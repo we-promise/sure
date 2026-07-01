@@ -1,0 +1,17 @@
+<%# locals: (api_key:, heading:, description:, copy_label:) %>
+<div class="bg-surface-inset rounded-xl p-4">
+  <h4 class="font-medium text-primary mb-3"><%= heading %></h4>
+  <p class="text-secondary text-sm mb-3"><%= description %></p>
+
+  <div class="@container bg-container rounded-lg p-3 border border-primary" data-controller="clipboard">
+    <div class="flex flex-col items-start gap-3 @lg:flex-row @lg:items-center @lg:justify-between">
+      <code class="font-mono text-sm text-primary break-all min-w-0" data-clipboard-target="source"><%= api_key.plain_key %></code>
+      <%= render DS::Button.new(
+        text: copy_label,
+        variant: "ghost",
+        icon: "copy",
+        data: { action: "clipboard#copy" }
+      ) %>
+    </div>
+  </div>
+</div>

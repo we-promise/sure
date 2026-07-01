@@ -8,6 +8,8 @@
       <div class="md:p-4">
         <%= render "chats/chat_nav", chat: @chat %>
 
+        <%= render "chats/worker_health_warning" %>
+
         <% if show_demo_warning? %>
           <%= render "shared/demo_warning",
             title: t("chats.demo_banner_title"),

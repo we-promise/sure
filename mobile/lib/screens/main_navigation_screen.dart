@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/privacy_provider.dart';
 import '../widgets/sure_logo.dart';
 import 'chat_list_screen.dart';
 import 'dashboard_screen.dart';
 import 'intro_screen.dart';
 import 'more_screen.dart';
 import 'settings_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -72,43 +74,43 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     await _handleDestinationSelected(settingsIndex, authProvider, introLayout);
   }
 
-  List<NavigationDestination> _buildDestinations(bool introLayout) {
+  List<NavigationDestination> _buildDestinations(bool introLayout, AppLocalizations l) {
     final destinations = <NavigationDestination>[];
 
     if (!introLayout) {
       destinations.add(
-        const NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
-          label: 'Home',
+        NavigationDestination(
+          icon: const Icon(Icons.home_outlined),
+          selectedIcon: const Icon(Icons.home),
+          label: l.navHome,
         ),
       );
     }
 
     if (introLayout) {
       destinations.add(
-        const NavigationDestination(
-          icon: Icon(Icons.auto_awesome_outlined),
-          selectedIcon: Icon(Icons.auto_awesome),
-          label: 'Intro',
+        NavigationDestination(
+          icon: const Icon(Icons.auto_awesome_outlined),
+          selectedIcon: const Icon(Icons.auto_awesome),
+          label: l.navIntro,
         ),
       );
     }
 
     destinations.add(
-      const NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline),
-        selectedIcon: Icon(Icons.chat_bubble),
-        label: 'Assistant',
+      NavigationDestination(
+        icon: const Icon(Icons.chat_bubble_outline),
+        selectedIcon: const Icon(Icons.chat_bubble),
+        label: l.navAssistant,
       ),
     );
 
     if (!introLayout) {
       destinations.add(
-        const NavigationDestination(
-          icon: Icon(Icons.more_horiz),
-          selectedIcon: Icon(Icons.more_horiz),
-          label: 'More',
+        NavigationDestination(
+          icon: const Icon(Icons.more_horiz),
+          selectedIcon: const Icon(Icons.more_horiz),
+          label: l.navMore,
         ),
       );
     }
@@ -137,6 +139,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 12),
           child: Center(
+            child: Tooltip(
+              message: 'Toggle privacy',
+              child: InkWell(
+                onTap: () => context.read<PrivacyProvider>().toggle(),
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Icon(
+                    context.watch<PrivacyProvider>().hidden
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    semanticLabel: 'Toggle privacy',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Center(
             child: InkWell(
               onTap: () {
                 _handleSelectSettings(authProvider, introLayout);
@@ -154,24 +177,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<bool> _showEnableAiPrompt() async {
+    final l = AppLocalizations.of(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     final shouldEnable = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Turn on AI Chat?'),
-        content: const Text('AI Chat is currently disabled in your account settings. Would you like to turn it on now?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not now'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Turn on AI'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final dl = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(dl.navEnableAiChatTitle),
+          content: Text(dl.navEnableAiChatContent),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(dl.navEnableAiChatNotNow),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(dl.navEnableAiChatConfirm),
+            ),
+          ],
+        );
+      },
     );
 
     if (shouldEnable != true) {
@@ -183,7 +210,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     if (!enabled && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Unable to enable AI right now.'),
+          content: Text(authProvider.errorMessage ?? l.navEnableAiChatFailed),
           backgroundColor: Colors.red,
         ),
       );
@@ -210,6 +237,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Consumer<AuthProvider>(
       builder: (context, authProvider, _) {
         final introLayout = authProvider.isIntroLayout;
@@ -218,7 +246,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           introLayout,
           () => _handleDestinationSelected(chatIndex, authProvider, introLayout),
         );
-        final destinations = _buildDestinations(introLayout);
+        final destinations = _buildDestinations(introLayout, l);
         final bottomNavIndex = _resolveBottomSelectedIndex(destinations);
 
         if (_currentIndex >= screens.length) {

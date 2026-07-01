@@ -113,7 +113,10 @@ class Provider::MoexPublic < Provider
       SecurityInfo.new(
         symbol: instrument[:secid],
         name: instrument[:name],
-        links: "https://www.moex.com/en/issue.aspx?code=#{instrument[:secid]}",
+        # Deliberately no website: moex.com is the exchange, not the issuer, so
+        # persisting it as website_url makes Brandfetch render the exchange logo
+        # for every instrument and shadows the real per-issuer brand logo.
+        links: nil,
         logo_url: nil,
         description: nil,
         kind: instrument[:kind],

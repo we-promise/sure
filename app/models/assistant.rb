@@ -30,7 +30,13 @@ module Assistant
         Function::GetBudget,
         Function::ImportBankStatement,
         Function::SearchFamilyFiles,
-        Function::CreateGoal
+        Function::CreateGoal,
+        Function::GetTags,
+        Function::CreateTag,
+        Function::UpdateTag,
+        Function::GetCategories,
+        Function::CreateCategory,
+        Function::UpdateCategory
       ]
     end
 

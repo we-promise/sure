@@ -118,6 +118,7 @@ Two primary data ingestion methods:
   - Set `SIMPLEFIN_INCLUDE_PENDING=0` to disable pending fetching for SimpleFIN.
   - Set `PLAID_INCLUDE_PENDING=0` to disable pending fetching for Plaid.
   - Set `SIMPLEFIN_DEBUG_RAW=1` to enable raw payload debug logging.
+  - Set `UP_DEBUG_RAW=1` to enable raw Up payload debug logging. DEV-ONLY: the dump contains PII and is gated to local environments, so it never logs in managed/production.
 
 Provider support notes:
 - SimpleFIN: supports pending + FX metadata (stored under `extra["simplefin"]`).

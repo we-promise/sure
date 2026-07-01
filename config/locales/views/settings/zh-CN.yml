@@ -107,6 +107,10 @@ zh-CN:
         theme_dark: 深色
         theme_light: 浅色
         theme_system: 跟随系统
+        modals_title: 模态框
+        modals_subtitle: 自定义模态框行为
+        disable_modal_click_outside_title: 点击外部时保持模态框打开
+        disable_modal_click_outside_description: 防止点击外部时关闭模态框。有助于避免意外丢失未保存的更改。
         transactions_title: 交易
         transactions_subtitle: 自定义交易的显示方式
         dashboard_title: 仪表盘

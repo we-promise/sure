@@ -493,7 +493,7 @@ jobs:
       - name: Commit and push version bump
         env:
           SOURCE_BRANCH: ${{ steps.source_branch.outputs.branch }}
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.VERSION_BUMP_PR_TOKEN || github.token }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
@@ -565,14 +565,30 @@ jobs:
 
           PR_BODY="This automated PR bumps .sure-version and charts/sure/Chart.yaml after the ${REF_NAME} pre-release. It was opened because the workflow could not push directly to ${SOURCE_BRANCH}."
 
-          PR_URL=$(gh pr create \
+          set +e
+          pr_create_output=$(gh pr create \
             --repo "$GITHUB_REPOSITORY" \
             --head "$BUMP_BRANCH" \
             --base "$SOURCE_BRANCH" \
             --title "$COMMIT_MESSAGE" \
-            --body "$PR_BODY")
+            --body "$PR_BODY" 2>&1)
+          pr_create_status=$?
+          set -e
 
+          if [[ $pr_create_status -ne 0 ]]; then
+            echo "::warning::Pushed ${BUMP_BRANCH}, but could not create the version bump PR: ${pr_create_output}"
+            if grep -q "GitHub Actions is not permitted to create or approve pull requests" <<< "$pr_create_output"; then
+              echo "::notice::Enable the repository setting that allows GitHub Actions to create pull requests, or add a VERSION_BUMP_PR_TOKEN secret with contents, pull requests, and workflows permissions."
+            fi
+            exit 0
+          fi
+
+          PR_URL="$pr_create_output"
           echo "Created version bump PR: $PR_URL"
           echo "Dispatching PR checks for $BUMP_BRANCH"
-          gh workflow run pr.yml --repo "$GITHUB_REPOSITORY" --ref "$BUMP_BRANCH"
-          gh workflow run chart-ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BUMP_BRANCH"
+          if ! gh workflow run pr.yml --repo "$GITHUB_REPOSITORY" --ref "$BUMP_BRANCH"; then
+            echo "::warning::Could not dispatch pr.yml for $BUMP_BRANCH"
+          fi
+          if ! gh workflow run chart-ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BUMP_BRANCH"; then
+            echo "::warning::Could not dispatch chart-ci.yml for $BUMP_BRANCH"
+          fi

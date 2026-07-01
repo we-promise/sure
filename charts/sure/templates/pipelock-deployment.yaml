@@ -45,6 +45,9 @@ spec:
         - name: config
           configMap:
             name: {{ include "sure.fullname" . }}-pipelock
+        {{- with .Values.pipelock.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       containers:
         - name: pipelock
           image: {{ include "sure.pipelockImage" . }}
@@ -63,6 +66,9 @@ spec:
             - name: config
               mountPath: /etc/pipelock
               readOnly: true
+            {{- with .Values.pipelock.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           ports:
             - name: proxy
               containerPort: {{ $fwdPort }}

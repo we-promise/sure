@@ -22,13 +22,26 @@ fr:
     new:
       title: Nouveau transfert
     show:
+      amount: Montant
+      category: Catégorie
+      date: Date
       delete: Supprimer le transfert
-      delete_subtitle: Ce transfert est supprimé. Il ne supprimera pas les transactions sous-jacentes.
+      delete_subtitle:
+        Ce transfert est supprimé. Il ne supprimera pas les transactions
+        sous-jacentes.
       delete_title: Voulez-vous vraiment supprimer ce transfert?
       details: Détails
+      from: De
+      mark_recurring: Marquer comme récurrent
+      mark_recurring_subtitle:
+        Suivez ce transfert comme un modèle récurrent dans
+        le prochain flux et la page récurrente.
+      mark_recurring_title: Marquer le transfert comme récurrent
       note_label: Notes
       note_placeholder: Ajoutez une note à ce transfert
       overview: Aperçu
       settings: Paramètres
+      to: À
+      uncategorized: Non classé
     update:
       success: Transfert mis à jour

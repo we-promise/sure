@@ -3,56 +3,103 @@ fr:
   pages:
     changelog:
       title: Nouveautés
-    privacy:
-      title: Politique de confidentialité
-      heading: Politique de confidentialité
-      placeholder: Le contenu de la politique de confidentialité sera affiché ici.
-    terms:
-      title: Conditions d'utilisation
-      heading: Conditions d'utilisation
-      placeholder: Le contenu des conditions d'utilisation sera affiché ici.
     dashboard:
-      welcome: "Content de vous revoir, %{name}"
-      subtitle: "Voici ce qui se passe avec vos finances"
-      new: "Nouveau"
-      drag_to_reorder: "Glisser pour réorganiser la section"
-      toggle_section: "Afficher/masquer la section"
+      balance_sheet:
+        add_accounts: Ajoutez vos comptes %{name} pour voir une ventilation complète
+        add_asset_accounts: Ajoutez vos comptes d'actifs pour voir une répartition complète
+        add_liability_accounts: Ajoutez vos comptes de passif pour voir une répartition complète
+        classifications:
+          asset: Actifs
+          liability: Passif
+        name: Nom
+        no_asset: Aucun actif pour l'instant
+        no_items: Aucun %{name} pour l'instant
+        no_liability: Pas encore de passif
+        title: Bilan
+        value: Valeur
+        weight: Poids
+      cashflow_sankey:
+        add_transaction: Ajouter une transaction
+        no_data_description: Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendez la période
+        no_data_title: Aucune donnée de flux de trésorerie pour cette période
+        title: Flux de trésorerie
+        zoom_out: Retour à la trésorerie totale
+      drag_to_reorder: Glisser pour réorganiser la section
+      investment_summary:
+        add_investment: Ajoutez un compte d'investissement pour suivre votre portefeuille
+        contributions: Apports
+        holding: Holding
+        no_investments: Aucun compte d'investissement
+        period_activity: Activité %{period}
+        return: Rendement
+        title: Investissements
+        total_return: Rendement total
+        trades: Transactions boursières
+        value: Valeur
+        weight: Poids
+        withdrawals: Retraits
       net_worth_chart:
         data_not_available: Données indisponibles pour la période sélectionnée
         title: Patrimoine net
+      new: Nouveau
       no_account_empty_state:
         new_account: Nouveau compte
         no_account_subtitle: Comme aucun compte n'a été ajouté, il n'y a pas de données à afficher. Ajoutez vos premiers comptes pour commencer à consulter les données du tableau de bord.
         no_account_title: Pas encore de comptes
-      balance_sheet:
-        title: "Bilan"
-        no_items: "Aucun %{name} pour l'instant"
-        add_accounts: "Ajoutez vos comptes %{name} pour voir une ventilation complète"
-      cashflow_sankey:
-        title: "Flux de trésorerie"
-        no_data_title: "Aucune donnée de flux de trésorerie pour cette période"
-        no_data_description: "Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendez la période"
-        add_transaction: "Ajouter une transaction"
       no_accounts:
-        title: "Pas encore de comptes"
-        description: "Ajoutez des comptes pour afficher les données de patrimoine net"
-        add_account: "Ajouter un compte"
+        add_account: Ajouter un compte
+        description: Ajoutez des comptes pour afficher les données de patrimoine net
+        title: Pas encore de comptes
       outflows_donut:
-        title: "Sorties"
-        total_outflows: "Total des sorties"
-        categories: "Catégories"
-        value: "Valeur"
-        weight: "Poids"
-      investment_summary:
-        title: "Investissements"
-        total_return: "Rendement total"
-        holding: "Avoir"
-        weight: "Poids"
-        value: "Valeur"
-        return: "Rendement"
-        period_activity: "Activité %{period}"
-        contributions: "Apports"
-        withdrawals: "Retraits"
-        trades: "Transactions boursières"
-        no_investments: "Aucun compte d'investissement"
-        add_investment: "Ajoutez un compte d'investissement pour suivre votre portefeuille"
+        categories: Catégories
+        title: Sorties
+        total_outflows: Total des sorties
+        value: Valeur
+        weight: Poids
+      sections_aria_label: Sections du tableau de bord
+      subtitle: Voici ce qui se passe avec vos finances
+      toggle_section: Afficher/masquer la section
+      welcome: Content de vous revoir, %{name}
+      widget_size:
+        auto: Auto
+        compact: Compact
+        full: Plein
+        half: Moitié
+        height_label: Hauteur
+        label: Ajuster la taille
+        tall: Grand
+        width_label: Largeur
+    feedback:
+      bug_report: Déposer un rapport de bug
+      description: Faites-nous savoir si vous avez des commentaires spécifiques. N'hésitez pas à inclure des liens vers des vidéos ou des captures d'écran.
+      discuss: Discutez de %{product} avec d'autres personnes
+      feature_request: Rédiger une demande de fonctionnalité
+      heading: Laisser des commentaires
+      title: Commentaires
+    intro:
+      coming_soon: Expérience d'introduction à venir
+      description: Nous construisons un parcours d'intégration plus riche pour en savoir plus sur vos objectifs, vos étapes et vos besoins quotidiens. Pour l’instant, rendez-vous dans la barre latérale de discussion pour démarrer une conversation avec Sure et dites-nous où vous en êtes dans votre parcours financier.
+      not_authorized: L'intro n'est disponible que pour les utilisateurs invités.
+      start_chatting: Commencez à discuter
+      welcome: Bienvenue !
+    privacy:
+      heading: Politique de confidentialité
+      placeholder: Le contenu de la politique de confidentialité sera affiché ici.
+      title: Politique de confidentialité
+    redis_configuration_error:
+      heading: Configuration Redis requise
+      page_title: Configuration Redis requise - Bien sûr
+      refresh_hint: Une fois que vous avez configuré Redis, actualisez cette page pour continuer.
+      refresh_page: Actualiser la page
+      setup_guide_hint: Suivez notre guide de configuration complet de Docker pour configurer Redis
+      subheading: Votre installation Sure auto-hébergée nécessite que Redis soit correctement configuré.
+      view_setup_guide: Afficher le guide de configuration
+      why_required_body: Sure utilise Redis pour alimenter les tâches en arrière-plan de Sidekiq pour des tâches telles que la synchronisation des données de compte, le traitement des importations et d'autres opérations en arrière-plan qui maintiennent vos données financières à jour.
+      why_required_title: Pourquoi Redis est-il requis ?
+    release_notes_unavailable:
+      body_html: "<p>Impossible de récupérer les dernières notes de mise à jour pour le moment. Veuillez réessayer plus tard ou visiter directement notre <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>page de versions GitHub</a>.</p>"
+      name: Notes de mise à jour indisponibles
+    terms:
+      heading: Conditions d'utilisation
+      placeholder: Le contenu des conditions d'utilisation sera affiché ici.
+      title: Conditions d'utilisation

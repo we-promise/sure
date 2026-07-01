@@ -247,6 +247,79 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match /Category/, @response.body
   end
 
+  test "export transactions with API key does not inherit web session impersonation" do
+    support_user = users(:sure_support_staff)
+    support_user.api_keys.active.destroy_all
+    token_value = ApiKey.generate_secure_key
+    export_credential = support_user.api_keys.build(
+      name: "Support Export Credential",
+      scopes: [ "read" ],
+      source: "web"
+    )
+    export_credential.key = token_value
+    export_credential.save!
+
+    impersonation_session = impersonation_sessions(:in_progress)
+    impersonated_user = impersonation_session.impersonated
+    leaked_category = impersonated_user.family.categories.create!(
+      name: "Impersonated Export Leak Probe"
+    )
+    impersonated_account = impersonated_user.finance_accounts.first
+    assert_not_nil impersonated_account, "Test setup failed: impersonated user has no finance account"
+
+    create_transaction(
+      account: impersonated_account,
+      name: "Impersonated export leak probe",
+      date: Date.current,
+      amount: 123.45,
+      category: leaked_category
+    )
+
+    support_user.sessions.destroy_all
+    support_user.sessions.create!(
+      user_agent: "Browser session",
+      ip_address: "127.0.0.1",
+      active_impersonator_session: impersonation_session
+    )
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :ytd,
+      start_date: Date.current.beginning_of_year,
+      end_date: Date.current,
+      api_key: token_value
+    )
+
+    assert_response :ok
+    assert_equal "text/csv", @response.media_type
+    assert_no_match /Impersonated Export Leak Probe/, @response.body
+  end
+
+  test "export transactions with API key rejects deactivated user" do
+    user = users(:family_admin)
+    user.api_keys.active.destroy_all
+    token_value = ApiKey.generate_secure_key
+    export_access = user.api_keys.build(
+      name: "Inactive User Export Credential",
+      scopes: [ "read" ],
+      source: "web"
+    )
+    export_access.key = token_value
+    export_access.save!
+    user.update_column(:active, false)
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :ytd,
+      api_key: token_value
+    )
+
+    assert_response :unauthorized
+    assert_match /Invalid or expired API key/, @response.body
+  ensure
+    user&.update_column(:active, true)
+  end
+
   test "export transactions with invalid API key" do
     get export_transactions_reports_path(
       format: :csv,

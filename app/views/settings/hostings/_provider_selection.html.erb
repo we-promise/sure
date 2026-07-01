@@ -53,12 +53,13 @@
           ["mfapi", t(".providers.mfapi"), t(".mfapi_hint")],
           ["binance_public", t(".providers.binance_public"), t(".binance_public_hint")],
           ["moex_public", t(".providers.moex_public"), t(".moex_public_hint")],
+          ["tinkoff_invest", t(".providers.tinkoff_invest"), t(".tinkoff_invest_hint")],
         ].each do |value, label, hint| %>
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox"
                    name="setting[securities_providers][]"
                    value="<%= value %>"
-                   class="rounded border-primary text-primary focus:ring-primary"
+                   class="checkbox checkbox--light"
                    <%= "checked" if enabled_providers.include?(value) %>
                    <%= "disabled" if disabled %>
                    data-auto-submit-form-target="auto">

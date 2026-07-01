@@ -107,6 +107,10 @@ en:
         theme_dark: Dark
         theme_light: Light
         theme_system: System
+        modals_title: Modals
+        modals_subtitle: Customize modal behavior
+        disable_modal_click_outside_title: Keep modals open on outside click
+        disable_modal_click_outside_description: Prevent modals from closing when clicking outside. Useful to avoid accidentally losing unsaved changes.
         transactions_title: Transactions
         transactions_subtitle: Customize how transactions are displayed
         dashboard_title: Dashboard
@@ -262,7 +266,7 @@ en:
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
-      api_key_label: API Key
+      api_key_label: API Keys
       payment_label: Payment
       categories_label: Categories
       feedback_label: Feedback
@@ -288,7 +292,7 @@ en:
       transactions_section_title: Transactions
       users_label: Users
       whats_new_label: What's new
-      api_keys_label: API Key
+      api_keys_label: API Keys
       appearance_label: Appearance
       bank_sync_label: Bank sync
       debug_label: Debug
@@ -478,6 +482,10 @@ en:
         step_1_html: "Go to %{link} and create a personal app."
         step_2: "Copy your app token and user token."
         step_3: "Paste the tokens below, save, then link your synced accounts."
+      up_panel:
+        step_1_html: "Go to %{link} and generate a personal access token."
+        step_2: "Copy your personal access token."
+        step_3: "Paste the token below, save, then link your synced accounts."
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."
