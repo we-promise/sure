@@ -1,5 +1,18 @@
 ---
 fr:
+  account_order:
+    balance_asc:
+      label: Solde (de bas en haut)
+      label_short: Solde ↑
+    balance_desc:
+      label: Solde (haut à bas)
+      label_short: Solde ↓
+    name_asc:
+      label: Nom (A-Z)
+      label_short: Nom ↑
+    name_desc:
+      label: Nom (Z-A)
+      label_short: Nom ↓
   activerecord:
     attributes:
       account:
@@ -12,6 +25,7 @@ fr:
     models:
       account: Compte
       account/credit: Carte de Crédit
+      account/crypto: Cryptomonnaie
       account/depository: Compte Bancaire
       account/investment: Investissement
       account/loan: Prêt
@@ -19,4 +33,3 @@ fr:
       account/other_liability: Autre Passif
       account/property: Immobilier
       account/vehicle: Véhicule
-      account/crypto: Cryptomonnaie

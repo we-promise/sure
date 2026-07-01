@@ -12,8 +12,11 @@ fr:
       destination_amount_display: "Montant de destination : %{amount}"
       exchange_rate_display: "Taux de change : %{rate}"
       expense: Dépense
+      bank_charges: Frais bancaires
       from: De
       income: Revenu
+      incoming_fee: Frais de transfert entrant
+      outgoing_fee: Frais de transfert sortant
       select_account: Sélectionner un compte
       source_amount: Montant source
       submit: Créer le transfert
@@ -22,15 +25,31 @@ fr:
     new:
       title: Nouveau transfert
     show:
+      amount: Montant
+      category: Catégorie
+      date: Date
       delete: Supprimer le transfert
-      delete_subtitle: Ce transfert est supprimé. Il ne supprimera pas les transactions sous-jacentes.
+      delete_subtitle:
+        Ce transfert est supprimé. Il ne supprimera pas les transactions
+        sous-jacentes.
       delete_title: Voulez-vous vraiment supprimer ce transfert?
       details: Détails
+      from: De
+      mark_recurring: Marquer comme récurrent
+      mark_recurring_subtitle:
+        Suivez ce transfert comme un modèle récurrent dans
+        le prochain flux et la page récurrente.
+      mark_recurring_title: Marquer le transfert comme récurrent
       note_label: Notes
       note_placeholder: Ajoutez une note à ce transfert
       overview: Aperçu
       settings: Paramètres
+      bank_charges: Frais bancaires
+      destination_fee: Frais de destination
+      source_fee: Frais d'origine
+      to: À
       total: Total
       transfer_amount: Montant du transfert
+      uncategorized: Non classé
     update:
       success: Transfert mis à jour
