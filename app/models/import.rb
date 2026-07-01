@@ -470,7 +470,12 @@ class Import < ApplicationRecord
 
       # Handle French/Scandinavian format specially
       if format[:delimiter] == " "
-        sanitized = sanitized.gsub(/\s+/, "") # Remove all spaces first
+        # The thousands "space" can be an ASCII space, a non-breaking space
+        # (U+00A0) or a narrow no-break space (U+202F) depending on the locale
+        # or exporter. Ruby's \s does not match those Unicode spaces, so strip
+        # everything that isn't a digit, the decimal separator, or a minus sign
+        # (this also removes stray currency symbols, matching the else branch).
+        sanitized = sanitized.gsub(/[^\d#{Regexp.escape(format[:separator])}\-]/, "")
       else
         sanitized = sanitized.gsub(/[^\d#{Regexp.escape(format[:delimiter])}#{Regexp.escape(format[:separator])}\-]/, "")
 

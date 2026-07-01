@@ -112,6 +112,27 @@ module ImportInterfaceTest
     assert_equal "1234.56", row.amount
   end
 
+  test "parses French/Scandinavian format with non-breaking-space thousands separator" do
+    import = imports(:transaction)
+    import.update!(
+      number_format: "1 234,56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    # Real-world European CSV exports use a non-breaking space (U+00A0) as the
+    # thousands separator rather than a plain ASCII space.
+    csv_data = "date,amount,name\n01/01/2024,\"1 234,56\",Test"
+    import.update!(raw_file_str: csv_data)
+    import.generate_rows_from_csv
+    import.reload
+
+    row = import.rows.first
+    assert_equal "1234.56", row.amount
+  end
+
   test "parses zero-decimal currency format correctly" do
     import = imports(:transaction)
     import.update!(
