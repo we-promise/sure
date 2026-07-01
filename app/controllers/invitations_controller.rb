@@ -32,6 +32,11 @@ class InvitationsController < ApplicationController
     end
 
     redirect_to settings_profile_path
+  rescue ActiveRecord::RecordNotUnique
+    # Safety net: a concurrent double-submit can still race the partial unique
+    # index between validation and INSERT. Never let it surface as a 500.
+    flash[:alert] = t(".failure")
+    redirect_to settings_profile_path
   end
 
   def accept
