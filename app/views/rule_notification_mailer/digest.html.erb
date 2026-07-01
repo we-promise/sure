@@ -1,0 +1,28 @@
+<h1><%= t(".heading", count: @transactions.size) %></h1>
+
+<p><%= t(".intro", rule: @rule.name.presence || @rule.primary_condition_title) %></p>
+
+<table style="width: 100%; border-collapse: collapse; text-align: left;">
+  <thead>
+    <tr>
+      <th style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><%= t(".date") %></th>
+      <th style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><%= t(".name") %></th>
+      <th style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><%= t(".account") %></th>
+      <th style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;"><%= t(".amount") %></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @transactions.each do |txn| %>
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #f1f5f9;"><%= I18n.l(txn.entry.date, format: :long) %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #f1f5f9;"><%= txn.entry.name %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #f1f5f9;"><%= txn.entry.account.name %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: right;"><%= txn.entry.amount_money.format %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p style="margin-top: 16px;">
+  <%= link_to t(".cta"), @transactions_url, class: "button" %>
+</p>
