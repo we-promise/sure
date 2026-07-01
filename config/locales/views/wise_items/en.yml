@@ -66,6 +66,7 @@ en:
       update_connection: Update connection
       setup_accounts: Set up accounts
       sync: Sync
+      disconnect: Disconnect
       disconnect_label: "Disconnect %{name}"
       disconnect_confirm: "Are you sure you want to disconnect %{name}? This will remove all synced account data."
       accounts_link: Accounts
