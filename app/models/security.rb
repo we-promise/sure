@@ -63,6 +63,23 @@ class Security < ApplicationRecord
     end
   end
 
+  # Lazily finds or creates a global synthetic cash security for a currency.
+  # Used to represent non-primary-currency cash positions from brokerage providers
+  # as holdings (e.g. CASH-USD, CASH-CAD).
+  #
+  # Enforces a strict 3-letter uppercase code so the resulting ticker is exactly
+  # `CASH-XXX` (8 chars). Callers that scan/clean up these holdings rely on that
+  # shape to distinguish them from per-account synthetic cash (`CASH-<uuid>`).
+  def self.cash_for_currency(currency_code)
+    code = currency_code.to_s.upcase
+    raise ArgumentError, "cash_for_currency requires a 3-letter currency code, got #{currency_code.inspect}" unless code.match?(/\A[A-Z]{3}\z/)
+
+    find_or_create_by!(ticker: "CASH-#{code}", kind: "cash") do |s|
+      s.name = "Cash (#{code})"
+      s.offline = true
+    end
+  end
+
   def cash?
     kind == "cash"
   end

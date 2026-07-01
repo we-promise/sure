@@ -339,6 +339,30 @@ class Account < ApplicationRecord
       create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
     end
 
+    def create_from_onchain_wallet_account(onchain_wallet_account)
+      family = onchain_wallet_account.onchain_wallet_item.family
+      name = [
+        onchain_wallet_account.symbol,
+        onchain_wallet_account.chain.titleize,
+        onchain_wallet_account.wallet_address.first(8)
+      ].join(" ")
+
+      attributes = {
+        family: family,
+        name: name,
+        balance: (onchain_wallet_account.current_balance || 0).to_d,
+        cash_balance: 0,
+        currency: family.currency,
+        accountable_type: "Crypto",
+        accountable_attributes: {
+          subtype: "wallet",
+          tax_treatment: "taxable"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     private
 
       def create_from_crypto_exchange_account(provider_account, family:)

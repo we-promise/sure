@@ -1,0 +1,82 @@
+---
+en:
+  onchain_wallet_items:
+    wallet_modal:
+      title: Link On-chain Wallet
+      subtitle: Track a Bitcoin, Ethereum, Solana, or supported EVM wallet by address.
+      ethereum_credentials_title: Ethereum data source needs attention
+      ethereum_credentials_prefix: "Review it in "
+      bank_sync_settings: Provider settings
+      ethereum_credentials_suffix: " before linking an Ethereum wallet."
+      auto_detect_chain: "Auto-detect from address"
+      chain_label: Chain
+      bitcoin: Bitcoin
+      ethereum: Ethereum
+      wallet_address_label: Wallet address
+      wallet_address_placeholder: Paste wallet address
+      cancel: Cancel
+      submit: Link wallet
+    wallet_token_review:
+      title: "Review %{chain} tokens"
+      subtitle: Select the tokens you want to import from this address.
+      native_title: "%{symbol} will be imported"
+      native_body: "%{quantity} %{symbol} · %{value}"
+      tokens_title: Tokens detected
+      token_detail: "%{quantity} · %{value}"
+      unpriced: No price found
+      cancel: Cancel
+      submit: Import selected
+    manage:
+      title: Manage On-chain Wallets
+      subtitle: Review the wallet addresses connected to this provider.
+      assets_summary: "%{count} assets synced: %{assets}"
+      edit_wallet: Edit address
+      disconnect_wallet: Disconnect
+      disconnect_confirm: "Disconnect wallet %{address}?"
+      no_wallets_title: No wallets connected
+      no_wallets_body: Add a wallet to start syncing on-chain balances.
+      close: Close
+      add_wallet: Add Wallet
+    wallet_edit_modal:
+      title: Edit wallet address
+      subtitle: Point this wallet at a new address. Existing balance history is preserved.
+      currently_tracking: "Currently tracking: %{assets}"
+      evm_note: You'll review which tokens to keep tracking and which new tokens to import after entering the new address.
+      new_address_label: New wallet address
+      new_address_placeholder: Paste the replacement address
+      new_address_hint: Must use the same chain. To switch chains, disconnect this wallet and add a new one.
+      cancel: Cancel
+      submit: Continue
+    wallet_edit_token_review:
+      title: Review tokens for new address
+      subtitle: Choose which tokens to track on the new wallet.
+      new_address_title: New address
+      native_title: "%{symbol} will continue to be tracked"
+      native_body: "%{quantity} %{symbol} · %{value}"
+      existing_tokens_title: Currently tracked tokens
+      existing_tokens_hint: Uncheck any token you no longer want to track. Unchecked tokens will be removed from this wallet.
+      new_tokens_title: New tokens detected on this address
+      new_tokens_hint: Pick any additional tokens to start tracking.
+      token_detail: "%{quantity} · %{value}"
+      unpriced: No price found
+      cancel: Cancel
+      submit: Update wallet
+    onchain_wallet_item:
+      provider_name: On-chain Wallets
+      syncing: Syncing...
+      reconnect: Credentials need updating
+      deletion_in_progress: Deleting...
+      status: "Last synced %{timestamp} ago"
+      status_with_summary: "Last synced %{timestamp} ago - %{summary}"
+      status_never: Never synced
+      update_credentials: Update credentials
+      manage_connection: Manage connection
+      add_wallet: Add Wallet
+      delete: Delete
+      no_wallets_title: No wallets connected
+      no_wallets_message: On-chain wallets will appear here after linking them from the Crypto account flow.
+      sync_status:
+        no_accounts: No wallets found
+        all_synced:
+          one: "%{count} wallet synced"
+          other: "%{count} wallets synced"

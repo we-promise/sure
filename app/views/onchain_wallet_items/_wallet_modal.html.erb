@@ -1,0 +1,55 @@
+<%= turbo_frame_tag "modal" do %>
+  <% selected_chain = local_assigns[:selected_chain].presence || params[:chain].presence || "auto" %>
+  <% wallet_address = local_assigns[:wallet_address].presence || params[:wallet_address].to_s %>
+
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(
+         title: t(".title"),
+         subtitle: t(".subtitle")
+       ) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <% if local_assigns[:error_message].present? %>
+          <%= render DS::Alert.new(message: local_assigns[:error_message], variant: :error) %>
+        <% end %>
+
+        <%= form_with url: link_wallet_onchain_wallet_items_path,
+                      method: :post,
+                      data: { turbo: true },
+                      class: "space-y-4" do |form| %>
+          <%= form.hidden_field :source, value: "account_modal" %>
+
+          <div>
+            <%= form.label :chain, t(".chain_label"), class: "block text-sm font-medium text-secondary mb-1" %>
+            <%= form.select :chain,
+                            options_for_select(
+                              [ [ t(".auto_detect_chain"), "auto" ] ] + OnchainWalletAccount::CHAINS.map { |chain| [ chain.titleize, chain ] },
+                              selected_chain
+                            ),
+                            {},
+                            class: "w-full rounded-lg border border-primary bg-container px-3 py-2 text-sm text-primary" %>
+          </div>
+
+          <div>
+            <%= form.label :wallet_address, t(".wallet_address_label"), class: "block text-sm font-medium text-secondary mb-1" %>
+            <%= form.text_field :wallet_address,
+                                value: wallet_address,
+                                placeholder: t(".wallet_address_placeholder"),
+                                class: "w-full rounded-lg border border-primary bg-container px-3 py-2 text-sm text-primary" %>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <%= render DS::Button.new(
+                  text: t(".cancel"),
+                  variant: :secondary,
+                  type: "button",
+                  data: { action: "DS--dialog#close" }
+                ) %>
+            <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

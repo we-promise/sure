@@ -1,0 +1,70 @@
+<%= turbo_frame_tag "modal" do %>
+  <% wallet_groups = @onchain_wallet_item.onchain_wallet_accounts.order(:chain, :wallet_address, :asset_kind, :symbol).group_by { |wallet_account| [ wallet_account.chain, wallet_account.wallet_address ] } %>
+
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(
+         title: t(".title"),
+         subtitle: t(".subtitle")
+       ) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <% if wallet_groups.any? %>
+          <div class="space-y-3">
+            <% wallet_groups.each do |(chain, wallet_address), wallet_accounts| %>
+              <div class="rounded-lg border border-primary bg-container p-4 space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium text-primary"><%= chain.titleize %></p>
+                    <p class="text-xs text-secondary break-all"><%= wallet_address %></p>
+                    <p class="text-xs text-secondary mt-1">
+                      <%= t(".assets_summary", count: wallet_accounts.count, assets: wallet_accounts.map(&:symbol).uniq.join(", ")) %>
+                    </p>
+                  </div>
+
+                  <div class="flex items-center gap-3">
+                    <%= render DS::Link.new(
+                          text: t(".edit_wallet"),
+                          href: edit_wallet_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, wallet_address: wallet_address),
+                          frame: :modal
+                        ) %>
+
+                    <%= render DS::Button.new(
+                          text: t(".disconnect_wallet"),
+                          href: wallet_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, wallet_address: wallet_address),
+                          variant: :outline_destructive,
+                          size: :sm,
+                          method: :delete,
+                          data: { turbo_confirm: t(".disconnect_confirm", address: wallet_accounts.first.display_address) }
+                        ) %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="rounded-lg border border-primary bg-container p-4">
+            <p class="text-sm font-medium text-primary"><%= t(".no_wallets_title") %></p>
+            <p class="text-sm text-secondary mt-1"><%= t(".no_wallets_body") %></p>
+          </div>
+        <% end %>
+
+        <div class="flex justify-end gap-2">
+          <%= render DS::Button.new(
+                text: t(".close"),
+                variant: :secondary,
+                type: "button",
+                data: { action: "DS--dialog#close" }
+              ) %>
+          <%= render DS::Link.new(
+                text: t(".add_wallet"),
+                href: new_wallet_onchain_wallet_items_path,
+                variant: "primary",
+                icon: "plus",
+                frame: :modal
+              ) %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

@@ -1,0 +1,112 @@
+<%# locals: (onchain_wallet_item:) %>
+
+<%= tag.div id: dom_id(onchain_wallet_item) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2 w-full focus-visible:outline-hidden">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <div class="flex items-center justify-center h-8 w-8 rounded-full bg-success/10">
+            <%= icon "wallet", size: "sm", color: "success" %>
+          </div>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p onchain_wallet_item.institution_display_name, class: "font-medium text-primary" %>
+              <% if onchain_wallet_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+            <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+            <% if onchain_wallet_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif onchain_wallet_item.requires_update? %>
+              <div class="text-warning flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t(".reconnect") %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if onchain_wallet_item.last_synced_at %>
+                  <% if onchain_wallet_item.sync_status_summary %>
+                    <%= t(".status_with_summary", timestamp: time_ago_in_words(onchain_wallet_item.last_synced_at), summary: onchain_wallet_item.sync_status_summary) %>
+                  <% else %>
+                    <%= t(".status", timestamp: time_ago_in_words(onchain_wallet_item.last_synced_at)) %>
+                  <% end %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <% if onchain_wallet_item.requires_update? %>
+              <%= render DS::Link.new(
+                text: t(".update_credentials"),
+                icon: "refresh-cw",
+                variant: "secondary",
+                href: settings_providers_path,
+                frame: "_top"
+              ) %>
+            <% else %>
+              <%= icon(
+                "refresh-cw",
+                as_button: true,
+                href: sync_onchain_wallet_item_path(onchain_wallet_item),
+                disabled: onchain_wallet_item.syncing?
+              ) %>
+            <% end %>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                variant: "link",
+                text: t(".manage_connection"),
+                icon: "settings-2",
+                href: manage_onchain_wallet_item_path(onchain_wallet_item),
+                frame: :modal
+              ) %>
+              <% menu.with_item(
+                variant: "link",
+                text: t(".add_wallet"),
+                icon: "plus",
+                href: new_wallet_onchain_wallet_items_path,
+                frame: :modal
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless onchain_wallet_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% visible_accounts = onchain_wallet_item.accounts.visible %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+        <% else %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_wallets_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_wallets_message") %></p>
+          </div>
+        <% end %>
+
+        <% stats = if defined?(@onchain_wallet_sync_stats_map) && @onchain_wallet_sync_stats_map
+             @onchain_wallet_sync_stats_map[onchain_wallet_item.id] || {}
+           else
+             onchain_wallet_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: onchain_wallet_item
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
