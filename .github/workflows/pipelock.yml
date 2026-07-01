@@ -27,7 +27,6 @@ jobs:
             .env.example
             compose.example.yml
             compose.example.ai.yml
-            Dockerfile.preview
             config/locales/views/reports/
             docs/hosting/ai.md
             app/models/provider/binance.rb

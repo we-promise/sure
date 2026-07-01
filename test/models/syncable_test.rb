@@ -57,6 +57,29 @@ class SyncableTest < ActiveSupport::TestCase
     Current.reset
   end
 
+  def test_partial_current_sync_maps_fall_back_to_database
+    account = Account.find(accounts(:depository).id)
+    Current.reset
+
+    sync = Sync.create!(syncable: account)
+    sync.start!
+
+    key = [ account.class.base_class.name, account.id ]
+    Current.latest_sync_by_syncable = {}
+    Current.latest_completed_sync_by_syncable = {}
+    Current.syncing_by_syncable = {}
+
+    queries = capture_sql_queries do
+      assert account.syncing?
+      assert_equal sync.created_at, account.last_sync_created_at
+    end
+
+    assert queries.grep(/FROM "syncs"/).any?,
+      "Expected partial Current maps to fall back to database queries"
+  ensure
+    Current.reset
+  end
+
   private
     def capture_sql_queries
       queries = []

@@ -94,7 +94,7 @@ COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 
 # Create preview entrypoint script inline
-COPY --chmod=755 --chown=rails:rails <<'ENTRYPOINT_EOF' /rails/bin/preview-entrypoint
+RUN cat > /rails/bin/preview-entrypoint << 'ENTRYPOINT_EOF'
 #!/bin/bash
 set -e
 
@@ -285,12 +285,8 @@ psql -h localhost -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='rails'"
 psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='sure_development'" | grep -q 1 || \
   psql -h localhost -U postgres -c "CREATE DATABASE sure_development OWNER rails;"
 
-# Set database env if not already set (ephemeral preview-only credentials)
-export POSTGRES_USER="${POSTGRES_USER:-rails}"
-export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-rails}"
-export POSTGRES_DB="${POSTGRES_DB:-sure_development}"
-export DB_HOST="${DB_HOST:-localhost}"
-export DB_PORT="${DB_PORT:-5432}"
+# Set DATABASE_URL if not already set
+export DATABASE_URL="${DATABASE_URL:-postgres://rails:rails@localhost:5432/sure_development}"
 
 # Set REDIS_URL if not already set
 export REDIS_URL="${REDIS_URL:-redis://localhost:6379/0}"
@@ -379,6 +375,7 @@ fi
 
 wait "$RAILS_PID"
 ENTRYPOINT_EOF
+RUN chmod 755 /rails/bin/preview-entrypoint && chown rails:rails /rails/bin/preview-entrypoint
 
 USER 1000:1000
 
