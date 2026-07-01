@@ -112,6 +112,10 @@ class QuestradeActivitiesFetchJob < ApplicationJob
 
     def clear_pending_flag
       @questrade_account.update!(activities_fetch_pending: false)
+    rescue => e
+      # Best-effort: never let clearing the flag mask the original error in
+      # perform's rescue (which then re-raises).
+      Rails.logger.warn("QuestradeActivitiesFetchJob - failed to clear pending flag: #{e.message}")
     end
 
     def broadcast_updates

@@ -91,4 +91,23 @@ class QuestradeAccount::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal 0, @account.reload.entries.where(source: "questrade").count
   end
+  # ---- home-currency inference (Questrade has no account currency field) ----
+
+  test "upsert_balances! infers USD home currency from per-currency balances" do
+    @questrade_account.update!(currency: "CAD")
+    @questrade_account.upsert_balances!([
+      { "currency" => "USD", "cash" => 5000, "totalEquity" => 5000 },
+      { "currency" => "CAD", "cash" => 0, "totalEquity" => 0 }
+    ])
+    assert_equal "USD", @questrade_account.reload.currency
+    assert_equal 5000, @questrade_account.cash_balance.to_d
+  end
+
+  test "upsert_balances! keeps CAD when the cash is CAD-denominated" do
+    @questrade_account.upsert_balances!([
+      { "currency" => "CAD", "cash" => 1000, "totalEquity" => 1000 },
+      { "currency" => "USD", "cash" => 0, "totalEquity" => 500 }
+    ])
+    assert_equal "CAD", @questrade_account.reload.currency
+  end
 end

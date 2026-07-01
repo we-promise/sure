@@ -51,8 +51,8 @@ class QuestradeAccount < ApplicationRecord
     update!(
       questrade_account_id: number,
       name: "#{type} (#{number})",
-      # Questrade accounts are CAD-based; per-currency sub-balances and per-security
-      # values are handled by Sure's securities pricing, not this field.
+      # Default; the real home currency is inferred from per-currency balances
+      # in upsert_balances! (Questrade exposes no account-level currency field).
       currency: "CAD",
       account_status: data[:status],
       account_type: type,
@@ -87,9 +87,15 @@ class QuestradeAccount < ApplicationRecord
   # non-primary-currency cash as holdings (issue #1809).
   def upsert_balances!(per_currency_balances)
     data = Array(per_currency_balances).map { |b| sdk_object_to_hash(b).with_indifferent_access }
+
+    # Questrade has no account-level currency field, so infer the home currency
+    # from the per-currency balances (the currency holding the cash wins). This
+    # keeps genuinely USD-denominated accounts from being mislabelled CAD.
+    self.currency = primary_balance_currency(data) if data.any?
+
     primary = primary_cash_entry(data)
     cash_value = primary ? primary[:cash] : 0
-    update!(cash_balance: cash_value, raw_balances_payload: data)
+    update!(currency: currency, cash_balance: cash_value, raw_balances_payload: data)
   end
 
   # Cash held in currencies other than the account's primary currency, surfaced
@@ -108,6 +114,15 @@ class QuestradeAccount < ApplicationRecord
   end
 
   private
+
+    # Infer the account home currency from per-currency balances: the currency
+    # holding the most cash wins (ties broken by total equity), default CAD.
+    def primary_balance_currency(entries)
+      ranked = entries.max_by do |b|
+        [ b[:cash].to_f.abs, (b[:totalEquity] || b[:marketValue]).to_f.abs ]
+      end
+      ranked&.dig(:currency).presence || "CAD"
+    end
 
     # Primary cash entry: account currency first, then USD, then first entry.
     def primary_cash_entry(entries)
