@@ -44,6 +44,8 @@ en:
         requires_api_key_alpha_vantage: requires API key, 25 calls/day limit
         mfapi_hint: free, no API key -- Indian mutual funds only
         binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
+        moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
+        tinkoff_invest_hint: requires read-only token -- Russian stocks/funds/bonds prices + brand logos
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -52,6 +54,8 @@ en:
           alpha_vantage: Alpha Vantage
           mfapi: MFAPI.in
           binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
@@ -90,6 +94,28 @@ en:
         title: Brand Fetch Settings
         high_res_label: Enable high-resolution logos
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
+      llm_provider_selector:
+        title: AI Provider
+        description: Choose which LLM powers AI chat. Batch operations (transaction categorization, merchant detection, and PDF processing) currently always use OpenAI.
+        env_configured_message: Successfully configured through the LLM_PROVIDER environment variable.
+        provider_label: Active LLM provider
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Switching providers takes effect on the next chat. Configure the active provider's credentials below.
+        not_configured_hint: "Add a %{provider} API key below to activate it."
+        data_retention_heading: Data handling
+        data_retention: API inputs are not used to train models by default; the providers' hosted APIs retain data for ~30 days for trust & safety. Custom or self-hosted endpoints follow your own policy.
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Enter your Anthropic API key. Optionally point Base URL at AWS Bedrock or GCP Vertex.
+        env_configured_message: Successfully configured through environment variables.
+        access_token_label: API Key
+        access_token_placeholder: Enter your Anthropic API key
+        base_url_label: Base URL (Optional)
+        base_url_placeholder: "https://api.anthropic.com (default)"
+        model_label: Default Model (Optional)
+        model_placeholder: "claude-sonnet-4-6 (default)"
+        model_help: Used for chat and PDF processing. Batch operations (categorize, merchant detection) default to Haiku for cost.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -106,7 +132,7 @@ en:
         json_mode_json_object: JSON Object
         json_mode_help: "Strict mode works best with thinking models (qwen-thinking, deepseek-reasoner). None mode works best with standard models (llama, mistral, gpt-oss)."
         budget_heading: Token Budget
-        budget_description: Applies to every LLM call — chat history, auto-categorization, merchant detection, and PDF processing. Defaults are conservative for small-context local models. Raise for cloud models with larger context windows.
+        budget_description: Applies to OpenAI-compatible calls (chat, auto-categorization, merchant detection, and PDF processing). Defaults are conservative for small-context local models. Raise for cloud models with larger context windows.
         context_window_label: Context Window (Optional)
         context_window_help: "Total tokens the model will accept. Default: 2048 — raise to 8192+ for cloud OpenAI or large-context local models."
         max_response_tokens_label: Max Response Tokens (Optional)
@@ -131,6 +157,16 @@ en:
         step_1_html: 'Visit <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> and create a free account.'
         step_2_html: 'Go to the <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a> page.'
         step_3: Copy your API token and paste it below.
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Enter a read-only T-Invest API token. Used to fetch brand logos for securities (incl. funds and bonds, even when MOEX prices them) and, when enabled above, prices for Russian instruments.
+        env_configured_message: Successfully configured through the TINKOFF_INVEST_API_KEY environment variable.
+        label: API Token
+        placeholder: Enter your T-Invest API token here
+        show_details: "(show details)"
+        step_1: Open T-Bank investments, then Settings, then API tokens (requires an open T-Bank brokerage account).
+        step_2: Create a token with read-only access.
+        step_3: Copy the token and paste it below.
       eodhd_settings:
         title: EODHD
         description: Enter the API token provided by EODHD. Supports EU ETFs on LSE, XETRA, and other international exchanges.
@@ -175,12 +211,16 @@ en:
         invalid_onboarding_state: Invalid onboarding state
         invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
+        invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
+        anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:
         external_assistant_disconnected: External assistant disconnected
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
       not_authorized: You are not authorized to perform this action
+      ensure_admin:
+        not_authorized: You are not authorized to perform this action
       ensure_super_admin_for_onboarding:
         not_authorized: You are not authorized to perform this action
       sync_auto_sync_scheduler!:

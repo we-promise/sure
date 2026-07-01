@@ -3,9 +3,11 @@ import 'package:flutter/foundation.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
 import '../services/chat_service.dart';
+import '../services/log_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatService _chatService = ChatService();
+  final LogService _log = LogService.instance;
 
   List<Chat> _chats = [];
   Chat? _currentChat;
@@ -60,7 +62,7 @@ class ChatProvider with ChangeNotifier {
         _errorMessage = result['error'] ?? 'Failed to fetch chats';
       }
     } catch (e) {
-      debugPrint('fetchChats error: $e');
+      _log.warning('ChatProvider', 'fetchChats failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
@@ -94,7 +96,7 @@ class ChatProvider with ChangeNotifier {
         _errorMessage = result['error'] ?? 'Failed to fetch chat';
       }
     } catch (e) {
-      debugPrint('fetchChat error: $e');
+      _log.warning('ChatProvider', 'fetchChat failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
@@ -153,7 +155,7 @@ class ChatProvider with ChangeNotifier {
         return null;
       }
     } catch (e) {
-      debugPrint('createChat error: $e');
+      _log.warning('ChatProvider', 'createChat failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
       _isLoading = false;
       notifyListeners();
@@ -164,9 +166,8 @@ class ChatProvider with ChangeNotifier {
   void _rollbackOptimisticMessage(String optimisticId, String chatId) {
     if (_currentChat != null && _currentChat!.id == chatId) {
       _currentChat = _currentChat!.copyWith(
-        messages: _currentChat!.messages
-            .where((m) => m.id != optimisticId)
-            .toList(),
+        messages:
+            _currentChat!.messages.where((m) => m.id != optimisticId).toList(),
       );
     }
     _isWaitingForResponse = false;
@@ -236,7 +237,7 @@ class ChatProvider with ChangeNotifier {
     } catch (e) {
       // Roll back the optimistic message on error.
       _rollbackOptimisticMessage(optimisticId, chatId);
-      debugPrint('sendMessage error: $e');
+      _log.warning('ChatProvider', 'sendMessage failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
       return false;
     } finally {
@@ -282,7 +283,7 @@ class ChatProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('updateChatTitle error: $e');
+      _log.warning('ChatProvider', 'updateChatTitle failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
       notifyListeners();
     }
@@ -314,7 +315,7 @@ class ChatProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      debugPrint('deleteChat error: $e');
+      _log.warning('ChatProvider', 'deleteChat failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -334,7 +335,8 @@ class ChatProvider with ChangeNotifier {
 
       final deletedCount = (result['deletedCount'] as int?) ?? 0;
       if (result['success'] == true || deletedCount > 0) {
-        final failedIds = ((result['failedIds'] as List?) ?? []).cast<String>().toSet();
+        final failedIds =
+            ((result['failedIds'] as List?) ?? []).cast<String>().toSet();
         final deleted = chatIds.toSet().difference(failedIds);
         _chats.removeWhere((c) => deleted.contains(c.id));
 
@@ -350,7 +352,10 @@ class ChatProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
-      debugPrint('deleteMultipleChats error: $e');
+      _log.warning(
+        'ChatProvider',
+        'deleteMultipleChats failed: ${e.runtimeType}',
+      );
       _errorMessage = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -477,14 +482,15 @@ class ChatProvider with ChangeNotifier {
     } catch (e) {
       // Network error — allow polling to continue; timeout check below will
       // stop it if the deadline has passed.
-      debugPrint('Polling error: ${e.toString()}');
+      _log.warning('ChatProvider', 'Polling failed: ${e.runtimeType}');
     }
 
     // Evaluate timeout only after the attempt, and only when no progress was made.
     if (_pollingStartTime != null &&
         DateTime.now().difference(_pollingStartTime!) >= _pollingTimeout) {
       _stopPolling();
-      _errorMessage = 'The assistant took too long to respond. Please try again.';
+      _errorMessage =
+          'The assistant took too long to respond. Please try again.';
       notifyListeners();
     }
   }

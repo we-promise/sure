@@ -6,7 +6,7 @@
         name comes from `aria-label`, and the tooltip text is exposed
         via `aria-describedby`. %>
     <button type="button"
-            class="inline-flex items-center cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 theme-dark:focus-visible:ring-alpha-white-300 rounded"
+            class="inline-flex items-center cursor-default focus-ring rounded"
             aria-describedby="<%= tooltip_id %>"
             aria-label="<%= t("ds.tooltip.trigger_label", default: "More info") %>">
       <%= helpers.icon icon_name, size: size, color: color %>

@@ -57,6 +57,26 @@ void main() {
       expect(restored.syncStatus, SyncStatus.synced);
     });
 
+    test('pending offline replay keeps the stored local id', () {
+      final pendingTransaction = OfflineTransaction(
+        localId: 'local_123',
+        accountId: 'acct_1',
+        name: 'Coffee',
+        date: '2026-06-01',
+        amount: r'$4.50',
+        currency: 'USD',
+        nature: 'expense',
+        syncStatus: SyncStatus.pending,
+      );
+
+      final restored = OfflineTransaction.fromDatabaseMap(
+        pendingTransaction.toDatabaseMap(),
+      );
+
+      expect(restored.localId, 'local_123');
+      expect(restored.syncStatus, SyncStatus.pending);
+    });
+
     test('preserves omitted tag state for stored rows without tag columns', () {
       final restored = OfflineTransaction.fromDatabaseMap({
         'server_id': 'tx_1',

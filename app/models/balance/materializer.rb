@@ -80,10 +80,10 @@ class Balance::Materializer
         # In incremental forward-sync, even when no balances were calculated for the window
         # (e.g. window_start_date is beyond the last entry), purge stale tail records that
         # now fall beyond the prior-balance boundary so orphaned future rows are cleaned up.
-        if strategy == :forward && calculator.incremental? && account.opening_anchor_date <= @window_start_date - 1
+        if strategy == :forward && calculator.incremental? && calculator.calculation_start_date <= @window_start_date - 1
           deleted_count = account.balances.delete_by(
             "date < ? OR date > ?",
-            account.opening_anchor_date,
+            calculator.calculation_start_date,
             @window_start_date - 1
           )
           Rails.logger.info("Purged #{deleted_count} stale balances") if deleted_count > 0
@@ -95,11 +95,13 @@ class Balance::Materializer
 
       # In incremental forward-sync mode the calculator only recalculates from
       # window_start_date onward, so balances before that date are still valid.
-      # Use opening_anchor_date as the lower purge bound to preserve them.
+      # Use calculation_start_date as the lower purge bound to preserve them —
+      # this is the same lower bound the calculator uses, so pre-anchor balances
+      # (from entries dated before the opening anchor) are not deleted.
       # We ask the calculator whether it actually ran incrementally — it may have
       # fallen back to a full recalculation, in which case we use the normal bound.
       oldest_valid_date = if strategy == :forward && calculator.incremental?
-        account.opening_anchor_date
+        calculator.calculation_start_date
       else
         sorted_balances.first.date
       end

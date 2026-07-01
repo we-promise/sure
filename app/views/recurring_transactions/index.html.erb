@@ -58,20 +58,21 @@
 
     <div class="bg-container rounded-xl shadow-border-xs p-4">
       <% if @recurring_transactions.empty? %>
-        <div class="text-center py-12">
-          <div class="flex justify-center text-secondary mb-4">
-            <%= icon "repeat", size: "xl" %>
-          </div>
-          <p class="text-primary font-medium mb-2"><%= t("recurring_transactions.empty.title") %></p>
-          <p class="text-secondary text-sm mb-4"><%= t("recurring_transactions.empty.description") %></p>
-          <%= render DS::Link.new(
-            text: t("recurring_transactions.identify_patterns"),
-            icon: "search",
-            variant: "primary",
-            href: identify_recurring_transactions_path,
-            method: :post
-          ) %>
-        </div>
+        <%= render DS::EmptyState.new(
+          icon: "repeat",
+          title: t("recurring_transactions.empty.title"),
+          description: t("recurring_transactions.empty.description")
+        ) do |empty| %>
+          <% empty.with_action do %>
+            <%= render DS::Link.new(
+              text: t("recurring_transactions.identify_patterns"),
+              icon: "search",
+              variant: "primary",
+              href: identify_recurring_transactions_path,
+              method: :post
+            ) %>
+          <% end %>
+        <% end %>
       <% else %>
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
         <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
@@ -155,7 +156,7 @@
                 </td>
                 <td class="py-3 px-2 text-sm">
                   <% if recurring_transaction.active? %>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-success">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-success theme-dark:bg-green-tint-10">
                       <%= t("recurring_transactions.status.active") %>
                     </span>
                   <% else %>

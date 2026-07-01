@@ -1,5 +1,19 @@
 <%= content_for :page_title, t(".page_title") %>
 
+<% if @encryption_unconfigured %>
+  <div class="mb-4">
+    <%= render DS::Alert.new(variant: :warning, title: t(".encryption_warning.title")) do %>
+      <p><%= t(".encryption_warning.intro") %></p>
+      <ul class="list-disc pl-5">
+        <% t(".encryption_warning.keys").each do |key| %>
+          <li><%= key %></li>
+        <% end %>
+      </ul>
+      <p><%= t(".encryption_warning.generate") %></p>
+    <% end %>
+  </div>
+<% end %>
+
 <%= settings_section title: t(".mfa_title"), subtitle: t(".mfa_description") do %>
   <div class="space-y-4">
     <div class="p-3 shadow-border-xs bg-container rounded-lg md:flex md:justify-between md:items-center">
@@ -160,11 +174,8 @@
         <% end %>
       </div>
       <% if @oidc_identities.count == 1 && Current.user.password_digest.blank? %>
-        <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <div class="flex items-start gap-2">
-            <%= icon "alert-triangle", class: "w-5 h-5 text-amber-600 shrink-0 mt-0.5" %>
-            <p class="text-sm text-amber-800"><%= t(".sso_warning_message") %></p>
-          </div>
+        <div class="mt-4">
+          <%= render DS::Alert.new(message: t(".sso_warning_message"), variant: :warning) %>
         </div>
       <% end %>
     <% else %>

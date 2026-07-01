@@ -6,7 +6,12 @@ import '../models/account.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/accounts_provider.dart';
 import '../providers/auth_provider.dart';
+import '../theme/sure_tokens.dart';
+import '../providers/privacy_provider.dart';
 import '../utils/amount_parser.dart';
+import '../utils/money_masker.dart';
+import '../widgets/money_text.dart';
+import '../l10n/app_localizations.dart';
 
 class RecentTransactionsScreen extends StatefulWidget {
   const RecentTransactionsScreen({super.key});
@@ -83,8 +88,10 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final transactionsProvider = context.watch<TransactionsProvider>();
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
 
     final recentTransactions = _getSortedTransactions(
       transactionsProvider.transactions,
@@ -92,12 +99,12 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Recent Transactions'),
+        title: Text(l.recentTransactionsTitle),
         actions: [
           PopupMenuButton<int>(
             initialValue: _transactionLimit,
             icon: const Icon(Icons.filter_list),
-            tooltip: 'Display Limit',
+            tooltip: l.recentTransactionsDisplayLimit,
             onSelected: (int value) {
               setState(() {
                 _transactionLimit = value;
@@ -113,7 +120,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
                     else
                       const SizedBox(width: 20),
                     const SizedBox(width: 8),
-                    Text('Show $limit'),
+                    Text(l.recentTransactionsShowN(limit)),
                   ],
                 ),
               );
@@ -136,8 +143,10 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
                     itemBuilder: (context, index) {
                       final transaction = recentTransactions[index];
                       return _buildTransactionItem(
+                        context,
                         transaction,
                         colorScheme,
+                        hideAmounts,
                       );
                     },
                   ),
@@ -146,6 +155,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
   }
 
   Widget _buildEmptyState(ColorScheme colorScheme) {
+    final l = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -159,12 +169,12 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No Transactions',
+              l.recentTransactionsEmpty,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              'Pull to refresh',
+              l.recentTransactionsPullToRefresh,
               style: TextStyle(color: colorScheme.onSurfaceVariant),
             ),
           ],
@@ -173,9 +183,11 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
     );
   }
 
-  Widget _buildTransactionItem(Transaction transaction, ColorScheme colorScheme) {
+  Widget _buildTransactionItem(BuildContext context, Transaction transaction,
+      ColorScheme colorScheme, bool hideAmounts) {
     final account = _getAccount(transaction.accountId);
-    final accountName = account?.name ?? 'Unknown Account';
+    final accountName = account?.name ??
+        AppLocalizations.of(context).recentTransactionsUnknownAccount;
 
     double? amount;
     try {
@@ -190,26 +202,24 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
       amount = -amount;
     }
 
-    // Determine display properties based on final amount
+    // Determine display properties based on final amount. The semantic color
+    // comes from the Sure design-system tokens (success/destructive/subdued)
+    // via MoneyTrend, instead of raw Colors.green/red.
     final isPositive = amount == null || amount >= 0;
-    Color amountColor;
-    String sign;
-
-    if (amount == null) {
-      amountColor = Colors.grey;
-      sign = '';
-    } else if (isPositive) {
-      amountColor = Colors.green.shade700;
-      sign = '+';
-    } else {
-      amountColor = Colors.red.shade700;
-      sign = '-';
-    }
+    final moneyTrend = SureMoney.trendForAmount(amount);
+    final amountColor = SureMoney.color(context, moneyTrend);
+    final sign = amount == null
+        ? ''
+        : isPositive
+            ? '+'
+            : '-';
 
     String formattedDate;
     try {
       final date = DateTime.parse(transaction.date);
-      formattedDate = DateFormat('yyyy-MM-dd HH:mm').format(date);
+      formattedDate = DateFormat('yyyy-MM-dd HH:mm',
+              Localizations.localeOf(context).toString())
+          .format(date);
     } catch (e) {
       formattedDate = transaction.date;
     }
@@ -219,11 +229,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: amount == null
-              ? Colors.grey.withValues(alpha: 0.1)
-              : isPositive
-                  ? Colors.green.withValues(alpha: 0.1)
-                  : Colors.red.withValues(alpha: 0.1),
+          color: amountColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -237,7 +243,7 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
       ),
       title: Text(
         transaction.name,
-        style: const TextStyle(fontWeight: FontWeight.w500),
+        style: const TextStyle(fontWeight: SureTokens.weightMedium),
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,14 +279,17 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
           ],
         ],
       ),
-      trailing: Text(
-        amount == null
-            ? transaction.amount
-            : '$sign${transaction.currency} ${_formatAmount(amount.abs())}',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
+      trailing: MoneyText(
+        MoneyMasker.mask(
+          amount == null
+              ? transaction.amount
+              : '$sign${transaction.currency} ${_formatAmount(amount.abs())}',
+          hidden: hideAmounts,
+        ),
+        trend: moneyTrend,
+        style: const TextStyle(
+          fontWeight: SureTokens.weightMedium,
           fontSize: 16,
-          color: amountColor,
         ),
       ),
     );

@@ -1,0 +1,85 @@
+---
+nl:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: Koppelen aan een Kraken-beursaccount
+      name: "Kraken - %{name}"
+      description: "Koppelen aan %{name}"
+    create:
+      default_name: Kraken
+      success: Succesvol verbonden met Kraken. Uw beursaccount wordt gesynchroniseerd.
+    update:
+      success: Kraken-verbinding succesvol bijgewerkt.
+    destroy:
+      success: Kraken-verbinding is in de wachtrij voor verwijdering geplaatst.
+    select_accounts:
+      select_connection: Kies een Kraken-verbinding in de Provider-instellingen.
+      no_credentials_configured: Voeg Kraken-API-inloggegevens toe voordat u accounts instelt.
+    link_accounts:
+      select_connection: Kies een Kraken-verbinding voordat u accounts koppelt.
+    select_existing_account:
+      title: Kraken-account koppelen
+      no_accounts_found: Geen Kraken-accounts gevonden.
+      wait_for_sync: Wacht tot Kraken klaar is met synchroniseren.
+      check_provider_health: Controleer of uw Kraken-API-inloggegevens geldig zijn.
+      link: Koppelen
+      cancel: Annuleren
+    link_existing_account:
+      success: Succesvol gekoppeld aan Kraken-account
+      select_connection: Kies een Kraken-verbinding voordat u accounts koppelt.
+      errors:
+        only_manual: Alleen handmatige crypto-beursaccounts zonder bestaande providerkoppeling kunnen aan Kraken worden gekoppeld
+        invalid_kraken_account: Ongeldig Kraken-account
+        kraken_account_already_linked: Dit Kraken-account is al gekoppeld
+    setup_accounts:
+      title: Kraken-account importeren
+      subtitle: Selecteer het beursaccount dat u wilt volgen
+      instructions: Kraken importeert voor deze verbinding één gecombineerd crypto-beursaccount, met alleen posities en spot-transactie-uitvoeringen.
+      no_accounts: Alle Kraken-accounts zijn geïmporteerd.
+      accounts_count:
+        one: "%{count} account beschikbaar"
+        other: "%{count} accounts beschikbaar"
+      select_all: Alles selecteren
+      import_selected: Geselecteerde importeren
+      cancel: Annuleren
+      creating: Importeren...
+    complete_account_setup:
+      success:
+        one: "%{count} account geïmporteerd"
+        other: "%{count} accounts geïmporteerd"
+      none_selected: Geen accounts geselecteerd
+      no_accounts: Geen accounts om te importeren
+    kraken_item:
+      provider_name: Kraken
+      syncing: Synchroniseren...
+      reconnect: Inloggegevens moeten worden bijgewerkt
+      deletion_in_progress: Verwijderen...
+      sync_status:
+        no_accounts: Geen accounts gevonden
+        all_synced:
+          one: "%{count} account gesynchroniseerd"
+          other: "%{count} accounts gesynchroniseerd"
+        partial_sync: "%{linked_count} gesynchroniseerd, %{unlinked_count} moeten worden ingesteld"
+      status: "Laatst gesynchroniseerd %{timestamp} geleden"
+      status_with_summary: "Laatst gesynchroniseerd %{timestamp} geleden - %{summary}"
+      status_never: Nooit gesynchroniseerd
+      delete: Verwijderen
+      no_accounts_title: Geen accounts gevonden
+      no_accounts_message: Uw Kraken-beursaccount verschijnt hier na de synchronisatie.
+      setup_needed: Account klaar om te importeren
+      setup_description: Importeer deze Kraken-verbinding als een crypto-beursaccount.
+      setup_action: Account importeren
+      import_accounts_menu: Account importeren
+      stale_rate_warning: "Het saldo is bij benadering omdat de exacte wisselkoers voor %{date} niet beschikbaar was. Wordt bijgewerkt bij de volgende synchronisatie."
+  kraken_item:
+    syncer:
+      checking_credentials: Inloggegevens controleren...
+      credentials_invalid: Ongeldige Kraken-API-inloggegevens. Controleer uw API-sleutel en secret.
+      importing_accounts: Accounts importeren vanuit Kraken...
+      checking_configuration: Accountconfiguratie controleren...
+      accounts_need_setup:
+        one: "%{count} account moet worden ingesteld"
+        other: "%{count} accounts moeten worden ingesteld"
+      processing_accounts: Accountgegevens verwerken...
+      calculating_balances: Saldi berekenen...

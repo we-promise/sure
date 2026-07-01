@@ -1,0 +1,116 @@
+---
+nl:
+  account_statements:
+    account_tab:
+      coverage_title: Dekking van afschriften
+      coverage_description: Historische maanden onderbouwd door geüploade afschriften en saldocontroles.
+      coverage_range: "%{start} - %{end}"
+      empty: Nog geen afschriften gekoppeld aan dit account.
+      open_inbox: Inbox
+      statements_title: Afschriften
+      year_label: Dekkingsjaar
+    balance:
+      unknown: Onbekend
+    coverage:
+      status:
+        ambiguous: Dubbelzinnig
+        covered: Gedekt
+        duplicate: Duplicaat
+        mismatched: Komt niet overeen
+        missing: Ontbreekt
+        not_expected: Niet verwacht
+    create:
+      duplicates:
+        one: 1 dubbel afschrift is overgeslagen.
+        other: "%{count} dubbele afschriften zijn overgeslagen."
+      invalid_file_type: Upload een afschrift als PDF, CSV of XLSX binnen de groottelimiet.
+      no_files: Selecteer ten minste één afschriftbestand.
+      success:
+        one: 1 afschrift geüpload.
+        other: "%{count} afschriften geüpload."
+    destroy:
+      failure: Afschrift kon niet worden verwijderd.
+      success: Afschrift verwijderd.
+    form:
+      account_upload: Afschrift uploaden
+      files_hint: PDF, CSV of XLSX. Max. %{max_size} MB per bestand.
+      files_label: Afschriftbestanden
+      inbox_upload: Uploaden
+    index:
+      account_label: Account
+      confidence: "%{confidence} overeenkomst"
+      empty_linked: Nog geen gekoppelde afschriften.
+      empty_unmatched: De afschriften-inbox is leeg.
+      leave_unmatched: Niet-toegewezen laten
+      linked_title: Gekoppelde afschriften
+      no_suggestion: Geen suggestie
+      storage_used: Gebruikte opslag
+      title: Afschriftenkluis
+      unmatched_title: Niet-toegewezen inbox
+      upload_description: Upload afschriften naar de inbox of kies een account om ze meteen te koppelen.
+      upload_title: Afschriften uploaden
+    link:
+      no_account: Kies een account voordat u dit afschrift koppelt.
+      success: Afschrift gekoppeld aan %{account}.
+    period:
+      unknown: Periode onbekend
+    reconciliation:
+      checks:
+        closing_balance: Eindsaldo
+        opening_balance: Beginsaldo
+        period_movement: Mutatie in periode
+        unknown_check: Onbekende controle
+      matched: Komt overeen
+      mismatched: Komt niet overeen
+      unavailable: Niet gecontroleerd
+    reject:
+      success: Afschriftkoppeling afgewezen.
+    show:
+      account_label: Account
+      account_last4_hint: Laatste vier cijfers van het account
+      account_name_hint: Hint voor accountnaam
+      closing_balance: Eindsaldo
+      currency: Valuta
+      delete: Verwijderen
+      difference: Verschil
+      download: Downloaden
+      institution_name_hint: Hint voor instelling
+      ledger_amount: Sure-grootboek
+      linked_to: Gekoppeld aan %{account}.
+      linking_title: Accountkoppeling
+      link_suggestion: Koppelsuggestie
+      metadata_title: Afschriftmetagegevens
+      no_suggestion: Nog geen accountsuggestie.
+      opening_balance: Beginsaldo
+      period_end_on: Einde periode
+      period_start_on: Begin periode
+      reconciliation_title: Afstemming
+      reconciliation_unavailable: Voeg een afschriftperiode en een begin- of eindsaldo toe en zorg ervoor dat Sure een saldogeschiedenis heeft voor die datums.
+      reject: Afwijzen
+      save: Afschrift opslaan
+      statement_amount: Afschrift
+      suggested_account: Voorgesteld account is %{account} (%{confidence} betrouwbaarheid).
+      title: Afschrift
+      unlink: Ontkoppelen
+      unmatched_account: Niet-toegewezen inbox
+      unknown_value: Onbekend
+    status:
+      linked: Gekoppeld
+      rejected: Afgewezen
+      unmatched: Niet-toegewezen
+    table:
+      account: Account
+      actions: Acties
+      download: Downloaden
+      file: Bestand
+      link_suggestion: Koppelsuggestie
+      period: Periode
+      reconciliation: Afstemming
+      reject: Suggestie afwijzen
+      suggestion: Suggestie
+      unlink: Ontkoppelen
+      view: Bekijken
+    unlink:
+      success: Afschrift teruggezet naar de niet-toegewezen inbox.
+    update:
+      success: Afschrift bijgewerkt.

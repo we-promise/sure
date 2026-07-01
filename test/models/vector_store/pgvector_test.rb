@@ -3,6 +3,9 @@ require "test_helper"
 class VectorStore::PgvectorTest < ActiveSupport::TestCase
   setup do
     @adapter = VectorStore::Pgvector.new
+    # Schema provisioning is exercised by its own tests below; the operation
+    # tests stub it out so their mock connections only see the op's SQL.
+    @adapter.stubs(:ensure_schema!)
   end
 
   test "create_store returns a UUID" do
@@ -137,5 +140,70 @@ class VectorStore::PgvectorTest < ActiveSupport::TestCase
     assert_not_includes @adapter.supported_extensions, ".png"
     assert_not_includes @adapter.supported_extensions, ".zip"
     assert_not_includes @adapter.supported_extensions, ".docx"
+  end
+
+  test "ensure_schema! is a no-op when the table already exists" do
+    adapter = VectorStore::Pgvector.new
+
+    mock_conn = mock("connection")
+    mock_conn.expects(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(true)
+    mock_conn.expects(:create_table).never
+    adapter.stubs(:connection).returns(mock_conn)
+
+    adapter.send(:ensure_schema!)
+    # Memoized: a second call must not hit the connection again.
+    adapter.send(:ensure_schema!)
+  end
+
+  test "ensure_schema! provisions extension, table, and indexes when missing" do
+    adapter = VectorStore::Pgvector.new
+
+    mock_conn = mock("connection")
+    mock_conn.expects(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(false)
+    mock_conn.expects(:extension_enabled?).with("vector").returns(false)
+    mock_conn.expects(:enable_extension).with("vector")
+    mock_conn.expects(:create_table).with(VectorStore::Pgvector::TABLE_NAME, id: :uuid, if_not_exists: true)
+    mock_conn.expects(:add_index).times(3)
+    adapter.stubs(:connection).returns(mock_conn)
+
+    adapter.send(:ensure_schema!)
+  end
+
+  test "ensure_schema! wraps provisioning failures in VectorStore::Error" do
+    adapter = VectorStore::Pgvector.new
+
+    mock_conn = mock("connection")
+    mock_conn.expects(:table_exists?).returns(false)
+    mock_conn.expects(:extension_enabled?).raises(ActiveRecord::StatementInvalid.new("permission denied"))
+    adapter.stubs(:connection).returns(mock_conn)
+
+    error = assert_raises(VectorStore::Error) { adapter.send(:ensure_schema!) }
+    assert_match(/pgvector store unavailable/, error.message)
+  end
+
+  test "available? is true when the chunks table exists" do
+    conn = mock("connection")
+    conn.expects(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(true)
+    ActiveRecord::Base.stubs(:connection).returns(conn)
+
+    assert VectorStore::Pgvector.available?
+  end
+
+  test "available? is true when the extension is available but the table is missing" do
+    conn = mock("connection")
+    conn.expects(:table_exists?).returns(false)
+    conn.expects(:select_value).returns(1)
+    ActiveRecord::Base.stubs(:connection).returns(conn)
+
+    assert VectorStore::Pgvector.available?
+  end
+
+  test "available? is false when neither table nor extension is available" do
+    conn = mock("connection")
+    conn.expects(:table_exists?).returns(false)
+    conn.expects(:select_value).returns(nil)
+    ActiveRecord::Base.stubs(:connection).returns(conn)
+
+    assert_not VectorStore::Pgvector.available?
   end
 end

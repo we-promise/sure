@@ -98,6 +98,44 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_no_difference -> { Transfer.count } do
       @family.auto_match_transfers!
     end
+
+    create_transaction(date: Date.current, account: @depository, amount: 700)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, excluded: true)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not consider excluded entries when matching transfers" do
+    create_transaction(date: Date.current, account: @depository, amount: 500, excluded: true)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "account-scoped auto-matching only considers pairs touching that account" do
+    depository_outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+    credit_card_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    connected_outflow = create_transaction(date: Date.current, account: accounts(:connected), amount: 700)
+    loan_inflow = create_transaction(date: Date.current, account: @loan, amount: -700)
+
+    assert_difference -> { Transfer.count }, 1 do
+      @family.auto_match_transfers!(account: @depository)
+    end
+
+    Transfer.find_by!(
+      inflow_transaction_id: credit_card_inflow.entryable_id,
+      outflow_transaction_id: depository_outflow.entryable_id
+    )
+    assert_nil Transfer.find_by(inflow_transaction_id: loan_inflow.entryable_id, outflow_transaction_id: connected_outflow.entryable_id)
+
+    assert_difference -> { Transfer.count }, 1 do
+      @family.auto_match_transfers!(account: accounts(:connected))
+    end
   end
 
   test "does not match transactions outside the 4-day window" do
@@ -202,6 +240,9 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     sql = @family.send(:transfer_match_candidates_sql)
 
     assert_includes sql, "UNION ALL"
+    assert_includes sql, "inflow_candidates.excluded = FALSE"
+    assert_includes sql, "outflow_candidates.excluded = FALSE"
+    assert_includes sql, ":account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id"
     assert_includes sql, "outflow_candidates.amount = -inflow_candidates.amount"
     assert_includes sql, "JOIN exchange_rates"
   end

@@ -571,6 +571,15 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' }
             }
           },
+          MerchantImportResult: {
+            type: :object,
+            required: %w[imported skipped merchants],
+            properties: {
+              imported: { type: :integer, description: 'Number of merchants successfully created' },
+              skipped: { type: :integer, description: 'Number of rows skipped (duplicates or invalid)' },
+              merchants: { type: :array, items: { '$ref' => '#/components/schemas/MerchantDetail' } }
+            }
+          },
           Tag: {
             type: :object,
             required: %w[id name color],
@@ -922,6 +931,27 @@ RSpec.configure do |config|
               message: { type: :string }
             }
           },
+          TransactionResponse: {
+            type: :object,
+            required: %w[id date amount currency name entryable_type account],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              amount: { type: :string },
+              currency: { type: :string },
+              name: { type: :string },
+              entryable_type: { type: :string },
+              account: {
+                type: :object,
+                required: %w[id name account_type],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  name: { type: :string },
+                  account_type: { type: :string, nullable: true }
+                }
+              }
+            }
+          },
           ImportConfiguration: {
             type: :object,
             properties: {
@@ -1052,7 +1082,7 @@ RSpec.configure do |config|
             type: :object,
             required: %w[type valid content stats errors warnings],
             properties: {
-              type: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport] },
+              type: { type: :string, enum: Import::TYPES },
               valid: { type: :boolean },
               content: { '$ref' => '#/components/schemas/ImportPreflightContent' },
               stats: { '$ref' => '#/components/schemas/ImportPreflightStats' },
@@ -1116,7 +1146,7 @@ RSpec.configure do |config|
             required: %w[id type status created_at updated_at status_detail],
             properties: {
               id: { type: :string, format: :uuid },
-              type: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport] },
+              type: { type: :string, enum: Import::TYPES },
               status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' },
@@ -1131,7 +1161,7 @@ RSpec.configure do |config|
             required: %w[id type status created_at updated_at status_detail configuration stats],
             properties: {
               id: { type: :string, format: :uuid },
-              type: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport] },
+              type: { type: :string, enum: Import::TYPES },
               status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' },

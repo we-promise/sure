@@ -18,7 +18,7 @@ module SettingsHelper
     # Advanced section
     { name: -> { t("settings.settings_nav.ai_prompts_label") }, path: :settings_ai_prompts_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.llm_usage_label") }, path: :settings_llm_usage_path, condition: :admin_user? },
-    { name: -> { t("settings.settings_nav.api_key_label") }, path: :settings_api_key_path, condition: :admin_user? },
+    { name: -> { t("settings.settings_nav.api_key_label") }, path: :settings_api_keys_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.self_hosting_label") }, path: :settings_hosting_path, condition: :self_hosted_and_admin? },
     { name: -> { t("settings.settings_nav.imports_label") }, path: :imports_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.exports_label") }, path: :family_exports_path, condition: :admin_user? },
@@ -45,7 +45,7 @@ module SettingsHelper
     }
   end
 
-  def settings_section(title:, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, status: nil, meta: nil, actions: nil, badge: nil, &block)
+  def settings_section(title: nil, subtitle: nil, collapsible: false, open: true, auto_open_param: nil, status: nil, meta: nil, actions: nil, badge: nil, &block)
     content = capture(&block)
     render partial: "settings/section", locals: { title: title, subtitle: subtitle, content: content, collapsible: collapsible, open: open, auto_open_param: auto_open_param, status: status, meta: meta, actions: actions, badge: badge }
   end
@@ -59,6 +59,9 @@ module SettingsHelper
       configured ? { status: :ok } : { status: :off }
     when "akahu"
       return { status: :off } unless @akahu_items&.any?
+      sync_based_summary(key)
+    when "up"
+      return { status: :off } unless @up_items&.any?
       sync_based_summary(key)
     when "simplefin"
       return { status: :off } unless @simplefin_items&.any?
@@ -88,8 +91,9 @@ module SettingsHelper
       return { status: :off } unless @kraken_items&.any?
       sync_based_summary(key)
     when "snaptrade"
-      configured_item = @snaptrade_items&.find(&:credentials_configured?)
+      configured_item = @snaptrade_items&.find { |item| item.credentials_configured? || item.oauth_configured? }
       return { status: :off } unless configured_item
+
       unless configured_item.user_registered?
         return { status: :warn, meta: t("settings.providers.meta.registration_needed") }
       end

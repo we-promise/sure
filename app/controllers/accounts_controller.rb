@@ -2,7 +2,7 @@ class AccountsController < ApplicationController
   include StreamExtensions
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
-  before_action :set_manageable_account, only: %i[toggle_active destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   include Periodable
 
   def index
@@ -16,6 +16,7 @@ class AccountsController < ApplicationController
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.includes(:syncs))
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts))
     @akahu_items = visible_provider_items(family.akahu_items.ordered.includes(:syncs, :akahu_accounts))
+    @up_items = visible_provider_items(family.up_items.ordered.includes(:syncs, :up_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.includes(:syncs))
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.includes(:syncs, :mercury_accounts))
@@ -108,6 +109,14 @@ class AccountsController < ApplicationController
     elsif @account.disabled?
       @account.enable!
     end
+    redirect_to accounts_path
+  end
+
+  # Toggles the exclude_from_reports flag on the account and redirects to the
+  # account list. The flag controls whether the account's data appears in
+  # financial reports, dashboards, and exports.
+  def toggle_exclude_from_reports
+    @account.update!(exclude_from_reports: !@account.exclude_from_reports?)
     redirect_to accounts_path
   end
 
@@ -338,6 +347,13 @@ class AccountsController < ApplicationController
       @akahu_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @akahu_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Up sync stats
+      @up_sync_stats_map = {}
+      @up_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @up_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Enable Banking sync stats

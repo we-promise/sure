@@ -10,11 +10,15 @@
 <% else %>
   <span class="<%= container_classes %>" style="<%= container_styles %>" title="<%= title || label %>">
     <% if icon %>
-      <%= helpers.icon(icon, size: "xs", color: "current") %>
+      <span class="shrink-0"><%= helpers.icon(icon, size: icon_size, color: "current") %></span>
     <% elsif show_dot %>
       <span class="inline-block shrink-0 rounded-full"
             style="width: <%= dot_size_px %>px; height: <%= dot_size_px %>px; background-color: <%= dot_color %>;"></span>
     <% end %>
-    <%= label %>
+    <% if truncate || label_testid %>
+      <%= tag.span label, class: ("min-w-0 truncate" if truncate), data: (label_testid ? { testid: label_testid } : nil) %>
+    <% else %>
+      <%= label %>
+    <% end %>
   </span>
 <% end %>

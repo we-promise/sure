@@ -155,6 +155,23 @@ export class RailsContainer extends Container {
     return history.filter((record) => kept.has(record));
   }
 
+  private isAttemptStart(record: DiagnosticRecord): boolean {
+    return (
+      record.event === "start" ||
+      (record.event === "entrypoint" && typeof record.payload?.stage === "string" && record.payload.stage === "boot")
+    );
+  }
+
+  private diagnosticsForLatestAttempt(allDiagnostics: DiagnosticRecord[]): DiagnosticRecord[] {
+    for (let index = allDiagnostics.length - 1; index >= 0; index -= 1) {
+      if (this.isAttemptStart(allDiagnostics[index])) {
+        return allDiagnostics.slice(index);
+      }
+    }
+
+    return allDiagnostics;
+  }
+
   private async getDiagnostics(): Promise<{
     state: unknown;
     containerRunning: boolean;
@@ -196,11 +213,12 @@ export class RailsContainer extends Container {
     return Math.round(((end - start) / 1000) * 100) / 100;
   }
 
-  private buildPreviewTimings(allDiagnostics: DiagnosticRecord[], previewReady: boolean): PreviewTimings {
-    const entrypointDiagnostics = allDiagnostics.filter(
+  private buildPreviewTimings(attemptDiagnostics: DiagnosticRecord[], previewReady: boolean): PreviewTimings {
+    const entrypointDiagnostics = attemptDiagnostics.filter(
       (item) => item.event === "entrypoint" && typeof item.payload?.stage === "string"
     );
-    const firstEventAt = (event: string) => this.validTimestamp(allDiagnostics.find((item) => item.event === event)?.at);
+    const firstEventAt = (event: string) =>
+      this.validTimestamp(attemptDiagnostics.find((item) => item.event === event)?.at);
     const firstStageAt = (...stages: string[]) =>
       this.validTimestamp(entrypointDiagnostics.find((item) => stages.includes(item.payload?.stage ?? ""))?.at);
 
@@ -240,7 +258,8 @@ export class RailsContainer extends Container {
     diagnosticsHistory: DiagnosticRecord[];
   }, options?: { probe?: boolean }): Promise<PreviewStatusPayload> {
     const allDiagnostics = [...base.diagnosticsHistory, ...(base.diagnostics ? [base.diagnostics] : [])];
-    const entrypointDiagnostics = allDiagnostics.filter(
+    const attemptDiagnostics = this.diagnosticsForLatestAttempt(allDiagnostics);
+    const entrypointDiagnostics = attemptDiagnostics.filter(
       (item) => item.event === "entrypoint" && typeof item.payload?.stage === "string"
     );
     const latestEntrypoint = entrypointDiagnostics.at(-1) ?? null;
@@ -258,7 +277,7 @@ export class RailsContainer extends Container {
     const previewFailed =
       entrypointDiagnostics.some((item) => FAILED_STAGES.has(item.payload?.stage ?? "")) ||
       base.diagnostics?.event === "error";
-    const timings = this.buildPreviewTimings(allDiagnostics, previewReady);
+    const timings = this.buildPreviewTimings(attemptDiagnostics, previewReady);
 
     let phase: PreviewProgress["phase"] = "cold";
     if (previewFailed) {

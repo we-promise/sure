@@ -1676,6 +1676,46 @@ components:
       properties:
         message:
           type: string
+    TransactionResponse:
+      type: object
+      required:
+      - id
+      - date
+      - amount
+      - currency
+      - name
+      - entryable_type
+      - account
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+        currency:
+          type: string
+        name:
+          type: string
+        entryable_type:
+          type: string
+        account:
+          type: object
+          required:
+          - id
+          - name
+          - account_type
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            account_type:
+              type: string
+              nullable: true
     ImportConfiguration:
       type: object
       properties:
@@ -1869,8 +1909,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         valid:
           type: boolean
@@ -1957,8 +2001,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         status:
           type: string
@@ -2010,8 +2058,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         status:
           type: string
@@ -5030,8 +5082,12 @@ paths:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
       responses:
         '200':
@@ -5089,8 +5145,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport)
                 account_id:
@@ -5196,8 +5256,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport)
                 account_id:
@@ -5434,8 +5498,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -5545,8 +5613,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -6864,13 +6936,25 @@ paths:
       parameters: []
       responses:
         '201':
-          description: trade created
+          description: interest created
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Trade"
+                "$ref": "#/components/schemas/TransactionResponse"
+        '403':
+          description: forbidden - api key missing read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized - missing api key
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - missing security identifier
+          description: deposit without amount returns error
           content:
             application/json:
               schema:
@@ -6900,15 +6984,23 @@ paths:
                       description: Trade date (required)
                     qty:
                       type: number
-                      description: Quantity (required)
+                      description: Quantity (required for buy/sell)
                     price:
                       type: number
-                      description: Price (required)
+                      description: Price (required for buy/sell)
+                    amount:
+                      type: number
+                      description: Amount (required for dividend, deposit, withdrawal,
+                        interest)
                     type:
                       type: string
                       enum:
                       - buy
                       - sell
+                      - dividend
+                      - deposit
+                      - withdrawal
+                      - interest
                       description: Trade type (required)
                     security_id:
                       type: string
@@ -6931,11 +7023,13 @@ paths:
                       type: string
                       format: uuid
                       description: Category ID
+                    transfer_account_id:
+                      type: string
+                      format: uuid
+                      description: Destination/source account ID for linked transfers
                   required:
                   - account_id
                   - date
-                  - qty
-                  - price
                   - type
               required:
               - trade
@@ -6987,6 +7081,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Trade"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - api key missing read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: trade not found
           content:
@@ -7014,6 +7120,10 @@ paths:
                       enum:
                       - buy
                       - sell
+                      - dividend
+                      - deposit
+                      - withdrawal
+                      - interest
                     nature:
                       type: string
                       enum:
@@ -7044,6 +7154,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/DeleteResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - api key missing read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: trade not found
           content:
