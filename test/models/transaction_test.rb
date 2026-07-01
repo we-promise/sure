@@ -179,4 +179,89 @@ class TransactionTest < ActiveSupport::TestCase
 
     assert_equal securities(:msft), transaction.activity_security
   end
+
+  test "channel_payment scope returns only persisted channel payment transactions" do
+    channel_payment = create_channel_transaction(extra: { "channel_payment" => true })
+    normal          = create_channel_transaction(extra: {})
+    other           = create_channel_transaction(extra: { "other" => "stuff" })
+
+    results = Transaction.channel_payment
+
+    assert_includes results, channel_payment
+    assert_not_includes results, normal
+    assert_not_includes results, other
+  end
+
+  test "channel_refund scope returns only persisted channel refund transactions" do
+    refund  = create_channel_transaction(extra: { "channel_payment" => true, "channel_kind" => "refund" })
+    payment = create_channel_transaction(extra: { "channel_payment" => true, "channel_kind" => "payment" })
+
+    results = Transaction.channel_refund
+
+    assert_includes results, refund
+    assert_not_includes results, payment
+  end
+
+  test "auto_generated scope returns only transactions with a channel_record_parent_id" do
+    parent      = create_channel_transaction(extra: { "channel_payment" => true })
+    auto_record = create_channel_transaction(
+      account: accounts(:depository),
+      channel_record_parent_id: parent.id,
+      extra: { "channel_auto_record" => true }
+    )
+    manual = create_channel_transaction(account: accounts(:depository))
+
+    results = Transaction.auto_generated
+
+    assert_includes results, auto_record
+    assert_not_includes results, manual
+    assert_not_includes results, parent
+  end
+
+  test "channel_child_records association connects a persisted parent to its auto-generated children" do
+    parent = create_channel_transaction(extra: { "channel_payment" => true })
+    child  = create_channel_transaction(
+      account: accounts(:depository),
+      channel_record_parent_id: parent.id,
+      extra: { "channel_auto_record" => true }
+    )
+
+    assert_includes parent.channel_child_records, child
+    assert_equal parent, child.channel_record_parent
+  end
+
+  test "deleting a channel payment cascades to its auto-generated children" do
+    parent = create_channel_transaction(extra: { "channel_payment" => true })
+    child  = create_channel_transaction(
+      account: accounts(:depository),
+      channel_record_parent_id: parent.id,
+      extra: { "channel_auto_record" => true }
+    )
+
+    assert_difference -> { Transaction.count } => -2 do
+      parent.destroy!
+    end
+
+    assert_not Transaction.exists?(child.id)
+  end
+
+  private
+    # Persists a real Entry + Transaction so the DB-backed channel scopes
+    # (channel_payment / channel_refund / auto_generated) actually run. The
+    # channel attributes live on Transaction (extra jsonb, channel_record_parent_id),
+    # not on Entry, so they can't go through the shared create_transaction helper.
+    def create_channel_transaction(account: accounts(:credit_card), extra: {}, channel_record_parent_id: nil)
+      entry = account.entries.create!(
+        name: "Channel transaction",
+        date: Date.current,
+        amount: 100,
+        currency: "USD",
+        entryable: Transaction.new(
+          extra: extra,
+          channel_record_parent_id: channel_record_parent_id
+        )
+      )
+
+      entry.transaction
+    end
 end

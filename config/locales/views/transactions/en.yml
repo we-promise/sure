@@ -36,6 +36,9 @@ en:
       description: Description
       description_placeholder: Describe transaction
       expense: Expense
+      funding_account_label: Funding source
+      funding_account_help: After you choose a funding account, the system automatically creates a matching transaction in that account, and this channel transaction is excluded from its balance.
+      funding_account_refund_label: Refund destination account
       income: Income
       merchant_label: Merchant
       none: (none)
@@ -48,6 +51,11 @@ en:
       transfer: Transfer
     create:
       created: Transaction created
+      funding_account_not_found: Funding account not found
+      funding_account_same_as_account: Funding account cannot be the same as the transaction account
+      refund_missing_original: A refund must reference the original channel payment
+      refund_original_not_found: Original transaction not found
+      refund_original_not_channel_payment: Original transaction must be a channel payment
     update:
       updated: Transaction updated
     new:
@@ -69,6 +77,11 @@ en:
       delete: Delete
       delete_subtitle: This permanently deletes the transaction, affects your historical
         balances, and cannot be undone.
+      delete_channel_cascade_body:
+        one: This transaction is linked to 1 automatically generated funding record;
+          deleting it will remove that record as well. This is not reversible.
+        other: This transaction is linked to %{count} automatically generated funding
+          records; deleting it will remove them as well. This is not reversible.
       delete_title: Delete transaction
       details: Details
       attachments: Attachments
@@ -97,6 +110,12 @@ en:
       tab_transactions: Transactions
       tab_upcoming: Upcoming
       uncategorized: "(uncategorized)"
+      channel_payment_label: Payment channel record
+      funding_account_text: "Funding source: %{account}"
+      view_auto_generated: View auto-generated funding record
+      auto_generated_label: Auto-generated funding record
+      auto_generated_text: This record was generated automatically from a payment channel transaction.
+      view_channel_record: View original channel record
       additional_details: "Additional details"
       payee: "Payee"
       description: "Description"
@@ -147,6 +166,12 @@ en:
       split: Split
       split_tooltip: This transaction has been split into multiple entries
       split_child_tooltip: Part of a split transaction
+      channel: Channel
+      channel_tooltip: Transaction created in a payment channel and excluded from balance
+      refund: Refund
+      refund_tooltip: Channel refund — excluded from balance, linked to the original payment
+      auto_generated: Auto
+      auto_generated_tooltip: Automatically generated funding-side transaction
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions

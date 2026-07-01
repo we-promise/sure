@@ -100,6 +100,20 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(account)
 
+    if funding_account_id_param.present?
+      if funding_account_id_param == params.dig(:entry, :account_id)
+        flash[:alert] = t(".funding_account_same_as_account")
+        return redirect_back_or_to new_transaction_path
+      end
+
+      if channel_refund_requested? && (refund_error = channel_refund_error)
+        flash[:alert] = refund_error
+        return redirect_back_or_to new_transaction_path
+      end
+
+      return create_channel_payment(account, Current.family)
+    end
+
     @entry = account.entries.new(entry_params)
 
     if @entry.save
@@ -467,6 +481,9 @@ class TransactionsController < ApplicationController
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
 
+      # funding_account_id is a routing param only — strip before mass-assigning to Entry
+      entry_params.delete(:funding_account_id)
+
       nature = entry_params.delete(:nature)
 
       entry_params.delete(:amount) if entry_params[:amount].blank?
@@ -482,6 +499,42 @@ class TransactionsController < ApplicationController
 
     def tag_ids_param
       Array(params[:tag_ids]).reject(&:blank?)
+    end
+
+    def funding_account_id_param
+      params.dig(:entry, :funding_account_id).presence
+    end
+
+    def channel_kind_param
+      params.dig(:entry, :channel_kind).presence || "payment"
+    end
+
+    def refund_of_transaction_id_param
+      params.dig(:entry, :refund_of_transaction_id).presence
+    end
+
+    def channel_refund_requested?
+      channel_kind_param == "refund"
+    end
+
+    # Enforces the refund linkage contract for the HTML path. Returns an i18n'd
+    # error message when invalid, or nil when valid. Mirrors the API contract:
+    #   1. refund must carry refund_of_transaction_id
+    #   2. the referenced transaction must exist within the current family
+    #   3. the referenced transaction must itself be a channel payment (not a refund)
+    def channel_refund_error
+      refund_id = refund_of_transaction_id_param
+      return t(".refund_missing_original") if refund_id.blank?
+
+      original = Current.family.transactions.find_by(id: refund_id)
+      return t(".refund_original_not_found") if original.nil?
+
+      original_extra = original.extra.is_a?(Hash) ? original.extra : {}
+      is_channel_payment = original_extra["channel_payment"].to_s == "true" &&
+                           original_extra["channel_kind"].to_s != "refund"
+      return t(".refund_original_not_channel_payment") unless is_channel_payment
+
+      nil
     end
 
     def set_entry_for_tags
@@ -663,5 +716,79 @@ class TransactionsController < ApplicationController
       end
 
       [ qty, price ]
+    end
+
+    def create_channel_payment(channel_account, family)
+      funding_account = family.accounts.writable_by(Current.user).find(funding_account_id_param)
+
+      amount = entry_params[:amount]
+      date = entry_params[:date] || Date.current
+      currency = entry_params[:currency] || Current.family.currency
+      name = entry_params[:name]
+      notes = entry_params[:notes]
+      ea = entry_params[:entryable_attributes] || {}
+
+      channel_extra = (ea[:extra] || {}).merge(
+        "channel_payment" => true,
+        "funding_account_id" => funding_account.id,
+        "channel_kind" => channel_kind_param
+      )
+      channel_extra["refund_of_transaction_id"] = refund_of_transaction_id_param if channel_refund_requested?
+
+      channel_entry = nil
+      funding_entry = nil
+
+      ActiveRecord::Base.transaction do
+        channel_entry = channel_account.entries.create!(
+          name: name,
+          date: date,
+          amount: amount,
+          currency: currency,
+          notes: notes,
+          excluded: true,
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: ea[:category_id],
+            merchant_id: ea[:merchant_id],
+            tag_ids: ea[:tag_ids] || [],
+            extra: channel_extra
+          }
+        )
+
+        funding_entry = funding_account.entries.create!(
+          name: "#{channel_account.name} - #{name}",
+          date: date,
+          amount: amount,
+          currency: currency,
+          notes: notes,
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: ea[:category_id],
+            merchant_id: ea[:merchant_id],
+            tag_ids: ea[:tag_ids] || [],
+            channel_record_parent_id: channel_entry.transaction.id,
+            extra: (ea[:extra] || {}).merge(
+              "channel_auto_record" => true
+            )
+          }
+        )
+      end
+
+      channel_entry.sync_account_later
+      funding_entry.sync_account_later
+      channel_entry.lock_saved_attributes!
+      channel_entry.mark_user_modified!
+      funding_entry.lock_saved_attributes!
+      funding_entry.mark_user_modified!
+
+      flash[:notice] = t(".created")
+
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(channel_entry.account) }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(channel_entry.account)) }
+      end
+    rescue ActiveRecord::RecordNotFound
+      flash[:alert] = t(".funding_account_not_found")
+      redirect_back_or_to new_transaction_path
     end
 end

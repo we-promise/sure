@@ -722,6 +722,230 @@ end
     assert_nil created_entry.transaction.extra["exchange_rate"]
   end
 
+  test "creates channel payment with funding account" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 2 do
+      post transactions_url, params: {
+        entry: {
+          account_id: channel_account.id,
+          funding_account_id: funding_account.id,
+          name: "Channel payment",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_redirected_to account_url(channel_account)
+    assert_equal "Transaction created", flash[:notice]
+
+    # Channel-side record lives on the transaction account, is excluded from
+    # balances, and carries the channel_payment metadata in extra.
+    channel_tx = channel_account.transactions.order(:created_at).last
+    assert channel_tx.entry.excluded?, "channel-side entry should be excluded"
+    assert_equal "true", channel_tx.extra["channel_payment"].to_s
+    assert_equal funding_account.id, channel_tx.extra["funding_account_id"]
+
+    # Funding-side auto record lives on the funding account, points back at the
+    # channel record via the FK, and is flagged as an auto record.
+    funding_tx = funding_account.transactions.order(:created_at).last
+    assert_equal channel_tx.id, funding_tx.channel_record_parent_id
+    assert_equal "true", funding_tx.extra["channel_auto_record"].to_s
+    assert_not funding_tx.entry.excluded?, "funding-side entry should not be excluded"
+  end
+
+  test "deleting a channel payment cascades to the funding-side auto record" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    post transactions_url, params: {
+      entry: {
+        account_id: channel_account.id,
+        funding_account_id: funding_account.id,
+        name: "Channel payment",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "outflow",
+        entryable_type: "Transaction",
+        entryable_attributes: {}
+      }
+    }
+
+    channel_tx = channel_account.transactions.order(:created_at).last
+    funding_tx = funding_account.transactions.order(:created_at).last
+    assert_equal channel_tx.id, funding_tx.channel_record_parent_id
+
+    # Deleting the channel-side entry cascades to the funding-side auto record
+    # (Transaction has_many :channel_child_records, dependent: :destroy), so both
+    # entries and both transactions disappear.
+    assert_difference [ "Entry.count", "Transaction.count" ], -2 do
+      delete transaction_url(channel_tx.entry)
+    end
+
+    assert_not Transaction.exists?(channel_tx.id)
+    assert_not Transaction.exists?(funding_tx.id)
+  end
+
+  test "rejects channel payment when funding account is the same as the transaction account" do
+    account = accounts(:depository)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: account.id,
+          funding_account_id: account.id,
+          name: "Self funding",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_equal "Funding account cannot be the same as the transaction account", flash[:alert]
+  end
+
+  test "rejects channel payment when funding account is not writable by the user" do
+    sign_in users(:family_member)
+
+    # family_member has full_control on :depository but only read_only on :credit_card
+    channel_account = accounts(:depository)
+    funding_account = accounts(:credit_card)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: channel_account.id,
+          funding_account_id: funding_account.id,
+          name: "Unwritable funding",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_equal "Funding account not found", flash[:alert]
+  end
+
+  test "creates channel refund linked to an original channel payment" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    # Create an original channel payment first
+    post transactions_url, params: {
+      entry: {
+        account_id: channel_account.id,
+        funding_account_id: funding_account.id,
+        name: "Original payment",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "outflow",
+        entryable_type: "Transaction",
+        entryable_attributes: {}
+      }
+    }
+    original = channel_account.transactions.order(:created_at).last
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 2 do
+      post transactions_url, params: {
+        entry: {
+          account_id: channel_account.id,
+          funding_account_id: funding_account.id,
+          name: "Refund",
+          date: Date.current,
+          currency: "USD",
+          amount: 40,
+          nature: "inflow",
+          channel_kind: "refund",
+          refund_of_transaction_id: original.id,
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_redirected_to account_url(channel_account)
+    refund = channel_account.transactions.order(:created_at).last
+
+    # Channel-side: inflow, excluded, refund metadata
+    assert refund.entry.amount.negative?, "refund channel entry should be inflow"
+    assert refund.entry.excluded?, "refund channel entry should be excluded"
+    assert_equal "true", refund.extra["channel_payment"].to_s
+    assert_equal "refund", refund.extra["channel_kind"]
+    assert_equal original.id, refund.extra["refund_of_transaction_id"]
+
+    # Funding-side: matching inflow auto record
+    funding_tx = Transaction.find_by(channel_record_parent_id: refund.id)
+    assert_not_nil funding_tx, "funding-side auto record should exist"
+    assert funding_tx.entry.amount.negative?, "funding entry should be inflow"
+    assert_equal "true", funding_tx.extra["channel_auto_record"].to_s
+  end
+
+  test "rejects channel refund without original transaction id" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: channel_account.id,
+          funding_account_id: funding_account.id,
+          name: "Bad refund",
+          date: Date.current,
+          currency: "USD",
+          amount: 40,
+          nature: "inflow",
+          channel_kind: "refund",
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_equal "A refund must reference the original channel payment", flash[:alert]
+  end
+
+  test "rejects channel refund when original is not a channel payment" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+    plain_transaction = transactions(:one)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: channel_account.id,
+          funding_account_id: funding_account.id,
+          name: "Bad refund",
+          date: Date.current,
+          currency: "USD",
+          amount: 40,
+          nature: "inflow",
+          channel_kind: "refund",
+          refund_of_transaction_id: plain_transaction.id,
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_equal "Original transaction must be a channel payment", flash[:alert]
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }

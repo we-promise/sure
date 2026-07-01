@@ -13,6 +13,10 @@ export default class extends Controller {
     const selectedTab = event.currentTarget;
     this.natureFieldTarget.value = selectedTab.dataset.nature;
 
+    // Broadcast the change so sibling controllers (e.g. transaction-form) can
+    // react — keep the event generic so it stays reusable.
+    this.dispatch("change", { detail: { nature: selectedTab.dataset.nature } });
+
     this.tabTargets.forEach((tab) => {
       const isActive = tab === selectedTab;
       tab.classList.toggle("segmented-control__segment--active", isActive);

@@ -3,6 +3,11 @@ class Transaction < ApplicationRecord
 
   belongs_to :category, optional: true
   belongs_to :merchant, optional: true
+  belongs_to :channel_record_parent, class_name: "Transaction", optional: true
+
+  has_many :channel_child_records, class_name: "Transaction",
+           foreign_key: :channel_record_parent_id,
+           dependent: :destroy
 
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
@@ -114,6 +119,12 @@ class Transaction < ApplicationRecord
     conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true" }
     where(conditions.join(" AND "))
   }
+
+  scope :auto_generated, -> { where.not(channel_record_parent_id: nil) }
+
+  scope :channel_payment, -> { where("transactions.extra ->> 'channel_payment' = 'true'") }
+
+  scope :channel_refund, -> { where("transactions.extra ->> 'channel_kind' = 'refund'") }
 
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.

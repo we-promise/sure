@@ -544,6 +544,191 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "should create channel payment with funding_account_id" do
+    channel_account = accounts(:credit_card) # payment channel account
+    funding_account = accounts(:depository)  # bank card / source
+
+    transaction_params = {
+      transaction: {
+        account_id: channel_account.id,
+        funding_account_id: funding_account.id,
+        name: "Starbucks Latte",
+        amount: 98.97,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    assert_difference("Entry.count", 2) do
+      post api_v1_transactions_url,
+           params: transaction_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal "Starbucks Latte", response_data["name"]
+
+    # Channel-side record (Record A): lives on the channel account, is excluded
+    # from balances, and carries the channel_payment metadata in extra.
+    channel_tx = Transaction.find(response_data["id"])
+    assert_equal channel_account.id, channel_tx.entry.account_id
+    assert channel_tx.entry.excluded?, "channel-side entry should be excluded"
+    assert_equal "true", channel_tx.extra["channel_payment"].to_s
+    assert_equal funding_account.id, channel_tx.extra["funding_account_id"]
+    assert_equal "payment", channel_tx.extra["channel_kind"]
+
+    # Funding-side auto record (Record B): lives on the funding account, points
+    # back at the channel record via the FK, is flagged as an auto record, and is
+    # not excluded from balances.
+    funding_tx = funding_account.transactions.order(:created_at).last
+    assert_equal channel_tx.id, funding_tx.channel_record_parent_id
+    assert_equal "true", funding_tx.extra["channel_auto_record"].to_s
+    assert_not funding_tx.entry.excluded?, "funding-side entry should not be excluded"
+  end
+
+  test "should create channel refund with valid original channel payment" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    # First create an original channel payment (outflow)
+    post api_v1_transactions_url,
+         params: {
+           transaction: {
+             account_id: channel_account.id,
+             funding_account_id: funding_account.id,
+             name: "Original payment",
+             amount: 100.00,
+             date: Date.current,
+             currency: "USD",
+             nature: "outflow"
+           }
+         },
+         headers: api_headers(@api_key)
+    assert_response :created
+    original_id = JSON.parse(response.body)["id"]
+
+    # Now create a refund (inflow) referencing the original
+    assert_difference("Entry.count", 2) do
+      post api_v1_transactions_url,
+           params: {
+             transaction: {
+               account_id: channel_account.id,
+               funding_account_id: funding_account.id,
+               name: "Refund",
+               amount: 40.00,
+               date: Date.current,
+               currency: "USD",
+               nature: "inflow",
+               extra: {
+                 channel_kind: "refund",
+                 refund_of_transaction_id: original_id
+               }
+             }
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+    refund = Transaction.find(JSON.parse(response.body)["id"])
+    refund_entry = refund.entry
+
+    # Channel-side (Record A): inflow, excluded, refund metadata written
+    assert refund_entry.amount.negative?, "refund channel entry should be inflow (negative amount)"
+    assert refund_entry.excluded?, "refund channel entry should be excluded from balance"
+    assert_equal "true", refund.extra["channel_payment"].to_s
+    assert_equal "refund", refund.extra["channel_kind"]
+    assert_equal original_id, refund.extra["refund_of_transaction_id"]
+
+    # Funding-side (Record B): matching inflow, points back to Record A
+    funding_tx = Transaction.find_by(channel_record_parent_id: refund.id)
+    assert_not_nil funding_tx, "funding-side auto record should exist"
+    assert funding_tx.entry.amount.negative?, "funding entry should also be inflow"
+    assert_equal "true", funding_tx.extra["channel_auto_record"].to_s
+  end
+
+  test "should reject channel refund without refund_of_transaction_id" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    assert_no_difference("Entry.count") do
+      post api_v1_transactions_url,
+           params: {
+             transaction: {
+               account_id: channel_account.id,
+               funding_account_id: funding_account.id,
+               name: "Bad refund",
+               amount: 40.00,
+               date: Date.current,
+               currency: "USD",
+               nature: "inflow",
+               extra: { channel_kind: "refund" }
+             }
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert JSON.parse(response.body)["error"].present?
+  end
+
+  test "should reject channel refund when original transaction not found" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+
+    assert_no_difference("Entry.count") do
+      post api_v1_transactions_url,
+           params: {
+             transaction: {
+               account_id: channel_account.id,
+               funding_account_id: funding_account.id,
+               name: "Bad refund",
+               amount: 40.00,
+               date: Date.current,
+               currency: "USD",
+               nature: "inflow",
+               extra: {
+                 channel_kind: "refund",
+                 refund_of_transaction_id: SecureRandom.uuid
+               }
+             }
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "should reject channel refund when original is not a channel payment" do
+    channel_account = accounts(:credit_card)
+    funding_account = accounts(:depository)
+    # @transaction is an ordinary transaction, not a channel payment
+    plain_transaction = @transaction
+
+    assert_no_difference("Entry.count") do
+      post api_v1_transactions_url,
+           params: {
+             transaction: {
+               account_id: channel_account.id,
+               funding_account_id: funding_account.id,
+               name: "Bad refund",
+               amount: 40.00,
+               date: Date.current,
+               currency: "USD",
+               nature: "inflow",
+               extra: {
+                 channel_kind: "refund",
+                 refund_of_transaction_id: plain_transaction.id
+               }
+             }
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   # UPDATE action tests
   test "should update transaction with valid parameters" do
     update_params = {
