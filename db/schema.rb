@@ -1507,55 +1507,55 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_27_003348) do
     t.string "subtype"
   end
 
-create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-  t.string "account_number"
-  t.string "account_status"
-  t.string "account_type"
-  t.boolean "activities_fetch_pending", default: false
-  t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
-  t.datetime "created_at", null: false
-  t.string "currency"
-  t.decimal "current_balance", precision: 19, scale: 4
-  t.jsonb "institution_metadata"
-  t.datetime "last_activities_sync"
-  t.datetime "last_holdings_sync"
-  t.string "name"
-  t.string "provider"
-  t.string "questrade_account_id"
-  t.string "questrade_authorization_id"
-  t.uuid "questrade_item_id", null: false
-  t.jsonb "raw_activities_payload", default: []
-  t.jsonb "raw_balances_payload"
-  t.jsonb "raw_holdings_payload", default: []
-  t.jsonb "raw_payload"
-  t.date "sync_start_date"
-  t.datetime "updated_at", null: false
-  t.index ["questrade_authorization_id"], name: "index_questrade_accounts_on_questrade_authorization_id"
-  t.index ["questrade_item_id", "questrade_account_id"], name: "idx_on_questrade_item_id_questrade_account_id_c3e6274342", unique: true
-  t.index ["questrade_item_id"], name: "index_questrade_accounts_on_questrade_item_id"
-end
+  create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_number"
+    t.string "account_status"
+    t.string "account_type"
+    t.boolean "activities_fetch_pending", default: false
+    t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.jsonb "institution_metadata"
+    t.datetime "last_activities_sync"
+    t.datetime "last_holdings_sync"
+    t.string "name"
+    t.string "provider"
+    t.string "questrade_account_id"
+    t.string "questrade_authorization_id"
+    t.uuid "questrade_item_id", null: false
+    t.jsonb "raw_activities_payload", default: []
+    t.jsonb "raw_balances_payload"
+    t.jsonb "raw_holdings_payload", default: []
+    t.jsonb "raw_payload"
+    t.date "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["questrade_authorization_id"], name: "index_questrade_accounts_on_questrade_authorization_id"
+    t.index ["questrade_item_id", "questrade_account_id"], name: "idx_on_questrade_item_id_questrade_account_id_c3e6274342", unique: true
+    t.index ["questrade_item_id"], name: "index_questrade_accounts_on_questrade_item_id"
+  end
 
-create_table "questrade_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-  t.string "api_server"
-  t.datetime "created_at", null: false
-  t.uuid "family_id", null: false
-  t.string "institution_color"
-  t.string "institution_domain"
-  t.string "institution_id"
-  t.string "institution_name"
-  t.string "institution_url"
-  t.string "name"
-  t.boolean "pending_account_setup", default: false, null: false
-  t.jsonb "raw_institution_payload"
-  t.jsonb "raw_payload"
-  t.text "refresh_token"
-  t.boolean "scheduled_for_deletion", default: false, null: false
-  t.string "status", default: "good", null: false
-  t.datetime "sync_start_date"
-  t.datetime "updated_at", null: false
-  t.index ["family_id"], name: "index_questrade_items_on_family_id"
-  t.index ["status"], name: "index_questrade_items_on_status"
-end
+  create_table "questrade_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "api_server"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.string "name"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_institution_payload"
+    t.jsonb "raw_payload"
+    t.text "refresh_token"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_questrade_items_on_family_id"
+    t.index ["status"], name: "index_questrade_items_on_status"
+  end
 
   create_table "recurring_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
