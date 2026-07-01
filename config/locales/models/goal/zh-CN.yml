@@ -16,9 +16,9 @@ zh-CN:
         goal:
           attributes:
             base:
-              at_least_one_linked_account_required: 请至少选择一个存款账户为此目标提供资金。
+              at_least_one_linked_account_required: 请至少选择一个账户为此目标提供资金。
             linked_accounts:
-              must_be_depository: 所有关联账户都必须是存款账户（支票、储蓄、HSA、CD、货币市场账户）。
+              must_be_fundable: 所有关联账户必须是现金或投资账户。
               currency_mismatch: 所有关联账户必须使用同一货币。
               must_belong_to_family: 关联账户必须属于与目标相同的家庭。
             currency:

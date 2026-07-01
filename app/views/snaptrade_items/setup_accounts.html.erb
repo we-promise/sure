@@ -26,7 +26,7 @@
             </ul>
             <p class="text-xs text-warning mt-2">
               <%= icon "alert-triangle", size: "xs", class: "inline-block mr-1" %>
-              <%= t("snaptrade_items.setup_accounts.free_tier_note", default: "SnapTrade free tier allows 5 brokerage connections. Check your SnapTrade dashboard for current usage.") %>
+              <%= t("snaptrade_items.setup_accounts.free_tier_note", default: "SnapTrade free tier allows 20 brokerage connections.") %>
             </p>
           </div>
         </div>
@@ -70,11 +70,23 @@
           </p>
         </div>
         <div class="flex gap-3 justify-center">
+          <%
+            brokerage_connect_href = if @snaptrade_item.user_registered?
+              connect_snaptrade_item_path(@snaptrade_item)
+            else
+              oauth_connect_snaptrade_items_path(
+                item_id: @snaptrade_item.id,
+                accountable_type: params[:accountable_type],
+                return_to: params[:return_to]
+              )
+            end
+            brokerage_connect_frame = @snaptrade_item.user_registered? ? "_top" : "drawer"
+          %>
           <%= render DS::Link.new(
             text: t("snaptrade_items.setup_accounts.try_again", default: "Connect Brokerage"),
             variant: "primary",
-            href: connect_snaptrade_item_path(@snaptrade_item),
-            frame: "_top"
+            href: brokerage_connect_href,
+            frame: brokerage_connect_frame
           ) %>
           <%= render DS::Link.new(
             text: t("snaptrade_items.setup_accounts.back_to_settings", default: "Back to Settings"),

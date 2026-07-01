@@ -20,11 +20,13 @@ class SnaptradeItem < ApplicationRecord
     encrypts :client_id, deterministic: true
     encrypts :consumer_key, deterministic: true
     encrypts :snaptrade_user_secret
+    encrypts :oauth_access_token
+    encrypts :oauth_refresh_token
   end
 
   validates :name, presence: true
-  validates :client_id, presence: true, on: :create
-  validates :consumer_key, presence: true, on: :create
+  validates :client_id, presence: true, if: -> { consumer_key.present? }
+  validates :consumer_key, presence: true, if: -> { client_id.present? }
   # Note: snaptrade_user_id and snaptrade_user_secret are populated after user registration
   # via ensure_user_registered!, so we don't validate them on create
 
@@ -159,6 +161,10 @@ class SnaptradeItem < ApplicationRecord
                   .uniq { |inst| inst["name"] || inst["institution_name"] }
   end
 
+  def oauth_token_active?
+    oauth_access_token.present? && (oauth_token_expires_at.blank? || oauth_token_expires_at.future?)
+  end
+
   def institution_summary
     institutions = connected_institutions
     case institutions.count
@@ -173,6 +179,10 @@ class SnaptradeItem < ApplicationRecord
 
   def credentials_configured?
     client_id.present? && consumer_key.present?
+  end
+
+  def oauth_configured?
+    oauth_access_token.present?
   end
 
   # Override Syncable#syncing? to also show syncing state when activities are being

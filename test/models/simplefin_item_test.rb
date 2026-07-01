@@ -30,6 +30,86 @@ class SimplefinItemTest < ActiveSupport::TestCase
     assert_equal "good", @simplefin_item.status
   end
 
+  test "setup token update is required when requires_update has no successful account sync" do
+    @simplefin_item.update!(status: :requires_update)
+    Sync.create!(
+      syncable: @simplefin_item,
+      status: "failed",
+      failed_at: Time.current,
+      error: "SimpleFIN access forbidden",
+      sync_stats: { "total_accounts" => 0 }
+    )
+
+    assert @simplefin_item.setup_token_update_required?
+    assert_equal "requires_update", @simplefin_item.effective_status
+    assert_includes @simplefin_item.attention_summary, "Connection needs update"
+  end
+
+  test "setup token update is not required when latest sync returned accounts" do
+    @simplefin_item.update!(status: :requires_update, pending_account_setup: true)
+    # Must be a terminal sync: a pending/in-progress sync short-circuits before
+    # the account-count check, so this would pass without exercising the branch.
+    Sync.create!(
+      syncable: @simplefin_item,
+      status: "completed",
+      completed_at: Time.current,
+      sync_stats: {
+        "total_accounts" => 18,
+        "error_buckets" => { "auth" => 1 },
+        "errors" => [ "Connection to Cash App may need attention. Auth required" ]
+      }
+    )
+
+    refute @simplefin_item.setup_token_update_required?
+    assert_equal "good", @simplefin_item.effective_status
+    refute_includes @simplefin_item.attention_summary, "Connection needs update"
+    assert_includes @simplefin_item.attention_summary, "Accounts need setup"
+  end
+
+  test "setup token update is not required when latest sync stats use symbol keys" do
+    @simplefin_item.update!(status: :requires_update)
+    latest_sync = Sync.new(
+      syncable: @simplefin_item,
+      status: "completed",
+      completed_at: Time.current,
+      sync_stats: {
+        total_accounts: 18,
+        error_buckets: { auth: 1 }
+      }
+    )
+
+    refute @simplefin_item.setup_token_update_required?(latest_sync:)
+    assert_equal "good", @simplefin_item.effective_status(latest_sync:)
+  end
+
+  test "setup token update is not required while latest sync is unresolved" do
+    @simplefin_item.update!(status: :requires_update)
+    Sync.create!(
+      syncable: @simplefin_item,
+      status: "pending",
+      sync_stats: {
+        "import_started" => true
+      }
+    )
+
+    refute @simplefin_item.setup_token_update_required?
+    assert_equal "good", @simplefin_item.effective_status
+  end
+
+  test "setup token update is required when latest sync is stale without accounts" do
+    @simplefin_item.update!(status: :requires_update)
+    Sync.create!(
+      syncable: @simplefin_item,
+      status: "stale",
+      sync_stats: {
+        "import_started" => true
+      }
+    )
+
+    assert @simplefin_item.setup_token_update_required?
+    assert_equal "requires_update", @simplefin_item.effective_status
+  end
+
   test "can be marked for deletion" do
     refute @simplefin_item.scheduled_for_deletion?
 
