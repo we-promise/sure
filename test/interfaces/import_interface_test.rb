@@ -133,6 +133,28 @@ module ImportInterfaceTest
     assert_equal "1234.56", row.amount
   end
 
+  test "rejects US-punctuation values under the French/Scandinavian format" do
+    import = imports(:transaction)
+    import.update!(
+      number_format: "1 234,56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    # A misconfigured/mixed row using US separators ("1,234.56") must not be
+    # silently reinterpreted as 1.23456 under a space-delimited format; the
+    # unexpected period keeps it invalid so it surfaces as blank instead.
+    csv_data = "date,amount,name\n01/01/2024,\"1,234.56\",Test"
+    import.update!(raw_file_str: csv_data)
+    import.generate_rows_from_csv
+    import.reload
+
+    row = import.rows.first
+    assert_equal "", row.amount
+  end
+
   test "parses zero-decimal currency format correctly" do
     import = imports(:transaction)
     import.update!(
