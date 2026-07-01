@@ -50,20 +50,25 @@
 
           <div class="mt-4 space-y-4">
             <div class="flex items-center gap-2">
-              <%= button_to sync_wise_item_path(item),
-                            method: :post,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
-                            disabled: item.syncing? do %>
-                <%= icon "refresh-cw", size: "sm" %>
-                <%= t("wise_items.provider_panel.sync") %>
-              <% end %>
-              <%= button_to wise_item_path(item),
-                            method: :delete,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                            aria: { label: t("wise_items.provider_panel.disconnect_label", name: item.name) },
-                            data: { turbo_confirm: t("wise_items.provider_panel.disconnect_confirm", name: item.name) } do %>
-                <%= icon "trash-2", size: "sm" %>
-              <% end %>
+              <%= render DS::Button.new(
+                text: t("wise_items.provider_panel.sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                size: :sm,
+                href: sync_wise_item_path(item),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
+              <%= render DS::Button.new(
+                text: t("wise_items.provider_panel.disconnect"),
+                icon: "trash-2",
+                variant: :outline_destructive,
+                size: :sm,
+                href: wise_item_path(item),
+                method: :delete,
+                aria: { label: t("wise_items.provider_panel.disconnect_label", name: item.name) },
+                confirm: t("wise_items.provider_panel.disconnect_confirm", name: item.name)
+              ) %>
             </div>
 
             <%= styled_form_with model: item,

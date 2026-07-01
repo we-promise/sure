@@ -12,9 +12,12 @@
             <p class="text-primary font-medium"><%= t(".no_accounts_found") %></p>
           </div>
           <div class="flex justify-end">
-            <%= link_to t(".cancel"), @return_to || new_account_path,
-                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
-                data: { turbo_frame: "_top" } %>
+            <%= render DS::Link.new(
+              text: t(".cancel"),
+              variant: :secondary,
+              href: @return_to || new_account_path,
+              frame: "_top"
+            ) %>
           </div>
         <% else %>
           <%= form_with url: link_accounts_wise_items_path,
@@ -42,9 +45,12 @@
             </div>
 
             <div class="flex gap-2 justify-end pt-4">
-              <%= link_to t(".cancel"), @return_to || new_account_path,
-                  class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
-                  data: { turbo_frame: "_top" } %>
+              <%= render DS::Link.new(
+                text: t(".cancel"),
+                variant: :secondary,
+                href: @return_to || new_account_path,
+                frame: "_top"
+              ) %>
               <%= render DS::Button.new(
                 text: t(".link_account"),
                 variant: :primary,

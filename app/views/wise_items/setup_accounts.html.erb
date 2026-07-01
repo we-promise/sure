@@ -31,14 +31,16 @@
                   <%= wise_account.currency %>
                 </p>
               </div>
-              <%= button_to complete_account_setup_wise_item_path(@wise_item),
-                            method: :post,
-                            params: { wise_account_id: wise_account.id },
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-subtle",
-                            data: { turbo_frame: "_top" } do %>
-                <%= icon "plus", size: "sm" %>
-                <%= t(".create_account") %>
-              <% end %>
+              <%= render DS::Button.new(
+                text: t(".create_account"),
+                icon: "plus",
+                variant: :outline,
+                size: :sm,
+                href: complete_account_setup_wise_item_path(@wise_item),
+                method: :post,
+                params: { wise_account_id: wise_account.id },
+                frame: "_top"
+              ) %>
             </div>
           <% end %>
         </div>
