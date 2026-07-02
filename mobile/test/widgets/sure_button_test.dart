@@ -192,6 +192,41 @@ void main() {
     expect(tester.getSize(find.byType(SureButton)).width, lessThan(300));
   });
 
+  testWidgets('leading icon inherits the variant foreground via IconTheme',
+      (tester) async {
+    // The button owns its content foreground: a leading icon with no explicit
+    // color must pick up the variant foreground (so call sites don't hardcode
+    // it). SureIcon resolves color from the ambient IconTheme.
+    Color? primaryIconColor;
+    await pump(
+      tester,
+      SureButton(
+        label: 'Retry',
+        onPressed: () {},
+        leading: Builder(builder: (ctx) {
+          primaryIconColor = IconTheme.of(ctx).color;
+          return const SizedBox.shrink();
+        }),
+      ),
+    );
+    expect(primaryIconColor, SureTokens.light.textInverse);
+
+    Color? outlineIconColor;
+    await pump(
+      tester,
+      SureButton(
+        label: 'Edit',
+        variant: SureButtonVariant.outline,
+        onPressed: () {},
+        leading: Builder(builder: (ctx) {
+          outlineIconColor = IconTheme.of(ctx).color;
+          return const SizedBox.shrink();
+        }),
+      ),
+    );
+    expect(outlineIconColor, SureTokens.light.textPrimary);
+  });
+
   testWidgets('size maps to the canonical min-height', (tester) async {
     await pump(
       tester,
