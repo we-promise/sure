@@ -316,6 +316,44 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
     t.index ["status"], name: "index_binance_items_on_status"
   end
 
+  create_table "bitstamp_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "bitstamp_item_id", null: false
+    t.string "name"
+    t.string "account_id", null: false
+    t.string "account_type"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.jsonb "extra", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_type"], name: "index_bitstamp_accounts_on_account_type"
+    t.index ["bitstamp_item_id", "account_id"], name: "index_bitstamp_accounts_on_item_and_account_id", unique: true
+    t.index ["bitstamp_item_id"], name: "index_bitstamp_accounts_on_bitstamp_item_id"
+  end
+
+  create_table "bitstamp_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.text "api_key"
+    t.text "api_secret"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_bitstamp_items_on_family_id"
+    t.index ["status"], name: "index_bitstamp_items_on_status"
+  end
+
   create_table "brex_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "brex_item_id", null: false
     t.string "name"
@@ -2120,6 +2158,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
   add_foreign_key "balances", "accounts", on_delete: :cascade
   add_foreign_key "binance_accounts", "binance_items"
   add_foreign_key "binance_items", "families"
+  add_foreign_key "bitstamp_accounts", "bitstamp_items"
+  add_foreign_key "bitstamp_items", "families"
   add_foreign_key "brex_accounts", "brex_items"
   add_foreign_key "brex_items", "families"
   add_foreign_key "budget_categories", "budgets"
