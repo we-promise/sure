@@ -775,7 +775,7 @@ class ReportsController < ApplicationController
           csv << [ "INCOME" ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:income].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvFormulaSanitizer.escape(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -807,7 +807,7 @@ class ReportsController < ApplicationController
           csv << [ "EXPENSES" ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:expenses].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvFormulaSanitizer.escape(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
