@@ -108,11 +108,112 @@ class SimplefinAccount::Investments::HoldingsProcessor
       simplefin_account.current_account
     end
 
+    # Loads the raw holdings payload and collapses multiple lots that share the
+    # same symbol into a single aggregated holding. Lots without a symbol are
+    # passed through individually unchanged.
     def holdings_data
-      # Use the dedicated raw_holdings_payload field
-      simplefin_account.raw_holdings_payload || []
+      raw = simplefin_account.raw_holdings_payload || []
+      return raw if raw.empty?
+
+      grouped = raw
+        .select { |h| h.is_a?(Hash) }
+        .group_by { |h| aggregation_key(h) }
+
+      grouped.flat_map do |key, lots|
+        next lots if key.start_with?("__nosym_")
+        [ normalize_to_aggregate(key, lots) ]
+      end
     end
 
+    # Returns a grouping key for a raw holding hash. Holdings with a symbol are
+    # keyed by the upcased symbol and currency (e.g. "AAPL-USD") so that
+    # same-ticker, different-currency positions are never merged. Holdings
+    # without a symbol get a unique key prefixed with "__nosym_" to ensure they
+    # are always kept as individual records.
+    def aggregation_key(holding)
+      sym = holding["symbol"].to_s.upcase.strip.presence
+      return "__nosym_#{holding['id']}" unless sym
+
+      currency = holding["currency"].to_s.upcase.presence || "UNKNOWN"
+      "#{sym}-#{currency}"
+    end
+
+    # Merges one or more lots for the same symbol into a single canonical holding
+    # hash. Quantities and market values are summed; cost basis is computed as a
+    # weighted average via `weighted_average_cost_basis`. The merged record is
+    # assigned a stable synthetic id of the form "HOL-{SYMBOL-CURRENCY}", and all
+    # quantity/value field aliases are removed in favour of the canonical
+    # `shares` and `market_value` keys.
+    def normalize_to_aggregate(key, lots)
+      first = lots.first
+      symbol = first["symbol"].to_s.strip.upcase
+
+      qty_keys   = %w[shares quantity qty units]
+      value_keys = %w[market_value current_value]
+
+      total_qty   = lots.sum { |l| parse_decimal(any_of(l, qty_keys)) }
+      total_value = lots.sum { |l| parse_decimal(any_of(l, value_keys)) }
+      cost_basis  = weighted_average_cost_basis(lots, qty_keys)
+
+      merged = first.dup
+      merged["id"] = "HOL-#{key}"
+      merged["symbol"] = symbol
+
+      qty_keys.each   { |k| merged.delete(k) }
+      value_keys.each { |k| merged.delete(k) }
+      merged["shares"]       = total_qty.to_s
+      merged["market_value"] = total_value.to_s
+
+      %w[cost_basis basis total_cost value].each { |k| merged.delete(k) }
+      if cost_basis
+        stored_basis = institution_reports_total_basis? ? cost_basis * total_qty : cost_basis
+        merged["cost_basis"] = stored_basis.to_s
+      end
+
+      Rails.logger.debug("SimpleFIN: normalized #{lots.size} #{'lot'.pluralize(lots.size)} for #{symbol}")
+
+      merged
+    end
+
+    # Computes the weighted average per-share cost basis across a collection of
+    # lots. Each lot's contribution is weighted by its quantity. Whether a basis
+    # value represents a per-share or total-position cost is determined by the
+    # source key and the `institution_reports_total_basis?` flag — lots sourced
+    # from `total_cost` or `value` are always treated as totals, while
+    # `cost_basis`/`basis` are treated as totals only for allowlisted
+    # institutions. Lots with no recognisable basis key or zero quantity are skipped.
+    def weighted_average_cost_basis(lots, qty_keys)
+      total_basis = 0
+      total_qty_with_basis = 0
+      any_basis_present = false
+
+      lots.each do |l|
+        raw_basis_value, source_key = cost_basis_from(l)
+        next if raw_basis_value.nil?
+
+        lot_qty = parse_decimal(any_of(l, qty_keys))
+        next unless lot_qty.positive?
+
+        any_basis_present = true
+
+        is_total = %w[total_cost value].include?(source_key) ||
+                   (institution_reports_total_basis? && %w[cost_basis basis].include?(source_key))
+
+        lot_total = is_total ? raw_basis_value : raw_basis_value * lot_qty
+        total_basis += lot_total
+        total_qty_with_basis += lot_qty
+      end
+
+      return nil unless any_basis_present
+      return nil unless total_qty_with_basis.positive?
+
+      total_basis / total_qty_with_basis
+    end
+
+    # Extracts the first available cost basis value from a SimpleFIN holding payload.
+    # For each key, blank or empty values are ignored. The first non-empty
+    # value found is parsed into a decimal using `parse_decimal` and returned
+    # along with the matching source key.
     def cost_basis_from(simplefin_holding)
       %w[cost_basis basis total_cost value].each do |key|
         raw = simplefin_holding[key]
