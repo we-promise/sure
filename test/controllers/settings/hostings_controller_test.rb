@@ -25,7 +25,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token external_assistant_token].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -101,11 +101,45 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Regression: issue #2465 symptom for the OpenAI token. Blanking the field
+  # (the form auto-submits on blur) must clear the stored value, not silently
+  # keep the old one.
+  test "can clear openai access token by submitting a blank value" do
+    with_self_hosting do
+      Setting.openai_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { openai_access_token: "" } }
+
+      assert_nil Setting.openai_access_token
+    end
+  end
+
+  test "ignores redacted openai token placeholder" do
+    with_self_hosting do
+      Setting.openai_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { openai_access_token: "********" } }
+
+      assert_equal "previous-token", Setting.openai_access_token
+    end
+  end
+
   test "can update anthropic access token when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { anthropic_access_token: "fake-anthropic-key-for-tests" } }
 
       assert_equal "fake-anthropic-key-for-tests", Setting.anthropic_access_token
+    end
+  end
+
+  # Regression: issue #2465 symptom for the Anthropic token.
+  test "can clear anthropic access token by submitting a blank value" do
+    with_self_hosting do
+      Setting.anthropic_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { anthropic_access_token: "" } }
+
+      assert_nil Setting.anthropic_access_token
     end
   end
 
@@ -367,6 +401,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { external_assistant_token: "********" } }
 
       assert_equal "real-secret", Setting.external_assistant_token
+    end
+  ensure
+    Setting.external_assistant_token = nil
+  end
+
+  # Regression: issue #2465 symptom for the external assistant token.
+  test "can clear external assistant token by submitting a blank value" do
+    with_self_hosting do
+      Setting.external_assistant_token = "real-secret"
+
+      patch settings_hosting_url, params: { setting: { external_assistant_token: "" } }
+
+      assert_nil Setting.external_assistant_token
     end
   ensure
     Setting.external_assistant_token = nil

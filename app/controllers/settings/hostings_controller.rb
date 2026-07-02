@@ -143,13 +143,7 @@ class Settings::HostingsController < ApplicationController
       sync_auto_sync_scheduler!
     end
 
-    if hosting_params.key?(:openai_access_token)
-      token_param = hosting_params[:openai_access_token].to_s.strip
-      # Ignore blanks and redaction placeholders to prevent accidental overwrite
-      unless token_param.blank? || token_param == "********"
-        Setting.openai_access_token = token_param
-      end
-    end
+    update_encrypted_setting(:openai_access_token)
 
     # Validate OpenAI configuration before updating
     if hosting_params.key?(:openai_uri_base) || hosting_params.key?(:openai_model)
@@ -171,12 +165,7 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
     end
 
-    if hosting_params.key?(:anthropic_access_token)
-      token_param = hosting_params[:anthropic_access_token].to_s.strip
-      unless token_param.blank? || token_param == "********"
-        Setting.anthropic_access_token = token_param
-      end
-    end
+    update_encrypted_setting(:anthropic_access_token)
 
     if hosting_params.key?(:anthropic_base_url)
       raw_base_url = hosting_params[:anthropic_base_url].to_s.strip
@@ -233,12 +222,7 @@ class Settings::HostingsController < ApplicationController
       Setting.external_assistant_url = hosting_params[:external_assistant_url]
     end
 
-    if hosting_params.key?(:external_assistant_token)
-      token_param = hosting_params[:external_assistant_token].to_s.strip
-      unless token_param.blank? || token_param == "********"
-        Setting.external_assistant_token = token_param
-      end
-    end
+    update_encrypted_setting(:external_assistant_token)
 
     if hosting_params.key?(:external_assistant_agent_id)
       Setting.external_assistant_agent_id = hosting_params[:external_assistant_agent_id]
