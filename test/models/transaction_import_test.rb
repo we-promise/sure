@@ -155,6 +155,43 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal 1, account.entries.where(external_id: "abc-123").count
   end
 
+  test "external_id de-dup is scoped per account within a single import" do
+    checking = accounts(:depository)
+    credit_card = accounts(:credit_card)
+    csv = <<~CSV
+      date,name,amount,txn_id,account
+      01/01/2024,Coffee,5.00,shared-1,Checking Account
+      01/02/2024,Grocery,7.00,shared-1,Credit Card
+    CSV
+
+    @import.update!(
+      account: nil,
+      raw_file_str: csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      external_id_col_label: "txn_id",
+      account_col_label: "account",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+    @import.mappings.create!(key: "Checking Account", mappable: checking, type: "Import::AccountMapping")
+    @import.mappings.create!(key: "Credit Card", mappable: credit_card, type: "Import::AccountMapping")
+    @import.mappings.create!(key: "", mappable: nil, create_when_empty: false, type: "Import::CategoryMapping")
+    @import.mappings.create!(key: "", mappable: nil, create_when_empty: false, type: "Import::TagMapping")
+    @import.reload
+
+    # Same bank id under two different accounts must NOT fold together.
+    assert_difference -> { Entry.count } => 2 do
+      @import.publish
+    end
+
+    assert_equal 1, checking.entries.where(external_id: "shared-1", import: @import).count
+    assert_equal 1, credit_card.entries.where(external_id: "shared-1", import: @import).count
+  end
+
   test "imports transactions with separate type column for signage convention" do
     import = <<~CSV
       date,amount,amount_type

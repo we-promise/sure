@@ -6,7 +6,7 @@ class TransactionImport < Import
       new_transactions = []
       updated_entries = []
       claimed_entry_ids = Set.new # Track entries we've already claimed in this import
-      claimed_external_ids = {} # external_id (this run) => Entry we created/updated, for in-batch dedup
+      claimed_external_ids = {} # [account_id, external_id] (this run) => Entry we created/updated, for in-batch dedup
 
       rows.each_with_index do |row, index|
         mapped_account = if account
@@ -35,12 +35,16 @@ class TransactionImport < Import
         # Pass claimed_entry_ids to exclude entries we've already matched in this import
         # This ensures identical rows within the CSV are all imported as separate transactions
         external_id = row.external_id.presence
+        # Scope the in-batch claim by account: the same bank id can legitimately
+        # appear under two different accounts in one multi-account CSV, and those
+        # must not fold together (the persisted lookup below is account-scoped too).
+        external_id_claim_key = [ mapped_account.id, external_id ] if external_id
 
         # In-batch dedup: a repeated external_id within the same CSV must fold
         # into the entry we already created/updated this run. The persisted
         # lookup below can't see a still-pending new_transactions record, so
         # without this two rows sharing an id would both be inserted.
-        if external_id && (claimed = claimed_external_ids[external_id])
+        if external_id_claim_key && (claimed = claimed_external_ids[external_id_claim_key])
           apply_row_updates(claimed, category: category, tags: tags, notes: row.notes)
           next
         end
@@ -70,7 +74,7 @@ class TransactionImport < Import
           duplicate_entry.import_locked = true  # Protect from provider sync overwrites
           updated_entries << duplicate_entry
           claimed_entry_ids.add(duplicate_entry.id)
-          claimed_external_ids[external_id] = duplicate_entry if external_id
+          claimed_external_ids[external_id_claim_key] = duplicate_entry if external_id_claim_key
         else
           # Create new transaction (no duplicate found)
           # Mark as import_locked to protect from provider sync overwrites
@@ -91,7 +95,7 @@ class TransactionImport < Import
           new_transaction.entry = new_entry
           new_entry.entryable = new_transaction
           new_transactions << new_transaction
-          claimed_external_ids[external_id] = new_entry if external_id
+          claimed_external_ids[external_id_claim_key] = new_entry if external_id_claim_key
         end
       end
 
