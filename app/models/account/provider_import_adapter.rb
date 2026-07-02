@@ -30,6 +30,13 @@ class Account::ProviderImportAdapter
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
+    # Normalize amount to BigDecimal to prevent Float vs BigDecimal comparison failures.
+    # Plaid amounts arrive as JSON floats (e.g. 50.01 as IEEE 754), which compare unequal
+    # to the exact BigDecimal stored in the DB, causing the split-parent amount gate
+    # (pending_match.amount != amount, below) to always misfire for non-terminating
+    # binary-fraction amounts.
+    amount = BigDecimal(amount.to_s)
+
     Account.transaction do
       # Find or initialize by both external_id AND source
       # This allows multiple providers to sync same account with separate entries
@@ -61,17 +68,35 @@ class Account::ProviderImportAdapter
       if entry.persisted?
         skip_reason = determine_skip_reason(entry)
         if skip_reason
-          # Pending→booked bypass for user_modified entries: clear the stale pending flag
-          # when the provider delivers a booked version of the same transaction.
-          # Some ASPSPs (e.g. Revolut Italy via Enable Banking) reuse the same transaction_id
-          # for pending and booked, so the entry is found by external_id rather than going
-          # through the auto-claim path. Without this, a user who categorised a pending entry
-          # (setting user_modified=true) would see the pending badge stuck forever.
-          # Excluded and import_locked entries are intentionally left untouched.
-          if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
-            entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
-            if entry_is_pending
-              entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
+          # Pending→booked bypass: clear stale pending flags when the provider delivers a booked
+          # version of the same transaction via same-external-id reuse (e.g. Enable Banking/Revolut).
+          # Applies to both user_modified entries (categorised pending) and excluded split parents.
+          # import_locked entries are intentionally left untouched.
+          if %w[user_modified excluded].include?(skip_reason) && !incoming_pending && entry.entryable.is_a?(Transaction)
+            # Acquire row-level lock before checking split state or clearing child flags.
+            # Mirrors the lock! in the auto-claim path; prevents a concurrent split! from
+            # creating children between our split_parent? check and the child-clearing loop.
+            entry.lock!
+            # A plain "excluded" entry is one the user deliberately excluded (not a split
+            # parent). Leave those untouched — only split parents, which are also excluded,
+            # should have their pending flag cleared when the booked version arrives.
+            # "user_modified" entries keep the original bypass behavior.
+            #
+            # For an excluded split parent, only clear pending flags when the booked amount
+            # matches the parent exactly. A tip/FX/partial-post amount change must not silently
+            # re-enter split children into analytics against stale split amounts; leave the
+            # parent pending so the mismatch surfaces for review (mirrors the auto-claim gate).
+            split_parent_amount_mismatch =
+              skip_reason == "excluded" && entry.split_parent? && entry.amount != amount
+
+            unless (skip_reason == "excluded" && !entry.split_parent?) || split_parent_amount_mismatch
+              if entry.transaction.pending?
+                entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
+
+                # For split parents, also clear the inherited pending flag from every child so
+                # they stop showing the pending badge and re-enter analytics.
+                clear_split_child_pending_flags(entry)
+              end
             end
           end
           record_skip(entry, skip_reason)
@@ -100,6 +125,13 @@ class Account::ProviderImportAdapter
         end
       end
 
+      # When the gate below skips auto-claiming a pending split parent (amount mismatch),
+      # we remember it here so the post-save suggestion path can store a high-confidence
+      # potential_posted_match using the authoritative match we already found — instead of
+      # falling back to fuzzy name matching, which can silently miss when the pending and
+      # posted names differ (e.g. "SQ *MERCHANT" → "MERCHANT INC").
+      skipped_split_parent_match = nil
+
       if entry.new_record? && !incoming_pending
         pending_match = nil
 
@@ -122,22 +154,58 @@ class Account::ProviderImportAdapter
         end
 
         if pending_match
-          old_pending_external_id = pending_match.external_id
-          pending_entry_date      = pending_match.date
-          entry = pending_match
-          entry.assign_attributes(external_id: external_id)
+          # Acquire a row-level lock before inspecting split state or clearing child flags.
+          # Without this, a concurrent split! that runs between our find and our read can
+          # create children from the still-pending parent while we claim it, leaving those
+          # children with permanent pending flags.
+          pending_match.lock! if pending_match.persisted?
 
-          # Clear the pending flag so this entry no longer shows as pending after being claimed
-          # by a booked transaction. Also record the old external_id so the sync engine can
-          # exclude it from re-import (preventing the old pending from being recreated on the
-          # next sync when the stored raw payload still contains the pending transaction data).
-          if entry.entryable.is_a?(Transaction)
-            ex = clear_pending_flags_from_extra(entry.transaction.extra)
-            if old_pending_external_id.present?
-              existing_claims = Array.wrap(ex["auto_claimed_pending_ids"])
-              ex["auto_claimed_pending_ids"] = (existing_claims + [ old_pending_external_id ]).uniq
+          # Split-parent pending: only auto-claim when the posted amount matches exactly.
+          # If amounts differ (tip adjustment, FX rounding, partial post), fall through so
+          # the post-save fuzzy-suggestion path stores a potential_posted_match for user review.
+          # Note: Plaid's pending_transaction_id link (priority 1 above) does NOT verify
+          # amount equality, so this gate is required for both priority-1 and priority-2 paths.
+          if pending_match.split_parent? && pending_match.amount != amount
+            # Keep monetary amounts and transaction names out of info logs; record the skip
+            # as a support-visible diagnostic with non-sensitive identifiers only.
+            DebugLogEntry.capture(
+              category: "provider_import",
+              level: "info",
+              message: "Skipped pending→posted auto-claim for split parent amount mismatch; storing suggestion instead",
+              source: "account.provider_import_adapter",
+              provider_key: source,
+              family: account.family,
+              metadata: {
+                pending_entry_id: pending_match.id,
+                posted_external_id: external_id
+              }
+            )
+            skipped_split_parent_match = pending_match
+            pending_match = nil
+            # entry remains a new record; is_new_posted stays true so the fuzzy-suggestion
+            # block below fires after save and writes the suggestion onto the split parent.
+          else
+            old_pending_external_id = pending_match.external_id
+            pending_entry_date      = pending_match.date
+            entry = pending_match
+            entry.assign_attributes(external_id: external_id)
+
+            # Clear the pending flag so this entry no longer shows as pending after being claimed
+            # by a booked transaction. Also record the old external_id so the sync engine can
+            # exclude it from re-import (preventing the old pending from being recreated on the
+            # next sync when the stored raw payload still contains the pending transaction data).
+            if entry.entryable.is_a?(Transaction)
+              ex = clear_pending_flags_from_extra(entry.transaction.extra)
+              if old_pending_external_id.present?
+                existing_claims = Array.wrap(ex["auto_claimed_pending_ids"])
+                ex["auto_claimed_pending_ids"] = (existing_claims + [ old_pending_external_id ]).uniq
+              end
+              entry.transaction.extra = ex
+
+              # If this was a split parent, clear the inherited pending flags from all children
+              # so they appear in analytics and drop the pending badge once the parent books.
+              clear_split_child_pending_flags(entry)
             end
-            entry.transaction.extra = ex
           end
         end
       end
@@ -149,8 +217,17 @@ class Account::ProviderImportAdapter
       # must clear the stale pending flag here before the final save.
       # (The auto-claim path already clears it in-memory, so this is a no-op there.)
       if !incoming_pending && entry.entryable.is_a?(Transaction)
-        if Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
+        # Lock before clearing so a concurrent split! cannot copy pending flags onto freshly
+        # created children between our check and the parent booking, which would otherwise
+        # strand those children as permanently pending (mirrors the auto-claim lock above).
+        # Skip when the entry already has unpersisted changes: that only happens on the
+        # auto-claim path, which already acquired the row lock earlier.
+        entry.lock! if entry.persisted? && !entry.changed?
+        if entry.transaction.pending?
           entry.transaction.extra = clear_pending_flags_from_extra(entry.transaction.extra)
+          # Defensive: if this entry became a split parent, drop the inherited pending flag
+          # from its children too (no-op when there are no children).
+          clear_split_child_pending_flags(entry)
         end
       end
 
@@ -262,7 +339,35 @@ class Account::ProviderImportAdapter
 
       # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
       # This handles tip adjustments where auto-matching is too risky
-      if is_new_posted
+      if is_new_posted && skipped_split_parent_match.present?
+        # PRIORITY 0: We already found this split parent via an authoritative match
+        # (Plaid's pending_transaction_id) but skipped the auto-claim because the amount
+        # differs. Store the suggestion directly using that known match so a name change
+        # between pending and posted cannot strand the parent as pending forever.
+        begin
+          store_duplicate_suggestion(
+            pending_entry: skipped_split_parent_match,
+            posted_entry: entry,
+            reason: "split_parent_amount_mismatch",
+            posted_amount: amount,
+            confidence: "high"
+          )
+          DebugLogEntry.capture(
+            category: "provider_import",
+            level: "info",
+            message: "Stored authoritative split-parent duplicate suggestion",
+            source: "account.provider_import_adapter",
+            provider_key: source,
+            family: account.family,
+            metadata: {
+              pending_entry_id: skipped_split_parent_match.id,
+              posted_entry_id: entry.id
+            }
+          )
+        rescue ActiveRecord::RecordInvalid => e
+          Rails.logger.warn("Failed to store split-parent duplicate suggestion for entry #{skipped_split_parent_match.id}: #{e.message}")
+        end
+      elsif is_new_posted
         # PRIORITY 1: Try medium-confidence fuzzy match (≤30% amount difference)
         fuzzy_suggestion = find_pending_transaction_fuzzy(
           date: date,
@@ -771,6 +876,7 @@ class Account::ProviderImportAdapter
       .where(amount: amount)
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
+      .where(parent_entry_id: nil) # Never match split children; their pending flag is inherited, not authoritative
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
@@ -821,6 +927,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
+      .where(parent_entry_id: nil) # Never match split children; their pending flag is inherited, not authoritative
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
@@ -894,6 +1001,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date)
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
+      .where(parent_entry_id: nil) # Never match split children; their pending flag is inherited, not authoritative
       .where(<<~SQL.squish)
         (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
@@ -927,9 +1035,9 @@ class Account::ProviderImportAdapter
   #
   # @param pending_entry [Entry] The pending entry that may be a duplicate
   # @param posted_entry [Entry] The posted entry it may match
-  # @param reason [String] Why this was flagged (e.g., "fuzzy_amount_match", "low_confidence_match")
+  # @param reason [String] Why this was flagged (e.g., "fuzzy_amount_match", "low_confidence_match", "split_parent_amount_mismatch")
   # @param posted_amount [BigDecimal] The posted transaction amount
-  # @param confidence [String] Confidence level: "medium" (≤30% diff) or "low" (>30% diff)
+  # @param confidence [String] Confidence level: "high" (authoritative pending_transaction_id link), "medium" (≤30% diff), or "low" (>30% diff)
   def store_duplicate_suggestion(pending_entry:, posted_entry:, reason:, posted_amount:, confidence: "medium")
     return unless pending_entry&.entryable.is_a?(Transaction)
 
@@ -1033,5 +1141,23 @@ class Account::ProviderImportAdapter
         ex.delete(provider) if ex[provider].empty?
       end
       ex
+    end
+
+    # Clear the inherited pending flag from every split child of +parent_entry+ so they
+    # drop the pending badge and re-enter analytics once the parent books. Uses
+    # update_columns deliberately: only the +extra+ JSON flag is flipped, and we do not
+    # want to re-fire Transaction save callbacks (merchant unlink, sync) for a child whose
+    # only change is losing a pending marker. updated_at is set manually since
+    # update_columns skips automatic timestamping.
+    def clear_split_child_pending_flags(parent_entry)
+      return unless parent_entry.split_parent?
+
+      parent_entry.child_entries.includes(:entryable).each do |child|
+        next unless child.entryable.is_a?(Transaction)
+        child.transaction.update_columns(
+          extra: clear_pending_flags_from_extra(child.transaction.extra),
+          updated_at: Time.current
+        )
+      end
     end
 end

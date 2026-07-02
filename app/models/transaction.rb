@@ -209,6 +209,7 @@ class Transaction < ApplicationRecord
   def merge_with_duplicate!
     return false unless pending?
     return false unless has_potential_duplicate?
+    return false if entry.split_parent?
 
     posted_entry = potential_duplicate_entry
     return false unless posted_entry

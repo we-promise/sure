@@ -63,7 +63,7 @@ class PendingDuplicateMergesController < ApplicationController
       entry = Current.accessible_entries.find(params[:transaction_id])
       @transaction = entry.entryable
 
-      unless @transaction.is_a?(Transaction) && @transaction.pending?
+      unless @transaction.is_a?(Transaction) && @transaction.pending? && !entry.split_parent?
         redirect_to transactions_path, alert: t("pending_duplicate_merges.set_transaction.pending_only")
       end
     end
