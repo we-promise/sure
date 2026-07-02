@@ -49,6 +49,27 @@
   </div>
 <% end %>
 
+<%= settings_section title: t(".modals_title"), subtitle: t(".modals_subtitle") do %>
+  <div>
+    <%= form_with url: settings_appearance_path, method: :patch,
+          class: "p-3",
+          data: { controller: "auto-submit-form" } do |f| %>
+      <div class="flex cursor-pointer items-center gap-4 justify-between">
+        <div class="text-sm space-y-1">
+          <h4 class="text-primary"><%= t(".disable_modal_click_outside_title") %></h4>
+          <p class="text-secondary"><%= t(".disable_modal_click_outside_description") %></p>
+        </div>
+        <%= render DS::Toggle.new(
+              id: "user_disable_modal_click_outside",
+              name: "user[disable_modal_click_outside]",
+              checked: @user.disable_modal_click_outside?,
+              data: { auto_submit_form_target: "auto" }
+        ) %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
 <%= settings_section title: t(".transactions_title"), subtitle: t(".transactions_subtitle") do %>
   <div>
     <%= form_with url: settings_appearance_path, method: :patch,

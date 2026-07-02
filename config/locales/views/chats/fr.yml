@@ -1,6 +1,45 @@
 ---
 fr:
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Assistant de raisonnement
+    tool_calls:
+      arguments: 'Arguments :'
+      function: 'Fonction :'
+      tool_calls: Appels d'outils
   chats:
-    demo_banner_title: "Mode Démo Actif"
-    demo_banner_message: "Vous utilisez un LLM Qwen3 open-weights avec des crédits fournis par Cloudflare Workers AI. Les résultats peuvent varier car le code a été principalement testé sur `gpt-4.1` mais vos tokens ne sont envoyés nulle part ailleurs pour être entraînés !"
-    thinking: "Traitement en cours ..."
+    ai_consent:
+      available_description: Le chat IA peut répondre aux questions financières et fournir des informations basées sur vos données. Pour utiliser cette fonctionnalité, vous devrez l'activer explicitement.
+      disable_note: Désactivez à tout moment. Toutes les données envoyées à nos prestataires LLM sont anonymisées.
+      enable_button: Activer les discussions IA
+      title: Activer les discussions IA
+      unavailable_description_html: Pour utiliser l'assistant AI, vous devez définir la variable d'environnement <code class="bg-surface-inset px-1 py-0.5 round font-mono text-xs">OPENAI_ACCESS_TOKEN</code> ou la configurer dans les paramètres d'auto-hébergement de votre instance.
+    ai_greeting:
+      commands_hint_html: Vous pouvez utiliser <span class="bg-container border border-secondary px-1.5 py-0.5 round font-mono text-xs">/</span> pour accéder aux commandes
+      evaluate_portfolio: Évaluer le portefeuille d'investissement
+      greeting: Hé %{name} ! Je suis un modèle d'IA/grand langage qui peut vous aider avec vos finances. J'ai accès au Web et aux données de votre compte.
+      questions_intro: 'Voici quelques questions que vous pouvez poser :'
+      spending_insights: Afficher des informations sur les dépenses
+      there: là
+      unusual_patterns: Trouver des modèles inhabituels
+    chat:
+      delete_chat: Supprimer le chat
+      edit_chat_title: Modifier le titre du chat
+    chat_nav:
+      all_chats: Toutes les discussions
+      delete_chat: Supprimer le chat
+      edit_chat_title: Modifier le titre du chat
+      start_new_chat: Démarrer une nouvelle discussion
+    demo_banner_message: Vous utilisez un LLM Qwen3 open-weights avec des crédits fournis par Cloudflare Workers AI. Les résultats peuvent varier car le code a été principalement testé sur `gpt-4.1` mais vos tokens ne sont envoyés nulle part ailleurs pour être entraînés !
+    demo_banner_title: Mode Démo Actif
+    destroy:
+      notice: Le chat a été supprimé avec succès
+    error:
+      retry: Réessayer
+    index:
+      chats: Discussions
+      new_chat: Nouvelle discussion
+    thinking: Traitement en cours ...
+    update:
+      success: Chat mis à jour
+    worker_unhealthy_warning: Les réponses de l'IA peuvent ne pas être distribuées actuellement — le worker en arrière-plan semble arrêté ou surchargé. Vérifiez que votre worker Sidekiq est bien démarré.
