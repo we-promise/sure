@@ -46,9 +46,10 @@ class Import::Preflight
   UNSUPPORTED_PREFLIGHT_IMPORT_TYPES = %w[PdfImport QifImport].freeze
   IMPORT_TYPES = (Import::TYPES - UNSUPPORTED_PREFLIGHT_IMPORT_TYPES).freeze
 
-  def initialize(family:, params:)
+  def initialize(family:, params:, resource_owner: nil)
     @family = family
     @params = params.to_h.symbolize_keys
+    @resource_owner = resource_owner
   end
 
   def call
@@ -61,7 +62,7 @@ class Import::Preflight
   end
 
   private
-    attr_reader :family, :params
+    attr_reader :family, :params, :resource_owner
 
     def preflight_import_type
       type = params[:type].to_s
@@ -174,7 +175,13 @@ class Import::Preflight
     def preflight_account
       raise ActiveRecord::RecordNotFound unless Api::V1::BaseController.valid_uuid?(params[:account_id])
 
-      family.accounts.find(params[:account_id])
+      preflight_account_scope.find(params[:account_id])
+    end
+
+    def preflight_account_scope
+      return family.accounts unless resource_owner
+
+      family.accounts.accessible_by(resource_owner)
     end
 
     def csv_upload_attributes
