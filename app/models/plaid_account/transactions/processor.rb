@@ -43,7 +43,12 @@ class PlaidAccount::Transactions::Processor
     end
 
     def remove_plaid_transaction(raw_transaction)
-      account.entries.find_by(plaid_id: raw_transaction["transaction_id"])&.destroy
+      id = raw_transaction["transaction_id"]
+      # Entries are keyed by external_id + source under the current import path; fall back to the
+      # legacy plaid_id column for rows synced before the external_id migration.
+      entry = account.entries.find_by(external_id: id, source: "plaid") ||
+              account.entries.find_by(plaid_id: id)
+      entry&.destroy
     end
 
     # Since we find_or_create_by transactions, we don't need a distinction between added/modified
