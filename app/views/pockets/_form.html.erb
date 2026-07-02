@@ -1,0 +1,81 @@
+<%# locals: (pocket:, account:, url:, available_tags:) %>
+
+<%= styled_form_with model: [ account, pocket ], url: url, class: "space-y-4",
+    data: { controller: "pocket-form" } do |f| %>
+  <div class="flex justify-center">
+    <%= render "goals/color_picker", form: f, colors: Pocket::COLORS, icons: Pocket::ICONS %>
+  </div>
+
+  <%= f.text_field :name,
+    label: t("pockets.form.name"),
+    required: true,
+    autofocus: true,
+    placeholder: t("pockets.form.name_placeholder") %>
+
+  <%= f.text_area :description,
+    label: t("pockets.form.description"),
+    placeholder: t("pockets.form.description_placeholder"),
+    rows: 2 %>
+
+  <div data-pocket-form-target="amountField" style="<%= "opacity:0.5;pointer-events:none" if pocket.tag_id.present? %>">
+    <%= f.money_field :allocated_amount,
+      label: t("pockets.form.allocated_amount"),
+      required: !pocket.tag_id.present?,
+      disable_currency: true,
+      disabled: pocket.tag_id.present? %>
+  </div>
+
+  <div>
+    <span class="block text-sm font-medium text-primary mb-2"><%= t("pockets.form.auto_fill_tag") %></span>
+    <div class="flex flex-wrap gap-2">
+      <label class="cursor-pointer">
+        <%= f.radio_button :tag_id, "",
+            class: "sr-only peer",
+            data: { pocket_form_target: "tagRadio", action: "change->pocket-form#onTagChange" } %>
+        <span class="flex items-center px-3 py-1.5 rounded-full border border-primary text-xs font-medium text-secondary select-none
+                     peer-checked:bg-container-inset peer-checked:text-primary transition-colors">
+          <%= t("pockets.form.no_tag") %>
+        </span>
+      </label>
+
+      <% available_tags.each do |tag| %>
+        <label class="cursor-pointer">
+          <%= f.radio_button :tag_id, tag.id,
+              class: "sr-only peer",
+              data: { pocket_form_target: "tagRadio", action: "change->pocket-form#onTagChange" } %>
+          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary text-xs font-medium text-secondary select-none
+                       peer-checked:bg-container-inset peer-checked:text-primary transition-colors">
+            <span class="w-2 h-2 rounded-full shrink-0" style="background-color: <%= tag.color %>"></span>
+            <%= tag.name %>
+          </span>
+        </label>
+      <% end %>
+    </div>
+  </div>
+
+  <div data-pocket-form-target="fillDirectionSection" class="<%= "hidden" unless pocket.tag_id.present? %> space-y-3">
+    <%= f.select :fill_direction,
+      Pocket.fill_directions.keys.map { |d| [ t("pockets.form.fill_direction.#{d}"), d ] },
+      { label: t("pockets.form.fill_direction_label") },
+      {} %>
+
+    <div class="bg-container-inset rounded-lg p-3 text-sm text-secondary flex items-start gap-2">
+      <%= icon("zap", size: "sm", class: "shrink-0 mt-0.5 text-warning") %>
+      <span><%= t("pockets.form.auto_fill_hint") %></span>
+    </div>
+  </div>
+
+  <% if account.pockets.any? || pocket.persisted? %>
+    <div class="bg-container-inset rounded-lg p-3 text-sm text-secondary flex items-center gap-2">
+      <%= icon("info", size: "sm", class: "shrink-0") %>
+      <span>
+        <%= t("pockets.form.free_balance_hint",
+              amount: format_money(Money.new(account.free_balance + (pocket.allocated_amount_was || 0), account.currency))) %>
+      </span>
+    </div>
+  <% end %>
+
+  <div class="flex gap-2 justify-end">
+    <%= f.submit t("pockets.form.save") %>
+  </div>
+<% end %>

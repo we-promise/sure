@@ -473,6 +473,7 @@ Rails.application.routes.draw do
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
+    resources :pockets, only: %i[index new create edit update destroy], shallow: false
   end
 
   resources :account_statements, only: %i[index show create update destroy] do

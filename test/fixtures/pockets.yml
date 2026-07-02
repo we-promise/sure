@@ -1,0 +1,13 @@
+emergency_fund:
+  account: depository
+  name: Emergency Fund
+  allocated_amount: 1000
+  currency: USD
+
+vacation:
+  account: depository
+  name: Vacation
+  allocated_amount: 500
+  currency: USD
+  tag: one
+  fill_direction: both

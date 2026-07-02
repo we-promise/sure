@@ -152,6 +152,7 @@ class Family::FinancialDataReset
       scope(:rules).destroy_all
       scope(:budgets).destroy_all
       scope(:categories).destroy_all
+      scope(:pockets).delete_all
       scope(:tags).destroy_all
       scope(:merchants).destroy_all
       delete_provider_items!
@@ -284,6 +285,7 @@ class Family::FinancialDataReset
           budget_categories: BudgetCategory.where(budget_id: budget_ids),
           categories: Category.where(family_id: family.id),
           tags: tag_scope,
+          pockets: Pocket.where(account_id: account_ids),
           taggings: Tagging.where(tag_id: tag_scope.select(:id)),
           merchants: FamilyMerchant.where(family_id: family.id),
           family_merchant_associations: FamilyMerchantAssociation.where(family_id: family.id),

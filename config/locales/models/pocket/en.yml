@@ -1,0 +1,19 @@
+---
+en:
+  activerecord:
+    models:
+      pocket: Pocket
+    attributes:
+      pocket:
+        name: Name
+        allocated_amount: Allocated amount
+        currency: Currency
+        tag: Auto-fill tag
+    errors:
+      models:
+        pocket:
+          attributes:
+            allocated_amount:
+              exceeds_account_balance: "exceeds the available balance (max: %{available} %{currency})"
+            tag:
+              wrong_family: "does not belong to this family"

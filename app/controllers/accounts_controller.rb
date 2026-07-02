@@ -65,6 +65,12 @@ class AccountsController < ApplicationController
     )
     Transaction::ActivitySecurityPreloader.new(@entries).preload
 
+    # Preload taggings for transaction entries (needed for pocket indicators)
+    transaction_entryables = @entries.select(&:transaction?).map(&:entryable)
+    ActiveRecord::Associations::Preloader.new(records: transaction_entryables, associations: :taggings).call if transaction_entryables.any?
+
+    @pocket_by_tag_id = @account.pockets.where.not(tag_id: nil).index_by(&:tag_id)
+
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end
 

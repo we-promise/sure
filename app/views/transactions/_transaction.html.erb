@@ -147,6 +147,24 @@
                     <% if transaction.transfer.present? %>
                       <%= render "transactions/transfer_match", transaction: transaction %>
                     <% end %>
+
+                    <%# Pocket fill indicator %>
+                    <% pocket_indicator = nil %>
+                    <% if defined?(@pocket_by_account_and_tag) && @pocket_by_account_and_tag.present? %>
+                      <% pocket_indicator = transaction.tags.find { |tag| @pocket_by_account_and_tag[[entry.account_id, tag.id]] }&.then { |tag| @pocket_by_account_and_tag[[entry.account_id, tag.id]] } %>
+                    <% elsif defined?(@pocket_by_tag_id) && @pocket_by_tag_id.present? %>
+                      <% pocket_indicator = transaction.taggings.find { |tg| @pocket_by_tag_id[tg.tag_id] }&.then { |tg| @pocket_by_tag_id[tg.tag_id] } %>
+                    <% end %>
+                    <% if pocket_indicator %>
+                      <%= render DS::Pill.new(
+                        label: pocket_indicator.name,
+                        custom_color: pocket_indicator.display_color,
+                        marker: false,
+                        show_dot: false,
+                        icon: pocket_indicator.display_icon,
+                        title: t("transactions.transaction.fills_pocket", pocket: pocket_indicator.name)
+                      ) %>
+                    <% end %>
                   </div>
                 </div>
 
