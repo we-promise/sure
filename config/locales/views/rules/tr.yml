@@ -1,6 +1,13 @@
 ---
 tr:
   rules:
+    actions:
+      auto_categorize:
+        label: İşlemleri yapay zekâ ile otomatik kategorize et
+        cost_na: "maliyet: mevcut değil"
+        cost_estimate: "%{count} işlem için yaklaşık $%{cost}"
+        no_provider: yapılandırılmış LLM sağlayıcısı yok
+      value_placeholder: Bir değer girin
     no_action: İşlem yok
     no_condition: Koşul yok
     recent_runs:

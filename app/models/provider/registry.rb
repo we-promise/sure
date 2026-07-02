@@ -32,6 +32,16 @@ class Provider::Registry
       nil
     end
 
+    def preferred_llm_model
+      effective_llm_model_for(preferred_llm_provider)
+    end
+
+    def effective_llm_model_for(provider)
+      return nil unless provider
+
+      provider.class.effective_model
+    end
+
     def plaid_provider_for_region(region)
       region.to_sym == :us ? plaid_us : plaid_eu
     end

@@ -1,6 +1,13 @@
 ---
 ro:
   rules:
+    actions:
+      auto_categorize:
+        label: Categorizează automat tranzacțiile cu AI
+        cost_na: "cost: indisponibil"
+        cost_estimate: "~$%{cost} pentru %{count} tranzacții"
+        no_provider: niciun furnizor LLM configurat
+      value_placeholder: Introdu o valoare
     no_action: Nicio acțiune
     no_condition: Nicio condiție
     recent_runs:

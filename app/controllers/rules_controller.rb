@@ -66,17 +66,10 @@ class RulesController < ApplicationController
   def confirm
     # Compute provider, model, and cost estimation for auto-categorize actions
     if @rule.actions.any? { |a| a.action_type == "auto_categorize" }
-      # Use the same provider determination logic as Family::AutoCategorizer
-      llm_provider = Provider::Registry.get_provider(:openai)
-
-      if llm_provider
-        @selected_model = Provider::Openai.effective_model
-        @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
-          transaction_count: @rule.affected_resource_count,
-          category_count: @rule.family.categories.count,
-          model: @selected_model
-        )
-      end
+      set_auto_categorize_estimate(
+        transaction_count: @rule.affected_resource_count,
+        category_count: @rule.family.categories.count
+      )
     end
   end
 
@@ -110,16 +103,10 @@ class RulesController < ApplicationController
 
     # Compute AI cost estimation if any rule has auto_categorize action
     if @rules.any? { |r| r.actions.any? { |a| a.action_type == "auto_categorize" } }
-      llm_provider = Provider::Registry.get_provider(:openai)
-
-      if llm_provider
-        @selected_model = Provider::Openai.effective_model
-        @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
-          transaction_count: @total_affected_count,
-          category_count: Current.family.categories.count,
-          model: @selected_model
-        )
-      end
+      set_auto_categorize_estimate(
+        transaction_count: @total_affected_count,
+        category_count: Current.family.categories.count
+      )
     end
   end
 
@@ -134,6 +121,18 @@ class RulesController < ApplicationController
   end
 
   private
+    def set_auto_categorize_estimate(transaction_count:, category_count:)
+      llm_provider = Provider::Registry.preferred_llm_provider
+      return unless llm_provider
+
+      @selected_model = Provider::Registry.effective_llm_model_for(llm_provider)
+      @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
+        transaction_count: transaction_count,
+        category_count: category_count,
+        model: @selected_model
+      )
+    end
+
     def set_rule
       @rule = Current.family.rules.find(params[:id])
     end

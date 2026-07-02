@@ -52,6 +52,11 @@ hu:
       confirm_changes: Változtatások megerősítése
     actions:
       value_placeholder: Adj meg egy értéket
+      auto_categorize:
+        label: Tranzakciók automatikus kategorizálása AI-jal
+        cost_na: "költség: N/A"
+        cost_estimate: "~$%{cost} / %{count} tranzakció"
+        no_provider: nincs LLM-szolgáltató beállítva
     apply_all:
       button: Összes alkalmazása
       confirm_title: Összes szabály alkalmazása

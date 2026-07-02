@@ -5,6 +5,11 @@ de:
     no_condition: Keine Bedingung
     actions:
       value_placeholder: Wert eingeben
+      auto_categorize:
+        label: Transaktionen mit KI automatisch kategorisieren
+        cost_na: "Kosten: k. A."
+        cost_estimate: ca. %{cost} $ pro %{count} Transaktionen
+        no_provider: kein LLM-Anbieter konfiguriert
     apply_all:
       button: Alle anwenden
       confirm_title: Alle Regeln anwenden
