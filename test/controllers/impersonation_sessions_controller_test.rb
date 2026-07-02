@@ -51,6 +51,23 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "in_progress", impersonator_session.reload.status
   end
 
+  test "inactive impersonated user is cleared from existing impersonation session" do
+    sign_in super_admin = users(:sure_support_staff)
+    impersonator_session = impersonation_sessions(:in_progress)
+    impersonated = impersonator_session.impersonated
+
+    post join_impersonation_sessions_path, params: { impersonation_session_id: impersonator_session.id }
+    super_admin_session = super_admin.sessions.order(created_at: :desc).first
+    assert_equal impersonator_session, super_admin_session.reload.active_impersonator_session
+
+    impersonated.update_column(:active, false)
+
+    get root_path
+
+    assert_response :success
+    assert_nil super_admin_session.reload.active_impersonator_session
+  end
+
   test "super admin can complete an impersonation session" do
     sign_in super_admin = users(:sure_support_staff)
 
