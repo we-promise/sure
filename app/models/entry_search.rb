@@ -6,6 +6,7 @@ class EntrySearch
   attribute :amount, :string
   attribute :amount_operator, :string
   attribute :types, :string
+  attribute :include_valuations, :boolean, default: false
   attribute :status, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
@@ -13,6 +14,11 @@ class EntrySearch
   attribute :end_date, :string
 
   class << self
+    def apply_valuations_filter(scope, include_valuations)
+      return scope if include_valuations
+      scope.where.not(entryable_type: "Valuation")
+    end
+
     def apply_search_filter(scope, search)
       return scope if search.blank?
 
@@ -96,6 +102,7 @@ class EntrySearch
 
   def build_query(scope)
     query = scope.joins(:account)
+    query = self.class.apply_valuations_filter(query, include_valuations)
     query = self.class.apply_search_filter(query, search)
     query = self.class.apply_date_filters(query, start_date, end_date)
     query = self.class.apply_amount_filter(query, amount, amount_operator)

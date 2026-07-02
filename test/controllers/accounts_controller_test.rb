@@ -444,4 +444,29 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
     refute_includes @response.body, setup_accounts_simplefin_item_path(item)
     refute_includes @response.body, "Link existing accounts"
   end
+
+  test "account activity excludes valuations by default" do
+    valuation_entry = entries(:valuation)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(valuation_entry)}", count: 0
+  end
+
+  test "account activity includes valuations when include_valuations param is set" do
+    valuation_entry = entries(:valuation)
+
+    get account_url(@account, q: { include_valuations: "true" })
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(valuation_entry)}", count: 1
+  end
+
+  test "account activity filter popover renders show balance updates toggle" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "input#q_include_valuations[type=checkbox]", count: 1
+  end
 end
