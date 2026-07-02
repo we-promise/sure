@@ -130,11 +130,11 @@ class AccountStatement::Coverage
       linked_statements = statements_covering(linked_statement_scope, month)
       ambiguous_statements = statements_covering(ambiguous_statement_scope, month)
 
-      status = if overlapping_statements?(linked_statements)
+      status = if linked_statements.many? && overlapping_statements?(linked_statements)
         "duplicate"
       elsif linked_statements.any? { |statement| statement.reconciliation_mismatched?(balance_lookup: balance_lookup) }
         "mismatched"
-      elsif linked_statements.one?
+      elsif linked_statements.any?
         "covered"
       elsif ambiguous_statements.any?
         "ambiguous"
