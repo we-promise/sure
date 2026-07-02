@@ -166,6 +166,48 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert filtered.all? { |t| t.category_id.nil? }
   end
 
+  test "applies transaction_tag condition" do
+    scope = @rule_scope
+
+    tag = @family.tags.create!(name: "Reimbursable")
+    tagged = @account.transactions.first
+    tagged.tags << tag
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_tag",
+      operator: "=",
+      value: tag.id
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 1, filtered.count
+    assert_equal tagged.id, filtered.first.id
+  end
+
+  test "applies is_null condition for transaction_tag" do
+    scope = @rule_scope
+
+    tag = @family.tags.create!(name: "Reimbursable")
+    @account.transactions.first.tags << tag
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_tag",
+      operator: "is_null",
+      value: nil
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # The 4 transactions without any tag
+    assert_equal 4, filtered.count
+    assert filtered.none? { |t| t.tags.include?(tag) }
+  end
+
   test "applies is_null condition for transaction_merchant" do
     scope = @rule_scope
 
