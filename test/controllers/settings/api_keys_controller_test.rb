@@ -200,4 +200,23 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     assert_includes created_key.scopes, "read"
     assert_equal 64, created_key.plain_key.length
   end
+
+  # API keys are user-scoped self-management: a member manages their own keys
+  # (a key carries only the owning user's permissions, and members reach this
+  # page via the Reports CSV/export flow). Do NOT add an admin gate here.
+  test "non-admin member can view API key settings" do
+    sign_in users(:family_member)
+    get settings_api_key_path
+    assert_response :success
+  end
+
+  test "non-admin member can create their own API key" do
+    sign_in users(:family_member)
+    assert_difference "ApiKey.count", 1 do
+      post settings_api_key_path, params: {
+        api_key: { name: "Member Key", scopes: "read" }
+      }
+    end
+    assert_redirected_to settings_api_key_path
+  end
 end
