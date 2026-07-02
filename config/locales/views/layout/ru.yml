@@ -1,0 +1,32 @@
+---
+ru:
+  layouts:
+    application:
+      nav:
+        assistant: Ассистент
+        budgets: Бюджеты
+        goals: Цели
+        home: Главная
+        reports: Отчёты
+        transactions: Операции
+      privacy_mode: Переключить режим конфиденциальности
+      resize_left_sidebar: Изменить ширину боковой панели счетов
+      resize_right_sidebar: Изменить ширину боковой панели ассистента
+      skip_to_main: Перейти к основному содержимому
+    auth:
+      existing_account: Уже есть аккаунт?
+      no_account: Впервые в %{product_name}?
+      sign_in: Войти
+      sign_up: Создать аккаунт
+    shared:
+      confirm_dialog:
+        are_you_sure: Вы уверены?
+        cannot_be_undone: Это действие нельзя отменить.
+        confirm: Подтвердить
+      footer:
+        privacy_policy: Политика конфиденциальности
+        terms_of_service: Условия использования
+    trial:
+      contribute: Внести вклад
+      data_deleted_in_days: Данные будут удалены через %{days} дней
+      open_demo: Открыть демо

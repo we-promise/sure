@@ -7,6 +7,8 @@ ru:
         restrict_dependent_destroy:
           has_many: 'Невозможно удалить запись, так как существуют зависимости: %{record}'
           has_one: 'Невозможно удалить запись, так как существует зависимость: %{record}'
+  common:
+    close: Закрыть
   date:
     abbr_day_names:
     - Вс
@@ -41,7 +43,9 @@ ru:
     formats:
       default: "%d.%m.%Y"
       long: "%-d %B %Y"
+      month_year: "%B %Y"
       short: "%-d %b"
+      short_month_year: "%b %Y"
     month_names:
     -
     - января
@@ -130,6 +134,11 @@ ru:
       month: Месяц
       second: Секунда
       year: Год
+  defaults:
+    brand_name: "%{brand_name}"
+    common:
+      close: Закрыть
+    product_name: "%{product_name}"
   errors:
     format: "%{attribute} %{message}"
     messages:
@@ -177,9 +186,13 @@ ru:
         many: "%{model}: сохранение не удалось из-за %{count} ошибок"
         one: "%{model}: сохранение не удалось из-за %{count} ошибки"
         other: "%{model}: сохранение не удалось из-за %{count} ошибки"
+  global:
+    expand: Развернуть
   helpers:
     select:
+      default_label: Выберите...
       prompt: 'Выберите: '
+      search_placeholder: Поиск
     submit:
       create: Создать %{model}
       submit: Сохранить %{model}
@@ -187,13 +200,8 @@ ru:
   number:
     currency:
       format:
-        delimiter: " "
-        format: "%n %u"
-        precision: 2
-        separator: ","
         significant: false
         strip_insignificant_zeros: false
-        unit: руб.
     format:
       delimiter: " "
       precision: 3

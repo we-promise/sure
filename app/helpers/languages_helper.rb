@@ -163,6 +163,7 @@ module LanguagesHelper
     "nb",   # Norwegian Bokmål
     "ca",   # Catalan
     "ro",   # Romanian
+    "ru",   # Russian
     "pl",   # Polish
     "pt-BR", # Brazilian Portuguese
     "zh-CN", # Chinese (Simplified)
