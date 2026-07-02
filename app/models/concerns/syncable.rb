@@ -6,6 +6,11 @@ module Syncable
   end
 
   def syncing?
+    # Avoid a query when the syncs association was eager-loaded (e.g. the
+    # accounts index loads every provider item with includes(:syncs) and
+    # renders sync status per item).
+    return syncs.any?(&:visible?) if syncs.loaded?
+
     syncs.visible.any?
   end
 
@@ -67,15 +72,26 @@ module Syncable
     latest_sync&.created_at
   end
 
-  private
-    def latest_sync
+  # Public so views/models can reuse one lookup instead of re-querying
+  # syncs.ordered.first per status method. Uses the eager-loaded association
+  # when available (provider item lists render several statuses per item).
+  def latest_sync
+    if syncs.loaded?
+      syncs.max_by { |s| [ s.created_at, s.id ] }
+    else
       syncs.ordered.first
     end
+  end
 
-    def latest_completed_sync
+  def latest_completed_sync
+    if syncs.loaded?
+      syncs.select(&:completed?).max_by { |s| [ s.created_at, s.id ] }
+    else
       syncs.completed.ordered.first
     end
+  end
 
+  private
     def syncer
       self.class::Syncer.new(self)
     end
