@@ -9,6 +9,7 @@ tr:
         create: Devam Et
   registrations:
     closed: Kayıtlar şu anda kapalı.
+    sso_only: "Hesap oluşturma kimlik sağlayıcınız tarafından yönetilir. Lütfen SSO sağlayıcınızla oturum açın."
     create:
       failure: Kayıt olurken bir sorun oluştu.
       invalid_invite_code: Geçersiz davet kodu, lütfen tekrar deneyin.

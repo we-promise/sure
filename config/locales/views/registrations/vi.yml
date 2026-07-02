@@ -9,6 +9,7 @@ vi:
         create: Tiếp tục
   registrations:
     closed: Đăng ký hiện đang đóng.
+    sso_only: "Việc tạo tài khoản do nhà cung cấp danh tính của bạn quản lý. Vui lòng đăng nhập bằng nhà cung cấp SSO của bạn."
     create:
       failure: Đã xảy ra lỗi khi đăng ký.
       invalid_invite_code: Mã mời không hợp lệ, vui lòng thử lại.

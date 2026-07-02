@@ -9,6 +9,7 @@ zh-TW:
         create: 繼續
   registrations:
     closed: 目前已關閉註冊。
+    sso_only: "帳戶建立由您的身分提供者管理。請使用您的 SSO 提供者登入。"
     create:
       failure: 註冊時發生問題。
       invalid_invite_code: 邀請碼無效，請再試一次。

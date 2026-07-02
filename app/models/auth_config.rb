@@ -27,6 +27,15 @@ class AuthConfig
       local_login_enabled?
     end
 
+    # Whether self-service local (email/password) account creation is allowed.
+    # Requires local login to be globally enabled. Admin override is NOT enough:
+    # in that mode only existing super-admins may log in locally, so a new
+    # self-service account would be created but could never sign in again. When
+    # local login is disabled, accounts are provisioned through the SSO provider.
+    def local_signup_enabled?
+      local_login_enabled?
+    end
+
     # Backend check to determine if a given user is allowed to authenticate via
     # local email/password credentials.
     #

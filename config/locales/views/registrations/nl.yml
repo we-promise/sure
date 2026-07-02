@@ -9,6 +9,7 @@ nl:
         create: Doorgaan
   registrations:
     closed: Aanmeldingen zijn momenteel gesloten.
+    sso_only: "Accountaanmaak wordt beheerd door uw identiteitsprovider. Meld u aan met uw SSO-provider."
     create:
       failure: Er was een probleem bij het aanmelden.
       invalid_invite_code: Ongeldige uitnodigingscode, probeer het opnieuw.
