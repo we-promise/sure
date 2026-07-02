@@ -5,7 +5,8 @@ module Family::AutoTransferMatchable
     inflow_transaction_id: nil,
     outflow_transaction_id: nil,
     account_id: nil,
-    include_rejected: true
+    include_rejected: true,
+    since_date: nil
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -20,14 +21,15 @@ module Family::AutoTransferMatchable
         account_id:,
         include_rejected:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
-        upper_exchange_rate_bound: 1 + exchange_rate_tolerance
+        upper_exchange_rate_bound: 1 + exchange_rate_tolerance,
+        since_date:
       }
     ])
   end
 
-  def auto_match_transfers!(account: nil)
+  def auto_match_transfers!(account: nil, since_date: nil)
     # Exclude already matched transfers
-    candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false)
+    candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false, since_date:)
     transaction_ids = candidates_scope.flat_map do |match|
       [ match.inflow_transaction_id, match.outflow_transaction_id ]
     end.uniq
@@ -140,7 +142,8 @@ module Family::AutoTransferMatchable
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
-            (:include_rejected = TRUE OR rejected_transfers.id IS NULL)
+            (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
+            (:since_date IS NULL OR inflow_candidates.date >= :since_date)
           UNION ALL
           SELECT
             inflow_candidates.entryable_id AS inflow_transaction_id,
@@ -185,7 +188,8 @@ module Family::AutoTransferMatchable
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
-            (:include_rejected = TRUE OR rejected_transfers.id IS NULL)
+            (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
+            (:since_date IS NULL OR inflow_candidates.date >= :since_date)
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.date_diff ASC
       SQL
