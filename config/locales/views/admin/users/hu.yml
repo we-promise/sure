@@ -48,6 +48,12 @@ hu:
           expires: "Lejár: %{date}"
           delete: "Törlés"
           delete_all: "Összes törlése"
+        delete_user:
+          button: "Törlés"
+          confirm: "Véglegesen törli a következőt: %{email}? Ez deaktiválja a fiókot és eltávolítja az adatait. Ez nem vonható vissza."
       update:
         success: "A felhasználói szerepkör sikeresen frissítve."
         failure: "Nem sikerült frissíteni a felhasználói szerepkört."
+      destroy:
+        success: "Felhasználó sikeresen törölve."
+        cannot_delete_self: "Nem törölheti a saját fiókját az adminisztrációs panelről."

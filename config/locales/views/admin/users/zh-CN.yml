@@ -48,6 +48,12 @@ zh-CN:
           expires: 于 %{date} 过期
           delete: 删除
           delete_all: 全部删除
+        delete_user:
+          button: "删除"
+          confirm: "永久删除 %{email}？这将停用该账户并删除其数据。此操作无法撤消。"
       update:
         success: 用户角色更新成功。
         failure: 更新用户角色失败。
+      destroy:
+        success: "用户已成功删除。"
+        cannot_delete_self: "您无法从管理面板删除自己的账户。"

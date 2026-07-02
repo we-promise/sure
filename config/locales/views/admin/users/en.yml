@@ -48,6 +48,12 @@ en:
           expires: "Expires %{date}"
           delete: "Delete"
           delete_all: "Delete All"
+        delete_user:
+          button: "Delete"
+          confirm: "Permanently delete %{email}? This deactivates the account and removes its data. This cannot be undone."
       update:
         success: "User role updated successfully."
         failure: "Failed to update user role."
+      destroy:
+        success: "User deleted successfully."
+        cannot_delete_self: "You cannot delete your own account from the admin panel."
