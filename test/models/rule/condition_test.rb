@@ -208,6 +208,63 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert filtered.none? { |t| t.tags.include?(tag) }
   end
 
+  test "compound AND of two transaction_tag conditions matches transactions having both tags" do
+    scope = @rule_scope
+
+    tag_a = @family.tags.create!(name: "Reimbursable")
+    tag_b = @family.tags.create!(name: "Business")
+
+    both = @account.transactions.first
+    both.tags << [ tag_a, tag_b ]
+
+    only_a = @account.transactions.second
+    only_a.tags << tag_a
+
+    parent_condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "compound",
+      operator: "and",
+      sub_conditions: [
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_a.id),
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_b.id)
+      ]
+    )
+
+    scope = parent_condition.prepare(scope)
+    filtered = parent_condition.apply(scope)
+
+    # Only the transaction carrying BOTH tags matches (a single joined alias could not)
+    assert_equal 1, filtered.count
+    assert_equal both.id, filtered.first.id
+  end
+
+  test "compound OR of transaction_tag conditions does not duplicate multi-tagged transactions" do
+    scope = @rule_scope
+
+    tag_a = @family.tags.create!(name: "Reimbursable")
+    tag_b = @family.tags.create!(name: "Business")
+
+    multi = @account.transactions.first
+    multi.tags << [ tag_a, tag_b ]
+
+    parent_condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "compound",
+      operator: "or",
+      sub_conditions: [
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_a.id),
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_b.id)
+      ]
+    )
+
+    scope = parent_condition.prepare(scope)
+    filtered = parent_condition.apply(scope)
+
+    # Matches both OR branches but must be returned exactly once (no join fan-out)
+    assert_equal 1, filtered.count
+    assert_equal [ multi.id ], filtered.map(&:id)
+  end
+
   test "applies is_null condition for transaction_merchant" do
     scope = @rule_scope
 
