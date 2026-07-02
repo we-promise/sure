@@ -361,6 +361,7 @@ en:
         binance: Sync your Binance spot balances using a read-only API key.
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
+        trading212: Sync your Trading 212 investment portfolio using a read-only API key.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         indexa_capital: Track your Indexa Capital automated investment portfolio.
         sophtron: Connect US & Canadian banks and utilities.
@@ -553,6 +554,29 @@ en:
         save_configuration: Save Configuration
         update_configuration: Update Configuration
         status_configured_prefix: "%{summary}. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to manage discovered accounts.
+        not_configured: Not configured.
+      trading212_panel:
+        steps:
+          step_1: Go to Trading 212 → Settings → API (web or mobile app).
+          step_2: Generate a new API key — Trading 212 will show you an API ID and a Secret Key.
+          step_3: Paste both below, select your environment and account currency, then save.
+        api_key_label: API ID
+        api_key_placeholder_new: Paste your Trading 212 API ID
+        api_key_placeholder_existing: Leave blank to keep the current API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Paste your Trading 212 Secret Key
+        api_secret_placeholder_existing: Leave blank to keep the current Secret Key
+        environment_label: Environment
+        environment_live: Live account
+        environment_demo: Demo account
+        currency_label: Account currency
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        sync: Sync
+        disconnect_confirm: Disconnect Trading 212?
+        status_configured_prefix: "Configured. Visit the"
         accounts_tab: Accounts
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
