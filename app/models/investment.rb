@@ -50,10 +50,26 @@ class Investment < ApplicationRecord
     "smsf" => { short: "SMSF", long: "Self-Managed Super Fund", region: "au", tax_treatment: :tax_deferred },
 
     # === Europe ===
-    "assurance_vie" => { short: "AV", long: "Assurance Vie", region: "eu", tax_treatment: :tax_advantaged },
-    "pea" => { short: "PEA", long: "Plan d'Épargne en Actions", region: "eu", tax_treatment: :tax_advantaged },
     "pillar_3a" => { short: "Pillar 3a", long: "Private Pension (Pillar 3a)", region: "eu", tax_treatment: :tax_deferred },
     "riester" => { short: "Riester", long: "Riester-Rente", region: "eu", tax_treatment: :tax_deferred },
+
+    # === France ===
+    "assurance_vie" => { short: "Assurance Vie", long: "Assurance Vie", region: "fr", tax_treatment: :tax_advantaged },
+    "contrat_de_capitalisation" => { short: "Contrat de Capitalisation", long: "Contrat de Capitalisation", region: "fr", tax_treatment: :tax_advantaged },
+    "cto" => { short: "CTO", long: "Compte-Titres Ordinaire", region: "fr", tax_treatment: :taxable },
+    "livret_a" => { short: "Livret A", long: "Livret A", region: "fr", tax_treatment: :tax_exempt },
+    "ldds" => { short: "LDDS", long: "Livret de Développement Durable et Solidaire", region: "fr", tax_treatment: :tax_exempt },
+    "lee" => { short: "LEE", long: "Livret d'Épargne Entreprise", region: "fr", tax_treatment: :taxable },
+    "lep" => { short: "LEP", long: "Livret d'Épargne Populaire", region: "fr", tax_treatment: :tax_exempt },
+    "livret_jeune" => { short: "Livret Jeune", long: "Livret Jeune", region: "fr", tax_treatment: :tax_exempt },
+    "pea" => { short: "PEA", long: "Plan d'Épargne en Actions", region: "fr", tax_treatment: :tax_advantaged },
+    "pee" => { short: "PEE", long: "Plan d'Épargne Entreprise", region: "fr", tax_treatment: :tax_advantaged },
+    "peg" => { short: "PEG", long: "Plan d'Épargne Groupe", region: "fr", tax_treatment: :tax_advantaged },
+    "pel" => { short: "PEL", long: "Plan d'Épargne Logement", region: "fr", tax_treatment: :tax_advantaged },
+    "per" => { short: "PER", long: "Plan d'Épargne Retraite", region: "fr", tax_treatment: :tax_deferred },
+    "per_individuel" => { short: "PER Individuel", long: "Plan d'Épargne Retraite Individuel", region: "fr", tax_treatment: :tax_deferred },
+    "per_collectif" => { short: "PER Collectif", long: "Plan d'Épargne Retraite Collectif", region: "fr", tax_treatment: :tax_deferred },
+    "per_obligatoire" => { short: "PER Obligatoire", long: "Plan d'Épargne Retraite Obligatoire", region: "fr", tax_treatment: :tax_deferred },
 
     # === India ===
     # Pensions & insurance
@@ -83,6 +99,7 @@ class Investment < ApplicationRecord
     "gold_etf" => { short: "Gold ETF", long: "Gold ETF", region: "in", tax_treatment: :taxable },
     "gold_mf" => { short: "Gold MF", long: "Gold Mutual Fund", region: "in", tax_treatment: :taxable },
     "sgb" => { short: "SGB", long: "Sovereign Gold Bond", region: "in", tax_treatment: :tax_advantaged },
+
 
     # === Generic (available everywhere) ===
     "pension" => { short: "Pension", long: "Pension", region: nil, tax_treatment: :tax_deferred },
@@ -115,7 +132,22 @@ class Investment < ApplicationRecord
       I18n.t("accounts.subtype_regions.#{region || 'generic'}")
     end
 
-    # Maps currency codes to regions for prioritizing user's likely region
+    # Maps country codes (ISO 2-letter) to regions
+    COUNTRY_REGION_MAP = {
+      "US" => "us",
+      "GB" => "uk",
+      "CA" => "ca",
+      "AU" => "au",
+      "IN" => "in",
+      "FR" => "fr",
+      # Other European countries using EUR/CHF
+      "DE" => "eu", "AT" => "eu", "BE" => "eu", "NL" => "eu",
+      "SE" => "eu", "NO" => "eu", "CH" => "eu", "IT" => "eu",
+      "ES" => "eu", "PT" => "eu", "CZ" => "eu", "PL" => "eu",
+      "DK" => "eu", "FI" => "eu", "IE" => "eu", "GR" => "eu"
+    }.freeze
+
+    # Maps currency codes to regions
     CURRENCY_REGION_MAP = {
       "USD" => "us",
       "GBP" => "uk",
@@ -127,18 +159,19 @@ class Investment < ApplicationRecord
     }.freeze
 
     # Returns subtypes grouped by region for use with grouped_options_for_select
-    # Optionally accepts currency to prioritize user's region first
-    def subtypes_grouped_for_select(currency: nil)
-      user_region = CURRENCY_REGION_MAP[currency]
+    # Optionally accepts country (ISO 2-letter code) to prioritize user's country first, else currency
+    def subtypes_grouped_for_select(currency: nil, country: nil)
+      user_region = nil
+      if country.present?
+        user_region = COUNTRY_REGION_MAP[country.to_s.upcase]
+      end
+      user_region ||= CURRENCY_REGION_MAP[currency&.to_s&.upcase]
+
       grouped = SUBTYPES.group_by { |_, v| v[:region] }
 
       # Build region order: user's region first (if known), then Generic, then others
-      other_regions = %w[us uk ca au eu in] - [ user_region ].compact
-      region_order = if user_region
-        [ user_region, nil, *other_regions ].uniq
-      else
-        [ nil, *other_regions ].uniq
-      end
+      other_regions = %w[us uk ca au eu fr in] - [ user_region ].compact
+      region_order = [ user_region, nil, *other_regions ].uniq
 
       region_order.filter_map do |region|
         next unless grouped[region]
