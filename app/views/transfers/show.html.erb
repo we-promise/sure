@@ -34,9 +34,21 @@
             <dd class="font-medium"><%= l(@transfer.outflow_transaction.entry.date, format: :long) %></dd>
           </dl>
           <dl class="flex items-center gap-2 justify-between">
-            <dt class="text-secondary"><%= t(".amount") %></dt>
-            <dd class="font-medium text-red-500 privacy-sensitive"><%= format_money @transfer.outflow_transaction.entry.amount_money * -1 %></dd>
+            <dt class="text-secondary"><%= t(".transfer_amount") %></dt>
+            <dd class="font-medium text-destructive privacy-sensitive"><%= format_money @transfer.outflow_transaction.entry.amount_money * -1 %></dd>
           </dl>
+          <% if @transfer.has_source_fee? %>
+            <dl class="flex items-center gap-2 justify-between">
+              <dt class="text-secondary"><%= t(".source_fee") %></dt>
+              <dd class="font-medium text-destructive privacy-sensitive"><%= format_money Money.new(@transfer.derived_source_fee_amount, @transfer.from_account.currency) * -1 %></dd>
+            </dl>
+            <dl class="flex items-center gap-2 justify-between pt-1 border-t border-alpha-black-50">
+              <dt class="text-secondary font-medium"><%= t(".total") %></dt>
+              <dd class="font-medium text-destructive privacy-sensitive">
+                <%= format_money (@transfer.outflow_transaction.entry.amount_money + Money.new(@transfer.derived_source_fee_amount, @transfer.from_account.currency)) * -1 %>
+              </dd>
+            </dl>
+          <% end %>
         </div>
         <%= render "shared/ruler", classes: "my-2" %>
         <div class="space-y-3">
@@ -52,9 +64,19 @@
             <dd class="font-medium"><%= l(@transfer.inflow_transaction.entry.date, format: :long) %></dd>
           </dl>
           <dl class="flex items-center gap-2 justify-between">
-            <dt class="text-secondary"><%= t(".amount") %></dt>
-            <dd class="font-medium text-green-500 privacy-sensitive">+<%= format_money @transfer.inflow_transaction.entry.amount_money * -1 %></dd>
+            <dt class="text-secondary"><%= t(".transfer_amount") %></dt>
+            <dd class="font-medium text-success privacy-sensitive">+<%= format_money @transfer.inflow_transaction.entry.amount_money * -1 %></dd>
           </dl>
+          <% if @transfer.has_destination_fee? %>
+            <dl class="flex items-center gap-2 justify-between">
+              <dt class="text-secondary"><%= t(".destination_fee") %></dt>
+              <dd class="font-medium text-destructive privacy-sensitive"><%= format_money Money.new(@transfer.derived_destination_fee_amount, @transfer.to_account.currency) * -1 %></dd>
+            </dl>
+            <dl class="flex items-center gap-2 justify-between pt-1 border-t border-alpha-black-50">
+              <dt class="text-secondary font-medium"><%= t(".total") %></dt>
+              <dd class="font-medium text-success privacy-sensitive">+<%= format_money (@transfer.inflow_transaction.entry.amount_money * -1) - Money.new(@transfer.derived_destination_fee_amount, @transfer.to_account.currency) %></dd>
+            </dl>
+          <% end %>
         </div>
       </div>
     <% end %>
@@ -94,12 +116,19 @@
             <h4 class="text-primary"><%= t(".delete_title") %></h4>
             <p class="text-secondary"><%= t(".delete_subtitle") %></p>
           </div>
-          <%= button_to t(".delete"),
-                transfer_path(@transfer),
+          <%= render DS::Button.new(
+                text: t(".delete"),
+                variant: :outline_destructive,
+                size: :md,
+                href: transfer_path(@transfer),
                 method: :delete,
-                class:  "rounded-lg px-3 py-2 whitespace-nowrap text-red-500 text-sm
-                          font-medium border border-secondary",
-                data:   { turbo_confirm: true, turbo_frame: "_top" } %>
+                confirm: CustomConfirm.new(
+                  title: t(".delete_title"),
+                  body: t(".delete_subtitle"),
+                  destructive: true
+                ),
+                frame: "_top"
+              ) %>
         </div>
       </div>
     <% end %>
