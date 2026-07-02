@@ -497,7 +497,7 @@ pipelock:
   enabled: false
   image:
     repository: ghcr.io/luckypipewrench/pipelock
-    tag: "2.5.0"
+    tag: "2.8.0"
     pullPolicy: IfNotPresent
     imagePullSecrets: []
   replicas: 1
@@ -565,7 +565,7 @@ pipelock:
   # destinations even when action is "warn"; trusted provider hosts (OpenAI,
   # Anthropic, etc.) remain exempt via the response_scanning exemption list.
   requestBodyScanning:
-    enabled: false
+    enabled: true
     action: warn               # warn or block
     maxBodyBytes: 5242880      # 5 MB; fail-closed above this
     scanHeaders: true          # scan request headers for DLP
@@ -577,6 +577,16 @@ pipelock:
     enabled: true
     intervalSeconds: 2
     exposeSubsystems: false    # include per-subsystem map in /health response
+  # Flight recorder: signed, hash-chained action receipts. Enabled by default in
+  # Pipelock, but inert until both dir and signingKeyPath are set and mounted.
+  # Use extraVolumes/extraVolumeMounts below to mount persistent storage and a
+  # Secret containing the signing key.
+  flightRecorder:
+    enabled: true
+    requireReceipts: false      # true = fail closed if allow-path receipt cannot be emitted
+    redact: true                # redact DLP-shaped content before writing receipts
+    dir: ""                     # e.g. /var/lib/pipelock/evidence
+    signingKeyPath: ""          # e.g. /run/secrets/pipelock/flight-recorder-signing.key
   service:
     type: ClusterIP
   resources:
@@ -590,6 +600,8 @@ pipelock:
   tolerations: []
   affinity: {}
   topologySpreadConstraints: []
+  extraVolumes: []
+  extraVolumeMounts: []
 
   # Prometheus Operator ServiceMonitor for /metrics on the proxy port
   serviceMonitor:

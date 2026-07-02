@@ -3,7 +3,7 @@
 # Preview Dockerfile for Cloudflare Containers
 # Includes PostgreSQL and Redis for self-contained development testing
 
-ARG RUBY_VERSION=3.4.7
+ARG RUBY_VERSION=3.4.9
 FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim AS base
 
 WORKDIR /rails

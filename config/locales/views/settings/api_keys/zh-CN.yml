@@ -106,3 +106,10 @@ zh-CN:
         usage_instructions: 使用 API 密钥时，请将其包含在 X-Api-Key 请求头中：
         copy_key: 复制 API 密钥
         continue: 继续前往 API 密钥设置
+      create:
+        success: API 密钥已成功创建
+      destroy:
+        not_found: 找不到 API 密钥
+        cannot_revoke: 此 API 密钥不能撤销
+        revoked_successfully: API 密钥已撤销
+        revoke_failed: 撤销 API 密钥失败

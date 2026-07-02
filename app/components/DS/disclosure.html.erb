@@ -33,7 +33,7 @@
     <% end %>
   <% end %>
 
-  <div class="mt-2">
+  <%= tag.div class: body_class.presence do %>
     <%= content %>
-  </div>
+  <% end %>
 <% end %>
