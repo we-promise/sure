@@ -49,24 +49,4 @@ class SimplefinAccount::Transactions::Processor
 
     Rails.logger.info "SimplefinAccount::Transactions::Processor - Completed for simplefin_account #{simplefin_account.id}: #{processed_count} processed, #{error_count} errors, #{@skipped_entries.size} skipped (protected)"
   end
-
-  private
-
-    def category_matcher
-      @category_matcher ||= SimplefinAccount::Transactions::CategoryMatcher.new(family_categories)
-    end
-
-    def family_categories
-      @family_categories ||= begin
-        if account.family.categories.none?
-          account.family.categories.bootstrap!
-        end
-
-        account.family.categories
-      end
-    end
-
-    def account
-      simplefin_account.current_account
-    end
 end
