@@ -23,7 +23,7 @@ class WiseItemsController < ApplicationController
     if token.blank?
       @wise_item = Current.family.wise_items.build
       @wise_item.errors.add(:token, :blank)
-      render :new, status: :unprocessable_entity and return
+      return render_provider_panel_error
     end
 
     provider = Provider::Wise.new(token, base_url: Rails.configuration.x.wise.base_url)
@@ -32,7 +32,7 @@ class WiseItemsController < ApplicationController
     if profiles.blank?
       @wise_item = Current.family.wise_items.build
       @wise_item.errors.add(:base, t(".no_profiles_found"))
-      render :new, status: :unprocessable_entity and return
+      return render_provider_panel_error
     end
 
     session[:wise_pending_profiles] = profiles
@@ -45,7 +45,7 @@ class WiseItemsController < ApplicationController
     @wise_item = Current.family.wise_items.build
     error_key = e.error_type == :unauthorized ? ".invalid_token" : ".connection_failed"
     @wise_item.errors.add(:base, t(error_key))
-    render :new, status: :unprocessable_entity
+    render_provider_panel_error
   end
 
   # Step 2: Show profile selection.
