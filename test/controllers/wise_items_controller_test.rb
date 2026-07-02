@@ -39,19 +39,19 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "live_token_abc", decrypted
   end
 
-  test "create re-renders new when token is blank" do
+  test "create redirects to providers on blank token" do
     post wise_items_url, params: { wise_item: { token: "" } }
-    assert_response :unprocessable_entity
+    assert_redirected_to settings_providers_path
     assert_nil session[:wise_pending_token]
   end
 
-  test "create re-renders new when Wise API rejects the token" do
+  test "create redirects to providers when Wise API rejects the token" do
     Provider::Wise.any_instance.stubs(:get_profiles).raises(
       Provider::Wise::WiseError.new("unauthorized", :unauthorized)
     )
 
     post wise_items_url, params: { wise_item: { token: "bad_token" } }
-    assert_response :unprocessable_entity
+    assert_redirected_to settings_providers_path
     assert_nil session[:wise_pending_token]
   end
 
