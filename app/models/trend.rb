@@ -56,7 +56,11 @@ class Trend
 
     change = (current - previous).to_f
 
-    (change / previous.to_f * 100).round(1)
+    # Normalize by the magnitude of the baseline so the sign reflects the
+    # direction of change. Dividing by a signed negative `previous` (e.g. a
+    # negative net worth or overdrawn balance) inverts the sign — an
+    # improvement from -1000 to -500 would otherwise read as -50%.
+    (change / previous.to_f.abs * 100).round(1)
   end
 
   def percent_formatted

@@ -37,4 +37,16 @@ class TrendTest < ActiveSupport::TestCase
     trend = Trend.new(current: 0, previous: 100)
     assert_equal "down", trend.direction
   end
+
+  test "percent uses magnitude of a negative baseline" do
+    # Net worth improving from -1000 to -500 is a +50% change, not -50%.
+    improving = Trend.new(current: -500, previous: -1000)
+    assert_equal "up", improving.direction
+    assert_equal 50.0, improving.percent
+
+    # Worsening from -1000 to -1500 is a -50% change.
+    worsening = Trend.new(current: -1500, previous: -1000)
+    assert_equal "down", worsening.direction
+    assert_equal(-50.0, worsening.percent)
+  end
 end
