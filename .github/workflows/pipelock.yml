@@ -34,3 +34,5 @@ jobs:
             # Preview Dockerfile uses local dev credentials (rails/rails) that are
             # not real secrets; Dockerfile format does not support inline # pipelock:ignore
             Dockerfile.preview
+            charts/sure/README.md
+            charts/sure/templates/_helpers.tpl

@@ -800,6 +800,8 @@ RSpec.configure do |config|
               notes: { type: :string, nullable: true },
               external_id: { type: :string, nullable: true },
               source: { type: :string, nullable: true },
+              kind: { type: :string, enum: %w[standard funds_movement cc_payment loan_payment one_time investment_contribution] },
+              refund: { type: :boolean, nullable: true },
               classification: { type: :string },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },

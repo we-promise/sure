@@ -150,6 +150,10 @@ end
           @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
         end
 
+        if refund_provided?
+          @entry.transaction.update!(refund: transaction_params[:refund])
+        end
+
         @entry.sync_account_later
         @entry.lock_saved_attributes!
 
@@ -308,7 +312,7 @@ end
     def transaction_params
       params.require(:transaction).permit(
         :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, tag_ids: []
+        :category_id, :merchant_id, :nature, :kind, :refund, tag_ids: []
       )
     end
 
@@ -327,8 +331,10 @@ end
         entryable_attributes: {
           category_id: transaction_params[:category_id],
           merchant_id: transaction_params[:merchant_id],
+          kind: transaction_params[:kind],
+          refund: transaction_params[:refund],
           tag_ids: transaction_params[:tag_ids] || []
-        }
+        }.compact
       }
       if idempotency_key_requested?
         entry_params[:external_id] = idempotency_external_id
@@ -346,9 +352,10 @@ end
         entryable_attributes: {
           id: @entry.entryable_id,
           category_id: transaction_params[:category_id],
-          merchant_id: transaction_params[:merchant_id]
-          # Note: tag_ids handled separately in update action to distinguish
-          # "not provided" from "explicitly set to empty"
+          merchant_id: transaction_params[:merchant_id],
+          kind: transaction_params[:kind]
+          # Note: tag_ids and refund handled separately in update action to distinguish
+          # "not provided" from "explicitly set to empty/false"
         }.compact_blank
       }
 
@@ -364,6 +371,10 @@ end
     # This distinguishes between "user wants to update tags" vs "user didn't specify tags".
     def tags_provided?
       params[:transaction].key?(:tag_ids)
+    end
+
+    def refund_provided?
+      params[:transaction].key?(:refund)
     end
 
     def split_financial_fields_changed?

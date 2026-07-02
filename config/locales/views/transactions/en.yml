@@ -42,6 +42,8 @@ en:
       note_label: Notes
       note_placeholder: Enter a note
       create_tag: Create
+      refund_title: Mark as refund
+      refund_description: A refund offsets the original expense in your budget — it won't be counted as income.
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags
@@ -77,6 +79,8 @@ en:
       activity_type: Activity Type
       activity_type_description: Type of investment activity (Buy, Sell, Dividend, etc.). Auto-detected or set manually.
       one_time_title: One-time %{type}
+      refund_title: Refund
+      refund_description: Mark this as a refund to offset the original expense in your budget and reports. It will not be counted as income.
       one_time_description: One-time transactions will be excluded from certain budgeting calculations and reports to help you see what's really important.
       convert_to_trade_title: Convert to Security Trade
       convert_to_trade_description: Convert this transaction into a Buy or Sell trade with security details for portfolio tracking.
@@ -136,6 +140,7 @@ en:
       reject_match: Reject match
       transfer_confirmed: Transfer is confirmed
     transaction:
+      refund_tooltip: "Refund — offsets an expense"
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
       linked_with_provider: Linked with %{provider}
@@ -147,6 +152,9 @@ en:
       split: Split
       split_tooltip: This transaction has been split into multiple entries
       split_child_tooltip: Part of a split transaction
+      one_time_tooltip: One-time %{type} (excluded from averages)
+      income: Income
+      expense: Expense
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions
@@ -301,12 +309,14 @@ en:
           income: Income
           on_or_after: on or after %{date}
           on_or_before: on or before %{date}
+          refund: Refund
           transfer: Transfer
           confirmed: Confirmed
           pending: Pending
         type_filter:
           expense: Expense
           income: Income
+          refund: Refund
           transfer: Transfer
         status_filter:
           confirmed: Confirmed

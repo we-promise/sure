@@ -270,6 +270,10 @@ class Entry < ApplicationRecord
   end
 
   def classification
+    if entryable.is_a?(Transaction)
+      override = entryable.classification
+      return override if override
+    end
     amount.negative? ? "income" : "expense"
   end
 
