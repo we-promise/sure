@@ -112,7 +112,10 @@ class GenerateInsightsJob < ApplicationJob
         ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", lock_key ])
       )
 
-      return unless acquired
+      unless acquired
+        Rails.logger.warn("Skipped insight generation for family #{family_id}: advisory lock unavailable")
+        return
+      end
 
       begin
         yield
@@ -124,6 +127,8 @@ class GenerateInsightsJob < ApplicationJob
     end
 
     def advisory_lock_key(family_id)
-      Digest::MD5.hexdigest("generate_insights:#{family_id}").to_i(16) % (2**31)
+      # Use (nearly) the full signed-bigint space pg_try_advisory_lock accepts
+      # to keep the collision odds between families negligible.
+      Digest::MD5.hexdigest("generate_insights:#{family_id}").to_i(16) % (2**62)
     end
 end

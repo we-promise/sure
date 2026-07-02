@@ -34,6 +34,6 @@ class Insight::Generators::IdleCashGenerator < Insight::Generator
       family.accounts.visible
         .where(accountable_type: "Depository", currency: family.currency)
         .where("balance >= ?", MIN_BALANCE)
-        .reject { |account| account.entries.where("date >= ?", IDLE_DAYS.days.ago.to_date).exists? }
+        .where.not(id: Entry.where("date >= ?", IDLE_DAYS.days.ago.to_date).select(:account_id))
     end
 end

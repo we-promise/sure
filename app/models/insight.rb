@@ -25,6 +25,9 @@ class Insight < ApplicationRecord
 
   validates :insight_type, presence: true, inclusion: { in: TYPES }
   validates :title, :body, :dedup_key, presence: true
+  # Mirrors the DB unique index so direct callers get a validation error
+  # instead of ActiveRecord::RecordNotUnique; races still hit the index.
+  validates :dedup_key, uniqueness: { scope: :family_id }
 
   # Everything the user hasn't dismissed; what the feed renders.
   scope :visible, -> { where(status: [ :active, :read ]) }

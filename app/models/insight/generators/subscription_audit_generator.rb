@@ -39,6 +39,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
   private
     def overdue_recurring
       family.recurring_transactions
+        .includes(:merchant)
         .active
         .where(destination_account_id: nil)
         .where("amount > 0")

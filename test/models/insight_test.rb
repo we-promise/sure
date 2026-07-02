@@ -33,7 +33,7 @@ class InsightTest < ActiveSupport::TestCase
   end
 
   test "duplicate dedup_key within a family is rejected" do
-    assert_raises ActiveRecord::RecordNotUnique do
+    assert_raises ActiveRecord::RecordInvalid do
       @insight.family.insights.create!(
         insight_type: @insight.insight_type,
         priority: "medium",

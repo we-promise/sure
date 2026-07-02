@@ -15,6 +15,13 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert @insight.reload.read?
   end
 
+  test "turbo prefetch requests do not mark insights read" do
+    get insights_url, headers: { "X-Sec-Purpose" => "prefetch" }
+
+    assert_response :success
+    assert @insight.reload.active?
+  end
+
   test "dashboard renders the insights feed section" do
     get root_url
 
@@ -46,7 +53,7 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "refresh enqueues insight generation for the family" do
-    assert_enqueued_with(job: GenerateInsightsJob) do
+    assert_enqueued_with(job: GenerateInsightsJob, args: [ { family_id: @user.family_id } ]) do
       post refresh_insights_url
     end
 

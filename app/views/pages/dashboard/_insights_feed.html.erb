@@ -1,7 +1,9 @@
 <%# locals: (insights:, **args) %>
 
 <div class="space-y-3" id="insights-feed">
-  <%= render partial: "insights/insight_card", collection: insights, as: :insight %>
+  <% insights.each do |insight| %>
+    <%= render "insights/insight_card", insight: insight, unread: insight.active? %>
+  <% end %>
 
   <div class="px-1">
     <%= render DS::Link.new(
