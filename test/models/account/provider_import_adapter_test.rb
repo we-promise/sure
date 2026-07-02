@@ -1210,8 +1210,9 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "reconciles most recent pending when multiple exist" do
-    # Create two pending transactions with same amount
+  test "does not auto-claim pending when multiple same-amount candidates exist" do
+    # Two pending transactions with the same amount — this is the ambiguous case.
+    # Claiming either one could silently destroy a distinct transaction (issue #2013).
     older_pending = @adapter.import_transaction(
       external_id: "simplefin_older_pending",
       amount: 60.00,
@@ -1232,8 +1233,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       extra: { "simplefin" => { "pending" => true } }
     )
 
-    # Import posted - should match the most recent pending (by date)
-    assert_no_difference "@account.entries.count" do
+    # Posted with same amount — ambiguous, so a NEW entry must be created
+    assert_difference "@account.entries.count", 1 do
       posted_entry = @adapter.import_transaction(
         external_id: "simplefin_posted_recurring",
         amount: 60.00,
@@ -1244,11 +1245,14 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         extra: { "simplefin" => { "pending" => false } }
       )
 
-      # Should match the newer pending entry
-      assert_equal newer_pending.id, posted_entry.id
-      # Older pending should remain untouched
-      assert_equal "simplefin_older_pending", older_pending.reload.external_id
+      # Must be a brand-new entry, not a hijacked pending
+      assert_not_equal older_pending.id, posted_entry.id
+      assert_not_equal newer_pending.id, posted_entry.id
     end
+
+    # Both original pendings must be untouched
+    assert_equal "simplefin_older_pending", older_pending.reload.external_id
+    assert_equal "simplefin_newer_pending", newer_pending.reload.external_id
   end
 
   test "find_pending_transaction returns nil when no pending transactions exist" do
@@ -1271,6 +1275,87 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
 
     assert_nil result
+  end
+
+  # ============================================================================
+  # Same-amount collision guard (issue #2013)
+  # ============================================================================
+
+  test "two same-amount ATM withdrawals both pending — posting one does not steal the other" do
+    # Exact scenario from issue #2013:
+    # Two $20 ATM withdrawals are both pending at the same time.  When the first
+    # one posts, the system must NOT auto-claim the second pending (ambiguous),
+    # so both pending entries survive intact and a new posted entry is created.
+    pending_atm1 = @adapter.import_transaction(
+      external_id: "simplefin_pending_atm_1",
+      amount: 20.00,
+      currency: "USD",
+      date: Date.today - 5.days,
+      name: "ATM Withdrawal",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    pending_atm2 = @adapter.import_transaction(
+      external_id: "simplefin_pending_atm_2",
+      amount: 20.00,
+      currency: "USD",
+      date: Date.today - 2.days,
+      name: "ATM Withdrawal",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    # First ATM withdrawal posts — two same-amount pendings in window → ambiguous → new entry
+    assert_difference "@account.entries.count", 1 do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_posted_atm_1",
+        amount: 20.00,
+        currency: "USD",
+        date: Date.today,
+        name: "ATM Withdrawal",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      assert_not_equal pending_atm1.id, posted_entry.id
+      assert_not_equal pending_atm2.id, posted_entry.id
+    end
+
+    # Both pending entries must remain untouched — no silent destruction
+    assert_equal "simplefin_pending_atm_1", pending_atm1.reload.external_id
+    assert pending_atm1.transaction.pending?
+    assert_equal "simplefin_pending_atm_2", pending_atm2.reload.external_id
+    assert pending_atm2.transaction.pending?
+  end
+
+  test "posted transaction still claims the pending when it is the only same-amount candidate" do
+    # When there is exactly ONE matching pending, auto-claim must still work.
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_pending_coffee",
+      amount: 5.50,
+      currency: "USD",
+      date: Date.today - 2.days,
+      name: "Coffee Shop",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_posted_coffee",
+        amount: 5.50,
+        currency: "USD",
+        date: Date.today,
+        name: "Coffee Shop",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      assert_equal pending_entry.id, posted_entry.id
+      assert_equal "simplefin_posted_coffee", posted_entry.external_id
+      assert_not posted_entry.transaction.pending?
+    end
   end
 
   # ============================================================================
