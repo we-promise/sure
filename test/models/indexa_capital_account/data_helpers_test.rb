@@ -129,6 +129,23 @@ class IndexaCapitalAccount::DataHelpersTest < ActiveSupport::TestCase
     assert_equal existing, result
   end
 
+  test "resolve_security selects existing security for matching exchange" do
+    Security.create!(ticker: "DUP939", name: "Nasdaq Listing", exchange_operating_mic: "XNAS")
+    nyse_security = Security.create!(ticker: "DUP939", name: "NYSE Listing", exchange_operating_mic: "XNYS")
+
+    result = @helper.resolve_security("dup939", { exchange: { mic_code: "XNYS" } })
+
+    assert_equal nyse_security, result
+  end
+
+  test "resolve_security stores exchange operating mic when creating security" do
+    result = @helper.resolve_security("mic939", { name: "MIC Test Security", exchange: { mic_code: "xmad" } })
+
+    assert_equal "MIC939", result.ticker
+    assert_equal "XMAD", result.exchange_operating_mic
+    assert_equal "XMAD", result.exchange_mic
+  end
+
   test "resolve_security creates new security when not found" do
     symbol_data = { name: "Test Company Inc" }
 
