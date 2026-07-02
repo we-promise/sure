@@ -10,6 +10,7 @@ module Api
       before_action :ensure_write_scope, only: :enable_ai
       before_action :check_api_key_rate_limit, only: :enable_ai
       before_action :log_api_access, only: :enable_ai
+      before_action :ensure_local_login_enabled, only: :signup
 
       def signup
         # Check if invite code is required
@@ -292,6 +293,15 @@ module Api
       end
 
       private
+
+        # Block local (email/password) account creation in pure SSO-only mode.
+        # SSO-based provisioning goes through sso_create_account, which has its
+        # own gating. See issue #1430.
+        def ensure_local_login_enabled
+          return if AuthConfig.local_login_enabled?
+
+          render json: { error: "Local account creation is disabled" }, status: :forbidden
+        end
 
         def user_signup_params
           params.require(:user).permit(:email, :password, :first_name, :last_name)
