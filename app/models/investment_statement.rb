@@ -80,34 +80,15 @@ class InvestmentStatement
       .includes(:security, :account)
   end
 
-  # Top holdings by family-currency value
+  # Top holdings by family-currency value, aggregated by security across all accounts
   def top_holdings(limit: 5)
-    current_holdings
-      .to_a
-      .sort_by { |h| -convert_to_family_currency(h.amount, h.currency) }
-      .first(limit)
+    aggregated_holdings.first(limit)
   end
 
   # Portfolio allocation by security. Weights and amounts are computed in the
   # family's currency so cross-currency holdings compare correctly.
   def allocation
-    converted = current_holdings.to_a.map do |holding|
-      [ holding, convert_to_family_currency(holding.amount, holding.currency) ]
-    end
-
-    total = converted.sum { |_, value| value }
-    return [] if total.zero?
-
-    converted
-      .sort_by { |_, value| -value }
-      .map do |holding, value|
-        HoldingAllocation.new(
-          security: holding.security,
-          amount: Money.new(value, family.currency),
-          weight: (value / total * 100).round(2),
-          trend: holding.trend
-        )
-      end
+    aggregated_holdings
   end
 
   # Unrealized gains across all holdings, summed in family currency
@@ -297,10 +278,42 @@ class InvestmentStatement
       end
     end
 
-    HoldingAllocation = Data.define(:security, :amount, :weight, :trend)
+    HoldingAllocation = Data.define(:security, :amount, :weight, :trend) do
+      def ticker       = security.ticker
+      def name         = security.name || ticker
+      def amount_money = amount
+    end
 
     def investment_account_ids
       @investment_account_ids ||= investment_accounts.pluck(:id)
+    end
+
+    def aggregated_holdings
+      @aggregated_holdings ||= begin
+        grouped = current_holdings.to_a.group_by(&:security_id)
+
+        per_security = grouped.map do |_sid, holdings|
+          converted = holdings.map { |h| [ h, convert_to_family_currency(h.amount, h.currency) ] }
+          total_value = converted.sum { |_, v| v }
+          # Use trend from the largest holding as a reasonable proxy for the aggregated position's performance
+          best = converted.max_by { |_, v| v }.first
+          [ best.security, total_value, best.trend ]
+        end
+
+        total = per_security.sum { |_, v, _| v }
+        return [] if total.zero?
+
+        per_security
+          .sort_by { |_, v, _| -v }
+          .map do |security, value, trend|
+            HoldingAllocation.new(
+              security: security,
+              amount:   Money.new(value, family.currency),
+              weight:   (value / total * 100).round(2),
+              trend:    trend
+            )
+          end
+      end
     end
 
     def totals_query(account_ids:, date_range:)

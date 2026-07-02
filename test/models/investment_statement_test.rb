@@ -222,6 +222,104 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 5.0, trend.percent, 0.1
   end
 
+  test "top_holdings rolls up same security across multiple accounts" do
+    account1 = create_investment_account(balance: 1500, currency: "USD")
+    account2 = create_investment_account(balance: 1000, currency: "USD")
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+
+    # Same security in two accounts
+    Holding.create!(
+      account: account1, security: security, date: Date.current,
+      qty: 10, price: 150, amount: 1500, currency: "USD"
+    )
+    Holding.create!(
+      account: account2, security: security, date: Date.current,
+      qty: 5, price: 200, amount: 1000, currency: "USD"
+    )
+
+    top = @statement.top_holdings(limit: 5)
+    assert_equal 1, top.size
+    first = top.first
+    assert_equal "AAPL", first.ticker
+    assert_equal 2500, first.amount.amount  # Combined value: 1500 + 1000
+    assert_equal 100.0, first.weight       # Only one security, so 100%
+    assert_equal "USD", first.amount.currency.iso_code
+  end
+
+  test "top_holdings calculates portfolio-level weight correctly" do
+    account1 = create_investment_account(balance: 1500, currency: "USD")
+    account2 = create_investment_account(balance: 1000, currency: "USD")
+    security1 = Security.create!(ticker: "AAPL", name: "Apple")
+    security2 = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    # AAPL in account1
+    Holding.create!(
+      account: account1, security: security1, date: Date.current,
+      qty: 10, price: 150, amount: 1500, currency: "USD"
+    )
+    # MSFT in account2
+    Holding.create!(
+      account: account2, security: security2, date: Date.current,
+      qty: 5, price: 200, amount: 1000, currency: "USD"
+    )
+
+    top = @statement.top_holdings(limit: 5)
+    assert_equal 2, top.size
+    assert_equal "AAPL", top.first.ticker
+    assert_equal 60.0, top.first.weight  # 1500 / (1500 + 1000) * 100
+    assert_equal 40.0, top.last.weight   # 1000 / (1500 + 1000) * 100
+  end
+
+  test "top_holdings aggregates same security across different currencies" do
+    usd_account = create_investment_account(balance: 1500, currency: "USD")
+    eur_account = create_investment_account(balance: 2000, currency: "EUR")
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+
+    # Same security in USD and EUR accounts
+    Holding.create!(
+      account: usd_account, security: security, date: Date.current,
+      qty: 10, price: 150, amount: 1500, currency: "USD"
+    )
+    Holding.create!(
+      account: eur_account, security: security, date: Date.current,
+      qty: 4, price: 500, amount: 2000, currency: "EUR"
+    )
+
+    ExchangeRate.create!(
+      from_currency: "EUR", to_currency: "USD",
+      date: Date.current, rate: 1.1
+    )
+
+    top = @statement.top_holdings(limit: 5)
+    assert_equal 1, top.size
+    assert_equal "AAPL", top.first.ticker
+    assert_equal 3700, top.first.amount.amount  # 1500 + (2000 * 1.1)
+    assert_equal "USD", top.first.amount.currency.iso_code  # Family currency
+  end
+
+  test "allocation aggregates same security across multiple accounts" do
+    account1 = create_investment_account(balance: 1500, currency: "USD")
+    account2 = create_investment_account(balance: 1000, currency: "USD")
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+
+    # Same security in two accounts
+    Holding.create!(
+      account: account1, security: security, date: Date.current,
+      qty: 10, price: 150, amount: 1500, currency: "USD"
+    )
+    Holding.create!(
+      account: account2, security: security, date: Date.current,
+      qty: 5, price: 200, amount: 1000, currency: "USD"
+    )
+
+    allocation = @statement.allocation
+    assert_equal 1, allocation.size
+    assert_equal "AAPL", allocation.first.ticker
+    assert_equal 2500, allocation.first.amount.amount  # Combined value
+    assert_equal 100.0, allocation.first.weight
+    assert_in_delta 100.0, allocation.sum(&:weight), 0.01
+  end
+
   test "totals skips cache when there are no investment accounts" do
     Rails.cache.expects(:fetch).never
 
