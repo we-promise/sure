@@ -2,6 +2,7 @@ class EnableBankingItem::Importer
   # Maximum number of pagination requests to prevent infinite loops
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
+  ASPSP_TRANSACTION_RETRY_DELAYS = [ 1, 5 ].freeze
 
   NETWORK_ERRORS = [
     ::SocketError,
@@ -446,6 +447,7 @@ class EnableBankingItem::Importer
       continuation_key = nil
       previous_continuation_key = nil
       page_count = 0
+      aspsp_retry_attempt = 0
 
       loop do
         page_count += 1
@@ -478,6 +480,19 @@ class EnableBankingItem::Importer
       end
 
       all_transactions
+    rescue Provider::EnableBanking::EnableBankingError => e
+      if e.aspsp_error? && transaction_status == "BOOK" && aspsp_retry_attempt < ASPSP_TRANSACTION_RETRY_DELAYS.length
+        delay = ASPSP_TRANSACTION_RETRY_DELAYS[aspsp_retry_attempt]
+        aspsp_retry_attempt += 1
+        Rails.logger.warn(
+          "EnableBankingItem::Importer - Retrying BOOK transaction fetch for account #{enable_banking_account.uid} " \
+          "after ASPSP_ERROR (attempt #{aspsp_retry_attempt + 1}/#{ASPSP_TRANSACTION_RETRY_DELAYS.length + 1}, sleep=#{delay}s)"
+        )
+        sleep(delay)
+        retry
+      end
+
+      raise
     rescue PaginationTruncatedError => e
       # Log as warning and return collected partial data instead of failing entirely.
       # This ensures accounts with huge history don't lose all synced data.
