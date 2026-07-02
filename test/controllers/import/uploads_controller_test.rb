@@ -11,6 +11,19 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "csv upload dropdown only lists accounts accessible to the signed-in user" do
+    # family_member has shares for :depository (full_control) and :credit_card (read_only)
+    # but not for :investment, owned by family_admin. The optional account dropdown
+    # in the CSV upload form must not leak unshared account names.
+    sign_in users(:family_member)
+
+    get import_upload_url(@import)
+
+    assert_response :success
+    assert_includes response.body, accounts(:depository).name
+    refute_includes response.body, accounts(:investment).name
+  end
+
   test "uploads valid csv by copy and pasting" do
     patch import_upload_url(@import), params: {
       import: {
