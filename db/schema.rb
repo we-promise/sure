@@ -1174,7 +1174,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_01_120000) do
     t.index ["family_id", "status"], name: "index_insights_on_family_id_and_status"
     t.index ["family_id"], name: "index_insights_on_family_id"
     t.check_constraint "priority::text = ANY (ARRAY['high'::character varying, 'medium'::character varying, 'low'::character varying]::text[])", name: "chk_insights_priority"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'read'::character varying, 'dismissed'::character varying]::text[])", name: "chk_insights_status"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'read'::character varying, 'dismissed'::character varying, 'expired'::character varying]::text[])", name: "chk_insights_status"
   end
 
   create_table "invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

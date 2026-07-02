@@ -3,6 +3,8 @@
 # is at least half over, a quiet positive signal that everything is on track.
 # Reuses BudgetCategory's own health checks rather than re-deriving pace math.
 class Insight::Generators::BudgetInsightGenerator < Insight::Generator
+  produces "budget_at_risk", "budget_on_track"
+
   NEAR_LIMIT_MIN_ELAPSED = 0.0 # near-limit/over warnings fire any time
   ON_TRACK_MIN_ELAPSED = 0.5   # positive signal only once the month is half over
   MAX_LISTED_CATEGORIES = 3
@@ -46,9 +48,12 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
           count: flagged.size,
           budget_spent_pct: round(budget.percent_of_budget_spent, 0).to_i
         },
+        # The percent bucket keeps the body fresh as overall usage moves (a
+        # >=10-point swing rewrites it) without nightly one-point churn.
         metadata: {
           over_category_ids: over.map { |bc| bc.category.id }.sort,
-          near_category_ids: near.map { |bc| bc.category.id }.sort
+          near_category_ids: near.map { |bc| bc.category.id }.sort,
+          budget_spent_pct_bucket: (round(budget.percent_of_budget_spent, 0).to_i / 10) * 10
         },
         period: budget.period,
         dedup_key: "budget_at_risk:#{month_token(budget.start_date)}"

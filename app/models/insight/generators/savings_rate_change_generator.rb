@@ -2,6 +2,8 @@
 # (partial) month is skipped on purpose — income usually lands early or late
 # in a month, which makes mid-month rates meaningless.
 class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
+  produces "savings_rate_change"
+
   THRESHOLD_PP = 5
   HIGH_PRIORITY_PP = 10
 

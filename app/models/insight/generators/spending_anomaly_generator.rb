@@ -1,6 +1,8 @@
 # Flags parent categories whose current-month spending pace deviates from
 # their average over the previous three full months.
 class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
+  produces "spending_anomaly"
+
   MIN_BASELINE = 50           # ignore categories with a negligible baseline
   MIN_ELAPSED_DAYS = 7        # too early in the month = too noisy to project
   DEVIATION_THRESHOLD_PCT = 25

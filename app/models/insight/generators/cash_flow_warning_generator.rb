@@ -2,6 +2,8 @@
 # layering known recurring transactions on top of a statistical daily-spend
 # baseline, and warns when the projected balance dips below the threshold.
 class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
+  produces "cash_flow_warning"
+
   LOW_BALANCE_THRESHOLD = 500
   HORIZON_DAYS = 30
 

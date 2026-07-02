@@ -28,10 +28,23 @@ class GenerateInsightsJob < ApplicationJob
 
       with_advisory_lock(family_id) do
         I18n.with_locale(family.locale) do
-          generated = Insight::GeneratorRegistry.new(family).generate_all
-          upsert_insights(family, generated)
+          result = Insight::GeneratorRegistry.new(family).generate_all
+          upsert_insights(family, result.insights)
+          expire_stale_insights(family, result)
         end
       end
+    end
+
+    # A visible insight whose generator ran successfully but did not re-emit
+    # its dedup_key has had its condition clear — hide it. Types whose
+    # generator crashed are left untouched so a transient failure can't wipe
+    # out healthy insights.
+    def expire_stale_insights(family, result)
+      family.insights
+        .visible
+        .where(insight_type: result.succeeded_types)
+        .where.not(dedup_key: result.insights.map(&:dedup_key))
+        .update_all(status: "expired", updated_at: Time.current)
     end
 
     def upsert_insights(family, generated_insights)
@@ -68,6 +81,11 @@ class GenerateInsightsJob < ApplicationJob
             period_end: generated.period_end,
             generated_at: Time.current
           )
+        elsif existing.expired?
+          # The condition cleared earlier and has now returned with the same
+          # numbers. Expiry was the system's doing, not the user's, so the
+          # insight resurfaces; the body is still accurate, so no rewrite.
+          existing.update!(status: "active", generated_at: Time.current)
         else
           # Same signal, same numbers: don't rewrite the body (avoids an LLM
           # call) and don't undo the user's read/dismissed state.

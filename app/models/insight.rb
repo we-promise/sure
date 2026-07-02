@@ -2,6 +2,10 @@
 # by GenerateInsightsJob. The financial logic lives in Insight::Generators::*;
 # the LLM (when configured) only writes the `body` prose from pre-computed
 # numbers, so rows are safe to render verbatim.
+#
+# Status semantics: `read` and `dismissed` are user actions; `expired` is the
+# system's — set when a signal stops being generated (the condition cleared).
+# A returning condition reactivates an expired row but never a dismissed one.
 class Insight < ApplicationRecord
   belongs_to :family
 
@@ -16,7 +20,7 @@ class Insight < ApplicationRecord
     budget_on_track
   ].freeze
 
-  enum :status, { active: "active", read: "read", dismissed: "dismissed" }
+  enum :status, { active: "active", read: "read", dismissed: "dismissed", expired: "expired" }
   enum :priority, { high: "high", medium: "medium", low: "low" }, prefix: true
 
   validates :insight_type, presence: true, inclusion: { in: TYPES }

@@ -21,6 +21,20 @@ class Insight::Generator
     :dedup_key
   )
 
+  class << self
+    # Declares the insight_type values this generator can emit. The job uses
+    # this to expire stale insights: a visible insight whose type belongs to a
+    # generator that ran successfully, but whose dedup_key was not regenerated,
+    # has had its condition clear.
+    def produces(*types)
+      @produced_types = types.flatten.map(&:to_s)
+    end
+
+    def produced_types
+      @produced_types || []
+    end
+  end
+
   def initialize(family)
     @family = family
   end

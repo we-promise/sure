@@ -2,6 +2,8 @@
 # the last 30 days. The dedup key is the milestone amount itself, so each
 # milestone is only ever celebrated once.
 class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
+  produces "net_worth_milestone"
+
   MILESTONES = [
     10_000, 25_000, 50_000, 100_000, 250_000,
     500_000, 1_000_000, 2_500_000, 5_000_000, 10_000_000

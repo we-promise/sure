@@ -86,9 +86,61 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal 9000.0, insight.metadata["balance"]
   end
 
+  test "expires a visible insight whose condition cleared" do
+    insight = insights(:cash_flow_warning)
+    stub_generated([], succeeded_types: [ "cash_flow_warning" ])
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert insight.reload.expired?
+    assert_not_includes Insight.visible, insight
+  end
+
+  test "does not expire insights whose generator failed" do
+    insight = insights(:cash_flow_warning)
+    stub_generated([], succeeded_types: [])
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert insight.reload.active?
+  end
+
+  test "does not touch dismissed insights when their condition clears" do
+    insight = insights(:cash_flow_warning)
+    insight.dismiss!
+    stub_generated([], succeeded_types: [ "cash_flow_warning" ])
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert insight.reload.dismissed?
+  end
+
+  test "expired insight reactivates without a body rewrite when the condition returns unchanged" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    original_body = insight.body
+
+    stub_generated([], succeeded_types: [ "idle_cash" ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    assert insight.reload.expired?
+
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert insight.active?
+    assert_equal original_body, insight.body
+  end
+
   private
-    def stub_generated(generated_insights)
-      Insight::GeneratorRegistry.any_instance.stubs(:generate_all).returns(generated_insights)
+    def stub_generated(generated_insights, succeeded_types: nil)
+      result = Insight::GeneratorRegistry::Result.new(
+        insights: generated_insights,
+        succeeded_types: succeeded_types || generated_insights.map(&:insight_type).uniq
+      )
+      Insight::GeneratorRegistry.any_instance.stubs(:generate_all).returns(result)
     end
 
     def generated_insight(balance: 5000.0)

@@ -43,7 +43,8 @@ class Insight::BodyWriter
       response = provider.chat_response(
         prompt,
         model: provider.class.effective_model,
-        instructions: SYSTEM_PROMPT
+        instructions: SYSTEM_PROMPT,
+        family: family
       )
       return nil unless response.success?
 

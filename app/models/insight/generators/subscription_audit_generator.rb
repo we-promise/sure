@@ -2,6 +2,8 @@
 # provider may have raised the price, the charge may have moved, or the user
 # may be paying for something that quietly stopped (or should stop).
 class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
+  produces "subscription_audit"
+
   OVERDUE_DAYS = 45
   MAX_INSIGHTS = 3
 

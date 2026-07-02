@@ -2,6 +2,8 @@
 # priority by design — it's a nudge, not a warning. The dedup key rotates
 # monthly so a dismissed nudge stays gone for the rest of the month.
 class Insight::Generators::IdleCashGenerator < Insight::Generator
+  produces "idle_cash"
+
   MIN_BALANCE = 5_000
   IDLE_DAYS = 60
   MAX_INSIGHTS = 2

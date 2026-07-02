@@ -22,7 +22,7 @@ class CreateInsights < ActiveRecord::Migration[7.2]
     end
 
     add_check_constraint :insights, "priority IN ('high', 'medium', 'low')", name: "chk_insights_priority"
-    add_check_constraint :insights, "status IN ('active', 'read', 'dismissed')", name: "chk_insights_status"
+    add_check_constraint :insights, "status IN ('active', 'read', 'dismissed', 'expired')", name: "chk_insights_status"
 
     add_index :insights, [ :family_id, :status ]
     add_index :insights, [ :family_id, :dedup_key ], unique: true
