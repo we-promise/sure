@@ -1,0 +1,25 @@
+<%= tag.div(class: container_classes) do %>
+  <div class="flex flex-col items-center <%= inner_max_width %>">
+    <% if icon.present? %>
+      <div class="<%= icon_wrapper_classes %>">
+        <%= helpers.icon(icon, size: icon_size, color: "current") %>
+      </div>
+    <% end %>
+
+    <%= tag.public_send(heading_tag, class: class_names(title_classes, title_margin_class)) do %>
+      <%= title %>
+    <% end %>
+
+    <% if description.present? %>
+      <p class="<%= class_names(description_classes, description_margin_class) %>">
+        <%= description %>
+      </p>
+    <% end %>
+
+    <% if content.present? %>
+      <div class="flex flex-wrap gap-3 justify-center">
+        <%= content %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
