@@ -25,7 +25,7 @@ class Category < ApplicationRecord
     left_joins(:parent)
       .order(Arel.sql("COALESCE(parents_categories.name, categories.name)"))
       .order(Arel.sql("parents_categories.name IS NOT NULL"))
-      .order(:name)
+      .order(:name, :id)
   }
   scope :roots, -> { where(parent_id: nil) }
   # Legacy scopes - classification removed; these now return all categories

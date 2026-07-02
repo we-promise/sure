@@ -1,5 +1,4 @@
 class Assistant::Function::GetHoldings < Assistant::Function
-  include Pagy::Backend
 
   SUPPORTED_ACCOUNT_TYPES = %w[Investment Crypto].freeze
 
@@ -87,11 +86,9 @@ class Assistant::Function::GetHoldings < Assistant::Function
   def call(params = {})
     holdings_query = build_holdings_query(params)
 
-    pagy, paginated_holdings = pagy(
-      holdings_query.includes(:security, :account).order(amount: :desc),
-      page: params["page"] || 1,
-      limit: default_page_size
-    )
+    ordered_holdings = holdings_query.order(amount: :desc)
+    pagy = Pagy.new(count: ordered_holdings.count, page: params["page"] || 1, limit: default_page_size)
+    paginated_holdings = ordered_holdings.includes(:security, :account).offset(pagy.offset).limit(pagy.limit)
 
     total_value = holdings_query.sum(:amount)
 
