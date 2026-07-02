@@ -64,20 +64,32 @@ class InvestmentStatement
   # All current holdings across investment accounts. Holdings are returned in
   # their native currency; callers that aggregate across accounts must convert
   # to family currency via convert_to_family_currency.
+  #
+  # The relation itself is memoized so callers that hit it more than once per
+  # turn (the dashboard alone calls it via `top_holdings`, `unrealized_gains`,
+  # `unrealized_gains_trend`, `allocation`, `day_change`, ...) reuse a single
+  # DISTINCT-ON scan and a single `:security, :account` preload — #2270 traced
+  # 10-second dashboards to the un-memoized version re-running this 5× per
+  # request. Callers that chain `.pluck` etc. still trigger a fresh query
+  # (pluck always bypasses the load cache), so the previous external contract
+  # — returning a `Holding::ActiveRecord_Relation` — is preserved.
   def current_holdings
-    return Holding.none unless investment_accounts.any?
-
-    # Get the latest holding for each security per account
-    Holding
-      .where(account_id: investment_account_ids)
-      .where.not(qty: 0)
-      .where(
-        id: Holding
+    @current_holdings ||= begin
+      if investment_accounts.any?
+        Holding
           .where(account_id: investment_account_ids)
-          .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
-          .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
-      )
-      .includes(:security, :account)
+          .where.not(qty: 0)
+          .where(
+            id: Holding
+              .where(account_id: investment_account_ids)
+              .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
+              .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
+          )
+          .includes(:security, :account)
+      else
+        Holding.none
+      end
+    end
   end
 
   # Top holdings by family-currency value
