@@ -37,4 +37,29 @@ class TrendTest < ActiveSupport::TestCase
     trend = Trend.new(current: 0, previous: 100)
     assert_equal "down", trend.direction
   end
+
+  test "negative baseline reports percent with the direction's sign" do
+    # Improving from -100 to -50 is an upward move of +50%, not -50%.
+    trend = Trend.new(current: -50, previous: -100)
+    assert_equal "up", trend.direction
+    assert_equal 50.0, trend.percent
+    assert_equal "50.0%", trend.percent_formatted
+  end
+
+  test "negative baseline getting worse reports a negative percent" do
+    # Falling from -50 to -100 is a downward move of -100%.
+    trend = Trend.new(current: -100, previous: -50)
+    assert_equal "down", trend.direction
+    assert_equal(-100.0, trend.percent)
+  end
+
+  test "infinite percent carries the direction's sign" do
+    up = Trend.new(current: 100, previous: 0)
+    assert_equal Float::INFINITY, up.percent
+    assert_equal "＋∞", up.percent_formatted
+
+    down = Trend.new(current: -100, previous: 0)
+    assert_equal(-Float::INFINITY, down.percent)
+    assert_equal "-∞", down.percent_formatted
+  end
 end
