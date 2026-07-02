@@ -133,6 +133,27 @@ module ImportInterfaceTest
     assert_equal "1234.56", row.amount
   end
 
+  test "parses French/Scandinavian format with narrow no-break-space thousands separator" do
+    import = imports(:transaction)
+    import.update!(
+      number_format: "1 234,56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    # Some locales/exporters use a narrow no-break space (U+202F) as the
+    # thousands separator, which Ruby's \s also does not match.
+    csv_data = "date,amount,name\n01/01/2024,\"1 234,56\",Test"
+    import.update!(raw_file_str: csv_data)
+    import.generate_rows_from_csv
+    import.reload
+
+    row = import.rows.first
+    assert_equal "1234.56", row.amount
+  end
+
   test "rejects US-punctuation values under the French/Scandinavian format" do
     import = imports(:transaction)
     import.update!(
