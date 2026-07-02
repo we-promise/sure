@@ -68,11 +68,7 @@ class IncomeStatement::Totals
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
         LEFT JOIN categories c ON c.id = at.category_id
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
+        #{nearest_exchange_rate_lateral_sql}
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           AND ae.excluded = false
           AND a.family_id = :family_id
@@ -97,11 +93,7 @@ class IncomeStatement::Totals
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
         LEFT JOIN categories c ON c.id = at.category_id
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
+        #{nearest_exchange_rate_lateral_sql}
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           AND (
             at.investment_activity_label IS NULL
@@ -134,7 +126,8 @@ class IncomeStatement::Totals
         target_currency: @family.currency,
         family_id: @family.id,
         start_date: @date_range.begin,
-        end_date: @date_range.end
+        end_date: @date_range.end,
+        nearest_rate_lookback_days: ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS
       }
 
       # Add tax-advantaged account IDs if any exist
@@ -163,6 +156,31 @@ class IncomeStatement::Totals
 
     def budget_excluded_kinds_sql
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
+    end
+
+    # Issue #1143: when no exchange_rate row exists for the exact transaction
+    # date, the previous LEFT JOIN matched no row and `COALESCE(er.rate, 1)`
+    # silently converted at 1:1 — e.g. NZD 117 displayed as ¥117 against a CNY
+    # budget. Look up the nearest stored rate for the same currency pair within
+    # a bounded backward window so the join only returns NULL when no rate is
+    # stored for the pair near the transaction date, mirroring the Ruby-side
+    # fallback in `ExchangeRate::Provided#find_or_fetch_rate`
+    # (`(date - NEAREST_RATE_LOOKBACK_DAYS)..date`, most-recent first). Without
+    # the bound an unrelated years-old import would silently convert today's
+    # transaction at a stale rate instead of falling through to the COALESCE
+    # 1:1 fallback. The unique index on (from_currency, to_currency, date)
+    # keeps the per-row LATERAL cheap.
+    def nearest_exchange_rate_lateral_sql
+      <<~SQL.strip
+        LEFT JOIN LATERAL (
+          SELECT rate FROM exchange_rates
+          WHERE from_currency = ae.currency
+            AND to_currency = :target_currency
+            AND date BETWEEN ae.date - :nearest_rate_lookback_days AND ae.date
+          ORDER BY date DESC
+          LIMIT 1
+        ) er ON true
+      SQL
     end
 
     def validate_date_range!
