@@ -84,6 +84,8 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     insight.reload
     assert insight.active?
     assert_equal 9000.0, insight.metadata["balance"]
+    assert_nil insight.dismissed_at
+    assert_nil insight.read_at
   end
 
   test "expires a visible insight whose condition cleared" do
@@ -121,6 +123,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
 
     insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
     original_body = insight.body
+    insight.mark_read!
 
     stub_generated([], succeeded_types: [ "idle_cash" ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
@@ -132,6 +135,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     insight.reload
     assert insight.active?
     assert_equal original_body, insight.body
+    assert_nil insight.read_at
   end
 
   private

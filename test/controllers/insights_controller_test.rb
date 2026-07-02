@@ -22,11 +22,12 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert @insight.reload.active?
   end
 
-  test "dashboard renders the insights feed section" do
+  test "dashboard renders the insights feed section with unread badges" do
     get root_url
 
     assert_response :success
-    assert_match "insights-feed", response.body
+    assert_select "#insights-feed", count: 1
+    assert_select "#insights-feed span", text: I18n.t("insights.card.new")
   end
 
   test "dismiss removes the insight from the feed via turbo stream" do

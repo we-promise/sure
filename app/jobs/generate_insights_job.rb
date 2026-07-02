@@ -79,13 +79,15 @@ class GenerateInsightsJob < ApplicationJob
             metadata: metadata,
             period_start: generated.period_start,
             period_end: generated.period_end,
-            generated_at: Time.current
+            generated_at: Time.current,
+            read_at: nil,
+            dismissed_at: nil
           )
         elsif existing.expired?
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces; the body is still accurate, so no rewrite.
-          existing.update!(status: "active", generated_at: Time.current)
+          existing.update!(status: "active", generated_at: Time.current, read_at: nil)
         else
           # Same signal, same numbers: don't rewrite the body (avoids an LLM
           # call) and don't undo the user's read/dismissed state.
