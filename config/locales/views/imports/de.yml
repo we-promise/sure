@@ -51,6 +51,8 @@ de:
         date_format_label: Datumsformat
       transaction_import:
         date_format_label: Datumsformat
+        external_id_hint: "Optional. Ordnet eine Spalte mit einer eindeutigen Transaktions-ID zu (z. B. eine von der Bank vergebene UUID), um beim erneuten Import zuverlässig Duplikate zu erkennen."
+        external_id_label: "Externe ID"
         rows_to_skip_label: Erste n Zeilen überspringen
     confirms:
       mappings:

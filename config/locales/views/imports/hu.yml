@@ -76,6 +76,8 @@ hu:
         category_label: Kategória
         tags_label: Címkék
         notes_label: Megjegyzések
+        external_id_label: "Külső azonosító"
+        external_id_hint: "Opcionális. Egyedi tranzakcióazonosító-oszlopot (pl. a bank által megadott UUID) rendel hozzá a megbízható deduplikációhoz újraimportáláskor."
         apply_configuration: Konfiguráció alkalmazása
         incomes_are_positive: A bevételek pozitívak
         incomes_are_negative: A bevételek negatívak

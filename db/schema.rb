@@ -987,6 +987,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
     t.integer "source_row_number", null: false
     t.string "merchant_color"
     t.string "merchant_website"
+    t.string "external_id"
     t.index ["import_id", "source_row_number"], name: "index_import_rows_on_import_id_and_source_row_number", unique: true
     t.index ["import_id"], name: "index_import_rows_on_import_id"
     t.check_constraint "source_row_number > 0", name: "chk_import_rows_source_row_number_positive"
@@ -1058,6 +1059,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
     t.string "entity_type_col_label"
     t.string "notes_col_label"
     t.string "currency_col_label"
+    t.string "external_id_col_label"
     t.string "date_format", default: "%m/%d/%Y"
     t.string "signage_convention", default: "inflows_positive"
     t.string "error"

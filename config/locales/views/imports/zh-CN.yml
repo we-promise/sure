@@ -76,6 +76,8 @@ zh-CN:
         category_label: 分类
         tags_label: 标签
         notes_label: 备注
+        external_id_label: "外部 ID"
+        external_id_hint: "可选。映射唯一的交易 ID 列（例如银行提供的 UUID），以便在重新导入时可靠地去重。"
         apply_configuration: 应用配置
         incomes_are_positive: 收入为正数
         incomes_are_negative: 收入为负数

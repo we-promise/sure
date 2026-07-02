@@ -57,6 +57,8 @@ pl:
         date_format_label: Format daty
       transaction_import:
         date_format_label: Format daty
+        external_id_hint: "Opcjonalne. Mapuje kolumnę z unikalnym identyfikatorem transakcji (np. UUID nadanym przez bank), aby niezawodnie wykrywać duplikaty przy ponownym imporcie."
+        external_id_label: "Identyfikator zewnętrzny"
         rows_to_skip_label: Pomiń pierwsze n wierszy
     confirms:
       sure_import:

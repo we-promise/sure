@@ -76,6 +76,8 @@ vi:
         category_label: Danh mục
         tags_label: Nhãn
         notes_label: Ghi chú
+        external_id_label: "ID bên ngoài"
+        external_id_hint: "Tùy chọn. Ánh xạ một cột ID giao dịch duy nhất (ví dụ: UUID do ngân hàng cung cấp) để loại trùng lặp đáng tin cậy khi nhập lại."
         apply_configuration: Áp dụng cấu hình
         incomes_are_positive: Thu nhập là số dương
         incomes_are_negative: Thu nhập là số âm

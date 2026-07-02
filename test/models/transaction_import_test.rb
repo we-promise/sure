@@ -70,6 +70,164 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal "complete", @import.status
   end
 
+  test "maps a CSV column to entry external_id" do
+    csv = <<~CSV
+      date,name,amount,account,txn_id
+      01/01/2024,Coffee,5.00,TestAccount,abc-123
+      01/02/2024,Lunch,12.00,TestAccount,def-456
+    CSV
+
+    @import.update!(
+      raw_file_str: csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      account_col_label: "account",
+      external_id_col_label: "txn_id",
+      date_format: "%m/%d/%Y"
+    )
+    @import.generate_rows_from_csv
+    @import.mappings.create! key: "TestAccount", mappable: accounts(:depository), type: "Import::AccountMapping"
+    @import.reload
+
+    assert_difference -> { Entry.count } => 2 do
+      @import.publish
+    end
+
+    assert_equal %w[abc-123 def-456], @import.entries.order(:date).pluck(:external_id)
+  end
+
+  test "external_id de-duplicates a transaction across re-imports" do
+    account = accounts(:depository)
+    csv = "date,name,amount,txn_id\n01/01/2024,Coffee,5.00,abc-123\n"
+
+    publish_csv = lambda do
+      import = @import.family.imports.create!(
+        type: "TransactionImport",
+        account: account,
+        raw_file_str: csv,
+        date_col_label: "date",
+        amount_col_label: "amount",
+        name_col_label: "name",
+        external_id_col_label: "txn_id",
+        date_format: "%m/%d/%Y"
+      )
+      import.generate_rows_from_csv
+      import.reload
+      import.publish
+      import
+    end
+
+    first = publish_csv.call
+    assert_equal "complete", first.status
+
+    assert_no_difference -> { account.entries.count } do
+      publish_csv.call
+    end
+
+    assert_equal 1, account.entries.where(external_id: "abc-123").count
+  end
+
+  test "external_id match ignores non-transaction entries" do
+    account = accounts(:depository)
+
+    # A valuation entry sharing the external_id must never be claimed as a
+    # duplicate: the update path assumes entry.transaction is present.
+    Entry.create!(
+      account: account,
+      name: "Reconciliation",
+      date: Date.parse("2024-01-01"),
+      currency: "USD",
+      amount: 5000,
+      external_id: "val-1",
+      entryable: Valuation.new(kind: "reconciliation")
+    )
+
+    import = @import.family.imports.create!(
+      type: "TransactionImport",
+      account: account,
+      raw_file_str: "date,name,amount,txn_id\n01/01/2024,Coffee,5.00,val-1\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      external_id_col_label: "txn_id",
+      date_format: "%m/%d/%Y"
+    )
+    import.generate_rows_from_csv
+    import.reload
+
+    assert_difference -> { account.entries.count } => 1 do
+      import.publish
+    end
+
+    assert_equal "complete", import.status
+    assert_equal 1, account.entries.where(external_id: "val-1", entryable_type: "Transaction").count
+  end
+
+  test "external_id de-duplicates repeated rows within a single import" do
+    account = accounts(:depository)
+    csv = <<~CSV
+      date,name,amount,txn_id
+      01/01/2024,Coffee,5.00,abc-123
+      01/02/2024,Coffee again,7.00,abc-123
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      external_id_col_label: "txn_id",
+      date_format: "%m/%d/%Y"
+    )
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { account.entries.count } => 1 do
+      @import.publish
+    end
+
+    assert_equal 1, account.entries.where(external_id: "abc-123").count
+  end
+
+  test "external_id de-dup is scoped per account within a single import" do
+    checking = accounts(:depository)
+    credit_card = accounts(:credit_card)
+    csv = <<~CSV
+      date,name,amount,txn_id,account
+      01/01/2024,Coffee,5.00,shared-1,Checking Account
+      01/02/2024,Grocery,7.00,shared-1,Credit Card
+    CSV
+
+    @import.update!(
+      account: nil,
+      raw_file_str: csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      external_id_col_label: "txn_id",
+      account_col_label: "account",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+    @import.mappings.create!(key: "Checking Account", mappable: checking, type: "Import::AccountMapping")
+    @import.mappings.create!(key: "Credit Card", mappable: credit_card, type: "Import::AccountMapping")
+    @import.mappings.create!(key: "", mappable: nil, create_when_empty: false, type: "Import::CategoryMapping")
+    @import.mappings.create!(key: "", mappable: nil, create_when_empty: false, type: "Import::TagMapping")
+    @import.reload
+
+    # Same bank id under two different accounts must NOT fold together.
+    assert_difference -> { Entry.count } => 2 do
+      @import.publish
+    end
+
+    assert_equal 1, checking.entries.where(external_id: "shared-1", import: @import).count
+    assert_equal 1, credit_card.entries.where(external_id: "shared-1", import: @import).count
+  end
+
   test "imports transactions with separate type column for signage convention" do
     import = <<~CSV
       date,amount,amount_type
