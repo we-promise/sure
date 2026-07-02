@@ -15,7 +15,16 @@ class LunchflowItem::Importer
     accounts_data = fetch_accounts_data
     unless accounts_data
       Rails.logger.error "LunchflowItem::Importer - Failed to fetch accounts data for item #{lunchflow_item.id}"
-      return { success: false, error: "Failed to fetch accounts data", accounts_imported: 0, transactions_imported: 0 }
+      return {
+        success: false,
+        error: "Failed to fetch accounts data",
+        accounts_updated: 0,
+        accounts_created: 0,
+        accounts_failed: 0,
+        accounts_pruned: 0,
+        transactions_imported: 0,
+        transactions_failed: 0
+      }
     end
 
     # Store raw payload
@@ -30,6 +39,7 @@ class LunchflowItem::Importer
     accounts_updated = 0
     accounts_created = 0
     accounts_failed = 0
+    accounts_pruned = 0
 
     if accounts_data[:accounts].present?
       # Get linked lunchflow account IDs (ones actually imported/used by the user)
@@ -73,9 +83,16 @@ class LunchflowItem::Importer
           end
         end
       end
+
+      # Remove records for accounts that no longer exist upstream so they don't
+      # linger as unlinked "Need setup" accounts (#1861). Guarded to a non-empty
+      # upstream list so a transient empty/failed response can't wipe out all
+      # accounts.
+      upstream_account_ids = accounts_data[:accounts].filter_map { |a| a[:id].to_s.presence }
+      accounts_pruned = prune_orphaned_lunchflow_accounts(upstream_account_ids)
     end
 
-    Rails.logger.info "LunchflowItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed)"
+    Rails.logger.info "LunchflowItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed), pruned #{accounts_pruned}"
 
     # Step 3: Fetch transactions only for linked accounts with active status
     transactions_imported = 0
@@ -103,12 +120,59 @@ class LunchflowItem::Importer
       accounts_updated: accounts_updated,
       accounts_created: accounts_created,
       accounts_failed: accounts_failed,
+      accounts_pruned: accounts_pruned,
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed
     }
   end
 
   private
+
+    # Removes LunchflowAccount records that no longer exist upstream and are not
+    # linked to any Account, so accounts deleted in Lunch Flow stop lingering as
+    # unlinked records that pin the item to "Need setup" (#1861). Mirrors
+    # SimpleFin's prune_orphaned_simplefin_accounts. LunchFlow linkage is only
+    # via AccountProvider (no legacy FK), so a present account_provider means keep.
+    #
+    # account_id is nullable on lunchflow_accounts. A NULL account_id can never
+    # match an upstream id, and `where.not(account_id: upstream_account_ids)`
+    # alone would silently drop those rows (SQL `NULL NOT IN (...)` is never
+    # TRUE). We explicitly OR them back in so a NULL-id unlinked record — which
+    # has no upstream identity and would otherwise pin the item to "Need setup"
+    # forever — is also pruned. The per-record account_provider guard below still
+    # protects any linked record regardless of its account_id.
+    def prune_orphaned_lunchflow_accounts(upstream_account_ids)
+      return 0 if upstream_account_ids.blank?
+
+      scope = lunchflow_item.lunchflow_accounts.includes(:account_provider)
+      orphaned = scope
+        .where.not(account_id: upstream_account_ids)
+        .or(scope.where(account_id: nil))
+
+      pruned = 0
+      orphaned.each do |lunchflow_account|
+        if lunchflow_account.account_provider.present?
+          Rails.logger.info "LunchflowItem::Importer - Keeping stale LunchflowAccount id=#{lunchflow_account.id} account_id=#{lunchflow_account.account_id} (still linked to Account)"
+          next
+        end
+
+        begin
+          Rails.logger.info "LunchflowItem::Importer - Pruning orphaned LunchflowAccount id=#{lunchflow_account.id} account_id=#{lunchflow_account.account_id} (no longer exists upstream)"
+          if lunchflow_account.destroy
+            pruned += 1
+          else
+            # A before_destroy callback halted deletion — don't inflate the count.
+            Rails.logger.warn "LunchflowItem::Importer - Destroy halted for LunchflowAccount id=#{lunchflow_account.id}; not counting as pruned"
+          end
+        rescue => e
+          # Don't let one failed destroy abort the whole import (transactions are
+          # fetched in a later step). Mirrors the importer's continue-on-error style.
+          Rails.logger.error "LunchflowItem::Importer - Failed to prune LunchflowAccount id=#{lunchflow_account.id}: #{e.message}"
+        end
+      end
+
+      pruned
+    end
 
     def fetch_accounts_data
       begin
