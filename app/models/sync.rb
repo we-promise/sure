@@ -100,6 +100,11 @@ class Sync < ApplicationRecord
     pending? || syncing?
   end
 
+  # Mirrors the .visible scope for use on loaded collections.
+  def visible?
+    in_progress? && created_at > VISIBLE_FOR.ago
+  end
+
   def terminal?
     completed? || failed? || stale?
   end
