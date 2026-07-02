@@ -1,6 +1,11 @@
 # "Materializes" holdings (similar to a DB materialized view, but done at the app level)
 # into a series of records we can easily query and join with other data.
 class Holding::Materializer
+  # Chunk upserts so the intermediate attribute-hash arrays
+  # (holdings_to_upsert_with_cost / _without_cost) don't sit in memory
+  # alongside the full @holdings collection. Reduces peak RSS during sync.
+  PERSIST_BATCH_SIZE = 2_000
+
   def initialize(account, strategy:, security_ids: nil)
     @account = account
     @strategy = strategy
@@ -28,9 +33,11 @@ class Holding::Materializer
     # than the account or the reverse-calculated holdings.
     cleanup_stale_calculated_rows_on_latest_provider_snapshot
 
-    # Reload holdings association to clear any cached stale data
-    # This ensures subsequent Balance calculations see the fresh holdings
-    account.holdings.reload
+    # Clear the holdings association cache (without eagerly reloading) so subsequent
+    # Balance calculations rebuild from the freshly-persisted rows on demand. Using
+    # `reset` instead of `reload` avoids materializing the entire collection here when
+    # the next consumer (Balance::SyncCache) will iterate it anyway.
+    account.holdings.reset
 
     @holdings
   end
@@ -50,9 +57,16 @@ class Holding::Materializer
       # Load existing holdings to check locked status and source priority
       existing_holdings_map = load_existing_holdings_map
 
-      # Separate holdings into categories based on cost_basis reconciliation
-      holdings_to_upsert_with_cost = []
-      holdings_to_upsert_without_cost = []
+      # Separate holdings into categories based on cost_basis reconciliation.
+      # Use two buffers that flush at PERSIST_BATCH_SIZE so peak memory is bounded
+      # rather than accumulating the full upsert payload before writing.
+      holdings_buffer_to_upsert_with_cost = []
+      holdings_buffer_to_upsert_without_cost = []
+
+      flush = ->(buf) do
+        account.holdings.upsert_all(buf, unique_by: %i[account_id security_id date currency])
+        buf.clear
+      end
 
       @holdings.each do |holding|
         key = holding_key(holding)
@@ -74,19 +88,28 @@ class Holding::Materializer
           incoming_source: "calculated"
         )
 
-        base_attrs = holding.attributes
-          .slice("date", "currency", "qty", "price", "amount", "security_id")
-          .merge("account_id" => account.id, "updated_at" => current_time)
+        base_attrs = {
+          "date" => holding.date,
+          "currency" => holding.currency,
+          "qty" => holding.qty,
+          "price" => holding.price,
+          "amount" => holding.amount,
+          "security_id" => holding.security_id,
+          "account_id" => account.id,
+          "updated_at" => current_time
+        }
 
         if existing&.cost_basis_locked?
           # For locked holdings, preserve ALL cost_basis fields
-          holdings_to_upsert_without_cost << base_attrs
+          holdings_buffer_to_upsert_without_cost << base_attrs
+          flush.call(holdings_buffer_to_upsert_without_cost) if holdings_buffer_to_upsert_without_cost.size >= PERSIST_BATCH_SIZE
         elsif reconciled[:should_update] && reconciled[:cost_basis].present?
           # Update with new cost_basis and source
-          holdings_to_upsert_with_cost << base_attrs.merge(
+          holdings_buffer_to_upsert_with_cost << base_attrs.merge(
             "cost_basis" => reconciled[:cost_basis],
             "cost_basis_source" => reconciled[:cost_basis_source]
           )
+          flush.call(holdings_buffer_to_upsert_with_cost) if holdings_buffer_to_upsert_with_cost.size >= PERSIST_BATCH_SIZE
         else
           # No new calculated value — fall back to the most recent provider
           # cost_basis for this security on or before the holding date.
@@ -95,38 +118,29 @@ class Holding::Materializer
           preserve_existing = existing&.cost_basis.present? && %w[calculated manual].include?(existing_source)
 
           if preserve_existing
-            holdings_to_upsert_without_cost << base_attrs
+            holdings_buffer_to_upsert_without_cost << base_attrs
+            flush.call(holdings_buffer_to_upsert_without_cost) if holdings_buffer_to_upsert_without_cost.size >= PERSIST_BATCH_SIZE
           else
             carried = carry_forward_provider_cost_basis(holding)
 
             if carried && (existing&.cost_basis != carried || existing_source != "provider")
-              holdings_to_upsert_with_cost << base_attrs.merge(
+              holdings_buffer_to_upsert_with_cost << base_attrs.merge(
                 "cost_basis" => carried,
                 "cost_basis_source" => "provider"
               )
+              flush.call(holdings_buffer_to_upsert_with_cost) if holdings_buffer_to_upsert_with_cost.size >= PERSIST_BATCH_SIZE
             else
               # No cost_basis to set, or existing is better - don't touch cost_basis fields
-              holdings_to_upsert_without_cost << base_attrs
+              holdings_buffer_to_upsert_without_cost << base_attrs
+              flush.call(holdings_buffer_to_upsert_without_cost) if holdings_buffer_to_upsert_without_cost.size >= PERSIST_BATCH_SIZE
             end
           end
         end
       end
 
-      # Upsert with cost_basis updates
-      if holdings_to_upsert_with_cost.any?
-        account.holdings.upsert_all(
-          holdings_to_upsert_with_cost,
-          unique_by: %i[account_id security_id date currency]
-        )
-      end
-
-      # Upsert without cost_basis (preserves existing)
-      if holdings_to_upsert_without_cost.any?
-        account.holdings.upsert_all(
-          holdings_to_upsert_without_cost,
-          unique_by: %i[account_id security_id date currency]
-        )
-      end
+      # Flush remaining items in each buffer
+      flush.call(holdings_buffer_to_upsert_with_cost) unless holdings_buffer_to_upsert_with_cost.empty?
+      flush.call(holdings_buffer_to_upsert_without_cost) unless holdings_buffer_to_upsert_without_cost.empty?
     end
 
     def load_existing_holdings_map

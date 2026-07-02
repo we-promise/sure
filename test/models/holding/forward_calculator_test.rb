@@ -133,11 +133,11 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
-        calculated_entry = calculated.find { |c| c.security == expected_entry.security && c.date == expected_entry.date }
+        calculated_entry = calculated.find { |c| c.security_id == expected_entry.security_id && c.date == expected_entry.date }
 
-        assert_equal expected_entry.qty, calculated_entry.qty, "Qty mismatch for #{expected_entry.security.ticker} on #{expected_entry.date}"
-        assert_equal expected_entry.price, calculated_entry.price, "Price mismatch for #{expected_entry.security.ticker} on #{expected_entry.date}"
-        assert_equal expected_entry.amount, calculated_entry.amount, "Amount mismatch for #{expected_entry.security.ticker} on #{expected_entry.date}"
+        assert_equal expected_entry.qty, calculated_entry.qty, "Qty mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
+        assert_equal expected_entry.price, calculated_entry.price, "Price mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
+        assert_equal expected_entry.amount, calculated_entry.amount, "Amount mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
       end
     end
 
