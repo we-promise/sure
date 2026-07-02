@@ -203,7 +203,7 @@ class SnaptradeItem < ApplicationRecord
 
   # Get all Sure accounts linked to this SnapTrade item
   def accounts
-    snaptrade_accounts
+    @accounts ||= snaptrade_accounts
       .includes(account_provider: :account)
       .filter_map { |sa| sa.current_account }
       .uniq
