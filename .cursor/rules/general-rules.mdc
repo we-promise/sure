@@ -11,7 +11,7 @@ alwaysApply: true
   - Read [project-design.mdc](mdc:.cursor/rules/project-design.mdc) to understand the codebase
   - Read [project-conventions.mdc](mdc:.cursor/rules/project-conventions.mdc) to understand _how_ to write code for the codebase
   - Read [ui-ux-design-guidelines.mdc](mdc:.cursor/rules/ui-ux-design-guidelines.mdc) to understand how to implement frontend code specifically
-- ActiveRecord migrations must inherit from `ActiveRecord::Migration[7.2]`. Do **not** use version 8.0 yet.
+- ActiveRecord migrations must inherit from `ActiveRecord::Migration[7.2]`. Do **not** use version 8.0 yet. Rails 7.2.x security support ends **2026-08-09**; upgrade to Rails 8 before then (tracked here; Brakeman `EOLRails` surfaces this in CI).
 
 ## Prohibited actions
 

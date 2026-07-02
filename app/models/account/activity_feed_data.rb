@@ -57,22 +57,20 @@ class Account::ActivityFeedData
           .or(Transfer.where(outflow_transaction_id: transaction_ids))
           .to_a
 
-        # Group transfers by the date of their transaction entries
-        result = Hash.new { |h, k| h[k] = [] }
-
-        entries.each do |entry|
-          next unless entry.transaction? && transaction_ids.include?(entry.entryable_id)
-
-          transfers.each do |transfer|
-            if transfer.inflow_transaction_id == entry.entryable_id ||
-               transfer.outflow_transaction_id == entry.entryable_id
-              result[entry.date] << transfer
-            end
-          end
+        transfers_by_transaction_id = Hash.new { |h, k| h[k] = [] }
+        transfers.each do |transfer|
+          transfers_by_transaction_id[transfer.inflow_transaction_id] << transfer if transfer.inflow_transaction_id
+          transfers_by_transaction_id[transfer.outflow_transaction_id] << transfer if transfer.outflow_transaction_id
         end
 
-        # Remove duplicates
-        result.transform_values(&:uniq)
+        result = Hash.new { |h, k| h[k] = [] }
+        entries.each do |entry|
+          next unless entry.transaction? && entry.entryable_id
+
+          result[entry.date].concat(transfers_by_transaction_id[entry.entryable_id])
+        end
+
+        result.transform_values { |list| list.uniq }
       end
     end
 
