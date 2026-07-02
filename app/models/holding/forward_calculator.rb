@@ -6,6 +6,8 @@ class Holding::ForwardCalculator
     @security_ids = security_ids
     # Track cost basis per security: { security_id => { total_cost: BigDecimal, total_qty: BigDecimal } }
     @cost_basis_tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+    # Securities whose cost basis cannot be computed due to a missing FX rate on a trade date
+    @cost_basis_invalid = {}
   end
 
   def calculate
@@ -85,14 +87,19 @@ class Holding::ForwardCalculator
         next unless trade.qty > 0 # Only track buys
 
         security_id = trade.security_id
+        next if @cost_basis_invalid[security_id] # already invalidated by a prior missing rate
+
         tracker = @cost_basis_tracker[security_id]
 
-        # Convert trade price to account currency if needed
+        # Convert trade price to account currency using the trade's date so we look up
+        # the rate that actually existed at the time of the trade, not today's rate.
         trade_price = Money.new(trade.price, trade.currency)
         begin
-          converted_price = trade_price.exchange_to(account.currency).amount
+          converted_price = trade_price.exchange_to(account.currency, date: trade_entry.date).amount
         rescue Money::ConversionError
-          converted_price = trade.price
+          Rails.logger.warn("[Holding::ForwardCalculator] No FX rate for #{trade.currency}→#{account.currency} on #{trade_entry.date}. Cost basis for security #{security_id} is unknown.")
+          @cost_basis_invalid[security_id] = true
+          next
         end
 
         tracker[:total_cost] += converted_price * trade.qty
@@ -101,7 +108,10 @@ class Holding::ForwardCalculator
     end
 
     # Returns the current cost basis for a security, or nil if no buys recorded
+    # or if any buy had an unresolvable FX rate.
     def cost_basis_for(security_id, currency)
+      return nil if @cost_basis_invalid[security_id]
+
       tracker = @cost_basis_tracker[security_id]
       return nil if tracker[:total_qty].zero?
 

@@ -236,6 +236,41 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_in_delta 100.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
   end
 
+  test "cost_basis_for returns nil when trade has a missing FX rate" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date = 5.days.ago.to_date
+
+    # EUR trade with no EUR→USD exchange rate — ConversionError must propagate as nil
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 50, date: buy_date, currency: "EUR")
+    end
+
+    assert_nil cost_basis_for(calc, security, buy_date)
+    assert_nil cost_basis_for(calc, security, Date.current)
+  end
+
+  test "cost_basis_for returns known value before missing-rate trade, nil after" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    first_buy  = 10.days.ago.to_date
+    second_buy = 3.days.ago.to_date
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: first_buy, rate: 1.08)
+    # No rate exists for second_buy date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: first_buy,  currency: "EUR")
+      create_trade(security, account: @account, qty:  5, price: 120, date: second_buy, currency: "EUR")
+    end
+
+    # Before the missing-rate trade, cost basis should be computable
+    expected_first = BigDecimal("100") * BigDecimal("1.08")
+    assert_in_delta expected_first.to_f, cost_basis_for(calc, security, first_buy).to_f, 1e-4
+
+    # On and after the missing-rate trade, cost basis must be nil
+    assert_nil cost_basis_for(calc, security, second_buy)
+    assert_nil cost_basis_for(calc, security, Date.current)
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
