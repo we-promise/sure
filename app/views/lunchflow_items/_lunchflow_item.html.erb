@@ -35,10 +35,7 @@
                 <%= tag.span t(".syncing") %>
               </div>
             <% elsif lunchflow_item.sync_error.present? %>
-              <div class="text-secondary flex items-center gap-1">
-                <%= render DS::Tooltip.new(text: lunchflow_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
-                <%= tag.span t(".error"), class: "text-destructive" %>
-              </div>
+              <%= render "provider_items/sync_error", provider_item: lunchflow_item, error_text: t(".error") %>
             <% else %>
               <p class="text-secondary">
                 <% if lunchflow_item.last_synced_at %>
