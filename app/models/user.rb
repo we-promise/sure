@@ -133,6 +133,20 @@ class User < ApplicationRecord
     [ first_name, last_name ].compact.join(" ").presence || email
   end
 
+  # Virtual attribute for the Preferences UI: inverts the stored
+  # `rule_prompts_disabled` flag so the toggle reads "on = prompts shown".
+  def rule_prompts_enabled
+    !rule_prompts_disabled
+  end
+
+  def rule_prompts_enabled=(value)
+    enabled = ActiveModel::Type::Boolean.new.cast(value)
+    self.rule_prompts_disabled = !enabled
+    # Re-enabling must also clear any recent inline dismissal, otherwise
+    # needs_rule_notification? keeps suppressing prompts for up to a day.
+    self.rule_prompt_dismissed_at = nil if enabled
+  end
+
   def initial
     (display_name&.first || email.first).upcase
   end
