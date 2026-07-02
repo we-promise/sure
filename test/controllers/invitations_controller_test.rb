@@ -155,6 +155,24 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert new_invitation.pending?
   end
 
+  test "raced unique-index violation on save is handled as a failure, not a 500" do
+    # Simulate a concurrent double-submit that slips past the pending-invite
+    # validation and hits the partial unique index at INSERT time.
+    Invitation.any_instance.stubs(:save).raises(ActiveRecord::RecordNotUnique)
+
+    assert_no_difference("Invitation.count") do
+      post invitations_url, params: {
+        invitation: {
+          email: "raced@example.com",
+          role: "member"
+        }
+      }
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.create.failure"), flash[:alert]
+  end
+
   test "should handle invalid invitation creation" do
     assert_no_difference("Invitation.count") do
       post invitations_url, params: {
