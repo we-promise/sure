@@ -270,6 +270,8 @@ class AssistantTest < ActiveSupport::TestCase
     assistant = Assistant.for_chat(@chat)
 
     Net::HTTP.any_instance.stubs(:request).raises(Errno::ECONNREFUSED, "Connection refused")
+    # Skip the real 1s/2s retry backoff sleeps
+    Assistant::External::Client.any_instance.stubs(:sleep)
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
