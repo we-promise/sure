@@ -3,7 +3,9 @@ class Rule < ApplicationRecord
 
   belongs_to :family
   has_many :conditions, dependent: :destroy
-  has_many :actions, dependent: :destroy
+  # App-wide default order: preloaded `rule.actions` must match the id order
+  # callers relied on when loading actions individually (e.g. `.first` on index).
+  has_many :actions, -> { order(:id) }, dependent: :destroy
   has_many :rule_runs, dependent: :destroy
 
   accepts_nested_attributes_for :conditions, allow_destroy: true

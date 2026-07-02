@@ -65,13 +65,7 @@ class TransactionsFormExchangeRateTest < ApplicationSystemTestCase
     # Change to GBP (exchange rate is set up in fixtures)
     find("select[data-money-field-target='currency']").find("option[value='GBP']").select_option
 
-    # Wait for exchange rate container to become visible
-    assert_selector "[data-transaction-form-target='exchangeRateContainer']", visible: true
-
-    # Exchange rate field should be populated
-    exchange_rate_field = find("[data-transaction-form-target='exchangeRateField']")
-    assert_not_empty exchange_rate_field.value
-    assert_equal "1.27", exchange_rate_field.value
+    assert_exchange_rate_value "1.27"
   end
 
   test "exchange rate field is empty when rate not found" do
@@ -99,22 +93,11 @@ class TransactionsFormExchangeRateTest < ApplicationSystemTestCase
 
     # Change to EUR
     find("select[data-money-field-target='currency']").find("option[value='EUR']").select_option
+    assert_exchange_rate_value "1.10"
 
-    # Wait for EUR rate to load
-    assert_selector "[data-transaction-form-target='exchangeRateContainer']", visible: true
-    first_rate = find("[data-transaction-form-target='exchangeRateField']").value
-    assert_equal "1.10", first_rate
-
-    # Change to GBP
+    # Change to GBP — container stays visible; wait for the new rate, not visibility alone
     find("select[data-money-field-target='currency']").find("option[value='GBP']").select_option
-
-    # Wait for GBP rate to be updated
-    assert_selector "[data-transaction-form-target='exchangeRateContainer']", visible: true
-    second_rate = find("[data-transaction-form-target='exchangeRateField']").value
-    assert_equal "1.27", second_rate
-
-    # Rates should be different
-    assert_not_equal first_rate, second_rate
+    assert_exchange_rate_value "1.27"
   end
 
   test "changing account also recalculates exchange rate for current currency" do

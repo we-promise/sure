@@ -192,6 +192,15 @@ export default class extends Controller {
     this.exchangeRateAbortController = new AbortController();
     const signal = this.exchangeRateAbortController.signal;
 
+    // Clear stale rate while the new currency pair loads (avoids showing the
+    // previous pair's value when only the amount currency changes).
+    if (this.hasExchangeRateFieldTarget) {
+      this.exchangeRateFieldTarget.value = "";
+    }
+    if (this.hasConvertDestinationDisplayTarget) {
+      this.convertDestinationDisplayTarget.textContent = "-";
+    }
+
     try {
       const url = new URL(this.exchangeRateUrlValue, window.location.origin);
       url.searchParams.set("from", fromCurrency);
