@@ -319,6 +319,7 @@ en:
         category_filter: Category
         clear_filters: Clear filters
         date_filter: Date
+        loading: Loading filters...
         merchant_filter: Merchant
         status_filter: Status
         tag_filter: Tag
