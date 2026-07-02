@@ -261,7 +261,11 @@ class Import < ApplicationRecord
         end
 
         updated_mappings.each { |m| m.save(validate: false) }
-        mapping_class.where.not(id: updated_mappings.map(&:id)).destroy_all
+
+        updated_mapping_ids = updated_mappings.map(&:id)
+        stale_mappings = mappings.where(type: mapping_class.name)
+        stale_mappings = stale_mappings.where.not(id: updated_mapping_ids) if updated_mapping_ids.any?
+        stale_mappings.destroy_all
       end
     end
   end
