@@ -1,0 +1,16 @@
+<%# locals: (insights:, **args) %>
+
+<div class="space-y-3" id="insights-feed">
+  <% insights.each do |insight| %>
+    <%= render "insights/insight_card", insight: insight, unread: insight.active? %>
+  <% end %>
+
+  <div class="px-1">
+    <%= render DS::Link.new(
+      text: t("insights.feed.view_all"),
+      href: insights_path,
+      variant: "ghost",
+      size: "sm"
+    ) %>
+  </div>
+</div>
