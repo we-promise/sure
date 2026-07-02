@@ -42,6 +42,10 @@ class AccountsController < ApplicationController
     @provider_configs = Provider::Factory.registered_adapters.flat_map do |adapter_class|
       adapter_class.connection_configs(family: family)
     end
+
+    # The dialog loads into the "modal" turbo frame; skip the full layout
+    # (which renders the account sidebar twice) for frame requests.
+    render layout: false if turbo_frame_request?
   end
 
   def sync_all
