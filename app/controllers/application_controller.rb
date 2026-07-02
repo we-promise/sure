@@ -16,7 +16,7 @@ class ApplicationController < ActionController::Base
   before_action :set_default_chat
   before_action :set_active_storage_url_options
 
-  helper_method :demo_config, :demo_host_match?, :show_demo_warning?
+  helper_method :demo_config, :demo_host_match?, :show_demo_warning?, :current_sidekiq_health
 
   private
     def accept_pending_invitation_for(user)
@@ -92,6 +92,18 @@ class ApplicationController < ActionController::Base
 
     def show_demo_warning?
       demo_host_match?
+    end
+
+    # Returns the current Sidekiq health snapshot in self-hosted mode and
+    # `nil` in managed mode. Memoized per request and additionally cached
+    # across requests by `SidekiqHealth.current`, so an authenticated page
+    # render adds at most one Redis round-trip per cache window — not three
+    # per request. Returns `nil` (not a healthy stand-in) in managed mode
+    # so callers must explicitly handle the "check disabled" case; the
+    # banner already gates on `Current.user&.super_admin?` and `present?`.
+    def current_sidekiq_health
+      return @current_sidekiq_health if defined?(@current_sidekiq_health)
+      @current_sidekiq_health = Rails.application.config.app_mode.self_hosted? ? SidekiqHealth.current : nil
     end
 
     def accessible_accounts

@@ -37,8 +37,31 @@
     <%# Custom overrides for browser's confirm API  %>
     <%= render "layouts/shared/confirm_dialog" %>
 
-    <%= render "impersonation_sessions/super_admin_bar" if Current.true_user&.super_admin? && show_super_admin_bar? %>
-    <%= render "impersonation_sessions/approval_bar" if Current.true_user&.impersonated_support_sessions&.initiated&.any? %>
+    <% super_admin_bar_visible = Current.true_user&.super_admin? && show_super_admin_bar? %>
+    <% approval_bar_visible = Current.true_user&.impersonated_support_sessions&.initiated&.any? %>
+
+    <%= render "impersonation_sessions/super_admin_bar" if super_admin_bar_visible %>
+    <%= render "impersonation_sessions/approval_bar" if approval_bar_visible %>
+
+    <%# Only surface the Sidekiq nudge to operators who can act on it. The
+        Redis round-trip and banner render are both skipped for non-super-admins
+        and for managed-mode deployments — `current_sidekiq_health` returns
+        nil in those cases. %>
+    <% if Current.user&.super_admin? && current_sidekiq_health && !current_sidekiq_health.healthy? %>
+      <%# Stack below any sticky impersonation bars instead of hard-coding
+          80px (`top-20`). Each bar is ~60px tall (`py-4` + content), so
+          adjust the fixed offset based on how many are visible. %>
+      <% banner_top_class = if super_admin_bar_visible && approval_bar_visible
+                             "top-36"
+                           elsif super_admin_bar_visible || approval_bar_visible
+                             "top-20"
+                           else
+                             "top-4"
+                           end %>
+      <div class="fixed z-40 <%= banner_top_class %> left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
+        <%= render "shared/sidekiq_health_banner", health: current_sidekiq_health %>
+      </div>
+    <% end %>
 
     <%= yield %>
   </body>

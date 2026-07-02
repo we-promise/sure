@@ -36,7 +36,8 @@ nav_sections = [
         { label: t(".imports_label"), path: imports_path, icon: "download" },
         { label: t(".exports_label"), path: family_exports_path, icon: "upload" },
         { label: t(".sso_providers_label"), path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },
-        { label: t(".users_label"), path: admin_users_path, icon: "users", if: Current.user&.super_admin? }
+        { label: t(".users_label"), path: admin_users_path, icon: "users", if: Current.user&.super_admin? },
+        { label: t(".system_health_label"), path: admin_system_health_path, icon: "heart-pulse", if: Current.user&.super_admin? }
       ]
     } : nil
   ),
