@@ -32,4 +32,22 @@ class Tag::DeletionsControllerTest < ActionDispatch::IntegrationTest
       post tag_deletions_url(@tag)
     end
   end
+
+  test "create with invalid or cross family tag_id returns not found" do
+    other_family_tag = families(:empty).tags.create!(name: "Other family tag")
+
+    assert_no_difference -> { Tag.count } do
+      post tag_deletions_url(tag_id: other_family_tag.id)
+    end
+
+    assert_response :not_found
+  end
+
+  test "create with invalid replacement_tag_id returns not found" do
+    assert_no_difference -> { Tag.count } do
+      post tag_deletions_url(@tag), params: { replacement_tag_id: "missing" }
+    end
+
+    assert_response :not_found
+  end
 end
