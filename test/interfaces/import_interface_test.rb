@@ -155,6 +155,30 @@ module ImportInterfaceTest
     assert_equal "", row.amount
   end
 
+  test "strips leading/trailing currency junk under the French/Scandinavian format" do
+    import = imports(:transaction)
+    import.update!(
+      number_format: "1 234,56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    # Currency symbols/codes at the edges (issue #2537's "1 234,56 kr" row) are
+    # stripped; the amount still parses. Interior junk is not stripped (covered
+    # by the mixed-punctuation rejection test above).
+    csv_data = "date,amount,name\n" \
+               "01/01/2024,\"1 234,56 kr\",Suffix\n" \
+               "01/02/2024,\"€1 234,56\",Prefix"
+    import.update!(raw_file_str: csv_data)
+    import.generate_rows_from_csv
+    import.reload
+
+    assert_equal "1234.56", import.rows.first.amount
+    assert_equal "1234.56", import.rows.second.amount
+  end
+
   test "parses zero-decimal currency format correctly" do
     import = imports(:transaction)
     import.update!(
