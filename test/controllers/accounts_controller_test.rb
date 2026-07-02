@@ -469,5 +469,4 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
     refute_includes @response.body, setup_accounts_simplefin_item_path(item)
     refute_includes @response.body, "Link existing accounts"
   end
-
 end
