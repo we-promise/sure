@@ -6,10 +6,10 @@ json.color category.color
 json.icon category.lucide_icon
 
 # Parent information (for subcategories)
-if category.parent.present?
+if category.parent_id.present?
   json.parent do
-    json.id category.parent.id
-    json.name category.parent.name
+    json.id category.parent_id
+    json.name category.parent&.name
   end
 else
   json.parent nil

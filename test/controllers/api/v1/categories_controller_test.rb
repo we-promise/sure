@@ -62,6 +62,19 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes category_names, @category.name
   end
 
+  test "index avoids parent association lookups when categories are preloaded" do
+    parent = @user.family.categories.create!(name: "Parent API", color: "#000000", lucide_icon: "shapes")
+    @user.family.categories.create!(name: "Child API", color: "#111111", lucide_icon: "shapes", parent: parent)
+
+    queries = capture_sql_queries do
+      get "/api/v1/categories", params: {}, headers: api_headers(read_only_api_key)
+    end
+
+    assert_response :success
+    parent_lookup_queries = queries.grep(/FROM "categories".*WHERE "categories"\."id"/i)
+    assert_empty parent_lookup_queries
+  end
+
   test "should return proper category data structure" do
     get "/api/v1/categories", params: {}, headers: api_headers(read_only_api_key)
 
@@ -306,6 +319,22 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
         scopes: %w[read],
         source: "mobile"
       )
+    end
+
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
     end
 
     def api_headers(api_key)
