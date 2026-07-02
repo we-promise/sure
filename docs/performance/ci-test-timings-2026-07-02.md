@@ -133,3 +133,30 @@ From the notification probe (serial runs of the slowest suites):
 Flows like SnapTrade/Sophtron/Hostings/Goals/Providers settings inherit most of
 their cost from flows 1 and 3 (sign-in bcrypt + layout sidebar) and are covered
 by those PRs.
+
+## Resulting PRs
+
+| # | PR | Fix |
+|---|---|---|
+| 1 | [#2551](https://github.com/we-promise/sure/pull/2551) | MIN_COST bcrypt digests in user fixtures |
+| 2 | [#2552](https://github.com/we-promise/sure/pull/2552) | Stubbable provider retry backoff (SimpleFIN/Akahu/Up) |
+| 3 | [#2553](https://github.com/we-promise/sure/pull/2553) | Memoize `Family#balance_sheet` + sync status lookups |
+| 4 | [#2559](https://github.com/we-promise/sure/pull/2559) | Lazy-load the transactions filter menu |
+| 5 | [#2560](https://github.com/we-promise/sure/pull/2560) | Skip layout for modal/drawer turbo frame requests |
+| 6 | [#2561](https://github.com/we-promise/sure/pull/2561) | Batch reports trends chart into one month-grouped query |
+| 7 | [#2562](https://github.com/we-promise/sure/pull/2562) | Skip data census in `FamilyResetJob` resets |
+| 8 | [#2563](https://github.com/we-promise/sure/pull/2563) | Use eager-loaded syncs for provider item status |
+| 9 | [#2564](https://github.com/we-promise/sure/pull/2564) | Stub assistant client retry backoff sleeps |
+| 10 | [#2565](https://github.com/we-promise/sure/pull/2565) | Seed rate-limit counter instead of 100 requests/test |
+
+## Verified combined result
+
+All ten branches merged into one local integration branch and the full suite
+re-run in the same environment:
+
+| Metric | Before | After |
+|---|---|---|
+| Wall time (parallel) | 156.2s | **72.0s (-54%)** |
+| Accumulated test time | 577.6s | **257.8s (-55%)** |
+| Slowest single test | 16.78s | **2.58s** |
+| Result | green | green (5,294 runs, 0 failures/errors) |
