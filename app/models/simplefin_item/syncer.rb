@@ -78,14 +78,23 @@ class SimplefinItem::Syncer
         window_start_date: sync.window_start_date,
         window_end_date: sync.window_end_date
       )
+
+      persist_post_run_stats(sync)
+      normalize_duplicate_only_errors(sync)
+      # Account syncs are child jobs; leave this parent open so child failures propagate.
+      return
     end
 
     mark_completed(sync)
   end
 
-  # Public: called by Sync after finalization; keep no-op
+  # Public: called by Sync after finalization.
   def perform_post_sync
-    # no-op
+    sync = simplefin_item.syncs.ordered.first
+    return unless sync&.completed?
+
+    update_last_synced_at(sync)
+    broadcast_provider_refresh
   end
 
   private
@@ -130,58 +139,34 @@ class SimplefinItem::Syncer
         sync.update!(status: :completed) if sync.status != "completed"
       end
 
-      # After completion, compute and persist compact post-run stats for the summary panel
-      begin
-        post_stats = compute_post_run_stats(sync)
-        if post_stats.present?
-          existing = (sync.sync_stats || {})
-          sync.update!(sync_stats: existing.merge(post_stats))
-        end
-      rescue => e
-        Rails.logger.warn("SimplefinItem::Syncer#mark_completed stats error: #{e.class} - #{e.message}")
-      end
+      persist_post_run_stats(sync)
 
-      # If all recorded errors are duplicate-skips, do not surface a generic failure message
-      begin
-        stats = (sync.sync_stats || {})
-        errors = Array(stats["errors"]).map { |e| (e.is_a?(Hash) ? e["message"] || e[:message] : e.to_s) }
-        if errors.present? && errors.all? { |m| m.to_s.downcase.include?("duplicate upstream account detected") }
-          sync.update_columns(error: nil) if sync.respond_to?(:error)
-          # Provide a gentle status hint instead
-          if sync.respond_to?(:status_text)
-            sync.update_columns(status_text: "Some accounts skipped as duplicates — try Link existing accounts to merge.")
-          end
-        end
-      rescue => e
-        Rails.logger.warn("SimplefinItem::Syncer duplicate-only error normalization failed: #{e.class} - #{e.message}")
-      end
-
-      # Bump item freshness timestamp (guard column existence and skip for balances-only)
-      if simplefin_item.has_attribute?(:last_synced_at) && !(sync.sync_stats || {})["balances_only"].present?
-        simplefin_item.update!(last_synced_at: Time.current)
-      end
-
-      # Broadcast UI updates so Providers/Accounts pages refresh without manual reload
-      begin
-        # Replace the SimpleFin card
-        card_html = ApplicationController.render(
-          partial: "simplefin_items/simplefin_item",
-          formats: [ :html ],
-          locals: { simplefin_item: simplefin_item }
-        )
-        target_id = ActionView::RecordIdentifier.dom_id(simplefin_item)
-        Turbo::StreamsChannel.broadcast_replace_to(simplefin_item.family, target: target_id, html: card_html)
-
-        # Broadcast a refresh signal instead of rendered HTML. Each user's browser
-        # re-fetches via their own authenticated request, so the manual accounts
-        # list is correctly scoped to the current user.
-        simplefin_item.family.broadcast_refresh
-      rescue => e
-        Rails.logger.warn("SimplefinItem::Syncer broadcast failed: #{e.class} - #{e.message}")
-      end
+      normalize_duplicate_only_errors(sync)
     end
 
-    # Computes transaction/holding counters between sync start and completion
+    def normalize_duplicate_only_errors(sync)
+      stats = (sync.sync_stats || {})
+      errors = Array(stats["errors"]).map { |e| (e.is_a?(Hash) ? e["message"] || e[:message] : e.to_s) }
+      return unless errors.present? && errors.all? { |m| m.to_s.downcase.include?("duplicate upstream account detected") }
+
+      sync.update_columns(error: nil) if sync.respond_to?(:error)
+      if sync.respond_to?(:status_text)
+        sync.update_columns(status_text: I18n.t("simplefin_items.simplefin_item.duplicate_accounts_skipped"))
+      end
+    rescue => e
+      Rails.logger.warn("SimplefinItem::Syncer duplicate-only error normalization failed: #{e.class} - #{e.message}")
+    end
+
+    def persist_post_run_stats(sync)
+      post_stats = compute_post_run_stats(sync)
+      return if post_stats.blank?
+
+      existing = (sync.sync_stats || {})
+      sync.update!(sync_stats: existing.merge(post_stats))
+    rescue => e
+      Rails.logger.warn("SimplefinItem::Syncer#persist_post_run_stats error: #{e.class} - #{e.message}")
+    end
+
     def compute_post_run_stats(sync)
       window_start = sync.created_at || 30.minutes.ago
       window_end   = Time.current
@@ -208,6 +193,31 @@ class SimplefinItem::Syncer
         "window_start" => window_start,
         "window_end" => window_end
       }
+    end
+
+    def update_last_synced_at(sync)
+      return unless simplefin_item.has_attribute?(:last_synced_at)
+      return if (sync.sync_stats || {})["balances_only"].present?
+
+      simplefin_item.update!(last_synced_at: Time.current)
+    end
+
+    def broadcast_provider_refresh
+      # Broadcast UI updates so Providers/Accounts pages refresh without manual reload.
+      card_html = ApplicationController.render(
+        partial: "simplefin_items/simplefin_item",
+        formats: [ :html ],
+        locals: { simplefin_item: simplefin_item }
+      )
+      target_id = ActionView::RecordIdentifier.dom_id(simplefin_item)
+      Turbo::StreamsChannel.broadcast_replace_to(simplefin_item.family, target: target_id, html: card_html)
+
+      # Broadcast a refresh signal instead of rendered HTML. Each user's browser
+      # re-fetches via their own authenticated request, so the manual accounts
+      # list is correctly scoped to the current user.
+      simplefin_item.family.broadcast_refresh
+    rescue => e
+      Rails.logger.warn("SimplefinItem::Syncer broadcast failed: #{e.class} - #{e.message}")
     end
 
     # Collects a data quality warning if any linked accounts are investment or crypto accounts.
