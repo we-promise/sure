@@ -54,7 +54,7 @@ class TransactionImport < Import
         # fall back to the existing date/amount/name heuristic otherwise.
         adapter = Account::ProviderImportAdapter.new(mapped_account)
         duplicate_entry =
-          (external_id && mapped_account.entries.where.not(id: claimed_entry_ids.to_a).find_by(external_id: external_id)) ||
+          (external_id && mapped_account.entries.where(entryable_type: "Transaction").where.not(id: claimed_entry_ids.to_a).find_by(external_id: external_id)) ||
           adapter.find_duplicate_transaction(
             date: row.date_iso,
             amount: row.signed_amount,

@@ -17,6 +17,8 @@ tr:
         date_format_label: Tarih formatı
       transaction_import:
         date_format_label: Tarih formatı
+        external_id_hint: "İsteğe bağlı. Yeniden içe aktarmada güvenilir yineleme tespiti için benzersiz bir işlem kimliği sütununu (örn. banka tarafından sağlanan UUID) eşler."
+        external_id_label: "Harici kimlik"
     confirms:
       mappings:
         create_account: Hesap oluştur
