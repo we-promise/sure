@@ -38,6 +38,8 @@ class PasswordResetsController < ApplicationController
     end
 
     if @user.update(password_params)
+      # Invalidate all existing sessions after password reset (FIX-13)
+      @user.sessions.destroy_all
       redirect_to new_session_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity
