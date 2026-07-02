@@ -37,7 +37,7 @@ class AccountActivityTest < ApplicationSystemTestCase
   end
 
   test "account activity hides duplicate action for a selected valuation" do
-    visit account_url(@account, tab: "activity")
+    visit account_url(@account, tab: "activity", q: { include_valuations: "true" })
 
     find("#" + dom_id(@valuation_entry, "selection")).check
 

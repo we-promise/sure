@@ -100,6 +100,19 @@
                   <%= label_tag "q_status_pending", t("accounts.show.activity.pending"), class: "text-sm text-primary" %>
                 </div>
               </div>
+              <div class="p-3 border-t border-primary space-y-3 min-w-[160px]">
+                <p class="text-xs font-medium text-secondary uppercase"><%= t("accounts.show.activity.entry_types") %></p>
+                <div class="flex items-center gap-3">
+                  <%= check_box_tag "q[include_valuations]",
+                                    "true",
+                                    params.dig(:q, :include_valuations) == "true",
+                                    id: "q_include_valuations",
+                                    class: "checkbox checkbox--light",
+                                    form: "entries-search",
+                                    onchange: "document.getElementById('entries-search').requestSubmit()" %>
+                  <%= label_tag "q_include_valuations", t("accounts.show.activity.show_balance_updates"), class: "text-sm text-primary" %>
+                </div>
+              </div>
             <% end %>
           <% end %>
       <% end %>

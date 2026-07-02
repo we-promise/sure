@@ -44,7 +44,7 @@ class Entry < ApplicationRecord
   scope :reverse_chronological, -> {
     order(
       date: :desc,
-      Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :desc,
+      Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :asc,
       created_at: :desc,
       id: :desc
     )
