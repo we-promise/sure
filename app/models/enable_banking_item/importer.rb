@@ -268,6 +268,11 @@ class EnableBankingItem::Importer
     end
 
     def mark_balance_unavailable(enable_banking_account)
+      unless enable_banking_account.persisted?
+        enable_banking_account.current_balance = nil
+        return
+      end
+
       enable_banking_account.update_columns(
         current_balance: nil,
         updated_at: Time.current
