@@ -312,6 +312,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
+    assert_match "must be greater than 0", response.body
   end
 
   test "cannot create transfer with negative fee" do
@@ -330,6 +331,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
+    assert_match "source_fee_amount must be non-negative", response.body
   end
 
   test "updating amount on cross-currency transfer without available rate shows alert instead of raising" do
