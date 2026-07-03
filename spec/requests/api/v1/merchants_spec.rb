@@ -47,6 +47,43 @@ RSpec.describe 'API V1 Merchants', type: :request do
         run_test!
       end
     end
+
+    post 'Import merchants from CSV' do
+      tags 'Merchants'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'multipart/form-data'
+      produces 'application/json'
+
+      parameter name: :file, in: :formData, type: :file, required: true,
+                description: 'CSV file with columns: name* (required), color, website_url'
+
+      response '201', 'merchants imported' do
+        schema '$ref' => '#/components/schemas/MerchantImportResult'
+
+        let(:file) do
+          Rack::Test::UploadedFile.new(
+            StringIO.new("name,color,website_url\nCoffee Shop,#e99537,https://coffeeshop.com"),
+            'text/csv',
+            true,
+            original_filename: 'merchants.csv'
+          )
+        end
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { nil }
+        run_test!
+      end
+
+      response '422', 'missing file or invalid CSV' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:file) { nil }
+        run_test!
+      end
+    end
   end
 
   path '/api/v1/merchants/{id}' do

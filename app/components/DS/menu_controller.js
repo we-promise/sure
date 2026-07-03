@@ -119,7 +119,14 @@ export default class extends Controller {
   }
 
   #menuItems() {
-    return Array.from(this.contentTarget.querySelectorAll('[role="menuitem"]'));
+    // Include selectable roles (menuitemradio/menuitemcheckbox) so roving focus
+    // and keyboard handling work for single/multi-select menus, not just plain
+    // action items.
+    return Array.from(
+      this.contentTarget.querySelectorAll(
+        '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]',
+      ),
+    );
   }
 
   #focusFirstMenuItem() {

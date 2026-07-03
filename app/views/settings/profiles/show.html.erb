@@ -9,7 +9,9 @@
 
       <% if @user.unconfirmed_email.present? %>
         <p class="mt-2 text-sm text-secondary">
-          You have requested to change your email to <%= @user.unconfirmed_email %>. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or <%= link_to "request a new confirmation email", resend_confirmation_email_user_path(@user), class: "hover:underline text-secondary" %>.
+          <%= t(".unconfirmed_email_notice_html",
+                email: @user.unconfirmed_email,
+                resend_link: link_to(t(".resend_confirmation_link"), resend_confirmation_email_user_path(@user), class: "hover:underline text-secondary")) %>
         </p>
       <% end %>
 
@@ -49,9 +51,7 @@
               <%= render "settings/user_avatar", avatar_url: user.profile_image&.variant(:small)&.url, initials: user.initials %>
             </div>
             <p class="text-primary font-medium text-sm"><%= user.display_name %></p>
-            <div class="rounded-md bg-surface px-1.5 py-0.5">
-              <p class="uppercase text-secondary font-medium text-xs"><%= t("users.roles.#{user.role}", default: user.role.humanize) %></p>
-            </div>
+            <%= render DS::Pill.new(label: t("users.roles.#{user.role}", default: user.role.humanize), tone: :gray, marker: false, size: :sm) %>
             <% if Current.user.admin? && user != Current.user %>
               <div class="ml-auto">
                 <%= render DS::Button.new(
@@ -67,16 +67,14 @@
         <% end %>
         <% if @pending_invitations.any? %>
           <% @pending_invitations.each do |invitation| %>
-            <div class="flex gap-2 items-center justify-between bg-container p-4 border border-alpha-black-25 rounded-lg">
+            <div class="flex gap-2 items-center justify-between bg-container p-4 shadow-border-xs rounded-lg">
               <div class="flex gap-2 items-center">
                 <div class="w-9 h-9 shrink-0">
                   <div class="text-inverse w-full h-full bg-surface-inset rounded-full flex items-center justify-center text-lg uppercase"><%= invitation.email[0] %></div>
                 </div>
-                <div class="flex">
+                <div class="flex items-center gap-2">
                   <p class="text-primary font-medium text-sm"><%= invitation.email %></p>
-                  <div class="rounded-md bg-surface px-1.5 py-0.5">
-                    <p class="uppercase text-secondary font-medium text-xs"><%= t(".pending") %></p>
-                  </div>
+                  <%= render DS::Pill.new(label: t(".pending"), tone: :gray, marker: false, size: :sm) %>
                 </div>
               </div>
               <div class="flex items-center gap-4">

@@ -9,7 +9,6 @@ en:
     authorize:
       authorization_failed: "Failed to initiate authorization: %{message}"
       bank_required: Please select a bank.
-      decoupled_not_supported: This bank uses a separate device authentication method which is not yet supported. Please add this account manually.
       invalid_redirect: The authorization URL received is invalid. Please try again.
       redirect_uri_not_allowed: Redirect not allowed. Please configure `%{callback_url}` in your Enable Banking app settings.
       unexpected_error: An unexpected error occurred. Please try again.

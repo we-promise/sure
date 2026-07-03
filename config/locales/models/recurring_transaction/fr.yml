@@ -1,0 +1,7 @@
+---
+fr:
+  activerecord:
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: Le commerçant ou le nom doit être présent

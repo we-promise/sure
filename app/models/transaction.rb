@@ -3,6 +3,7 @@ class Transaction < ApplicationRecord
 
   belongs_to :category, optional: true
   belongs_to :merchant, optional: true
+  belongs_to :transfer, optional: true
 
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
@@ -97,7 +98,7 @@ class Transaction < ApplicationRecord
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
   # Providers that support pending transaction flags
-  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu].freeze
+  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up mercury].freeze
 
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.

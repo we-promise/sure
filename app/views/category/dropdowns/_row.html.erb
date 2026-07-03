@@ -18,9 +18,11 @@
       ),
       method: :patch,
       data: { turbo_frame: "category_dropdown" },
-      class: "flex w-full items-center gap-1.5 cursor-pointer focus:outline-none" do %>
+      class: "flex w-full items-center gap-1.5 cursor-pointer" do %>
 
-    <%= icon("check") if is_selected %>
+    <span class="flex items-center justify-center w-5 h-5 shrink-0">
+      <% if is_selected %><%= icon("check") %><% end %>
+    </span>
 
     <% if category.subcategory? %>
       <%= icon("corner-down-right", size: "sm") %>

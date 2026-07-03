@@ -3,6 +3,7 @@ class Family < ApplicationRecord
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable
   include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
   include IndexaCapitalConnectable, IbkrConnectable
+  include UpConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -14,7 +15,9 @@ class Family < ApplicationRecord
     [ "MM/DD/YYYY", "%m/%d/%Y" ],
     [ "D/MM/YYYY", "%e/%m/%Y" ],
     [ "YYYY.MM.DD", "%Y.%m.%d" ],
-    [ "YYYYMMDD", "%Y%m%d" ]
+    [ "YYYYMMDD", "%Y%m%d" ],
+    # QIF month-name imports rely on QifParser preserving normalized spaces.
+    [ "DD MMM YYYY", "%d %b %Y" ]
   ].freeze
 
 
@@ -27,6 +30,8 @@ class Family < ApplicationRecord
   has_many :invitations, dependent: :destroy
 
   has_many :imports, dependent: :destroy
+  has_many :import_sessions, dependent: :destroy
+  has_many :import_source_mappings, dependent: :destroy
   has_many :family_exports, dependent: :destroy
   has_many :account_statements, dependent: :destroy
 

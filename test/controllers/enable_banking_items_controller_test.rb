@@ -39,4 +39,28 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes haystack, "ing-diba ag",
       "Expected the searchable data attribute to still include the bank name (existing name-search behavior)"
   end
+
+  test "authorize no longer blocks decoupled banks and proceeds to the hosted auth page" do
+    Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
+      aspsps: [
+        {
+          name: "VR Bank in Holstein",
+          country: "DE",
+          psu_types: [ "personal" ],
+          auth_methods: [ { name: "decoupled_app", approach: "DECOUPLED" } ]
+        }
+      ]
+    )
+    Provider::EnableBanking.any_instance.stubs(:start_authorization).returns(
+      url: "https://api.enablebanking.com/auth/redirect/abc",
+      authorization_id: "auth_1"
+    )
+
+    post authorize_enable_banking_item_url(@item),
+         params: { aspsp_name: "VR Bank in Holstein", psu_type: "personal" }
+
+    assert_redirected_to "https://api.enablebanking.com/auth/redirect/abc"
+    assert_nil flash[:alert]
+    assert_equal "DECOUPLED", @item.reload.aspsp_auth_approach
+  end
 end

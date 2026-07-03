@@ -239,3 +239,39 @@ zh-CN:
       sync_start_date_help: 选择您希望向前同步交易历史的时间范围。最多可用 3 年历史记录。
       sync_start_date_label: "从以下日期开始同步交易："
       title: 设置您的 Brex 账户
+    complete_account_setup:
+      all_skipped: 所有账户都已跳过，未创建账户。
+      creation_failed: 创建账户失败：%{error}
+      creation_failed_count: "%{count} 个账户创建失败。"
+      no_accounts: 没有需要设置的账户。
+      partial_skipped: 已成功创建 %{created_count} 个账户；已跳过 %{skipped_count} 个账户。
+      partial_success: 已成功创建 %{created_count} 个账户，但 %{failed_count} 个账户失败。
+      success: 已成功创建 %{count} 个账户。
+      unexpected_error: 出现意外错误。
+    sync:
+      success: 同步已开始
+    syncer:
+      account_processing_failed:
+        one: "%{count} 个 Brex 账户处理失败。"
+        other: "%{count} 个 Brex 账户处理失败。"
+      account_sync_failed:
+        one: "%{count} 个 Brex 账户同步无法安排。"
+        other: "%{count} 个 Brex 账户同步无法安排。"
+      accounts_need_setup:
+        one: "%{count} 个账户需要设置..."
+        other: "%{count} 个账户需要设置..."
+      accounts_failed:
+        one: "%{count} 个 Brex 账户导入失败。"
+        other: "%{count} 个 Brex 账户导入失败。"
+      calculating_balances: 正在计算余额...
+      checking_account_configuration: 正在检查账户配置...
+      credentials_invalid: Brex 凭据无效。
+      failed: 同步失败。请重试或联系支持。
+      import_failed: Brex 导入失败。
+      importing_accounts: 正在从 Brex 导入账户...
+      processing_transactions: 正在处理交易...
+      transactions_failed:
+        one: "%{count} 个 Brex 账户存在交易导入失败。"
+        other: "%{count} 个 Brex 账户存在交易导入失败。"
+    update:
+      success: Brex 连接已更新

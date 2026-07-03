@@ -52,13 +52,6 @@
   </div>
 
   <% if env_configured %>
-    <div class="bg-warning-50 border border-warning-200 rounded-lg p-3">
-      <div class="flex items-start gap-2">
-        <%= icon("alert-circle", class: "w-5 h-5 text-warning-600 mt-0.5 shrink-0") %>
-        <p class="text-sm text-warning-800">
-          <%= t(".env_configured_message") %>
-        </p>
-      </div>
-    </div>
+    <%= render DS::Alert.new(message: t(".env_configured_message"), variant: :warning) %>
   <% end %>
 </div>

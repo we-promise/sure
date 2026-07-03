@@ -11,3 +11,4 @@ zh-CN:
         explanation: "“%{tag_name}”将从交易及其他可标记实体中移除。您也可以在下述选项中选择一个新标签进行重新分配，而不是保留为未标记状态。"
         replacement_tag_prompt: 选择新标签
         tag: 标签
+        delete_and_reassign: 删除并重新分配

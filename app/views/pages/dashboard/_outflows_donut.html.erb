@@ -1,15 +1,5 @@
 <%# locals: (outflows_data:, period:) %>
 <div id="outflows-donut-section" class="@container">
-  <div class="flex justify-end items-center gap-4 px-4 mb-4">
-    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
-      <%= form.select :period,
-                Period.as_options,
-                { selected: period.key },
-                data: { "auto-submit-form-target": "auto" },
-                class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
-    <% end %>
-  </div>
-
   <div class="px-4">
     <div class="flex flex-col @2xl:flex-row gap-8 items-center">
       <!-- Donut Chart -->

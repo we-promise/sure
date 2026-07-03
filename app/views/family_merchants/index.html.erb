@@ -9,6 +9,12 @@
         icon: "combine") %>
   <% end %>
   <%= render DS::Link.new(
+    text: t(".import"),
+    variant: "outline",
+    icon: "upload",
+    href: new_import_path(type: "MerchantImport")
+  ) %>
+  <%= render DS::Link.new(
     text: t(".new"),
     variant: "primary",
     icon: "plus",

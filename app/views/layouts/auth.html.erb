@@ -7,28 +7,24 @@
             <%= image_tag "logomark.svg", class: "w-16 mb-6" %>
           </div>
           <div class="space-y-2">
-            <% if (controller_name == "sessions" && action_name == "new") || (controller_name == "registrations" && action_name == "new") %>
-              <div class="space-y-3 md:hidden w-full my-4">
+            <% if controller_name.in?(%w[sessions registrations]) && action_name.in?(%w[new create]) %>
+              <%# Determine the active tab from the controller, not current_page?:
+                  a failed POST re-renders :new from #create, where the request
+                  path is the form target (not /sessions/new), so current_page?
+                  would mis-highlight the switch. %>
+              <% on_sign_in = controller_name == "sessions" %>
+              <div class="space-y-3 w-full my-4">
                 <div class="bg-surface-inset rounded-lg p-1 flex">
                   <%= link_to new_session_path,
-      class: "w-1/2 px-2 py-1 rounded-md text-sm text-center font-medium #{current_page?(new_session_path) ? 'bg-surface shadow-sm text-primary' : 'text-secondary'}" do %>
+      class: "w-1/2 px-2 py-1 rounded-md text-sm text-center font-medium #{on_sign_in ? 'bg-surface shadow-sm text-primary' : 'text-secondary'}" do %>
                     <%= t("layouts.auth.sign_in") %>
                   <% end %>
                   <%= link_to new_registration_path,
-      class: "w-1/2 px-2 py-1 rounded-md text-sm text-center font-medium #{!current_page?(new_session_path) ? 'bg-surface shadow-sm text-primary' : 'text-secondary'}" do %>
+      class: "w-1/2 px-2 py-1 rounded-md text-sm text-center font-medium #{!on_sign_in ? 'bg-surface shadow-sm text-primary' : 'text-secondary'}" do %>
                     <%= t("layouts.auth.sign_up") %>
                   <% end %>
                 </div>
               </div>
-            <% end %>
-            <% if controller_name == "sessions" %>
-              <p class="text-sm text-center hidden md:block">
-                <%= tag.span t("layouts.auth.no_account", product_name: product_name), class: "text-secondary" %> <%= link_to t("layouts.auth.sign_up"), new_registration_path, class: "font-medium text-primary hover:underline transition" %>
-              </p>
-            <% elsif controller_name == "registrations" %>
-              <p class="text-sm text-center text-secondary hidden md:block">
-                <%= t("layouts.auth.existing_account") %> <%= link_to t("layouts.auth.sign_in"), new_session_path, class: "font-medium text-primary hover:underline transition" %>
-              </p>
             <% end %>
           </div>
         </div>

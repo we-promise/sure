@@ -1,10 +1,14 @@
 class Balance::ChartSeriesBuilder
-  def initialize(account_ids:, currency:, period: Period.last_30_days, interval: nil, favorable_direction: "up")
+  def initialize(account_ids:, currency:, period: Period.last_30_days, interval: nil,
+                 favorable_direction: "up", account_active_until_dates: {})
     @account_ids = account_ids
     @currency = currency
     @period = period
     @interval = interval
     @favorable_direction = favorable_direction
+    @account_active_until_dates = account_active_until_dates.compact
+      .transform_keys(&:to_s)
+      .transform_values { |date| date.to_date.iso8601 }
   end
 
   def balance_series
@@ -29,7 +33,7 @@ class Balance::ChartSeriesBuilder
   end
 
   private
-    attr_reader :account_ids, :currency, :period, :favorable_direction
+    attr_reader :account_ids, :currency, :period, :favorable_direction, :account_active_until_dates
 
     def interval
       @interval || period.interval
@@ -74,7 +78,8 @@ class Balance::ChartSeriesBuilder
           start_date: period.start_date,
           end_date: period.end_date,
           interval: interval,
-          sign_multiplier: sign_multiplier
+          sign_multiplier: sign_multiplier,
+          account_active_until_dates_json: account_active_until_dates.to_json
         }
       ])
     rescue => e
@@ -96,6 +101,19 @@ class Balance::ChartSeriesBuilder
           SELECT generate_series(DATE :start_date, DATE :end_date, :interval::interval)::date AS date
           UNION DISTINCT
           SELECT :end_date::date  -- Ensure end date is included
+        ),
+        account_windows AS (
+          SELECT
+            account_window.account_id::uuid AS account_id,
+            account_window.active_until_date::date AS active_until_date
+          FROM jsonb_each_text(CAST(:account_active_until_dates_json AS jsonb))
+            AS account_window(account_id, active_until_date)
+        ),
+        selected_accounts AS (
+          SELECT accounts.*, account_windows.active_until_date
+          FROM accounts
+          LEFT JOIN account_windows ON account_windows.account_id = accounts.id
+          WHERE accounts.id = ANY(array[:account_ids]::uuid[])
         )
         SELECT
           d.date,
@@ -119,7 +137,8 @@ class Balance::ChartSeriesBuilder
             END * COALESCE(er.rate, 1) * :sign_multiplier::integer
           ), 0) AS start_holdings_balance
         FROM dates d
-        CROSS JOIN accounts
+        LEFT JOIN selected_accounts accounts
+          ON accounts.active_until_date IS NULL OR d.date <= accounts.active_until_date
         LEFT JOIN LATERAL (
           SELECT b.end_balance,
                  b.end_cash_balance,
@@ -153,7 +172,6 @@ class Balance::ChartSeriesBuilder
              LIMIT 1)
           ) AS rate
         ) er ON TRUE
-        WHERE accounts.id = ANY(array[:account_ids]::uuid[])
         GROUP BY d.date
         ORDER BY d.date
       SQL

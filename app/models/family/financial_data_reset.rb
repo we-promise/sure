@@ -7,6 +7,8 @@ class Family::FinancialDataReset
     account_statements
     family_exports
     imports
+    import_sessions
+    import_source_mappings
     import_rows
     import_mappings
     accounts
@@ -52,6 +54,7 @@ class Family::FinancialDataReset
     simplefin_items
     snaptrade_items
     sophtron_items
+    up_items
   ].freeze
 
   Result = Struct.new(:user, :family, :dry_run, :before_counts, :deleted_counts, :after_counts, keyword_init: true)
@@ -127,6 +130,7 @@ class Family::FinancialDataReset
       delete_active_storage_attachments!
       scope(:transfers).destroy_all
       scope(:rejected_transfers).destroy_all
+      scope(:import_source_mappings).destroy_all
       scope(:import_mappings).destroy_all
       scope(:import_rows).destroy_all
       scope(:rule_runs).destroy_all
@@ -138,6 +142,7 @@ class Family::FinancialDataReset
       scope(:account_statements).destroy_all
       scope(:family_exports).destroy_all
       scope(:imports).destroy_all
+      scope(:import_sessions).destroy_all
       scope(:entries).destroy_all
       scope(:holdings).destroy_all
       scope(:balances).destroy_all
@@ -239,6 +244,7 @@ class Family::FinancialDataReset
         account_scope = Account.where(family_id: family.id)
         account_ids = account_scope.select(:id)
         import_scope = Import.where(family_id: family.id)
+        import_session_scope = ImportSession.where(family_id: family.id)
         import_ids = import_scope.select(:id)
         rule_scope = Rule.where(family_id: family.id)
         rule_ids = rule_scope.select(:id)
@@ -252,6 +258,8 @@ class Family::FinancialDataReset
           account_statements: AccountStatement.where(family_id: family.id),
           family_exports: FamilyExport.where(family_id: family.id),
           imports: import_scope,
+          import_sessions: import_session_scope,
+          import_source_mappings: ImportSourceMapping.where(family_id: family.id),
           import_rows: Import::Row.where(import_id: import_ids),
           import_mappings: Import::Mapping.where(import_id: import_ids),
           accounts: account_scope,

@@ -50,6 +50,7 @@ zh-CN:
         all: 全部
         on_track: 正常
         over_budget: 超支
+        aria_label: 筛选预算分类
       tabs:
         actual: 实际
         budgeted: 预算

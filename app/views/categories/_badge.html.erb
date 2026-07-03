@@ -1,17 +1,20 @@
 <%# locals: (category:) %>
 <% category ||= Category.uncategorized %>
 
+<%# Canonical category badge: DS::Pill in badge mode carrying the category's
+    user-chosen hex (custom_color is the sanctioned escape hatch for hues that
+    are data, not design). truncate + this min-w-0 wrapper keep long names
+    ellipsizing inside tight columns (e.g. the transaction row's category
+    cell) instead of overflowing them. %>
 <div class="min-w-0">
-  <span class="flex w-full items-center gap-1 text-sm font-medium rounded-full px-1.5 py-1 border focus-visible:outline-none focus-visible:ring-0"
-        style="
-          background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
-          border-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
-          color: <%= category.color %>;">
-    <% if category.lucide_icon.present? %>
-      <span class="shrink-0">
-        <%= icon category.lucide_icon, size: "sm", color: "current" %>
-      </span>
-    <% end %>
-    <span class="min-w-0 flex-1 truncate" data-testid="category-name"><%= category.name %></span>
-  </span>
+  <%= render DS::Pill.new(
+        label: category.name,
+        custom_color: category.color,
+        icon: category.lucide_icon.presence,
+        icon_size: "sm",
+        marker: false,
+        size: :md,
+        truncate: true,
+        label_testid: "category-name",
+        title: category.name) %>
 </div>

@@ -91,4 +91,80 @@ class Account::ReconciliationManagerTest < ActiveSupport::TestCase
       @manager.reconcile_balance(balance: 1200, date: Date.current)
     end
   end
+
+  test "reconciliation matches an open manual_save pledge by contribution delta" do
+    account = accounts(:depository)
+    manager = Account::ReconciliationManager.new(account)
+    create_balance(account: account, date: Date.current, balance: 2000, cash_balance: 2000)
+
+    pledge = goal_pledges(:open_transfer).goal.goal_pledges.create!(
+      account: account,
+      amount: 150,
+      currency: "USD",
+      kind: "manual_save"
+    )
+
+    result = manager.reconcile_balance(balance: 2150, date: Date.current)
+
+    assert result.success?
+    assert pledge.reload.status_matched?
+  end
+
+  test "reconciliation to the same balance leaves manual_save pledges open" do
+    account = accounts(:depository)
+    manager = Account::ReconciliationManager.new(account)
+    create_balance(account: account, date: Date.current, balance: 2000, cash_balance: 2000)
+
+    pledge = goal_pledges(:open_transfer).goal.goal_pledges.create!(
+      account: account,
+      amount: 150,
+      currency: "USD",
+      kind: "manual_save"
+    )
+
+    result = manager.reconcile_balance(balance: 2000, date: Date.current)
+
+    assert result.success?
+    assert_not pledge.reload.status_matched?
+  end
+
+  test "second same-day reconcile derives its delta from the valuation it updates, not the stale balance row" do
+    account = accounts(:depository)
+    manager = Account::ReconciliationManager.new(account)
+    create_balance(account: account, date: Date.current, balance: 2000, cash_balance: 2000)
+
+    goal = goal_pledges(:open_transfer).goal
+    first_pledge = goal.goal_pledges.create!(
+      account: account,
+      amount: 150,
+      currency: "USD",
+      kind: "manual_save"
+    )
+
+    assert manager.reconcile_balance(balance: 2150, date: Date.current).success?
+    assert first_pledge.reload.status_matched?
+
+    # The post-reconcile balance sync is async and hasn't run, so the
+    # balances row still says $2,000. The second save of $150 (2150 → 2300)
+    # must not be read as a $300 contribution off that stale row — that
+    # would wrongly close the larger pledge, and a wrong match never
+    # self-heals.
+    oversized_pledge = goal.goal_pledges.create!(
+      account: account,
+      amount: 300,
+      currency: "USD",
+      kind: "manual_save"
+    )
+    second_pledge = goal.goal_pledges.create!(
+      account: account,
+      amount: 150,
+      currency: "USD",
+      kind: "manual_save"
+    )
+
+    assert manager.reconcile_balance(balance: 2300, date: Date.current).success?
+
+    assert_not oversized_pledge.reload.status_matched?
+    assert second_pledge.reload.status_matched?
+  end
 end

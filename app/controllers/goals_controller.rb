@@ -1,6 +1,8 @@
 class GoalsController < ApplicationController
   before_action :require_preview_features!
-  before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive]
+  before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive reopen]
+
+  FUNDABLE_TYPES = %w[Depository Investment].freeze
   rescue_from ActiveRecord::RecordNotFound, with: :goal_not_found
 
   STATE_FILTERS = %w[all active paused completed archived].freeze
@@ -14,7 +16,7 @@ class GoalsController < ApplicationController
 
     all_goals = Current.family.goals
                        .alphabetically
-                       .includes(:open_pledges, linked_accounts: :account_providers)
+                       .includes(:open_pledges, :goal_accounts, linked_accounts: :account_providers)
                        .to_a
     @active_goals = all_goals.reject { |g| %w[completed archived].include?(g.state) }
                              .sort_by { |g| [ g.paused? ? 3 : ACTIVE_STATUS_RANK.fetch(g.status, 4), g.name.downcase ] }
@@ -26,7 +28,16 @@ class GoalsController < ApplicationController
     # entirely (rendered with filterable: false).
     @grid_goals = @active_goals + @completed_goals
 
-    @linkable_account_count = Current.family.accounts.where(accountable_type: "Depository").visible.count
+    # One family-wide earmark-pool + market-flows query injected into every
+    # rendered goal so the backing math doesn't fire a query per card (N+1).
+    pooled = Goal.pooled_allocations_for(Current.family)
+    flows = Goal.market_flows_for(Current.family)
+    (@grid_goals + @archived_goals).each do |goal|
+      goal.pooled_allocations = pooled
+      goal.market_flows = flows
+    end
+
+    @linkable_account_count = Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible.count
     @kpi = kpi_payload(@active_goals)
     @any_pending_pledge = @active_goals.any? { |g| g.open_pledges.any? }
     @show_search = @grid_goals.size > 6
@@ -61,10 +72,11 @@ class GoalsController < ApplicationController
   def create
     @goal = Current.family.goals.new(goal_params)
     accounts = lookup_accounts(params.dig(:goal, :account_ids))
-    @goal.currency = accounts.first.currency if accounts.any? && @goal.currency.blank?
+    @goal.currency = (accounts.first&.currency || Current.family.primary_currency_code) if @goal.currency.blank?
 
+    allocations = submitted_allocations
     Goal.transaction do
-      accounts.each { |a| @goal.goal_accounts.build(account: a) }
+      accounts.each { |a| @goal.goal_accounts.build(account: a, allocated_amount: allocations[a.id.to_s]) }
       @goal.save!
     end
 
@@ -100,7 +112,7 @@ class GoalsController < ApplicationController
 
     Goal.transaction do
       @goal.update!(goal_update_params)
-      sync_linked_accounts!(@goal, accounts) if accounts_supplied
+      sync_linked_accounts!(@goal, accounts, submitted_allocations) if accounts_supplied
     end
 
     flash[:notice] = t(".success")
@@ -146,6 +158,10 @@ class GoalsController < ApplicationController
     perform_transition!(:unarchive)
   end
 
+  def reopen
+    perform_transition!(:reopen)
+  end
+
   private
     def set_goal
       @goal = Current.family.goals
@@ -169,26 +185,54 @@ class GoalsController < ApplicationController
       return [] if ids.blank?
 
       ids = Array(ids).reject(&:blank?)
-      Current.family.accounts.where(accountable_type: "Depository").visible.where(id: ids).to_a
+      Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible.where(id: ids).to_a
     end
 
     def linkable_accounts_for_new
-      Current.family.accounts.where(accountable_type: "Depository").visible.alphabetically.to_a
+      Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible.alphabetically.to_a
     end
 
-    def sync_linked_accounts!(goal, accounts)
+    def sync_linked_accounts!(goal, accounts, allocations = {})
       desired_ids = accounts.map(&:id).to_set
       current_ids = goal.goal_accounts.pluck(:account_id).to_set
 
-      (current_ids - desired_ids).each do |id|
+      # Only unlink accounts the current user can actually see in the picker.
+      # A family goal may be linked to another member's private account, which
+      # never renders as a checkbox — so its absence from the submitted set is
+      # not an intentional removal and must not destroy the link.
+      removable_ids = Current.user.accessible_accounts.where(id: current_ids.to_a).pluck(:id).to_set
+
+      ((current_ids & removable_ids) - desired_ids).each do |id|
         goal.goal_accounts.where(account_id: id).destroy_all
       end
-      additions = accounts.reject { |a| current_ids.include?(a.id) }
-      additions.each { |a| goal.goal_accounts.build(account: a) }
-      # Save through the goal so currency / depository / family
-      # validations fire. `create!` on goal_accounts directly bypasses them
-      # and let cross-currency / non-depository attachments through.
+      goal.goal_accounts.reload
+
+      # Add new links and refresh the earmark on kept links. Only touch the
+      # allocation when the form actually submitted a value for that account
+      # (allocations.key?), so a caller that omits the hash leaves earmarks
+      # untouched. Save through the goal so currency / depository / family
+      # validations fire — create! on goal_accounts bypasses them.
+      accounts.each do |account|
+        existing = goal.goal_accounts.find { |ga| ga.account_id == account.id }
+        if existing
+          existing.allocated_amount = allocations[account.id.to_s] if allocations.key?(account.id.to_s)
+        else
+          goal.goal_accounts.build(account: account, allocated_amount: allocations[account.id.to_s])
+        end
+      end
       goal.save!
+    end
+
+    # { account_id_string => amount_string_or_nil } from goal[allocations].
+    # A blank amount means "dedicate the whole balance" (NULL allocated_amount).
+    def submitted_allocations
+      raw = params.dig(:goal, :allocations)
+      return {} if raw.blank?
+
+      hash = raw.respond_to?(:to_unsafe_h) ? raw.to_unsafe_h : raw
+      hash.each_with_object({}) do |(account_id, amount), memo|
+        memo[account_id.to_s] = amount.to_s.strip.presence
+      end
     end
 
     def kpi_payload(active_goals)

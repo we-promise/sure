@@ -48,7 +48,14 @@ module AccountableResource
       @account.lock_saved_attributes!
     end
 
-    redirect_to account_params[:return_to].presence || @account, notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
+    # Prefer the form-carried return_to, then the session value StoreLocation
+    # captured from `?return_to=` (survives multi-step flows where the param
+    # isn't threaded), then the account page. The form param is sanitized here
+    # (the session value is already filtered at store time); the session is
+    # consumed with delete so a stale value can't leak into a later flow.
+    return_path = safe_return_to(account_params[:return_to]) || session.delete(:return_to).presence || @account
+    redirect_to return_path,
+                notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
   end
 
   def update
@@ -104,7 +111,7 @@ module AccountableResource
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
-        :institution_name, :institution_domain, :notes,
+        :institution_name, :institution_domain, :notes, :exclude_from_reports,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end

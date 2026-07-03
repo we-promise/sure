@@ -96,6 +96,24 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal expected, builder.balance_series.map { |v| v.value.amount }
   end
 
+  test "account active until dates stop locf while preserving date rows" do
+    account = accounts(:depository)
+    account.balances.destroy_all
+
+    period = Period.custom(start_date: 2.days.ago.to_date, end_date: Date.current)
+    create_balance(account: account, date: period.start_date, balance: 1000)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      account_active_until_dates: { account.id => 1.day.ago.to_date },
+      currency: "USD",
+      period: period,
+      interval: "1 day"
+    )
+
+    assert_equal [ 1000, 1000, 0 ], builder.balance_series.map { |v| v.value.amount }
+  end
+
   test "when favorable direction is down balance signage inverts" do
     account = accounts(:credit_card)
     account.balances.destroy_all

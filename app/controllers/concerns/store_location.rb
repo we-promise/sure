@@ -24,9 +24,20 @@ private
   end
 
   def store_return_to
-    if params[:return_to].present?
-      session[:return_to] = params[:return_to]
-    end
+    safe = safe_return_to(params[:return_to])
+    session[:return_to] = safe if safe
+  end
+
+  # Only allow internal absolute paths (a single leading "/"). Blocks absolute
+  # URLs, protocol-relative ("//evil"), and backslash tricks ("/\\evil") so a
+  # crafted ?return_to= can't open-redirect — including via a custom
+  # turbo_stream redirect, which Rails' redirect host-guard does NOT cover
+  # (the client `Turbo.visit`es the target and full-navigates cross-origin).
+  def safe_return_to(value)
+    # is_a?(String) first: a crafted `?return_to[]=foo` makes params[:return_to]
+    # an Array, and Array#match? doesn't exist — without this guard the helper
+    # raises NoMethodError before the redirect hardening can reject it.
+    value if value.is_a?(String) && value.present? && value.match?(%r{\A/(?![/\\])})
   end
 
   def clear_previous_path

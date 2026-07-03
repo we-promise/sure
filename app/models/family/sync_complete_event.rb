@@ -6,10 +6,11 @@ class Family::SyncCompleteEvent
   end
 
   def broadcast
-    # Append a lightweight toast to the notification tray instead of a full
-    # page refresh.  The sync-toast Stimulus controller handles two cases:
-    #   - User is idle       → auto-reloads after a short delay
-    #   - User is mid-form   → toast stays visible; user clicks "Refresh now"
+    # Replace the #sync-toast slot with a lightweight toast instead of a full
+    # page refresh.  The sync-toast Stimulus controller handles three cases:
+    #   - User is idle         → morph-refreshes after a short delay
+    #   - User is mid-form     → toast stays visible; user clicks "Refresh"
+    #   - A modal is open      → toast defers until the dialog closes
     #
     # This avoids wiping in-progress form state when a background sync fires.
     # The partial contains no user-scoped data (Current.user is nil here), so

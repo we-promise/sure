@@ -14,6 +14,35 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "update_preferences persists dashboard section layout height" do
+    patch "/dashboard/preferences", params: {
+      preferences: { dashboard_section_layout: { net_worth_chart: { height: "compact" } } }
+    }, as: :json
+
+    assert_response :ok
+    assert_equal "compact", @user.reload.dashboard_section_height("net_worth_chart")
+  end
+
+  test "update_preferences persists dashboard section width" do
+    patch "/dashboard/preferences", params: {
+      preferences: { dashboard_section_layout: { cashflow_sankey: { col_span: "single" } } }
+    }, as: :json
+
+    assert_response :ok
+    assert_equal "single", @user.reload.dashboard_section_width("cashflow_sankey")
+  end
+
+  test "update_preferences ignores malformed dashboard_section_layout without erroring" do
+    previous_height = @user.reload.dashboard_section_height("net_worth_chart")
+
+    patch "/dashboard/preferences", params: {
+      preferences: { dashboard_section_layout: "not-a-hash" }
+    }, as: :json
+
+    assert_response :ok
+    assert_equal previous_height, @user.reload.dashboard_section_height("net_worth_chart")
+  end
+
   test "dashboard memoizes income statement period totals while rendering" do
     income_statement = IncomeStatement.new(@family)
     IncomeStatement.stubs(:new).returns(income_statement)

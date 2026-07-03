@@ -105,6 +105,8 @@ Rails.application.routes.draw do
       get :select_existing_account
       post :link_existing_account
       get :callback
+      get :oauth_connect
+      post :start_oauth_connect
     end
 
     member do
@@ -113,6 +115,8 @@ Rails.application.routes.draw do
       get :setup_accounts
       post :complete_account_setup
       get :connections
+      post :start_oauth_device_flow
+      post :complete_oauth_device_flow
       delete :delete_connection
       delete :delete_orphaned_user
     end
@@ -160,6 +164,9 @@ Rails.application.routes.draw do
       post :new_connection
     end
   end
+  get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
+  get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
+  post "register", to: "oauth_registration#create"
   use_doorkeeper
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
@@ -182,7 +189,13 @@ Rails.application.routes.draw do
 
   # AI chats
   resources :chats do
-    resources :messages, only: :create
+    resources :messages, only: :create do
+      member do
+        # Client-side watchdog reports a "Thinking…" bubble that never received
+        # a response (e.g. the background worker is down) so it can be failed.
+        post :report_timeout
+      end
+    end
 
     member do
       post :retry
@@ -249,7 +262,10 @@ Rails.application.routes.draw do
       post :options, on: :collection
     end
     resources :sso_identities, only: :destroy
-    resource :api_key, only: [ :show, :new, :create, :destroy ]
+    resources :api_keys, only: [ :index, :show, :new, :create, :destroy ]
+    resource :mcp, controller: "mcp", only: :show do
+      delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
+    end
     resource :ai_prompts, only: :show
     resource :llm_usage, only: :show
     resource :guides, only: :show
@@ -310,6 +326,7 @@ Rails.application.routes.draw do
       patch :complete
       patch :archive
       patch :unarchive
+      patch :reopen
     end
 
     resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do
@@ -443,6 +460,7 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      patch :toggle_exclude_from_reports
       patch :set_default
       patch :remove_default
       get :select_provider
@@ -515,7 +533,7 @@ Rails.application.routes.draw do
       resources :budgets, only: [ :index, :show ]
       resources :budget_categories, only: [ :index, :show ]
       resources :categories, only: [ :index, :show, :create ]
-      resources :merchants, only: [ :index, :show ]
+      resources :merchants, only: [ :index, :show, :create ]
       resources :rules, only: [ :index, :show ]
       resources :rule_runs, only: [ :index, :show ]
       resources :securities, only: [ :index, :show ]
@@ -535,6 +553,10 @@ Rails.application.routes.draw do
       resources :imports, only: [ :index, :show, :create ] do
         post :preflight, on: :collection
         get :rows, on: :member
+      end
+      resources :import_sessions, only: [ :show, :create ] do
+        post :chunks, on: :member, action: :create_chunk
+        post :publish, on: :member
       end
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
@@ -624,6 +646,22 @@ Rails.application.routes.draw do
   end
 
   resources :akahu_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :up_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
       get :select_accounts

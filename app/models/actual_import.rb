@@ -28,7 +28,7 @@ class ActualImport < Import
         date: row[date_col_label].to_s,
         amount: signed_csv_amount(row).to_s,
         currency: default_currency.to_s,
-        name: row[name_col_label].to_s,
+        name: row_name(row),
         category: combined_category(row),
         notes: row[notes_col_label].to_s
       }
@@ -90,6 +90,16 @@ class ActualImport < Import
     def set_mappings
       assign_attributes(self.class.default_column_mappings)
       save!
+    end
+
+    # Actual Budget exports reconciliation and starting-balance rows with a blank
+    # Payee. Entry requires a name, so fall back to the Notes column (which usually
+    # carries text like "Reconciliation balance adjustment") and finally to the
+    # generic default, matching the blank-name handling in Import and MintImport.
+    def row_name(row)
+      row[name_col_label].to_s.presence ||
+        row[notes_col_label].to_s.presence ||
+        default_row_name
     end
 
     def combined_category(row)

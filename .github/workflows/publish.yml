@@ -199,6 +199,7 @@ jobs:
         env:
           TAGS: ${{ needs.build.outputs.tags }}
           DIGESTS_DIR: ${{ runner.temp }}/digests
+          REF_NAME: ${{ github.ref_name }}
         shell: bash -xeuo pipefail {0}
         run: |
           tag_args=()
@@ -216,7 +217,7 @@ jobs:
             "index:org.opencontainers.image.created=$(date -Iseconds)"
             'index:org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}'
             'index:org.opencontainers.image.revision=${{ github.sha }}'
-            'index:org.opencontainers.image.ref.name=${{ github.ref_name }}'
+            "index:org.opencontainers.image.ref.name=${REF_NAME}"
             'index:org.opencontainers.image.vendor=we-promise'
             'index:org.opencontainers.image.licenses=AGPL-3.0'
             'index:org.opencontainers.image.title=Sure'
@@ -294,6 +295,8 @@ jobs:
           path: ${{ runner.temp }}/helm-artifacts
 
       - name: Prepare release assets
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
           mkdir -p ${{ runner.temp }}/release-assets
 
@@ -306,13 +309,13 @@ jobs:
 
           # Copy debug APK if it exists
           if [ -f "${{ runner.temp }}/mobile-artifacts/app-debug.apk" ]; then
-            cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}-debug.apk"
+            cp "${{ runner.temp }}/mobile-artifacts/app-debug.apk" "${{ runner.temp }}/release-assets/sure-${REF_NAME}-debug.apk"
             echo "✓ Debug APK prepared"
           fi
 
           # Copy release APK if it exists
           if [ -f "${{ runner.temp }}/mobile-artifacts/app-release.apk" ]; then
-            cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}.apk"
+            cp "${{ runner.temp }}/mobile-artifacts/app-release.apk" "${{ runner.temp }}/release-assets/sure-${REF_NAME}.apk"
             echo "✓ Release APK prepared"
           fi
 
@@ -320,7 +323,7 @@ jobs:
           # Path preserves directory structure from artifact upload
           if [ -d "${{ runner.temp }}/ios-build/ios/iphoneos/Runner.app" ]; then
             cd "${{ runner.temp }}/ios-build/ios/iphoneos"
-            zip -r "${{ runner.temp }}/release-assets/sure-${{ github.ref_name }}-ios-unsigned.zip" Runner.app
+            zip -r "${{ runner.temp }}/release-assets/sure-${REF_NAME}-ios-unsigned.zip" Runner.app
             echo "✓ iOS build archive prepared"
           fi
 
@@ -398,7 +401,9 @@ jobs:
     timeout-minutes: 10
 
     permissions:
+      actions: write
       contents: write
+      pull-requests: write
 
     steps:
       - name: Determine source branch for tag
@@ -433,71 +438,66 @@ jobs:
 
       - name: Bump pre-release version
         run: |
-           VERSION_FILE=".sure-version"
-           CHART_FILE="charts/sure/Chart.yaml"
+          set -euo pipefail
 
-           # Ensure version file exists
-           if [ ! -f "$VERSION_FILE" ]; then
-             echo "ERROR: Version file not found: $VERSION_FILE"
-             exit 1
-           fi
+          VERSION_FILE=".sure-version"
+          CHART_FILE="charts/sure/Chart.yaml"
 
-           # Ensure chart file exists
-           if [ ! -f "$CHART_FILE" ]; then
-             echo "ERROR: Chart file not found: $CHART_FILE"
-             exit 1
-           fi
- 
-           # Extract current version
-           CURRENT_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
-           if [ -z "$CURRENT_VERSION" ]; then
-             echo "ERROR: Could not extract version from $VERSION_FILE"
-             exit 1
-           fi
-           echo "Current version: $CURRENT_VERSION"
+          # Ensure version file exists
+          if [ ! -f "$VERSION_FILE" ]; then
+            echo "ERROR: Version file not found: $VERSION_FILE"
+            exit 1
+          fi
 
-           # Extract the pre-release tag and number, then increment it
-           PRE_RELEASE_TAG=$(echo "$CURRENT_VERSION" | grep -oP '(alpha|beta|rc)')
-           if [ -z "$PRE_RELEASE_TAG" ]; then
-             echo "ERROR: Could not extract pre-release tag from $CURRENT_VERSION"
-             exit 1
-           fi
+          # Ensure chart file exists
+          if [ ! -f "$CHART_FILE" ]; then
+            echo "ERROR: Chart file not found: $CHART_FILE"
+            exit 1
+          fi
 
-           PRE_RELEASE_NUM=$(echo "$CURRENT_VERSION" | grep -oP '(alpha|beta|rc)\.\K[0-9]+')
-           if [ -z "$PRE_RELEASE_NUM" ]; then
-             echo "ERROR: Could not extract pre-release number from $CURRENT_VERSION"
-             exit 1
-           fi
-           NEW_PRE_RELEASE_NUM=$((PRE_RELEASE_NUM + 1))
- 
-           # Create new version string
-           BASE_VERSION=$(echo "$CURRENT_VERSION" | grep -oP '^[0-9]+\.[0-9]+\.[0-9]+')
-           if [ -z "$BASE_VERSION" ]; then
-             echo "ERROR: Could not extract base version from $CURRENT_VERSION"
-             exit 1
-           fi
-           NEW_VERSION="${BASE_VERSION}-${PRE_RELEASE_TAG}.${NEW_PRE_RELEASE_NUM}"
-           echo "New version: $NEW_VERSION"
+          # Extract current version
+          CURRENT_VERSION=$(tr -d '[:space:]' < "$VERSION_FILE")
+          if [ -z "$CURRENT_VERSION" ]; then
+            echo "ERROR: Could not extract version from $VERSION_FILE"
+            exit 1
+          fi
+          echo "Current version: $CURRENT_VERSION"
 
-           # Update the version file
-           echo "$NEW_VERSION" > "$VERSION_FILE"
+          if [[ ! "$CURRENT_VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-(alpha|beta|rc)\.([0-9]+)$ ]]; then
+            echo "ERROR: Expected prerelease version like 1.2.3-alpha.4, got $CURRENT_VERSION"
+            exit 1
+          fi
 
-           # Verify the change
-           echo "Updated .sure-version:"
-           cat "$VERSION_FILE"
+          BASE_VERSION="${BASH_REMATCH[1]}"
+          PRE_RELEASE_TAG="${BASH_REMATCH[2]}"
+          PRE_RELEASE_NUM="${BASH_REMATCH[3]}"
+          NEW_PRE_RELEASE_NUM=$((PRE_RELEASE_NUM + 1))
+          NEW_VERSION="${BASE_VERSION}-${PRE_RELEASE_TAG}.${NEW_PRE_RELEASE_NUM}"
+          echo "New version: $NEW_VERSION"
 
-           # Update Helm chart version and appVersion
-           sed -i -E "s/^version: .*/version: ${NEW_VERSION}/" "$CHART_FILE"
-           sed -i -E "s/^appVersion: .*/appVersion: \"${NEW_VERSION}\"/" "$CHART_FILE"
+          # Update the version file
+          echo "$NEW_VERSION" > "$VERSION_FILE"
 
-           # Verify the change
-           echo "Updated Chart.yaml:"
-           grep -E "^(version|appVersion):" "$CHART_FILE"
+          # Verify the change
+          echo "Updated .sure-version:"
+          cat "$VERSION_FILE"
+
+          # Update Helm chart version and appVersion
+          sed -i -E "s/^version: .*/version: ${NEW_VERSION}/" "$CHART_FILE"
+          sed -i -E "s/^appVersion: .*/appVersion: \"${NEW_VERSION}\"/" "$CHART_FILE"
+
+          # Verify the change
+          echo "Updated Chart.yaml:"
+          grep -E "^(version|appVersion):" "$CHART_FILE"
 
       - name: Commit and push version bump
         env:
           SOURCE_BRANCH: ${{ steps.source_branch.outputs.branch }}
+          GH_TOKEN: ${{ secrets.VERSION_BUMP_PR_TOKEN || github.token }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -510,20 +510,85 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Bump version to next iteration after ${{ github.ref_name }} release"
+          COMMIT_MESSAGE="Bump version to next iteration after ${REF_NAME} release"
+          git commit -m "$COMMIT_MESSAGE"
 
           echo "Pushing to branch: $SOURCE_BRANCH"
 
-          # Push with retry logic
-          attempts=0
-          until git push origin HEAD:$SOURCE_BRANCH; do
-            attempts=$((attempts + 1))
-            if [[ $attempts -ge 4 ]]; then
-              echo "ERROR: Failed to push after 4 attempts." >&2
-              exit 1
+          # Push directly when allowed. Main is protected and must be updated
+          # through a pull request. Other branches get a direct-push attempt, but
+          # protected-branch rejections fall back to a pull request immediately.
+          push_succeeded=false
+          if [[ "$SOURCE_BRANCH" == "main" || "$SOURCE_BRANCH" == "master" ]]; then
+            echo "$SOURCE_BRANCH is protected; creating a pull request instead of pushing directly."
+          else
+            direct_push_output=""
+            for attempt in 1 2 3 4; do
+              set +e
+              direct_push_output=$(git push origin HEAD:"refs/heads/${SOURCE_BRANCH}" 2>&1)
+              push_status=$?
+              set -e
+
+              echo "$direct_push_output"
+
+              if [[ $push_status -eq 0 ]]; then
+                push_succeeded=true
+                break
+              fi
+
+              if grep -Eq 'GH006|Protected branch update failed|Changes must be made through a pull request' <<< "$direct_push_output"; then
+                echo "Direct push is blocked by branch protection; creating a pull request instead."
+                break
+              fi
+
+              if [[ $attempt -eq 4 ]]; then
+                echo "Direct push failed after 4 attempts; creating a pull request instead."
+                break
+              fi
+
+              delay=$((2 ** attempt))
+              echo "Push failed (attempt $attempt). Retrying in ${delay} seconds..."
+              sleep "$delay"
+              git fetch origin "${SOURCE_BRANCH}"
+              git rebase "origin/${SOURCE_BRANCH}"
+            done
+          fi
+
+          if [[ "$push_succeeded" == "true" ]]; then
+            exit 0
+          fi
+
+          SAFE_TAG=$(printf '%s' "${REF_NAME}" | tr -c '[:alnum:]._-' '-')
+          BUMP_BRANCH="automation/bump-version-after-${SAFE_TAG}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+          git push --force-with-lease origin HEAD:"refs/heads/${BUMP_BRANCH}"
+
+          PR_BODY="This automated PR bumps .sure-version and charts/sure/Chart.yaml after the ${REF_NAME} pre-release. It was opened because the workflow could not push directly to ${SOURCE_BRANCH}."
+
+          set +e
+          pr_create_output=$(gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --head "$BUMP_BRANCH" \
+            --base "$SOURCE_BRANCH" \
+            --title "$COMMIT_MESSAGE" \
+            --body "$PR_BODY" 2>&1)
+          pr_create_status=$?
+          set -e
+
+          if [[ $pr_create_status -ne 0 ]]; then
+            echo "::warning::Pushed ${BUMP_BRANCH}, but could not create the version bump PR: ${pr_create_output}"
+            if grep -q "GitHub Actions is not permitted to create or approve pull requests" <<< "$pr_create_output"; then
+              echo "::notice::Enable the repository setting that allows GitHub Actions to create pull requests, or add a VERSION_BUMP_PR_TOKEN secret with contents, pull requests, and workflows permissions."
             fi
-            delay=$((2 ** attempts))
-            echo "Push failed (attempt $attempts). Retrying in ${delay} seconds..."
-            sleep ${delay}
-            git pull --rebase origin $SOURCE_BRANCH
-          done
+            exit 0
+          fi
+
+          PR_URL="$pr_create_output"
+          echo "Created version bump PR: $PR_URL"
+          echo "Dispatching PR checks for $BUMP_BRANCH"
+          if ! gh workflow run pr.yml --repo "$GITHUB_REPOSITORY" --ref "$BUMP_BRANCH"; then
+            echo "::warning::Could not dispatch pr.yml for $BUMP_BRANCH"
+          fi
+          if ! gh workflow run chart-ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BUMP_BRANCH"; then
+            echo "::warning::Could not dispatch chart-ci.yml for $BUMP_BRANCH"
+          fi

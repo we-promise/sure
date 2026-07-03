@@ -381,9 +381,12 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       assert rule_lines.any?
 
-      rule_data = JSON.parse(rule_lines.first)
+      rule_data = rule_lines.map { |line| JSON.parse(line) }.find { |rule| rule["data"]["name"] == "Test Rule" }
+
+      assert_not_nil rule_data
       assert_equal "Rule", rule_data["type"]
       assert_equal 1, rule_data["version"]
+      assert_equal @rule.id, rule_data["data"]["id"]
       assert rule_data["data"].key?("name")
       assert rule_data["data"].key?("resource_type")
       assert rule_data["data"].key?("active")

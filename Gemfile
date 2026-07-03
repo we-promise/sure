@@ -3,14 +3,14 @@ source "https://rubygems.org"
 ruby file: ".ruby-version"
 
 # Rails
-gem "rails", "~> 7.2.2"
+gem "rails", "~> 8.1.0"
 
 # Drivers
 gem "pg", "~> 1.5"
 gem "redis", "~> 5.4"
 
 # Deployment
-gem "puma", ">= 5.0"
+gem "puma", ">= 7.2.1"
 gem "bootsnap", require: false
 
 # Assets
@@ -59,7 +59,6 @@ gem "image_processing", ">= 1.2"
 gem "ostruct"
 gem "bcrypt", "~> 3.1"
 gem "jwt"
-gem "ed25519" # For Coinbase CDP API authentication
 gem "jbuilder"
 gem "countries"
 
@@ -93,7 +92,7 @@ gem "pdf-reader", "~> 2.12"
 
 # OpenID Connect, OAuth & SAML authentication
 gem "omniauth", "~> 2.1"
-gem "omniauth-rails_csrf_protection"
+gem "omniauth-rails_csrf_protection", ">= 2.0"
 gem "omniauth_openid_connect"
 gem "omniauth-google-oauth2"
 gem "omniauth-github"

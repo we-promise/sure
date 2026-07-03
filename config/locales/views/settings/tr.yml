@@ -27,6 +27,12 @@ tr:
         theme_system: Sistem
         theme_title: Tema
         timezone: Zaman dilimi
+    appearances:
+      show:
+        modals_title: Modaller
+        modals_subtitle: Modal davranışını özelleştir
+        disable_modal_click_outside_title: Dışarı tıklandığında modalleri açık tut
+        disable_modal_click_outside_description: Modalların dışına tıklandığında kapanmasını engeller. Kaydedilmemiş değişiklikleri yanlışlıkla kaybetmemek için kullanışlıdır.
     profiles:
       destroy:
         cannot_remove_self: Kendinizi hesaptan çıkaramazsınız.

@@ -1,4 +1,39 @@
 @layer components {
+  /*
+    Canonical keyboard-focus indicator (#2136). One recipe for every focusable
+    primitive: a neutral 2px `outline` that hugs the control (`outline-offset: 0`
+    so it sits right at the edge and follows the border-radius), in the
+    theme-aware `focus-ring` token.
+
+    `outline` — NOT box-shadow — on purpose: a components-layer box-shadow loses
+    to any utility-layer `shadow-*` (or `focus-within:shadow-none` on the field)
+    on the same element, so the ring silently vanished on shadowed controls.
+    `outline` is a separate property with no such conflict, and it doubles as the
+    forced-colors (Windows high-contrast) indicator. `:focus-visible` only, so it
+    never shows for mouse/touch. `.focus-ring-within` mirrors it onto a wrapper
+    whose focus lands on a child input. `.form-field` deliberately does NOT
+    adopt it: form fields keep their original always-on soft halo (ring-4 at
+    low alpha) — a resting decoration, not a keyboard-only indicator.
+  */
+  /* Base: an always-present transparent outline so consumers that carry
+     `transition-all` (or any transition touching outline-color) animate
+     transparent -> token instead of passing through `currentColor` — the
+     latter reads as a black border flashing in and out. */
+  .focus-ring,
+  .focus-ring-within {
+    outline: 2px solid transparent;
+    outline-offset: 0;
+  }
+
+  .focus-ring:focus-visible,
+  .focus-ring-within:focus-within {
+    /* Note: consumers carrying `transition-colors` animate this in over
+       150ms — Tailwind v4's color transition list includes outline-color.
+       Combined with the transparent base above, that reads as a quick
+       fade-in rather than a pop, never a flash through currentColor. */
+    outline-color: var(--color-focus-ring);
+  }
+
   /* Forms */
   .form-field {
     @apply flex flex-col gap-1 relative px-3 py-2 rounded-md border bg-container border-secondary shadow-xs w-full;
@@ -157,6 +192,93 @@
     fill: var(--color-black);
     @variant theme-dark {
       fill: var(--color-white);
+    }
+  }
+
+  /*
+    Segmented control (#2137) — track + equal-footprint segments. The selected
+    state is a single `--active` class so an optional Stimulus controller can
+    toggle it as one unit. Values mirror the DS tab tokens (tab-bg-group /
+    tab-item-active / tab-item-hover) but are inlined with `@variant theme-dark`
+    because `@apply`-ing a custom utility drops its dark override. The near-black
+    dark track (alpha-black-700) is what makes the gray-700 selected pill read —
+    the bespoke controls used a too-light `container-inset` track, hence the
+    audit's "selected pill invisible on dark." Focus comes from the canonical
+    recipe (`focus-ring` on link segments, the base button rule on button
+    segments), not from this block.
+  */
+  .segmented-control {
+    @apply inline-flex items-center gap-0.5 p-1 rounded-lg bg-gray-50;
+    @variant theme-dark {
+      @apply bg-alpha-black-700;
+    }
+  }
+
+  .segmented-control__segment {
+    @apply inline-flex items-center justify-center px-2 py-1 rounded-md whitespace-nowrap;
+    @apply text-sm font-medium text-secondary cursor-pointer transition-colors duration-200;
+    @apply hover:bg-gray-200;
+    @variant theme-dark {
+      @apply hover:bg-gray-800;
+    }
+  }
+
+  .segmented-control__segment--active {
+    @apply bg-white text-primary shadow-sm hover:bg-white;
+    @variant theme-dark {
+      @apply bg-gray-700 hover:bg-gray-700;
+    }
+  }
+
+  /*
+    Horizontally scrollable table wrapper (#2137). `overflow-x: auto` so wide
+    tables scroll instead of clipping (the LLM-usage table was `overflow-hidden`
+    and pushed columns off-screen) or wrapping money mid-digit. The pure-CSS
+    "scroll shadow" gives the missing affordance: the cover gradients
+    (`--table-scroll-bg`, default container-inset) scroll WITH the content
+    (`background-attachment: local`) and hide the fixed shadow gradients at the
+    edges, so a soft edge-shadow only appears when there is more to scroll.
+    Theme-aware via `--color-shadow`. Set `--table-scroll-bg` to match the wrapper.
+  */
+  .table-scroll {
+    --table-scroll-bg: var(--color-container-inset);
+    overflow-x: auto;
+    background:
+      linear-gradient(to right, var(--table-scroll-bg) 30%, transparent),
+      linear-gradient(to left, var(--table-scroll-bg) 30%, transparent) 100% 0,
+      radial-gradient(farthest-side at 0 50%, var(--color-shadow), transparent),
+      radial-gradient(farthest-side at 100% 50%, var(--color-shadow), transparent) 100% 0;
+    background-repeat: no-repeat;
+    background-color: var(--table-scroll-bg);
+    background-size: 32px 100%, 32px 100%, 12px 100%, 12px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+
+  /*
+    Chart hover tooltip surface (see utils/chart_tooltip.js for the JS-side
+    contract). Matches the design reference exactly: hairline border ring
+    composed with a soft 8/24 drop shadow (Tailwind shadow utilities don't
+    compose, hence the component class), 10px radius, 10x12 padding. Dark
+    mode swaps the ring to alpha-white; the drop shadow is near-invisible
+    there, which is fine — the ring carries the edge.
+
+    No position transition here on purpose: cursor-following tooltips
+    (sankey, time-series) update left/top every mousemove and a transition
+    makes them trail the pointer. Snap-positioned tooltips (goal projection,
+    which jumps between dates) opt into the 80ms glide via inline style.
+  */
+  .chart-tooltip {
+    background: var(--color-container);
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow:
+      0 0 0 1px var(--color-alpha-black-50),
+      0 8px 24px rgba(11, 11, 11, 0.12);
+
+    @variant theme-dark {
+      box-shadow:
+        0 0 0 1px var(--color-alpha-white-50),
+        0 8px 24px rgba(11, 11, 11, 0.12);
     }
   }
 }

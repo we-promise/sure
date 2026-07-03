@@ -118,6 +118,7 @@ Two primary data ingestion methods:
   - Set `SIMPLEFIN_INCLUDE_PENDING=0` to disable pending fetching for SimpleFIN.
   - Set `PLAID_INCLUDE_PENDING=0` to disable pending fetching for Plaid.
   - Set `SIMPLEFIN_DEBUG_RAW=1` to enable raw payload debug logging.
+  - Set `UP_DEBUG_RAW=1` to enable raw Up payload debug logging. DEV-ONLY: the dump contains PII and is gated to local environments, so it never logs in managed/production.
 
 Provider support notes:
 - SimpleFIN: supports pending + FX metadata (stored under `extra["simplefin"]`).
@@ -131,6 +132,12 @@ Sidekiq handles asynchronous tasks:
 - Import processing (`ImportJob`)
 - AI chat responses (`AssistantResponseJob`)
 - Scheduled maintenance via sidekiq-cron
+
+### Debug Logging for Provider Syncs
+- Prefer `DebugLogEntry.capture(...)` over `Rails.logger.*` for provider sync/import failures, partial responses, and other support-relevant diagnostics.
+- Record support-relevant incidents in the super-admin `/settings/debug` UI rather than leaving them only in raw application logs.
+- Include `category`, `level`, `message`, `source`, `provider_key`, and structured `metadata`.
+- Attach `family` and `account_provider` whenever possible so support can filter to the affected provider connection.
 
 ### Frontend Architecture
 - **Hotwire Stack**: Turbo + Stimulus for reactive UI without heavy JavaScript

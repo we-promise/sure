@@ -16,6 +16,7 @@ en:
     index:
       empty: No merchants yet
       new: New merchant
+      import: Import merchants
       merge: Merge merchants
       title: Merchants
       family_title: "%{moniker} merchants"

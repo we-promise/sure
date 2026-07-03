@@ -37,11 +37,19 @@ class Trade::CreateForm
     end
 
     def create_trade
+      sec = security
+
+      unless sec
+        entry = account.entries.build(entryable: Trade.new)
+        entry.errors.add(:base, I18n.t("trades.form.trade_requires_security"))
+        return entry
+      end
+
       signed_qty = type == "sell" ? -qty.to_d : qty.to_d
       signed_amount = signed_qty * price.to_d + fee.to_d
 
       trade_entry = account.entries.new(
-        name: Trade.build_name(type, qty, security.ticker),
+        name: Trade.build_name(type, qty, sec.ticker),
         date: date,
         amount: signed_amount,
         currency: currency,
@@ -50,7 +58,7 @@ class Trade::CreateForm
           price: price,
           fee: fee.to_d,
           currency: currency,
-          security: security,
+          security: sec,
           investment_activity_label: type.capitalize # "buy" → "Buy", "sell" → "Sell"
         )
       )

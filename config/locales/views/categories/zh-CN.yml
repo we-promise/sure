@@ -31,6 +31,7 @@ zh-CN:
       delete_all: 全部删除
       empty: 未找到分类
       new: 新建分类
+      merge: 合并分类
     menu:
       loading: 正在加载...
     new:
@@ -41,6 +42,22 @@ zh-CN:
       transfer: 转账
       payment: 付款
       trade: 交易
+    merge:
+      title: 合并分类
+      description: 选择要合并的分类，并指定保留的目标分类。
+      target_label: 合并到（目标）
+      select_target: 选择目标分类...
+      sources_label: 要合并的分类
+      sources_hint: 这些分类会被合并到目标分类中。
+      submit: 合并所选分类
+    perform_merge:
+      success:
+        one: 已成功合并 %{count} 个分类。
+        other: 已成功合并 %{count} 个分类。
+      no_categories_selected: 请选择要合并的分类。
+      target_not_found: 找不到目标分类。
+      invalid_categories: 选择的分类无效。
+      target_selected_as_source: 目标分类不能同时作为来源分类。
   category:
     dropdowns:
       show:

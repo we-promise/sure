@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BalanceSheetTest < ActiveSupport::TestCase
+  include BalanceTestHelper
+
   setup do
     @family = families(:empty)
   end
@@ -44,6 +46,71 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 10000 - 1000, BalanceSheet.new(@family).net_worth
     assert_equal 10000, BalanceSheet.new(@family).assets.total
     assert_equal 1000, BalanceSheet.new(@family).liabilities.total
+  end
+
+  test "excluded accounts do not affect totals" do
+    create_account(balance: 1000, accountable: CreditCard.new)
+    create_account(balance: 10000, accountable: Depository.new)
+
+    excluded_asset = create_account(balance: 5000, accountable: Depository.new)
+    excluded_asset.update!(exclude_from_reports: true)
+
+    assert_equal 10000 - 1000, BalanceSheet.new(@family).net_worth
+    assert_equal 10000, BalanceSheet.new(@family).assets.total
+    assert_equal 1000, BalanceSheet.new(@family).liabilities.total
+  end
+
+  test "excluded accounts still have their own balance in account groups" do
+    create_account(balance: 1000, accountable: Depository.new)
+    excluded_asset = create_account(balance: 5000, accountable: Depository.new)
+    excluded_asset.update!(exclude_from_reports: true)
+
+    asset_groups = BalanceSheet.new(@family).assets.account_groups
+    depository_group = asset_groups.find { |ag| ag.name == Depository.display_name }
+
+    assert_equal 1000, depository_group.total
+    assert depository_group.accounts.any?(&:exclude_from_reports?)
+  end
+
+  test "net worth series preserves disabled history without carrying it into current totals" do
+    period = Period.custom(start_date: Date.current - 1.day, end_date: Date.current)
+    active_account = create_account(balance: 20_000, accountable: Depository.new)
+    disabled_account = create_account(balance: 0, accountable: Depository.new)
+    pending_deletion_account = create_account(balance: 0, accountable: Depository.new)
+    disabled_account.disable!
+    pending_deletion_account.mark_for_deletion!
+
+    assert_not_nil disabled_account.reload.disabled_at
+
+    create_balance(account: active_account, date: period.start_date, balance: 10_000)
+    create_balance(account: active_account, date: period.end_date, balance: 20_000)
+    create_balance(account: disabled_account, date: period.start_date, balance: 20_000)
+    create_balance(account: disabled_account, date: period.end_date, balance: 10_000)
+    create_balance(account: pending_deletion_account, date: period.start_date, balance: 40_000)
+    create_balance(account: pending_deletion_account, date: period.end_date, balance: 80_000)
+
+    series = BalanceSheet.new(@family).net_worth_series(period: period)
+    values_by_date = series.values.index_by(&:date)
+
+    assert_equal 30_000, values_by_date.fetch(period.start_date).value.amount
+    assert_equal 20_000, BalanceSheet.new(@family).net_worth
+    assert_equal BalanceSheet.new(@family).net_worth, values_by_date.fetch(period.end_date).value.amount
+  end
+
+  test "historical account scope respects shared-account finance settings" do
+    member = users(:new_email)
+    included_account = create_account(balance: 0, accountable: Depository.new)
+    excluded_account = create_account(balance: 0, accountable: Depository.new)
+
+    included_account.disable!
+    excluded_account.disable!
+    included_account.share_with!(member, include_in_finances: true)
+    excluded_account.share_with!(member, include_in_finances: false)
+
+    account_ids = BalanceSheet::HistoricalAccountScope.new(@family, user: member).account_ids
+
+    assert_includes account_ids, included_account.id
+    assert_not_includes account_ids, excluded_account.id
   end
 
   test "calculates asset group totals" do

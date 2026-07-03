@@ -15,6 +15,25 @@ class VectorStore::Pgvector < VectorStore::Base
 
   PGVECTOR_SUPPORTED_EXTENSIONS = (VectorStore::Embeddable::TEXT_EXTENSIONS + [ ".pdf" ]).uniq.freeze
 
+  TABLE_NAME = "vector_store_chunks"
+
+  # True when this adapter can actually operate: the chunks table already
+  # exists, or the server has the pgvector extension available so
+  # ensure_schema! can provision it on first use. The Registry consults this
+  # before building the adapter, so an install without pgvector degrades to
+  # the assistant's friendly "provider_not_configured" message instead of
+  # raising raw PG errors mid-chat.
+  def self.available?
+    conn = ActiveRecord::Base.connection
+    return true if conn.table_exists?(TABLE_NAME)
+
+    conn.select_value(
+      "SELECT 1 FROM pg_available_extensions WHERE name = 'vector' LIMIT 1"
+    ).present?
+  rescue StandardError
+    false
+  end
+
   def supported_extensions
     PGVECTOR_SUPPORTED_EXTENSIONS
   end
@@ -27,6 +46,7 @@ class VectorStore::Pgvector < VectorStore::Base
 
   def delete_store(store_id:)
     with_response do
+      ensure_schema!
       connection.exec_delete(
         "DELETE FROM vector_store_chunks WHERE store_id = $1",
         "VectorStore::Pgvector DeleteStore",
@@ -37,6 +57,7 @@ class VectorStore::Pgvector < VectorStore::Base
 
   def upload_file(store_id:, file_content:, filename:)
     with_response do
+      ensure_schema!
       text = extract_text(file_content, filename)
       raise VectorStore::Error, "Could not extract text from #{filename}" if text.blank?
 
@@ -81,6 +102,7 @@ class VectorStore::Pgvector < VectorStore::Base
 
   def remove_file(store_id:, file_id:)
     with_response do
+      ensure_schema!
       connection.exec_delete(
         "DELETE FROM vector_store_chunks WHERE store_id = $1 AND file_id = $2",
         "VectorStore::Pgvector RemoveFile",
@@ -94,6 +116,7 @@ class VectorStore::Pgvector < VectorStore::Base
 
   def search(store_id:, query:, max_results: 10)
     with_response do
+      ensure_schema!
       query_vector = embed(query)
       vector_literal = "[#{query_vector.join(',')}]"
 
@@ -126,6 +149,44 @@ class VectorStore::Pgvector < VectorStore::Base
   end
 
   private
+
+    # Provisions the chunks table on first use, mirroring the
+    # CreateVectorStoreChunks migration. Migrations cover db:migrate
+    # upgrades, but fresh installs go through db:prepare → schema:load
+    # (bin/docker-entrypoint), which marks conditional migrations as applied
+    # without running them — and the table can't live in schema.rb because it
+    # requires the vector extension. Idempotent; memoized per instance.
+    def ensure_schema!
+      return if @schema_ensured
+      if connection.table_exists?(TABLE_NAME)
+        @schema_ensured = true
+        return
+      end
+
+      connection.enable_extension("vector") unless connection.extension_enabled?("vector")
+      # if_not_exists on the DDL (not a Mutex) is the right concurrency guard
+      # here: adapter instances are built per call and never shared across
+      # threads, so the realistic race is two *processes* (e.g. web + Sidekiq)
+      # provisioning at once. IF NOT EXISTS makes the loser's DDL a no-op
+      # instead of a duplicate-relation error.
+      connection.create_table(TABLE_NAME, id: :uuid, if_not_exists: true) do |t|
+        t.string :store_id, null: false
+        t.string :file_id, null: false
+        t.string :filename
+        t.integer :chunk_index, null: false, default: 0
+        t.text :content, null: false
+        t.column :embedding, "vector(#{ENV.fetch('EMBEDDING_DIMENSIONS', '1024')})", null: false
+        t.jsonb :metadata, null: false, default: {}
+        t.timestamps null: false
+      end
+      connection.add_index TABLE_NAME, :store_id, if_not_exists: true
+      connection.add_index TABLE_NAME, :file_id, if_not_exists: true
+      connection.add_index TABLE_NAME, [ :store_id, :file_id, :chunk_index ], unique: true,
+        name: "index_vector_store_chunks_on_store_file_chunk", if_not_exists: true
+      @schema_ensured = true
+    rescue StandardError => e
+      raise VectorStore::Error, "pgvector store unavailable: #{e.message}"
+    end
 
     def connection
       ActiveRecord::Base.connection

@@ -1,3 +1,3 @@
 # frozen_string_literal: true
 
-json.partial! "transfer", transfer: @transfer
+json.partial! "api/v1/transfers/transfer", transfer: @transfer

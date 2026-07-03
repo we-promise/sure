@@ -1,30 +1,24 @@
 <%# locals: (active_tab:, account_id: nil) %>
 
-<fieldset class="bg-surface-inset rounded-lg p-1 flex flex-wrap gap-2">
-  <%= link_to new_transaction_path(nature: "outflow", account_id: account_id),
-              data: { turbo_frame: :modal, action: "click->transaction-type-tabs#selectTab", nature: "outflow", "transaction-type-tabs-target": "tab" },
-              class: "flex-1 min-w-0 flex px-4 py-1 rounded-lg items-center space-x-2 justify-center text-sm #{active_tab == 'expense' ? 'bg-container text-primary shadow-sm' : 'hover:bg-container text-subdued hover:text-primary hover:shadow-sm'}" do %>
-    <%= icon "minus-circle" %>
-    <%= tag.span class: "truncate" do %>
-      <%= t("shared.transaction_tabs.expense") %>
-    <% end %>
-  <% end %>
+<%= render DS::SegmentedControl.new(full_width: true, aria_label: t("shared.transaction_tabs.aria", default: "Transaction type")) do |sc| %>
+  <% sc.with_segment(
+       safe_join([ icon("minus-circle"), tag.span(t("shared.transaction_tabs.expense"), class: "truncate") ]),
+       active: active_tab == "expense",
+       href: new_transaction_path(nature: "outflow", account_id: account_id),
+       class: "min-w-0 gap-2",
+       data: { turbo_frame: :modal, action: "click->transaction-type-tabs#selectTab", nature: "outflow", "transaction-type-tabs-target": "tab" }) %>
 
-  <%= link_to new_transaction_path(nature: "inflow", account_id: account_id),
-              data: { turbo_frame: :modal, action: "click->transaction-type-tabs#selectTab", nature: "inflow", "transaction-type-tabs-target": "tab" },
-              class: "flex-1 min-w-0 flex px-4 py-1 rounded-lg items-center space-x-2 justify-center text-sm #{active_tab == 'income' ? 'bg-container text-primary shadow-sm' : 'hover:bg-container text-subdued hover:text-primary hover:shadow-sm'}" do %>
-    <%= icon "plus-circle" %>
-    <%= tag.span class: "truncate" do %>
-      <%= t("shared.transaction_tabs.income") %>
-    <% end %>
-  <% end %>
+  <% sc.with_segment(
+       safe_join([ icon("plus-circle"), tag.span(t("shared.transaction_tabs.income"), class: "truncate") ]),
+       active: active_tab == "income",
+       href: new_transaction_path(nature: "inflow", account_id: account_id),
+       class: "min-w-0 gap-2",
+       data: { turbo_frame: :modal, action: "click->transaction-type-tabs#selectTab", nature: "inflow", "transaction-type-tabs-target": "tab" }) %>
 
-  <%= link_to new_transfer_path(from_account_id: account_id),
-              data: { turbo_frame: :modal },
-              class: "flex-1 min-w-0 flex px-4 py-1 rounded-lg items-center space-x-2 justify-center text-sm #{active_tab == 'transfer' ? 'bg-container text-primary shadow-sm' : 'hover:bg-container text-subdued hover:text-primary hover:shadow-sm'}" do %>
-    <%= icon "arrow-right-left" %>
-    <%= tag.span class: "truncate" do %>
-      <%= t("shared.transaction_tabs.transfer") %>
-    <% end %>
-  <% end %>
-</fieldset>
+  <% sc.with_segment(
+       safe_join([ icon("arrow-right-left"), tag.span(t("shared.transaction_tabs.transfer"), class: "truncate") ]),
+       active: active_tab == "transfer",
+       href: new_transfer_path(from_account_id: account_id),
+       class: "min-w-0 gap-2",
+       data: { turbo_frame: :modal }) %>
+<% end %>

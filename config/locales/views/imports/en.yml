@@ -110,6 +110,10 @@ en:
         description: Upload a simple CSV file (like the one we generate when you
           export your data). We'll automatically map the columns for you.
         instructions: Select continue to parse your CSV and move on to the clean step.
+      merchant_import:
+        button_label: Continue
+        description: Upload a CSV file with your merchants. We'll automatically map the columns for you.
+        instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
       actual_import:
@@ -125,6 +129,17 @@ en:
         name_label: Payee (optional)
         category_label: Category (optional)
         notes_label: Notes (optional)
+        apply_configuration: Apply configuration
+      ynab_import:
+        preconfigured_notice: We have pre-configured your YNAB import for you. Please proceed to the next step.
+        amount_notice: Amounts are detected automatically from the Outflow and Inflow columns.
+        leave_empty: Leave empty
+        date_label: Date
+        date_format_label: Date format
+        account_label: Account (optional)
+        name_label: Payee (optional)
+        category_label: Category (optional)
+        notes_label: Memo (optional)
         apply_configuration: Apply configuration
       rule_import:
         description: Configure your rule import. Rules will be created or updated based
@@ -169,6 +184,8 @@ en:
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
     uploads:
+      handle_qif_upload:
+        qif_uploaded: "QIF file uploaded successfully."
       update:
         qif_uploaded: "QIF file uploaded successfully."
       show:
@@ -250,6 +267,8 @@ en:
       category_parent: "Parent category"
       category_color: "Color"
       category_icon: "Lucide icon"
+      merchant_color: "Color"
+      merchant_website: "Website URL"
     update:
       account_saved: "Account saved."
       invalid_account: "Account not found."
@@ -302,9 +321,11 @@ en:
       account_import: "Account import"
       mint_import: "Mint import"
       actual_import: "Actual import"
+      ynab_import: "YNAB import"
       qif_import: "QIF import"
       category_import: "Category import"
       rule_import: "Rule import"
+      merchant_import: "Merchant import"
       pdf_import: "PDF import"
       document_import: "Document import"
       sure_import: "Sure import"
@@ -335,9 +356,11 @@ en:
           account_import: "Account"
           mint_import: "Mint"
           actual_import: "Actual"
+          ynab_import: "YNAB"
           qif_import: "QIF"
           category_import: "Category"
           rule_import: "Rule"
+          merchant_import: "Merchant"
           pdf_import: "PDF"
           document_import: "Document"
           sure_import: "Sure"
@@ -358,10 +381,10 @@ en:
       description: Import from a financial tool or upload raw data files.
       tab_financial_tools: Financial Tools & Files
       tab_raw_data: Raw Data
-      coming_soon: Coming soon
       import_ynab: Import from YNAB
       import_accounts: Import accounts
       import_categories: Import categories
+      import_merchants: Import merchants
       import_mint: Import from Mint
       import_actual: Import from Actual Budget
       import_portfolio: Import investments
