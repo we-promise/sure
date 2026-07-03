@@ -73,19 +73,7 @@ class Trading212ItemsController < ApplicationController
   end
 
   def destroy
-    begin
-      @trading212_item.unlink_all!(dry_run: false)
-    rescue => e
-      DebugLogEntry.capture(
-        category: "sync",
-        level: "error",
-        message: "Trading 212 unlink during destroy failed: #{e.class} - #{e.message}",
-        source: "trading212",
-        family: Current.family,
-        provider_key: "trading212"
-      )
-    end
-
+    @trading212_item.unlink_all!(dry_run: false)
     @trading212_item.destroy_later
     redirect_to settings_providers_path, notice: t(".success"), status: :see_other
   end

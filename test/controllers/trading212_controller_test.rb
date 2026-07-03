@@ -65,7 +65,9 @@ class Trading212ItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "sync triggers sync job" do
     @item.update!(status: :good)
-    post sync_trading212_item_url(@item)
+    assert_enqueued_with(job: SyncJob) do
+      post sync_trading212_item_url(@item)
+    end
 
     assert_response :redirect
   end

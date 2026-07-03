@@ -38,17 +38,19 @@ class Trading212AccountTest < ActiveSupport::TestCase
   end
 
   test "allows nil trading212_account_id across items" do
+    second_item = trading212_items(:pending_setup_item)
+
     account1 = @trading212_item.trading212_accounts.create!(
       name: "Account 1",
       currency: "USD"
     )
 
-    account2 = @trading212_item.trading212_accounts.create!(
+    account2 = second_item.trading212_accounts.create!(
       name: "Account 2",
       currency: "USD"
     )
 
-    # Both nil IDs are allowed on the same item (unique index has WHERE clause)
+    # Both nil IDs are allowed across different items (unique index has WHERE clause)
     assert account1.valid?
     assert account2.valid?
   end
