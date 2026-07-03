@@ -323,5 +323,4 @@ class WiseItemsController < ApplicationController
         nil
       end
     end
-
 end
