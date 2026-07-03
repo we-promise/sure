@@ -19,6 +19,33 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show batch-loads activity row associations instead of querying per row" do
+    # Several rows so per-row loads would be visible as repeated queries
+    3.times do |i|
+      @account.entries.create!(
+        date: Date.current - i.days,
+        amount: 100 + i,
+        currency: "USD",
+        name: "Activity row #{i}",
+        entryable: Transaction.new(category: categories(:food_and_drink))
+      )
+    end
+
+    queries = capture_sql_queries do
+      get account_url(@account)
+    end
+
+    assert_response :success
+
+    split_parent_checks = queries.grep(/SELECT 1 AS one FROM "entries"/)
+    assert_empty split_parent_checks,
+      "expected split-parent lookups to be batched, got per-row checks: #{split_parent_checks}"
+
+    per_row_transfer_loads = queries.grep(/FROM "transfers".*LIMIT/)
+    assert_empty per_row_transfer_loads,
+      "expected transfers to be batch-loaded, got per-row has_one loads: #{per_row_transfer_loads}"
+  end
+
   test "show lazily loads statement tab data unless statements tab is active" do
     AccountStatement::Coverage.expects(:for_year).never
     AccountStatement.expects(:reconciliation_statuses_for).never
