@@ -44,7 +44,7 @@ class Api::V1::RuleRunsController < Api::V1::BaseController
     def rule_runs_scope
       RuleRun
         .joins(:rule)
-        .where(rules: { family_id: Current.family.id })
+        .where(rules: { family_id: current_resource_owner.family.id })
         .includes(:rule)
     end
 

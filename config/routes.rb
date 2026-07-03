@@ -105,6 +105,8 @@ Rails.application.routes.draw do
       get :select_existing_account
       post :link_existing_account
       get :callback
+      get :oauth_connect
+      post :start_oauth_connect
     end
 
     member do
@@ -338,6 +340,7 @@ Rails.application.routes.draw do
       patch :complete
       patch :archive
       patch :unarchive
+      patch :reopen
     end
 
     resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do
@@ -471,6 +474,7 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      patch :toggle_exclude_from_reports
       patch :set_default
       patch :remove_default
       get :select_provider

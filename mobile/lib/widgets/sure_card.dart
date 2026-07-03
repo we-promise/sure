@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/sure_colors.dart';
+import '../theme/sure_spacing.dart';
 import '../theme/sure_tokens.dart';
 
 /// Sure design-system card — a tokenized content surface mirroring the web card
@@ -15,7 +16,7 @@ class SureCard extends StatelessWidget {
   const SureCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(SureSpacing.xl),
     this.margin,
     this.onTap,
     this.elevated = true,

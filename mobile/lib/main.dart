@@ -10,6 +10,7 @@ import 'providers/tags_provider.dart';
 import 'providers/transactions_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/privacy_provider.dart';
 import 'screens/backend_config_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/biometric_lock_screen.dart';
@@ -31,13 +32,31 @@ void main() async {
   // Add initial log entry
   LogService.instance.info('App', 'Sure app starting...');
 
+  // Read the privacy preference before the first frame so money values are
+  // never briefly rendered unmasked for a user who enabled "Hide amounts".
+  // Default to masked (fail-closed) if it can't be read.
+  bool moneyHidden = true;
+  try {
+    moneyHidden = await PreferencesService.instance.getMoneyHidden();
+  } catch (e) {
+    LogService.instance.warning(
+      'App',
+      'Failed to read privacy preference at startup with ${e.runtimeType}',
+    );
+  }
+
   await TelemetryService.instance.initialize(
-    appRunner: () => runApp(const SureApp()),
+    appRunner: () => runApp(SureApp(moneyHidden: moneyHidden)),
   );
 }
 
 class SureApp extends StatelessWidget {
-  const SureApp({super.key});
+  // Fail-closed default (masked) for the no-argument path; main() always passes
+  // the persisted value explicitly.
+  const SureApp({super.key, this.moneyHidden = true});
+
+  /// The persisted "hide amounts" state, read before `runApp` (see `main`).
+  final bool moneyHidden;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +70,8 @@ class SureApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MerchantsProvider()),
         ChangeNotifierProvider(create: (_) => TagsProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(
+            create: (_) => PrivacyProvider(initialHidden: moneyHidden)),
         ChangeNotifierProxyProvider<ConnectivityService, AccountsProvider>(
           create: (_) => AccountsProvider(),
           update: (_, connectivityService, accountsProvider) {
