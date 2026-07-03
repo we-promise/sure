@@ -7,7 +7,10 @@ class Budget < ApplicationRecord
 
   belongs_to :family
 
-  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
+  # inverse_of is not inferred for scoped associations; without it each
+  # budget_category.budget would load a fresh Budget whose budget_categories
+  # collection is unloaded, defeating in-memory filtering (e.g. #subcategories).
+  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy, inverse_of: :budget
 
   validates :start_date, :end_date, presence: true
   validates :start_date, :end_date, uniqueness: { scope: :family_id }
