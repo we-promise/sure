@@ -72,11 +72,7 @@ class IncomeStatement::CategoryStats
           JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Transaction'
           JOIN accounts a ON a.id = ae.account_id
           LEFT JOIN categories c ON c.id = t.category_id
-          LEFT JOIN exchange_rates er ON (
-            er.date = ae.date AND
-            er.from_currency = ae.currency AND
-            er.to_currency = :target_currency
-          )
+          #{ExchangeRate.nearest_rate_join_sql(currency: "ae.currency", date: "ae.date")}
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
             AND ae.excluded = false

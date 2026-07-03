@@ -53,11 +53,7 @@ class InvestmentStatement::Totals
           COUNT(trades.id) as trades_count
         FROM entries
         JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'
-        LEFT JOIN exchange_rates er ON (
-          er.date = entries.date AND
-          er.from_currency = entries.currency AND
-          er.to_currency = :target_currency
-        )
+        #{ExchangeRate.nearest_rate_join_sql(currency: "entries.currency", date: "entries.date")}
         WHERE entries.account_id IN (:account_ids)
           AND entries.date BETWEEN :start_date AND :end_date
           AND entries.excluded = false
