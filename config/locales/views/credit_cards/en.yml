@@ -13,6 +13,10 @@ en:
       expiration_date: Expiration date
       minimum_payment: Minimum payment
       minimum_payment_placeholder: '100'
+      treat_balance_as_available_credit_description: Enable if your bank reports
+        this card's balance as remaining available credit instead of the amount
+        owed. The debt is then derived from your credit limit.
+      treat_balance_as_available_credit_label: Balance is available credit
     new:
       title: Enter credit card details
     overview:
