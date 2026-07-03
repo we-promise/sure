@@ -56,7 +56,7 @@ class Sync < ApplicationRecord
   # In-memory mirror of the `visible` scope, for checks on preloaded
   # collections without issuing a new query. Keep in sync with the scope.
   def visible?
-    (pending? || syncing?) && created_at > VISIBLE_FOR.ago
+    in_progress? && created_at > VISIBLE_FOR.ago
   end
 
   class << self

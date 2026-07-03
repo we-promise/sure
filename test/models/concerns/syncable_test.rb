@@ -33,6 +33,23 @@ class SyncableTest < ActiveSupport::TestCase
     assert_empty queries, "expected no queries with preloaded syncs, got: #{queries}"
   end
 
+  test "syncing? uses preloaded visible_syncs without new queries" do
+    @account.syncs.create!(status: "pending")
+    stale = @account.syncs.create!(status: "pending")
+    stale.update_column(:created_at, (Sync::VISIBLE_FOR + 1.minute).ago)
+
+    loaded_account = Account.includes(:visible_syncs).find(@account.id)
+
+    result = nil
+    queries = capture_sql_queries do
+      result = loaded_account.syncing?
+    end
+
+    assert result
+    assert_empty queries, "expected no queries with preloaded visible_syncs, got: #{queries}"
+    assert_equal 1, loaded_account.visible_syncs.size
+  end
+
   test "syncing? on preloaded collection matches the visible scope semantics" do
     @account.syncs.create!(status: "completed", completed_at: Time.current)
     stale = @account.syncs.create!(status: "pending")
