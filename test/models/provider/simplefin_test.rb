@@ -141,4 +141,36 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
     assert delay <= Provider::Simplefin::MAX_RETRY_DELAY,
       "Delay should be capped at MAX_RETRY_DELAY (#{Provider::Simplefin::MAX_RETRY_DELAY}s)"
   end
+
+  test "get_accounts sends pending=1 when pending is true" do
+    mock_response = OpenStruct.new(code: 200, body: '{"accounts": []}')
+
+    Provider::Simplefin.expects(:get)
+      .with { |url| url.include?("pending=1") }
+      .returns(mock_response)
+
+    @provider.get_accounts(@access_url, pending: true)
+  end
+
+  test "get_accounts omits pending parameter when pending is false" do
+    # SimpleFin treats the presence of the parameter as opt-in, so pending=0
+    # would still return pending transactions.
+    mock_response = OpenStruct.new(code: 200, body: '{"accounts": []}')
+
+    Provider::Simplefin.expects(:get)
+      .with { |url| !url.include?("pending") }
+      .returns(mock_response)
+
+    @provider.get_accounts(@access_url, pending: false)
+  end
+
+  test "get_accounts omits pending parameter when pending is nil" do
+    mock_response = OpenStruct.new(code: 200, body: '{"accounts": []}')
+
+    Provider::Simplefin.expects(:get)
+      .with { |url| !url.include?("pending") }
+      .returns(mock_response)
+
+    @provider.get_accounts(@access_url)
+  end
 end
