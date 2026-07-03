@@ -1648,6 +1648,30 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          ExchangeRate: {
+            type: :object,
+            required: %w[id from_currency to_currency date rate created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              from_currency: { type: :string, description: 'ISO 4217 source currency code' },
+              to_currency: { type: :string, description: 'ISO 4217 target currency code' },
+              date: { type: :string, format: :date },
+              rate: { type: :string, description: 'Exact decimal exchange rate' },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          ExchangeRateCollection: {
+            type: :object,
+            required: %w[exchange_rates pagination],
+            properties: {
+              exchange_rates: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/ExchangeRate' }
+              },
+              pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
           Money: {
             type: :object,
             required: %w[amount currency formatted],
