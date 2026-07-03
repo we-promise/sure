@@ -73,5 +73,4 @@ class Trading212Account::HoldingsProcessor
         metadata: { ticker: t212_ticker, trading212_account_id: @trading212_account.id }
       )
     end
-
 end
