@@ -2006,6 +2006,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_02_000001) do
     t.jsonb "locked_attributes", default: {}
     t.uuid "merchant_id"
     t.datetime "updated_at", null: false
+    t.uuid "transfer_id"
     t.index "(((extra -> 'goal'::text) ->> 'pledge_id'::text))", name: "ix_transactions_extra_goal_pledge_id", unique: true, where: "(((extra -> 'goal'::text) ->> 'pledge_id'::text) IS NOT NULL)"
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
@@ -2013,10 +2014,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_02_000001) do
     t.index ["investment_activity_label"], name: "index_transactions_on_investment_activity_label"
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
+    t.index ["transfer_id"], name: "index_transactions_on_transfer_id"
   end
 
   create_table "transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.decimal "amount", precision: 19, scale: 4, default: "0.0", null: false
     t.uuid "inflow_transaction_id", null: false
     t.text "notes"
     t.uuid "outflow_transaction_id", null: false
@@ -2026,6 +2029,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_02_000001) do
     t.index ["inflow_transaction_id"], name: "index_transfers_on_inflow_transaction_id"
     t.index ["outflow_transaction_id"], name: "index_transfers_on_outflow_transaction_id"
     t.index ["status"], name: "index_transfers_on_status"
+    t.check_constraint "amount >= 0::numeric", name: "check_transfer_amount_non_negative"
   end
 
   create_table "up_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2304,6 +2308,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_02_000001) do
   add_foreign_key "trades", "securities"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
+  add_foreign_key "transactions", "transfers", column: "transfer_id"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
   add_foreign_key "up_accounts", "up_items"
