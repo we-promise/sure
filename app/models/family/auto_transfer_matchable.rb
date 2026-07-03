@@ -5,7 +5,8 @@ module Family::AutoTransferMatchable
     inflow_transaction_id: nil,
     outflow_transaction_id: nil,
     account_id: nil,
-    include_rejected: true
+    include_rejected: true,
+    since_date: nil
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -19,15 +20,20 @@ module Family::AutoTransferMatchable
         outflow_transaction_id:,
         account_id:,
         include_rejected:,
+        since_date: since_date&.to_date,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
     ])
   end
 
-  def auto_match_transfers!(account: nil)
+  # since_date bounds the scan to recently-dated entries; nil matches across
+  # full history. Family-level syncs pass a bound (matching runs after every
+  # sync, so older pairs were already considered by previous runs), while
+  # account-level syncs keep full history for the single account.
+  def auto_match_transfers!(account: nil, since_date: nil)
     # Exclude already matched transfers
-    candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false)
+    candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false, since_date: since_date)
     transaction_ids = candidates_scope.flat_map do |match|
       [ match.inflow_transaction_id, match.outflow_transaction_id ]
     end.uniq
@@ -132,6 +138,7 @@ module Family::AutoTransferMatchable
             inflow_candidates.entryable_type = 'Transaction' AND
             inflow_candidates.excluded = FALSE AND
             inflow_candidates.amount < 0 AND
+            (:since_date IS NULL OR inflow_candidates.date >= :since_date) AND
             inflow_accounts.family_id = :family_id AND
             outflow_accounts.family_id = :family_id AND
             inflow_accounts.status IN ('draft', 'active') AND
@@ -175,6 +182,7 @@ module Family::AutoTransferMatchable
             inflow_candidates.entryable_type = 'Transaction' AND
             inflow_candidates.excluded = FALSE AND
             inflow_candidates.amount < 0 AND
+            (:since_date IS NULL OR inflow_candidates.date >= :since_date) AND
             inflow_accounts.family_id = :family_id AND
             outflow_accounts.family_id = :family_id AND
             inflow_accounts.status IN ('draft', 'active') AND

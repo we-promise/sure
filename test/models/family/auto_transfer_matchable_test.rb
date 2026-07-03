@@ -147,6 +147,31 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "since_date bounds matching to recently dated entries" do
+    # Old pair, outside the bound
+    create_transaction(date: 100.days.ago.to_date, account: @depository, amount: 500)
+    create_transaction(date: 99.days.ago.to_date, account: @credit_card, amount: -500)
+
+    # Recent pair, inside the bound
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 300)
+    create_transaction(date: Date.current, account: @credit_card, amount: -300)
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!(since_date: 90.days.ago.to_date)
+    end
+
+    assert_equal 300, Transfer.order(created_at: :desc).first.outflow_transaction.entry.amount
+  end
+
+  test "nil since_date matches across full history" do
+    create_transaction(date: 100.days.ago.to_date, account: @depository, amount: 500)
+    create_transaction(date: 99.days.ago.to_date, account: @credit_card, amount: -500)
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "transfer candidate options require valid numeric input" do
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: "soon") }
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: nil) }
