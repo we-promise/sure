@@ -24,7 +24,7 @@ class Provider::WiseTest < ActiveSupport::TestCase
   test "sends Authorization header as Bearer token on API requests" do
     provider = Provider::Wise.new(api_token: "test-token-abc")
 
-    stub_response = stub(code: 200, body: [].to_json)
+    stub_response = OpenStruct.new(code: 200, body: [].to_json)
 
     # Should send GET /v1/profiles with Bearer authorization
     Provider::Wise.expects(:get)
@@ -37,7 +37,7 @@ class Provider::WiseTest < ActiveSupport::TestCase
   test "raises AuthenticationError on 401 response" do
     provider = Provider::Wise.new(api_token: "bad-token")
 
-    stub_response = stub(code: 401, body: '{"error": "unauthorized"}')
+    stub_response = OpenStruct.new(code: 401, body: '{"error": "unauthorized"}')
 
     Provider::Wise.stubs(:get).returns(stub_response)
 
@@ -52,7 +52,7 @@ class Provider::WiseTest < ActiveSupport::TestCase
     start_date = Date.new(2024, 1, 1)
     end_date   = Date.new(2025, 6, 1)   # ~517 days -> 2 windows expected
 
-    stub_response = stub(code: 200, body: { transactions: [] }.to_json)
+    stub_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
 
     call_count = 0
     Provider::Wise.stubs(:get).with do |_url, _opts|
