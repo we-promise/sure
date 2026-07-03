@@ -22,7 +22,7 @@ class QuestradeItemsController < ApplicationController
 
   def create
     @questrade_item = Current.family.questrade_items.build(questrade_item_params)
-    @questrade_item.name ||= "Questrade Connection"
+    @questrade_item.name ||= I18n.t("questrade_items.default_name")
 
     if @questrade_item.save
       # Kick off an initial sync so accounts are discovered and appear under the
@@ -135,7 +135,7 @@ class QuestradeItemsController < ApplicationController
     end
 
     # The account-linking UI lives in the setup_accounts view (mirrors IBKR).
-    redirect_to setup_accounts_questrade_item_path(questrade_item)
+    redirect_to setup_accounts_questrade_item_path(questrade_item, return_to: safe_return_to_path)
   end
 
   def link_accounts
@@ -173,7 +173,15 @@ class QuestradeItemsController < ApplicationController
       link_questrade_account(questrade_account, accountable_type)
       created_count += 1
     rescue => e
-      Rails.logger.error "QuestradeItemsController#link_accounts - Failed to link account: #{e.message}"
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to link Questrade account",
+        source: "QuestradeItemsController",
+        provider_key: "questrade",
+        family: Current.family,
+        metadata: { questrade_account_id: questrade_account.id, error_class: e.class.name, error_message: e.message }
+      )
     end
 
     if created_count > 0
@@ -259,17 +267,27 @@ class QuestradeItemsController < ApplicationController
       end
       created_count += 1
     rescue => e
-      Rails.logger.error "QuestradeItemsController#complete_account_setup - Error: #{e.message}"
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to create account during Questrade setup",
+        source: "QuestradeItemsController",
+        provider_key: "questrade",
+        family: Current.family,
+        metadata: { questrade_account_id: questrade_account_id, error_class: e.class.name, error_message: e.message }
+      )
       skipped_count += 1
     end
 
+    return_to = safe_return_to_path
+
     if created_count > 0
       @questrade_item.sync_later unless @questrade_item.syncing?
-      redirect_to accounts_path, notice: t(".success", count: created_count)
+      redirect_to return_to || accounts_path, notice: t(".success", count: created_count)
     elsif skipped_count > 0 && created_count == 0
-      redirect_to accounts_path, notice: t(".all_skipped")
+      redirect_to return_to || accounts_path, notice: t(".all_skipped")
     else
-      redirect_to setup_accounts_questrade_item_path(@questrade_item), alert: t(".creation_failed", error: "Unknown error")
+      redirect_to setup_accounts_questrade_item_path(@questrade_item, return_to: return_to), alert: t(".creation_failed", error: "Unknown error")
     end
   end
 
@@ -369,5 +387,21 @@ class QuestradeItemsController < ApplicationController
       end
 
       accountable_type.constantize
+    end
+
+    def safe_return_to_path
+      return nil if params[:return_to].blank?
+
+      return_to = params[:return_to].to_s
+
+      begin
+        uri = URI.parse(return_to)
+        return nil if uri.scheme.present?
+        return nil if uri.host.present?
+        return nil unless return_to.start_with?("/")
+        return_to
+      rescue URI::InvalidURIError
+        nil
+      end
     end
 end

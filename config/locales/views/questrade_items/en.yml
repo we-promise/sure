@@ -1,6 +1,7 @@
 ---
 en:
   questrade_items:
+    default_name: "Questrade Connection"
     # Model method strings (i18n for item_model.rb)
     sync_status:
       no_accounts: "No accounts found"

@@ -38,10 +38,15 @@ module QuestradeItem::Unlinking
           end
         end
       rescue StandardError => e
-        Rails.logger.warn(
-          "QuestradeItem Unlinker: failed to fully unlink provider account ##{provider_account.id} (links=#{link_ids.inspect}): #{e.class} - #{e.message}"
+        DebugLogEntry.capture(
+          category: "provider_sync",
+          level: "warn",
+          message: "QuestradeItem: failed to fully unlink provider account #\#{provider_account.id}",
+          source: self.class.name,
+          provider_key: "questrade",
+          family: family,
+          metadata: { provider_account_id: provider_account.id, link_ids: link_ids, error_class: e.class.name, error_message: e.message }
         )
-        # Record error for observability; continue with other accounts
         result[:error] = e.message
       end
     end

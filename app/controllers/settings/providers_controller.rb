@@ -254,6 +254,8 @@ class Settings::ProvidersController < ApplicationController
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
       when "sophtron"
         @sophtron_items = Current.family.sophtron_items.ordered
+      when "questrade"
+        @questrade_items = Current.family.questrade_items.active.ordered
       end
     end
 

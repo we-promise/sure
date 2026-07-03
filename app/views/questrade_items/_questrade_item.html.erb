@@ -85,9 +85,10 @@
           institutions_count: questrade_item.connected_institutions.size
         ) %>
 
-        <% unlinked_count = questrade_item.unlinked_accounts_count %>
-        <% linked_count = questrade_item.linked_accounts_count %>
-        <% total_count = questrade_item.total_accounts_count %>
+        <% counts = defined?(@questrade_account_counts_map) && @questrade_account_counts_map ? @questrade_account_counts_map[questrade_item.id] : nil %>
+        <% unlinked_count = counts ? counts[:unlinked] : questrade_item.unlinked_accounts_count %>
+        <% linked_count = counts ? counts[:linked] : questrade_item.linked_accounts_count %>
+        <% total_count = counts ? counts[:total] : questrade_item.total_accounts_count %>
 
         <% if unlinked_count > 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
