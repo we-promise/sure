@@ -4,14 +4,15 @@ fr:
     edit:
       edit: Modifier %{account}
     form:
+      initial_balance: Solde initial du prêt
       interest_rate: Taux d'intérêt
       interest_rate_placeholder: '5,25'
-      initial_balance: Solde initial du prêt
+      none: Aucun
       rate_type: Type de taux
+      subtype_none: Aucun
+      subtype_prompt: Sélectionner le type de prêt
       term_months: Durée (mois)
       term_months_placeholder: '360'
-      subtype_prompt: Sélectionner le type de prêt
-      subtype_none: Aucun
     new:
       title: Saisir les détails du prêt
     overview:
@@ -23,3 +24,14 @@ fr:
       term: Durée
       type: Type
       unknown: Inconnu
+    tabs:
+      overview:
+        edit_loan_details: Modifier les détails du prêt
+        interest_rate: Taux d'intérêt
+        monthly_payment: Paiement mensuel
+        not_applicable: N/D
+        original_principal: Capital d'origine
+        remaining_principal: Capital restant
+        term: Durée
+        type: Type
+        unknown: Inconnu

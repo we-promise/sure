@@ -9,6 +9,8 @@ ca:
         reports: Informes
         transactions: Transaccions
       privacy_mode: Commuta el mode de privadesa
+      resize_left_sidebar: Redimensiona la barra lateral de comptes
+      resize_right_sidebar: Redimensiona la barra lateral de l'assistent
       skip_to_main: Salta al contingut principal
     auth:
       existing_account: Ja tens un compte?

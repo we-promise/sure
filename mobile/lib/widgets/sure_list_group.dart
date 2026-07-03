@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/sure_colors.dart';
+import '../theme/sure_spacing.dart';
 import '../theme/sure_tokens.dart';
 import 'sure_icon.dart';
 
@@ -81,7 +82,11 @@ class SureListGroup extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                padding: const EdgeInsets.only(
+                  left: SureSpacing.xl,
+                  right: SureSpacing.xl,
+                  bottom: SureSpacing.md,
+                ),
                 child: Text(
                   header!.toUpperCase(),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -156,10 +161,10 @@ class SureListRow extends StatelessWidget {
     }
 
     Widget content = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: SureSpacing.xl, vertical: 14),
       child: Row(
         children: [
-          if (leading != null) ...[leading!, const SizedBox(width: 12)],
+          if (leading != null) ...[leading!, const SizedBox(width: SureSpacing.lg)],
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -189,7 +194,7 @@ class SureListRow extends StatelessWidget {
             ),
           ),
           if (trailingWidget != null) ...[
-            const SizedBox(width: 12),
+            const SizedBox(width: SureSpacing.lg),
             trailingWidget,
           ],
         ],

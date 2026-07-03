@@ -2,7 +2,9 @@ import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 
 import '../theme/sure_colors.dart';
+import '../theme/sure_spacing.dart';
 import '../theme/sure_tokens.dart';
+import '../theme/sure_typography.dart';
 
 /// Sure design-system button variants, mirroring the web `DS::Button`
 /// (`DS::Buttonish::VARIANTS`).
@@ -113,7 +115,7 @@ class _SureButtonState extends State<SureButton> {
       mainAxisSize: widget.fullWidth ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (leading != null) ...[leading, const SizedBox(width: 8)],
+        if (leading != null) ...[leading, const SizedBox(width: SureSpacing.md)],
         // Flex only when full-width (bounded). A bare Flexible in a min-size Row
         // asserts under unbounded horizontal constraints, so an inline button
         // passes the self-sizing label directly.
@@ -262,22 +264,22 @@ class _SureButtonMetrics {
       case SureButtonSize.sm:
         return const _SureButtonMetrics(
           height: 28,
-          horizontalPadding: 12,
-          fontSize: 14,
+          horizontalPadding: SureSpacing.lg,
+          fontSize: SureTypography.sm,
           radius: SureTokens.radiusMd,
         );
       case SureButtonSize.md:
         return const _SureButtonMetrics(
           height: 36,
-          horizontalPadding: 16,
-          fontSize: 14,
+          horizontalPadding: SureSpacing.xl,
+          fontSize: SureTypography.sm,
           radius: SureTokens.radiusLg,
         );
       case SureButtonSize.lg:
         return const _SureButtonMetrics(
           height: 48,
-          horizontalPadding: 20,
-          fontSize: 16,
+          horizontalPadding: SureSpacing.xxl,
+          fontSize: SureTypography.base,
           radius: SureTokens.radiusLg,
         );
     }
