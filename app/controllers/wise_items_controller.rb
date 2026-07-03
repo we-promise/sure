@@ -316,6 +316,7 @@ class WiseItemsController < ApplicationController
       begin
         uri = URI.parse(return_to)
         return nil if uri.scheme.present?
+        return nil if uri.host.present?
         return nil unless return_to.start_with?("/")
         return_to
       rescue URI::InvalidURIError
