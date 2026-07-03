@@ -96,7 +96,19 @@ class TransactionsController < ApplicationController
   end
 
   def create
-    account = Current.user.accessible_accounts.find(params.dig(:entry, :account_id))
+    account = Current.user.accessible_accounts.find_by(id: params.dig(:entry, :account_id))
+
+    # A blank or inaccessible account is a form error, not a routing error:
+    # the account select can be submitted empty, and a 404 here loses the
+    # user's input. Re-render the form with a validation message instead.
+    if account.nil?
+      @entry = Current.family.entries.new(entryable: Transaction.new)
+      @entry.assign_attributes(entry_params)
+      @entry.errors.add(:account, :blank)
+      set_new_transaction_form_options
+      render :new, status: :unprocessable_entity
+      return
+    end
 
     return unless require_account_permission!(account)
 
