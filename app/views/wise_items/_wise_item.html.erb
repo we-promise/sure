@@ -85,9 +85,10 @@
           institutions_count: wise_item.connected_institutions.size
         ) %>
 
-        <% unlinked_count = wise_item.unlinked_accounts_count %>
-        <% linked_count   = wise_item.linked_accounts_count %>
-        <% total_count    = wise_item.total_accounts_count %>
+        <% counts = defined?(@wise_account_counts_map) && @wise_account_counts_map ? @wise_account_counts_map[wise_item.id] || { linked: 0, unlinked: 0, total: 0 } : { linked: wise_item.linked_accounts_count, unlinked: wise_item.unlinked_accounts_count, total: wise_item.total_accounts_count } %>
+        <% unlinked_count = counts[:unlinked] %>
+        <% linked_count   = counts[:linked] %>
+        <% total_count    = counts[:total] %>
 
         <% if unlinked_count > 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">

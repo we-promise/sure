@@ -13,8 +13,8 @@ class Provider::WiseAdapter < Provider::Base
 
     [ {
       key: "wise",
-      name: "Wise",
-      description: "Connect to your Wise multi-currency account",
+      name: I18n.t("wise_items.provider_config.name"),
+      description: I18n.t("wise_items.provider_config.description"),
       can_connect: true,
       new_account_path: ->(accountable_type, return_to) {
         Rails.application.routes.url_helpers.select_accounts_wise_items_path(

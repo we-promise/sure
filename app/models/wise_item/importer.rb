@@ -37,11 +37,7 @@ class WiseItem::Importer
     prune_removed_accounts(upstream_account_ids)
 
     # For each linked account, fetch transaction history
-    linked_accounts = WiseAccount
-      .where(wise_item_id: wise_item.id)
-      .joins(:account_provider)
-
-    linked_accounts.each do |wise_account|
+    wise_item.linked_wise_accounts.each do |wise_account|
       import_transactions(wise_account)
     end
 
@@ -70,12 +66,26 @@ class WiseItem::Importer
     end
 
     def import_balances_for_profile(profile_id, upstream_account_ids)
-      response = wise_provider.list_balances(profile_id: profile_id)
-      stats["api_requests"] = stats.fetch("api_requests", 0) + 1
-
-      balances = Array(response)
+      balances = begin
+        response = wise_provider.list_balances(profile_id: profile_id)
+        stats["api_requests"] = stats.fetch("api_requests", 0) + 1
+        Array(response)
+      rescue Provider::Wise::AuthenticationError
+        raise
+      rescue => e
+        register_error(type: "profile_balances_error", message: e.message, context: { profile_id: profile_id })
+        DebugLogEntry.capture(
+          category: "provider_sync",
+          level: "error",
+          message: "WiseItem::Importer - Failed to fetch balances for profile #{profile_id}: #{e.message}",
+          source: "WiseItem::Importer",
+          provider_key: "wise"
+        )
+        return
+      end
 
       balances.each do |balance|
+        safe_id = balance.is_a?(Hash) ? (balance[:id] || balance["id"]).to_s : nil
         begin
           balance = balance.with_indifferent_access if balance.is_a?(Hash)
           balance_id = balance[:id].to_s
@@ -85,11 +95,11 @@ class WiseItem::Importer
           upstream_account_ids << balance_id
           stats["accounts_imported"] = stats.fetch("accounts_imported", 0) + 1
         rescue => e
-          register_error(type: "account_import_error", message: e.message, context: { balance_id: balance[:id] })
+          register_error(type: "account_import_error", message: e.message, context: { balance_id: safe_id })
           DebugLogEntry.capture(
             category: "provider_sync",
             level: "error",
-            message: "WiseItem::Importer - Failed to import balance #{balance[:id]}: #{e.message}",
+            message: "WiseItem::Importer - Failed to import balance #{safe_id}: #{e.message}",
             source: "WiseItem::Importer",
             provider_key: "wise"
           )
@@ -141,6 +151,8 @@ class WiseItem::Importer
       else
         wise_account.update!(last_transactions_sync: Time.current)
       end
+    rescue Provider::Wise::AuthenticationError
+      raise
     rescue => e
       register_error(type: "transaction_import_error", message: e.message, context: { wise_account_id: wise_account.id })
       DebugLogEntry.capture(
@@ -177,7 +189,8 @@ class WiseItem::Importer
       ref = txn[:referenceNumber]
       return ref if ref.present?
 
-      [ txn[:date], txn[:type], txn.dig(:amount, :value), txn.dig(:amount, :currency) ].join("-")
+      desc = txn.dig(:details, :description).to_s
+      [ txn[:date], txn[:type], txn.dig(:amount, :value), txn.dig(:amount, :currency), desc ].join("-")
     end
 
     def prune_removed_accounts(upstream_account_ids)

@@ -15,7 +15,7 @@ module Family::WiseConnectable
 
   def create_wise_item!(api_token:, item_name: nil)
     item = wise_items.create!(
-      name: item_name || "Wise Connection",
+      name: item_name || I18n.t("wise_items.default_name"),
       api_token: api_token
     )
     item.sync_later

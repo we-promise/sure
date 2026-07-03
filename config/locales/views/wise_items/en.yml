@@ -1,4 +1,4 @@
----
+﻿---
 en:
   wise_items:
     sync_status:
@@ -12,6 +12,12 @@ en:
       count:
         one: "%{count} institution"
         other: "%{count} institutions"
+    default_name: "Wise Connection"
+
+    provider_config:
+      name: "Wise"
+      description: "Connect to your Wise multi-currency account"
+
     errors:
       provider_not_configured: "Wise provider is not configured"
 

@@ -14,7 +14,7 @@ class WiseItemsController < ApplicationController
 
   def create
     @wise_item = Current.family.wise_items.build(wise_item_params)
-    @wise_item.name ||= "Wise Connection"
+    @wise_item.name ||= I18n.t("wise_items.default_name")
 
     if @wise_item.save
       @wise_item.sync_later unless @wise_item.syncing?
@@ -110,7 +110,7 @@ class WiseItemsController < ApplicationController
       return
     end
 
-    redirect_to setup_accounts_wise_item_path(wise_item)
+    redirect_to setup_accounts_wise_item_path(wise_item, return_to: safe_return_to_path)
   end
 
   def link_accounts
@@ -160,7 +160,9 @@ class WiseItemsController < ApplicationController
 
     if created_count > 0
       wise_item.sync_later unless wise_item.syncing?
-      if already_linked_count > 0 || invalid_count > 0
+      if invalid_count > 0
+        redirect_to accounts_path, notice: t(".partial_invalid", created_count: created_count, already_linked_count: already_linked_count, invalid_count: invalid_count)
+      elsif already_linked_count > 0
         redirect_to accounts_path, notice: t(".partial_success", created_count: created_count, already_linked_count: already_linked_count)
       else
         redirect_to accounts_path, notice: t(".success", count: created_count)
@@ -261,13 +263,15 @@ class WiseItemsController < ApplicationController
       skipped_count += 1
     end
 
+    return_to = safe_return_to_path
+
     if created_count > 0
       @wise_item.sync_later unless @wise_item.syncing?
-      redirect_to accounts_path, notice: t(".success", count: created_count)
+      redirect_to return_to || accounts_path, notice: t(".success", count: created_count)
     elsif skipped_count > 0 && created_count == 0
-      redirect_to accounts_path, notice: t(".all_skipped")
+      redirect_to return_to || accounts_path, notice: t(".all_skipped")
     else
-      redirect_to setup_accounts_wise_item_path(@wise_item), alert: t(".creation_failed", error: "Unknown error")
+      redirect_to setup_accounts_wise_item_path(@wise_item, return_to: return_to), alert: t(".creation_failed", error: "Unknown error")
     end
   end
 
@@ -301,6 +305,21 @@ class WiseItemsController < ApplicationController
       when "loan"         then "Loan"
       when "other_asset"  then "OtherAsset"
       else "Depository"
+      end
+    end
+
+    def safe_return_to_path
+      return nil if params[:return_to].blank?
+
+      return_to = params[:return_to].to_s
+
+      begin
+        uri = URI.parse(return_to)
+        return nil if uri.scheme.present?
+        return nil unless return_to.start_with?("/")
+        return_to
+      rescue URI::InvalidURIError
+        nil
       end
     end
 

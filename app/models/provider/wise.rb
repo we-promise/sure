@@ -130,9 +130,13 @@ class Provider::Wise
           sleep(delay)
           retry
         else
-          Rails.logger.error(
-            "Wise API: #{operation_name} failed after #{max_retries} retries: " \
-            "#{e.class}: #{e.message}"
+          DebugLogEntry.capture(
+            category: "provider_sync",
+            level: "error",
+            message: "Wise API: #{operation_name} failed after #{max_retries} retries: #{e.class}: #{e.message}",
+            source: self.class.name,
+            provider_key: "wise",
+            metadata: { operation: operation_name, error_class: e.class.name, retries: max_retries }
           )
           raise Error.new("Network error after #{max_retries} retries: #{e.message}", :network_error)
         end
@@ -146,13 +150,19 @@ class Provider::Wise
     end
 
     def capture_response_error(reason, response)
+      error_detail = begin
+        parsed = JSON.parse(response.body, symbolize_names: true)
+        { error: parsed[:error], message: parsed[:message] }.compact
+      rescue
+        {}
+      end
       DebugLogEntry.capture(
         category: "provider_sync",
         level: "error",
         message: "Wise API #{reason} (#{response.code})",
         source: self.class.name,
         provider_key: "wise",
-        metadata: { status: response.code, body: response.body.to_s.first(1000) }
+        metadata: { status: response.code }.merge(error_detail)
       )
     end
 

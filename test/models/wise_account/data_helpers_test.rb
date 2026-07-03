@@ -49,6 +49,10 @@ class WiseAccount::DataHelpersTest < ActiveSupport::TestCase
     assert_nil @helper.parse_decimal("not a number")
   end
 
+  test "parse_decimal returns nil for unsupported type" do
+    assert_nil @helper.parse_decimal([ 1, 2, 3 ])
+  end
+
   test "parse_decimal handles negative values" do
     result = @helper.parse_decimal("-250.75")
     assert_equal BigDecimal("-250.75"), result
@@ -89,5 +93,9 @@ class WiseAccount::DataHelpersTest < ActiveSupport::TestCase
 
   test "parse_date returns nil for invalid string" do
     assert_nil @helper.parse_date("not a date")
+  end
+
+  test "parse_date returns nil for unsupported type" do
+    assert_nil @helper.parse_date({ year: 2024, month: 6, day: 15 })
   end
 end

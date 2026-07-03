@@ -138,11 +138,11 @@ class WiseItem < ApplicationRecord
   end
 
   def linked_accounts_count
-    wise_accounts.joins(:account_provider).count
+    linked_wise_accounts.count
   end
 
   def unlinked_accounts_count
-    wise_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    unlinked_wise_accounts.count
   end
 
   def total_accounts_count

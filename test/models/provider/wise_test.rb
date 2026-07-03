@@ -3,9 +3,21 @@
 require "test_helper"
 
 class Provider::WiseTest < ActiveSupport::TestCase
-  test "raises ConfigurationError when api_token is blank" do
+  test "raises ConfigurationError when api_token is nil" do
     assert_raises(Provider::Wise::ConfigurationError) do
       Provider::Wise.new(api_token: nil)
+    end
+  end
+
+  test "raises ConfigurationError when api_token is empty string" do
+    assert_raises(Provider::Wise::ConfigurationError) do
+      Provider::Wise.new(api_token: "")
+    end
+  end
+
+  test "raises ConfigurationError when api_token is whitespace only" do
+    assert_raises(Provider::Wise::ConfigurationError) do
+      Provider::Wise.new(api_token: "   ")
     end
   end
 

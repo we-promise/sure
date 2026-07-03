@@ -27,8 +27,14 @@ module WiseItem::Unlinking
           links.each(&:destroy!)
         end
       rescue StandardError => e
-        Rails.logger.warn(
-          "WiseItem Unlinker: failed to fully unlink provider account ##{provider_account.id} (links=#{link_ids.inspect}): #{e.class} - #{e.message}"
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "error",
+          message: "WiseItem Unlinker: failed to fully unlink provider account ##{provider_account.id}: #{e.class} - #{e.message}",
+          source: "WiseItem::Unlinking",
+          provider_key: "wise",
+          family: family,
+          metadata: { provider_account_id: provider_account.id, link_ids: link_ids, error_class: e.class.name, error_message: e.message }
         )
         result[:error] = e.message
       end

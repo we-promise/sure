@@ -55,7 +55,9 @@ class WiseAccount::Processor
           level: "error",
           message: "WiseAccount::Processor - Failed to process transaction: #{e.message}",
           source: "WiseAccount::Processor",
-          provider_key: "wise"
+          provider_key: "wise",
+          family: @wise_account.wise_item&.family,
+          metadata: { wise_account_id: @wise_account.id, error_class: e.class.name, error_message: e.message }
         )
       end
     end
@@ -98,8 +100,9 @@ class WiseAccount::Processor
     # Fallback dedup key when referenceNumber is absent (very old transactions)
     def transaction_fallback_key(data)
       amount_data = (data[:amount] || {}).with_indifferent_access
+      details = (data[:details] || {}).with_indifferent_access
       Digest::SHA256.hexdigest(
-        [ data[:date], data[:type], amount_data[:value], amount_data[:currency] ].join("|")
+        [ data[:date], data[:type], amount_data[:value], amount_data[:currency], details[:description].to_s ].join("|")
       ).first(24)
     end
 end

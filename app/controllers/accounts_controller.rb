@@ -27,7 +27,7 @@ class AccountsController < ApplicationController
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts))
     @binance_items = visible_provider_items(family.binance_items.ordered.includes(:binance_accounts, :accounts, :syncs))
-    @wise_items = visible_provider_items(family.wise_items.ordered.includes(:syncs, :wise_accounts))
+    @wise_items = visible_provider_items(family.wise_items.ordered.includes(:syncs, :accounts, wise_accounts: :account_provider))
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -439,11 +439,21 @@ class AccountsController < ApplicationController
         @binance_unlinked_count_map[item.id] = count
       end
 
-      # Wise sync stats
+      # Wise sync stats and account counts
       @wise_sync_stats_map = {}
+      @wise_account_counts_map = {}
       @wise_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @wise_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+
+        wise_accounts = item.wise_accounts.to_a
+        linked_count  = wise_accounts.count { |wa| wa.account_provider.present? }
+        total_count   = wise_accounts.count
+        @wise_account_counts_map[item.id] = {
+          linked:   linked_count,
+          unlinked: total_count - linked_count,
+          total:    total_count
+        }
       end
     end
 end

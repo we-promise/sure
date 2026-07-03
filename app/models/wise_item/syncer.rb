@@ -12,7 +12,7 @@ class WiseItem::Syncer
   def perform_sync(sync)
     Rails.logger.info "WiseItem::Syncer - Starting sync for item #{wise_item.id}"
 
-    sync.update!(status_text: I18n.t("wise_items.sync.status.importing")) if sync.respond_to?(:status_text)
+    update_sync_status(sync, :importing)
     wise_item.import_latest_wise_data(sync: sync)
 
     finalize_setup_counts(sync)
@@ -21,11 +21,11 @@ class WiseItem::Syncer
     linked_wise_accounts = wise_item.linked_wise_accounts.includes(account_provider: :account)
 
     if linked_wise_accounts.any?
-      sync.update!(status_text: I18n.t("wise_items.sync.status.processing")) if sync.respond_to?(:status_text)
+      update_sync_status(sync, :processing)
       mark_import_started(sync)
       process_results  = wise_item.process_accounts
 
-      sync.update!(status_text: I18n.t("wise_items.sync.status.calculating")) if sync.respond_to?(:status_text)
+      update_sync_status(sync, :calculating)
       schedule_results = wise_item.schedule_account_syncs(
         parent_sync: sync,
         window_start_date: sync.window_start_date,
@@ -56,12 +56,16 @@ class WiseItem::Syncer
 
   private
 
+    def update_sync_status(sync, key)
+      sync.update!(status_text: I18n.t("wise_items.sync.status.#{key}")) if sync.respond_to?(:status_text)
+    end
+
     def mark_import_started(sync)
-      sync.update!(status_text: I18n.t("wise_items.sync.status.importing_data")) if sync.respond_to?(:status_text)
+      update_sync_status(sync, :importing_data)
     end
 
     def finalize_setup_counts(sync)
-      sync.update!(status_text: I18n.t("wise_items.sync.status.checking_setup")) if sync.respond_to?(:status_text)
+      update_sync_status(sync, :checking_setup)
 
       unlinked_count = wise_item.unlinked_accounts_count
 
