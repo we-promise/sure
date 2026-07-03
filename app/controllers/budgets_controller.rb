@@ -7,6 +7,9 @@ class BudgetsController < ApplicationController
 
   def show
     @source_budget = @budget.most_recent_initialized_budget unless @budget.initialized?
+    # Load the collection (with categories, via the association scope) up
+    # front so per-category subcategory lookups filter in memory.
+    @budget.budget_categories.load
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.budgets"), nil ] ]
   end
 
