@@ -6,7 +6,14 @@ module Syncable
   end
 
   def syncing?
-    syncs.visible.any?
+    # Use the preloaded collection when available — `syncs.visible.any?` always
+    # builds a new query, which turns pages that render many syncables (e.g.
+    # the accounts index) into an N+1.
+    if syncs.loaded?
+      syncs.any?(&:visible?)
+    else
+      syncs.visible.any?
+    end
   end
 
   # Schedules a sync for syncable.  If there is an existing sync pending/syncing for this syncable,
