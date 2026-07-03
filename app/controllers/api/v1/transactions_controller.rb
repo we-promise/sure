@@ -44,6 +44,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # Rails will automatically use app/views/api/v1/transactions/index.json.jbuilder
     render :index
 
+  rescue InvalidFilterError
+    # Let rescue_from render a 422 validation error for bad filter params
+    raise
   rescue => e
     Rails.logger.error "TransactionsController#index error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -257,11 +260,11 @@ end
 
       # Date range filtering
       if params[:start_date].present?
-        query = query.joins(:entry).where("entries.date >= ?", Date.parse(params[:start_date]))
+        query = query.joins(:entry).where("entries.date >= ?", parse_date_param(:start_date))
       end
 
       if params[:end_date].present?
-        query = query.joins(:entry).where("entries.date <= ?", Date.parse(params[:end_date]))
+        query = query.joins(:entry).where("entries.date <= ?", parse_date_param(:end_date))
       end
 
       # Amount filtering

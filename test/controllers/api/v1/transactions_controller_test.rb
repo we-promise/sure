@@ -121,6 +121,28 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "should return validation error for invalid start_date" do
+    get api_v1_transactions_url,
+        params: { start_date: "not-a-date" },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+    assert_match "start_date", response_data["message"]
+  end
+
+  test "should return validation error for invalid end_date" do
+    get api_v1_transactions_url,
+        params: { end_date: "2026-13-45" },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+    assert_match "end_date", response_data["message"]
+  end
+
   test "should filter disabled account transactions by date range" do
     disabled_transaction = create_disabled_account_transaction(
       name: "Closed Account Date Range",

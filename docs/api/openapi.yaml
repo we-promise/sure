@@ -7292,6 +7292,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TransactionCollection"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create transaction
       tags:
