@@ -52,11 +52,14 @@ class Trend
 
   def percent
     return 0.0 if previous.zero? && current.zero?
-    return Float::INFINITY if previous.zero?
+    return (current > previous ? Float::INFINITY : -Float::INFINITY) if previous.zero?
 
     change = (current - previous).to_f
 
-    (change / previous.to_f * 100).round(1)
+    # Divide by the absolute baseline so the sign of the percentage always
+    # matches the direction of the change, even when the baseline is negative
+    # (e.g. net worth improving from -$2,000 to -$1,000 is +50%, not -50%)
+    (change / previous.to_f.abs * 100).round(1)
   end
 
   def percent_formatted
