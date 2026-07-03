@@ -152,11 +152,12 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
   test "balance endpoint failure marks unsaved provider balance unavailable" do
     unsaved_account = EnableBankingAccount.new(
       enable_banking_item: @enable_banking_item,
-      api_account_id: "unsaved-account",
       uid: "unsaved-account",
       current_balance: BigDecimal("123.45"),
       currency: "EUR"
     )
+
+    unsaved_account.stubs(:api_account_id).returns("unsaved-account")
 
     error = Provider::EnableBanking::EnableBankingError.new(
       "Bad request to Enable Banking API",
