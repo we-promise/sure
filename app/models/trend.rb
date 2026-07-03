@@ -52,7 +52,7 @@ class Trend
 
   def percent
     return 0.0 if previous.zero? && current.zero?
-    return (current > previous ? Float::INFINITY : -Float::INFINITY) if previous.zero?
+    return (direction.up? ? Float::INFINITY : -Float::INFINITY) if previous.zero?
 
     change = (current - previous).to_f
 
