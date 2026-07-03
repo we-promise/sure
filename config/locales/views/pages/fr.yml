@@ -38,6 +38,15 @@ fr:
         value: Valeur
         weight: Poids
         withdrawals: Retraits
+      money_flow:
+        apply: Appliquer
+        balance: Balance des opérations
+        date_range: Du %{start_date} au %{end_date}
+        expenses: Sorties
+        filter_accounts: Filtrer les comptes (%{count})
+        income: Entrées
+        month_picker_aria_label: Sélectionner un mois
+        title: Entrées / sorties d'argent
       net_worth_chart:
         data_not_available: Données indisponibles pour la période sélectionnée
         title: Patrimoine net

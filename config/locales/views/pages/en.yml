@@ -103,3 +103,12 @@ en:
         trades: "Trades"
         no_investments: "No investment accounts"
         add_investment: "Add an investment account to track your portfolio"
+      money_flow:
+        title: "Money In / Out"
+        date_range: "%{start_date} to %{end_date}"
+        month_picker_aria_label: "Select month"
+        filter_accounts: "Filter accounts (%{count})"
+        apply: "Apply"
+        balance: "Transaction balance"
+        income: "Income"
+        expenses: "Expenses"

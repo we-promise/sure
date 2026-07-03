@@ -107,6 +107,18 @@ class IncomeStatement
     )
   end
 
+  # Income/expense totals for an arbitrary period, optionally scoped to a
+  # subset of accounts (e.g. a dashboard widget's account filter). Unlike
+  # `income_totals`/`expense_totals`, this isn't memoized per-period since
+  # callers (e.g. a monthly bar chart) typically query several distinct
+  # periods and account combinations in one request.
+  def totals_for(period, account_ids: nil)
+    scope = family.transactions.visible.excluding_pending.in_period(period)
+    scope = scope.where(entries: { account_id: account_ids }) if account_ids.present?
+
+    totals(transactions_scope: scope, date_range: period.date_range)
+  end
+
   def median_expense(interval: "month", category: nil)
     if category.present?
       category_stats(interval: interval).find { |stat| stat.classification == "expense" && stat.category_id == category.id }&.median || 0

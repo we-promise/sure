@@ -124,6 +124,30 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
   end
 
+  test "dashboard renders money flow widget" do
+    get root_path
+
+    assert_response :ok
+    assert_select "[data-controller='bar-chart']"
+  end
+
+  test "dashboard scopes money flow widget to selected month and accounts" do
+    account = @family.accounts.first
+    create_transaction(account: account, name: "Groceries", amount: 50)
+
+    get root_path, params: {
+      money_flow_month: 1.month.ago.beginning_of_month.iso8601,
+      money_flow_account_ids: [ account.id ]
+    }
+
+    assert_response :ok
+    chart = css_select("[data-controller='bar-chart']").first
+    bars = JSON.parse(chart["data-bar-chart-data-value"])
+
+    assert_equal 3, bars.size
+    assert bars.any? { |bar| bar["highlighted"] }
+  end
+
   test "changelog" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path

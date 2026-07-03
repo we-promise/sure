@@ -76,6 +76,19 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_income, income_totals.category_totals.find { |ct| ct.category.id == @income_category.id }.total
   end
 
+  test "totals_for scopes totals to a period and optional account ids" do
+    income_statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    all_totals = income_statement.totals_for(period)
+    assert_equal Money.new(1000, @family.currency), all_totals.income_money
+    assert_equal Money.new(200 + 300 + 400, @family.currency), all_totals.expense_money
+
+    checking_only_totals = income_statement.totals_for(period, account_ids: [ @checking_account.id ])
+    assert_equal Money.new(1000, @family.currency), checking_only_totals.income_money
+    assert_equal Money.new(200, @family.currency), checking_only_totals.expense_money
+  end
+
   test "calculates median expense" do
     income_statement = IncomeStatement.new(@family)
     assert_equal 200 + 300 + 400, income_statement.expense_totals(period: Period.last_30_days).total
