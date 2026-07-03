@@ -1,0 +1,80 @@
+<div class="space-y-4">
+  <% items = local_assigns[:wise_items] || @wise_items || Current.family.wise_items.where.not(api_token: nil) %>
+  <% connected = items.present? && items.any? %>
+
+  <% unless connected %>
+    <%= render "settings/providers/setup_steps",
+               eyebrow: t("wise_items.panel.eyebrow"),
+               steps: [
+                 t("wise_items.panel.steps.s1_html").html_safe,
+                 t("wise_items.panel.steps.s2"),
+                 t("wise_items.panel.steps.s3"),
+                 t("wise_items.panel.steps.s4")
+               ],
+               help: { url: "https://docs.wise.com/api-docs/features/authentication-access/personal-tokens", text: t("wise_items.panel.help_text") } %>
+  <% end %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% if connected %>
+    <div class="flex items-center gap-2">
+      <div class="w-2 h-2 bg-success rounded-full shrink-0"></div>
+      <p class="text-sm text-secondary"><%= t("wise_items.panel.status_configured_html", accounts_path: accounts_path).html_safe %></p>
+    </div>
+
+    <div class="mt-4 space-y-3">
+      <p class="text-xs text-secondary"><%= t("wise_items.panel.token_refresh_hint") %></p>
+
+      <%= styled_form_with model: items.first,
+                           url: wise_item_path(items.first),
+                           scope: :wise_item,
+                           method: :patch,
+                           data: { turbo: true },
+                           class: "space-y-3" do |form| %>
+        <%= form.text_field :api_token,
+                            label: t("wise_items.panel.fields.api_token.label"),
+                            placeholder: t("wise_items.panel.fields.api_token.placeholder_update"),
+                            type: :password,
+                            value: nil %>
+
+        <div class="flex justify-end">
+          <%= render DS::Button.new(text: t("wise_items.panel.update_button"), type: "submit") %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="flex items-center gap-2 mt-4">
+      <%= render DS::Button.new(
+        text: t("wise_items.panel.disconnect"),
+        icon: "trash-2",
+        variant: :outline_destructive,
+        size: :sm,
+        href: wise_item_path(items.first),
+        method: :delete,
+        data: { turbo_frame: "_top", turbo_confirm: t("wise_items.panel.disconnect_confirm") }
+      ) %>
+    </div>
+  <% else %>
+    <%
+      wise_item = Current.family.wise_items.first_or_initialize(name: "Wise Connection")
+    %>
+    <%= styled_form_with model: wise_item,
+                         url: wise_items_path,
+                         scope: :wise_item,
+                         method: :post,
+                         data: { turbo: true },
+                         class: "space-y-3" do |form| %>
+      <%= form.text_field :api_token,
+                          label: t("wise_items.panel.fields.api_token.label"),
+                          placeholder: t("wise_items.panel.fields.api_token.placeholder_new"),
+                          type: :password %>
+
+      <div class="flex justify-end">
+        <%= render DS::Button.new(text: t("wise_items.panel.save_button"), type: "submit") %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

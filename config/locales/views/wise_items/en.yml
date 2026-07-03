@@ -1,0 +1,142 @@
+---
+en:
+  wise_items:
+    sync_status:
+      no_accounts: "No accounts found"
+      synced:
+        one: "%{count} account synced"
+        other: "%{count} accounts synced"
+      synced_with_setup: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: "No institutions connected"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+    errors:
+      provider_not_configured: "Wise provider is not configured"
+
+    sync:
+      status:
+        importing: "Importing balances from Wise..."
+        processing: "Processing transactions..."
+        calculating: "Calculating balances..."
+        importing_data: "Importing transaction data..."
+        checking_setup: "Checking account setup..."
+        needs_setup: "%{count} accounts need setup..."
+
+    panel:
+      eyebrow: "Setup"
+      steps:
+        s1_html: >
+          Sign in to <a href="https://wise.com" target="_blank" rel="noopener noreferrer"
+          class="text-primary font-medium underline">Wise</a> and go to your Account Settings.
+        s2: "Click on Connect and manage apps."
+        s3: "Select API tokens and create a new token with Read only access."
+        s4: "Paste the generated token below and save."
+      help_text: "Wise API docs"
+      save_button: "Save Configuration"
+      update_button: "Update Configuration"
+      token_refresh_hint: "Wise API tokens do not expire unless you revoke them. If your token stops working, generate a new one from your Wise settings and paste it here."
+      status_configured_html: "Configured and ready to use. Visit the <a href=\"%{accounts_path}\" class=\"link\">Accounts</a> tab to manage and set up accounts."
+      disconnect: "Disconnect"
+      disconnect_confirm: "Disconnect Wise? This removes the connection and unlinks its synced accounts."
+      fields:
+        api_token:
+          label: "API Token"
+          placeholder_new: "Paste your Wise API token here"
+          placeholder_update: "Enter new API token to update"
+
+    create:
+      success: "Wise connection created successfully"
+    update:
+      success: "Wise connection updated"
+    destroy:
+      success: "Disconnected Wise"
+
+    wise_item:
+      kind: "Multi-currency account"
+      deletion_in_progress: "Removing..."
+      syncing: "Syncing..."
+      error: "Sync error"
+      status: "Synced %{timestamp} ago"
+      status_with_summary: "Last synced %{timestamp} ago · %{summary}"
+      status_never: "Not synced yet"
+      delete: "Delete connection"
+      requires_update: "Connection needs update"
+      provider_name: "Wise"
+      update_credentials: "Update credentials"
+      setup_needed: "Accounts need setup"
+      setup_description: "%{linked} of %{total} accounts linked"
+      setup_action: "Set up accounts"
+      no_accounts_title: "No balances found"
+      no_accounts_description: "No Wise balances were found for this connection."
+
+    link_accounts:
+      all_already_linked:
+        one: "The selected account is already linked"
+        other: "All %{count} selected accounts are already linked"
+      partial_success: "Successfully linked %{created_count} account(s). %{already_linked_count} account(s) were already linked."
+      partial_invalid: "Successfully linked %{created_count} account(s), %{already_linked_count} were already linked, %{invalid_count} had invalid names."
+      no_accounts_selected: "Please select at least one account"
+      no_api_token: "Wise API token not found. Please configure it in Provider Settings."
+      link_failed: "Failed to link accounts"
+      success:
+        one: "Successfully linked %{count} account"
+        other: "Successfully linked %{count} accounts"
+
+    select_accounts:
+      no_credentials_configured: "Please configure your Wise API token first in Provider Settings."
+      no_api_token: "Wise API token not found. Please configure it in Provider Settings."
+      no_accounts_selected: "Please select at least one account"
+      link_failed: "Failed to link accounts"
+      success:
+        one: "Successfully linked %{count} account"
+        other: "Successfully linked %{count} accounts"
+
+    select_existing_account:
+      page_title: "Link a Wise account"
+      dialog_title: "Link to a Wise balance"
+      subtitle: "Connect this account to one of your Wise balances"
+      linking_label: "Linking"
+      none_available: "No unlinked Wise balances available."
+      no_credentials_configured: "Please configure your Wise API token first in Provider Settings."
+      no_api_token: "Wise API token not configured. Please configure it in Settings."
+      provider_account_already_linked: "This Wise balance is already linked to another account"
+      success: "Successfully linked %{account_name} with Wise"
+      buttons:
+        link: "Link"
+        cancel: "Cancel"
+
+    link_existing_account:
+      no_api_token: "Wise API token not found. Please configure it in Provider Settings."
+      provider_account_already_linked: "This Wise balance is already linked to another account"
+      success: "Successfully linked %{account_name} with Wise"
+
+    setup_required:
+      title: "Connect Wise first"
+      not_configured_title: "Wise isn't connected yet"
+      not_configured_description: "Add your Wise API token under Provider settings, then come back here to link accounts."
+      go_to_provider_settings: "Go to provider settings"
+
+    setup_accounts:
+      page_title: "Set up Wise accounts"
+      dialog_title: "Set up your Wise accounts"
+      subtitle: "Choose how to import each balance"
+      import_as: "Import as"
+      all_linked: "All your Wise balances are already linked."
+      types:
+        depository: "Cash / Depository"
+        investment: "Investment Account"
+        skip: "Skip this account"
+      buttons:
+        create: "Create accounts"
+        cancel: "Cancel"
+        done: "Done"
+
+    complete_account_setup:
+      no_accounts: "No accounts to set up."
+      all_skipped: "All accounts were skipped."
+      creation_failed: "Failed to create accounts: %{error}"
+      success:
+        one: "Successfully created %{count} account"
+        other: "Successfully created %{count} accounts"

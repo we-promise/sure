@@ -358,6 +358,7 @@ en:
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
+        wise: Sync your Wise multi-currency balances and transaction history via the Wise API.
         indexa_capital: Track your Indexa Capital automated investment portfolio.
         sophtron: Connect US & Canadian banks and utilities.
         plaid: Connect thousands of US financial institutions via Plaid.

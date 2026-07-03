@@ -1,0 +1,108 @@
+<%# locals: (wise_item:) %>
+
+<%= tag.div id: dom_id(wise_item) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <div class="flex items-center justify-center h-8 w-8 bg-surface rounded-full">
+            <% if wise_item.logo.attached? %>
+              <%= image_tag wise_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
+            <% else %>
+              <%= tag.p "W", class: "text-primary text-xs font-medium" %>
+            <% end %>
+          </div>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p "Wise", class: "font-medium text-primary" %>
+              <% if wise_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+            <p class="text-xs text-secondary"><%= t(".kind") %></p>
+            <% if wise_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif wise_item.sync_error.present? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= render DS::Tooltip.new(text: wise_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+                <%= tag.span t(".error"), class: "text-destructive" %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if wise_item.last_synced_at %>
+                  <% if wise_item.sync_status_summary %>
+                    <%= t(".status_with_summary", timestamp: time_ago_in_words(wise_item.last_synced_at), summary: wise_item.sync_status_summary) %>
+                  <% else %>
+                    <%= t(".status", timestamp: time_ago_in_words(wise_item.last_synced_at)) %>
+                  <% end %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <%= icon("refresh-cw", as_button: true, href: sync_wise_item_path(wise_item), disabled: wise_item.syncing?) %>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete"),
+                icon: "trash-2",
+                href: wise_item_path(wise_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion("Wise", high_severity: true)
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless wise_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if wise_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: wise_item.accounts %>
+        <% end %>
+
+        <% stats = if defined?(@wise_sync_stats_map) && @wise_sync_stats_map
+             @wise_sync_stats_map[wise_item.id] || {}
+           else
+             wise_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: wise_item,
+          institutions_count: wise_item.connected_institutions.size
+        ) %>
+
+        <% unlinked_count = wise_item.unlinked_accounts_count %>
+        <% linked_count   = wise_item.linked_accounts_count %>
+        <% total_count    = wise_item.total_accounts_count %>
+
+        <% if unlinked_count > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: linked_count, total: total_count) %></p>
+            <%= render DS::Link.new(text: t(".setup_action"), icon: "settings", variant: "primary", href: setup_accounts_wise_item_path(wise_item), frame: :modal) %>
+          </div>
+        <% elsif wise_item.accounts.empty? && total_count == 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+            <%= render DS::Link.new(text: t(".setup_action"), icon: "settings", variant: "primary", href: setup_accounts_wise_item_path(wise_item), frame: :modal) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

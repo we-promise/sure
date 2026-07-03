@@ -1,0 +1,11 @@
+one:
+  family: dylan_family
+  name: My Wise
+  api_token: test_api_token_abc123
+  status: good
+
+requires_update:
+  family: dylan_family
+  name: Stale Wise
+  api_token: old_token
+  status: requires_update

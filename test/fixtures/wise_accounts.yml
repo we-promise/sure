@@ -1,0 +1,8 @@
+one:
+  wise_item: one
+  name: CAD Balance
+  account_type: STANDARD
+  currency: CAD
+  current_balance: 1500.00
+  wise_account_id: "balance-001"
+  wise_profile_id: "profile-001"

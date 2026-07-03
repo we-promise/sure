@@ -1,0 +1,60 @@
+<% content_for :title, t(".page_title") %>
+
+<%= render DS::Dialog.new(disable_click_outside: true) do |dialog| %>
+  <% dialog.with_header(title: t(".dialog_title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "wallet", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-6">
+      <% if @unlinked_accounts.blank? %>
+        <div class="flex flex-col items-center justify-center py-6 space-y-3">
+          <%= icon "check-circle", size: "lg", class: "text-success" %>
+          <p class="text-primary text-center font-medium"><%= t(".all_linked") %></p>
+          <%= render DS::Link.new(text: t(".buttons.done"), variant: "primary", href: accounts_path, frame: "_top") %>
+        </div>
+      <% else %>
+        <%= form_with url: complete_account_setup_wise_item_path(@wise_item), method: :post, data: { turbo_frame: "_top" }, class: "space-y-6" do %>
+          <div class="space-y-4">
+            <% @unlinked_accounts.each do |wise_account| %>
+              <div class="border border-primary rounded-lg p-4">
+                <h4 class="font-medium text-primary"><%= wise_account.name %></h4>
+                <p class="text-xs text-secondary mb-3">
+                  <%= wise_account.currency %>
+                  <% if wise_account.current_balance %>
+                    &middot; <%= number_to_currency(wise_account.current_balance, unit: wise_account.currency + " ") %>
+                  <% end %>
+                </p>
+
+                <label class="block text-sm text-secondary mb-1" for="account_type_<%= wise_account.id %>">
+                  <%= t(".import_as") %>
+                </label>
+                <select id="account_type_<%= wise_account.id %>"
+                        name="accounts[<%= wise_account.id %>][account_type]"
+                        class="bg-container border border-primary rounded px-2 py-1 text-sm text-primary w-full">
+                  <option value="depository" selected><%= t(".types.depository") %></option>
+                  <option value="investment"><%= t(".types.investment") %></option>
+                  <option value="skip"><%= t(".types.skip") %></option>
+                </select>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="flex gap-3">
+            <%= render DS::Button.new(
+              text: t(".buttons.create"),
+              variant: "primary",
+              icon: "plus",
+              type: "submit",
+              class: "flex-1"
+            ) %>
+            <%= render DS::Link.new(text: t(".buttons.cancel"), variant: "secondary", href: accounts_path, frame: "_top") %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

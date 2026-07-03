@@ -1,0 +1,46 @@
+<% content_for :title, t(".page_title") %>
+
+<%= render DS::Dialog.new(disable_click_outside: true) do |dialog| %>
+  <% dialog.with_header(title: t(".dialog_title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "link", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-6">
+      <div class="bg-surface border border-primary p-4 rounded-lg">
+        <p class="text-sm text-secondary"><%= t(".linking_label") %></p>
+        <p class="font-medium text-primary"><%= @account.name %></p>
+      </div>
+
+      <% if @wise_accounts.blank? %>
+        <div class="flex flex-col items-center justify-center py-6 space-y-3">
+          <%= icon "alert-circle", size: "lg", class: "text-warning" %>
+          <p class="text-primary text-center font-medium"><%= t(".none_available") %></p>
+          <%= render DS::Link.new(text: t(".buttons.cancel"), variant: "secondary", href: account_path(@account), frame: "_top") %>
+        </div>
+      <% else %>
+        <div class="space-y-2">
+          <% @wise_accounts.each do |wise_account| %>
+            <%= form_with url: link_existing_account_wise_items_path, method: :post, data: { turbo_frame: "_top" },
+                          class: "flex items-center justify-between gap-3 border border-primary rounded-lg p-3" do |form| %>
+              <%= form.hidden_field :account_id, value: @account.id %>
+              <%= form.hidden_field :wise_account_id, value: wise_account.id %>
+              <div>
+                <p class="font-medium text-primary"><%= wise_account.name %></p>
+                <p class="text-xs text-secondary"><%= [ wise_account.account_type, wise_account.currency ].compact.join(" · ") %></p>
+              </div>
+              <%= render DS::Button.new(text: t(".buttons.link"), variant: "secondary", size: "sm", type: "submit") %>
+            <% end %>
+          <% end %>
+        </div>
+
+        <div class="flex justify-end">
+          <%= render DS::Link.new(text: t(".buttons.cancel"), variant: "ghost", href: account_path(@account), frame: "_top") %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
