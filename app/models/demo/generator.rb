@@ -871,16 +871,14 @@ class Demo::Generator
       diff_amex     = amex_balance - target_amex
       diff_sapphire = sapphire_balance - target_sapphire
 
-      if diff_amex.abs > 250
-        adjust_payment = diff_amex.positive? ? diff_amex : 0
-        create_transfer!(@chase_checking, @amex_gold, adjust_payment, "Amex Balance Adjust", Date.current)
-        amex_balance -= adjust_payment
+      if diff_amex > 250
+        create_transfer!(@chase_checking, @amex_gold, diff_amex, "Amex Balance Adjust", Date.current)
+        amex_balance -= diff_amex
       end
 
-      if diff_sapphire.abs > 250
-        adjust_payment = diff_sapphire.positive? ? diff_sapphire : 0
-        create_transfer!(@chase_checking, @chase_sapphire, adjust_payment, "Sapphire Balance Adjust", Date.current)
-        sapphire_balance -= adjust_payment
+      if diff_sapphire > 250
+        create_transfer!(@chase_checking, @chase_sapphire, diff_sapphire, "Sapphire Balance Adjust", Date.current)
+        sapphire_balance -= diff_sapphire
       end
 
       puts "   💳 Charges generated: #{charges_this_run} | Payments: #{payments_this_run}"
