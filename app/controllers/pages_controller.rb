@@ -429,7 +429,8 @@ class PagesController < ApplicationController
         {
           date: month_start,
           label: I18n.l(month_start, format: :short_month_year),
-          value: (totals.income_money.amount + totals.expense_money.amount).to_f.round(2),
+          income: totals.income_money.amount.to_f.round(2),
+          expense: totals.expense_money.amount.to_f.round(2),
           highlighted: month_start == selected_month
         }
       end

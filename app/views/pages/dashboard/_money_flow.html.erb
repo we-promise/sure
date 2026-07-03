@@ -4,8 +4,8 @@
   selected_account_ids = money_flow_data[:account_ids] || accounts.map { |a| a.id.to_s }
   period = money_flow_data[:period]
 %>
-<div id="money-flow-section" class="@container px-4 space-y-4">
-  <div class="flex flex-col @2xl:flex-row @2xl:items-start @2xl:justify-between gap-3">
+<div id="money-flow-section" class="px-4 space-y-4">
+  <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
     <p class="text-sm text-secondary">
       <%= t(".date_range", start_date: l(period.date_range.begin, format: :long), end_date: l(period.date_range.end, format: :long)) %>
     </p>
@@ -55,14 +55,29 @@
     </div>
   </div>
 
-  <div class="flex flex-col @3xl:flex-row gap-6">
-    <div class="w-full @3xl:w-3/5 h-64 privacy-sensitive"
-      data-controller="bar-chart"
-      data-bar-chart-data-value="<%= money_flow_data[:bars].to_json %>"
-      data-bar-chart-currency-value="<%= Current.family.currency %>">
+  <div class="flex flex-col xl:flex-row gap-6">
+    <div class="w-full xl:w-3/5 space-y-2">
+      <div class="flex items-center gap-4 px-1">
+        <span class="flex items-center gap-1.5 text-xs text-secondary">
+          <span class="w-2 h-2 rounded-full bg-green-500"></span>
+          <%= t(".income") %>
+        </span>
+        <span class="flex items-center gap-1.5 text-xs text-secondary">
+          <span class="w-2 h-2 rounded-full bg-red-500"></span>
+          <%= t(".expenses") %>
+        </span>
+      </div>
+
+      <div class="w-full h-56 privacy-sensitive"
+        data-controller="bar-chart"
+        data-bar-chart-data-value="<%= money_flow_data[:bars].to_json %>"
+        data-bar-chart-currency-value="<%= Current.family.currency %>"
+        data-bar-chart-income-label-value="<%= t(".income") %>"
+        data-bar-chart-expense-label-value="<%= t(".expenses") %>">
+      </div>
     </div>
 
-    <div class="w-full @3xl:w-2/5 space-y-4">
+    <div class="w-full xl:w-2/5 space-y-4">
       <div class="flex items-center justify-between text-sm">
         <span class="text-secondary"><%= t(".balance") %></span>
         <span class="font-medium text-lg tabular-nums privacy-sensitive <%= money_flow_data[:balance].negative? ? "text-destructive" : "text-success" %>">

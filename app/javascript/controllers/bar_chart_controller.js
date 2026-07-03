@@ -2,14 +2,17 @@ import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 
-// Minimal categorical bar chart used by the dashboard "money flow" widget —
-// one bar per month, with the selected month highlighted. Modeled after
-// time_series_chart_controller's lifecycle (install/teardown, ResizeObserver,
-// turbo:load reinstall) but with scaleBand/scaleLinear instead of a line.
+// Grouped bar chart used by the dashboard "money flow" widget — each month
+// shows an expense bar (red) and an income bar (green) side by side.
+// Modeled after time_series_chart_controller's lifecycle (install/teardown,
+// ResizeObserver, turbo:load reinstall, page-relative tooltip positioning)
+// but with scaleBand/scaleLinear instead of a line.
 export default class extends Controller {
   static values = {
     data: Array,
     currency: { type: String, default: "USD" },
+    incomeLabel: { type: String, default: "Income" },
+    expenseLabel: { type: String, default: "Expenses" },
   };
 
   _resizeObserver = null;
@@ -58,13 +61,18 @@ export default class extends Controller {
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const x = d3
+    const series = ["expense", "income"];
+    const seriesColor = { expense: "var(--color-destructive)", income: "var(--color-success)" };
+
+    const x0 = d3
       .scaleBand()
       .domain(data.map((d) => d.label))
       .range([0, innerWidth])
-      .padding(0.4);
+      .padding(0.3);
 
-    const maxValue = d3.max(data, (d) => d.value) || 1;
+    const x1 = d3.scaleBand().domain(series).range([0, x0.bandwidth()]).padding(0.15);
+
+    const maxValue = d3.max(data, (d) => Math.max(d.income, d.expense)) || 1;
     const y = d3.scaleLinear().domain([0, maxValue]).nice().range([innerHeight, 0]);
 
     const tooltip = d3
@@ -72,33 +80,46 @@ export default class extends Controller {
       .append("div")
       .attr("class", `${CHART_TOOLTIP_CLASSES} opacity-0 top-0`);
 
-    group
-      .selectAll("rect")
-      .data(data)
-      .join("rect")
-      .attr("x", (d) => x(d.label))
-      .attr("y", (d) => y(d.value))
-      .attr("width", x.bandwidth())
-      .attr("height", (d) => innerHeight - y(d.value))
-      .attr("rx", 4)
-      .attr("fill", (d) => (d.highlighted ? "var(--color-success)" : "var(--color-gray-300)"))
-      .on("mousemove", (event, d) => {
-        const [xPos, yPos] = d3.pointer(event, this.element);
+    const showTooltip = (event, month, key) => {
+      const estimatedTooltipWidth = 200;
+      const pageWidth = document.body.clientWidth;
+      const tooltipX = event.pageX + 10;
+      const overflowX = tooltipX + estimatedTooltipWidth - pageWidth;
+      const adjustedX = overflowX > 0 ? event.pageX - overflowX - 20 : tooltipX;
 
-        tooltip
-          .html(this._tooltipTemplate(d))
-          .style("opacity", 1)
-          .style("left", `${xPos + 12}px`)
-          .style("top", `${yPos - 10}px`);
-      })
-      .on("mouseleave", () => {
-        tooltip.style("opacity", 0);
-      });
+      tooltip
+        .html(this._tooltipTemplate(month, key))
+        .style("opacity", 1)
+        .style("left", `${adjustedX}px`)
+        .style("top", `${event.pageY - 10}px`);
+    };
+
+    const hideTooltip = () => tooltip.style("opacity", 0);
+
+    const monthGroups = group
+      .selectAll("g.month")
+      .data(data)
+      .join("g")
+      .attr("class", "month")
+      .attr("transform", (d) => `translate(${x0(d.label)},0)`);
+
+    monthGroups
+      .selectAll("rect")
+      .data((d) => series.map((key) => ({ key, value: d[key], month: d })))
+      .join("rect")
+      .attr("x", (d) => x1(d.key))
+      .attr("y", (d) => y(d.value))
+      .attr("width", x1.bandwidth())
+      .attr("height", (d) => innerHeight - y(d.value))
+      .attr("rx", 3)
+      .attr("fill", (d) => seriesColor[d.key])
+      .on("mousemove", (event, d) => showTooltip(event, d.month, d.key))
+      .on("mouseleave", hideTooltip);
 
     group
       .append("g")
       .attr("transform", `translate(0,${innerHeight})`)
-      .call(d3.axisBottom(x).tickSize(0))
+      .call(d3.axisBottom(x0).tickSize(0))
       .call((g) => g.select(".domain").remove())
       .selectAll("text")
       .attr("class", (_d, i) => (data[i].highlighted ? "text-primary" : "text-secondary"))
@@ -106,10 +127,16 @@ export default class extends Controller {
       .style("font-weight", (_d, i) => (data[i].highlighted ? 600 : 500));
   }
 
-  _tooltipTemplate(d) {
+  _tooltipTemplate(month, key) {
+    const label = key === "income" ? this.incomeLabelValue : this.expenseLabelValue;
+    const color = key === "income" ? "var(--color-success)" : "var(--color-destructive)";
+
     return `
-      <div class="text-xs text-secondary mb-1">${d.label}</div>
-      <div class="text-primary font-medium tabular-nums">${this._formatCurrency(d.value)}</div>
+      <div class="text-xs text-secondary mb-1">${month.label}</div>
+      <div class="flex items-center gap-1.5 text-primary font-medium tabular-nums">
+        <span class="inline-block w-2 h-2 rounded-full" style="background-color: ${color};"></span>
+        ${label}: ${this._formatCurrency(month[key])}
+      </div>
     `;
   }
 
