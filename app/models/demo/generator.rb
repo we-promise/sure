@@ -874,11 +874,21 @@ class Demo::Generator
       if diff_amex > 250
         create_transfer!(@chase_checking, @amex_gold, diff_amex, "Amex Balance Adjust", Date.current)
         amex_balance -= diff_amex
+      elsif diff_amex < -250
+        # Balance landed below target: a transfer can't have a negative payment
+        # amount, so bring the card up to target with a direct charge instead.
+        shortfall = diff_amex.abs
+        create_transaction!(@amex_gold, shortfall, "Balance Reconciliation", random_expense_category, Date.current)
+        amex_balance += shortfall
       end
 
       if diff_sapphire > 250
         create_transfer!(@chase_checking, @chase_sapphire, diff_sapphire, "Sapphire Balance Adjust", Date.current)
         sapphire_balance -= diff_sapphire
+      elsif diff_sapphire < -250
+        shortfall = diff_sapphire.abs
+        create_transaction!(@chase_sapphire, shortfall, "Balance Reconciliation", random_expense_category, Date.current)
+        sapphire_balance += shortfall
       end
 
       puts "   💳 Charges generated: #{charges_this_run} | Payments: #{payments_this_run}"
