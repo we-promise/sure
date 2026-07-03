@@ -11,7 +11,7 @@
     </p>
 
     <div class="flex items-center gap-2">
-      <%= render DS::Menu.new(variant: :button, placement: "bottom-end") do |menu| %>
+      <%= render DS::Menu.new(variant: :button, placement: "bottom-end", max_height: "18rem") do |menu| %>
         <% menu.with_button(type: "button", class: pill_button_class, aria: { label: t(".month_picker_aria_label") }) do %>
           <span class="capitalize"><%= I18n.l(money_flow_data[:month], format: :month_year) %></span>
           <%= icon("chevron-down", size: "sm") %>
