@@ -27,4 +27,5 @@ pl:
       overview: Przegląd
       settings: Ustawienia
     update:
+      exchange_rate_unavailable: Kurs wymiany jest niedostępny dla wybranych walut i daty
       success: Przelew został zaktualizowany

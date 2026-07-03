@@ -33,4 +33,5 @@ es:
       total: Total
       transfer_amount: Importe de la transferencia
     update:
+      exchange_rate_unavailable: No hay tipo de cambio disponible para las divisas y la fecha seleccionadas
       success: Transferencia actualizada

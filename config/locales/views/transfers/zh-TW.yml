@@ -27,4 +27,5 @@ zh-TW:
       overview: 概覽
       settings: 設定
     update:
+      exchange_rate_unavailable: 所選貨幣和日期的匯率不可用
       success: 轉帳已更新

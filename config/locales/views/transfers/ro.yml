@@ -27,4 +27,5 @@ ro:
       overview: Prezentare generală
       settings: Setări
     update:
+      exchange_rate_unavailable: Cursul de schimb nu este disponibil pentru monedele și data selectate
       success: Transfer actualizat

@@ -49,4 +49,5 @@ en:
       category: Category
       uncategorized: Uncategorized
     update:
+      exchange_rate_unavailable: Exchange rate unavailable for selected currencies and date
       success: Transfer updated

@@ -28,4 +28,5 @@ pt-BR:
       overview: Visão geral
       settings: Configurações
     update:
+      exchange_rate_unavailable: Taxa de câmbio indisponível para as moedas e a data selecionadas
       success: Transferência atualizada

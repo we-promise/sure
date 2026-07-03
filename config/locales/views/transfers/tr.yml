@@ -27,4 +27,5 @@ tr:
       overview: Genel Bakış
       settings: Ayarlar
     update:
+      exchange_rate_unavailable: Seçilen para birimleri ve tarih için döviz kuru mevcut değil
       success: Transfer güncellendi

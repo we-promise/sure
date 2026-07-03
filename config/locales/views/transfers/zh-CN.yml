@@ -46,4 +46,5 @@ zh-CN:
       total: 总计
       transfer_amount: 转账金额
     update:
+      exchange_rate_unavailable: 所选货币和日期的汇率不可用
       success: 转账已更新

@@ -27,4 +27,5 @@ de:
       overview: Übersicht
       settings: Einstellungen
     update:
+      exchange_rate_unavailable: Für die ausgewählten Währungen und das Datum ist kein Wechselkurs verfügbar
       success: Überweisung aktualisiert

@@ -44,4 +44,5 @@ ca:
       transfer_amount: Import de la transferència
       uncategorized: Sense categoria
     update:
+      exchange_rate_unavailable: No hi ha cap tipus de canvi disponible per a les divises i la data seleccionades
       success: Transferència actualitzada

@@ -52,4 +52,5 @@ fr:
       transfer_amount: Montant du transfert
       uncategorized: Non classé
     update:
+      exchange_rate_unavailable: Taux de change indisponible pour les devises et la date sélectionnées
       success: Transfert mis à jour

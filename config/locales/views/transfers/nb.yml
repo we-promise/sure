@@ -28,4 +28,5 @@ nb:
       overview: Oversikt
       settings: Innstillinger
     update:
+      exchange_rate_unavailable: Valutakurs er ikke tilgjengelig for valgte valutaer og dato
       success: Overføring oppdatert

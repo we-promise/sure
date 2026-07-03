@@ -42,4 +42,5 @@ hu:
       total: '[Total]'
       transfer_amount: '[Transfer amount]'
     update:
+      exchange_rate_unavailable: Nem érhető el árfolyam a kiválasztott pénznemekhez és dátumhoz
       success: Átutalás frissítve

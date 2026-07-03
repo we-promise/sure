@@ -279,6 +279,110 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1.0, json_response["rate"]
   end
 
+  test "cannot create transfer with zero amount" do
+    ensure_tailwind_build
+
+    assert_no_difference "Transfer.count" do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 0
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "must be greater than 0", response.body
+  end
+
+  test "cannot create transfer with negative amount" do
+    ensure_tailwind_build
+
+    assert_no_difference "Transfer.count" do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: -100
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "cannot create transfer with negative fee" do
+    ensure_tailwind_build
+
+    assert_no_difference "Transfer.count" do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          source_fee_amount: -5
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "updating amount on cross-currency transfer without available rate shows alert instead of raising" do
+    usd_account = accounts(:depository)
+    eur_account = users(:family_admin).family.accounts.create!(
+      name: "EUR Account",
+      balance: 1000,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: usd_account.id,
+        to_account_id: eur_account.id,
+        date: Date.current,
+        amount: 100,
+        exchange_rate: 0.92
+      }
+    }
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_not_nil transfer
+
+    ExchangeRate.delete_all
+
+    patch transfer_url(transfer), params: { transfer: { amount: 200 } }
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transfers.update.exchange_rate_unavailable"), flash[:alert]
+    assert_equal 100, transfer.reload.outflow_transaction.entry.amount
+  end
+
+  test "updating amount to zero shows alert and leaves entries unchanged" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100
+      }
+    }
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+
+    patch transfer_url(transfer), params: { transfer: { amount: 0 } }
+
+    assert_redirected_to transactions_url
+    assert_match "must be greater than 0", flash[:alert]
+    assert_equal 100, transfer.reload.outflow_transaction.entry.amount
+  end
+
   test "soft deletes transfer" do
     assert_difference -> { Transfer.count }, -1 do
       delete transfer_url(transfers(:one))

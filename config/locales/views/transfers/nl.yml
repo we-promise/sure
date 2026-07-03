@@ -28,4 +28,5 @@ nl:
       overview: Overzicht
       settings: Instellingen
     update:
+      exchange_rate_unavailable: Wisselkoers niet beschikbaar voor de geselecteerde valuta's en datum
       success: Overboeking bijgewerkt

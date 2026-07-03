@@ -32,6 +32,14 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(source_account, redirect_path: transactions_path)
     return unless require_account_permission!(destination_account, redirect_path: transactions_path)
 
+    if transfer_params[:amount].to_d <= 0
+      @transfer = Transfer.new
+      @transfer.errors.add(:amount, :greater_than, count: 0)
+      @from_account_id = transfer_params[:from_account_id]
+      render :new, status: :unprocessable_entity
+      return
+    end
+
     @transfer = Transfer::Creator.new(
       family: Current.family,
       source_account_id: source_account.id,
@@ -53,6 +61,11 @@ class TransfersController < ApplicationController
       @from_account_id = transfer_params[:from_account_id]
       render :new, status: :unprocessable_entity
     end
+  rescue ActiveRecord::RecordInvalid => e
+    @transfer = e.record.is_a?(Transfer) ? e.record : Transfer.new.tap { |t| t.errors.add(:base, e.record.errors.full_messages.to_sentence) }
+    @from_account_id = transfer_params[:from_account_id]
+    set_accounts
+    render :new, status: :unprocessable_entity
   rescue Money::ConversionError
     @transfer ||= Transfer.new
     @transfer.errors.add(:base, "Exchange rate unavailable for selected currencies and date")
@@ -79,6 +92,10 @@ class TransfersController < ApplicationController
       format.html { redirect_back_or_to transactions_url, notice: t(".success") }
       format.turbo_stream
     end
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back_or_to transactions_url, alert: e.record.errors.full_messages.to_sentence
+  rescue Money::ConversionError
+    redirect_back_or_to transactions_url, alert: t(".exchange_rate_unavailable")
   end
 
   def destroy
@@ -204,6 +221,11 @@ class TransfersController < ApplicationController
       amount_changed = new_amount.present? && new_amount.to_d != @transfer.amount.to_d
 
       return unless amount_changed || source_fee_changed || dest_fee_changed
+
+      if amount_changed && new_amount.to_d <= 0
+        @transfer.errors.add(:amount, :greater_than, count: 0)
+        raise ActiveRecord::RecordInvalid.new(@transfer)
+      end
 
       @transfer.amount = new_amount.to_d if amount_changed
 
