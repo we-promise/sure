@@ -204,38 +204,51 @@ class EnableBankingItem::Importer
       # current_balance/net worth before considering available balances. Available
       # balances can include arranged overdraft facilities and overstate cash.
       balances = Array(balance_data[:balances]).map { |balance| balance.with_indifferent_access }
-      return true if balances.empty?
+
+      if balances.empty?
+        mark_balance_unavailable(enable_banking_account)
+        return false
+      end
 
       balance = select_current_balance(balances)
 
-      if balance.present?
-        amount = balance.dig(:balance_amount, :amount) || balance[:amount]
-        currency = balance.dig(:balance_amount, :currency) || balance[:currency]
-
-        if amount.present?
-          indicator = balance[:credit_debit_indicator].to_s.upcase
-          parsed_amount = amount.to_d
-
-          # Enable Banking uses positive amounts for both credit and debit.
-          # DBIT indicates a negative balance (money owed/withdrawn).
-          parsed_amount = -parsed_amount if indicator == "DBIT"
-
-          enable_banking_account.update!(
-            current_balance: parsed_amount,
-            currency: currency.presence || enable_banking_account.currency
-          )
-        end
+      unless balance.present?
+        mark_balance_unavailable(enable_banking_account)
+        return false
       end
+
+      amount = balance.dig(:balance_amount, :amount) || balance[:amount]
+      currency = balance.dig(:balance_amount, :currency) || balance[:currency]
+
+      unless amount.present?
+        mark_balance_unavailable(enable_banking_account)
+        return false
+      end
+
+      indicator = balance[:credit_debit_indicator].to_s.upcase
+      parsed_amount = amount.to_d
+
+      # Enable Banking uses positive amounts for both credit and debit.
+      # DBIT indicates a negative balance (money owed/withdrawn).
+      parsed_amount = -parsed_amount if indicator == "DBIT"
+
+      enable_banking_account.update!(
+        current_balance: parsed_amount,
+        currency: currency.presence || enable_banking_account.currency
+      )
+
       true
     rescue Provider::EnableBanking::EnableBankingError => e
       @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
       Rails.logger.error "EnableBankingItem::Importer - Error fetching balance for account #{enable_banking_account.uid}: #{e.message}"
       capture_balance_sync_error(enable_banking_account, e)
+      mark_balance_unavailable(enable_banking_account)
       false
     rescue => e
       @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching balance for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
       capture_balance_sync_error(enable_banking_account, e)
+      mark_balance_unavailable(enable_banking_account)
       false
     end
 
@@ -254,6 +267,13 @@ class EnableBankingItem::Importer
       type.to_s.delete("_-").downcase
     end
 
+    def mark_balance_unavailable(enable_banking_account)
+      enable_banking_account.update_columns(
+        current_balance: nil,
+        updated_at: Time.current
+      )
+    end
+
     def capture_balance_sync_error(enable_banking_account, error)
       metadata = {
         enable_banking_item_id: enable_banking_item.id,
@@ -262,12 +282,12 @@ class EnableBankingItem::Importer
         api_account_id: enable_banking_account.api_account_id,
         previous_current_balance: enable_banking_account.current_balance,
         error_class: error.class.name,
-        error_message: error.message
+        error_message: sanitized_error_message(error)
       }
 
       if error.is_a?(Provider::EnableBanking::EnableBankingError)
-        metadata[:error_type] = error.error_type
-        metadata[:response_data] = error.response_data if error.response_data.present?
+        metadata[:error_type] = error.error_type.to_s
+        metadata[:provider_error] = sanitized_provider_error(error)
       end
 
       DebugLogEntry.capture(
@@ -280,6 +300,38 @@ class EnableBankingItem::Importer
         account_provider: enable_banking_account.account_provider,
         metadata: metadata
       )
+    end
+
+    def sanitized_error_message(error)
+      return error.message unless error.is_a?(Provider::EnableBanking::EnableBankingError)
+
+      provider_error = sanitized_provider_error(error)
+      provider_error[:message].presence ||
+        provider_error[:error].presence ||
+        provider_error[:error_type].presence ||
+        error.error_type.to_s
+    end
+
+    def sanitized_provider_error(error)
+      response_data = error.response_data
+      response_data = response_data.with_indifferent_access if response_data.respond_to?(:with_indifferent_access)
+
+      metadata = { error_type: error.error_type.to_s }
+      return metadata unless response_data.is_a?(Hash)
+
+      metadata[:code] = response_data[:code] if response_data[:code].present?
+      metadata[:error] = response_data[:error] if response_data[:error].present?
+      metadata[:message] = response_data[:message] if response_data[:message].present?
+
+      detail = response_data[:detail]
+      detail = detail.with_indifferent_access if detail.respond_to?(:with_indifferent_access)
+
+      if detail.is_a?(Hash)
+        metadata[:detail_message] = detail[:message] if detail[:message].present?
+        metadata[:detail_error_name] = detail[:error_name] if detail[:error_name].present?
+      end
+
+      metadata
     end
 
     def promote_session_invalid(existing, new)

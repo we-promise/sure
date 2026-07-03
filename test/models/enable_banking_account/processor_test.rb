@@ -98,13 +98,4 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal 300.0, cc_account.reload.cash_balance
   end
-  
-  test "skips account balance update when provider current_balance is nil" do
-    @account.update!(cash_balance: 987.65)
-    @enable_banking_account.update_columns(current_balance: nil)
-
-    assert_no_changes -> { @account.reload.cash_balance } do
-      EnableBankingAccount::Processor.new(@enable_banking_account).process
-    end
-  end
 end

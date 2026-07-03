@@ -71,26 +71,54 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("321.09"), @enable_banking_account.reload.current_balance
   end
 
-  test "balance endpoint failure keeps previous balance and creates debug log" do
+  test "balance endpoint failure marks provider balance unavailable and creates sanitized debug log" do
     error = Provider::EnableBanking::EnableBankingError.new(
       "Bad request to Enable Banking API: {\"error\":\"BALANCES_UNAVAILABLE\"}",
       :bad_request,
-      response_data: { error: "BALANCES_UNAVAILABLE", detail: { account_id: "redacted" } }
+      response_data: {
+        error: "BALANCES_UNAVAILABLE",
+        detail: { account_id: "sensitive_account_id_should_not_be_persisted" }
+      }
     )
+
     @mock_provider.stubs(:get_account_balances).raises(error)
 
     assert_difference "DebugLogEntry.count", 1 do
       assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
     end
 
-    assert_equal BigDecimal("123.45"), @enable_banking_account.reload.current_balance
+    assert_nil @enable_banking_account.reload.current_balance
 
     entry = DebugLogEntry.order(:created_at).last
     assert_equal "provider_sync_error", entry.category
     assert_equal "warn", entry.level
     assert_equal "enable_banking", entry.provider_key
     assert_equal "bad_request", entry.metadata["error_type"]
-    assert_equal "BALANCES_UNAVAILABLE", entry.metadata.dig("response_data", "error")
+    assert_equal "BALANCES_UNAVAILABLE", entry.metadata.dig("provider_error", "error")
+    assert_nil entry.metadata["response_data"]
+    assert_nil entry.metadata.dig("provider_error", "account_id")
+  end
+
+  test "empty balance response marks provider balance unavailable" do
+    @mock_provider.stubs(:get_account_balances).returns(balances: [])
+
+    assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    assert_nil @enable_banking_account.reload.current_balance
+  end
+
+  test "unusable balance response marks provider balance unavailable" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "CLBD",
+          balance_amount: { currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    assert_nil @enable_banking_account.reload.current_balance
   end
 
   test "import continues transaction sync when balance refresh fails" do
