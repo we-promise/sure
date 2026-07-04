@@ -85,7 +85,7 @@
         </span>
       </div>
 
-      <%= link_to transactions_path(q: { types: [ "income" ], status: [ "confirmed" ], start_date: period.date_range.begin, end_date: period.date_range.end, account_ids: money_flow_data[:account_ids] }.compact),
+      <%= link_to transactions_path(q: { types: [ "income" ], status: [ "confirmed" ], start_date: period.date_range.begin, end_date: period.date_range.end, account_ids: selected_account_ids }.compact),
             class: "flex items-center justify-between p-3 border border-secondary rounded-lg hover:bg-container-inset-hover transition-colors group",
             data: { turbo_frame: "_top" } do %>
         <span class="flex items-center gap-2 text-sm text-primary">
@@ -98,7 +98,7 @@
         </span>
       <% end %>
 
-      <%= link_to transactions_path(q: { types: [ "expense" ], status: [ "confirmed" ], start_date: period.date_range.begin, end_date: period.date_range.end, account_ids: money_flow_data[:account_ids] }.compact),
+      <%= link_to transactions_path(q: { types: [ "expense" ], status: [ "confirmed" ], start_date: period.date_range.begin, end_date: period.date_range.end, account_ids: selected_account_ids }.compact),
             class: "flex items-center justify-between p-3 border border-secondary rounded-lg hover:bg-container-inset-hover transition-colors group",
             data: { turbo_frame: "_top" } do %>
         <span class="flex items-center gap-2 text-sm text-primary">

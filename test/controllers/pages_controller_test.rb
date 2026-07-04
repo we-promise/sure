@@ -230,6 +230,31 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href*='q%5Btypes%5D%5B%5D=expense'][href*='q%5Bstatus%5D%5B%5D=confirmed']"
   end
 
+  test "dashboard money flow income/expense links stay scoped to eligible accounts by default" do
+    excluded_account = @family.accounts.create!(
+      name: "Excluded From Reports",
+      currency: @family.currency,
+      balance: 0,
+      exclude_from_reports: true,
+      accountable: Depository.new
+    )
+
+    get root_path
+
+    assert_response :ok
+    income_href = css_select("a[href*='q%5Btypes%5D%5B%5D=income']").first["href"]
+    expense_href = css_select("a[href*='q%5Btypes%5D%5B%5D=expense']").first["href"]
+
+    # The default (unfiltered) state must still pin the drill-down links to
+    # the eligible accounts backing the displayed totals, not the broader
+    # accessible-accounts set transactions_path defaults to when account_ids
+    # is absent.
+    assert_includes income_href, "q%5Baccount_ids%5D%5B%5D="
+    assert_not_includes income_href, excluded_account.id
+    assert_includes expense_href, "q%5Baccount_ids%5D%5B%5D="
+    assert_not_includes expense_href, excluded_account.id
+  end
+
   test "changelog" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path
