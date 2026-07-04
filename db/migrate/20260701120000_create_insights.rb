@@ -1,7 +1,9 @@
 class CreateInsights < ActiveRecord::Migration[7.2]
   def change
     create_table :insights, id: :uuid do |t|
-      t.references :family, null: false, type: :uuid, foreign_key: true
+      # index: false — every composite index below leads with family_id, so the
+      # auto-created single-column index would be redundant write overhead.
+      t.references :family, null: false, type: :uuid, foreign_key: true, index: false
       t.string :insight_type, null: false
       t.string :priority, null: false, default: "medium"
       t.string :status, null: false, default: "active"
