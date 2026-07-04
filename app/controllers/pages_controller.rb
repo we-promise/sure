@@ -395,9 +395,14 @@ class PagesController < ApplicationController
     end
 
     def money_flow_month_param
-      Date.strptime(params[:money_flow_month], "%Y-%m-%d").beginning_of_month
+      current_month = Date.current.beginning_of_month
+      month = Date.strptime(params[:money_flow_month], "%Y-%m-%d").beginning_of_month
+      # Clamp future months: build_money_flow_data caps each bar's end_date at
+      # Date.current, which would otherwise be earlier than a future month's
+      # start_date and blow up Period.custom's date-range validation.
+      month > current_month ? current_month : month
     rescue ArgumentError, TypeError
-      Date.current.beginning_of_month
+      current_month
     end
 
     # nil means "all accessible accounts" (the widget's default, unfiltered state)

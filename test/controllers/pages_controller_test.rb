@@ -132,11 +132,15 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dashboard scopes money flow widget to selected month and accounts" do
-    account = @family.accounts.first
-    create_transaction(account: account, name: "Groceries", amount: 50)
+    # Dedicated account (rather than @family.accounts.first) so fixture
+    # transactions on other accounts can't skew the computed totals.
+    account = @family.accounts.create!(name: "Money Flow Test Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    selected_month = 1.month.ago.beginning_of_month.to_date
+    create_transaction(account: account, name: "Groceries", amount: 50, date: selected_month + 1.day)
+    create_transaction(account: account, name: "Paycheck", amount: -200, date: selected_month + 2.days)
 
     get root_path, params: {
-      money_flow_month: 1.month.ago.beginning_of_month.iso8601,
+      money_flow_month: selected_month.iso8601,
       money_flow_account_ids: [ account.id ]
     }
 
@@ -145,7 +149,48 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     bars = JSON.parse(chart["data-bar-chart-data-value"])
 
     assert_equal 3, bars.size
-    assert bars.any? { |bar| bar["highlighted"] }
+    highlighted = bars.find { |bar| bar["highlighted"] }
+    assert_equal selected_month.iso8601, highlighted["date"]
+    assert_equal 50.0, highlighted["expense"]
+    assert_equal 200.0, highlighted["income"]
+  end
+
+  test "dashboard money flow widget ignores account ids not accessible to the current user" do
+    other_family = Family.create!(name: "Other Family", currency: "USD")
+    other_account = other_family.accounts.create!(name: "Other Family Checking", currency: "USD", balance: 0, accountable: Depository.new)
+    create_transaction(account: other_account, name: "Not mine", amount: 999)
+
+    get root_path
+    default_bars = JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+
+    get root_path, params: { money_flow_account_ids: [ other_account.id ] }
+
+    assert_response :ok
+    filtered_bars = JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+
+    # An id outside the current user's accessible accounts is dropped entirely
+    # (money_flow_account_ids_param intersects against accessible ids), so the
+    # widget falls back to its unfiltered "all accessible accounts" state
+    # rather than scoping to a foreign account or erroring.
+    assert_equal default_bars, filtered_bars
+  end
+
+  test "dashboard clamps a future money flow month instead of erroring" do
+    get root_path, params: { money_flow_month: 1.month.from_now.beginning_of_month.iso8601 }
+
+    assert_response :ok
+    chart = css_select("[data-controller='bar-chart']").first
+    bars = JSON.parse(chart["data-bar-chart-data-value"])
+
+    assert_equal Date.current.beginning_of_month.iso8601, bars.last["date"]
+  end
+
+  test "dashboard money flow income/expense links exclude pending transactions" do
+    get root_path
+
+    assert_response :ok
+    assert_select "a[href*='q%5Btypes%5D%5B%5D=income'][href*='q%5Bstatus%5D%5B%5D=confirmed']"
+    assert_select "a[href*='q%5Btypes%5D%5B%5D=expense'][href*='q%5Bstatus%5D%5B%5D=confirmed']"
   end
 
   test "changelog" do
