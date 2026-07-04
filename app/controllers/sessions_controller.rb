@@ -116,7 +116,7 @@ class SessionsController < ApplicationController
 
   def mobile_sso_start
     provider = params[:provider].to_s
-    configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
+    configured_providers = AuthConfig.sso_providers.map { |p| p[:name].to_s }
 
     unless configured_providers.include?(provider)
       mobile_sso_redirect(error: "invalid_provider", message: "SSO provider not configured")
