@@ -99,24 +99,32 @@ class EnableBankingAccount::Processor
     # Returns [balance, available_credit, skip_balance_update].
     def interpret_credit_card_balance(account, reported_balance)
       if enable_banking_account.treat_balance_as_available_credit?
-        if enable_banking_account.credit_limit.present?
+        # In this mode the accountable's available_credit field holds the credit
+        # limit: the API-provided one, or a user-entered value when the API
+        # omits it. Writing the limit back (never the reported balance) keeps
+        # the field stable across syncs so a manual limit is never clobbered.
+        credit_limit = enable_banking_account.credit_limit.presence ||
+                       account.accountable&.available_credit
+
+        unless account.accountable.present?
+          capture_debug_log("CreditCard accountable missing for account", account)
+        end
+
+        if credit_limit.present?
           # The API returns the available credit as the current balance, so the
           # outstanding debt is derived from the credit limit.
           # Use .max(0) to prevent synthetic debt on overpaid cards.
-          outstanding_debt = [ enable_banking_account.credit_limit - reported_balance, 0 ].max
+          outstanding_debt = [ credit_limit - reported_balance, 0 ].max
 
-          unless account.accountable.present?
-            capture_debug_log("CreditCard accountable missing for account", account)
-          end
-
-          [ outstanding_debt, reported_balance, false ]
+          [ outstanding_debt, credit_limit, false ]
         else
-          # No credit limit from API. The reported balance is available credit,
-          # so the outstanding debt is unknown. Keep the existing account balance
-          # instead of recording available credit as debt.
-          capture_debug_log("Cannot compute debt from available credit because credit_limit is blank", account)
+          # No credit limit from the API or the card's available credit field.
+          # The reported balance is available credit, so the outstanding debt is
+          # unknown. Keep the existing account balance instead of recording
+          # available credit as debt.
+          capture_debug_log("Cannot compute debt from available credit because no credit limit is set (API or manual)", account)
 
-          [ nil, reported_balance, true ]
+          [ nil, nil, true ]
         end
       else
         # Default behavior: API returns outstanding debt

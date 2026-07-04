@@ -56,7 +56,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal 100.0, cc_account.reload.cash_balance
     if cc_account.accountable.respond_to?(:available_credit)
-      assert_equal 900.0, cc_account.accountable.reload.available_credit
+      assert_equal 1000.0, cc_account.accountable.reload.available_credit
     end
   end
 
@@ -74,14 +74,35 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal 0.0, cc_account.reload.cash_balance
     if cc_account.accountable.respond_to?(:available_credit)
-      assert_equal 1050.0, cc_account.accountable.reload.available_credit
+      assert_equal 1000.0, cc_account.accountable.reload.available_credit
     end
   end
 
-  test "when treat_balance_as_available_credit is true but limit absent, keeps existing balance" do
+  test "when treat_balance_as_available_credit is true and API limit absent, derives debt from manually set available_credit" do
     cc_account = accounts(:credit_card)
 
     cc_account.accountable.update!(available_credit: 1000.0)
+
+    @enable_banking_account.update!(
+      current_balance: 900.00,
+      credit_limit: nil,
+      treat_balance_as_available_credit: true
+    )
+
+    relink_provider_to(cc_account)
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    # The manually configured available_credit acts as the credit limit and
+    # must survive the sync unchanged.
+    assert_equal 100.0, cc_account.reload.cash_balance
+    assert_equal 1000.0, cc_account.accountable.reload.available_credit
+  end
+
+  test "when treat_balance_as_available_credit is true but no limit is known, keeps existing balance" do
+    cc_account = accounts(:credit_card)
+
+    cc_account.accountable.update!(available_credit: nil)
 
     @enable_banking_account.update!(
       current_balance: 900.00,
@@ -96,10 +117,11 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
     # The reported balance is available credit and there's no limit to reverse
-    # from, so the debt is unknown. The existing balance must not be overwritten
-    # with available credit, only the metadata is updated.
+    # from, so the debt is unknown. The existing balance must not be overwritten,
+    # and available_credit must stay blank so a later sync can't mistake a
+    # stale reported balance for a credit limit.
     assert_equal balance_before, cc_account.reload.cash_balance
-    assert_equal 900.0, cc_account.accountable.reload.available_credit
+    assert_nil cc_account.accountable.reload.available_credit
   end
 
   test "when treat_balance_as_available_credit is false, treats balance as absolute debt natively" do
