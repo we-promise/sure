@@ -185,6 +185,23 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "a wide date_window combined with since_date is rejected" do
+    error = assert_raises(ArgumentError) do
+      @family.transfer_match_candidates(since_date: 90.days.ago.to_date, date_window: 31)
+    end
+    assert_match "date_window", error.message
+
+    assert_nothing_raised do
+      @family.transfer_match_candidates(since_date: 90.days.ago.to_date, date_window: 30)
+    end
+
+    # date_window alone (no since_date) is unrestricted: full-history matches
+    # have no transitive-bound assumption to protect.
+    assert_nothing_raised do
+      @family.transfer_match_candidates(date_window: 31)
+    end
+  end
+
   test "auto-matched cash to investment assigns investment contribution category" do
     investment = accounts(:investment)
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
