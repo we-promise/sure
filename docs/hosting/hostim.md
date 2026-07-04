@@ -31,4 +31,11 @@ image and set the following environment variables:
 | `SELF_HOSTED` | `true` |
 
 Run the web server and a Sidekiq worker from the same image, both sharing the same
-`SECRET_KEY_BASE`. Migrations run automatically on boot via `bin/rails db:prepare`.
+`SECRET_KEY_BASE`. Run `bin/rails db:prepare` before the web server starts so
+migrations are applied — for example with a start command like
+`sh -c "./bin/rails db:prepare && (bundle exec sidekiq &) && exec ./bin/rails server -b 0.0.0.0"`.
+
+Mount a persistent volume at `/rails/storage`. Sure stores uploaded files (such as
+imported statements) there via Active Storage's local disk service by default;
+without a persistent volume they are lost when the container is replaced, while the
+database still references them.
