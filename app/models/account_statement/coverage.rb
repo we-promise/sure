@@ -130,11 +130,11 @@ class AccountStatement::Coverage
       linked_statements = statements_covering(linked_statement_scope, month)
       ambiguous_statements = statements_covering(ambiguous_statement_scope, month)
 
-      status = if linked_statements.size > 1
+      status = if linked_statements.many? && overlapping_statements?(linked_statements)
         "duplicate"
       elsif linked_statements.any? { |statement| statement.reconciliation_mismatched?(balance_lookup: balance_lookup) }
         "mismatched"
-      elsif linked_statements.one?
+      elsif linked_statements.any?
         "covered"
       elsif ambiguous_statements.any?
         "ambiguous"
@@ -174,6 +174,13 @@ class AccountStatement::Coverage
           statement.period_end_on.present? &&
           statement.period_start_on <= month_end &&
           statement.period_end_on >= month_start
+      end
+    end
+
+    def overlapping_statements?(statements)
+      statements.combination(2).any? do |a, b|
+        a.period_start_on <= b.period_end_on &&
+          b.period_start_on <= a.period_end_on
       end
     end
 
