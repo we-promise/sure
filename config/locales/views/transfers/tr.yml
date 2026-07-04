@@ -2,6 +2,7 @@
 tr:
   transfers:
     create:
+      exchange_rate_unavailable: Seçilen para birimleri ve tarih için döviz kuru mevcut değil
       success: Transfer başarıyla oluşturuldu
     destroy:
       success: Transfer kaldırıldı

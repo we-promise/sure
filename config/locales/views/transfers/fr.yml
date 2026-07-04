@@ -2,6 +2,7 @@
 fr:
   transfers:
     create:
+      exchange_rate_unavailable: Taux de change indisponible pour les devises et la date sélectionnées
       success: Transfert créé
     destroy:
       success: Transfert supprimé

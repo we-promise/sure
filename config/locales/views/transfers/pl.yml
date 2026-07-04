@@ -2,6 +2,7 @@
 pl:
   transfers:
     create:
+      exchange_rate_unavailable: Kurs wymiany jest niedostępny dla wybranych walut i daty
       success: Przelew został utworzony
     destroy:
       success: Przelew został usunięty

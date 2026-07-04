@@ -32,7 +32,11 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(source_account, redirect_path: transactions_path)
     return unless require_account_permission!(destination_account, redirect_path: transactions_path)
 
-    if transfer_params[:amount].to_d <= 0
+    if transfer_params[:amount].blank?
+      @transfer = Transfer.new
+      @transfer.errors.add(:amount, :blank)
+      return render_transfer_form_errors
+    elsif transfer_params[:amount].to_d <= 0
       @transfer = Transfer.new
       @transfer.errors.add(:amount, :greater_than, count: 0)
       return render_transfer_form_errors
@@ -46,7 +50,7 @@ class TransfersController < ApplicationController
       date = transfer_params[:date].present? ? Date.parse(transfer_params[:date]) : Date.current
     rescue Date::Error
       @transfer = Transfer.new
-      @transfer.errors.add(:date, "is invalid")
+      @transfer.errors.add(:date, :invalid)
       return render_transfer_form_errors
     end
 
@@ -75,7 +79,7 @@ class TransfersController < ApplicationController
     render_transfer_form_errors
   rescue Money::ConversionError
     @transfer ||= Transfer.new
-    @transfer.errors.add(:base, "Exchange rate unavailable for selected currencies and date")
+    @transfer.errors.add(:base, t(".exchange_rate_unavailable"))
     render_transfer_form_errors
   rescue ArgumentError => e
     @transfer ||= Transfer.new

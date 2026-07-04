@@ -2,6 +2,7 @@
 en:
   transfers:
     create:
+      exchange_rate_unavailable: Exchange rate unavailable for selected currencies and date
       success: Transfer created
     destroy:
       success: Transfer removed

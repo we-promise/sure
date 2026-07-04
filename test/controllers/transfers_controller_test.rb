@@ -315,6 +315,24 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_match "must be greater than 0", response.body
   end
 
+  test "cannot create transfer with blank amount" do
+    ensure_tailwind_build
+
+    assert_no_difference "Transfer.count" do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: ""
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "can&#39;t be blank", response.body
+  end
+
   test "cannot create transfer with negative fee" do
     ensure_tailwind_build
 
