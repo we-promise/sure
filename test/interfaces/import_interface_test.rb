@@ -112,6 +112,31 @@ module ImportInterfaceTest
     assert_equal "1234.56", row.amount
   end
 
+  test "parses French/Scandinavian amounts with non-breaking-space separators and currency suffixes" do
+    import = imports(:transaction)
+    import.update!(
+      number_format: "1 234,56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    nbsp = "\u00A0"
+    narrow_nbsp = "\u202F"
+    csv_data = "date,amount,name\n" \
+      "01/01/2024,\"1#{nbsp}234,56\",NBSP\n" \
+      "01/02/2024,\"1#{narrow_nbsp}234,56\",NarrowNBSP\n" \
+      "01/03/2024,\"1 234,56 kr\",CurrencySuffix\n" \
+      "01/04/2024,\"-1#{nbsp}234,56\",Negative"
+    import.update!(raw_file_str: csv_data)
+    import.generate_rows_from_csv
+    import.reload
+
+    amounts = import.rows.order(:date).map(&:amount)
+    assert_equal [ "1234.56", "1234.56", "1234.56", "-1234.56" ], amounts
+  end
+
   test "parses zero-decimal currency format correctly" do
     import = imports(:transaction)
     import.update!(

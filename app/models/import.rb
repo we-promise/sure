@@ -470,7 +470,11 @@ class Import < ApplicationRecord
 
       # Handle French/Scandinavian format specially
       if format[:delimiter] == " "
-        sanitized = sanitized.gsub(/\s+/, "") # Remove all spaces first
+        # Strip everything that isn't a digit, the decimal separator, or a minus
+        # sign. This removes every space variant (including non-breaking U+00A0
+        # and narrow no-break U+202F, which \s does not match) as well as
+        # currency symbols and other junk, mirroring the branch below.
+        sanitized = sanitized.gsub(/[^\d#{Regexp.escape(format[:separator])}\-]/, "")
       else
         sanitized = sanitized.gsub(/[^\d#{Regexp.escape(format[:delimiter])}#{Regexp.escape(format[:separator])}\-]/, "")
 
