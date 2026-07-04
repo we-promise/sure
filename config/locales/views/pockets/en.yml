@@ -1,0 +1,51 @@
+---
+en:
+  pockets:
+    index:
+      new: "New pocket"
+      total_allocated: "Allocated"
+      free_balance: "Free balance"
+      free_label: "Free"
+      empty: "No pockets yet. Create one to start allocating funds."
+      overflow_warning: "Allocated pockets exceed the current account balance."
+    new:
+      title: "New pocket"
+    edit:
+      title: "Edit pocket"
+    form:
+      name: "Name"
+      name_placeholder: "e.g. Emergency fund"
+      description: "Description"
+      description_placeholder: "e.g. 3 months of expenses"
+      allocated_amount: "Allocated amount"
+      auto_fill_tag: "Auto-fill from tag"
+      no_tag: "None (manual only)"
+      fill_direction_label: "Count transactions"
+      fill_direction:
+        inflows: "Deposits only (money coming in)"
+        outflows: "Expenses only (money going out)"
+        both: "All tagged transactions"
+      auto_fill_hint: "Transactions tagged with this tag will automatically update this pocket."
+      free_balance_hint: "Available to allocate: %{amount}"
+      save: "Save"
+    pocket:
+      overflow_badge: "OVERFLOW"
+      manual: "Manual"
+      auto_fills_from: "Auto-fills from \"%{tag}\""
+      no_auto_fill: "No auto-fill linked"
+      view_transactions: "View tagged transactions"
+      fill_direction:
+        inflows: "Deposits only"
+        outflows: "Expenses only"
+        both: "All transactions"
+    create:
+      success: "Pocket created."
+    update:
+      success: "Pocket updated."
+    destroy:
+      confirm: "Delete pocket \"%{name}\"?"
+      success: "Pocket deleted."
+  accounts:
+    show:
+      tabs:
+        pockets: "Pockets"

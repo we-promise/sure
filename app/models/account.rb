@@ -25,6 +25,7 @@ class Account < ApplicationRecord
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :pockets, dependent: :destroy
   has_many :goal_accounts, dependent: :destroy
   has_many :goals, through: :goal_accounts
   has_many :goal_pledges, dependent: :destroy
@@ -574,6 +575,14 @@ class Account < ApplicationRecord
     else
       raise "Unknown account type: #{accountable_type}"
     end
+  end
+
+  def free_balance
+    balance - pockets.sum(:allocated_amount)
+  end
+
+  def pockets_overflow?
+    pockets.sum(:allocated_amount) > balance
   end
 
   def owned_by?(user)

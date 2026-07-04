@@ -1,0 +1,90 @@
+<%# locals: (account:) %>
+
+<% pockets = account.pockets.includes(:tag).order(:name) %>
+<% overflow = account.pockets_overflow? %>
+<% account_balance = account.balance.to_f %>
+<% free_amount = [ account.free_balance, 0 ].max.to_f %>
+
+<div id="<%= dom_id(account, :pockets_content) %>" class="space-y-4 px-3">
+
+  <%# ── Summary bar ── %>
+  <div class="bg-container-inset rounded-xl p-4 flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="space-y-0.5">
+        <p class="text-xs text-secondary uppercase font-medium tracking-wide"><%= t("pockets.index.total_allocated") %></p>
+        <p class="text-lg font-semibold text-primary privacy-sensitive">
+          <%= format_money Money.new(account.pockets.sum(:allocated_amount), account.currency) %>
+        </p>
+      </div>
+
+      <div class="h-8 w-px bg-border-primary hidden sm:block"></div>
+
+      <div class="space-y-0.5">
+        <p class="text-xs text-secondary uppercase font-medium tracking-wide"><%= t("pockets.index.free_balance") %></p>
+        <p class="text-lg font-semibold privacy-sensitive <%= overflow ? "text-destructive" : "text-success" %>">
+          <%= format_money Money.new(account.free_balance, account.currency) %>
+        </p>
+      </div>
+
+      <% if overflow %>
+        <div class="w-full sm:w-auto sm:ml-0">
+          <%= render DS::Alert.new(message: t("pockets.index.overflow_warning"), variant: :warning) %>
+        </div>
+      <% end %>
+
+      <div class="ml-auto">
+        <%= render DS::Link.new(
+          text: t("pockets.index.new"),
+          icon: "plus",
+          variant: "primary",
+          href: new_account_pocket_path(account),
+          frame: :modal
+        ) %>
+      </div>
+    </div>
+
+    <%# ── Allocation stacked bar ── %>
+    <% if pockets.any? && account_balance > 0 %>
+      <div class="space-y-2">
+        <div class="flex h-2 rounded-full overflow-hidden gap-0.5 bg-container">
+          <% pockets.each do |p| %>
+            <% pct = (p.allocated_amount / account_balance * 100).clamp(0, 100).round(2) %>
+            <% next if pct == 0 %>
+            <div class="h-full" style="width: <%= pct %>%; background-color: <%= p.display_color %>"></div>
+          <% end %>
+          <% free_pct = (free_amount / account_balance * 100).clamp(0, 100).round(2) %>
+          <div class="h-full flex-1 bg-alpha-black-400 theme-dark:bg-alpha-white-400" style="min-width: 4px"></div>
+        </div>
+        <div class="flex flex-wrap gap-x-4 gap-y-1">
+          <% pockets.each do |p| %>
+            <span class="flex items-center gap-1.5 text-xs text-secondary">
+              <span class="w-2 h-2 rounded-full shrink-0" style="background-color: <%= p.display_color %>"></span>
+              <span class="truncate max-w-24 privacy-sensitive"><%= p.name %></span>
+              <span class="tabular-nums privacy-sensitive"><%= p.allocation_percent(account.balance) %>%</span>
+            </span>
+          <% end %>
+          <span class="flex items-center gap-1.5 text-xs text-secondary">
+            <span class="w-2 h-2 rounded-full bg-alpha-black-400 theme-dark:bg-alpha-white-400 shrink-0"></span>
+            <%= t("pockets.index.free_label") %>
+            <span class="tabular-nums privacy-sensitive"><%= free_pct.round %>%</span>
+          </span>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <%# ── Cards grid ── %>
+  <% if pockets.any? %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <% pockets.each do |pocket| %>
+        <%= render "pockets/pocket", pocket: pocket, account: account, overflow: overflow %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="bg-container rounded-xl shadow-border-xs px-4 py-12 text-center">
+      <%= icon("wallet", class: "w-8 h-8 text-secondary mx-auto mb-3") %>
+      <p class="text-sm text-secondary"><%= t("pockets.index.empty") %></p>
+    </div>
+  <% end %>
+
+</div>
