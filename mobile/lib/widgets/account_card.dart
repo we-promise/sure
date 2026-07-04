@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/account.dart';
+import '../providers/privacy_provider.dart';
 import '../theme/sure_colors.dart';
 import '../theme/sure_tokens.dart';
+import '../utils/money_masker.dart';
 import 'money_text.dart';
 import 'sure_card.dart';
 import 'sure_icon.dart';
@@ -58,6 +61,7 @@ class AccountCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final accountColor = _getAccountColor(context);
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
 
     final cardContent = SureCard(
       margin: const EdgeInsets.only(bottom: 12),
@@ -109,7 +113,7 @@ class AccountCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                account.balance,
+                MoneyMasker.mask(account.balance, hidden: hideAmounts),
                 style: SureMoney.tabular(
                   Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: SureTokens.weightMedium,

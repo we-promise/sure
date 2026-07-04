@@ -11,16 +11,21 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_includes item.errors[:name], "can't be blank"
   end
 
-  test "validates presence of client_id on create" do
+  test "requires client_id when consumer_key is present" do
     item = SnaptradeItem.new(family: @family, name: "Test", consumer_key: "test")
     assert_not item.valid?
     assert_includes item.errors[:client_id], "can't be blank"
   end
 
-  test "validates presence of consumer_key on create" do
+  test "requires consumer_key when client_id is present" do
     item = SnaptradeItem.new(family: @family, name: "Test", client_id: "test")
     assert_not item.valid?
     assert_includes item.errors[:consumer_key], "can't be blank"
+  end
+
+  test "allows oauth-only items without api credentials" do
+    item = SnaptradeItem.new(family: @family, name: "Test")
+    assert item.valid?
   end
 
   test "credentials_configured? returns true when credentials are set" do

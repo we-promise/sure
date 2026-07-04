@@ -1,5 +1,18 @@
 ---
 fr:
+  import:
+    uploads:
+      handle_qif_upload:
+        qif_uploaded: Aucun
+  lunchflow_items:
+    link_accounts:
+      no_api_key: Aucun
+    link_existing_account:
+      no_api_key: Aucun
+    select_accounts:
+      no_credentials_configured: Aucun
+    select_existing_account:
+      no_credentials_configured: Aucun
   number:
     currency:
       format:
@@ -8,3 +21,255 @@ fr:
         precision: 2
         separator: ","
         unit: "€"
+  settings:
+    hostings:
+      ensure_admin:
+        not_authorized: Aucun
+    providers:
+      binance_panel:
+        no_withdraw_body: N'activez pas les autorisations de retrait lors de la création
+          de votre clé API Binance. Bien sûr, il suffit d'un accès en lecture.
+        no_withdraw_title: Clé en lecture seule uniquement
+      clear_filter: Effacer les filtres
+      connect: Se connecter
+      drawer_trust_statement: Accès en lecture seule. Bien sûr, vous ne pourrez jamais
+        transférer d’argent et vos informations d’identification sont stockées cryptées.
+      empty_filter: Aucun fournisseur ne correspond à votre filtre.
+      enable_banking_panel:
+        add_connection: Ajouter une connexion
+        application_id_label: Identifiant de la demande
+        application_id_placeholder_new: Entrez l'ID de la demande
+        application_id_placeholder_update: Entrez le nouvel identifiant à mettre à
+          jour
+        client_certificate_label: Certificat client (avec clé privée)
+        config_locked_message: Déconnectez toutes les banques liées avant de modifier
+          ces informations d'identification.
+        config_locked_title: Configuration verrouillée
+        configured: Configuré
+        connect_bank: Connecter la banque
+        connected_bank: Banque connectée
+        connection: Connexion
+        country_label: Pays
+        ready_to_link: Prêt à lier des comptes
+        reconnect: Reconnecter
+        remove: Supprimer
+        remove_confirm: Êtes-vous sûr de vouloir supprimer cette connexion ?
+        save_and_connect: Enregistrez et connectez-vous
+        select_country: Sélectionnez le pays...
+        session_expired_reconnect: Session expirée - reconnectez-vous
+        session_expires: 'Expiration de la session : %{date}'
+        step_1_html: Accédez à %{link} et récupérez vos informations d'identification
+          de développeur.
+        step_2: Choisissez votre pays et collez l'ID d'application + le certificat
+          client ci-dessous.
+        step_3: Enregistrez, puis utilisez Ajouter une connexion pour lier votre banque.
+        sync: Synchroniser
+        syncing: Synchronisation
+        unknown: Inconnu
+        update_connection: Mettre à jour la connexion
+      groups:
+        available: Disponible
+        empty_available: Tous les fournisseurs disponibles sont connectés.
+        your_connections: Vos connexions
+      health_strip:
+        accounts_syncing: synchronisation des comptes
+        connected: connecté
+        last_synced: Dernière synchronisation il y a %{time}
+        needs_attention: a besoin d'attention
+      ibkr_panel:
+        accounts_tab: Comptes
+        configuration:
+          all_other_options: 'Toutes les autres options de configuration : "Non"'
+          date_format: 'Format de date : aaaa-MM-jj'
+          date_time_separator: Séparateur date/heure : ; (point-virgule)
+          format: 'Format : XML'
+          models: Modèles : facultatif
+          period: 'Période : 365 derniers jours calendaires'
+          profit_and_loss: Profits et pertes : par défaut
+          time_format: Format de l'heure : HH : mm : ss
+        disconnect_confirm: Déconnecter Interactive Brokers ?
+        flex_query_details:
+          configuration_heading: Définir ces options de requête
+          eyebrow: Requête flexible
+          sections_heading: Activer ces sections et champs
+          summary: Développez pour voir les sections, champs et paramètres exacts
+            que votre requête IBKR Activity Flex doit inclure.
+          title: Sections, champs et configuration
+        not_configured: Non configuré.
+        query_id_label: ID de requête
+        query_id_placeholder_existing: Laissez vide pour conserver l'ID de requête
+          actuel
+        query_id_placeholder_new: Entrez votre ID de requête IBKR Flex
+        report_window_note: Les rapports IBKR Flex sont limités à la fenêtre de requête
+          que vous avez configurée dans IBKR. Bien sûr, l'intégralité des fonds actuels
+          ainsi que les 365 derniers jours d'activité de ce rapport seront importés.
+        save_configuration: Enregistrer la configuration
+        sections:
+          account_information: 'Informations sur le compte : identifiant de compte,
+            devise'
+          cash_report: 'Rapport de caisse :'
+          cash_report_fields: 'Champs : Devise, Liquidités de fin'
+          cash_report_options: 'Options : Aucune'
+          cash_transactions: 'Opérations en espèces :'
+          cash_transactions_fields: 'Champs : Montant, Conid, Devise, Taux de change
+            par rapport à la base, Date du rapport, ID de transaction, Type'
+          cash_transactions_options: 'Options : Dividendes, Dépôts et retraits, Détail'
+          change_in_position_value_summary: 'Récapitulatif des modifications de la
+            valeur de position : devise, valeur de fin de période'
+          net_asset_value: 'Valeur Liquidative (VNI) en Base :'
+          net_asset_value_fields: 'Champs : Devise, Date du rapport, Total'
+          net_asset_value_options: 'Options : Aucune'
+          open_positions: 'Postes ouverts :'
+          open_positions_fields: 'Champs : Classe d''actifs, Conid, Prix de base,
+            Devise, Taux de change par rapport à la base, Prix de référence, Quantité,
+            Date du rapport, ID de titre, Type d''ID de titre, Côté, Symbole'
+          open_positions_options: Options : Résumé
+          trades: 'Métiers :'
+          trades_fields: 'Champs : Classe d''actifs, Achat/Vente, Conid, Devise, Taux
+            de change à la base, Commission IB, Devise de la Commission IB, Quantité,
+            Symbole, Date de transaction, ID de transaction, TradePrice, ID de transaction'
+          trades_options: 'Options : Exécution'
+        status_configured_prefix: "%{summary}. Visitez le"
+        status_configured_suffix: onglet pour gérer les comptes découverts.
+        steps:
+          step_1: Dans votre portail client IBKR, accédez à « Performances et rapports
+            » > « Requêtes flexibles ».
+          step_2: Cliquez sur l'icône "+" dans la section "Activity Flex Query" pour
+            créer une nouvelle requête.
+          step_3: Nommez votre requête (par exemple, « Sure Sync »), puis examinez
+            les détails de la requête Flex ci-dessous et activez les sections, champs
+            et options de configuration répertoriés.
+          step_4: Enregistrez la requête, notez votre « ID de requête », puis utilisez
+            l'icône d'engrenage dans la section « Configuration du service Web Flex
+            » pour générer un jeton d'accès.
+          step_5: Collez votre ID de requête et votre jeton ci-dessous, enregistrez
+            la configuration, puis accédez à Comptes pour lier les comptes IBKR découverts.
+        sync: Synchroniser
+        token_label: Jeton
+        token_placeholder_existing: Laisser vide pour conserver le jeton actuel
+        token_placeholder_new: Entrez votre jeton de service Web IBKR Flex
+        update_configuration: Mettre à jour la configuration
+      kraken_panel:
+        add_connection: Ajouter une connexion Kraken
+        api_key_label: Clé API
+        api_key_placeholder: Collez votre clé API Kraken
+        api_secret_label: Clé privée
+        api_secret_placeholder: Collez votre clé privée Kraken
+        connection_name_label: Nom de la connexion
+        connection_name_placeholder: Kraken principal
+        default_connection_name: Kraken
+        disconnect: Déconnecter
+        disconnect_confirm: Êtes-vous sûr de vouloir déconnecter %{name} ?
+        keep_api_key_placeholder: Laissez vide pour conserver la clé API existante
+        keep_api_secret_placeholder: Laisser vide pour conserver la clé privée existante
+        read_only_body: N’accordez pas d’autorisations de négociation, d’annulation,
+          de retrait, d’exportation, de grand livre, de gain, de jalonnement ou de
+          transfert. Bien sûr, n'importe que les soldes, les holdings et les transactions
+          au comptant.
+        read_only_title: Synchronisation d'échange en lecture seule uniquement
+        setup_accounts: Configurer le compte
+        step1_html: Accédez aux <a href="https://pro.kraken.com/app/settings/api"
+          target="_blank" rel="noopener noreferrer" class="underline">Paramètres de
+          l'API Kraken</a>
+        step2: Créez une clé API avec Query Funds et Query Closed Orders & Trades
+          uniquement.
+        step3: Collez la clé API et la clé privée ci-dessous.
+        sync: Synchroniser
+        syncing: Synchronisation...
+        update_connection: Mettre à jour la connexion
+      lunchflow_panel:
+        api_key_label: Clé API
+        api_key_placeholder_new: Collez la clé API ici
+        api_key_placeholder_update: Saisissez la nouvelle clé API à mettre à jour
+        base_url_label: URL de base (facultatif)
+        base_url_placeholder: https://lunchflow.app/api/v1 (par défaut)
+        save_and_connect: Enregistrez et connectez-vous
+        step_1_html: Accédez à %{link} et créez une clé API.
+        step_2: Collez votre clé ci-dessous et connectez-vous.
+        step_3: Dirigez-vous ensuite vers Comptes pour lier vos comptes synchronisés.
+        update_connection: Mettre à jour la connexion
+      maturity:
+        alpha: Alpha
+        beta: Bêta
+      meta:
+        last_synced: Synchronisé il y a %{time}
+        no_recent_sync: Synchronisation en retard
+        reconsent_needed:
+          one: Re-consentement nécessaire dans 1 jour
+          other: Renouvellement du consentement requis dans %{count} jours
+        reconsent_required: Re-consentement requis
+        registration_needed: Inscription nécessaire
+        sync_error: Erreur de synchronisation
+      not_found: Fournisseur introuvable.
+      plaid_eu_panel:
+        step_1_html: Ouvrez le %{link} et copiez votre identifiant client européen
+          et votre clé secrète.
+      plaid_panel:
+        step_1_html: Ouvrez le %{link} et copiez votre identifiant client et votre
+          clé secrète.
+        step_2: Choisissez un environnement. Utilisez le bac à sable pour les tests
+          et la production de comptes réels.
+        step_3: Collez vos identifiants ci-dessous et connectez-vous.
+      provider_form:
+        save_and_connect: Enregistrez et connectez-vous
+      recently_synced: Synchronisé récemment. Réessayez dans un instant.
+      search_filters:
+        aria_label: Fournisseurs de recherche
+        chips:
+          all: Tout
+          bank: Banques
+          crypto: Cryptomonnaie
+          investment: Investissements
+        placeholder: Fournisseurs de recherche
+      setup_steps:
+        eyebrow: Configuration
+        need_help: Besoin d'aide ?
+      simplefin_panel:
+        save_and_connect: Enregistrez et connectez-vous
+        setup_token_label: Jeton de configuration
+        setup_token_placeholder: Coller le jeton de configuration SimpleFIN
+        step_1_html: Accédez à %{link} pour un jeton de configuration unique.
+        step_2: Collez le jeton ci-dessous et connectez-vous.
+        step_3: Dirigez-vous ensuite vers Comptes pour lier vos comptes synchronisés.
+      status:
+        'false': Non configuré
+      sync_all: Synchroniser tout
+      sync_all_in_progress: Synchronisation de tous les fournisseurs connectés…
+      sync_all_recently: Synchronisation déjà en cours. Réessayez dans un instant.
+      sync_provider: Synchronisez maintenant
+      sync_provider_in_progress: La synchronisation a commencé.
+      sync_provider_no_items: Aucune connexion disponible pour synchroniser.
+      taglines:
+        binance: Synchronisez vos soldes spot Binance à l'aide d'une clé API en lecture
+          seule.
+        brex: Synchronisez l'activité des espèces Brex et des cartes d'entreprise
+          avec un accès en lecture seule.
+        coinbase: Importez vos holdings cryptographiques Coinbase et suivez les performances.
+        coinstats: Suivez l’intégralité de votre portefeuille de crypto-monnaies sur
+          les portefeuilles et les échanges.
+        enable_banking: Synchronisez les comptes bancaires européens via l'open banking
+          PSD2.
+        ibkr: Synchronisez les comptes d'investissement Interactive Brokers via les
+          importations Flex Query.
+        indexa_capital: Suivez votre portefeuille d'investissement automatisé Indexa
+          Capital.
+        kraken: Synchronisez les soldes Kraken et les transactions au comptant à l'aide
+          d'une clé API en lecture seule.
+        lunchflow: Connectez plus de 20 000 banques dans plus de 40 pays (Royaume-Uni,
+          UE, États-Unis et plus !)
+        mercury: Synchronisez automatiquement vos comptes bancaires professionnels
+          Mercury.
+        plaid: Connectez des milliers d'institutions financières américaines via Plaid.
+        plaid_eu: Connectez les institutions financières européennes via Plaid (PSD2
+          / Open Banking).
+        simplefin: Connectez les comptes bancaires américains via le protocole ouvert
+          SimpleFIN.
+        snaptrade: Connectez les comptes de courtage via le réseau d'agrégation SnapTrade.
+        sophtron: Connectez les banques et les services publics américains et canadiens.
+  simplefin_items:
+    select_existing_account:
+      check_provider_health: Aucun
+  valuations:
+    new:
+      amount: Aucun
+      submit: Aucun
