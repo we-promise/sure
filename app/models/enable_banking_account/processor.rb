@@ -51,6 +51,7 @@ class EnableBankingAccount::Processor
       end
 
       available_credit = nil
+      skip_balance_update = false
 
       # For liability accounts, ensure balance sign is correct.
       # For CreditCards, we expect the main balance to reflect the absolute outstanding debt
@@ -61,50 +62,10 @@ class EnableBankingAccount::Processor
       # calculates net worth accurately.
       if account.accountable_type == "Loan" || account.accountable_type == "CreditCard"
         # Standardize the raw balance to an absolute positive debt
-        outstanding_debt = balance.abs
-        balance = outstanding_debt
+        balance = balance.abs
 
         if account.accountable_type == "CreditCard"
-          if enable_banking_account.treat_balance_as_available_credit?
-            if enable_banking_account.credit_limit.present?
-              # When the API returns the available credit as the current balance,
-              # we need to calculate the outstanding debt using the credit limit.
-              # Use .max(0) to prevent synthetic debt on overpaid cards.
-              outstanding_debt = [ enable_banking_account.credit_limit - balance, 0 ].max
-              available_credit = balance
-
-              balance = outstanding_debt
-
-              unless account.accountable.present?
-                DebugLogEntry.capture(
-                  category: "sync",
-                  level: "warn",
-                  message: "CreditCard accountable missing for account",
-                  source: "EnableBankingAccount::Processor",
-                  account: account
-                )
-              end
-            else
-              # No credit limit from API. We cannot reverse available credit to absolute debt
-              # without knowing the total limit. Fall back to absolute balance.
-              DebugLogEntry.capture(
-                category: "sync",
-                level: "warn",
-                message: "Cannot compute debt from available credit because credit_limit is blank",
-                source: "EnableBankingAccount::Processor",
-                account: account
-              )
-              available_credit = balance
-            end
-          else
-            # Default behavior: API returns outstanding debt
-            if enable_banking_account.credit_limit.present?
-              available_credit = [ enable_banking_account.credit_limit - outstanding_debt, 0 ].max
-            elsif account.accountable&.available_credit.present?
-              # No limit from API, but we have stored available_credit metadata
-              available_credit = account.accountable.available_credit
-            end
-          end
+          balance, available_credit, skip_balance_update = interpret_credit_card_balance(account, balance)
         end
       end
 
@@ -115,17 +76,75 @@ class EnableBankingAccount::Processor
         if account.accountable.present? && account.accountable.respond_to?(:available_credit=)
           account.accountable.update!(available_credit: available_credit)
         end
-        account.update!(currency: currency, cash_balance: balance)
 
-        # Use set_current_balance to create a current_anchor valuation entry.
-        # This enables Balance::ReverseCalculator, which works backward from the
-        # bank-reported balance — eliminating spurious cash adjustment spikes.
-        result = account.set_current_balance(balance)
-        raise ProcessingError, "Failed to set current balance: #{result.error}" unless result.success?
+        if skip_balance_update
+          account.update!(currency: currency)
+        else
+          account.update!(currency: currency, cash_balance: balance)
+
+          # Use set_current_balance to create a current_anchor valuation entry.
+          # This enables Balance::ReverseCalculator, which works backward from the
+          # bank-reported balance — eliminating spurious cash adjustment spikes.
+          result = account.set_current_balance(balance)
+          raise ProcessingError, "Failed to set current balance: #{result.error}" unless result.success?
+        end
       end
 
       # TODO: pass explicit window_start_date to sync_later to avoid full history recalculation on every sync
       # Currently relies on set_current_balance's implicit sync trigger; window params would require refactor
+    end
+
+    # Interprets the reported credit card balance based on the
+    # treat_balance_as_available_credit flag.
+    # Returns [balance, available_credit, skip_balance_update].
+    def interpret_credit_card_balance(account, reported_balance)
+      if enable_banking_account.treat_balance_as_available_credit?
+        if enable_banking_account.credit_limit.present?
+          # The API returns the available credit as the current balance, so the
+          # outstanding debt is derived from the credit limit.
+          # Use .max(0) to prevent synthetic debt on overpaid cards.
+          outstanding_debt = [ enable_banking_account.credit_limit - reported_balance, 0 ].max
+
+          unless account.accountable.present?
+            capture_debug_log("CreditCard accountable missing for account", account)
+          end
+
+          [ outstanding_debt, reported_balance, false ]
+        else
+          # No credit limit from API. The reported balance is available credit,
+          # so the outstanding debt is unknown. Keep the existing account balance
+          # instead of recording available credit as debt.
+          capture_debug_log("Cannot compute debt from available credit because credit_limit is blank", account)
+
+          [ nil, reported_balance, true ]
+        end
+      else
+        # Default behavior: API returns outstanding debt
+        available_credit = if enable_banking_account.credit_limit.present?
+          [ enable_banking_account.credit_limit - reported_balance, 0 ].max
+        elsif account.accountable&.available_credit.present?
+          # No limit from API, but we have stored available_credit metadata
+          account.accountable.available_credit
+        end
+
+        [ reported_balance, available_credit, false ]
+      end
+    end
+
+    def capture_debug_log(message, account)
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "warn",
+        message: message,
+        source: "EnableBankingAccount::Processor",
+        provider_key: "enable_banking",
+        account: account,
+        account_provider: account.account_providers.find_by(provider_type: "EnableBankingAccount"),
+        metadata: {
+          enable_banking_account_id: enable_banking_account.id,
+          enable_banking_item_id: enable_banking_account.enable_banking_item_id
+        }
+      )
     end
 
     def process_transactions

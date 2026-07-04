@@ -80,7 +80,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "when treat_balance_as_available_credit is true but limit absent, safely falls back to balance" do
+  test "when treat_balance_as_available_credit is true but limit absent, keeps existing balance" do
     cc_account = accounts(:credit_card)
 
     cc_account.accountable.update!(available_credit: 1000.0)
@@ -94,10 +94,14 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     AccountProvider.find_by(provider: @enable_banking_account)&.destroy
     AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
 
+    balance_before = cc_account.cash_balance
+
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
-    # Since there's no limit to reverse from, it falls back to parsing the raw absolute balance
-    assert_equal 900.0, cc_account.reload.cash_balance
+    # The reported balance is available credit and there's no limit to reverse
+    # from, so the debt is unknown. The existing balance must not be overwritten
+    # with available credit, only the metadata is updated.
+    assert_equal balance_before, cc_account.reload.cash_balance
     assert_equal 900.0, cc_account.accountable.reload.available_credit
   end
 
