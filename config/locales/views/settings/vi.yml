@@ -107,6 +107,10 @@ vi:
         theme_dark: Tối
         theme_light: Sáng
         theme_system: Hệ thống
+        modals_title: Hộp thoại
+        modals_subtitle: Tùy chỉnh hành vi hộp thoại
+        disable_modal_click_outside_title: Giữ hộp thoại mở khi nhấp bên ngoài
+        disable_modal_click_outside_description: Ngăn hộp thoại đóng khi nhấp bên ngoài. Hữu ích để tránh vô tình mất các thay đổi chưa lưu.
         transactions_title: Giao dịch
         transactions_subtitle: Tùy chỉnh cách hiển thị giao dịch
         dashboard_title: Bảng điều khiển

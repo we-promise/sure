@@ -2,4 +2,4 @@
 fr:
   pdf_import_mailer:
     next_steps:
-      subject: "Votre document PDF a été analysé - %{product_name}"
+      subject: Votre document PDF a été analysé - %{product_name}

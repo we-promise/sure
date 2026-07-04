@@ -1,0 +1,9 @@
+---
+fr:
+  chat:
+    errors:
+      default: Échec de la génération d'une réponse. Veuillez réessayer.
+      misconfigured: Le fournisseur AI n’est pas configuré correctement. Veuillez contacter votre administrateur.
+      no_response: L'assistant n'a pas répondu. Le worker en arrière-plan est peut-être arrêté ou l'IA n'est pas complètement configurée. Veuillez réessayer.
+      rate_limited: Le fournisseur d’IA est actuellement limité en termes de tarifs. Veuillez réessayer dans quelques minutes.
+      temporarily_unavailable: Le fournisseur d’IA est temporairement indisponible pour le moment. Veuillez réessayer dans quelques minutes.

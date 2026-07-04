@@ -120,7 +120,7 @@ class Budget < ApplicationRecord
   def transactions
     scope = family.transactions.visible.in_period(period)
     if current_user
-      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).select(:id) })
+      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).included_in_reports.select(:id) })
     end
     scope
   end

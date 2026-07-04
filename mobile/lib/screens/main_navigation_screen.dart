@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/privacy_provider.dart';
 import '../widgets/sure_logo.dart';
 import 'chat_list_screen.dart';
 import 'dashboard_screen.dart';
@@ -135,6 +136,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ),
       actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Center(
+            child: Tooltip(
+              message: 'Toggle privacy',
+              child: InkWell(
+                onTap: () => context.read<PrivacyProvider>().toggle(),
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Icon(
+                    context.watch<PrivacyProvider>().hidden
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    semanticLabel: 'Toggle privacy',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.only(right: 12),
           child: Center(

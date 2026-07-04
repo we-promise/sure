@@ -5,6 +5,7 @@ fr:
       account: Compte de transfert (facultatif)
       account_prompt: Rechercher un compte
       amount: Montant
+      dividend_requires_security: Un titre est requis pour les dividendes
       fee: Frais de transaction
       holding: Symbole boursier
       holding_optional: Symbole boursier (facultatif)
@@ -12,23 +13,23 @@ fr:
       qty: Quantité
       submit: Ajouter la transaction
       ticker_placeholder: AAPL
+      trade_requires_security: Un titre (ticker) est requis pour les transactions d'achat et de vente
       type: Type
       type_buy: Acheter
-      type_sell: Vendre
       type_deposit: Dépôt
-      type_withdrawal: Retrait
       type_dividend: Dividende
       type_interest: Intérêts
-      dividend_requires_security: Un titre est requis pour les dividendes
+      type_sell: Vendre
+      type_withdrawal: Retrait
     header:
       buy: Acheter
-      sell: Vendre
+      current_market_price_label: Prix du marché actuel
       dividend: Dividende
       interest: Intérêts
-      current_market_price_label: Prix du marché actuel
       overview: Aperçu
       purchase_price_label: Prix d'achat
       purchase_qty_label: Quantité achetée
+      sell: Vendre
       symbol_label: Symbole
       total_return_label: Gain/perte non réalisé(e)
     new:
@@ -41,16 +42,16 @@ fr:
       cost_per_share_label: Coût par action
       date_label: Date
       delete: Supprimer
-      fee_label: Frais de transaction
       delete_subtitle: Cette action ne peut pas être annulée
       delete_title: Supprimer la transaction boursière
       details: Détails
-      provider_disabled_warning: "Mises à jour des prix en pause — le fournisseur %{provider} est désactivé. Réactivez-le dans les paramètres ou réassociez l'avoir à un autre fournisseur."
       exclude_subtitle: Cette transaction ne sera pas incluse dans les rapports et les calculs
       exclude_title: Exclure des analyses
+      fee_label: Frais de transaction
       no_category: Aucune catégorie
       note_label: Note
       note_placeholder: Ajoutez tout commentaire supplémentaire ici...
+      provider_disabled_warning: Mises à jour des prix en pause — le fournisseur %{provider} est désactivé. Réactivez-le dans les paramètres ou réassociez l'holding à un autre fournisseur.
       quantity_label: Quantité
       sell: Vendre
       settings: Paramètres
