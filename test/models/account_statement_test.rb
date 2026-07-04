@@ -756,6 +756,41 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal "mismatched", statuses[mismatched_month]
   end
 
+  test "coverage does not mark adjacent statements as duplicate when they only share a calendar month" do
+    account = Account.create!(
+      family: @family,
+      owner: users(:family_admin),
+      name: "Adjacent Statement Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    march = Date.new(2026, 3, 1)
+
+    create_statement_with_period(
+      account: account,
+      period_start_on: Date.new(2026, 1, 8),
+      period_end_on: Date.new(2026, 3, 6),
+      content: "adjacent-a"
+    )
+
+    create_statement_with_period(
+      account: account,
+      period_start_on: Date.new(2026, 3, 7),
+      period_end_on: Date.new(2026, 4, 7),
+      content: "adjacent-b"
+    )
+
+    coverage = AccountStatement::Coverage.new(
+      account,
+      start_month: march,
+      end_month: march
+    )
+
+    assert_equal "covered", coverage.months.first.status
+  end
+
   private
 
     def create_statement(account:, month:, content:, suggested_account: nil, closing_balance: nil)
@@ -774,6 +809,26 @@ class AccountStatementTest < ActiveSupport::TestCase
         period_end_on: month.end_of_month,
         closing_balance: closing_balance
       )
+      statement
+    end
+
+    def create_statement_with_period(account:, period_start_on:, period_end_on:, content:, suggested_account: nil)
+      statement = AccountStatement.create_from_upload!(
+        family: @family,
+        account: account,
+        file: uploaded_file(
+          filename: "statement_#{content}_#{period_start_on}_#{period_end_on}.csv",
+          content_type: "text/csv",
+          content: "date,amount\n#{period_start_on},1\n#{period_end_on},2\n#{content}\n"
+        )
+      )
+
+      statement.update!(
+        suggested_account: suggested_account,
+        period_start_on: period_start_on,
+        period_end_on: period_end_on
+      )
+
       statement
     end
 end
