@@ -4,7 +4,7 @@ class CategoriesController < ApplicationController
   before_action :set_transaction, only: :create
 
   def index
-    @categories = Current.family.categories.alphabetically.to_a
+    @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
     @category_groups = Category::Group.for(@categories)
     @category_ids_with_transactions = Category.ids_with_transactions(
       family: Current.family,

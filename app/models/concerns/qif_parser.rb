@@ -354,12 +354,15 @@ module QifParser
   #   - Optional spaces around components:  6/ 4'20  →  6/4/20
   #   - Dot separators:  04.06.2020
   #   - Dash separators:  04-06-2020
+  #   - Month-name separators:  26 Jan 2026  (Amex-style "dd mmm yyyy")
   #
   # This method:
   #   1. Strips whitespace
   #   2. Replaces the Quicken apostrophe with the file's date separator
-  #   3. Expands 2-digit years to 4-digit (00-99 → 2000-2099, capped at current year)
-  #   4. Returns a cleaned date string suitable for Date.strptime
+  #   3. Collapses whitespace (removes it for numeric dates; keeps single
+  #      spaces for month-name dates since the space IS the separator)
+  #   4. Expands 2-digit years to 4-digit (00-99 → 2000-2099, capped at current year)
+  #   5. Returns a cleaned date string suitable for Date.strptime
   def self.normalize_qif_date(date_str)
     return nil if date_str.blank?
 
@@ -371,12 +374,20 @@ module QifParser
       s = s.gsub("'", sep)
     end
 
-    # Remove internal spaces (e.g. "6/ 4/20" → "6/4/20")
-    s = s.gsub(/\s+/, "")
+    # Whitespace handling depends on the date style:
+    #   - Month-name dates (e.g. "26 Jan 2026") use spaces as the field
+    #     separator, so collapse multiples to a single space.
+    #   - Numeric dates (e.g. Quicken's padded "6/ 4/20") use / . or - as
+    #     separators and may carry stray padding spaces, so strip them.
+    if s.match?(/[A-Za-z]/)
+      s = s.gsub(/\s+/, " ").strip
+    else
+      s = s.gsub(/\s+/, "")
+    end
 
     # Expand 2-digit year at end to 4-digit, but only when the string doesn't
     # already contain a 4-digit number (which would be a full year).
-    if !s.match?(/\d{4}/) && (m = s.match(%r{\A(.+[/.\-])(\d{2})\z}))
+    if !s.match?(/\d{4}/) && (m = s.match(%r{\A(.+[/.\- ])(\d{2})\z}))
       short_year = m[2].to_i
       full_year  = 2000 + short_year
       full_year -= 100 if full_year > Date.today.year

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/sure_colors.dart';
+import '../theme/sure_spacing.dart';
 
 /// Sure design-system filter chip — a tokenized selectable pill mirroring the web
 /// DS pill: a rounded-full chip that reads as bordered/neutral when unselected
@@ -59,11 +60,15 @@ class SureChip extends StatelessWidget {
       // (Material FilterChip parity); the chip still sizes to content otherwise.
       constraints: const BoxConstraints(minHeight: 44),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        // horizontal 14 is intentionally off the SureSpacing scale (between
+        // lg=12 and xl=16): it's the chip's tuned content inset for the
+        // FilterChip-parity look, not a spacing-scale step — don't "fix" it to a
+        // token. Vertical stays on-scale.
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: SureSpacing.lg),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (leading != null) ...[leading!, const SizedBox(width: 6)],
+            if (leading != null) ...[leading!, const SizedBox(width: SureSpacing.sm)],
             Text(
               label,
               maxLines: 1,
