@@ -50,8 +50,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
       credit_limit: 1000.00,
       treat_balance_as_available_credit: true
     )
-    AccountProvider.find_by(provider: @enable_banking_account)&.destroy
-    AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
+    relink_provider_to(cc_account)
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
@@ -69,8 +68,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
       credit_limit: 1000.00,
       treat_balance_as_available_credit: true
     )
-    AccountProvider.find_by(provider: @enable_banking_account)&.destroy
-    AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
+    relink_provider_to(cc_account)
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
@@ -91,8 +89,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
       treat_balance_as_available_credit: true
     )
 
-    AccountProvider.find_by(provider: @enable_banking_account)&.destroy
-    AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
+    relink_provider_to(cc_account)
 
     balance_before = cc_account.cash_balance
 
@@ -115,8 +112,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
       credit_limit: 1000.00,
       treat_balance_as_available_credit: false
     )
-    AccountProvider.find_by(provider: @enable_banking_account)&.destroy
-    AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
+    relink_provider_to(cc_account)
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
@@ -132,8 +128,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
 
     @enable_banking_account.update!(current_balance: 300.00, credit_limit: nil)
 
-    AccountProvider.find_by(provider: @enable_banking_account)&.destroy
-    AccountProvider.create!(account: cc_account, provider: @enable_banking_account)
+    relink_provider_to(cc_account)
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
@@ -150,12 +145,17 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
       treat_balance_as_available_credit: true
     )
 
-    AccountProvider.find_by(provider: @enable_banking_account)&.destroy
-    AccountProvider.create!(account: loan_account, provider: @enable_banking_account)
+    relink_provider_to(loan_account)
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
     # Balance should match the absolute incoming balance, no credit limit math applied
     assert_equal 50000.0, loan_account.reload.cash_balance
   end
+
+  private
+    def relink_provider_to(account)
+      AccountProvider.find_by(provider: @enable_banking_account)&.destroy
+      AccountProvider.create!(account: account, provider: @enable_banking_account)
+    end
 end
