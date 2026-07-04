@@ -16,6 +16,9 @@ en:
       troubleshoot: Troubleshoot
       enable: Enable account
       disable: Disable account
+      exclude_from_reports: Exclude from all reports
+      include_in_reports: Include in reports
+      excluded_from_reports_indicator: Excluded from reports
       set_default: Set as default
       remove_default: Unset default
       default_label: Default
@@ -47,6 +50,7 @@ en:
       institution_domain_placeholder: e.g., chase.com
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
+      exclude_from_reports: Exclude from all reports
     index:
       accounts: Accounts
       manual_accounts:
@@ -118,6 +122,8 @@ en:
         manage: Manage accounts
         sharing: Sharing
         statements: Statements
+        exclude_from_reports: Exclude from all reports
+        include_in_reports: Include in reports
     update:
       success: "%{type} account updated"
     sidebar:

@@ -16,9 +16,9 @@ en:
         goal:
           attributes:
             base:
-              at_least_one_linked_account_required: Pick at least one depository account to fund this goal.
+              at_least_one_linked_account_required: Pick at least one account to fund this goal.
             linked_accounts:
-              must_be_depository: All linked accounts must be depository (checking, savings, HSA, CD, money-market).
+              must_be_fundable: All linked accounts must be cash or investment accounts.
               currency_mismatch: All linked accounts must share the same currency.
               must_belong_to_family: Linked accounts must belong to the same family as the goal.
             currency:
