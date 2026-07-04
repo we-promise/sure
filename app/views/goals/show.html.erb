@@ -65,6 +65,9 @@
         <% if @goal.may_unarchive? %>
           <% menu.with_item(variant: "button", text: t(".unarchive"), icon: "archive-restore", href: unarchive_goal_path(@goal), method: :patch) %>
         <% end %>
+        <% if @goal.may_reopen? %>
+          <% menu.with_item(variant: "button", text: t(".reopen"), icon: "rotate-ccw", href: reopen_goal_path(@goal), method: :patch) %>
+        <% end %>
         <% if @goal.archived? %>
           <% menu.with_item(
                variant: "button",
@@ -121,6 +124,9 @@
     <div class="rounded-xl p-5 flex flex-col items-center justify-center text-center">
       <%= render Goals::ProgressRingComponent.new(goal: @goal, size: 180) %>
       <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format(precision: 0) %></p>
+      <% if @goal.contributions_basis? %>
+        <p class="text-xs text-secondary tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.market_value", amount: @goal.market_value_money.format(precision: 0)) %></p>
+      <% end %>
       <% unless @goal.completed? %>
         <p class="text-xs text-subdued tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.to_go", amount: @goal.remaining_amount_money.format(precision: 0)) %></p>
       <% end %>

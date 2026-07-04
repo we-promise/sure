@@ -292,6 +292,12 @@
   "settingsProxyHeadersLabel": "Custom Proxy Headers",
   "@settingsProxyHeadersLabel": { "description": "Label for the custom proxy headers setting." },
 
+  "settingsPrivacyHideAmountsLabel": "Hide amounts",
+  "@settingsPrivacyHideAmountsLabel": { "description": "Label for the toggle that masks monetary amounts across the app." },
+
+  "settingsPrivacyHideAmountsContent": "Mask money values across the app",
+  "@settingsPrivacyHideAmountsContent": { "description": "Subtitle describing the hide-amounts toggle." },
+
   "settingsBiometricLabel": "Biometric Lock",
   "@settingsBiometricLabel": { "description": "Label for the biometric lock toggle." },
 

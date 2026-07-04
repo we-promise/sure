@@ -566,6 +566,46 @@ class IncomeStatementTest < ActiveSupport::TestCase
     refute_includes tax_advantaged_ids, @checking_account.id
   end
 
+  # Exclude-from-reports tests
+  test "excludes transactions from accounts with exclude_from_reports set" do
+    excluded_account = @family.accounts.create!(
+      name: "Excluded Checking",
+      currency: @family.currency,
+      balance: 3000,
+      accountable: Depository.new,
+      exclude_from_reports: true
+    )
+
+    create_transaction(account: excluded_account, amount: 500, category: @groceries_category)
+    create_transaction(account: excluded_account, amount: -300, category: @income_category)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal 4, totals.transactions_count
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "includes transactions from accounts without exclude_from_reports" do
+    included_account = @family.accounts.create!(
+      name: "Included Checking",
+      currency: @family.currency,
+      balance: 3000,
+      accountable: Depository.new,
+      exclude_from_reports: false
+    )
+
+    create_transaction(account: included_account, amount: 100, category: @groceries_category)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal 5, totals.transactions_count
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(1000, @family.currency), totals.expense_money
+  end
+
   # net_category_totals tests
   test "net_category_totals nets expense and refund in the same category" do
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all

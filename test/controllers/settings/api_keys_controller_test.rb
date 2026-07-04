@@ -7,29 +7,20 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     sign_in @user
   end
 
-  test "should show no API key page when user has no active keys" do
-    get settings_api_key_path
-    assert_response :success
-  end
-
-  test "should show current API key when user has active key" do
-    @api_key = ApiKey.create!(
+  test "index shows api keys list" do
+    ApiKey.create!(
       user: @user,
-      name: "Test API Key",
-      display_key: "test_key_123",
+      name: "Listed Key",
+      display_key: "listed_key_123",
       scopes: [ "read" ]
     )
 
-    get settings_api_key_path
+    get settings_api_keys_path
     assert_response :success
+    assert_includes response.body, "Listed Key"
   end
 
-  test "should show new API key form" do
-    get new_settings_api_key_path
-    assert_response :success
-  end
-
-  test "should redirect to show when user already has active key and tries to visit new" do
+  test "new always renders form (no redirect when key exists)" do
     ApiKey.create!(
       user: @user,
       name: "Existing API Key",
@@ -38,57 +29,38 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     )
 
     get new_settings_api_key_path
-    assert_redirected_to settings_api_key_path
+    assert_response :success
   end
 
-  test "should create new API key with valid parameters" do
+  test "create makes a new key without revoking existing keys" do
+    existing = ApiKey.create!(
+      user: @user,
+      name: "Existing API Key",
+      display_key: "existing_key_123",
+      scopes: [ "read" ]
+    )
+
     assert_difference "ApiKey.count", 1 do
-      post settings_api_key_path, params: {
+      post settings_api_keys_path, params: {
         api_key: {
-          name: "Test Integration Key",
+          name: "Brand New Key",
           scopes: "read_write"
         }
       }
     end
 
-    assert_redirected_to settings_api_key_path
-    follow_redirect!
-    assert_response :success
+    new_key = @user.api_keys.active.visible.find_by(name: "Brand New Key")
+    assert new_key.present?
+    assert_redirected_to settings_api_key_path(new_key, newly_created: true)
 
-    api_key = @user.api_keys.active.first
-    assert_equal "Test Integration Key", api_key.name
-    assert_includes api_key.scopes, "read_write"
+    existing.reload
+    refute existing.revoked?
+    assert_includes new_key.scopes, "read_write"
   end
 
-  test "should revoke existing key when creating new one" do
-    old_key = ApiKey.create!(
-      user: @user,
-      name: "Old API Key",
-      display_key: "old_key_123",
-      scopes: [ "read" ]
-    )
-
-    post settings_api_key_path, params: {
-      api_key: {
-        name: "New API Key",
-        scopes: "read_write"
-      }
-    }
-
-    assert_redirected_to settings_api_key_path
-    follow_redirect!
-    assert_response :success
-
-    old_key.reload
-    assert old_key.revoked?
-
-    new_key = @user.api_keys.active.first
-    assert_equal "New API Key", new_key.name
-  end
-
-  test "should not create API key without name" do
+  test "create rejects blank name" do
     assert_no_difference "ApiKey.count" do
-      post settings_api_key_path, params: {
+      post settings_api_keys_path, params: {
         api_key: {
           name: "",
           scopes: "read"
@@ -99,93 +71,133 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "should not create API key without scopes" do
-  # Ensure clean state for this specific test
-  @user.api_keys.destroy_all
-  initial_user_count = @user.api_keys.count
-
-  assert_no_difference "@user.api_keys.count" do
-    post settings_api_key_path, params: {
-      api_key: {
-        name: "Test Key",
-        scopes: []
+  test "create rejects blank scopes" do
+    assert_no_difference "ApiKey.count" do
+      post settings_api_keys_path, params: {
+        api_key: {
+          name: "No Scopes Key",
+          scopes: []
+        }
       }
-    }
+    end
+
+    assert_response :unprocessable_entity
   end
 
-  assert_response :unprocessable_entity
-  assert_equal initial_user_count, @user.api_keys.reload.count
-end
+  test "create rejects duplicate active name" do
+    ApiKey.create!(
+      user: @user,
+      name: "Dup",
+      display_key: "dup_key_123",
+      scopes: [ "read" ]
+    )
 
-  test "should revoke API key" do
-    @api_key = ApiKey.create!(
+    assert_no_difference "ApiKey.count" do
+      post settings_api_keys_path, params: {
+        api_key: {
+          name: "Dup",
+          scopes: "read_write"
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "show renders a key" do
+    created_key = ApiKey.create!(
       user: @user,
       name: "Test API Key",
       display_key: "test_key_123",
       scopes: [ "read" ]
     )
 
-    delete settings_api_key_path
-
-    assert_redirected_to settings_api_key_path
-    follow_redirect!
+    get settings_api_key_path(created_key)
     assert_response :success
-
-    @api_key.reload
-    assert @api_key.revoked?
+    assert_includes response.body, "Test API Key"
   end
 
-  test "should handle revoke when no API key exists" do
-    delete settings_api_key_path
+  test "show renders the newly created confirmation" do
+    created_key = ApiKey.create!(
+      user: @user,
+      name: "Fresh Key",
+      display_key: "fresh_key_123",
+      scopes: [ "read" ]
+    )
 
-    assert_redirected_to settings_api_key_path
-    # Should not error even when no API key exists
+    get settings_api_key_path(created_key, newly_created: true)
+    assert_response :success
+    assert_includes response.body, created_key.plain_key
+    assert_select "h3", text: I18n.t("settings.api_keys.show.newly_created.heading")
   end
 
-  test "should only allow one active API key per user" do
-    # Create first API key
-    post settings_api_key_path, params: {
-      api_key: {
-        name: "First Key",
-        scopes: "read"
-      }
-    }
+  test "show 404s on another user's key" do
+    other_user = users(:family_member)
+    other_user.api_keys.destroy_all
+    other_key = ApiKey.create!(
+      user: other_user,
+      name: "Other User Key",
+      display_key: "other_user_key_123",
+      scopes: [ "read" ]
+    )
 
-    first_key = @user.api_keys.active.first
-
-    # Create second API key
-    post settings_api_key_path, params: {
-      api_key: {
-        name: "Second Key",
-        scopes: "read_write"
-      }
-    }
-
-    # First key should be revoked
-    first_key.reload
-    assert first_key.revoked?
-
-    # Only one active key should exist
-    assert_equal 1, @user.api_keys.active.count
-    assert_equal "Second Key", @user.api_keys.active.first.name
+    get settings_api_key_path(other_key)
+    assert_response :not_found
   end
 
-  test "should generate secure random API key" do
-    post settings_api_key_path, params: {
+  test "destroy revokes the targeted key only" do
+    key1 = ApiKey.create!(
+      user: @user,
+      name: "Key One",
+      display_key: "key_one_123",
+      scopes: [ "read" ]
+    )
+    key2 = ApiKey.create!(
+      user: @user,
+      name: "Key Two",
+      display_key: "key_two_123",
+      scopes: [ "read_write" ]
+    )
+
+    delete settings_api_key_path(key1)
+    assert_redirected_to settings_api_keys_path
+
+    key1.reload
+    key2.reload
+    assert key1.revoked?
+    refute key2.revoked?
+  end
+
+  test "destroy cannot revoke demo monitoring key" do
+    # set_api_key scopes to .visible which EXCLUDES the demo key, so the
+    # demo key id is not found by the controller and the request 404s
+    # before reaching the cannot_revoke branch.
+    demo_key = ApiKey.create!(
+      user: @user,
+      name: "Demo Monitoring Key",
+      display_key: ApiKey::DEMO_MONITORING_KEY,
+      scopes: [ "read" ]
+    )
+
+    delete settings_api_key_path(demo_key)
+    assert_response :not_found
+
+    demo_key.reload
+    refute demo_key.revoked?
+  end
+
+  test "create generates a secure random API key" do
+    post settings_api_keys_path, params: {
       api_key: {
         name: "Random Key Test",
         scopes: "read"
       }
     }
 
-    assert_redirected_to settings_api_key_path
-    follow_redirect!
-    assert_response :success
-
-    # Verify the API key was created with expected properties
-    api_key = @user.api_keys.active.first
-    assert api_key.present?
-    assert_equal "Random Key Test", api_key.name
-    assert_includes api_key.scopes, "read"
+    created_key = @user.api_keys.active.visible.find_by(name: "Random Key Test")
+    assert created_key.present?
+    assert_redirected_to settings_api_key_path(created_key, newly_created: true)
+    assert_includes created_key.scopes, "read"
+    assert_equal 64, created_key.plain_key.length
   end
 end

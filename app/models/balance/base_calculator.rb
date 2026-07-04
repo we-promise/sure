@@ -9,6 +9,32 @@ class Balance::BaseCalculator
     raise NotImplementedError, "Subclasses must implement this method"
   end
 
+  # The earliest date balances should be materialized for.
+  #
+  # Normally this is the opening anchor date, which our system keeps at or
+  # before the oldest entry. But an entry (most commonly a backfilled
+  # reconciliation Valuation) can be created with a date EARLIER than the
+  # opening anchor — the reconciliation path does not move the anchor back.
+  # When that happens the anchor date alone would clip all pre-anchor entries
+  # out of the balance series (they'd be stored but never materialized into
+  # Balance rows, leaving the net-worth chart empty before the anchor).
+  #
+  # Bounding on min(opening_anchor_date, oldest_entry_date) ensures those
+  # earlier entries are included. The opening anchor and any reconciliation
+  # still reset the absolute balance on their own dates via the
+  # valuation-override path, so extending the window backward is safe.
+  #
+  # Public so Balance::Materializer can use the same lower bound when deciding
+  # which balances to preserve during an incremental purge.
+  #
+  # Memoized: this is read multiple times per sync (calc bound + both purge
+  # branches) and the underlying MIN(date) is a non-trivial scan on accounts
+  # with large entry histories. Calculator instances are per-sync, so there is
+  # no staleness concern.
+  def calculation_start_date
+    @calculation_start_date ||= [ account.opening_anchor_date, account.entries.minimum(:date) ].compact.min
+  end
+
   private
     def sync_cache
       @sync_cache ||= Balance::SyncCache.new(account)
@@ -38,6 +64,11 @@ class Balance::BaseCalculator
       return 0 unless account.balance_type == :non_cash
 
       end_non_cash - start_non_cash - non_cash_flows
+    end
+
+    # Keeps asset/liability flow sign conventions centralized for persisted balances.
+    def flows_factor
+      account.classification == "asset" ? 1 : -1
     end
 
     # If holdings value goes from $100 -> $200 (change_holdings_value is $100)
@@ -133,7 +164,7 @@ class Balance::BaseCalculator
         cash_adjustments: args[:cash_adjustments] || 0,
         non_cash_adjustments: args[:non_cash_adjustments] || 0,
         net_market_flows: args[:net_market_flows] || 0,
-        flows_factor: account.classification == "asset" ? 1 : -1
+        flows_factor: flows_factor
       )
     end
 end

@@ -314,6 +314,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsProxyHeadersLabel => 'Custom Proxy Headers';
 
   @override
+  String get settingsPrivacyHideAmountsLabel => 'Hide amounts';
+
+  @override
+  String get settingsPrivacyHideAmountsContent =>
+      'Mask money values across the app';
+
+  @override
   String get settingsBiometricLabel => 'Biometric Lock';
 
   @override

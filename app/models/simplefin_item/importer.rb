@@ -46,9 +46,10 @@ class SimplefinItem::Importer
         import_regular_sync
       end
 
-      # Reset status to good if no auth errors occurred in this sync.
-      # This allows the item to recover automatically when a bank's auth issue is resolved
-      # in SimpleFIN Bridge, without requiring the user to manually reconnect.
+      # A successful import proves the SimpleFIN access URL still works, so clear
+      # any lingering item-level requires_update. Per-institution auth errors are
+      # recorded in sync stats but do not mean the access URL itself is dead; a
+      # dead access URL fails the fetch earlier and never reaches this line.
       maybe_clear_requires_update_status
 
       # Detect likely card-replacement scenarios (e.g., fraud replacement).
@@ -353,19 +354,17 @@ class SimplefinItem::Importer
       )
     end
 
-    # Reset status to good if no auth errors occurred in this sync.
-    # This allows automatic recovery when a bank's auth issue is resolved in SimpleFIN Bridge.
+    # Reset status to good after a successful import. Per-institution auth
+    # errors are recorded in sync stats, but they do not mean the SimpleFIN
+    # access URL itself is dead.
     def maybe_clear_requires_update_status
       return unless simplefin_item.requires_update?
 
-      auth_errors = stats.dig("error_buckets", "auth").to_i
-      if auth_errors.zero?
-        simplefin_item.update!(status: :good)
-        Rails.logger.info(
-          "SimpleFIN: cleared requires_update status for item ##{simplefin_item.id} " \
-          "(no auth errors in this sync)"
-        )
-      end
+      simplefin_item.update!(status: :good)
+      Rails.logger.info(
+        "SimpleFIN: cleared requires_update status for item ##{simplefin_item.id} " \
+        "after successful import"
+      )
     end
 
     def import_with_chunked_history
