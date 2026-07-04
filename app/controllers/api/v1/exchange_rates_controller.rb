@@ -88,8 +88,12 @@ class Api::V1::ExchangeRatesController < Api::V1::BaseController
       record = ExchangeRate.find_or_initialize_by(from_currency: from, to_currency: to, date: date)
       record.update!(rate: rate)
       record
-    rescue ActiveRecord::RecordNotUnique
-      # Concurrent POST inserted between our SELECT and INSERT; retry as update.
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+      # Concurrent POST raced ours between our SELECT and INSERT. The
+      # uniqueness *validator* can also lose this race and raise
+      # RecordInvalid before the DB's unique index has a chance to raise
+      # RecordNotUnique, so both must be treated as "someone else just
+      # created it — retry as an update."
       record = ExchangeRate.find_by!(from_currency: from, to_currency: to, date: date)
       record.update!(rate: rate)
       record

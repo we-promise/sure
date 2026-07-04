@@ -117,6 +117,29 @@ class Api::V1::ExchangeRatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1.10.to_d, @rate.reload.rate
   end
 
+  test "create retries as an update when a concurrent request wins the uniqueness race" do
+    # Simulates two concurrent POSTs for the same (from, to, date): both pass
+    # find_or_initialize_by before either has saved, so ours must lose the
+    # validation-level uniqueness check (RecordInvalid), not just the DB
+    # index (RecordNotUnique), and retry as an update against the winner.
+    winner = ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.new(2026, 6, 20), rate: 150.0)
+
+    racing_record = ExchangeRate.new(from_currency: "JPY", to_currency: "USD", date: Date.new(2026, 6, 20))
+    racing_record.define_singleton_method(:update!) do |*|
+      raise ActiveRecord::RecordInvalid, self
+    end
+    ExchangeRate.stubs(:find_or_initialize_by).returns(racing_record)
+
+    assert_no_difference "ExchangeRate.count" do
+      post api_v1_exchange_rates_url,
+        params: { from: "JPY", to: "USD", date: "2026-06-20", rate: "151.0" },
+        headers: api_headers(@api_key)
+    end
+
+    assert_response :ok
+    assert_equal 151.0.to_d, winner.reload.rate
+  end
+
   test "create rejects invalid payloads" do
     post api_v1_exchange_rates_url,
       params: { from: "EUR", to: "USD", date: "junk", rate: "1.1" },
