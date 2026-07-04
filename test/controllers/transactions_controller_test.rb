@@ -74,6 +74,10 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
+    # Same message as the blank-account case: an inaccessible account must
+    # not be distinguishable from a truly blank one, or the response leaks
+    # which account ids exist.
+    assert_match CGI.escapeHTML(Entry.new.errors.generate_message(:account, :blank)), response.body
   end
 
   test "updates with transaction details" do
