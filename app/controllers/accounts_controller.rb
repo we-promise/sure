@@ -261,16 +261,11 @@ class AccountsController < ApplicationController
       if page_transactions.any?
         ActiveRecord::Associations::Preloader.new(
           records: page_transactions,
-          associations: [ :category, :merchant, :tags, :transfer_as_inflow, :transfer_as_outflow ]
+          associations: Transaction::ACTIVITY_ROW_ASSOCIATIONS
         ).call
       end
 
-      entry_ids = @entries.map(&:id)
-      @split_parent_entry_ids = if entry_ids.any?
-        Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
-      else
-        Set.new
-      end
+      @split_parent_entry_ids = Entry.split_parent_ids_for(@entries.map(&:id))
     end
 
     def build_statement_tab_data

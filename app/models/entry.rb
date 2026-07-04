@@ -89,6 +89,15 @@ class Entry < ApplicationRecord
     joins(:account).where(accounts: { family_id: family.id })
   end
 
+  # Given a page of entry ids, returns the subset that are split parents
+  # (i.e. have children), in one query. Used by activity-feed views to
+  # avoid a per-row child_entries.exists? check.
+  def self.split_parent_ids_for(entry_ids)
+    return Set.new if entry_ids.blank?
+
+    where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+  end
+
   # Uncategorized, non-transfer transaction entries on draft or active accounts.
   # Caller is responsible for scoping to accessible entries before applying this scope.
   scope :uncategorized_transactions, -> {
