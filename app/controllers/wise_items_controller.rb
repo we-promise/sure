@@ -14,7 +14,7 @@ class WiseItemsController < ApplicationController
 
   def create
     @wise_item = Current.family.wise_items.build(wise_item_params)
-    @wise_item.name ||= I18n.t("wise_items.default_name")
+    @wise_item.name = I18n.t("wise_items.default_name") if @wise_item.name.blank?
 
     if @wise_item.save
       @wise_item.sync_later unless @wise_item.syncing?

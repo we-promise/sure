@@ -6,7 +6,8 @@ class WiseItem < ApplicationRecord
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   if encryption_ready?
-    encrypts :api_token
+    encrypts :api_token, deterministic: true
+    encrypts :raw_payload
   end
 
   validates :name, presence: true

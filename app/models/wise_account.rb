@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 class WiseAccount < ApplicationRecord
+  include Encryptable
+
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+  end
+
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   belongs_to :wise_item
