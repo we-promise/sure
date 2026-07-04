@@ -139,7 +139,13 @@ RSpec.describe 'API V1 Transfers', type: :request do
       response '200', 'transfer retrieved' do
         schema '$ref' => '#/components/schemas/TransferDecision'
 
-        run_test!
+        run_test! do |response|
+          body = JSON.parse(response.body)
+          expect(body['source_fee_amount']).to eq '0.0'
+          expect(body['destination_fee_amount']).to eq '0.0'
+          expect(body).to have_key('source_fee_currency')
+          expect(body).to have_key('destination_fee_currency')
+        end
       end
 
       response '401', 'unauthorized' do
