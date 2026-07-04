@@ -66,6 +66,11 @@ class Balance::BaseCalculator
       end_non_cash - start_non_cash - non_cash_flows
     end
 
+    # Keeps asset/liability flow sign conventions centralized for persisted balances.
+    def flows_factor
+      account.classification == "asset" ? 1 : -1
+    end
+
     # If holdings value goes from $100 -> $200 (change_holdings_value is $100)
     # And non-cash flows (i.e. "buys") for day are +$50 (net_buy_sell_value is $50)
     # That means value increased by $100, where $50 of that is due to the change in holdings value, and $50 is due to the buy/sell
@@ -159,7 +164,7 @@ class Balance::BaseCalculator
         cash_adjustments: args[:cash_adjustments] || 0,
         non_cash_adjustments: args[:non_cash_adjustments] || 0,
         net_market_flows: args[:net_market_flows] || 0,
-        flows_factor: account.classification == "asset" ? 1 : -1
+        flows_factor: flows_factor
       )
     end
 end
