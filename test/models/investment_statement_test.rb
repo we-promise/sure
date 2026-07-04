@@ -268,6 +268,22 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_no_match(/JOIN accounts/, aggregate_queries.first)
   end
 
+  test "investment_accounts preloads the associations report rows render" do
+    create_investment_account(balance: 1000)
+
+    account = @statement.investment_accounts.first
+
+    assert account.association(:accountable).loaded?
+    assert account.association(:account_providers).loaded?
+    assert account.association(:logo_attachment).loaded?
+  end
+
+  test "investment_account_ids resolves despite the polymorphic accountable preload" do
+    account = create_investment_account(balance: 1000)
+
+    assert_equal [ account.id ], @statement.send(:investment_account_ids)
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(
