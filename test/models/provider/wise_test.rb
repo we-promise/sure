@@ -70,4 +70,48 @@ class Provider::WiseTest < ActiveSupport::TestCase
 
     assert_equal 2, call_count, "Expected 2 API calls for a 517-day range chunked at 365 days"
   end
+
+  test "retries network errors and raises Error after max retries exhausted" do
+    provider = Provider::Wise.new(api_token: "test-token")
+    provider.stubs(:sleep)
+    DebugLogEntry.stubs(:capture)
+
+    attempt_count = 0
+    Provider::Wise.stubs(:get).with { |*| attempt_count += 1; true }.raises(SocketError, "connection failed")
+
+    error = assert_raises(Provider::Wise::Error) do
+      provider.list_profiles
+    end
+
+    assert_equal Provider::Wise::MAX_RETRIES + 1, attempt_count
+    assert_match "Network error after #{Provider::Wise::MAX_RETRIES} retries", error.message
+  end
+
+  test "retries on 429 rate limit and raises Error after max retries exhausted" do
+    provider = Provider::Wise.new(api_token: "test-token")
+    provider.stubs(:sleep)
+    DebugLogEntry.stubs(:capture)
+
+    stub_429 = OpenStruct.new(code: 429, body: "{}")
+    Provider::Wise.stubs(:get).returns(stub_429)
+
+    error = assert_raises(Provider::Wise::Error) do
+      provider.list_profiles
+    end
+
+    assert_match "Network error after #{Provider::Wise::MAX_RETRIES} retries", error.message
+  end
+
+  test "retries on 5xx server error and raises Error after max retries exhausted" do
+    provider = Provider::Wise.new(api_token: "test-token")
+    provider.stubs(:sleep)
+    DebugLogEntry.stubs(:capture)
+
+    stub_503 = OpenStruct.new(code: 503, body: "{}")
+    Provider::Wise.stubs(:get).returns(stub_503)
+
+    assert_raises(Provider::Wise::Error) do
+      provider.list_profiles
+    end
+  end
 end

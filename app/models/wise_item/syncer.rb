@@ -56,8 +56,8 @@ class WiseItem::Syncer
 
   private
 
-    def update_sync_status(sync, key)
-      sync.update!(status_text: I18n.t("wise_items.sync.status.#{key}")) if sync.respond_to?(:status_text)
+    def update_sync_status(sync, key, **i18n_options)
+      sync.update!(status_text: I18n.t("wise_items.sync.status.#{key}", **i18n_options)) if sync.respond_to?(:status_text)
     end
 
     def mark_import_started(sync)
@@ -71,7 +71,7 @@ class WiseItem::Syncer
 
       if unlinked_count > 0
         wise_item.update!(pending_account_setup: true)
-        sync.update!(status_text: I18n.t("wise_items.sync.status.needs_setup", count: unlinked_count)) if sync.respond_to?(:status_text)
+        update_sync_status(sync, :needs_setup, count: unlinked_count)
       else
         wise_item.update!(pending_account_setup: false)
       end
