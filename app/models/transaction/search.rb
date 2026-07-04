@@ -131,6 +131,9 @@ class Transaction::Search
       # Get parent category IDs for the given category names
       parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
 
+      # Categorizable transfer kinds (loan_payment, investment_contribution)
+      # must stay visible here: they feed the dashboard's Uncategorized bucket,
+      # so hiding them would leave those totals with no matching rows.
       uncategorized_condition = "categories.id IS NULL AND transactions.kind NOT IN (?)"
 
       # Build condition based on whether parent_category_ids is empty
@@ -138,7 +141,7 @@ class Transaction::Search
         if include_uncategorized
           query = query.left_joins(:category).where(
             "categories.name IN (?) OR (#{uncategorized_condition})",
-            real_categories.presence || [], Transaction::TRANSFER_KINDS
+            real_categories.presence || [], Transaction::UNCATEGORIZABLE_TRANSFER_KINDS
           )
         else
           query = query.left_joins(:category).where(categories: { name: real_categories })
@@ -147,7 +150,7 @@ class Transaction::Search
         if include_uncategorized
           query = query.left_joins(:category).where(
             "categories.name IN (?) OR categories.parent_id IN (?) OR (#{uncategorized_condition})",
-            real_categories, parent_category_ids, Transaction::TRANSFER_KINDS
+            real_categories, parent_category_ids, Transaction::UNCATEGORIZABLE_TRANSFER_KINDS
           )
         else
           query = query.left_joins(:category).where(

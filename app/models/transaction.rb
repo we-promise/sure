@@ -85,6 +85,14 @@ class Transaction < ApplicationRecord
   # they represent real cash outflow from a budgeting perspective.
   BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
 
+  # Transfer kinds that never carry a category. loan_payment and
+  # investment_contribution are intentionally NOT here: they count as budget
+  # expenses (see BUDGET_EXCLUDED_KINDS) and can be categorized, so
+  # "uncategorized" views must surface them — otherwise their amounts show up
+  # in dashboard/report Uncategorized buckets with no matching rows in the
+  # transactions list.
+  UNCATEGORIZABLE_TRANSFER_KINDS = %w[funds_movement cc_payment].freeze
+
   # All valid investment activity labels (for UI dropdown)
   ACTIVITY_LABELS = [
     "Buy", "Sell", "Sweep In", "Sweep Out", "Dividend", "Reinvestment",
