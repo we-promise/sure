@@ -301,7 +301,9 @@ class InvestmentStatement
     HoldingAllocation = Data.define(:security, :amount, :weight, :trend)
 
     def investment_account_ids
-      @investment_account_ids ||= investment_accounts.pluck(:id)
+      # map over the loaded relation rather than pluck, which would force the
+      # polymorphic :accountable include into an impossible eager-load JOIN
+      @investment_account_ids ||= investment_accounts.map(&:id)
     end
 
     def totals_query(account_ids:, date_range:)
