@@ -122,7 +122,7 @@ export default class extends Controller {
       .call(d3.axisBottom(x0).tickSize(0))
       .call((g) => g.select(".domain").remove())
       .selectAll("text")
-      .attr("class", (_d, i) => (data[i].highlighted ? "text-primary" : "text-secondary"))
+      .attr("class", (_d, i) => (data[i].highlighted ? "text-primary fill-current" : "text-secondary fill-current"))
       .style("font-size", "12px")
       .style("font-weight", (_d, i) => (data[i].highlighted ? 600 : 500));
   }

@@ -47,6 +47,7 @@ class PagesController < ApplicationController
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(net_totals)
 
+    @money_flow_accounts = income_statement.eligible_accounts
     @money_flow_month = money_flow_month_param
     @money_flow_account_ids = money_flow_account_ids_param
     @money_flow_data = build_money_flow_data(income_statement, @money_flow_month, @money_flow_account_ids)
@@ -127,7 +128,7 @@ class PagesController < ApplicationController
           title: "pages.dashboard.money_flow.title",
           partial: "pages/dashboard/money_flow",
           layout: section_layout("money_flow"),
-          locals: { money_flow_data: @money_flow_data, accounts: @accounts },
+          locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts },
           visible: @accounts.any?,
           collapsible: true
         },
@@ -408,8 +409,8 @@ class PagesController < ApplicationController
     # nil means "all accessible accounts" (the widget's default, unfiltered state)
     def money_flow_account_ids_param
       ids = Array(params[:money_flow_account_ids]).reject(&:blank?)
-      accessible_ids = @accounts.map { |a| a.id.to_s }
-      ids &= accessible_ids
+      eligible_ids = @money_flow_accounts.map { |a| a.id.to_s }
+      ids &= eligible_ids
       ids.presence
     end
 

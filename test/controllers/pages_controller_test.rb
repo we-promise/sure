@@ -175,6 +175,45 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal default_bars, filtered_bars
   end
 
+  test "dashboard money flow widget excludes accounts ineligible for cashflow totals from its account filter" do
+    excluded_account = @family.accounts.create!(
+      name: "Excluded From Reports",
+      currency: @family.currency,
+      balance: 0,
+      exclude_from_reports: true,
+      accountable: Depository.new
+    )
+
+    get root_path
+
+    assert_response :ok
+    assert_select "input[type='checkbox'][value=?]", excluded_account.id.to_s, count: 0
+  end
+
+  test "dashboard money flow widget ignores account ids excluded from cashflow totals" do
+    excluded_account = @family.accounts.create!(
+      name: "Excluded From Reports",
+      currency: @family.currency,
+      balance: 0,
+      exclude_from_reports: true,
+      accountable: Depository.new
+    )
+    create_transaction(account: excluded_account, name: "Not counted", amount: 999)
+
+    get root_path
+    default_bars = JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+
+    get root_path, params: { money_flow_account_ids: [ excluded_account.id ] }
+
+    assert_response :ok
+    filtered_bars = JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+
+    # An account excluded from reports is visible/accessible but not eligible
+    # for cashflow totals, so selecting only it must fall back to the
+    # unfiltered state instead of silently computing to zero.
+    assert_equal default_bars, filtered_bars
+  end
+
   test "dashboard clamps a future money flow month instead of erroring" do
     get root_path, params: { money_flow_month: 1.month.from_now.beginning_of_month.iso8601 }
 
