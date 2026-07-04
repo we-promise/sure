@@ -145,8 +145,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :ok
-    chart = css_select("[data-controller='bar-chart']").first
-    bars = JSON.parse(chart["data-bar-chart-data-value"])
+    bars = money_flow_bars
 
     assert_equal 3, bars.size
     highlighted = bars.find { |bar| bar["highlighted"] }
@@ -161,12 +160,12 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: other_account, name: "Not mine", amount: 999)
 
     get root_path
-    default_bars = JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+    default_bars = money_flow_bars
 
     get root_path, params: { money_flow_account_ids: [ other_account.id ] }
 
     assert_response :ok
-    filtered_bars = JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+    filtered_bars = money_flow_bars
 
     # An id outside the current user's accessible accounts is dropped entirely
     # (money_flow_account_ids_param intersects against accessible ids), so the
@@ -201,12 +200,12 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: excluded_account, name: "Not counted", amount: 999)
 
     get root_path
-    default_bars = JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+    default_bars = money_flow_bars
 
     get root_path, params: { money_flow_account_ids: [ excluded_account.id ] }
 
     assert_response :ok
-    filtered_bars = JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+    filtered_bars = money_flow_bars
 
     # An account excluded from reports is visible/accessible but not eligible
     # for cashflow totals, so selecting only it must fall back to the
@@ -218,8 +217,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path, params: { money_flow_month: 1.month.from_now.beginning_of_month.iso8601 }
 
     assert_response :ok
-    chart = css_select("[data-controller='bar-chart']").first
-    bars = JSON.parse(chart["data-bar-chart-data-value"])
+    bars = money_flow_bars
 
     assert_equal Date.current.beginning_of_month.iso8601, bars.last["date"]
   end
@@ -269,4 +267,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "Test Release"
     # Should not crash even with nil values
   end
+
+  private
+    def money_flow_bars
+      JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+    end
 end
