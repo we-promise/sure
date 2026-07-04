@@ -202,6 +202,32 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "matching still finds pairs at the widest allowed date_window with since_date" do
+    # 29 days apart: far outside the default 4-day window, so this pair only
+    # matches if the widened window is actually applied.
+    outflow = create_transaction(date: 29.days.ago.to_date, account: @depository, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    pairs = @family.transfer_match_candidates(since_date: 7.days.ago.to_date, date_window: 30).map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    assert_includes pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "a pair whose inflow predates since_date is excluded even when its outflow is recent" do
+    # This is the known gap the date_window cap guards: since_date only filters
+    # the inflow side, so a pre-since_date inflow drops the pair entirely.
+    outflow = create_transaction(date: 5.days.ago.to_date, account: @depository, amount: 500)
+    inflow = create_transaction(date: 8.days.ago.to_date, account: @credit_card, amount: -500)
+
+    pairs = @family.transfer_match_candidates(since_date: 7.days.ago.to_date).map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    refute_includes pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
   test "auto-matched cash to investment assigns investment contribution category" do
     investment = accounts(:investment)
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
