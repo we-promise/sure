@@ -11,16 +11,19 @@ class CreditCardsController < ApplicationController
   )
 
   def update
-    update_enable_banking_settings
     super
+    # Only apply provider settings once the account update succeeded (redirect);
+    # a failed update renders :edit and must not persist the flag.
+    update_enable_banking_settings if response.redirect?
   end
 
   private
     def update_enable_banking_settings
-      eb_params = params[:account]&.[](:enable_banking)
+      eb_params = params.permit(account: { enable_banking: [ :treat_balance_as_available_credit ] })
+        .dig(:account, :enable_banking)
       return if eb_params.blank?
 
-      provider_account = @account.account_providers.find_by(provider_type: "EnableBankingAccount")&.provider
+      provider_account = @account.provider_account_for("EnableBankingAccount")
       return unless provider_account.present?
 
       provider_account.update!(

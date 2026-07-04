@@ -129,6 +129,35 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_not enable_banking_account.reload.treat_balance_as_available_credit?
   end
 
+  test "does not persist enable banking flag when the account update fails" do
+    enable_banking_account = create_linked_enable_banking_account
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: "",
+        accountable_type: "CreditCard",
+        enable_banking: { treat_balance_as_available_credit: "1" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_not enable_banking_account.reload.treat_balance_as_available_credit?
+  end
+
+  test "handles malformed enable banking params without error" do
+    create_linked_enable_banking_account
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        enable_banking: "bogus"
+      }
+    }
+
+    assert_redirected_to @account
+  end
+
   test "ignores enable banking params for accounts without an enable banking link" do
     patch credit_card_path(@account), params: {
       account: {
