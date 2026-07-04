@@ -173,6 +173,22 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal category, outflow_entry.entryable.category
   end
 
+  test "auto-matched investment to investment transfer is a funds movement, not a contribution" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:crypto), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500)
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+
+    outflow_entry.reload
+    inflow_entry.reload
+
+    assert_equal "funds_movement", outflow_entry.entryable.kind
+    assert_equal "funds_movement", inflow_entry.entryable.kind
+    assert_nil outflow_entry.entryable.category
+  end
+
   test "auto-matched investment transfers reuse contribution category lookup" do
     investment = accounts(:investment)
     category = @family.investment_contributions_category
