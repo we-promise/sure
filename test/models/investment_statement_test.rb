@@ -268,6 +268,23 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_no_match(/JOIN accounts/, aggregate_queries.first)
   end
 
+  test "totals converts foreign currency trades using the nearest exchange rate" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    eur_account = create_investment_account(balance: 500, currency: "EUR")
+    trade_date = period.start_date + 1.day
+
+    # A rate dated exactly on the trade date would pass identically whether
+    # aggregation_sql joins on exact date or nearest date — this pins the
+    # nearest-earlier-rate behavior specifically by dating the rate off.
+    create_trade(account: eur_account, qty: 2, amount: 100, date: trade_date)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: trade_date - 2.days, rate: 2)
+
+    statement = InvestmentStatement.new(@family, user: nil)
+    totals = statement.totals(period: period)
+
+    assert_equal Money.new(200, @family.currency), totals.contributions
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(
