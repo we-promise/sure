@@ -61,6 +61,9 @@ class GoalPledge < ApplicationRecord
     is_valuation = entry.entryable.is_a?(Valuation)
 
     if is_valuation
+      # Never match a valuation delta on an investment account: it may be a
+      # market move, not a deposit, and would false-match (investment goals).
+      return false if account&.investment?
       return false if valuation_delta.nil? || valuation_delta.to_d <= 0
     elsif kind_transfer? && !entry.amount.to_d.negative?
       return false

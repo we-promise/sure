@@ -92,6 +92,11 @@ class Provider::Up
 
     # Flattens a JSON:API transaction resource, lifting attributes to the top level and
     # extracting the related account/category ids from relationships.
+    #
+    # transfer_account_id is the other side of an internal money movement: Up populates
+    # relationships.transferAccount on any transaction that moves funds between the
+    # user's own accounts (including round-ups swept into a Saver). It is nil for
+    # ordinary income/expense.
     def flatten_transaction(resource)
       data = resource.with_indifferent_access
       attributes = data[:attributes].is_a?(Hash) ? data[:attributes] : {}
@@ -99,7 +104,8 @@ class Provider::Up
       attributes.merge(
         id: data[:id],
         account_id: data.dig(:relationships, :account, :data, :id),
-        category_id: data.dig(:relationships, :category, :data, :id)
+        category_id: data.dig(:relationships, :category, :data, :id),
+        transfer_account_id: data.dig(:relationships, :transferAccount, :data, :id)
       ).with_indifferent_access
     end
 

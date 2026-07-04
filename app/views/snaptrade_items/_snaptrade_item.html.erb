@@ -2,6 +2,9 @@
 
 <%= tag.div id: dom_id(snaptrade_item) do %>
   <% unlinked_count = snaptrade_item.unlinked_accounts_count %>
+  <% snaptrade_registered = snaptrade_item.user_registered? %>
+  <% brokerage_connect_href = snaptrade_registered ? connect_snaptrade_item_path(snaptrade_item) : oauth_connect_snaptrade_items_path(item_id: snaptrade_item.id) %>
+  <% brokerage_connect_frame = snaptrade_registered ? "_top" : :drawer %>
 
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
@@ -60,12 +63,13 @@
 
         <% if Current.user&.admin? %>
           <div class="flex items-center gap-2">
-            <% if snaptrade_item.requires_update? || !snaptrade_item.user_registered? %>
+            <% if snaptrade_item.requires_update? || !snaptrade_registered %>
               <%= render DS::Link.new(
                 text: t(".reconnect"),
                 icon: "link",
                 variant: "secondary",
-                href: connect_snaptrade_item_path(snaptrade_item)
+                href: brokerage_connect_href,
+                frame: brokerage_connect_frame
               ) %>
             <% else %>
               <%= icon(
@@ -81,7 +85,8 @@
                 variant: "link",
                 text: t(".connect_brokerage"),
                 icon: "plus",
-                href: connect_snaptrade_item_path(snaptrade_item)
+                href: brokerage_connect_href,
+                frame: brokerage_connect_frame
               ) %>
               <% if unlinked_count > 0 %>
                 <% menu.with_item(
@@ -150,7 +155,8 @@
                 text: t(".connect_brokerage"),
                 icon: "link",
                 variant: "primary",
-                href: connect_snaptrade_item_path(snaptrade_item)
+                href: brokerage_connect_href,
+                frame: brokerage_connect_frame
               ) %>
             </div>
           <% end %>
