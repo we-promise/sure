@@ -39,7 +39,5 @@ hu:
       amount: Összeg
       category: Kategória
       uncategorized: Kategorizálatlan
-      total: '[Total]'
-      transfer_amount: '[Transfer amount]'
     update:
       success: Átutalás frissítve

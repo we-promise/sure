@@ -82,10 +82,6 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Transfer Savings", response_data.dig("inflow_transaction", "account", "name")
     assert_equal "Transfer Checking", response_data.dig("outflow_transaction", "account", "name")
     assert response_data.key?("amount_cents")
-    assert_equal "0.0", response_data["source_fee_amount"]
-    assert_equal "0.0", response_data["destination_fee_amount"]
-    assert response_data.key?("source_fee_currency")
-    assert response_data.key?("destination_fee_currency")
   end
 
   test "returns not found for another family's transfer" do

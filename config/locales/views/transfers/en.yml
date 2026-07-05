@@ -7,9 +7,6 @@ en:
       success: Transfer removed
     form:
       amount: Amount
-      bank_charges: Bank Charges
-      outgoing_fee: Outgoing transfer fee
-      incoming_fee: Incoming transfer fee
       date: Date
       destination_amount: Destination amount
       destination_amount_display: "Destination amount: %{amount}"
@@ -41,11 +38,7 @@ en:
       from: From
       to: To
       date: Date
-      transfer_amount: Transfer amount
-      total: Total
-      bank_charges: Bank Charges
-      source_fee: Source fee
-      destination_fee: Destination fee
+      amount: Amount
       category: Category
       uncategorized: Uncategorized
     update:

@@ -12,11 +12,8 @@ fr:
       destination_amount_display: "Montant de destination : %{amount}"
       exchange_rate_display: "Taux de change : %{rate}"
       expense: Dépense
-      bank_charges: Frais bancaires
       from: De
       income: Revenu
-      incoming_fee: Frais de transfert entrant
-      outgoing_fee: Frais de transfert sortant
       select_account: Sélectionner un compte
       source_amount: Montant source
       submit: Créer le transfert
@@ -44,12 +41,7 @@ fr:
       note_placeholder: Ajoutez une note à ce transfert
       overview: Aperçu
       settings: Paramètres
-      bank_charges: Frais bancaires
-      destination_fee: Frais de destination
-      source_fee: Frais d'origine
       to: À
-      total: Total
-      transfer_amount: Montant du transfert
       uncategorized: Non classé
     update:
       success: Transfert mis à jour

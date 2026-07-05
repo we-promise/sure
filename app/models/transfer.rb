@@ -2,10 +2,6 @@ class Transfer < ApplicationRecord
   belongs_to :inflow_transaction, class_name: "Transaction"
   belongs_to :outflow_transaction, class_name: "Transaction"
 
-  has_many :fee_transactions, class_name: "Transaction", dependent: :destroy
-
-  attr_accessor :source_fee_amount, :destination_fee_amount
-
   enum :status, { pending: "pending", confirmed: "confirmed" }
 
   validates :inflow_transaction_id, uniqueness: true
@@ -32,32 +28,53 @@ class Transfer < ApplicationRecord
     end
   end
 
-  def has_source_fee?
-    derived_source_fee_amount > 0
+  def reject!
+    Transfer.transaction do
+      RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
+      destroy!
+    end
   end
 
-  def has_destination_fee?
-    derived_destination_fee_amount > 0
+  # Once transfer is destroyed, we need to mark the denormalized kind fields on the transactions
+  def destroy!
+    Transfer.transaction do
+      [ inflow_transaction, outflow_transaction ].each do |transaction|
+        next if transaction.nil?
+        next unless Transaction.exists?(transaction.id)
+        begin
+          transaction.update!(kind: "standard")
+        rescue ActiveRecord::RecordNotFound
+        rescue NoMethodError
+          next
+        end
+      end
+      super
+    end
   end
 
-  def has_fees?
-    has_source_fee? || has_destination_fee?
+  def confirm!
+    update!(status: "confirmed")
   end
 
-  def total_fee
-    derived_source_fee_amount + derived_destination_fee_amount
+  def date
+    inflow_transaction&.entry&.date
   end
 
-  def derived_source_fee_amount
-    fee_transactions.joins(:entry).where(entries: { account_id: from_account.id }).sum("entries.amount")
+  def sync_account_later
+    inflow_transaction&.entry&.sync_account_later
+    outflow_transaction&.entry&.sync_account_later
   end
 
-  def derived_destination_fee_amount
-    fee_transactions.joins(:entry).where(entries: { account_id: to_account.id }).sum("entries.amount")
+  def to_account
+    inflow_transaction&.entry&.account
+  end
+
+  def from_account
+    outflow_transaction&.entry&.account
   end
 
   def amount_abs
-    inflow_transaction&.entry&.amount_money&.abs || Money.new(0, from_account&.currency || "USD")
+    inflow_transaction&.entry&.amount_money&.abs
   end
 
   def name
@@ -95,51 +112,6 @@ class Transfer < ApplicationRecord
     to_account&.accountable_type == "Loan"
   end
 
-  def reject!
-    Transfer.transaction do
-      RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
-      destroy!
-    end
-  end
-
-  def destroy!
-    Transfer.transaction do
-      [ inflow_transaction, outflow_transaction ].each do |transaction|
-        next if transaction.nil?
-        next unless Transaction.exists?(transaction.id)
-        begin
-          transaction.update!(kind: "standard")
-        rescue ActiveRecord::RecordNotFound
-        rescue NoMethodError
-          next
-        end
-      end
-      super
-    end
-  end
-
-  def confirm!
-    update!(status: "confirmed")
-  end
-
-  def date
-    inflow_transaction&.entry&.date
-  end
-
-  def sync_account_later
-    inflow_transaction&.entry&.sync_account_later
-    outflow_transaction&.entry&.sync_account_later
-    fee_transactions.each { |t| t.entry&.sync_account_later }
-  end
-
-  def to_account
-    inflow_transaction&.entry&.account
-  end
-
-  def from_account
-    outflow_transaction&.entry&.account
-  end
-
   private
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
@@ -157,13 +129,15 @@ class Transfer < ApplicationRecord
       inflow_entry = inflow_transaction.entry
       outflow_entry = outflow_transaction.entry
 
-      inflow_amount_raw = inflow_entry.amount
-      outflow_amount_raw = outflow_entry.amount
-
-      errors.add(:base, :opposite_amounts) unless inflow_amount_raw.negative? && outflow_amount_raw.positive?
+      inflow_amount = inflow_entry.amount
+      outflow_amount = outflow_entry.amount
 
       if inflow_entry.currency == outflow_entry.currency
-        errors.add(:base, :opposite_amounts) if inflow_amount_raw + outflow_amount_raw != 0
+        # For same currency, amounts must be exactly opposite
+        errors.add(:base, :opposite_amounts) if inflow_amount + outflow_amount != 0
+      else
+        # For different currencies, just check the signs are opposite
+        errors.add(:base, :opposite_amounts) unless inflow_amount.negative? && outflow_amount.positive?
       end
     end
 

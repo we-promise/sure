@@ -40,8 +40,6 @@ ca:
       overview: Resum
       settings: Configuració
       to: A
-      total: Total
-      transfer_amount: Import de la transferència
       uncategorized: Sense categoria
     update:
       success: Transferència actualitzada
