@@ -100,11 +100,14 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     end
 
     def sign_out
-      find("#user-menu").click
-      click_button "Logout"
+      user_menu = find("div[data-testid=user-menu]", match: :first, visible: :visible)
+      within user_menu do
+        find("[data-DS--popover-target='button']", match: :first).click
+        click_button I18n.t("users.user_menu.log_out")
+      end
 
       # Trigger Capybara's wait mechanism to avoid timing issues with logout
-      find("a", text: "Sign in")
+      find("a", text: I18n.t("layouts.auth.sign_in"))
     end
 
     def within_testid(testid)
