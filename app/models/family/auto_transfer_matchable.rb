@@ -38,8 +38,8 @@ module Family::AutoTransferMatchable
     investment_category = nil
     investment_category_loaded = false
 
-    # Preload refund flags to skip refunds without N+1
-    refund_ids = Transaction.where(id: transaction_ids, refund: true).pluck(:id).to_set
+    # Preload refund flags from in-memory transactions to skip refunds without N+1
+    refund_ids = transactions_by_id.values.select { |t| t.refund? }.map(&:id).to_set
 
     Transfer.transaction do
       candidates_scope.each do |match|
