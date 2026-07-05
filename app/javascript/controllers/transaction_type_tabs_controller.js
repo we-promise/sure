@@ -5,33 +5,33 @@ import { Controller } from "@hotwired/stimulus";
 // active segment without navigating (the href is a progressive-enhancement
 // fallback). Transfer is a plain link to the transfer form.
 export default class extends Controller {
-  static targets = ["tab", "natureField", "refundFields"]
+  static targets = ["tab", "natureField", "refundFields"];
 
   connect() {
-    this.toggleRefundFields()
+    this.toggleRefundFields();
   }
 
   selectTab(event) {
-    event.preventDefault()
+    event.preventDefault();
 
-    const selectedTab = event.currentTarget
-    this.natureFieldTarget.value = selectedTab.dataset.nature
+    const selectedTab = event.currentTarget;
+    this.natureFieldTarget.value = selectedTab.dataset.nature;
 
     this.tabTargets.forEach((tab) => {
-      const isActive = tab === selectedTab
-      tab.classList.toggle("segmented-control__segment--active", isActive)
+      const isActive = tab === selectedTab;
+      tab.classList.toggle("segmented-control__segment--active", isActive);
       if (isActive) {
-        tab.setAttribute("aria-current", "true")
+        tab.setAttribute("aria-current", "true");
       } else {
-        tab.removeAttribute("aria-current")
+        tab.removeAttribute("aria-current");
       }
-    })
+    });
 
-    this.toggleRefundFields()
+    this.toggleRefundFields();
   }
 
   toggleRefundFields() {
-    if (!this.hasRefundFieldsTarget) return
-    this.refundFieldsTarget.classList.toggle("hidden", this.natureFieldTarget.value !== "inflow")
+    if (!this.hasRefundFieldsTarget) return;
+    this.refundFieldsTarget.classList.toggle("hidden", this.natureFieldTarget.value !== "inflow");
   }
 }

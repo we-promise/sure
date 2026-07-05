@@ -67,20 +67,10 @@ module TransactionsHelper
         raw: nil
       }
     else
-      filtered = extra.is_a?(Hash) ? extra.dup : extra
-      filtered.delete("exchange_rate") if filtered.respond_to?(:delete)
-      filtered.delete("exchange_rate_invalid") if filtered.respond_to?(:delete)
-      filtered.delete("plaid") if filtered.respond_to?(:delete)
-      filtered.delete("lunchflow") if filtered.respond_to?(:delete)
-
-      if filtered.respond_to?(:empty?) ? filtered.empty? : filtered.to_s.blank?
-        return nil
-      end
-
       pretty = begin
-        JSON.pretty_generate(filtered)
+        JSON.pretty_generate(extra)
       rescue StandardError
-        filtered.to_s
+        extra.to_s
       end
       {
         kind: :raw,

@@ -39,8 +39,7 @@ module Family::AutoTransferMatchable
     investment_category_loaded = false
 
     # Preload refund flags to skip refunds without N+1
-    txn_ids = candidates_scope.flat_map { |m| [ m.inflow_transaction_id, m.outflow_transaction_id ] }.uniq
-    refund_ids = Transaction.where(id: txn_ids, refund: true).pluck(:id).to_set
+    refund_ids = Transaction.where(id: transaction_ids, refund: true).pluck(:id).to_set
 
     Transfer.transaction do
       candidates_scope.each do |match|

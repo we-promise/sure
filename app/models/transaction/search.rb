@@ -175,7 +175,7 @@ class Transaction::Search
 
     def apply_type_filter(query, types)
       return query unless types.present?
-      return query if types.sort == [ "expense", "income", "transfer", "refund" ]
+      return query if types.sort == [ "expense", "income", "refund", "transfer" ]
 
       case types.sort
         # Single-type filters
@@ -202,7 +202,7 @@ class Transaction::Search
 
         # Three-type combinations
       when [ "expense", "income" ]
-        query.where.not(kind: Transaction::TRANSFER_KINDS).where(refund: false)
+        query.where.not(kind: Transaction::TRANSFER_KINDS)
       when [ "expense", "income", "refund" ]
         query.where.not(kind: Transaction::TRANSFER_KINDS)
       when [ "expense", "income", "transfer" ]

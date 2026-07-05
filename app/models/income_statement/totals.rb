@@ -177,43 +177,12 @@ class IncomeStatement::Totals
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
     end
 
-
-    # SQL CASE expression for classifying a transaction row as 'income' or 'expense'.
-    #
-    # Refunds are always 'expense' — they offset a prior spend, not real income.
-    # investment_contribution and loan_payment are always 'expense' regardless of sign.
-    # Everything else follows the sign of ae.amount (negative = inflow = income).
-    #
-    # Mirrors Transaction#classification (the Ruby source of truth for
-    # transaction-level overrides) combined with Entry#classification's
-    # sign-based default (negative = income, positive = expense).
     def classification_sql
-      <<~SQL.squish
-        CASE
-          WHEN at.refund = true                                      THEN 'expense'
-          WHEN at.kind IN ('investment_contribution','loan_payment')  THEN 'expense'
-          WHEN ae.amount < 0                                         THEN 'income'
-          ELSE 'expense'
-        END
-      SQL
+      IncomeStatement::ClassificationSql.classification(transactions_alias: "at")
     end
 
-    # SQL CASE expression for the signed amount used inside SUM.
-    #
-    # Refunds arrive as negative amounts (money back to the user) but must
-    # *reduce* the expense total, not add to it.  We keep their sign intact
-    # inside the SUM so a later Ruby step can detect when the group total
-    # went negative (refunds > expenses) and flip the classification.
-    # All other kinds use the raw signed amount; investment_contribution
-    # and loan_payment are forced positive because they are always an outflow.
     def signed_amount_sql
-      <<~SQL.squish
-        CASE
-          WHEN at.refund = true                                      THEN ae.amount * COALESCE(er.rate, 1)
-          WHEN at.kind IN ('investment_contribution','loan_payment')  THEN ABS(ae.amount * COALESCE(er.rate, 1))
-          ELSE ae.amount * COALESCE(er.rate, 1)
-        END
-      SQL
+      IncomeStatement::ClassificationSql.signed_amount(transactions_alias: "at")
     end
 
     def validate_date_range!
