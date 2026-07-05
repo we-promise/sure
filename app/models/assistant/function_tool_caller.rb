@@ -24,7 +24,15 @@ class Assistant::FunctionToolCaller
     def execute(function_request)
       fn = find_function(function_request)
       fn_args = JSON.parse(function_request.function_args)
-      fn.call(fn_args)
+
+      LlmInstrumentation.with_tool_span(
+        tool_name: function_request.function_name,
+        tool_description: fn.respond_to?(:description) ? fn.description : nil
+      ) do |span|
+        result = fn.call(fn_args)
+        LlmInstrumentation.set_span_tool_call(span, arguments: fn_args, result: result)
+        result
+      end
     rescue => e
       raise FunctionExecutionError.new(
         "Error calling function #{fn.name} with arguments #{fn_args}: #{e.message}"

@@ -11,40 +11,50 @@ class Assistant::Responder
   end
 
   def respond(previous_response_id: nil)
-    # Track whether response was handled by streamer
-    response_handled = false
-
-    # For the first response
-    streamer = proc do |chunk|
-      case chunk.type
-      when "output_text"
-        emit(:output_text, chunk.data)
-      when "response"
-        response = chunk.data
-        response_handled = true
-
-        if response.function_requests.any?
-          handle_follow_up_response(response)
-        else
-          emit(:response, { id: response.id })
-        end
-      end
-    end
-
-    response = get_llm_response(streamer: streamer, previous_response_id: previous_response_id)
-
-    # For synchronous (non-streaming) responses, handle function requests if not already handled by streamer
-    unless response_handled
-      if response && response.function_requests.any?
-        handle_follow_up_response(response)
-      elsif response
-        emit(:response, { id: response.id })
-      end
+    LlmInstrumentation.with_agent_span(
+      model: message.ai_model,
+      conversation_id: chat_session_id,
+      user_identifier: chat_user_identifier
+    ) do
+      respond_with_llm(previous_response_id: previous_response_id)
     end
   end
 
   private
     attr_reader :message, :instructions, :function_tool_caller, :llm
+
+    def respond_with_llm(previous_response_id:)
+      # Track whether response was handled by streamer
+      response_handled = false
+
+      # For the first response
+      streamer = proc do |chunk|
+        case chunk.type
+        when "output_text"
+          emit(:output_text, chunk.data)
+        when "response"
+          response = chunk.data
+          response_handled = true
+
+          if response.function_requests.any?
+            handle_follow_up_response(response)
+          else
+            emit(:response, { id: response.id })
+          end
+        end
+      end
+
+      response = get_llm_response(streamer: streamer, previous_response_id: previous_response_id)
+
+      # For synchronous (non-streaming) responses, handle function requests if not already handled by streamer
+      unless response_handled
+        if response && response.function_requests.any?
+          handle_follow_up_response(response)
+        elsif response
+          emit(:response, { id: response.id })
+        end
+      end
+    end
 
     def handle_follow_up_response(response)
       streamer = proc do |chunk|

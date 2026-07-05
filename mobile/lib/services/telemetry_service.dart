@@ -63,6 +63,11 @@ class TelemetryConfig {
 class TelemetryService {
   static final TelemetryService instance = TelemetryService();
 
+  /// Agent name reported on AI monitoring spans. Matches the backend's
+  /// LlmInstrumentation::AGENT_NAME so both ends of the assistant flow show
+  /// up under the same agent in Sentry's AI Agents dashboard.
+  static const aiAgentName = 'sure_assistant';
+
   final TelemetryConfig _config;
   final SentryNavigatorObserver _navigatorObserver = SentryNavigatorObserver(
     enableAutoTransactions: false,
@@ -98,6 +103,14 @@ class TelemetryService {
             options.release = _config.release.trim();
           }
           options.tracesSampleRate = _config.tracesSampleRate;
+          // AI agent turns are sampled as complete span trees — dropping the
+          // root loses every gen_ai child span — so keep them at 100% while
+          // other transactions use the configured rate.
+          options.tracesSampler = (samplingContext) {
+            final operation = samplingContext.transactionContext.operation;
+            if (operation.startsWith('gen_ai')) return 1.0;
+            return _config.tracesSampleRate;
+          };
           // TODO: Remove this suppression once sentry_flutter stabilizes
           // options.profilesSampleRate, then revalidate _config.profilesSampleRate
           // against the upstream changelog.
@@ -372,6 +385,20 @@ class TelemetryService {
     }
 
     return LogService.sanitize(value.runtimeType.toString());
+  }
+
+  /// Stable pseudonymous conversation id for AI telemetry
+  /// (`gen_ai.conversation.id`). Chat ids are UUIDs, which this service's
+  /// privacy layer deliberately redacts — hashing keeps AI spans groupable
+  /// per conversation in Sentry without exposing the raw identifier.
+  /// Uses simple 31-multiplier hashing so it stays exact on the web build
+  /// (all intermediate values fit in a JS double).
+  static String conversationId(String chatId) {
+    var hash = 7;
+    for (final unit in chatId.codeUnits) {
+      hash = (hash * 31 + unit) & 0x7FFFFFFF;
+    }
+    return hash.toRadixString(16);
   }
 
   static String? sanitizeUserId(String? userId) {
