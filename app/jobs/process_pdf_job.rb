@@ -1,7 +1,7 @@
 class ProcessPdfJob < ApplicationJob
   queue_as :medium_priority
 
-  discard_on(RuntimeError) do |job, err|
+  discard_on(Provider::Error) do |job, err|
     Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}): #{err.message}")
   end
 
@@ -56,7 +56,7 @@ class ProcessPdfJob < ApplicationJob
 
     def sanitize_error_message(error)
       case error
-      when RuntimeError, ArgumentError
+      when Provider::Error, RuntimeError, ArgumentError
         I18n.t("imports.pdf_import.processing_failed_with_message",
                message: error.message.truncate(500))
       else
