@@ -1,8 +1,11 @@
-<%# locals: (money_flow_data:, accounts:) %>
+<%# locals: (money_flow_data:, accounts:, col_span: "single") %>
 <%
   pill_button_class = "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0 whitespace-nowrap"
   selected_account_ids = money_flow_data[:account_ids] || accounts.map { |a| a.id.to_s }
   period = money_flow_data[:period]
+  # At full width the chart and summary sit side by side; at single/half width
+  # they stack so the chart gets the full column and the month labels don't crowd.
+  stacked = col_span != "full"
 %>
 <div id="money-flow-section" class="px-4 space-y-4">
   <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
@@ -30,22 +33,33 @@
       <% end %>
 
       <%= render DS::Popover.new(variant: :button, no_padding: true) do |popover| %>
-        <% popover.with_button(type: "button", class: pill_button_class, aria: { label: t(".filter_accounts", count: selected_account_ids.size) }) do %>
-          <span><%= t(".filter_accounts", count: selected_account_ids.size) %></span>
-          <%= icon("chevron-down", size: "sm") %>
-        <% end %>
+        <% popover.with_button(
+             type: "button",
+             text: t(".filter_accounts", count: selected_account_ids.size),
+             variant: "outline",
+             icon: "list-filter"
+           ) %>
 
         <% popover.with_custom_content do %>
           <%= form_with url: root_path, method: :get, data: { turbo_frame: "dashboard_sections" }, class: "p-3 w-56 space-y-2" do %>
             <%= hidden_field_tag :money_flow_month, money_flow_data[:month].iso8601 %>
 
-            <div class="max-h-64 overflow-y-auto space-y-1">
-              <% accounts.each do |account| %>
-                <label class="flex items-center gap-2 p-1.5 rounded-md hover:bg-container-inset-hover cursor-pointer">
-                  <%= check_box_tag "money_flow_account_ids[]", account.id, selected_account_ids.include?(account.id.to_s), id: nil, class: "checkbox checkbox--light" %>
-                  <span class="text-sm text-primary truncate"><%= account.name %></span>
-                </label>
-              <% end %>
+            <div data-controller="list-filter">
+              <%= render DS::SearchInput.new(
+                    variant: :embedded,
+                    placeholder: t(".search_accounts"),
+                    aria_label: t(".search_accounts"),
+                    data: { list_filter_target: "input", action: "input->list-filter#filter" }
+                  ) %>
+
+              <div class="my-2 max-h-64 overflow-y-auto space-y-1" data-list-filter-target="list">
+                <% accounts.each do |account| %>
+                  <label class="filterable-item flex items-center gap-2 p-1.5 rounded-md hover:bg-container-inset-hover cursor-pointer" data-filter-name="<%= account.name %>">
+                    <%= check_box_tag "money_flow_account_ids[]", account.id, selected_account_ids.include?(account.id.to_s), id: nil, class: "checkbox checkbox--light" %>
+                    <span class="text-sm text-primary truncate"><%= account.name %></span>
+                  </label>
+                <% end %>
+              </div>
             </div>
 
             <%= render DS::Button.new(type: "submit", text: t(".apply"), variant: "primary", full_width: true) %>
@@ -55,20 +69,20 @@
     </div>
   </div>
 
-  <div class="flex flex-col xl:flex-row gap-6">
-    <div class="w-full xl:w-3/5 space-y-2">
+  <div class="flex flex-col gap-6<%= " xl:flex-row" unless stacked %>">
+    <div class="w-full space-y-2<%= " xl:w-3/5" unless stacked %>">
       <div class="flex items-center gap-4 px-1">
         <span class="flex items-center gap-1.5 text-xs text-secondary">
           <span class="w-2 h-2 rounded-full bg-success"></span>
           <%= t(".income") %>
         </span>
         <span class="flex items-center gap-1.5 text-xs text-secondary">
-          <span class="w-2 h-2 rounded-full bg-destructive"></span>
+          <span class="w-2 h-2 rounded-full bg-gray-400"></span>
           <%= t(".expenses") %>
         </span>
       </div>
 
-      <div class="w-full h-56 privacy-sensitive"
+      <div class="w-full h-44 privacy-sensitive"
         data-controller="bar-chart"
         data-bar-chart-data-value="<%= money_flow_data[:bars].to_json %>"
         data-bar-chart-currency-value="<%= Current.family.currency %>"
@@ -77,10 +91,10 @@
       </div>
     </div>
 
-    <div class="w-full xl:w-2/5 space-y-4">
+    <div class="w-full space-y-4<%= " xl:w-2/5" unless stacked %>">
       <div class="flex items-center justify-between text-sm">
         <span class="text-secondary"><%= t(".balance") %></span>
-        <span class="font-medium text-lg tabular-nums privacy-sensitive <%= money_flow_data[:balance].negative? ? "text-destructive" : "text-success" %>">
+        <span class="font-medium text-lg tabular-nums privacy-sensitive <%= money_flow_data[:balance].negative? ? "text-destructive" : (money_flow_data[:balance].zero? ? "text-primary" : "text-success") %>">
           <%= format_money money_flow_data[:balance] %>
         </span>
       </div>
@@ -102,11 +116,11 @@
             class: "flex items-center justify-between p-3 border border-secondary rounded-lg hover:bg-container-inset-hover transition-colors group",
             data: { turbo_frame: "_top" } do %>
         <span class="flex items-center gap-2 text-sm text-primary">
-          <span class="w-2.5 h-2.5 rounded-full bg-destructive"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-gray-400"></span>
           <%= t(".expenses") %>
         </span>
         <span class="flex items-center gap-2">
-          <span class="font-medium tabular-nums text-destructive privacy-sensitive"><%= format_money money_flow_data[:expense] %></span>
+          <span class="font-medium tabular-nums text-primary privacy-sensitive"><%= format_money money_flow_data[:expense] %></span>
           <%= icon("chevron-right", size: "sm", class: "text-secondary group-hover:text-primary transition-colors") %>
         </span>
       <% end %>

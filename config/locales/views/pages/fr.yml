@@ -46,6 +46,7 @@ fr:
         filter_accounts: Filtrer les comptes (%{count})
         income: Entrées
         month_picker_aria_label: Sélectionner un mois
+        search_accounts: Rechercher un compte
         title: Entrées / sorties d'argent
       net_worth_chart:
         data_not_available: Données indisponibles pour la période sélectionnée

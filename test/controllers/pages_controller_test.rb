@@ -147,7 +147,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     bars = money_flow_bars
 
-    assert_equal 3, bars.size
+    assert_equal 6, bars.size
     highlighted = bars.find { |bar| bar["highlighted"] }
     assert_equal selected_month.iso8601, highlighted["date"]
     assert_equal 50.0, highlighted["expense"]

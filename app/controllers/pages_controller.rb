@@ -9,7 +9,7 @@ class PagesController < ApplicationController
   #   min_height: floor in px
   DASHBOARD_SECTION_LAYOUTS = {
     "cashflow_sankey"    => { col_span: "full",   grow: false, min_height: 384, width_toggle: true },
-    "money_flow"         => { col_span: "full",   grow: false, min_height: 0,   width_toggle: true },
+    "money_flow"         => { col_span: "single", grow: false, min_height: 0,   width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
     "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
@@ -18,7 +18,7 @@ class PagesController < ApplicationController
 
   # Number of consecutive months (ending at the selected month) shown as
   # bars in the "money_flow" dashboard widget.
-  MONEY_FLOW_CHART_MONTHS = 3
+  MONEY_FLOW_CHART_MONTHS = 6
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -128,7 +128,7 @@ class PagesController < ApplicationController
           title: "pages.dashboard.money_flow.title",
           partial: "pages/dashboard/money_flow",
           layout: section_layout("money_flow"),
-          locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts },
+          locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts, col_span: section_layout("money_flow")[:col_span] },
           visible: @accounts.any?,
           collapsible: true
         },
@@ -437,7 +437,8 @@ class PagesController < ApplicationController
           label: I18n.l(month_start, format: :short_month_year),
           income: totals.income_money.amount.to_f.round(2),
           expense: totals.expense_money.amount.to_f.round(2),
-          highlighted: month_start == selected_month
+          highlighted: month_start == selected_month,
+          partial: end_date < month_start.end_of_month
         }
       end
 

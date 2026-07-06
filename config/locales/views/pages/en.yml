@@ -108,6 +108,7 @@ en:
         date_range: "%{start_date} to %{end_date}"
         month_picker_aria_label: "Select month"
         filter_accounts: "Filter accounts (%{count})"
+        search_accounts: "Search accounts"
         apply: "Apply"
         balance: "Transaction balance"
         income: "Income"

@@ -61,8 +61,8 @@ export default class extends Controller {
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const series = ["expense", "income"];
-    const seriesColor = { expense: "var(--color-destructive)", income: "var(--color-success)" };
+    const series = ["income", "expense"];
+    const seriesColor = { expense: "var(--color-gray-400)", income: "var(--color-success)" };
 
     const x0 = d3
       .scaleBand()
@@ -73,7 +73,9 @@ export default class extends Controller {
     const x1 = d3.scaleBand().domain(series).range([0, x0.bandwidth()]).padding(0.15);
 
     const maxValue = d3.max(data, (d) => Math.max(d.income, d.expense)) || 1;
-    const y = d3.scaleLinear().domain([0, maxValue]).nice().range([innerHeight, 0]);
+    const y = d3.scaleLinear().domain([0, maxValue * 1.1]).range([innerHeight, 0]);
+    // Floor tiny-but-nonzero bars (e.g. an in-progress month) at 2px so they stay visible.
+    const barHeight = (v) => (v > 0 ? Math.max(2, innerHeight - y(v)) : 0);
 
     const tooltip = d3
       .select(this.element)
@@ -108,11 +110,13 @@ export default class extends Controller {
       .data((d) => series.map((key) => ({ key, value: d[key], month: d })))
       .join("rect")
       .attr("x", (d) => x1(d.key))
-      .attr("y", (d) => y(d.value))
+      .attr("y", (d) => innerHeight - barHeight(d.value))
       .attr("width", x1.bandwidth())
-      .attr("height", (d) => innerHeight - y(d.value))
+      .attr("height", (d) => barHeight(d.value))
       .attr("rx", 3)
       .attr("fill", (d) => seriesColor[d.key])
+      // In-progress month (period capped at today) reads as provisional.
+      .attr("fill-opacity", (d) => (d.month.partial ? 0.5 : 1))
       .on("mousemove", (event, d) => showTooltip(event, d.month, d.key))
       .on("mouseleave", hideTooltip);
 
