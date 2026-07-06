@@ -2,6 +2,7 @@ class Provider
   module Metadata
     REGISTRY = {
       akahu:          { region: "NZ",      kinds: %w[Bank Investment], maturity: :beta,   logo_text: "AK", logo_bg: "bg-emerald-600" },
+      open_banking_io: { region: "EU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "OB", logo_bg: "bg-sky-600", name: "open-banking.io" },
       simplefin:      { region: "US",      kinds: %w[Bank Investment], maturity: :stable, logo_text: "SF", logo_bg: "bg-blue-600" },
       lunchflow:      { region: "Global",  kinds: %w[Bank],            maturity: :stable, logo_text: "LF", logo_bg: "bg-orange-500" },
       up:             { region: "AU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "UP", logo_bg: "bg-orange-600" },

@@ -3,6 +3,7 @@
 class ProviderConnectionStatus
   PROVIDERS = [
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
+    { key: "open_banking_io", type: "OpenBankingIoItem", association: :open_banking_io_items, accounts: :open_banking_io_accounts },
     { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
     { key: "plaid", type: "PlaidItem", association: :plaid_items, accounts: :plaid_accounts },
     { key: "simplefin", type: "SimplefinItem", association: :simplefin_items, accounts: :simplefin_accounts },

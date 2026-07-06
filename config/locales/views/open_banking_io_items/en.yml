@@ -1,0 +1,126 @@
+---
+en:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: Connect European bank accounts via open-banking.io
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: open-banking.io Connection
+  open_banking_io_account:
+    fallback: open-banking.io account
+  open_banking_io_entry:
+    notes:
+      reference: Reference
+      particulars: Particulars
+      code: Code
+      other_account: Other account
+  open_banking_io_item:
+    errors:
+      account_processing_failed: Could not sync open-banking.io account
+      account_sync_schedule_failed: Could not schedule open-banking.io account sync
+      pending_transactions_failed: Could not fetch open-banking.io pending transactions
+      transactions_failed: Could not fetch open-banking.io transactions
+      sync_failed: Could not sync open-banking.io connection
+    sync_status:
+      no_accounts: No accounts found
+      all_synced:
+        one: 1 account synced
+        other: "%{count} accounts synced"
+      partial: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: No institutions connected
+      one: 1 institution
+      count:
+        one: 1 institution
+        other: "%{count} institutions"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: open-banking.io Connection
+      add_connection: Add open-banking.io connection
+      update_connection: Update connection
+      connection_name_label: Connection name
+      connection_name_placeholder: Main open-banking.io
+      credentials_label: Credentials JSON
+      credentials_placeholder: Paste the contents of your exported credentials.json
+      keep_credentials_placeholder: Leave blank to keep the existing credentials
+      credentials_required: Paste your open-banking.io credentials.json to connect.
+      credentials_invalid: Could not read the credentials.json. Paste the full exported file.
+      setup_accounts: Setup accounts
+      syncing: Syncing...
+      sync: Sync
+      disconnect: Disconnect
+      disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+    create:
+      success: open-banking.io connection saved.
+    update:
+      success: open-banking.io connection updated.
+    destroy:
+      success: Scheduled open-banking.io connection for deletion.
+      unlink_failed: Could not disconnect open-banking.io connection
+    select_accounts:
+      title: Link open-banking.io accounts
+      description: Choose the open-banking.io accounts to add.
+      no_accounts_found: No unlinked open-banking.io accounts were found.
+      no_credentials_configured: Configure open-banking.io in provider settings first.
+      cancel: Cancel
+      link_accounts: Link accounts
+    link_accounts:
+      success:
+        one: Linked 1 open-banking.io account.
+        other: "Linked %{count} open-banking.io accounts."
+      no_accounts_selected: Select at least one account.
+      no_credentials_configured: Configure open-banking.io in provider settings first.
+      unsupported_account_type: open-banking.io does not support that account type.
+      link_failed: No accounts were linked.
+    select_existing_account:
+      title: "Link open-banking.io account to %{account_name}"
+      description: Choose an unlinked open-banking.io account to connect to this account.
+      no_accounts_found: No unlinked open-banking.io accounts were found.
+      no_credentials_configured: Configure open-banking.io in provider settings first.
+      account_already_linked: This account is already linked to a provider.
+      cancel: Cancel
+      link_account: Link account
+    link_existing_account:
+      success: "Linked open-banking.io account to %{account_name}."
+      account_already_linked: This account is already linked to a provider.
+      open_banking_io_account_already_linked: This open-banking.io account is already linked.
+    setup_accounts:
+      title: Set Up open-banking.io Accounts
+      subtitle: Choose how each open-banking.io account should appear in Sure.
+      no_credentials: Configure open-banking.io credentials first.
+      api_error: Could not fetch open-banking.io accounts.
+      fetch_failed: Could not fetch accounts
+      no_accounts_to_setup: No accounts to set up
+      all_accounts_linked: All open-banking.io accounts are already linked.
+      choose_account_type: Choose an account type
+      choose_account_type_description: Skip accounts you do not want to track.
+      account_type_label: Account type
+      account_types:
+        skip: Skip
+        depository: Cash
+        credit_card: Credit Card
+        investment: Investment
+        loan: Loan
+      create_accounts: Create accounts
+      cancel: Cancel
+    complete_account_setup:
+      success:
+        one: Created 1 open-banking.io account.
+        other: "Created %{count} open-banking.io accounts."
+      all_skipped: No open-banking.io accounts were created.
+      no_accounts: No open-banking.io accounts were selected.
+      creation_failed: Could not create open-banking.io accounts.
+    open_banking_io_item:
+      deletion_in_progress: Deletion in progress
+      syncing: Syncing
+      error: Error
+      status_with_summary: "Synced %{timestamp} ago · %{summary}"
+      status_never: Never synced
+      delete: Delete
+      setup_needed: Account setup needed
+      setup_description: "%{linked} of %{total} accounts linked."
+      setup_action: Setup accounts
+      no_accounts_title: No accounts imported yet
+      no_accounts_description: Fetch open-banking.io accounts and choose which ones to link.
