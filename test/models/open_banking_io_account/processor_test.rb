@@ -6,7 +6,7 @@ class OpenBankingIoAccount::ProcessorTest < ActiveSupport::TestCase
     @item = OpenBankingIoItem.create!(
       family: @family,
       name: "Test open-banking.io",
-      api_base_url: "https://api.example.com",
+      api_base_url: "https://api.open-banking.io",
       api_key: "test-api-key",
       private_key: "test-private-key"
     )
@@ -59,5 +59,19 @@ class OpenBankingIoAccount::ProcessorTest < ActiveSupport::TestCase
     account.reload
     assert_equal BigDecimal("1000.00"), account.balance
     assert_equal 0, account.cash_balance
+  end
+
+  # Bug 1: when the feed carries only an available (ITAV) balance the snapshot
+  # leaves current_balance nil. Processing must SKIP the balance update entirely
+  # rather than coercing nil→0 and overwriting the real prior balance with zero.
+  test "balance is left untouched when the feed carries no booked balance" do
+    provider_account, account = build_linked(accountable: Depository.new, current_balance: nil)
+    account.update!(balance: BigDecimal("500.00"), cash_balance: BigDecimal("500.00"))
+
+    OpenBankingIoAccount::Processor.new(provider_account).process
+    account.reload
+
+    assert_equal BigDecimal("500.00"), account.balance, "prior balance must not be zeroed"
+    assert_equal BigDecimal("500.00"), account.cash_balance, "prior cash balance must not be zeroed"
   end
 end

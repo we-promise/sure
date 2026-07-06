@@ -1,9 +1,4 @@
 class OpenBankingIoItemsController < ApplicationController
-  # The apiBaseUrl from the pasted credentials.json is used verbatim by the SDK's
-  # HTTP client, so it must be pinned to the real open-banking.io service to
-  # prevent SSRF (e.g. a crafted bundle pointing the client at 169.254.169.254).
-  ALLOWED_API_HOST = "open-banking.io".freeze
-
   before_action :set_open_banking_io_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
   before_action :require_admin!, only: [
     :new, :create, :preload_accounts, :select_accounts, :link_accounts,
@@ -287,17 +282,11 @@ class OpenBankingIoItemsController < ApplicationController
       [ {}, t("open_banking_io_items.provider_panel.credentials_invalid") ]
     end
 
-    # SSRF guard: require https and a host that is exactly open-banking.io or one
-    # of its subdomains. Rejects internal IPs, plain http, and look-alike hosts
-    # such as "open-banking.io.evil.com".
+    # SSRF guard: delegate to the model so the allow-list logic lives in exactly
+    # one place. Rejects internal IPs, plain http, and look-alike hosts such as
+    # "open-banking.io.evil.com".
     def allowed_api_base_url?(url)
-      uri = URI.parse(url.to_s)
-      return false unless uri.is_a?(URI::HTTPS)
-
-      host = uri.host.to_s.downcase
-      host == ALLOWED_API_HOST || host.end_with?(".#{ALLOWED_API_HOST}")
-    rescue URI::InvalidURIError
-      false
+      OpenBankingIoItem.allowed_api_base_url?(url)
     end
 
     def requested_open_banking_io_item
@@ -328,7 +317,11 @@ class OpenBankingIoItemsController < ApplicationController
     end
 
     def create_account_from_open_banking_io(open_banking_io_account, account_type)
-      balance = open_banking_io_account.current_balance || 0
+      # Avoid seeding a bogus 0 when the bank returned no booked balance (only an
+      # available/ITAV balance leaves current_balance nil): fall back to the
+      # available balance before defaulting to 0, so a real balance isn't lost.
+      balance = open_banking_io_account.current_balance ||
+                open_banking_io_account.available_balance || 0
       balance = balance.abs if account_type.in?(%w[CreditCard Loan])
       subtype = if account_type == "CreditCard"
         "credit_card"

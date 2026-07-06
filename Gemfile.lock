@@ -912,7 +912,7 @@ DEPENDENCIES
   omniauth-rails_csrf_protection (>= 2.0)
   omniauth-saml (~> 2.1)
   omniauth_openid_connect
-  open-banking-io
+  open-banking-io (~> 0.2)
   ostruct
   pagy
   pdf-reader (~> 2.12)

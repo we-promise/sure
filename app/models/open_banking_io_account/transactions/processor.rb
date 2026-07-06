@@ -20,7 +20,7 @@ class OpenBankingIoAccount::Transactions::Processor
     current_pending_external_ids = pending_external_ids
     excluded_ids = excluded_external_ids
 
-    open_banking_io_account.raw_transactions_payload.each_with_index do |transaction_data, index|
+    ordered_transactions(open_banking_io_account.raw_transactions_payload).each_with_index do |transaction_data, index|
       ext_id = OpenBankingIoEntry::Processor.canonical_external_id(transaction_data)
       if ext_id.present? && excluded_ids.include?(ext_id)
         # This pending row was already reconciled into a booked transaction
@@ -67,6 +67,22 @@ class OpenBankingIoAccount::Transactions::Processor
   end
 
   private
+
+    # Process PENDING rows before BOOKED ones within a single sync.
+    #
+    # Pending→booked reconciliation is driven from the BOOKED side: a booked
+    # transaction auto-claims a matching pending entry that is ALREADY persisted
+    # (Account::ProviderImportAdapter#find_pending_transaction). When a booked
+    # row and its still-listed pending sibling (different ids, same amount) arrive
+    # in the SAME fetch, the pending sibling must be imported first so the booked
+    # settlement can find and claim it; otherwise the booked row is processed with
+    # no pending to claim and the pending row then imports as a phantom duplicate.
+    # A stable sort preserves the bank's relative ordering within each group.
+    def ordered_transactions(transactions)
+      transactions.each_with_index
+                  .sort_by { |transaction_data, index| [ OpenBankingIoEntry::Processor.pending?(transaction_data) ? 0 : 1, index ] }
+                  .map(&:first)
+    end
 
     # External ids that must NOT be re-imported this sync because the pending
     # transaction they represent has already been reconciled into a booked one.
