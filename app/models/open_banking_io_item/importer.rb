@@ -139,7 +139,7 @@ class OpenBankingIoItem::Importer
     rescue JSON::ParserError => e
       Rails.logger.error "OpenBankingIoItem::Importer - Failed to parse transaction response for account #{open_banking_io_account.id}: #{e.class}"
       capture_sync_error("Failed to parse open-banking.io transactions response", e, open_banking_io_account: open_banking_io_account)
-      { success: false, transactions_count: 0, error: "Failed to parse response" }
+      { success: false, transactions_count: 0, error: I18n.t("open_banking_io_item.errors.transactions_failed") }
     rescue => e
       Rails.logger.error "OpenBankingIoItem::Importer - Unexpected error fetching transactions for account #{open_banking_io_account.id}: #{e.class}"
       Rails.logger.error e.backtrace.join("\n")
