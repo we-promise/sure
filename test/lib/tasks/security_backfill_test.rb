@@ -48,4 +48,26 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     at_rest = account.read_attribute_before_type_cast(:raw_transactions_payload).to_s
     refute_includes at_rest, "tx-1"
   end
+
+  # Several payload columns default to {} — Rails presence checks treat empty
+  # Hash/Array as absent, so the backfill must gate on nil-ness or empty
+  # payloads stay plaintext and raise on every read once keys are live.
+  test "backfill encrypts empty json payloads" do
+    item = LunchflowItem.new(family: families(:dylan_family), name: "Backfill Empty Test", api_key: "seed")
+    item.save!(validate: false)
+    account = item.lunchflow_accounts.create!(
+      name: "Backfill Empty Test Account", currency: "GBP", account_id: "backfill-test-2")
+
+    # Plaintext empty payload, as left by a pre-encryption install
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE lunchflow_accounts SET raw_payload = ?::jsonb WHERE id = ?", "{}", account.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    account.reload
+    assert_equal({}, account.raw_payload,
+      "an empty payload must decrypt cleanly after the backfill, not remain plaintext")
+    assert_match(/"p":/, account.read_attribute_before_type_cast(:raw_payload).to_s,
+      "the stored value must be an encryption envelope, not plaintext {}")
+  end
 end

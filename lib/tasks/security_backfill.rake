@@ -81,8 +81,11 @@ namespace :security do
         # Skip if filter block returns false
         next if block_given? && !filter_block.call(record)
 
-        # Check if any field has data (use safe read to handle plaintext)
-        next unless fields.any? { |f| safe_read_field(record, f).present? }
+        # Check if any field has data (use safe read to handle plaintext).
+        # Nil-check rather than present?: empty values ({}, [], "") are still
+        # plaintext that needs encrypting — present? skips them, leaving data
+        # the encrypted getters raise on once keys are live.
+        next unless fields.any? { |f| !safe_read_field(record, f).nil? }
 
         next if dry_run
 
@@ -91,7 +94,7 @@ namespace :security do
           plaintext_values = {}
           fields.each do |field|
             value = safe_read_field(record, field)
-            plaintext_values[field] = value if value.present?
+            plaintext_values[field] = value unless value.nil?
           end
 
           next if plaintext_values.empty?
@@ -165,7 +168,7 @@ namespace :security do
 
           # Re-save user_agent to trigger encryption (use safe read for plaintext)
           user_agent_value = safe_read_field(session, :user_agent)
-          if user_agent_value.present?
+          unless user_agent_value.nil?
             # Use temporary instance to encrypt
             encryptor = Session.new
             encryptor.user_agent = user_agent_value
