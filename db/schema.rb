@@ -2212,8 +2212,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_06_000000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "akahu_accounts", "akahu_items"
   add_foreign_key "akahu_items", "families"
-  add_foreign_key "open_banking_io_accounts", "open_banking_io_items"
-  add_foreign_key "open_banking_io_items", "families"
   add_foreign_key "api_keys", "users"
   add_foreign_key "balances", "accounts", on_delete: :cascade
   add_foreign_key "binance_accounts", "binance_items"
@@ -2285,6 +2283,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_06_000000) do
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oidc_identities", "users"
+  add_foreign_key "open_banking_io_accounts", "open_banking_io_items"
+  add_foreign_key "open_banking_io_items", "families"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "questrade_accounts", "questrade_items"

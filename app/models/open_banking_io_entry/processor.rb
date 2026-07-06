@@ -1,3 +1,5 @@
+require "digest/md5"
+
 class OpenBankingIoEntry::Processor
   include CurrencyNormalizable
 
@@ -6,12 +8,33 @@ class OpenBankingIoEntry::Processor
   # so the indicator is what determines the sign.
   DEBIT_INDICATOR = "DBIT".freeze
   CREDIT_INDICATOR = "CRDT".freeze
+  VALID_INDICATORS = [ DEBIT_INDICATOR, CREDIT_INDICATOR ].freeze
   # ISO 20022 entry status. Anything other than BOOK (booked) is treated as pending.
   BOOKED_STATUS = "BOOK".freeze
 
   def self.canonical_external_id(open_banking_io_transaction)
     data = open_banking_io_transaction.with_indifferent_access
-    "open_banking_io_#{data[:id]}"
+    id = data[:id].presence
+    return "open_banking_io_#{id}" if id.present?
+
+    # Some ISO-20022 (PSD2) pending entries omit `id` entirely. Derive a stable
+    # content-based external_id so they can still be imported idempotently.
+    "open_banking_io_pending_#{content_hash_for(data)}"
+  end
+
+  # Stable fingerprint for id-less transactions. Kept in sync with the importer's
+  # storage key so the same row hashes identically in both places.
+  def self.content_hash_for(open_banking_io_transaction)
+    data = open_banking_io_transaction.with_indifferent_access
+    attributes = [
+      data[:booking_date],
+      data[:amount],
+      data[:credit_debit_indicator],
+      data[:remittance_information],
+      data[:creditor_name]
+    ].map { |value| value.to_s.strip }.join("|")
+
+    Digest::MD5.hexdigest(attributes)
   end
 
   def self.pending?(open_banking_io_transaction)
@@ -27,6 +50,15 @@ class OpenBankingIoEntry::Processor
   def process
     unless account.present?
       Rails.logger.warn "OpenBankingIoEntry::Processor - No linked account for open_banking_io_account #{open_banking_io_account.id}, skipping transaction #{external_id}"
+      return nil
+    end
+
+    # Never guess the sign: the amount arrives as an unsigned magnitude and the
+    # credit/debit indicator is the only thing that determines expense vs income.
+    # A blank/garbled indicator would otherwise be treated as credit and silently
+    # flip an expense into income, so skip the transaction instead.
+    unless valid_indicator?
+      Rails.logger.warn "OpenBankingIoEntry::Processor - Skipping transaction #{external_id} with unrecognized credit_debit_indicator #{data[:credit_debit_indicator].inspect}"
       return nil
     end
 
@@ -75,8 +107,16 @@ class OpenBankingIoEntry::Processor
       @external_id ||= self.class.canonical_external_id(data)
     end
 
+    def indicator
+      data[:credit_debit_indicator].to_s.strip.upcase
+    end
+
+    def valid_indicator?
+      VALID_INDICATORS.include?(indicator)
+    end
+
     def debit?
-      data[:credit_debit_indicator].to_s.upcase == DEBIT_INDICATOR
+      indicator == DEBIT_INDICATOR
     end
 
     # open-banking.io reports amounts as an UNSIGNED magnitude plus a credit/debit

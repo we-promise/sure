@@ -129,23 +129,39 @@ class OpenBankingIoItem::Importer
       { success: false, transactions_count: 0, error: I18n.t("open_banking_io_item.errors.transactions_failed") }
     end
 
+    # Update-in-place (upsert-by-key) storage. Rows are keyed by their stable
+    # storage key (id when present, otherwise a content hash). An incoming row
+    # REPLACES the stored row with the same key, so a pending transaction that
+    # settles to booked under the same id is updated rather than dropped as a
+    # duplicate (which previously left the entry stuck pending forever), and a
+    # re-synced pending row doesn't accumulate as a phantom duplicate.
     def store_transactions(open_banking_io_account, transactions:)
       existing_transactions = open_banking_io_account.raw_transactions_payload.to_a
-      seen_keys = existing_transactions.filter_map { |tx| transaction_storage_key(tx) }.to_set
 
-      new_transactions = transactions.select do |tx|
-        next false unless tx.is_a?(Hash)
+      merged = {}
+      order = []
+
+      add_row = lambda do |tx|
+        next unless tx.is_a?(Hash)
 
         key = transaction_storage_key(tx)
-        key.present? && seen_keys.add?(key)
+        next if key.blank?
+
+        order << key unless merged.key?(key)
+        merged[key] = tx
       end
 
-      return if new_transactions.empty?
+      existing_transactions.each { |tx| add_row.call(tx) }
+      incoming_count = transactions.count { |tx| tx.is_a?(Hash) && transaction_storage_key(tx).present? }
+      transactions.each { |tx| add_row.call(tx) }
 
-      final_transactions = existing_transactions + new_transactions
+      final_transactions = order.map { |key| merged[key] }
+      return if final_transactions == existing_transactions
+
       Rails.logger.info(
-        "OpenBankingIoItem::Importer - Storing #{new_transactions.count} new transactions " \
-        "(#{existing_transactions.count} existing) for account #{open_banking_io_account.account_id}"
+        "OpenBankingIoItem::Importer - Storing #{final_transactions.count} transactions " \
+        "(#{existing_transactions.count} existing, #{incoming_count} incoming, upsert-by-key) " \
+        "for account #{open_banking_io_account.account_id}"
       )
       open_banking_io_account.upsert_open_banking_io_transactions_snapshot!(final_transactions)
     end
@@ -153,7 +169,11 @@ class OpenBankingIoItem::Importer
     def transaction_storage_key(transaction)
       data = transaction.with_indifferent_access
       id = data[:id].presence
-      id.present? ? "id:#{id}" : nil
+      return "id:#{id}" if id.present?
+
+      # ISO-20022 pending entries can omit `id`. Derive a stable content hash so
+      # they are stored (not dropped) and dedup idempotently across syncs.
+      "hash:#{OpenBankingIoEntry::Processor.content_hash_for(data)}"
     end
 
     def determine_sync_start_date(open_banking_io_account)

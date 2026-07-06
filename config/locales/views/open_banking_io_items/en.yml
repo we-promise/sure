@@ -13,14 +13,10 @@ en:
   open_banking_io_entry:
     notes:
       reference: Reference
-      particulars: Particulars
-      code: Code
-      other_account: Other account
   open_banking_io_item:
     errors:
       account_processing_failed: Could not sync open-banking.io account
       account_sync_schedule_failed: Could not schedule open-banking.io account sync
-      pending_transactions_failed: Could not fetch open-banking.io pending transactions
       transactions_failed: Could not fetch open-banking.io transactions
       sync_failed: Could not sync open-banking.io connection
     sync_status:
@@ -47,6 +43,7 @@ en:
       keep_credentials_placeholder: Leave blank to keep the existing credentials
       credentials_required: Paste your open-banking.io credentials.json to connect.
       credentials_invalid: Could not read the credentials.json. Paste the full exported file.
+      credentials_invalid_url: The credentials.json must use an https open-banking.io API URL.
       setup_accounts: Setup accounts
       syncing: Syncing...
       sync: Sync
