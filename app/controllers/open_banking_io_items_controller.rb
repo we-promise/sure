@@ -51,11 +51,37 @@ class OpenBankingIoItemsController < ApplicationController
   end
 
   def destroy
-    @open_banking_io_item.unlink_all!(dry_run: false)
+    results = @open_banking_io_item.unlink_all!(dry_run: false)
+
+    # If any account failed to unlink, its Holding/AccountProvider rows may still
+    # reference the connection. Destroying now would orphan them, so bail out and
+    # surface the error instead of scheduling deletion.
+    if results.any? { |result| result[:error].present? }
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "open-banking.io unlink during destroy failed",
+        source: self.class.name,
+        provider_key: "open_banking_io",
+        family: @open_banking_io_item.family,
+        metadata: { open_banking_io_item_id: @open_banking_io_item.id, failures: results.select { |r| r[:error].present? } }
+      )
+      redirect_to settings_providers_path, alert: t(".unlink_failed"), status: :see_other
+      return
+    end
+
     @open_banking_io_item.destroy_later
     redirect_to settings_providers_path, notice: t(".success"), status: :see_other
   rescue => e
-    Rails.logger.warn("open-banking.io unlink during destroy failed: #{e.class} - #{e.message}")
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "warn",
+      message: "open-banking.io unlink during destroy failed",
+      source: self.class.name,
+      provider_key: "open_banking_io",
+      family: @open_banking_io_item&.family,
+      metadata: { open_banking_io_item_id: @open_banking_io_item&.id, error_class: e.class.name, error_message: e.message }
+    )
     redirect_to settings_providers_path, alert: t(".unlink_failed"), status: :see_other
   end
 
@@ -264,10 +290,19 @@ class OpenBankingIoItemsController < ApplicationController
       return [ {}, t("open_banking_io_items.provider_panel.credentials_required") ] if raw_json.blank?
 
       bundle = JSON.parse(raw_json)
+      # Valid JSON can still be the wrong shape (null, an array, or an
+      # encryptionKey that isn't an object). Treat any non-hash bundle or
+      # encryptionKey as invalid credentials rather than letting the ensuing
+      # `[]`/`dig` raise NoMethodError/TypeError and bubble up as a 500.
+      return [ {}, t("open_banking_io_items.provider_panel.credentials_invalid") ] unless bundle.is_a?(Hash)
+
+      encryption_key = bundle["encryptionKey"]
+      encryption_key = {} unless encryption_key.is_a?(Hash)
+
       api_base_url = bundle["apiBaseUrl"].presence
       api_key = bundle["apiKey"].presence
-      private_key = bundle.dig("encryptionKey", "privateKey").presence ||
-                    bundle.dig("encryptionKey", "privateKeyPkcs8B64").presence
+      private_key = encryption_key["privateKey"].presence ||
+                    encryption_key["privateKeyPkcs8B64"].presence
 
       if api_base_url.blank? || api_key.blank? || private_key.blank?
         return [ {}, t("open_banking_io_items.provider_panel.credentials_invalid") ]
@@ -278,7 +313,7 @@ class OpenBankingIoItemsController < ApplicationController
       end
 
       [ { api_base_url: api_base_url, api_key: api_key, private_key: private_key }, nil ]
-    rescue JSON::ParserError
+    rescue JSON::ParserError, TypeError, NoMethodError
       [ {}, t("open_banking_io_items.provider_panel.credentials_invalid") ]
     end
 

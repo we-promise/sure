@@ -28,8 +28,11 @@ class OpenBankingIoItem < ApplicationRecord
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   if encryption_ready?
-    encrypts :api_base_url, deterministic: true
-    encrypts :api_key, deterministic: true
+    # Non-deterministic encryption: nothing queries these columns by value
+    # (no `where(api_key:)` / `where(api_base_url:)`), so deterministic mode
+    # would only weaken them by leaking equality. Matches :private_key.
+    encrypts :api_base_url
+    encrypts :api_key
     encrypts :private_key
     encrypts :raw_payload
     encrypts :raw_institution_payload

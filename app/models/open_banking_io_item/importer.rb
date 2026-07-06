@@ -9,6 +9,8 @@ class OpenBankingIoItem::Importer
   def import
     Rails.logger.info "OpenBankingIoItem::Importer - Starting import for item #{open_banking_io_item.id}"
 
+    trigger_upstream_sync
+
     accounts_data = fetch_accounts_data
     return failed_result("Failed to fetch accounts data") unless accounts_data
 
@@ -35,37 +37,58 @@ class OpenBankingIoItem::Importer
 
   private
 
+    # Best-effort: ask open-banking.io to pull fresh data from the upstream banks
+    # BEFORE we paginate, so `get_accounts`/`get_transactions` read refreshed data
+    # instead of re-importing a stale cached window. A sync failure (e.g. an
+    # account whose bank session expired) must never abort importing the cached
+    # data we already have, so it is swallowed and surfaced via DebugLogEntry.
+    def trigger_upstream_sync
+      open_banking_io_provider.sync_all
+    rescue => e
+      Rails.logger.error "OpenBankingIoItem::Importer - Upstream sync failed (continuing with cached data): #{e.class}"
+      capture_sync_error("Failed to trigger upstream open-banking.io sync", e)
+    end
+
     def fetch_accounts_data
       items = open_banking_io_provider.get_accounts
       { items: items }
     rescue Provider::OpenBankingIo::Error => e
       mark_requires_update! if e.error_type.in?([ :unauthorized, :access_forbidden ])
       Rails.logger.error "OpenBankingIoItem::Importer - open-banking.io API error: #{e.error_type}"
+      capture_sync_error("Failed to fetch accounts data", e, error_type: e.error_type)
       nil
     rescue JSON::ParserError => e
       Rails.logger.error "OpenBankingIoItem::Importer - Failed to parse open-banking.io API response: #{e.class}"
+      capture_sync_error("Failed to parse open-banking.io accounts response", e)
       nil
     rescue => e
       Rails.logger.error "OpenBankingIoItem::Importer - Unexpected error fetching accounts: #{e.class}"
       Rails.logger.error e.backtrace.join("\n")
+      capture_sync_error("Unexpected error fetching accounts", e)
       nil
     end
 
     def import_accounts(accounts_data)
       stats = { updated: 0, created: 0, failed: 0 }
       accounts = Array(accounts_data[:items])
-      linked_account_ids = open_banking_io_item.open_banking_io_accounts.joins(:account_provider).pluck(:account_id).map(&:to_s)
-      all_existing_ids = open_banking_io_item.open_banking_io_accounts.pluck(:account_id).map(&:to_s)
+      # Preload every existing provider account once, keyed by external id, so the
+      # per-account refresh is an in-memory lookup instead of a find_by per row (N+1).
+      existing_by_id = open_banking_io_item.open_banking_io_accounts.index_by { |a| a.account_id.to_s }
 
       accounts.each do |account_data|
         account = account_data.with_indifferent_access
         account_id = account[:id].presence
         next if account_id.blank?
 
-        if linked_account_ids.include?(account_id.to_s)
-          import_account(account)
+        existing = existing_by_id[account_id.to_s]
+        if existing
+          # Refresh the snapshot for ANY already-known account, linked or not.
+          # An existing-but-unlinked account previously matched neither branch,
+          # so its name/currency/balance snapshot went stale every sync until a
+          # user linked it. Refreshing here keeps unlinked accounts current.
+          existing.upsert_open_banking_io_snapshot!(account)
           stats[:updated] += 1
-        elsif !all_existing_ids.include?(account_id.to_s)
+        else
           open_banking_io_account = open_banking_io_item.open_banking_io_accounts.build(account_id: account_id.to_s)
           open_banking_io_account.upsert_open_banking_io_snapshot!(account)
           stats[:created] += 1
@@ -76,15 +99,6 @@ class OpenBankingIoItem::Importer
       end
 
       stats
-    end
-
-    def import_account(account_data)
-      account = account_data.with_indifferent_access
-      account_id = account[:id].presence
-      open_banking_io_account = open_banking_io_item.open_banking_io_accounts.find_by(account_id: account_id.to_s)
-      return unless open_banking_io_account
-
-      open_banking_io_account.upsert_open_banking_io_snapshot!(account)
     end
 
     def import_transactions
@@ -118,14 +132,18 @@ class OpenBankingIoItem::Importer
 
       { success: true, transactions_count: Array(transactions).count }
     rescue Provider::OpenBankingIo::Error => e
+      mark_requires_update! if e.error_type.in?([ :unauthorized, :access_forbidden ])
       Rails.logger.error "OpenBankingIoItem::Importer - open-banking.io API error for account #{open_banking_io_account.id}: #{e.error_type}"
+      capture_sync_error("Failed to fetch transactions", e, open_banking_io_account: open_banking_io_account, error_type: e.error_type)
       { success: false, transactions_count: 0, error: I18n.t("open_banking_io_item.errors.transactions_failed") }
     rescue JSON::ParserError => e
       Rails.logger.error "OpenBankingIoItem::Importer - Failed to parse transaction response for account #{open_banking_io_account.id}: #{e.class}"
+      capture_sync_error("Failed to parse open-banking.io transactions response", e, open_banking_io_account: open_banking_io_account)
       { success: false, transactions_count: 0, error: "Failed to parse response" }
     rescue => e
       Rails.logger.error "OpenBankingIoItem::Importer - Unexpected error fetching transactions for account #{open_banking_io_account.id}: #{e.class}"
       Rails.logger.error e.backtrace.join("\n")
+      capture_sync_error("Unexpected error fetching transactions", e, open_banking_io_account: open_banking_io_account)
       { success: false, transactions_count: 0, error: I18n.t("open_banking_io_item.errors.transactions_failed") }
     end
 
@@ -206,10 +224,30 @@ class OpenBankingIoItem::Importer
       end
     end
 
+    # Record a provider sync/import failure as a DebugLogEntry so it surfaces on
+    # /settings/debug, mirroring the sibling bank-sync providers (Up, Kraken, ...).
+    def capture_sync_error(message, error, open_banking_io_account: nil, error_type: nil)
+      metadata = { open_banking_io_item_id: open_banking_io_item.id, error_class: error.class.name, error_message: error.message }
+      metadata[:open_banking_io_account_id] = open_banking_io_account.id if open_banking_io_account
+      metadata[:error_type] = error_type if error_type
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: message,
+        source: self.class.name,
+        provider_key: "open_banking_io",
+        family: open_banking_io_item.family,
+        account_provider: open_banking_io_account&.account_provider,
+        metadata: metadata
+      )
+    end
+
     def mark_requires_update!
       open_banking_io_item.update!(status: :requires_update)
     rescue => e
       Rails.logger.error "OpenBankingIoItem::Importer - Failed to update item status: #{e.message}"
+      capture_sync_error("Failed to mark open-banking.io item as requiring update", e)
     end
 
     def failed_result(error)

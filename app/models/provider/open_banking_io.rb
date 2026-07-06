@@ -42,6 +42,24 @@ class Provider::OpenBankingIo
     end
   end
 
+  # Ask open-banking.io to pull fresh data from every connected bank that still
+  # has an active session, so a subsequent get_accounts/get_transactions reads
+  # refreshed data instead of the stale cached window. Accounts whose session
+  # expired are simply skipped upstream (never raises for them).
+  def sync_all
+    with_error_handling("sync_all") do
+      @client.sync_all
+    end
+  end
+
+  # Trigger an online refresh of a single account. Raises upstream if the account
+  # has no active session, so callers should rescue when best-effort.
+  def sync(account_id)
+    with_error_handling("sync") do
+      @client.sync(account_id)
+    end
+  end
+
   def get_account_transactions(account_id:, start_date: nil, end_date: nil)
     with_error_handling("get_account_transactions") do
       from = format_date(start_date)

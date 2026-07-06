@@ -37,4 +37,16 @@ class OpenBankingIoItemTest < ActiveSupport::TestCase
     assert build_item(api_base_url: "https://api.open-banking.io").valid?
     assert build_item(api_base_url: "https://staging.open-banking.io").valid?
   end
+
+  # Fix 5: api_base_url/api_key are non-deterministically encrypted (nothing
+  # queries them by value). They must still round-trip through save/reload.
+  test "api_base_url and api_key round-trip through non-deterministic encryption" do
+    item = build_item(api_base_url: "https://staging.open-banking.io")
+    item.api_key = "secret-key"
+    item.save!
+
+    reloaded = OpenBankingIoItem.find(item.id)
+    assert_equal "https://staging.open-banking.io", reloaded.api_base_url
+    assert_equal "secret-key", reloaded.api_key
+  end
 end

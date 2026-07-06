@@ -63,6 +63,15 @@ class OpenBankingIoItem::Syncer
   rescue => e
     safe_message = I18n.t("open_banking_io_item.errors.sync_failed")
     Rails.logger.error "OpenBankingIoItem::Syncer - Unexpected sync error: #{e.class}"
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "Unexpected sync error",
+      source: self.class.name,
+      provider_key: "open_banking_io",
+      family: open_banking_io_item.family,
+      metadata: { open_banking_io_item_id: open_banking_io_item.id, error_class: e.class.name, error_message: e.message }
+    )
     collect_health_stats(sync, errors: [ { message: safe_message, category: "sync_error" } ])
     raise SafeSyncError.new(safe_message), cause: nil
   end

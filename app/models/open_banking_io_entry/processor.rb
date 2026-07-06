@@ -29,9 +29,13 @@ class OpenBankingIoEntry::Processor
     attributes = [
       data[:booking_date],
       data[:amount],
+      data[:currency],
       data[:credit_debit_indicator],
       data[:remittance_information],
-      data[:creditor_name]
+      data[:creditor_name],
+      data[:debtor_name],
+      data[:reference_number],
+      data[:bank_transaction_code]
     ].map { |value| value.to_s.strip }.join("|")
 
     Digest::MD5.hexdigest(attributes)
