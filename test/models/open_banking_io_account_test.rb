@@ -6,7 +6,7 @@ class OpenBankingIoAccountTest < ActiveSupport::TestCase
     @item = OpenBankingIoItem.create!(
       family: @family,
       name: "Test open-banking.io",
-      api_base_url: "https://api.example.com",
+      api_base_url: "https://api.open-banking.io",
       api_key: "test-api-key",
       private_key: "test-private-key"
     )
