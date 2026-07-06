@@ -77,7 +77,7 @@ en:
       shared_accounts_hidden_title:
         one: "1 shared account already imported"
         other: "%{count} shared accounts already imported"
-      shared_accounts_hidden_description: "These accounts were imported from another bank connection and are already linked. They will not appear in your account list as duplicates."
+      shared_accounts_hidden_description: "These accounts were already imported from another bank connection and do not need to be set up again."
     new:
       link_enable_banking_title: Link Enable Banking
       session_expired: Session expired - re-authorization required

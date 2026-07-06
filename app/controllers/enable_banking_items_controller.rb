@@ -355,6 +355,12 @@ class EnableBankingItemsController < ApplicationController
       .where(iban: linked_ibans)
       .count
 
+    @hidden_dedup_count = @enable_banking_item.enable_banking_accounts
+      .left_joins(:account_provider)
+      .where(account_providers: { id: nil })
+      .where(iban: linked_ibans)
+      .count
+
     @account_type_options = [
       [ "Skip this account", "skip" ],
       [ "Checking or Savings Account", "Depository" ],
