@@ -479,6 +479,9 @@ GEM
     omniauth_openid_connect (0.8.0)
       omniauth (>= 1.9, < 3)
       openid_connect (~> 2.2)
+    open-banking-io (0.2.0)
+      base64 (>= 0.1)
+      bigdecimal (>= 3.0)
     openid_connect (2.3.1)
       activemodel
       attr_required (>= 1.0.0)
@@ -909,6 +912,7 @@ DEPENDENCIES
   omniauth-rails_csrf_protection (>= 2.0)
   omniauth-saml (~> 2.1)
   omniauth_openid_connect
+  open-banking-io
   ostruct
   pagy
   pdf-reader (~> 2.12)
