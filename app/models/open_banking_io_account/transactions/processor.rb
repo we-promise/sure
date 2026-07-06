@@ -14,11 +14,24 @@ class OpenBankingIoAccount::Transactions::Processor
 
     total_count = open_banking_io_account.raw_transactions_payload.count
     imported_count = 0
+    skipped_count = 0
     failed_count = 0
     errors = []
     current_pending_external_ids = pending_external_ids
+    excluded_ids = excluded_external_ids
 
     open_banking_io_account.raw_transactions_payload.each_with_index do |transaction_data, index|
+      ext_id = OpenBankingIoEntry::Processor.canonical_external_id(transaction_data)
+      if ext_id.present? && excluded_ids.include?(ext_id)
+        # This pending row was already reconciled into a booked transaction
+        # (auto-claimed by the amount/date heuristic, or manually merged by the
+        # user). The stored raw payload still contains the old pending data, so
+        # skip it to avoid recreating a phantom pending duplicate.
+        Rails.logger.info "OpenBankingIoAccount::Transactions::Processor - Skipping already-reconciled pending transaction #{ext_id}"
+        skipped_count += 1
+        next
+      end
+
       result = OpenBankingIoEntry::Processor.new(
         transaction_data,
         open_banking_io_account: open_banking_io_account
@@ -46,6 +59,7 @@ class OpenBankingIoAccount::Transactions::Processor
       success: failed_count.zero?,
       total: total_count,
       imported: imported_count,
+      skipped: skipped_count,
       failed: failed_count,
       pruned_pending: pruned_count,
       errors: errors
@@ -53,6 +67,57 @@ class OpenBankingIoAccount::Transactions::Processor
   end
 
   private
+
+    # External ids that must NOT be re-imported this sync because the pending
+    # transaction they represent has already been reconciled into a booked one.
+    # Mirrors EnableBankingAccount::Transactions::Processor: one query per
+    # category, O(1) Set membership per transaction (no N+1).
+    def excluded_external_ids
+      account = open_banking_io_account.current_account
+      return Set.new unless account.present?
+
+      account_id = account.id
+
+      # 1. Manually merged: pending entries the user explicitly merged into a
+      #    posted transaction. Handles both the current Array format and the
+      #    legacy Hash format of the manual_merge metadata.
+      manually_merged_ids = Transaction.joins(:entry)
+                                       .where(entries: { account_id: account_id })
+                                       .where("transactions.extra ? 'manual_merge'")
+                                       .joins(
+                                         Arel.sql(<<~SQL.squish)
+                                           CROSS JOIN LATERAL jsonb_array_elements(
+                                             CASE jsonb_typeof(transactions.extra->'manual_merge')
+                                             WHEN 'array'  THEN transactions.extra->'manual_merge'
+                                             WHEN 'object' THEN jsonb_build_array(transactions.extra->'manual_merge')
+                                             ELSE '[]'::jsonb
+                                             END
+                                           ) AS merge_elem
+                                         SQL
+                                       )
+                                       .pluck(Arel.sql("merge_elem->>'merged_from_external_id'"))
+                                       .compact
+                                       .to_set
+
+      # 2. Auto-claimed: pending entries automatically matched to a booked
+      #    transaction by the amount/date heuristic. Their old external_ids are
+      #    stored in extra["auto_claimed_pending_ids"].
+      auto_claimed_ids = Transaction.joins(:entry)
+                                    .where(entries: { account_id: account_id })
+                                    .where("transactions.extra ? 'auto_claimed_pending_ids'")
+                                    .joins(
+                                      Arel.sql(<<~SQL.squish)
+                                        CROSS JOIN LATERAL jsonb_array_elements_text(
+                                          transactions.extra->'auto_claimed_pending_ids'
+                                        ) AS claimed_id
+                                      SQL
+                                    )
+                                    .pluck(Arel.sql("claimed_id"))
+                                    .compact
+                                    .to_set
+
+      manually_merged_ids | auto_claimed_ids
+    end
 
     def transaction_id(transaction_data)
       transaction_data.try(:[], :id) ||

@@ -8,8 +8,15 @@ class OpenBankingIoAccount < ApplicationRecord
     "CARD" => { accountable_type: "CreditCard", subtype: "credit_card" }
   }.freeze
 
-  # ISO 20022 booked balance code used as the account's current balance.
+  # ISO 20022 booked balance code preferred as the account's current balance.
   BOOKED_BALANCE_TYPE = "ITBD".freeze
+  # ISO 20022 closing booked balance code, the secondary booked preference.
+  CLOSING_BOOKED_BALANCE_TYPE = "CLBD".freeze
+  # Booked-balance preference order for current_balance. Both are genuine booked
+  # balances (interim booked, then closing booked); an available balance is never
+  # used here. When none is present we leave current_balance untouched rather than
+  # picking an arbitrary balance.
+  BOOKED_BALANCE_PREFERENCE = [ BOOKED_BALANCE_TYPE, CLOSING_BOOKED_BALANCE_TYPE ].freeze
   # ISO 20022 available balance code.
   AVAILABLE_BALANCE_TYPE = "ITAV".freeze
 
@@ -43,8 +50,9 @@ class OpenBankingIoAccount < ApplicationRecord
     snapshot = account_snapshot.with_indifferent_access
     balances = snapshot[:balances].is_a?(Array) ? snapshot[:balances] : []
 
-    booked = find_balance(balances, BOOKED_BALANCE_TYPE) || balances.first
+    booked = find_booked_balance(balances)
     available = find_balance(balances, AVAILABLE_BALANCE_TYPE)
+    booked_amount = parse_balance_amount(booked)
 
     display_name = snapshot[:display_name].presence ||
                    snapshot[:account_name].presence ||
@@ -52,7 +60,6 @@ class OpenBankingIoAccount < ApplicationRecord
                    I18n.t("open_banking_io_account.fallback")
 
     assign_attributes(
-      current_balance: parse_balance_amount(booked) || 0,
       available_balance: parse_balance_amount(available),
       currency: parse_currency(snapshot[:currency]) || parse_currency(booked&.dig(:currency)) || "EUR",
       name: display_name,
@@ -72,6 +79,11 @@ class OpenBankingIoAccount < ApplicationRecord
       raw_payload: account_snapshot
     )
 
+    # Only update the current (booked) balance when the feed actually carries a
+    # booked balance. Never fall back to an available balance or an arbitrary
+    # first entry — that silently corrupts the account balance.
+    self.current_balance = booked_amount unless booked_amount.nil?
+
     save!
   end
 
@@ -84,6 +96,14 @@ class OpenBankingIoAccount < ApplicationRecord
 
     def find_balance(balances, type)
       balances.find { |b| b.is_a?(Hash) && b.with_indifferent_access[:type].to_s.upcase == type }&.with_indifferent_access
+    end
+
+    def find_booked_balance(balances)
+      BOOKED_BALANCE_PREFERENCE.each do |type|
+        found = find_balance(balances, type)
+        return found if found
+      end
+      nil
     end
 
     def parse_balance_amount(balance)
