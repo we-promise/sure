@@ -2,6 +2,7 @@
 <%
   pill_button_class = "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0 whitespace-nowrap"
   selected_account_ids = money_flow_data[:account_ids] || accounts.map { |a| a.id.to_s }
+  all_accounts_selected = selected_account_ids.size == accounts.size
   period = money_flow_data[:period]
   # At full width the chart and summary sit side by side; at single/half width
   # they stack so the chart gets the full column and the month labels don't crowd.
@@ -14,6 +15,8 @@
     </p>
 
     <div class="flex items-center gap-2">
+      <%= render DS::Tooltip.new(text: t(".period_scope_hint"), placement: "top-start") %>
+
       <%= render DS::Menu.new(variant: :button, placement: "bottom-end", max_height: "18rem") do |menu| %>
         <% menu.with_button(type: "button", class: pill_button_class, aria: { label: t(".month_picker_aria_label") }) do %>
           <span class="capitalize"><%= I18n.l(money_flow_data[:month], format: :month_year) %></span>
@@ -35,7 +38,7 @@
       <%= render DS::Popover.new(variant: :button, no_padding: true) do |popover| %>
         <% popover.with_button(
              type: "button",
-             text: t(".filter_accounts", count: selected_account_ids.size),
+             text: all_accounts_selected ? t(".filter_accounts_all") : t(".filter_accounts", count: selected_account_ids.size),
              variant: "outline",
              icon: "list-filter"
            ) %>
@@ -71,15 +74,18 @@
 
   <div class="flex flex-col gap-6<%= " xl:flex-row" unless stacked %>">
     <div class="w-full space-y-2<%= " xl:w-3/5" unless stacked %>">
-      <div class="flex items-center gap-4 px-1">
-        <span class="flex items-center gap-1.5 text-xs text-secondary">
-          <span class="w-2 h-2 rounded-full bg-success"></span>
-          <%= t(".income") %>
-        </span>
-        <span class="flex items-center gap-1.5 text-xs text-secondary">
-          <span class="w-2 h-2 rounded-full bg-gray-400"></span>
-          <%= t(".expenses") %>
-        </span>
+      <div class="flex items-center justify-between gap-4 px-1">
+        <div class="flex items-center gap-4">
+          <span class="flex items-center gap-1.5 text-xs text-secondary">
+            <span class="w-2 h-2 rounded-full bg-success"></span>
+            <%= t(".income") %>
+          </span>
+          <span class="flex items-center gap-1.5 text-xs text-secondary">
+            <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+            <%= t(".expenses") %>
+          </span>
+        </div>
+        <span class="text-xs text-secondary"><%= t(".chart_span", count: money_flow_data[:bars].size) %></span>
       </div>
 
       <div class="w-full h-44 privacy-sensitive"
@@ -92,6 +98,8 @@
     </div>
 
     <div class="w-full space-y-4<%= " xl:w-2/5" unless stacked %>">
+      <p class="text-sm font-medium text-primary capitalize"><%= I18n.l(money_flow_data[:month], format: :month_year) %></p>
+
       <div class="flex items-center justify-between text-sm">
         <span class="text-secondary"><%= t(".balance") %></span>
         <span class="font-medium text-lg tabular-nums privacy-sensitive <%= money_flow_data[:balance].negative? ? "text-destructive" : (money_flow_data[:balance].zero? ? "text-primary" : "text-success") %>">
