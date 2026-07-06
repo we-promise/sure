@@ -51,6 +51,8 @@ en:
       target_label: Merge into (target)
       select_target: Select target merchant...
       sources_label: Merchants to merge
+      sources_search_placeholder: Search merchants...
+      no_merchants_found: No matching merchants found
       sources_hint: Selected merchants will be merged into the target. Family merchants will be deleted, provider merchants will be unlinked.
       submit: Merge selected
     new:
