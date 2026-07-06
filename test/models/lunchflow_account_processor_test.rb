@@ -60,4 +60,19 @@ class LunchflowAccountProcessorTest < ActiveSupport::TestCase
       "an established account's currency must survive a currency-less snapshot"
     assert_nil lf_acct.current_balance
   end
+
+  test "snapshot upsert falls back to USD when neither payload nor record has a valid currency" do
+    lf_acct = @item.lunchflow_accounts.create!(
+      name: "Checking",
+      account_id: "lf_4",
+      currency: "GBP"
+    )
+    # Simulate a record built from bad provider data (bypasses validation)
+    lf_acct.update_column(:currency, "")
+
+    lf_acct.upsert_lunchflow_snapshot!({ id: "lf_4", name: "Checking", status: "active" })
+
+    assert_equal "USD", lf_acct.reload.currency,
+      "a blank stored currency must fall through to USD, not fail validation"
+  end
 end

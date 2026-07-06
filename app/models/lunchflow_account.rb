@@ -39,8 +39,10 @@ class LunchflowAccount < ApplicationRecord
       current_balance: nil, # Balance not provided by accounts endpoint
       # The accounts endpoint usually omits currency (the balance endpoint is
       # the authoritative source) — preserve what we already know rather than
-      # resetting an established account to USD; USD only for new records.
-      currency: parse_currency(snapshot[:currency]) || currency || "USD",
+      # resetting an established account to USD. Normalize the preserved value
+      # too: a blank/invalid stored currency must fall through to USD, not
+      # propagate (blank would fail the presence validation and break import).
+      currency: parse_currency(snapshot[:currency]) || parse_currency(currency) || "USD",
       name: display_name,
       account_id: snapshot[:id].to_s,
       account_status: snapshot[:status],
