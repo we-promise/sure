@@ -335,9 +335,25 @@ class EnableBankingItemsController < ApplicationController
 
   # Show setup accounts modal
   def setup_accounts
+    linked_ibans = EnableBankingAccount
+      .where(enable_banking_item_id: Current.family.enable_banking_items.select(:id))
+      .joins(:account_provider)
+      .where.not(account_providers: { account_id: nil })
+      .where.not(iban: nil)
+      .distinct
+      .pluck(:iban)
+
     @enable_banking_accounts = @enable_banking_item.enable_banking_accounts
       .left_joins(:account_provider)
       .where(account_providers: { id: nil })
+
+    @enable_banking_accounts = @enable_banking_accounts.where.not(iban: linked_ibans) if linked_ibans.any?
+
+    @hidden_dedup_count = @enable_banking_item.enable_banking_accounts
+      .left_joins(:account_provider)
+      .where(account_providers: { id: nil })
+      .where(iban: linked_ibans)
+      .count
 
     @account_type_options = [
       [ "Skip this account", "skip" ],
@@ -402,18 +418,34 @@ class EnableBankingItemsController < ApplicationController
       # Default subtype for CreditCard since it only has one option
       selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
 
-      # Create account with user-selected type and subtype
-      account = Account.create_from_enable_banking_account(
-        enable_banking_account,
-        selected_type,
-        selected_subtype
-      )
+      # IBAN-based dedup: when two family members connect the same bank via
+      # separate EnableBankingItem sessions, a shared joint account will appear
+      # on both items.  If another item in this family already linked an account
+      # with the same IBAN, reuse that Account instead of creating a duplicate.
+      account = if enable_banking_account.iban.present?
+                  find_existing_family_account_for_iban(enable_banking_account.iban)
+                end
 
-      # Link account via AccountProvider
-      AccountProvider.create!(
-        account: account,
-        provider: enable_banking_account
-      )
+      if account
+        # Link this EnableBankingAccount to the existing family Account
+        AccountProvider.create!(
+          account: account,
+          provider: enable_banking_account
+        )
+      else
+        # Create account with user-selected type and subtype
+        account = Account.create_from_enable_banking_account(
+          enable_banking_account,
+          selected_type,
+          selected_subtype
+        )
+
+        # Link account via AccountProvider
+        AccountProvider.create!(
+          account: account,
+          provider: enable_banking_account
+        )
+      end
 
       created_count += 1
     end
@@ -551,6 +583,33 @@ class EnableBankingItemsController < ApplicationController
 
     def set_enable_banking_item
       @enable_banking_item = Current.family.enable_banking_items.find(params[:id])
+    end
+
+    # When two family members connect the same bank via separate EnableBankingItem
+    # sessions, a shared joint account may appear on both items.  This method
+    # prevents duplicate Account records by checking whether another item in the
+    # same family already linked an EnableBankingAccount with the same IBAN.
+    #
+    # It also handles the single-item case where the same session returns a shared
+    # account with multiple identification hashes (one per customer view), each
+    # producing its own EnableBankingAccount record with the same IBAN.
+    #
+    # Returns the existing family Account if found, nil otherwise.
+    def find_existing_family_account_for_iban(iban)
+      return nil if iban.blank?
+
+      family_items = Current.family.enable_banking_items
+
+      matching_account = EnableBankingAccount
+        .where(enable_banking_item_id: family_items.select(:id))
+        .where(iban: iban)
+        .joins(:account_provider)
+        .where.not(account_providers: { account_id: nil })
+        .pick("account_providers.account_id")
+
+      return nil unless matching_account
+
+      Current.family.accounts.find_by(id: matching_account)
     end
 
     def enable_banking_item_params
