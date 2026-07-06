@@ -273,4 +273,46 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
     assert current_eba.reload.account_provider.present?
   end
+
+  test "setup_accounts keeps blank IBAN accounts visible when linked_ibans exist" do
+    # Create a linked account on another item to populate linked_ibans
+    other_item = @family.enable_banking_items.create!(
+      name: "Spouse Connection",
+      country_code: "DE",
+      application_id: "test_app_id",
+      client_certificate: OpenSSL::PKey::RSA.new(2048).to_pem
+    )
+    other_eba = other_item.enable_banking_accounts.create!(
+      uid: "uid-linked",
+      name: "Linked Account",
+      currency: "EUR",
+      iban: "DE89370400440532013000",
+      current_balance: 5000
+    )
+    linked_account = Account.create_from_enable_banking_account(other_eba, "Depository", "checking")
+    AccountProvider.create!(account: linked_account, provider: other_eba)
+
+    # Current item: one account with nil IBAN, one with a different IBAN
+    nil_iban_eba = @item.enable_banking_accounts.create!(
+      uid: "uid-nil-iban",
+      name: "No IBAN Account",
+      currency: "EUR",
+      iban: nil,
+      current_balance: 1000
+    )
+    unique_iban_eba = @item.enable_banking_accounts.create!(
+      uid: "uid-unique",
+      name: "Unique IBAN Account",
+      currency: "EUR",
+      iban: "DE02700100800030874808",
+      current_balance: 2000
+    )
+
+    get setup_accounts_enable_banking_item_url(@item)
+
+    assert_response :success
+    # Both accounts should be visible in the rendered modal
+    assert_includes @response.body, "No IBAN Account"
+    assert_includes @response.body, "Unique IBAN Account"
+  end
 end

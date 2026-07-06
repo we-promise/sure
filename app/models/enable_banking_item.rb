@@ -268,7 +268,9 @@ class EnableBankingItem < ApplicationRecord
 
     base = enable_banking_accounts.left_joins(:account_provider)
                                   .where(account_providers: { id: nil })
-    base = base.where.not(iban: linked_ibans) if linked_ibans.any?
+    if linked_ibans.any?
+      base = base.where("enable_banking_accounts.iban IS NULL OR enable_banking_accounts.iban NOT IN (?)", linked_ibans)
+    end
     base.count
   end
 

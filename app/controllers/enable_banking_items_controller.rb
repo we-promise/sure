@@ -347,13 +347,10 @@ class EnableBankingItemsController < ApplicationController
       .left_joins(:account_provider)
       .where(account_providers: { id: nil })
 
-    @enable_banking_accounts = @enable_banking_accounts.where.not(iban: linked_ibans) if linked_ibans.any?
-
-    @hidden_dedup_count = @enable_banking_item.enable_banking_accounts
-      .left_joins(:account_provider)
-      .where(account_providers: { id: nil })
-      .where(iban: linked_ibans)
-      .count
+    if linked_ibans.any?
+      @enable_banking_accounts = @enable_banking_accounts
+        .where("enable_banking_accounts.iban IS NULL OR enable_banking_accounts.iban NOT IN (?)", linked_ibans)
+    end
 
     @hidden_dedup_count = @enable_banking_item.enable_banking_accounts
       .left_joins(:account_provider)
@@ -411,6 +408,15 @@ class EnableBankingItemsController < ApplicationController
     created_count = 0
     skipped_count = 0
 
+    # Precompute family-wide IBAN→account mapping for dedup, normalized for comparison
+    family_iban_accounts = EnableBankingAccount
+      .where(enable_banking_item_id: Current.family.enable_banking_items.select(:id))
+      .where.not(iban: nil)
+      .joins(:account_provider)
+      .where.not(account_providers: { account_id: nil })
+      .pluck(:iban, "account_providers.account_id")
+      .to_h { |iban, account_id| [iban.delete(" ").upcase, account_id] }
+
     account_types.each do |enable_banking_account_id, selected_type|
       # Skip accounts marked as "skip"
       if selected_type == "skip" || selected_type.blank?
@@ -424,33 +430,47 @@ class EnableBankingItemsController < ApplicationController
       # Default subtype for CreditCard since it only has one option
       selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
 
-      # IBAN-based dedup: when two family members connect the same bank via
-      # separate EnableBankingItem sessions, a shared joint account will appear
-      # on both items.  If another item in this family already linked an account
-      # with the same IBAN, reuse that Account instead of creating a duplicate.
-      account = if enable_banking_account.iban.present?
-                  find_existing_family_account_for_iban(enable_banking_account.iban)
-                end
+      # IBAN-based dedup with race protection: wrap lookup-and-create in a transaction
+      # so two concurrent requests for the same shared IBAN don't both create Account rows.
+      normalized_iban = enable_banking_account.iban&.delete(" ")&.upcase
+      existing_account_id = normalized_iban.present? ? family_iban_accounts[normalized_iban] : nil
 
-      if account
-        # Link this EnableBankingAccount to the existing family Account
+      if existing_account_id
+        account = Current.family.accounts.find(existing_account_id)
+
         AccountProvider.create!(
           account: account,
           provider: enable_banking_account
         )
       else
-        # Create account with user-selected type and subtype
-        account = Account.create_from_enable_banking_account(
-          enable_banking_account,
-          selected_type,
-          selected_subtype
-        )
+        Account.transaction do
+          @enable_banking_item.with_lock do
+            # Re-check within the lock: another request may have created it by now
+            if normalized_iban.present?
+              dup_account_id = EnableBankingAccount
+                .where(enable_banking_item_id: Current.family.enable_banking_items.select(:id))
+                .where(iban: enable_banking_account.iban)
+                .joins(:account_provider)
+                .where.not(account_providers: { account_id: nil })
+                .pick("account_providers.account_id")
 
-        # Link account via AccountProvider
-        AccountProvider.create!(
-          account: account,
-          provider: enable_banking_account
-        )
+              if dup_account_id
+                account = Current.family.accounts.find(dup_account_id)
+                AccountProvider.create!(account: account, provider: enable_banking_account)
+                created_count += 1
+                next
+              end
+            end
+
+            account = Account.create_from_enable_banking_account(
+              enable_banking_account,
+              selected_type,
+              selected_subtype
+            )
+
+            AccountProvider.create!(account: account, provider: enable_banking_account)
+          end
+        end
       end
 
       created_count += 1
@@ -608,7 +628,7 @@ class EnableBankingItemsController < ApplicationController
 
       matching_account = EnableBankingAccount
         .where(enable_banking_item_id: family_items.select(:id))
-        .where(iban: iban)
+        .where("REPLACE(UPPER(enable_banking_accounts.iban), ' ', '') = ?", iban.delete(" ").upcase)
         .joins(:account_provider)
         .where.not(account_providers: { account_id: nil })
         .pick("account_providers.account_id")
