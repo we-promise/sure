@@ -27,17 +27,22 @@ class OpenBankingIoAccount::Processor
 
     def process_account!
       account = open_banking_io_account.current_account
-      balance = open_banking_io_account.current_balance || 0
-
-      balance = balance.abs if account.accountable_type.in?(%w[CreditCard Loan])
-      cash_balance = account.accountable_type == "Investment" ? 0 : balance
       currency = parse_currency(open_banking_io_account.currency) || account.currency || "EUR"
 
-      account.update!(
-        balance: balance,
-        cash_balance: cash_balance,
-        currency: currency
-      )
+      attributes = { currency: currency }
+
+      # Only touch the balance when the feed actually carried a booked balance.
+      # When a bank returns only an available (ITAV) balance the snapshot leaves
+      # current_balance nil; coercing that to 0 would overwrite the real account
+      # balance with zero on every sync, so skip the balance update entirely.
+      balance = open_banking_io_account.current_balance
+      unless balance.nil?
+        balance = balance.abs if account.accountable_type.in?(%w[CreditCard Loan])
+        attributes[:balance] = balance
+        attributes[:cash_balance] = account.accountable_type == "Investment" ? 0 : balance
+      end
+
+      account.update!(**attributes)
     end
 
     def process_transactions

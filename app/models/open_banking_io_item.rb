@@ -1,6 +1,25 @@
 class OpenBankingIoItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable
 
+  # SSRF guard: the api_base_url from the pasted credentials.json is used verbatim
+  # by the SDK's HTTP client, so it must be pinned to the real open-banking.io
+  # service (exactly open-banking.io or a subdomain, over https). This is the one
+  # source of truth reused by the controller's credential-parsing guard.
+  ALLOWED_API_HOST = "open-banking.io".freeze
+
+  # Whether +url+ is a permitted open-banking.io API base URL: https and a host
+  # that is exactly open-banking.io or one of its subdomains. Rejects internal
+  # IPs, plain http, and look-alikes such as "open-banking.io.evil.com".
+  def self.allowed_api_base_url?(url)
+    uri = URI.parse(url.to_s)
+    return false unless uri.is_a?(URI::HTTPS)
+
+    host = uri.host.to_s.downcase
+    host == ALLOWED_API_HOST || host.end_with?(".#{ALLOWED_API_HOST}")
+  rescue URI::InvalidURIError
+    false
+  end
+
   # Virtual field: the "add connection" form is a single textarea where the user
   # pastes their exported credentials.json bundle. The controller parses it into
   # api_base_url / api_key / private_key before saving.
@@ -23,6 +42,7 @@ class OpenBankingIoItem < ApplicationRecord
 
   validates :name, presence: true
   validates :api_base_url, :api_key, :private_key, presence: true, on: :create
+  validate :api_base_url_pinned_to_open_banking_io
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :syncable, -> { active }
@@ -140,4 +160,15 @@ class OpenBankingIoItem < ApplicationRecord
   def credentials_configured?
     api_base_url.present? && api_key.present? && private_key.present?
   end
+
+  private
+
+    # Model-layer SSRF defense-in-depth: reject any api_base_url that isn't pinned
+    # to open-banking.io, even if a caller bypasses the controller's guard.
+    def api_base_url_pinned_to_open_banking_io
+      return if api_base_url.blank?
+      return if self.class.allowed_api_base_url?(api_base_url)
+
+      errors.add(:api_base_url, :invalid)
+    end
 end

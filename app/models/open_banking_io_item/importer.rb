@@ -138,6 +138,16 @@ class OpenBankingIoItem::Importer
     def store_transactions(open_banking_io_account, transactions:)
       existing_transactions = open_banking_io_account.raw_transactions_payload.to_a
 
+      # Storage keys present in THIS fetch. A stored PENDING row whose key is not
+      # in this set is a pre-auth/hold the bank stopped returning (canceled, or
+      # settled under a new booked id). It must be stripped so its entry can be
+      # pruned; otherwise it stays pending forever. Booked history is never
+      # stripped — banks legitimately drop older booked rows from the window.
+      incoming_keys = transactions.filter_map do |tx|
+        next unless tx.is_a?(Hash)
+        transaction_storage_key(tx).presence
+      end.to_set
+
       merged = {}
       order = []
 
@@ -151,8 +161,16 @@ class OpenBankingIoItem::Importer
         merged[key] = tx
       end
 
-      existing_transactions.each { |tx| add_row.call(tx) }
-      incoming_count = transactions.count { |tx| tx.is_a?(Hash) && transaction_storage_key(tx).present? }
+      existing_transactions.each do |tx|
+        next unless tx.is_a?(Hash)
+
+        key = transaction_storage_key(tx)
+        next if key.blank?
+        next if OpenBankingIoEntry::Processor.pending?(tx) && !incoming_keys.include?(key)
+
+        add_row.call(tx)
+      end
+      incoming_count = incoming_keys.size
       transactions.each { |tx| add_row.call(tx) }
 
       final_transactions = order.map { |key| merged[key] }
