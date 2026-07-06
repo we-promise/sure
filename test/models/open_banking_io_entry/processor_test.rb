@@ -128,4 +128,24 @@ class OpenBankingIoEntry::ProcessorTest < ActiveSupport::TestCase
     entry = process(id: "tx_nocur", currency: nil)
     assert_equal "EUR", entry.currency
   end
+
+  # === CREDIT/DEBIT INDICATOR GUARD (Fix 4) ===
+  # An unknown indicator must never be guessed as credit (income) — the transaction
+  # is skipped so a garbled feed can't silently flip an expense into income.
+  test "skips a transaction with a blank credit_debit_indicator instead of importing it as income" do
+    result = process(id: "tx_blank", credit_debit_indicator: "")
+    assert_nil result
+    assert_not @account.entries.exists?(external_id: "open_banking_io_tx_blank")
+  end
+
+  test "skips a transaction with a garbage credit_debit_indicator" do
+    result = process(id: "tx_garbage", credit_debit_indicator: "XYZ")
+    assert_nil result
+    assert_not @account.entries.exists?(external_id: "open_banking_io_tx_garbage")
+  end
+
+  test "accepts CRDT and DBIT case-insensitively" do
+    assert_not_nil process(id: "tx_lc_dbit", credit_debit_indicator: "dbit")
+    assert_not_nil process(id: "tx_lc_crdt", credit_debit_indicator: "crdt")
+  end
 end

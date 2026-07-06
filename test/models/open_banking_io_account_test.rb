@@ -60,11 +60,24 @@ class OpenBankingIoAccountTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1200.00"), @account.available_balance
   end
 
-  test "upsert falls back to the first balance when no ITBD is present" do
+  # Fix 5: booked-preference order ITBD -> CLBD. CLBD is used as current_balance
+  # when no ITBD is present.
+  test "upsert falls back to the CLBD booked balance when no ITBD is present" do
     @account.upsert_open_banking_io_snapshot!(snapshot(balances: [
-      { type: "CLAV", name: "Closing available", amount: "42.00", currency: "EUR" }
+      { type: "CLBD", name: "Closing booked", amount: "42.00", currency: "EUR" }
     ]))
     assert_equal BigDecimal("42.00"), @account.current_balance
+  end
+
+  # Fix 5: an available-only balance (ITAV) must NOT be silently used as the
+  # current (booked) balance.
+  test "upsert does not take current_balance from an available-only ITAV balance" do
+    @account.update!(current_balance: BigDecimal("100.00"))
+    @account.upsert_open_banking_io_snapshot!(snapshot(balances: [
+      { type: "ITAV", name: "Available", amount: "1200.00", currency: "EUR" }
+    ]))
+    assert_equal BigDecimal("100.00"), @account.current_balance
+    assert_equal BigDecimal("1200.00"), @account.available_balance
   end
 
   test "upsert maps display name, account id, formatted account and account type" do

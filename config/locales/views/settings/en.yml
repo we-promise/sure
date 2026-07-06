@@ -416,7 +416,7 @@ en:
       recently_synced: Synced recently. Try again in a moment.
       taglines:
         akahu: Sync New Zealand financial institutions via Akahu.
-        open_banking_io: Sync European bank accounts via open-banking.io for €3/mo.
+        open_banking_io: Sync European bank accounts via open-banking.io.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         redbark: Sync Australian bank accounts via Redbark open banking.
