@@ -26,9 +26,21 @@ module OpenBankingIoItem::Unlinking
           end
         end
       rescue StandardError => e
-        Rails.logger.warn(
-          "OpenBankingIoItem Unlinker: failed to fully unlink provider account ##{provider_account.id} " \
-          "(links=#{link_ids.inspect}): #{e.class} - #{e.message}"
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "warn",
+          message: "Failed to fully unlink provider account",
+          source: self.class.name,
+          provider_key: "open_banking_io",
+          family: family,
+          account_provider: links.first,
+          metadata: {
+            open_banking_io_item_id: id,
+            open_banking_io_account_id: provider_account.id,
+            link_ids: link_ids,
+            error_class: e.class.name,
+            error_message: e.message
+          }
         )
         result[:error] = e.message
       end
