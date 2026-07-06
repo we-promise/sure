@@ -121,5 +121,4 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal "BALANCES_UNAVAILABLE", error.response_data[:error]
     assert_equal "redacted", error.response_data.dig(:detail, :account_id)
   end
-
 end
