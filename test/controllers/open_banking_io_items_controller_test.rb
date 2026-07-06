@@ -118,4 +118,42 @@ class OpenBankingIoItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
   end
+
+  # Fix 3: valid JSON of the wrong SHAPE (null, an array, or a non-object
+  # encryptionKey) must be rejected as invalid credentials, not raise a
+  # NoMethodError/TypeError that surfaces as a 500.
+  test "create rejects valid-but-wrong-shape credentials json without a 500" do
+    [ "null", "[1,2,3]", { "apiBaseUrl" => "https://open-banking.io", "apiKey" => "k", "encryptionKey" => "oops" }.to_json ].each do |body|
+      assert_no_difference "OpenBankingIoItem.count", "body #{body.inspect} should not create an item" do
+        post open_banking_io_items_url, params: {
+          open_banking_io_item: { name: "WrongShape", credentials_json: body }
+        }, headers: { "Turbo-Frame" => "open_banking_io-providers-panel" }
+      end
+
+      assert_response :unprocessable_entity, "body #{body.inspect} should be a validation error, not a 500"
+    end
+  end
+
+  # Fix 9: if unlinking an account fails, destroy must NOT schedule the connection
+  # for deletion (which would orphan Holding/AccountProvider rows) — it must
+  # surface an error and leave the item intact.
+  test "destroy does not delete the item when unlink_all! reports a failure" do
+    item = @family.open_banking_io_items.create!(
+      name: "To Delete",
+      api_base_url: "https://open-banking.io",
+      api_key: "k",
+      private_key: "pk"
+    )
+
+    OpenBankingIoItem.any_instance.stubs(:unlink_all!).returns([
+      { provider_account_id: 1, name: "Everyday", provider_link_ids: [ 1 ], error: "could not unlink" }
+    ])
+
+    assert_no_enqueued_jobs only: DestroyJob do
+      delete open_banking_io_item_url(item)
+    end
+
+    assert_redirected_to settings_providers_path
+    assert_not item.reload.scheduled_for_deletion
+  end
 end

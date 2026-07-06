@@ -148,4 +148,61 @@ class OpenBankingIoEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not_nil process(id: "tx_lc_dbit", credit_debit_indicator: "dbit")
     assert_not_nil process(id: "tx_lc_crdt", credit_debit_indicator: "crdt")
   end
+
+  # === ID-LESS FINGERPRINT (Fixes 2 & 4) ===
+  # Two id-less CRDT transfers that are identical except for the counterparty
+  # (debtor_name) must fingerprint differently, otherwise one collides with the
+  # other and is silently dropped on import.
+  test "id-less transfers differing only by debtor_name get distinct external_ids" do
+    base = {
+      status: "BOOK",
+      credit_debit_indicator: "CRDT",
+      amount: "50.00",
+      currency: "EUR",
+      booking_date: "2026-03-01",
+      remittance_information: "Rent"
+    }
+
+    id_a = OpenBankingIoEntry::Processor.canonical_external_id(base.merge(debtor_name: "Alice"))
+    id_b = OpenBankingIoEntry::Processor.canonical_external_id(base.merge(debtor_name: "Bob"))
+
+    assert_not_equal id_a, id_b
+  end
+
+  test "id-less transfers differing only by reference_number or bank_transaction_code get distinct external_ids" do
+    base = {
+      status: "BOOK",
+      credit_debit_indicator: "CRDT",
+      amount: "50.00",
+      currency: "EUR",
+      booking_date: "2026-03-01",
+      debtor_name: "Alice"
+    }
+
+    id_ref_a = OpenBankingIoEntry::Processor.canonical_external_id(base.merge(reference_number: "REF-1"))
+    id_ref_b = OpenBankingIoEntry::Processor.canonical_external_id(base.merge(reference_number: "REF-2"))
+    assert_not_equal id_ref_a, id_ref_b
+
+    id_code_a = OpenBankingIoEntry::Processor.canonical_external_id(base.merge(bank_transaction_code: "PMNT-RCDT"))
+    id_code_b = OpenBankingIoEntry::Processor.canonical_external_id(base.merge(bank_transaction_code: "PMNT-ICDT"))
+    assert_not_equal id_code_a, id_code_b
+  end
+
+  # Two id-less CRDT transfers identical except for the debtor must BOTH import
+  # (distinct external_ids), rather than one overwriting the other.
+  test "two id-less credit transfers differing only by debtor are both imported" do
+    common = {
+      status: "BOOK",
+      credit_debit_indicator: "CRDT",
+      amount: "50.00",
+      currency: "EUR",
+      booking_date: "2026-03-01",
+      remittance_information: "Rent"
+    }
+
+    assert_not_nil process(common.merge(id: nil, debtor_name: "Alice"))
+    assert_not_nil process(common.merge(id: nil, debtor_name: "Bob"))
+
+    assert_equal 2, @account.entries.where("external_id LIKE ?", "open_banking_io_pending_%").count
+  end
 end

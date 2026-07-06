@@ -51,4 +51,69 @@ class OpenBankingIoItem::ImporterTest < ActiveSupport::TestCase
     stored_again = store([ txn.dup ])
     assert_equal 1, stored_again.size
   end
+
+  # Fix 1: the importer must ask open-banking.io to pull fresh upstream data
+  # (sync_all) BEFORE it paginates account transactions, otherwise it just
+  # re-imports the stale cached window.
+  test "triggers an upstream sync_all before fetching transactions" do
+    account = Account.create!(family: @family, name: "Everyday", accountable: Depository.new(subtype: "checking"), balance: 100, currency: "EUR")
+    AccountProvider.create!(account: account, provider: @provider_account)
+
+    provider = mock("provider")
+    seq = sequence("import")
+    provider.expects(:sync_all).in_sequence(seq)
+    provider.expects(:get_accounts).in_sequence(seq).returns([ { id: "acc_1", currency: "EUR" } ])
+    provider.expects(:get_account_transactions).in_sequence(seq).returns([])
+
+    OpenBankingIoItem::Importer.new(@item, open_banking_io_provider: provider).import
+  end
+
+  # Fix 1: a sync_all failure must not abort importing the cached data, and it
+  # must be surfaced through DebugLogEntry (not just the logger).
+  test "a failing upstream sync_all is swallowed, captured, and does not abort the import" do
+    provider = mock("provider")
+    provider.expects(:sync_all).raises(StandardError.new("session expired"))
+    provider.expects(:get_accounts).returns([ { id: "acc_1", currency: "EUR" } ])
+
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync_error").count }, +1 do
+      result = OpenBankingIoItem::Importer.new(@item, open_banking_io_provider: provider).import
+      assert result[:success]
+    end
+  end
+
+  # Fix 7: an account that already exists but is not yet linked must have its
+  # snapshot (name/currency/balance) refreshed on a subsequent sync, instead of
+  # falling through both branches and going stale until a user links it.
+  test "refreshes the snapshot of an existing but unlinked account on sync" do
+    provider = mock("provider")
+    provider.stubs(:sync_all)
+    provider.expects(:get_accounts).returns([
+      {
+        id: "acc_1",
+        display_name: "Renamed Everyday",
+        currency: "USD",
+        balances: [ { type: "ITBD", amount: "500.00", currency: "USD" } ]
+      }
+    ])
+
+    OpenBankingIoItem::Importer.new(@item, open_banking_io_provider: provider).import
+
+    @provider_account.reload
+    assert_equal "Renamed Everyday", @provider_account.name
+    assert_equal "USD", @provider_account.currency
+    assert_equal BigDecimal("500.00"), @provider_account.current_balance
+  end
+
+  # Fix 6: a provider API error while fetching accounts must be captured to
+  # DebugLogEntry (surfacing on /settings/debug), not only Rails.logger.
+  test "captures a provider account-fetch error to DebugLogEntry" do
+    provider = mock("provider")
+    provider.stubs(:sync_all)
+    provider.expects(:get_accounts).raises(Provider::OpenBankingIo::Error.new("boom", :server_error))
+
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync_error").count }, +1 do
+      result = OpenBankingIoItem::Importer.new(@item, open_banking_io_provider: provider).import
+      assert_not result[:success]
+    end
+  end
 end
