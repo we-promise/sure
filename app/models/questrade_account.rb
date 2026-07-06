@@ -1,8 +1,15 @@
 # frozen_string_literal: true
 
 class QuestradeAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
   include QuestradeAccount::DataHelpers
+
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_holdings_payload
+    encrypts :raw_activities_payload
+    encrypts :raw_balances_payload
+  end
 
   belongs_to :questrade_item
 

@@ -22,7 +22,7 @@ class QuestradeItemsController < ApplicationController
 
   def create
     @questrade_item = Current.family.questrade_items.build(questrade_item_params)
-    @questrade_item.name ||= I18n.t("questrade_items.default_name")
+    @questrade_item.name = I18n.t("questrade_items.default_name") if @questrade_item.name.blank?
 
     if @questrade_item.save
       # Kick off an initial sync so accounts are discovered and appear under the

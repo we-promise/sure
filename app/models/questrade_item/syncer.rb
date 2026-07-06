@@ -13,7 +13,7 @@ class QuestradeItem::Syncer
     Rails.logger.info "QuestradeItem::Syncer - Starting sync for item #{questrade_item.id}"
 
     # Phase 1: Import data from provider API
-    sync.update!(status_text: I18n.t("questrade_items.sync.status.importing")) if sync.respond_to?(:status_text)
+    update_sync_status(sync, :importing)
     questrade_item.import_latest_questrade_data(sync: sync)
 
     # Phase 2: Collect setup statistics
@@ -23,12 +23,12 @@ class QuestradeItem::Syncer
     sync_errors = nil
     linked_questrade_accounts = questrade_item.linked_questrade_accounts.includes(account_provider: :account)
     if linked_questrade_accounts.any?
-      sync.update!(status_text: I18n.t("questrade_items.sync.status.processing")) if sync.respond_to?(:status_text)
+      update_sync_status(sync, :processing)
       mark_import_started(sync)
       process_results = questrade_item.process_accounts
 
       # Phase 4: Schedule balance calculations
-      sync.update!(status_text: I18n.t("questrade_items.sync.status.calculating")) if sync.respond_to?(:status_text)
+      update_sync_status(sync, :calculating)
       schedule_results = questrade_item.schedule_account_syncs(
         parent_sync: sync,
         window_start_date: sync.window_start_date,
@@ -70,19 +70,23 @@ class QuestradeItem::Syncer
       questrade_item.linked_questrade_accounts.sum { |pa| Array(pa.raw_holdings_payload).size }
     end
 
+    def update_sync_status(sync, key, **i18n_options)
+      sync.update!(status_text: I18n.t("questrade_items.sync.status.#{key}", **i18n_options)) if sync.respond_to?(:status_text)
+    end
+
     def mark_import_started(sync)
       # Mark that we're now processing imported data
-      sync.update!(status_text: I18n.t("questrade_items.sync.status.importing_data")) if sync.respond_to?(:status_text)
+      update_sync_status(sync, :importing_data)
     end
 
     def finalize_setup_counts(sync)
-      sync.update!(status_text: I18n.t("questrade_items.sync.status.checking_setup")) if sync.respond_to?(:status_text)
+      update_sync_status(sync, :checking_setup)
 
       unlinked_count = questrade_item.unlinked_accounts_count
 
       if unlinked_count > 0
         questrade_item.update!(pending_account_setup: true)
-        sync.update!(status_text: I18n.t("questrade_items.sync.status.needs_setup", count: unlinked_count)) if sync.respond_to?(:status_text)
+        update_sync_status(sync, :needs_setup, count: unlinked_count)
       else
         questrade_item.update!(pending_account_setup: false)
       end

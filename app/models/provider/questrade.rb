@@ -36,6 +36,7 @@ class Provider::Questrade
 
   class ConfigurationError < Error; end
   class AuthenticationError < Error; end
+  class RetryableResponseError < Error; end
 
   attr_reader :refresh_token, :api_server
 

@@ -8,7 +8,9 @@ class QuestradeItem < ApplicationRecord
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   # (encryption_ready? is provided by Encryptable, shared with the other providers).
   if encryption_ready?
-    encrypts :refresh_token
+    encrypts :refresh_token, deterministic: true
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
@@ -43,13 +45,29 @@ class QuestradeItem < ApplicationRecord
   def import_latest_questrade_data(sync: nil)
     provider = questrade_provider
     unless provider
-      Rails.logger.error "QuestradeItem #{id} - Cannot import: provider is not configured"
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Cannot import: Questrade provider is not configured",
+        source: self.class.name,
+        provider_key: "questrade",
+        family: family,
+        metadata: { questrade_item_id: id }
+      )
       raise StandardError, I18n.t("questrade_items.errors.provider_not_configured")
     end
 
     QuestradeItem::Importer.new(self, questrade_provider: provider, sync: sync).import
   rescue => e
-    Rails.logger.error "QuestradeItem #{id} - Failed to import data: #{e.message}"
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "Failed to import data",
+      source: self.class.name,
+      provider_key: "questrade",
+      family: family,
+      metadata: { questrade_item_id: id, error_class: e.class.name, error_message: e.message }
+    )
     raise
   end
 
@@ -63,7 +81,15 @@ class QuestradeItem < ApplicationRecord
         result = QuestradeAccount::Processor.new(questrade_account).process
         results << { questrade_account_id: questrade_account.id, success: true, result: result }
       rescue => e
-        Rails.logger.error "QuestradeItem #{id} - Failed to process account #{questrade_account.id}: #{e.message}"
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "error",
+          message: "Failed to process account",
+          source: self.class.name,
+          provider_key: "questrade",
+          family: family,
+          metadata: { questrade_item_id: id, questrade_account_id: questrade_account.id, error_class: e.class.name, error_message: e.message }
+        )
         results << { questrade_account_id: questrade_account.id, success: false, error: e.message }
       end
     end
@@ -85,7 +111,15 @@ class QuestradeItem < ApplicationRecord
         )
         results << { account_id: account.id, success: true }
       rescue => e
-        Rails.logger.error "QuestradeItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "error",
+          message: "Failed to schedule sync for account",
+          source: self.class.name,
+          provider_key: "questrade",
+          family: family,
+          metadata: { questrade_item_id: id, account_id: account.id, error_class: e.class.name, error_message: e.message }
+        )
         results << { account_id: account.id, success: false, error: e.message }
       end
     end

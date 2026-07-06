@@ -48,4 +48,61 @@ class Provider::QuestradeTest < ActiveSupport::TestCase
     assert_equal 1, lock_calls, "exchange must run inside the synchronize_exchange lock"
     assert_equal "rotated", provider.refresh_token
   end
+
+  test "retries network errors and raises Error after max retries exhausted" do
+    provider = Provider::Questrade.new(refresh_token: "test-rt")
+    # Authenticate first to set api_server and access_token
+    auth_payload = { access_token: "at", api_server: "https://api01.example.com/", refresh_token: "rt2", expires_in: 1800 }.to_json
+    Provider::Questrade.stubs(:post).returns(OpenStruct.new(code: 200, body: auth_payload))
+    provider.send(:authenticate!)
+
+    provider.stubs(:sleep)
+    DebugLogEntry.stubs(:capture)
+
+    attempt_count = 0
+    Provider::Questrade.stubs(:get).with { |*| attempt_count += 1; true }.raises(SocketError, "connection failed")
+
+    error = assert_raises(Provider::Questrade::Error) do
+      provider.list_accounts
+    end
+
+    assert_equal Provider::Questrade::MAX_RETRIES + 1, attempt_count
+    assert_match "Network error after #{Provider::Questrade::MAX_RETRIES} retries", error.message
+  end
+
+  test "retries on 429 rate limit and raises Error after max retries exhausted" do
+    provider = Provider::Questrade.new(refresh_token: "test-rt")
+    auth_payload = { access_token: "at", api_server: "https://api01.example.com/", refresh_token: "rt2", expires_in: 1800 }.to_json
+    Provider::Questrade.stubs(:post).returns(OpenStruct.new(code: 200, body: auth_payload))
+    provider.send(:authenticate!)
+
+    provider.stubs(:sleep)
+    DebugLogEntry.stubs(:capture)
+
+    stub_429 = OpenStruct.new(code: 429, body: "{}")
+    Provider::Questrade.stubs(:get).returns(stub_429)
+
+    error = assert_raises(Provider::Questrade::Error) do
+      provider.list_accounts
+    end
+
+    assert_match "Network error after #{Provider::Questrade::MAX_RETRIES} retries", error.message
+  end
+
+  test "retries on 5xx server error and raises Error after max retries exhausted" do
+    provider = Provider::Questrade.new(refresh_token: "test-rt")
+    auth_payload = { access_token: "at", api_server: "https://api01.example.com/", refresh_token: "rt2", expires_in: 1800 }.to_json
+    Provider::Questrade.stubs(:post).returns(OpenStruct.new(code: 200, body: auth_payload))
+    provider.send(:authenticate!)
+
+    provider.stubs(:sleep)
+    DebugLogEntry.stubs(:capture)
+
+    stub_503 = OpenStruct.new(code: 503, body: "{}")
+    Provider::Questrade.stubs(:get).returns(stub_503)
+
+    assert_raises(Provider::Questrade::Error) do
+      provider.list_accounts
+    end
+  end
 end
