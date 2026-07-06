@@ -60,6 +60,9 @@ module SettingsHelper
     when "akahu"
       return { status: :off } unless @akahu_items&.any?
       sync_based_summary(key)
+    when "open_banking_io"
+      return { status: :off } unless @open_banking_io_items&.any?
+      sync_based_summary(key)
     when "up"
       return { status: :off } unless @up_items&.any?
       sync_based_summary(key)
