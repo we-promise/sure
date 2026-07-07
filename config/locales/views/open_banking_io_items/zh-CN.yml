@@ -1,0 +1,123 @@
+---
+zh-CN:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: 通过 open-banking.io 连接欧洲银行账户
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: open-banking.io 连接
+  open_banking_io_account:
+    fallback: open-banking.io 账户
+  open_banking_io_entry:
+    notes:
+      reference: 参考号
+  open_banking_io_item:
+    errors:
+      account_processing_failed: 无法同步 open-banking.io 账户
+      account_sync_schedule_failed: 无法安排 open-banking.io 账户同步
+      transactions_failed: 无法获取 open-banking.io 交易
+      sync_failed: 无法同步 open-banking.io 连接
+    sync_status:
+      no_accounts: 未找到账户
+      all_synced:
+        one: 已同步 1 个账户
+        other: 已同步 %{count} 个账户
+      partial: "%{linked} 个已同步，%{unlinked} 个需要设置"
+    institution_summary:
+      none: 未连接任何机构
+      one: 1 个机构
+      count:
+        one: 1 个机构
+        other: "%{count} 个机构"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: open-banking.io 连接
+      add_connection: 添加 open-banking.io 连接
+      update_connection: 更新连接
+      connection_name_label: 连接名称
+      connection_name_placeholder: 主 open-banking.io
+      credentials_label: 凭据 JSON
+      credentials_placeholder: 粘贴导出的 credentials.json 文件内容
+      keep_credentials_placeholder: 留空以保留现有凭据
+      credentials_required: 粘贴您的 open-banking.io credentials.json 以进行连接。
+      credentials_invalid: 无法读取 credentials.json。请粘贴完整的导出文件。
+      credentials_invalid_url: credentials.json 必须使用 https 的 open-banking.io API 地址。
+      setup_accounts: 设置账户
+      syncing: 正在同步…
+      sync: 同步
+      disconnect: 断开连接
+      disconnect_confirm: "确定要断开 %{name} 吗？"
+    create:
+      success: 已保存 open-banking.io 连接。
+    update:
+      success: 已更新 open-banking.io 连接。
+    destroy:
+      success: 已安排删除 open-banking.io 连接。
+      unlink_failed: 无法断开 open-banking.io 连接
+    select_accounts:
+      title: 关联 open-banking.io 账户
+      description: 选择要添加的 open-banking.io 账户。
+      no_accounts_found: 未找到未关联的 open-banking.io 账户。
+      no_credentials_configured: 请先在提供商设置中配置 open-banking.io。
+      cancel: 取消
+      link_accounts: 关联账户
+    link_accounts:
+      success:
+        one: 已关联 1 个 open-banking.io 账户。
+        other: "已关联 %{count} 个 open-banking.io 账户。"
+      no_accounts_selected: 请至少选择一个账户。
+      no_credentials_configured: 请先在提供商设置中配置 open-banking.io。
+      unsupported_account_type: open-banking.io 不支持该账户类型。
+      link_failed: 未关联任何账户。
+    select_existing_account:
+      title: "将 open-banking.io 账户关联到 %{account_name}"
+      description: 选择一个未关联的 open-banking.io 账户以连接到此账户。
+      no_accounts_found: 未找到未关联的 open-banking.io 账户。
+      no_credentials_configured: 请先在提供商设置中配置 open-banking.io。
+      account_already_linked: 此账户已关联到某个提供商。
+      cancel: 取消
+      link_account: 关联账户
+    link_existing_account:
+      success: "已将 open-banking.io 账户关联到 %{account_name}。"
+      account_already_linked: 此账户已关联到某个提供商。
+      open_banking_io_account_already_linked: 此 open-banking.io 账户已关联。
+    setup_accounts:
+      title: 设置 open-banking.io 账户
+      subtitle: 选择每个 open-banking.io 账户在 Sure 中的显示方式。
+      no_credentials: 请先配置 open-banking.io 凭据。
+      api_error: 无法获取 open-banking.io 账户。
+      fetch_failed: 无法获取账户
+      no_accounts_to_setup: 没有需要设置的账户
+      all_accounts_linked: 所有 open-banking.io 账户均已关联。
+      choose_account_type: 选择账户类型
+      choose_account_type_description: 跳过您不想跟踪的账户。
+      account_type_label: 账户类型
+      account_types:
+        skip: 跳过
+        depository: 现金
+        credit_card: 信用卡
+        investment: 投资
+        loan: 贷款
+      create_accounts: 创建账户
+      cancel: 取消
+    complete_account_setup:
+      success:
+        one: 已创建 1 个 open-banking.io 账户。
+        other: "已创建 %{count} 个 open-banking.io 账户。"
+      all_skipped: 未创建任何 open-banking.io 账户。
+      no_accounts: 未选择任何 open-banking.io 账户。
+      creation_failed: 无法创建 open-banking.io 账户。
+    open_banking_io_item:
+      deletion_in_progress: 正在删除
+      syncing: 正在同步
+      error: 错误
+      status_with_summary: "%{timestamp}前已同步 · %{summary}"
+      status_never: 从未同步
+      delete: 删除
+      setup_needed: 需要设置账户
+      setup_description: "%{total} 个账户中已关联 %{linked} 个。"
+      setup_action: 设置账户
+      no_accounts_title: 尚未导入任何账户
+      no_accounts_description: 获取 open-banking.io 账户并选择要关联的账户。
