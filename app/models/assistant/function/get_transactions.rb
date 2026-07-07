@@ -126,6 +126,13 @@ class Assistant::Function::GetTransactions < Assistant::Function
           items: { enum: family_tag_names },
           minItems: 1,
           uniqueItems: true
+        },
+        excluded: {
+          type: "array",
+          description: "Filter by excluded state. \"active\" keeps transactions counted in budgets/reports, \"excluded\" keeps only those excluded from them. Omit (or pass both) to include all transactions.",
+          items: { enum: [ "active", "excluded" ] },
+          minItems: 1,
+          uniqueItems: true
         }
       }
     )
@@ -165,7 +172,8 @@ class Assistant::Function::GetTransactions < Assistant::Function
         category: txn.category&.name,
         merchant: txn.merchant&.name,
         tags: txn.tags.map(&:name),
-        is_transfer: txn.transfer?
+        is_transfer: txn.transfer?,
+        is_excluded: entry.excluded
       }
     end
 

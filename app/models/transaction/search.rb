@@ -215,7 +215,7 @@ class Transaction::Search
       return query unless excluded_states.present?
       return query if excluded_states.uniq.sort == [ "active", "excluded" ] # Both selected = no filter
 
-      case excluded_states.sort
+      case excluded_states.uniq.sort
       when [ "active" ]
         query.where(entries: { excluded: false })
       when [ "excluded" ]
