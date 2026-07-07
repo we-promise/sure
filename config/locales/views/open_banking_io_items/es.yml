@@ -1,0 +1,123 @@
+---
+es:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: Conecta cuentas bancarias europeas a través de open-banking.io
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: Conexión de open-banking.io
+  open_banking_io_account:
+    fallback: cuenta de open-banking.io
+  open_banking_io_entry:
+    notes:
+      reference: Referencia
+  open_banking_io_item:
+    errors:
+      account_processing_failed: No se pudo sincronizar la cuenta de open-banking.io
+      account_sync_schedule_failed: No se pudo programar la sincronización de la cuenta de open-banking.io
+      transactions_failed: No se pudieron obtener las transacciones de open-banking.io
+      sync_failed: No se pudo sincronizar la conexión de open-banking.io
+    sync_status:
+      no_accounts: No se encontraron cuentas
+      all_synced:
+        one: 1 cuenta sincronizada
+        other: "%{count} cuentas sincronizadas"
+      partial: "%{linked} sincronizadas, %{unlinked} requieren configuración"
+    institution_summary:
+      none: No hay instituciones conectadas
+      one: 1 institución
+      count:
+        one: 1 institución
+        other: "%{count} instituciones"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: Conexión de open-banking.io
+      add_connection: Agregar conexión de open-banking.io
+      update_connection: Actualizar conexión
+      connection_name_label: Nombre de la conexión
+      connection_name_placeholder: open-banking.io principal
+      credentials_label: JSON de credenciales
+      credentials_placeholder: Pega el contenido de tu archivo credentials.json exportado
+      keep_credentials_placeholder: Déjalo en blanco para mantener las credenciales existentes
+      credentials_required: Pega tu credentials.json de open-banking.io para conectarte.
+      credentials_invalid: No se pudo leer el credentials.json. Pega el archivo exportado completo.
+      credentials_invalid_url: El credentials.json debe usar una URL de la API de open-banking.io con https.
+      setup_accounts: Configurar cuentas
+      syncing: Sincronizando...
+      sync: Sincronizar
+      disconnect: Desconectar
+      disconnect_confirm: "¿Seguro que quieres desconectar %{name}?"
+    create:
+      success: Conexión de open-banking.io guardada.
+    update:
+      success: Conexión de open-banking.io actualizada.
+    destroy:
+      success: Conexión de open-banking.io programada para eliminación.
+      unlink_failed: No se pudo desconectar la conexión de open-banking.io
+    select_accounts:
+      title: Vincular cuentas de open-banking.io
+      description: Elige las cuentas de open-banking.io que quieras agregar.
+      no_accounts_found: No se encontraron cuentas de open-banking.io sin vincular.
+      no_credentials_configured: Primero configura open-banking.io en los ajustes del proveedor.
+      cancel: Cancelar
+      link_accounts: Vincular cuentas
+    link_accounts:
+      success:
+        one: Se vinculó 1 cuenta de open-banking.io.
+        other: "Se vincularon %{count} cuentas de open-banking.io."
+      no_accounts_selected: Selecciona al menos una cuenta.
+      no_credentials_configured: Primero configura open-banking.io en los ajustes del proveedor.
+      unsupported_account_type: open-banking.io no admite ese tipo de cuenta.
+      link_failed: No se vinculó ninguna cuenta.
+    select_existing_account:
+      title: "Vincular cuenta de open-banking.io con %{account_name}"
+      description: Elige una cuenta de open-banking.io sin vincular para conectarla a esta cuenta.
+      no_accounts_found: No se encontraron cuentas de open-banking.io sin vincular.
+      no_credentials_configured: Primero configura open-banking.io en los ajustes del proveedor.
+      account_already_linked: Esta cuenta ya está vinculada a un proveedor.
+      cancel: Cancelar
+      link_account: Vincular cuenta
+    link_existing_account:
+      success: "Cuenta de open-banking.io vinculada con %{account_name}."
+      account_already_linked: Esta cuenta ya está vinculada a un proveedor.
+      open_banking_io_account_already_linked: Esta cuenta de open-banking.io ya está vinculada.
+    setup_accounts:
+      title: Configurar cuentas de open-banking.io
+      subtitle: Elige cómo debe aparecer cada cuenta de open-banking.io en Sure.
+      no_credentials: Primero configura las credenciales de open-banking.io.
+      api_error: No se pudieron obtener las cuentas de open-banking.io.
+      fetch_failed: No se pudieron obtener las cuentas
+      no_accounts_to_setup: No hay cuentas para configurar
+      all_accounts_linked: Todas las cuentas de open-banking.io ya están vinculadas.
+      choose_account_type: Elige un tipo de cuenta
+      choose_account_type_description: Omite las cuentas que no quieras controlar.
+      account_type_label: Tipo de cuenta
+      account_types:
+        skip: Omitir
+        depository: Efectivo
+        credit_card: Tarjeta de crédito
+        investment: Inversión
+        loan: Préstamo
+      create_accounts: Crear cuentas
+      cancel: Cancelar
+    complete_account_setup:
+      success:
+        one: Se creó 1 cuenta de open-banking.io.
+        other: "Se crearon %{count} cuentas de open-banking.io."
+      all_skipped: No se creó ninguna cuenta de open-banking.io.
+      no_accounts: No se seleccionó ninguna cuenta de open-banking.io.
+      creation_failed: No se pudieron crear las cuentas de open-banking.io.
+    open_banking_io_item:
+      deletion_in_progress: Eliminación en curso
+      syncing: Sincronizando
+      error: Error
+      status_with_summary: "Sincronizado hace %{timestamp} · %{summary}"
+      status_never: Nunca sincronizado
+      delete: Eliminar
+      setup_needed: Se requiere configurar la cuenta
+      setup_description: "%{linked} de %{total} cuentas vinculadas."
+      setup_action: Configurar cuentas
+      no_accounts_title: Aún no se han importado cuentas
+      no_accounts_description: Obtén las cuentas de open-banking.io y elige cuáles vincular.

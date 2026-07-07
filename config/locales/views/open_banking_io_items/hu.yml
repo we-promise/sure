@@ -1,0 +1,123 @@
+---
+hu:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: Európai bankszámlák összekapcsolása az open-banking.io szolgáltatáson keresztül
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: open-banking.io kapcsolat
+  open_banking_io_account:
+    fallback: open-banking.io számla
+  open_banking_io_entry:
+    notes:
+      reference: Hivatkozás
+  open_banking_io_item:
+    errors:
+      account_processing_failed: Nem sikerült szinkronizálni az open-banking.io számlát
+      account_sync_schedule_failed: Nem sikerült ütemezni az open-banking.io számla szinkronizálását
+      transactions_failed: Nem sikerült lekérni az open-banking.io tranzakciókat
+      sync_failed: Nem sikerült szinkronizálni az open-banking.io kapcsolatot
+    sync_status:
+      no_accounts: Nem található számla
+      all_synced:
+        one: 1 számla szinkronizálva
+        other: "%{count} számla szinkronizálva"
+      partial: "%{linked} szinkronizálva, %{unlinked} beállításra vár"
+    institution_summary:
+      none: Nincs csatlakoztatott intézmény
+      one: 1 intézmény
+      count:
+        one: 1 intézmény
+        other: "%{count} intézmény"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: open-banking.io kapcsolat
+      add_connection: open-banking.io kapcsolat hozzáadása
+      update_connection: Kapcsolat frissítése
+      connection_name_label: Kapcsolat neve
+      connection_name_placeholder: Fő open-banking.io
+      credentials_label: Hitelesítő adatok JSON
+      credentials_placeholder: Illessze be az exportált credentials.json tartalmát
+      keep_credentials_placeholder: Hagyja üresen a meglévő hitelesítő adatok megtartásához
+      credentials_required: A csatlakozáshoz illessze be az open-banking.io credentials.json fájlját.
+      credentials_invalid: Nem sikerült beolvasni a credentials.json fájlt. Illessze be a teljes exportált fájlt.
+      credentials_invalid_url: A credentials.json fájlnak https open-banking.io API URL-t kell használnia.
+      setup_accounts: Számlák beállítása
+      syncing: Szinkronizálás...
+      sync: Szinkronizálás
+      disconnect: Leválasztás
+      disconnect_confirm: "Biztosan le szeretné választani a következőt: %{name}?"
+    create:
+      success: open-banking.io kapcsolat mentve.
+    update:
+      success: open-banking.io kapcsolat frissítve.
+    destroy:
+      success: open-banking.io kapcsolat törlésre ütemezve.
+      unlink_failed: Nem sikerült leválasztani az open-banking.io kapcsolatot
+    select_accounts:
+      title: open-banking.io számlák összekapcsolása
+      description: Válassza ki a hozzáadandó open-banking.io számlákat.
+      no_accounts_found: Nem található összekapcsolatlan open-banking.io számla.
+      no_credentials_configured: Először állítsa be az open-banking.io szolgáltatót a szolgáltatói beállításokban.
+      cancel: Mégse
+      link_accounts: Számlák összekapcsolása
+    link_accounts:
+      success:
+        one: 1 open-banking.io számla összekapcsolva.
+        other: "%{count} open-banking.io számla összekapcsolva."
+      no_accounts_selected: Válasszon ki legalább egy számlát.
+      no_credentials_configured: Először állítsa be az open-banking.io szolgáltatót a szolgáltatói beállításokban.
+      unsupported_account_type: Az open-banking.io nem támogatja ezt a számlatípust.
+      link_failed: Egyetlen számla sem lett összekapcsolva.
+    select_existing_account:
+      title: "open-banking.io számla összekapcsolása ezzel: %{account_name}"
+      description: Válasszon egy összekapcsolatlan open-banking.io számlát, amelyet ehhez a számlához csatlakoztat.
+      no_accounts_found: Nem található összekapcsolatlan open-banking.io számla.
+      no_credentials_configured: Először állítsa be az open-banking.io szolgáltatót a szolgáltatói beállításokban.
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
+      cancel: Mégse
+      link_account: Számla összekapcsolása
+    link_existing_account:
+      success: "open-banking.io számla összekapcsolva ezzel: %{account_name}."
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
+      open_banking_io_account_already_linked: Ez az open-banking.io számla már össze van kapcsolva.
+    setup_accounts:
+      title: open-banking.io számlák beállítása
+      subtitle: Válassza ki, hogyan jelenjen meg minden open-banking.io számla a Sure alkalmazásban.
+      no_credentials: Először állítsa be az open-banking.io hitelesítő adatokat.
+      api_error: Nem sikerült lekérni az open-banking.io számlákat.
+      fetch_failed: Nem sikerült lekérni a számlákat
+      no_accounts_to_setup: Nincs beállítandó számla
+      all_accounts_linked: Az összes open-banking.io számla már össze van kapcsolva.
+      choose_account_type: Válasszon számlatípust
+      choose_account_type_description: Hagyja ki azokat a számlákat, amelyeket nem szeretne követni.
+      account_type_label: Számlatípus
+      account_types:
+        skip: Kihagyás
+        depository: Készpénz
+        credit_card: Hitelkártya
+        investment: Befektetés
+        loan: Hitel
+      create_accounts: Számlák létrehozása
+      cancel: Mégse
+    complete_account_setup:
+      success:
+        one: 1 open-banking.io számla létrehozva.
+        other: "%{count} open-banking.io számla létrehozva."
+      all_skipped: Egyetlen open-banking.io számla sem lett létrehozva.
+      no_accounts: Nem lett kiválasztva open-banking.io számla.
+      creation_failed: Nem sikerült létrehozni az open-banking.io számlákat.
+    open_banking_io_item:
+      deletion_in_progress: Törlés folyamatban
+      syncing: Szinkronizálás
+      error: Hiba
+      status_with_summary: "Szinkronizálva %{timestamp} · %{summary}"
+      status_never: Soha nem szinkronizált
+      delete: Törlés
+      setup_needed: Számlabeállítás szükséges
+      setup_description: "%{total} számlából %{linked} összekapcsolva."
+      setup_action: Számlák beállítása
+      no_accounts_title: Még nincs importált számla
+      no_accounts_description: Kérje le az open-banking.io számlákat, és válassza ki, melyeket szeretné összekapcsolni.

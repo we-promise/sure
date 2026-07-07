@@ -1,0 +1,123 @@
+---
+de:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: Europäische Bankkonten über open-banking.io verbinden
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: open-banking.io Verbindung
+  open_banking_io_account:
+    fallback: open-banking.io Konto
+  open_banking_io_entry:
+    notes:
+      reference: Referenz
+  open_banking_io_item:
+    errors:
+      account_processing_failed: open-banking.io Konto konnte nicht synchronisiert werden
+      account_sync_schedule_failed: Synchronisierung des open-banking.io Kontos konnte nicht geplant werden
+      transactions_failed: open-banking.io Transaktionen konnten nicht abgerufen werden
+      sync_failed: open-banking.io Verbindung konnte nicht synchronisiert werden
+    sync_status:
+      no_accounts: Keine Konten gefunden
+      all_synced:
+        one: 1 Konto synchronisiert
+        other: "%{count} Konten synchronisiert"
+      partial: "%{linked} synchronisiert, %{unlinked} benötigen Einrichtung"
+    institution_summary:
+      none: Keine Institute verbunden
+      one: 1 Institut
+      count:
+        one: 1 Institut
+        other: "%{count} Institute"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: open-banking.io Verbindung
+      add_connection: open-banking.io Verbindung hinzufügen
+      update_connection: Verbindung aktualisieren
+      connection_name_label: Verbindungsname
+      connection_name_placeholder: Haupt open-banking.io
+      credentials_label: Anmeldedaten JSON
+      credentials_placeholder: Fügen Sie den Inhalt Ihrer exportierten credentials.json ein
+      keep_credentials_placeholder: Leer lassen, um die vorhandenen Anmeldedaten beizubehalten
+      credentials_required: Fügen Sie Ihre open-banking.io credentials.json ein, um die Verbindung herzustellen.
+      credentials_invalid: Die credentials.json konnte nicht gelesen werden. Fügen Sie die vollständige exportierte Datei ein.
+      credentials_invalid_url: Die credentials.json muss eine https open-banking.io API-URL verwenden.
+      setup_accounts: Konten einrichten
+      syncing: Wird synchronisiert...
+      sync: Synchronisieren
+      disconnect: Trennen
+      disconnect_confirm: "Möchten Sie %{name} wirklich trennen?"
+    create:
+      success: open-banking.io Verbindung gespeichert.
+    update:
+      success: open-banking.io Verbindung aktualisiert.
+    destroy:
+      success: open-banking.io Verbindung zur Löschung vorgemerkt.
+      unlink_failed: open-banking.io Verbindung konnte nicht getrennt werden
+    select_accounts:
+      title: open-banking.io Konten verknüpfen
+      description: Wählen Sie die open-banking.io Konten aus, die hinzugefügt werden sollen.
+      no_accounts_found: Es wurden keine nicht verknüpften open-banking.io Konten gefunden.
+      no_credentials_configured: Konfigurieren Sie zuerst open-banking.io in den Anbietereinstellungen.
+      cancel: Abbrechen
+      link_accounts: Konten verknüpfen
+    link_accounts:
+      success:
+        one: 1 open-banking.io Konto verknüpft.
+        other: "%{count} open-banking.io Konten verknüpft."
+      no_accounts_selected: Wählen Sie mindestens ein Konto aus.
+      no_credentials_configured: Konfigurieren Sie zuerst open-banking.io in den Anbietereinstellungen.
+      unsupported_account_type: open-banking.io unterstützt diesen Kontotyp nicht.
+      link_failed: Es wurden keine Konten verknüpft.
+    select_existing_account:
+      title: "open-banking.io Konto mit %{account_name} verknüpfen"
+      description: Wählen Sie ein nicht verknüpftes open-banking.io Konto aus, um es mit diesem Konto zu verbinden.
+      no_accounts_found: Es wurden keine nicht verknüpften open-banking.io Konten gefunden.
+      no_credentials_configured: Konfigurieren Sie zuerst open-banking.io in den Anbietereinstellungen.
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
+      cancel: Abbrechen
+      link_account: Konto verknüpfen
+    link_existing_account:
+      success: "open-banking.io Konto mit %{account_name} verknüpft."
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
+      open_banking_io_account_already_linked: Dieses open-banking.io Konto ist bereits verknüpft.
+    setup_accounts:
+      title: open-banking.io Konten einrichten
+      subtitle: Wählen Sie, wie jedes open-banking.io Konto in Sure angezeigt werden soll.
+      no_credentials: Konfigurieren Sie zuerst die open-banking.io Anmeldedaten.
+      api_error: open-banking.io Konten konnten nicht abgerufen werden.
+      fetch_failed: Konten konnten nicht abgerufen werden
+      no_accounts_to_setup: Keine Konten zum Einrichten
+      all_accounts_linked: Alle open-banking.io Konten sind bereits verknüpft.
+      choose_account_type: Wählen Sie einen Kontotyp
+      choose_account_type_description: Überspringen Sie Konten, die Sie nicht verfolgen möchten.
+      account_type_label: Kontotyp
+      account_types:
+        skip: Überspringen
+        depository: Bargeld
+        credit_card: Kreditkarte
+        investment: Anlage
+        loan: Darlehen
+      create_accounts: Konten erstellen
+      cancel: Abbrechen
+    complete_account_setup:
+      success:
+        one: 1 open-banking.io Konto erstellt.
+        other: "%{count} open-banking.io Konten erstellt."
+      all_skipped: Es wurden keine open-banking.io Konten erstellt.
+      no_accounts: Es wurden keine open-banking.io Konten ausgewählt.
+      creation_failed: open-banking.io Konten konnten nicht erstellt werden.
+    open_banking_io_item:
+      deletion_in_progress: Löschung läuft
+      syncing: Wird synchronisiert
+      error: Fehler
+      status_with_summary: "Vor %{timestamp} synchronisiert · %{summary}"
+      status_never: Nie synchronisiert
+      delete: Löschen
+      setup_needed: Kontoeinrichtung erforderlich
+      setup_description: "%{linked} von %{total} Konten verknüpft."
+      setup_action: Konten einrichten
+      no_accounts_title: Noch keine Konten importiert
+      no_accounts_description: Rufen Sie open-banking.io Konten ab und wählen Sie aus, welche verknüpft werden sollen.
