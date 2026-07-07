@@ -1,0 +1,123 @@
+---
+ro:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: Conectează conturi bancare europene prin open-banking.io
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: Conexiune open-banking.io
+  open_banking_io_account:
+    fallback: cont open-banking.io
+  open_banking_io_entry:
+    notes:
+      reference: Referință
+  open_banking_io_item:
+    errors:
+      account_processing_failed: Nu s-a putut sincroniza contul open-banking.io
+      account_sync_schedule_failed: Nu s-a putut programa sincronizarea contului open-banking.io
+      transactions_failed: Nu s-au putut prelua tranzacțiile open-banking.io
+      sync_failed: Nu s-a putut sincroniza conexiunea open-banking.io
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      all_synced:
+        one: 1 cont sincronizat
+        other: "%{count} conturi sincronizate"
+      partial: "%{linked} sincronizate, %{unlinked} necesită configurare"
+    institution_summary:
+      none: Nicio instituție conectată
+      one: 1 instituție
+      count:
+        one: 1 instituție
+        other: "%{count} instituții"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: Conexiune open-banking.io
+      add_connection: Adaugă conexiune open-banking.io
+      update_connection: Actualizează conexiunea
+      connection_name_label: Numele conexiunii
+      connection_name_placeholder: open-banking.io principal
+      credentials_label: Credențiale JSON
+      credentials_placeholder: Lipește conținutul fișierului credentials.json exportat
+      keep_credentials_placeholder: Lasă necompletat pentru a păstra credențialele existente
+      credentials_required: Lipește fișierul credentials.json open-banking.io pentru a conecta.
+      credentials_invalid: Nu s-a putut citi fișierul credentials.json. Lipește fișierul exportat complet.
+      credentials_invalid_url: Fișierul credentials.json trebuie să folosească o adresă URL de API https open-banking.io.
+      setup_accounts: Configurează conturile
+      syncing: Se sincronizează...
+      sync: Sincronizează
+      disconnect: Deconectează
+      disconnect_confirm: "Sigur vrei să deconectezi %{name}?"
+    create:
+      success: Conexiunea open-banking.io a fost salvată.
+    update:
+      success: Conexiunea open-banking.io a fost actualizată.
+    destroy:
+      success: Conexiunea open-banking.io a fost programată pentru ștergere.
+      unlink_failed: Nu s-a putut deconecta conexiunea open-banking.io
+    select_accounts:
+      title: Asociază conturi open-banking.io
+      description: Alege conturile open-banking.io de adăugat.
+      no_accounts_found: Nu s-au găsit conturi open-banking.io neasociate.
+      no_credentials_configured: Configurează mai întâi open-banking.io în setările furnizorului.
+      cancel: Anulează
+      link_accounts: Asociază conturile
+    link_accounts:
+      success:
+        one: A fost asociat 1 cont open-banking.io.
+        other: "Au fost asociate %{count} conturi open-banking.io."
+      no_accounts_selected: Selectează cel puțin un cont.
+      no_credentials_configured: Configurează mai întâi open-banking.io în setările furnizorului.
+      unsupported_account_type: open-banking.io nu acceptă acel tip de cont.
+      link_failed: Nu a fost asociat niciun cont.
+    select_existing_account:
+      title: "Asociază contul open-banking.io la %{account_name}"
+      description: Alege un cont open-banking.io neasociat pentru a-l conecta la acest cont.
+      no_accounts_found: Nu s-au găsit conturi open-banking.io neasociate.
+      no_credentials_configured: Configurează mai întâi open-banking.io în setările furnizorului.
+      account_already_linked: Acest cont este deja asociat unui furnizor.
+      cancel: Anulează
+      link_account: Asociază contul
+    link_existing_account:
+      success: "Contul open-banking.io a fost asociat la %{account_name}."
+      account_already_linked: Acest cont este deja asociat unui furnizor.
+      open_banking_io_account_already_linked: Acest cont open-banking.io este deja asociat.
+    setup_accounts:
+      title: Configurează conturile open-banking.io
+      subtitle: Alege modul în care fiecare cont open-banking.io ar trebui să apară în Sure.
+      no_credentials: Configurează mai întâi credențialele open-banking.io.
+      api_error: Nu s-au putut prelua conturile open-banking.io.
+      fetch_failed: Nu s-au putut prelua conturile
+      no_accounts_to_setup: Niciun cont de configurat
+      all_accounts_linked: Toate conturile open-banking.io sunt deja asociate.
+      choose_account_type: Alege un tip de cont
+      choose_account_type_description: Omite conturile pe care nu vrei să le urmărești.
+      account_type_label: Tip de cont
+      account_types:
+        skip: Omite
+        depository: Numerar
+        credit_card: Card de credit
+        investment: Investiție
+        loan: Împrumut
+      create_accounts: Creează conturile
+      cancel: Anulează
+    complete_account_setup:
+      success:
+        one: A fost creat 1 cont open-banking.io.
+        other: "Au fost create %{count} conturi open-banking.io."
+      all_skipped: Nu a fost creat niciun cont open-banking.io.
+      no_accounts: Nu a fost selectat niciun cont open-banking.io.
+      creation_failed: Nu s-au putut crea conturile open-banking.io.
+    open_banking_io_item:
+      deletion_in_progress: Ștergere în curs
+      syncing: Se sincronizează
+      error: Eroare
+      status_with_summary: "Sincronizat acum %{timestamp} · %{summary}"
+      status_never: Niciodată sincronizat
+      delete: Șterge
+      setup_needed: Configurarea contului este necesară
+      setup_description: "%{linked} din %{total} conturi asociate."
+      setup_action: Configurează conturile
+      no_accounts_title: Niciun cont importat încă
+      no_accounts_description: Preia conturile open-banking.io și alege pe care să le asociezi.
