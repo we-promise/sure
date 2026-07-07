@@ -1,0 +1,123 @@
+---
+nl:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: Koppel Europese bankrekeningen via open-banking.io
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: open-banking.io-koppeling
+  open_banking_io_account:
+    fallback: open-banking.io-rekening
+  open_banking_io_entry:
+    notes:
+      reference: Referentie
+  open_banking_io_item:
+    errors:
+      account_processing_failed: Kan open-banking.io-rekening niet synchroniseren
+      account_sync_schedule_failed: Kan synchronisatie van open-banking.io-rekening niet inplannen
+      transactions_failed: Kan open-banking.io-transacties niet ophalen
+      sync_failed: Kan open-banking.io-koppeling niet synchroniseren
+    sync_status:
+      no_accounts: Geen rekeningen gevonden
+      all_synced:
+        one: 1 rekening gesynchroniseerd
+        other: "%{count} rekeningen gesynchroniseerd"
+      partial: "%{linked} gesynchroniseerd, %{unlinked} moeten worden ingesteld"
+    institution_summary:
+      none: Geen instellingen gekoppeld
+      one: 1 instelling
+      count:
+        one: 1 instelling
+        other: "%{count} instellingen"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: open-banking.io-koppeling
+      add_connection: open-banking.io-koppeling toevoegen
+      update_connection: Koppeling bijwerken
+      connection_name_label: Naam koppeling
+      connection_name_placeholder: Hoofd open-banking.io
+      credentials_label: Inloggegevens JSON
+      credentials_placeholder: Plak de inhoud van je geëxporteerde credentials.json
+      keep_credentials_placeholder: Laat leeg om de bestaande inloggegevens te behouden
+      credentials_required: Plak je open-banking.io credentials.json om te koppelen.
+      credentials_invalid: Kan de credentials.json niet lezen. Plak het volledige geëxporteerde bestand.
+      credentials_invalid_url: De credentials.json moet een https open-banking.io API-URL gebruiken.
+      setup_accounts: Rekeningen instellen
+      syncing: Synchroniseren...
+      sync: Synchroniseren
+      disconnect: Ontkoppelen
+      disconnect_confirm: "Weet je zeker dat je %{name} wilt ontkoppelen?"
+    create:
+      success: open-banking.io-koppeling opgeslagen.
+    update:
+      success: open-banking.io-koppeling bijgewerkt.
+    destroy:
+      success: open-banking.io-koppeling ingepland voor verwijdering.
+      unlink_failed: Kan open-banking.io-koppeling niet ontkoppelen
+    select_accounts:
+      title: open-banking.io-rekeningen koppelen
+      description: Kies de open-banking.io-rekeningen om toe te voegen.
+      no_accounts_found: Er zijn geen niet-gekoppelde open-banking.io-rekeningen gevonden.
+      no_credentials_configured: Stel open-banking.io eerst in bij de provider-instellingen.
+      cancel: Annuleren
+      link_accounts: Rekeningen koppelen
+    link_accounts:
+      success:
+        one: 1 open-banking.io-rekening gekoppeld.
+        other: "%{count} open-banking.io-rekeningen gekoppeld."
+      no_accounts_selected: Selecteer ten minste één rekening.
+      no_credentials_configured: Stel open-banking.io eerst in bij de provider-instellingen.
+      unsupported_account_type: open-banking.io ondersteunt dat rekeningtype niet.
+      link_failed: Er zijn geen rekeningen gekoppeld.
+    select_existing_account:
+      title: "open-banking.io-rekening koppelen aan %{account_name}"
+      description: Kies een niet-gekoppelde open-banking.io-rekening om aan deze rekening te koppelen.
+      no_accounts_found: Er zijn geen niet-gekoppelde open-banking.io-rekeningen gevonden.
+      no_credentials_configured: Stel open-banking.io eerst in bij de provider-instellingen.
+      account_already_linked: Deze rekening is al gekoppeld aan een provider.
+      cancel: Annuleren
+      link_account: Rekening koppelen
+    link_existing_account:
+      success: "open-banking.io-rekening gekoppeld aan %{account_name}."
+      account_already_linked: Deze rekening is al gekoppeld aan een provider.
+      open_banking_io_account_already_linked: Deze open-banking.io-rekening is al gekoppeld.
+    setup_accounts:
+      title: open-banking.io-rekeningen instellen
+      subtitle: Kies hoe elke open-banking.io-rekening in Sure moet verschijnen.
+      no_credentials: Stel eerst de open-banking.io-inloggegevens in.
+      api_error: Kan open-banking.io-rekeningen niet ophalen.
+      fetch_failed: Kan rekeningen niet ophalen
+      no_accounts_to_setup: Geen rekeningen om in te stellen
+      all_accounts_linked: Alle open-banking.io-rekeningen zijn al gekoppeld.
+      choose_account_type: Kies een rekeningtype
+      choose_account_type_description: Sla rekeningen over die je niet wilt volgen.
+      account_type_label: Rekeningtype
+      account_types:
+        skip: Overslaan
+        depository: Contant
+        credit_card: Creditcard
+        investment: Belegging
+        loan: Lening
+      create_accounts: Rekeningen aanmaken
+      cancel: Annuleren
+    complete_account_setup:
+      success:
+        one: 1 open-banking.io-rekening aangemaakt.
+        other: "%{count} open-banking.io-rekeningen aangemaakt."
+      all_skipped: Er zijn geen open-banking.io-rekeningen aangemaakt.
+      no_accounts: Er zijn geen open-banking.io-rekeningen geselecteerd.
+      creation_failed: Kan open-banking.io-rekeningen niet aanmaken.
+    open_banking_io_item:
+      deletion_in_progress: Verwijdering bezig
+      syncing: Synchroniseren
+      error: Fout
+      status_with_summary: "%{timestamp} geleden gesynchroniseerd · %{summary}"
+      status_never: Nooit gesynchroniseerd
+      delete: Verwijderen
+      setup_needed: Rekening instellen vereist
+      setup_description: "%{linked} van %{total} rekeningen gekoppeld."
+      setup_action: Rekeningen instellen
+      no_accounts_title: Nog geen rekeningen geïmporteerd
+      no_accounts_description: Haal open-banking.io-rekeningen op en kies welke je wilt koppelen.
