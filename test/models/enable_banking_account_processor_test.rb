@@ -26,6 +26,10 @@ class EnableBankingAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("500"), acct.cash_balance,
       "a sync whose balance fetch failed must not zero the account"
     assert_equal BigDecimal("500"), acct.balance
+    # Parity/invariant check, not regression coverage: unlike Lunch Flow, the
+    # EB *processor* never had a currency-reset defect (its fallback chain
+    # already preferred the stored value), so this assertion also passes on
+    # main. The EB currency regression test lives at the model layer below.
     assert_equal "GBP", acct.currency,
       "a sync whose balance fetch failed must not change the account currency"
   end
@@ -45,5 +49,13 @@ class EnableBankingAccountProcessorTest < ActiveSupport::TestCase
     EnableBankingAccount::Processor.new(eb_acct).send(:process_account!)
 
     assert_equal BigDecimal("250"), acct.reload.cash_balance
+  end
+  test "snapshot upsert preserves an established currency when the payload omits it" do
+    eb_acct = @item.enable_banking_accounts.create!(name: "Checking", uid: "eb_3", currency: "GBP")
+
+    eb_acct.upsert_enable_banking_snapshot!({ uid: "eb_3", name: "Checking" })
+
+    assert_equal "GBP", eb_acct.reload.currency,
+      "an omitted payload currency must not reset an established account to EUR"
   end
 end
