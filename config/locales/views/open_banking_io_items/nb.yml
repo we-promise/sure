@@ -1,0 +1,123 @@
+---
+nb:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: Koble til europeiske bankkontoer via open-banking.io
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: open-banking.io-tilkobling
+  open_banking_io_account:
+    fallback: open-banking.io-konto
+  open_banking_io_entry:
+    notes:
+      reference: Referanse
+  open_banking_io_item:
+    errors:
+      account_processing_failed: Kunne ikke synkronisere open-banking.io-konto
+      account_sync_schedule_failed: Kunne ikke planlegge synkronisering av open-banking.io-konto
+      transactions_failed: Kunne ikke hente open-banking.io-transaksjoner
+      sync_failed: Kunne ikke synkronisere open-banking.io-tilkobling
+    sync_status:
+      no_accounts: Ingen kontoer funnet
+      all_synced:
+        one: 1 konto synkronisert
+        other: "%{count} kontoer synkronisert"
+      partial: "%{linked} synkronisert, %{unlinked} trenger oppsett"
+    institution_summary:
+      none: Ingen institusjoner tilkoblet
+      one: 1 institusjon
+      count:
+        one: 1 institusjon
+        other: "%{count} institusjoner"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: open-banking.io-tilkobling
+      add_connection: Legg til open-banking.io-tilkobling
+      update_connection: Oppdater tilkobling
+      connection_name_label: Tilkoblingsnavn
+      connection_name_placeholder: Hoved open-banking.io
+      credentials_label: Legitimasjon JSON
+      credentials_placeholder: Lim inn innholdet i din eksporterte credentials.json
+      keep_credentials_placeholder: La stå tomt for å beholde eksisterende legitimasjon
+      credentials_required: Lim inn din open-banking.io credentials.json for å koble til.
+      credentials_invalid: Kunne ikke lese credentials.json. Lim inn hele den eksporterte filen.
+      credentials_invalid_url: credentials.json må bruke en https open-banking.io API-URL.
+      setup_accounts: Sett opp kontoer
+      syncing: Synkroniserer...
+      sync: Synkroniser
+      disconnect: Koble fra
+      disconnect_confirm: "Er du sikker på at du vil koble fra %{name}?"
+    create:
+      success: open-banking.io-tilkobling lagret.
+    update:
+      success: open-banking.io-tilkobling oppdatert.
+    destroy:
+      success: open-banking.io-tilkobling planlagt for sletting.
+      unlink_failed: Kunne ikke koble fra open-banking.io-tilkobling
+    select_accounts:
+      title: Koble til open-banking.io-kontoer
+      description: Velg open-banking.io-kontoene du vil legge til.
+      no_accounts_found: Ingen ukoblede open-banking.io-kontoer ble funnet.
+      no_credentials_configured: Konfigurer open-banking.io i leverandørinnstillingene først.
+      cancel: Avbryt
+      link_accounts: Koble til kontoer
+    link_accounts:
+      success:
+        one: Koblet til 1 open-banking.io-konto.
+        other: "Koblet til %{count} open-banking.io-kontoer."
+      no_accounts_selected: Velg minst én konto.
+      no_credentials_configured: Konfigurer open-banking.io i leverandørinnstillingene først.
+      unsupported_account_type: open-banking.io støtter ikke den kontotypen.
+      link_failed: Ingen kontoer ble koblet til.
+    select_existing_account:
+      title: "Koble open-banking.io-konto til %{account_name}"
+      description: Velg en ukoblet open-banking.io-konto å koble til denne kontoen.
+      no_accounts_found: Ingen ukoblede open-banking.io-kontoer ble funnet.
+      no_credentials_configured: Konfigurer open-banking.io i leverandørinnstillingene først.
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør.
+      cancel: Avbryt
+      link_account: Koble til konto
+    link_existing_account:
+      success: "Koblet open-banking.io-konto til %{account_name}."
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør.
+      open_banking_io_account_already_linked: Denne open-banking.io-kontoen er allerede koblet til.
+    setup_accounts:
+      title: Sett opp open-banking.io-kontoer
+      subtitle: Velg hvordan hver open-banking.io-konto skal vises i Sure.
+      no_credentials: Konfigurer open-banking.io-legitimasjon først.
+      api_error: Kunne ikke hente open-banking.io-kontoer.
+      fetch_failed: Kunne ikke hente kontoer
+      no_accounts_to_setup: Ingen kontoer å sette opp
+      all_accounts_linked: Alle open-banking.io-kontoer er allerede koblet til.
+      choose_account_type: Velg en kontotype
+      choose_account_type_description: Hopp over kontoer du ikke vil spore.
+      account_type_label: Kontotype
+      account_types:
+        skip: Hopp over
+        depository: Kontanter
+        credit_card: Kredittkort
+        investment: Investering
+        loan: Lån
+      create_accounts: Opprett kontoer
+      cancel: Avbryt
+    complete_account_setup:
+      success:
+        one: Opprettet 1 open-banking.io-konto.
+        other: "Opprettet %{count} open-banking.io-kontoer."
+      all_skipped: Ingen open-banking.io-kontoer ble opprettet.
+      no_accounts: Ingen open-banking.io-kontoer ble valgt.
+      creation_failed: Kunne ikke opprette open-banking.io-kontoer.
+    open_banking_io_item:
+      deletion_in_progress: Sletting pågår
+      syncing: Synkroniserer
+      error: Feil
+      status_with_summary: "Synkronisert for %{timestamp} siden · %{summary}"
+      status_never: Aldri synkronisert
+      delete: Slett
+      setup_needed: Kontooppsett kreves
+      setup_description: "%{linked} av %{total} kontoer koblet til."
+      setup_action: Sett opp kontoer
+      no_accounts_title: Ingen kontoer importert ennå
+      no_accounts_description: Hent open-banking.io-kontoer og velg hvilke som skal kobles til.
