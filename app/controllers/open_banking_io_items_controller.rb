@@ -300,7 +300,10 @@ class OpenBankingIoItemsController < ApplicationController
       encryption_key = {} unless encryption_key.is_a?(Hash)
 
       api_base_url = bundle["apiBaseUrl"].presence
-      api_key = bundle["apiKey"].presence
+      # Reads the apiKey field from the user's pasted JSON at request time; it is
+      # not a hardcoded secret and never appears in a URL. pipelock's "credential
+      # in URL" rule false-positives on this assignment next to api_base_url.
+      api_key = bundle["apiKey"].presence # pipelock:ignore
       private_key = encryption_key["privateKey"].presence ||
                     encryption_key["privateKeyPkcs8B64"].presence
 
