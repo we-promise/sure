@@ -1,0 +1,123 @@
+---
+vi:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: Kết nối tài khoản ngân hàng châu Âu qua open-banking.io
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: Kết nối open-banking.io
+  open_banking_io_account:
+    fallback: Tài khoản open-banking.io
+  open_banking_io_entry:
+    notes:
+      reference: Tham chiếu
+  open_banking_io_item:
+    errors:
+      account_processing_failed: Không thể đồng bộ tài khoản open-banking.io
+      account_sync_schedule_failed: Không thể lên lịch đồng bộ tài khoản open-banking.io
+      transactions_failed: Không thể tải giao dịch open-banking.io
+      sync_failed: Không thể đồng bộ kết nối open-banking.io
+    sync_status:
+      no_accounts: Không tìm thấy tài khoản nào
+      all_synced:
+        one: Đã đồng bộ 1 tài khoản
+        other: "%{count} tài khoản đã đồng bộ"
+      partial: "%{linked} đã đồng bộ, %{unlinked} cần thiết lập"
+    institution_summary:
+      none: Chưa kết nối tổ chức nào
+      one: 1 tổ chức
+      count:
+        one: 1 tổ chức
+        other: "%{count} tổ chức"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: Kết nối open-banking.io
+      add_connection: Thêm kết nối open-banking.io
+      update_connection: Cập nhật kết nối
+      connection_name_label: Tên kết nối
+      connection_name_placeholder: open-banking.io chính
+      credentials_label: Thông tin xác thực JSON
+      credentials_placeholder: Dán nội dung tệp credentials.json đã xuất của bạn
+      keep_credentials_placeholder: Để trống để giữ thông tin xác thực hiện tại
+      credentials_required: Dán credentials.json của open-banking.io để kết nối.
+      credentials_invalid: Không thể đọc credentials.json. Dán toàn bộ tệp đã xuất.
+      credentials_invalid_url: credentials.json phải sử dụng URL API open-banking.io dạng https.
+      setup_accounts: Thiết lập tài khoản
+      syncing: Đang đồng bộ...
+      sync: Đồng bộ
+      disconnect: Ngắt kết nối
+      disconnect_confirm: "Bạn có chắc muốn ngắt kết nối %{name}?"
+    create:
+      success: Đã lưu kết nối open-banking.io.
+    update:
+      success: Đã cập nhật kết nối open-banking.io.
+    destroy:
+      success: Đã lên lịch xóa kết nối open-banking.io.
+      unlink_failed: Không thể ngắt kết nối open-banking.io
+    select_accounts:
+      title: Liên kết tài khoản open-banking.io
+      description: Chọn các tài khoản open-banking.io để thêm.
+      no_accounts_found: Không tìm thấy tài khoản open-banking.io chưa liên kết nào.
+      no_credentials_configured: Hãy cấu hình open-banking.io trong cài đặt nhà cung cấp trước.
+      cancel: Hủy
+      link_accounts: Liên kết tài khoản
+    link_accounts:
+      success:
+        one: Đã liên kết 1 tài khoản open-banking.io.
+        other: "Đã liên kết %{count} tài khoản open-banking.io."
+      no_accounts_selected: Chọn ít nhất một tài khoản.
+      no_credentials_configured: Hãy cấu hình open-banking.io trong cài đặt nhà cung cấp trước.
+      unsupported_account_type: open-banking.io không hỗ trợ loại tài khoản đó.
+      link_failed: Không có tài khoản nào được liên kết.
+    select_existing_account:
+      title: "Liên kết tài khoản open-banking.io với %{account_name}"
+      description: Chọn một tài khoản open-banking.io chưa liên kết để kết nối với tài khoản này.
+      no_accounts_found: Không tìm thấy tài khoản open-banking.io chưa liên kết nào.
+      no_credentials_configured: Hãy cấu hình open-banking.io trong cài đặt nhà cung cấp trước.
+      account_already_linked: Tài khoản này đã được liên kết với một nhà cung cấp.
+      cancel: Hủy
+      link_account: Liên kết tài khoản
+    link_existing_account:
+      success: "Đã liên kết tài khoản open-banking.io với %{account_name}."
+      account_already_linked: Tài khoản này đã được liên kết với một nhà cung cấp.
+      open_banking_io_account_already_linked: Tài khoản open-banking.io này đã được liên kết.
+    setup_accounts:
+      title: Thiết lập tài khoản open-banking.io
+      subtitle: Chọn cách mỗi tài khoản open-banking.io hiển thị trong Sure.
+      no_credentials: Hãy cấu hình thông tin xác thực open-banking.io trước.
+      api_error: Không thể tải tài khoản open-banking.io.
+      fetch_failed: Không thể tải tài khoản
+      no_accounts_to_setup: Không có tài khoản nào để thiết lập
+      all_accounts_linked: Tất cả tài khoản open-banking.io đã được liên kết.
+      choose_account_type: Chọn loại tài khoản
+      choose_account_type_description: Bỏ qua các tài khoản bạn không muốn theo dõi.
+      account_type_label: Loại tài khoản
+      account_types:
+        skip: Bỏ qua
+        depository: Tiền mặt
+        credit_card: Thẻ tín dụng
+        investment: Đầu tư
+        loan: Khoản vay
+      create_accounts: Tạo tài khoản
+      cancel: Hủy
+    complete_account_setup:
+      success:
+        one: Đã tạo 1 tài khoản open-banking.io.
+        other: "Đã tạo %{count} tài khoản open-banking.io."
+      all_skipped: Không có tài khoản open-banking.io nào được tạo.
+      no_accounts: Không có tài khoản open-banking.io nào được chọn.
+      creation_failed: Không thể tạo tài khoản open-banking.io.
+    open_banking_io_item:
+      deletion_in_progress: Đang tiến hành xóa
+      syncing: Đang đồng bộ
+      error: Lỗi
+      status_with_summary: "Đã đồng bộ %{timestamp} trước · %{summary}"
+      status_never: Chưa từng đồng bộ
+      delete: Xóa
+      setup_needed: Cần thiết lập tài khoản
+      setup_description: "%{linked} trên %{total} tài khoản đã liên kết."
+      setup_action: Thiết lập tài khoản
+      no_accounts_title: Chưa nhập tài khoản nào
+      no_accounts_description: Tải tài khoản open-banking.io và chọn tài khoản để liên kết.
