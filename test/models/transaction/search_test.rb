@@ -670,4 +670,25 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_includes confirmed_ids, confirmed.entryable.id
     assert_not_includes pending_ids, confirmed.entryable.id
   end
+
+  test "excluded filter hides or isolates excluded transactions" do
+    active = create_transaction(account: @checking_account, amount: 100, excluded: false)
+    excluded = create_transaction(account: @checking_account, amount: 100, excluded: true)
+
+    active_ids = Transaction::Search.new(@family, filters: { excluded: [ "active" ] }).transactions_scope.pluck(:id)
+    assert_includes active_ids, active.entryable.id
+    assert_not_includes active_ids, excluded.entryable.id
+
+    excluded_ids = Transaction::Search.new(@family, filters: { excluded: [ "excluded" ] }).transactions_scope.pluck(:id)
+    assert_includes excluded_ids, excluded.entryable.id
+    assert_not_includes excluded_ids, active.entryable.id
+
+    # Both selected (or none) is a no-op: excluded transactions remain visible by default
+    both_ids = Transaction::Search.new(@family, filters: { excluded: [ "active", "excluded" ] }).transactions_scope.pluck(:id)
+    default_ids = Transaction::Search.new(@family, filters: {}).transactions_scope.pluck(:id)
+    [ both_ids, default_ids ].each do |ids|
+      assert_includes ids, active.entryable.id
+      assert_includes ids, excluded.entryable.id
+    end
+  end
 end
