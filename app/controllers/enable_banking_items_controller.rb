@@ -235,6 +235,12 @@ class EnableBankingItemsController < ApplicationController
 
   # Re-authorize an expired session
   def reauthorize
+    if @enable_banking_item.aspsp_name.blank?
+      redirect_to select_bank_enable_banking_item_path(@enable_banking_item),
+        alert: t(".no_bank_selected", default: "No bank has been selected for this connection. Please select a bank to continue.")
+      return
+    end
+
     begin
       language = I18n.locale.to_s.split("-").first
 
@@ -253,6 +259,10 @@ class EnableBankingItemsController < ApplicationController
       )
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "Enable Banking reauthorization error: #{e.message}"
+      redirect_to settings_providers_path, alert: t(".reauthorization_failed",
+        default: "Failed to re-authorize: %{message}", message: e.message)
+    rescue StandardError => e
+      Rails.logger.error "Enable Banking reauthorization unexpected error: #{e.message}"
       redirect_to settings_providers_path, alert: t(".reauthorization_failed",
         default: "Failed to re-authorize: %{message}", message: e.message)
     end
