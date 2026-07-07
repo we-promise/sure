@@ -1,16 +1,21 @@
 # ===========================================================================
-# Example Docker Compose file
+# Example Docker Compose file (local development)
 # ===========================================================================
 #
 # Purpose:
 # --------
 #
-# This file is an example Docker Compose configuration for self hosting
-# Sure on your local machine or on a cloud VPS.
+# This file mounts your local Rails source code into the containers so you
+# can edit files on your host and see changes reflected immediately without
+# rebuilding the image.
 #
-# The configuration below is a "standard" setup that works out of the box,
-# but if you're running this outside of a local network, it is recommended
-# to set the environment variables for extra security.
+# The first time you run `docker compose up` it will build the image from
+# your local Dockerfile (gems, assets, etc.).  After that, any change you
+# make to `app/`, `config/`, `db/`, `lib/`, etc. is picked up automatically.
+#
+# If you change the Gemfile or add a new gem, rebuild with:
+#
+#   docker compose build --no-cache
 #
 # Setup:
 # ------
@@ -61,9 +66,16 @@ x-rails-env: &rails_env
 
 services:
   web:
-    image: ghcr.io/we-promise/sure:stable
+    build: .
     volumes:
-      - app-storage:/rails/storage
+      - .:/rails
+      - /usr/local/bundle
+      - /rails/public/assets
+      - /rails/app/assets/builds
+      - /rails/node_modules
+      - /rails/tmp
+      - /rails/log
+      - ./db/surebak/storage:/rails/storage
     ports:
       - ${PORT:-3000}:3000
       # To also publish on IPv6 (dual-stack), uncomment the line below AND
@@ -86,9 +98,16 @@ services:
       - sure_net
 
   worker:
-    image: ghcr.io/we-promise/sure:stable
+    build: .
     command: bundle exec sidekiq
     volumes:
+      - .:/rails
+      - /usr/local/bundle
+      - /rails/public/assets
+      - /rails/app/assets/builds
+      - /rails/node_modules
+      - /rails/tmp
+      - /rails/log
       - app-storage:/rails/storage
     restart: unless-stopped
     depends_on:
@@ -108,7 +127,7 @@ services:
     image: postgres:16
     restart: unless-stopped
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ./db/surebak/data:/var/lib/postgresql/data
     environment:
       <<: *db_env
     healthcheck:
@@ -125,7 +144,7 @@ services:
     image: prodrigestivill/postgres-backup-local
     restart: unless-stopped
     volumes:
-      - /opt/sure-data/backups:/backups # Change this path to your desired backup location on the host machine
+      - ./db/surebak/backups:/backups # Change this path to your desired backup location on the host machine
     environment:
       - POSTGRES_HOST=db
       - POSTGRES_DB=${POSTGRES_DB:-sure_production}
