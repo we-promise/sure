@@ -51,4 +51,46 @@ class RuleJobTest < ActiveJob::TestCase
     assert_equal 10, rule_run.transactions_modified
     assert_equal 10, rule_run.transactions_blocked
   end
+
+  test "auto-categorize rule does not mark all transactions blocked when no categories are available" do
+    3.times do |index|
+      create_transaction(
+        account: @account,
+        name: "Uncategorized #{index}",
+        date: Date.current - index.days
+      )
+    end
+
+    @family.categories.destroy_all
+
+    llm_provider = mock("llm_provider")
+    llm_provider.expects(:auto_categorize).never
+    Provider::Registry.stubs(:get_provider).with(:openai).returns(llm_provider)
+    Provider::Registry.stubs(:preferred_llm_provider).returns(llm_provider)
+
+    rule = @family.rules.create!(
+      name: "Auto-categorize uncategorized",
+      resource_type: "transaction",
+      effective_date: 1.year.ago.to_date,
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Uncategorized")
+      ],
+      actions: [
+        Rule::Action.new(action_type: "auto_categorize")
+      ]
+    )
+
+    assert_enqueued_jobs 1, only: AutoCategorizeJob do
+      RuleJob.perform_now(rule)
+    end
+
+    perform_enqueued_jobs only: AutoCategorizeJob
+
+    rule_run = rule.rule_runs.order(:created_at).last
+
+    assert_equal 3, rule_run.transactions_queued
+    assert_equal 0, rule_run.transactions_processed
+    assert_equal 0, rule_run.transactions_modified
+    assert_equal 0, rule_run.transactions_blocked
+  end
 end
