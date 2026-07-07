@@ -31,10 +31,10 @@ it:
       not_configured: "SnapTrade non è configurato."
     select_existing_account:
       not_found: "Conto o configurazione SnapTrade non trovati."
-      title: "Collega a conto SnapTrade"
+      title: "Collega conto SnapTrade"
       header: "Collega conto esistente"
-      subtitle: "Seleziona un conto SnapTrade a cui collegarsi"
-      no_accounts: "Nessun conto SnapTrade non collegato disponibile."
+      subtitle: "Seleziona un conto SnapTrade da collegare"
+      no_accounts: "Nessun conto SnapTrade disponibile per il collegamento."
       connect_hint: "Potrebbe essere necessario connettere prima un brokerage."
       settings_link: "Vai alle Impostazioni provider"
       linking_to: "Collegamento al conto:"

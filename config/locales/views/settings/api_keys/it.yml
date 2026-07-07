@@ -18,6 +18,21 @@ it:
         cannot_revoke: "Questa chiave API non può essere revocata"
         revoked_successfully: "Chiave API revocata con successo"
         revoke_failed: "Revoca chiave API fallita"
+      shared:
+        active: "Attiva"
+        created_ago: "Creata %{time} fa"
+        last_used_ago: "Usata l'ultima volta %{time} fa"
+        never_used: "Mai utilizzata"
+        scope_read_only: "Solo lettura"
+        scope_read_write: "Lettura/Scrittura"
+      index:
+        title: "Chiavi API"
+        subtitle: "Gestisci le chiavi API per l'accesso programmatico ai tuoi dati."
+        new_key: "Nuova chiave API"
+        empty_heading: "Nessuna chiave API ancora"
+        empty_description: "Crea una chiave API per accedere ai tuoi dati in modo programmatico."
+        revoke_key: "Revoca"
+        revoke_confirmation: "Sei sicuro di voler revocare \"%{name}\"? Questa azione disabiliterà immediatamente tutte le applicazioni che usano questa chiave."
       show:
         title: "Gestione chiavi API"
         no_api_key:

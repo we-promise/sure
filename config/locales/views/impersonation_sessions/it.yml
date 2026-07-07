@@ -15,7 +15,7 @@ it:
       success: Richiesta rifiutata
     super_admin_bar:
       super_admin: Super Amministratore
-      jobs: Job
+      jobs: Processi
       impersonating: Impersonando
       leave: Abbandona
       terminate: Termina

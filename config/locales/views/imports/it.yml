@@ -277,7 +277,7 @@ it:
       description: I dati importati sono stati aggiunti con successo all'app e sono ora pronti per l'uso.
       back_to_dashboard: Torna al dashboard
       verification:
-        title: Verifica readback
+        title: Verifica di rilettura
         checked: Verificato
         mismatches: Discrepanze
         status:

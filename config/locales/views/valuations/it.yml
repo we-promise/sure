@@ -2,7 +2,7 @@
 it:
   valuations:
     confirmation_contents:
-      this_will: "Questo %{action_verb} il valore del conto il"
+      this_will: "Questo %{action_verb} il valore del conto"
       to_colon: "a:"
       total_account_value: Valore totale del conto
       holdings_value: Valore posizioni
