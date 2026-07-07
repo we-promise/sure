@@ -1,0 +1,8 @@
+---
+it:
+  chat:
+    errors:
+      rate_limited: "Il provider AI ha raggiunto il limite di frequenza. Riprova tra qualche minuto."
+      temporarily_unavailable: "Il provider AI è temporaneamente non disponibile. Riprova tra qualche minuto."
+      misconfigured: "Il provider AI non è configurato correttamente. Contatta il tuo amministratore."
+      default: "Impossibile generare una risposta. Riprova."

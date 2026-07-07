@@ -1,0 +1,57 @@
+---
+it:
+  trades:
+    form:
+      account: Conto di trasferimento (facoltativo)
+      account_prompt: Cerca conto
+      amount: Importo
+      fee: Commissione transazione
+      holding: Simbolo ticker
+      holding_optional: Simbolo ticker (facoltativo)
+      price: Prezzo per azione
+      qty: Quantità
+      submit: Aggiungi transazione
+      ticker_placeholder: AAPL
+      type: Tipo
+      type_buy: Acquisto
+      type_sell: Vendita
+      type_deposit: Deposito
+      type_withdrawal: Prelievo
+      type_dividend: Dividendo
+      type_interest: Interessi
+      dividend_requires_security: Il titolo è obbligatorio per i dividendi
+    header:
+      buy: Acquisto
+      sell: Vendita
+      dividend: Dividendo
+      interest: Interessi
+      current_market_price_label: Prezzo di Mercato Attuale
+      overview: Panoramica
+      purchase_price_label: Prezzo di Acquisto
+      purchase_qty_label: Quantità Acquistata
+      symbol_label: Simbolo
+      total_return_label: Utile/perdita non realizzato
+    new:
+      title: Nuova transazione
+    show:
+      additional: Aggiuntivo
+      amount_label: Importo
+      buy: Acquisto
+      category_label: Categoria
+      cost_per_share_label: Costo per Azione
+      date_label: Data
+      delete: Elimina
+      fee_label: Commissione transazione
+      delete_subtitle: Questa azione non può essere annullata
+      delete_title: Elimina Movimento
+      details: Dettagli
+      provider_disabled_warning: "Aggiornamenti prezzi in pausa — il provider %{provider} è disabilitato. Riabilitalo nelle Impostazioni o rimappa la posizione su un altro provider."
+      exclude_subtitle: Questo movimento non verrà incluso nei rapporti e nei calcoli
+      exclude_title: Escludi dall'analisi
+      no_category: Nessuna categoria
+      note_label: Nota
+      note_placeholder: Aggiungi qui eventuali note aggiuntive...
+      quantity_label: Quantità
+      sell: Vendita
+      settings: Impostazioni
+      type_label: Tipo

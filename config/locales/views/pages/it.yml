@@ -1,0 +1,105 @@
+---
+it:
+  pages:
+    feedback:
+      title: Feedback
+      heading: Lascia un feedback
+      description: Facci sapere se hai feedback specifici. Puoi includere link a video o screenshot.
+      feature_request: Scrivi una richiesta di funzionalità
+      bug_report: Segnala un bug
+      discuss: "Discuti di %{product} con altri"
+    intro:
+      not_authorized: "L'introduzione è disponibile solo per gli utenti ospite."
+      welcome: "Benvenuto!"
+      coming_soon: Esperienza di introduzione in arrivo
+      description: "Stiamo costruendo un percorso di onboarding più ricco per conoscere i tuoi obiettivi, traguardi e necessità quotidiane. Per ora, vai alla barra laterale della chat per iniziare una conversazione con Sure e raccontaci dove sei nel tuo percorso finanziario."
+      start_chatting: Inizia a chattare
+    redis_configuration_error:
+      page_title: Configurazione Redis Richiesta - Sure
+      heading: Configurazione Redis Richiesta
+      subheading: La tua installazione self-hosted di Sure ha bisogno che Redis sia correttamente configurato.
+      why_required_title: Perché Redis è richiesto?
+      why_required_body: Sure usa Redis per gestire i job in background di Sidekiq per attività come la sincronizzazione dei dati dei conti, l'elaborazione delle importazioni e altre operazioni in background che mantengono aggiornati i tuoi dati finanziari.
+      view_setup_guide: Visualizza guida alla configurazione
+      setup_guide_hint: Segui la nostra guida Docker completa per configurare Redis
+      refresh_hint: "Una volta configurato Redis, aggiorna questa pagina per continuare."
+      refresh_page: Aggiorna pagina
+    changelog:
+      title: Novità
+    release_notes_unavailable:
+      name: Note di rilascio non disponibili
+      body_html: "<p>Impossibile recuperare le ultime note di rilascio al momento. Riprova più tardi o visita direttamente la nostra <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>pagina rilasci su GitHub</a>.</p>"
+    privacy:
+      title: Privacy Policy
+      heading: Privacy Policy
+      placeholder: Il contenuto della privacy policy verrà visualizzato qui.
+    terms:
+      title: Termini di Servizio
+      heading: Termini di Servizio
+      placeholder: Il contenuto dei termini di servizio verrà visualizzato qui.
+    dashboard:
+      welcome: "Bentornato, %{name}"
+      subtitle: "Ecco cosa sta succedendo con le tue finanze"
+      new: "Nuovo"
+      sections_aria_label: "Sezioni dashboard"
+      drag_to_reorder: "Trascina per riordinare la sezione"
+      toggle_section: "Attiva/disattiva visibilità sezione"
+      widget_size:
+        label: "Regola dimensione"
+        width_label: "Larghezza"
+        half: "Metà"
+        full: "Intera"
+        height_label: "Altezza"
+        compact: "Compatta"
+        auto: "Auto"
+        tall: "Alta"
+      net_worth_chart:
+        data_not_available: Dati non disponibili per il periodo selezionato
+        title: Patrimonio Netto
+      no_account_empty_state:
+        new_account: Nuovo conto
+        no_account_subtitle: Poiché non sono stati aggiunti conti, non ci sono dati da visualizzare. Aggiungi i tuoi primi conti per iniziare a vedere i dati della dashboard.
+        no_account_title: Nessun conto ancora
+      balance_sheet:
+        title: "Stato Patrimoniale"
+        no_items: "Nessun %{name} ancora"
+        add_accounts: "Aggiungi i tuoi conti %{name} per vedere un riepilogo completo"
+        no_asset: "Nessun asset ancora"
+        no_liability: "Nessuna passività ancora"
+        add_asset_accounts: "Aggiungi i tuoi conti asset per vedere un riepilogo completo"
+        add_liability_accounts: "Aggiungi i tuoi conti passività per vedere un riepilogo completo"
+        name: "Nome"
+        weight: "Peso"
+        value: "Valore"
+        classifications:
+          asset: "Attività"
+          liability: "Passività"
+      cashflow_sankey:
+        title: "Flusso di cassa"
+        zoom_out: "Torna al flusso completo"
+        no_data_title: "Nessun dato di flusso di cassa per questo periodo"
+        no_data_description: "Aggiungi transazioni per visualizzare i dati di flusso di cassa o amplia il periodo"
+        add_transaction: "Aggiungi transazione"
+      no_accounts:
+        title: "Nessun conto ancora"
+        description: "Aggiungi conti per visualizzare i dati del patrimonio netto"
+        add_account: "Aggiungi conto"
+      outflows_donut:
+        title: "Uscite"
+        total_outflows: "Uscite Totali"
+        categories: "Categorie"
+        value: "Valore"
+        weight: "Peso"
+      investment_summary:
+        title: "Investimenti"
+        total_return: "Rendimento Totale"
+        holding: "Posizione"
+        weight: "Peso"
+        value: "Valore"
+        return: "Rendimento"
+        period_activity: "Attività %{period}"
+        contributions: "Contributi"
+        withdrawals: "Prelievi"
+        trades: "Movimenti"
+        no_investments: "Nessun conto investimenti"
+        add_investment: "Aggiungi un conto investimenti per tracciare il tuo portafoglio"

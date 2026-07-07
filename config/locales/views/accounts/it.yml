@@ -1,0 +1,192 @@
+---
+it:
+  account:
+    entries:
+      destroy:
+        success: "Voce eliminata con successo."
+  accounts:
+    not_authorized: "Non hai i permessi per gestire questo conto"
+    account:
+      complete_setup: Completa configurazione
+      edit: Modifica
+      link_lunchflow: Collega con Lunch Flow
+      link_provider: Collega con provider
+      unlink_provider: Scollega dal provider
+      change_simplefin_account: Cambia conto SimpleFIN
+      troubleshoot: Risoluzione problemi
+      enable: Abilita conto
+      disable: Disabilita conto
+      set_default: Imposta come predefinito
+      remove_default: Rimuovi predefinito
+      default_label: Predefinito
+      delete: Elimina conto
+      sharing: Condivisione
+    chart:
+      data_not_available: Dati non disponibili per il periodo selezionato
+    create:
+      success: "Conto %{type} creato"
+    set_default:
+      depository_only: "Solo i conti correnti e le carte di credito possono essere impostati come predefiniti."
+    destroy:
+      success: "Conto %{type} pianificato per l'eliminazione"
+      cannot_delete_linked: "Impossibile eliminare un conto collegato. Prima scollega il provider."
+      failed: "Eliminazione della risorsa fallita. Riprova più tardi."
+    empty:
+      empty_message: Aggiungi un conto tramite connessione, importazione o inserimento manuale.
+      new_account: Nuovo conto
+      no_accounts: Nessun conto ancora
+    form:
+      balance: "Saldo alla data:"
+      opening_balance_date_label: Data saldo iniziale
+      name_label: Nome conto
+      name_placeholder: Nome conto di esempio
+      additional_details: Dettagli aggiuntivi
+      institution_name_label: Nome istituzione
+      institution_name_placeholder: es. Banca Intesa
+      institution_domain_label: Dominio istituzione
+      institution_domain_placeholder: es. intesasanpaolo.com
+      notes_label: Note
+      notes_placeholder: Conserva informazioni aggiuntive come numeri di conto, IBAN, codici ABI/CAB, ecc.
+    index:
+      accounts: Conti
+      manual_accounts:
+        other_accounts: Altri conti
+      new_account: Nuovo conto
+      sync: Sincronizza tutti
+    sync_all:
+      syncing: "Sincronizzazione conti in corso..."
+    new:
+      import_accounts: Importa conti
+      container:
+        select: Seleziona
+        navigate: Naviga
+        close: Chiudi
+      method_selector:
+        connected_entry: Collega conto
+        connected_entry_eu: Collega conto EU
+        link_with_provider: "Collega con %{provider}"
+        lunchflow_entry: Collega conto Lunch Flow
+        manual_entry: Inserisci saldo conto
+        title: Come vuoi aggiungerlo?
+      title: Cosa vuoi aggiungere?
+    show:
+      limited_fx_history_warning: "La cronologia dei tassi di cambio è disponibile solo dal %{date} in poi. Le transazioni precedenti a questa data usano conversioni valutarie approssimate — questo può accadere quando il provider FX offre solo una finestra storica limitata."
+      tabs:
+        activity: Attività
+        holdings: Portafoglio
+        overview: Panoramica
+        statements: Estratti conto
+      activity:
+        amount: Importo
+        balance: Saldo
+        confirmed: Confermato
+        date: Data
+        entries: voci
+        entry: voce
+        filter: Filtra
+        new: Nuovo
+        new_activity: Nuova attività
+        new_balance: Nuovo saldo
+        new_trade: Nuova operazione
+        new_transaction: Nuova transazione
+        new_transfer: Nuovo bonifico
+        no_entries: Nessuna voce trovata
+        pending: In attesa
+        search:
+          placeholder: Cerca voci per nome
+        search_placeholder: Cerca voci per nome
+        status: Stato
+        title: Attività
+      chart:
+        balance: Saldo
+        owed: Importo dovuto
+      header:
+        complete_setup: Completa configurazione
+      menu:
+        confirm_accept: Elimina "%{name}"
+        confirm_body_html: "<p>Eliminando questo conto, cancellerai la sua cronologia del valore, influenzando vari aspetti del tuo conto complessivo. Questa azione avrà un impatto diretto sui tuoi calcoli del patrimonio netto e sui grafici del conto.</p><br /> <p>Dopo l'eliminazione, non potrai ripristinare le informazioni del conto perché dovrai aggiungerlo come nuovo conto.</p>"
+        confirm_title: Eliminare il conto?
+        delete_account: Elimina conto
+        edit: Modifica
+        import: Importa transazioni
+        import_trades: Importa operazioni
+        import_transactions: Importa transazioni
+        manage: Gestisci conti
+        sharing: Condivisione
+        statements: Estratti conto
+    update:
+      success: "Conto %{type} aggiornato"
+    sidebar:
+      missing_data: Dati storici mancanti
+      missing_data_description: "%{product} utilizza provider di terze parti per recuperare tassi di cambio storici, prezzi dei titoli e altro. Questi dati sono necessari per calcolare i saldi storici accurati del conto."
+      configure_providers: Configura i tuoi provider qui.
+      tabs:
+        all: Tutti
+        assets: Attività
+        debts: Passività
+      new_asset: Nuova attività
+      new_debt: Nuova passività
+      new_account: Nuovo conto
+      new_account_group: "Nuovo %{account_group}"
+    types:
+      depository: Liquidità
+      investment: Investimento
+      crypto: Crypto
+      property: Proprietà
+      vehicle: Veicolo
+      other_asset: Altro asset
+      credit_card: Carta di credito
+      loan: Prestito
+      other_liability: Altra passività
+    types_plural:
+      depository: Liquidità
+      investment: Investimenti
+      crypto: Crypto
+      property: Proprietà
+      vehicle: Veicoli
+      other_asset: Altri asset
+      credit_card: Carte di credito
+      loan: Prestiti
+      other_liability: Altre passività
+    tax_treatments:
+      taxable: Imponibile
+      tax_deferred: Fiscalmente differito
+      tax_exempt: Esente da imposte
+      tax_advantaged: Fiscalmente agevolato
+    tax_treatment_descriptions:
+      taxable: Plusvalenze tassate alla realizzazione
+      tax_deferred: Contributi deducibili, tassati al prelievo
+      tax_exempt: Contributi al netto delle imposte, plusvalenze non tassate
+      tax_advantaged: Benefici fiscali speciali con condizioni
+    subtype_regions:
+      us: Stati Uniti
+      uk: Regno Unito
+      ca: Canada
+      au: Australia
+      eu: Europa
+      in: India
+      generic: Generale
+    confirm_unlink:
+      title: Scollegare il conto dal provider?
+      description_html: "Stai per scollegare <strong>%{account_name}</strong> da <strong>%{provider_name}</strong>. Questo lo convertirà in un conto manuale."
+      warning_title: Cosa significa
+      warning_no_sync: Il conto non si sincronizzerà più automaticamente con il tuo provider
+      warning_manual_updates: Dovrai aggiungere transazioni e aggiornare i saldi manualmente
+      warning_transactions_kept: Tutte le transazioni e i saldi esistenti verranno conservati
+      warning_can_delete: Dopo lo scollegamento, potrai eliminare il conto se necessario
+      confirm_button: Conferma e scollega
+    unlink:
+      success: "Conto scollegato con successo. È ora un conto manuale."
+      not_linked: "Il conto non è collegato a nessun provider"
+      error: "Impossibile scollegare il conto: %{error}"
+      generic_error: "Si è verificato un errore imprevisto. Riprova."
+    select_provider:
+      title: Seleziona un provider da collegare
+      description: "Scegli quale provider vuoi usare per collegare %{account_name}"
+      already_linked: "Il conto è già collegato a un provider"
+      no_providers: "Nessun provider attualmente configurato"
+
+  email_confirmations:
+    new:
+      invalid_token: Link di conferma non valido o scaduto.
+      success_login: La tua email è stata confermata. Accedi con il tuo nuovo indirizzo email.

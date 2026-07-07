@@ -1,0 +1,44 @@
+---
+it:
+  chats:
+    demo_banner_title: "Modalità Demo Attiva"
+    demo_banner_message: "Stai utilizzando LLM tramite crediti forniti da Cloudflare Workers AI. I risultati possono variare poiché il codice è stato testato su `gpt-4.1` ma i tuoi token non vengono utilizzati per addestrare modelli! 🤖"
+    thinking: "Sto elaborando ..."
+    ai_greeting:
+      greeting: "Ciao %{name}! Sono un assistente IA che può aiutarti con le tue finanze. Ho accesso al web e ai dati del tuo conto."
+      there: "lì"
+      commands_hint_html: "Puoi usare <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> per accedere ai comandi"
+      questions_intro: "Ecco alcune domande che puoi fare:"
+      evaluate_portfolio: "Valuta il portafoglio investimenti"
+      spending_insights: "Mostra analisi delle spese"
+      unusual_patterns: "Trova schemi insoliti"
+    chat:
+      edit_chat_title: "Modifica titolo chat"
+      delete_chat: "Elimina chat"
+    chat_nav:
+      all_chats: "Tutte le chat"
+      start_new_chat: "Inizia nuova chat"
+      edit_chat_title: "Modifica titolo chat"
+      delete_chat: "Elimina chat"
+    error:
+      retry: "Riprova"
+    destroy:
+      notice: "Chat eliminata con successo"
+    index:
+      chats: "Chat"
+      new_chat: "Nuova chat"
+    update:
+      success: "Chat aggiornata"
+    ai_consent:
+      title: "Abilita chat IA"
+      available_description: "La chat IA può rispondere a domande finanziarie e fornire analisi basate sui tuoi dati. Per usare questa funzione devi abilitarla esplicitamente."
+      unavailable_description_html: "Per usare l'assistente IA, devi impostare la variabile d'ambiente <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> o configurarla nelle impostazioni di self-hosting della tua istanza."
+      enable_button: "Abilita chat IA"
+      disable_note: "Disabilita in qualsiasi momento. Tutti i dati inviati ai provider LLM sono anonimizzati."
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: "Ragionamento assistente"
+    tool_calls:
+      tool_calls: "Chiamate strumenti"
+      function: "Funzione:"
+      arguments: "Argomenti:"
