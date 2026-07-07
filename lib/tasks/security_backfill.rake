@@ -1,6 +1,15 @@
 # frozen_string_literal: true
 
 namespace :security do
+  # Scope note: this task encrypts values that are still stored as PLAINTEXT.
+  # It cannot detect or repair rows that were double-encoded by the pre-fix
+  # version of this task (issue #2611): those decrypt "successfully" to a
+  # JSON-text String on a json/jsonb column, which is indistinguishable here
+  # from a legitimately stored string value, so mutating them automatically
+  # would risk mangling valid data. If your instance ran the backfill before
+  # the #2611 fix and provider payloads now decrypt to Strings (symptom:
+  # zero balances on every provider-linked account after a sync), run the
+  # manual recovery script in issue #2611 first, then re-run this task.
   desc "Backfill encryption for sensitive fields (idempotent). Args: batch_size, dry_run"
   task :backfill_encryption, [ :batch_size, :dry_run ] => :environment do |_, args|
     raw_batch = args[:batch_size].presence || ENV["BATCH_SIZE"].presence || "100"
@@ -142,7 +151,7 @@ namespace :security do
   rescue ActiveRecord::Encryption::Errors::Decryption
     raw = record.read_attribute_before_type_cast(field)
     column = record.class.columns_hash[field.to_s]
-    if raw.is_a?(String) && column&.sql_type&.include?("json")
+    if raw.is_a?(String) && [ :json, :jsonb ].include?(column&.type)
       begin
         JSON.parse(raw)
       rescue JSON::ParserError
