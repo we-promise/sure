@@ -310,8 +310,12 @@ class InvestmentStatement
 
       account_ids_hash = Digest::MD5.hexdigest(account_ids.sort.join(","))
 
+      # v2: nearest-rate join replaced the exact-date/1.0-fallback join (see
+      # ExchangeRate.nearest_rate_join_sql) — bump on any future change to
+      # Totals' aggregation SQL so warm caches don't keep serving pre-change
+      # results.
       Rails.cache.fetch([
-        "investment_statement", "totals_query", family.id, user&.id,
+        "investment_statement", "totals_query", "v2", family.id, user&.id,
         account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version
       ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
     end

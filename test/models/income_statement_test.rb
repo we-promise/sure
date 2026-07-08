@@ -28,6 +28,72 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 4, totals.transactions_count
   end
 
+  test "converts foreign currency amounts using the nearest earlier exchange rate" do
+    eur_account = @family.accounts.create! name: "EUR Card", currency: "EUR", balance: 0, accountable: CreditCard.new
+    txn_date = 3.days.ago.to_date
+    create_transaction(account: eur_account, amount: 100, currency: "EUR", category: @groceries_category, date: txn_date)
+
+    # No rate on the transaction date itself; the nearest earlier rate applies.
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: txn_date - 2.days, rate: 2)
+
+    totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(900 + 100 * 2, @family.currency), totals.expense_money
+  end
+
+  test "converts foreign currency amounts using a later rate when no earlier rate exists" do
+    eur_account = @family.accounts.create! name: "EUR Card", currency: "EUR", balance: 0, accountable: CreditCard.new
+    txn_date = 3.days.ago.to_date
+    create_transaction(account: eur_account, amount: 100, currency: "EUR", category: @groceries_category, date: txn_date)
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: txn_date + 1.day, rate: 3)
+
+    totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(900 + 100 * 3, @family.currency), totals.expense_money
+  end
+
+  test "leaves foreign currency amounts unconverted when the pair has no rates" do
+    eur_account = @family.accounts.create! name: "EUR Card", currency: "EUR", balance: 0, accountable: CreditCard.new
+    create_transaction(account: eur_account, amount: 100, currency: "EUR", category: @groceries_category, date: 3.days.ago.to_date)
+
+    totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(900 + 100, @family.currency), totals.expense_money
+  end
+
+  test "family_stats (median/avg expense) converts foreign currency using the nearest rate" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    eur_account = @family.accounts.create! name: "EUR Card", currency: "EUR", balance: 0, accountable: CreditCard.new
+    txn_date = 3.days.ago.to_date
+    create_transaction(account: eur_account, amount: 100, currency: "EUR", category: @groceries_category, date: txn_date)
+
+    # No rate on the transaction date itself; the nearest earlier rate applies.
+    # This exercises FamilyStats' own join site, not just IncomeStatement::Totals.
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: txn_date - 2.days, rate: 2)
+
+    income_statement = IncomeStatement.new(@family)
+
+    assert_equal 200.0, income_statement.median_expense(interval: "month")
+    assert_equal 200.0, income_statement.avg_expense(interval: "month")
+  end
+
+  test "category_stats (median/avg expense) converts foreign currency using a later rate when no earlier rate exists" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    eur_account = @family.accounts.create! name: "EUR Card", currency: "EUR", balance: 0, accountable: CreditCard.new
+    txn_date = 3.days.ago.to_date
+    create_transaction(account: eur_account, amount: 100, currency: "EUR", category: @groceries_category, date: txn_date)
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: txn_date + 1.day, rate: 3)
+
+    income_statement = IncomeStatement.new(@family)
+
+    assert_equal 300.0, income_statement.median_expense(interval: "month", category: @groceries_category)
+    assert_equal 300.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
+  end
+
   test "calculates expenses for a period" do
     income_statement = IncomeStatement.new(@family)
     expense_totals = income_statement.expense_totals(period: Period.last_30_days)

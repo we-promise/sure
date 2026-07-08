@@ -154,24 +154,7 @@ class Balance::ChartSeriesBuilder
           ORDER BY b.date DESC
           LIMIT 1
         ) last_bal ON TRUE
-        LEFT JOIN LATERAL (
-          SELECT COALESCE(
-            (SELECT er.rate
-             FROM exchange_rates er
-             WHERE er.from_currency = accounts.currency
-               AND er.to_currency = :target_currency
-               AND er.date <= d.date
-             ORDER BY er.date DESC
-             LIMIT 1),
-            (SELECT er.rate
-             FROM exchange_rates er
-             WHERE er.from_currency = accounts.currency
-               AND er.to_currency = :target_currency
-               AND er.date > d.date
-             ORDER BY er.date ASC
-             LIMIT 1)
-          ) AS rate
-        ) er ON TRUE
+        #{ExchangeRate.nearest_rate_join_sql(currency: "accounts.currency", date: "d.date")}
         GROUP BY d.date
         ORDER BY d.date
       SQL
