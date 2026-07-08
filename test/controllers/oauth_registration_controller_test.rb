@@ -68,4 +68,43 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     json = JSON.parse(response.body)
     assert_equal "MCP Client", json["client_name"]
   end
+
+  test "rejects non-loopback http redirect uri" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "http://evil.example/callback" ]
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :bad_request
+    json = JSON.parse(response.body)
+    assert_equal "invalid_client_metadata", json["error"]
+  end
+
+  test "allows loopback http redirect uri" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "http://localhost:3456/callback" ]
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    json = JSON.parse(response.body)
+    assert_equal [ "http://localhost:3456/callback" ], json["redirect_uris"]
+  end
+
+  test "rejects custom scheme redirect uri" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "myapp://callback" ]
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :bad_request
+    json = JSON.parse(response.body)
+    assert_equal "invalid_client_metadata", json["error"]
+  end
 end
