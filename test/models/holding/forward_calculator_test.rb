@@ -130,6 +130,23 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_holdings(expected, calculated)
   end
 
+  # Regression: selling a position to zero must relieve the cost-basis tracker so
+  # that a later repurchase is not averaged against the already-sold lots.
+  test "cost basis resets after a position is fully sold and repurchased" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 4.days.ago.to_date, price: 460, account: @account)
+    create_trade(@voo, qty: -10, date: 3.days.ago.to_date, price: 480, account: @account) # fully sold
+    create_trade(@voo, qty: 10, date: 1.day.ago.to_date, price: 490, account: @account)    # repurchased
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # Only the repurchased lot is held, so cost basis is $490 — not the
+    # buggy (460 + 490) / 2 = $475 averaged over the sold-off shares.
+    assert_equal BigDecimal("490"), current.cost_basis
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
