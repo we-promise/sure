@@ -1,16 +1,16 @@
 # Frankfurter (https://frankfurter.dev), a free, keyless, open-source FX rates
-# API backed by ECB daily reference rates. No auth, no key, no published rate
-# limit, and self-hostable (out of scope here, we just consume the public
-# instance, with FRANKFURTER_URL as an escape hatch for self-hosters later).
+# API backed by exchange rates blended across multiple central banks (ECB,
+# FED, BOC, etc). No auth, no key, no published rate limit, and self-hostable
+# (out of scope here, we just consume the public instance, with
+# FRANKFURTER_URL as an escape hatch for self-hosters later).
 #
-# Frankfurter computes cross-currency rates server-side (e.g. INR->CAD
-# triangulated via EUR), so a single request gives the direct rate. No need
-# to fetch two legs and divide.
-#
-# Weekends/ECB holidays simply have no entry in the response (no row, not a
-# zero), which Sure's ExchangeRate::Importer already gapfills via
-# last-observation-carried-forward, so no special handling is needed here
-# beyond looking back to the nearest prior date for single-date lookups.
+# This targets Frankfurter's v2 API (https://api.frankfurter.dev/v2), not v1.
+# Per Frankfurter's own root endpoint, v1 is status "frozen" (stable, no new
+# features) while v2 is status "current" (the actively developed version)
+# and covers far more currencies (201 across 84 central banks, vs v1's ~30
+# ECB-only). v2 also carries forward weekends/holidays server-side (a single
+# date lookup on a non-trading day returns the last known rate directly), so
+# unlike v1 this provider does not need its own lookback-window logic.
 class Provider::Frankfurter < Provider
   include ExchangeRateConcept, RateLimitable
   extend SslConfigurable
@@ -21,17 +21,13 @@ class Provider::Frankfurter < Provider
   # No published rate limit, but a light throttle is cheap insurance.
   MIN_REQUEST_INTERVAL = 0.15
 
-  # Weekends/ECB holidays return no data for the exact date, so a single-date
-  # lookup falls back to the nearest prior date within this window.
-  RATE_LOOKBACK_DAYS = 10
-
   def initialize
     # No API key required, public endpoint only.
   end
 
   def healthy?
     with_provider_response do
-      body = get_json("/v1/currencies")
+      body = get_json("/currencies")
       raise Error, "Frankfurter currencies endpoint returned no data" if body.blank?
       true
     end
@@ -43,6 +39,9 @@ class Provider::Frankfurter < Provider
     end
   end
 
+  # GET /rate/{base}/{quote}?date=... -> { date:, base:, quote:, rate: }.
+  # Frankfurter carries forward weekends/holidays itself, so the returned
+  # date may differ from the requested one but is never simply missing.
   def fetch_exchange_rate(from:, to:, date:)
     from = from.to_s.upcase
     to = to.to_s.upcase
@@ -51,12 +50,16 @@ class Provider::Frankfurter < Provider
       if from == to
         Rate.new(date: date, from: from, to: to, rate: 1.0)
       else
-        rates = exchange_rates(from, to, date - RATE_LOOKBACK_DAYS, date)
-        raise Error, "No Frankfurter FX rate for #{from}/#{to} on #{date}" if rates.blank?
+        body = get_json("/rate/#{from}/#{to}", "date" => date.to_s)
+        raise Error, "Unexpected Frankfurter response shape" unless body.is_a?(Hash) && body["rate"]
 
-        rates.find { |r| r.date == date } ||
-          rates.select { |r| r.date <= date }.max_by(&:date) ||
-          rates.first
+        begin
+          parsed_date = Date.parse(body["date"].to_s)
+        rescue Date::Error => e
+          raise Error, "Invalid date in Frankfurter response: #{e.message}"
+        end
+
+        Rate.new(date: parsed_date, from: from, to: to, rate: body["rate"].to_f)
       end
     end
   end
@@ -75,13 +78,13 @@ class Provider::Frankfurter < Provider
   end
 
   def max_history_days
-    nil # ECB reference rates go back to 1999, no bounded window.
+    nil # Backed by central bank reference rates going back decades, no bounded window.
   end
 
   private
 
     def base_url
-      ENV["FRANKFURTER_URL"].presence || "https://api.frankfurter.dev"
+      ENV["FRANKFURTER_URL"].presence || "https://api.frankfurter.dev/v2"
     end
 
     def get_json(path, params = {})
@@ -119,20 +122,21 @@ class Provider::Frankfurter < Provider
       end
     end
 
-    # Frankfurter's date-range envelope: { "amount", "base", "start_date",
-    # "end_date", "rates": { "2024-03-18" => { "CAD" => 0.01632 }, ... } }.
-    # Missing dates (weekends/holidays) simply have no key, not an error.
+    # GET /rates?base=...&quotes=...&from=...&to=... -> a flat array of
+    # { date:, base:, quote:, rate: } records, one per day in range (v2
+    # carries forward weekends/holidays itself, so every calendar day in the
+    # range is present, not just trading days).
     def exchange_rates(from, to, start_date, end_date)
-      body = get_json("/v1/#{start_date}..#{end_date}", "from" => from, "to" => to)
-      raise Error, "Unexpected Frankfurter response shape (no rates key)" unless body.is_a?(Hash) && body.key?("rates")
+      body = get_json("/rates", "base" => from, "quotes" => to, "from" => start_date.to_s, "to" => end_date.to_s)
+      raise Error, "Unexpected Frankfurter response shape (expected an array)" unless body.is_a?(Array)
 
-      rates_by_date = body["rates"] || {}
+      body.filter_map do |entry|
+        next nil unless entry.is_a?(Hash) && entry["quote"] == to
 
-      rates_by_date.filter_map do |date_str, currencies|
-        rate_value = currencies.is_a?(Hash) ? currencies[to] : nil
+        rate_value = entry["rate"]
         next nil if rate_value.nil?
 
-        Rate.new(date: Date.parse(date_str), from: from, to: to, rate: rate_value.to_f)
+        Rate.new(date: Date.parse(entry["date"].to_s), from: from, to: to, rate: rate_value.to_f)
       end.sort_by(&:date)
     rescue Date::Error => e
       raise Error, "Invalid date in Frankfurter response: #{e.message}"
