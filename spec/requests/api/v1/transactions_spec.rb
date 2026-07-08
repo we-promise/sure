@@ -151,6 +151,14 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         run_test!
       end
+
+      response '422', 'invalid filter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:start_date) { 'not-a-date' }
+
+        run_test!
+      end
     end
 
     post 'Create transaction' do
