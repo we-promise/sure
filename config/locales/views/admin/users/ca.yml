@@ -55,6 +55,12 @@ ca:
         trial_ends_at: Fi de la prova
         unnamed_family: Família/grup sense nom
         you: "(Tu)"
+        delete_user:
+          button: "Suprimeix"
+          confirm: "Voleu suprimir permanentment %{email}? Això desactiva el compte i n'elimina les dades. Aquesta acció no es pot desfer."
       update:
         failure: No s'ha pogut actualitzar el rol d'usuari.
         success: Rol d'usuari actualitzat correctament.
+      destroy:
+        success: "Usuari suprimit correctament."
+        cannot_delete_self: "No podeu suprimir el vostre propi compte des del tauler d'administració."

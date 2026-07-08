@@ -40,6 +40,12 @@ es:
           member: "Acceso de usuario básico. Pueden gestionar sus propias cuentas, transacciones y ajustes."
           admin: "Administrador de la familia. Puede acceder a ajustes avanzados como claves API, importaciones e instrucciones de IA."
           super_admin: "Administrador de la instancia. Puede gestionar proveedores de SSO, roles de usuario y suplantar a usuarios para soporte."
+        delete_user:
+          button: "Eliminar"
+          confirm: "¿Eliminar permanentemente a %{email}? Esto desactiva la cuenta y elimina sus datos. Esta acción no se puede deshacer."
       update:
         success: "Rol de usuario actualizado correctamente."
         failure: "Error al actualizar el rol de usuario."
+      destroy:
+        success: "Usuario eliminado correctamente."
+        cannot_delete_self: "No puedes eliminar tu propia cuenta desde el panel de administración."

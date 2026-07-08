@@ -2,7 +2,7 @@
 
 module Admin
   class UsersController < Admin::BaseController
-    before_action :set_user, only: %i[update]
+    before_action :set_user, only: %i[update destroy]
 
     def index
       authorize User
@@ -58,6 +58,31 @@ module Admin
         redirect_to admin_users_path, notice: t(".success")
       else
         redirect_to admin_users_path, alert: t(".failure")
+      end
+    end
+
+    def destroy
+      authorize @user
+
+      if @user == Current.user
+        redirect_to admin_users_path, alert: t(".cannot_delete_self")
+        return
+      end
+
+      if @user.deactivate
+        # Web auth restores a user from the session cookie without checking
+        # active?, and the purge runs async, so revoke sessions now to end the
+        # deleted user's access immediately.
+        @user.sessions.destroy_all
+
+        Rails.logger.info(
+          "[Admin::Users] User deleted - " \
+          "by_user_id=#{Current.user.id} " \
+          "target_user_id=#{@user.id}"
+        )
+        redirect_to admin_users_path, notice: t(".success")
+      else
+        redirect_to admin_users_path, alert: @user.errors.full_messages.to_sentence
       end
     end
 
