@@ -35,6 +35,51 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "create with blank account re-renders form with validation error instead of 404" do
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: "",
+          name: "No account transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match CGI.escapeHTML(Entry.new.errors.generate_message(:account, :blank)), response.body
+  end
+
+  test "create with inaccessible account re-renders form with validation error" do
+    other_family_account = families(:empty).accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+
+    assert_no_difference "Entry.count" do
+      post transactions_url, params: {
+        entry: {
+          account_id: other_family_account.id,
+          name: "Cross family transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {}
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    # Same message as the blank-account case: an inaccessible account must
+    # not be distinguishable from a truly blank one, or the response leaks
+    # which account ids exist.
+    assert_match CGI.escapeHTML(Entry.new.errors.generate_message(:account, :blank)), response.body
+  end
+
   test "updates with transaction details" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       patch transaction_url(@entry), params: {
