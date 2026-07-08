@@ -1,6 +1,14 @@
 <%# locals: (family:, active_tab:, mobile: false) %>
 
-<% cache account_sidebar_tabs_cache_key(family: family, active_tab: active_tab, mobile: mobile), expires_in: 12.hours do %>
+<%# skip_digest: the ERB dependency tracker misreads `render DS::...` component
+    calls as a "Ds/D" partial dependency and logs "Couldn't find template for
+    digesting: Ds/D" on every digest. The cache key is already fully manual
+    (versioned suffix + family cache key), so the template digest adds nothing.
+    NOTE: skipping the digest covers the whole dependency tree, so a change to
+    THIS template, to any partial it renders (e.g. accounts/_accountable_group),
+    or to a rendered ViewComponent's markup requires a manual version bump in
+    account_sidebar_tabs_cache_key (e.g. _v2 -> _v3) to invalidate old entries. %>
+<% cache account_sidebar_tabs_cache_key(family: family, active_tab: active_tab, mobile: mobile), expires_in: 12.hours, skip_digest: true do %>
 <div id="account-sidebar-tabs">
   <% if family.missing_data_provider? %>
     <div class="mb-3">
