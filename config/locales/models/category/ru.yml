@@ -1,0 +1,29 @@
+---
+ru:
+  models:
+    category:
+      defaults:
+        entertainment: Развлечения
+        fees: Комиссии
+        food_and_drink: Еда и напитки
+        gifts_and_donations: Подарки и пожертвования
+        groceries: Продукты
+        healthcare: Здравоохранение
+        home_improvement: Ремонт дома
+        income: Доход
+        insurance: Страхование
+        loan_payments: Платежи по кредитам
+        mortgage_rent: Ипотека / Аренда
+        personal_care: Личная гигиена
+        savings_and_investments: Сбережения и инвестиции
+        services: Услуги
+        shopping: Покупки
+        sports_and_fitness: Спорт и фитнес
+        subscriptions: Подписки
+        taxes: Налоги
+        transportation: Транспорт
+        travel: Путешествия
+        utilities: Коммунальные услуги
+      investment_contributions: Взносы в инвестиции
+      other_investments: Прочие инвестиции
+      uncategorized: Без категории

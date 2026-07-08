@@ -1,0 +1,8 @@
+one:
+  questrade_item: one
+  name: TFSA (12345678)
+  questrade_account_id: "12345678"
+  account_type: TFSA
+  currency: CAD
+  current_balance: 10000.00
+  account_status: Active
