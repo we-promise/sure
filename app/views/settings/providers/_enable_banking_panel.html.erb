@@ -116,7 +116,12 @@
               <div class="w-2 h-2 bg-destructive rounded-full"></div>
               <div>
                 <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.connection_error") %></p>
-                <p class="text-xs text-destructive" title="<%= item.sync_error %>"><%= item.sync_error.truncate(50) %></p>
+                <p class="text-xs text-destructive">
+                  <%= provider_sync_debug_log_hint %>
+                  <% if Current.user&.super_admin? %>
+                    · <%= link_to provider_sync_debug_log_label, provider_sync_debug_log_path(item), class: "underline" %>
+                  <% end %>
+                </p>
               </div>
             <% elsif item.session_valid? %>
               <div class="w-2 h-2 bg-success rounded-full"></div>

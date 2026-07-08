@@ -101,7 +101,7 @@
         <% if latest_sync_error.present? && stats.is_a?(Hash) %>
           <% stats = stats.merge(
             "total_errors" => 1,
-            "errors" => [{ "message" => latest_sync_error }]
+            "errors" => [{ "message" => "provider_sync_error" }]
           ) %>
         <% end %>
         <%= render ProviderSyncSummary.new(

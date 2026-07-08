@@ -163,6 +163,10 @@ class ProviderSyncSummary < ViewComponent::Base
     stats["errors"] || []
   end
 
+  def debug_log_only_errors?
+    error_details.any? && error_details.all? { |detail| detail["message"] == "provider_sync_error" }
+  end
+
   def error_buckets
     stats["error_buckets"] || {}
   end
