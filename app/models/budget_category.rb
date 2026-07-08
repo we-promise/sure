@@ -230,13 +230,23 @@ class BudgetCategory < ApplicationRecord
     budget.budget_categories.select { |bc| bc.category.parent_id == category.parent_id && bc.id != id }
   end
 
+  # Always returns an Array. Filters the already-loaded collection (categories
+  # are preloaded by the association's default scope) instead of issuing one
+  # query per parent category — budget pages call this for every top-level
+  # category. The SQL path is materialized so both branches return the same
+  # type.
   def subcategories
-    return BudgetCategory.none unless category.parent_id.nil?
-    return BudgetCategory.none if category.id.nil?
+    return [] unless category.parent_id.nil?
+    return [] if category.id.nil?
 
-    budget.budget_categories
-      .joins(:category)
-      .where(categories: { parent_id: category.id })
+    if budget.budget_categories.loaded?
+      budget.budget_categories.select { |bc| bc.category.parent_id == category.id }
+    else
+      budget.budget_categories
+        .joins(:category)
+        .where(categories: { parent_id: category.id })
+        .to_a
+    end
   end
 
   private

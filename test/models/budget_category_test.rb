@@ -271,4 +271,25 @@ class BudgetCategoryTest < ActiveSupport::TestCase
       assert_equal 14, suggestion[:days_remaining]
     end
   end
+
+  test "subcategories filters the loaded collection without extra queries" do
+    budget = Budget.find(@budget.id)
+    budget.budget_categories.to_a # load the collection (categories preloaded by scope)
+    parent_bc = budget.budget_categories.find { |bc| bc.id == @parent_budget_category.id }
+
+    subcategory_ids = nil
+    queries = capture_sql_queries do
+      subcategory_ids = parent_bc.subcategories.map(&:id)
+    end
+
+    assert_equal [ @subcategory_with_limit_bc.id, @subcategory_inheriting_bc.id ].sort, subcategory_ids.sort
+    assert_empty queries, "expected no queries when budget_categories are loaded, got: #{queries}"
+  end
+
+  test "subcategories queries the database when collection is not loaded" do
+    parent_bc = BudgetCategory.find(@parent_budget_category.id)
+
+    assert_equal [ @subcategory_with_limit_bc.id, @subcategory_inheriting_bc.id ].sort,
+      parent_bc.subcategories.map(&:id).sort
+  end
 end
