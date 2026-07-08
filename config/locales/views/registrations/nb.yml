@@ -9,6 +9,7 @@ nb:
         create: Fortsett
   registrations:
     closed: Registrering er midlertidig stengt.
+    sso_only: "Kontoopprettelse håndteres av identitetsleverandøren din. Logg inn med SSO-leverandøren din."
     create:
       failure: Det oppsto et problem med registreringen.
       invalid_invite_code: Ugyldig invitasjonskode, vennligst prøv igjen.

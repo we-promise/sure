@@ -118,4 +118,48 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_not created_user.show_ai_sidebar?
     assert created_user.ai_enabled?
   end
+
+  test "blocks local signup in pure SSO-only mode" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+
+    get new_registration_url
+    assert_redirected_to new_session_url
+
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: {
+        email: "sso-only-block@example.com",
+        password: "Password1!"
+      } }
+    end
+    assert_redirected_to new_session_url
+  end
+
+  test "blocks local signup when local login is off even with admin override" do
+    # Admin override only lets existing super-admins log in locally; a new
+    # self-service account would be created but could never sign in again.
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+
+    get new_registration_url
+    assert_redirected_to new_session_url
+
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: {
+        email: "admin-override-block@example.com",
+        password: "Password1!"
+      } }
+    end
+    assert_redirected_to new_session_url
+  end
+
+  test "forwards invitation token when redirecting blocked signup" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+    invitation = invitations(:one)
+
+    get new_registration_url(invitation: invitation.token)
+
+    assert_redirected_to new_session_url(invitation: invitation.token)
+  end
 end

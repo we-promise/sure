@@ -9,6 +9,7 @@ hu:
         create: Folytatás
   registrations:
     closed: A regisztráció jelenleg szünetel.
+    sso_only: "A fiók létrehozását az identitásszolgáltató kezeli. Kérjük, jelentkezzen be az SSO-szolgáltatójával."
     create:
       failure: Hiba történt a regisztráció során.
       invalid_invite_code: Érvénytelen meghívókód, kérjük, próbáld újra.

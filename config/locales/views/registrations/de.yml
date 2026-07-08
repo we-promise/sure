@@ -9,6 +9,7 @@ de:
         create: Weiter
   registrations:
     closed: Die Anmeldung ist derzeit geschlossen.
+    sso_only: "Die Kontoerstellung wird von Ihrem Identitätsanbieter verwaltet. Bitte melden Sie sich mit Ihrem SSO-Anbieter an."
     create:
       failure: Beim Registrieren ist ein Problem aufgetreten
       invalid_invite_code: Ungültiger Einladungscode bitte versuche es erneut

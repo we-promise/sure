@@ -9,6 +9,7 @@ ca:
         create: Continua
   registrations:
     closed: Les inscripcions actualment estan tancades.
+    sso_only: "La creació de comptes la gestiona el vostre proveïdor d'identitat. Inicieu la sessió amb el vostre proveïdor SSO."
     create:
       failure: Hi ha hagut un problema en registrar-te.
       invalid_invite_code: Codi d'invitació invàlid, torna-ho a provar.
