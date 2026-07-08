@@ -1,0 +1,49 @@
+---
+ru:
+  oidc_accounts:
+    create_link:
+      no_pending_oidc: Не найдено ожидающей аутентификации OIDC
+    create_user:
+      account_created: Добро пожаловать! Ваш аккаунт был создан.
+      account_creation_disabled: Создание аккаунтов через SSO отключено. Пожалуйста,
+        свяжитесь с администратором.
+      no_pending_oidc: Не найдено ожидающей аутентификации OIDC
+    link:
+      account_creation_disabled: Создание новых аккаунтов через единый вход отключено.
+        Пожалуйста, свяжитесь с администратором для создания вашего аккаунта.
+      cancel: Отмена
+      create_description_html: Аккаунт с электронной почтой <strong>%{email}</strong>
+        не найден. Нажмите ниже, чтобы создать новый аккаунт, используя вашу идентификацию
+        %{provider}.
+      create_heading: Создать новый счёт
+      email_label: Электронная почта
+      email_placeholder: Введите вашу электронную почту
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      info_email: 'Электронная почта:'
+      info_name: 'Имя:'
+      no_pending_oidc: Не найдено ожидающей аутентификации OIDC
+      password_label: Пароль
+      password_placeholder: Введите ваш пароль
+      submit_accept_invitation: Принять приглашение
+      submit_create: Создать счёт
+      submit_link: Привязать аккаунт
+      title_create: Создать счёт
+      title_link: Привязать OIDC аккаунт
+      verify_description_html: Чтобы привязать ваш аккаунт %{provider}%{email_suffix},
+        пожалуйста, подтвердите вашу личность, введя пароль.
+      verify_heading: Подтвердите вашу личность
+      verify_hint: Это помогает убедиться, что только вы можете привязывать внешние
+        аккаунты к вашему профилю.
+    new_user:
+      cancel: Отмена
+      description: Пожалуйста, подтвердите ваши данные для завершения создания аккаунта
+        с вашей идентификацией %{provider}.
+      email_label: Электронная почта (от поставщика SSO)
+      first_name_label: Имя
+      first_name_placeholder: Введите ваше имя
+      heading: Создайте ваш аккаунт
+      last_name_label: Фамилия
+      last_name_placeholder: Введите вашу фамилию
+      no_pending_oidc: Не найдено ожидающей аутентификации OIDC
+      submit: Создать счёт
+      title: Завершите создание аккаунта

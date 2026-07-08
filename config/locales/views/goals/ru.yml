@@ -1,0 +1,265 @@
+---
+ru:
+  goals:
+    archive:
+      invalid_transition: Нельзя архивировать цель в текущем состоянии.
+      success: Цель архивирована.
+    color_picker:
+      auto_adjust: автонастройка.
+      color_heading: Цвет
+      icon_heading: Иконка
+      poor_contrast: Низкий контраст, выберите более тёмный цвет или
+      trigger_label: Выбрать цвет и иконку
+    complete:
+      invalid_transition: Нельзя завершить цель в текущем состоянии.
+      success: Цель отмечена как выполненная.
+    create:
+      success: Цель создана.
+    destroy:
+      archive_first: Сначала архивируйте цель перед удалением.
+      success: Цель удалена.
+    edit:
+      heading: Редактировать цель
+      save: Сохранить изменения
+    empty_state:
+      add_account: Добавить счёт
+      body: Установите цель, выберите счета для накоплений и отслеживайте прогресс.
+      heading: Пока нет целей
+      new_goal: Создать первую цель
+      no_depository_accounts: Перед созданием цели нужен хотя бы один счёт (расчётный, сберегательный и т.д.).
+      subtitle: Установите цель и начните копить.
+    errors:
+      not_found: Цель не найдена. Возможно, она была удалена.
+    form:
+      create: Создать цель
+      errors:
+        accounts_required: Выберите хотя бы один счёт.
+        amount_required: Укажите цель больше нуля.
+        name_required: Укажите название цели.
+      fields:
+        color: Цвет
+        earmark_for: Зарезервировать сумму для %{account}
+        earmark_hint: Оставьте пустым, чтобы использовать весь баланс счёта.
+        funding_accounts: Счета для накоплений
+        funding_accounts_hint: Баланс цели — это баланс (или часть) этих счетов.
+        name: Название
+        name_placeholder: Финансовая подушка, первоначальный взнос…
+        notes: Заметки (необязательно)
+        notes_placeholder: Напоминание себе…
+        target_amount: Целевая сумма
+        target_date: Дата достижения
+        whole_balance: Весь баланс
+      save: Сохранить изменения
+      subtypes:
+        cd: Срочный вклад
+        checking: Расчётный счёт
+        hsa: Медицинский сберегательный счёт
+        money_market: Накопительный счёт
+        other: Другое
+        savings: Сберегательный счёт
+      suggested_no_date: Укажите дату, чтобы рассчитать срок достижения.
+      suggested_with_date: Откладывайте {monthly}/мес. на {accounts}, чтобы уложиться в срок.
+    goal_card:
+      accounts:
+        one: "%{count} счёт"
+        few: "%{count} счёта"
+        many: "%{count} счетов"
+        other: "%{count} счёта"
+      aria_progress: "%{percent}% от %{target}"
+      completed: Выполнено
+      days_left:
+        one: "%{count} день остался"
+        few: "%{count} дня осталось"
+        many: "%{count} дней осталось"
+        other: "%{count} дня осталось"
+      footer_archived: Архив
+      footer_catch_up: Откладывайте %{amount}/мес., чтобы наверстать
+      footer_last_days:
+        one: Последнее пополнение %{count} день назад
+        few: Последнее пополнение %{count} дня назад
+        many: Последнее пополнение %{count} дней назад
+        other: Последнее пополнение %{count} дня назад
+      footer_last_today: Последнее пополнение сегодня
+      footer_no_deadline: Без срока
+      footer_no_pledges: Пока нет пополнений
+      footer_paused: Пауза
+      footer_reached: Цель достигнута
+      left: осталось
+      n_accounts: "%{first} +%{count}"
+      no_accounts: Нет привязанных счетов
+      no_target_date: Без срока
+      pace_no_target: "%{avg}/мес."
+      pace_with_target: "%{avg}/мес. · цель %{target}/мес."
+      past_due: Просрочено
+      pending_count:
+        one: "%{count} в ожидании"
+        few: "%{count} в ожидании"
+        many: "%{count} в ожидании"
+        other: "%{count} в ожидании"
+      pending_pledge: Ожидаемое пополнение
+    index:
+      archived_section:
+        heading: Архив
+      chips:
+        all: Все
+        behind: Отставание
+        completed: Выполненные
+        no_target_date: Без срока
+        on_track: По плану
+        paused: Пауза
+      empty_filtered: Нет подходящих целей.
+      goals_section:
+        heading: Цели
+        subtitle: Копите на важное.
+      kpi:
+        contributed_label: Пополнено · за 30 дней
+        needs_this_month_label: Требуется в этом месяце
+        needs_this_month_sub:
+          one: "%{count} цель отстаёт"
+          few: "%{count} цели отстают"
+          many: "%{count} целей отстают"
+          other: "%{count} цели отстают"
+        needs_this_month_zero_sub: Нет отстающих целей
+        on_track_all_caught_up: Всё по плану
+        on_track_label: Цели по плану
+        on_track_sub_all_good: Все активные цели идут по плану
+        on_track_sub_parts:
+          behind:
+            one: "%{count} отстаёт"
+            few: "%{count} отстают"
+            many: "%{count} отстают"
+            other: "%{count} отстают"
+          no_date:
+            one: "%{count} без срока"
+            few: "%{count} без срока"
+            many: "%{count} без срока"
+            other: "%{count} без срока"
+          paused:
+            one: "%{count} на паузе"
+            few: "%{count} на паузе"
+            many: "%{count} на паузе"
+            other: "%{count} на паузе"
+          reached:
+            one: "%{count} достигнута"
+            few: "%{count} достигнуты"
+            many: "%{count} достигнуты"
+            other: "%{count} достигнуты"
+        on_track_value: "%{on_track} из %{total}"
+        velocity_delta_down: "↓ %{percent}%% к предыдущим 30 дн."
+        velocity_delta_flat: к предыдущим 30 дн.
+        velocity_delta_up: "↑ %{percent}%% к предыдущим 30 дн."
+        velocity_delta_zero_base: Первые 30 дней активности
+      new_goal: Новая цель
+      ongoing_section:
+        heading: Цели
+      pending_pledges_callout: У вас есть ожидаемые пополнения. Они подтвердятся при следующей синхронизации.
+      search:
+        aria_label: Поиск целей
+        clear_search: Очистить поиск
+        empty: Нет подходящих целей.
+        empty_with_both: Нет целей по запросу "%{query}" с этим фильтром.
+        empty_with_filter: Нет целей для этого фильтра.
+        empty_with_query: Нет целей по запросу "%{query}".
+        placeholder: Поиск целей…
+        show_all: Показать все
+      subtitle: Копите на важное.
+      title: Цели
+    new:
+      heading: Новая цель
+      subtitle: Копите на конкретную цель.
+    pause:
+      invalid_transition: Нельзя поставить цель на паузу в текущем состоянии.
+      success: Цель поставлена на паузу.
+    reopen:
+      invalid_transition: Нельзя открыть цель в текущем состоянии.
+      success: Цель открыта снова.
+    resume:
+      invalid_transition: Нельзя возобновить цель в текущем состоянии.
+      success: Цель возобновлена.
+    show:
+      archive: Архивировать
+      archived_banner:
+        body: Восстановите цель, чтобы продолжить накопления, или оставьте как запись.
+        restore_cta: Восстановить цель
+        title: Цель в архиве
+      catch_up:
+        adjust_target_cta: Изменить цель
+        body: Текущий темп %{avg}/мес. · требуется %{required}/мес.
+        title: Откладывайте %{amount}/мес. больше
+      celebration:
+        archive_cta: Архивировать цель
+        body: Накоплено %{saved} из %{target}.
+        heading: Цель достигнута
+      complete: Отметить выполненной
+      confirm_archive_body: Архивные цели скрываются из списка. Их можно восстановить позже.
+      confirm_archive_cta: Архивировать
+      confirm_archive_title: Архивировать цель?
+      confirm_complete_body: Цель исчезнет из активных.
+      confirm_complete_body_short: Вы достигли %{progress}%, %{saved} из %{target}.
+      confirm_complete_cta: Отметить выполненной
+      confirm_complete_title: Завершить цель?
+      delete: Удалить
+      edit: Редактировать
+      empty:
+        body: Пополните счёт — данные появятся после синхронизации.
+        heading: Пока нет пополнений
+      funding_accounts:
+        earmarked_of: "%{earmarked} из %{balance}"
+        empty:
+          body: Добавьте счета для накоплений.
+          heading: Нет счетов
+      funding_accounts_heading: Счета
+      funding_last_30d: за 30 дней
+      funding_last_90d: за 90 дней
+      header:
+        target: Цель %{amount}
+        target_by: Цель %{amount} к %{date}
+        target_by_past: Цель %{amount} · срок прошёл %{date}
+      inactive:
+        body: Накоплено %{saved} из %{target}.
+        heading_archived: Цель в архиве
+        heading_paused: Цель на паузе
+      no_target_date:
+        body: Укажите дату для прогноза.
+        cta: Указать дату
+        heading: Добавьте дату
+      notes: Заметки
+      pause: Пауза
+      paused_banner:
+        body: Возобновите, чтобы продолжить отслеживание.
+        resume_cta: Возобновить
+        title: Цель на паузе
+      record_pledge_cta: Добавить пополнение
+      reopen: Открыть снова
+      resume: Возобновить
+      ring:
+        aria_label: Выполнено %{percent}%. %{amount} из %{target}
+        market_value: Текущая стоимость %{amount}
+        of: из %{target}
+        of_target: от цели
+        saved: Накоплено
+        to_go: Осталось %{amount}
+      status_callout:
+        behind: откладывайте %{amount}/мес. больше
+        behind_covered: ожидаемые пополнения покроют разницу
+        no_target_date: укажите дату
+        on_track: достижение около %{date}
+      unarchive: Восстановить
+    states:
+      active: Активна
+      archived: В архиве
+      completed: Выполнена
+      paused: На паузе
+    status:
+      archived: В архиве
+      behind: Отстаёт
+      completed: Выполнена
+      no_target_date: Без срока
+      on_track: По плану
+      paused: На паузе
+      reached: Достигнута
+    unarchive:
+      invalid_transition: Нельзя восстановить цель в текущем состоянии.
+      success: Цель восстановлена.
+    update:
+      success: Цель обновлена.
