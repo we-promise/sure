@@ -44,6 +44,7 @@ it:
         mfapi_hint: gratuito, nessuna chiave API — solo fondi comuni indiani
         binance_public_hint: gratuito, nessuna chiave API — solo crypto (BTC, ETH, ecc.)
         moex_public_hint: gratuito, nessuna chiave API — azioni, fondi e obbligazioni russe (MOEX), incluso FX RUB
+        tinkoff_invest_hint: richiede token di sola lettura — prezzi di azioni/fondi/obbligazioni russe + loghi dei brand
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -53,6 +54,7 @@ it:
           mfapi: MFAPI.in
           binance_public: Binance
           moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
       assistant_settings:
         title: Assistente IA
         description: Scegli come risponde l'assistente chat. Integrato usa il tuo provider LLM configurato direttamente. Esterno delega a un agente IA remoto che può richiamare gli strumenti finanziari di Sure tramite MCP.
@@ -154,6 +156,16 @@ it:
         step_1_html: 'Visita <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> e crea un account gratuito.'
         step_2_html: 'Vai alla pagina <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">Token API</a>.'
         step_3: Copia il tuo token API e incollalo qui sotto.
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Inserisci un token API T-Invest di sola lettura. Usato per recuperare i loghi dei brand per i titoli (inclusi fondi e obbligazioni, anche quando i prezzi sono forniti da MOEX) e, se abilitato sopra, i prezzi per gli strumenti russi.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente TINKOFF_INVEST_API_KEY.
+        label: Token API
+        placeholder: Inserisci il tuo token API T-Invest qui
+        show_details: "(mostra dettagli)"
+        step_1: Apri T-Bank investments, poi Impostazioni, poi Token API (richiede un conto di intermediazione T-Bank aperto).
+        step_2: Crea un token con accesso in sola lettura.
+        step_3: Copia il token e incollalo qui sotto.
       eodhd_settings:
         title: EODHD
         description: Inserisci il token API fornito da EODHD. Supporta ETF europei su LSE, XETRA e altre borse internazionali.

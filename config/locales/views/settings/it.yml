@@ -107,6 +107,10 @@ it:
         theme_dark: Scuro
         theme_light: Chiaro
         theme_system: Sistema
+        modals_title: Finestre modali
+        modals_subtitle: Personalizza il comportamento delle finestre modali
+        disable_modal_click_outside_title: Mantieni le finestre modali aperte al clic esterno
+        disable_modal_click_outside_description: Impedisce la chiusura delle finestre modali quando si fa clic all'esterno. Utile per evitare di perdere accidentalmente le modifiche non salvate.
         transactions_title: Transazioni
         transactions_subtitle: Personalizza come vengono visualizzate le transazioni
         dashboard_title: Dashboard
@@ -476,6 +480,10 @@ it:
         step_1_html: "Vai su %{link} e crea un'app personale."
         step_2: "Copia il token dell'app e il token utente."
         step_3: "Incolla i token qui sotto, salva, poi collega i tuoi conti sincronizzati."
+      up_panel:
+        step_1_html: "Vai su %{link} e genera un token di accesso personale."
+        step_2: "Copia il tuo token di accesso personale."
+        step_3: "Incolla il token qui sotto, salva, poi collega i tuoi conti sincronizzati."
       simplefin_panel:
         step_1_html: "Vai su %{link} per un token di configurazione una tantum."
         step_2: "Incolla il token qui sotto e connetti."

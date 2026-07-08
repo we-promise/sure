@@ -92,6 +92,9 @@ it:
     unarchive:
       success: Obiettivo ripristinato.
       invalid_transition: L'obiettivo non può essere ripristinato dal suo stato attuale.
+    reopen:
+      success: Obiettivo riaperto.
+      invalid_transition: L'obiettivo non può essere riaperto dal suo stato attuale.
     show:
       edit: Modifica
       pause: Metti in pausa
@@ -99,12 +102,14 @@ it:
       complete: Segna come completato
       archive: Archivia
       unarchive: Ripristina
+      reopen: Riapri obiettivo
       delete: Elimina definitivamente
       record_pledge_cta: Registra impegno
       pledge_just_transferred: Registra un trasferimento effettuato
       pledge_just_saved: Registra denaro messo da parte
       funding_accounts_heading: Conti di finanziamento
       funding_accounts:
+        earmarked_of: "%{earmarked} accantonati di %{balance}"
         empty:
           heading: Nessun conto di finanziamento collegato
           body: Modifica l'obiettivo per collegare i conti correnti in cui risparmi.
@@ -138,6 +143,7 @@ it:
         of: "di %{target}"
         to_go: "%{amount} mancanti"
         of_target: dell'obiettivo
+        market_value: "Valore di mercato %{amount}"
         aria_label: "Obiettivo %{percent}%% completato. %{amount} di %{target} risparmiati."
       projection:
         heading: Proiezione
@@ -259,6 +265,9 @@ it:
         notes_placeholder: Un promemoria per te in futuro…
         funding_accounts: Conti di finanziamento
         funding_accounts_hint: Il saldo di questo obiettivo è il saldo di questi conti.
+        whole_balance: Saldo intero
+        earmark_for: Accantona un importo per %{account}
+        earmark_hint: Lascia vuoto un importo per dedicare l'intero saldo di quel conto.
       subtypes:
         checking: Conto corrente
         savings: Risparmio

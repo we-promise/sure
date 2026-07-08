@@ -187,10 +187,14 @@ it:
         format: "%n %u"
         units:
           billion: Miliardi
-          million: Milioni
+          million:
+            one: Milione
+            other: Milioni
           quadrillion: Biliardi
           thousand: Mila
-          trillion: Bilioni
+          trillion:
+            one: Bilione
+            other: Bilioni
           unit: ''
       format:
         delimiter: ''

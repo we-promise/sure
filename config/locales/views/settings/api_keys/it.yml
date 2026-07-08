@@ -76,6 +76,7 @@ it:
           usage_instructions_title: "Come usare la tua chiave API"
           usage_instructions: "Includi la tua chiave API nell'intestazione X-Api-Key quando fai richieste all'API di %{product_name}:"
           regenerate_key: "Crea nuova chiave"
+          back_to_keys: "Torna alle chiavi API"
           revoke_key: "Revoca chiave"
           revoke_confirmation: "Sei sicuro di voler revocare questa chiave API? Questa azione non può essere annullata e disabiliterà immediatamente tutte le applicazioni che usano questa chiave."
       new:

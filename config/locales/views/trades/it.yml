@@ -20,6 +20,7 @@ it:
       type_dividend: Dividendo
       type_interest: Interessi
       dividend_requires_security: Il titolo è obbligatorio per i dividendi
+      trade_requires_security: Un titolo (ticker) è obbligatorio per le operazioni di acquisto e vendita
     header:
       buy: Acquisto
       sell: Vendita

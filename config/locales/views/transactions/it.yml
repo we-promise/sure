@@ -123,7 +123,6 @@ it:
     mark_recurring_title: Transazione ricorrente
     potential_duplicate_title: Possibile duplicato rilevato
     potential_duplicate_description: Questa transazione in attesa potrebbe essere la stessa di quella registrata qui sotto. In caso affermativo, uniscile per evitare il doppio conteggio.
-    merge_duplicate: Sì, uniscile
     keep_both: No, tienile entrambe
     split_parent_row:
       split_label: "Suddivisa"
