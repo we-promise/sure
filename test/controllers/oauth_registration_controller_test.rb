@@ -95,6 +95,19 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "http://localhost:3456/callback" ], json["redirect_uris"]
   end
 
+  test "allows ipv6 loopback http redirect uri" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "http://[::1]:3456/callback" ]
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    json = JSON.parse(response.body)
+    assert_equal [ "http://[::1]:3456/callback" ], json["redirect_uris"]
+  end
+
   test "rejects custom scheme redirect uri" do
     post "/register",
       params: {

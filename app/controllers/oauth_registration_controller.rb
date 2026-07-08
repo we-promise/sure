@@ -82,7 +82,8 @@ class OauthRegistrationController < ApplicationController
       return true if scheme == "https"
       return false unless scheme == "http"
 
-      LOOPBACK_HOSTS.include?(uri.host.downcase)
+      host = uri.host.downcase.delete_prefix("[").delete_suffix("]")
+      LOOPBACK_HOSTS.include?(host)
     rescue URI::InvalidURIError
       false
     end
