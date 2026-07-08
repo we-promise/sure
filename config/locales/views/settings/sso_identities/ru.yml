@@ -1,0 +1,7 @@
+---
+ru:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Невозможно отвязать последнюю учётную запись
+        success: Успешно
