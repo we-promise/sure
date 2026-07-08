@@ -643,7 +643,9 @@ class ReportsController < ApplicationController
 
       # Filter by account
       if params[:filter_account_id].present?
-        scope = scope.where(entries: { account_id: params[:filter_account_id] })
+        filter_id = params[:filter_account_id].to_i
+        allowed_ids = finance_account_ids.include?(filter_id) ? [ filter_id ] : []
+        scope = scope.where(entries: { account_id: allowed_ids })
       end
 
       # Filter by amount range
