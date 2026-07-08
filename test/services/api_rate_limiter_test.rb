@@ -135,4 +135,11 @@ class ApiRateLimiterTest < ActiveSupport::TestCase
 
     assert_in_delta expected_reset, reset_time, 1
   end
+
+  test "uses REDIS_URL for redis connection" do
+    with_env_overrides("REDIS_URL" => "redis://custom-host:6380/3") do
+      limiter = ApiRateLimiter.new(@api_key)
+      assert_equal "redis://custom-host:6380/3", limiter.instance_variable_get(:@redis).id
+    end
+  end
 end
