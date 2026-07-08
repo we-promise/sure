@@ -5,6 +5,7 @@ class Family < ApplicationRecord
   include IndexaCapitalConnectable, IbkrConnectable
   include UpConnectable
   include WiseConnectable
+  include QuestradeConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],

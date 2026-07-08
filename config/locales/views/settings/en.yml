@@ -363,6 +363,7 @@ en:
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         wise: Sync your Wise multi-currency balances and transaction history via the Wise API.
+        questrade: Sync your Questrade investment accounts directly via the Questrade API.
         indexa_capital: Track your Indexa Capital automated investment portfolio.
         sophtron: Connect US & Canadian banks and utilities.
         plaid: Connect thousands of US financial institutions via Plaid.

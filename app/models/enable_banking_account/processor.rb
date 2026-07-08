@@ -37,7 +37,19 @@ class EnableBankingAccount::Processor
       end
 
       account = enable_banking_account.current_account
-      balance = enable_banking_account.current_balance || 0
+      balance = enable_banking_account.current_balance
+
+      # A nil current_balance means this sync's balance fetch did not succeed:
+      # upsert_enable_banking_snapshot! clears it and only a successful
+      # balance fetch repopulates it. Coercing nil to 0 here would persist a
+      # zero balance (and a zero current_anchor valuation) onto a healthy
+      # account whenever the provider has a transient failure, so leave the
+      # account untouched instead.
+      if balance.nil?
+        Rails.logger.warn("EnableBankingAccount::Processor - No balance available for enable_banking_account #{enable_banking_account.id} (balance fetch failed or not yet run), skipping account update")
+        return
+      end
+
       available_credit = nil
 
       # For liability accounts, ensure balance sign is correct.

@@ -197,6 +197,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
+      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" },
       { key: "wise",           title: "Wise",            turbo_id: "wise",           partial: "wise_panel" }
     ].freeze
 
@@ -216,6 +217,7 @@ class Settings::ProvidersController < ApplicationController
       "binance"        => "BinanceItem",
       "kraken"         => "KrakenItem",
       "snaptrade"      => "SnaptradeItem",
+      "questrade"      => "QuestradeItem",
       "ibkr"           => "IbkrItem",
       "indexa_capital" => "IndexaCapitalItem",
       "sophtron"       => "SophtronItem",
@@ -254,6 +256,8 @@ class Settings::ProvidersController < ApplicationController
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
       when "sophtron"
         @sophtron_items = Current.family.sophtron_items.ordered
+      when "questrade"
+        @questrade_items = Current.family.questrade_items.active.ordered
       when "wise"
         @wise_items = Current.family.wise_items.active.ordered
       end
@@ -284,6 +288,7 @@ class Settings::ProvidersController < ApplicationController
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
+      @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
       @wise_items = Current.family.wise_items.active.ordered.select(:id)
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
@@ -314,6 +319,7 @@ class Settings::ProvidersController < ApplicationController
         "binance"        => @binance_items,
         "kraken"         => @kraken_items,
         "snaptrade"      => @snaptrade_items,
+        "questrade"      => @questrade_items,
         "ibkr"           => @ibkr_items,
         "indexa_capital" => @indexa_capital_items,
         "sophtron"       => @sophtron_items,

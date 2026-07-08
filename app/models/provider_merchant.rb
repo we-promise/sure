@@ -1,5 +1,5 @@
 class ProviderMerchant < Merchant
-  enum :source, { plaid: "plaid", simplefin: "simplefin", lunchflow: "lunchflow", akahu: "akahu", up: "up", synth: "synth", ai: "ai", enable_banking: "enable_banking", coinstats: "coinstats", mercury: "mercury", brex: "brex", indexa_capital: "indexa_capital", sophtron: "sophtron", wise: "wise" }
+  enum :source, { plaid: "plaid", simplefin: "simplefin", lunchflow: "lunchflow", akahu: "akahu", up: "up", synth: "synth", ai: "ai", enable_banking: "enable_banking", coinstats: "coinstats", mercury: "mercury", brex: "brex", indexa_capital: "indexa_capital", sophtron: "sophtron", questrade: "questrade", wise: "wise" }
 
   validates :name, uniqueness: { scope: [ :source ] }
   validates :source, presence: true
