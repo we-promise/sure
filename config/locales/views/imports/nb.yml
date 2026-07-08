@@ -19,6 +19,8 @@ nb:
         date_format_label: Datoformat
       transaction_import:
         date_format_label: Datoformat
+        external_id_hint: "Valgfritt. Knytter en kolonne med unik transaksjons-ID (f.eks. en UUID fra banken) for pålitelig deduplisering ved reimport."
+        external_id_label: "Ekstern ID"
     confirms:
       mappings:
         create_account: Opprett konto

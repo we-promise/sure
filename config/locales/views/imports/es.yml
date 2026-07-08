@@ -51,6 +51,8 @@ es:
         date_format_label: Formato de fecha
       transaction_import:
         date_format_label: Formato de fecha
+        external_id_hint: "Opcional. Asigna una columna con un ID de transacción único (p. ej., un UUID proporcionado por el banco) para una deduplicación fiable al reimportar."
+        external_id_label: "ID externo"
         rows_to_skip_label: Omitir las primeras n filas
     confirms:
       mappings:

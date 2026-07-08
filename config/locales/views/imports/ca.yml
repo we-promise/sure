@@ -102,6 +102,8 @@ ca:
         leave_empty: Deixa-ho buit
         name_label: Nom
         notes_label: Notes
+        external_id_label: "ID extern"
+        external_id_hint: "Opcional. Assigna una columna d'ID de transacció única (p. ex. un UUID del banc) per a una desduplicació fiable en reimportar."
         rows_to_skip_label: Omet les primeres n files
         select_column: Selecciona la columna
         select_convention: Selecciona la convenció

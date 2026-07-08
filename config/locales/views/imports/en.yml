@@ -78,6 +78,8 @@ en:
         category_label: Category
         tags_label: Tags
         notes_label: Notes
+        external_id_label: External ID
+        external_id_hint: Optional. Maps a unique transaction ID column (e.g. a bank-provided UUID) for reliable de-duplication on re-import.
         apply_configuration: Apply configuration
         incomes_are_positive: Incomes are positive
         incomes_are_negative: Incomes are negative

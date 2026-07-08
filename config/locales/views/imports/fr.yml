@@ -89,6 +89,8 @@ fr:
         date_label: Date
         default: Par défaut
         expense_outflow: Dépense (sortie)
+        external_id_hint: "Facultatif. Associe une colonne d'identifiant de transaction unique (p. ex. un UUID fourni par la banque) pour une déduplication fiable lors d'une réimportation."
+        external_id_label: "Identifiant externe"
         format_label: Formater
         income_inflow: Revenu (entrée)
         incomes_are_negative: Les revenus sont négatifs

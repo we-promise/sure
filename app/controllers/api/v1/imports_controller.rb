@@ -205,6 +205,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
         :entity_type_col_label,
         :currency_col_label,
         :exchange_operating_mic_col_label,
+        :external_id_col_label,
         :date_format,
         :number_format,
         :signage_convention,

@@ -17,6 +17,8 @@ ro:
         date_format_label: Format dată
       transaction_import:
         date_format_label: Format dată
+        external_id_hint: "Opțional. Mapează o coloană cu un ID unic de tranzacție (de ex. un UUID furnizat de bancă) pentru o deduplicare fiabilă la reimport."
+        external_id_label: "ID extern"
     confirms:
       mappings:
         create_account: Creează cont
