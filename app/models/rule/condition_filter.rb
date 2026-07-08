@@ -8,26 +8,26 @@ class Rule::ConditionFilter
 
   OPERATORS_MAP = {
     "text" => [
-      [ "Contains", "like" ],
-      [ "Does not contain", "not_like" ],
-      [ "Equal to", "=" ],
-      [ "Not equal to", "!=" ],
-      [ "Is empty", "is_null" ],
-      [ "Is not empty", "is_not_null" ]
+      [ :contains, "like" ],
+      [ :does_not_contain, "not_like" ],
+      [ :equal_to, "=" ],
+      [ :not_equal_to, "!=" ],
+      [ :is_empty, "is_null" ],
+      [ :is_not_empty, "is_not_null" ]
     ],
     "number" => [
-      [ "Greater than", ">" ],
-      [ "Greater or equal to", ">=" ],
-      [ "Less than", "<" ],
-      [ "Less than or equal to", "<=" ],
-      [ "Is equal to", "=" ],
-      [ "Not equal to", "!=" ]
+      [ :greater_than, ">" ],
+      [ :greater_or_equal_to, ">=" ],
+      [ :less_than, "<" ],
+      [ :less_than_or_equal_to, "<=" ],
+      [ :is_equal_to, "=" ],
+      [ :not_equal_to, "!=" ]
     ],
     "select" => [
-      [ "Equal to", "=" ],
-      [ "Not equal to", "!=" ],
-      [ "Is empty", "is_null" ],
-      [ "Is not empty", "is_not_null" ]
+      [ :equal_to, "=" ],
+      [ :not_equal_to, "!=" ],
+      [ :is_empty, "is_null" ],
+      [ :is_not_empty, "is_not_null" ]
     ]
   }
 
@@ -57,7 +57,7 @@ class Rule::ConditionFilter
   end
 
   def operators
-    OPERATORS_MAP.dig(type)
+    OPERATORS_MAP.dig(type).map { |label_key, operator| [ operator_label(label_key), operator ] }
   end
 
   # Matchers can prepare the scope with joins by implementing this method
@@ -86,6 +86,10 @@ class Rule::ConditionFilter
 
     def family
       rule.family
+    end
+
+    def operator_label(key)
+      I18n.t("rules.condition_filters.operators.#{key}")
     end
 
     def build_sanitized_where_condition(field, operator, value)
