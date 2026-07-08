@@ -65,6 +65,7 @@ class AccountsController < ApplicationController
       params: request.query_parameters.except("tab").merge("tab" => "activity")
     )
     Transaction::ActivitySecurityPreloader.new(@entries).preload
+    preload_activity_row_associations
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end
@@ -251,6 +252,21 @@ class AccountsController < ApplicationController
         Current.user.admin? ||
           (item.respond_to?(:accounts) && (item.accounts.map(&:id) & @accessible_account_ids).any?)
       end
+    end
+
+    # The activity feed renders category, merchant, tags and transfer state for
+    # every transaction row, and asks each entry whether it is a split parent.
+    # Batch-load all of it for the current page so rows don't query one by one.
+    def preload_activity_row_associations
+      page_transactions = @entries.filter_map { |entry| entry.entryable if entry.entryable_type == "Transaction" }
+      if page_transactions.any?
+        ActiveRecord::Associations::Preloader.new(
+          records: page_transactions,
+          associations: Transaction::ACTIVITY_ROW_ASSOCIATIONS
+        ).call
+      end
+
+      @split_parent_entry_ids = Entry.split_parent_ids_for(@entries.map(&:id))
     end
 
     def build_statement_tab_data

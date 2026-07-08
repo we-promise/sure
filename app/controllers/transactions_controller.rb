@@ -19,11 +19,7 @@ class TransactionsController < ApplicationController
 
     base_scope = @search.transactions_scope
                        .reverse_chronological
-                       .includes(
-                         { entry: :account },
-                         :category, :merchant, :tags,
-                         :transfer_as_inflow, :transfer_as_outflow
-                       )
+                       .includes({ entry: :account }, *Transaction::ACTIVITY_ROW_ASSOCIATIONS)
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
@@ -46,11 +42,7 @@ class TransactionsController < ApplicationController
     end
 
     # Preload which entries on this page are split parents (have children) to avoid N+1
-    @split_parent_entry_ids = if entry_ids.any?
-      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
-    else
-      Set.new
-    end
+    @split_parent_entry_ids = Entry.split_parent_ids_for(entry_ids)
 
     @uncategorized_count = Current.accessible_entries.uncategorized_transactions.count
 

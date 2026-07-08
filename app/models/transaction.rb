@@ -85,6 +85,14 @@ class Transaction < ApplicationRecord
   # they represent real cash outflow from a budgeting perspective.
   BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
 
+  # Associations the shared transactions/_transaction row partial reads for
+  # every row. Single source of truth for both TransactionsController#index
+  # (preloaded via .includes on the query) and AccountsController#show
+  # (preloaded post-hoc via ActiveRecord::Associations::Preloader, since its
+  # entries are already loaded by the time transactions are known) so the
+  # two preload sites can't silently drift from each other.
+  ACTIVITY_ROW_ASSOCIATIONS = %i[category merchant tags transfer_as_inflow transfer_as_outflow].freeze
+
   # All valid investment activity labels (for UI dropdown)
   ACTIVITY_LABELS = [
     "Buy", "Sell", "Sweep In", "Sweep Out", "Dividend", "Reinvestment",
