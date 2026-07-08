@@ -149,10 +149,10 @@ class Balance::BaseCalculator
     end
 
     def build_balance(date:, **args)
-      Balance.new(
-        account_id: account.id,
-        currency: account.currency,
+      Balance::BalanceData.new(
+        account: account,
         date: date,
+        currency: account.currency,
         balance: args[:balance],
         cash_balance: args[:cash_balance],
         start_cash_balance: args[:start_cash_balance] || 0,

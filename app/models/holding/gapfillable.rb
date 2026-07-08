@@ -20,9 +20,9 @@ module Holding::Gapfillable
             previous_holding = holding
           else
             # Create a new holding based on the previous day's data
-            filled_holdings << Holding.new(
-              account: previous_holding.account,
-              security: previous_holding.security,
+            filled_holdings << Holding::HoldingData.new(
+              account_id: previous_holding.account_id,
+              security_id: previous_holding.security_id,
               date: date,
               qty: previous_holding.qty,
               price: previous_holding.price,
