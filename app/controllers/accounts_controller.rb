@@ -10,7 +10,7 @@ class AccountsController < ApplicationController
     @manual_accounts = family.accounts
           .listable_manual
           .where(id: @accessible_account_ids)
-          .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
+          .includes(:accountable, :account_providers, :plaid_account, :simplefin_account, :visible_syncs)
           .order(:name)
     @plaid_items = visible_provider_items(family.plaid_items.ordered.includes(:syncs, :plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.includes(:syncs))
@@ -295,11 +295,15 @@ class AccountsController < ApplicationController
       @simplefin_show_relink_map = {}
       @simplefin_duplicate_only_map = {}
 
+      # All items belong to the current family, so check once outside the loop
+      # (item.family would also load a fresh Family per item).
+      family_has_listable_manual_accounts = @simplefin_items.any? && family.accounts.listable_manual.exists?
+
       @simplefin_items.each do |item|
         latest_sync = item.syncs.ordered.first
         stats = latest_sync&.sync_stats || {}
         @simplefin_sync_stats_map[item.id] = stats
-        @simplefin_has_unlinked_map[item.id] = item.family.accounts.listable_manual.exists?
+        @simplefin_has_unlinked_map[item.id] = family_has_listable_manual_accounts
 
         # Count unlinked accounts
         count = item.simplefin_accounts

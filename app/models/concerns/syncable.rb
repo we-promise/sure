@@ -3,10 +3,24 @@ module Syncable
 
   included do
     has_many :syncs, as: :syncable, dependent: :destroy
+
+    # Preloadable subset for sync-status checks: pages that only need to
+    # answer syncing? should preload this instead of :syncs, which would
+    # hydrate every historical sync row (old syncs are never deleted).
+    has_many :visible_syncs, -> { visible }, as: :syncable, class_name: "Sync"
   end
 
   def syncing?
-    syncs.visible.any?
+    # Use a preloaded collection when available — `syncs.visible.any?` always
+    # builds a new query, which turns pages that render many syncables (e.g.
+    # the accounts index) into an N+1.
+    if association(:visible_syncs).loaded?
+      visible_syncs.any?
+    elsif syncs.loaded?
+      syncs.any?(&:visible?)
+    else
+      syncs.visible.any?
+    end
   end
 
   # Schedules a sync for syncable.  If there is an existing sync pending/syncing for this syncable,
