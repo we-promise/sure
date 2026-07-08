@@ -24,7 +24,7 @@
 
     <%= yield form %>
 
-    <% if account.linked? && account.persisted? %>
+    <% if account.persisted? && account.supports_category_matcher? %>
       <div class="flex items-center justify-between gap-3 py-2">
         <div class="space-y-1">
           <p class="text-sm text-primary"><%= t(".enable_category_matcher_label") %></p>
