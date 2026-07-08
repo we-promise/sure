@@ -142,6 +142,44 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, sf["pending"], "expected pending flag to be true when posted==0 and/or pending=true"
   end
 
+  test "skips pending transactions when pending inclusion is disabled" do
+    Setting.stubs(:syncs_include_pending).returns(false)
+
+    tx = {
+      id: "tx_pending_disabled_1",
+      amount: "-30.00",
+      currency: "USD",
+      payee: "Test Store",
+      description: "Auth hold",
+      posted: Date.current.to_s,
+      transacted_at: (Date.current - 1).to_s,
+      pending: true
+    }
+
+    assert_no_difference "@account.entries.count" do
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+    end
+  end
+
+  test "still imports posted transactions when pending inclusion is disabled" do
+    Setting.stubs(:syncs_include_pending).returns(false)
+
+    tx = {
+      id: "tx_posted_disabled_1",
+      amount: "-30.00",
+      currency: "USD",
+      payee: "Test Store",
+      description: "Settled",
+      posted: Date.current.to_s,
+      transacted_at: (Date.current - 1).to_s,
+      pending: false
+    }
+
+    assert_difference "@account.entries.count", 1 do
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+    end
+  end
+
   test "infers pending when posted is explicitly 0 and transacted_at present (no explicit pending flag)" do
     # Some SimpleFIN banks indicate pending by sending posted=0 + transacted_at, without pending flag
     t_epoch = (Date.current - 1).to_time.to_i
