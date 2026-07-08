@@ -17,12 +17,16 @@ class Transfer < ApplicationRecord
   validate :transfer_has_same_family
 
   class << self
-    def kind_for_account(account)
+    # Outflow kind for a transfer into `account`. Mirrors
+    # Transfer::Creator#outflow_transaction_kind: money moving between two
+    # investment-ish accounts is a funds movement, not a contribution, so pass
+    # `source_account` whenever it is known.
+    def kind_for_account(account, source_account: nil)
       if account.loan?
         "loan_payment"
       elsif account.credit_card?
         "cc_payment"
-      elsif account.investment? || account.crypto?
+      elsif (account.investment? || account.crypto?) && !(source_account&.investment? || source_account&.crypto?)
         "investment_contribution"
       elsif account.liability?
         "cc_payment"

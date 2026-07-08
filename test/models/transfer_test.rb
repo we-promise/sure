@@ -125,6 +125,17 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository))
   end
 
+  test "kind_for_account returns funds_movement between investment-ish accounts" do
+    # Matches Transfer::Creator#outflow_transaction_kind: moving money between
+    # two investment/crypto accounts is not a contribution.
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:investment), source_account: accounts(:crypto))
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:crypto), source_account: accounts(:investment))
+  end
+
+  test "kind_for_account returns investment_contribution from non-investment sources" do
+    assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:investment), source_account: accounts(:depository))
+  end
+
   test "has_source_fee? returns true when source fee present" do
     transfer = transfers(:one)
     entry = accounts(:depository).entries.create!(name: "Fee", date: Date.current, amount: 5, currency: "USD", entryable: Transaction.new(kind: "standard"))
