@@ -7,6 +7,44 @@ class UserTest < ActiveSupport::TestCase
     @user = users(:family_admin)
   end
 
+  test "rule_prompts_enabled inverts rule_prompts_disabled" do
+    @user.rule_prompts_disabled = false
+    assert @user.rule_prompts_enabled
+
+    @user.rule_prompts_disabled = true
+    assert_not @user.rule_prompts_enabled
+  end
+
+  test "rule_prompts_enabled= writes the inverted flag and casts strings" do
+    @user.rule_prompts_enabled = "0"
+    assert @user.rule_prompts_disabled
+
+    @user.rule_prompts_enabled = "1"
+    assert_not @user.rule_prompts_disabled
+
+    @user.rule_prompts_enabled = false
+    assert @user.rule_prompts_disabled
+  end
+
+  test "enabling rule prompts clears a recent inline dismissal" do
+    @user.update!(rule_prompts_disabled: true, rule_prompt_dismissed_at: Time.current)
+
+    @user.rule_prompts_enabled = "1"
+
+    assert_not @user.rule_prompts_disabled
+    assert_nil @user.rule_prompt_dismissed_at
+  end
+
+  test "disabling rule prompts leaves the dismissal timestamp untouched" do
+    dismissed = 2.hours.ago
+    @user.update!(rule_prompts_disabled: false, rule_prompt_dismissed_at: dismissed)
+
+    @user.rule_prompts_enabled = "0"
+
+    assert @user.rule_prompts_disabled
+    assert_in_delta dismissed.to_i, @user.rule_prompt_dismissed_at.to_i, 1
+  end
+
   def teardown
     clear_enqueued_jobs
     clear_performed_jobs

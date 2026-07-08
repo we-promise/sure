@@ -73,7 +73,11 @@ class UsersController < ApplicationController
 
   def rule_prompt_settings
     @user.update!(rule_prompt_settings_params)
-    redirect_back_or_to settings_profile_path
+    if params[:redirect_to] == "preferences"
+      redirect_to settings_preferences_path
+    else
+      redirect_back_or_to settings_profile_path
+    end
   end
 
   private
@@ -108,7 +112,7 @@ class UsersController < ApplicationController
     end
 
     def rule_prompt_settings_params
-      params.require(:user).permit(:rule_prompt_dismissed_at, :rule_prompts_disabled)
+      params.require(:user).permit(:rule_prompt_dismissed_at, :rule_prompts_disabled, :rule_prompts_enabled)
     end
 
     def user_params
