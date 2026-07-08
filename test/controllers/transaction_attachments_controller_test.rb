@@ -141,4 +141,32 @@ class TransactionAttachmentsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/turbo-stream action="append" target="notification-tray"/, response.body)
     assert_match("Attachment deleted successfully", response.body)
   end
+
+  test "enqueues vector store indexing when configured" do
+    VectorStore.stubs(:configured?).returns(true)
+    file = fixture_file_upload("test.txt", "application/pdf")
+
+    assert_enqueued_with(job: IndexTransactionAttachmentJob) do
+      post transaction_attachments_path(@transaction), params: { attachment: file }
+    end
+  end
+
+  test "does not enqueue vector store indexing when not configured" do
+    VectorStore.stubs(:configured?).returns(false)
+    file = fixture_file_upload("test.txt", "application/pdf")
+
+    assert_no_enqueued_jobs only: IndexTransactionAttachmentJob do
+      post transaction_attachments_path(@transaction), params: { attachment: file }
+    end
+  end
+
+  test "enqueues vector store removal on delete when configured" do
+    VectorStore.stubs(:configured?).returns(true)
+    @transaction.attachments.attach(io: StringIO.new("test"), filename: "test.pdf", content_type: "application/pdf")
+    attachment = @transaction.attachments.first
+
+    assert_enqueued_with(job: RemoveTransactionAttachmentJob) do
+      delete transaction_attachment_path(@transaction, attachment)
+    end
+  end
 end
