@@ -4636,6 +4636,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ExchangeRate"
+        '200':
+          description: exchange rate updated (idempotent upsert)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ExchangeRate"
         '403':
           description: read-only key cannot write
           content:
@@ -4695,6 +4701,12 @@ paths:
                 "$ref": "#/components/schemas/ExchangeRate"
         '404':
           description: exchange rate not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized
           content:
             application/json:
               schema:

@@ -129,6 +129,14 @@ RSpec.describe 'API V1 Exchange Rates', type: :request do
         run_test!
       end
 
+      response '200', 'exchange rate updated (idempotent upsert)' do
+        schema '$ref' => '#/components/schemas/ExchangeRate'
+
+        let(:body) { { from: 'EUR', to: 'USD', date: '2026-06-01', rate: '1.10' } }
+
+        run_test!
+      end
+
       response '403', 'read-only key cannot write' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -169,6 +177,15 @@ RSpec.describe 'API V1 Exchange Rates', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { exchange_rate.id }
+        let(:'X-Api-Key') { nil }
 
         run_test!
       end
