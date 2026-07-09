@@ -268,17 +268,30 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_no_match(/JOIN accounts/, aggregate_queries.first)
   end
 
-  test "investment_accounts preloads the associations report rows render" do
+  test "investment_accounts_for_display preloads the associations report rows render" do
+    account = create_investment_account(balance: 1000)
+    AccountProvider.create!(account: account, provider: plaid_accounts(:one))
+    account.logo.attach(io: StringIO.new("logo"), filename: "logo.png", content_type: "image/png")
+
+    loaded = @statement.investment_accounts_for_display.first
+
+    assert loaded.association(:accountable).loaded?
+    assert loaded.association(:account_providers).loaded?
+    assert loaded.account_providers.first.association(:provider).loaded?
+    assert loaded.association(:logo_attachment).loaded?
+    assert loaded.logo_attachment.association(:blob).loaded?
+  end
+
+  test "investment_accounts stays free of row-rendering preloads" do
     create_investment_account(balance: 1000)
 
     account = @statement.investment_accounts.first
 
-    assert account.association(:accountable).loaded?
-    assert account.association(:account_providers).loaded?
-    assert account.association(:logo_attachment).loaded?
+    assert_not account.association(:account_providers).loaded?
+    assert_not account.association(:logo_attachment).loaded?
   end
 
-  test "investment_account_ids resolves despite the polymorphic accountable preload" do
+  test "investment_account_ids resolves from the base scope" do
     account = create_investment_account(balance: 1000)
 
     assert_equal [ account.id ], @statement.send(:investment_account_ids)
