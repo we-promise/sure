@@ -110,6 +110,32 @@ class InvitationTest < ActiveSupport::TestCase
     assert invitation.valid?
   end
 
+  test "re-inviting an email with an expired unaccepted invitation replaces it without raising" do
+    email = "expired-reinvite@example.com"
+
+    expired = @family.invitations.create!(email: email, role: "member", inviter: @inviter)
+    expired.update_column(:expires_at, 1.day.ago)
+
+    invitation = nil
+    assert_nothing_raised do
+      invitation = @family.invitations.create!(email: email, role: "admin", inviter: @inviter)
+    end
+
+    assert invitation.pending?
+    assert_not Invitation.exists?(expired.id), "stale expired invitation should be removed"
+    assert_equal 1, @family.invitations.where(email: email).count
+  end
+
+  test "re-invite does not remove a still-pending duplicate (validation blocks first)" do
+    email = "still-pending@example.com"
+    pending = @family.invitations.create!(email: email, role: "member", inviter: @inviter)
+
+    duplicate = @family.invitations.build(email: email, role: "admin", inviter: @inviter)
+    assert_not duplicate.valid?
+
+    assert Invitation.exists?(pending.id), "an unexpired pending invitation must be preserved"
+  end
+
   test "can create invitation in same family (uniqueness scoped to family)" do
     email = "same-family-test@example.com"
 

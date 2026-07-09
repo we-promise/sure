@@ -36,7 +36,7 @@ class Provider::Simplefin
     # Use retry logic for transient network failures during token claim
     # Claim should be fast; keep request-path latency bounded.
     # Use self.class.post to inherit class-level SSL and timeout defaults
-    response = with_retries("POST /claim", max_retries: 1, sleep: false) do
+    response = with_retries("POST /claim", max_retries: 1, backoff: false) do
       self.class.post(claim_url, timeout: 15)
     end
 
@@ -126,7 +126,7 @@ class Provider::Simplefin
     # Execute a block with retry logic and exponential backoff for transient network errors.
     # This helps handle temporary network issues that cause autosync failures while
     # manual sync (with user retry) succeeds.
-    def with_retries(operation_name, max_retries: MAX_RETRIES, sleep: true)
+    def with_retries(operation_name, max_retries: MAX_RETRIES, backoff: true)
       retries = 0
 
       begin
@@ -140,7 +140,7 @@ class Provider::Simplefin
             "SimpleFin API: #{operation_name} failed (attempt #{retries}/#{max_retries}): " \
             "#{e.class}: #{e.message}. Retrying in #{delay}s..."
           )
-          Kernel.sleep(delay) if sleep && delay.to_f.positive?
+          sleep(delay) if backoff && delay.to_f.positive?
           retry
         else
           Rails.logger.error(
