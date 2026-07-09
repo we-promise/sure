@@ -470,7 +470,19 @@ class Import < ApplicationRecord
 
       # Handle French/Scandinavian format specially
       if format[:delimiter] == " "
-        sanitized = sanitized.gsub(/\s+/, "") # Remove all spaces first
+        # The thousands "space" may be an ASCII space, a non-breaking space
+        # (U+00A0), or a narrow no-break space (U+202F) depending on the
+        # locale/exporter; \s misses the latter two, so strip every Unicode
+        # space variant.
+        sanitized = sanitized.gsub(/\p{Space}/, "")
+
+        # Strip currency symbols/codes at the leading/trailing edges only
+        # (e.g. "€1 234,56" or "1 234,56 kr"). Interior characters
+        # deliberately stay put so a misconfigured US-style "1,234.56" keeps
+        # its period and is rejected by the numeric guard below, rather than
+        # silently importing as 1.23456.
+        edge_junk = /\A[^\d#{Regexp.escape(format[:separator])}\-]+|[^\d#{Regexp.escape(format[:separator])}\-]+\z/
+        sanitized = sanitized.gsub(edge_junk, "")
       else
         sanitized = sanitized.gsub(/[^\d#{Regexp.escape(format[:delimiter])}#{Regexp.escape(format[:separator])}\-]/, "")
 
