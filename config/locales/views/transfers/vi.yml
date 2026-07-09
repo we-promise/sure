@@ -2,6 +2,7 @@
 vi:
   transfers:
     create:
+      exchange_rate_unavailable: Không có tỷ giá hối đoái cho các loại tiền tệ và ngày đã chọn
       success: Chuyển khoản đã được tạo
     destroy:
       success: Chuyển khoản đã được xóa
@@ -42,4 +43,5 @@ vi:
       total: '[Total]'
       transfer_amount: '[Transfer amount]'
     update:
+      exchange_rate_unavailable: Không có tỷ giá hối đoái cho các loại tiền tệ và ngày đã chọn
       success: Chuyển khoản đã được cập nhật

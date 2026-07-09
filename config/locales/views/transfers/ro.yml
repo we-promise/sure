@@ -2,6 +2,7 @@
 ro:
   transfers:
     create:
+      exchange_rate_unavailable: Cursul de schimb nu este disponibil pentru monedele și data selectate
       success: Transfer creat
     destroy:
       success: Transfer eliminat
@@ -27,4 +28,5 @@ ro:
       overview: Prezentare generală
       settings: Setări
     update:
+      exchange_rate_unavailable: Cursul de schimb nu este disponibil pentru monedele și data selectate
       success: Transfer actualizat

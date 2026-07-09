@@ -2,6 +2,7 @@
 nb:
   transfers:
     create:
+      exchange_rate_unavailable: Valutakurs er ikke tilgjengelig for valgte valutaer og dato
       success: Overføring opprettet
     destroy:
       success: Overføring fjernet
@@ -28,4 +29,5 @@ nb:
       overview: Oversikt
       settings: Innstillinger
     update:
+      exchange_rate_unavailable: Valutakurs er ikke tilgjengelig for valgte valutaer og dato
       success: Overføring oppdatert
