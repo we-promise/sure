@@ -111,7 +111,7 @@ module AccountableResource
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
-        :institution_name, :institution_domain, :notes, :exclude_from_reports,
+        :institution_name, :institution_domain, :notes, :exclude_from_reports, :auto_match_transfers,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end
