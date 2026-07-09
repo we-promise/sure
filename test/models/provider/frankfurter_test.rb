@@ -42,6 +42,18 @@ class Provider::FrankfurterTest < ActiveSupport::TestCase
     assert_equal 1.0, response.data.rate
   end
 
+  test "fetch_exchange_rate strips non-letter characters from currency codes before building the URL path" do
+    date = Date.current - 5
+    body = { "date" => date.to_s, "base" => "USD", "quote" => "INR", "rate" => 83.1 }
+    @provider.expects(:get_json).with("/rate/USD/INR", has_entries("date" => date.to_s)).returns(body)
+
+    response = @provider.fetch_exchange_rate(from: "US/../D", to: "IN;R", date: date)
+
+    assert response.success?
+    assert_equal "USD", response.data.from
+    assert_equal "INR", response.data.to
+  end
+
   # ================================
   #        fetch_exchange_rate (GET /rate/{base}/{quote})
   # ================================

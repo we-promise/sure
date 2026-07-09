@@ -43,8 +43,8 @@ class Provider::Frankfurter < Provider
   # Frankfurter carries forward weekends/holidays itself, so the returned
   # date may differ from the requested one but is never simply missing.
   def fetch_exchange_rate(from:, to:, date:)
-    from = from.to_s.upcase
-    to = to.to_s.upcase
+    from = sanitize_currency(from)
+    to = sanitize_currency(to)
 
     with_provider_response do
       if from == to
@@ -65,8 +65,8 @@ class Provider::Frankfurter < Provider
   end
 
   def fetch_exchange_rates(from:, to:, start_date:, end_date:)
-    from = from.to_s.upcase
-    to = to.to_s.upcase
+    from = sanitize_currency(from)
+    to = sanitize_currency(to)
 
     with_provider_response do
       if from == to
@@ -82,6 +82,13 @@ class Provider::Frankfurter < Provider
   end
 
   private
+
+    # from/to are interpolated directly into the URL path in
+    # fetch_exchange_rate (GET /rate/{from}/{to}), so strip anything that
+    # isn't a letter before use - real ISO 4217 codes are always A-Z anyway.
+    def sanitize_currency(code)
+      code.to_s.upcase.gsub(/[^A-Z]/, "")
+    end
 
     def base_url
       ENV["FRANKFURTER_URL"].presence || "https://api.frankfurter.dev/v2"
