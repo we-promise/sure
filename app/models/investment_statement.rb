@@ -246,13 +246,23 @@ class InvestmentStatement
     )
   end
 
-  # Investment accounts
+  # Investment accounts. Kept free of row-rendering preloads so summary
+  # consumers (dashboard visibility checks, portfolio/cash totals) don't
+  # materialize provider and ActiveStorage rows they never read.
   def investment_accounts
     @investment_accounts ||= begin
       scope = family.accounts.visible.included_in_reports.where(accountable_type: %w[Investment Crypto])
       scope = scope.included_in_finances_for(user) if user
       scope
     end
+  end
+
+  # Investment accounts with the associations report account rows render
+  # (accountable badge, provider name, logo). Use this only where rows are
+  # actually displayed.
+  def investment_accounts_for_display
+    @investment_accounts_for_display ||= investment_accounts
+      .includes(:accountable, { account_providers: :provider }, logo_attachment: :blob)
   end
 
   private

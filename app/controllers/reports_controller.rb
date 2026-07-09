@@ -479,7 +479,7 @@ class ReportsController < ApplicationController
         period_contributions: period_totals.contributions,
         period_withdrawals: period_totals.withdrawals,
         top_holdings: investment_statement.top_holdings(limit: 5),
-        accounts: investment_accounts.to_a,
+        accounts: investment_statement.investment_accounts_for_display.to_a,
         gains_by_tax_treatment: build_gains_by_tax_treatment(investment_statement)
       }
     end
