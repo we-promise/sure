@@ -1,14 +1,4 @@
 module Family::AutoTransferMatchable
-  # since_date only filters on the "inflow" candidate's date (see
-  # transfer_match_candidates_sql), relying on date_window to transitively
-  # bound the "outflow" side. That only holds while date_window stays small
-  # relative to since_date's lookback: a pair whose inflow date falls just
-  # before since_date is dropped entirely regardless of how recent its
-  # paired outflow is. This cap keeps that gap negligible; it isn't a hard
-  # correctness requirement, just a guard against a future caller silently
-  # reintroducing missed pairs by widening date_window while since_date is set.
-  MAX_DATE_WINDOW_WITH_SINCE_DATE = 30
-
   def transfer_match_candidates(
     date_window: 4,
     exchange_rate_tolerance: 0.1,
@@ -21,13 +11,6 @@ module Family::AutoTransferMatchable
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
 
-    if since_date.present? && date_window > MAX_DATE_WINDOW_WITH_SINCE_DATE
-      raise ArgumentError,
-        "date_window (#{date_window}) must be <= #{MAX_DATE_WINDOW_WITH_SINCE_DATE} when since_date is set: " \
-        "a wider window can silently exclude a pair whose inflow date falls before since_date " \
-        "while its paired outflow remains in range"
-    end
-
     Entry.find_by_sql([
       transfer_match_candidates_sql,
       {
@@ -37,7 +20,11 @@ module Family::AutoTransferMatchable
         outflow_transaction_id:,
         account_id:,
         include_rejected:,
-        since_date: since_date&.to_date,
+        # The SQL bounds only the inflow side; the paired outflow may be dated
+        # up to date_window days later. Widen the cutoff by the window so a
+        # pair whose outflow sits inside the lookback still matches when its
+        # inflow falls just before since_date, without losing the indexed bound.
+        since_date: since_date && (since_date.to_date - date_window),
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
