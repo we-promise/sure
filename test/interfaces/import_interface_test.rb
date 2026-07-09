@@ -137,6 +137,19 @@ module ImportInterfaceTest
     assert_equal [ "1234.56", "1234.56", "1234.56", "-1234.56" ], amounts
   end
 
+  test "rejects misconfigured US-style amounts under the space-delimiter format" do
+    import = imports(:transaction)
+    import.update!(number_format: "1 234,56")
+
+    # A US-formatted value fed through the space-delimiter format must be
+    # rejected by the numeric guard — stripping its interior period would
+    # silently import 1.23456 instead of 1234.56.
+    assert_equal "", import.send(:sanitize_number, "1,234.56")
+    # Edge currency symbols/codes are still stripped.
+    assert_equal "1234.56", import.send(:sanitize_number, "€1 234,56")
+    assert_equal "1234.56", import.send(:sanitize_number, "1 234,56 kr")
+  end
+
   test "parses zero-decimal currency format correctly" do
     import = imports(:transaction)
     import.update!(
