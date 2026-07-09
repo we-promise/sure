@@ -36,7 +36,7 @@ class Transactions::CategorizesController < ApplicationController
         Current.family,
         params[:grouping_key],
         category,
-        transaction_type: params[:transaction_type]
+        transaction_type: rule_transaction_type(entries)
       )
       flash[:alert] = t(".rule_creation_failed") if rule.nil?
     end
@@ -121,6 +121,17 @@ class Transactions::CategorizesController < ApplicationController
 
     def uncategorized_count
       Current.accessible_entries.uncategorized_transactions.count
+    end
+
+    # Rules with a transaction_type condition never match transfer kinds
+    # (Rule::ConditionFilter::TransactionType excludes Transaction::TRANSFER_KINDS),
+    # so a rule created from a group containing loan payments or investment
+    # contributions must rely on the name condition alone to stay effective.
+    def rule_transaction_type(entries)
+      transaction_ids = entries.where(entryable_type: "Transaction").select(:entryable_id)
+      return nil if Transaction.where(id: transaction_ids, kind: Transaction::TRANSFER_KINDS).exists?
+
+      params[:transaction_type].presence
     end
 
     def uncategorized_entries_for(ids)
