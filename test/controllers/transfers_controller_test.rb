@@ -374,7 +374,10 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     transfer = Transfer.order(created_at: :desc).first
     assert_not_nil transfer
 
+    # delete_all only clears cached rows; Money#exchange_to can still hit the
+    # provider via find_or_fetch_rate, so stub it to keep this test offline.
     ExchangeRate.delete_all
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
 
     patch transfer_url(transfer), params: { transfer: { amount: 200 } }
 
