@@ -14,7 +14,7 @@ class InvitationsController < ApplicationController
     @invitation = Current.family.invitations.build(invitation_params)
     @invitation.inviter = Current.user
 
-    if @invitation.save
+    if save_invitation
       normalized_email = @invitation.email.to_s.strip.downcase
       existing_user = User.find_by(email: normalized_email)
       if existing_user && @invitation.would_orphan_owned_accounts?(existing_user)
@@ -66,5 +66,16 @@ class InvitationsController < ApplicationController
 
     def invitation_params
       params.require(:invitation).permit(:email, :role)
+    end
+
+    # Persist the invitation, treating a raced partial-unique-index violation as
+    # an ordinary save failure. A concurrent double-submit can still slip between
+    # the `no_duplicate_pending_invitation_in_family` validation and the INSERT.
+    # Scoping the rescue to the save alone keeps later writes in #create (e.g.
+    # accept_for) from silently swallowing a genuine RecordNotUnique.
+    def save_invitation
+      @invitation.save
+    rescue ActiveRecord::RecordNotUnique
+      false
     end
 end

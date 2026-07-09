@@ -28,6 +28,7 @@ class AccountsController < ApplicationController
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
     @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
+    @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
 
     preload_latest_sync_metadata_for_index!
 
@@ -271,7 +272,8 @@ class AccountsController < ApplicationController
         @ibkr_items,
         @indexa_capital_items,
         @sophtron_items,
-        @binance_items
+        @binance_items,
+        @questrade_items
       ].flatten.compact
 
       accounts = @manual_accounts.to_a
@@ -498,6 +500,19 @@ class AccountsController < ApplicationController
           .where(account_providers: { id: nil })
           .count
         @binance_unlinked_count_map[item.id] = count
+      end
+
+      # Questrade sync stats and account counts
+      @questrade_sync_stats_map = {}
+      @questrade_account_counts_map = {}
+      @questrade_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @questrade_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+        accounts = item.questrade_accounts.to_a
+        linked = accounts.count { |a| a.account_provider.present? }
+        @questrade_account_counts_map[item.id] = {
+          linked: linked, unlinked: accounts.size - linked, total: accounts.size
+        }
       end
     end
 end
