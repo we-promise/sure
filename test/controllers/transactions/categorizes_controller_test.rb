@@ -218,6 +218,32 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
       assert rule.conditions.any? { |c| c.condition_type == "transaction_type" && c.value == "expense" }
     end
 
+    test "create with create_rule param omits type condition for transfer-kind groups" do
+      entry = create_transaction(account: @account, name: "Mortgage Payment", amount: 1500, kind: "loan_payment")
+
+      assert_difference "@family.rules.count", 1 do
+        post transactions_categorize_url,
+          params: {
+            position: 0,
+            grouping_key: "Mortgage Payment",
+            transaction_type: "expense",
+            entry_ids: [ entry.id ],
+            all_entry_ids: [ entry.id ],
+            category_id: @category.id,
+            create_rule: "1"
+          },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      end
+
+      rule = @family.rules.find_by(name: "Mortgage Payment")
+      assert_not_nil rule
+      assert rule.conditions.any? { |c| c.condition_type == "transaction_name" && c.value == "Mortgage Payment" }
+      # A transaction_type condition would never match loan_payment rows
+      # (Rule::ConditionFilter::TransactionType excludes transfer kinds), so
+      # the generated rule must not include one.
+      assert_not rule.conditions.any? { |c| c.condition_type == "transaction_type" }
+    end
+
     test "create falls back to html redirect without turbo stream header" do
       entry = create_transaction(account: @account, name: "Starbucks")
 

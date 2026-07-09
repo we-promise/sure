@@ -107,10 +107,22 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "funds_movement"
     )
 
+    uncategorized_cc_payment = create_transaction(
+      account: @credit_card_account,
+      amount: 200,
+      kind: "cc_payment"
+    )
+
     uncategorized_loan_payment = create_transaction(
       account: @loan_account,
       amount: 300,
       kind: "loan_payment"
+    )
+
+    uncategorized_investment_contribution = create_transaction(
+      account: @checking_account,
+      amount: 400,
+      kind: "investment_contribution"
     )
 
     # Search for uncategorized transactions
@@ -120,9 +132,15 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     # Should include standard uncategorized transactions
     assert_includes uncategorized_ids, uncategorized_standard.entryable.id
 
-    # Should exclude all transfer kinds (TRANSFER_KINDS) even if uncategorized
+    # Categorizable transfer kinds count as budget expenses, so they must be
+    # findable here — otherwise dashboard Uncategorized totals have no matching
+    # rows in the transactions list (see issue #2592)
+    assert_includes uncategorized_ids, uncategorized_loan_payment.entryable.id
+    assert_includes uncategorized_ids, uncategorized_investment_contribution.entryable.id
+
+    # Transfer kinds that can never carry a category stay hidden
     assert_not_includes uncategorized_ids, uncategorized_transfer.entryable.id
-    assert_not_includes uncategorized_ids, uncategorized_loan_payment.entryable.id
+    assert_not_includes uncategorized_ids, uncategorized_cc_payment.entryable.id
   end
 
   test "filtering for only Uncategorized returns only uncategorized transactions" do
