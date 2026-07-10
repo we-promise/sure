@@ -311,11 +311,14 @@ class Family::DataImporter
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
-          status: importable_account_status(data["status"]),
-          # Exports include the flag via Account#as_json; default to false for
-          # exports that predate the column
-          exclude_from_reports: data["exclude_from_reports"] == true
+          status: importable_account_status(data["status"])
         )
+
+        # Exports include the flag via Account#as_json. Only assign when the
+        # export carries the key: exports that predate the column must not
+        # clobber an opt-out on an already-imported account when a session
+        # reprocesses them, and newly built accounts get the DB default anyway.
+        account.exclude_from_reports = data["exclude_from_reports"] == true if data.key?("exclude_from_reports")
 
         account.save!
 
