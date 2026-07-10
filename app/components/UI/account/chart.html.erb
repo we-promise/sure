@@ -9,7 +9,7 @@
         <% end %>
       </div>
       <div class="flex flex-row gap-2 items-baseline">
-        <%= tag.p view_balance_money.format, class: "text-primary text-3xl font-medium truncate privacy-sensitive" %>
+        <%= tag.p view_balance_display, class: "text-primary text-3xl font-medium truncate privacy-sensitive" %>
 
         <% if converted_balance_money %>
           <%= tag.p converted_balance_money.format, class: "text-sm font-medium text-secondary privacy-sensitive" %>
@@ -21,7 +21,7 @@
       <% if account.supports_trades? %>
         <%= form_with url: account_path(account), method: :get, data: { controller: "auto-submit-form" } do |form| %>
           <%= form.select :chart_view,
-            [[t(".views.total_value"), "balance"], [t(".views.holdings"), "holdings_balance"], [t(".views.cash"), "cash_balance"]],
+            [[t(".views.total_value"), "balance"], [t(".views.holdings"), "holdings_balance"], [t(".views.cash"), "cash_balance"], [t(".views.gains"), "gains"]],
             { selected: view },
             class: "bg-container border border-secondary rounded-lg text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0",
             data: { "auto-submit-form-target": "auto" } %>
