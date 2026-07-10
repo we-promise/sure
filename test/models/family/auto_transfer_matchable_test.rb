@@ -19,6 +19,50 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "does not auto-match transfers when the inflow account opted out" do
+    @credit_card.update!(auto_match_transfers: false)
+
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference "Transfer.count" do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not auto-match transfers when the outflow account opted out" do
+    @depository.update!(auto_match_transfers: false)
+
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference "Transfer.count" do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "opting out one account does not affect auto-matching between other accounts" do
+    @loan.update!(auto_match_transfers: false)
+
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "opted-out accounts still appear in manual match candidates" do
+    @credit_card.update!(auto_match_transfers: false)
+
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    candidates = @family.transfer_match_candidates
+    assert candidates.any? { |c| c.inflow_transaction_id == inflow_entry.entryable_id },
+      "Manual matching candidates should not be filtered by the auto-match opt-out"
+  end
+
   test "auto-matches multi-currency transfers" do
     load_exchange_prices
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)

@@ -314,6 +314,12 @@ class Family::DataImporter
           status: importable_account_status(data["status"])
         )
 
+        # Only assign when the export carries the key: exports that predate the
+        # column must not clobber an opt-out on an already-imported account when
+        # a session reprocesses them, and newly built accounts get the DB
+        # default (true) anyway.
+        account.auto_match_transfers = data["auto_match_transfers"] != false if data.key?("auto_match_transfers")
+
         account.save!
 
         # Set opening balance if we have a historical balance and the import

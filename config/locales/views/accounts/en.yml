@@ -51,6 +51,7 @@ en:
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
       exclude_from_reports: Exclude from all reports
+      auto_match_transfers: Auto-match transfers
     index:
       accounts: Accounts
       manual_accounts:
