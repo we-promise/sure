@@ -84,6 +84,10 @@ class ApiRateLimiter
     ENV.fetch("REDIS_URL", "redis://localhost:6379/0")
   end
 
+  def redis_url
+    self.class.redis_url
+  end
+
   private
 
     def redis_key
