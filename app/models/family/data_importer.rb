@@ -314,6 +314,12 @@ class Family::DataImporter
           status: importable_account_status(data["status"])
         )
 
+        # Exports include the flag via Account#as_json. Only assign when the
+        # export carries the key: exports that predate the column must not
+        # clobber an opt-out on an already-imported account when a session
+        # reprocesses them, and newly built accounts get the DB default anyway.
+        account.exclude_from_reports = data["exclude_from_reports"] == true if data.key?("exclude_from_reports")
+
         account.save!
 
         # Set opening balance if we have a historical balance and the import

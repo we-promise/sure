@@ -31,6 +31,62 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "imports account exclude_from_reports opt-out and defaults it for older exports" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Hidden From Reports",
+          balance: "100.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          exclude_from_reports: true
+        }
+      },
+      {
+        type: "Account",
+        data: {
+          id: "old-account-2",
+          name: "Legacy Export",
+          balance: "100.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert @family.accounts.find_by!(name: "Hidden From Reports").exclude_from_reports?
+    assert_not @family.accounts.find_by!(name: "Legacy Export").exclude_from_reports?
+  end
+
+  test "reimporting a legacy export does not clobber an existing exclude_from_reports opt-out" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Legacy Reimport",
+          balance: "100.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    account = @family.accounts.find_by!(name: "Legacy Reimport")
+    account.update!(exclude_from_reports: true)
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert account.reload.exclude_from_reports?, "Reprocessing a legacy export must not reset the opt-out"
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
