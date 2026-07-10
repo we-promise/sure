@@ -52,6 +52,16 @@ class Family::SyncerTest < ActiveSupport::TestCase
     syncer.perform_sync(family_sync)
   end
 
+  test "post-sync bounds transfer matching to the lookback window" do
+    syncer = Family::Syncer.new(@family)
+
+    @family.expects(:auto_match_transfers!)
+           .with(since_date: Family::Syncer::TRANSFER_MATCHING_LOOKBACK.ago.to_date)
+           .once
+
+    syncer.perform_post_sync
+  end
+
   test "only applies active rules during sync" do
     family_sync = syncs(:family)
 

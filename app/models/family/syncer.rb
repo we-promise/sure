@@ -1,4 +1,11 @@
 class Family::Syncer
+  # Family-wide transfer matching runs after every sync, so it only needs to
+  # consider recently-dated entries — older pairs were already examined by
+  # previous runs. Without a bound the candidate query self-joins the family's
+  # entire entries history (O(N^2) for large families) on every sync.
+  # Account-level syncs still match across full history for their account.
+  TRANSFER_MATCHING_LOOKBACK = 90.days
+
   attr_reader :family
 
   def initialize(family)
@@ -16,7 +23,7 @@ class Family::Syncer
   end
 
   def perform_post_sync
-    family.auto_match_transfers!
+    family.auto_match_transfers!(since_date: TRANSFER_MATCHING_LOOKBACK.ago.to_date)
 
     Rails.logger.info("Applying rules for family #{family.id}")
     family.rules.where(active: true).each do |rule|

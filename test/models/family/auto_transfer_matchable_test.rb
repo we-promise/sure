@@ -147,6 +147,31 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "since_date bounds matching to recently dated entries" do
+    # Old pair, outside the bound
+    create_transaction(date: 100.days.ago.to_date, account: @depository, amount: 500)
+    create_transaction(date: 99.days.ago.to_date, account: @credit_card, amount: -500)
+
+    # Recent pair, inside the bound
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 300)
+    create_transaction(date: Date.current, account: @credit_card, amount: -300)
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!(since_date: 90.days.ago.to_date)
+    end
+
+    assert_equal 300, Transfer.order(created_at: :desc).first.outflow_transaction.entry.amount
+  end
+
+  test "nil since_date matches across full history" do
+    create_transaction(date: 100.days.ago.to_date, account: @depository, amount: 500)
+    create_transaction(date: 99.days.ago.to_date, account: @credit_card, amount: -500)
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "transfer candidate options require valid numeric input" do
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: "soon") }
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: nil) }
@@ -158,6 +183,68 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_nothing_raised do
       @family.transfer_match_candidates(date_window: "4", exchange_rate_tolerance: "0.1")
     end
+  end
+
+  test "since_date requires a date or date-like input" do
+    error = assert_raises(ArgumentError) { @family.transfer_match_candidates(since_date: 90) }
+    assert_equal "since_date must be a date", error.message
+    assert_raises(ArgumentError) { @family.transfer_match_candidates(since_date: "not a date") }
+
+    assert_nothing_raised do
+      @family.transfer_match_candidates(since_date: 7.days.ago.to_date)
+      @family.transfer_match_candidates(since_date: 7.days.ago)
+      @family.transfer_match_candidates(since_date: 7.days.ago.to_date.iso8601)
+    end
+  end
+
+  test "an inflow dated exactly at the widened since_date cutoff is included" do
+    # Widened cutoff = since_date - date_window = 11 days ago; the >= bound is
+    # inclusive, so an inflow dated exactly at the cutoff still matches.
+    outflow = create_transaction(date: 7.days.ago.to_date, account: @depository, amount: 500)
+    inflow = create_transaction(date: 11.days.ago.to_date, account: @credit_card, amount: -500)
+
+    pairs = @family.transfer_match_candidates(since_date: 7.days.ago.to_date).map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    assert_includes pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "matching finds pairs across a wide date_window with since_date" do
+    # 29 days apart: far outside the default 4-day window, so this pair only
+    # matches if the widened window is actually applied.
+    outflow = create_transaction(date: 29.days.ago.to_date, account: @depository, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    pairs = @family.transfer_match_candidates(since_date: 7.days.ago.to_date, date_window: 30).map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    assert_includes pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "a pair whose outflow is recent still matches when its inflow just predates since_date" do
+    # since_date only filters the inflow side in SQL, so the cutoff is widened
+    # by date_window to admit pairs whose outflow sits inside the lookback.
+    outflow = create_transaction(date: 5.days.ago.to_date, account: @depository, amount: 500)
+    inflow = create_transaction(date: 8.days.ago.to_date, account: @credit_card, amount: -500)
+
+    pairs = @family.transfer_match_candidates(since_date: 7.days.ago.to_date).map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    assert_includes pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "a pair entirely before the widened since_date cutoff is excluded" do
+    outflow = create_transaction(date: 14.days.ago.to_date, account: @depository, amount: 500)
+    inflow = create_transaction(date: 13.days.ago.to_date, account: @credit_card, amount: -500)
+
+    pairs = @family.transfer_match_candidates(since_date: 7.days.ago.to_date).map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    refute_includes pairs, [ inflow.entryable_id, outflow.entryable_id ]
   end
 
   test "auto-matched cash to investment assigns investment contribution category" do
