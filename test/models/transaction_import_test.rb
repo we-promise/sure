@@ -103,6 +103,37 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal [ -100, 200, -300 ], @import.entries.order(:date).map(&:amount)
   end
 
+  test "preserves CSV row order for same-date transactions in the transactions list" do
+    import = <<~CSV
+      date,name,amount
+      01/15/2024,First row,100
+      01/15/2024,Second row,200
+      01/15/2024,Third row,300
+    CSV
+
+    @import.update!(
+      account: accounts(:depository),
+      raw_file_str: import,
+      date_col_label: "date",
+      date_format: "%m/%d/%Y",
+      amount_col_label: "amount",
+      name_col_label: "name"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { Entry.count } => 3 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+    # The transactions list renders reverse-chronologically; same-date rows
+    # must keep the file's top-to-bottom order instead of random UUID order.
+    assert_equal [ "First row", "Second row", "Third row" ],
+                 @import.entries.reverse_chronological.map(&:name)
+  end
+
   test "csv_template uses ISO dates" do
     first_row = @import.csv_template.first
 

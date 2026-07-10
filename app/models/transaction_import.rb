@@ -7,7 +7,14 @@ class TransactionImport < Import
       updated_entries = []
       claimed_entry_ids = Set.new # Track entries we've already claimed in this import
 
-      rows.each_with_index do |row, index|
+      # Bulk-imported entries all share the same insert timestamp, and UUID ids
+      # are random, so same-date rows would render in arbitrary order. Stamp
+      # each entry with a per-row offset (descending, since the transactions
+      # list is newest-first within a date) so the file's row order is
+      # preserved on screen (issue #2603).
+      import_time = Time.current
+
+      rows.ordered.each_with_index do |row, index|
         mapped_account = if account
           account
         else
@@ -65,7 +72,8 @@ class TransactionImport < Import
               currency: effective_currency,
               notes: row.notes,
               import: self,
-              import_locked: true
+              import_locked: true,
+              created_at: import_time - (index * 0.001)
             )
           )
         end
