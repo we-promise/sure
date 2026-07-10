@@ -338,4 +338,102 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal 1, linked_account.balances.where(currency: "USD").count
     assert_equal 0, linked_account.balances.where(currency: "EUR").count
   end
+
+  test "gains series computes unrealized gains from holdings with locf" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    security = securities(:aapl)
+
+    # 10 shares with avg cost of $90/share
+    create_holding(account: account, security: security, date: 3.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    create_holding(account: account, security: security, date: 1.day.ago.to_date, qty: 10, price: 110, cost_basis: 90)
+    create_holding(account: account, security: security, date: Date.current, qty: 10, price: 105, cost_basis: 90)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: 4.days.ago.to_date, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    expected = [
+      0, # No holdings yet
+      100, # 1000 - 900
+      100, # Last observation carried forward
+      200, # 1100 - 900
+      150 # 1050 - 900
+    ]
+
+    assert_equal expected, builder.gains_series.map { |v| v.value.amount }
+  end
+
+  test "gains series treats unusable cost basis as zero gain" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+
+    # Unlocked zero cost basis (provider "unknown") -> no gain contribution
+    create_holding(account: account, security: securities(:aapl), date: Date.current, qty: 10, price: 100, cost_basis: 0)
+    # Nil cost basis -> no gain contribution
+    create_holding(account: account, security: securities(:msft), date: Date.current, qty: 5, price: 50, cost_basis: nil)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    assert_equal [ 0 ], builder.gains_series.map { |v| v.value.amount }
+
+    # Locked zero cost basis (e.g. airdrop) is trusted -> full amount is gain
+    account.holdings.where(security: securities(:aapl)).update_all(cost_basis_locked: true)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    assert_equal [ 1000 ], builder.gains_series.map { |v| v.value.amount }
+  end
+
+  test "gains series values carry trend vs previous point" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    security = securities(:aapl)
+
+    create_holding(account: account, security: security, date: 1.day.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    create_holding(account: account, security: security, date: Date.current, qty: 10, price: 110, cost_basis: 90)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: 1.day.ago.to_date, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    series = builder.gains_series
+
+    # First point has no prior point, so trend is flat
+    assert_equal 100, series.values.first.trend.previous.amount
+    assert_equal 100, series.values.first.trend.current.amount
+
+    assert_equal 100, series.values.last.trend.previous.amount
+    assert_equal 200, series.values.last.trend.current.amount
+  end
+
+  private
+    def create_holding(account:, security:, date:, qty:, price:, cost_basis:)
+      Holding.create!(
+        account: account,
+        security: security,
+        date: date,
+        qty: qty,
+        price: price,
+        amount: qty * price,
+        currency: account.currency,
+        cost_basis: cost_basis
+      )
+    end
 end

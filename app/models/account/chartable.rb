@@ -7,7 +7,7 @@ module Account::Chartable
   end
 
   def balance_series(period: Period.last_30_days, view: :balance, interval: nil)
-    raise ArgumentError, "Invalid view type" unless [ :balance, :cash_balance, :holdings_balance ].include?(view.to_sym)
+    raise ArgumentError, "Invalid view type" unless [ :balance, :cash_balance, :holdings_balance, :gains ].include?(view.to_sym)
 
     @balance_series ||= {}
 

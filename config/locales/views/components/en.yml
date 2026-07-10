@@ -70,8 +70,10 @@ en:
           holdings_value: Holdings value
           remaining_principal_balance: Remaining principal balance
           total_account_value: Total account value
+          total_gains: Total gains
         views:
           cash: Cash
+          gains: Gains / ROI
           holdings: Holdings
           total_value: Total value
         vs_available_history: vs. available history
