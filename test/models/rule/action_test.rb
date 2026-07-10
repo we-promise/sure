@@ -220,6 +220,95 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal category, transfer.outflow_transaction.category
   end
 
+  test "set_as_transfer_or_payment supersedes a pending auto-match to a different account" do
+    other_account = @family.accounts.create!(name: "Wrong match", balance: 1000, currency: "USD", accountable: Depository.new)
+    target_account = @family.accounts.create!(name: "Rule target", balance: 1000, currency: "USD", accountable: Depository.new)
+
+    counterpart_txn = create_transaction(date: Date.current, account: other_account, amount: -100, name: "Wrong counterpart").transaction
+
+    pending_transfer = Transfer.create!(
+      inflow_transaction: counterpart_txn,
+      outflow_transaction: @txn1,
+      status: "pending"
+    )
+    # Mirror what the auto-matcher does when it proposes a match
+    counterpart_txn.update!(kind: "funds_movement")
+    @txn1.update!(kind: "funds_movement")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_as_transfer_or_payment",
+      value: target_account.id
+    )
+
+    action.apply(Transaction.where(id: @txn1.id))
+
+    assert_not Transfer.exists?(pending_transfer.id), "Pending auto-match should be removed"
+    assert RejectedTransfer.exists?(inflow_transaction_id: counterpart_txn.id, outflow_transaction_id: @txn1.id),
+      "Superseded auto-match should be rejected so it is not re-proposed"
+    assert_equal "standard", counterpart_txn.reload.kind
+
+    transfer = Transfer.find_by(outflow_transaction_id: @txn1.id)
+    assert transfer.present?, "Rule should create its transfer"
+    assert transfer.confirmed?
+    assert_equal target_account, transfer.to_account
+  end
+
+  test "set_as_transfer_or_payment confirms a pending auto-match to the target account" do
+    target_account = @family.accounts.create!(name: "Rule target", balance: 1000, currency: "USD", accountable: Depository.new)
+
+    counterpart_txn = create_transaction(date: Date.current, account: target_account, amount: -100, name: "Real counterpart").transaction
+
+    pending_transfer = Transfer.create!(
+      inflow_transaction: counterpart_txn,
+      outflow_transaction: @txn1,
+      status: "pending"
+    )
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_as_transfer_or_payment",
+      value: target_account.id
+    )
+
+    assert_no_difference [ "Transfer.count", "target_account.entries.count" ] do
+      action.apply(Transaction.where(id: @txn1.id))
+    end
+
+    assert pending_transfer.reload.confirmed?, "Pending auto-match to the target account should be confirmed"
+    assert_equal "funds_movement", @txn1.reload.kind
+    assert_equal "funds_movement", counterpart_txn.reload.kind
+    assert_not RejectedTransfer.exists?(inflow_transaction_id: counterpart_txn.id, outflow_transaction_id: @txn1.id)
+  end
+
+  test "set_as_transfer_or_payment leaves confirmed transfers untouched" do
+    other_account = @family.accounts.create!(name: "Existing destination", balance: 1000, currency: "USD", accountable: Depository.new)
+    target_account = @family.accounts.create!(name: "Rule target", balance: 1000, currency: "USD", accountable: Depository.new)
+
+    counterpart_txn = create_transaction(date: Date.current, account: other_account, amount: -100, name: "Confirmed counterpart").transaction
+
+    confirmed_transfer = Transfer.create!(
+      inflow_transaction: counterpart_txn,
+      outflow_transaction: @txn1,
+      status: "confirmed"
+    )
+    counterpart_txn.update!(kind: "funds_movement")
+    @txn1.update!(kind: "funds_movement")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_as_transfer_or_payment",
+      value: target_account.id
+    )
+
+    assert_no_difference "Transfer.count" do
+      action.apply(Transaction.where(id: @txn1.id))
+    end
+
+    assert Transfer.exists?(confirmed_transfer.id)
+    assert_equal other_account, confirmed_transfer.reload.to_account
+  end
+
   test "set_investment_activity_label ignores invalid values" do
     action = Rule::Action.new(
       rule: @transaction_rule,
