@@ -153,10 +153,10 @@
                 <div class="text-secondary text-xs font-normal">
                   <% if transaction.transfer? %>
                     <span class="text-secondary">
-                      <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> • 
+                      <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> •
                       <% if transaction.transfer.present? %>
                         <% counterpart = transaction.transfer_as_outflow.present? ? transaction.transfer.to_account : transaction.transfer.from_account %>
-                        <% if counterpart.present? && Current.user.accessible_accounts.exists?(counterpart.id) %>
+                        <% if counterpart.present? && @accessible_account_ids&.include?(counterpart.id) %>
                           <% if transaction.transfer_as_outflow.present? %>
                             <%= entry.account.name %> → <%= counterpart.name %>
                           <% else %>
