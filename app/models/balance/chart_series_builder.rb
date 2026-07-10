@@ -116,6 +116,8 @@ class Balance::ChartSeriesBuilder
       raise
     end
 
+    # Executes the gains query and memoizes the per-date rows
+    # (date, end_gains, start_gains) used to build the gains series.
     def gains_query_data
       @gains_query_data ||= Balance.find_by_sql([
         gains_query,
