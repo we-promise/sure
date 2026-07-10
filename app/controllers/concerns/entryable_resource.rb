@@ -17,6 +17,7 @@ module EntryableResource
 
     @entry = Current.family.entries.new(
       account: account,
+      date: Date.current,
       currency: account ? account.currency : Current.family.currency,
       entryable: entryable
     )

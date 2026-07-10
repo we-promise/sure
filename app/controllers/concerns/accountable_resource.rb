@@ -39,7 +39,7 @@ module AccountableResource
       account_params[:opening_balance_date].presence&.to_date
     rescue Date::Error
       nil
-    end || (Time.zone.today - 2.years)
+    end || Date.current
     Account.transaction do
       @account = Current.family.accounts.create_and_sync(
         account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),

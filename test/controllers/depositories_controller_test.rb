@@ -8,6 +8,24 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
+  test "new form defaults opening balance date to today" do
+    get new_depository_path
+
+    assert_response :success
+    assert_select "input[name='account[opening_balance_date]'][value='#{Date.current}']"
+  end
+
+  test "create defaults opening balance date to today when omitted" do
+    assert_difference -> { Account.count } => 1 do
+      post depositories_path, params: {
+        account: { name: "Today Checking", currency: "USD", balance: 100, accountable_type: "Depository" }
+      }
+    end
+
+    account = Account.order(:created_at).last
+    assert_equal Date.current, account.entries.valuations.order(:created_at).last.date
+  end
+
   test "create falls back to the stored return_to when no form param is present" do
     get new_account_path(return_to: transactions_path) # StoreLocation captures it into the session
 

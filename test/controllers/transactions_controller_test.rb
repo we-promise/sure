@@ -8,6 +8,13 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:transaction)
   end
 
+  test "new form defaults date to today" do
+    get new_transaction_url
+
+    assert_response :success
+    assert_select "input[name='entry[date]'][value='#{Date.current}']"
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {
