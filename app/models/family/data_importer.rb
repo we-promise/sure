@@ -311,7 +311,10 @@ class Family::DataImporter
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
-          status: importable_account_status(data["status"])
+          status: importable_account_status(data["status"]),
+          # Exports include the flag via Account#as_json; default to false for
+          # exports that predate the column
+          exclude_from_reports: data["exclude_from_reports"] == true
         )
 
         account.save!
