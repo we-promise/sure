@@ -38,4 +38,20 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     created = Account.order(:created_at).last
     assert_redirected_to account_path(created) # not the external URL
   end
+
+  test "update persists the auto_match_transfers toggle" do
+    assert @account.auto_match_transfers?
+
+    patch depository_path(@account), params: {
+      account: { auto_match_transfers: "0" }
+    }
+
+    assert_not @account.reload.auto_match_transfers?
+
+    patch depository_path(@account), params: {
+      account: { auto_match_transfers: "1" }
+    }
+
+    assert @account.reload.auto_match_transfers?
+  end
 end

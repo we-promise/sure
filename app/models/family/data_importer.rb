@@ -311,7 +311,9 @@ class Family::DataImporter
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
-          status: importable_account_status(data["status"])
+          status: importable_account_status(data["status"]),
+          # Default to true for exports that predate the column
+          auto_match_transfers: data["auto_match_transfers"] != false
         )
 
         account.save!
