@@ -62,6 +62,31 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert @family.accounts.find_by!(name: "Legacy Export").auto_match_transfers?
   end
 
+  test "reimporting a legacy export does not clobber an existing auto_match_transfers opt-out" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Legacy Reimport",
+          balance: "100.00",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    account = @family.accounts.find_by!(name: "Legacy Reimport")
+    account.update!(auto_match_transfers: false)
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert_not account.reload.auto_match_transfers?, "Reprocessing a legacy export must not reset the opt-out"
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {

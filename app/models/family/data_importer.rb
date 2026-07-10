@@ -311,10 +311,14 @@ class Family::DataImporter
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
-          status: importable_account_status(data["status"]),
-          # Default to true for exports that predate the column
-          auto_match_transfers: data["auto_match_transfers"] != false
+          status: importable_account_status(data["status"])
         )
+
+        # Only assign when the export carries the key: exports that predate the
+        # column must not clobber an opt-out on an already-imported account when
+        # a session reprocesses them, and newly built accounts get the DB
+        # default (true) anyway.
+        account.auto_match_transfers = data["auto_match_transfers"] != false if data.key?("auto_match_transfers")
 
         account.save!
 
