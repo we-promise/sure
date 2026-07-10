@@ -15,6 +15,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     count_modified_resources(scope) do |txn|
       entry = txn.entry
       existing_transfer = txn.transfer
+      superseded_transfer = nil
 
       if existing_transfer&.pending?
         if counterpart_account(existing_transfer, txn)&.id == target_account.id
@@ -23,23 +24,34 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
           confirm_transfer!(existing_transfer)
           next true
         else
+          superseded_transfer = existing_transfer
+        end
+      end
+
+      next false if superseded_transfer.nil? && txn.transfer?
+
+      transfer = nil
+      Transfer.transaction do
+        if superseded_transfer
           # Rules take priority over unconfirmed auto-match proposals (issue #2596).
           # Rejecting (not just destroying) prevents the auto-matcher from
-          # re-proposing the same pair on the next sync.
-          existing_transfer.reject!
+          # re-proposing the same pair on the next sync. Rejecting in the same
+          # transaction as the new transfer's insert leaves no window for a
+          # concurrent auto_match_transfers! run to re-occupy this
+          # transaction's transfer slot.
+          superseded_transfer.reject!
           txn.reload
         end
-      end
 
-      unless txn.transfer?
         transfer = build_transfer(target_account, entry)
-        Transfer.transaction do
-          transfer.save!
-          apply_transfer_kinds(transfer)
-        end
-
-        transfer.sync_account_later
+        transfer.save!
+        apply_transfer_kinds(transfer)
       end
+
+      transfer.sync_account_later
+      # Re-sync the superseded counterpart's account so its balances don't go stale
+      superseded_transfer&.sync_account_later
+      true
     end
   end
 
