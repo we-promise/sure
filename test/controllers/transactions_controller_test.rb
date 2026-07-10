@@ -187,6 +187,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".split-group > div.opacity-50 p.privacy-sensitive", count: 1
   end
 
+  test "day group header shows a converted base-currency total for multi-currency days" do
+    # A date of its own so fixture entries don't share the day group
+    day = 100.days.ago.to_date
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.2, date: day)
+
+    create_transaction(date: day, account: accounts(:depository), amount: 100, name: "USD expense")
+    create_transaction(date: day, account: accounts(:depository), amount: 50, currency: "EUR", name: "EUR expense")
+
+    get transactions_url(q: { start_date: day, end_date: day })
+
+    assert_response :success
+    assert_select "#entry-group-#{day}-totals" do |elements|
+      text = elements.first.text.squish
+      assert_includes text, "-$160.00", "Header should lead with the converted base-currency day total"
+      assert_includes text, "(", "Header should keep the per-currency breakdown"
+    end
+  end
+
   test "can paginate" do
   family = families(:empty)
   sign_in users(:empty)

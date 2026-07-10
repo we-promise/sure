@@ -53,6 +53,38 @@ module EntriesHelper
     end.compact.join.html_safe
   end
 
+  # Day-group total converted to the family's base currency (issue #2622).
+  #
+  # Returns nil when there is nothing to convert (all entries are already in
+  # the base currency) or when a needed exchange rate is not cached locally —
+  # callers should fall back to the per-currency breakdown.
+  def entry_group_base_currency_total(entries, date)
+    family = Current.family
+    return nil unless family
+
+    items = entries.reject do |entry|
+      entry.entryable_type == "Transaction" && entry.entryable.transfer?
+    end
+
+    currencies = items.map(&:currency).uniq
+    return nil if currencies.empty? || currencies == [ family.currency ]
+
+    total = items.group_by(&:currency).sum(Money.new(0, family.currency)) do |currency, group|
+      subtotal = group.sum(&:amount_money)
+
+      if currency == family.currency
+        subtotal
+      else
+        rate = ExchangeRate.find_cached_rate(from: currency, to: family.currency, date: date)
+        return nil if rate.nil?
+
+        subtotal.exchange_to(family.currency, custom_rate: rate.rate)
+      end
+    end
+
+    -total
+  end
+
   def entry_name_detailed(entry)
     [
       entry.date,

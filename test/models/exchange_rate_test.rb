@@ -95,4 +95,29 @@ class ExchangeRateTest < ActiveSupport::TestCase
     result = ExchangeRate.find_or_fetch_rate(from: "USD", to: "JPY", date: Date.current)
     assert_equal 155.0, result.rate
   end
+
+  test "find_cached_rate returns the exact-date rate without touching the provider" do
+    rate = ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: Date.current, rate: 151.0)
+
+    @provider.expects(:fetch_exchange_rate).never
+
+    assert_equal rate, ExchangeRate.find_cached_rate(from: "USD", to: "JPY", date: Date.current)
+  end
+
+  test "find_cached_rate falls back to the nearest rate within the lookback window" do
+    nearest = ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: 3.days.ago.to_date, rate: 150.0)
+
+    @provider.expects(:fetch_exchange_rate).never
+
+    assert_equal nearest, ExchangeRate.find_cached_rate(from: "USD", to: "JPY", date: Date.current)
+  end
+
+  test "find_cached_rate returns nil outside the lookback window instead of calling the provider" do
+    old_date = (ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS + 1).days.ago.to_date
+    ExchangeRate.create!(from_currency: "USD", to_currency: "JPY", date: old_date, rate: 140.0)
+
+    @provider.expects(:fetch_exchange_rate).never
+
+    assert_nil ExchangeRate.find_cached_rate(from: "USD", to: "JPY", date: Date.current)
+  end
 end
