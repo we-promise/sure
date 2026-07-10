@@ -77,8 +77,7 @@ class Account::OpeningBalanceManagerTest < ActiveSupport::TestCase
     end
 
     opening_anchor = @depository_account.valuations.opening_anchor.first
-    # Default should be MIN(1 day before oldest entry, 2 years ago) = 2 years ago
-    assert_equal 2.years.ago.to_date, opening_anchor.entry.date
+    assert_equal 31.days.ago.to_date, opening_anchor.entry.date
 
     # Test with old entry (more than 2 years ago)
     loan_account = accounts(:loan)
@@ -99,7 +98,6 @@ class Account::OpeningBalanceManagerTest < ActiveSupport::TestCase
     end
 
     loan_anchor = loan_account.valuations.opening_anchor.first
-    # Default should be MIN(3 years ago - 1 day, 2 years ago) = 3 years ago - 1 day
     assert_equal (3.years.ago.to_date - 1.day), loan_anchor.entry.date
 
     # Test with account that has no entries
@@ -113,8 +111,7 @@ class Account::OpeningBalanceManagerTest < ActiveSupport::TestCase
     end
 
     opening_anchor_no_entries = property_account.valuations.opening_anchor.first
-    # Default should be 2 years ago when no entries exist
-    assert_equal 2.years.ago.to_date, opening_anchor_no_entries.entry.date
+    assert_equal Date.current, opening_anchor_no_entries.entry.date
   end
 
   test "updates existing anchor" do

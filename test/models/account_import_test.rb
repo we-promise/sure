@@ -173,13 +173,10 @@ class AccountImportTest < ActiveSupport::TestCase
 
     assert_equal "complete", @import.status
 
-    # Verify account was created with default date (2 years ago or 1 day before oldest entry)
     account = @import.accounts.first
     valuation = account.valuations.opening_anchor.first
 
-    # Default date should be 2 years ago when there are no other entries
-    expected_default_date = 2.years.ago.to_date
-    assert_equal expected_default_date, valuation.entry.date
+    assert_equal Date.current, valuation.entry.date
   end
 
   test "column_keys returns expected keys including date" do
