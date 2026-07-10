@@ -398,6 +398,32 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal [ 1000 ], builder.gains_series.map { |v| v.value.amount }
   end
 
+  test "gains series carries cost basis forward over gap-filled holdings" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    security = securities(:aapl)
+
+    create_holding(account: account, security: security, date: 2.days.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    # Gap-filled rows (weekends, price gaps) are persisted without cost_basis
+    create_holding(account: account, security: security, date: 1.day.ago.to_date, qty: 10, price: 100, cost_basis: nil)
+    create_holding(account: account, security: security, date: Date.current, qty: 10, price: 110, cost_basis: nil)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: 2.days.ago.to_date, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    expected = [
+      100, # 1000 - 900
+      100, # basis carried forward from 2 days ago, not zeroed
+      200 # 1100 - 900
+    ]
+
+    assert_equal expected, builder.gains_series.map { |v| v.value.amount }
+  end
+
   test "gains series values carry trend vs previous point" do
     account = accounts(:investment)
     account.holdings.destroy_all

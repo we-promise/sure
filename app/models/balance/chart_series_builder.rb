@@ -257,9 +257,8 @@ class Balance::ChartSeriesBuilder
             d.date,
             COALESCE(SUM(
               CASE
-                WHEN last_h.cost_basis IS NOT NULL
-                  AND (last_h.cost_basis_locked OR last_h.cost_basis > 0)
-                THEN (last_h.amount - (last_h.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
+                WHEN last_basis.cost_basis IS NOT NULL
+                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
                 ELSE 0
               END
             ), 0) AS gains
@@ -268,7 +267,7 @@ class Balance::ChartSeriesBuilder
             ON accounts.active_until_date IS NULL OR d.date <= accounts.active_until_date
           LEFT JOIN account_securities sec ON sec.account_id = accounts.id
           LEFT JOIN LATERAL (
-            SELECT h.amount, h.qty, h.cost_basis, h.cost_basis_locked, h.currency
+            SELECT h.amount, h.qty, h.currency
             FROM holdings h
             WHERE h.account_id = accounts.id
               AND h.security_id = sec.security_id
@@ -276,6 +275,21 @@ class Balance::ChartSeriesBuilder
             ORDER BY h.date DESC
             LIMIT 1
           ) last_h ON TRUE
+          -- Cost basis is looked up separately from the latest row that has a usable one:
+          -- gap-filled holding rows (weekends, price-history gaps) are persisted without
+          -- cost_basis even though the position and basis are unchanged, so the basis is
+          -- carried forward from the last real snapshot instead of zeroing those points.
+          LEFT JOIN LATERAL (
+            SELECT h2.cost_basis
+            FROM holdings h2
+            WHERE h2.account_id = accounts.id
+              AND h2.security_id = sec.security_id
+              AND h2.date <= d.date
+              AND h2.cost_basis IS NOT NULL
+              AND (h2.cost_basis_locked OR h2.cost_basis > 0)
+            ORDER BY h2.date DESC
+            LIMIT 1
+          ) last_basis ON TRUE
           LEFT JOIN LATERAL (
             SELECT COALESCE(
               (SELECT er.rate
