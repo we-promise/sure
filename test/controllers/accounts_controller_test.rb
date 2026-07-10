@@ -51,6 +51,23 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(@account, :container)}", count: 0
   end
 
+  test "statement links target the top frame so full-page views render outside the tab frame" do
+    statement = AccountStatement.create_from_upload!(
+      family: @user.family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv")
+    )
+
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+    # Filename link + eye icon both navigate to a full page rendered with the
+    # settings layout, which has no matching frame — they must escape the
+    # statements tab turbo frame or Turbo drops the response ("Content missing").
+    assert_select "a[href='#{account_statement_path(statement)}'][data-turbo-frame='_top']", count: 2
+    assert_select "a[href='#{account_statements_path}'][data-turbo-frame='_top']", count: 1
+  end
+
   test "statements tab filters historical coverage by year" do
     account = Account.create!(
       family: @user.family,
