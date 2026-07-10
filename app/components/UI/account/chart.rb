@@ -15,6 +15,7 @@ class UI::Account::Chart < ApplicationComponent
     account.balance_money - account.cash_balance_money
   end
 
+  # Money value shown as the main indicator for the selected chart view.
   def view_balance_money
     case view
     when "balance"
@@ -37,6 +38,7 @@ class UI::Account::Chart < ApplicationComponent
     "+#{money.format}"
   end
 
+  # Label displayed above the main indicator, based on account type and chart view.
   def title
     case account.accountable_type
     when "Investment", "Crypto"
@@ -67,6 +69,8 @@ class UI::Account::Chart < ApplicationComponent
     account.currency != account.family.currency
   end
 
+  # Main indicator converted to the family currency for foreign-currency accounts,
+  # or nil when no conversion applies (same currency or missing exchange rate).
   def converted_balance_money
     return nil unless foreign_currency?
 
