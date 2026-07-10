@@ -81,6 +81,18 @@ class EntriesHelperTest < ActionView::TestCase
     assert_equal Money.new(-75, "USD"), total
   end
 
+  test "entry_group_base_currency_total returns nil when the account-to-base rate is missing on the transaction-rate path" do
+    # The transaction's own rate covers GBP -> EUR, but with no cached
+    # EUR -> USD rate the second leg cannot be converted — fall back to the
+    # per-currency breakdown instead of showing a partial total.
+    eur_account = @family.accounts.create!(name: "EUR account no rate", balance: 1000, currency: "EUR", accountable: Depository.new)
+
+    entry = create_transaction(date: Date.current, account: eur_account, amount: 50, currency: "GBP")
+    entry.entryable.update!(exchange_rate: 1.2)
+
+    assert_nil entry_group_base_currency_total([ entry ], Date.current)
+  end
+
   test "entry_group_base_currency_total chains a transaction rate through the account currency" do
     # The transaction's own rate converts GBP -> EUR (its account's currency);
     # the cached market rate finishes the EUR -> USD leg.
