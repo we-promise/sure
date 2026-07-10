@@ -59,4 +59,39 @@ class EntriesHelperTest < ActionView::TestCase
 
     assert_equal Money.new(-60, "USD"), total
   end
+
+  test "entry_group_base_currency_total honors a transaction's own exchange rate" do
+    # No ExchangeRate rows at all — the transaction's stored rate must be enough
+    entry = create_transaction(date: Date.current, account: @account, amount: 50, currency: "EUR")
+    entry.entryable.update!(exchange_rate: 1.5)
+
+    total = entry_group_base_currency_total([ entry ], Date.current)
+
+    assert_equal Money.new(-75, "USD"), total
+  end
+
+  test "entry_group_base_currency_total prefers the transaction's rate over a cached market rate" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.2, date: Date.current)
+
+    entry = create_transaction(date: Date.current, account: @account, amount: 50, currency: "EUR")
+    entry.entryable.update!(exchange_rate: 1.5)
+
+    total = entry_group_base_currency_total([ entry ], Date.current)
+
+    assert_equal Money.new(-75, "USD"), total
+  end
+
+  test "entry_group_base_currency_total chains a transaction rate through the account currency" do
+    # The transaction's own rate converts GBP -> EUR (its account's currency);
+    # the cached market rate finishes the EUR -> USD leg.
+    eur_account = @family.accounts.create!(name: "EUR account", balance: 1000, currency: "EUR", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.1, date: Date.current)
+
+    entry = create_transaction(date: Date.current, account: eur_account, amount: 50, currency: "GBP")
+    entry.entryable.update!(exchange_rate: 1.2)
+
+    total = entry_group_base_currency_total([ entry ], Date.current)
+
+    assert_equal Money.new(-66, "USD"), total
+  end
 end

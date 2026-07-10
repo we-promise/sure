@@ -69,16 +69,29 @@ module EntriesHelper
     currencies = items.map(&:currency).uniq
     return nil if currencies.empty? || currencies == [ family.currency ]
 
-    total = items.group_by(&:currency).sum(Money.new(0, family.currency)) do |currency, group|
-      subtotal = group.sum(&:amount_money)
+    market_rates = {}
 
-      if currency == family.currency
-        subtotal
-      else
-        rate = ExchangeRate.find_cached_rate(from: currency, to: family.currency, date: date)
+    total = items.sum(Money.new(0, family.currency)) do |entry|
+      next entry.amount_money if entry.currency == family.currency
+
+      # A transaction can carry its own rate (entry currency -> account
+      # currency), which is what balance syncing uses to value the entry —
+      # honor it so the day total agrees with the account's converted amounts.
+      custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
+
+      if custom_rate.present?
+        in_account_currency = Money.new(entry.amount * custom_rate, entry.account.currency)
+        next in_account_currency if entry.account.currency == family.currency
+
+        rate = market_rates[entry.account.currency] ||= ExchangeRate.find_cached_rate(from: entry.account.currency, to: family.currency, date: date)
         return nil if rate.nil?
 
-        subtotal.exchange_to(family.currency, custom_rate: rate.rate)
+        in_account_currency.exchange_to(family.currency, custom_rate: rate.rate)
+      else
+        rate = market_rates[entry.currency] ||= ExchangeRate.find_cached_rate(from: entry.currency, to: family.currency, date: date)
+        return nil if rate.nil?
+
+        entry.amount_money.exchange_to(family.currency, custom_rate: rate.rate)
       end
     end
 

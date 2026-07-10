@@ -11,9 +11,10 @@ module ExchangeRate::Provided
     # Maximum number of days to look back for a cached rate before calling the provider.
     NEAREST_RATE_LOOKBACK_DAYS = 5
 
-    # Database-only lookup: the exact date first, then the nearest cached rate
-    # within the lookback window. Never calls the provider, so it is safe to
-    # use in request/render paths.
+    # Database-only lookup: the exact-date rate when one exists (the range's
+    # upper bound wins the descending order), otherwise the nearest cached
+    # rate within the lookback window. Never calls the provider, so it is
+    # safe to use in request/render paths.
     #
     # Reusing the nearest recently-cached rate also matters for the fetch path:
     # providers like Yahoo Finance return the most recent trading-day rate
@@ -21,11 +22,10 @@ module ExchangeRate::Provided
     # subsequent requests for the weekend date always miss the exact lookup
     # and trigger redundant API calls.
     def find_cached_rate(from:, to:, date: Date.current)
-      find_by(from_currency: from, to_currency: to, date: date) ||
-        where(from_currency: from, to_currency: to)
-          .where(date: (date - NEAREST_RATE_LOOKBACK_DAYS)..date)
-          .order(date: :desc)
-          .first
+      where(from_currency: from, to_currency: to)
+        .where(date: (date - NEAREST_RATE_LOOKBACK_DAYS)..date)
+        .order(date: :desc)
+        .first
     end
 
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
