@@ -899,4 +899,36 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal family.accounts.pluck(:id).sort,
       AccountShare.where(user: invitee).pluck(:account_id).sort
   end
+
+  test "mobile SSO onboarding via invitation shares nothing when family sharing is private" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "private")
+    invitation = family.invitations.create!(
+      email: "mobile-private@example.com", role: "member", inviter: users(:family_admin)
+    )
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "openid_connect",
+      uid: "mobile-private-uid-1",
+      email: invitation.email,
+      first_name: "Mobile",
+      last_name: "Private",
+      name: "Mobile Private",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    post "/api/v1/auth/sso_create_account", params: {
+      linking_code: linking_code,
+      first_name: "Mobile",
+      last_name: "Private"
+    }
+
+    assert_response :success
+    invitee = User.find_by(email: invitation.email)
+    assert_not_nil invitee
+    assert_equal family.id, invitee.family_id
+    assert_equal 0, AccountShare.where(user: invitee).count
+  end
 end

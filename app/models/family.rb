@@ -188,6 +188,10 @@ class Family < ApplicationRecord
   # there is nothing to share, and idempotent on re-run.
   def auto_share_existing_accounts_with(user)
     return unless share_all_by_default?
+    # Load-bearing security guard: insert_all below bypasses AccountShare's
+    # user_in_same_family / cannot_share_with_owner validations, so this
+    # membership check is the ONLY thing preventing cross-family sharing.
+    # Do not drop it when refactoring.
     return unless user&.persisted? && user.family_id == id
 
     permission = user.guest? ? "read_only" : "read_write"
