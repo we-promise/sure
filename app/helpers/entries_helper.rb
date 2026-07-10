@@ -53,6 +53,51 @@ module EntriesHelper
     end.compact.join.html_safe
   end
 
+  # Day-group total converted to the family's base currency (issue #2622).
+  #
+  # Returns nil when there is nothing to convert (all entries are already in
+  # the base currency) or when a needed exchange rate is not cached locally —
+  # callers should fall back to the per-currency breakdown.
+  def entry_group_base_currency_total(entries, date)
+    family = Current.family
+    return nil unless family
+
+    items = entries.reject do |entry|
+      entry.entryable_type == "Transaction" && entry.entryable.transfer?
+    end
+
+    currencies = items.map(&:currency).uniq
+    return nil if currencies.empty? || currencies == [ family.currency ]
+
+    market_rates = {}
+
+    total = items.sum(Money.new(0, family.currency)) do |entry|
+      next entry.amount_money if entry.currency == family.currency
+
+      # A transaction can carry its own rate (entry currency -> account
+      # currency), which is what balance syncing uses to value the entry —
+      # honor it so the day total agrees with the account's converted amounts.
+      custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
+
+      if custom_rate.present?
+        in_account_currency = Money.new(entry.amount * custom_rate, entry.account.currency)
+        next in_account_currency if entry.account.currency == family.currency
+
+        rate = market_rates[entry.account.currency] ||= ExchangeRate.find_cached_rate(from: entry.account.currency, to: family.currency, date: date)
+        return nil if rate.nil?
+
+        in_account_currency.exchange_to(family.currency, custom_rate: rate.rate)
+      else
+        rate = market_rates[entry.currency] ||= ExchangeRate.find_cached_rate(from: entry.currency, to: family.currency, date: date)
+        return nil if rate.nil?
+
+        entry.amount_money.exchange_to(family.currency, custom_rate: rate.rate)
+      end
+    end
+
+    -total
+  end
+
   def entry_name_detailed(entry)
     [
       entry.date,

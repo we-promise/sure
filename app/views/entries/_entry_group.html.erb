@@ -20,7 +20,14 @@
 
     <% if totals %>
       <div id="entry-group-<%= date %>-totals" class="privacy-sensitive">
-        <%= totals_by_currency(collection: entries, money_method: :amount_money, negate: true) %>
+        <% base_currency_total = entry_group_base_currency_total(entries, date) %>
+        <% if base_currency_total %>
+          <% per_currency_breakdown = totals_by_currency(collection: entries, money_method: :amount_money, negate: true) %>
+          <span title="<%= per_currency_breakdown %>"><%= format_money(base_currency_total) %></span>
+          <span class="text-tertiary hidden lg:inline">(<%= per_currency_breakdown %>)</span>
+        <% else %>
+          <%= totals_by_currency(collection: entries, money_method: :amount_money, negate: true) %>
+        <% end %>
       </div>
     <% end %>
   </div>

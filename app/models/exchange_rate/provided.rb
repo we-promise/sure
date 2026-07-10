@@ -11,20 +11,26 @@ module ExchangeRate::Provided
     # Maximum number of days to look back for a cached rate before calling the provider.
     NEAREST_RATE_LOOKBACK_DAYS = 5
 
-    def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
-      rate = find_by(from_currency: from, to_currency: to, date: date)
-      return rate if rate.present?
+    # Database-only lookup: the exact-date rate when one exists (the range's
+    # upper bound wins the descending order), otherwise the nearest cached
+    # rate within the lookback window. Never calls the provider, so it is
+    # safe to use in request/render paths.
+    #
+    # Reusing the nearest recently-cached rate also matters for the fetch path:
+    # providers like Yahoo Finance return the most recent trading-day rate
+    # (e.g. Friday for a Saturday request) and save it under that date, so
+    # subsequent requests for the weekend date always miss the exact lookup
+    # and trigger redundant API calls.
+    def find_cached_rate(from:, to:, date: Date.current)
+      where(from_currency: from, to_currency: to)
+        .where(date: (date - NEAREST_RATE_LOOKBACK_DAYS)..date)
+        .order(date: :desc)
+        .first
+    end
 
-      # Reuse the nearest recently-cached rate before hitting the provider.
-      # Providers like Yahoo Finance return the most recent trading-day rate
-      # (e.g. Friday for a Saturday request) and save it under that date, so
-      # subsequent requests for the weekend date always miss the exact lookup
-      # and trigger redundant API calls.
-      nearest = where(from_currency: from, to_currency: to)
-                  .where(date: (date - NEAREST_RATE_LOOKBACK_DAYS)..date)
-                  .order(date: :desc)
-                  .first
-      return nearest if nearest.present?
+    def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
+      rate = find_cached_rate(from: from, to: to, date: date)
+      return rate if rate.present?
 
       return nil unless provider.present? # No provider configured (some self-hosted apps)
 
