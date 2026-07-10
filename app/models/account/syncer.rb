@@ -13,6 +13,9 @@ class Account::Syncer
   end
 
   def perform_post_sync
+    # Intentionally no since_date: family-level syncs bound their scan on the
+    # assumption that account-level syncs keep matching across the account's
+    # full history (see Family::Syncer::TRANSFER_MATCHING_LOOKBACK).
     account.family.auto_match_transfers!(account: account)
   end
 

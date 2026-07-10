@@ -10,6 +10,7 @@ module Family::AutoTransferMatchable
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
+    since_date = coerce_transfer_match_since_date!(since_date)
 
     Entry.find_by_sql([
       transfer_match_candidates_sql,
@@ -23,8 +24,10 @@ module Family::AutoTransferMatchable
         # The SQL bounds only the inflow side; the paired outflow may be dated
         # up to date_window days later. Widen the cutoff by the window so a
         # pair whose outflow sits inside the lookback still matches when its
-        # inflow falls just before since_date, without losing the indexed bound.
-        since_date: since_date && (since_date.to_date - date_window),
+        # inflow falls just before since_date, without losing the indexed bound
+        # (entries.date is covered by index_entries_on_date and the
+        # index_entries_on_transfer_match_lookup partial index).
+        since_date: since_date && (since_date - date_window),
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
@@ -94,6 +97,17 @@ module Family::AutoTransferMatchable
       Integer(value)
     rescue ArgumentError, TypeError
       raise ArgumentError, "date_window must be an integer"
+    end
+
+    def coerce_transfer_match_since_date!(value)
+      return nil if value.nil?
+      raise ArgumentError, "since_date must be a date" unless value.respond_to?(:to_date)
+
+      begin
+        value.to_date
+      rescue Date::Error
+        raise ArgumentError, "since_date must be a date"
+      end
     end
 
     def coerce_transfer_match_exchange_rate_tolerance!(value)

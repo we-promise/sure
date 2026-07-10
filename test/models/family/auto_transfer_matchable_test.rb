@@ -185,6 +185,31 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "since_date requires a date or date-like input" do
+    error = assert_raises(ArgumentError) { @family.transfer_match_candidates(since_date: 90) }
+    assert_equal "since_date must be a date", error.message
+    assert_raises(ArgumentError) { @family.transfer_match_candidates(since_date: "not a date") }
+
+    assert_nothing_raised do
+      @family.transfer_match_candidates(since_date: 7.days.ago.to_date)
+      @family.transfer_match_candidates(since_date: 7.days.ago)
+      @family.transfer_match_candidates(since_date: 7.days.ago.to_date.iso8601)
+    end
+  end
+
+  test "an inflow dated exactly at the widened since_date cutoff is included" do
+    # Widened cutoff = since_date - date_window = 11 days ago; the >= bound is
+    # inclusive, so an inflow dated exactly at the cutoff still matches.
+    outflow = create_transaction(date: 7.days.ago.to_date, account: @depository, amount: 500)
+    inflow = create_transaction(date: 11.days.ago.to_date, account: @credit_card, amount: -500)
+
+    pairs = @family.transfer_match_candidates(since_date: 7.days.ago.to_date).map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    assert_includes pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
   test "matching finds pairs across a wide date_window with since_date" do
     # 29 days apart: far outside the default 4-day window, so this pair only
     # matches if the widened window is actually applied.
