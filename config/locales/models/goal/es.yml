@@ -1,0 +1,25 @@
+---
+es:
+  activerecord:
+    attributes:
+      goal:
+        name: Nombre
+        target_amount: Importe objetivo
+        currency: Moneda
+        target_date: Fecha objetivo
+        color: Color
+        notes: Notas
+        state: Estado
+        linked_accounts: Cuentas vinculadas
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Elige al menos una cuenta para financiar este objetivo.
+            linked_accounts:
+              must_be_fundable: Todas las cuentas vinculadas deben ser cuentas de efectivo o de inversión.
+              currency_mismatch: Todas las cuentas vinculadas deben compartir la misma moneda.
+              must_belong_to_family: Las cuentas vinculadas deben pertenecer a la misma familia que el objetivo.
+            currency:
+              locked_after_linked: No se puede cambiar la moneda cuando el objetivo ya está vinculado a cuentas.

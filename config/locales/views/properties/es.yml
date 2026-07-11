@@ -23,6 +23,38 @@ es:
       year_built_placeholder: '2000'
     new:
       title: Introduzca los detalles de la propiedad
+      next: Siguiente
+    address:
+      title: Introducir propiedad manualmente
+      address_line1_label: Dirección (línea 1)
+      address_line1_placeholder: Calle Mayor 123
+      city_label: Ciudad
+      city_placeholder: Madrid
+      state_region_label: Provincia/Región
+      state_region_placeholder: Madrid
+      postal_code_label: Código postal
+      postal_code_placeholder: '28001'
+      country_label: País
+      country_placeholder: España
+      save: Guardar
+    balances:
+      title: Introducir propiedad manualmente
+      market_value_label: Valor de mercado estimado
+      market_value_tooltip: El valor de mercado estimado de tu propiedad. Este dato suele encontrarse en portales como Idealista o Fotocasa, y nunca es una cifra exacta.
+      save: Guardar
+      next: Siguiente
+    overview_fields:
+      name_label: Nombre
+      name_placeholder: Casa de vacaciones
+      subtype_prompt: Selecciona el tipo
+      property_type_label: Tipo de propiedad
+      year_built_label: Año de construcción (opcional)
+      year_built_placeholder: '1990'
+      area_label: Superficie (opcional)
+      area_placeholder: '120'
+      square_feet: Pies cuadrados
+      square_meters: Metros cuadrados
+      area_unit_label: Unidad de superficie
     overview:
       living_area: Área Habitable
       market_value: Valor de Mercado
@@ -30,3 +62,28 @@ es:
       trend: Tendencia
       unknown: Desconocido
       year_built: Año de Construcción
+    tabs:
+      overview:
+        living_area: Superficie habitable
+        market_value: Valor de mercado
+        purchase_price: Precio de compra
+        trend: Tendencia
+        unknown: Desconocido
+        year_built: Año de construcción
+        edit_account_details: Editar detalles de la cuenta
+    subtypes:
+      apartment:
+        short: Piso
+        long: Piso
+      plot:
+        short: Parcela
+        long: Parcela / Terreno
+      commercial:
+        short: Comercial
+        long: Inmueble comercial
+      rented:
+        short: Alquilada
+        long: Propiedad alquilada
+      agri_land:
+        short: Terreno agrícola
+        long: Terreno agrícola

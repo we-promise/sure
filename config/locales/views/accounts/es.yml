@@ -1,8 +1,13 @@
 ---
 es:
+  account:
+    entries:
+      destroy:
+        success: Registro eliminado correctamente.
   accounts:
     not_authorized: No tienes permiso para gestionar esta cuenta
     account:
+      complete_setup: Completar configuración
       edit: Editar
       link_lunchflow: Vincular con Lunch Flow
       link_provider: Vincular con proveedor
@@ -11,6 +16,9 @@ es:
       troubleshoot: Solucionar problemas
       enable: Activar cuenta
       disable: Desactivar cuenta
+      exclude_from_reports: Excluir de todos los informes
+      include_in_reports: Incluir en los informes
+      excluded_from_reports_indicator: Excluida de los informes
       set_default: Establecer como predeterminada
       remove_default: Quitar predeterminada
       default_label: Predeterminada
@@ -19,13 +27,13 @@ es:
     chart:
       data_not_available: Datos no disponibles para el período seleccionado
     create:
-      success: "Cuenta %{type} creada"
+      success: Cuenta %{type} creada
     set_default:
-      depository_only: "Solo las cuentas de efectivo y tarjeta de crédito pueden establecerse como predeterminadas."
+      depository_only: Solo las cuentas de efectivo y tarjeta de crédito pueden establecerse como predeterminadas.
     destroy:
-      success: "Cuenta %{type} programada para eliminación"
-      cannot_delete_linked: "No se puede eliminar una cuenta vinculada. Por favor, desvincúlela primero."
-      failed: "No se pudo eliminar el recurso. Inténtalo de nuevo más tarde."
+      success: Cuenta %{type} programada para eliminación
+      cannot_delete_linked: No se puede eliminar una cuenta vinculada. Por favor, desvincúlela primero.
+      failed: No se pudo eliminar el recurso. Inténtalo de nuevo más tarde.
     empty:
       empty_message: Añade una cuenta mediante conexión, importación o introducción manual.
       new_account: Nueva cuenta
@@ -42,6 +50,7 @@ es:
       institution_domain_placeholder: ej. chase.com
       notes_label: Notas
       notes_placeholder: Guarda información adicional como números de cuenta, códigos de sucursal, IBAN, números de ruta, etc.
+      exclude_from_reports: Excluir de todos los informes
     index:
       accounts: Cuentas
       manual_accounts:
@@ -49,19 +58,28 @@ es:
       new_account: Nueva cuenta
       sync: Sincronizar todo
     sync_all:
-      syncing: "Sincronizando cuentas..."
+      syncing: Sincronizando cuentas...
     new:
       import_accounts: Importar cuentas
+      container:
+        select: Seleccionar
+        navigate: Navegar
+        close: Cerrar
       method_selector:
         connected_entry: Vincular cuenta
         connected_entry_eu: Vincular cuenta de la UE
-        link_with_provider: "Vincular con %{provider}"
+        link_with_provider: Vincular con %{provider}
         lunchflow_entry: Vincular cuenta de Lunch Flow
         manual_entry: Introducir saldo de la cuenta
         title: ¿Cómo te gustaría añadirla?
       title: ¿Qué te gustaría añadir?
     show:
-      limited_fx_history_warning: "El historial de tipos de cambio solo está disponible desde %{date}. Las transacciones anteriores a esa fecha usan conversiones de divisa aproximadas; esto puede ocurrir cuando el proveedor de tipos de cambio solo ofrece una ventana histórica limitada."
+      limited_fx_history_warning: El historial de tipos de cambio solo está disponible desde %{date}. Las transacciones anteriores a esa fecha usan conversiones de divisa aproximadas; esto puede ocurrir cuando el proveedor de tipos de cambio solo ofrece una ventana histórica limitada.
+      tabs:
+        activity: Actividad
+        holdings: Posiciones
+        overview: Resumen
+        statements: Extractos
       activity:
         amount: Cantidad
         balance: Saldo
@@ -80,25 +98,33 @@ es:
         pending: Pendiente
         search:
           placeholder: Buscar entradas por nombre
+        search_placeholder: Buscar registros por nombre
         status: Estado
         title: Actividad
       chart:
         balance: Saldo
         owed: Cantidad adeudada
+      header:
+        complete_setup: Completar configuración
       menu:
         confirm_accept: Eliminar "%{name}"
-        confirm_body_html: "<p>Al eliminar esta cuenta, borrarás su historial de valores, afectando varios aspectos de tu cuenta general. Esta acción tendrá un impacto directo en los cálculos de tu patrimonio neto y en los gráficos de la cuenta.</p><br /> <p>Después de la eliminación, no podrás restaurar la información de la cuenta, ya que tendrás que añadirla como una nueva cuenta.</p>"
+        confirm_body_html: <p>Al eliminar esta cuenta, borrarás su historial de valores, afectando varios aspectos de tu cuenta general. Esta acción tendrá un impacto directo en los cálculos de tu patrimonio neto y en los gráficos de la cuenta.</p><br /> <p>Después de la eliminación, no podrás restaurar la información de la cuenta, ya que tendrás que añadirla como una nueva cuenta.</p>
         confirm_title: ¿Eliminar cuenta?
+        delete_account: Eliminar cuenta
         edit: Editar
         import: Importar transacciones
         import_trades: Importar operaciones
         import_transactions: Importar transacciones
         manage: Gestionar cuentas
+        sharing: Compartir
+        statements: Extractos
+        exclude_from_reports: Excluir de todos los informes
+        include_in_reports: Incluir en los informes
     update:
-      success: "Cuenta %{type} actualizada"
+      success: Cuenta %{type} actualizada
     sidebar:
       missing_data: Faltan datos históricos
-      missing_data_description: "%{product} utiliza proveedores externos para obtener tipos de cambio históricos, precios de valores y más. Estos datos son necesarios para calcular saldos históricos precisos de las cuentas."
+      missing_data_description: '%{product} utiliza proveedores externos para obtener tipos de cambio históricos, precios de valores y más. Estos datos son necesarios para calcular saldos históricos precisos de las cuentas.'
       configure_providers: Configura tus proveedores aquí.
       tabs:
         all: Todo
@@ -107,7 +133,7 @@ es:
       new_asset: Nuevo activo
       new_debt: Nueva deuda
       new_account: Nueva cuenta
-      new_account_group: "Nuevo %{account_group}"
+      new_account_group: Nuevo %{account_group}
     types:
       depository: Efectivo
       investment: Inversión
@@ -118,6 +144,16 @@ es:
       credit_card: Tarjeta de crédito
       loan: Préstamo
       other_liability: Otra deuda
+    types_plural:
+      depository: Efectivo
+      investment: Inversiones
+      crypto: Criptomonedas
+      property: Propiedades
+      vehicle: Vehículos
+      other_asset: Otros activos
+      credit_card: Tarjetas de crédito
+      loan: Préstamos
+      other_liability: Otros pasivos
     tax_treatments:
       taxable: Sujeto a impuestos
       tax_deferred: Impuestos diferidos
@@ -138,7 +174,7 @@ es:
       generic: General
     confirm_unlink:
       title: ¿Desvincular cuenta del proveedor?
-      description_html: "Estás a punto de desvincular <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Esto la convertirá en una cuenta manual."
+      description_html: Estás a punto de desvincular <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Esto la convertirá en una cuenta manual.
       warning_title: Qué significa esto
       warning_no_sync: La cuenta dejará de sincronizarse automáticamente con tu proveedor
       warning_manual_updates: Deberás añadir transacciones y actualizar saldos manualmente
@@ -146,16 +182,15 @@ es:
       warning_can_delete: Tras desvincularla, podrás eliminar la cuenta si es necesario
       confirm_button: Confirmar y desvincular
     unlink:
-      success: "Cuenta desvinculada correctamente. Ahora es una cuenta manual."
-      not_linked: "La cuenta no está vinculada a un proveedor"
-      error: "Error al desvincular la cuenta: %{error}"
-      generic_error: "Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo."
+      success: Cuenta desvinculada correctamente. Ahora es una cuenta manual.
+      not_linked: La cuenta no está vinculada a un proveedor
+      error: 'Error al desvincular la cuenta: %{error}'
+      generic_error: Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.
     select_provider:
       title: Selecciona un proveedor para vincular
-      description: "Elige qué proveedor quieres usar para vincular %{account_name}"
-      already_linked: "La cuenta ya está vinculada a un proveedor"
-      no_providers: "No hay proveedores configurados actualmente"
-
+      description: Elige qué proveedor quieres usar para vincular %{account_name}
+      already_linked: La cuenta ya está vinculada a un proveedor
+      no_providers: No hay proveedores configurados actualmente
   email_confirmations:
     new:
       invalid_token: Enlace de confirmación inválido o caducado.

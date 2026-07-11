@@ -1,9 +1,16 @@
 ---
 es:
+  concerns:
+    self_hostable:
+      redis_configured: ¡Redis ya está configurado correctamente! Ahora puedes configurar tu aplicación Sure.
   shared:
+    preview: Vista previa
+    sync_toast:
+      message: Nuevos datos disponibles
+      refresh: Actualizar
     confirm_modal:
       accept: Confirmar
-      body_html: "<p>No podrás deshacer esta decisión</p>"
+      body_html: <p>No podrás deshacer esta decisión</p>
       cancel: Cancelar
       title: ¿Estás seguro?
     money_field:
@@ -16,5 +23,20 @@ es:
       exchange_rate_help: Elige cómo introducir el importe.
     syncing_notice:
       syncing: Sincronizando datos de cuentas...
+    require_admin: Solo los administradores pueden realizar esta acción
+    custom_confirm:
+      default_title: ¿Estás seguro?
+      default_body: Esto no es reversible.
+      default_btn_text: Confirmar
+    family_moniker:
+      group_plural: Grupos
+      group_singular: Grupo
+      plural: Familias
+      singular: Familia
     trend_change:
-      no_change: "sin cambios"
+      no_change: sin cambios
+    cancel: Cancelar
+    transaction_tabs:
+      expense: Gasto
+      income: Ingreso
+      transfer: Transferencia

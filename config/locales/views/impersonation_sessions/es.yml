@@ -13,3 +13,13 @@ es:
       success: Salió de la sesión
     reject:
       success: Solicitud rechazada
+    super_admin_bar:
+      super_admin: Super admin
+      jobs: Trabajos
+      impersonating: Suplantando a
+      leave: Salir
+      terminate: Terminar
+      join_a_session: Unirse a una sesión
+      join: Unirse
+      uuid_placeholder: UUID
+      request_impersonation: Solicitar suplantación
