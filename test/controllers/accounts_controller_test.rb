@@ -66,6 +66,9 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # statements tab turbo frame or Turbo drops the response ("Content missing").
     assert_select "a[href='#{account_statement_path(statement)}'][data-turbo-frame='_top']", count: 2
     assert_select "a[href='#{account_statements_path}'][data-turbo-frame='_top']", count: 1
+    # The unlink button's controller action redirects to the same full-page
+    # show view, so its form must escape the frame too.
+    assert_select "form[action='#{unlink_account_statement_path(statement)}'][data-turbo-frame='_top']", count: 1
   end
 
   test "statements tab filters historical coverage by year" do

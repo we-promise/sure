@@ -111,7 +111,8 @@
                       <%= button_to unlink_account_statement_path(statement),
                                     method: :patch,
                                     class: "flex items-center",
-                                    aria: { label: t("account_statements.table.unlink") } do %>
+                                    aria: { label: t("account_statements.table.unlink") },
+                                    form: { data: { turbo_frame: "_top" } } do %>
                         <%= icon("unlink", class: "w-5 h-5 text-secondary") %>
                       <% end %>
                     <% end %>
