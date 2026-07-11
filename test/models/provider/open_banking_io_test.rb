@@ -1,10 +1,9 @@
 require "test_helper"
-require "open_banking_io"
 
 class Provider::OpenBankingIoTest < ActiveSupport::TestCase
   setup do
     @fake_client = mock("open_banking_io_client")
-    OpenBankingIO::Client.stubs(:new).returns(@fake_client)
+    Provider::OpenBankingIo::Client.stubs(:new).returns(@fake_client)
     @provider = Provider::OpenBankingIo.new(
       api_base_url: "https://api.example.com",
       api_key: "test-api-key",
@@ -13,7 +12,7 @@ class Provider::OpenBankingIoTest < ActiveSupport::TestCase
   end
 
   test "get_accounts maps struct value objects into hashes with string amounts" do
-    account = OpenBankingIO::Account.new(
+    account = Provider::OpenBankingIo::Account.new(
       id: "acc_1",
       aspsp_name: "Test Bank",
       aspsp_country: "DE",
@@ -28,7 +27,7 @@ class Provider::OpenBankingIoTest < ActiveSupport::TestCase
       product: "Current",
       display_name: "Everyday Account",
       balances: [
-        OpenBankingIO::Balance.new(type: "ITBD", name: "Booked", amount: BigDecimal("1234.56"), currency: "EUR", reference_date: "2026-01-15")
+        Provider::OpenBankingIo::Balance.new(type: "ITBD", name: "Booked", amount: BigDecimal("1234.56"), currency: "EUR", reference_date: "2026-01-15")
       ]
     )
     @fake_client.expects(:get_accounts).returns([ account ])
@@ -45,10 +44,10 @@ class Provider::OpenBankingIoTest < ActiveSupport::TestCase
 
   test "get_account_transactions paginates and maps transactions" do
     page1_items = Array.new(Provider::OpenBankingIo::PAGE_LIMIT) do |i|
-      OpenBankingIO::Transaction.new(id: "tx_#{i}", currency: "EUR", credit_debit_indicator: "DBIT", status: "BOOK", amount: BigDecimal("1.00"))
+      Provider::OpenBankingIo::Transaction.new(id: "tx_#{i}", currency: "EUR", credit_debit_indicator: "DBIT", status: "BOOK", amount: BigDecimal("1.00"))
     end
     page2_items = [
-      OpenBankingIO::Transaction.new(id: "tx_last", currency: "EUR", credit_debit_indicator: "CRDT", status: "BOOK", amount: BigDecimal("2.50"))
+      Provider::OpenBankingIo::Transaction.new(id: "tx_last", currency: "EUR", credit_debit_indicator: "CRDT", status: "BOOK", amount: BigDecimal("2.50"))
     ]
 
     total = Provider::OpenBankingIo::PAGE_LIMIT + 1
@@ -57,11 +56,11 @@ class Provider::OpenBankingIoTest < ActiveSupport::TestCase
     @fake_client.expects(:get_transactions)
       .with("acc_1", from: "2026-01-01", to: nil, limit: Provider::OpenBankingIo::PAGE_LIMIT, offset: 0)
       .in_sequence(seq)
-      .returns(OpenBankingIO::TransactionPage.new(items: page1_items, total: total))
+      .returns(Provider::OpenBankingIo::TransactionPage.new(items: page1_items, total: total))
     @fake_client.expects(:get_transactions)
       .with("acc_1", from: "2026-01-01", to: nil, limit: Provider::OpenBankingIo::PAGE_LIMIT, offset: Provider::OpenBankingIo::PAGE_LIMIT)
       .in_sequence(seq)
-      .returns(OpenBankingIO::TransactionPage.new(items: page2_items, total: total))
+      .returns(Provider::OpenBankingIo::TransactionPage.new(items: page2_items, total: total))
 
     result = @provider.get_account_transactions(account_id: "acc_1", start_date: Date.new(2026, 1, 1))
 
@@ -71,7 +70,7 @@ class Provider::OpenBankingIoTest < ActiveSupport::TestCase
   end
 
   test "wraps HTTP 401 into unauthorized provider error" do
-    @fake_client.expects(:get_accounts).raises(OpenBankingIO::HTTPError.new(401, "unauthorized"))
+    @fake_client.expects(:get_accounts).raises(Provider::OpenBankingIo::HTTPError.new(401, "unauthorized"))
 
     error = assert_raises(Provider::OpenBankingIo::Error) do
       @provider.get_accounts
@@ -81,7 +80,7 @@ class Provider::OpenBankingIoTest < ActiveSupport::TestCase
   end
 
   test "wraps HTTP 429 into rate_limited provider error" do
-    @fake_client.expects(:get_accounts).raises(OpenBankingIO::HTTPError.new(429, "slow down"))
+    @fake_client.expects(:get_accounts).raises(Provider::OpenBankingIo::HTTPError.new(429, "slow down"))
 
     error = assert_raises(Provider::OpenBankingIo::Error) do
       @provider.get_accounts
