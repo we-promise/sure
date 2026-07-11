@@ -10,6 +10,45 @@ class TradeImportTest < ActiveSupport::TestCase
     Security.stubs(:provider).returns(@provider)
   end
 
+  test "preserves CSV row order for same-date trades in reverse-chronological lists" do
+    aapl = securities(:aapl)
+    aapl_resolver = mock
+    aapl_resolver.stubs(:resolve).returns(aapl)
+    Security::Resolver.stubs(:new).returns(aapl_resolver)
+
+    import = <<~CSV
+      date,ticker,qty,price,currency,name
+      01/15/2024,AAPL,1,150.00,USD,First row
+      01/15/2024,AAPL,2,151.00,USD,Second row
+      01/15/2024,AAPL,3,152.00,USD,Third row
+    CSV
+
+    @import.update!(
+      account: accounts(:depository),
+      raw_file_str: import,
+      date_col_label: "date",
+      ticker_col_label: "ticker",
+      qty_col_label: "qty",
+      price_col_label: "price",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      signage_convention: "inflows_positive"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { Entry.count } => 3 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+    # Activity feeds render reverse-chronologically; same-date rows must keep
+    # the file's top-to-bottom order instead of random UUID order.
+    assert_equal [ "First row", "Second row", "Third row" ],
+                 @import.entries.reverse_chronological.map(&:name)
+  end
+
   test "csv_template uses ISO dates" do
     first_row = @import.csv_template.first
 
