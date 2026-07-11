@@ -79,13 +79,18 @@ class QuestradeItem::Importer
       accounts_data.each do |account_data|
         begin
           account_data = account_data.with_indifferent_access if account_data.is_a?(Hash)
-          import_account(account_data, credentials)
+          # Record the upstream id before importing: an account whose import
+          # fails still exists upstream and must not be pruned below.
           number = (account_data[:number] || account_data[:id]).to_s
           upstream_account_ids << number if number.present?
+          import_account(account_data, credentials)
+        rescue Provider::Questrade::AuthenticationError
+          raise
         rescue => e
           Rails.logger.error "QuestradeItem::Importer - Failed to import account: #{e.message}"
           stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
           register_error(e, account_data: account_data)
+          capture_import_error(e, context: "account_import")
         end
       end
 
@@ -133,8 +138,11 @@ class QuestradeItem::Importer
       entry = combined.find { |b| b[:currency] == questrade_account.currency } || combined.first
       total = entry && (entry[:totalEquity] || entry[:marketValue])
       questrade_account.update!(current_balance: total) if total.present?
+    rescue Provider::Questrade::AuthenticationError
+      raise
     rescue => e
       Rails.logger.warn "QuestradeItem::Importer - Failed to fetch balances for account #{questrade_account.id}: #{e.message}"
+      capture_import_error(e, context: "balances", questrade_account: questrade_account)
     end
 
     def import_holdings(questrade_account, credentials)
@@ -153,9 +161,12 @@ class QuestradeItem::Importer
           questrade_account.upsert_holdings_snapshot!(holdings_hashes)
           stats["holdings_found"] = stats.fetch("holdings_found", 0) + holdings_data.size
         end
+      rescue Provider::Questrade::AuthenticationError
+        raise
       rescue => e
         Rails.logger.warn "QuestradeItem::Importer - Failed to fetch holdings: #{e.message}"
         register_error(e, context: "holdings", account_id: questrade_account.id)
+        capture_import_error(e, context: "holdings", questrade_account: questrade_account)
       end
     end
 
@@ -174,8 +185,11 @@ class QuestradeItem::Importer
           sym = sym.with_indifferent_access
           currency_by_id[sym[:symbolId]] = sym[:currency]
         end
+      rescue Provider::Questrade::AuthenticationError
+        raise
       rescue => e
         Rails.logger.warn "QuestradeItem::Importer - symbol currency lookup failed: #{e.message}"
+        capture_import_error(e, context: "symbol_currency_lookup")
         return positions
       end
 
@@ -214,16 +228,21 @@ class QuestradeItem::Importer
           # Fresh account with no activities - schedule background fetch
           schedule_background_activities_fetch(questrade_account, start_date)
         end
+      rescue Provider::Questrade::AuthenticationError
+        raise
       rescue => e
         Rails.logger.warn "QuestradeItem::Importer - Failed to fetch activities: #{e.message}"
         register_error(e, context: "activities", account_id: questrade_account.id)
+        capture_import_error(e, context: "activities", questrade_account: questrade_account)
       end
     end
 
     def calculate_start_date(questrade_account)
-      # Use user-specified start date if available
+      # The user-specified start date bounds the initial history fetch; once
+      # activities have been fetched, incremental sync takes over. Returning it
+      # unconditionally would re-fetch the full window on every sync.
       user_start = questrade_account.sync_start_date
-      return user_start if user_start.present?
+      return user_start if user_start.present? && questrade_account.last_activities_sync.blank?
 
       # For accounts with existing history, use incremental sync
       existing_count = (questrade_account.raw_activities_payload || []).size
@@ -231,8 +250,10 @@ class QuestradeItem::Importer
         # Incremental: go back 30 days from last sync to catch updates
         (questrade_account.last_activities_sync - 30.days).to_date
       else
-        # Full sync: go back up to 3 years
-        (ACTIVITY_CHUNK_DAYS * MAX_ACTIVITY_CHUNKS).days.ago.to_date
+        # Full sync: go back up to 3 years, but never earlier than the
+        # user-specified start date
+        default_start = (ACTIVITY_CHUNK_DAYS * MAX_ACTIVITY_CHUNKS).days.ago.to_date
+        [ default_start, user_start&.to_date ].compact.max
       end
     end
 
@@ -278,6 +299,24 @@ class QuestradeItem::Importer
         Rails.logger.info "QuestradeItem::Importer - Pruning #{removed.count} removed accounts"
         removed.destroy_all
       end
+    end
+
+    # Surface provider sync failures in /settings/debug alongside the other
+    # provider importers (kraken, mercury, up, lunchflow).
+    def capture_import_error(error, context:, questrade_account: nil)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "QuestradeItem::Importer #{context} failed: #{error.class}: #{error.message}",
+        source: self.class.name,
+        provider_key: "questrade",
+        family: questrade_item.family,
+        metadata: {
+          questrade_item_id: questrade_item.id,
+          questrade_account_id: questrade_account&.id,
+          context: context
+        }.compact
+      )
     end
 
     def register_error(error, **context)
