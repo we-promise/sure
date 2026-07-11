@@ -19,7 +19,8 @@
                           aria: { label: t("account_statements.account_tab.year_label") } %>
         <% end %>
         <%= link_to account_statements_path,
-                    class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
+                    class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover",
+                    data: { turbo_frame: "_top" } do %>
           <%= icon("inbox", size: "sm") %>
           <%= t("account_statements.account_tab.open_inbox") %>
         <% end %>
@@ -75,7 +76,9 @@
             <% statements.each do |statement| %>
               <tr id="<%= dom_id(statement) %>" class="border-b border-subdued hover:bg-surface-hover">
                 <td class="px-3 py-3">
-                  <%= link_to account_statement_path(statement), class: "flex items-center gap-2 min-w-0 text-sm font-medium text-primary hover:underline" do %>
+                  <%= link_to account_statement_path(statement),
+                              class: "flex items-center gap-2 min-w-0 text-sm font-medium text-primary hover:underline",
+                              data: { turbo_frame: "_top" } do %>
                     <%= icon(account_statement_file_icon(statement), size: "sm") %>
                     <span class="truncate"><%= statement.filename %></span>
                   <% end %>
@@ -94,7 +97,9 @@
                 </td>
                 <td class="px-3 py-3">
                   <div class="flex items-center justify-end gap-3">
-                    <%= link_to account_statement_path(statement), aria: { label: t("account_statements.table.view") } do %>
+                    <%= link_to account_statement_path(statement),
+                                aria: { label: t("account_statements.table.view") },
+                                data: { turbo_frame: "_top" } do %>
                       <%= icon("eye", class: "w-5 h-5 text-primary") %>
                     <% end %>
                     <% if statement.original_file.attached? %>
@@ -106,7 +111,8 @@
                       <%= button_to unlink_account_statement_path(statement),
                                     method: :patch,
                                     class: "flex items-center",
-                                    aria: { label: t("account_statements.table.unlink") } do %>
+                                    aria: { label: t("account_statements.table.unlink") },
+                                    form: { data: { turbo_frame: "_top" } } do %>
                         <%= icon("unlink", class: "w-5 h-5 text-secondary") %>
                       <% end %>
                     <% end %>
