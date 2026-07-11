@@ -81,7 +81,6 @@ gem "rchardet" # Character encoding detection
 gem "redcarpet"
 gem "stripe"
 gem "plaid"
-gem "open-banking-io", "~> 0.2"
 gem "snaptrade", "~> 2.0"
 gem "httparty"
 gem "rotp", "~> 6.3"
