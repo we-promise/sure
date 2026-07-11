@@ -47,7 +47,10 @@ class CoinbaseAccount::Processor
 
     # Creates/updates Holdings record for this crypto wallet.
     def process_holdings
-      HoldingsProcessor.new(coinbase_account).process
+      # Must be fully qualified: with the compact `class CoinbaseAccount::Processor`
+      # definition, Ruby's lexical constant lookup never searches CoinbaseAccount,
+      # so a bare HoldingsProcessor raises NameError on every sync (issue #2412).
+      CoinbaseAccount::HoldingsProcessor.new(coinbase_account).process
     end
 
     # Updates the linked Account with current balance from Coinbase.
