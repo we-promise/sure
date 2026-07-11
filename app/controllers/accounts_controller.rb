@@ -53,7 +53,10 @@ class AccountsController < ApplicationController
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     @q = params.fetch(:q, {}).permit(:search, status: [])
-    entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
+    # Excluded entries stay visible (rendered greyed-out, same as the global
+    # transactions list) so they remain reachable and can be re-included —
+    # hiding them left excluded trades with no restore path (issue #2612).
+    entries = @account.entries.search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?

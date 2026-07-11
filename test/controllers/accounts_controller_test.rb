@@ -106,6 +106,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
   end
 
+  test "excluded entries remain visible in the account activity feed so they can be restored" do
+    trade_entry = entries(:trade)
+    trade_entry.update!(excluded: true)
+
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    # Rendered (greyed out via the partial's excluded styling), not hidden —
+    # otherwise an excluded trade has no UI path back to "included" (issue #2612)
+    assert_select "turbo-frame##{dom_id(trade_entry)}", count: 1
+  end
+
   test "activity pagination keeps activity tab when loaded from holdings tab" do
     investment = accounts(:investment)
 
