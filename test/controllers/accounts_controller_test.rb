@@ -2,6 +2,7 @@ require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
+  include EntriesTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -116,6 +117,24 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # Rendered (greyed out via the partial's excluded styling), not hidden —
     # otherwise an excluded trade has no UI path back to "included" (issue #2612)
     assert_select "turbo-frame##{dom_id(trade_entry)}", count: 1
+  end
+
+  test "split parents stay hidden from the account activity feed" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent feed")
+    parent.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get account_url(accounts(:depository))
+
+    assert_response :success
+    # Entry#split! marks the parent excluded as an implementation detail; it
+    # must not resurface alongside its children now that excluded entries render
+    assert_select "turbo-frame##{dom_id(parent)}", count: 0
+    parent.child_entries.each do |child|
+      assert_select "turbo-frame##{dom_id(child)}", count: 1
+    end
   end
 
   test "activity pagination keeps activity tab when loaded from holdings tab" do

@@ -56,7 +56,10 @@ class AccountsController < ApplicationController
     # Excluded entries stay visible (rendered greyed-out, same as the global
     # transactions list) so they remain reachable and can be re-included —
     # hiding them left excluded trades with no restore path (issue #2612).
-    entries = @account.entries.search(@q).reverse_chronological.includes(:entryable)
+    # Split parents are excluded by Entry#split! as an implementation detail
+    # and must stay hidden so they don't render duplicated next to their
+    # children (the global list filters them the same way).
+    entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
