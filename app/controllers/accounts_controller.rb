@@ -28,6 +28,7 @@ class AccountsController < ApplicationController
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts))
     @binance_items = visible_provider_items(family.binance_items.ordered.includes(:binance_accounts, :accounts, :syncs))
     @questrade_items = visible_provider_items(family.questrade_items.ordered.includes(:syncs, questrade_accounts: :account_provider))
+    @kraken_items = visible_provider_items(family.kraken_items.ordered.includes(:syncs, :kraken_accounts))
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
