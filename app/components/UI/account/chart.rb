@@ -32,10 +32,13 @@ class UI::Account::Chart < ApplicationComponent
   # Formatted main indicator. Gains are signed explicitly (e.g. "+€79.53") since
   # a gain of zero-or-more is otherwise indistinguishable from a balance.
   def view_balance_display
-    money = view_balance_money
-    return money.format unless view == "gains" && money.amount.positive?
+    signed_format(view_balance_money)
+  end
 
-    "+#{money.format}"
+  # Formatted family-currency amount for foreign-currency accounts, signed the
+  # same way as the main indicator. Nil when no conversion applies.
+  def converted_balance_display
+    converted_balance_money&.then { |money| signed_format(money) }
   end
 
   # Label displayed above the main indicator, based on account type and chart view.
@@ -110,4 +113,12 @@ class UI::Account::Chart < ApplicationComponent
       period.comparison_label
     end
   end
+
+  private
+    # Prefixes positive gains with "+"; other views keep plain Money formatting.
+    def signed_format(money)
+      return money.format unless view == "gains" && money.amount.positive?
+
+      "+#{money.format}"
+    end
 end

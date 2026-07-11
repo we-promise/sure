@@ -11,8 +11,8 @@
       <div class="flex flex-row gap-2 items-baseline">
         <%= tag.p view_balance_display, class: "text-primary text-3xl font-medium truncate privacy-sensitive" %>
 
-        <% if converted_balance_money %>
-          <%= tag.p converted_balance_money.format, class: "text-sm font-medium text-secondary privacy-sensitive" %>
+        <% if converted_balance_display %>
+          <%= tag.p converted_balance_display, class: "text-sm font-medium text-secondary privacy-sensitive" %>
         <% end %>
       </div>
     </div>
