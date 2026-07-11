@@ -50,7 +50,11 @@ class TransactionImport < Import
         )
 
         if duplicate_entry
-          # Update existing transaction instead of creating a new one
+          # Update existing transaction instead of creating a new one. Note:
+          # the existing entry keeps its original created_at, so on a
+          # re-import that mixes deduped and net-new same-date rows the two
+          # sets interleave by their own timestamps rather than strict file
+          # order — only net-new entries get the row-order stamping below.
           duplicate_entry.transaction.category = category if category.present?
           duplicate_entry.transaction.tags = tags if tags.any?
           duplicate_entry.notes = row.notes if row.notes.present?
