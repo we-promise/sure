@@ -3,7 +3,14 @@ class TradeImport < Import
     transaction do
       mappings.each(&:create_mappable!)
 
-      trades = rows.map do |row|
+      # Bulk-imported entries all share the same insert timestamp, and UUID ids
+      # are random, so same-date rows would render in arbitrary order. Stamp
+      # each entry with a per-row offset (descending, since lists are
+      # newest-first within a date) so the file's row order is preserved on
+      # screen — same fix as TransactionImport (issue #2663).
+      import_time = Time.current
+
+      trades = rows.ordered.each_with_index.map do |row, index|
         mapped_account = if account
           account
         else
@@ -29,7 +36,8 @@ class TradeImport < Import
             name: row.name,
             currency: row.currency.presence || mapped_account.currency,
             import: self,
-            import_locked: true  # Protect from provider sync overwrites
+            import_locked: true,  # Protect from provider sync overwrites
+            created_at: import_time - (index * 0.001)
           ),
         )
       end
