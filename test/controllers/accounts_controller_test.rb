@@ -8,6 +8,23 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
+  test "family with only kraken connections sees them instead of the empty state" do
+    sign_in user = users(:empty)
+    kraken_item = user.family.kraken_items.create!(
+      name: "Kraken",
+      api_key: "test_key",
+      api_secret: "test_secret"
+    )
+
+    get accounts_url
+
+    assert_response :success
+    # Kraken was previously missing from both the empty-state check and the
+    # provider render section, so a kraken-only family saw a blank empty state
+    assert_select "##{dom_id(kraken_item)}", count: 1
+    assert_select "p", text: I18n.t("accounts.empty.no_accounts"), count: 0
+  end
+
   test "should get index" do
     get accounts_url
     assert_response :success
