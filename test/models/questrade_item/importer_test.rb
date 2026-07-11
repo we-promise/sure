@@ -63,6 +63,46 @@ class QuestradeItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "requires_update", @questrade_item.reload.status
   end
 
+  test "authentication error while fetching holdings marks the item requires_update" do
+    link_account!
+    provider = stub_provider(accounts: [
+      { "number" => "11111111", "type" => "TFSA", "status" => "Active" }
+    ])
+    provider.stubs(:get_holdings).raises(Provider::Questrade::AuthenticationError, "token expired")
+
+    assert_raises(Provider::Questrade::AuthenticationError) do
+      QuestradeItem::Importer.new(@questrade_item, questrade_provider: provider).import
+    end
+    assert_equal "requires_update", @questrade_item.reload.status
+  end
+
+  test "authentication error during symbol currency lookup marks the item requires_update" do
+    link_account!
+    provider = stub_provider(accounts: [
+      { "number" => "11111111", "type" => "TFSA", "status" => "Active" }
+    ])
+    provider.stubs(:get_holdings).returns({ positions: [ { "symbolId" => 123, "symbol" => "XEQT.TO" } ] })
+    provider.stubs(:get_symbols).raises(Provider::Questrade::AuthenticationError, "token expired")
+
+    assert_raises(Provider::Questrade::AuthenticationError) do
+      QuestradeItem::Importer.new(@questrade_item, questrade_provider: provider).import
+    end
+    assert_equal "requires_update", @questrade_item.reload.status
+  end
+
+  test "authentication error while fetching activities marks the item requires_update" do
+    link_account!
+    provider = stub_provider(accounts: [
+      { "number" => "11111111", "type" => "TFSA", "status" => "Active" }
+    ])
+    provider.stubs(:get_activities).raises(Provider::Questrade::AuthenticationError, "token expired")
+
+    assert_raises(Provider::Questrade::AuthenticationError) do
+      QuestradeItem::Importer.new(@questrade_item, questrade_provider: provider).import
+    end
+    assert_equal "requires_update", @questrade_item.reload.status
+  end
+
   test "non-auth balance failures are tolerated and the sync continues" do
     link_account!
     provider = stub_provider(accounts: [

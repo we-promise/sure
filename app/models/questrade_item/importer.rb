@@ -90,6 +90,7 @@ class QuestradeItem::Importer
           Rails.logger.error "QuestradeItem::Importer - Failed to import account: #{e.message}"
           stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
           register_error(e, account_data: account_data)
+          capture_import_error(e, context: "account_import")
         end
       end
 
@@ -141,6 +142,7 @@ class QuestradeItem::Importer
       raise
     rescue => e
       Rails.logger.warn "QuestradeItem::Importer - Failed to fetch balances for account #{questrade_account.id}: #{e.message}"
+      capture_import_error(e, context: "balances", questrade_account: questrade_account)
     end
 
     def import_holdings(questrade_account, credentials)
@@ -164,6 +166,7 @@ class QuestradeItem::Importer
       rescue => e
         Rails.logger.warn "QuestradeItem::Importer - Failed to fetch holdings: #{e.message}"
         register_error(e, context: "holdings", account_id: questrade_account.id)
+        capture_import_error(e, context: "holdings", questrade_account: questrade_account)
       end
     end
 
@@ -186,6 +189,7 @@ class QuestradeItem::Importer
         raise
       rescue => e
         Rails.logger.warn "QuestradeItem::Importer - symbol currency lookup failed: #{e.message}"
+        capture_import_error(e, context: "symbol_currency_lookup")
         return positions
       end
 
@@ -229,6 +233,7 @@ class QuestradeItem::Importer
       rescue => e
         Rails.logger.warn "QuestradeItem::Importer - Failed to fetch activities: #{e.message}"
         register_error(e, context: "activities", account_id: questrade_account.id)
+        capture_import_error(e, context: "activities", questrade_account: questrade_account)
       end
     end
 
@@ -294,6 +299,24 @@ class QuestradeItem::Importer
         Rails.logger.info "QuestradeItem::Importer - Pruning #{removed.count} removed accounts"
         removed.destroy_all
       end
+    end
+
+    # Surface provider sync failures in /settings/debug alongside the other
+    # provider importers (kraken, mercury, up, lunchflow).
+    def capture_import_error(error, context:, questrade_account: nil)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "QuestradeItem::Importer #{context} failed: #{error.class}: #{error.message}",
+        source: self.class.name,
+        provider_key: "questrade",
+        family: questrade_item.family,
+        metadata: {
+          questrade_item_id: questrade_item.id,
+          questrade_account_id: questrade_account&.id,
+          context: context
+        }.compact
+      )
     end
 
     def register_error(error, **context)
