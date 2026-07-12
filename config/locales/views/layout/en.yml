@@ -20,6 +20,7 @@ en:
       sign_up: Create account
     shared:
       footer:
+        community_fork: Community fork of Maybe Finance
         privacy_policy: Privacy Policy
         terms_of_service: Terms of Service
       confirm_dialog:

@@ -6,6 +6,8 @@ en:
       subtitle: Comprehensive insights into your financial health
       export: Export CSV
       print_report: Print Report
+      period_aria: Report period
+      sections_aria_label: Reports sections
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
       periods:
@@ -195,6 +197,7 @@ en:
     print:
       document_title: Financial Report
       title: Financial Report
+      date_range: "%{start} – %{end}"
       generated_on: "Generated %{date}"
       # Summary section
       summary:

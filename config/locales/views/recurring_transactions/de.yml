@@ -21,7 +21,7 @@ de:
       manual_description: Du kannst Muster manuell erkennen oder alte wiederkehrende Transaktionen mit den obigen Schaltflächen bereinigen.
       automatic_description: "Die automatische Erkennung wird außerdem ausgeführt nach:"
       triggers:
-        - Abschluss von CSV-Importen (Transaktionen, Trades, Konten usw.)
+        - Abschluss von CSV-Importen (Transaktionen, Wertpapiergeschäfte, Konten usw.)
         - Abschluss einer Anbieter-Synchronisierung (Plaid, SimpleFIN usw.)
     identified: "%{count} wiederkehrende Transaktionsmuster erkannt"
     cleaned_up: "%{count} alte wiederkehrende Transaktionen bereinigt"

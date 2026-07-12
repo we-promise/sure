@@ -1,0 +1,55 @@
+---
+de:
+  period:
+    last_day:
+      label_short: "1T"
+      label: "Letzter Tag"
+      comparison_label: "gegenüber gestern"
+    current_week:
+      label_short: "Woche"
+      label: "Laufende Woche"
+      comparison_label: "gegenüber Wochenbeginn"
+    last_7_days:
+      label_short: "7T"
+      label: "Letzte 7 Tage"
+      comparison_label: "gegenüber der letzten Woche"
+    current_month:
+      label_short: "Monat"
+      label: "Laufender Monat"
+      comparison_label: "gegenüber Monatsbeginn"
+    last_month:
+      label_short: "LM"
+      label: "Letzter Monat"
+      comparison_label: "gegenüber dem letzten Monat"
+    last_30_days:
+      label_short: "30T"
+      label: "Letzte 30 Tage"
+      comparison_label: "gegenüber den letzten 30 Tagen"
+    last_90_days:
+      label_short: "90T"
+      label: "Letzte 90 Tage"
+      comparison_label: "gegenüber dem letzten Quartal"
+    current_year:
+      label_short: "Jahr"
+      label: "Laufendes Jahr"
+      comparison_label: "gegenüber Jahresbeginn"
+    last_365_days:
+      label_short: "365T"
+      label: "Letzte 365 Tage"
+      comparison_label: "gegenüber dem Stand vor einem Jahr"
+    last_5_years:
+      label_short: "5J"
+      label: "Letzte 5 Jahre"
+      comparison_label: "gegenüber dem Stand vor 5 Jahren"
+    last_10_years:
+      label_short: "10J"
+      label: "Letzte 10 Jahre"
+      comparison_label: "gegenüber dem Stand vor 10 Jahren"
+    all_time:
+      label_short: "Gesamt"
+      label: "Gesamter Zeitraum"
+      comparison_label: "gegenüber dem Beginn"
+    custom:
+      label_short: "Benutzerdefiniert"
+      label: "Benutzerdefinierter Zeitraum"
+      comparison_label: "%{start} bis %{end}"

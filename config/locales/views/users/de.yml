@@ -1,6 +1,18 @@
 ---
 de:
   users:
+    roles:
+      admin: Administrator
+      member: Mitglied
+      super_admin: Superadministrator
+    user_menu:
+      aria_label: Kontomenü öffnen
+      version: Version
+      settings: Einstellungen
+      changelog: Changelog
+      feedback: Feedback
+      contact: Kontakt
+      log_out: Abmelden
     destroy:
       success: Dein Konto wurde gelöscht.
     update:

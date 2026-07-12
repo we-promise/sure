@@ -25,6 +25,7 @@ en:
       refresh_hint: "Once you've configured Redis, refresh this page to continue."
       refresh_page: Refresh Page
     changelog:
+      date_unavailable: Date unavailable
       title: What's new
     release_notes_unavailable:
       name: Release notes unavailable
