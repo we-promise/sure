@@ -52,3 +52,4 @@ vi:
     custom:
       label_short: "Tùy chỉnh"
       label: "Khoảng thời gian tùy chỉnh"
+      comparison_label: "từ %{start} đến %{end}"

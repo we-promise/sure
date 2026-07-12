@@ -76,6 +76,17 @@ class GermanCoreLocalizationTest < ActiveSupport::TestCase
     }
   end
 
+  test "all period locales translate custom comparison ranges" do
+    locale_paths = Rails.root.glob("config/locales/models/period/*.yml")
+
+    locale_paths.each do |path|
+      locale = path.basename(".yml").to_s
+      period = flattened_locale("models/period", locale)
+
+      assert_equal [ "end", "start" ], interpolation_variables(period.fetch("period.custom.comparison_label")), locale
+    end
+  end
+
   private
     def flattened_locale(relative_path, locale)
       path = Rails.root.join("config/locales/#{relative_path}/#{locale}.yml")
