@@ -5,13 +5,13 @@
       <%= f.collection_select :target_id,
             @merchants,
             :id, :name,
-            { prompt: t(".select_target"), label: t(".target_label"), searchable: true },
+            { prompt: t(".select_target"), label: t(".target_label"), searchable: true, variant: :logo },
             { required: true } %>
 
       <div class="space-y-2" data-controller="list-filter">
         <p class="text-sm font-medium text-primary"><%= t(".sources_label") %></p>
         <%= render DS::SearchInput.new(
-          variant: :standalone,
+          variant: :embedded,
           placeholder: t(".sources_search_placeholder"),
           data: {
             list_filter_target: "input",
@@ -26,6 +26,21 @@
             <label class="filterable-item flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer"
                    data-filter-name="<%= merchant.name %>">
               <%= check_box_tag "source_ids[]", merchant.id, false, class: "rounded border-secondary" %>
+              <div class="hidden lg:flex">
+                <% if merchant.logo_url.present? %>
+                  <%= image_tag Setting.transform_brand_fetch_url(merchant.logo_url),
+                      class: "w-6 h-6 rounded-full border border-secondary",
+                      loading: "lazy" %>
+                <% else %>
+                  <%= render DS::FilledIcon.new(
+                    variant: :text,
+                    hex_color: merchant.color,
+                    text: merchant.name,
+                    size: "sm",
+                    rounded: true
+                  ) %>
+                <% end %>
+              </div>
               <span class="text-sm text-primary"><%= merchant.name %></span>
               <% if merchant.is_a?(ProviderMerchant) %>
                 <span class="text-xs text-subdued">(<%= merchant.source&.titleize %>)</span>

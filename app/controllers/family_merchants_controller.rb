@@ -20,8 +20,8 @@ class FamilyMerchantsController < ApplicationController
     @enhanceable_count = @all_provider_merchants.where(website_url: [ nil, "" ]).count
     @llm_available = Provider::Registry.get_provider(:openai).present?
 
-    @pagy_family_merchants, @family_merchants = pagy(@all_family_merchants, page_param: :family_page, limit: safe_per_page)
-    @pagy_provider_merchants, @provider_merchants = pagy(@all_provider_merchants, page_param: :provider_page, limit: safe_per_page)
+    @family_merchants = @all_family_merchants.limit(safe_per_page(20))
+    @provider_merchants = @all_provider_merchants.limit(safe_per_page(20))
 
     render layout: "settings"
   end

@@ -29,6 +29,10 @@ en:
         one: "%{count} provider merchant is missing website information. Enhance with AI to detect websites, display logos, and merge duplicate merchants."
         other: "%{count} provider merchants are missing website information. Enhance with AI to detect websites, display logos, and merge duplicate merchants."
       enhance_button: Enhance with AI
+      search_family_merchants: Search family merchants...
+      search_provider_merchants: Search provider merchants...
+      no_family_merchants_found: No matching family merchants found
+      no_provider_merchants_found: No matching provider merchants found
       unlinked_title: Recently unlinked
       unlinked_info: These merchants were recently removed from your transactions. They will disappear from this list after 30 days unless re-assigned to a transaction.
       table:

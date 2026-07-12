@@ -1,6 +1,6 @@
 <%# locals: (provider_merchant:) %>
 
-<tr class="border-b border-subdued last:border-0 hover:bg-surface-hover">
+<tr class="filterable-item border-b border-subdued last:border-0 hover:bg-surface-hover" data-filter-name="<%= provider_merchant.name %>">
   <td class="py-3 px-4 text-sm text-primary">
     <div class="flex w-full items-center gap-2.5">
       <% if provider_merchant.logo_url %>

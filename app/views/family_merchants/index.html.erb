@@ -32,24 +32,33 @@
     </div>
 
     <% if @all_family_merchants.any? %>
-      <div class="rounded-xl bg-container-inset space-y-1 p-1">
-        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
-          <table class="w-full">
-            <thead>
-              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
-                <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
-                <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
-              </tr>
-            </thead>
-            <tbody>
-              <%= render partial: "family_merchants/family_merchant", collection: @family_merchants %>
-            </tbody>
-          </table>
+      <div data-controller="list-filter" class="space-y-2">
+        <%= render DS::SearchInput.new(
+          variant: :standalone,
+          placeholder: t(".search_family_merchants"),
+          data: {
+            list_filter_target: "input",
+            action: "input->list-filter#filter"
+          }
+        ) %>
+        <p class="hidden text-sm text-secondary px-2 py-1" data-list-filter-target="emptyMessage">
+          <%= t(".no_family_merchants_found") %>
+        </p>
+        <div data-list-filter-target="list" class="rounded-xl bg-container-inset space-y-1 p-1">
+          <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                  <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
+                  <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
+                </tr>
+              </thead>
+              <tbody>
+                <%= render partial: "family_merchants/family_merchant", collection: @family_merchants %>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-
-      <div class="pt-4">
-        <%= render "shared/pagination", pagy: @pagy_family_merchants %>
       </div>
     <% else %>
       <div class="flex justify-center items-center py-12">
@@ -98,25 +107,34 @@
     <% end %>
 
     <% if @all_provider_merchants.any? %>
-      <div class="rounded-xl bg-container-inset space-y-1 p-1">
-        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
-          <table class="w-full">
-            <thead>
-              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
-                <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
-                <th scope="col" class="text-left py-3 px-4"><%= t(".table.source") %></th>
-                <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
-              </tr>
-            </thead>
-            <tbody>
-              <%= render partial: "family_merchants/provider_merchant", collection: @provider_merchants %>
-            </tbody>
-          </table>
+      <div data-controller="list-filter" class="space-y-2">
+        <%= render DS::SearchInput.new(
+          variant: :standalone,
+          placeholder: t(".search_provider_merchants"),
+          data: {
+            list_filter_target: "input",
+            action: "input->list-filter#filter"
+          }
+        ) %>
+        <p class="hidden text-sm text-secondary px-2 py-1" data-list-filter-target="emptyMessage">
+          <%= t(".no_provider_merchants_found") %>
+        </p>
+        <div data-list-filter-target="list" class="rounded-xl bg-container-inset space-y-1 p-1">
+          <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                  <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
+                  <th scope="col" class="text-left py-3 px-4"><%= t(".table.source") %></th>
+                  <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
+                </tr>
+              </thead>
+              <tbody>
+                <%= render partial: "family_merchants/provider_merchant", collection: @provider_merchants %>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-
-      <div class="pt-4">
-        <%= render "shared/pagination", pagy: @pagy_provider_merchants %>
       </div>
     <% else %>
       <div class="flex justify-center items-center py-8">
