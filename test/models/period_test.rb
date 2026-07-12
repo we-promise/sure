@@ -45,6 +45,18 @@ class PeriodTest < ActiveSupport::TestCase
     assert_equal "Custom Period", period.label
   end
 
+  test "custom comparison label uses the current locale" do
+    period = Period.new(start_date: Date.new(2026, 1, 2), end_date: Date.new(2026, 2, 3))
+
+    I18n.with_locale(:en) do
+      assert_equal "January 02, 2026 to February 03, 2026", period.comparison_label
+    end
+
+    I18n.with_locale(:de) do
+      assert_equal "2. Januar 2026 bis 3. Februar 2026", period.comparison_label
+    end
+  end
+
   test "all_time period can be created" do
     period = Period.from_key("all_time")
     assert_equal "all_time", period.key

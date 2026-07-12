@@ -1,11 +1,20 @@
 ---
 de:
+  concerns:
+    self_hostable:
+      redis_configured: Redis ist jetzt richtig konfiguriert. Du kannst deine Sure-Anwendung nun einrichten.
   shared:
+    app_version:
+      label: Version
+    preview: Vorschau
+    sync_toast:
+      message: Neue Daten verfügbar
+      refresh: Aktualisieren
     confirm_modal:
       accept: Bestätigen
       body_html: "<p>Diese Entscheidung kann nicht rückgängig gemacht werden</p>"
       cancel: Abbrechen
-      title: Bist du sicher
+      title: Bist du sicher?
     money_field:
       label: Betrag
     exchange_rate_tabs:
@@ -13,8 +22,23 @@ de:
       convert_tab: Mit FX-Kurs konvertieren
       destination_amount: Zielbetrag
       exchange_rate: Wechselkurs
-      exchange_rate_help: Wählen Sie, wie Sie den Betrag eingeben möchten.
+      exchange_rate_help: Wähle aus, wie du den Betrag eingeben möchtest.
     syncing_notice:
       syncing: Kontodaten werden synchronisiert...
+    require_admin: Nur Administratoren können diese Aktion ausführen
+    custom_confirm:
+      default_title: Bist du sicher?
+      default_body: Diese Aktion kann nicht rückgängig gemacht werden.
+      default_btn_text: Bestätigen
+    family_moniker:
+      group_plural: Gruppen
+      group_singular: Gruppe
+      plural: Familien
+      singular: Familie
     trend_change:
       no_change: keine Änderung
+    cancel: Abbrechen
+    transaction_tabs:
+      expense: Ausgabe
+      income: Einnahme
+      transfer: Umbuchung

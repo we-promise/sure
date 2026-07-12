@@ -1,5 +1,102 @@
 ---
 de:
+  UI:
+    period_picker:
+      aria_label: "Zeitraum: %{period}"
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Auswahl umschalten
+      balance_reconciliation:
+        labels:
+          adjustments: Anpassungen
+          buys: Käufe
+          change_in_brokerage_cash: Veränderung des Verrechnungskontos
+          change_in_holdings_market: Wertveränderung der Bestände (Marktpreise)
+          change_in_holdings_trades: Wertveränderung der Bestände (Käufe/Verkäufe)
+          charges: Belastungen
+          end_balance: Endsaldo
+          end_principal: Restschuld am Ende
+          end_value: Endwert
+          final_balance: Abschlusssaldo
+          final_principal: Abschließende Restschuld
+          final_value: Abschließender Wert
+          market_changes: Marktveränderungen
+          net_cash_flow: Netto-Geldfluss
+          net_principal_change: Nettoveränderung der Restschuld
+          net_value_change: Netto-Wertveränderung
+          payments: Zahlungen
+          sells: Verkäufe
+          start_balance: Anfangssaldo
+          start_principal: Restschuld zu Beginn
+          start_value: Anfangswert
+        tooltips:
+          adjustments: Manuelle Abstimmungen oder sonstige Anpassungen
+          adjustments_asset: Manuelle Wertanpassungen oder Schätzungen
+          buys: Kryptokäufe im Tagesverlauf
+          change_in_brokerage_cash: Nettoveränderung des Bargelds durch Einzahlungen, Auszahlungen und Wertpapiergeschäfte
+          change_in_holdings_market: Wertveränderung der Bestände durch Marktpreisbewegungen
+          change_in_holdings_trades: Einfluss von Wertpapierkäufen und -verkäufen auf die Bestände
+          charges: Neue Belastungen im Tagesverlauf
+          end_balance: Berechneter Saldo nach allen Transaktionen
+          end_balance_investment: Berechneter Saldo nach allen Aktivitäten
+          end_principal: Berechnete Restschuld nach allen Transaktionen
+          end_value: Berechneter Wert nach allen Veränderungen
+          final_balance: Abschließender Kontostand des Tages
+          final_balance_credit: Abschließend geschuldeter Betrag des Tages
+          final_balance_crypto: Abschließender Wert der Kryptobestände des Tages
+          final_balance_investment: Abschließender Portfoliowert des Tages
+          final_principal: Abschließende Restschuld des Tages
+          final_value: Abschließender Vermögenswert des Tages
+          market_changes: Wertveränderungen durch Marktpreisbewegungen
+          net_cash_flow: Nettoveränderung des Saldos durch alle Transaktionen des Tages
+          net_principal_change: Tilgungen und neue Darlehensaufnahme im Tagesverlauf
+          net_value_change: Alle Wertveränderungen einschließlich Verbesserungen und Wertminderungen
+          payments: Zahlungen an die Karte im Tagesverlauf
+          sells: Kryptoverkäufe im Tagesverlauf
+          start_balance: Kontostand zu Beginn des Tages
+          start_balance_credit: Geschuldeter Betrag zu Beginn des Tages
+          start_balance_crypto: Wert der Kryptobestände zu Beginn des Tages
+          start_balance_investment: Gesamter Portfoliowert zu Beginn des Tages
+          start_principal: Restschuld zu Beginn des Tages
+          start_value: Vermögenswert zu Beginn des Tages
+      chart:
+        no_data_available: Keine Daten verfügbar
+        title:
+          balance: Kontostand
+          cash_value: Barvermögen
+          debt_balance: Schuldenstand
+          estimated_property_value: Geschätzter Immobilienwert
+          estimated_vehicle_value: Geschätzter Fahrzeugwert
+          holdings_value: Wert der Bestände
+          remaining_principal_balance: Verbleibende Restschuld
+          total_account_value: Gesamter Kontowert
+        views:
+          cash: Bargeld
+          holdings: Bestände
+          total_value: Gesamtwert
+        vs_available_history: ggü. verfügbarem Verlauf
+      activity_date:
+        balance_tooltip: Kontostand am Tagesende nach allen Transaktionen und Anpassungen
+        no_balance_data: Für dieses Datum sind keine Kontostandsdaten verfügbar
+  ds:
+    alert:
+      variants:
+        info: Information
+        success: Erfolg
+        warning: Warnung
+        error: Fehler
+        destructive: Fehler
+    pill:
+      aria_label: "%{label}"
+      default_label: Vorschau
+    dialog:
+      close: Schließen
+    popover:
+      avatar_default_label: Menü öffnen
+    tooltip:
+      trigger_label: Weitere Informationen
+    link:
+      opens_in_new_tab: (wird in einem neuen Tab geöffnet)
   provider_sync_summary:
     title: Sync-Zusammenfassung
     last_sync: "Letzter Sync: vor %{time_ago}"
@@ -30,7 +127,7 @@ de:
       found: "Gefunden: %{count}"
       processed: "Verarbeitet: %{count}"
     trades:
-      title: Trades
+      title: Wertpapiergeschäfte
       imported: "Importiert: %{count}"
       skipped: "Übersprungen: %{count}"
       fetching: "Aktivitäten werden vom Broker abgerufen..."

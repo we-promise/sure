@@ -31,7 +31,7 @@ de:
         items:
           item_1: Bestände mit aktuellen Kursen und Stückzahlen
           item_2: Einstandskosten pro Position
-          item_3: Trades, Dividenden, Provisionen sowie Bareinzahlungen und -abhebungen
+          item_3: Wertpapiergeschäfte, Dividenden, Provisionen sowie Bareinzahlungen und -abhebungen
         warning: Historische Aktivitäten sind auf den Berichtszeitraum der Flex-Abfrage beschränkt
       status:
         fetching_accounts: Konten werden von Interactive Brokers abgerufen...

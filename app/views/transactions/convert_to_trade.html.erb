@@ -17,7 +17,7 @@
       <div class="space-y-2 p-3 bg-surface-inset rounded-lg border border-primary">
         <div class="text-sm">
           <span class="text-secondary"><%= t(".date_label") %></span>
-          <span class="font-medium text-primary"><%= @entry.date.strftime("%b %d, %Y") %></span>
+          <span class="font-medium text-primary"><%= l(@entry.date, format: :long) %></span>
         </div>
         <div class="text-sm">
           <span class="text-secondary"><%= t(".account_label") %></span>

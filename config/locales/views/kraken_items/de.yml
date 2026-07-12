@@ -35,7 +35,7 @@ de:
     setup_accounts:
       title: Kraken-Konto importieren
       subtitle: Wählen Sie das zu verfolgende Börsenkonto
-      instructions: Kraken importiert für diese Verbindung ein kombiniertes Krypto-Börsenkonto, ausschließlich mit Beständen und Spot-Trade-Ausführungen.
+      instructions: Kraken importiert für diese Verbindung ein kombiniertes Krypto-Börsenkonto, ausschließlich mit Beständen und Spot-Handelsausführungen.
       no_accounts: Alle Kraken-Konten wurden importiert.
       accounts_count:
         one: "%{count} Konto verfügbar"
