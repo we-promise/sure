@@ -52,3 +52,4 @@ zh-CN:
     custom:
       label_short: "自定义"
       label: "自定义周期"
+      comparison_label: "%{start} 至 %{end}"

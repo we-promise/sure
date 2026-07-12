@@ -20,6 +20,7 @@ ca:
     custom:
       label: Període personalitzat
       label_short: Personalitzat
+      comparison_label: "del %{start} al %{end}"
     last_10_years:
       comparison_label: vs. fa 10 anys
       label: Últims 10 anys

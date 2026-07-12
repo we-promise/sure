@@ -123,7 +123,6 @@ de:
     mark_recurring_title: Wiederkehrende Transaktion
     potential_duplicate_title: Mögliches Duplikat erkannt
     potential_duplicate_description: Diese ausstehende Transaktion könnte mit der unten stehenden gebuchten Transaktion übereinstimmen. Wenn ja, führe sie zusammen, um Doppelzählung zu vermeiden.
-    merge_duplicate: Ja, zusammenführen
     keep_both: Nein, beide behalten
     split_parent_row:
       split_label: Aufteilung
