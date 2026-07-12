@@ -32,19 +32,19 @@
     </div>
 
     <% if @all_family_merchants.any? %>
-      <div data-controller="list-filter" class="space-y-2">
+      <div data-controller="list-filter list-pagination" data-list-pagination-per-page-value="20" class="space-y-2">
         <%= render DS::SearchInput.new(
           variant: :standalone,
           placeholder: t(".search_family_merchants"),
           data: {
             list_filter_target: "input",
-            action: "input->list-filter#filter"
+            action: "input->list-filter#filter input->list-pagination#rePage"
           }
         ) %>
         <p class="hidden text-sm text-secondary px-2 py-1" data-list-filter-target="emptyMessage">
           <%= t(".no_family_merchants_found") %>
         </p>
-        <div data-list-filter-target="list" class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div data-list-filter-target="list" data-list-pagination-target="list" class="rounded-xl bg-container-inset space-y-1 p-1">
           <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
             <table class="w-full">
               <thead>
@@ -57,6 +57,34 @@
                 <%= render partial: "family_merchants/family_merchant", collection: @family_merchants %>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <div class="flex items-center gap-2">
+            <%= select_tag :family_per_page,
+                  options_for_select([10, 20, 30, 50, 100], 20),
+                  data: {
+                    list_pagination_target: "perPageSelect",
+                    action: "change->list-pagination#changePerPage"
+                  },
+                  class: "py-1.5 pr-8 text-sm text-primary font-medium bg-container-inset border border-secondary rounded-lg focus:border-secondary focus:ring-secondary focus-visible:ring-secondary" %>
+            <span class="text-sm text-secondary"><%= t(".per_page") %></span>
+          </div>
+          <span class="text-sm text-secondary tabular-nums" data-list-pagination-target="pageInfo"></span>
+          <div class="flex items-center">
+            <button type="button"
+                    data-list-pagination-target="prevButton"
+                    data-action="click->list-pagination#prevPage"
+                    class="inline-flex items-center p-2 text-sm font-medium text-secondary disabled:opacity-30">
+              <%= icon("chevron-left") %>
+            </button>
+            <button type="button"
+                    data-list-pagination-target="nextButton"
+                    data-action="click->list-pagination#nextPage"
+                    class="inline-flex items-center p-2 text-sm font-medium text-secondary disabled:opacity-30">
+              <%= icon("chevron-right") %>
+            </button>
           </div>
         </div>
       </div>
@@ -107,19 +135,19 @@
     <% end %>
 
     <% if @all_provider_merchants.any? %>
-      <div data-controller="list-filter" class="space-y-2">
+      <div data-controller="list-filter list-pagination" data-list-pagination-per-page-value="20" class="space-y-2">
         <%= render DS::SearchInput.new(
           variant: :standalone,
           placeholder: t(".search_provider_merchants"),
           data: {
             list_filter_target: "input",
-            action: "input->list-filter#filter"
+            action: "input->list-filter#filter input->list-pagination#rePage"
           }
         ) %>
         <p class="hidden text-sm text-secondary px-2 py-1" data-list-filter-target="emptyMessage">
           <%= t(".no_provider_merchants_found") %>
         </p>
-        <div data-list-filter-target="list" class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div data-list-filter-target="list" data-list-pagination-target="list" class="rounded-xl bg-container-inset space-y-1 p-1">
           <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
             <table class="w-full">
               <thead>
@@ -133,6 +161,34 @@
                 <%= render partial: "family_merchants/provider_merchant", collection: @provider_merchants %>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <div class="flex items-center gap-2">
+            <%= select_tag :provider_per_page,
+                  options_for_select([10, 20, 30, 50, 100], 20),
+                  data: {
+                    list_pagination_target: "perPageSelect",
+                    action: "change->list-pagination#changePerPage"
+                  },
+                  class: "py-1.5 pr-8 text-sm text-primary font-medium bg-container-inset border border-secondary rounded-lg focus:border-secondary focus:ring-secondary focus-visible:ring-secondary" %>
+            <span class="text-sm text-secondary"><%= t(".per_page") %></span>
+          </div>
+          <span class="text-sm text-secondary tabular-nums" data-list-pagination-target="pageInfo"></span>
+          <div class="flex items-center">
+            <button type="button"
+                    data-list-pagination-target="prevButton"
+                    data-action="click->list-pagination#prevPage"
+                    class="inline-flex items-center p-2 text-sm font-medium text-secondary disabled:opacity-30">
+              <%= icon("chevron-left") %>
+            </button>
+            <button type="button"
+                    data-list-pagination-target="nextButton"
+                    data-action="click->list-pagination#nextPage"
+                    class="inline-flex items-center p-2 text-sm font-medium text-secondary disabled:opacity-30">
+              <%= icon("chevron-right") %>
+            </button>
           </div>
         </div>
       </div>
