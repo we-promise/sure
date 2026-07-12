@@ -33,6 +33,7 @@ en:
       search_provider_merchants: Search provider merchants...
       no_family_merchants_found: No matching family merchants found
       no_provider_merchants_found: No matching provider merchants found
+      per_page: per page
       unlinked_title: Recently unlinked
       unlinked_info: These merchants were recently removed from your transactions. They will disappear from this list after 30 days unless re-assigned to a transaction.
       table:

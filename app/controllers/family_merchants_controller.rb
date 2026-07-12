@@ -8,6 +8,12 @@ class FamilyMerchantsController < ApplicationController
     @all_family_merchants = Current.family.merchants.alphabetically
     @all_provider_merchants = Current.family.assigned_merchants_for(Current.user).where(type: "ProviderMerchant").alphabetically
 
+    family_scope = @all_family_merchants
+    family_scope = family_scope.where("LOWER(name) LIKE ?", "%#{params[:family_search].downcase}%") if params[:family_search].present?
+
+    provider_scope = @all_provider_merchants
+    provider_scope = provider_scope.where("LOWER(name) LIKE ?", "%#{params[:provider_search].downcase}%") if params[:provider_search].present?
+
     # Show recently unlinked ProviderMerchants (within last 30 days)
     # Exclude merchants that are already assigned to transactions (they appear in provider_merchants)
     recently_unlinked_ids = FamilyMerchantAssociation
@@ -20,8 +26,8 @@ class FamilyMerchantsController < ApplicationController
     @enhanceable_count = @all_provider_merchants.where(website_url: [ nil, "" ]).count
     @llm_available = Provider::Registry.get_provider(:openai).present?
 
-    @family_merchants = @all_family_merchants
-    @provider_merchants = @all_provider_merchants
+    @pagy_family_merchants, @family_merchants = pagy(family_scope, page_param: :family_page, limit: safe_per_page)
+    @pagy_provider_merchants, @provider_merchants = pagy(provider_scope, page_param: :provider_page, limit: safe_per_page)
 
     render layout: "settings"
   end
