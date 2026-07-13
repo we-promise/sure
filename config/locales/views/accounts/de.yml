@@ -133,6 +133,7 @@ de:
       new_asset: Neues Vermögen
       new_debt: Neue Schuld
       new_account: Neues Konto
+      capitalize_account_group: true
       new_account_group: "%{account_group} hinzufügen"
     types:
       depository: Bargeld

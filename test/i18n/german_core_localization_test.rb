@@ -68,12 +68,9 @@ class GermanCoreLocalizationTest < ActiveSupport::TestCase
   end
 
   test "account group links use localized noun capitalization" do
-    assert_equal "New Loan", I18n.with_locale(:en) {
-      I18n.t("accounts.sidebar.new_account_group", account_group: Loan.singular_display_name)
-    }
-    assert_equal "Darlehen hinzufügen", I18n.with_locale(:de) {
-      I18n.t("accounts.sidebar.new_account_group", account_group: Loan.singular_display_name)
-    }
+    assert_equal "New loan", I18n.with_locale(:en) { localized_account_group_link(Loan) }
+    assert_equal "Darlehen hinzufügen", I18n.with_locale(:de) { localized_account_group_link(Loan) }
+    assert_equal "Nouveau prêt", I18n.with_locale(:fr) { localized_account_group_link(Loan) }
   end
 
   test "all period locales translate custom comparison ranges" do
@@ -113,6 +110,13 @@ class GermanCoreLocalizationTest < ActiveSupport::TestCase
       return [] unless value.is_a?(String)
 
       value.scan(/%\{([^}]+)\}/).flatten.uniq.sort
+    end
+
+    def localized_account_group_link(accountable_type)
+      account_group_name = accountable_type.singular_display_name
+      account_group_name = account_group_name.downcase unless I18n.t("accounts.sidebar.capitalize_account_group")
+
+      I18n.t("accounts.sidebar.new_account_group", account_group: account_group_name)
     end
 
     def missing_message(missing_by_file)
