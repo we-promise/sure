@@ -10,12 +10,52 @@ en:
         description: Insights appear here once there's enough activity in your accounts. They refresh automatically every night.
     refresh:
       queued: We're generating fresh insights. Check back in a minute.
+      checking: Checking…
     card:
       dismiss: Dismiss
       new: New
-      generated_at: "%{time} ago"
+      dismissed: Insight dismissed
+      undo: Undo
     feed:
       view_all: View all insights
+      header: Latest
+      header_new: New
+    types:
+      spending_anomaly: Spending
+      cash_flow_warning: Cash flow
+      net_worth_milestone: Net worth
+      subscription_audit: Subscriptions
+      savings_rate_change: Savings rate
+      idle_cash: Idle cash
+      budget_at_risk: Budget
+      budget_on_track: Budget
+    meta:
+      next_n_days:
+        one: Next day
+        other: Next %{count} days
+      last_n_days:
+        one: Last day
+        other: Last %{count} days
+      date_range: "%{from} to %{to}"
+    figures:
+      vs_previous: vs prior month
+      today: today
+      on_pace: on pace
+      of_budget: of budget
+      days_overdue:
+        one: "%{count} day overdue"
+        other: "%{count} days overdue"
+      idle_days:
+        one: idle %{count} day
+        other: idle %{count} days
+    actions:
+      spending_anomaly: View %{category} transactions
+      cash_flow_warning: Review recurring transactions
+      net_worth_milestone: View net worth report
+      subscription_audit: Review recurring transactions
+      savings_rate_change: View that month's transactions
+      idle_cash: Go to account
+      budget: View budget
     titles:
       spending_anomaly:
         above: "%{category} spending is trending up"
@@ -45,6 +85,7 @@ en:
       savings_rate_change:
         up: You saved %{current_rate}% of your income in %{month}, up %{change_pp} percentage points from %{previous_rate}% the month before.
         down: You saved %{current_rate}% of your income in %{month}, down %{change_pp} percentage points from %{previous_rate}% the month before.
+        down_negative: "You spent more than you earned in %{month}: your savings rate fell to %{current_rate}%, from %{previous_rate}% the month before."
       idle_cash: "%{account} holds %{balance} with no activity in the last %{idle_days} days."
       budget_at_risk:
         over: "%{categories} went over budget this month. You've used %{budget_spent_pct}% of your total budget so far."

@@ -1,16 +1,64 @@
 <%# locals: (insights:, **args) %>
 
-<div class="space-y-3" id="insights-feed">
-  <% insights.each do |insight| %>
-    <%= render "insights/insight_card", insight: insight, unread: insight.active? %>
-  <% end %>
+<%# Mirrors the outflows/balance-sheet list idiom: an inset well with an
+    uppercase mini-header, white rows inside, tinted icon circles, and
+    right-aligned figures. Dismissal lives on /insights; here each row just
+    links through. Prefetch is disabled because Turbo would serve the
+    hover-prefetched response on click, skipping the mark-as-read in
+    InsightsController#index (it deliberately ignores prefetch requests). %>
+<%# -mt-2 evens the frame: the section shell gives 24px above the content but
+    only 16px at the sides and bottom, and with the well as the sole content
+    the asymmetry shows. %>
+<div id="insights-feed" class="px-4 -mt-2">
+  <div class="bg-container-inset rounded-xl p-1 space-y-1">
+    <div class="px-4 py-2 flex items-center justify-between uppercase text-xs font-medium text-secondary">
+      <% new_count = insights.count(&:active?) %>
+      <% if new_count.positive? %>
+        <p><%= t("insights.feed.header_new") %><span class="text-subdued mx-1">&middot;</span><%= new_count %></p>
+      <% else %>
+        <p><%= t("insights.feed.header") %></p>
+      <% end %>
 
-  <div class="px-1">
-    <%= render DS::Link.new(
-      text: t("insights.feed.view_all"),
-      href: insights_path,
-      variant: "ghost",
-      size: "sm"
-    ) %>
+      <%= render DS::Link.new(
+        text: t("insights.feed.view_all"),
+        href: insights_path,
+        variant: "ghost",
+        size: "sm",
+        class: "normal-case",
+        data: { turbo_prefetch: false }
+      ) %>
+    </div>
+
+    <div class="py-1.5 shadow-border-xs rounded-lg bg-container text-sm">
+      <% insights.each do |insight| %>
+        <%# No hover background, matching the outflows rows — the affordance is
+            the cursor plus the icon's gentle scale. %>
+        <%= link_to insights_path,
+              data: { turbo_prefetch: false },
+              class: "flex items-center mx-3 px-3 py-2.5 rounded-lg gap-3 cursor-pointer group" do %>
+          <div class="h-7 w-7 shrink-0 rounded-full flex justify-center items-center group-hover:scale-105 transition-all duration-300"
+               style="background-color: color-mix(in oklab, <%= insight_icon_css_color(insight) %> 10%, transparent); color: <%= insight_icon_css_color(insight) %>;">
+            <%= icon(insight_icon_key(insight), color: "current", size: "sm") %>
+          </div>
+
+          <div class="min-w-0 grow">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium text-primary truncate"><%= insight.title %></span>
+              <% if insight.active? %>
+                <%= render DS::Pill.new(label: t("insights.card.new"), tone: :info, size: :sm) %>
+              <% end %>
+            </div>
+            <p class="text-sm text-secondary truncate"><%= insight.body %></p>
+          </div>
+
+          <% if (figure = insight_key_figure(insight)) %>
+            <div class="text-right shrink-0">
+              <p class="text-sm font-medium whitespace-nowrap privacy-sensitive <%= insight_sentiment(insight) == :positive ? "text-success" : "text-primary" %>"><%= figure.first %></p>
+              <p class="text-xs text-secondary whitespace-nowrap"><%= figure.last %></p>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
   </div>
 </div>

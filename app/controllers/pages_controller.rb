@@ -8,7 +8,11 @@ class PagesController < ApplicationController
   #               false for content-sized widgets (tables, stat grids)
   #   min_height: floor in px
   DASHBOARD_SECTION_LAYOUTS = {
-    "insights_feed"      => { col_span: "full",   grow: false, min_height: 0 },
+    # Width-toggleable but full by default: the feed is much shorter than any
+    # other single-width widget, so defaulting to half leaves a grid hole the
+    # masonry can't backfill (dense placement needs a later card short enough
+    # to fit beside it, and none is). Users who pair it manually can go half.
+    "insights_feed"      => { col_span: "full",   grow: false, min_height: 0, width_toggle: true },
     "cashflow_sankey"    => { col_span: "full",   grow: false, min_height: 384, width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
@@ -168,9 +172,18 @@ class PagesController < ApplicationController
         all_sections.find { |s| s[:key] == key }
       end.compact
 
-      # Add any new sections that aren't in the saved order (future-proofing)
+      # Add any new sections that aren't in the saved order (future-proofing).
+      # The insights feed leads instead of appending: it's a proactive surface,
+      # and appending would bury it below the fold for every family with a
+      # saved order. Users can still drag it back down — that choice persists.
       all_sections.each do |section|
-        ordered_sections << section unless ordered_sections.include?(section)
+        next if ordered_sections.include?(section)
+
+        if section[:key] == "insights_feed"
+          ordered_sections.unshift(section)
+        else
+          ordered_sections << section
+        end
       end
 
       ordered_sections
