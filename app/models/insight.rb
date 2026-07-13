@@ -45,4 +45,10 @@ class Insight < ApplicationRecord
   def dismiss!
     update!(status: :dismissed, dismissed_at: Time.current)
   end
+
+  # Undoes a dismissal without re-badging the insight as new — the user has
+  # obviously seen it, so it returns as read.
+  def undismiss!
+    update!(status: :read, dismissed_at: nil, read_at: read_at || Time.current)
+  end
 end

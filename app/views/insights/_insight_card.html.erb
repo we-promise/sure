@@ -6,28 +6,41 @@
   </div>
 
   <div class="min-w-0 grow space-y-1">
-    <div class="flex items-start justify-between gap-2">
-      <h3 class="text-sm font-medium text-primary inline-flex items-center gap-2">
+    <p class="text-xs text-secondary"><%= insight_meta_line(insight) %></p>
+
+    <div class="flex items-start justify-between gap-3">
+      <h3 class="text-sm font-medium text-primary inline-flex items-center gap-2 min-w-0">
         <%= insight.title %>
         <% if unread %>
           <%= render DS::Pill.new(label: t("insights.card.new"), tone: :info, size: :sm) %>
         <% end %>
       </h3>
 
-      <%= render DS::Button.new(
-        variant: "icon",
-        icon: "x",
-        href: dismiss_insight_path(insight),
-        method: :patch,
-        title: t("insights.card.dismiss"),
-        aria_label: t("insights.card.dismiss")
-      ) %>
+      <div class="flex items-start gap-1 shrink-0">
+        <% if (figure = insight_key_figure(insight)) %>
+          <div class="text-right mr-1">
+            <p class="text-sm font-mono font-medium privacy-sensitive <%= insight_sentiment(insight) == :positive ? "text-success" : "text-primary" %>"><%= figure.first %></p>
+            <p class="text-xs text-subdued"><%= figure.last %></p>
+          </div>
+        <% end %>
+
+        <%= render DS::Button.new(
+          variant: "icon",
+          icon: "x",
+          href: dismiss_insight_path(insight),
+          method: :patch,
+          title: t("insights.card.dismiss"),
+          aria_label: t("insights.card.dismiss")
+        ) %>
+      </div>
     </div>
 
     <p class="text-sm text-secondary"><%= insight.body %></p>
 
-    <p class="text-xs text-subdued">
-      <%= t("insights.card.generated_at", time: time_ago_in_words(insight.generated_at)) %>
-    </p>
+    <% if (action = insight_action(insight)) %>
+      <div class="pt-1">
+        <%= render DS::Link.new(text: action[:text], href: action[:href], variant: "ghost", size: "sm") %>
+      </div>
+    <% end %>
   </div>
 </div>

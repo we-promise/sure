@@ -22,16 +22,24 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
     direction = delta.positive? ? "up" : "down"
     month_name = I18n.l(last_month.start_date, format: "%B")
 
+    # "You saved -5.4% of your income" is machine-speak; a negative rate means
+    # the family spent more than it earned, and the copy should say so.
+    template_key = if direction == "down" && current_rate.negative?
+      "savings_rate_change.down_negative"
+    else
+      "savings_rate_change.#{direction}"
+    end
+
     [
       build_insight(
         insight_type: "savings_rate_change",
         priority: delta.abs >= HIGH_PRIORITY_PP ? "high" : "medium",
         title: I18n.t("insights.titles.savings_rate_change.#{direction}", month: month_name),
-        template_key: "savings_rate_change.#{direction}",
+        template_key: template_key,
         facts: {
           month: month_name,
-          current_rate: round(current_rate, 1),
-          previous_rate: round(previous_rate, 1),
+          current_rate: signed_number(round(current_rate, 1)),
+          previous_rate: signed_number(round(previous_rate, 1)),
           change_pp: round(delta.abs, 1)
         },
         metadata: {

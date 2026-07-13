@@ -83,4 +83,11 @@ class Insight::Generator
     def month_token(date = Date.current)
       date.strftime("%Y-%m")
     end
+
+    # Formats a number for display facts with a true minus sign (U+2212) —
+    # the app types negatives with a minus, not a hyphen. Keep raw numerics
+    # in `metadata`; this is for interpolation into template/LLM prose only.
+    def signed_number(value)
+      value.negative? ? "−#{value.abs}" : value.to_s
+    end
 end

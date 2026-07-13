@@ -438,6 +438,7 @@ Rails.application.routes.draw do
 
     member do
       patch :dismiss
+      patch :undismiss
     end
   end
 

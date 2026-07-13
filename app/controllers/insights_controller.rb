@@ -1,9 +1,8 @@
 class InsightsController < ApplicationController
-  before_action :set_insight, only: %i[dismiss]
+  before_action :set_insight, only: %i[dismiss undismiss]
 
   def index
-    @insights = Current.family.insights.visible.ordered.to_a
-    @unread_ids = @insights.select(&:active?).map(&:id).to_set
+    load_feed
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("insights.index.title"), nil ] ]
 
     # Viewing the feed is what "read" means here; the New badge for this
@@ -19,19 +18,40 @@ class InsightsController < ApplicationController
     @insight.dismiss!
 
     respond_to do |format|
-      format.turbo_stream { render turbo_stream: turbo_stream.remove(ActionView::RecordIdentifier.dom_id(@insight)) }
+      format.turbo_stream
+      format.html { redirect_back_or_to insights_path }
+    end
+  end
+
+  def undismiss
+    @insight.undismiss!
+    load_feed
+
+    respond_to do |format|
+      format.turbo_stream
       format.html { redirect_back_or_to insights_path }
     end
   end
 
   def refresh
     GenerateInsightsJob.perform_later(family_id: Current.family.id)
-    redirect_to insights_path, notice: t("insights.refresh.queued")
+
+    respond_to do |format|
+      # Swaps the button into its pending state; the job broadcasts the
+      # refreshed list and the idle button back when it finishes.
+      format.turbo_stream
+      format.html { redirect_to insights_path, notice: t("insights.refresh.queued") }
+    end
   end
 
   private
     def set_insight
       @insight = Current.family.insights.find(params[:id])
+    end
+
+    def load_feed
+      @insights = Current.family.insights.visible.ordered.to_a
+      @unread_ids = @insights.select(&:active?).map(&:id).to_set
     end
 
     # Turbo sends X-Sec-Purpose (the fetch spec forbids setting Sec-Purpose

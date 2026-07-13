@@ -59,6 +59,24 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal original_body, insight.reload.body
   end
 
+  test "persists display facts and refreshes them without a body rewrite when metadata is unchanged" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    assert_equal "$5000", insight.facts["balance"]
+    original_body = insight.body
+    insight.mark_read!
+
+    stub_generated([ generated_insight(display_balance: 5040) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_equal "$5040", insight.facts["balance"]
+    assert_equal original_body, insight.body
+    assert insight.read?
+  end
+
   test "dismissed insight stays dismissed when numbers are unchanged" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
@@ -147,13 +165,16 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
       Insight::GeneratorRegistry.any_instance.stubs(:generate_all).returns(result)
     end
 
-    def generated_insight(balance: 5000.0)
+    # display_balance changes only the formatted facts, leaving metadata (the
+    # material-change signal) untouched — mirrors a balance drifting slightly
+    # between runs without crossing a bucket boundary.
+    def generated_insight(balance: 5000.0, display_balance: nil)
       Insight::Generator::GeneratedInsight.new(
         insight_type: "idle_cash",
         priority: "low",
         title: "Idle cash in Test Checking",
         template_key: "idle_cash",
-        facts: { account: "Test Checking", balance: "$#{balance.to_i}", idle_days: 60 },
+        facts: { account: "Test Checking", balance: "$#{(display_balance || balance).to_i}", idle_days: 60 },
         metadata: { account_id: "test-account", balance: balance },
         currency: "USD",
         period_start: nil,

@@ -33,6 +33,29 @@ class GenerateInsightsJob < ApplicationJob
           expire_stale_insights(family, result)
         end
       end
+
+      # Outside the lock on purpose: even a lock-skipped run re-broadcasts the
+      # current state, so a subscribed /insights page (waiting on its manual
+      # refresh) always gets its list and button restored.
+      broadcast_feed(family)
+    end
+
+    def broadcast_feed(family)
+      insights = family.insights.visible.ordered.to_a
+      unread_ids = insights.select(&:active?).map(&:id).to_set
+
+      Turbo::StreamsChannel.broadcast_replace_to(
+        [ family, :insights ],
+        target: "insights-list",
+        partial: "insights/list",
+        locals: { insights: insights, unread_ids: unread_ids }
+      )
+      Turbo::StreamsChannel.broadcast_replace_to(
+        [ family, :insights ],
+        target: "insights-refresh",
+        partial: "insights/refresh_button",
+        locals: { pending: false }
+      )
     end
 
     # A visible insight whose generator ran successfully but did not re-emit
@@ -51,7 +74,8 @@ class GenerateInsightsJob < ApplicationJob
       writer = Insight::BodyWriter.new(family)
 
       generated_insights.each do |generated|
-        metadata = normalize_metadata(generated.metadata)
+        metadata = normalize_json(generated.metadata)
+        facts = normalize_json(generated.facts)
         existing = family.insights.find_by(dedup_key: generated.dedup_key)
 
         if existing.nil?
@@ -62,6 +86,7 @@ class GenerateInsightsJob < ApplicationJob
             title: generated.title,
             body: writer.write(generated),
             metadata: metadata,
+            facts: facts,
             currency: generated.currency,
             period_start: generated.period_start,
             period_end: generated.period_end,
@@ -77,6 +102,7 @@ class GenerateInsightsJob < ApplicationJob
             title: generated.title,
             body: writer.write(generated),
             metadata: metadata,
+            facts: facts,
             period_start: generated.period_start,
             period_end: generated.period_end,
             generated_at: Time.current,
@@ -87,25 +113,36 @@ class GenerateInsightsJob < ApplicationJob
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces; the body is still accurate, so no rewrite.
-          existing.update!(status: "active", generated_at: Time.current, read_at: nil)
+          existing.update!(status: "active", facts: facts, generated_at: Time.current, read_at: nil)
         else
           # Same signal, same numbers: don't rewrite the body (avoids an LLM
-          # call) and don't undo the user's read/dismissed state.
-          existing.update!(generated_at: Time.current)
+          # call) and don't undo the user's read/dismissed state. Facts still
+          # refresh — they're display values (key figure, link labels), and
+          # keeping them current is exactly why they're not part of the
+          # material-change comparison.
+          existing.update!(facts: facts, generated_at: Time.current)
         end
       rescue ActiveRecord::RecordNotUnique
         # A concurrent run created the same dedup_key first; it owns this row.
         next
       rescue => e
-        Rails.logger.error("Failed to upsert insight #{generated.dedup_key} for family #{family.id}: #{e.message}")
+        DebugLogEntry.capture(
+          category: "insights",
+          level: "error",
+          message: "Failed to upsert insight #{generated.dedup_key}: #{e.class}: #{e.message}",
+          source: "GenerateInsightsJob",
+          family: family,
+          metadata: { dedup_key: generated.dedup_key, insight_type: generated.insight_type }
+        )
       end
     end
 
-    # GeneratedInsight metadata may hold symbols, dates, or BigDecimals; the
-    # persisted jsonb column round-trips everything to JSON primitives. Compare
-    # like with like or every nightly run would look like a material change.
-    def normalize_metadata(metadata)
-      JSON.parse(metadata.to_json)
+    # GeneratedInsight metadata/facts may hold symbols, dates, or BigDecimals;
+    # the persisted jsonb columns round-trip everything to JSON primitives.
+    # Compare like with like or every nightly run would look like a material
+    # change.
+    def normalize_json(hash)
+      JSON.parse(hash.to_json)
     end
 
     def with_advisory_lock(family_id)

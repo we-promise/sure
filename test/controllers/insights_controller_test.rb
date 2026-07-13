@@ -30,12 +30,49 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#insights-feed span", text: I18n.t("insights.card.new")
   end
 
-  test "dismiss removes the insight from the feed via turbo stream" do
+  test "insights feed leads the dashboard for users with a saved order that predates it" do
+    @user.update!(preferences: (@user.preferences || {}).merge(
+      "section_order" => %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet]
+    ))
+
+    get root_url
+
+    assert_response :success
+    feed_position = response.body.index('data-section-key="insights_feed"')
+    sankey_position = response.body.index('data-section-key="cashflow_sankey"')
+    assert feed_position.present? && feed_position < sankey_position,
+      "insights_feed should be prepended, not appended, for saved orders that predate it"
+  end
+
+  test "dismiss removes the insight from the feed and offers undo via turbo stream" do
     patch dismiss_insight_url(@insight), as: :turbo_stream
 
     assert_response :success
     assert_match "turbo-stream", response.body
+    assert_match undismiss_insight_path(@insight), response.body
     assert @insight.reload.dismissed?
+  end
+
+  test "undismiss restores the insight as read and re-renders the list" do
+    @insight.dismiss!
+
+    patch undismiss_insight_url(@insight), as: :turbo_stream
+
+    assert_response :success
+    assert_match "insights-list", response.body
+    assert_match CGI.escapeHTML(@insight.title), response.body
+    assert @insight.reload.read?
+    assert_nil @insight.dismissed_at
+  end
+
+  test "refresh swaps the button into a pending state via turbo stream" do
+    assert_enqueued_with(job: GenerateInsightsJob, args: [ { family_id: @user.family_id } ]) do
+      post refresh_insights_url, as: :turbo_stream
+    end
+
+    assert_response :success
+    assert_match "insights-refresh", response.body
+    assert_match CGI.escapeHTML(I18n.t("insights.refresh.checking")), response.body
   end
 
   test "cannot dismiss another family's insight" do

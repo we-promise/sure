@@ -32,6 +32,17 @@ class InsightTest < ActiveSupport::TestCase
     assert @insight.dismissed_at.present?
   end
 
+  test "undismiss! restores a dismissed insight as read, not new" do
+    @insight.dismiss!
+
+    @insight.undismiss!
+
+    assert @insight.reload.read?
+    assert_nil @insight.dismissed_at
+    assert @insight.read_at.present?
+    assert_includes Insight.visible, @insight
+  end
+
   test "duplicate dedup_key within a family is rejected" do
     assert_raises ActiveRecord::RecordInvalid do
       @insight.family.insights.create!(

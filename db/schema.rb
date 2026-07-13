@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_01_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1158,6 +1158,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_01_120000) do
     t.string "currency", default: "USD", null: false
     t.string "dedup_key", null: false
     t.datetime "dismissed_at"
+    t.jsonb "facts", default: {}, null: false
     t.uuid "family_id", null: false
     t.datetime "generated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "insight_type", null: false
