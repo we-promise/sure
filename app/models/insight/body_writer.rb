@@ -1,8 +1,9 @@
 # Writes the user-facing prose for a GeneratedInsight. The LLM acts as a
 # writer, not a reasoner: it receives pre-computed facts and may only phrase
-# them. When no LLM provider is configured (common on self-hosted installs)
-# or the call fails, the i18n template interpolated with the same facts is
-# used instead, so insight generation never depends on an external service.
+# them. When no LLM provider is configured (common on self-hosted installs),
+# nobody in the family has opted into AI, or the call fails, the i18n template
+# interpolated with the same facts is used instead, so insight generation
+# never depends on an external service.
 class Insight::BodyWriter
   SYSTEM_PROMPT = <<~PROMPT.freeze
     You write short insights for a personal finance app.
@@ -50,12 +51,24 @@ class Insight::BodyWriter
 
       response.data.messages.filter_map(&:output_text).join(" ").strip.presence
     rescue => e
-      Rails.logger.warn("Insight::BodyWriter narration failed for family #{family.id}: #{e.message}")
+      DebugLogEntry.capture(
+        category: "insights",
+        level: "warn",
+        message: "Insight::BodyWriter narration failed: #{e.class}: #{e.message}",
+        source: "Insight::BodyWriter",
+        family: family,
+        metadata: { insight_type: generated_insight.insight_type }
+      )
       nil
     end
 
+    # This job runs unprompted for every family, so unlike chat (where the user
+    # initiates each call) LLM narration is gated on someone in the family
+    # having AI enabled — consent to share financial data with the provider,
+    # and a cost cap in managed mode. Everyone else gets the template body.
     def provider
       return @provider if defined?(@provider)
+      return @provider = nil unless family.users.any?(&:ai_enabled?)
 
       @provider = Provider::Registry.preferred_llm_provider
     end
