@@ -62,7 +62,7 @@ class OidcIdentity < ApplicationRecord
     return unless role_mapping.present?
 
     # Check roles in order of precedence (highest to lowest)
-    %w[super_admin admin member].each do |role|
+    %w[super_admin admin member guest].each do |role|
       mapped_groups = role_mapping[role] || role_mapping[role.to_sym] || []
       mapped_groups = Array(mapped_groups)
 

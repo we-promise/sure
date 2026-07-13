@@ -1,0 +1,109 @@
+<%# locals: (questrade_item:) %>
+
+<%= tag.div id: dom_id(questrade_item) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <div class="flex items-center justify-center h-8 w-8 bg-surface rounded-full">
+            <% if questrade_item.logo.attached? %>
+              <%= image_tag questrade_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
+            <% else %>
+              <%= tag.p "Q", class: "text-primary text-xs font-medium" %>
+            <% end %>
+          </div>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p "Questrade", class: "font-medium text-primary" %>
+              <% if questrade_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress", default: "Removing…") %></p>
+              <% end %>
+            </div>
+            <p class="text-xs text-secondary"><%= t(".kind", default: "Brokerage") %></p>
+            <% if questrade_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing", default: "Syncing…") %>
+              </div>
+            <% elsif questrade_item.sync_error.present? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= render DS::Tooltip.new(text: questrade_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+                <%= tag.span t(".error", default: "Sync error"), class: "text-destructive" %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if questrade_item.last_synced_at %>
+                  <% if questrade_item.sync_status_summary %>
+                    <%= t(".status_with_summary", default: "Synced %{timestamp} ago · %{summary}", timestamp: time_ago_in_words(questrade_item.last_synced_at), summary: questrade_item.sync_status_summary) %>
+                  <% else %>
+                    <%= t(".status", default: "Synced %{timestamp} ago", timestamp: time_ago_in_words(questrade_item.last_synced_at)) %>
+                  <% end %>
+                <% else %>
+                  <%= t(".status_never", default: "Not synced yet") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <%= icon("refresh-cw", as_button: true, href: sync_questrade_item_path(questrade_item), disabled: questrade_item.syncing?) %>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete", default: "Delete"),
+                icon: "trash-2",
+                href: questrade_item_path(questrade_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion("Questrade", high_severity: true)
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless questrade_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if questrade_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: questrade_item.accounts %>
+        <% end %>
+
+        <% stats = if defined?(@questrade_sync_stats_map) && @questrade_sync_stats_map
+             @questrade_sync_stats_map[questrade_item.id] || {}
+           else
+             questrade_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: questrade_item,
+          institutions_count: questrade_item.connected_institutions.size
+        ) %>
+
+        <% counts = defined?(@questrade_account_counts_map) && @questrade_account_counts_map ? @questrade_account_counts_map[questrade_item.id] : nil %>
+        <% unlinked_count = counts ? counts[:unlinked] : questrade_item.unlinked_accounts_count %>
+        <% linked_count = counts ? counts[:linked] : questrade_item.linked_accounts_count %>
+        <% total_count = counts ? counts[:total] : questrade_item.total_accounts_count %>
+
+        <% if unlinked_count > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed", default: "Accounts need setup") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", default: "%{linked} of %{total} accounts linked", linked: linked_count, total: total_count) %></p>
+            <%= render DS::Link.new(text: t(".setup_action", default: "Set up accounts"), icon: "settings", variant: "primary", href: setup_accounts_questrade_item_path(questrade_item), frame: :modal) %>
+          </div>
+        <% elsif questrade_item.accounts.empty? && total_count == 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title", default: "No accounts found") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description", default: "We could not find any Questrade accounts to import.") %></p>
+            <%= render DS::Link.new(text: t(".setup_action", default: "Set up accounts"), icon: "settings", variant: "primary", href: setup_accounts_questrade_item_path(questrade_item), frame: :modal) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
