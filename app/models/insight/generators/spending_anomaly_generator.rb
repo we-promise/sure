@@ -54,11 +54,14 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
           projected_spend: format_money(anomaly[:projected]),
           baseline_spend: format_money(anomaly[:baseline])
         },
+        # The projection moves every night by construction (spend accrues and
+        # the pace factor shrinks as the month elapses), so exact amounts here
+        # would rewrite the body and resurrect dismissals nightly. Bucket the
+        # deviation instead; the display numbers live in `facts` only.
         metadata: {
           category_id: anomaly[:category_id],
-          projected_amount: round(anomaly[:projected], 0),
-          baseline_amount: round(anomaly[:baseline], 0),
-          deviation_pct: round(anomaly[:deviation_pct], 0)
+          direction: direction,
+          deviation_bucket: (round(anomaly[:deviation_pct].abs, 0).to_i / 25) * 25
         },
         period: period,
         dedup_key: "spending_anomaly:#{anomaly[:category_id]}:#{month_token(period.start_date)}"

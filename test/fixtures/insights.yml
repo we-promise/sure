@@ -6,9 +6,9 @@ spending_anomaly_dining:
   title: Food & Drink spending is up
   body: You've spent about 40% more on Food & Drink this month than your recent three-month average.
   metadata:
-    current_amount: 420.0
-    baseline_amount: 300.0
-    deviation_pct: 40.0
+    category_id: food-and-drink
+    direction: above
+    deviation_bucket: 25
   currency: USD
   period_start: <%= Date.current.beginning_of_month %>
   period_end: <%= Date.current.end_of_month %>
@@ -23,8 +23,8 @@ cash_flow_warning:
   title: Checking balance may run low
   body: Based on your upcoming bills and typical spending, your checking balance could drop to about $320 in the next 30 days.
   metadata:
-    projected_low_amount: 320.0
-    projected_low_date: <%= 12.days.from_now.to_date %>
+    negative: false
+    projected_low_bucket: 250
   currency: USD
   period_start: <%= Date.current %>
   period_end: <%= 30.days.from_now.to_date %>

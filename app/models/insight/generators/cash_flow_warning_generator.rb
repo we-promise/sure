@@ -4,6 +4,8 @@
 class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
   produces "cash_flow_warning"
 
+  # Known limitation: family-currency units, tuned for dollar/euro-scale
+  # currencies (¥500 ≈ $3 would make this threshold meaninglessly low).
   LOW_BALANCE_THRESHOLD = 500
   HORIZON_DAYS = 30
 
@@ -54,10 +56,13 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
           current_balance: format_money(starting_balance),
           horizon_days: HORIZON_DAYS
         },
+        # Balances and projected dates drift with nearly every transaction, so
+        # exact values here would read as a material change nightly — rewriting
+        # the body and resurrecting dismissals. Only severity and a coarse
+        # bucket of the low point are material; display values live in `facts`.
         metadata: {
-          projected_low_amount: round(low_point, 0),
-          projected_low_date: low_date.iso8601,
-          starting_balance: round(starting_balance, 0)
+          negative: low_point.negative?,
+          projected_low_bucket: (round(low_point, 0).to_i / 250) * 250
         },
         period: Period.custom(start_date: Date.current, end_date: Date.current + HORIZON_DAYS),
         dedup_key: "cash_flow_warning:#{month_token}"

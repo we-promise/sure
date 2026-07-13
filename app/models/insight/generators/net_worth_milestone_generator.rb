@@ -1,9 +1,13 @@
 # Celebrates the family's net worth crossing a round-number milestone within
-# the last 30 days. The dedup key is the milestone amount itself, so each
-# milestone is only ever celebrated once.
+# the last 30 days. The dedup key is the milestone amount itself, so a
+# milestone row is reused for life: a dismissal is permanent, and only a
+# dip-below-and-recross within a 30-day window can resurface an expired one.
 class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
   produces "net_worth_milestone"
 
+  # Known limitation: milestones are family-currency units, tuned for
+  # dollar/euro-scale currencies. In JPY-scale currencies the lower rungs are
+  # trivially small ($10k ≈ ¥1.5M would be the right first rung, not ¥10k).
   MILESTONES = [
     10_000, 25_000, 50_000, 100_000, 250_000,
     500_000, 1_000_000, 2_500_000, 5_000_000, 10_000_000
@@ -31,9 +35,11 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
           milestone: format_whole_money(milestone),
           net_worth: format_money(current)
         },
+        # The milestone alone is the signal. Net worth itself drifts daily for
+        # the ~30 days the crossing stays in the series window — storing it
+        # here would rewrite the body and resurrect dismissals every night.
         metadata: {
-          milestone: milestone,
-          net_worth: round(current, 0)
+          milestone: milestone
         },
         period: Period.last_30_days,
         dedup_key: "net_worth_milestone:#{milestone}"
