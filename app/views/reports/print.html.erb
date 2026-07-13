@@ -351,6 +351,6 @@
   <% end %>
 
   <footer class="tufte-footer">
-    <%= product_name %> · <%= t("reports.print.date_range", start: l(@start_date, format: :month_year), end: l(@end_date, format: :month_year)) %>
+    <%= product_name %> · <%= t("reports.print.date_range", start: l(@start_date, format: "%B %Y"), end: l(@end_date, format: "%B %Y")) %>
   </footer>
 </div>
