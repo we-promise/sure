@@ -11,7 +11,7 @@ clean_syncs:
   cron: "0 * * * *" # every hour
   class: "SyncCleanerJob"
   queue: "scheduled"
-  description: "Cleans up stale syncs"
+  description: "Cleans up stale syncs and reaps imports, exports, and provider fetch flags stuck by lost jobs"
 
 run_security_health_checks:
   cron: "0 2 * * 1-5" # 2:00 AM EST / 3:00 AM EDT (NY time) Monday through Friday

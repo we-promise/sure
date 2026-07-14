@@ -18,6 +18,18 @@ class FamilyDataExportJobTest < ActiveJob::TestCase
     assert @export.export_file.attached?
   end
 
+  test "does not restart an export in a terminal status" do
+    @export.update_columns(status: "failed")
+
+    Family::DataExporter.any_instance.expects(:generate_export).never
+
+    perform_enqueued_jobs do
+      FamilyDataExportJob.perform_later(@export)
+    end
+
+    assert_equal "failed", @export.reload.status
+  end
+
   test "marks export as failed on error" do
     # Mock the exporter to raise an error
     Family::DataExporter.any_instance.stubs(:generate_export).raises(StandardError, "Export failed")

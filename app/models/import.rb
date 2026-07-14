@@ -2,6 +2,12 @@ class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
 
+  # A hard-killed worker (OOM, SIGKILL during deploy) loses its in-flight job
+  # permanently, leaving the record wedged in importing/reverting forever.
+  # SyncCleanerJob reaps records stuck past this window (see Import.clean).
+  STUCK_AFTER = 6.hours
+  INTERRUPTED_ERROR = "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again.".freeze
+
   # Shared CSV upload/content limit for web and API imports, including preflight.
   MAX_CSV_SIZE = 10.megabytes
   MAX_PDF_SIZE = 25.megabytes
@@ -82,6 +88,34 @@ class Import < ApplicationRecord
   has_many :entries, dependent: :destroy
 
   class << self
+    # Reaps imports whose job died mid-flight. Every import! runs in a single
+    # DB transaction, so a killed job rolled its data back — failing the record
+    # is safe and re-enables the "Try again" path. Reverts that died the same
+    # way go to revert_failed so the revert can be retried. PdfImports are
+    # excluded: their importing status is a processing claim that is reclaimed
+    # to pending instead (see PdfImport.clean).
+    def clean
+      where(status: [ :importing, :reverting ])
+        .where.not(type: "PdfImport")
+        .where("updated_at < ?", STUCK_AFTER.ago)
+        .find_each do |import|
+          previous_status = import.status
+          import.update!(
+            status: previous_status == "reverting" ? :revert_failed : :failed,
+            error: INTERRUPTED_ERROR
+          )
+
+          DebugLogEntry.capture(
+            category: "background_jobs",
+            level: "warn",
+            message: "Reaped #{import.type} stuck in #{previous_status} for over #{STUCK_AFTER.inspect}",
+            source: name,
+            family: import.family,
+            metadata: { record_type: import.type, record_id: import.id, previous_status: previous_status, new_status: import.status }
+          )
+        end
+    end
+
     def parse_csv_str(csv_str, col_sep: ",")
       CSV.parse(
         (csv_str || "").strip,
@@ -148,6 +182,15 @@ class Import < ApplicationRecord
   end
 
   def publish
+    # A redelivered or stray ImportJob must not re-import data that already
+    # committed (types without row dedup would double-apply), and must not
+    # race a revert that owns the record. A failed import is deliberately NOT
+    # blocked: its transaction rolled back, so a re-run is a safe retry.
+    if complete? || reverting? || revert_failed?
+      Rails.logger.warn("Import #{id} publish skipped (status: #{status})")
+      return
+    end
+
     raise MaxRowCountExceededError if row_count_exceeded?
 
     import!

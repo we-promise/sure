@@ -5,6 +5,28 @@ class PdfImport < Import
   validate :account_statement_matches_import
 
   class << self
+    # PdfImport's importing status is a processing claim (either the AI
+    # extraction claim from process_with_ai_later or a regular publish). A lost
+    # job leaves the claim held forever and the user cannot re-trigger —
+    # ProcessPdfJob's own reclaim only runs when the job is redelivered.
+    # Reclaiming to pending re-enables both re-processing and re-publishing.
+    def clean
+      where(status: :importing)
+        .where("updated_at < ?", Import::STUCK_AFTER.ago)
+        .find_each do |pdf_import|
+          pdf_import.update!(status: :pending)
+
+          DebugLogEntry.capture(
+            category: "background_jobs",
+            level: "warn",
+            message: "Reclaimed PdfImport stuck in importing for over #{Import::STUCK_AFTER.inspect}",
+            source: name,
+            family: pdf_import.family,
+            metadata: { record_type: name, record_id: pdf_import.id, previous_status: "importing", new_status: "pending" }
+          )
+        end
+    end
+
     def create_from_upload!(family:, file:, user:)
       statement = AccountStatement.create_from_prepared_upload!(
         family: family,

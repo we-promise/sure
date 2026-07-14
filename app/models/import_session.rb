@@ -29,6 +29,33 @@ class ImportSession < ApplicationRecord
             allow_nil: true
   validate :payloads_are_json_objects
 
+  # See Import::STUCK_AFTER — same dead-worker failure mode, same sweep.
+  # A session wedged in importing is otherwise unrecoverable: publish_later
+  # refuses to re-publish while importing. Failing it re-enables re-publish,
+  # which resumes safely at the first incomplete chunk.
+  def self.clean
+    where(status: :importing)
+      .where("updated_at < ?", Import::STUCK_AFTER.ago)
+      .find_each do |session|
+        session.update!(
+          status: :failed,
+          error_details: {
+            "code" => "import_interrupted",
+            "message" => Import::INTERRUPTED_ERROR
+          }
+        )
+
+        DebugLogEntry.capture(
+          category: "background_jobs",
+          level: "warn",
+          message: "Reaped ImportSession stuck in importing for over #{Import::STUCK_AFTER.inspect}",
+          source: name,
+          family: session.family,
+          metadata: { record_type: name, record_id: session.id, previous_status: "importing", new_status: "failed" }
+        )
+      end
+  end
+
   def self.create_or_find_for!(family:, import_type:, client_session_id:, expected_chunks:)
     import_type = import_type.presence || "SureImport"
     expected_chunks = normalize_positive_integer(expected_chunks)

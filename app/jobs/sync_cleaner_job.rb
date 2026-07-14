@@ -1,7 +1,52 @@
 class SyncCleanerJob < ApplicationJob
   queue_as :scheduled
 
+  # Provider account rows flip activities_fetch_pending while a fetch-job chain
+  # runs; the chain's state lives only in job args, so a lost link strands the
+  # flag (and its "fetching" UI badge) forever.
+  ACTIVITY_FLAG_STUCK_AFTER = 6.hours
+  ACTIVITY_FLAG_MODELS = %w[SnaptradeAccount QuestradeAccount IndexaCapitalAccount].freeze
+
+  # Sweeps records whose background job died without finalizing them. A hard
+  # worker kill (OOM, SIGKILL during deploy) loses in-flight Sidekiq jobs
+  # permanently, leaving records wedged in non-terminal statuses. Each sweep is
+  # isolated so one failing model doesn't block the others.
   def perform
-    Sync.clean
+    sweep("syncs") { Sync.clean }
+    sweep("imports") { Import.clean }
+    sweep("import_sessions") { ImportSession.clean }
+    sweep("family_exports") { FamilyExport.clean }
+    sweep("pdf_imports") { PdfImport.clean }
+    sweep("provider_activity_flags") { clear_stuck_activity_fetch_flags }
   end
+
+  private
+    def sweep(label)
+      yield
+    rescue => e
+      Rails.logger.error("SyncCleanerJob sweep #{label} failed: #{e.class}: #{e.message}")
+      Sentry.capture_exception(e) do |scope|
+        scope.set_tags(sweep: label)
+      end
+    end
+
+    def clear_stuck_activity_fetch_flags
+      ACTIVITY_FLAG_MODELS.each do |model_name|
+        model = model_name.constantize
+        model.where(activities_fetch_pending: true)
+             .where("updated_at < ?", ACTIVITY_FLAG_STUCK_AFTER.ago)
+             .find_each do |record|
+          record.update!(activities_fetch_pending: false)
+
+          DebugLogEntry.capture(
+            category: "background_jobs",
+            level: "warn",
+            message: "Cleared #{model_name} activities_fetch_pending flag stuck for over #{ACTIVITY_FLAG_STUCK_AFTER.inspect}",
+            source: self.class.name,
+            account: record.respond_to?(:account) ? record.account : nil,
+            metadata: { record_type: model_name, record_id: record.id }
+          )
+        end
+      end
+    end
 end
