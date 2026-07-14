@@ -149,6 +149,10 @@ module ApplicationHelper
     cookies[:admin] == "true"
   end
 
+  def sidekiq_web_available?
+    Rails.application.routes.named_routes.route_defined?(:sidekiq_web)
+  end
+
   def assistant_icon
     type = ENV["ASSISTANT_TYPE"].presence || Current.family&.assistant_type.presence || "builtin"
     type == "external" ? "claw" : "ai"
