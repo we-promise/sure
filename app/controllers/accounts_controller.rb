@@ -67,6 +67,24 @@ class AccountsController < ApplicationController
     )
     Transaction::ActivitySecurityPreloader.new(@entries).preload
 
+    # The preload and split-parent lookup below are intentionally scoped to the
+    # current page (@entries) — only this page is rendered, so a child entry
+    # whose split parent sits on another page deliberately won't resolve it.
+    transactions = @entries.filter_map { |e| e.entryable if e.transaction? }
+    if transactions.any?
+      ActiveRecord::Associations::Preloader.new(
+        records: transactions,
+        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant ]
+      ).call
+    end
+
+    entry_ids = @entries.map(&:id)
+    @split_parent_entry_ids = if entry_ids.any?
+      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+    else
+      Set.new
+    end
+
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end
 
