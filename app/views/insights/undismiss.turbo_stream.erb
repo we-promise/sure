@@ -1,0 +1,5 @@
+<%= turbo_stream.remove dom_id(@insight, :undo) %>
+
+<%= turbo_stream.replace "insights-list" do %>
+  <%= render "insights/list", insights: @insights, unread_ids: @unread_ids %>
+<% end %>

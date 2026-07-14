@@ -286,7 +286,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         date: date,
         currency: account.currency,
         entryable: Trade.new(
-          security: Security.create!(ticker: "T#{SecureRandom.hex(2)}", name: "Test Security"),
+          security: Security.create!(ticker: "T#{SecureRandom.hex(8)}", name: "Test Security"),
           qty: qty,
           price: amount.to_d.abs / qty.to_d.abs,
           currency: account.currency
