@@ -150,7 +150,8 @@ module ApplicationHelper
   end
 
   def sidekiq_web_available?
-    Rails.application.routes.named_routes.route_defined?(:sidekiq_web)
+    named_routes = Rails.application.routes.named_routes
+    named_routes.route_defined?(:sidekiq_web_path) || named_routes.route_defined?(:sidekiq_web_url)
   end
 
   def assistant_icon

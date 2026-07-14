@@ -51,7 +51,7 @@ class ApplicationHelperTest < ActionView::TestCase
       end
     end
 
-    Rails.application.routes.stub(:named_routes, named_routes.new({ sidekiq_web: true })) do
+    Rails.application.routes.stub(:named_routes, named_routes.new({ sidekiq_web_path: true })) do
       assert sidekiq_web_available?
     end
   end
@@ -65,6 +65,18 @@ class ApplicationHelperTest < ActionView::TestCase
 
     Rails.application.routes.stub(:named_routes, named_routes.new({})) do
       assert_not sidekiq_web_available?
+    end
+  end
+
+  test "#sidekiq_web_available? returns true when only the url helper is defined" do
+    named_routes = Struct.new(:defined) do
+      def route_defined?(name)
+        defined.fetch(name, false)
+      end
+    end
+
+    Rails.application.routes.stub(:named_routes, named_routes.new({ sidekiq_web_url: true })) do
+      assert sidekiq_web_available?
     end
   end
 
