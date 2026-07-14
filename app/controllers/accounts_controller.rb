@@ -296,11 +296,13 @@ class AccountsController < ApplicationController
       @simplefin_show_relink_map = {}
       @simplefin_duplicate_only_map = {}
 
+      family_has_manual_accounts = family.accounts.listable_manual.exists?
+
       @simplefin_items.each do |item|
         latest_sync = item.syncs.ordered.first
         stats = latest_sync&.sync_stats || {}
         @simplefin_sync_stats_map[item.id] = stats
-        @simplefin_has_unlinked_map[item.id] = item.family.accounts.listable_manual.exists?
+        @simplefin_has_unlinked_map[item.id] = family_has_manual_accounts
 
         # Count unlinked accounts
         count = item.simplefin_accounts

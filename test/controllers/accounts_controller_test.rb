@@ -404,6 +404,19 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
     @family = families(:dylan_family)
   end
 
+  test "index batches manual-account existence check for SimpleFIN items" do
+    2.times do |idx|
+      item = SimplefinItem.create!(family: @family, name: "Conn#{idx}", access_url: "https://example.com/access#{idx}")
+      item.simplefin_accounts.create!(name: "Unlinked #{idx}", account_id: "sf_#{idx}", currency: "USD", current_balance: 1, account_type: "depository")
+    end
+
+    queries = capture_sql_queries { get accounts_path }
+
+    assert_response :success
+    manual_exists_queries = queries.grep(/FROM "accounts".*listable_manual/i)
+    assert_equal 1, manual_exists_queries.size
+  end
+
   test "when unlinked SFAs exist and manuals exist, shows setup button only" do
     item = SimplefinItem.create!(family: @family, name: "Conn", access_url: "https://example.com/access")
     # Unlinked SFA (no account and no provider link)
@@ -444,4 +457,21 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
     refute_includes @response.body, setup_accounts_simplefin_item_path(item)
     refute_includes @response.body, "Link existing accounts"
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        next if payload[:cached]
+        next if %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        queries << payload[:sql].squish
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end
