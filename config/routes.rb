@@ -446,6 +446,17 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :insights, only: %i[index] do
+    collection do
+      post :refresh
+    end
+
+    member do
+      patch :dismiss
+      patch :undismiss
+    end
+  end
+
   resources :accountable_sparklines, only: :show, param: :accountable_type
 
   direct :entry do |entry, options|
