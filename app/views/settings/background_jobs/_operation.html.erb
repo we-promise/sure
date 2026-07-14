@@ -1,0 +1,47 @@
+<% family = BackgroundJobConsole.family_for(operation) %>
+<% running = console.running?(operation) %>
+<tr>
+  <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
+    <%= operation.is_a?(Sync) ? "Sync · #{operation.syncable_type}" : operation.class.name %>
+    <p class="text-xs text-secondary font-mono" title="<%= operation.id %>"><%= operation.id.split("-").first %></p>
+  </td>
+  <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= family&.name || t(".missing_value") %></td>
+  <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= operation.status %></td>
+  <td class="px-4 py-3 text-sm text-secondary whitespace-nowrap">
+    <%= t(".ago", time: time_ago_in_words(operation.updated_at)) %>
+  </td>
+  <td class="px-4 py-3 text-sm whitespace-nowrap">
+    <% if running %>
+      <span class="flex items-center gap-2 text-primary">
+        <span class="animate-spin h-3 w-3 border-2 border-secondary border-t-transparent rounded-full"></span>
+        <%= t(".running") %>
+      </span>
+    <% elsif console.redis_error? %>
+      <span class="text-secondary"><%= t(".unknown") %></span>
+    <% elsif operation.updated_at > BackgroundJobConsole::STUCK_AFTER.ago %>
+      <span class="text-secondary"><%= t(".recent") %></span>
+    <% else %>
+      <span class="flex items-center gap-2 text-primary">
+        <%= icon "alert-triangle", class: "w-4 h-4 text-warning" %>
+        <%= t(".stuck") %>
+      </span>
+    <% end %>
+  </td>
+  <td class="px-4 py-3 text-sm whitespace-nowrap text-right">
+    <% if console.cancellable?(operation) %>
+      <% action_key = case operation
+         when Sync then "mark_stale"
+         when PdfImport then "release_claim"
+         else "mark_failed"
+         end %>
+      <%= button_to cancel_settings_background_jobs_path(record_type: operation.class.base_class.name, id: operation.id),
+                    method: :post,
+                    class: "text-sm text-destructive hover:underline",
+                    data: { turbo_confirm: t(".confirm"), turbo_frame: "_top" } do %>
+        <%= t(".actions.#{action_key}") %>
+      <% end %>
+    <% else %>
+      <span class="text-xs text-secondary"><%= t(".missing_value") %></span>
+    <% end %>
+  </td>
+</tr>
