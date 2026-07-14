@@ -250,6 +250,21 @@ class EnableBankingItem::Importer
         psu_headers: enable_banking_item.build_psu_headers
       )
 
+      if include_pending
+        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG) with _pending: true
+        all_transactions = all_transactions.map do |tx|
+          tx = tx.with_indifferent_access
+          tx[:status] == "PDNG" ? tx.merge(_pending: true) : tx
+        end
+      else
+        # If include_pending is false, we must filter out any pending transactions
+        # that were returned (e.g. if the bank ignores transaction_status="BOOK").
+        all_transactions = all_transactions.reject do |tx|
+          tx = tx.with_indifferent_access
+          tx[:status] == "PDNG"
+        end
+      end
+
       pending_transactions = []
       if include_pending
         # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled.
@@ -273,6 +288,7 @@ class EnableBankingItem::Importer
       end
 
       book_fingerprints = all_transactions
+        .reject { |tx| tx.with_indifferent_access[:_pending] }
         .map { |tx| EnableBankingEntry::Processor.compute_external_id(tx) }
         .compact.to_set
 
@@ -280,6 +296,7 @@ class EnableBankingItem::Importer
       # transaction_id can still be matched when the settled BOOK row adds one
       # (fingerprints differ; entry_reference stays the same across settlement).
       book_entry_refs = all_transactions
+        .reject { |tx| tx.with_indifferent_access[:_pending] }
         .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
         .compact.to_set
 
