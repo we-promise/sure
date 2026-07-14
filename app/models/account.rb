@@ -280,6 +280,23 @@ class Account < ApplicationRecord
       )
     end
 
+    def create_from_wise_account(wise_account)
+      family = wise_account.wise_item.family
+
+      create_and_sync(
+        {
+          family: family,
+          name: wise_account.name || "Wise #{wise_account.currency}",
+          balance: wise_account.current_balance || 0,
+          cash_balance: wise_account.current_balance || 0,
+          currency: wise_account.currency,
+          accountable_type: "Depository",
+          accountable_attributes: { subtype: wise_account.account_subtype }
+        },
+        skip_initial_sync: true
+      )
+    end
+
     def create_from_coinbase_account(coinbase_account)
       # All Coinbase accounts are crypto exchange accounts
       family = coinbase_account.coinbase_item.family
@@ -609,8 +626,12 @@ class Account < ApplicationRecord
   end
 
   def auto_share_with_family!
-    records = family.users.where.not(id: owner_id).pluck(:id).map do |user_id|
-      { account_id: id, user_id: user_id, permission: "read_write",
+    # Guests get read_only, everyone else read_write. This mirrors
+    # Family#auto_share_existing_accounts_with so a guest's permission on an
+    # account is the same whether they joined before or after it was created.
+    records = family.users.where.not(id: owner_id).pluck(:id, :role).map do |user_id, role|
+      { account_id: id, user_id: user_id,
+        permission: role == "guest" ? "read_only" : "read_write",
         include_in_finances: true, created_at: Time.current, updated_at: Time.current }
     end
 

@@ -1,0 +1,7 @@
+one:
+  family: dylan_family
+  name: "Test Wise Connection"
+  token: "test_wise_token_123"
+  profile_id: "11111111"
+  profile_type: business
+  status: good
