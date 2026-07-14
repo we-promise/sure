@@ -180,7 +180,7 @@ class Transaction::Search
       case types.sort
         # Single-type filters
       when [ "refund" ]
-        query.where(refund: true)
+        query.where(refund: true).where.not(kind: Transaction::TRANSFER_KINDS)
       when [ "transfer" ]
         query.where(kind: Transaction::TRANSFER_KINDS)
       when [ "expense" ]

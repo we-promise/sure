@@ -110,8 +110,8 @@ class Entry < ApplicationRecord
               .where("BTRIM(REGEXP_REPLACE(entries.name, '[[:space:]]+', ' ', 'g')) ILIKE ?", "%#{sanitized}%")
 
     scope = case transaction_type
-    when "income"  then scope.where("entries.amount < 0")
-    when "expense" then scope.where("entries.amount >= 0")
+    when "income"  then scope.where("entries.amount < 0 AND transactions.refund != true")
+    when "expense" then scope.where("entries.amount >= 0 OR transactions.refund = true")
     else scope
     end
 
