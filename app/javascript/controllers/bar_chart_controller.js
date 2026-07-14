@@ -133,7 +133,8 @@ export default class extends Controller {
 
   _tooltipTemplate(month, key) {
     const label = key === "income" ? this.incomeLabelValue : this.expenseLabelValue;
-    const color = key === "income" ? "var(--color-success)" : "var(--color-destructive)";
+    // Match the bar/legend palette — expenses render gray, not destructive red.
+    const color = key === "income" ? "var(--color-success)" : "var(--color-gray-400)";
 
     return `
       <div class="text-xs text-secondary mb-1">${month.label}</div>
