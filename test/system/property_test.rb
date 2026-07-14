@@ -14,7 +14,7 @@ class PropertiesEditTest < ApplicationSystemTestCase
   test "can persist property subtype" do
     click_link "[system test] Property Account"
     open_account_edit_dialog
-    assert_equal "single_family_home", find("#account_accountable_attributes_subtype").value
+    assert_selector "#account_accountable_attributes_subtype option[value='single_family_home'][selected]"
   end
 
   private
