@@ -96,9 +96,11 @@ en:
         new_transfer: New transfer
         no_entries: No entries found
         pending: Pending
+        entry_types: Entry types
         search:
           placeholder: Search entries by name
         search_placeholder: Search entries by name
+        show_balance_updates: Show balance updates
         status: Status
         title: Activity
       chart:

@@ -53,7 +53,7 @@ class AccountsController < ApplicationController
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
-    @q = params.fetch(:q, {}).permit(:search, status: [])
+    @q = params.fetch(:q, {}).permit(:search, :include_valuations, status: [])
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
