@@ -237,6 +237,13 @@ Rails.application.routes.draw do
   resources :family_exports, only: %i[new create index destroy] do
     member do
       get :download
+      post :cancel
+    end
+  end
+
+  resources :syncs, only: [] do
+    member do
+      post :cancel
     end
   end
 
@@ -389,6 +396,7 @@ Rails.application.routes.draw do
       post :publish
       put :revert
       put :apply_template
+      post :cancel
     end
 
     resource :upload, only: %i[show update], module: :import

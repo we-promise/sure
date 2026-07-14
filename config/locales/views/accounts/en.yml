@@ -53,6 +53,7 @@ en:
       exclude_from_reports: Exclude from all reports
     index:
       accounts: Accounts
+      cancel_sync: Cancel sync
       manual_accounts:
         other_accounts: Other accounts
       new_account: New account
