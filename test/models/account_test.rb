@@ -227,6 +227,45 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "401k", account.subtype
   end
 
+  test "subtype prefers stored column over blank preloaded accountable" do
+    investment = Investment.new(subtype: "brokerage")
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Stored Subtype Account",
+      balance: 1000,
+      currency: "USD",
+      accountable: investment,
+      subtype: "401k"
+    )
+
+    # Keep the denormalized column present, but leave the accountable blank so a
+    # preloaded association cannot mask the stored account subtype.
+    account.accountable.update_column(:subtype, nil)
+
+    preloaded = Account.includes(:accountable).find(account.id)
+    assert preloaded.association(:accountable).loaded?
+    assert_nil preloaded.accountable.subtype
+    assert_equal "401k", preloaded[:subtype]
+    assert_equal "401k", preloaded.subtype
+  end
+
+  test "subtype uses preloaded accountable when stored column is blank" do
+    credit_card = CreditCard.create!(subtype: "visa")
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Legacy Card",
+      balance: 100,
+      currency: "USD",
+      accountable: credit_card
+    )
+    account.update_column(:subtype, nil)
+
+    preloaded = Account.includes(:accountable).find(account.id)
+    assert preloaded.association(:accountable).loaded?
+    assert_nil preloaded[:subtype]
+    assert_equal "visa", preloaded.subtype
+  end
+
   test "tax_treatment delegates to accountable for Investment" do
     investment = Investment.new(subtype: "401k")
     account = @family.accounts.create!(

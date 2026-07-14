@@ -97,12 +97,17 @@ class Account < ApplicationRecord
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
 
+  # Prefer the denormalized column when present. A preloaded accountable can be
+  # blank/stale relative to `accounts.subtype` (e.g. after backfill or partial
+  # updates), so association state must not override a stored value. Fall back
+  # to the accountable only when the column is blank — using the preloaded
+  # target when available to avoid an N+1 on balance-sheet / budget paths.
   def subtype
+    return self[:subtype] if self[:subtype].present?
+
     if association(:accountable).loaded?
       return association(:accountable).target&.subtype
     end
-
-    return self[:subtype] if self[:subtype].present?
 
     accountable&.subtype
   end
