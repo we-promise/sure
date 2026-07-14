@@ -4,6 +4,21 @@ unless Rails.env.production?
 end
 
 Rails.application.routes.draw do
+  resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
   resources :indexa_capital_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -22,6 +37,23 @@ Rails.application.routes.draw do
   resources :mercury_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :wise_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :select_profiles
+      post :link_profiles
       get :select_accounts
       post :link_accounts
       get :select_existing_account
@@ -428,6 +460,17 @@ Rails.application.routes.draw do
 
     member do
       match :toggle_status, via: [ :get, :post ]
+    end
+  end
+
+  resources :insights, only: %i[index] do
+    collection do
+      post :refresh
+    end
+
+    member do
+      patch :dismiss
+      patch :undismiss
     end
   end
 

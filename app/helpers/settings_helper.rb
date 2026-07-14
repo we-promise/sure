@@ -107,6 +107,9 @@ module SettingsHelper
     when "sophtron"
       return { status: :off } unless @sophtron_items&.any?
       sync_based_summary(key)
+    when "questrade"
+      return { status: :off } unless @questrade_items&.any?
+      sync_based_summary(key)
     else
       { status: :off }
     end
