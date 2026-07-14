@@ -37,6 +37,6 @@ class Rule::Registry::TransactionResource < Rule::Registry
 
   private
     def ai_enabled?
-      Provider::Registry.get_provider(:openai).present?
+      Provider::Registry.preferred_llm_provider.present?
     end
 end

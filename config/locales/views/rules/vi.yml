@@ -52,6 +52,11 @@ vi:
       confirm_changes: Xác nhận thay đổi
     actions:
       value_placeholder: Nhập một giá trị
+      auto_categorize:
+        label: Tự động phân loại giao dịch bằng AI
+        cost_na: "chi phí: không có"
+        cost_estimate: "~$%{cost} cho %{count} giao dịch"
+        no_provider: chưa cấu hình nhà cung cấp LLM
     update:
       success: Đã cập nhật quy tắc
     destroy:
