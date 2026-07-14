@@ -478,6 +478,27 @@ class AccountTest < ActiveSupport::TestCase
     assert share.include_in_finances?
   end
 
+  test "auto_share_with_family grants guests read_only and other members read_write" do
+    @family.update!(default_account_sharing: "private")
+    guest = users(:empty)
+    guest.update_columns(family_id: @family.id, role: "guest")
+
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Guest Permission Account",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable_attributes: {}
+    })
+
+    account.auto_share_with_family!
+
+    assert_equal "read_only", account.account_shares.find_by(user: guest).permission
+    assert_equal "read_write", account.account_shares.find_by(user: @member).permission
+  end
+
   test "current_holdings prefers latest provider snapshot holdings across currencies" do
     account = @family.accounts.create!(
       owner: @admin,

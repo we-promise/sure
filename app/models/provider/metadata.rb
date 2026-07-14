@@ -7,6 +7,7 @@ class Provider
       up:             { region: "AU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "UP", logo_bg: "bg-orange-600" },
       enable_banking: { region: "EU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "EB", logo_bg: "bg-purple-600" },
       coinstats:      { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "CS", logo_bg: "bg-pink-600" },
+      wise:           { region: "Global",  kinds: %w[Bank],            maturity: :beta,   logo_text: "WI", logo_bg: "bg-green-500" },
       mercury:        { region: "US",      kinds: %w[Bank],            maturity: :beta,   logo_text: "ME", logo_bg: "bg-cyan-600" },
       brex:           { region: "US",      kinds: %w[Bank],            maturity: :beta,   logo_text: "BX", logo_bg: "bg-emerald-600" },
       coinbase:       { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "CB", logo_bg: "bg-blue-500" },
@@ -17,7 +18,8 @@ class Provider
       indexa_capital: { region: "ES",      kinds: %w[Investment],      maturity: :alpha,  logo_text: "IC", logo_bg: "bg-red-600" },
       sophtron:       { region: "US",      kinds: %w[Bank Investment], maturity: :alpha,  logo_text: "SO", logo_bg: "bg-teal-600" },
       plaid:          { region: "US",      kinds: %w[Bank],            maturity: :stable, logo_text: "PL", logo_bg: "bg-indigo-600", tier: "Paid" },
-      plaid_eu:       { region: "EU",      kinds: %w[Bank],            maturity: :stable, logo_text: "PL", logo_bg: "bg-indigo-600", tier: "Paid", name: "Plaid EU" }
+      plaid_eu:       { region: "EU",      kinds: %w[Bank],            maturity: :stable, logo_text: "PL", logo_bg: "bg-indigo-600", tier: "Paid", name: "Plaid EU" },
+      questrade:      { region: "CA",      kinds: %w[Investment],      maturity: :beta,   logo_text: "QT", logo_bg: "bg-teal-600" }
     }.freeze
 
     def self.for(provider_key)
