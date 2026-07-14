@@ -42,6 +42,16 @@ class DS::Button < DS::Buttonish
         merged_opts[:type] ||= "button"
       end
 
+      # A bare `aria_label:` option reaches the tag helpers as a literal
+      # `aria_label` attribute — Rails only dasherizes the nested `aria:` hash.
+      # Callers use both spellings, so fold `aria_label:` into the aria hash
+      # (before the icon fallback below, which must see it as a real label).
+      if (aria_label = merged_opts.delete(:aria_label)).present?
+        aria = (merged_opts[:aria] || {}).symbolize_keys
+        aria[:label] = aria_label if aria[:label].blank?
+        merged_opts[:aria] = aria
+      end
+
       # Icon-only buttons have no visible text node, so screen readers fall
       # back to announcing "button" with no name. Derive a humanized fallback
       # from the icon key so AT users hear *something* meaningful; explicit

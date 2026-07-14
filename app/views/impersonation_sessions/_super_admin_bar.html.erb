@@ -3,9 +3,11 @@
     <%= icon "alert-triangle", size: "lg", color: "current", class: "mr-2" %>
     <span class="text-inverse font-semibold uppercase"><%= t(".super_admin") %></span>
   </div>
-  <div>
-    <%= link_to t(".jobs"), sidekiq_web_url, class: "text-white underline hover:text-gray-100" %>
-  </div>
+  <% if sidekiq_web_available? %>
+    <div>
+      <%= link_to t(".jobs"), sidekiq_web_url, class: "text-inverse underline hover:text-subdued" %>
+    </div>
+  <% end %>
 
   <div class="flex items-center space-x-2 px-2 py-2 text-white">
     <% if Current.session.active_impersonator_session.present? %>

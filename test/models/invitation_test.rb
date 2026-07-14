@@ -229,4 +229,47 @@ class InvitationTest < ActiveSupport::TestCase
     assert_not user.show_ai_sidebar?
     assert user.ai_enabled?
   end
+
+  test "accept_for auto-shares existing family accounts when family shares by default" do
+    @family.update!(default_account_sharing: "shared")
+    user = users(:empty)
+    user.update_columns(family_id: families(:empty).id, role: "admin")
+    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
+
+    expected_ids = @family.accounts.where.not(owner_id: user.id).pluck(:id).sort
+    assert expected_ids.any?
+
+    assert invitation.accept_for(user)
+
+    assert_equal expected_ids, AccountShare.where(user: user).pluck(:account_id).sort
+  end
+
+  test "accept_for auto-shares read_only for guest invitations" do
+    @family.update!(default_account_sharing: "shared")
+    user = users(:empty)
+    user.update_columns(family_id: families(:empty).id, role: "admin")
+    invitation = @family.invitations.create!(email: user.email, role: "guest", inviter: @inviter)
+
+    expected_ids = @family.accounts.where.not(owner_id: user.id).pluck(:id).sort
+    assert expected_ids.any?
+
+    assert invitation.accept_for(user)
+
+    user.reload
+    shares = AccountShare.where(user: user)
+    assert_equal "guest", user.role
+    assert_equal expected_ids, shares.pluck(:account_id).sort
+    assert shares.all?(&:read_only?), "guest invitation shares must grant read_only"
+  end
+
+  test "accept_for does not auto-share when family sharing is private" do
+    @family.update!(default_account_sharing: "private")
+    user = users(:empty)
+    user.update_columns(family_id: families(:empty).id, role: "admin")
+    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
+
+    assert_no_difference "AccountShare.count" do
+      assert invitation.accept_for(user)
+    end
+  end
 end
