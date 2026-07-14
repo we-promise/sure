@@ -95,6 +95,20 @@ SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
 
+#### Optional: pin custom Active Record encryption keys
+
+Self-hosted Sure can derive Active Record encryption keys from `SECRET_KEY_BASE` automatically. That is enough for new self-hosted installs.
+
+If you want to provide dedicated encryption keys instead, add these variables to your `.env` before the first boot:
+
+```txt
+ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY="generated-key-1"
+ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY="generated-key-2"
+ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT="generated-key-3"
+```
+
+If you are enabling these custom keys on an instance that already has data, see [Turning on Active Record encryption after first boot](#turning-on-active-record-encryption-after-first-boot).
+
 #### Using HTTPS
 
 Assuming you want to access your instance from the internet, you should have secured your URL address with an SSL certificate.  
@@ -326,3 +340,23 @@ docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # Th
 ### Slow `.csv` import (processing rows taking longer than expected)
 
 Importing comma-separated-value file(s) requires the `sure-worker` container to communicate with Redis. Check your worker logs for any unexpected errors, such as connection timeouts or Redis communication failures.
+
+### Turning on Active Record encryption after first boot
+
+If your instance already has data and you later add `ACTIVE_RECORD_ENCRYPTION_*` variables, restarting the containers is not enough to rewrite older plaintext values.
+
+- Normal app startup runs `db:prepare`, which covers schema setup and migrations.
+- New writes use encryption after the app boots with the keys.
+- Existing rows are not automatically re-encrypted on startup.
+
+Run the backfill task once after the app is up:
+
+```bash
+# Safe preview first (dry-run is the default)
+docker compose exec web bin/rails security:backfill_encryption
+
+# Perform the rewrite
+docker compose exec web env DRY_RUN=false bin/rails security:backfill_encryption
+```
+
+The task is idempotent, so it is safe to run again if needed.
