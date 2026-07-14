@@ -24,7 +24,7 @@ class Transaction < ApplicationRecord
   ].freeze
 
   validate :validate_attachments, if: -> { attachments.attached? }
-  validates :refund, inclusion: { in: [false] }, if: -> { transfer? }
+  validates :refund, inclusion: { in: [ false ] }, if: -> { transfer? }
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
