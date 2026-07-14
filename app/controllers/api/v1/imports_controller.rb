@@ -112,6 +112,12 @@ class Api::V1::ImportsController < Api::V1::BaseController
           @import.reload
         rescue StandardError => e
           Rails.logger.error "Row generation failed for import #{@import.id}: #{e.message}"
+          clean_up_failed_csv_import(@import)
+          render json: {
+            error: "import_row_generation_failed",
+            message: "Import could not be created"
+          }, status: :internal_server_error
+          return
         end
       end
 
@@ -312,6 +318,14 @@ class Api::V1::ImportsController < Api::V1::BaseController
       ensure
         import.destroy if import.persisted?
       end
+    end
+
+    def clean_up_failed_csv_import(import)
+      return unless import&.persisted?
+
+      import.destroy
+    rescue StandardError => e
+      Rails.logger.warn "Failed to destroy CSV import #{import.id}: #{e.message}"
     end
 
     def sure_import_upload_attributes
