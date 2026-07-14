@@ -1,0 +1,143 @@
+<div id="wise-providers-panel" class="space-y-4">
+  <% active_items = local_assigns[:wise_items] || @wise_items || Current.family.wise_items.active.ordered %>
+
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium"><%= t("wise_items.provider_panel.setup_title") %></p>
+    <ol>
+      <li><%= t("wise_items.provider_panel.instructions.sign_in_html", link: link_to("Wise", "https://wise.com", target: "_blank", rel: "noopener noreferrer", class: "link")).html_safe %></li>
+      <li><%= t("wise_items.provider_panel.instructions.open_tokens") %></li>
+      <li><%= t("wise_items.provider_panel.instructions.create_token") %></li>
+      <li><%= t("wise_items.provider_panel.instructions.copy_token_html").html_safe %></li>
+    </ol>
+  </div>
+
+  <% unless WiseItem.encryption_ready? %>
+    <div class="p-3 rounded-md bg-warning/10 text-warning text-sm">
+      <div class="flex items-start gap-2">
+        <%= icon "shield-alert", size: "sm", class: "mt-0.5 shrink-0" %>
+        <div>
+          <p class="font-medium"><%= t("wise_items.provider_panel.encryption_warning.title") %></p>
+          <p class="mt-1"><%= t("wise_items.provider_panel.encryption_warning.message") %></p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+    </div>
+  <% end %>
+
+  <% if active_items.any? %>
+    <div class="space-y-3">
+      <% active_items.each do |item| %>
+        <%= render DS::Disclosure.new(variant: :card) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <div class="flex items-center justify-between gap-2 w-full">
+              <div class="flex items-center gap-3">
+                <div class="flex items-center justify-center h-8 w-8 bg-container-inset rounded-full">
+                  <p class="text-primary text-xs font-medium">WI</p>
+                </div>
+                <div>
+                  <p class="font-medium text-primary"><%= item.name %></p>
+                  <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="mt-4 space-y-4">
+            <div class="flex items-center gap-2">
+              <%= render DS::Button.new(
+                text: t("wise_items.provider_panel.sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                size: :sm,
+                href: sync_wise_item_path(item),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
+              <%= render DS::Button.new(
+                text: t("wise_items.provider_panel.disconnect"),
+                icon: "trash-2",
+                variant: :outline_destructive,
+                size: :sm,
+                href: wise_item_path(item),
+                method: :delete,
+                aria: { label: t("wise_items.provider_panel.disconnect_label", name: item.name) },
+                confirm: t("wise_items.provider_panel.disconnect_confirm", name: item.name)
+              ) %>
+            </div>
+
+            <%= styled_form_with model: item,
+                                 url: wise_item_path(item),
+                                 scope: :wise_item,
+                                 method: :patch,
+                                 data: { turbo: true },
+                                 class: "space-y-3" do |form| %>
+              <%= form.text_field :name,
+                                  label: t("wise_items.provider_panel.connection_name_label"),
+                                  placeholder: t("wise_items.provider_panel.connection_name_placeholder") %>
+
+              <%= form.text_field :token,
+                                  label: t("wise_items.provider_panel.token_label"),
+                                  placeholder: t("wise_items.provider_panel.keep_token_placeholder"),
+                                  type: :password,
+                                  value: nil %>
+
+              <div class="flex flex-wrap justify-end gap-2">
+                <%= render DS::Link.new(
+                  text: t("wise_items.provider_panel.setup_accounts"),
+                  icon: "settings",
+                  variant: "secondary",
+                  href: setup_accounts_wise_item_path(item),
+                  frame: :modal
+                ) %>
+                <%= form.submit t("wise_items.provider_panel.update_connection") %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= render DS::Disclosure.new(variant: :card, open: active_items.none?) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center gap-2 text-sm font-medium text-primary">
+        <%= icon "plus" %>
+        <%= t("wise_items.provider_panel.add_connection") %>
+      </div>
+    <% end %>
+
+    <%= styled_form_with url: wise_items_path,
+                         scope: :wise_item,
+                         method: :post,
+                         data: { turbo: true },
+                         class: "space-y-3 mt-4" do |form| %>
+      <%= form.text_field :token,
+                          label: t("wise_items.provider_panel.token_label"),
+                          placeholder: t("wise_items.provider_panel.token_placeholder"),
+                          type: :password,
+                          value: nil %>
+
+      <p class="text-xs text-secondary px-1 -mt-1"><%= t("wise_items.provider_panel.sandbox_note_html").html_safe %></p>
+
+      <div class="flex justify-end">
+        <%= form.submit t("wise_items.provider_panel.connect") %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <div class="flex items-center gap-2">
+    <% if active_items.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("wise_items.provider_panel.configured_html", accounts_link: link_to(t("wise_items.provider_panel.accounts_link"), accounts_path, class: "link")).html_safe %></p>
+    <% else %>
+      <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("wise_items.provider_panel.not_configured") %></p>
+    <% end %>
+  </div>
+</div>

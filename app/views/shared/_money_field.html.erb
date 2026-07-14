@@ -75,8 +75,7 @@
              }.compact)
              # Preserve any existing action and append money-field handler
              existing_action = currency_data.delete("action")
-             currency_data["action"] = ["change->money-field#handleCurrencyChange", existing_action].compact.join(" ")
-          %>
+             currency_data["action"] = ["change->money-field#handleCurrencyChange", existing_action].compact.join(" ") %>
           <%= form.select currency_method,
                         currency_picker_options_for_family(extra: currency.iso_code),
                         { inline: true, selected: currency.iso_code },
