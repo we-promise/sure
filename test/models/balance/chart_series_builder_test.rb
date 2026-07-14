@@ -398,6 +398,38 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal [ 1000 ], builder.gains_series.map { |v| v.value.amount }
   end
 
+  test "gains series converts holding gains to target currency with locf rates" do
+    family = families(:dylan_family)
+    account = family.accounts.create!(
+      name: "EUR Investment",
+      balance: 1000,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    security = securities(:aapl)
+
+    # Gains in EUR: 100 yesterday (1000 - 900), 200 today (1100 - 900)
+    create_holding(account: account, security: security, date: 1.day.ago.to_date, qty: 10, price: 100, cost_basis: 90)
+    create_holding(account: account, security: security, date: Date.current, qty: 10, price: 110, cost_basis: 90)
+
+    # Single EUR -> USD rate; LOCF applies it to today as well
+    ExchangeRate.create!(date: 1.day.ago.to_date, from_currency: "EUR", to_currency: "USD", rate: 1.1)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: 1.day.ago.to_date, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    expected = [
+      110, # 100 EUR * 1.1
+      220 # 200 EUR * 1.1 (rate carried forward)
+    ]
+
+    assert_equal expected, builder.gains_series.map { |v| v.value.amount }
+  end
+
   test "gains series carries cost basis forward over gap-filled holdings" do
     account = accounts(:investment)
     account.holdings.destroy_all
