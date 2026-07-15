@@ -224,6 +224,38 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "stale", sync.reload.status
   end
 
+  test "cancelling a pending child finalizes its waiting parent" do
+    family = families(:dylan_family)
+    parent = Sync.create!(syncable: family, status: :syncing)
+    child = Sync.create!(syncable: accounts(:depository), parent: parent, status: :pending)
+
+    Family.any_instance.expects(:perform_post_sync).once
+    Family.any_instance.expects(:broadcast_sync_complete).once
+
+    assert child.request_cancel!
+
+    # The child's queued job will no-op via may_start?, so nothing else ever
+    # finalizes the parent — request_cancel! itself must cascade or the
+    # parent hangs in syncing until the 24h sweep.
+    assert_equal "stale", child.reload.status
+    assert_equal "completed", parent.reload.status
+  end
+
+  test "a late provider complete! cannot resurrect a cancelled sync" do
+    item = SimplefinItem.create!(family: families(:dylan_family), name: "SF Conn", access_url: "https://example.com/access")
+    sync = Sync.create!(syncable: item, status: :syncing)
+
+    # Simulates the Sidekiq job's in-memory copy, loaded before cancellation
+    in_job_copy = Sync.find(sync.id)
+
+    assert sync.request_cancel!
+    assert_equal "stale", sync.reload.status
+
+    SimplefinItem::Syncer.new(item).send(:mark_completed, in_job_copy)
+
+    assert_equal "stale", sync.reload.status
+  end
+
   test "request_cancel! returns false for terminal syncs" do
     sync = Sync.create!(syncable: accounts(:depository), status: :completed)
 

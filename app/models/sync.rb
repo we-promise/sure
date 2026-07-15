@@ -180,10 +180,14 @@ class Sync < ApplicationRecord
     end
     return false if result.nil?
 
-    if result == :cancel_requested
-      cancel_pending_descendants!
-      finalize_if_all_children_finalized
-    end
+    # Both paths cascade: a pending sync resolved above went terminal without
+    # its job ever running, so nothing else will ever call
+    # finalize_if_all_children_finalized for it — without this, a parent
+    # waiting on the cancelled child stays syncing until the 24h sweep.
+    # finalize_if_all_children_finalized re-reads under lock!, so it safely
+    # no-ops on this sync's own branch when already terminal.
+    cancel_pending_descendants!
+    finalize_if_all_children_finalized
 
     true
   end

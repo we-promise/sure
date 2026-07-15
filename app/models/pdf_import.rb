@@ -33,7 +33,7 @@ class PdfImport < Import
   # publish). Release a lost claim back to pending so the user can re-trigger
   # processing, mirroring ProcessPdfJob's own reclaim; lost reverts keep the
   # base revert_failed behavior.
-  def force_fail!(error_message = LOST_ERROR)
+  def force_fail!(error_message = Import.lost_error_message)
     return super if reverting?
 
     with_lock do

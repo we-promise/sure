@@ -8,7 +8,15 @@ class Import < ApplicationRecord
   # record into a retryable terminal status. Imports finish in minutes, so an
   # hour of silence dwarfs any legitimate run.
   PRESUMED_LOST_AFTER = 1.hour
-  LOST_ERROR = "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again.".freeze
+
+  # User-facing (shown as the import's error in the UI), so resolved through
+  # i18n at call time rather than frozen at boot.
+  def self.lost_error_message
+    I18n.t(
+      "imports.errors.presumed_lost",
+      default: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
+    )
+  end
 
   # Shared CSV upload/content limit for web and API imports, including preflight.
   MAX_CSV_SIZE = 10.megabytes
@@ -185,7 +193,7 @@ class Import < ApplicationRecord
   # click wins. Every import! runs in a single DB transaction, so a lost job
   # rolled its data back — failing the record is safe and re-enables the
   # existing "Try again" (failed) / revert-retry (revert_failed) paths.
-  def force_fail!(error_message = LOST_ERROR)
+  def force_fail!(error_message = self.class.lost_error_message)
     with_lock do
       return false unless presumed_lost?
 

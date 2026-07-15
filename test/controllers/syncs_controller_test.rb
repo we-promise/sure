@@ -32,4 +32,23 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     assert_equal "syncing", other_family_sync.reload.status
   end
+
+  test "non-admin member cannot cancel a provider item sync" do
+    sign_in users(:family_member)
+    provider_sync = Sync.create!(syncable: plaid_items(:one), status: :syncing)
+
+    post cancel_sync_path(provider_sync)
+
+    assert_response :not_found
+    assert_equal "syncing", provider_sync.reload.status
+  end
+
+  test "admin can cancel a provider item sync" do
+    provider_sync = Sync.create!(syncable: plaid_items(:one), status: :syncing)
+
+    post cancel_sync_path(provider_sync)
+
+    assert_redirected_to accounts_path
+    assert_not_nil provider_sync.reload.cancel_requested_at
+  end
 end

@@ -34,7 +34,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to imports_path
     assert_equal "failed", import.reload.status
-    assert_equal Import::LOST_ERROR, import.error
+    assert_equal Import.lost_error_message, import.error
   end
 
   test "cancel refuses an import that is not presumed lost" do

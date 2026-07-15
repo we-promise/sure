@@ -15,7 +15,7 @@ class ImportTest < ActiveSupport::TestCase
 
     assert lost_import.force_fail!
     assert_equal "failed", lost_import.reload.status
-    assert_equal Import::LOST_ERROR, lost_import.error
+    assert_equal Import.lost_error_message, lost_import.error
 
     lost_revert = imports(:trade)
     lost_revert.update_columns(status: "reverting", updated_at: 2.hours.ago)
