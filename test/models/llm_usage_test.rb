@@ -53,6 +53,22 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_in_delta 4.8, pro, 0.0001
   end
 
+  test "calculate_cost uses reviewed OpenAI pricing for GPT-5.2 aliases and pro" do
+    chat_latest = LlmUsage.calculate_cost(
+      model: "gpt-5.2-chat-latest",
+      prompt_tokens: 1_000_000,
+      completion_tokens: 100_000
+    )
+    assert_in_delta 3.15, chat_latest, 0.0001
+
+    pro = LlmUsage.calculate_cost(
+      model: "gpt-5.2-pro",
+      prompt_tokens: 1_000_000,
+      completion_tokens: 100_000
+    )
+    assert_in_delta 37.8, pro, 0.0001
+  end
+
   test "calculate_cost returns Anthropic pricing for Claude models" do
     cost = LlmUsage.calculate_cost(model: "claude-sonnet-4-6", prompt_tokens: 1_000_000, completion_tokens: 100_000)
 
