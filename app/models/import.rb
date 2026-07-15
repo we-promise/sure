@@ -103,39 +103,58 @@ class Import < ApplicationRecord
     # the commit and the status write, so the truthful terminal state is
     # complete (re-enabling retry there would double-import types without row
     # dedup, e.g. TradeImport). Reverts that died the same way go to
-    # revert_failed so the revert can be retried. PdfImports are excluded:
-    # their statuses double as processing claims (see PdfImport.clean).
+    # revert_failed so the revert can be retried. PdfImports are excluded
+    # (their statuses double as processing claims, see PdfImport.clean), and
+    # so are session-owned chunks — ImportSession.clean reconciles those
+    # within the session flow.
     def clean
       where(status: [ :importing, :reverting ])
         .where.not(type: "PdfImport")
+        .where(import_session_id: nil)
         .where("updated_at < ?", STUCK_AFTER.ago)
         .find_each do |import|
-          # Same guard Sync#perform gained in #2680: between the sweep query
-          # and this row the owning job may have finished (or another sweep
-          # won), so re-check staleness under a row lock before mutating.
-          import.with_lock do
-            next unless import.reapable_since?(STUCK_AFTER.ago)
-
-            previous_status = import.status
-            if previous_status == "reverting"
-              import.update!(status: :revert_failed, error: interrupted_error_message)
-            elsif import.data_committed?
-              import.update!(status: :complete, error: nil)
-              import.family.sync_later
-            else
-              import.update!(status: :failed, error: interrupted_error_message)
-            end
-
-            DebugLogEntry.capture(
-              category: "background_jobs",
-              level: "warn",
-              message: "Reaped #{import.type} stuck in #{previous_status} for over #{STUCK_AFTER.inspect} (→ #{import.status})",
-              source: name,
-              family: import.family,
-              metadata: { record_type: import.type, record_id: import.id, previous_status: previous_status, new_status: import.status }
-            )
-          end
+          reap_stuck!(import)
+        rescue => e
+          # One bad record must not abort the sweep for every other stuck
+          # import this hour.
+          Rails.logger.error("Import.clean failed for #{import.type} #{import.id}: #{e.class}: #{e.message}")
+          Sentry.capture_exception(e) { |scope| scope.set_tags(record_type: import.type, record_id: import.id) } if defined?(Sentry)
         end
+    end
+
+    def reap_stuck!(import)
+      needs_sync = false
+
+      # Same guard Sync#perform gained in #2680: between the sweep query
+      # and this row the owning job may have finished (or another sweep
+      # won), so re-check staleness under a row lock before mutating.
+      import.with_lock do
+        next unless import.reapable_since?(STUCK_AFTER.ago)
+
+        previous_status = import.status
+        if previous_status == "reverting"
+          import.update!(status: :revert_failed, error: interrupted_error_message)
+        elsif import.data_committed?
+          import.update!(status: :complete, error: nil)
+          needs_sync = true
+        else
+          import.update!(status: :failed, error: interrupted_error_message)
+        end
+
+        DebugLogEntry.capture(
+          category: "background_jobs",
+          level: "warn",
+          message: "Reaped #{import.type} stuck in #{previous_status} for over #{STUCK_AFTER.inspect} (→ #{import.status})",
+          source: name,
+          family: import.family,
+          metadata: { record_type: import.type, record_id: import.id, previous_status: previous_status, new_status: import.status }
+        )
+      end
+
+      # Outside the row-lock transaction: Rails doesn't defer enqueues to
+      # after-commit by default, so enqueuing inside the lock could hand
+      # Sidekiq a job before the status write is visible.
+      import.family.sync_later if needs_sync
     end
 
     def parse_csv_str(csv_str, col_sep: ",")

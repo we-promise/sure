@@ -19,29 +19,42 @@ class PdfImport < Import
       where(status: [ :importing, :reverting ])
         .where("updated_at < ?", Import::STUCK_AFTER.ago)
         .find_each do |pdf_import|
-          pdf_import.with_lock do
-            next unless pdf_import.reapable_since?(Import::STUCK_AFTER.ago)
-
-            previous_status = pdf_import.status
-            if previous_status == "reverting"
-              pdf_import.update!(status: :revert_failed, error: Import.interrupted_error_message)
-            elsif pdf_import.data_committed?
-              pdf_import.update!(status: :complete, error: nil)
-              pdf_import.family.sync_later
-            else
-              pdf_import.update!(status: :pending)
-            end
-
-            DebugLogEntry.capture(
-              category: "background_jobs",
-              level: "warn",
-              message: "Reclaimed PdfImport stuck in #{previous_status} for over #{Import::STUCK_AFTER.inspect} (→ #{pdf_import.status})",
-              source: name,
-              family: pdf_import.family,
-              metadata: { record_type: name, record_id: pdf_import.id, previous_status: previous_status, new_status: pdf_import.status }
-            )
-          end
+          reap_stuck!(pdf_import)
+        rescue => e
+          # One bad record must not abort the sweep for the rest.
+          Rails.logger.error("PdfImport.clean failed for #{pdf_import.id}: #{e.class}: #{e.message}")
+          Sentry.capture_exception(e) { |scope| scope.set_tags(record_type: name, record_id: pdf_import.id) } if defined?(Sentry)
         end
+    end
+
+    def reap_stuck!(pdf_import)
+      needs_sync = false
+
+      pdf_import.with_lock do
+        next unless pdf_import.reapable_since?(Import::STUCK_AFTER.ago)
+
+        previous_status = pdf_import.status
+        if previous_status == "reverting"
+          pdf_import.update!(status: :revert_failed, error: Import.interrupted_error_message)
+        elsif pdf_import.data_committed?
+          pdf_import.update!(status: :complete, error: nil)
+          needs_sync = true
+        else
+          pdf_import.update!(status: :pending)
+        end
+
+        DebugLogEntry.capture(
+          category: "background_jobs",
+          level: "warn",
+          message: "Reclaimed PdfImport stuck in #{previous_status} for over #{Import::STUCK_AFTER.inspect} (→ #{pdf_import.status})",
+          source: name,
+          family: pdf_import.family,
+          metadata: { record_type: name, record_id: pdf_import.id, previous_status: previous_status, new_status: pdf_import.status }
+        )
+      end
+
+      # Outside the row lock — see Import.reap_stuck!.
+      pdf_import.family.sync_later if needs_sync
     end
 
     def create_from_upload!(family:, file:, user:)

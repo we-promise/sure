@@ -36,6 +36,23 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal "importing", stuck_pdf.reload.status
   end
 
+  test "clean leaves session-owned chunks to ImportSession.clean" do
+    family = families(:dylan_family)
+    session = family.import_sessions.create!(status: "importing")
+    chunk = TransactionImport.create!(
+      family: family,
+      import_session: session,
+      sequence: 1,
+      checksum: Digest::SHA256.hexdigest("chunk"),
+      status: "importing"
+    )
+    chunk.update_columns(updated_at: 7.hours.ago)
+
+    Import.clean
+
+    assert_equal "importing", chunk.reload.status
+  end
+
   test "clean completes a stuck import whose data already committed" do
     stuck = imports(:transaction)
     stuck.update_columns(status: "importing", updated_at: 7.hours.ago)

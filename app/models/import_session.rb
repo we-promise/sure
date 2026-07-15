@@ -44,7 +44,7 @@ class ImportSession < ApplicationRecord
         # Row-lock + staleness re-check before mutating, as Sync#perform
         # does since #2680 — the owning job may have finished in between.
         session.with_lock do
-          next unless session.status == "importing" && session.updated_at < Import::STUCK_AFTER.ago
+          next unless session.importing? && session.updated_at < Import::STUCK_AFTER.ago
 
           session.reconcile_committed_chunks!
           session.update!(
@@ -74,7 +74,9 @@ class ImportSession < ApplicationRecord
   # The chunk's summary was lost with the job; aggregate_chunk_summaries
   # tolerates the empty hash.
   def reconcile_committed_chunks!
-    imports.where(status: :importing).find_each do |chunk|
+    # Plain each: the association carries a default order (find_each would
+    # log a scoped-order warning) and sessions cap out at a handful of chunks.
+    imports.where(status: :importing).each do |chunk|
       next unless chunk.data_committed?
 
       chunk.update!(status: :complete, error: nil, error_details: {})
