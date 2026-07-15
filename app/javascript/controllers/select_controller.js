@@ -21,6 +21,7 @@ export default class extends Controller {
     this.element.addEventListener("focusout", this.boundFocusOut)
 
     this.resetOptionTabindex()
+    this.setMenuInert(true)
     this.observeMenuResize()
   }
 
@@ -37,12 +38,15 @@ export default class extends Controller {
     this.isOpen ? this.close() : this.openMenu()
   }
 
+  // Tab lands on the trigger — open the menu but keep focus here so the
+  // browser doesn't continue Tab into the listbox and skip to the next field.
   handleButtonFocus() {
     if (this.isOpen) return
     if (!this.buttonTarget.matches(":focus-visible")) return
-    this.openAndFocusMenu()
+    this.openMenu()
   }
 
+  // Arrow / Space / Enter from a closed trigger — open and move focus in.
   openAndFocusMenu() {
     this.openMenu()
     requestAnimationFrame(() => {
@@ -56,12 +60,12 @@ export default class extends Controller {
     if (visible.length === 0) return
 
     const selected = visible.find(opt => opt.getAttribute("aria-selected") === "true")
-    const target = selected || visible[0]
-    this.rovingFocus(visible, visible.indexOf(target))
+    this.focusOption(selected || visible[0])
   }
 
   openMenu() {
     this.isOpen = true
+    this.setMenuInert(false)
     this.menuTarget.classList.remove("hidden")
     this.buttonTarget.setAttribute("aria-expanded", "true")
     this.startAutoUpdate()
@@ -81,6 +85,7 @@ export default class extends Controller {
     this.menuTarget.classList.add("opacity-0", "-translate-y-1", "pointer-events-none")
     this.buttonTarget.setAttribute("aria-expanded", "false")
     this.resetOptionTabindex()
+    this.setMenuInert(true)
     setTimeout(() => { if (!this.isOpen && this.hasMenuTarget) this.menuTarget.classList.add("hidden") }, 150)
   }
 
@@ -98,14 +103,12 @@ export default class extends Controller {
     const previousSelected = this.menuTarget.querySelector("[aria-selected='true']")
     if (previousSelected) {
       previousSelected.setAttribute("aria-selected", "false")
-      previousSelected.setAttribute("tabindex", "-1")
       previousSelected.classList.remove("bg-container-inset")
       const prevIcon = previousSelected.querySelector(".check-icon")
       if (prevIcon) prevIcon.classList.add("hidden")
     }
 
     selectedElement.setAttribute("aria-selected", "true")
-    selectedElement.setAttribute("tabindex", "0")
     selectedElement.classList.add("bg-container-inset")
     const selectedIcon = selectedElement.querySelector(".check-icon")
     if (selectedIcon) selectedIcon.classList.remove("hidden")
@@ -185,18 +188,25 @@ export default class extends Controller {
     if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click(); return }
 
     // WAI-ARIA APG listbox keyboard pattern: ArrowUp/Down moves focus
-    // between options (roving tabindex), Home/End jump to first/last.
-    // From the search input, ArrowDown/Up bridge into the visible
-    // options so users can reach the filtered matches; other keys
-    // (typing, caret movement) stay with the input.
+    // between options, Home/End jump to first/last. Options stay at
+    // tabindex="-1" so they never appear in the Tab sequence — focus moves
+    // programmatically only.
+    // From the search input, ArrowDown/Up bridge into the visible options.
     const fromSearch = event.target.matches('input[type="search"]')
+    const fromButton = event.target === this.buttonTarget
     const visibleOptions = this.visibleOptions()
+
     if (fromSearch) {
       if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return
       if (visibleOptions.length === 0) return
       event.preventDefault()
       const targetIndex = event.key === "ArrowDown" ? 0 : visibleOptions.length - 1
-      this.rovingFocus(visibleOptions, targetIndex)
+      this.focusOption(visibleOptions[targetIndex])
+      return
+    }
+
+    if (fromButton && event.key === "ArrowDown" && this.focusSearch()) {
+      event.preventDefault()
       return
     }
 
@@ -211,21 +221,27 @@ export default class extends Controller {
       default: return
     }
     event.preventDefault()
-    this.rovingFocus(visibleOptions, nextIndex)
+    this.focusOption(visibleOptions[nextIndex])
   }
 
-  // Roving tabindex helper: makes the target option tabbable (and
-  // focuses it), clears tabindex on every other option in the listbox.
-  rovingFocus(visibleOptions, index) {
-    const all = this.hasOptionTarget ? this.optionTargets : []
-    const target = visibleOptions[index]
-    all.forEach(opt => opt.setAttribute("tabindex", opt === target ? "0" : "-1"))
-    target.focus()
+  focusOption(option) {
+    if (!option) return
+    option.focus({ preventScroll: true })
+    option.scrollIntoView({ block: "nearest" })
   }
 
   resetOptionTabindex() {
     if (!this.hasOptionTarget) return
     this.optionTargets.forEach(opt => opt.setAttribute("tabindex", "-1"))
+  }
+
+  setMenuInert(inert) {
+    if (!this.hasMenuTarget) return
+    if (inert) {
+      this.menuTarget.setAttribute("inert", "")
+    } else {
+      this.menuTarget.removeAttribute("inert")
+    }
   }
 
   // Options the user can currently see — list-filter hides non-matches
@@ -235,17 +251,16 @@ export default class extends Controller {
     return options.filter(opt => opt.style.display !== "none")
   }
 
-  // After list-filter#filter runs, the option holding tabindex="0" may
-  // be hidden. Promote the first visible option so Tab from the search
-  // input still lands somewhere reachable; if none match, no-op.
+  // After list-filter#filter runs, the focused option may be hidden.
+  // Move focus to the first visible match without touching tabindex.
   syncTabindex() {
     const visible = this.visibleOptions()
     if (visible.length === 0) return
-    const tabbable = visible.find(opt => opt.getAttribute("tabindex") === "0")
-    if (tabbable) return
-    const all = this.hasOptionTarget ? this.optionTargets : []
-    all.forEach(opt => opt.setAttribute("tabindex", "-1"))
-    visible[0].setAttribute("tabindex", "0")
+
+    const active = document.activeElement
+    if (visible.includes(active)) return
+
+    this.focusOption(visible[0])
   }
 
   handleTurboLoad() { if (this.isOpen) this.close() }
