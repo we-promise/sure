@@ -36,16 +36,22 @@ class SyncCleanerJob < ApplicationJob
         model.where(activities_fetch_pending: true)
              .where("updated_at < ?", ACTIVITY_FLAG_STUCK_AFTER.ago)
              .find_each do |record|
-          record.update!(activities_fetch_pending: false)
+          # Row-lock + re-check so a fetch chain finishing right now isn't
+          # clobbered mid-write (same guard as the reapers, see #2680).
+          record.with_lock do
+            next unless record.activities_fetch_pending? && record.updated_at < ACTIVITY_FLAG_STUCK_AFTER.ago
 
-          DebugLogEntry.capture(
-            category: "background_jobs",
-            level: "warn",
-            message: "Cleared #{model_name} activities_fetch_pending flag stuck for over #{ACTIVITY_FLAG_STUCK_AFTER.inspect}",
-            source: self.class.name,
-            account: record.respond_to?(:account) ? record.account : nil,
-            metadata: { record_type: model_name, record_id: record.id }
-          )
+            record.update!(activities_fetch_pending: false)
+
+            DebugLogEntry.capture(
+              category: "background_jobs",
+              level: "warn",
+              message: "Cleared #{model_name} activities_fetch_pending flag stuck for over #{ACTIVITY_FLAG_STUCK_AFTER.inspect}",
+              source: self.class.name,
+              account: record.respond_to?(:account) ? record.account : nil,
+              metadata: { record_type: model_name, record_id: record.id }
+            )
+          end
         end
       end
     end

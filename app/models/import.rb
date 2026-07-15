@@ -6,7 +6,15 @@ class Import < ApplicationRecord
   # permanently, leaving the record wedged in importing/reverting forever.
   # SyncCleanerJob reaps records stuck past this window (see Import.clean).
   STUCK_AFTER = 6.hours
-  INTERRUPTED_ERROR = "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again.".freeze
+
+  # User-facing (shown as the import's error in the UI). Resolved at reap
+  # time; the sweep runs from cron so this snapshots the default locale.
+  def self.interrupted_error_message
+    I18n.t(
+      "imports.errors.interrupted",
+      default: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."
+    )
+  end
 
   # Shared CSV upload/content limit for web and API imports, including preflight.
   MAX_CSV_SIZE = 10.megabytes
@@ -88,31 +96,45 @@ class Import < ApplicationRecord
   has_many :entries, dependent: :destroy
 
   class << self
-    # Reaps imports whose job died mid-flight. Every import! runs in a single
-    # DB transaction, so a killed job rolled its data back — failing the record
-    # is safe and re-enables the "Try again" path. Reverts that died the same
-    # way go to revert_failed so the revert can be retried. PdfImports are
-    # excluded: their importing status is a processing claim that is reclaimed
-    # to pending instead (see PdfImport.clean).
+    # Reaps imports whose job died mid-flight. import! runs in a single DB
+    # transaction, so which side of its commit the worker died on is
+    # observable: no rows attached → the data rolled back, failing the record
+    # re-enables the "Try again" path; rows attached → the job died between
+    # the commit and the status write, so the truthful terminal state is
+    # complete (re-enabling retry there would double-import types without row
+    # dedup, e.g. TradeImport). Reverts that died the same way go to
+    # revert_failed so the revert can be retried. PdfImports are excluded:
+    # their statuses double as processing claims (see PdfImport.clean).
     def clean
       where(status: [ :importing, :reverting ])
         .where.not(type: "PdfImport")
         .where("updated_at < ?", STUCK_AFTER.ago)
         .find_each do |import|
-          previous_status = import.status
-          import.update!(
-            status: previous_status == "reverting" ? :revert_failed : :failed,
-            error: INTERRUPTED_ERROR
-          )
+          # Same guard Sync#perform gained in #2680: between the sweep query
+          # and this row the owning job may have finished (or another sweep
+          # won), so re-check staleness under a row lock before mutating.
+          import.with_lock do
+            next unless import.reapable_since?(STUCK_AFTER.ago)
 
-          DebugLogEntry.capture(
-            category: "background_jobs",
-            level: "warn",
-            message: "Reaped #{import.type} stuck in #{previous_status} for over #{STUCK_AFTER.inspect}",
-            source: name,
-            family: import.family,
-            metadata: { record_type: import.type, record_id: import.id, previous_status: previous_status, new_status: import.status }
-          )
+            previous_status = import.status
+            if previous_status == "reverting"
+              import.update!(status: :revert_failed, error: interrupted_error_message)
+            elsif import.data_committed?
+              import.update!(status: :complete, error: nil)
+              import.family.sync_later
+            else
+              import.update!(status: :failed, error: interrupted_error_message)
+            end
+
+            DebugLogEntry.capture(
+              category: "background_jobs",
+              level: "warn",
+              message: "Reaped #{import.type} stuck in #{previous_status} for over #{STUCK_AFTER.inspect} (→ #{import.status})",
+              source: name,
+              family: import.family,
+              metadata: { record_type: import.type, record_id: import.id, previous_status: previous_status, new_status: import.status }
+            )
+          end
         end
     end
 
@@ -181,13 +203,35 @@ class Import < ApplicationRecord
     ImportJob.perform_later(self)
   end
 
+  # Whether import! already committed rows for this import. Distinguishes a
+  # job that died mid-import (single transaction → rolled back, nothing
+  # attached) from one that died after the data landed but before the status
+  # write. Covers entry-producing imports and account-producing ones
+  # (AccountImport creates accounts, not entries).
+  def data_committed?
+    entries.exists? || accounts.exists?
+  end
+
+  # Reaper guard: still wedged in a job-owned status and untouched since the
+  # sweep's cutoff. Called under the record's row lock (fresh read).
+  def reapable_since?(cutoff)
+    %w[importing reverting].include?(status) && updated_at < cutoff
+  end
+
   def publish
     # A redelivered or stray ImportJob must not re-import data that already
     # committed (types without row dedup would double-apply), and must not
     # race a revert that owns the record. A failed import is deliberately NOT
     # blocked: its transaction rolled back, so a re-run is a safe retry.
     if complete? || reverting? || revert_failed?
-      Rails.logger.warn("Import #{id} publish skipped (status: #{status})")
+      DebugLogEntry.capture(
+        category: "background_jobs",
+        level: "warn",
+        message: "Import publish skipped: job redelivered while record was #{status}",
+        source: self.class.name,
+        family: family,
+        metadata: { record_type: type, record_id: id, status: status }
+      )
       return
     end
 

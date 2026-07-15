@@ -725,6 +725,34 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_includes mapping.errors[:target], "must belong to your family"
   end
 
+  test "clean reconciles committed chunks before failing a stuck session" do
+    session = @family.import_sessions.create!(status: "importing")
+    session.update_columns(updated_at: 7.hours.ago)
+
+    checksum = Digest::SHA256.hexdigest("chunk")
+    committed_chunk = TransactionImport.create!(family: @family, import_session: session, sequence: 1, checksum: checksum, status: "importing")
+    entries(:transaction).update_columns(import_id: committed_chunk.id)
+    rolled_back_chunk = TransactionImport.create!(family: @family, import_session: session, sequence: 2, checksum: checksum, status: "importing")
+
+    ImportSession.clean
+
+    session.reload
+    assert_equal "failed", session.status
+    assert_equal "import_interrupted", session.error_details["code"]
+    # The chunk whose import! committed must be skipped by a re-publish...
+    assert_equal "complete", committed_chunk.reload.status
+    # ...while the one that rolled back stays re-runnable.
+    assert_equal "importing", rolled_back_chunk.reload.status
+  end
+
+  test "clean leaves fresh importing sessions alone" do
+    session = @family.import_sessions.create!(status: "importing")
+
+    ImportSession.clean
+
+    assert_equal "importing", session.reload.status
+  end
+
   private
     def entity_records
       [

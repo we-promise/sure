@@ -31,29 +31,63 @@ class ImportSession < ApplicationRecord
 
   # See Import::STUCK_AFTER — same dead-worker failure mode, same sweep.
   # A session wedged in importing is otherwise unrecoverable: publish_later
-  # refuses to re-publish while importing. Failing it re-enables re-publish,
-  # which resumes safely at the first incomplete chunk.
+  # refuses to re-publish while importing. Before failing it, chunks whose
+  # import! committed but never got their complete-status write are
+  # reconciled — otherwise the re-publish would run those chunks again
+  # (process_chunk! only skips complete ones) and double-import their rows.
+  # Failing the session then re-enables re-publish, which resumes safely at
+  # the first genuinely incomplete chunk.
   def self.clean
     where(status: :importing)
       .where("updated_at < ?", Import::STUCK_AFTER.ago)
       .find_each do |session|
-        session.update!(
-          status: :failed,
-          error_details: {
-            "code" => "import_interrupted",
-            "message" => Import::INTERRUPTED_ERROR
-          }
-        )
+        # Row-lock + staleness re-check before mutating, as Sync#perform
+        # does since #2680 — the owning job may have finished in between.
+        session.with_lock do
+          next unless session.status == "importing" && session.updated_at < Import::STUCK_AFTER.ago
 
-        DebugLogEntry.capture(
-          category: "background_jobs",
-          level: "warn",
-          message: "Reaped ImportSession stuck in importing for over #{Import::STUCK_AFTER.inspect}",
-          source: name,
-          family: session.family,
-          metadata: { record_type: name, record_id: session.id, previous_status: "importing", new_status: "failed" }
-        )
+          session.reconcile_committed_chunks!
+          session.update!(
+            status: :failed,
+            error_details: {
+              "code" => "import_interrupted",
+              "message" => Import.interrupted_error_message
+            }
+          )
+
+          DebugLogEntry.capture(
+            category: "background_jobs",
+            level: "warn",
+            message: "Reaped ImportSession stuck in importing for over #{Import::STUCK_AFTER.inspect}",
+            source: name,
+            family: session.family,
+            metadata: { record_type: name, record_id: session.id, previous_status: "importing", new_status: "failed" }
+          )
+        end
       end
+  end
+
+  # Chunks caught by a worker kill between import!'s commit and the
+  # complete-status write have their rows attached but still read importing.
+  # Mark them complete so a re-publish skips them instead of importing the
+  # same rows twice (SureImport's split path would duplicate child entries).
+  # The chunk's summary was lost with the job; aggregate_chunk_summaries
+  # tolerates the empty hash.
+  def reconcile_committed_chunks!
+    imports.where(status: :importing).find_each do |chunk|
+      next unless chunk.data_committed?
+
+      chunk.update!(status: :complete, error: nil, error_details: {})
+
+      DebugLogEntry.capture(
+        category: "background_jobs",
+        level: "warn",
+        message: "Reconciled ImportSession chunk whose data committed before the worker died",
+        source: self.class.name,
+        family: family,
+        metadata: { record_type: chunk.type, record_id: chunk.id, import_session_id: id }
+      )
+    end
   end
 
   def self.create_or_find_for!(family:, import_type:, client_session_id:, expected_chunks:)

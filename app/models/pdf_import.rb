@@ -5,25 +5,42 @@ class PdfImport < Import
   validate :account_statement_matches_import
 
   class << self
-    # PdfImport's importing status is a processing claim (either the AI
-    # extraction claim from process_with_ai_later or a regular publish). A lost
-    # job leaves the claim held forever and the user cannot re-trigger —
+    # PdfImport's importing status doubles as a processing claim: the AI
+    # extraction claim from process_with_ai_later (no rows yet) or a regular
+    # publish (rows being written). A lost job leaves the claim held forever —
     # ProcessPdfJob's own reclaim only runs when the job is redelivered.
-    # Reclaiming to pending re-enables both re-processing and re-publishing.
+    # Which claim died is observable from the data: no rows attached → the AI
+    # claim, reclaim to pending so the user can re-trigger; rows attached →
+    # the publish died after import!'s commit, so finalize as complete
+    # (pending would let the user publish the same extracted rows again —
+    # PdfImport#import! always builds new transactions). Stuck reverts go to
+    # revert_failed like every other import, keeping the retry path exposed.
     def clean
-      where(status: :importing)
+      where(status: [ :importing, :reverting ])
         .where("updated_at < ?", Import::STUCK_AFTER.ago)
         .find_each do |pdf_import|
-          pdf_import.update!(status: :pending)
+          pdf_import.with_lock do
+            next unless pdf_import.reapable_since?(Import::STUCK_AFTER.ago)
 
-          DebugLogEntry.capture(
-            category: "background_jobs",
-            level: "warn",
-            message: "Reclaimed PdfImport stuck in importing for over #{Import::STUCK_AFTER.inspect}",
-            source: name,
-            family: pdf_import.family,
-            metadata: { record_type: name, record_id: pdf_import.id, previous_status: "importing", new_status: "pending" }
-          )
+            previous_status = pdf_import.status
+            if previous_status == "reverting"
+              pdf_import.update!(status: :revert_failed, error: Import.interrupted_error_message)
+            elsif pdf_import.data_committed?
+              pdf_import.update!(status: :complete, error: nil)
+              pdf_import.family.sync_later
+            else
+              pdf_import.update!(status: :pending)
+            end
+
+            DebugLogEntry.capture(
+              category: "background_jobs",
+              level: "warn",
+              message: "Reclaimed PdfImport stuck in #{previous_status} for over #{Import::STUCK_AFTER.inspect} (→ #{pdf_import.status})",
+              source: name,
+              family: pdf_import.family,
+              metadata: { record_type: name, record_id: pdf_import.id, previous_status: previous_status, new_status: pdf_import.status }
+            )
+          end
         end
     end
 

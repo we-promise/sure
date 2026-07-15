@@ -26,7 +26,7 @@ class SyncCleanerJobTest < ActiveSupport::TestCase
     SyncCleanerJob.perform_now
 
     assert_equal "failed", stuck_import.reload.status
-    assert_equal Import::INTERRUPTED_ERROR, stuck_import.error
+    assert_equal Import.interrupted_error_message, stuck_import.error
 
     assert_equal "revert_failed", stuck_revert.reload.status
 

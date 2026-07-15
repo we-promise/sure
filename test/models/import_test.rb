@@ -35,4 +35,48 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal "failed", stuck_csv.reload.status
     assert_equal "importing", stuck_pdf.reload.status
   end
+
+  test "clean completes a stuck import whose data already committed" do
+    stuck = imports(:transaction)
+    stuck.update_columns(status: "importing", updated_at: 7.hours.ago)
+    entries(:transaction).update_columns(import_id: stuck.id)
+
+    Import.clean
+
+    stuck.reload
+    assert_equal "complete", stuck.status
+    assert_nil stuck.error
+  end
+
+  test "clean moves a stuck revert to revert_failed" do
+    stuck = imports(:transaction)
+    stuck.update_columns(status: "reverting", updated_at: 7.hours.ago)
+
+    Import.clean
+
+    assert_equal "revert_failed", stuck.reload.status
+  end
+
+  test "PdfImport clean reclaims the AI claim but completes a committed publish" do
+    ai_claim = imports(:pdf)
+    ai_claim.update_columns(status: "importing", updated_at: 7.hours.ago)
+
+    published = imports(:pdf_processed)
+    published.update_columns(status: "importing", updated_at: 7.hours.ago)
+    entries(:transaction).update_columns(import_id: published.id)
+
+    PdfImport.clean
+
+    assert_equal "pending", ai_claim.reload.status
+    assert_equal "complete", published.reload.status
+  end
+
+  test "PdfImport clean moves a stuck revert to revert_failed" do
+    stuck = imports(:pdf)
+    stuck.update_columns(status: "reverting", updated_at: 7.hours.ago)
+
+    PdfImport.clean
+
+    assert_equal "revert_failed", stuck.reload.status
+  end
 end

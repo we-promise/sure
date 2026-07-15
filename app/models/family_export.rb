@@ -21,17 +21,23 @@ class FamilyExport < ApplicationRecord
     where(status: [ :pending, :processing ])
       .where("updated_at < ?", STUCK_AFTER.ago)
       .find_each do |export|
-        previous_status = export.status
-        export.update!(status: :failed)
+        # Row-lock + staleness re-check before mutating, as Sync#perform
+        # does since #2680 — the export job may have finished in between.
+        export.with_lock do
+          next unless %w[pending processing].include?(export.status) && export.updated_at < STUCK_AFTER.ago
 
-        DebugLogEntry.capture(
-          category: "background_jobs",
-          level: "warn",
-          message: "Reaped FamilyExport stuck in #{previous_status} for over #{STUCK_AFTER.inspect}",
-          source: name,
-          family: export.family,
-          metadata: { record_type: name, record_id: export.id, previous_status: previous_status, new_status: "failed" }
-        )
+          previous_status = export.status
+          export.update!(status: :failed)
+
+          DebugLogEntry.capture(
+            category: "background_jobs",
+            level: "warn",
+            message: "Reaped FamilyExport stuck in #{previous_status} for over #{STUCK_AFTER.inspect}",
+            source: name,
+            family: export.family,
+            metadata: { record_type: name, record_id: export.id, previous_status: previous_status, new_status: "failed" }
+          )
+        end
       end
   end
 
