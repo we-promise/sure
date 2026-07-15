@@ -10,18 +10,25 @@ class LlmUsage < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
   scope :for_date_range, ->(start_date, end_date) { where(created_at: start_date..end_date) }
 
-  # OpenAI pricing per 1M tokens (as of Oct 2025)
+  # OpenAI pricing per 1M tokens (as of July 2026)
   # Source: https://platform.openai.com/docs/pricing
   PRICING = {
     "openai" => {
       # GPT-4.1 and similar models
       "gpt-4.1" => { prompt: 2.00, completion: 8.00 },
       "gpt-4.1-mini" => { prompt: 0.40, completion: 1.60 },
-      "gpt-4.1-nano" => { prompt: 0.40, completion: 1.60 },
+      "gpt-4.1-nano" => { prompt: 0.10, completion: 0.40 },
       # 4o
       "gpt-4o" => { prompt: 2.50, completion: 10.00 },
       "gpt-4o-mini" => { prompt: 0.15, completion: 0.60 },
-      # GPT-5 models (estimated pricing)
+      # GPT-5 models
+      "gpt-5.4" => { prompt: 2.50, completion: 15.00 },
+      "gpt-5.4-mini" => { prompt: 0.75, completion: 4.50 },
+      "gpt-5.4-nano" => { prompt: 0.20, completion: 1.25 },
+      "gpt-5.4-pro" => { prompt: 30.00, completion: 180.00 },
+      "gpt-5.2" => { prompt: 1.75, completion: 14.00 },
+      "gpt-5.2-pro" => { prompt: 21.00, completion: 168.00 },
+      "gpt-5.1" => { prompt: 1.25, completion: 10.00 },
       "gpt-5" => { prompt: 1.25, completion: 10.00 },
       "gpt-5-mini" => { prompt: 0.25, completion: 2.00 },
       "gpt-5-nano" => { prompt: 0.05, completion: 0.40 },
@@ -29,8 +36,9 @@ class LlmUsage < ApplicationRecord
       # o1 models
       "o1-mini" => { prompt: 1.10, completion: 4.40 },
       "o1" => { prompt: 15.00, completion: 60.00 },
-      # o3 models (estimated pricing)
+      # o-series models
       "o3" => { prompt: 2.00, completion: 8.00 },
+      "o4-mini" => { prompt: 1.10, completion: 4.40 },
       "o3-mini" => { prompt: 1.10, completion: 4.40 },
       "o3-pro" => { prompt: 20.00, completion: 80.00 }
     },

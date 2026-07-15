@@ -28,6 +28,15 @@ class LlmUsageTest < ActiveSupport::TestCase
     )
   end
 
+
+  test "calculate_cost uses current OpenAI pricing" do
+    gpt_54 = LlmUsage.calculate_cost(model: "gpt-5.4", prompt_tokens: 1_000_000, completion_tokens: 100_000)
+    assert_in_delta 4.0, gpt_54, 0.0001
+
+    nano = LlmUsage.calculate_cost(model: "gpt-4.1-nano", prompt_tokens: 1_000_000, completion_tokens: 1_000_000)
+    assert_in_delta 0.5, nano, 0.0001
+  end
+
   test "calculate_cost returns Anthropic pricing for Claude models" do
     cost = LlmUsage.calculate_cost(model: "claude-sonnet-4-6", prompt_tokens: 1_000_000, completion_tokens: 100_000)
 
