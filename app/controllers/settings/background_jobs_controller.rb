@@ -19,9 +19,13 @@ class Settings::BackgroundJobsController < Admin::BaseController
 
     # Server-side re-check — the button state in the UI is not trusted. The
     # with_lock block re-reads the record, so a job finishing between render
-    # and click cannot be clobbered (it already moved the status on).
+    # and click cannot be clobbered (it already moved the status on). The
+    # stuck-window check repeats inside the lock too: cancellable? evaluated
+    # Sidekiq liveness outside the transaction (re-running Redis calls under
+    # a row lock would be worse), so a worker that grabbed the job in between
+    # shows up here as a freshly-touched updated_at.
     cancelled = console.cancellable?(record) && record.with_lock do
-      if cancellable_status?(record)
+      if cancellable_status?(record) && record.updated_at <= BackgroundJobConsole::STUCK_AFTER.ago
         prior_status = record.status
         apply_cancel!(record)
         audit_cancel!(record, prior_status)
