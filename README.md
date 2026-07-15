@@ -124,9 +124,9 @@ an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
 <p align="center">
   <a href="https://gittensor.io/miners/repository?name=we-promise%2Fsure">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/phase-rs/phase/gittensor-impact-assets/gittensor-impact-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/phase-rs/phase/gittensor-impact-assets/gittensor-impact-light.svg">
-      <img src="https://raw.githubusercontent.com/phase-rs/phase/gittensor-impact-assets/gittensor-impact-light.svg" alt="Gittensor contributor impact for phase.rs" width="600">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/we-promise/sure/gittensor-impact-assets/gittensor-impact-dark.svg">
+      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/we-promise/sure/gittensor-impact-assets/gittensor-impact-light.svg">
+      <img src="https://raw.githubusercontent.com/we-promise/sure/gittensor-impact-assets/gittensor-impact-light.svg" alt="Gittensor contributor impact for Sure repo" width="600">
     </picture>
   </a>
 </p>
