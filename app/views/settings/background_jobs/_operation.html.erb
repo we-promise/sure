@@ -3,7 +3,7 @@
 <tr>
   <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
     <%= operation.is_a?(Sync) ? "Sync · #{operation.syncable_type}" : operation.class.name %>
-    <p class="text-xs text-secondary font-mono" title="<%= operation.id %>"><%= operation.id.split("-").first %></p>
+    <p class="text-xs text-secondary font-mono" title="<%= operation.id %>"><%= operation.id.to_s.split("-").first %></p>
   </td>
   <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= family&.name || t(".missing_value") %></td>
   <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= operation.status %></td>
@@ -18,6 +18,8 @@
       </span>
     <% elsif console.redis_error? %>
       <span class="text-secondary"><%= t(".unknown") %></span>
+    <% elsif console.enqueued?(operation) %>
+      <span class="text-secondary"><%= t(".queued") %></span>
     <% elsif operation.updated_at > BackgroundJobConsole::STUCK_AFTER.ago %>
       <span class="text-secondary"><%= t(".recent") %></span>
     <% else %>

@@ -17,19 +17,30 @@ class BackgroundJobConsole
   # behind a backlog or between Sidekiq heartbeats — refuse to touch it.
   STUCK_AFTER = 30.minutes
 
+  # Upper bound on queue/retry/schedule entries scanned for record
+  # references. Past this the backlog is inspected only partially, so
+  # liveness is unknowable and cancellation fails closed (like redis_error?).
+  QUEUE_SCAN_LIMIT = 5_000
+
   Stats = Struct.new(:processes, :busy, :enqueued, :retry_size, :dead_size, :scheduled_size, :queues, keyword_init: true)
 
   attr_reader :stats
 
   def initialize
     @redis_error = false
+    @queue_scan_truncated = false
     @running_global_ids = Set.new
+    @queued_global_ids = Set.new
     @stats = nil
     load_runtime_state
   end
 
   def redis_error?
     @redis_error
+  end
+
+  def queue_scan_truncated?
+    @queue_scan_truncated
   end
 
   # In-flight operations across ALL families, newest activity first. This is
@@ -50,13 +61,25 @@ class BackgroundJobConsole
     @running_global_ids.include?(record.to_global_id.to_s)
   end
 
-  # Safe to force-terminalize: liveness is knowable, the job is not visibly
-  # executing, the record has been idle past the stuck window, and (for syncs)
+  # A job referencing this record is sitting in a queue, the retry set, or
+  # the scheduled set. Such a job WILL run later — most of the affected job
+  # classes don't abort just because an operator flipped the record's status,
+  # so terminalizing now would invite duplicate/conflicting work when it
+  # finally executes.
+  def enqueued?(record)
+    @queued_global_ids.include?(record.to_global_id.to_s)
+  end
+
+  # Safe to force-terminalize: liveness is knowable (Redis reachable, backlog
+  # scan complete), no job referencing the record is executing or waiting to
+  # execute, the record has been idle past the stuck window, and (for syncs)
   # no children are still in flight — a parent Sync legitimately has no live
   # job of its own while its children run.
   def cancellable?(record)
     return false if redis_error?
+    return false if queue_scan_truncated?
     return false if running?(record)
+    return false if enqueued?(record)
     return false if record.updated_at > STUCK_AFTER.ago
     return false if record.is_a?(Sync) && record.children.incomplete.exists?
 
@@ -88,11 +111,13 @@ class BackgroundJobConsole
       )
 
       @running_global_ids = collect_running_global_ids
+      @queued_global_ids = collect_queued_global_ids
     rescue => e
       Rails.logger.warn("BackgroundJobConsole: Sidekiq state unavailable: #{e.class}: #{e.message}")
       @redis_error = true
       @stats = nil
       @running_global_ids = Set.new
+      @queued_global_ids = Set.new
     end
 
     # All jobs are ActiveJob-wrapped, so record references appear in worker
@@ -109,6 +134,33 @@ class BackgroundJobConsole
       end
 
       ids
+    end
+
+    # Record references in jobs that are waiting to run: queue backlogs, the
+    # retry set, and the scheduled set. Bounded by QUEUE_SCAN_LIMIT — on a
+    # truncated scan, cancellation fails closed via queue_scan_truncated?.
+    def collect_queued_global_ids
+      ids = Set.new
+      scanned = 0
+
+      each_waiting_job do |item|
+        scanned += 1
+        if scanned > QUEUE_SCAN_LIMIT
+          @queue_scan_truncated = true
+          break
+        end
+        collect_global_ids(item, ids)
+      end
+
+      ids
+    end
+
+    def each_waiting_job(&block)
+      Sidekiq::Queue.all.each do |queue|
+        queue.each { |job| yield job.item }
+      end
+      Sidekiq::RetrySet.new.each { |job| yield job.item }
+      Sidekiq::ScheduledSet.new.each { |job| yield job.item }
     end
 
     def collect_global_ids(node, ids)

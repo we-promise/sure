@@ -40,6 +40,34 @@ class BackgroundJobConsoleTest < ActiveSupport::TestCase
     assert console.cancellable?(stuck)
   end
 
+  test "a record referenced by a queued job is not cancellable" do
+    sync = Sync.create!(syncable: accounts(:depository), status: :syncing)
+    sync.update_columns(updated_at: 1.hour.ago)
+
+    stub_sidekiq(queued_items: [
+      { "wrapped" => "SyncJob", "args" => [ { "arguments" => [ { "_aj_globalid" => sync.to_global_id.to_s } ] } ] }
+    ])
+
+    console = BackgroundJobConsole.new
+
+    assert console.enqueued?(sync)
+    assert_not console.running?(sync)
+    assert_not console.cancellable?(sync)
+  end
+
+  test "a truncated backlog scan fails closed" do
+    sync = Sync.create!(syncable: accounts(:depository), status: :syncing)
+    sync.update_columns(updated_at: 1.hour.ago)
+
+    filler = Array.new(BackgroundJobConsole::QUEUE_SCAN_LIMIT + 1) { { "args" => [] } }
+    stub_sidekiq(queued_items: filler)
+
+    console = BackgroundJobConsole.new
+
+    assert console.queue_scan_truncated?
+    assert_not console.cancellable?(sync)
+  end
+
   test "a parent sync with incomplete children is not cancellable" do
     stub_sidekiq
 
@@ -53,20 +81,33 @@ class BackgroundJobConsoleTest < ActiveSupport::TestCase
   end
 
   private
-    def stub_sidekiq(worker_payloads: [])
+    def stub_sidekiq(worker_payloads: [], queued_items: [])
       process_set = mock("ProcessSet")
       process_set.stubs(:size).returns(1)
       process_set.stubs(:sum).returns(worker_payloads.size)
       Sidekiq::ProcessSet.stubs(:new).returns(process_set)
 
       stats = mock("Stats")
-      stats.stubs(:enqueued).returns(0)
+      stats.stubs(:enqueued).returns(queued_items.size)
       stats.stubs(:retry_size).returns(0)
       stats.stubs(:dead_size).returns(0)
       stats.stubs(:scheduled_size).returns(0)
       Sidekiq::Stats.stubs(:new).returns(stats)
 
-      Sidekiq::Queue.stubs(:all).returns([])
+      if queued_items.any?
+        queue = mock("Queue")
+        queue.stubs(name: "default", size: queued_items.size, latency: 0.0)
+        queue_yields = queued_items.map { |item| [ stub(item: item) ] }
+        queue.stubs(:each).multiple_yields(*queue_yields)
+        Sidekiq::Queue.stubs(:all).returns([ queue ])
+      else
+        Sidekiq::Queue.stubs(:all).returns([])
+      end
+
+      empty_set = mock("JobSet")
+      empty_set.stubs(:each)
+      Sidekiq::RetrySet.stubs(:new).returns(empty_set)
+      Sidekiq::ScheduledSet.stubs(:new).returns(empty_set)
 
       workers = mock("Workers")
       yields = worker_payloads.map { |payload| [ "process", "thread", { "payload" => payload.to_json } ] }

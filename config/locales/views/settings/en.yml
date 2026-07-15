@@ -34,6 +34,7 @@ en:
       operation:
         ago: "%{time} ago"
         running: "Running"
+        queued: "Queued"
         recent: "Recent"
         unknown: "Unknown"
         stuck: "Stuck — presumed lost"
@@ -46,6 +47,7 @@ en:
       cancel:
         cancelled: "%{type} marked as lost."
         not_cancellable: "This operation can't be modified right now — its job may still be queued or running. Try again once it has been idle for 30 minutes."
+        cancelled_error: "Marked as failed by an administrator — the background job was presumed lost."
     debugs:
       show:
         page_title: "Debug"

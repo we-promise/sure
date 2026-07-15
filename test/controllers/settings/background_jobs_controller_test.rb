@@ -112,6 +112,46 @@ class Settings::BackgroundJobsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "importing", import.reload.status
   end
 
+  test "cancel resolves STI subclass record types" do
+    sign_in users(:sure_support_staff)
+
+    import = imports(:transaction)
+    import.update_columns(status: "importing", updated_at: 1.hour.ago)
+
+    post cancel_settings_background_jobs_path(record_type: "TransactionImport", id: import.id)
+
+    assert_redirected_to settings_background_jobs_path
+    assert_equal "failed", import.reload.status
+  end
+
+  test "cancel routes a stuck PdfImport revert to revert_failed, not pending" do
+    sign_in users(:sure_support_staff)
+
+    pdf = imports(:pdf)
+    pdf.update_columns(status: "reverting", updated_at: 1.hour.ago)
+
+    post cancel_settings_background_jobs_path(record_type: "Import", id: pdf.id)
+
+    assert_equal "revert_failed", pdf.reload.status
+  end
+
+  test "cancel refuses when the record's job is waiting in a queue" do
+    sign_in users(:sure_support_staff)
+
+    import = imports(:transaction)
+    import.update_columns(status: "importing", updated_at: 1.hour.ago)
+
+    queue = mock("Queue")
+    queue.stubs(name: "default", size: 1, latency: 0.0)
+    queue.stubs(:each).multiple_yields([ stub(item: { "wrapped" => "ImportJob", "args" => [ { "arguments" => [ { "_aj_globalid" => import.to_global_id.to_s } ] } ] }) ])
+    Sidekiq::Queue.stubs(:all).returns([ queue ])
+
+    post cancel_settings_background_jobs_path(record_type: "Import", id: import.id)
+
+    assert_equal "importing", import.reload.status
+    assert_equal I18n.t("settings.background_jobs.cancel.not_cancellable"), flash[:alert]
+  end
+
   test "cancel refuses unknown record types" do
     sign_in users(:sure_support_staff)
 
@@ -147,6 +187,11 @@ class Settings::BackgroundJobsControllerTest < ActionDispatch::IntegrationTest
       Sidekiq::Stats.stubs(:new).returns(stats)
 
       Sidekiq::Queue.stubs(:all).returns([])
+
+      empty_set = mock("JobSet")
+      empty_set.stubs(:each)
+      Sidekiq::RetrySet.stubs(:new).returns(empty_set)
+      Sidekiq::ScheduledSet.stubs(:new).returns(empty_set)
 
       workers = mock("Workers")
       yields = worker_payloads.map { |payload| [ "process", "thread", { "payload" => payload.to_json } ] }

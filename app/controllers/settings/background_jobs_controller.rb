@@ -1,14 +1,7 @@
 # frozen_string_literal: true
 
 class Settings::BackgroundJobsController < Admin::BaseController
-  CANCELLABLE_TYPES = {
-    "Sync" => Sync,
-    "Import" => Import,
-    "ImportSession" => ImportSession,
-    "FamilyExport" => FamilyExport
-  }.freeze
-
-  CANCELLED_ERROR = "Marked as failed by an administrator — the background job was presumed lost.".freeze
+  CANCELLABLE_BASE_TYPES = [ Sync, Import, ImportSession, FamilyExport ].freeze
 
   def show
     @breadcrumbs = [
@@ -46,12 +39,24 @@ class Settings::BackgroundJobsController < Admin::BaseController
   end
 
   private
+    # Resolves record_type against the cancellable base classes, accepting
+    # STI subclass names too (the UI sends base_class names, but a direct
+    # request naming e.g. TransactionImport shouldn't 404). safe_constantize
+    # only resolves already-defined constants and the `<=` whitelist check
+    # rejects anything outside the cancellable hierarchy.
     def find_record!
-      model = CANCELLABLE_TYPES.fetch(params[:record_type]) do
+      model = params[:record_type].to_s.match?(/\A[A-Za-z]+\z/) ? params[:record_type].safe_constantize : nil
+
+      unless model.is_a?(Class) && CANCELLABLE_BASE_TYPES.any? { |base| model <= base }
         raise ActiveRecord::RecordNotFound, "Unknown record type"
       end
 
       model.find(params[:id])
+    end
+
+    # User-facing: surfaces as the failed operation's error in the family UI.
+    def cancelled_error_message
+      t("settings.background_jobs.cancel.cancelled_error")
     end
 
     def cancellable_status?(record)
@@ -68,18 +73,25 @@ class Settings::BackgroundJobsController < Admin::BaseController
       when Sync
         record.mark_stale!
       when PdfImport
-        # A PdfImport's importing status is a processing claim — release it so
-        # the user can re-trigger, mirroring ProcessPdfJob's own reclaim.
-        record.update!(status: :pending)
+        if record.reverting?
+          # A stuck revert may have half-deleted entries — pending would
+          # present the import as publishable again. Route it through the
+          # same revert_failed retry path as every other import.
+          record.update!(status: :revert_failed, error: cancelled_error_message)
+        else
+          # importing is the AI-processing claim — release it so the user
+          # can re-trigger, mirroring ProcessPdfJob's own reclaim.
+          record.update!(status: :pending)
+        end
       when Import
         record.update!(
           status: record.reverting? ? :revert_failed : :failed,
-          error: CANCELLED_ERROR
+          error: cancelled_error_message
         )
       when ImportSession
         record.update!(
           status: :failed,
-          error_details: { "code" => "cancelled_by_admin", "message" => CANCELLED_ERROR }
+          error_details: { "code" => "cancelled_by_admin", "message" => cancelled_error_message }
         )
       when FamilyExport
         record.update!(status: :failed)
