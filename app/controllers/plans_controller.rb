@@ -11,6 +11,10 @@ class PlansController < ApplicationController
 
     @goals = Goal.active_prepared_for(Current.family)
     @goals_summary = goals_summary(@goals)
+    # Includes completed/archived goals: the hub is the only route to the
+    # goals index for preview users, so the "All goals" link must survive
+    # an empty *active* list.
+    @family_has_goals = @goals.any? || Current.family.goals.exists?
     @linkable_account_count = Current.user.accessible_accounts
                                      .where(accountable_type: Goal::FUNDABLE_ACCOUNT_TYPES)
                                      .visible

@@ -42,6 +42,17 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match I18n.t("goals.empty_state.body"), response.body
+    assert_select "a[href=?]", goals_path, count: 0
+  end
+
+  test "keeps the all-goals link when only completed or archived goals remain" do
+    @user.family.goals.each { |goal| goal.update_columns(state: "archived") }
+
+    get plan_url
+
+    assert_response :success
+    assert_match I18n.t("goals.empty_state.body"), response.body
+    assert_select "a[href=?]", goals_path, minimum: 1
   end
 
   test "shows the budget setup CTA when the month is uninitialized" do

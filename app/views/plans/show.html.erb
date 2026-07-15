@@ -34,7 +34,7 @@
 
   <div class="grid grid-cols-1 @3xl:grid-cols-2 gap-4 items-stretch">
     <%= render "plans/budget_card", budget: @budget, top_budget_categories: @top_budget_categories %>
-    <%= render "plans/goals_card", goals: @goals, summary: @goals_summary, linkable_account_count: @linkable_account_count %>
+    <%= render "plans/goals_card", goals: @goals, summary: @goals_summary, linkable_account_count: @linkable_account_count, family_has_goals: @family_has_goals %>
   </div>
 
   <p class="flex items-center gap-1.5 text-xs text-subdued">
