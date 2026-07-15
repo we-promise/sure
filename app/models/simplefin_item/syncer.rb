@@ -136,7 +136,15 @@ class SimplefinItem::Syncer
       end
 
       unless finalized
-        Rails.logger.info("SimplefinItem::Syncer#mark_completed skipped: sync #{sync.id} was #{sync.status} (cancel requested: #{sync.cancel_requested_at?.inspect})")
+        DebugLogEntry.capture(
+          category: "provider_sync",
+          level: "info",
+          message: "SimplefinItem::Syncer#mark_completed skipped: sync was #{sync.status} (cancel requested: #{sync.cancel_requested_at.present?})",
+          source: self.class.name,
+          family: simplefin_item.family,
+          provider_key: "simplefin",
+          metadata: { sync_id: sync.id, status: sync.status, cancel_requested_at: sync.cancel_requested_at }
+        )
         return
       end
 
