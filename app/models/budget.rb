@@ -188,6 +188,13 @@ class Budget < ApplicationRecord
     end
   end
 
+  # Whole days from today through the period's last day (today counts) —
+  # same day math as BudgetCategory#suggested_daily_spending. 0 once the
+  # period is over.
+  def days_remaining
+    [ (end_date - Date.current).to_i + 1, 0 ].max
+  end
+
   def previous_budget_param
     previous_date = start_date - 1.month
     return nil unless self.class.budget_date_valid?(previous_date, family: family)

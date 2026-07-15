@@ -1,0 +1,103 @@
+<%# locals: (goals:, summary:, linkable_account_count:) %>
+
+<section class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
+  <div class="flex items-center gap-2 mb-4">
+    <span class="w-7 h-7 rounded-lg bg-surface-inset text-secondary flex items-center justify-center shrink-0">
+      <%= icon("target", size: "sm") %>
+    </span>
+    <h2 class="text-sm font-medium text-primary"><%= t(".title") %></h2>
+    <% if goals.any? %>
+      <span class="text-xs text-subdued">· <%= t(".active_count", count: goals.size) %></span>
+    <% end %>
+  </div>
+
+  <% if goals.empty? %>
+    <div class="flex-1 flex flex-col items-center justify-center text-center gap-3 py-10">
+      <span class="w-12 h-12 rounded-full bg-surface-inset text-secondary flex items-center justify-center">
+        <%= icon("target", size: "md") %>
+      </span>
+      <p class="text-sm text-secondary max-w-xs"><%= t("goals.empty_state.body") %></p>
+      <% if linkable_account_count > 0 %>
+        <%= render DS::Link.new(
+          text: t("goals.empty_state.new_goal"),
+          variant: "primary",
+          href: new_goal_path,
+          icon: "plus",
+          frame: :modal
+        ) %>
+      <% else %>
+        <%= render DS::Link.new(
+          text: t("goals.empty_state.add_account"),
+          variant: "primary",
+          href: new_account_path(return_to: plan_path),
+          icon: "plus"
+        ) %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="flex items-baseline gap-2">
+      <span class="text-3xl font-medium text-primary tabular-nums privacy-sensitive">
+        <%= format_money(summary[:saved_money]) %>
+      </span>
+      <% if summary[:target_money].positive? %>
+        <span class="text-sm text-subdued privacy-sensitive">
+          <%= t(".of_targets", total: format_money(summary[:target_money])) %>
+        </span>
+      <% end %>
+    </div>
+    <p class="text-xs text-subdued mt-1 mb-4">
+      <%
+        parts = []
+        parts << t(".behind_count", count: summary[:behind_count]) if summary[:behind_count].positive?
+        parts << t(".pending_count", count: summary[:pending_count]) if summary[:pending_count].positive?
+      %>
+      <%= parts.any? ? parts.join(" · ") : t(".all_on_pace") %>
+    </p>
+
+    <% if summary[:target_money].positive? %>
+      <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
+        <div class="h-full bg-inverse rounded-full"
+             style="inline-size: <%= [ (summary[:saved_money].amount / summary[:target_money].amount * 100), 100 ].min.round(1) %>%"></div>
+      </div>
+    <% end %>
+
+    <p class="mt-6 mb-1 text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".active_goals") %></p>
+    <div class="flex-1">
+      <% shown_goals = goals.first(5) %>
+      <% shown_goals.each_with_index do |goal, index| %>
+        <%= link_to goal_path(goal), class: "flex items-center gap-3 py-2.5 group #{"border-b border-primary" unless index == shown_goals.size - 1}" do %>
+          <%= render Goals::AvatarComponent.new(goal: goal, size: "md") %>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-sm font-medium text-primary truncate"><%= goal.name %></span>
+              <%= render Goals::StatusPillComponent.new(goal: goal) %>
+              <% if goal.open_pledges.any? %>
+                <span class="text-xs text-warning shrink-0">· <%= t(".pending_marker") %></span>
+              <% end %>
+            </div>
+            <% if goal.target_amount.to_d.positive? %>
+              <div class="h-1 bg-container-inset rounded-full overflow-hidden">
+                <div class="h-full <%= goal.status == :behind ? "bg-warning" : "bg-inverse" %> rounded-full"
+                     style="inline-size: <%= [ goal.progress_percent, 100 ].min %>%"></div>
+              </div>
+            <% elsif goal.months_of_runway.present? %>
+              <p class="text-xs text-subdued">
+                <%= t(".runway", months: goal.months_of_runway, pace: goal.pace_money.format(precision: 0)) %>
+              </p>
+            <% end %>
+          </div>
+          <span class="shrink-0 text-xs tabular-nums text-primary privacy-sensitive">
+            <%= format_money(goal.current_balance_money) %><% if goal.target_amount.to_d.positive? %><span class="text-subdued">/<%= goal.target_amount_money.format(precision: 0) %></span><% end %>
+          </span>
+          <%= icon("chevron-right", size: "sm", class: "text-subdued shrink-0") %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <%= link_to goals_path,
+        class: "mt-5 flex items-center justify-center gap-1.5 rounded-lg bg-surface-inset px-4 py-2.5 text-sm font-medium text-primary hover:bg-container-inset-hover" do %>
+      <%= t(".all_goals") %>
+      <%= icon("chevron-right", size: "sm") %>
+    <% end %>
+  <% end %>
+</section>

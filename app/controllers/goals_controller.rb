@@ -2,11 +2,11 @@ class GoalsController < ApplicationController
   before_action :require_preview_features!
   before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive reopen]
 
-  FUNDABLE_TYPES = %w[Depository Investment].freeze
+  FUNDABLE_TYPES = Goal::FUNDABLE_ACCOUNT_TYPES
   rescue_from ActiveRecord::RecordNotFound, with: :goal_not_found
 
   STATE_FILTERS = %w[all active paused completed archived].freeze
-  ACTIVE_STATUS_RANK = { behind: 0, on_track: 1, no_target_date: 2 }.freeze
+  ACTIVE_STATUS_RANK = Goal::ACTIVE_DISPLAY_STATUS_RANK
 
   def index
     state_counts = Current.family.goals.group(:state).count
@@ -41,16 +41,12 @@ class GoalsController < ApplicationController
     @kpi = kpi_payload(@active_goals)
     @any_pending_pledge = @active_goals.any? { |g| g.open_pledges.any? }
     @show_search = @grid_goals.size > 6
-    @breadcrumbs = [
-      [ t("breadcrumbs.home"), root_path ],
-      [ t("goals.index.title"), nil ]
-    ]
+    @breadcrumbs = plan_breadcrumb_prefix + [ [ t("goals.index.title"), nil ] ]
   end
 
   def show
     @open_pledges = @goal.open_pledges.reverse_chronological.to_a
-    @breadcrumbs = [
-      [ t("breadcrumbs.home"), root_path ],
+    @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ @goal.name, nil ]
     ]
@@ -62,8 +58,7 @@ class GoalsController < ApplicationController
       currency: Current.family.primary_currency_code
     )
     @linkable_accounts = linkable_accounts_for_new
-    @breadcrumbs = [
-      [ t("breadcrumbs.home"), root_path ],
+    @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ t("goals.new.heading"), nil ]
     ]
