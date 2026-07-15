@@ -453,4 +453,20 @@ class BudgetTest < ActiveSupport::TestCase
     # Other Investments synthetic categories previously caused this to return 0
     assert spending >= 75, "Uncategorized actual spending should include the $75 transaction, got #{spending}"
   end
+
+  test "days_remaining counts today through the end of the period" do
+    budget = budgets(:one)
+
+    travel_to budget.start_date do
+      assert_equal (budget.end_date - budget.start_date).to_i + 1, budget.days_remaining
+    end
+
+    travel_to budget.end_date do
+      assert_equal 1, budget.days_remaining
+    end
+
+    travel_to budget.end_date + 1.day do
+      assert_equal 0, budget.days_remaining
+    end
+  end
 end
