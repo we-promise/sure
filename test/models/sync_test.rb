@@ -179,6 +179,39 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "completed", account_sync.reload.status
   end
 
+  test "sync staled mid-run does not run post-sync when its job finishes" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable)
+
+    # Simulate SyncCleanerJob marking the sync stale while the job is still running
+    syncable.expects(:perform_sync).with { |s| Sync.find(s.id).mark_stale!; true }
+
+    Account.any_instance.expects(:perform_post_sync).never
+    Account.any_instance.expects(:broadcast_sync_complete).never
+
+    sync.perform
+
+    assert_equal "stale", sync.reload.status
+  end
+
+  test "sync staled mid-run does not raise when its job fails" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable)
+
+    syncable.expects(:perform_sync).with { |s| Sync.find(s.id).mark_stale!; true }
+      .raises(StandardError.new("provider blew up"))
+
+    Account.any_instance.expects(:perform_post_sync).never
+    Account.any_instance.expects(:broadcast_sync_complete).never
+
+    assert_nothing_raised do
+      sync.perform
+    end
+
+    assert_equal "stale", sync.reload.status
+    assert_equal "provider blew up", sync.error
+  end
+
   test "clean marks stale incomplete rows" do
     stale_pending = Sync.create!(
       syncable: accounts(:depository),
