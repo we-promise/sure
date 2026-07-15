@@ -36,7 +36,7 @@
 
     <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
       <div class="h-full rounded-full <%= budget.available_to_spend.negative? ? "bg-destructive" : "bg-inverse" %>"
-           style="inline-size: <%= [ budget.percent_of_budget_spent, 100 ].min.round(1) %>%"></div>
+           style="inline-size: <%= budget.percent_of_budget_spent.clamp(0, 100).round(1) %>%"></div>
     </div>
 
     <% if top_budget_categories.any? %>
@@ -84,9 +84,13 @@
     </div>
   <% end %>
 
-  <%= link_to budget_path(budget),
-      class: "mt-5 flex items-center justify-center gap-1.5 rounded-lg bg-surface-inset px-4 py-2.5 text-sm font-medium text-primary hover:bg-container-inset-hover" do %>
-    <%= t(".view_budget") %>
-    <%= icon("chevron-right", size: "sm") %>
-  <% end %>
+  <%= render DS::Link.new(
+    text: t(".view_budget"),
+    variant: "secondary",
+    href: budget_path(budget),
+    icon: "chevron-right",
+    icon_position: :right,
+    full_width: true,
+    class: "mt-5"
+  ) %>
 </section>
