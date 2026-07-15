@@ -251,13 +251,16 @@ export default class extends Controller {
     return options.filter(opt => opt.style.display !== "none")
   }
 
-  // After list-filter#filter runs, the focused option may be hidden.
-  // Move focus to the first visible match without touching tabindex.
+  // After list-filter#filter runs, a keyboard-focused option may be hidden.
+  // Repoint focus to the first visible match. Leave the search input and
+  // trigger alone — this handler also runs on every search keystroke.
   syncTabindex() {
     const visible = this.visibleOptions()
     if (visible.length === 0) return
 
     const active = document.activeElement
+    if (active.matches('input[type="search"]') && this.menuTarget.contains(active)) return
+    if (!this.hasOptionTarget || !this.optionTargets.includes(active)) return
     if (visible.includes(active)) return
 
     this.focusOption(visible[0])
