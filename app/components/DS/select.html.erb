@@ -23,7 +23,7 @@
                 id="<%= method %>_trigger"
                 class="form-field__input w-full"
                 data-select-target="button"
-                data-action="click->select#toggle"
+                data-action="click->select#toggle focus->select#handleButtonFocus"
                 aria-haspopup="listbox"
                 aria-expanded="false"
                 <%= "aria-labelledby=\"#{method}_label #{method}_trigger\"".html_safe if options[:label].present? %>>

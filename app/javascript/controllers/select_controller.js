@@ -13,11 +13,14 @@ export default class extends Controller {
     this.boundOutsideClick = this.handleOutsideClick.bind(this)
     this.boundKeydown = this.handleKeydown.bind(this)
     this.boundTurboLoad = this.handleTurboLoad.bind(this)
+    this.boundFocusOut = this.handleFocusOut.bind(this)
 
     document.addEventListener("click", this.boundOutsideClick)
     document.addEventListener("turbo:load", this.boundTurboLoad)
     this.element.addEventListener("keydown", this.boundKeydown)
+    this.element.addEventListener("focusout", this.boundFocusOut)
 
+    this.resetOptionTabindex()
     this.observeMenuResize()
   }
 
@@ -25,12 +28,36 @@ export default class extends Controller {
     document.removeEventListener("click", this.boundOutsideClick)
     document.removeEventListener("turbo:load", this.boundTurboLoad)
     this.element.removeEventListener("keydown", this.boundKeydown)
+    this.element.removeEventListener("focusout", this.boundFocusOut)
     this.stopAutoUpdate()
     if (this.resizeObserver) this.resizeObserver.disconnect()
   }
 
   toggle = () => {
     this.isOpen ? this.close() : this.openMenu()
+  }
+
+  handleButtonFocus() {
+    if (this.isOpen) return
+    if (!this.buttonTarget.matches(":focus-visible")) return
+    this.openAndFocusMenu()
+  }
+
+  openAndFocusMenu() {
+    this.openMenu()
+    requestAnimationFrame(() => {
+      if (this.focusSearch()) return
+      this.focusSelectedOrFirstOption()
+    })
+  }
+
+  focusSelectedOrFirstOption() {
+    const visible = this.visibleOptions()
+    if (visible.length === 0) return
+
+    const selected = visible.find(opt => opt.getAttribute("aria-selected") === "true")
+    const target = selected || visible[0]
+    this.rovingFocus(visible, visible.indexOf(target))
   }
 
   openMenu() {
@@ -53,6 +80,7 @@ export default class extends Controller {
     this.menuTarget.classList.remove("opacity-100", "translate-y-0")
     this.menuTarget.classList.add("opacity-0", "-translate-y-1", "pointer-events-none")
     this.buttonTarget.setAttribute("aria-expanded", "false")
+    this.resetOptionTabindex()
     setTimeout(() => { if (!this.isOpen && this.hasMenuTarget) this.menuTarget.classList.add("hidden") }, 150)
   }
 
@@ -130,8 +158,29 @@ export default class extends Controller {
     if (this.isOpen && !this.element.contains(event.target)) this.close()
   }
 
-  handleKeydown(event) {
+  handleFocusOut(event) {
     if (!this.isOpen) return
+    const related = event.relatedTarget
+    if (related && this.element.contains(related)) return
+    this.close()
+  }
+
+  handleKeydown(event) {
+    if (!this.isOpen && event.target === this.buttonTarget) {
+      if (["ArrowDown", "ArrowUp", " ", "Enter"].includes(event.key)) {
+        event.preventDefault()
+        this.openAndFocusMenu()
+      }
+      return
+    }
+
+    if (!this.isOpen) return
+
+    if (event.key === "Tab") {
+      this.close()
+      return
+    }
+
     if (event.key === "Escape") { this.close(); this.buttonTarget.focus(); return }
     if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click(); return }
 
@@ -172,6 +221,11 @@ export default class extends Controller {
     const target = visibleOptions[index]
     all.forEach(opt => opt.setAttribute("tabindex", opt === target ? "0" : "-1"))
     target.focus()
+  }
+
+  resetOptionTabindex() {
+    if (!this.hasOptionTarget) return
+    this.optionTargets.forEach(opt => opt.setAttribute("tabindex", "-1"))
   }
 
   // Options the user can currently see — list-filter hides non-matches
