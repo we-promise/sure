@@ -100,8 +100,10 @@ class LlmUsage < ApplicationRecord
     # Try exact match first
     return provider_pricing[model] if provider_pricing.key?(model)
 
-    # Try prefix matching (e.g., "gpt-4.1-2024-08-06" matches "gpt-4.1")
-    provider_pricing.each do |model_prefix, pricing|
+    # Try prefix matching longest-first so snapshot IDs for variants (e.g.,
+    # "gpt-5.4-mini-2026-03-17") do not match a broader family row
+    # ("gpt-5.4") before their specific pricing row.
+    provider_pricing.sort_by { |model_prefix, _pricing| -model_prefix.length }.each do |model_prefix, pricing|
       return pricing if model.start_with?(model_prefix)
     end
 
@@ -125,8 +127,8 @@ class LlmUsage < ApplicationRecord
       # Try exact match first
       return provider_name if provider_pricing.key?(model)
 
-      # Try prefix matching
-      provider_pricing.each_key do |model_prefix|
+      # Try prefix matching longest-first to mirror find_pricing.
+      provider_pricing.keys.sort_by { |model_prefix| -model_prefix.length }.each do |model_prefix|
         return provider_name if model.start_with?(model_prefix)
       end
     end

@@ -37,6 +37,22 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_in_delta 0.5, nano, 0.0001
   end
 
+  test "calculate_cost prices snapshot model IDs with the most specific OpenAI prefix" do
+    mini = LlmUsage.calculate_cost(
+      model: "gpt-5.4-mini-2026-03-17",
+      prompt_tokens: 1_000_000,
+      completion_tokens: 100_000
+    )
+    assert_in_delta 1.2, mini, 0.0001
+
+    pro = LlmUsage.calculate_cost(
+      model: "gpt-5.4-pro-2026-03-17",
+      prompt_tokens: 100_000,
+      completion_tokens: 10_000
+    )
+    assert_in_delta 4.8, pro, 0.0001
+  end
+
   test "calculate_cost returns Anthropic pricing for Claude models" do
     cost = LlmUsage.calculate_cost(model: "claude-sonnet-4-6", prompt_tokens: 1_000_000, completion_tokens: 100_000)
 
