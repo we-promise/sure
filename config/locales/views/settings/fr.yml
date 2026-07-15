@@ -85,7 +85,7 @@ fr:
         completion: achèvement
         cost_by_model: Coût par modèle
         cost_by_operation: Coût par opération
-        cost_estimates_description: Les coûts sont estimés sur la base des tarifs d'OpenAI à partir de 2025. Les coûts réels peuvent varier. Le prix est par million de jetons et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total.
+        cost_estimates_description: "Les coûts sont estimés d’après les tarifs publiés par les fournisseurs, y compris les tarifs OpenAI en vigueur en juillet 2026. Les coûts réels peuvent varier. Le prix est par million de jetons et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total."
         cost_estimates_title: À propos des estimations de coûts
         end_date: Date de fin
         failed: Échec

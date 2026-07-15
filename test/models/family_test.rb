@@ -234,4 +234,82 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal({ "type" => "financial_document" }, document.metadata)
     assert_equal "vs_test123", family.reload.vector_store_id
   end
+
+  # auto_share_existing_accounts_with -----------------------------------------
+
+  test "auto_share_existing_accounts_with shares existing family accounts read_write when sharing is default" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    newcomer = users(:empty)
+    newcomer.update_columns(family_id: family.id, role: "member")
+
+    expected_ids = family.accounts.where.not(owner_id: newcomer.id).pluck(:id).sort
+    assert expected_ids.any?, "fixture family must have shareable accounts"
+
+    family.auto_share_existing_accounts_with(newcomer)
+
+    shares = AccountShare.where(user: newcomer)
+    assert_equal expected_ids, shares.pluck(:account_id).sort
+    assert shares.all?(&:read_write?), "shares must grant read_write"
+    assert shares.all?(&:include_in_finances?), "shares must be included in finances"
+  end
+
+  test "auto_share_existing_accounts_with shares existing family accounts read_only for guests" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    newcomer = users(:empty)
+    newcomer.update_columns(family_id: family.id, role: "guest")
+
+    expected_ids = family.accounts.where.not(owner_id: newcomer.id).pluck(:id).sort
+    assert expected_ids.any?, "fixture family must have shareable accounts"
+
+    family.auto_share_existing_accounts_with(newcomer)
+
+    shares = AccountShare.where(user: newcomer)
+    assert_equal expected_ids, shares.pluck(:account_id).sort
+    assert shares.all?(&:read_only?), "guest shares must grant read_only"
+    assert shares.all?(&:include_in_finances?), "shares must be included in finances"
+  end
+
+  test "auto_share_existing_accounts_with is a no-op when family sharing is private" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "private")
+    newcomer = users(:empty)
+    newcomer.update_columns(family_id: family.id, role: "member")
+
+    assert_no_difference "AccountShare.count" do
+      family.auto_share_existing_accounts_with(newcomer)
+    end
+  end
+
+  test "auto_share_existing_accounts_with does not share with a user outside the family" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    outsider = users(:empty)
+    outsider.update_columns(family_id: families(:empty).id, role: "member")
+
+    assert_no_difference "AccountShare.count" do
+      family.auto_share_existing_accounts_with(outsider)
+    end
+  end
+
+  test "auto_share_existing_accounts_with never shares a user's own account and is idempotent" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    newcomer = users(:empty)
+    newcomer.update_columns(family_id: family.id, role: "member")
+    owned = family.accounts.first
+    owned.update!(owner: newcomer)
+
+    family.auto_share_existing_accounts_with(newcomer)
+    count_after_first = AccountShare.where(user: newcomer).count
+
+    assert_not AccountShare.exists?(user: newcomer, account: owned),
+      "must not share a user's own account with themselves"
+
+    family.auto_share_existing_accounts_with(newcomer) # re-run
+
+    assert_equal count_after_first, AccountShare.where(user: newcomer).count,
+      "re-running must not create duplicate shares"
+  end
 end
