@@ -188,11 +188,23 @@ class Budget < ApplicationRecord
     end
   end
 
-  # Whole days from today through the period's last day (today counts) —
-  # same day math as BudgetCategory#suggested_daily_spending. 0 once the
-  # period is over.
+  # Whole days from today through the period's last day (today counts).
+  # 0 once the period is over. Also feeds
+  # BudgetCategory#suggested_daily_spending's per-day split.
   def days_remaining
     [ (end_date - Date.current).to_i + 1, 0 ].max
+  end
+
+  # Biggest parent categories by what's actually been spent this period,
+  # falling back to allocation size early in the month before spending
+  # lands. Categories with neither spend nor an allocation are noise in a
+  # summary. (The budget_categories association preloads :category.)
+  def top_spending_categories(limit: 4)
+    budget_categories
+      .reject(&:subcategory?)
+      .reject { |bc| bc.actual_spending.to_d.zero? && bc.budgeted_spending.to_d.zero? }
+      .sort_by { |bc| [ -bc.actual_spending.to_d, -bc.budgeted_spending.to_d ] }
+      .first(limit)
   end
 
   def previous_budget_param
