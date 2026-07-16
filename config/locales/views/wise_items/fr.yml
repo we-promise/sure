@@ -1,0 +1,167 @@
+---
+fr:
+  wise_items:
+    activities:
+      asset_fee: Frais Wise Assets
+      default_name: Activité Wise
+      interest: Intérêts Wise
+      jar_deposit: Transfert vers Jar
+      jar_withdrawal: Transfert depuis Jar
+      transfer_from_jar: "Transfert depuis %{jar}"
+      transfer_to_jar: "Transfert vers %{jar}"
+    complete_account_setup:
+      failed: Échec de la création du compte. Veuillez réessayer.
+      not_found: Solde Wise introuvable.
+      success: Compte créé et lié avec succès.
+    create:
+      connection_failed: Impossible de se connecter à Wise. Veuillez réessayer plus
+        tard.
+      invalid_token: Jeton API invalide. Veuillez vérifier et réessayer.
+      no_profiles_found: Aucun profil Wise trouvé. Veuillez vérifier votre jeton
+        API.
+    destroy:
+      success: Connexion Wise supprimée
+    entries:
+      default_name: Transaction Wise
+      fee_name: Frais Wise
+    link_accounts:
+      failed: Échec de la liaison du solde Wise. Veuillez réessayer.
+      not_found: Solde Wise introuvable.
+      success: Solde Wise lié au compte avec succès.
+    link_existing_account:
+      failed: Échec de la liaison du compte. Veuillez réessayer.
+      not_found: Compte ou solde Wise introuvable.
+      success: "%{account_name} lié avec succès à Wise"
+    link_profiles:
+      already_connected: Tous les profils sélectionnés sont déjà connectés.
+      no_profiles_selected: Veuillez sélectionner au moins un profil.
+      session_expired: Session expirée. Veuillez réessayer de vous connecter.
+      success:
+        one: "%{count} profil Wise connecté avec succès"
+        other: "%{count} profils Wise connectés avec succès"
+    profile_types:
+      business: Professionnel
+      personal: Personnel
+    provider_connection:
+      default_description: Connectez votre compte multi-devises Wise
+      default_name: Wise
+      description: Connectez-vous en utilisant %{name}
+      name: "Wise — %{name}"
+    provider_panel:
+      accounts_link: Comptes
+      add_connection: Ajouter une connexion Wise
+      configured_html: Connecté et synchronisation en cours. Rendez-vous sur l'onglet
+        %{accounts_link} pour gérer vos comptes.
+      connect: Connecter Wise
+      connection_name_label: Nom de la connexion
+      connection_name_placeholder: Wise Personnel
+      disconnect: Déconnecter
+      disconnect_confirm: Voulez-vous vraiment déconnecter %{name} ? Cela supprimera
+        toutes les données de compte synchronisées.
+      disconnect_label: "Déconnecter %{name}"
+      encryption_warning:
+        message: Configurez les clés de chiffrement Active Record avant d'ajouter
+          des jetons Wise en production. Sans chiffrement, les jetons sont stockés
+          en texte brut.
+        title: Le chiffrement de la base de données n'est pas configuré
+      instructions:
+        copy_token_html: Copiez le jeton et collez-le ci-dessous. Sure l'utilise
+          uniquement pour synchroniser vos soldes et transactions.
+        create_token: Créez un nouveau jeton API personnel avec un accès en lecture
+          seule
+        open_tokens: Accédez à Paramètres → Jetons API
+        sign_in_html: Visitez %{link} et connectez-vous à votre compte
+      keep_token_placeholder: Laisser vide pour conserver le jeton actuel
+      not_configured: Non configuré
+      sandbox_note_html: Utilisez l'URL de base <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>)
+        pour les tests. Définissez <code>WISE_BASE_URL</code> dans votre environnement.
+      setup_accounts: Configurer des comptes
+      setup_title: 'Instructions de configuration :'
+      sync: Synchroniser
+      token_label: Jeton API
+      token_placeholder: Collez votre jeton API personnel Wise
+      update_connection: Mettre à jour la connexion
+    select_accounts:
+      cancel: Annuler
+      description: Sélectionnez le solde en devise Wise que vous souhaitez lier à
+        votre compte %{product_name}.
+      link_account: Lier le solde
+      no_accounts_found: Tous les soldes Wise sont déjà liés à des comptes Sure.
+      no_connection: Aucune connexion Wise trouvée. Veuillez d'abord connecter Wise
+        dans les paramètres du fournisseur.
+      title: Sélectionner un solde Wise
+    select_existing_account:
+      cancel: Annuler
+      description: Sélectionnez le solde en devise Wise à lier à ce compte. Les transactions
+        seront synchronisées automatiquement.
+      link_account: Lier le solde
+      no_accounts_found: Aucun solde Wise non lié trouvé.
+      title: Lier %{account_name} avec Wise
+    select_profiles:
+      already_connected_label: Déjà connecté
+      cancel: Annuler
+      connect: Connecter les profils sélectionnés
+      description: Votre compte Wise a plusieurs profils. Sélectionnez ceux que vous
+        souhaitez synchroniser avec Sure.
+      session_expired: Session expirée. Veuillez réessayer de vous connecter.
+      subtitle: Choisissez les profils à connecter
+      title: Sélectionner les profils Wise
+      unnamed_profile: "(Profil sans nom)"
+    setup_accounts:
+      all_accounts_linked: Tous vos soldes en devises Wise ont été liés à des comptes
+        Sure.
+      create_account: Créer le compte
+      description: Créez un compte Sure pour chaque solde en devise Wise que vous
+        souhaitez suivre. Chaque devise devient son propre compte.
+      done: Terminé
+      no_accounts_to_setup: Tous les comptes sont configurés
+      subtitle: Liez vos soldes en devises Wise
+      title: Configurer les comptes Wise
+    sync:
+      success: Synchronisation démarrée
+    sync_status:
+      all_synced:
+        one: "%{count} compte synchronisé"
+        other: "%{count} comptes synchronisés"
+      no_accounts: Aucun compte trouvé
+      partial_setup: "%{synced} synchronisé(s), %{pending} à configurer"
+    syncer:
+      account_processing_failed:
+        one: "%{count} compte Wise a échoué lors du traitement."
+        other: "%{count} comptes Wise ont échoué lors du traitement."
+      account_sync_failed:
+        one: La synchronisation de %{count} compte Wise n'a pas pu être planifiée.
+        other: La synchronisation de %{count} comptes Wise n'a pas pu être planifiée.
+      accounts_failed:
+        one: "%{count} solde n'a pas pu être importé."
+        other: "%{count} soldes n'ont pas pu être importés."
+      accounts_need_setup:
+        one: "%{count} compte doit être configuré…"
+        other: "%{count} comptes doivent être configurés…"
+      calculating_balances: Calcul des soldes…
+      checking_account_configuration: Vérification de la configuration du compte…
+      credentials_invalid: Jeton API Wise invalide ou autorisations insuffisantes
+      failed: Échec de la synchronisation. Veuillez réessayer ou contacter le support.
+      import_failed: Échec de l'importation Wise.
+      importing_accounts: Importation des comptes depuis Wise…
+      processing_transactions: Traitement des transactions…
+      transactions_failed:
+        one: "%{count} solde a rencontré des échecs d'importation de transactions."
+        other: "%{count} soldes ont rencontré des échecs d'importation de transactions."
+    update:
+      success: Connexion Wise mise à jour
+    wise_item:
+      delete: Déconnecter
+      deletion_in_progress: suppression en cours…
+      error: Erreur de synchronisation
+      no_accounts_description: Lancez une synchronisation pour découvrir vos soldes
+        Wise, puis liez-les à des comptes Sure.
+      no_accounts_title: Aucun compte lié pour l'instant
+      setup_action: Configurer les comptes
+      setup_description: "%{linked} sur %{total} comptes liés. Créez des comptes
+        Sure pour vos soldes en devises Wise."
+      setup_needed: Nouveaux comptes prêts à être configurés
+      status: Synchronisé il y a %{timestamp}
+      status_never: Jamais synchronisé
+      status_with_summary: Dernière synchronisation il y a %{timestamp} — %{summary}
+      syncing: Synchronisation…

@@ -1,0 +1,114 @@
+---
+fr:
+  insights:
+    actions:
+      budget: Voir le budget
+      cash_flow_warning: Vérifier les transactions récurrentes
+      idle_cash: Aller au compte
+      net_worth_milestone: Voir le rapport de patrimoine net
+      savings_rate_change: Voir les transactions de ce mois
+      spending_anomaly: Voir les transactions de %{category}
+      subscription_audit: Vérifier les transactions récurrentes
+    card:
+      dismiss: Ignorer
+      dismissed: Insight ignoré
+      new: Nouveau
+      undo: Annuler
+    feed:
+      header: Derniers
+      header_new: Nouveau
+      view_all: Voir tous les insights
+    figures:
+      days_overdue:
+        one: "%{count} jour de retard"
+        other: "%{count} jours de retard"
+      idle_days:
+        one: inactif depuis %{count} jour
+        other: inactif depuis %{count} jours
+      of_budget: du budget
+      on_pace: au rythme actuel
+      today: aujourd'hui
+      vs_previous: vs mois précédent
+    index:
+      empty:
+        description: Les insights apparaissent ici dès qu'il y a suffisamment d'activité
+          sur vos comptes. Ils se rafraîchissent automatiquement chaque nuit.
+        title: Aucun insight pour l'instant
+      refresh: Rechercher de nouveaux insights
+      subtitle: Ce qui se passe dans vos finances, actualisé chaque nuit.
+      title: Insights
+    meta:
+      date_range: "%{from} au %{to}"
+      last_n_days:
+        one: Dernier jour
+        other: "%{count} derniers jours"
+      next_n_days:
+        one: Jour suivant
+        other: "%{count} prochains jours"
+    refresh:
+      checking: Vérification…
+      queued: Nous générons de nouveaux insights. Revenez dans une minute.
+    templates:
+      budget_at_risk:
+        near: "%{categories} approchent de leurs limites ce mois-ci. Vous avez utilisé
+          %{budget_spent_pct}% de votre budget total jusqu'à présent."
+        over: "%{categories} ont dépassé le budget ce mois-ci. Vous avez utilisé
+          %{budget_spent_pct}% de votre budget total jusqu'à présent."
+      budget_on_track: Vous avez dépensé %{spent} sur votre budget de %{budgeted}
+        (%{budget_spent_pct}%) et tout reste dans les limites.
+      cash_flow_warning:
+        low: D'après vos prochaines transactions récurrentes et vos dépenses habituelles,
+          votre solde de trésorerie pourrait descendre à %{projected_low} vers le
+          %{projected_low_date}.
+        negative: D'après vos prochaines transactions récurrentes et vos dépenses
+          habituelles, votre solde de trésorerie pourrait chuter à %{projected_low}
+          vers le %{projected_low_date}.
+      idle_cash: "%{account} détient %{balance} sans aucune activité depuis %{idle_days}
+        jours."
+      net_worth_milestone: Votre patrimoine net a franchi %{milestone} et s'élève
+        désormais à %{net_worth}.
+      savings_rate_change:
+        down: Vous avez épargné %{current_rate}% de vos revenus en %{month}, soit
+          %{change_pp} points de pourcentage de moins que %{previous_rate}% le mois
+          précédent.
+        down_negative: "Vous avez dépensé plus que vous n'avez gagné en %{month}
+          : votre taux d'épargne est tombé à %{current_rate}%, contre %{previous_rate}%
+          le mois précédent."
+        up: Vous avez épargné %{current_rate}% de vos revenus en %{month}, soit %{change_pp}
+          points de pourcentage de plus que %{previous_rate}% le mois précédent.
+      spending_anomaly:
+        above: Vous êtes en voie de dépenser %{projected_spend} pour %{category}
+          ce mois-ci, soit environ %{deviation_pct}% de plus que votre moyenne mensuelle
+          récente de %{baseline_spend}.
+        below: Vous êtes en voie de dépenser %{projected_spend} pour %{category}
+          ce mois-ci, soit environ %{deviation_pct}% de moins que votre moyenne mensuelle
+          récente de %{baseline_spend}.
+      subscription_audit: "%{name} (%{amount}) n'est pas réapparu depuis la date
+        prévue du %{expected_on}. Il est possible que l'abonnement ait été annulé
+        ou que le prélèvement ait changé de date."
+    titles:
+      budget_at_risk:
+        one: Une catégorie de votre budget nécessite votre attention
+        other: "%{count} catégories de votre budget nécessitent votre attention"
+      budget_on_track: Votre budget est sur la bonne voie
+      cash_flow_warning:
+        low: Votre solde de trésorerie pourrait devenir faible
+        negative: Votre solde de trésorerie pourrait devenir négatif
+      idle_cash: Liquidités inactives sur %{account}
+      net_worth_milestone: "Étape de patrimoine net : %{milestone}"
+      savings_rate_change:
+        down: Votre taux d'épargne a baissé en %{month}
+        up: Votre taux d'épargne s'est amélioré en %{month}
+      spending_anomaly:
+        above: Les dépenses de %{category} sont en hausse
+        below: Les dépenses de %{category} sont en baisse
+      subscription_audit: "%{name} est-il toujours actif ?"
+    types:
+      budget_at_risk: Budget
+      budget_on_track: Budget
+      cash_flow_warning: Trésorerie
+      idle_cash: Liquidités inactives
+      net_worth_milestone: Patrimoine net
+      savings_rate_change: Taux d'épargne
+      spending_anomaly: Dépenses
+      subscription_audit: Abonnements

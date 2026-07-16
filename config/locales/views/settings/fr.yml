@@ -36,7 +36,6 @@ fr:
         disable_modal_click_outside_description: Empêche les fenêtres modales de se fermer en cliquant à l'extérieur. Utile pour éviter de perdre accidentellement des modifications non sauvegardées.
         transactions_title: Transactions
         transactions_subtitle: Personnalisez l'affichage des transactions
-        transactions_title: Transactions
     debugs:
       show:
         context:
@@ -473,9 +472,11 @@ fr:
         mercury: Synchronisez automatiquement vos comptes professionnels Mercury.
         plaid: Connectez des milliers d'institutions financières américaines via Plaid.
         plaid_eu: Connectez des institutions financières européennes via Plaid (PSD2 / Open Banking).
+        questrade: Synchronisez directement vos comptes d'investissement Questrade via l'API Questrade.
         simplefin: Connectez des comptes bancaires américains via le protocole ouvert SimpleFIN.
         snaptrade: Connectez vos comptes de courtage via le réseau d'agrégation SnapTrade.
         sophtron: Connectez vos banques et services publics américains et canadiens.
+        wise: Synchronisez automatiquement vos soldes multi-devises Wise et vos transferts internationaux.
       up_panel:
         step_1_html: Allez sur %{link} et générez un jeton d'accès personnel.
         step_2: Copiez votre jeton d'accès personnel.
