@@ -11,13 +11,13 @@ fr:
       subscription_audit: Vérifier les transactions récurrentes
     card:
       dismiss: Ignorer
-      dismissed: Insight ignoré
+      dismissed: Analyse ignorée
       new: Nouveau
       undo: Annuler
     feed:
       header: Derniers
       header_new: Nouveau
-      view_all: Voir tous les insights
+      view_all: Voir toutes les analyses
     figures:
       days_overdue:
         one: "%{count} jour de retard"
@@ -31,12 +31,12 @@ fr:
       vs_previous: vs mois précédent
     index:
       empty:
-        description: Les insights apparaissent ici dès qu'il y a suffisamment d'activité
-          sur vos comptes. Ils se rafraîchissent automatiquement chaque nuit.
-        title: Aucun insight pour l'instant
-      refresh: Rechercher de nouveaux insights
+        description: Les analyses apparaissent ici dès qu'il y a suffisamment d'activité
+          sur vos comptes. Elles se rafraîchissent automatiquement chaque nuit.
+        title: Aucune analyse pour l'instant
+      refresh: Rechercher de nouvelles analyses
       subtitle: Ce qui se passe dans vos finances, actualisé chaque nuit.
-      title: Insights
+      title: Analyses
     meta:
       date_range: "%{from} au %{to}"
       last_n_days:
@@ -47,7 +47,7 @@ fr:
         other: "%{count} prochains jours"
     refresh:
       checking: Vérification…
-      queued: Nous générons de nouveaux insights. Revenez dans une minute.
+      queued: Nous générons de nouvelles analyses. Revenez dans une minute.
     templates:
       budget_at_risk:
         near: "%{categories} approchent de leurs limites ce mois-ci. Vous avez utilisé

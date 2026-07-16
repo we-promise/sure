@@ -2,7 +2,7 @@
 fr:
   layouts:
     application:
-      insights: Insights
+      insights: Analyses
       nav:
         assistant: Assistant
         budgets: Budgets
