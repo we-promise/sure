@@ -26,8 +26,8 @@ class Chat {
       id: json['id'].toString(),
       title: json['title'] as String,
       error: json['error'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
-      updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
       messages: json['messages'] != null
           ? (json['messages'] as List)
               .map((m) => Message.fromJson(m as Map<String, dynamic>))
@@ -35,7 +35,7 @@ class Chat {
           : [],
       messageCount: json['message_count'] as int?,
       lastMessageAt: json['last_message_at'] != null
-          ? DateTime.parse(json['last_message_at'] as String).toLocal()
+          ? DateTime.parse(json['last_message_at'] as String)
           : null,
     );
   }
@@ -45,11 +45,11 @@ class Chat {
       'id': id,
       'title': title,
       'error': error,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
       'messages': messages.map((m) => m.toJson()).toList(),
       'message_count': messageCount,
-      'last_message_at': lastMessageAt?.toIso8601String(),
+      'last_message_at': lastMessageAt?.toUtc().toIso8601String(),
     };
   }
 

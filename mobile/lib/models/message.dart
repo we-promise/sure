@@ -57,8 +57,8 @@ class Message {
       role: role,
       content: content,
       model: json['model'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
-      updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
       toolCalls: json['tool_calls'] != null
           ? (json['tool_calls'] as List)
               .map((tc) => ToolCall.fromJson(tc as Map<String, dynamic>))
@@ -74,8 +74,8 @@ class Message {
       'role': role,
       'content': content,
       'model': model,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
       'tool_calls': toolCalls?.map((tc) => tc.toJson()).toList(),
     };
   }
