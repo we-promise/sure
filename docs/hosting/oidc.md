@@ -559,6 +559,7 @@ Each provider requires a callback URL configured in your identity provider:
 - Client secrets are encrypted at rest using Rails 7.2 ActiveRecord Encryption
 - Encryption keys are derived from `SECRET_KEY_BASE` by default
 - For additional security, set custom encryption keys (see `.env` for `ACTIVE_RECORD_ENCRYPTION_*` variables)
+- If you enable custom keys on an existing self-hosted instance, run `bin/rails security:backfill_encryption` once to rewrite older plaintext values
 
 ### Issuer validation
 

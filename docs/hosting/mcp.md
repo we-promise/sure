@@ -1,6 +1,6 @@
 # MCP Server for External AI Assistants
 
-Sure includes a Model Context Protocol (MCP) server endpoint that allows external AI assistants like Claude Desktop, GPT agents, or custom AI clients to query your financial data.
+Sure includes a Model Context Protocol (MCP) server endpoint that allows external AI assistants like Claude.ai, Claude Desktop, GPT agents, or custom AI clients to query and act on your financial data.
 
 ## What is MCP?
 
@@ -11,16 +11,32 @@ This is useful when:
 - You prefer to keep your LLM provider separate from Sure
 - You're building custom AI agents that need access to financial tools
 
-## Prerequisites
+## Authentication Modes
 
-To enable the MCP endpoint, you need to set two environment variables:
+Sure supports two ways to authenticate MCP clients:
+
+### 1. OAuth 2.0 / dynamic client registration (recommended)
+
+This is the best option for Claude.ai and other MCP clients that support OAuth. Sure exposes:
+
+- `/.well-known/oauth-protected-resource`
+- `/.well-known/oauth-authorization-server`
+- `POST /register` for dynamic client registration
+
+These endpoints let compatible MCP clients register a public OAuth client, redirect you back to Sure for sign-in, and receive a bearer token with the `read_write` scope.
+
+### 2. Static bearer token via environment variables
+
+This is the simpler fallback for custom agents, scripts, and deployments where you want to pin the MCP server to a specific Sure user.
+
+Set these environment variables:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `MCP_API_TOKEN` | Bearer token for authentication | `your-secret-token-here` |
 | `MCP_USER_EMAIL` | Email of the Sure user whose data the assistant can access | `user@example.com` |
 
-Both variables are **required**. The endpoint will not activate if either is missing.
+Both variables are required for the static-token flow.
 
 ### Generating a secure token
 
@@ -33,7 +49,7 @@ openssl rand -base64 32
 # Or use any secure password generator
 ```
 
-### Choosing the user
+### Choosing the user for static-token auth
 
 The `MCP_USER_EMAIL` must match an existing Sure user's email address. The AI assistant will have access to all financial data for that user's family.
 
@@ -82,11 +98,16 @@ POST /mcp
 
 ### Authentication
 
-All requests must include the `MCP_API_TOKEN` as a Bearer token:
+MCP requests authenticate with a bearer token:
 
 ```
-Authorization: Bearer <MCP_API_TOKEN>
+Authorization: Bearer <token>
 ```
+
+That token can come from either:
+
+- an OAuth authorization flow handled by the MCP client, or
+- the static `MCP_API_TOKEN` environment variable described above.
 
 ### Supported Methods
 
@@ -100,7 +121,9 @@ Sure implements the following JSON-RPC 2.0 methods:
 
 ### Available Tools
 
-The MCP endpoint exposes these financial tools:
+The MCP endpoint exposes the same tool registry used by Sure's builtin assistant. Clients should treat `tools/list` as the source of truth.
+
+At the time of writing, `tools/list` includes:
 
 | Tool | Description |
 |------|-------------|
@@ -109,8 +132,10 @@ The MCP endpoint exposes these financial tools:
 | `get_holdings` | Query investment holdings |
 | `get_balance_sheet` | Current financial position (assets, liabilities, net worth) |
 | `get_income_statement` | Income and expenses over a period |
+| `get_budget` | Budget status and budget category breakdowns |
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search uploaded documents in the vault |
+| `create_goal` | Create a savings goal linked to depository accounts |
 
 These are the same tools used by Sure's builtin AI assistant.
 
@@ -167,6 +192,22 @@ curl -X POST https://your-sure-instance/mcp \
 
 Response includes tool names, descriptions, and JSON schemas for parameters.
 
+### OAuth discovery
+
+MCP clients that support OAuth can discover Sure's metadata automatically:
+
+```bash
+curl https://your-sure-instance/.well-known/oauth-protected-resource
+curl https://your-sure-instance/.well-known/oauth-authorization-server
+```
+
+The authorization-server metadata includes:
+
+- `authorization_endpoint`: `https://your-sure-instance/oauth/authorize`
+- `token_endpoint`: `https://your-sure-instance/oauth/token`
+- `registration_endpoint`: `https://your-sure-instance/register`
+- `scopes_supported`: `["read_write"]`
+
 ### Call a Tool
 
 Execute a tool to get transactions:
@@ -214,7 +255,7 @@ The MCP controller creates a **transient session** for each request. This preven
 
 Each MCP request:
 1. Authenticates the token
-2. Loads the user specified in `MCP_USER_EMAIL`
+2. Loads the authorized Sure user
 3. Creates a temporary session scoped to that user
 4. Executes the tool call
 5. Discards the session
@@ -282,14 +323,25 @@ The Pipelock proxy (port 8889) scans all MCP traffic before forwarding to Sure's
 
 ## Connecting AI Assistants
 
+### Claude.ai
+
+Sure's Settings UI is already geared toward Claude.ai OAuth integrations:
+
+1. Open **Settings -> Integrations** in Claude.ai
+2. Click **Add integration**
+3. Paste your Sure MCP URL
+4. Claude redirects you to Sure to sign in and authorize access
+
+If you are using Pipelock, use the reverse-proxy URL on port `8889`. Otherwise use the app URL ending in `/mcp`.
+
 ### Claude Desktop
 
-Configure Claude Desktop to use Sure's MCP server:
+If your Claude Desktop build expects a raw MCP endpoint instead of an OAuth integration flow, point it at:
 
-1. Open Claude Desktop settings
-2. Add a new MCP server
-3. Set the endpoint to `http://your-server:8889` (if using Pipelock) or `http://your-server:3000/mcp`
-4. Add the authorization header: `Authorization: Bearer your-secret-token`
+- `http://your-server:8889` when using Pipelock, or
+- `http://your-server:3000/mcp` for direct access
+
+Use either the client's OAuth support or a bearer token, depending on what that build supports.
 
 ### Custom Agents
 
@@ -302,23 +354,21 @@ Any AI agent that supports JSON-RPC 2.0 can connect to the MCP endpoint. The age
 
 ## Troubleshooting
 
-### "MCP endpoint not configured" error
-
-**Symptom:** Requests return HTTP 503 with "MCP endpoint not configured"
-
-**Fix:** Ensure both `MCP_API_TOKEN` and `MCP_USER_EMAIL` are set as environment variables and restart Sure.
-
 ### "unauthorized" error
 
 **Symptom:** Requests return HTTP 401 with "unauthorized"
 
-**Fix:** Verify the `Authorization` header contains the correct token: `Bearer <MCP_API_TOKEN>`
+**Fix:** Verify one of these is true:
 
-### "MCP user not configured" error
+- The OAuth flow completed successfully and the client is sending the issued bearer token
+- The static token matches `MCP_API_TOKEN`
+- If you are using the static-token flow, `MCP_USER_EMAIL` matches an active Sure user
 
-**Symptom:** Requests return HTTP 503 with "MCP user not configured"
+### Static token works, but the user still gets rejected
 
-**Fix:** The `MCP_USER_EMAIL` does not match an existing user. Check that:
+**Symptom:** Requests return HTTP 401 even though the bearer token matches `MCP_API_TOKEN`
+
+**Fix:** The `MCP_USER_EMAIL` probably does not match an existing active user. Check that:
 - The email is correct
 - The user exists in the database
 - There are no typos or extra spaces

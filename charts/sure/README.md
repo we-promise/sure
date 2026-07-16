@@ -497,6 +497,7 @@ migrations:
 
 - SimpleFin encryption is optional. If you enable it, you must provide Active Record Encryption keys.
 - The backfill Job runs a safe, idempotent Rake task to encrypt existing `access_url` values.
+- This Job is SimpleFin-specific. It does not replace the general `security:backfill_encryption` task for older plaintext data elsewhere in the app.
 
 ```yaml
 simplefin:
@@ -554,6 +555,15 @@ rails:
 ```
 
 Note: In self-hosted mode, if these env vars are not provided, they will be automatically generated from `SECRET_KEY_BASE`. In managed mode, these env vars must be explicitly provided via environment variables or Rails credentials.
+
+If you add custom `ACTIVE_RECORD_ENCRYPTION_*` values to an existing self-hosted deployment, `db:prepare` will still run automatically on install/upgrade, but older plaintext rows are not rewritten automatically. After the app is running with the new keys, run a one-off backfill such as:
+
+```bash
+kubectl exec -it deploy/sure-web -- bundle exec rake security:backfill_encryption
+kubectl exec -it deploy/sure-web -- env DRY_RUN=false bundle exec rake security:backfill_encryption
+```
+
+The first command is a dry-run preview. The task is idempotent.
 
 ## Advanced environment variable injection
 
