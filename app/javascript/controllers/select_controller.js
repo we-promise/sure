@@ -1,6 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
 import { autoUpdate } from "@floating-ui/dom"
 
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "textarea:not([disabled])",
+  "input:not([disabled]):not([type=hidden])",
+  "select:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ")
+
 export default class extends Controller {
   static targets = ["button", "menu", "input", "content", "option"]
   static values = {
@@ -54,6 +63,26 @@ export default class extends Controller {
     this.suppressReopenOnFocus = true
     this.buttonTarget.focus()
     requestAnimationFrame(() => { this.suppressReopenOnFocus = false })
+  }
+
+  // Move focus to the next/previous tab stop after the trigger. Used when Tab
+  // closes the listbox: options are tabindex="-1" and close() sets inert on
+  // the menu, so the browser can't reliably continue native Tab navigation.
+  focusAdjacentTabStop(reverse = false) {
+    const scope = this.element.closest("dialog") || document
+    const focusables = this.#focusablesIn(scope)
+    const index = focusables.indexOf(this.buttonTarget)
+    if (index === -1) return
+
+    const next = focusables[index + (reverse ? -1 : 1)]
+    next?.focus()
+  }
+
+  #focusablesIn(scope) {
+    return Array.from(scope.querySelectorAll(FOCUSABLE_SELECTOR)).filter((el) => {
+      if (el.closest("[inert]")) return false
+      return el.offsetParent !== null || el === document.activeElement
+    })
   }
 
   // Arrow / Space / Enter from a closed trigger — open and move focus in.
@@ -128,8 +157,8 @@ export default class extends Controller {
       bubbles: true
     }))
 
-    this.close()
     this.focusTriggerWithoutReopening()
+    this.close()
   }
 
   focusSearch() {
@@ -190,7 +219,13 @@ export default class extends Controller {
     if (!this.isOpen) return
 
     if (event.key === "Tab") {
+      const reverse = event.shiftKey
+      event.preventDefault()
+      // Focus the trigger before close() sets inert on the menu — otherwise
+      // focus is still on an option and the UA drops it to <body>.
+      this.focusTriggerWithoutReopening()
       this.close()
+      this.focusAdjacentTabStop(reverse)
       return
     }
 
@@ -199,8 +234,8 @@ export default class extends Controller {
     if (event.key === "Escape") {
       event.preventDefault()
       event.stopPropagation()
-      this.close()
       this.focusTriggerWithoutReopening()
+      this.close()
       return
     }
     if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click(); return }
