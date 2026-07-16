@@ -166,6 +166,27 @@ class SnaptradeAccount < ApplicationRecord
     end
   end
 
+  # Total value of positions SnapTrade flags as `cash_equivalent` (usually
+  # money market / sweep funds such as Fidelity's SPAXX) held in the given
+  # currency. Per SnapTrade's docs, these positions are ALSO included in the
+  # balances endpoint's `cash` figure, so cash figures must have this value
+  # removed to avoid double counting the same money. The positions themselves
+  # are still imported as holdings by SnaptradeAccount::HoldingsProcessor.
+  def cash_equivalent_position_value(currency_code = currency)
+    Array(raw_holdings_payload).sum(BigDecimal("0")) do |holding|
+      data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
+      next BigDecimal("0") unless data[:cash_equivalent] == true
+
+      position_currency = extract_currency(data, extract_symbol_data(data), currency)
+      next BigDecimal("0") unless position_currency == currency_code
+
+      units = parse_decimal(data[:units]) || BigDecimal("0")
+      price = parse_decimal(data[:price]) || BigDecimal("0")
+
+      units * price
+    end
+  end
+
   # Get the SnapTrade provider instance via the parent item
   def snaptrade_provider
     snaptrade_item.snaptrade_provider

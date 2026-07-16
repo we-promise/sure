@@ -81,7 +81,7 @@ class SnaptradeAccount::Processor
       # Calculate total from holdings + cash for accuracy
       # SnapTrade's current_balance can sometimes be stale or just the cash value
       holdings_value = calculate_holdings_value
-      cash_value = snaptrade_account.cash_balance || 0
+      cash_value = calculate_cash_balance
 
       calculated_total = holdings_value + cash_value
 
@@ -98,11 +98,23 @@ class SnaptradeAccount::Processor
     end
 
     def calculate_cash_balance
-      # Use SnapTrade's cash_balance directly
       # Note: Can be negative for margin accounts
       cash = snaptrade_account.cash_balance
       Rails.logger.info "SnaptradeAccount::Processor - Cash balance from API: #{cash.inspect}"
-      cash || BigDecimal("0")
+      return BigDecimal("0") if cash.nil?
+
+      # SnapTrade includes money market / sweep funds (e.g. Fidelity SPAXX) in
+      # the balances endpoint's `cash` figure while ALSO reporting them as
+      # positions with `cash_equivalent: true`. Those positions are imported as
+      # holdings, so their value must come out of cash here — otherwise the
+      # account total counts the same money twice.
+      cash_equivalent_value = snaptrade_account.cash_equivalent_position_value
+
+      if cash_equivalent_value.nonzero?
+        Rails.logger.info "SnaptradeAccount::Processor - Excluding #{cash_equivalent_value} of cash-equivalent positions already counted in cash"
+      end
+
+      cash - cash_equivalent_value
     end
 
     def calculate_holdings_value
@@ -128,12 +140,5 @@ class SnaptradeAccount::Processor
         data = holding.respond_to?(:with_indifferent_access) ? holding.with_indifferent_access : {}
         extract_currency(data, extract_symbol_data(data), snaptrade_account.currency)
       end.uniq
-    end
-
-    def extract_symbol_data(data)
-      symbol_wrapper = data[:symbol].is_a?(Hash) ? data[:symbol].with_indifferent_access : {}
-      raw_symbol_data = symbol_wrapper[:symbol]
-
-      raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
     end
 end
