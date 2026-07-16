@@ -147,6 +147,38 @@ class Provider::TiingoTest < ActiveSupport::TestCase
     assert_equal "USD", Rails.cache.read("tiingo:currency:AAPL")
   end
 
+  test "search_securities does not downgrade a cached US-derived currency when a later search for the same ticker omits the US entry" do
+    # Test env uses cache_store = :null_store; swap in a real store so the
+    # cache write from the first search actually persists for the second.
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    stub_client_get(aapl_duplicate_ticker_search_body)
+    @provider.search_securities("AAPL") # caches USD from the US entry
+    assert_equal "USD", Rails.cache.read("tiingo:currency:AAPL")
+
+    # A later search for the same ticker returns a result set that only
+    # includes the CA cross-listing (e.g. a different query string surfaced
+    # by Tiingo's relevance ranking) - the cached USD (backing the real daily
+    # price data) must not be silently overwritten with CAD.
+    ca_only_body = [
+      {
+        "name" => "Apple Inc",
+        "ticker" => "AAPL",
+        "permaTicker" => "CA000000137372",
+        "openFIGIComposite" => nil,
+        "assetType" => "Stock",
+        "isActive" => true,
+        "countryCode" => "CA"
+      }
+    ].to_json
+    stub_client_get(ca_only_body)
+
+    result = @provider.search_securities("AAPL")
+
+    assert result.success?
+    assert_equal "USD", Rails.cache.read("tiingo:currency:AAPL")
+  end
+
   # ================================
   #        fetch_security_prices
   # ================================

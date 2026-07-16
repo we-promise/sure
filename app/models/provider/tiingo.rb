@@ -90,12 +90,28 @@ class Provider::Tiingo < Provider
       # can use it without a second search request) and for the Security objects
       # below, so what's shown in search results always matches what
       # fetch_security_prices will later return.
-      currency_by_ticker = parsed.filter_map { |security| security["ticker"] }.map(&:upcase).uniq.index_with do |ticker|
-        currency_for_country(best_match_for_ticker(parsed, ticker)&.dig("countryCode"))
+      matches_by_ticker = parsed.filter_map { |security| security["ticker"] }.map(&:upcase).uniq.index_with do |ticker|
+        best_match_for_ticker(parsed, ticker)
       end
 
+      currency_by_ticker = matches_by_ticker.transform_values { |match| currency_for_country(match&.dig("countryCode")) }
+
       currency_by_ticker.each do |ticker, currency|
-        Rails.cache.write("tiingo:currency:#{ticker}", currency, expires_in: 24.hours) if currency.present?
+        next if currency.blank?
+
+        cache_key = "tiingo:currency:#{ticker}"
+
+        # A ticker's daily-price endpoint is US-centric (see best_match_for_ticker),
+        # so a currency derived from a US match is authoritative. But a search
+        # query can return a result set that happens not to include the US
+        # cross-listing for an already-cached ticker (Tiingo's relevance ranking
+        # varies by query), and this loop runs on every search_securities call.
+        # Only overwrite a cached value when this result set's match is US, or
+        # nothing is cached yet - never downgrade a previously US-derived
+        # currency to one derived from a non-US match.
+        next if matches_by_ticker[ticker]&.dig("countryCode") != "US" && Rails.cache.read(cache_key).present?
+
+        Rails.cache.write(cache_key, currency, expires_in: 24.hours)
       end
 
       parsed.first(25).map do |security|
