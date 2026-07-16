@@ -10,6 +10,7 @@ export default class extends Controller {
 
   connect() {
     this.isOpen = false
+    this.suppressReopenOnFocus = false
     this.boundOutsideClick = this.handleOutsideClick.bind(this)
     this.boundKeydown = this.handleKeydown.bind(this)
     this.boundTurboLoad = this.handleTurboLoad.bind(this)
@@ -40,10 +41,19 @@ export default class extends Controller {
 
   // Tab lands on the trigger — open the menu but keep focus here so the
   // browser doesn't continue Tab into the listbox and skip to the next field.
+  // Skip when we just closed via Escape/Enter and re-focused the trigger:
+  // keyboard modality keeps :focus-visible, which would otherwise reopen.
   handleButtonFocus() {
     if (this.isOpen) return
+    if (this.suppressReopenOnFocus) return
     if (!this.buttonTarget.matches(":focus-visible")) return
     this.openMenu()
+  }
+
+  focusTriggerWithoutReopening() {
+    this.suppressReopenOnFocus = true
+    this.buttonTarget.focus()
+    requestAnimationFrame(() => { this.suppressReopenOnFocus = false })
   }
 
   // Arrow / Space / Enter from a closed trigger — open and move focus in.
@@ -119,7 +129,7 @@ export default class extends Controller {
     }))
 
     this.close()
-    this.buttonTarget.focus()
+    this.focusTriggerWithoutReopening()
   }
 
   focusSearch() {
@@ -184,7 +194,15 @@ export default class extends Controller {
       return
     }
 
-    if (event.key === "Escape") { this.close(); this.buttonTarget.focus(); return }
+    // Stop Escape from reaching DS::Dialog's esc hotkey so only the
+    // listbox closes; a second Escape can still dismiss the modal.
+    if (event.key === "Escape") {
+      event.preventDefault()
+      event.stopPropagation()
+      this.close()
+      this.focusTriggerWithoutReopening()
+      return
+    }
     if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click(); return }
 
     // WAI-ARIA APG listbox keyboard pattern: ArrowUp/Down moves focus
