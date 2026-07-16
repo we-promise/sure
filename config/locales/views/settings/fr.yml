@@ -230,7 +230,7 @@ fr:
     providers:
       akahu_panel:
         step_1_html: Allez sur %{link} et créez une application personnelle.
-        step_2: Copiez votre jeton d'application (App Token) et votre jeton d'utilisateur (User Token).
+        step_2: Copiez votre jeton d'application et votre jeton d'utilisateur.
         step_3: Collez les jetons ci-dessous, enregistrez, puis liez vos comptes synchronisés.
       bank_sync:
         lede: Connectez des comptes externes pour que les transactions, les soldes et les holdings soient automatiquement transférés vers Sure.
