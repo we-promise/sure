@@ -10,6 +10,7 @@ class Transactions::TransferCounterpartViewTest < ActionView::TestCase
     @savings = accounts(:credit_card) # "to" account
 
     @accessible_account_ids = @user.accessible_accounts.pluck(:id).to_set
+    @split_parent_entry_ids = Set.new
   end
 
   test "renders outflow transfer with arrow to destination account" do
