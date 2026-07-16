@@ -59,10 +59,13 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
     end
   end
 
-  test "build_conversation_messages truncates to last 20 messages" do
+  test "build_conversation_messages preserves conversation history beyond 20 messages" do
     chat = chats(:one)
+    original_messages = chat.conversation_messages.where(status: "complete").ordered.map do |msg|
+      { role: msg.role, content: msg.content }
+    end
 
-    # Create enough messages to exceed the 20-message cap
+    # Reproduce a long chat: 13 user/assistant turns = 26 messages.
     25.times do |i|
       role_class = i.even? ? UserMessage : AssistantMessage
       role_class.create!(chat: chat, content: "msg #{i}", ai_model: "test")
@@ -72,8 +75,8 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
       external = Assistant::External.new(chat)
       messages = external.send(:build_conversation_messages)
 
-      assert_equal 20, messages.length
-      # Last message should be the most recent one we created
+      assert_equal original_messages.length + 25, messages.length
+      assert_equal original_messages.first, messages.first
       assert_equal "msg 24", messages.last[:content]
     end
   end
