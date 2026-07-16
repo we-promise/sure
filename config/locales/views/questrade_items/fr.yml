@@ -5,7 +5,9 @@ fr:
       all_skipped: Tous les comptes ont été ignorés. Aucun compte n'a été créé.
       creation_failed: 'Échec de la création des comptes : %{error}'
       no_accounts: Aucun compte à configurer.
-      success: "%{count} compte(s) créé(s) avec succès."
+      success:
+        one: "%{count} compte créé avec succès."
+        other: "%{count} comptes créés avec succès."
     create:
       success: Connexion Questrade créée avec succès
     default_name: Connexion Questrade

@@ -31,7 +31,7 @@ fr:
     link_existing_account:
       failed: Échec de la liaison du compte. Veuillez réessayer.
       not_found: Compte ou solde Wise introuvable.
-      success: "%{account_name} lié avec succès à Wise"
+      success: "Liaison de %{account_name} à Wise réussie"
     link_profiles:
       already_connected: Tous les profils sélectionnés sont déjà connectés.
       no_profiles_selected: Veuillez sélectionner au moins un profil.
