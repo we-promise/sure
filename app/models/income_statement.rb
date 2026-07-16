@@ -29,28 +29,30 @@ class IncomeStatement
     )
   end
 
-  def expense_totals(period: Period.current_month)
+  def expense_totals(period: Period.current_month, for_budget: false)
     # Memoized per instance so callers that also invoke `net_category_totals`
     key = period_cache_key(period)
     @expense_totals_by_period ||= {}
-    return @expense_totals_by_period[key] if @expense_totals_by_period.key?(key)
-    @expense_totals_by_period[key] = build_period_total(classification: "expense", period: period)
+    cache_key = [ period_cache_key(period), for_budget ]
+    @expense_totals_by_period[cache_key] ||=
+      build_period_total(classification: "expense", period: period, for_budget: for_budget)
   end
 
-  def income_totals(period: Period.current_month)
-    key = period_cache_key(period)
+  def income_totals(period: Period.current_month, for_budget: false)
     @income_totals_by_period ||= {}
-    return @income_totals_by_period[key] if @income_totals_by_period.key?(key)
-    @income_totals_by_period[key] = build_period_total(classification: "income", period: period)
+    cache_key = [ period_cache_key(period), for_budget ]
+    @income_totals_by_period[cache_key] ||=
+      build_period_total(classification: "income", period: period, for_budget: for_budget)
   end
 
-  def net_category_totals(period: Period.current_month)
-    key = period_cache_key(period)
+  def net_category_totals(period: Period.current_month, for_budget: false)
     @net_category_totals_by_period ||= {}
-    return @net_category_totals_by_period[key] if @net_category_totals_by_period.key?(key)
+    cache_key = [ period_cache_key(period), for_budget ]
+    cached = @net_category_totals_by_period[cache_key]
+    return cached if cached
 
-    expense = expense_totals(period: period)
-    income = income_totals(period: period)
+    expense = expense_totals(period: period, for_budget: for_budget)
+    income = income_totals(period: period, for_budget: for_budget)
 
     # Use a stable key for each category: id for persisted, invariant token for synthetic
     cat_key = ->(ct) {
@@ -98,7 +100,7 @@ class IncomeStatement
       CategoryTotal.new(category: r[:category], total: r[:total], currency: family.currency, weight: weight)
     end
 
-    @net_category_totals_by_period[key] = NetCategoryTotals.new(
+    @net_category_totals_by_period[cache_key] = NetCategoryTotals.new(
       net_expense_categories: net_expense_categories,
       net_income_categories: net_income_categories,
       total_net_expense: total_net_expense,
@@ -142,9 +144,9 @@ class IncomeStatement
       [ period.start_date, period.end_date ]
     end
 
-    def build_period_total(classification:, period:)
-      # Exclude pending transactions from budget calculations
-      totals = totals_for_period(period).select { |t| t.classification == classification }
+    def build_period_total(classification:, period:, for_budget: false)
+      # Income and expense for the same period+scope share a single totals fetch
+      totals = totals_for_period(period, for_budget: for_budget).select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
@@ -187,12 +189,16 @@ class IncomeStatement
       )
     end
 
-    def totals_for_period(period)
+    def totals_for_period(period, for_budget: false)
+      excluded_kinds = for_budget ? Transaction::BUDGET_EXCLUDED_KINDS : Transaction::REPORT_EXCLUDED_KINDS
       @totals_for_period ||= {}
-      @totals_for_period[period_cache_key(period)] ||=
+      cache_key = [ period_cache_key(period), for_budget ]
+      # Exclude pending transactions from budget/report calculations
+      @totals_for_period[cache_key] ||=
         totals_query(
           transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
-          date_range: period.date_range
+          date_range: period.date_range,
+          excluded_kinds: excluded_kinds
         )
     end
 
@@ -218,12 +224,22 @@ class IncomeStatement
       @included_account_ids_hash ||= included_account_ids ? Digest::MD5.hexdigest(included_account_ids.sort.join(",")) : nil
     end
 
-    def totals_query(transactions_scope:, date_range:)
+    def totals_query(transactions_scope:, date_range:, excluded_kinds: Transaction::REPORT_EXCLUDED_KINDS)
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
+      kinds_key = excluded_kinds.join(",")
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i
-      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
+        "income_statement", "totals_query", "v3", family.id, user&.id, included_account_ids_hash, sql_hash,
+        date_range.begin, date_range.end, kinds_key, family.entries_cache_version
+      ]) {
+        Totals.new(
+          family,
+          transactions_scope: transactions_scope,
+          date_range: date_range,
+          included_account_ids: included_account_ids,
+          excluded_kinds: excluded_kinds
+        ).call
+      }
     end
 
     def monetizable_currency

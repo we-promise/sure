@@ -453,4 +453,55 @@ class BudgetTest < ActiveSupport::TestCase
     # Other Investments synthetic categories previously caused this to return 0
     assert spending >= 75, "Uncategorized actual spending should include the $75 transaction, got #{spending}"
   end
+
+  test "actual_spending and actual_income exclude one-time transactions" do
+    family = families(:empty)
+    account = family.accounts.create!(
+      name: "Checking",
+      currency: family.currency,
+      balance: 5000,
+      accountable: Depository.new
+    )
+    income_category = family.categories.create!(name: "Income")
+    expense_category = family.categories.create!(name: "Groceries")
+
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: expense_category, kind: "standard"),
+      date: Date.current,
+      name: "Groceries",
+      amount: 100,
+      currency: family.currency
+    )
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: expense_category, kind: "one_time"),
+      date: Date.current,
+      name: "One-time expense",
+      amount: 250,
+      currency: family.currency
+    )
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: income_category, kind: "standard"),
+      date: Date.current,
+      name: "Paycheck",
+      amount: -500,
+      currency: family.currency
+    )
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: income_category, kind: "one_time"),
+      date: Date.current,
+      name: "One-time bonus",
+      amount: -300,
+      currency: family.currency
+    )
+
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    budget = Budget.find(budget.id)
+
+    assert_equal 100, budget.actual_spending
+    assert_equal 500, budget.actual_income
+  end
 end
