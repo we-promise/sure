@@ -188,6 +188,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
       { key: "enable_banking", title: "Enable Banking",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
       { key: "coinstats",      title: "CoinStats",       turbo_id: "coinstats",      partial: "coinstats_panel" },
+      { key: "wise",           title: "Wise",            turbo_id: "wise",           partial: "wise_panel" },
       { key: "mercury",        title: "Mercury",         turbo_id: "mercury",        partial: "mercury_panel" },
       { key: "brex",           title: "Brex",            turbo_id: "brex",           partial: "brex_panel" },
       { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
@@ -196,7 +197,8 @@ class Settings::ProvidersController < ApplicationController
       { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
       { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
-      { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" }
+      { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
+      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" }
     ].freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
@@ -209,12 +211,14 @@ class Settings::ProvidersController < ApplicationController
       "lunchflow"      => "LunchflowItem",
       "enable_banking" => "EnableBankingItem",
       "coinstats"      => "CoinstatsItem",
+      "wise"           => "WiseItem",
       "mercury"        => "MercuryItem",
       "brex"           => "BrexItem",
       "coinbase"       => "CoinbaseItem",
       "binance"        => "BinanceItem",
       "kraken"         => "KrakenItem",
       "snaptrade"      => "SnaptradeItem",
+      "questrade"      => "QuestradeItem",
       "ibkr"           => "IbkrItem",
       "indexa_capital" => "IndexaCapitalItem",
       "sophtron"       => "SophtronItem"
@@ -234,6 +238,8 @@ class Settings::ProvidersController < ApplicationController
         @enable_banking_items = Current.family.enable_banking_items.ordered
       when "coinstats"
         @coinstats_items = Current.family.coinstats_items.ordered
+      when "wise"
+        @wise_items = Current.family.wise_items.active.ordered.includes(:syncs, :wise_accounts)
       when "mercury"
         @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
       when "brex"
@@ -252,6 +258,8 @@ class Settings::ProvidersController < ApplicationController
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
       when "sophtron"
         @sophtron_items = Current.family.sophtron_items.ordered
+      when "questrade"
+        @questrade_items = Current.family.questrade_items.active.ordered
       end
     end
 
@@ -272,6 +280,7 @@ class Settings::ProvidersController < ApplicationController
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
+      @wise_items = Current.family.wise_items.active.ordered
       @mercury_items = Current.family.mercury_items.active.ordered
       @brex_items = Current.family.brex_items.active.ordered
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
@@ -280,6 +289,7 @@ class Settings::ProvidersController < ApplicationController
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
+      @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
@@ -303,12 +313,14 @@ class Settings::ProvidersController < ApplicationController
         "lunchflow"      => @lunchflow_items,
         "enable_banking" => @enable_banking_items,
         "coinstats"      => @coinstats_items,
+        "wise"           => @wise_items,
         "mercury"        => @mercury_items,
         "brex"           => @brex_items,
         "coinbase"       => @coinbase_items,
         "binance"        => @binance_items,
         "kraken"         => @kraken_items,
         "snaptrade"      => @snaptrade_items,
+        "questrade"      => @questrade_items,
         "ibkr"           => @ibkr_items,
         "indexa_capital" => @indexa_capital_items,
         "sophtron"       => @sophtron_items

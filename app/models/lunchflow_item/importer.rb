@@ -269,7 +269,19 @@ class LunchflowItem::Importer
         begin
           fetch_and_update_balance(lunchflow_account)
         rescue => e
-          # Log but don't fail transaction import if balance fetch fails
+          # Log but don't fail transaction import if balance fetch fails.
+          # current_balance stays nil, so the processor will skip the balance
+          # update for this account — capture the failure, because the sync
+          # still reports success and this is otherwise invisible to support.
+          DebugLogEntry.capture(
+            category: "provider_sync",
+            level: "warn",
+            message: "Balance fetch failed for account #{lunchflow_account.account_id}; keeping previous balance",
+            source: self.class.name,
+            provider_key: "lunchflow",
+            family: lunchflow_item.family,
+            metadata: { account_id: lunchflow_account.account_id, error_class: e.class.name, error: e.message }
+          )
           Rails.logger.warn "LunchflowItem::Importer - Failed to update balance for account #{lunchflow_account.account_id}: #{e.message}"
         end
 
