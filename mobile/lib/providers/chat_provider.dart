@@ -19,7 +19,7 @@ class ChatProvider with ChangeNotifier {
   DateTime? _pollingStartTime;
   bool _isPollingRequestInFlight = false;
 
-  static const _pollingTimeout = Duration(seconds: 20);
+  static const _pollingTimeout = Duration(seconds: 60);
 
   /// Content length of the last assistant message from the previous poll.
   /// Used to detect when the LLM has finished writing (no growth between polls).
@@ -422,6 +422,7 @@ class ChatProvider with ChangeNotifier {
         if (newMessageCount > oldMessageCount) {
           shouldUpdate = true;
           _lastAssistantContentLength = null;
+          _pollingStartTime = DateTime.now(); // server acked the new message — reset timeout clock
         } else if (newMessageCount == oldMessageCount) {
           // Same count: check if any assistant message has more content
           for (final m in newMessages) {
@@ -442,7 +443,13 @@ class ChatProvider with ChangeNotifier {
 
         if (updatedChat.error != null && updatedChat.error!.isNotEmpty) {
           if (!shouldUpdate) {
-            _currentChat = updatedChat;
+            // Preserve existing messages if the error response has fewer — prevents
+            // a backend error from wiping out messages the user can already see.
+            if (updatedChat.messages.length >= (_currentChat?.messages.length ?? 0)) {
+              _currentChat = updatedChat;
+            } else {
+              _currentChat = _currentChat!.copyWith(error: updatedChat.error);
+            }
           }
           _stopPolling();
           _errorMessage = updatedChat.error;
