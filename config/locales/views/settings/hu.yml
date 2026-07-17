@@ -31,7 +31,7 @@ hu:
         failed: "Sikertelen"
         no_usage_data: "Nem található használati adat a kiválasztott időszakra"
         cost_estimates_title: "A költségbecslésekről"
-        cost_estimates_description: "A költségek az OpenAI 2025-ös árazása alapján vannak becsülve. A tényleges költségek eltérhetnek. Az árazás millió tokenenként van megadva, és modellenként változik. Az egyéni vagy önállóan üzemeltetett modellek \"N/A\"-t mutatnak, és nem szerepelnek a költségösszesítőkben."
+        cost_estimates_description: "A költségek a szolgáltatók közzétett árazása alapján vannak becsülve, beleértve az OpenAI 2026. júliusi árait. A tényleges költségek eltérhetnek. Az árazás millió tokenenként van megadva, és modellenként változik. Az egyéni vagy önállóan üzemeltetett modellek \"N/A\"-t mutatnak, és nem szerepelnek a költségösszesítőkben."
     ai_prompts:
       show:
         page_title: MI promptok

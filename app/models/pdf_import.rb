@@ -29,6 +29,22 @@ class PdfImport < Import
     end
   end
 
+  # A PdfImport's importing status is a processing claim (AI extraction or
+  # publish). Release a lost claim back to pending so the user can re-trigger
+  # processing, mirroring ProcessPdfJob's own reclaim; lost reverts keep the
+  # base revert_failed behavior.
+  def force_fail!(error_message = Import.lost_error_message)
+    return super if reverting?
+
+    with_lock do
+      return false unless presumed_lost?
+
+      update!(status: :pending)
+    end
+
+    true
+  end
+
   def import!
     raise "Account required for PDF import" unless account.present?
 

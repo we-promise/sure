@@ -250,6 +250,20 @@ class EnableBankingItem::Importer
         psu_headers: enable_banking_item.build_psu_headers
       )
 
+      if include_pending
+        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG) with _pending: true
+        all_transactions = all_transactions.map do |tx|
+          tx_ia = tx.with_indifferent_access
+          tx_ia[:status] == "PDNG" ? tx_ia.merge(_pending: true) : tx_ia
+        end
+      else
+        # If include_pending is false, we must filter out any pending transactions
+        # that were returned (e.g. if the bank ignores transaction_status="BOOK").
+        all_transactions = all_transactions.reject do |tx|
+          tx.with_indifferent_access[:status] == "PDNG"
+        end
+      end
+
       pending_transactions = []
       if include_pending
         # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled.
@@ -272,14 +286,16 @@ class EnableBankingItem::Importer
         end
       end
 
-      book_fingerprints = all_transactions
+      booked_transactions = all_transactions.reject { |tx| tx.with_indifferent_access[:_pending] }
+
+      book_fingerprints = booked_transactions
         .map { |tx| EnableBankingEntry::Processor.compute_external_id(tx) }
         .compact.to_set
 
       # Also index all booked entry_references so a pending row that lacks
       # transaction_id can still be matched when the settled BOOK row adds one
       # (fingerprints differ; entry_reference stays the same across settlement).
-      book_entry_refs = all_transactions
+      book_entry_refs = booked_transactions
         .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
         .compact.to_set
 
@@ -323,13 +339,13 @@ class EnableBankingItem::Importer
         #    no transaction_id but the settled BOOK row gained one — fingerprints
         #    diverge (enable_banking_<ref> vs enable_banking_<txn_id>) but the
         #    shared entry_reference is a reliable settlement signal.
-        book_fingerprints = all_transactions
-          .reject { |tx| tx.with_indifferent_access[:_pending] }
+        booked_transactions_for_settlement = all_transactions.reject { |tx| tx.with_indifferent_access[:_pending] }
+
+        book_fingerprints = booked_transactions_for_settlement
           .map { |tx| EnableBankingEntry::Processor.compute_external_id(tx) }
           .compact.to_set
 
-        book_entry_refs = all_transactions
-          .reject { |tx| tx.with_indifferent_access[:_pending] }
+        book_entry_refs = booked_transactions_for_settlement
           .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
           .compact.to_set
 

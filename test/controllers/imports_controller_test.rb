@@ -26,6 +26,39 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#modal"
   end
 
+  test "cancel marks a lost import as failed" do
+    import = imports(:transaction)
+    import.update_columns(status: "importing", updated_at: 2.hours.ago)
+
+    post cancel_import_path(import)
+
+    assert_redirected_to imports_path
+    assert_equal "failed", import.reload.status
+    assert_equal Import.lost_error_message, import.error
+  end
+
+  test "cancel refuses an import that is not presumed lost" do
+    import = imports(:transaction)
+    import.update_columns(status: "importing", updated_at: 5.minutes.ago)
+
+    post cancel_import_path(import)
+
+    assert_equal I18n.t("imports.cancel.not_cancellable"), flash[:alert]
+    assert_equal "importing", import.reload.status
+  end
+
+  test "cannot cancel another family's import" do
+    import = imports(:transaction)
+    import.update_columns(status: "importing", updated_at: 2.hours.ago)
+
+    sign_in users(:empty)
+
+    post cancel_import_path(import)
+
+    assert_response :not_found
+    assert_equal "importing", import.reload.status
+  end
+
   test "shows disabled account-dependent imports when family has no accounts" do
     sign_in users(:empty)
 
