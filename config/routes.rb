@@ -1,7 +1,5 @@
-unless Rails.env.production?
-  require "sidekiq/web"
-  require "sidekiq/cron/web"
-end
+require "sidekiq/web"
+require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
@@ -216,8 +214,18 @@ Rails.application.routes.draw do
     mount Rswag::Ui::Engine => "/api-docs"
   end
 
-  # Uses basic auth - see config/initializers/sidekiq.rb
-  mount Sidekiq::Web => "/sidekiq" unless Rails.env.production?
+  # Break-glass queue tooling. Development mounts it open for convenience;
+  # everywhere else (production, staging, test) the route only exists for a
+  # signed-in super admin — see app/constraints/super_admin_constraint.rb.
+  # An optional basic-auth second layer can be enabled via SIDEKIQ_WEB_USERNAME
+  # and SIDEKIQ_WEB_PASSWORD (config/initializers/sidekiq.rb).
+  if Rails.env.development?
+    mount Sidekiq::Web => "/sidekiq"
+  else
+    constraints SuperAdminConstraint.new do
+      mount Sidekiq::Web => "/sidekiq"
+    end
+  end
 
   # AI chats
   resources :chats do
