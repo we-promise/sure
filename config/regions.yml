@@ -37,6 +37,10 @@ regions:
       - PT
       - CZ
       - PL
+  in:
+    label: India
+    countries:
+      - IN
 
 # Currency to region fallback mapping
 # Used when country is not available
@@ -47,3 +51,4 @@ currencies:
   AUD: au
   EUR: eu
   CHF: eu
+  INR: in
