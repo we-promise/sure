@@ -1,0 +1,116 @@
+---
+it:
+  providers:
+    up:
+      name: Up
+      description: Collega i conti bancari australiani Up tramite un token di accesso personale
+  family:
+    up:
+      create_up_item:
+        default_name: Connessione Up
+  up_account:
+    fallback: Conto Up
+  up_item:
+    errors:
+      account_processing_failed: Impossibile sincronizzare il conto Up
+      account_sync_schedule_failed: Impossibile pianificare la sincronizzazione del conto Up
+      transactions_failed: Impossibile recuperare le transazioni Up
+      sync_failed: Impossibile sincronizzare la connessione Up
+    sync_status:
+      no_accounts: Nessun conto trovato
+      all_synced:
+        one: 1 conto sincronizzato
+        other: "%{count} conti sincronizzati"
+      partial: "%{linked} sincronizzati, %{unlinked} da configurare"
+    institution_summary:
+      none: Nessuna istituzione collegata
+      one: 1 istituzione
+      count:
+        one: 1 istituzione
+        other: "%{count} istituzioni"
+  up_items:
+    provider_panel:
+      default_connection_name: Connessione Up
+      add_connection: Aggiungi connessione Up
+      update_connection: Aggiorna connessione
+      connection_name_label: Nome connessione
+      connection_name_placeholder: Up principale
+      access_token_label: Token di accesso personale
+      access_token_placeholder: Incolla il tuo token di accesso personale Up
+      keep_access_token_placeholder: Lascia vuoto per mantenere il token esistente
+      setup_accounts: Configura conti
+      syncing: Sincronizzazione in corso...
+      sync: Sincronizza
+      disconnect: Disconnetti
+      disconnect_confirm: "Sei sicuro di voler disconnettere %{name}?"
+    create:
+      success: Connessione Up salvata.
+    update:
+      success: Connessione Up aggiornata.
+    destroy:
+      success: Eliminazione della connessione Up pianificata.
+      unlink_failed: Impossibile disconnettere la connessione Up
+    select_accounts:
+      title: Collega conti Up
+      description: Scegli i conti Up da aggiungere.
+      no_accounts_found: Non è stato trovato alcun conto Up non collegato.
+      no_credentials_configured: Configura prima Up nelle impostazioni provider.
+      cancel: Annulla
+      link_accounts: Collega conti
+    link_accounts:
+      success:
+        one: Collegato 1 conto Up.
+        other: "Collegati %{count} conti Up."
+      no_accounts_selected: Seleziona almeno un conto.
+      no_credentials_configured: Configura prima Up nelle impostazioni provider.
+      unsupported_account_type: Up non supporta questo tipo di conto.
+      link_failed: Nessun conto è stato collegato.
+    select_existing_account:
+      title: "Collega conto Up a %{account_name}"
+      description: Scegli un conto Up non collegato da connettere a questo conto.
+      no_accounts_found: Non è stato trovato alcun conto Up non collegato.
+      no_credentials_configured: Configura prima Up nelle impostazioni provider.
+      account_already_linked: Questo conto è già collegato a un provider.
+      cancel: Annulla
+      link_account: Collega conto
+    link_existing_account:
+      success: "Collegato conto Up a %{account_name}."
+      account_already_linked: Questo conto è già collegato a un provider.
+      up_account_already_linked: Questo conto Up è già collegato.
+      no_account_selected: Seleziona un conto Up da collegare.
+    setup_accounts:
+      title: Collega conti Up
+      subtitle: Scegli come deve apparire ogni conto Up in Sure.
+      no_credentials: Configura prima le credenziali Up.
+      api_error: Impossibile recuperare i conti Up.
+      fetch_failed: Impossibile recuperare i conti
+      no_accounts_to_setup: Nessun conto da configurare
+      all_accounts_linked: Tutti i conti Up sono già collegati.
+      choose_account_type: Scegli un tipo di conto
+      choose_account_type_description: Salta i conti che non vuoi monitorare.
+      account_type_label: Tipo di conto
+      account_types:
+        skip: Salta
+        depository: Contanti
+        loan: Prestito
+      create_accounts: Crea conti
+      cancel: Annulla
+    complete_account_setup:
+      success:
+        one: Creato 1 conto Up.
+        other: "Creati %{count} conti Up."
+      all_skipped: Nessun conto Up è stato creato.
+      no_accounts: Nessun conto Up è stato selezionato.
+      creation_failed: Impossibile creare i conti Up.
+    up_item:
+      deletion_in_progress: Eliminazione in corso
+      syncing: Sincronizzazione in corso
+      error: Errore
+      status_with_summary: "Sincronizzato %{timestamp} fa · %{summary}"
+      status_never: Mai sincronizzato
+      delete: Elimina
+      setup_needed: Configurazione conto necessaria
+      setup_description: "%{linked} di %{total} conti collegati."
+      setup_action: Configura conti
+      no_accounts_title: Nessun conto importato
+      no_accounts_description: Recupera i conti Up e scegli quali collegare.
