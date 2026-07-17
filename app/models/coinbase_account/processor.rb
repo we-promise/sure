@@ -47,7 +47,7 @@ class CoinbaseAccount::Processor
 
     # Creates/updates Holdings record for this crypto wallet.
     def process_holdings
-      HoldingsProcessor.new(coinbase_account).process
+      CoinbaseAccount::HoldingsProcessor.new(coinbase_account).process
     end
 
     # Updates the linked Account with current balance from Coinbase.
