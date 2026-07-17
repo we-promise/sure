@@ -1,0 +1,50 @@
+---
+it:
+  transfers:
+    create:
+      success: Bonifico creato
+    destroy:
+      success: Bonifico rimosso
+    form:
+      amount: Importo
+      bank_charges: Commissioni bancarie
+      outgoing_fee: Commissione bonifico in uscita
+      incoming_fee: Commissione bonifico in entrata
+      date: Data
+      destination_amount: Importo di destinazione
+      destination_amount_display: "Importo di destinazione: %{amount}"
+      exchange_rate_display: "Tasso di cambio: %{rate}"
+      expense: Spesa
+      from: Da
+      income: Entrata
+      select_account: Seleziona conto
+      source_amount: Importo di origine
+      submit: Crea bonifico
+      to: A
+      transfer: Bonifico
+    new:
+      title: Nuovo bonifico
+    show:
+      delete: Rimuovi bonifico
+      delete_subtitle: Questo rimuove il bonifico. Non eliminerà le transazioni sottostanti.
+      delete_title: Rimuovere il bonifico?
+      details: Dettagli
+      mark_recurring: Segna come ricorrente
+      mark_recurring_subtitle: Traccia questo bonifico come schema ricorrente nel feed delle prossime uscite e nella pagina dei ricorrenti.
+      mark_recurring_title: Segna il bonifico come ricorrente
+      note_label: Note
+      note_placeholder: Aggiungi una nota a questo bonifico
+      overview: Panoramica
+      settings: Impostazioni
+      from: Da
+      to: A
+      date: Data
+      transfer_amount: Importo bonifico
+      total: Totale
+      bank_charges: Commissioni bancarie
+      source_fee: Commissione origine
+      destination_fee: Commissione destinazione
+      category: Categoria
+      uncategorized: Non categorizzata
+    update:
+      success: Bonifico aggiornato
