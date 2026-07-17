@@ -86,6 +86,18 @@
                     <% end %>
 
                   <% else %>
+                    <% if import.presumed_lost? %>
+                      <%= button_to cancel_import_path(import),
+                                    method: :post,
+                                    class: "flex items-center gap-2 text-secondary hover:text-primary",
+                                    aria: { label: t("imports.table.row.actions.mark_failed") },
+                                    data: {
+                                      turbo_confirm: t("imports.table.row.actions.confirm_mark_failed")
+                                    } do %>
+                        <%= icon "circle-x", class: "w-5 h-5" %>
+                      <% end %>
+                    <% end %>
+
                     <%= button_to import_path(import),
                                   method: :delete,
                                   class: "flex items-center gap-2 text-destructive hover:text-destructive-hover",

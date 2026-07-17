@@ -95,10 +95,7 @@ ca:
         completion: completació
         cost_by_model: Cost per model
         cost_by_operation: Cost per operació
-        cost_estimates_description: Els costos s'estimen segons els preus d'OpenAI
-          de 2025. Els costos reals poden variar. El preu és per cada milió de tokens
-          i varia segons el model. Els models personalitzats o amb self hosting mostraran
-          "N/D" i no s'inclouen als totals de cost.
+        cost_estimates_description: 'Els costos s’estimen segons els preus publicats pels proveïdors, inclosos els preus d’OpenAI de juliol de 2026. Els costos reals poden variar. El preu és per cada milió de tokens i varia segons el model. Els models personalitzats o amb self hosting mostraran "N/A" i no s’inclouen als totals de cost.'
         cost_estimates_title: Sobre les estimacions de cost
         end_date: Data de fi
         failed: Errades
