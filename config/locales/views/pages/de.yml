@@ -75,6 +75,8 @@ de:
         classifications:
           asset: Vermögen
           liability: Schulden
+      insights_feed:
+        title: "Einblicke"
       cashflow_sankey:
         title: "Geldfluss"
         no_data_title: "Keine Geldflussdaten für diesen Zeitraum"

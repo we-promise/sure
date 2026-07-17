@@ -2,6 +2,7 @@
 de:
   layouts:
     application:
+      insights: Einblicke
       privacy_mode: Datenschutzmodus umschalten
       resize_left_sidebar: Seitenleiste für Konten skalieren
       resize_right_sidebar: Seitenleiste für den Assistenten skalieren
