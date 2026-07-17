@@ -108,7 +108,7 @@ class Account::MarketDataImporter
       security_ids.each_with_object({}) do |security_id, hash|
         trade_date   = trade_start_dates[security_id]
         holding_date = provider_holding_security_ids.include?(security_id) ? account_start_date : nil
-        hash[security_id] = [ trade_date, holding_date ].compact.min || account_start_date
+        hash[security_id] = [ trade_date, holding_date ].compact.min || account_start_date || Date.current
       end
     end
 
