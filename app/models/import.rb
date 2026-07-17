@@ -2,6 +2,22 @@ class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
 
+  # A hard-killed worker (OOM, SIGKILL during deploy) loses its in-flight job
+  # permanently, wedging the record in importing/reverting with no UI recourse.
+  # After this idle window the job is presumed lost and the user may force the
+  # record into a retryable terminal status. Imports finish in minutes, so an
+  # hour of silence dwarfs any legitimate run.
+  PRESUMED_LOST_AFTER = 1.hour
+
+  # User-facing (shown as the import's error in the UI), so resolved through
+  # i18n at call time rather than frozen at boot.
+  def self.lost_error_message
+    I18n.t(
+      "imports.errors.presumed_lost",
+      default: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
+    )
+  end
+
   # Shared CSV upload/content limit for web and API imports, including preflight.
   MAX_CSV_SIZE = 10.megabytes
   MAX_PDF_SIZE = 25.megabytes
@@ -165,6 +181,29 @@ class Import < ApplicationRecord
     update! status: :reverting
 
     RevertImportJob.perform_later(self)
+  end
+
+  def presumed_lost?
+    (importing? || reverting?) && updated_at < PRESUMED_LOST_AFTER.ago
+  end
+
+  # Escape hatch for imports whose background job died mid-flight. Only
+  # allowed once the record has been idle past PRESUMED_LOST_AFTER, and the
+  # with_lock re-check means a job finishing between page render and button
+  # click wins. Every import! runs in a single DB transaction, so a lost job
+  # rolled its data back — failing the record is safe and re-enables the
+  # existing "Try again" (failed) / revert-retry (revert_failed) paths.
+  def force_fail!(error_message = self.class.lost_error_message)
+    with_lock do
+      return false unless presumed_lost?
+
+      update!(
+        status: reverting? ? :revert_failed : :failed,
+        error: error_message
+      )
+    end
+
+    true
   end
 
   def revert

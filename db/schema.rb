@@ -10,9 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-
-ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
-
+ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1971,6 +1969,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
     t.date "window_start_date"
     t.date "window_end_date"
     t.text "sync_stats"
+    t.datetime "cancel_requested_at"
     t.index ["parent_id"], name: "index_syncs_on_parent_id"
     t.index ["status"], name: "index_syncs_on_status"
     t.index ["syncable_type", "syncable_id"], name: "index_syncs_on_syncable"
