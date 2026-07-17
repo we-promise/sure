@@ -59,10 +59,10 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
     end
   end
 
-  test "build_conversation_messages truncates to last 20 messages" do
+  test "build_conversation_messages returns all complete messages without truncation" do
     chat = chats(:one)
 
-    # Create enough messages to exceed the 20-message cap
+    # Create messages well beyond the old 20-message cap to verify it's gone
     25.times do |i|
       role_class = i.even? ? UserMessage : AssistantMessage
       role_class.create!(chat: chat, content: "msg #{i}", ai_model: "test")
@@ -72,7 +72,8 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
       external = Assistant::External.new(chat)
       messages = external.send(:build_conversation_messages)
 
-      assert_equal 20, messages.length
+      # All 25 created + 3 fixture messages = 28 complete messages returned
+      assert messages.length > 20, "Expected all messages to be included, not truncated at 20"
       # Last message should be the most recent one we created
       assert_equal "msg 24", messages.last[:content]
     end

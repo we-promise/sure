@@ -28,12 +28,6 @@ class Api::V1::ChatsController < Api::V1::BaseController
         )
 
         if @message.save
-          # NOTE: Commenting out duplicate job enqueue to fix mobile app receiving duplicate AI responses
-          # UserMessage model already triggers AssistantResponseJob via after_create_commit callback
-          # in app/models/user_message.rb:10-12, so this manual enqueue causes the job to run twice,
-          # resulting in duplicate AI responses with different content and wasted tokens.
-          # See: https://github.com/dwvwdv/sure (mobile app integration issue)
-          # AssistantResponseJob.perform_later(@message)
           render :show, status: :created
         else
           @chat.destroy
