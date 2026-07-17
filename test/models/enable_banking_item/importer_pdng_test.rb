@@ -158,8 +158,8 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
       status: "PDNG"
     }
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([tx])
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG")).returns([tx])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ tx ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG")).returns([ tx ])
 
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 
@@ -181,7 +181,7 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
       status: "PDNG"
     }
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([tx])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ tx ])
 
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 
@@ -189,4 +189,3 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
     assert_nil @enable_banking_account.raw_transactions_payload
   end
 end
-
