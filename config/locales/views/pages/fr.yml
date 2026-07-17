@@ -25,6 +25,8 @@ fr:
         title: Flux de trésorerie
         zoom_out: Retour à la trésorerie totale
       drag_to_reorder: Glisser pour réorganiser la section
+      insights_feed:
+        title: Analyses
       investment_summary:
         add_investment: Ajoutez un compte d'investissement pour suivre votre portefeuille
         contributions: Apports
