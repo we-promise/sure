@@ -61,7 +61,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{account_statement_path(statement)}'][data-turbo-frame='_top'][aria-label='#{I18n.t("account_statements.table.edit")}']"
 
     # Unlink button escapes frame
-    assert_select "form[action='#{unlink_account_statement_path(statement)}'] button"
+    assert_select "form[action='#{unlink_account_statement_path(statement)}'][data-turbo-frame='_top'] button"
   end
 
   test "statements tab shows coverage and upload for statement managers with account write access" do
