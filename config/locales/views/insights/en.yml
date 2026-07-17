@@ -45,6 +45,8 @@ en:
       on_pace: on pace
       of_budget: of budget
       need_attention: need attention
+      savings_rate_delta: "%{value} pp"
+      percent: "%{value}%"
       days_overdue:
         one: "%{count} day overdue"
         other: "%{count} days overdue"

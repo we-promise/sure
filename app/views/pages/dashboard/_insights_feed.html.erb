@@ -51,12 +51,13 @@
           </div>
 
           <div class="min-w-0 grow">
-            <%# No per-row "New" pill: the well's header already counts the
-                unread ones ("New · 3"), and with only three rows the pill was
-                usually on all of them — saying the same thing twice while
-                crowding the title. %>
-            <span class="text-sm font-medium text-primary truncate block"><%= insight.title %></span>
-            <p class="text-sm text-secondary truncate"><%= insight.body %></p>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium text-primary truncate"><%= insight.display_title %></span>
+              <% if insight.active? %>
+                <%= render DS::Pill.new(label: t("insights.card.new"), tone: :info, size: :sm) %>
+              <% end %>
+            </div>
+            <p class="text-sm text-secondary truncate"><%= insight.display_body %></p>
           </div>
 
           <% if (figure = insight_key_figure(insight)) %>

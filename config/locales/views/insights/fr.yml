@@ -27,6 +27,8 @@ fr:
         other: inactif depuis %{count} jours
       of_budget: du budget
       on_pace: au rythme actuel
+      percent: "%{value} %"
+      savings_rate_delta: "%{value} pts"
       today: aujourd'hui
       vs_previous: vs mois précédent
     index:
