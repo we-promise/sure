@@ -17,6 +17,11 @@ class ChatsController < ApplicationController
   end
 
   def create
+    if chat_params[:content].blank?
+      redirect_to chats_path, alert: t(".blank_content")
+      return
+    end
+
     @chat = Current.user.chats.start!(chat_params[:content], model: chat_params[:ai_model])
     set_last_viewed_chat(@chat)
     redirect_to chat_path(@chat, thinking: true)
