@@ -18,9 +18,9 @@ class Import::UploadsController < ApplicationController
       handle_qif_upload
     elsif @import.is_a?(SureImport)
       update_sure_import_upload
-    elsif csv_valid?(csv_str)
+    elsif csv_valid?(normalized_csv_str)
       @import.account = import_account_id.present? ? accessible_accounts.find(import_account_id) : nil
-      @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
+      @import.assign_attributes(raw_file_str: normalized_csv_str, col_sep: upload_params[:col_sep])
       @import.save!(validate: false)
 
       redirect_to import_configuration_path(@import, template_hint: true), notice: t("imports.create.csv_uploaded")
@@ -90,6 +90,10 @@ class Import::UploadsController < ApplicationController
 
     def csv_str
       @csv_str ||= upload_params[:import_file]&.read || upload_params[:raw_file_str]
+    end
+
+    def normalized_csv_str
+      @normalized_csv_str ||= QifParser.normalize_encoding(csv_str)
     end
 
     def csv_valid?(str)
