@@ -93,6 +93,28 @@ class InsightsHelperTest < ActionView::TestCase
     assert_nil insight_key_figure(without_facts)
   end
 
+  test "savings rate figure localizes the delta and its unit" do
+    insight = build_insight(
+      "savings_rate_change",
+      metadata: { "current_rate" => -4.3, "previous_rate" => 8.5 },
+      facts: { "change_pp" => 12.8 }
+    )
+
+    assert_equal "−12.8 pp", insight_key_figure(insight).first
+    I18n.with_locale(:fr) do
+      assert_equal "−12,8 pts", insight_key_figure(insight).first
+    end
+  end
+
+  test "budget figure localizes the percent" do
+    insight = build_insight("budget_on_track", facts: { "budget_spent_pct" => 57 })
+
+    assert_equal "57%", insight_key_figure(insight).first
+    I18n.with_locale(:fr) do
+      assert_equal "57 %", insight_key_figure(insight).first
+    end
+  end
+
   test "action link resolves the stored subject and disappears when it cannot" do
     account = families(:dylan_family).accounts.visible.first
     resolvable = build_insight("idle_cash", metadata: { "account_id" => account.id })

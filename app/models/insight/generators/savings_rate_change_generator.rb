@@ -38,8 +38,8 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
         template_key: template_key,
         facts: {
           month: month_name,
-          current_rate: signed_number(round(current_rate, 1)),
-          previous_rate: signed_number(round(previous_rate, 1)),
+          current_rate: round(current_rate, 1),
+          previous_rate: round(previous_rate, 1),
           change_pp: round(delta.abs, 1)
         },
         metadata: {

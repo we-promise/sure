@@ -84,6 +84,7 @@ class GenerateInsightsJob < ApplicationJob
             priority: generated.priority,
             status: "active",
             title: generated.title,
+            template_key: generated.template_key,
             body: writer.write(generated),
             metadata: metadata,
             facts: facts,
@@ -100,6 +101,7 @@ class GenerateInsightsJob < ApplicationJob
             priority: generated.priority,
             status: "active",
             title: generated.title,
+            template_key: generated.template_key,
             body: writer.write(generated),
             metadata: metadata,
             facts: facts,
@@ -113,14 +115,16 @@ class GenerateInsightsJob < ApplicationJob
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces; the body is still accurate, so no rewrite.
-          existing.update!(status: "active", facts: facts, generated_at: Time.current, read_at: nil)
+          existing.update!(status: "active", facts: facts, generated_at: Time.current, read_at: nil,
+                           **legacy_content_refresh(existing, generated, writer))
         else
           # Same signal, same numbers: don't rewrite the body (avoids an LLM
           # call) and don't undo the user's read/dismissed state. Facts still
           # refresh — they're display values (key figure, link labels), and
           # keeping them current is exactly why they're not part of the
           # material-change comparison.
-          existing.update!(facts: facts, generated_at: Time.current)
+          existing.update!(facts: facts, generated_at: Time.current,
+                           **legacy_content_refresh(existing, generated, writer))
         end
       rescue ActiveRecord::RecordNotUnique
         # A concurrent run created the same dedup_key first; it owns this row.
@@ -135,6 +139,21 @@ class GenerateInsightsJob < ApplicationJob
           metadata: { dedup_key: generated.dedup_key, insight_type: generated.insight_type }
         )
       end
+    end
+
+    # Rows created before template_key existed hold prose snapshotted under
+    # whatever locale — and whatever translations — generation ran with, which
+    # may be the English fallback for a non-English family. Refresh their
+    # content once, in place, without undoing the user's read/dismissed state;
+    # from then on the row renders live in the viewer's locale.
+    def legacy_content_refresh(existing, generated, writer)
+      return {} if existing.template_key.present?
+
+      {
+        title: generated.title,
+        template_key: generated.template_key,
+        body: writer.write(generated)
+      }
     end
 
     # GeneratedInsight metadata/facts may hold symbols, dates, or BigDecimals;

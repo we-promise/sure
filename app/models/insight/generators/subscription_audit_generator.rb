@@ -22,7 +22,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
           name: name,
           amount: amount,
           days_overdue: days_overdue,
-          expected_on: I18n.l(recurring.next_expected_date)
+          expected_on: recurring.next_expected_date.iso8601
         },
         # days_overdue is deliberately left out: it changes every night, and
         # metadata drift would resurrect insights the user already dismissed.

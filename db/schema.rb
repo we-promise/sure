@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_17_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1153,7 +1153,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
   end
 
   create_table "insights", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.text "body", null: false
+    t.text "body"
     t.datetime "created_at", null: false
     t.string "currency", default: "USD", null: false
     t.string "dedup_key", null: false
@@ -1168,6 +1168,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
     t.string "priority", default: "medium", null: false
     t.datetime "read_at"
     t.string "status", default: "active", null: false
+    t.string "template_key"
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id", "dedup_key"], name: "index_insights_on_family_id_and_dedup_key", unique: true
