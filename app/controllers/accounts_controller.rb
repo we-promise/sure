@@ -232,7 +232,9 @@ class AccountsController < ApplicationController
     end
 
     def set_account
-      @account = Current.user.accessible_accounts.find(params[:id])
+      @account = Current.user.accessible_accounts
+        .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
+        .find(params[:id])
     end
 
     def set_manageable_account
