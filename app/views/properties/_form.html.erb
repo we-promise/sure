@@ -2,7 +2,7 @@
 
 <%= render "accounts/form", account: account, url: url do |form| %>
   <%= form.select :subtype,
-                 Property::SUBTYPES.map { |k, v| [v[:long], k] },
+                 Property.subtype_options_for_select,
                  { label: true, prompt: t("properties.form.subtype_prompt"), include_blank: t("properties.form.none") } %>
 
   <%= render "shared/ruler", classes: "my-4" %>
@@ -23,7 +23,7 @@
                                        placeholder: t("properties.form.area_placeholder"),
                                        min: 0 %>
         <%= property_form.select :area_unit,
-                                 [["Square Feet", "sqft"], ["Square Meters", "sqm"]],
+                                 [[t("properties.overview_fields.square_feet"), "sqft"], [t("properties.overview_fields.square_meters"), "sqm"]],
                                  { label: t("properties.form.area_unit") } %>
       </div>
 
