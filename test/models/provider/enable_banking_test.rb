@@ -62,6 +62,25 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert error.wrong_transactions_period?
   end
 
+  test "maps ASPSP_ERROR response bodies to aspsp_error regardless of http status" do
+    response = OpenStruct.new(
+      code: 500,
+      body: {
+        error: "ASPSP_ERROR",
+        detail: { message: "Bank backend unavailable" }
+      }.to_json,
+      message: "Internal Server Error"
+    )
+
+    error = assert_raises Provider::EnableBanking::EnableBankingError do
+      @provider.send(:handle_response, response)
+    end
+
+    assert_equal :aspsp_error, error.error_type
+    assert error.aspsp_error?
+    assert_equal "ASPSP_ERROR", error.response_data[:error]
+  end
+
   test "start_authorization includes auth_method in the request body when provided" do
     captured_body = nil
     response = OpenStruct.new(

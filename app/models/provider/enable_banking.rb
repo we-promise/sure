@@ -241,28 +241,29 @@ class Provider::EnableBanking
     end
 
     def handle_response(response)
+      response_data = parse_error_response_body(response.body)
+
       case response.code
       when 200, 201
         parse_response_body(response)
       when 204
         {}
       when 400
-        raise EnableBankingError.new("Bad request to Enable Banking API: #{response.body}", :bad_request)
+        raise mapped_error(response, response_data, default_type: :bad_request, default_message: "Bad request to Enable Banking API")
       when 401
-        raise EnableBankingError.new("Invalid credentials or expired JWT", :unauthorized)
+        raise mapped_error(response, response_data, default_type: :unauthorized, default_message: "Invalid credentials or expired JWT")
       when 403
-        raise EnableBankingError.new("Access forbidden - check your application permissions", :access_forbidden)
+        raise mapped_error(response, response_data, default_type: :access_forbidden, default_message: "Access forbidden - check your application permissions")
       when 404
-        raise EnableBankingError.new("Resource not found", :not_found)
+        raise mapped_error(response, response_data, default_type: :not_found, default_message: "Resource not found")
       when 408
-        raise EnableBankingError.new("Request timeout from Enable Banking API", :timeout)
+        raise mapped_error(response, response_data, default_type: :timeout, default_message: "Request timeout from Enable Banking API")
       when 422
-        response_data = parse_response_body(response)
-        raise EnableBankingError.new("Validation error from Enable Banking API: #{response.body}", :validation_error, response_data: response_data)
+        raise mapped_error(response, response_data, default_type: :validation_error, default_message: "Validation error from Enable Banking API")
       when 429
-        raise EnableBankingError.new("Rate limit exceeded. Please try again later.", :rate_limited)
+        raise mapped_error(response, response_data, default_type: :rate_limited, default_message: "Rate limit exceeded. Please try again later.")
       else
-        raise EnableBankingError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
+        raise mapped_error(response, response_data, default_type: :fetch_failed, default_message: "Failed to fetch data")
       end
     end
 
@@ -273,6 +274,30 @@ class Provider::EnableBanking
     rescue JSON::ParserError => e
       Rails.logger.error "Enable Banking API: Failed to parse response: #{e.message}"
       raise EnableBankingError.new("Failed to parse API response", :parse_error)
+    end
+
+    def parse_error_response_body(body)
+      return nil if body.blank?
+
+      JSON.parse(body, symbolize_names: true)
+    rescue JSON::ParserError
+      nil
+    end
+
+    def mapped_error(response, response_data, default_type:, default_message:)
+      error_code = response_data.is_a?(Hash) ? response_data[:error].presence : nil
+
+      error_type = case error_code
+      when "ASPSP_ERROR" then :aspsp_error
+      when "ASPSP_TIMEOUT" then :timeout
+      when "ASPSP_RATE_LIMIT_EXCEEDED" then :rate_limited
+      when "WRONG_TRANSACTIONS_PERIOD" then :validation_error
+      when "EXPIRED_SESSION" then :unauthorized
+      else default_type
+      end
+
+      suffix = response.body.present? ? ": #{response.body}" : nil
+      EnableBankingError.new("#{default_message}#{suffix}", error_type, response_data: response_data)
     end
 
     class EnableBankingError < StandardError
@@ -286,6 +311,10 @@ class Provider::EnableBanking
 
       def wrong_transactions_period?
         error_type == :validation_error && response_data.is_a?(Hash) && response_data[:error] == "WRONG_TRANSACTIONS_PERIOD"
+      end
+
+      def aspsp_error?
+        error_type == :aspsp_error
       end
 
       def corrected_date_from
