@@ -120,6 +120,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
     t.datetime "disabled_at"
     t.boolean "exclude_from_reports", default: false, null: false
     t.integer "account_providers_count", default: 0, null: false
+    t.boolean "enable_category_matcher", default: true, null: false
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
