@@ -1,0 +1,25 @@
+<%# locals: (avm_providers:) %>
+
+<%= render layout: "accounts/new/container", locals: { title: t("accounts.new.method_selector.title"), back_path: new_account_path } do %>
+  <div class="text-sm">
+    <%# Manual entry option %>
+    <%= link_to new_property_path(return_to: params[:return_to]), class: "group flex items-center gap-4 w-full text-center text-primary focus:outline-hidden focus:bg-surface-hover border border-transparent focus:border focus:border-secondary px-2 hover:bg-surface-hover rounded-lg p-2" do %>
+      <span class="flex w-8 h-8 shrink-0 grow-0 items-center justify-center rounded-lg bg-alpha-black-50 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]">
+        <%= icon("keyboard") %>
+      </span>
+      <%= t("accounts.new.method_selector.manual_entry") %>
+      <%= icon("chevron-right", size: "sm", class: "ml-auto shrink-0 text-subdued transition-colors group-hover:text-secondary") %>
+    <% end %>
+
+    <%# AVM provider lookup options %>
+    <% avm_providers.each do |provider_key| %>
+      <%= link_to new_property_path(method: provider_key, return_to: params[:return_to]), class: "group flex items-center gap-4 w-full text-center text-primary focus:outline-hidden focus:bg-surface-hover border border-transparent focus:border focus:border-secondary px-2 hover:bg-surface-hover rounded-lg p-2" do %>
+        <span class="flex w-8 h-8 shrink-0 grow-0 items-center justify-center rounded-lg bg-alpha-black-50 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]">
+          <%= icon("map-pin") %>
+        </span>
+        <%= t("properties.new.avm_option", provider: t("properties.avm_providers.#{provider_key}")) %>
+        <%= icon("chevron-right", size: "sm", class: "ml-auto shrink-0 text-subdued transition-colors group-hover:text-secondary") %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

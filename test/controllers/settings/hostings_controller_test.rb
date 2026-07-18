@@ -12,6 +12,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
     @provider.stubs(:healthy?).returns(true)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(@provider)
+    Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
     @provider.stubs(:usage).returns(provider_success_response(
       OpenStruct.new(
         used: 10,

@@ -273,4 +273,133 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert draft_account.active?
     assert_redirected_to account_path(draft_account)
   end
+
+  # AVM provider lookup tests
+  def stub_avm_provider(response)
+    provider = mock
+    provider.stubs(:fetch_property_valuation).returns(response)
+    Provider::Registry.stubs(:rentcast).returns(provider)
+    provider
+  end
+
+  def successful_avm_response
+    Provider::Response.new(
+      success?: true,
+      data: Provider::PropertyValuationConcept::PropertyValuation.new(
+        valuation: 356_000,
+        currency: "USD",
+        property_type: "single_family_home",
+        year_built: 1973,
+        area_value: 1878,
+        area_unit: "sqft"
+      ),
+      error: nil
+    )
+  end
+
+  test "new shows method selector when an AVM provider is configured" do
+    stub_avm_provider(successful_avm_response)
+
+    get new_property_path(step: "method_select")
+
+    assert_response :success
+    assert_match "Add via RentCast", response.body
+  end
+
+  test "new skips method selector when no AVM provider is configured" do
+    get new_property_path(step: "method_select")
+
+    assert_response :success
+    assert_match "Enter property manually", response.body
+  end
+
+  test "new renders AVM lookup form for a configured provider" do
+    stub_avm_provider(successful_avm_response)
+
+    get new_property_path(method: "rentcast")
+
+    assert_response :success
+    assert_match "Add property via RentCast", response.body
+  end
+
+  test "creates active property from AVM provider lookup" do
+    stub_avm_provider(successful_avm_response)
+
+    assert_difference -> { Account.count } => 1 do
+      post properties_path, params: {
+        avm_provider: "rentcast",
+        account: {
+          name: "AVM Home",
+          accountable_type: "Property",
+          address: {
+            line1: "5500 Grand Lake Dr",
+            locality: "San Antonio",
+            region: "TX",
+            postal_code: "78244"
+          }
+        }
+      }
+    end
+
+    created_account = Account.order(:created_at).last
+    assert_redirected_to account_path(created_account)
+    assert created_account.active?
+    assert_equal "AVM Home", created_account.name
+    assert_equal 356_000, created_account.balance
+    assert_equal "USD", created_account.currency
+
+    property = created_account.accountable
+    assert_equal "rentcast", property.avm_provider
+    assert_equal Date.current, property.avm_last_synced_on
+    assert_equal "single_family_home", property.subtype
+    assert_equal 1973, property.year_built
+    assert_equal 1878, property.area_value
+    assert_equal "sqft", property.area_unit
+
+    address = property.address
+    assert_equal "5500 Grand Lake Dr", address.line1
+    assert_equal "San Antonio", address.locality
+    assert_equal "TX", address.region
+    assert_equal "78244", address.postal_code
+    assert_equal "US", address.country
+  end
+
+  test "re-renders lookup form when the AVM provider returns an error" do
+    stub_avm_provider(
+      Provider::Response.new(
+        success?: false,
+        data: nil,
+        error: Provider::Rentcast::Error.new("RentCast could not find a property matching this address")
+      )
+    )
+
+    assert_no_difference "Account.count" do
+      post properties_path, params: {
+        avm_provider: "rentcast",
+        account: {
+          name: "AVM Home",
+          accountable_type: "Property",
+          address: { line1: "1 Nowhere Ln", locality: "Nowhere", region: "TX", postal_code: "00000" }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "could not find a property", response.body
+  end
+
+  test "rejects AVM creation for unconfigured providers" do
+    assert_no_difference "Account.count" do
+      post properties_path, params: {
+        avm_provider: "realie",
+        account: {
+          name: "AVM Home",
+          accountable_type: "Property",
+          address: { line1: "123 Main Street", locality: "LA", region: "CA", postal_code: "90001" }
+        }
+      }
+    end
+
+    assert_redirected_to new_property_path
+  end
 end

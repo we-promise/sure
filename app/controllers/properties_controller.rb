@@ -6,9 +6,12 @@ class PropertiesController < ApplicationController
 
   def new
     @account = Current.family.accounts.build(accountable: Property.new)
+    @avm_providers = configured_avm_providers
   end
 
   def create
+    return create_via_avm_provider if params[:avm_provider].present?
+
     @account = Current.family.accounts.create!(
       property_params.merge(
         balance: 0,
@@ -99,6 +102,48 @@ class PropertiesController < ApplicationController
   end
 
   private
+    def create_via_avm_provider
+      @avm_providers = configured_avm_providers
+      provider_key = params[:avm_provider].to_s
+
+      unless @avm_providers.map(&:to_s).include?(provider_key)
+        redirect_to new_property_path, alert: "This property data provider is not configured." and return
+      end
+
+      @account = Property::AvmImport.new(
+        family: Current.family,
+        owner: Current.user,
+        provider_key: provider_key,
+        name: params.dig(:account, :name),
+        address_attributes: avm_address_params.to_h.symbolize_keys
+      ).call
+
+      # The provider lookup fills in what the manual wizard's balance and
+      # address steps would have collected, so the account is complete —
+      # land on the account page (or the flow that initiated the wizard).
+      return_path = safe_return_to(session.delete(:return_to)) || account_path(@account)
+
+      respond_to do |format|
+        format.html { redirect_to return_path }
+        format.turbo_stream { stream_redirect_to return_path }
+      end
+    rescue Property::AvmImport::Error => error
+      @avm_provider_key = provider_key
+      @error_message = error.message
+      @account = Current.family.accounts.build(name: params.dig(:account, :name), accountable: Property.new)
+      @avm_address = Address.new(avm_address_params.to_h)
+      render :new, status: :unprocessable_entity
+    end
+
+    def avm_address_params
+      params.require(:account).require(:address).permit(:line1, :locality, :region, :postal_code)
+    end
+
+    def configured_avm_providers
+      registry = Provider::Registry.for_concept(:property_valuations)
+      registry.provider_keys.select { |key| registry.get_provider(key).present? }
+    end
+
     def balance_params
       params.require(:account).permit(:balance, :currency)
     end

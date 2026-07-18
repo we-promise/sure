@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_18_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1541,6 +1541,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
     t.string "area_unit"
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.string "avm_provider"
+    t.date "avm_last_synced_on"
   end
 
   create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
