@@ -179,6 +179,146 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "completed", account_sync.reload.status
   end
 
+  test "sync staled mid-run does not run post-sync when its job finishes" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable)
+
+    # Simulate SyncCleanerJob marking the sync stale while the job is still running
+    syncable.expects(:perform_sync).with { |s| Sync.find(s.id).mark_stale!; true }
+
+    Account.any_instance.expects(:perform_post_sync).never
+    Account.any_instance.expects(:broadcast_sync_complete).never
+
+    sync.perform
+
+    assert_equal "stale", sync.reload.status
+  end
+
+  test "sync staled mid-run does not raise when its job fails" do
+    syncable = accounts(:depository)
+    sync = Sync.create!(syncable: syncable)
+
+    syncable.expects(:perform_sync).with { |s| Sync.find(s.id).mark_stale!; true }
+      .raises(StandardError.new("provider blew up"))
+
+    Account.any_instance.expects(:perform_post_sync).never
+    Account.any_instance.expects(:broadcast_sync_complete).never
+
+    assert_nothing_raised do
+      sync.perform
+    end
+
+    assert_equal "stale", sync.reload.status
+    assert_equal "provider blew up", sync.error
+  end
+
+  test "request_cancel! resolves a pending sync immediately" do
+    sync = Sync.create!(syncable: accounts(:depository))
+
+    assert sync.request_cancel!
+    assert_equal "stale", sync.reload.status
+
+    # The queued job later no-ops via the may_start? guard
+    accounts(:depository).expects(:perform_sync).never
+    sync.perform
+    assert_equal "stale", sync.reload.status
+  end
+
+  test "cancelling a pending child finalizes its waiting parent" do
+    family = families(:dylan_family)
+    parent = Sync.create!(syncable: family, status: :syncing)
+    child = Sync.create!(syncable: accounts(:depository), parent: parent, status: :pending)
+
+    Family.any_instance.expects(:perform_post_sync).once
+    Family.any_instance.expects(:broadcast_sync_complete).once
+
+    assert child.request_cancel!
+
+    # The child's queued job will no-op via may_start?, so nothing else ever
+    # finalizes the parent — request_cancel! itself must cascade or the
+    # parent hangs in syncing until the 24h sweep.
+    assert_equal "stale", child.reload.status
+    assert_equal "completed", parent.reload.status
+  end
+
+  test "a late provider complete! cannot resurrect a cancelled sync" do
+    item = SimplefinItem.create!(family: families(:dylan_family), name: "SF Conn", access_url: "https://example.com/access")
+    sync = Sync.create!(syncable: item, status: :syncing)
+
+    # Simulates the Sidekiq job's in-memory copy, loaded before cancellation
+    in_job_copy = Sync.find(sync.id)
+
+    assert sync.request_cancel!
+    assert_equal "stale", sync.reload.status
+
+    SimplefinItem::Syncer.new(item).send(:mark_completed, in_job_copy)
+
+    assert_equal "stale", sync.reload.status
+  end
+
+  test "request_cancel! returns false for terminal syncs" do
+    sync = Sync.create!(syncable: accounts(:depository), status: :completed)
+
+    assert_not sync.request_cancel!
+    assert_equal "completed", sync.reload.status
+  end
+
+  test "cancelling a running tree stales pending children and resolves the root to stale without post-sync" do
+    family = families(:dylan_family)
+    plaid_item = plaid_items(:one)
+    account = accounts(:connected)
+
+    family_sync = Sync.create!(syncable: family, status: :syncing)
+    running_child = Sync.create!(syncable: plaid_item, parent: family_sync)
+    pending_child = Sync.create!(syncable: account, parent: running_child, status: :pending)
+
+    running_child.start!
+
+    assert family_sync.request_cancel!
+
+    # Pending descendants are resolved immediately; running ones are left alone
+    assert_equal "stale", pending_child.reload.status
+    assert_equal "syncing", running_child.reload.status
+    assert_equal "syncing", family_sync.reload.status
+
+    # The running child finishes honestly; the cancelled root resolves to
+    # stale and must not re-run family transfer matching / rules / broadcasts
+    PlaidItem.any_instance.expects(:perform_post_sync).once
+    PlaidItem.any_instance.expects(:broadcast_sync_complete).once
+    Family.any_instance.expects(:perform_post_sync).never
+    Family.any_instance.expects(:broadcast_sync_complete).never
+
+    # Simulate the in-flight job finishing after the cancel was requested
+    running_child.finalize_if_all_children_finalized
+
+    assert_equal "completed", running_child.reload.status
+    assert_equal "stale", family_sync.reload.status
+  end
+
+  test "cancel-requested syncs are not visible and do not swallow new sync requests" do
+    account = accounts(:depository)
+    Sync.where(syncable: account).destroy_all
+
+    sync = Sync.create!(syncable: account, status: :syncing, cancel_requested_at: Time.current)
+
+    assert_not account.syncing?
+
+    new_sync = nil
+    assert_difference "Sync.count", 1 do
+      new_sync = account.sync_later
+    end
+    assert_not_equal sync.id, new_sync.id
+  end
+
+  test "family syncer stops scheduling children once cancel is requested" do
+    family = families(:dylan_family)
+    sync = Sync.create!(syncable: family, status: :syncing, cancel_requested_at: Time.current)
+
+    assert_no_difference "Sync.count" do
+      Family::Syncer.new(family).perform_sync(sync)
+    end
+  end
+
   test "clean marks stale incomplete rows" do
     stale_pending = Sync.create!(
       syncable: accounts(:depository),

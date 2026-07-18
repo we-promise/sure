@@ -247,7 +247,8 @@ class Provider::EnableBanking
       when 204
         {}
       when 400
-        raise EnableBankingError.new("Bad request to Enable Banking API: #{response.body}", :bad_request)
+        response_data = parse_error_response_body(response)
+        raise EnableBankingError.new("Bad request to Enable Banking API: #{response.body}", :bad_request, response_data: response_data)
       when 401
         raise EnableBankingError.new("Invalid credentials or expired JWT", :unauthorized)
       when 403
@@ -262,8 +263,17 @@ class Provider::EnableBanking
       when 429
         raise EnableBankingError.new("Rate limit exceeded. Please try again later.", :rate_limited)
       else
-        raise EnableBankingError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
+        response_data = parse_error_response_body(response)
+        raise EnableBankingError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed, response_data: response_data)
       end
+    end
+
+    def parse_error_response_body(response)
+      return {} if response.body.blank?
+
+      JSON.parse(response.body, symbolize_names: true)
+    rescue JSON::ParserError
+      { raw_body: response.body.to_s }
     end
 
     def parse_response_body(response)

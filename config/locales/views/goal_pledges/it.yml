@@ -1,0 +1,20 @@
+---
+it:
+  goal_pledges:
+    new:
+      helper_transfer: Sure cercherà un deposito corrispondente nel tuo conto collegato. L'impegno rimane in attesa per 7 giorni, poi si conferma automaticamente quando Sure lo rileva.
+      helper_manual: Sure lo registrerà alla tua prossima modifica manuale del saldo e confermerà il contributo.
+      amount_label: Importo
+      account_label: Nel conto
+      submit: Registra impegno
+      preview_zero: "Attualmente {current} di {target} risparmiati."
+      preview_nonzero: "Raggiunge {percent}%, {newTotal} di {target}."
+      preview_reached: "Raggiunge il tuo obiettivo di {target}. Obiettivo raggiunto."
+    create:
+      success: Impegno registrato. Sure lo confermerà alla prossima sincronizzazione.
+    renew:
+      success: Finestra impegno estesa di 7 giorni.
+      not_open: Solo gli impegni aperti possono essere estesi.
+    destroy:
+      success: Impegno annullato.
+      not_open: Solo gli impegni aperti possono essere annullati.

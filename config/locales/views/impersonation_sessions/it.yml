@@ -1,0 +1,25 @@
+---
+it:
+  impersonation_sessions:
+    approve:
+      success: Richiesta approvata
+    complete:
+      success: Sessione completata
+    create:
+      success: Richiesta inviata all'utente. In attesa di approvazione.
+    join:
+      success: Sessione unita
+    leave:
+      success: Sessione abbandonata
+    reject:
+      success: Richiesta rifiutata
+    super_admin_bar:
+      super_admin: Super Amministratore
+      jobs: Processi
+      impersonating: Impersonando
+      leave: Abbandona
+      terminate: Termina
+      join_a_session: Unisciti a una sessione
+      join: Unisciti
+      uuid_placeholder: UUID
+      request_impersonation: Richiedi impersonazione

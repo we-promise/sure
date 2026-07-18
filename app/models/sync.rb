@@ -17,7 +17,9 @@ class Sync < ApplicationRecord
 
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
   scope :incomplete, -> { where("syncs.status IN (?)", %w[pending syncing]) }
-  scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago) }
+  # Cancel-requested syncs are excluded so spinners clear immediately and
+  # sync_later stops piggybacking new requests onto a dying sync.
+  scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago).where(cancel_requested_at: nil) }
 
   after_commit :update_family_sync_timestamp, on: [ :create, :update ]
 
@@ -186,7 +188,7 @@ class Sync < ApplicationRecord
       unless syncable.present?
         Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} no longer exists. Marking as failed.")
         start! if may_start?
-        fail!
+        fail! if may_fail?
         update(error: "Syncable record was deleted")
         return
       end
@@ -195,7 +197,7 @@ class Sync < ApplicationRecord
       if syncable.respond_to?(:scheduled_for_deletion?) && syncable.scheduled_for_deletion?
         Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} is scheduled for deletion. Skipping sync.")
         start! if may_start?
-        fail!
+        fail! if may_fail?
         update(error: "Syncable record is scheduled for deletion")
         return
       end
@@ -205,7 +207,11 @@ class Sync < ApplicationRecord
       begin
         syncable.perform_sync(self)
       rescue => e
-        fail!
+        # Re-check state under a row lock (with_lock reloads): the sync may
+        # have been terminalized externally (marked stale by SyncCleanerJob)
+        # while this job was still running. An unguarded fail! on the in-memory
+        # record would silently overwrite that terminal status.
+        with_lock { fail! if may_fail? }
         update(error: e.message)
         report_error(e)
       ensure
@@ -214,24 +220,75 @@ class Sync < ApplicationRecord
     end
   end
 
+  # Requests cooperative cancellation of this sync tree. Only this sync
+  # carries the flag: pending descendants are marked stale immediately (their
+  # queued jobs no-op via the may_start? guard), while descendants whose jobs
+  # are already running finish their work honestly — finalization then
+  # resolves this sync to stale instead of completed. Returns false when the
+  # sync is already terminal.
+  def request_cancel!
+    result = with_lock do
+      if pending?
+        # Job hasn't started — safe to resolve immediately; the queued job
+        # will no-op via the may_start? guard.
+        update!(cancel_requested_at: Time.current)
+        mark_stale!
+        :cancelled_before_start
+      elsif syncing?
+        update!(cancel_requested_at: Time.current)
+        :cancel_requested
+      end
+    end
+    return false if result.nil?
+
+    # Both paths cascade: a pending sync resolved above went terminal without
+    # its job ever running, so nothing else will ever call
+    # finalize_if_all_children_finalized for it — without this, a parent
+    # waiting on the cancelled child stays syncing until the 24h sweep.
+    # finalize_if_all_children_finalized re-reads under lock!, so it safely
+    # no-ops on this sync's own branch when already terminal.
+    cancel_pending_descendants!
+    finalize_if_all_children_finalized
+
+    true
+  end
+
+  # Fresh DB read — cancellation is requested from the web process while this
+  # sync's job holds a stale in-memory copy of the record.
+  def cancel_requested?
+    self.class.where(id: id).pick(:cancel_requested_at).present?
+  end
+
   # Finalizes the current sync AND parent (if it exists)
   def finalize_if_all_children_finalized
     Sync.transaction do
       lock!
 
+      # Eagerly load children once so that all_children_finalized? and
+      # has_failed_children? can filter in-memory without additional DB queries.
+      children.load
+
       # If this is the "parent" and there are still children running, don't finalize.
       return unless all_children_finalized?
 
       if syncing?
-        if has_failed_children?
+        if cancel_requested_at?
+          # User asked for cancellation while work was in flight. Whatever
+          # children completed keep their data; the tree resolves to stale
+          # (which also skips post-sync below).
+          mark_stale!
+        elsif has_failed_children?
           fail!
         else
           complete!
         end
       end
 
-      # If we make it here, the sync is finalized.  Run post-sync, regardless of failure/success.
-      perform_post_sync
+      # If we make it here, the sync is finalized.  Run post-sync, regardless of failure/success —
+      # unless the sync was terminalized externally (marked stale by SyncCleanerJob while its job
+      # was still running). A stale sync's job has been written off: re-running transfer matching,
+      # rules, and broadcasts for it would apply side effects for work the system already abandoned.
+      perform_post_sync unless stale?
     end
 
     # If this sync has a parent, try to finalize it so the child status propagates up the chain.
@@ -261,17 +318,25 @@ class Sync < ApplicationRecord
     )
   end
 
+  protected
+    def cancel_pending_descendants!
+      children.incomplete.find_each do |child|
+        child.with_lock { child.mark_stale! if child.pending? }
+        child.cancel_pending_descendants!
+      end
+    end
+
   private
     def log_status_change
       Rails.logger.info("changing from #{aasm.from_state} to #{aasm.to_state} (event: #{aasm.current_event})")
     end
 
     def has_failed_children?
-      children.failed.any?
+      children.any?(&:failed?)
     end
 
     def all_children_finalized?
-      children.incomplete.empty?
+      children.none? { |child| child.pending? || child.syncing? }
     end
 
     def perform_post_sync
