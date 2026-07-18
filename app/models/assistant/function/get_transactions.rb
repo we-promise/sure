@@ -155,6 +155,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
     normalized_transactions = paginated_transactions.map do |txn|
       entry = txn.entry
       {
+        id: txn.id,
         name: entry.name,
         date: entry.date,
         amount: entry.amount.abs,
@@ -162,6 +163,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
         formatted_amount: entry.amount_money.abs.format,
         classification: entry.amount < 0 ? "income" : "expense",
         account: entry.account.name,
+        notes: entry.notes,
         category: txn.category&.name,
         merchant: txn.merchant&.name,
         tags: txn.tags.map(&:name),

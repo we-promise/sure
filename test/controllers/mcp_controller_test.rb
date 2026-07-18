@@ -238,6 +238,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_includes tool_names, "get_holdings"
       assert_includes tool_names, "get_balance_sheet"
       assert_includes tool_names, "get_income_statement"
+      assert_includes tool_names, "update_transaction"
 
       # Each tool has required fields
       tools.each do |tool|
@@ -282,6 +283,31 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       inner = JSON.parse(result["content"][0]["text"])
       assert inner.key?("net_worth") || inner.key?("error"),
              "Expected balance sheet data or error, got: #{inner.keys}"
+    end
+  end
+
+  test "tools/call executes update_transaction" do
+    with_mcp_env do
+      transaction = transactions(:one)
+      category = categories(:subcategory)
+
+      post "/mcp", params: jsonrpc_request("tools/call", {
+        name: "update_transaction",
+        arguments: {
+          id: transaction.id,
+          category_id: category.id,
+          notes: "Updated through MCP"
+        }
+      }).to_json, headers: mcp_headers(@token)
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      result = body["result"]
+      inner = JSON.parse(result["content"][0]["text"])
+
+      assert_equal true, inner["success"]
+      assert_equal category.id, transaction.reload.category_id
+      assert_equal "Updated through MCP", transaction.entry.notes
     end
   end
 
