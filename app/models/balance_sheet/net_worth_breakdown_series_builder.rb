@@ -21,7 +21,9 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
         end_date: period.end_date,
         interval: INTERVAL,
         trend: net_series.trend,
-        values: net_series.values.map { |value| breakdown_value(value, groups) }
+        values: [ nil, *net_series.values ].each_cons(2).map do |previous, value|
+          breakdown_value(value, previous, groups)
+        end
       }
     end
   end
@@ -29,7 +31,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
   private
     attr_reader :family, :user
 
-    def breakdown_value(value, groups)
+    def breakdown_value(value, previous, groups)
       point_groups = groups.map do |group|
         {
           name: group[:name],
@@ -43,7 +45,16 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
         date: value.date,
         date_formatted: value.date_formatted,
         value: value.value,
-        trend: value.trend,
+        # Month-over-month change between chart points. The trend on the raw
+        # series value compares the underlying balance row's own start/end,
+        # which at a monthly interval reflects only the last balance update
+        # before the sample date. The first point has no prior month, so it
+        # gets a flat trend.
+        trend: Trend.new(
+          current: value.value,
+          previous: previous&.value || value.value,
+          favorable_direction: "up"
+        ),
         assets: classification_total(point_groups, "asset"),
         liabilities: classification_total(point_groups, "liability"),
         groups: point_groups

@@ -37,6 +37,13 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilderTest < ActiveSupport::TestCase
     series[:values].each do |point|
       assert_equal point[:value].amount, point[:assets].amount - point[:liabilities].amount
     end
+
+    # Each point's trend is the month-over-month change from the previous
+    # point; the first point has no prior month so its trend is flat
+    assert_equal 0, series[:values].first[:trend].value.amount
+    series[:values].each_cons(2) do |previous, point|
+      assert_equal point[:value].amount - previous[:value].amount, point[:trend].value.amount
+    end
   end
 
   test "includes group metadata and excludes groups with no balances" do
