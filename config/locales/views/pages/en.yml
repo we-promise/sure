@@ -74,6 +74,8 @@ en:
         classifications:
           asset: "Assets"
           liability: "Liabilities"
+      insights_feed:
+        title: "Insights"
       cashflow_sankey:
         title: "Cashflow"
         zoom_out: "Back to full cashflow"

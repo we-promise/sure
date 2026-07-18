@@ -1,0 +1,8 @@
+---
+it:
+  activerecord:
+    errors:
+      models:
+        merchant_import:
+          missing_columns: "Colonne obbligatorie mancanti: %{columns}"
+          duplicate_columns: "Nomi colonne duplicati dopo la normalizzazione: %{columns}"

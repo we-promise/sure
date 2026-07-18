@@ -1,0 +1,8 @@
+---
+it:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: "La categoria '%{name}' non può essere il proprio genitore"
+          missing_columns: "Colonne obbligatorie mancanti: %{columns}"
