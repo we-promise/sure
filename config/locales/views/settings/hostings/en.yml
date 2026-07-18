@@ -151,14 +151,14 @@ en:
         troubleshooting: Check your internet connection and firewall settings. Yahoo Finance may be temporarily unavailable.
       rentcast_settings:
         title: RentCast
-        description: Enter your RentCast API key to look up US property details and value estimates when adding a property. The free tier is limited to 50 API requests per month, shared between property lookups and daily valuation refreshes.
+        description: Enter your RentCast API key to look up US property details and value estimates when adding a property. The free tier is limited to 50 API requests per month, shared between property lookups and daily valuation refreshes. On a paid plan, raise the cap with the RENTCAST_MAX_REQUESTS_PER_MONTH environment variable.
         env_configured_message: Successfully configured through the RENTCAST_API_KEY environment variable.
         label: API Key
         placeholder: Enter your RentCast API key here
         usage: "%{used} of %{limit} monthly requests used"
       realie_settings:
         title: Realie
-        description: Enter your Realie API key to look up US property details and value estimates when adding a property. The free tier is limited to 25 API requests per month, shared between property lookups and daily valuation refreshes.
+        description: Enter your Realie API key to look up US property details and value estimates when adding a property. The free tier is limited to 25 API requests per month, shared between property lookups and daily valuation refreshes. On a paid plan, raise the cap with the REALIE_MAX_REQUESTS_PER_MONTH environment variable.
         env_configured_message: Successfully configured through the REALIE_API_KEY environment variable.
         label: API Key
         placeholder: Enter your Realie API key here

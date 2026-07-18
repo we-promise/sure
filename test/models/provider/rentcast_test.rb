@@ -74,6 +74,16 @@ class Provider::RentcastTest < ActiveSupport::TestCase
     assert_equal 1, Rails.cache.read(count_key).to_i
   end
 
+  test "monthly limit can be raised via ENV override" do
+    count_key = "rentcast:avm_request_count:#{Date.current.strftime('%Y-%m')}"
+    Rails.cache.write(count_key, Provider::Rentcast::MAX_REQUESTS_PER_MONTH)
+
+    ENV["RENTCAST_MAX_REQUESTS_PER_MONTH"] = "100"
+    assert @provider.requests_remaining?
+  ensure
+    ENV.delete("RENTCAST_MAX_REQUESTS_PER_MONTH")
+  end
+
   test "stops issuing requests once the monthly limit is reached" do
     count_key = "rentcast:avm_request_count:#{Date.current.strftime('%Y-%m')}"
     Rails.cache.write(count_key, Provider::Rentcast::MAX_REQUESTS_PER_MONTH)

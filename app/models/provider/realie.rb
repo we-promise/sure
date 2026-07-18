@@ -9,7 +9,8 @@ class Provider::Realie < Provider
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 1.0
 
-  # Maximum API requests per month (Realie free tier limit)
+  # Maximum API requests per month (Realie free tier limit).
+  # Override with REALIE_MAX_REQUESTS_PER_MONTH for paid plans.
   MAX_REQUESTS_PER_MONTH = 25
 
   def initialize(api_key)

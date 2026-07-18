@@ -9,7 +9,8 @@ class Provider::Rentcast < Provider
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 1.0
 
-  # Maximum API requests per month (RentCast free tier limit)
+  # Maximum API requests per month (RentCast free tier limit).
+  # Override with RENTCAST_MAX_REQUESTS_PER_MONTH for paid plans.
   MAX_REQUESTS_PER_MONTH = 50
 
   # RentCast property types to Property::SUBTYPES keys. Unmapped types
