@@ -8,6 +8,7 @@ class Transactions::BulkUpdatesController < ApplicationController
                      .entries
                      .excluding_split_parents
                      .where(id: bulk_update_params[:entry_ids])
+                     .includes(:entryable)
                      .bulk_update!(bulk_update_params, update_tags: tags_provided?)
 
     redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
