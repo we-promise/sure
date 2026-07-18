@@ -2,3 +2,10 @@
 en:
   provider_warnings:
     limited_investment_data: "Investment data from this provider is limited. Activity labels (Buy, Sell, Dividend) are not available, which may affect budget accuracy. Consider creating rules to exclude or categorize investment transactions."
+    lunchflow_accounts_failed:
+      one: "Lunchflow import: %{count} account failed to update"
+      other: "Lunchflow import: %{count} accounts failed to update"
+    lunchflow_transactions_failed:
+      one: "Lunchflow import: transaction fetch failed for %{count} account"
+      other: "Lunchflow import: transaction fetch failed for %{count} accounts"
+    lunchflow_import_error: "Lunchflow import: %{error}"
