@@ -4,6 +4,11 @@ import TimeSeriesChartController from "controllers/time_series_chart_controller"
 // the time series chart and extends the tooltip with a per-account-group
 // breakdown of assets and liabilities at the hovered point.
 export default class extends TimeSeriesChartController {
+  static values = {
+    assetsLabel: { type: String, default: "Assets" },
+    liabilitiesLabel: { type: String, default: "Liabilities" },
+  };
+
   _normalizeDataPoints() {
     super._normalizeDataPoints();
 
@@ -29,13 +34,9 @@ export default class extends TimeSeriesChartController {
     );
 
     const sections = [
+      this._sectionTemplate(this.assetsLabelValue, datum.assets, assetGroups),
       this._sectionTemplate(
-        this.element.dataset.assetsLabel || "Assets",
-        datum.assets,
-        assetGroups,
-      ),
-      this._sectionTemplate(
-        this.element.dataset.liabilitiesLabel || "Liabilities",
+        this.liabilitiesLabelValue,
         datum.liabilities,
         liabilityGroups,
       ),
