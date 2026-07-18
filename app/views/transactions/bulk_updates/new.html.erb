@@ -11,7 +11,7 @@
         <%= render DS::Disclosure.new(title: t(".transactions_section"), open: true) do %>
           <div class="space-y-2">
             <%= form.text_field :name, label: t(".name_label"), placeholder: t(".name_placeholder") %>
-            <%= form.collection_select :category_id, Current.family.categories.alphabetically, :id, :name, { prompt: t(".category_prompt"), label: t(".category_label"), class: "text-subdued" } %>
+            <%= form.collection_select :category_id, Current.family.categories.alphabetically, :id, :name, { prompt: t(".category_prompt"), label: t(".category_label"), class: "text-subdued", variant: :badge, searchable: true } %>
             <%= form.collection_select :merchant_id, Current.family.available_merchants_for(Current.user).alphabetically, :id, :name, { prompt: t(".merchant_prompt"), label: t(".merchant_label"), class: "text-subdued" } %>
             <%= form.select :tag_ids, Current.family.tags.alphabetically.pluck(:name, :id), { include_blank: t(".none"), multiple: true, label: t(".tags_label"), include_hidden: false } %>
             <%= form.text_area :notes, label: t(".notes_label"), placeholder: t(".notes_placeholder"), rows: 5 %>
