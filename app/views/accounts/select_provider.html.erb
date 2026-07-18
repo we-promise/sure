@@ -8,7 +8,7 @@
 
     <div class="space-y-2">
       <% @available_providers.each do |provider| %>
-        <%= link_to provider[:path], data: { turbo_frame: :modal }, class: "block p-4 border border-primary rounded-lg hover:bg-container-hover transition-colors" do %>
+        <%= link_to provider[:path], data: { turbo_frame: :modal, turbo_prefetch: "false" }, class: "block p-4 border border-primary rounded-lg hover:bg-container-hover transition-colors" do %>
           <div class="flex items-center justify-between">
             <div>
               <p class="font-medium text-primary"><%= provider[:name] %></p>

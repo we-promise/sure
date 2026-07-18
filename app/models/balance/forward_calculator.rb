@@ -156,8 +156,4 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     def derive_end_non_cash_balance(start_non_cash_balance:, date:)
       derive_non_cash_balance(start_non_cash_balance, date, direction: :forward)
     end
-
-    def flows_factor
-      account.asset? ? 1 : -1
-    end
 end

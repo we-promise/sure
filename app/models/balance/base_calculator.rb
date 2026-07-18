@@ -66,6 +66,11 @@ class Balance::BaseCalculator
       end_non_cash - start_non_cash - non_cash_flows
     end
 
+    # Keeps asset/liability flow sign conventions centralized for persisted balances.
+    def flows_factor
+      account.classification == "asset" ? 1 : -1
+    end
+
     # If holdings value goes from $100 -> $200 (change_holdings_value is $100)
     # And non-cash flows (i.e. "buys") for day are +$50 (net_buy_sell_value is $50)
     # That means value increased by $100, where $50 of that is due to the change in holdings value, and $50 is due to the buy/sell
@@ -92,15 +97,24 @@ class Balance::BaseCalculator
       txn_inflow_sum = entries.select { |e| e.amount < 0 && e.transaction? }.sum(&:amount)
       txn_outflow_sum = entries.select { |e| e.amount >= 0 && e.transaction? }.sum(&:amount)
 
-      trade_cash_inflow_sum = entries.select { |e| e.amount < 0 && e.trade? }.sum(&:amount)
-      trade_cash_outflow_sum = entries.select { |e| e.amount >= 0 && e.trade? }.sum(&:amount)
+      # Separate regular trades (buy/sell, affecting holdings) from income-only
+      # trades (interest/dividend with qty=0, which are cash-only events and
+      # must not produce spurious non_cash_outflows in the flow breakdown).
+      regular_trades = entries.select { |e| e.trade? && e.entryable.qty != 0 }
+      income_trades   = entries.select { |e| e.trade? && e.entryable.qty == 0 }
+
+      trade_cash_inflow_sum = regular_trades.select { |e| e.amount < 0 }.sum(&:amount)
+      trade_cash_outflow_sum = regular_trades.select { |e| e.amount >= 0 }.sum(&:amount)
+
+      income_inflow_sum = income_trades.select { |e| e.amount < 0 }.sum(&:amount)
+      income_outflow_sum = income_trades.select { |e| e.amount >= 0 }.sum(&:amount)
 
       if account.balance_type == :non_cash && account.accountable_type == "Loan"
         non_cash_inflows = txn_inflow_sum.abs
         non_cash_outflows = txn_outflow_sum
       elsif account.balance_type != :non_cash
-        cash_inflows = txn_inflow_sum.abs + trade_cash_inflow_sum.abs
-        cash_outflows = txn_outflow_sum + trade_cash_outflow_sum
+        cash_inflows = txn_inflow_sum.abs + trade_cash_inflow_sum.abs + income_inflow_sum.abs
+        cash_outflows = txn_outflow_sum + trade_cash_outflow_sum + income_outflow_sum
 
         # Trades are inverse (a "buy" is outflow of cash, but "inflow" of non-cash, aka "holdings")
         non_cash_outflows = trade_cash_inflow_sum.abs
@@ -159,7 +173,7 @@ class Balance::BaseCalculator
         cash_adjustments: args[:cash_adjustments] || 0,
         non_cash_adjustments: args[:non_cash_adjustments] || 0,
         net_market_flows: args[:net_market_flows] || 0,
-        flows_factor: account.classification == "asset" ? 1 : -1
+        flows_factor: flows_factor
       )
     end
 end

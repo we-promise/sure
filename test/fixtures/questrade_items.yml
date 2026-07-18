@@ -1,0 +1,11 @@
+one:
+  family: dylan_family
+  name: My Questrade
+  refresh_token: test_refresh_token_abc123
+  status: good
+
+requires_update:
+  family: dylan_family
+  name: Stale Questrade
+  refresh_token: old_token
+  status: requires_update

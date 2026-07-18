@@ -129,6 +129,40 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "checking", account.subtype
   end
 
+  test "subtype assigned before accountable_type is not dropped" do
+    # The real controller path: strong-params `permit` preserves filter order,
+    # and `account_params` lists `:subtype` before `:accountable_type`, so the
+    # subtype writer runs while the type is still unknown.
+    account = Account.new
+    account.subtype = "savings"
+    account.accountable_type = "Depository"
+
+    assert_not_nil account.accountable
+    assert_equal "savings", account.subtype
+    assert_equal "savings", account.accountable.subtype
+  end
+
+  test "subtype persists on create when attributes arrive in permit order" do
+    Account.any_instance.stubs(:sync_later)
+
+    # Mirrors `account_params`: `permit` yields keys in filter order, so the
+    # create hash carries `subtype` before `accountable_type` — the ordering
+    # that previously dropped the subtype on create.
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Savings Account",
+      balance: 100,
+      subtype: "savings",
+      currency: "USD",
+      accountable_type: "Depository"
+    })
+
+    assert account.persisted?
+    assert_equal "savings", account.reload.subtype
+    assert_equal "savings", account.accountable.subtype
+  end
+
   test "accountable display names expose singular and group contexts" do
     assert_equal "Investment", Investment.singular_display_name
     assert_equal "Investments", Investment.display_name
@@ -376,6 +410,15 @@ class AccountTest < ActiveSupport::TestCase
     assert_not_includes @family.accounts.included_in_finances_for(@member), @account
   end
 
+  test "included_in_reports scope excludes accounts marked as exclude_from_reports" do
+    included = @family.accounts.create! name: "Included", balance: 100, currency: "USD", accountable: Depository.new
+    excluded = @family.accounts.create! name: "Excluded", balance: 200, currency: "USD", accountable: Depository.new, exclude_from_reports: true
+
+    results = @family.accounts.included_in_reports
+    assert_includes results, included
+    assert_not_includes results, excluded
+  end
+
   test "auto_share_with_family creates shares for all non-owner members" do
     @family.update!(default_account_sharing: "private")
 
@@ -397,6 +440,27 @@ class AccountTest < ActiveSupport::TestCase
     assert_not_nil share
     assert_equal "read_write", share.permission
     assert share.include_in_finances?
+  end
+
+  test "auto_share_with_family grants guests read_only and other members read_write" do
+    @family.update!(default_account_sharing: "private")
+    guest = users(:empty)
+    guest.update_columns(family_id: @family.id, role: "guest")
+
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Guest Permission Account",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable_attributes: {}
+    })
+
+    account.auto_share_with_family!
+
+    assert_equal "read_only", account.account_shares.find_by(user: guest).permission
+    assert_equal "read_write", account.account_shares.find_by(user: @member).permission
   end
 
   test "current_holdings prefers latest provider snapshot holdings across currencies" do

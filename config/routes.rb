@@ -1,9 +1,22 @@
-unless Rails.env.production?
-  require "sidekiq/web"
-  require "sidekiq/cron/web"
-end
+require "sidekiq/web"
+require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
   resources :indexa_capital_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -22,6 +35,23 @@ Rails.application.routes.draw do
   resources :mercury_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :wise_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :select_profiles
+      post :link_profiles
       get :select_accounts
       post :link_accounts
       get :select_existing_account
@@ -105,6 +135,8 @@ Rails.application.routes.draw do
       get :select_existing_account
       post :link_existing_account
       get :callback
+      get :oauth_connect
+      post :start_oauth_connect
     end
 
     member do
@@ -182,8 +214,18 @@ Rails.application.routes.draw do
     mount Rswag::Ui::Engine => "/api-docs"
   end
 
-  # Uses basic auth - see config/initializers/sidekiq.rb
-  mount Sidekiq::Web => "/sidekiq" unless Rails.env.production?
+  # Break-glass queue tooling. Development mounts it open for convenience;
+  # everywhere else (production, staging, test) the route only exists for a
+  # signed-in super admin — see app/constraints/super_admin_constraint.rb.
+  # An optional basic-auth second layer can be enabled via SIDEKIQ_WEB_USERNAME
+  # and SIDEKIQ_WEB_PASSWORD (config/initializers/sidekiq.rb).
+  if Rails.env.development?
+    mount Sidekiq::Web => "/sidekiq"
+  else
+    constraints SuperAdminConstraint.new do
+      mount Sidekiq::Web => "/sidekiq"
+    end
+  end
 
   # AI chats
   resources :chats do
@@ -203,6 +245,13 @@ Rails.application.routes.draw do
   resources :family_exports, only: %i[new create index destroy] do
     member do
       get :download
+      post :cancel
+    end
+  end
+
+  resources :syncs, only: [] do
+    member do
+      post :cancel
     end
   end
 
@@ -324,6 +373,7 @@ Rails.application.routes.draw do
       patch :complete
       patch :archive
       patch :unarchive
+      patch :reopen
     end
 
     resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do
@@ -354,6 +404,7 @@ Rails.application.routes.draw do
       post :publish
       put :revert
       put :apply_template
+      post :cancel
     end
 
     resource :upload, only: %i[show update], module: :import
@@ -428,6 +479,17 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :insights, only: %i[index] do
+    collection do
+      post :refresh
+    end
+
+    member do
+      patch :dismiss
+      patch :undismiss
+    end
+  end
+
   resources :accountable_sparklines, only: :show, param: :accountable_type
 
   direct :entry do |entry, options|
@@ -457,6 +519,7 @@ Rails.application.routes.draw do
       post :sync
       get :sparkline
       patch :toggle_active
+      patch :toggle_exclude_from_reports
       patch :set_default
       patch :remove_default
       get :select_provider

@@ -91,8 +91,9 @@ module SettingsHelper
       return { status: :off } unless @kraken_items&.any?
       sync_based_summary(key)
     when "snaptrade"
-      configured_item = @snaptrade_items&.find(&:credentials_configured?)
+      configured_item = @snaptrade_items&.find { |item| item.credentials_configured? || item.oauth_configured? }
       return { status: :off } unless configured_item
+
       unless configured_item.user_registered?
         return { status: :warn, meta: t("settings.providers.meta.registration_needed") }
       end
@@ -105,6 +106,9 @@ module SettingsHelper
       sync_based_summary(key)
     when "sophtron"
       return { status: :off } unless @sophtron_items&.any?
+      sync_based_summary(key)
+    when "questrade"
+      return { status: :off } unless @questrade_items&.any?
       sync_based_summary(key)
     else
       { status: :off }

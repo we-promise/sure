@@ -2,8 +2,9 @@ class Family < ApplicationRecord
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable
   include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
-  include IndexaCapitalConnectable, IbkrConnectable
+  include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
+  include QuestradeConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -15,7 +16,9 @@ class Family < ApplicationRecord
     [ "MM/DD/YYYY", "%m/%d/%Y" ],
     [ "D/MM/YYYY", "%e/%m/%Y" ],
     [ "YYYY.MM.DD", "%Y.%m.%d" ],
-    [ "YYYYMMDD", "%Y%m%d" ]
+    [ "YYYYMMDD", "%Y%m%d" ],
+    # QIF month-name imports rely on QifParser preserving normalized spaces.
+    [ "DD MMM YYYY", "%d %b %Y" ]
   ].freeze
 
 
@@ -110,6 +113,7 @@ class Family < ApplicationRecord
 
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :insights, dependent: :destroy
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
@@ -171,6 +175,33 @@ class Family < ApplicationRecord
 
   def share_all_by_default?
     default_account_sharing == "shared"
+  end
+
+  # Shares every existing account in this family (except ones the user already
+  # owns) with the given user, honoring the family's default sharing policy and
+  # the user's role. Guests receive read_only; members/admins receive read_write.
+  #
+  # This is the single entry point for "a member just joined, give them the
+  # accounts the family shares by default." It self-guards on the sharing policy
+  # and family membership so every membership path (invitation accept, SSO JIT
+  # sign-up, token registration, mobile SSO) can call it without reintroducing
+  # the "member joined but sees nothing" bug. No-op when sharing is disabled or
+  # there is nothing to share, and idempotent on re-run.
+  def auto_share_existing_accounts_with(user)
+    return unless share_all_by_default?
+    # Load-bearing security guard: insert_all below bypasses AccountShare's
+    # user_in_same_family / cannot_share_with_owner validations, so this
+    # membership check is the ONLY thing preventing cross-family sharing.
+    # Do not drop it when refactoring.
+    return unless user&.persisted? && user.family_id == id
+
+    permission = user.guest? ? "read_only" : "read_write"
+    records = accounts.where.not(owner_id: user.id).pluck(:id).map do |account_id|
+      { account_id: account_id, user_id: user.id, permission: permission,
+        include_in_finances: true, created_at: Time.current, updated_at: Time.current }
+    end
+
+    AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
   end
 
   def uses_custom_month_start?
