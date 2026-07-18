@@ -36,6 +36,9 @@ class Balance::SyncCache
     def converted_entries
       @converted_entries ||= account.entries.excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
         converted_entry = e.dup
+        # dup does not copy the association cache, so the entryable would
+        # be re-fetched on access. Copy it to keep the preload active.
+        converted_entry.association(:entryable).target = e.entryable
 
         custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 

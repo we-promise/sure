@@ -18,7 +18,9 @@ class ProviderConnectionStatus
     { key: "mercury", type: "MercuryItem", association: :mercury_items, accounts: :mercury_accounts },
     { key: "brex", type: "BrexItem", association: :brex_items, accounts: :brex_accounts },
     { key: "sophtron", type: "SophtronItem", association: :sophtron_items, accounts: :sophtron_accounts },
-    { key: "indexa_capital", type: "IndexaCapitalItem", association: :indexa_capital_items, accounts: :indexa_capital_accounts }
+    { key: "indexa_capital", type: "IndexaCapitalItem", association: :indexa_capital_items, accounts: :indexa_capital_accounts },
+    { key: "questrade", type: "QuestradeItem", association: :questrade_items, accounts: :questrade_accounts },
+    { key: "wise", type: "WiseItem", association: :wise_items, accounts: :wise_accounts }
   ].freeze
 
   class << self

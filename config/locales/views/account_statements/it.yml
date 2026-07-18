@@ -1,0 +1,116 @@
+---
+it:
+  account_statements:
+    account_tab:
+      coverage_title: Copertura estratti conto
+      coverage_description: Mesi storici supportati da estratti conto caricati e verifiche del saldo.
+      coverage_range: "%{start} - %{end}"
+      empty: Nessun estratto conto collegato a questo conto ancora.
+      open_inbox: Posta in arrivo
+      statements_title: Estratti conto
+      year_label: Anno di copertura
+    balance:
+      unknown: Sconosciuto
+    coverage:
+      status:
+        ambiguous: Ambiguo
+        covered: Coperto
+        duplicate: Duplicato
+        mismatched: Non corrispondente
+        missing: Mancante
+        not_expected: Non atteso
+    create:
+      duplicates:
+        one: 1 estratto conto duplicato è stato ignorato.
+        other: "%{count} estratti conto duplicati sono stati ignorati."
+      invalid_file_type: Carica un estratto conto PDF, CSV o XLSX entro il limite di dimensione.
+      no_files: Seleziona almeno un file di estratto conto.
+      success:
+        one: 1 estratto conto caricato.
+        other: "%{count} estratti conto caricati."
+    destroy:
+      failure: Impossibile eliminare l'estratto conto.
+      success: Estratto conto eliminato.
+    form:
+      account_upload: Carica estratto conto
+      files_hint: PDF, CSV o XLSX. Max %{max_size}MB per file.
+      files_label: File estratti conto
+      inbox_upload: Carica
+    index:
+      account_label: Conto
+      confidence: "Corrispondenza %{confidence}"
+      empty_linked: Nessun estratto conto collegato ancora.
+      empty_unmatched: La posta in arrivo degli estratti conto è vuota.
+      leave_unmatched: Lascia non abbinato
+      linked_title: Estratti conto collegati
+      no_suggestion: Nessun suggerimento
+      storage_used: Spazio utilizzato
+      title: Archivio estratti conto
+      unmatched_title: Posta in arrivo non abbinata
+      upload_description: Carica estratti conto nella posta in arrivo, oppure scegli un conto per collegarli subito.
+      upload_title: Carica estratti conto
+    link:
+      no_account: Scegli un conto prima di collegare questo estratto conto.
+      success: Estratto conto collegato a %{account}.
+    period:
+      unknown: Periodo sconosciuto
+    reconciliation:
+      checks:
+        closing_balance: Saldo di chiusura
+        opening_balance: Saldo iniziale
+        period_movement: Movimento del periodo
+        unknown_check: Verifica sconosciuta
+      matched: Corrispondente
+      mismatched: Non corrispondente
+      unavailable: Non verificato
+    reject:
+      success: Corrispondenza estratto conto rifiutata.
+    show:
+      account_label: Conto
+      account_last4_hint: Ultime quattro cifre del conto
+      account_name_hint: Suggerimento nome conto
+      closing_balance: Saldo di chiusura
+      currency: Valuta
+      delete: Elimina
+      difference: Differenza
+      download: Scarica
+      institution_name_hint: Suggerimento istituzione
+      ledger_amount: Libro contabile Sure
+      linked_to: Collegato a %{account}.
+      linking_title: Collegamento conto
+      link_suggestion: Suggerimento collegamento
+      metadata_title: Metadati estratto conto
+      no_suggestion: Nessun suggerimento di conto ancora.
+      opening_balance: Saldo iniziale
+      period_end_on: Fine periodo
+      period_start_on: Inizio periodo
+      reconciliation_title: Riconciliazione
+      reconciliation_unavailable: Aggiungi un periodo e il saldo iniziale o finale dell'estratto, poi assicurati che Sure abbia la cronologia saldi per quelle date.
+      reject: Rifiuta
+      save: Salva estratto conto
+      statement_amount: Estratto conto
+      suggested_account: Il conto suggerito è %{account} (confidenza %{confidence}).
+      title: Estratto conto
+      unlink: Scollega
+      unmatched_account: Posta in arrivo non abbinata
+      unknown_value: Sconosciuto
+    status:
+      linked: Collegato
+      rejected: Rifiutato
+      unmatched: Non abbinato
+    table:
+      account: Conto
+      actions: Azioni
+      download: Scarica
+      file: File
+      link_suggestion: Suggerimento collegamento
+      period: Periodo
+      reconciliation: Riconciliazione
+      reject: Rifiuta suggerimento
+      suggestion: Suggerimento
+      unlink: Scollega
+      view: Visualizza
+    unlink:
+      success: Estratto conto spostato nella posta in arrivo non abbinata.
+    update:
+      success: Estratto conto aggiornato.

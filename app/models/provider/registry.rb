@@ -145,6 +145,10 @@ class Provider::Registry
         Provider::MoexPublic.new
       end
 
+      def frankfurter
+        Provider::Frankfurter.new
+      end
+
       def tinkoff_invest
         api_key = ENV["TINKOFF_INVEST_API_KEY"].presence || Setting.tinkoff_invest_api_key # pipelock:ignore
 
@@ -182,7 +186,7 @@ class Provider::Registry
     def available_providers
       case concept
       when :exchange_rates
-        %i[twelve_data yahoo_finance moex_public]
+        %i[twelve_data yahoo_finance moex_public frankfurter]
       when :securities
         %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest]
       when :llm
