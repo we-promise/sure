@@ -8,6 +8,7 @@ class OnboardingsController < ApplicationController
   end
 
   def preferences
+    @preview_currency = Money::Currency.find(params[:currency] || @user.family.currency)&.iso_code || "USD"
   end
 
   def trial
