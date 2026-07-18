@@ -116,7 +116,7 @@ class SessionsController < ApplicationController
 
   def mobile_sso_start
     provider = params[:provider].to_s
-    configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
+    configured_providers = AuthConfig.sso_providers.map { |p| p[:name].to_s }
 
     unless configured_providers.include?(provider)
       mobile_sso_redirect(error: "invalid_provider", message: "SSO provider not configured")
@@ -333,11 +333,7 @@ class SessionsController < ApplicationController
     end
 
     def build_idp_logout_url(oidc_identity, id_token)
-      # Find the provider configuration using unified loader (supports both YAML and DB providers)
-      provider_config = ProviderLoader.load_providers.find do |p|
-        p[:name] == oidc_identity.provider
-      end
-
+      provider_config = AuthConfig.find_sso_provider(oidc_identity.provider)
       return nil unless provider_config
 
       # For OIDC providers, fetch end_session_endpoint from discovery
