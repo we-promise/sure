@@ -385,7 +385,7 @@ class TransactionsController < ApplicationController
   end
 
   def exchange_rate
-    account = Current.family.accounts.find(params[:account_id])
+    account = Current.user.accessible_accounts.find(params[:account_id])
     currency_from = params[:currency]
     date = params[:date]&.to_date || Date.current
 

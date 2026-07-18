@@ -467,6 +467,21 @@ end
     assert_not entry.protected_from_sync?
   end
 
+  test "new only exposes account ids accessible to the signed-in user" do
+    # family_member has shares for :depository (full_control) and :credit_card (read_only)
+    # but not for :investment or :loan. The currency JSON map at the top of the
+    # form should not leak ids/currencies of unshared accounts.
+    sign_in users(:family_member)
+
+    get new_transaction_url
+
+    assert_response :success
+    assert_includes response.body, accounts(:depository).id.to_s
+    assert_includes response.body, accounts(:credit_card).id.to_s
+    refute_includes response.body, accounts(:investment).id.to_s
+    refute_includes response.body, accounts(:loan).id.to_s
+  end
+
   test "new with duplicate_entry_id pre-fills form from source transaction" do
     @entry.reload
 
