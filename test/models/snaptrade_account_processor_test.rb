@@ -430,6 +430,40 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "4000.0", debug_entries.first.metadata["cash_equivalent_value"]
   end
 
+  test "cash-equivalent positions are subtracted in the stored cash currency when it falls back to USD" do
+    Account.any_instance.stubs(:set_current_balance)
+
+    # CAD account with no CAD cash entry: upsert_balances!' USD fallback means
+    # cash_balance is denominated in USD, so the USD money market fund must be
+    # subtracted from it even though it doesn't match the account currency.
+    @snaptrade_account.update!(
+      currency: "CAD",
+      current_balance: BigDecimal("10000.00"),
+      cash_balance: BigDecimal("5000.00"),
+      raw_balances_payload: [
+        { "currency" => { "code" => "USD" }, "cash" => "5000.00" }
+      ],
+      raw_holdings_payload: [
+        {
+          "symbol" => {
+            "symbol" => { "symbol" => "SPAXX", "description" => "Fidelity Government Money Market Fund" }
+          },
+          "units" => "4000",
+          "price" => "1.00",
+          "currency" => "USD",
+          "cash_equivalent" => true
+        }
+      ],
+      raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    @account.reload
+    assert_equal BigDecimal("1000.00"), @account.cash_balance, "USD cash-equivalent position must be subtracted from the USD-denominated cash balance"
+    assert_equal BigDecimal("10000.00"), @account.balance, "multi-currency holdings still use the API total"
+  end
+
   test "cash-equivalent positions in a non-primary currency reduce that currency's synthetic cash holding" do
     @snaptrade_account.update!(
       currency: "USD",

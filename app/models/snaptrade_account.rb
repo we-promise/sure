@@ -151,10 +151,7 @@ class SnaptradeAccount < ApplicationRecord
   # multi-currency cash isn't discarded (issue #1809). Excludes the actual
   # primary currency — including the USD fallback — to avoid double-counting.
   def non_primary_cash_entries
-    entries = Array(raw_balances_payload).map do |entry|
-      entry.respond_to?(:with_indifferent_access) ? entry.with_indifferent_access : {}
-    end
-
+    entries = normalized_balance_entries
     primary_code = primary_cash_entry(entries)&.dig(:currency, :code)
 
     entries.filter_map do |e|
@@ -164,6 +161,14 @@ class SnaptradeAccount < ApplicationRecord
       next if amount.blank?
       { currency: code, amount: amount }
     end
+  end
+
+  # Currency of the amount stored in cash_balance. upsert_balances! falls back
+  # to a USD (or first) balance entry when there is no entry in the account
+  # currency, so the stored cash is not guaranteed to be denominated in
+  # `currency` — cash adjustments must use this instead.
+  def primary_cash_currency
+    primary_cash_entry(normalized_balance_entries)&.dig(:currency, :code) || currency
   end
 
   # Total value of positions SnapTrade flags as `cash_equivalent` (usually
@@ -199,9 +204,16 @@ class SnaptradeAccount < ApplicationRecord
 
   private
 
+    def normalized_balance_entries
+      Array(raw_balances_payload).map do |entry|
+        entry.respond_to?(:with_indifferent_access) ? entry.with_indifferent_access : {}
+      end
+    end
+
     # Selects the primary cash entry from a list of indifferent-access balance
     # hashes: account currency first, then USD, then the first entry. Shared by
-    # upsert_balances! and non_primary_cash_entries so both stay in sync.
+    # upsert_balances!, non_primary_cash_entries, and primary_cash_currency so
+    # they stay in sync.
     def primary_cash_entry(entries)
       entries.find { |b| b.dig(:currency, :code) == currency } ||
         entries.find { |b| b.dig(:currency, :code) == "USD" } ||

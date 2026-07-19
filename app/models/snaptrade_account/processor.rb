@@ -112,8 +112,11 @@ class SnaptradeAccount::Processor
           # the balances endpoint's `cash` figure while ALSO reporting them as
           # positions with `cash_equivalent: true`. Those positions are imported as
           # holdings, so their value must come out of cash here — otherwise the
-          # account total counts the same money twice.
-          cash_equivalent_value = snaptrade_account.cash_equivalent_position_value
+          # account total counts the same money twice. Subtract in the currency the
+          # stored cash is actually denominated in (upsert_balances! can fall back
+          # to a USD/first entry), not the account currency.
+          cash_currency = snaptrade_account.primary_cash_currency
+          cash_equivalent_value = snaptrade_account.cash_equivalent_position_value(cash_currency)
 
           if cash_equivalent_value.nonzero?
             DebugLogEntry.capture(
@@ -126,7 +129,7 @@ class SnaptradeAccount::Processor
               account_provider: snaptrade_account.account_provider,
               metadata: {
                 snaptrade_account_id: snaptrade_account.id,
-                currency: snaptrade_account.currency,
+                currency: cash_currency,
                 cash_equivalent_value: cash_equivalent_value.to_s("F")
               }
             )
