@@ -1,0 +1,31 @@
+---
+it:
+  settings:
+    securities:
+      show:
+        disable_mfa: Disabilita 2FA
+        disable_mfa_confirm: Sei sicuro di voler disabilitare l'autenticazione a due fattori? Questo renderà il tuo account meno sicuro.
+        enable_mfa: Abilita 2FA
+        mfa_enabled_status_html: "L'autenticazione a due fattori è <span class=\"font-medium text-green-600\">abilitata</span>"
+        mfa_enabled_description: Il tuo account è protetto con un ulteriore livello di sicurezza.
+        mfa_disabled_status_html: "L'autenticazione a due fattori è <span class=\"font-medium text-red-600\">disabilitata</span>"
+        mfa_disabled_description: Abilita l'A2F per aggiungere un ulteriore livello di sicurezza al tuo account.
+        mfa_description: Aggiungi un ulteriore livello di sicurezza al tuo account richiedendo un codice dalla tua app di autenticazione al momento dell'accesso
+        mfa_title: Autenticazione a due fattori
+        webauthn_add: Aggiungi passkey o chiave di sicurezza
+        webauthn_added: Aggiunta il %{date}
+        webauthn_description: Usa una passkey, Touch ID, Windows Hello o una chiave di sicurezza hardware come secondo fattore al momento dell'accesso.
+        webauthn_empty: Nessuna passkey o chiave di sicurezza registrata ancora.
+        webauthn_last_used: Usata l'ultima volta %{time_ago} fa
+        webauthn_name_label: Nome chiave
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey, ecc.
+        webauthn_remove: Rimuovi
+        webauthn_remove_confirm: Sei sicuro di voler rimuovere questa passkey o chiave di sicurezza?
+        webauthn_remove_confirm_body: Dovrai registrare nuovamente questa passkey o chiave di sicurezza prima che possa essere usata per la verifica dell'accesso.
+        webauthn_title: Passkey e chiavi di sicurezza
+        webauthn_unsupported: Questo browser non supporta passkey o chiavi di sicurezza.
+  webauthn_credentials:
+    default_name: Chiave di sicurezza
+    failure: Impossibile salvare la passkey o la chiave di sicurezza. Riprova.
+    mfa_required: Abilita l'autenticazione a due fattori prima di aggiungere una passkey o una chiave di sicurezza.
+    success: Passkey o chiave di sicurezza rimossa.

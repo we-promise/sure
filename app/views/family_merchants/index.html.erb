@@ -7,13 +7,13 @@
         href: merge_family_merchants_path,
         frame: :modal,
         icon: "combine") %>
+    <% menu.with_item(
+        variant: "link",
+        text: t(".import"),
+        href: new_import_path(type: "MerchantImport"),
+        frame: :modal,
+        icon: "upload") %>
   <% end %>
-  <%= render DS::Link.new(
-    text: t(".import"),
-    variant: "outline",
-    icon: "upload",
-    href: new_import_path(type: "MerchantImport")
-  ) %>
   <%= render DS::Link.new(
     text: t(".new"),
     variant: "primary",

@@ -42,6 +42,17 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     assert_nil result
   end
 
+  test "skips balance update when provider current_balance is nil" do
+    @account.update!(cash_balance: 987.65)
+    @enable_banking_account.update_columns(current_balance: nil)
+
+    EnableBankingAccount::Transactions::Processor.any_instance.expects(:process).once
+
+    assert_no_changes -> { @account.reload.cash_balance } do
+      EnableBankingAccount::Processor.new(@enable_banking_account).process
+    end
+  end
+
   test "sets CC balance as absolute debt and tracks available_credit when limit is present" do
     cc_account = accounts(:credit_card)
     @enable_banking_account.update!(
