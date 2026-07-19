@@ -60,6 +60,27 @@ class Provider::RealieTest < ActiveSupport::TestCase
     assert_equal 400_000, response.data.valuation
   end
 
+  test "picks the candidate matching the entered city and ZIP from multiple results" do
+    wrong_city = { "useCode" => "Commercial", "yearBuilt" => 1970, "buildingArea" => 9_000.0, "modelValue" => 2_000_000.0, "city" => "SACRAMENTO", "state" => "CA", "zipCode" => "95814" }
+    right_city = { "useCode" => "Single Family Residential", "yearBuilt" => 1985, "buildingArea" => 1500.0, "modelValue" => 420_000.0, "city" => "LOS ANGELES", "state" => "CA", "zipCode" => "90001" }
+
+    stub_request(:get, "https://app.realie.ai/api/public/property/address/")
+      .with(query: hash_including("address" => "123 Main Street"))
+      .to_return(status: 200, body: { "property" => [ wrong_city, right_city ] }.to_json)
+
+    response = @provider.fetch_property_valuation(
+      line1: "123 Main Street",
+      locality: "Los Angeles",
+      region: "CA",
+      postal_code: "90001"
+    )
+
+    assert response.success?
+    assert_equal 420_000, response.data.valuation
+    assert_equal "single_family_home", response.data.property_type
+    assert_equal 1985, response.data.year_built
+  end
+
   test "rejects a property matched in a different city or ZIP" do
     stub_request(:get, "https://app.realie.ai/api/public/property/address/")
       .with(query: hash_including("address" => "123 Main Street"))

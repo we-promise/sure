@@ -18,16 +18,25 @@ class SyncPropertyValuationsJob < ApplicationJob
                          .includes(:address, :account)
                          .order(Arel.sql("avm_last_synced_on ASC NULLS FIRST"))
 
+    # One provider instance per key for the whole run — the request throttle
+    # tracks its last request time on the instance, so a fresh instance per
+    # property would bypass the inter-request delay.
+    providers = {}
+
     properties.each do |property|
       account = property.account
       next unless account&.active?
       next if property.avm_last_synced_on == Date.current
 
-      provider = begin
-        registry.get_provider(property.avm_provider)
-      rescue Provider::Registry::Error
-        nil
+      unless providers.key?(property.avm_provider)
+        providers[property.avm_provider] = begin
+          registry.get_provider(property.avm_provider)
+        rescue Provider::Registry::Error
+          nil
+        end
       end
+
+      provider = providers[property.avm_provider]
       next unless provider # API key was removed after the property was linked
       next unless provider.requests_remaining?
 

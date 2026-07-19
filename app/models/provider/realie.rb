@@ -33,11 +33,15 @@ class Provider::Realie < Provider
       end
 
       parsed = JSON.parse(response.body)
-      record = parsed["property"]
-      record = record.first if record.is_a?(Array)
-      raise Error.new(I18n.t("providers.realie.errors.no_property")) if record.blank?
+      records = parsed["property"]
+      records = [ records ] unless records.is_a?(Array)
+      records = records.reject(&:blank?)
+      raise Error.new(I18n.t("providers.realie.errors.no_property")) if records.empty?
 
-      verify_location_match!(record, locality: locality, postal_code: postal_code)
+      # A street+state query can return several candidates across different
+      # cities; pick the first one consistent with the entered city/ZIP.
+      record = records.find { |candidate| location_match?(candidate, locality: locality, postal_code: postal_code) }
+      raise Error.new(I18n.t("providers.realie.errors.location_mismatch")) if record.nil?
 
       valuation = record["modelValue"] || record["totalMarketValue"]
       raise Error.new(I18n.t("providers.realie.errors.no_valuation")) if valuation.blank?
@@ -58,9 +62,9 @@ class Provider::Realie < Provider
 
     # The address lookup matches on street + state only (filtering by city
     # additionally requires a county, which isn't collected), so a common
-    # street name can resolve to a property in another city. Reject the
-    # record when the returned city/ZIP contradict what the user entered.
-    def verify_location_match!(record, locality:, postal_code:)
+    # street name can resolve to properties in other cities. A candidate
+    # matches unless its returned city/ZIP contradict what the user entered.
+    def location_match?(record, locality:, postal_code:)
       returned_city = record["city"].to_s.strip
       returned_zip = record["zipCode"].to_s.strip.first(5)
       entered_city = locality.to_s.strip
@@ -69,7 +73,7 @@ class Provider::Realie < Provider
       city_mismatch = returned_city.present? && entered_city.present? && !returned_city.casecmp?(entered_city)
       zip_mismatch = returned_zip.present? && entered_zip.present? && returned_zip != entered_zip
 
-      raise Error.new(I18n.t("providers.realie.errors.location_mismatch")) if city_mismatch || zip_mismatch
+      !(city_mismatch || zip_mismatch)
     end
 
     # Realie use codes can be free-form parcel descriptions (e.g. "Single

@@ -35,6 +35,29 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
     assert_equal 600_000, @account.reload.balance
   end
 
+  test "resolves each provider once per run across multiple properties" do
+    second_account = @account.family.accounts.create!(
+      name: "Second AVM Property",
+      balance: 0,
+      currency: "USD",
+      owner: @account.owner,
+      accountable: Property.new(
+        avm_provider: "rentcast",
+        address_attributes: { line1: "456 Oak Ave", locality: "Los Angeles", region: "CA", country: "US", postal_code: "90002" }
+      )
+    )
+
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:fetch_property_valuation).twice.returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
+    Provider::Registry.expects(:rentcast).once.returns(provider)
+
+    SyncPropertyValuationsJob.new.perform
+
+    assert_equal Date.current, @property.reload.avm_last_synced_on
+    assert_equal Date.current, second_account.property.reload.avm_last_synced_on
+  end
+
   test "does not mark a property synced when the balance update fails" do
     provider = mock
     provider.stubs(:requests_remaining?).returns(true)
