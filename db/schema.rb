@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -120,6 +120,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
     t.datetime "disabled_at"
     t.boolean "exclude_from_reports", default: false, null: false
     t.integer "account_providers_count", default: 0, null: false
+    t.boolean "enable_category_matcher", default: true, null: false
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -1405,6 +1406,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
     t.index ["user_id"], name: "index_mobile_devices_on_user_id"
   end
 
+  create_table "notification_deliveries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "rule_id", null: false
+    t.uuid "transaction_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["rule_id", "transaction_id"], name: "index_notification_deliveries_on_rule_and_transaction", unique: true
+    t.index ["rule_id"], name: "index_notification_deliveries_on_rule_id"
+    t.index ["transaction_id"], name: "index_notification_deliveries_on_transaction_id"
+  end
+
   create_table "oauth_access_grants", force: :cascade do |t|
     t.string "resource_owner_id", null: false
     t.bigint "application_id", null: false
@@ -1968,6 +1979,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
     t.date "window_start_date"
     t.date "window_end_date"
     t.text "sync_stats"
+    t.datetime "cancel_requested_at"
     t.index ["parent_id"], name: "index_syncs_on_parent_id"
     t.index ["status"], name: "index_syncs_on_status"
     t.index ["syncable_type", "syncable_id"], name: "index_syncs_on_syncable"
@@ -2293,6 +2305,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_13_090000) do
   add_foreign_key "mercury_items", "families"
   add_foreign_key "messages", "chats"
   add_foreign_key "mobile_devices", "users"
+  add_foreign_key "notification_deliveries", "rules", on_delete: :cascade
+  add_foreign_key "notification_deliveries", "transactions", on_delete: :cascade
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oidc_identities", "users"
