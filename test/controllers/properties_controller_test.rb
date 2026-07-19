@@ -325,7 +325,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_match "Add property via RentCast", response.body
   end
 
-  test "creates active property from AVM provider lookup" do
+  test "AVM lookup renders a preview without creating an account" do
     provider = mock
     provider.expects(:fetch_property_valuation).with(
       line1: "5500 Grand Lake Dr",
@@ -335,7 +335,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     ).returns(successful_avm_response)
     Provider::Registry.stubs(:rentcast).returns(provider)
 
-    assert_difference -> { Account.count } => 1 do
+    assert_no_difference "Account.count" do
       post properties_path, params: {
         avm_provider: "rentcast",
         account: {
@@ -347,6 +347,66 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
             region: "TX",
             postal_code: "78244"
           }
+        }
+      }
+    end
+
+    assert_response :success
+    assert_match "Confirm property details", response.body
+    assert_match "1973", response.body
+    assert_match "1878", response.body
+  end
+
+  test "AVM preview warns when no property record was found" do
+    no_record = Provider::Response.new(
+      success?: true,
+      data: Provider::PropertyValuationConcept::PropertyValuation.new(
+        valuation: 450_000, currency: "USD", property_type: nil, year_built: nil, area_value: nil, area_unit: "sqft"
+      ),
+      error: nil
+    )
+    stub_avm_provider(no_record)
+
+    post properties_path, params: {
+      avm_provider: "rentcast",
+      account: {
+        name: "AVM Home",
+        accountable_type: "Property",
+        address: { line1: "1 Ghost St", locality: "San Antonio", region: "TX", postal_code: "78244" }
+      }
+    }
+
+    assert_response :success
+    assert_match "couldn&#39;t find a property record", response.body
+    assert_match "Unknown", response.body
+  end
+
+  test "AVM confirm creates the account from reviewed data without a provider call" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    assert_difference -> { Account.count } => 1 do
+      post properties_path, params: {
+        avm_provider: "rentcast",
+        avm_step: "confirm",
+        account: {
+          name: "AVM Home",
+          accountable_type: "Property",
+          address: {
+            line1: "5500 Grand Lake Dr",
+            locality: "San Antonio",
+            region: "TX",
+            postal_code: "78244"
+          }
+        },
+        avm_data: {
+          valuation: "356000.0",
+          currency: "USD",
+          property_type: "single_family_home",
+          year_built: "1973",
+          area_value: "1878",
+          area_unit: "sqft"
         }
       }
     end

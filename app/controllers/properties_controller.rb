@@ -110,22 +110,36 @@ class PropertiesController < ApplicationController
         redirect_to new_property_path, alert: t("providers.property_valuation.not_configured") and return
       end
 
-      @account = Property::AvmImport.new(
+      importer = Property::AvmImport.new(
         family: Current.family,
         owner: Current.user,
         provider_key: provider_key,
         name: params.dig(:account, :name),
         address_attributes: avm_address_params.to_h.symbolize_keys
-      ).call
+      )
 
-      # The provider lookup fills in what the manual wizard's balance and
-      # address steps would have collected, so the account is complete —
-      # land on the account page (or the flow that initiated the wizard).
-      return_path = safe_return_to(session.delete(:return_to)) || account_path(@account)
+      if params[:avm_step] == "confirm"
+        # The lookup already spent the provider request; the account is
+        # created from the data the user reviewed — no second request.
+        @account = importer.create_account(confirmed_avm_data)
 
-      respond_to do |format|
-        format.html { redirect_to return_path }
-        format.turbo_stream { stream_redirect_to return_path }
+        # The provider lookup fills in what the manual wizard's balance and
+        # address steps would have collected, so the account is complete —
+        # land on the account page (or the flow that initiated the wizard).
+        return_path = safe_return_to(session.delete(:return_to)) || account_path(@account)
+
+        respond_to do |format|
+          format.html { redirect_to return_path }
+          format.turbo_stream { stream_redirect_to return_path }
+        end
+      else
+        # Step 1: spend one provider request, then show the fetched data for
+        # review before anything is created.
+        @avm_preview = importer.lookup
+        @avm_provider_key = provider_key
+        @account = Current.family.accounts.build(name: params.dig(:account, :name), accountable: Property.new)
+        @avm_address = Address.new(avm_address_params.to_h)
+        render :new
       end
     rescue Property::AvmImport::Error => error
       @avm_provider_key = provider_key
@@ -137,6 +151,30 @@ class PropertiesController < ApplicationController
 
     def avm_address_params
       params.require(:account).require(:address).permit(:line1, :locality, :region, :postal_code)
+    end
+
+    # Rebuilds the valuation data the preview round-tripped through hidden
+    # fields. Values are sanitized rather than trusted: the subtype must be a
+    # known key, the currency a plausible ISO code, and the valuation positive.
+    # (Tampering is not a security concern — manual entry already lets users
+    # set arbitrary balances — this only guards data integrity.)
+    def confirmed_avm_data
+      raw = params.require(:avm_data).permit(:valuation, :currency, :property_type, :year_built, :area_value, :area_unit)
+
+      valuation = BigDecimal(raw[:valuation].to_s, exception: false)
+      raise Property::AvmImport::Error.new(t("providers.property_valuation.missing_fields")) if valuation.nil? || valuation <= 0
+
+      currency = raw[:currency].to_s.upcase
+      currency = "USD" unless currency.match?(/\A[A-Z]{3}\z/)
+
+      Provider::PropertyValuationConcept::PropertyValuation.new(
+        valuation: valuation,
+        currency: currency,
+        property_type: Property::SUBTYPES.key?(raw[:property_type]) ? raw[:property_type] : nil,
+        year_built: raw[:year_built].presence&.to_i,
+        area_value: raw[:area_value].presence&.to_i,
+        area_unit: raw[:area_unit].presence || "sqft"
+      )
     end
 
     def configured_avm_providers

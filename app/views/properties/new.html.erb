@@ -1,6 +1,8 @@
 <% avm_provider_key = @avm_provider_key || params[:method] %>
 
-<% if params[:step] == "method_select" && @avm_providers.present? %>
+<% if @avm_preview.present? %>
+  <%= render "properties/avm_preview", account: @account, provider_key: @avm_provider_key, preview: @avm_preview, address: @avm_address %>
+<% elsif params[:step] == "method_select" && @avm_providers.present? %>
   <%= render "properties/avm_method_selector", avm_providers: @avm_providers %>
 <% elsif avm_provider_key.present? && @avm_providers&.map(&:to_s)&.include?(avm_provider_key.to_s) %>
   <%= render "properties/avm_form", account: @account, provider_key: avm_provider_key %>

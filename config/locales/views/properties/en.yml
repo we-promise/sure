@@ -31,7 +31,12 @@ en:
       avm_title: "Add property via %{provider}"
       avm_description: "Enter a name for the property and its address. %{provider} will look up the property details and estimated market value for you."
       avm_us_only: "%{provider} only supports properties located in the United States."
-      avm_submit: "Add property"
+      avm_submit: "Look up property"
+      avm_preview_title: "Confirm property details"
+      avm_preview_description: "Here's what %{provider} found. Review the details before adding the property — nothing has been created yet."
+      avm_preview_no_record: "%{provider} couldn't find a property record at this address, so the value shown is an estimate based on the surrounding area. Double-check the address before continuing."
+      avm_preview_back: "Back"
+      avm_preview_confirm: "Add property"
     address:
       title: "Enter property manually"
       address_line1_label: "Address Line 1"

@@ -1,6 +1,8 @@
-# Creates a property account from an AVM provider lookup: one provider request
-# fetches the property's attributes (type, year built, area) and estimated
-# value, which seed the account in place of the manual entry wizard steps.
+# Creates a property account from an AVM provider lookup in two steps:
+# `lookup` spends one provider request to fetch the property's attributes
+# (type, year built, area) and estimated value, which the user reviews on a
+# preview screen; `create_account` then seeds the account from the confirmed
+# data without a second request.
 class Property::AvmImport
   Error = Class.new(StandardError)
 
@@ -12,7 +14,9 @@ class Property::AvmImport
     @address_attributes = address_attributes
   end
 
-  def call
+  # Step 1: validates the inputs, then spends one provider request. Returns
+  # the fetched Provider::PropertyValuationConcept::PropertyValuation.
+  def lookup
     validate_inputs!
 
     provider = Provider::Registry.for_concept(:property_valuations).get_provider(provider_key)
@@ -26,7 +30,13 @@ class Property::AvmImport
     )
     raise Error.new(response.error.message) unless response.success?
 
-    data = response.data
+    response.data
+  end
+
+  # Step 2: creates the active property account from the user-confirmed
+  # valuation data. No provider request is made here.
+  def create_account(data)
+    validate_inputs!
 
     account = nil
     Account.transaction do
