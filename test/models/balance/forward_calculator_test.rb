@@ -534,6 +534,57 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "investment account interest trade is classified as cash-only, not non-cash outflow" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 },
+        { type: "trade", date: 1.day.ago.to_date, ticker: "AAPL", qty: 10, price: 100 },
+        { type: "income_trade", date: Date.current, ticker: "AAPL", amount: 5, label: "Interest" }
+      ],
+      holdings: [
+        { date: 1.day.ago.to_date, ticker: "AAPL", qty: 10, price: 100, amount: 1000 },
+        { date: Date.current, ticker: "AAPL", qty: 10, price: 110, amount: 1100 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: 3.days.ago.to_date,
+          legacy_balances: { balance: 5000, cash_balance: 5000 },
+          balances: { start: 5000, start_cash: 5000, start_non_cash: 0, end_cash: 5000, end_non_cash: 0, end: 5000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 2.days.ago.to_date,
+          legacy_balances: { balance: 5000, cash_balance: 5000 },
+          balances: { start: 5000, start_cash: 5000, start_non_cash: 0, end_cash: 5000, end_non_cash: 0, end: 5000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 1.day.ago.to_date,
+          legacy_balances: { balance: 5000, cash_balance: 4000 },
+          balances: { start: 5000, start_cash: 5000, start_non_cash: 0, end_cash: 4000, end_non_cash: 1000, end: 5000 },
+          flows: { cash_inflows: 0, cash_outflows: 1000, non_cash_inflows: 1000, non_cash_outflows: 0, net_market_flows: 0 },
+          adjustments: 0
+        },
+        {
+          date: Date.current,
+          legacy_balances: { balance: 5105, cash_balance: 4005 },
+          balances: { start: 5000, start_cash: 4000, start_non_cash: 1000, end_cash: 4005, end_non_cash: 1100, end: 5105 },
+          flows: { cash_inflows: 5, cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0, net_market_flows: 100 },
+          adjustments: 0
+        }
+      ]
+    )
+  end
+
   test "investment account can have valuations that override balance" do
     account = create_account_with_ledger(
       account: { type: Investment, currency: "USD" },
@@ -755,6 +806,72 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     # Full range returned.
     assert_includes result.map(&:date), 3.days.ago.to_date
     assert_not calculator.incremental?, "Should not be incremental for foreign currency accounts"
+  end
+
+  # Regression: a reconciliation (or any entry) backfilled with a date EARLIER
+  # than the opening anchor must still be materialized into Balance rows. The
+  # window is bounded on min(opening_anchor_date, oldest_entry_date), and the
+  # pre-anchor start seeds from zero — each valuation resets the absolute
+  # balance on its own date.
+  test "materializes entries dated before the opening anchor" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "reconciliation", date: 5.days.ago.to_date, balance: 10000 }, # before anchor
+        { type: "opening_anchor",  date: 3.days.ago.to_date, balance: 17000 },
+        { type: "reconciliation", date: 1.day.ago.to_date,  balance: 20000 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    # Window extends back to the earliest entry, not the (later) opening anchor.
+    assert_equal 5.days.ago.to_date, calculated.map(&:date).min
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          # Pre-anchor reconciliation: seeded from 0, valuation sets the balance.
+          date: 5.days.ago.to_date,
+          legacy_balances: { balance: 10000, cash_balance: 10000 },
+          balances: { start: 0, start_cash: 0, start_non_cash: 0, end_cash: 10000, end_non_cash: 0, end: 10000 },
+          flows: 0,
+          adjustments: { cash_adjustments: 10000, non_cash_adjustments: 0 }
+        },
+        {
+          # Carries forward on a day with no entries.
+          date: 4.days.ago.to_date,
+          legacy_balances: { balance: 10000, cash_balance: 10000 },
+          balances: { start: 10000, start_cash: 10000, start_non_cash: 0, end_cash: 10000, end_non_cash: 0, end: 10000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          # Opening anchor resets the balance on its own date.
+          date: 3.days.ago.to_date,
+          legacy_balances: { balance: 17000, cash_balance: 17000 },
+          balances: { start: 10000, start_cash: 10000, start_non_cash: 0, end_cash: 17000, end_non_cash: 0, end: 17000 },
+          flows: 0,
+          adjustments: { cash_adjustments: 7000, non_cash_adjustments: 0 }
+        },
+        {
+          # Carries forward on a day with no entries.
+          date: 2.days.ago.to_date,
+          legacy_balances: { balance: 17000, cash_balance: 17000 },
+          balances: { start: 17000, start_cash: 17000, start_non_cash: 0, end_cash: 17000, end_non_cash: 0, end: 17000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 1.day.ago.to_date,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 17000, start_cash: 17000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: { cash_adjustments: 3000, non_cash_adjustments: 0 }
+        }
+      ]
+    )
   end
 
   private

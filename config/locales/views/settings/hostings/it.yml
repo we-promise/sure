@@ -1,0 +1,234 @@
+---
+it:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Controlla come le nuove persone si registrano alla tua istanza di %{product}.
+        email_confirmation_description: Quando abilitato, gli utenti devono confermare il loro indirizzo email quando lo cambiano.
+        email_confirmation_title: Richiedi conferma email
+        default_family_title: Famiglia predefinita per i nuovi utenti
+        default_family_description: "Metti i nuovi utenti su questa famiglia/gruppo solo se non hanno un invito."
+        default_family_none: Nessuna (crea nuova famiglia)
+        generate_tokens: Genera nuovo codice
+        generated_tokens: Codici generati
+        title: Onboarding
+        states:
+          open: Aperto
+          closed: Chiuso
+          invite_only: Solo su invito
+      show:
+        general: Impostazioni generali
+        ai_assistant: Assistente IA
+        financial_data_providers: Provider dati finanziari
+        sync_settings: Impostazioni sincronizzazione
+        invites: Codici invito
+        title: Self-Hosting
+        danger_zone: Zona pericolosa
+        clear_cache: Svuota cache dati
+        clear_cache_warning: Svuotare la cache dei dati rimuoverà tutti i tassi di cambio, i prezzi dei titoli, i saldi dei conti e altri dati. Questo non eliminerà conti, transazioni, categorie o altri dati degli utenti.
+        confirm_clear_cache:
+          title: Svuotare la cache dei dati?
+          body: Sei sicuro di voler svuotare la cache dei dati? Questo rimuoverà tutti i tassi di cambio, i prezzi dei titoli, i saldi dei conti e altri dati. Questa azione non può essere annullata.
+      provider_selection:
+        exchange_rate_title: Provider tasso di cambio
+        exchange_rate_description: Seleziona un singolo provider per recuperare i tassi di cambio.
+        exchange_rate_provider_label: Provider tasso di cambio
+        securities_title: Provider titoli
+        securities_description: Abilita uno o più provider per recuperare prezzi di azioni, ETF e fondi comuni. Durante la ricerca, tutti i provider abilitati vengono interrogati e i risultati uniti.
+        env_configured_message: La selezione del provider è disabilitata perché sono impostate variabili d'ambiente. Per abilitare la selezione qui, rimuovi queste variabili d'ambiente dalla configurazione.
+        twelve_data_hint: richiede chiave API, 800 crediti/giorno
+        yahoo_finance_hint: gratuito, nessuna chiave API richiesta
+        requires_api_key: richiede chiave API
+        requires_api_key_eodhd: richiede chiave API, limite 20 chiamate/giorno
+        requires_api_key_alpha_vantage: richiede chiave API, limite 25 chiamate/giorno
+        mfapi_hint: gratuito, nessuna chiave API — solo fondi comuni indiani
+        binance_public_hint: gratuito, nessuna chiave API — solo crypto (BTC, ETH, ecc.)
+        moex_public_hint: gratuito, nessuna chiave API — azioni, fondi e obbligazioni russe (MOEX), incluso FX RUB
+        tinkoff_invest_hint: richiede token di sola lettura — prezzi di azioni/fondi/obbligazioni russe + loghi dei brand
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+          tiingo: Tiingo
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
+          binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+      assistant_settings:
+        title: Assistente IA
+        description: Scegli come risponde l'assistente chat. Integrato usa il tuo provider LLM configurato direttamente. Esterno delega a un agente IA remoto che può richiamare gli strumenti finanziari di Sure tramite MCP.
+        type_label: Tipo di assistente
+        type_builtin: Integrato (LLM diretto)
+        type_external: Esterno (agente remoto)
+        external_status: Endpoint assistente esterno
+        external_configured: Configurato
+        external_not_configured: Non configurato. Inserisci l'URL e il token qui sotto, o imposta le variabili d'ambiente EXTERNAL_ASSISTANT_URL e EXTERNAL_ASSISTANT_TOKEN.
+        env_notice: "Il tipo di assistente è bloccato su '%{type}' tramite la variabile d'ambiente ASSISTANT_TYPE."
+        env_configured_external: Configurato con successo tramite variabili d'ambiente.
+        url_label: URL endpoint
+        url_placeholder: "https://your-agent-host/v1/chat"
+        url_help: L'URL completo all'endpoint API del tuo agente. Il tuo provider agente te lo fornirà.
+        token_label: Token API
+        token_placeholder: Inserisci il token dal tuo provider agente
+        token_help: Il token di autenticazione fornito dal tuo agente esterno. Viene inviato come token Bearer con ogni richiesta.
+        agent_id_label: ID agente (facoltativo)
+        agent_id_placeholder: "main (predefinito)"
+        agent_id_help: Instrada a un agente specifico quando il provider ospita più agenti. Lascia vuoto per il predefinito.
+        disconnect_title: Connessione esterna
+        disconnect_description: Rimuovi la connessione all'assistente esterno e torna all'assistente integrato.
+        disconnect_button: Disconnetti
+        confirm_disconnect:
+          title: Disconnettere l'assistente esterno?
+          body: Questo rimuoverà l'URL, il token e l'ID agente salvati, e passerà all'assistente integrato. Puoi riconnetterti in seguito inserendo nuove credenziali.
+      brand_fetch_settings:
+        description: Inserisci il Client ID fornito da Brand Fetch
+        env_configured_message: Hai configurato con successo il tuo Client ID di Brand Fetch tramite la variabile d'ambiente BRAND_FETCH_CLIENT_ID.
+        show_details: "(mostra dettagli)"
+        setup_step_1_html: 'Visita <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> e crea un account sviluppatore Brand Fetch gratuito.'
+        setup_step_2_html: 'Vai alla pagina <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
+        setup_step_3: 'Tocca l''icona occhio nella sezione "Il tuo Client ID" per visualizzare il tuo Client ID e incollarlo qui sotto.'
+        label: Client ID
+        placeholder: Inserisci il tuo Client ID qui
+        title: Impostazioni Brand Fetch
+        high_res_label: Abilita loghi ad alta risoluzione
+        high_res_description: Se abilitato, i loghi verranno recuperati alla risoluzione 120x120 invece di 40x40. Questo fornisce immagini più nitide su display ad alta densità.
+      llm_provider_selector:
+        title: Provider IA
+        description: Scegli quale LLM alimenta la chat IA. Le operazioni batch (categorizzazione transazioni, rilevamento commercianti e elaborazione PDF) usano sempre OpenAI.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente LLM_PROVIDER.
+        provider_label: Provider LLM attivo
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Il cambio di provider ha effetto sulla prossima chat. Configura le credenziali del provider attivo qui sotto.
+        not_configured_hint: "Aggiungi una chiave API %{provider} qui sotto per attivarlo."
+        data_retention_heading: Gestione dati
+        data_retention: Gli input API non vengono usati per addestrare modelli per impostazione predefinita; le API hosted dei provider conservano i dati per ~30 giorni per fiducia e sicurezza. Gli endpoint personalizzati o self-hosted seguono la tua politica.
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Inserisci la tua chiave API Anthropic. Opzionalmente punta l'URL base ad AWS Bedrock o GCP Vertex.
+        env_configured_message: Configurato con successo tramite variabili d'ambiente.
+        access_token_label: Chiave API
+        access_token_placeholder: Inserisci la tua chiave API Anthropic
+        base_url_label: URL base (facoltativo)
+        base_url_placeholder: "https://api.anthropic.com (predefinito)"
+        model_label: Modello predefinito (facoltativo)
+        model_placeholder: "claude-sonnet-4-6 (predefinito)"
+        model_help: Usato per chat ed elaborazione PDF. Le operazioni batch (categorizza, rilevamento commercianti) usano Haiku per il costo.
+      openai_settings:
+        description: Inserisci il token di accesso e opzionalmente configura un provider compatibile con OpenAI personalizzato
+        env_configured_message: Configurato con successo tramite variabili d'ambiente.
+        access_token_label: Token di accesso
+        access_token_placeholder: Inserisci il tuo token di accesso qui
+        uri_base_label: URL base API (facoltativo)
+        uri_base_placeholder: "https://api.openai.com/v1 (predefinito)"
+        model_label: Modello (facoltativo)
+        model_placeholder: "gpt-4.1 (predefinito)"
+        json_mode_label: Modalità JSON
+        json_mode_auto: Auto (consigliato)
+        json_mode_strict: Strict (ottimo per modelli thinking)
+        json_mode_none: Nessuno (ottimo per modelli standard)
+        json_mode_json_object: Oggetto JSON
+        json_mode_help: "La modalità Strict funziona meglio con i modelli thinking (qwen-thinking, deepseek-reasoner). La modalità None funziona meglio con i modelli standard (llama, mistral, gpt-oss)."
+        budget_heading: Budget token
+        budget_description: Si applica alle chiamate compatibili con OpenAI (chat, auto-categorizzazione, rilevamento commercianti ed elaborazione PDF). I valori predefiniti sono conservativi per i modelli locali a contesto ridotto. Aumenta per i modelli cloud con finestre di contesto più grandi.
+        context_window_label: Finestra di contesto (facoltativo)
+        context_window_help: "Token totali che il modello accetterà. Predefinito: 2048 — aumenta a 8192+ per OpenAI cloud o modelli locali a contesto ampio."
+        max_response_tokens_label: Token risposta massimi (facoltativo)
+        max_response_tokens_help: "Token riservati per la risposta del modello. Predefinito: 512. Diminuisci per liberare spazio per cronologie più lunghe."
+        max_items_per_call_label: Elementi massimi per batch (facoltativo)
+        max_items_per_call_help: "Limite superiore per batch di auto-categorizzazione/rilevamento commercianti. Predefinito: 25. I batch più grandi vengono suddivisi automaticamente per adattarsi alla finestra di contesto."
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance fornisce accesso gratuito a prezzi azionari, tassi di cambio e dati finanziari senza richiedere una chiave API.
+        status_active: Yahoo Finance è attivo e funzionante
+        status_inactive: Connessione Yahoo Finance fallita
+        connection_failed: Impossibile connettersi a Yahoo Finance
+        troubleshooting: Controlla la connessione internet e le impostazioni del firewall. Yahoo Finance potrebbe essere temporaneamente non disponibile.
+      tiingo_settings:
+        title: Tiingo
+        description: Inserisci il token API fornito da Tiingo. Il piano gratuito supporta 50 simboli unici all'ora con oltre 30 anni di dati storici.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente TIINGO_API_KEY.
+        label: Token API
+        placeholder: Inserisci il tuo token API Tiingo qui
+        show_details: "(mostra dettagli)"
+        step_1_html: 'Visita <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> e crea un account gratuito.'
+        step_2_html: 'Vai alla pagina <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">Token API</a>.'
+        step_3: Copia il tuo token API e incollalo qui sotto.
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Inserisci un token API T-Invest di sola lettura. Usato per recuperare i loghi dei brand per i titoli (inclusi fondi e obbligazioni, anche quando i prezzi sono forniti da MOEX) e, se abilitato sopra, i prezzi per gli strumenti russi.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente TINKOFF_INVEST_API_KEY.
+        label: Token API
+        placeholder: Inserisci il tuo token API T-Invest qui
+        show_details: "(mostra dettagli)"
+        step_1: Apri T-Bank investments, poi Impostazioni, poi Token API (richiede un conto di intermediazione T-Bank aperto).
+        step_2: Crea un token con accesso in sola lettura.
+        step_3: Copia il token e incollalo qui sotto.
+      eodhd_settings:
+        title: EODHD
+        description: Inserisci il token API fornito da EODHD. Supporta ETF europei su LSE, XETRA e altre borse internazionali.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente EODHD_API_KEY.
+        label: Token API
+        placeholder: Inserisci il tuo token API EODHD qui
+        show_details: "(mostra dettagli)"
+        step_1_html: 'Visita <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> e crea un account gratuito.'
+        step_2_html: 'Vai alla tua <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> per trovare il tuo token API.'
+        step_3: Copia il tuo token API e incollalo qui sotto.
+        rate_limit_warning: "Il piano gratuito EODHD è limitato a 20 chiamate API al giorno. Usato al meglio come provider supplementare per ETF europei non disponibili da altri provider."
+      alpha_vantage_settings:
+        title: Alpha Vantage
+        description: Inserisci la chiave API da Alpha Vantage. Supporta ETF europei su London Stock Exchange, XETRA e altre borse.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente ALPHA_VANTAGE_API_KEY.
+        label: Chiave API
+        placeholder: Inserisci qui la tua chiave API Alpha Vantage
+        show_details: "(mostra dettagli)"
+        step_1_html: 'Visita <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> e ottieni la tua chiave API gratuita.'
+        step_2: Copia la chiave API e incollala qui sotto.
+        rate_limit_warning: "Il piano gratuito Alpha Vantage è limitato a 25 chiamate API al giorno. Usato al meglio come provider supplementare per ETF europei non disponibili da altri provider."
+        no_health_check_note: "Il controllo salute della connessione non è disponibile per questo provider a causa del limite di frequenza rigoroso."
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} chiamate API giornaliere usate (%{percentage})"
+        description: Inserisci la chiave API fornita da Twelve Data
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente TWELVE_DATA_API_KEY.
+        label: Chiave API
+        placeholder: Inserisci qui la tua chiave API
+        show_details: "(mostra dettagli)"
+        step_1_html: 'Visita <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> e crea un account sviluppatore Twelve Data gratuito.'
+        step_2_html: 'Vai alla pagina <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">Chiavi API</a>.'
+        step_3: Mostra la tua chiave segreta e incollala qui sotto.
+        plan: "Piano %{plan}"
+        plan_upgrade_warning_title: Alcuni ticker richiedono un piano a pagamento
+        plan_upgrade_warning_description: I seguenti ticker nel tuo portafoglio non possono sincronizzare i prezzi con il tuo piano Twelve Data attuale.
+        requires_plan: richiede piano %{plan}
+        view_pricing: Visualizza prezzi Twelve Data
+        title: Twelve Data
+      update:
+        failure: Valore impostazione non valido
+        success: Impostazioni aggiornate
+        invalid_onboarding_state: Stato di onboarding non valido
+        invalid_sync_time: Formato orario di sincronizzazione non valido. Usa il formato HH:MM (es. 02:30).
+        invalid_llm_budget: "%{field} deve essere un numero intero ≥ %{minimum}."
+        invalid_anthropic_base_url: L'URL base di Anthropic deve essere un URL http(s).
+        anthropic_model_required_for_base_url: Il modello Anthropic è obbligatorio quando si imposta un URL base personalizzato.
+        scheduler_sync_failed: Impostazioni salvate, ma aggiornamento pianificazione sincronizzazione fallito. Riprova o controlla i log del server.
+      disconnect_external_assistant:
+        external_assistant_disconnected: Assistente esterno disconnesso
+      clear_cache:
+        cache_cleared: Cache dati svuotata. Potrebbero volerci alcuni istanti per completare.
+      not_authorized: Non sei autorizzato a eseguire questa azione
+      ensure_admin:
+        not_authorized: Non sei autorizzato a eseguire questa azione
+      ensure_super_admin_for_onboarding:
+        not_authorized: Non sei autorizzato a eseguire questa azione
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Impostazioni salvate, ma aggiornamento pianificazione sincronizzazione fallito. Riprova o controlla i log del server.
+      sync_settings:
+        auto_sync_label: Abilita sincronizzazione automatica
+        auto_sync_description: Quando abilitata, tutti i conti verranno sincronizzati automaticamente ogni giorno all'orario specificato.
+        auto_sync_time_label: Orario sincronizzazione (HH:MM)
+        auto_sync_time_description: Specifica l'ora del giorno in cui deve avvenire la sincronizzazione automatica.
+        include_pending_label: Includi transazioni in sospeso
+        include_pending_description: Quando abilitato, le transazioni in sospeso (non confermate) verranno importate e riconciliate automaticamente quando vengono registrate. Disabilita se la tua banca fornisce dati in sospeso inaffidabili.
+        env_configured_message: Questa impostazione è disabilitata perché è impostata una variabile d'ambiente del provider (SIMPLEFIN_INCLUDE_PENDING o PLAID_INCLUDE_PENDING). Rimuovila per abilitare questa impostazione.

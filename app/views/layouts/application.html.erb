@@ -23,7 +23,7 @@ end %>
 <%= render "layouts/shared/htmldoc" do %>
   <div
     class="flex flex-col lg:flex-row h-full bg-surface"
-    data-controller="app-layout privacy-mode"
+    data-controller="app-layout privacy-mode sidebar-resize"
     data-app-layout-expanded-sidebar-class="<%= expanded_sidebar_class %>"
     data-app-layout-collapsed-sidebar-class="<%= collapsed_sidebar_class %>"
     data-app-layout-user-id-value="<%= Current.user.id %>">
@@ -105,11 +105,13 @@ end %>
 
     <%# DESKTOP - Left sidebar %>
     <%= tag.div class: class_names(
-        "hidden lg:block py-4 shrink-0 max-w-[320px] transition-all duration-300 border-divider",
+        "hidden lg:block relative py-4 shrink-0 transition-all duration-300 border-divider",
         Current.user.show_sidebar? ? [expanded_sidebar_class, "border-r"] : [collapsed_sidebar_class, "border-r-0"],
        ),
+       style: "max-width: var(--left-sidebar-width, 320px)",
        inert: !Current.user.show_sidebar?,
-       data: { app_layout_target: "leftSidebar" } do %>
+       data: { app_layout_target: "leftSidebar", sidebar_resize_target: "leftSidebar" } do %>
+      <%= render "layouts/shared/sidebar_resize_handle", side: "left" %>
       <div class="px-4 h-full flex flex-col overflow-y-auto">
         <% if content_for?(:sidebar) %>
           <%= yield :sidebar %>
@@ -157,6 +159,23 @@ end %>
           </div>
 
           <div class="flex items-center gap-2">
+            <% if Current.family %>
+              <% unread_insights_count = Current.family.insights.active.count %>
+              <%# Prefetch disabled: /insights marks insights read on real visits
+                  and deliberately skips prefetch requests, so a prefetched
+                  response served on click would never clear the badge. %>
+              <%= link_to insights_path,
+                    class: "relative inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring",
+                    title: t("layouts.application.insights"),
+                    aria: { label: t("layouts.application.insights") },
+                    data: { turbo_prefetch: false } do %>
+                <%= icon("lightbulb", size: "sm") %>
+                <% if unread_insights_count.positive? %>
+                  <span class="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-inverse text-inverse text-[10px] font-medium flex items-center justify-center pointer-events-none"><%= unread_insights_count > 9 ? "9+" : unread_insights_count %></span>
+                <% end %>
+              <% end %>
+            <% end %>
+
             <button type="button"
                     class="inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring"
                     data-action="click->privacy-mode#toggle"
@@ -182,11 +201,13 @@ end %>
 
     <%# DESKTOP - Right sidebar %>
     <%= tag.div class: class_names(
-          "hidden lg:block h-full shrink-0 max-w-[400px] transition-all duration-300 border-divider",
+          "hidden lg:block relative h-full shrink-0 transition-all duration-300 border-divider",
           Current.user.show_ai_sidebar? ? [expanded_sidebar_class, "border-l"] : [collapsed_sidebar_class, "border-l-0"],
         ),
+        style: "max-width: var(--right-sidebar-width, 400px)",
         inert: !Current.user.show_ai_sidebar?,
-        data: { app_layout_target: "rightSidebar" } do %>
+        data: { app_layout_target: "rightSidebar", sidebar_resize_target: "rightSidebar" } do %>
+      <%= render "layouts/shared/sidebar_resize_handle", side: "right" %>
       <%= tag.div id: "chat-container", class: "relative h-full px-4 overflow-y-auto", data: { controller: "chat hotkey", turbo_permanent: true } do %>
         <div class="flex flex-col h-full justify-between shrink-0">
           <%= turbo_frame_tag chat_frame, src: chat_view_path(@chat), loading: "lazy", class: "h-full" do %>

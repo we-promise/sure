@@ -67,7 +67,7 @@ vi:
         failed: "Thất bại"
         no_usage_data: "Không tìm thấy dữ liệu sử dụng cho kỳ đã chọn"
         cost_estimates_title: "Về ước tính chi phí"
-        cost_estimates_description: "Chi phí được ước tính dựa trên bảng giá của OpenAI từ năm 2025. Chi phí thực tế có thể khác nhau. Giá tính trên 1 triệu token và thay đổi theo mô hình. Mô hình tùy chỉnh hoặc tự lưu trữ sẽ hiển thị \"N/A\" và không được tính vào tổng chi phí."
+        cost_estimates_description: "Chi phí được ước tính theo bảng giá công bố của nhà cung cấp, bao gồm bảng giá OpenAI tính đến tháng 7 năm 2026. Chi phí thực tế có thể khác nhau. Giá tính trên 1 triệu token và thay đổi theo mô hình. Mô hình tùy chỉnh hoặc tự lưu trữ sẽ hiển thị \"N/A\" và không được tính vào tổng chi phí."
     ai_prompts:
       show:
         page_title: Câu lệnh AI
@@ -107,6 +107,10 @@ vi:
         theme_dark: Tối
         theme_light: Sáng
         theme_system: Hệ thống
+        modals_title: Hộp thoại
+        modals_subtitle: Tùy chỉnh hành vi hộp thoại
+        disable_modal_click_outside_title: Giữ hộp thoại mở khi nhấp bên ngoài
+        disable_modal_click_outside_description: Ngăn hộp thoại đóng khi nhấp bên ngoài. Hữu ích để tránh vô tình mất các thay đổi chưa lưu.
         transactions_title: Giao dịch
         transactions_subtitle: Tùy chỉnh cách hiển thị giao dịch
         dashboard_title: Bảng điều khiển

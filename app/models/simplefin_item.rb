@@ -401,16 +401,34 @@ class SimplefinItem < ApplicationRecord
 
   # Check if the SimpleFin connection needs user attention
   def needs_attention?
-    requires_update? || stale_sync_status[:stale] || pending_account_setup?
+    setup_token_update_required? || stale_sync_status[:stale] || pending_account_setup?
   end
 
   # Get a summary of issues requiring attention
   def attention_summary
     issues = []
-    issues << "Connection needs update" if requires_update?
+    issues << "Connection needs update" if setup_token_update_required?
     issues << stale_sync_status[:message] if stale_sync_status[:stale]
     issues << "Accounts need setup" if pending_account_setup?
     issues
+  end
+
+  # A SimpleFIN setup token is only needed when the bridge access URL appears
+  # unusable. If the latest sync returned accounts, the access URL still works;
+  # any auth warning in that response belongs to an individual institution.
+  def setup_token_update_required?(latest_sync: nil)
+    return false unless requires_update?
+
+    latest = latest_sync || syncs.ordered.first
+    return true unless latest
+    return false if latest.in_progress?
+
+    stats = parse_sync_stats(latest.sync_stats).to_h.stringify_keys
+    stats["total_accounts"].to_i.zero?
+  end
+
+  def effective_status(latest_sync: nil)
+    setup_token_update_required?(latest_sync: latest_sync) ? status : "good"
   end
 
   # Get reconciled duplicates count from the last sync

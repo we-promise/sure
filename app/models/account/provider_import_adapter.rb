@@ -26,7 +26,7 @@ class Account::ProviderImportAdapter
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -285,7 +285,13 @@ class Account::ProviderImportAdapter
         detected_label = detect_activity_label(name, amount)
       end
 
-      # Auto-set kind for internal movements and contributions
+      # Determine the transaction kind. Activity-label and account-type classification
+      # take precedence; an explicit kind supplied by the provider is used as a fallback
+      # for the standard case. A provider such as Up flags internal transfers and
+      # round-ups (via relationships.transferAccount) and passes funds_movement, but a
+      # repayment imported onto a linked Loan/CreditCard account must stay
+      # loan_payment/cc_payment (a budgeted expense) rather than being reclassified, so
+      # the account-type branches below win over the provider hint.
       auto_kind = nil
       auto_category = nil
       if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
@@ -298,6 +304,7 @@ class Account::ProviderImportAdapter
       elsif account.accountable_type == "CreditCard" && amount.negative?
         auto_kind = "cc_payment"
       end
+      auto_kind ||= kind.presence
 
       # Set investment activity label, kind, and category if detected
       if entry.entryable.is_a?(Transaction)
@@ -877,6 +884,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
 
@@ -927,6 +935,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
       SQL
 
     # If merchant_id is provided, prioritize matching by merchant
@@ -1000,6 +1009,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
       SQL
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)

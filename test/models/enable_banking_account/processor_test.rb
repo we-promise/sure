@@ -42,7 +42,18 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     assert_nil result
   end
 
-  test "sets CC balance to available_credit when credit_limit is present" do
+  test "skips balance update when provider current_balance is nil" do
+    @account.update!(cash_balance: 987.65)
+    @enable_banking_account.update_columns(current_balance: nil)
+
+    EnableBankingAccount::Transactions::Processor.any_instance.expects(:process).once
+
+    assert_no_changes -> { @account.reload.cash_balance } do
+      EnableBankingAccount::Processor.new(@enable_banking_account).process
+    end
+  end
+
+  test "sets CC balance as absolute debt and tracks available_credit when limit is present" do
     cc_account = accounts(:credit_card)
     @enable_banking_account.update!(
       current_balance: 450.00,
@@ -53,13 +64,13 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
-    assert_equal 550.0, cc_account.reload.cash_balance
+    assert_equal 450.0, cc_account.reload.cash_balance
     if cc_account.accountable.respond_to?(:available_credit)
       assert_equal 550.0, cc_account.accountable.reload.available_credit
     end
   end
 
-  test "falls back to stored available_credit when credit_limit is absent" do
+  test "sets CC balance as absolute debt and keeps stored available_credit when limit absent" do
     cc_account = accounts(:credit_card)
     cc_account.accountable.update!(available_credit: 1000.0)
 
@@ -70,10 +81,11 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
 
     EnableBankingAccount::Processor.new(@enable_banking_account).process
 
-    assert_equal 700.0, cc_account.reload.cash_balance
+    assert_equal 300.0, cc_account.reload.cash_balance
+    assert_equal 1000.0, cc_account.accountable.reload.available_credit
   end
 
-  test "sets CC balance to raw outstanding when credit_limit is absent" do
+  test "sets CC balance to absolute debt when both limit and stored available_credit are absent" do
     cc_account = accounts(:credit_card)
     cc_account.accountable.update!(available_credit: nil)
 

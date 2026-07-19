@@ -31,8 +31,7 @@ class ExchangeRatePairTest < ActiveSupport::TestCase
         provider_name: "twelve_data"
       )
 
-      Setting.exchange_rate_provider = "yahoo_finance"
-      refreshed = ExchangeRatePair.for_pair(from: "USD", to: "EUR")
+      refreshed = ExchangeRatePair.for_pair(from: "USD", to: "EUR", provider_name: "yahoo_finance")
 
       assert_nil refreshed.first_provider_rate_on
       assert_equal "yahoo_finance", refreshed.provider_name

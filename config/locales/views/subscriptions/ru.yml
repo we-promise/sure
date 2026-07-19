@@ -1,0 +1,27 @@
+---
+ru:
+  subscriptions:
+    create:
+      trial_already_used: Вы уже начали или завершили пробный период. Пожалуйста,
+        обновитесь, чтобы продолжить.
+      welcome: Добро пожаловать в Sure!
+    self_hosted_alert: "%{product_name} недоступен в режиме с собственным хостингом."
+    success:
+      contribution_failed: Произошла ошибка при обработке вашего взноса. Пожалуйста,
+        попробуйте снова.
+      welcome_with_contribution: Добро пожаловать в Sure! Ваша поддержка очень ценна.
+    upgrade:
+      account_settings: Настройки счёта
+      already_contributing: Вы уже поддерживаете нас. Спасибо!
+      contribute_and_support_sure: Поддержите и помогите Sure
+      cta: Продолжайте поддерживать разработку этого кода!
+      header:
+        support: Поддержка
+        sure: Sure
+        today: сегодня
+      page_title: Обновление
+      redirect_to_stripe: На следующем шаге вы будете перенаправлены на Stripe, который
+        обрабатывает наши кредитные карты.
+      sign_out: Выйти
+      trial_over: Ваш пробный период завершён
+      trialing: Ваши данные будут удалены через %{days} дней

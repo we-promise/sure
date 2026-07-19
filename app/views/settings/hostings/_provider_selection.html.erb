@@ -15,7 +15,8 @@
                       [
                         [t(".providers.twelve_data"), "twelve_data"],
                         [t(".providers.yahoo_finance"), "yahoo_finance"],
-                        [t(".providers.moex_public"), "moex_public"]
+                        [t(".providers.moex_public"), "moex_public"],
+                        [t(".providers.frankfurter"), "frankfurter"]
                       ],
                       { label: t(".exchange_rate_provider_label") },
                       {
@@ -59,7 +60,7 @@
             <input type="checkbox"
                    name="setting[securities_providers][]"
                    value="<%= value %>"
-                   class="rounded border-primary text-primary focus:ring-primary"
+                   class="checkbox checkbox--light"
                    <%= "checked" if enabled_providers.include?(value) %>
                    <%= "disabled" if disabled %>
                    data-auto-submit-form-target="auto">

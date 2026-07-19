@@ -2,7 +2,10 @@
 en:
   layouts:
     application:
+      insights: Insights
       privacy_mode: Toggle privacy mode
+      resize_left_sidebar: Resize the accounts sidebar
+      resize_right_sidebar: Resize the assistant sidebar
       skip_to_main: Skip to main content
       nav:
         assistant: Assistant

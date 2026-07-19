@@ -277,6 +277,9 @@ en:
       max_rows_exceeded: "Your import exceeds the maximum row count of %{max}."
     revert:
       started: "Import is reverting in the background."
+    cancel:
+      cancelled: "Import marked as failed. You can try again from the import page."
+      not_cancellable: "This import can't be marked as failed right now — its job may still be running. Try again once it has been inactive for an hour."
     apply_template:
       template_applied: "Template applied."
       no_template_found: "No template found, please manually configure your import."
@@ -376,6 +379,8 @@ en:
           confirm_revert: This will delete transactions that were imported, but you will still be able to review and re-import your data at any time.
           delete: Delete
           view: View
+          mark_failed: Mark as failed
+          confirm_mark_failed: This import has been inactive for a while and its background job was likely interrupted. Mark it as failed so you can try again? No imported data is kept.
       empty: No imports yet.
     new:
       description: Import from a financial tool or upload raw data files.
@@ -429,6 +434,7 @@ en:
       back_to_imports: Back to imports
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
+      presumed_lost: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
     document_types:
       bank_statement: Bank Statement
       credit_card_statement: Credit Card Statement

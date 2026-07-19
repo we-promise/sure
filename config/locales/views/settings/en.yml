@@ -67,7 +67,7 @@ en:
         failed: "Failed"
         no_usage_data: "No usage data found for the selected period"
         cost_estimates_title: "About Cost Estimates"
-        cost_estimates_description: "Costs are estimated based on OpenAI's pricing as of 2025. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
+        cost_estimates_description: "Costs are estimated from published provider pricing, including OpenAI pricing as of July 2026. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
     ai_prompts:
       show:
         page_title: AI Prompts
@@ -107,6 +107,10 @@ en:
         theme_dark: Dark
         theme_light: Light
         theme_system: System
+        modals_title: Modals
+        modals_subtitle: Customize modal behavior
+        disable_modal_click_outside_title: Keep modals open on outside click
+        disable_modal_click_outside_description: Prevent modals from closing when clicking outside. Useful to avoid accidentally losing unsaved changes.
         transactions_title: Transactions
         transactions_subtitle: Customize how transactions are displayed
         dashboard_title: Dashboard
@@ -262,7 +266,7 @@ en:
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
-      api_key_label: API Key
+      api_key_label: API Keys
       payment_label: Payment
       categories_label: Categories
       feedback_label: Feedback
@@ -288,7 +292,7 @@ en:
       transactions_section_title: Transactions
       users_label: Users
       whats_new_label: What's new
-      api_keys_label: API Key
+      api_keys_label: API Keys
       appearance_label: Appearance
       bank_sync_label: Bank sync
       debug_label: Debug
@@ -351,6 +355,7 @@ en:
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
+        wise: Sync your Wise multi-currency balances and international transfers automatically.
         mercury: Sync your Mercury business banking accounts automatically.
         brex: Sync Brex cash and corporate card activity with read-only access.
         coinbase: Import your Coinbase crypto holdings and track performance.
@@ -358,6 +363,7 @@ en:
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
+        questrade: Sync your Questrade investment accounts directly via the Questrade API.
         indexa_capital: Track your Indexa Capital automated investment portfolio.
         sophtron: Connect US & Canadian banks and utilities.
         plaid: Connect thousands of US financial institutions via Plaid.

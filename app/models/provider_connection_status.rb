@@ -17,7 +17,9 @@ class ProviderConnectionStatus
     { key: "mercury", type: "MercuryItem", association: :mercury_items, accounts: :mercury_accounts },
     { key: "brex", type: "BrexItem", association: :brex_items, accounts: :brex_accounts },
     { key: "sophtron", type: "SophtronItem", association: :sophtron_items, accounts: :sophtron_accounts },
-    { key: "indexa_capital", type: "IndexaCapitalItem", association: :indexa_capital_items, accounts: :indexa_capital_accounts }
+    { key: "indexa_capital", type: "IndexaCapitalItem", association: :indexa_capital_items, accounts: :indexa_capital_accounts },
+    { key: "questrade", type: "QuestradeItem", association: :questrade_items, accounts: :questrade_accounts },
+    { key: "wise", type: "WiseItem", association: :wise_items, accounts: :wise_accounts }
   ].freeze
 
   class << self
@@ -85,8 +87,8 @@ class ProviderConnectionStatus
       provider: provider[:key],
       provider_type: provider[:type],
       name: item_value(:name, provider[:key].humanize),
-      status: item_value(:status),
-      requires_update: item_boolean(:requires_update?),
+      status: item_status,
+      requires_update: item_requires_update?,
       credentials_configured: credentials_configured?,
       scheduled_for_deletion: item_boolean(:scheduled_for_deletion?),
       pending_account_setup: pending_account_setup?,
@@ -104,6 +106,18 @@ class ProviderConnectionStatus
 
     def credentials_configured?
       item_boolean(:credentials_configured?)
+    end
+
+    def item_status
+      return item.effective_status(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
+
+      item_value(:status)
+    end
+
+    def item_requires_update?
+      return item.setup_token_update_required?(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
+
+      item_boolean(:requires_update?)
     end
 
     def pending_account_setup?

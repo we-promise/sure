@@ -235,7 +235,9 @@ class InvestmentStatementTest < ActiveSupport::TestCase
   end
 
   test "totals aggregate directly from trade entries" do
-    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+    # Use the full current month: a month-to-date period collapses to a single
+    # day on the 1st, which would drop the start_date + 1.day trade below.
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
     shared_user = users(:new_email)
     investment_account = create_investment_account(balance: 500)
     hidden_account = create_investment_account(balance: 500)
@@ -284,7 +286,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         date: date,
         currency: account.currency,
         entryable: Trade.new(
-          security: Security.create!(ticker: "T#{SecureRandom.hex(2)}", name: "Test Security"),
+          security: Security.create!(ticker: "T#{SecureRandom.hex(8)}", name: "Test Security"),
           qty: qty,
           price: amount.to_d.abs / qty.to_d.abs,
           currency: account.currency

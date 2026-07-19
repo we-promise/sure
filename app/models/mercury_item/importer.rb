@@ -209,25 +209,54 @@ class MercuryItem::Importer
           begin
             existing_transactions = mercury_account.raw_transactions_payload.to_a
 
-            # Build set of existing transaction IDs for efficient lookup
-            existing_ids = existing_transactions.map do |tx|
-              tx.with_indifferent_access[:id]
-            end.to_set
+            # Build a map of existing transaction IDs for efficient lookup
+            existing_by_id = existing_transactions.index_by { |tx| tx.with_indifferent_access[:id] }
 
-            # Filter to ONLY truly new transactions (skip duplicates)
-            # Transactions are immutable on the bank side, so we don't need to update them
-            new_transactions = transactions_data[:transactions].select do |tx|
-              next false unless tx.is_a?(Hash)
+            new_transactions = []
+            updated_transactions = []
 
-              tx_id = tx.with_indifferent_access[:id]
-              tx_id.present? && !existing_ids.include?(tx_id)
+            transactions_data[:transactions].each do |tx|
+              next unless tx.is_a?(Hash)
+
+              tx_data = tx.with_indifferent_access
+              tx_id   = tx_data[:id]
+              next unless tx_id.present?
+
+              if existing_by_id.key?(tx_id)
+                existing = existing_by_id[tx_id].with_indifferent_access
+                # Mercury reuses the same transaction ID when a pending entry posts.
+                # Replace the stored copy so the processor clears the pending flag.
+                if existing[:status] == "pending" && tx_data[:status] != "pending"
+                  existing_by_id[tx_id] = tx
+                  updated_transactions << tx_id
+                end
+              else
+                new_transactions << tx
+              end
             end
 
-            if new_transactions.any?
-              Rails.logger.info "MercuryItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions_data[:transactions].count - new_transactions.count} duplicates skipped) for account #{mercury_account.account_id}"
-              mercury_account.upsert_mercury_transactions_snapshot!(existing_transactions + new_transactions)
+            if new_transactions.any? || updated_transactions.any?
+              merged = existing_by_id.values + new_transactions
+              DebugLogEntry.capture(
+                category: "provider_sync",
+                level: "info",
+                message: "Storing #{new_transactions.count} new, #{updated_transactions.count} status-updated transactions for account #{mercury_account.account_id}",
+                source: self.class.name,
+                provider_key: "mercury",
+                family: mercury_item.family,
+                metadata: { account_id: mercury_account.account_id, new_count: new_transactions.count, updated_count: updated_transactions.count }
+              )
+              mercury_account.upsert_mercury_transactions_snapshot!(merged)
             else
-              Rails.logger.info "MercuryItem::Importer - No new transactions to store (all #{transactions_data[:transactions].count} were duplicates) for account #{mercury_account.account_id}"
+              DebugLogEntry.capture(
+                category: "provider_sync",
+                level: "info",
+                message: "No new or updated transactions for account #{mercury_account.account_id}",
+                source: self.class.name,
+                provider_key: "mercury",
+                family: mercury_item.family,
+                metadata: { account_id: mercury_account.account_id }
+              )
             end
           rescue => e
             Rails.logger.error "MercuryItem::Importer - Failed to store transactions for account #{mercury_account.account_id}: #{e.message}"

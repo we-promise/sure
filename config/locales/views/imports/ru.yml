@@ -1,0 +1,531 @@
+---
+ru:
+  import:
+    cleans:
+      show:
+        all_rows: Все строки
+        data_cleaned: Ваши данные очищены
+        description: Редактируйте ваши данные в таблице ниже. Красные ячейки недействительны.
+        error_rows: Строки с ошибками
+        errors_notice: У вас есть ошибки в данных. Наведите курсор на ошибку, чтобы
+          увидеть детали.
+        errors_notice_mobile: У вас есть ошибки в данных. Нажмите на подсказку ошибки,
+          чтобы увидеть детали.
+        next_step: Следующий шаг
+        not_configured: Пожалуйста, настройте импорт перед продолжением.
+        title: Очистите ваши данные
+    configurations:
+      account_import:
+        apply_configuration: Применить настройки
+        balance: Баланс
+        balance_date: Дата баланса
+        currency: Валюта
+        date_format: Формат даты
+        default: По умолчанию
+        entity_type: Тип сущности
+        leave_empty: Оставить пустым
+        name: Имя
+        select_format: Выберите формат
+      actual_import:
+        account_label: Счёт (необязательно)
+        amount_label: Сумма
+        apply_configuration: Применить настройки
+        category_label: Категория (необязательно)
+        date_format_label: Формат даты
+        date_label: Дата
+        incomes_are_negative: Доходы отрицательные
+        incomes_are_positive: Доходы положительные
+        leave_empty: Оставить пустым
+        name_label: Получатель (необязательно)
+        notes_label: Заметки (необязательно)
+        preconfigured_notice: Мы предварительно настроили ваш импорт Actual Budget.
+          Пожалуйста, перейдите к следующему шагу.
+        signage_convention_label: Соглашение о знаках
+      category_import:
+        button_label: Продолжить
+        description: Загрузите простой CSV файл (как тот, который мы генерируем при
+          экспорте ваших данных). Мы автоматически сопоставим колонки для вас.
+        instructions: Нажмите Продолжить, чтобы обработать CSV и перейти к очистке данных.
+      merchant_import:
+        button_label: Продолжить
+        description: Загрузите CSV-файл с продавцами. Мы автоматически сопоставим столбцы.
+        instructions: Нажмите Продолжить, чтобы обработать CSV и перейти к очистке данных.
+      mint_import:
+        date_format_label: Формат даты
+      rule_import:
+        description: Настройте импорт правил. Правила будут созданы или обновлены
+          на основе данных CSV.
+        process_button: Обработать правила
+        process_help: Нажмите кнопку ниже, чтобы обработать ваш CSV и создать строки
+          правил.
+      show:
+        description: Выберите колонки, которые соответствуют каждому полю в вашем
+          CSV.
+        title: Настройте ваш импорт
+      trade_import:
+        account_label: Счёт
+        apply_configuration: Применить настройки
+        buys_are_negative: Покупки отрицательные
+        buys_are_positive: Покупки положительные
+        currency_label: Валюта
+        date_format_label: Формат даты
+        date_label: Дата
+        default: По умолчанию
+        format_label: Формат
+        leave_empty: Оставить пустым
+        name_label: Имя
+        no_security_provider_warning: Поставщик цен на ценные бумаги не настроен.
+          Ваши импорты торгов будут работать, но Sure не будет заполнять историю цен.
+          Пожалуйста, перейдите в настройки, чтобы настроить это.
+        note_label: Заметка
+        price_label: Цена
+        quantity_label: Количество
+        select_column: Выберите колонку
+        select_format: Выберите формат
+        stock_exchange_code_label: Код биржи
+        ticker_label: Тикер
+      transaction_import:
+        account_label: Счёт
+        amount_label: Сумма
+        amount_type_label: Тип суммы
+        amount_type_strategy_label: Стратегия типа суммы
+        apply_configuration: Применить настройки
+        as_amount_type_column: как колонку типа суммы
+        as_identifier_value: как идентификатор
+        category_label: Категория
+        currency_label: Валюта
+        date_format_label: Формат даты
+        date_label: Дата
+        default: По умолчанию
+        expense_outflow: Расход (выбытие)
+        format_label: Формат
+        income_inflow: Доход (поступление)
+        incomes_are_negative: Доходы отрицательные
+        incomes_are_positive: Доходы положительные
+        leave_empty: Оставить пустым
+        name_label: Имя
+        notes_label: Заметки
+        rows_to_skip_label: Пропустить первые n строк
+        select_column: Выберите колонку
+        select_convention: Выберите соглашение
+        select_format: Выберите формат
+        select_strategy: Выберите стратегию
+        select_type: Выберите тип
+        select_value: Выберите значение
+        set: Установить
+        tags_label: Теги
+        treat_as_html: Рассматривать "<span class="font-medium">%{value}</span>" как
+      update:
+        success: Импорт успешно настроен.
+      ynab_import:
+        account_label: Счёт (необязательно)
+        amount_notice: Суммы автоматически определяются по столбцам Outflow и Inflow.
+        apply_configuration: Применить настройки
+        category_label: Категория (необязательно)
+        date_format_label: Формат даты
+        date_label: Дата
+        leave_empty: Оставить пустым
+        name_label: Получатель (необязательно)
+        notes_label: Примечание (необязательно)
+        preconfigured_notice: Мы уже настроили импорт YNAB за вас. Перейдите к следующему шагу.
+    confirms:
+      mappings:
+        create_account: Создать счёт
+        csv_mapping_label: "%{mapping} в CSV"
+        next: Далее
+        no_accounts: У вас ещё нет счетов. Пожалуйста, создайте счёт, который мы можем
+          использовать для (неприсвоенных) строк в вашем CSV или вернитесь к шагу
+          очистки и укажите имя счёта, которое мы можем использовать.
+        rows_label: Строки
+        sure_mapping_label: "%{mapping} в %{product_name}"
+        unassigned_account: Нужно создать новый счёт для неприсвоенных строк?
+      show:
+        account_mapping_description: Назначьте все счета из импортированного файла
+          существующим счетам в %{product_name}. Вы также можете добавить новые счета
+          или оставить их без категории.
+        account_mapping_title: Назначьте ваши счета
+        account_type_mapping_description: Назначьте все типы счетов из вашего импортированного
+          файла типам %{product_name}
+        account_type_mapping_title: Назначьте ваши типы счетов
+        category_mapping_description: Назначьте все категории из вашего импортированного
+          файла существующим категориям %{product_name}. Вы также можете добавить
+          новые категории или оставить их некатегоризированными.
+        category_mapping_title: Назначьте ваши категории
+        invalid_data: У вас есть недействительные данные, пожалуйста, исправьте их,
+          пока все ошибки не будут устранены
+        tag_mapping_description: Назначьте все теги из вашего импортированного файла
+          существующим тегам %{product_name}. Вы также можете добавить новые теги
+          или оставить их некатегоризированными.
+        tag_mapping_title: Назначьте ваши теги
+      sure_import:
+        cancel: Отмена
+        description: Проверьте данные, которые будут импортированы из вашего экспортного
+          файла.
+        empty_summary: Мы не смогли найти импортируемые записи в этом файле. Он может
+          быть пустым, или строки могут не соответствовать ожидаемому формату экспорта
+          (каждая строка должна быть JSON объектом с ключами "type" и "data", используя
+          поддерживаемые этим импортом типы).
+        publish_button: Начать импорт
+        summary: Сводка импорта
+        title: Подтвердите ваш импорт
+    qif_category_selections:
+      show:
+        categories_found:
+          few: Найдено %{count} категории
+          many: Найдено %{count} категорий
+          one: Найдена 1 категория
+          other: Найдено %{count} категории
+        categories_heading: Категории
+        category_name_col: Название категории
+        description: Проверьте обнаруженный формат даты, затем выберите, какие категории
+          и теги из вашего QIF файла перенести в %{product_name}.
+        empty_state_primary: В этом QIF файле не найдено категорий или тегов.
+        empty_state_secondary: Все операции будут импортированы без категорий или
+          тегов.
+        split_badge: разделение
+        split_warning_description: Этот QIF файл содержит разделённые операции. Разделения
+          пока не поддерживаются, поэтому каждая разделённая операция будет импортирована
+          как одна операция с полной суммой и без категории. Индивидуальные разделения
+          не будут сохранены.
+        split_warning_title: Обнаружены разделённые операции
+        submit: Продолжить к обзору
+        tag_name_col: Название тега
+        tags_found:
+          few: Найдено %{count} тега
+          many: Найдено %{count} тегов
+          one: Найден 1 тег
+          other: Найдено %{count} тега
+        tags_heading: Теги
+        title: Настройка и выбор
+        transactions_col: Операции
+        txn_count:
+          few: "%{count} операции"
+          many: "%{count} операций"
+          one: 1 операция
+          other: "%{count} операции"
+      update:
+        success: Категории и теги сохранены.
+    uploads:
+      handle_qif_upload:
+        qif_uploaded: Файл Qif загружен
+      show:
+        account_optional_label: Счёт (необязательно)
+        browse: Обзор
+        copy_paste_tab: Копировать и вставить
+        csv_file_prompt: чтобы добавить ваш CSV файл сюда
+        csv_invalid: Должен быть действительный CSV с заголовками и хотя бы одной
+          строкой данных
+        description: Вставьте или загрузите ваш CSV файл ниже. Пожалуйста, ознакомьтесь
+          с инструкциями в таблице ниже перед началом.
+        download_sample_csv: Скачать пример CSV
+        drop_csv_subtitle: Ваш файл будет загружен автоматически
+        drop_csv_title: Перетащите CSV для загрузки
+        instructions_1: Ниже приведён пример CSV с колонками, доступными для импорта.
+        instructions_2: Ваш CSV должен иметь строку заголовка
+        instructions_3: Вы можете назвать ваши колонки как угодно. Вы сопоставите
+          их на следующем шаге.
+        instructions_4: Колонки, отмеченные звёздочкой (*), являются обязательными.
+        instructions_5: Без запятых, символов валют и скобок в числах.
+        multi_account_import: Импорт нескольких счетов
+        paste_csv_placeholder: Вставьте содержимое вашего CSV файла здесь
+        qif_account_label: Счёт
+        qif_account_placeholder: Выберите счёт…
+        qif_description: Выберите счёт, к которому относится этот QIF файл, затем
+          загрузите ваш .qif экспорт из Quicken.
+        qif_file_hint: только .qif файлы
+        qif_file_prompt: чтобы добавить ваш QIF файл сюда
+        qif_submit: Загрузить QIF
+        qif_title: Загрузить QIF файл
+        title: Импортируйте ваши данные
+        to_see_format: чтобы увидеть требуемый формат CSV
+        upload_csv_button: Загрузить CSV
+        upload_csv_tab: Загрузить CSV
+      sure_import:
+        browse: Обзор
+        browse_hint: чтобы добавить ваш all.ndjson файл сюда
+        description: Загрузите файл all.ndjson из вашего экспорта данных, чтобы восстановить
+          ваши счета, операции, категории и многое другое.
+        drop_subtitle: Ваш файл будет загружен автоматически
+        drop_title: Перетащите NDJSON для загрузки
+        hint_html: Загрузите <strong>all.ndjson</strong> файл из вашего ZIP экспорта
+          данных
+        ndjson_invalid: Должен быть действительный NDJSON с хотя бы одной записью
+        title: Импорт из экспорта
+        upload_button: Загрузить NDJSON
+      update:
+        qif_uploaded: QIF файл успешно загружен.
+  imports:
+    apply_template:
+      no_template_found: Шаблон не найден, пожалуйста, настройте ваш импорт вручную.
+      template_applied: Шаблон применён.
+    column_labels:
+      account: Счёт
+      amount: Сумма
+      category: Категория
+      category_color: Цвет
+      category_icon: Иконка Lucide
+      category_parent: Родительская категория
+      currency: Валюта
+      date: Дата
+      entity_type: Тип
+      exchange: Биржа
+      merchant_color: Цвет
+      merchant_website: Сайт
+      name: Имя
+      notes: Заметки
+      price: Цена
+      qty: Количество
+      tags: Теги
+      ticker: Тикер
+    create:
+      csv_uploaded: CSV успешно загружен.
+      document_provider_not_configured: Хранилище векторов для загрузки документов
+        не настроено.
+      document_too_large: Файл документа слишком большой. Максимальный размер %{max_size}MB.
+      document_upload_failed: Не удалось загрузить документ в хранилище векторов.
+        Пожалуйста, попробуйте снова.
+      document_uploaded: Документ успешно загружен.
+      duplicate_pdf_unavailable: Этот PDF уже сохранён как выписка, к которой у вас
+        нет доступа.
+      file_too_large: Файл слишком большой. Максимальный размер %{max_size}MB.
+      invalid_document_file_type: Неверный тип файла документа для активного хранилища
+        векторов.
+      invalid_file_type: Неверный тип файла. Пожалуйста, загрузите CSV файл.
+      invalid_ndjson_file_type: Неверный тип или формат файла. Пожалуйста, загрузите
+        действительный .ndjson или .json файл экспорта.
+      invalid_pdf: Загруженный файл не является действительным PDF.
+      ndjson_uploaded: NDJSON файл успешно загружен.
+      pdf_processing: Ваш PDF обрабатывается. Вы получите электронное письмо, когда
+        анализ будет завершён.
+      pdf_too_large: PDF файл слишком большой. Максимальный размер %{max_size}MB.
+    date_format:
+      description: Формат даты был автоматически определён из вашего файла. Измените
+        его, если даты выглядят некорректно.
+      error_description: Ни один из поддерживаемых форматов даты не смог разобрать
+        даты в этом файле. Пожалуйста, проверьте, что файл содержит действительные
+        записи дат.
+      error_title: Не удалось определить формат даты
+      heading: Формат даты
+      preview: Первая разобранная дата
+    destroy:
+      deleted: Ваш импорт был удалён.
+    document_types:
+      bank_statement: Выписка из банка
+      contract: Контракт
+      credit_card_statement: Выписка по кредитной карте
+      financial_document: Финансовый документ
+      investment_statement: Инвестиционная выписка
+      other: Другой документ
+      unknown: Неизвестный документ
+    dry_run_resources:
+      accounts: Счета
+      balances: Балансы
+      budget_categories: Категории бюджета
+      budgets: Бюджеты
+      categories: Категории
+      holdings: Активы
+      merchants: Продавцы
+      recurring_transactions: Регулярные операции
+      rejected_transfers: Отклонённые переводы
+      rules: Правила
+      tags: Теги
+      trades: Сделки
+      transactions: Операции
+      transfers: Переводы
+      valuations: Оценки
+    empty:
+      message: Импорты не найдены.
+    errors:
+      custom_column_requires_inflow: Импорт пользовательских колонок требует выбора
+        колонки поступлений
+    failure:
+      description: Пожалуйста, проверьте формат вашего файла, наличие ошибок и заполненность
+        всех обязательных полей, затем вернитесь и попробуйте снова.
+      title: Импорт не удался
+      try_again: Попробовать снова
+    importing:
+      back_to_dashboard: Назад к панели
+      check_status: Проверить статус
+      description: Ваш импорт в процессе. Проверьте меню импорта для обновлений статуса
+        или нажмите 'Проверить статус', чтобы обновить страницу. Вы можете продолжать
+        использовать приложение.
+      title: Импорт в процессе
+    index:
+      new: Новый импорт
+      title: Импорты
+    mapping_labels:
+      account: Счёт
+      account_type: Тип счёта
+      category: Категория
+      tag: Тег
+    new:
+      coming_soon: Скоро
+      description: Импорт из финансового инструмента или загрузка сырых данных.
+      import_accounts: Импорт счетов
+      import_actual: Импорт из Actual Budget
+      import_categories: Импорт категорий
+      import_file: Импорт документа
+      import_file_description: Анализ на основе ИИ для PDF и загрузка файлов с возможностью
+        поиска
+      import_merchants: Импорт продавцов
+      import_mint: Импорт из Mint
+      import_portfolio: Импорт инвестиций
+      import_qif: Импорт из Quicken (QIF)
+      import_rules: Импорт правил
+      import_sure: Импорт из Sure
+      import_sure_description: Полный экспорт .ndjson файл
+      import_transactions: Импорт операций
+      import_ynab: Импорт из YNAB
+      requires_account: Сначала импортируйте счета, чтобы разблокировать эту опцию.
+      resume: Возобновить %{type}
+      sources: Источники
+      tab_financial_tools: Финансовые инструменты и файлы
+      tab_raw_data: Сырые данные
+      title: Новый импорт
+    pdf_import:
+      back_to_dashboard: Назад к панели
+      back_to_imports: Назад к импортам
+      check_status: Проверить статус
+      complete_description: Мы проанализировали ваш PDF и вот что мы нашли.
+      complete_title: Документ проанализирован
+      create_account: Создать счёт
+      delete_import: Удалить импорт
+      document_type_label: Тип документа
+      email_sent_notice: Вам отправлено электронное письмо с дальнейшими шагами.
+      failed_description: Мы не смогли обработать ваш PDF документ. Пожалуйста, попробуйте
+        снова или свяжитесь с поддержкой.
+      failed_title: Обработка не удалась
+      no_accounts: Нет доступных счетов. Пожалуйста, сначала создайте счёт.
+      processing_description: Мы анализируем ваш документ с помощью ИИ. Это может
+        занять некоторое время. Вы получите электронное письмо, когда анализ будет
+        завершён.
+      processing_failed_generic: 'Обработка не удалась: %{error}'
+      processing_failed_with_message: "%{message}"
+      processing_title: Обработка вашего PDF
+      publish_transactions:
+        few: Опубликовать %{count} операции
+        many: Опубликовать %{count} операций
+        one: Опубликовать %{count} операцию
+        other: Опубликовать %{count} операции
+      ready_for_review_description: Мы извлекли %{count} операций из вашей выписки.
+        Проверьте и опубликуйте их, чтобы добавить на ваш счёт.
+      ready_for_review_title: Готово к обзору
+      review_transactions: Проверить операции
+      save_account: Сохранить
+      select_account: Импортировать на счёт
+      select_account_hint: Выберите, на какой счёт импортировать эти операции.
+      select_account_placeholder: Выберите счёт...
+      select_account_to_continue: Пожалуйста, выберите счёт выше, чтобы продолжить.
+      source_statement: Исходная выписка
+      summary_label: Сводка
+      transactions_extracted: Извлечённые операции
+      transactions_extracted_count:
+        few: "%{count} операции"
+        many: "%{count} операций"
+        one: "%{count} операция"
+        other: "%{count} операции"
+      try_again: Попробовать снова
+      unknown_document_type: Неизвестный
+      unknown_state_description: Этот импорт находится в неожиданном состоянии. Пожалуйста,
+        вернитесь к импортам.
+      unknown_state_title: Неизвестное состояние
+    publish:
+      max_rows_exceeded: Ваш импорт превышает максимальное количество строк в %{max}.
+      started: Ваш импорт начался в фоновом режиме.
+    ready:
+      back_to_imports: Назад к импортам
+      description: Вот сводка новых элементов, которые будут добавлены на ваш счёт
+        после публикации этого импорта.
+      empty_summary: Мы не смогли найти импортируемые записи в этом файле. Он может
+        быть пустым, или строки могут не соответствовать ожидаемому формату экспорта
+        (каждая строка должна быть JSON объектом с ключами "type" и "data", используя
+        поддерживаемые этим импортом типы).
+      publish_import: Опубликовать импорт
+      summary_count_label: Количество
+      summary_item_label: Элемент
+      title: Подтвердите ваши данные импорта
+    revert:
+      started: Импорт отменяется в фоновом режиме.
+    revert_failure:
+      description: Пожалуйста, попробуйте снова
+      title: Отмена импорта не удалась
+      try_again: Попробовать снова
+    show:
+      finalize_mappings: Пожалуйста, завершите сопоставления перед продолжением.
+      finalize_upload: Пожалуйста, завершите загрузку вашего файла.
+    steps:
+      clean: Очистка
+      configure: Настройка
+      confirm: Подтверждение
+      map: Сопоставление
+      progress: Шаг %{step} из %{total}
+      select: Выбор
+      upload: Загрузка
+    success:
+      back_to_dashboard: Назад к панели
+      description: Ваши импортированные данные успешно добавлены в приложение и готовы
+        к использованию.
+      title: Импорт успешен
+      verification:
+        checked: Проверено
+        mismatches: Несоответствия
+        status:
+          failed: Не удалось
+          matched: Совпадает
+          mismatch: Несоответствие
+          not_verified: Не проверено
+          reverted: Отменено
+        title: Проверка обратного чтения
+    table:
+      empty: Импортов пока нет.
+      header:
+        actions: Действия
+        date: Дата
+        operation: Операция
+        status: Статус
+      row:
+        actions:
+          confirm_revert: Это удалит операции, которые были импортированы, но вы всё
+            ещё сможете просмотреть и повторно импортировать ваши данные в любое время.
+          delete: Удалить
+          revert: Отменить
+          view: Просмотр
+        status:
+          complete: Завершено
+          failed: Не удалось
+          in_progress: В процессе
+          revert_failed: Отмена не удалась
+          reverting: Отмена
+          uploading: Обработка строк
+        type_labels:
+          account_import: Счёт
+          actual_import: Actual
+          category_import: Категория
+          document_import: Документ
+          merchant_import: Продавец
+          mint_import: Mint
+          pdf_import: PDF
+          qif_import: QIF
+          rule_import: Правило
+          sure_import: Sure
+          trade_import: Сделка
+          transaction_import: Операция
+          ynab_import: YNAB
+      title: Импорты
+    type_labels:
+      account_import: Импорт счетов
+      actual_import: Импорт из Actual
+      category_import: Импорт категорий
+      document_import: Импорт документов
+      merchant_import: Импорт продавцев
+      mint_import: Импорт из Mint
+      pdf_import: Импорт PDF
+      qif_import: Импорт QIF
+      rule_import: Импорт правил
+      sure_import: Импорт Sure
+      trade_import: Импорт сделок
+      transaction_import: Импорт операций
+      ynab_import: Импорт из YNAB
+    update:
+      account_saved: Счёт сохранён.
+      invalid_account: Счёт не найден.

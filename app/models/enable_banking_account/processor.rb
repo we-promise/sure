@@ -37,33 +37,48 @@ class EnableBankingAccount::Processor
       end
 
       account = enable_banking_account.current_account
-      balance = enable_banking_account.current_balance || 0
+      balance = enable_banking_account.current_balance
+
+      # A nil current_balance means this sync's balance fetch did not succeed:
+      # upsert_enable_banking_snapshot! clears it and only a successful
+      # balance fetch repopulates it. Coercing nil to 0 here would persist a
+      # zero balance (and a zero current_anchor valuation) onto a healthy
+      # account whenever the provider has a transient failure, so leave the
+      # account untouched instead.
+      if balance.nil?
+        Rails.logger.warn("EnableBankingAccount::Processor - No balance available for enable_banking_account #{enable_banking_account.id} (balance fetch failed or not yet run), skipping account update")
+        return
+      end
+
       available_credit = nil
 
       # For liability accounts, ensure balance sign is correct.
-      # DELIBERATE UX DECISION: For CreditCards, we display the available credit (credit_limit - outstanding debt)
-      # rather than the raw outstanding debt. Do not revert this behavior, as future maintainers should understand
-      # users expect to see how much credit they have left rather than their debt balance.
-      # The 'available_credit' calculation overrides the 'balance' variable.
-      if account.accountable_type == "Loan"
-        balance = balance.abs
-      elsif account.accountable_type == "CreditCard"
-        if enable_banking_account.credit_limit.present?
-          available = enable_banking_account.credit_limit - balance.abs
-          available_credit = [ available, 0 ].max
-          balance = available_credit
-          unless account.accountable.present?
-            Rails.logger.warn "EnableBankingAccount::Processor - CreditCard accountable missing for account #{account.id}"
+      # For CreditCards, we expect the main balance to reflect the absolute outstanding debt
+      # rather than available credit, to ensure net worth calculations handle the liability accurately.
+      # Any available credit metrics (from limits) are instead stored safely as metadata on the Accountable.
+      # Loans and CreditCards must always represent their outstanding balance as an absolute
+      # positive debt amount, regardless of the API's reported sign, to ensure the BalanceSheet
+      # calculates net worth accurately.
+      if account.accountable_type == "Loan" || account.accountable_type == "CreditCard"
+        # Standardize the raw balance to an absolute positive debt
+        outstanding_debt = balance.abs
+
+        # Override the top-level balance variable intended for the account
+        balance = outstanding_debt
+
+        if account.accountable_type == "CreditCard"
+          if enable_banking_account.credit_limit.present?
+            # Compute available credit based on the strictly positive outstanding debt
+            available = enable_banking_account.credit_limit - outstanding_debt
+            available_credit = [ available, 0 ].max
+            unless account.accountable.present?
+              Rails.logger.warn "EnableBankingAccount::Processor - CreditCard accountable missing for account #{account.id}"
+            end
+          elsif account.accountable&.available_credit.present?
+            # Fallback: no credit_limit from API — compute it using available_credit defined at account level
+            Rails.logger.info "Using stored available_credit fallback for account #{account.id}"
+            available_credit = account.accountable.available_credit
           end
-        elsif account.accountable&.available_credit.present?
-          # Fallback: no credit_limit from API — compute it using available_credit defined at account level
-          Rails.logger.info "Using stored available_credit fallback for account #{account.id}"
-          available_credit = account.accountable.available_credit
-          outstanding = balance.abs
-          balance = [ available_credit - outstanding, 0 ].max
-        else
-          # Fallback: no credit_limit from API — display raw outstanding balance
-          # We cannot derive available credit without knowing the limit; leave balance unchanged.
         end
       end
 
