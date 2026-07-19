@@ -13,6 +13,8 @@ class Property::AvmImport
   end
 
   def call
+    validate_inputs!
+
     provider = Provider::Registry.for_concept(:property_valuations).get_provider(provider_key)
     raise Error.new(I18n.t("providers.property_valuation.not_configured")) if provider.nil?
 
@@ -61,4 +63,14 @@ class Property::AvmImport
 
   private
     attr_reader :family, :owner, :provider_key, :name, :address_attributes
+
+    # The form marks these required, but a forged or JS-less submission can
+    # bypass that — validate locally before spending a monthly-budget request
+    # on a lookup that can't produce a property.
+    def validate_inputs!
+      missing = name.blank? ||
+        %i[line1 locality region postal_code].any? { |field| address_attributes[field].blank? }
+
+      raise Error.new(I18n.t("providers.property_valuation.missing_fields")) if missing
+    end
 end

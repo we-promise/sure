@@ -398,6 +398,26 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_match "could not find a property", response.body
   end
 
+  test "rejects incomplete AVM submissions before calling the provider" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    assert_no_difference "Account.count" do
+      post properties_path, params: {
+        avm_provider: "rentcast",
+        account: {
+          name: "",
+          accountable_type: "Property",
+          address: { line1: "5500 Grand Lake Dr", locality: "", region: "TX", postal_code: "78244" }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "complete US address", response.body
+  end
+
   test "rejects AVM creation for unconfigured providers" do
     assert_no_difference "Account.count" do
       post properties_path, params: {

@@ -3,6 +3,7 @@ en:
   providers:
     property_valuation:
       not_configured: This property data provider is not configured.
+      missing_fields: Please provide a name and a complete US address (street, city, state, and ZIP code).
     rentcast:
       errors:
         no_valuation: RentCast did not return a value estimate for this address.
