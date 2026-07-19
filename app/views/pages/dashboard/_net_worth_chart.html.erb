@@ -21,7 +21,9 @@
     class="w-full min-h-52 privacy-sensitive"
     style="height: var(--dash-widget-h, 13rem);"
     data-controller="time-series-chart"
-    data-time-series-chart-data-value="<%= series.to_json %>"></div>
+    data-time-series-chart-data-value="<%= series.to_json %>"
+    data-time-series-chart-selectable-value="true"
+    data-time-series-chart-turbo-frame-value="dashboard_sections"></div>
   <% else %>
     <div class="w-full h-full flex items-center justify-center">
       <p class="text-secondary text-sm"><%= t(".data_not_available") %></p>

@@ -55,4 +55,14 @@ class UI::PeriodPickerTest < ViewComponent::TestCase
     assert_text Period.from_key("last_7_days").label_short
     assert_equal 1, page.all("a[aria-checked='true']").size
   end
+
+  test "shows Custom for a custom (nil-key) Period without falling back to a preset label" do
+    custom_period = Period.custom(start_date: 15.days.ago.to_date, end_date: Date.current)
+
+    render_inline(UI::PeriodPicker.new(selected: custom_period, url: "/"))
+
+    assert_text "Custom"
+    # None of the preset period options should be marked as the active selection.
+    assert_equal 0, page.all("a[role='menuitemradio'][aria-checked='true']").size
+  end
 end
