@@ -60,7 +60,7 @@ class WiseItemsController < ApplicationController
 
   # Step 3: Create one WiseItem per selected profile.
   def link_profiles
-    token = decrypt_pending_token(params[:encrypted_pending_token]) # pipelock:ignore
+    token = decrypt_pending_token(session[:wise_pending_encrypted_token]) # pipelock:ignore
     profiles = session[:wise_pending_profiles]
 
     if token.blank? || profiles.blank?
