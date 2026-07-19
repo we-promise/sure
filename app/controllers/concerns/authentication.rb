@@ -29,12 +29,27 @@ module Authentication
 
     def find_session_by_cookie
       cookie_value = cookies.signed[:session_token]
+      return nil unless cookie_value.present?
 
-      if cookie_value.present?
-        Session.find_by(id: cookie_value)
-      else
-        nil
-      end
+      session_record = Session.includes(:user, active_impersonator_session: :impersonated).find_by(id: cookie_value)
+      return clear_invalid_session(session_record) unless session_record&.user&.active?
+
+      clear_inactive_impersonation(session_record)
+
+      session_record
+    end
+
+    def clear_inactive_impersonation(session_record)
+      impersonated_user = session_record.active_impersonator_session&.impersonated
+      return if impersonated_user.blank? || impersonated_user.active?
+
+      session_record.update!(active_impersonator_session: nil)
+    end
+
+    def clear_invalid_session(session_record)
+      session_record&.destroy
+      cookies.delete(:session_token)
+      nil
     end
 
     def create_session_for(user)
