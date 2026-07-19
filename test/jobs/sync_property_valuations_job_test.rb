@@ -88,6 +88,30 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
     assert_nil @property.reload.avm_last_synced_on
   end
 
+  test "skips properties whose address city or ZIP was blanked" do
+    @property.address.update!(locality: "")
+
+    Provider::Registry.expects(:rentcast).never
+
+    assert_difference "DebugLogEntry.count" => 1 do
+      SyncPropertyValuationsJob.new.perform
+    end
+
+    assert_nil @property.reload.avm_last_synced_on
+  end
+
+  test "skips properties whose address is no longer in the US" do
+    @property.address.update!(country: "CA")
+
+    Provider::Registry.expects(:rentcast).never
+
+    assert_difference "DebugLogEntry.count" => 1 do
+      SyncPropertyValuationsJob.new.perform
+    end
+
+    assert_nil @property.reload.avm_last_synced_on
+  end
+
   test "does not mark a property synced when the balance update fails" do
     provider = mock
     provider.stubs(:requests_remaining?).returns(true)

@@ -28,11 +28,15 @@ class SyncPropertyValuationsJob < ApplicationJob
       next unless account&.active?
       next if property.avm_last_synced_on == Date.current
 
-      # Skip before spending a monthly-budget request: a lookup with a blank
-      # street or state can't match a property, but would still be counted.
+      # Skip before spending a monthly-budget request: mirrors the
+      # import-time completeness check. A blank city/ZIP would also disable
+      # the wrong-city guard in the Realie lookup, letting a refresh accept
+      # another property's valuation — and the providers only cover the US.
       address = property.address
-      if address.nil? || address.line1.blank? || address.region.blank?
-        capture_failure(property, account, "Skipping refresh: property address is incomplete", level: "warn")
+      if address.nil? ||
+          %i[line1 locality region postal_code].any? { |field| address[field].blank? } ||
+          (address.country.present? && !address.country.to_s.strip.match?(/\A(US|USA)\z/i))
+        capture_failure(property, account, "Skipping refresh: property address is incomplete or not a US address", level: "warn")
         next
       end
 
