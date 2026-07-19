@@ -2,7 +2,7 @@
 <% running = console.running?(operation) %>
 <tr>
   <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
-    <%= operation.is_a?(Sync) ? "Sync · #{operation.syncable_type}" : operation.class.name %>
+    <%= operation.is_a?(Sync) ? t(".sync_label", type: operation.syncable_type) : operation.class.name %>
     <p class="text-xs text-secondary font-mono" title="<%= operation.id %>"><%= operation.id.to_s.split("-").first %></p>
   </td>
   <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= family&.name || t(".missing_value") %></td>

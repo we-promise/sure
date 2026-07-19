@@ -43,19 +43,21 @@ class Settings::BackgroundJobsController < Admin::BaseController
   end
 
   private
-    # Resolves record_type against the cancellable base classes, accepting
-    # STI subclass names too (the UI sends base_class names, but a direct
-    # request naming e.g. TransactionImport shouldn't 404). safe_constantize
-    # only resolves already-defined constants and the `<=` whitelist check
-    # rejects anything outside the cancellable hierarchy.
+    # Resolves record_type without reflecting on request input: rather than
+    # turning the param into a constant, look the id up in each cancellable
+    # base table and require the claimed type to match the found record's
+    # class (or its base class). STI subclass names are still accepted —
+    # the UI sends base_class names, but a direct request naming e.g.
+    # TransactionImport shouldn't 404.
     def find_record!
-      model = params[:record_type].to_s.match?(/\A[A-Za-z]+\z/) ? params[:record_type].safe_constantize : nil
+      claimed_type = params[:record_type].to_s
 
-      unless model.is_a?(Class) && CANCELLABLE_BASE_TYPES.any? { |base| model <= base }
-        raise ActiveRecord::RecordNotFound, "Unknown record type"
+      CANCELLABLE_BASE_TYPES.each do |base|
+        record = base.find_by(id: params[:id])
+        return record if record && [ record.class.name, base.name ].include?(claimed_type)
       end
 
-      model.find(params[:id])
+      raise ActiveRecord::RecordNotFound, "Unknown record type"
     end
 
     # User-facing: surfaces as the failed operation's error in the family UI.

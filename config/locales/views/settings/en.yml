@@ -33,6 +33,7 @@ en:
           action: "Action"
       operation:
         ago: "%{time} ago"
+        sync_label: "Sync · %{type}"
         running: "Running"
         queued: "Queued"
         recent: "Recent"
