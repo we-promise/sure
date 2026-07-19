@@ -8,6 +8,7 @@
 
         <%= render DS::Disclosure.new(
               variant: :bare,
+              summary_aria_label: t(".trigger_label"),
               summary_class: "cursor-pointer absolute -bottom-2 -right-2 flex justify-center items-center bg-surface-inset hover:bg-surface-inset-hover border-2 w-7 h-7 border-subdued rounded-full text-secondary",
               data: {
                 color_icon_picker_target: "details",
