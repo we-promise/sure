@@ -17,7 +17,9 @@ class Sync < ApplicationRecord
 
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
   scope :incomplete, -> { where("syncs.status IN (?)", %w[pending syncing]) }
-  scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago) }
+  # Cancel-requested syncs are excluded so spinners clear immediately and
+  # sync_later stops piggybacking new requests onto a dying sync.
+  scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago).where(cancel_requested_at: nil) }
 
   after_commit :update_family_sync_timestamp, on: [ :create, :update ]
 
@@ -157,6 +159,45 @@ class Sync < ApplicationRecord
     end
   end
 
+  # Requests cooperative cancellation of this sync tree. Only this sync
+  # carries the flag: pending descendants are marked stale immediately (their
+  # queued jobs no-op via the may_start? guard), while descendants whose jobs
+  # are already running finish their work honestly — finalization then
+  # resolves this sync to stale instead of completed. Returns false when the
+  # sync is already terminal.
+  def request_cancel!
+    result = with_lock do
+      if pending?
+        # Job hasn't started — safe to resolve immediately; the queued job
+        # will no-op via the may_start? guard.
+        update!(cancel_requested_at: Time.current)
+        mark_stale!
+        :cancelled_before_start
+      elsif syncing?
+        update!(cancel_requested_at: Time.current)
+        :cancel_requested
+      end
+    end
+    return false if result.nil?
+
+    # Both paths cascade: a pending sync resolved above went terminal without
+    # its job ever running, so nothing else will ever call
+    # finalize_if_all_children_finalized for it — without this, a parent
+    # waiting on the cancelled child stays syncing until the 24h sweep.
+    # finalize_if_all_children_finalized re-reads under lock!, so it safely
+    # no-ops on this sync's own branch when already terminal.
+    cancel_pending_descendants!
+    finalize_if_all_children_finalized
+
+    true
+  end
+
+  # Fresh DB read — cancellation is requested from the web process while this
+  # sync's job holds a stale in-memory copy of the record.
+  def cancel_requested?
+    self.class.where(id: id).pick(:cancel_requested_at).present?
+  end
+
   # Finalizes the current sync AND parent (if it exists)
   def finalize_if_all_children_finalized
     Sync.transaction do
@@ -170,7 +211,12 @@ class Sync < ApplicationRecord
       return unless all_children_finalized?
 
       if syncing?
-        if has_failed_children?
+        if cancel_requested_at?
+          # User asked for cancellation while work was in flight. Whatever
+          # children completed keep their data; the tree resolves to stale
+          # (which also skips post-sync below).
+          mark_stale!
+        elsif has_failed_children?
           fail!
         else
           complete!
@@ -210,6 +256,14 @@ class Sync < ApplicationRecord
       window_end_date: latest_end_date
     )
   end
+
+  protected
+    def cancel_pending_descendants!
+      children.incomplete.find_each do |child|
+        child.with_lock { child.mark_stale! if child.pending? }
+        child.cancel_pending_descendants!
+      end
+    end
 
   private
     def log_status_change
