@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_19_000001) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1543,6 +1543,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000001) do
     t.string "subtype"
     t.string "avm_provider"
     t.date "avm_last_synced_on"
+    t.index ["avm_provider", "avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", where: "(avm_provider IS NOT NULL)"
     t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying]::text[]))", name: "properties_avm_provider_check"
   end
 

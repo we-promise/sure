@@ -112,6 +112,15 @@ class Provider::Realie < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        # Retry transient connection failures so a network blip doesn't burn
+        # one of the tight monthly budget's requests
+        faraday.request(:retry, {
+          max: 3,
+          interval: 1.0,
+          interval_randomness: 0.5,
+          backoff_factor: 2,
+          exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed ]
+        })
         faraday.request :json
         faraday.response :raise_error
         faraday.options.timeout = 10
