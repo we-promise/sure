@@ -7,6 +7,11 @@ module Periodable
 
   private
     def set_period
+      if params[:start_date].present? && params[:end_date].present?
+        @period = Period.custom(start_date: Date.parse(params[:start_date]), end_date: Date.parse(params[:end_date]))
+        return
+      end
+
       if params[:period].present?
         period_key = params[:period]
         Current.user&.update!(default_period: period_key) if Period.valid_key?(period_key)
@@ -21,7 +26,7 @@ module Periodable
       else
         Period.from_key(period_key)
       end
-    rescue Period::InvalidKeyError
+    rescue Period::InvalidKeyError, ArgumentError, TypeError, ActiveModel::ValidationError
       @period = Period.last_30_days
     end
 end

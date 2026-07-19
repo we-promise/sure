@@ -10,6 +10,8 @@ export default class extends Controller {
     strokeWidth: { type: Number, default: 2 },
     useLabels: { type: Boolean, default: true },
     useTooltip: { type: Boolean, default: true },
+    selectable: { type: Boolean, default: false },
+    turboFrame: { type: String, default: "" },
   };
 
   _d3SvgMemo = null;
@@ -19,6 +21,11 @@ export default class extends Controller {
   _d3InitialContainerHeight = 0;
   _normalDataPoints = [];
   _resizeObserver = null;
+  _d3DragSelectBrush = null;
+  _d3DragSelectGroup = null;
+  // Below this pixel width, a brush gesture is indistinguishable from a
+  // stray click/tap meant for hovering the tooltip, not selecting a range.
+  _dragSelectMinPx = 4;
 
   connect() {
     this._install();
@@ -42,6 +49,8 @@ export default class extends Controller {
     this._d3GroupMemo = null;
     this._d3Tooltip = null;
     this._normalDataPoints = [];
+    this._d3DragSelectBrush = null;
+    this._d3DragSelectGroup = null;
 
     this._d3Container.selectAll("*").remove();
   }
@@ -125,7 +134,10 @@ export default class extends Controller {
 
     if (this.useTooltipValue) {
       this._drawTooltip();
-      this._trackMouseForShowingTooltip();
+    }
+
+    if (this.useTooltipValue || this.selectableValue) {
+      this._drawInteractionOverlay();
     }
   }
 
@@ -303,16 +315,94 @@ export default class extends Controller {
       .attr("class", `${CHART_TOOLTIP_CLASSES} opacity-0 top-0`);
   }
 
-  _trackMouseForShowingTooltip() {
-    const bisectDate = d3.bisector((d) => d.date).left;
+  // The interaction surface is either a plain full-size rect (hover-only charts)
+  // or a d3-brush overlay (selectable charts, which also need drag capture).
+  // Either way, tooltip handlers bind to whichever element ends up on top so
+  // hover and drag-select never fight over the same pointer events.
+  _drawInteractionOverlay() {
+    if (this.selectableValue) {
+      this._drawDragSelectOverlay();
+    } else {
+      this._drawHoverOverlay();
+    }
+  }
 
-    this._d3Group
+  _drawHoverOverlay() {
+    const rect = this._d3Group
       .append("rect")
       .attr("class", "bg-container")
       .attr("width", this._d3ContainerWidth)
       .attr("height", this._d3ContainerHeight)
       .attr("fill", "none")
-      .attr("pointer-events", "all")
+      .attr("pointer-events", "all");
+
+    this._bindTooltipHandlers(rect);
+  }
+
+  _drawDragSelectOverlay() {
+    const brush = d3
+      .brushX()
+      .extent([
+        [0, 0],
+        [this._d3ContainerWidth, this._d3ContainerHeight],
+      ])
+      .on("start", () => this._hideTooltip())
+      .on("end", (event) => this._handleDragSelectEnd(event));
+
+    const brushGroup = this._d3Group
+      .append("g")
+      .attr("class", "drag-select-brush")
+      .call(brush);
+
+    brushGroup
+      .select(".selection")
+      .attr("fill", this._trendColor)
+      .attr("fill-opacity", 0.12)
+      .attr("stroke", this._trendColor)
+      .attr("stroke-opacity", 0.5);
+
+    if (this.useTooltipValue) {
+      this._bindTooltipHandlers(brushGroup.select(".overlay"));
+    }
+
+    this._d3DragSelectBrush = brush;
+    this._d3DragSelectGroup = brushGroup;
+  }
+
+  _handleDragSelectEnd(event) {
+    if (!event.selection) return;
+
+    const [x0, x1] = event.selection;
+
+    if (x1 - x0 < this._dragSelectMinPx) {
+      this._d3DragSelectGroup.call(this._d3DragSelectBrush.move, null);
+      return;
+    }
+
+    const startDate = this._d3XScale.invert(x0);
+    const endDate = this._d3XScale.invert(x1);
+
+    this._navigateToDateRange(startDate, endDate);
+  }
+
+  _navigateToDateRange(startDate, endDate) {
+    const formatDate = d3.timeFormat("%Y-%m-%d");
+    const url = new URL(window.location.href);
+
+    url.searchParams.delete("period");
+    url.searchParams.set("start_date", formatDate(startDate));
+    url.searchParams.set("end_date", formatDate(endDate));
+
+    Turbo.visit(
+      url.toString(),
+      this.turboFrameValue ? { frame: this.turboFrameValue } : {},
+    );
+  }
+
+  _bindTooltipHandlers(selection) {
+    const bisectDate = d3.bisector((d) => d.date).left;
+
+    selection
       .on("mousemove", (event) => {
         const estimatedTooltipWidth = 250;
         const pageWidth = document.body.clientWidth;
@@ -386,12 +476,16 @@ export default class extends Controller {
           event.toElement?.classList.contains("guideline");
 
         if (!hoveringOnGuideline) {
-          this._d3Group.selectAll(".guideline").remove();
-          this._d3Group.selectAll(".data-point-circle").remove();
-          this._d3Tooltip.style("opacity", 0);
-          this._setTrendlineSplitAt(1);
+          this._hideTooltip();
         }
       });
+  }
+
+  _hideTooltip() {
+    this._d3Group.selectAll(".guideline").remove();
+    this._d3Group.selectAll(".data-point-circle").remove();
+    this._d3Tooltip?.style("opacity", 0);
+    this._setTrendlineSplitAt(1);
   }
 
   _tooltipTemplate(datum) {

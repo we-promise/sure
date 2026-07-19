@@ -11,9 +11,10 @@ class UI::PeriodPicker < ApplicationComponent
   #
   # NOTE: `url` must be a path without a query string; pass query state via
   # `extra_params` so the picker can compose `?period=…` cleanly.
-  attr_reader :selected_key, :url, :frame, :extra_params, :placement
+  attr_reader :selected, :selected_key, :url, :frame, :extra_params, :placement
 
   def initialize(selected:, url:, frame: nil, extra_params: {}, placement: "bottom-end")
+    @selected = selected
     @selected_key = selected.respond_to?(:key) ? selected.key : selected.to_s
     @url = url
     @frame = frame
@@ -26,7 +27,9 @@ class UI::PeriodPicker < ApplicationComponent
   end
 
   def selected_label
-    period_for(selected_key).label_short
+    # A Period object (e.g. a drag-selected custom range) knows its own label,
+    # including the nil-key "Custom" case — no need to round-trip through PERIODS.
+    selected.respond_to?(:label_short) ? selected.label_short : period_for(selected_key).label_short
   end
 
   def selected?(key)

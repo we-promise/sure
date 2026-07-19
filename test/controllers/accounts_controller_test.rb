@@ -19,6 +19,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show renders the balance chart as drag-selectable for a custom date range" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "#lineChart[data-time-series-chart-selectable-value='true']"
+  end
+
+  test "show accepts a custom start_date/end_date range" do
+    get account_url(@account), params: { start_date: 15.days.ago.to_date.to_s, end_date: Date.current.to_s }
+
+    assert_response :success
+  end
+
   test "show lazily loads statement tab data unless statements tab is active" do
     AccountStatement::Coverage.expects(:for_year).never
     AccountStatement.expects(:reconciliation_statuses_for).never
