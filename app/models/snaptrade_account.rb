@@ -182,6 +182,11 @@ class SnaptradeAccount < ApplicationRecord
       data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
       next BigDecimal("0") unless data[:cash_equivalent] == true
 
+      # Positions without currency metadata deliberately fall back to the
+      # ACCOUNT currency (not currency_code): that's where HoldingsProcessor
+      # books such a position as a holding, so it must be subtracted from that
+      # same bucket — using currency_code here would subtract the position
+      # from every caller's currency bucket.
       position_currency = extract_currency(data, extract_symbol_data(data), currency)
       next BigDecimal("0") unless position_currency == currency_code
 

@@ -118,6 +118,12 @@ class SnaptradeAccount::Processor
           cash_currency = snaptrade_account.primary_cash_currency
           cash_equivalent_value = snaptrade_account.cash_equivalent_position_value(cash_currency)
 
+          # No floor: negative cash is legitimate for margin accounts, and
+          # clamping would silently skew the calculated total. The before/after
+          # values in the debug entry let support distinguish real margin from
+          # a stale holdings snapshot over-subtracting.
+          adjusted_cash = cash - cash_equivalent_value
+
           if cash_equivalent_value.nonzero?
             DebugLogEntry.capture(
               category: "provider_sync",
@@ -130,12 +136,14 @@ class SnaptradeAccount::Processor
               metadata: {
                 snaptrade_account_id: snaptrade_account.id,
                 currency: cash_currency,
-                cash_equivalent_value: cash_equivalent_value.to_s("F")
+                cash_equivalent_value: cash_equivalent_value.to_s("F"),
+                cash_balance_before: cash.to_s("F"),
+                cash_balance_after: adjusted_cash.to_s("F")
               }
             )
           end
 
-          cash - cash_equivalent_value
+          adjusted_cash
         end
       end
     end

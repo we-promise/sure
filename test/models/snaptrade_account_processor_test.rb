@@ -430,6 +430,40 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "4000.0", debug_entries.first.metadata["cash_equivalent_value"]
   end
 
+  test "cash balance may go negative when cash-equivalent value exceeds reported cash and is recorded for support" do
+    Account.any_instance.stubs(:set_current_balance)
+
+    # A stale holdings snapshot (or real margin) can make the cash-equivalent
+    # value exceed reported cash. No floor is applied — negative cash is
+    # legitimate for margin — but before/after values are recorded so support
+    # can tell the two apart in /settings/debug.
+    @snaptrade_account.update!(
+      currency: "USD",
+      cash_balance: BigDecimal("100.00"),
+      raw_holdings_payload: [
+        {
+          "symbol" => {
+            "symbol" => { "symbol" => "SPAXX", "description" => "Fidelity Government Money Market Fund" }
+          },
+          "units" => "4000",
+          "price" => "1.00",
+          "currency" => "USD",
+          "cash_equivalent" => true
+        }
+      ],
+      raw_activities_payload: []
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    @account.reload
+    assert_equal BigDecimal("-3900.00"), @account.cash_balance, "negative cash is preserved, not floored"
+
+    entry = DebugLogEntry.where(category: "provider_sync", provider_key: "snaptrade").order(created_at: :desc).first
+    assert_equal "100.0", entry.metadata["cash_balance_before"]
+    assert_equal "-3900.0", entry.metadata["cash_balance_after"]
+  end
+
   test "cash-equivalent positions are subtracted in the stored cash currency when it falls back to USD" do
     Account.any_instance.stubs(:set_current_balance)
 
