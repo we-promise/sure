@@ -1,0 +1,214 @@
+---
+it:
+  snaptrade_items:
+    default_name: "Connessione SnapTrade"
+    link_accounts:
+      use_setup_flow: Usa il flusso di configurazione account
+    create:
+      success: "SnapTrade configurato con successo."
+    update:
+      success: "Configurazione SnapTrade aggiornata con successo."
+    destroy:
+      success: "Connessione SnapTrade pianificata per l'eliminazione."
+    connect:
+      decryption_failed: "Impossibile leggere le credenziali SnapTrade. Elimina e ricrea questa connessione."
+      connection_failed: "Connessione a SnapTrade fallita: %{message}"
+    callback:
+      success: "Brokerage connesso! Seleziona quali conti collegare."
+      no_item: "Configurazione SnapTrade non trovata."
+    complete_account_setup:
+      success:
+        one: "Collegato con successo %{count} conto."
+        other: "Collegati con successo %{count} conti."
+      partial_success:
+        one: "Collegato %{count} conto. %{failed_count} non è riuscito a collegarsi."
+        other: "Collegati %{count} conti. %{failed_count} non sono riusciti a collegarsi."
+      link_failed: "Collegamento conti fallito: %{errors}"
+      no_accounts: "Nessun conto è stato selezionato per il collegamento."
+    preload_accounts:
+      not_configured: "SnapTrade non è configurato."
+    select_accounts:
+      not_configured: "SnapTrade non è configurato."
+    oauth_device_flow:
+      title: "Connetti SnapTrade"
+      subtitle: "Autorizza Sure per SnapTrade"
+      instructions: "Apri SnapTrade e conferma questo codice dispositivo, poi torna qui per completare l'autorizzazione."
+      code_label: "Codice dispositivo"
+      open_snaptrade: "Apri SnapTrade"
+      start_button: "Avvia autorizzazione"
+      complete_button: "Ho autorizzato SnapTrade"
+      cancel_button: "Annulla"
+      missing_client_id: "Il Client ID OAuth di SnapTrade non è configurato. Aggiungi SNAPTRADE_OAUTH_CLIENT_ID a .env.local, riavvia l'app, poi riprova."
+    complete_oauth_device_flow:
+      success: "Autorizzazione SnapTrade completata."
+      setup_incomplete: "L'autorizzazione SnapTrade è completa, ma sono necessarie le credenziali API prima che i conti possano sincronizzarsi."
+      failed: "Impossibile completare l'autorizzazione del dispositivo OAuth SnapTrade. Riprova."
+    start_oauth_device_flow:
+      failed: "Impossibile avviare l'autorizzazione del dispositivo OAuth SnapTrade. Riprova."
+    select_existing_account:
+      not_found: "Conto o configurazione SnapTrade non trovati."
+      title: "Collega conto SnapTrade"
+      header: "Collega conto esistente"
+      subtitle: "Seleziona un conto SnapTrade da collegare"
+      no_accounts: "Nessun conto SnapTrade disponibile per il collegamento."
+      connect_hint: "Potrebbe essere necessario connettere prima un brokerage."
+      settings_link: "Vai alle Impostazioni provider"
+      linking_to: "Collegamento al conto:"
+      balance_label: "Saldo:"
+      link_button: "Collega"
+      cancel_button: "Annulla"
+    link_existing_account:
+      success: "Collegato con successo al conto SnapTrade."
+      failed: "Collegamento conto fallito: %{message}"
+      not_found: "Conto non trovato."
+    connections:
+      unknown_brokerage: "Brokerage sconosciuto"
+    delete_connection:
+      success: "Connessione eliminata con successo. Uno slot liberato."
+      failed: "Eliminazione connessione fallita: %{message}"
+      missing_authorization_id: "ID autorizzazione mancante"
+      api_deletion_failed: "Impossibile eliminare la connessione da SnapTrade - credenziali mancanti. La connessione potrebbe esistere ancora nel tuo account SnapTrade."
+    delete_orphaned_user:
+      success: "Registrazione orfana eliminata con successo."
+      failed: "Eliminazione registrazione orfana fallita."
+    setup_accounts:
+      title: "Configura conti SnapTrade"
+      header: "Configura i tuoi conti SnapTrade"
+      subtitle: "Seleziona quali conti brokerage collegare"
+      syncing: "Recupero dei tuoi conti..."
+      loading: "Recupero conti da SnapTrade..."
+      loading_hint: "Clicca Aggiorna per controllare i conti."
+      refresh: "Aggiorna"
+      info_title: "Dati investimento SnapTrade"
+      info_holdings: "Posizioni con prezzi e quantità correnti"
+      info_cost_basis: "Costo base per posizione (quando disponibile)"
+      info_activities: "Cronologia movimenti con etichette attività (Acquisto, Vendita, Dividendo, ecc.)"
+      info_history: "Fino a 3 anni di cronologia transazioni"
+      free_tier_note: "Il piano gratuito SnapTrade consente 20 connessioni brokerage."
+      no_accounts_title: "Nessun conto trovato"
+      no_accounts_message: "Nessun conto brokerage trovato. Questo può succedere se hai annullato la connessione o se il tuo brokerage non è supportato."
+      try_again: "Connetti Brokerage"
+      back_to_settings: "Torna alle Impostazioni"
+      available_accounts: "Conti disponibili"
+      balance_label: "Saldo:"
+      account_number: "Conto:"
+      sync_start_date_label: "Importa transazioni dal:"
+      sync_start_date_help: "Lascia vuoto per tutta la cronologia disponibile"
+      create_button: "Crea conti selezionati"
+      cancel_button: "Annulla"
+      creating: "Creazione conti..."
+      done_button: "Fatto"
+      or_link_existing: "Oppure collega a un conto esistente invece di crearne uno nuovo:"
+      select_account: "Seleziona un conto..."
+      link_button: "Collega"
+      linked_accounts: "Già collegati"
+      linked_to: "Collegato a:"
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} conto da configurare"
+        other: "%{count} conti da configurare"
+      deletion_in_progress: "Eliminazione in corso..."
+      syncing: "Sincronizzazione in corso..."
+      requires_update: "La connessione necessita di aggiornamento"
+      error: "Errore di sincronizzazione"
+      status: "Ultima sincronizzazione %{timestamp} fa - %{summary}"
+      status_never: "Mai sincronizzato"
+      reconnect: "Riconnetti"
+      connect_brokerage: "Connetti Brokerage"
+      add_another_brokerage: "Connetti un altro brokerage"
+      delete: "Elimina"
+      setup_needed: "I conti devono essere configurati"
+      setup_description: "Alcuni conti da SnapTrade devono essere collegati ai conti Sure."
+      setup_action: "Configura conti"
+      setup_accounts_menu: "Configura conti"
+      manage_connections: "Gestisci connessioni"
+      more_accounts_available:
+        one: "%{count} altro conto disponibile da configurare"
+        other: "%{count} altri conti disponibili da configurare"
+      no_accounts_title: "Nessun conto trovato"
+      no_accounts_description: "Connetti un brokerage per importare i tuoi conti investimento."
+
+  providers:
+    snaptrade:
+      name: "SnapTrade"
+      connection_description: "Connetti al tuo brokerage tramite SnapTrade (25+ broker supportati)"
+      description: "SnapTrade si connette a 25+ principali brokerage (Fidelity, Vanguard, Schwab, Robinhood, ecc.) e fornisce cronologia completa delle operazioni con etichette di attività e costo base."
+      setup_title: "Istruzioni di configurazione:"
+      step_1_html: "Crea un account su <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
+      step_2: "Copia il tuo Client ID e Consumer Key dal dashboard"
+      step_3: "Inserisci le tue credenziali qui sotto e clicca Salva"
+      step_4: "Vai alla pagina Conti e usa 'Connetti un altro brokerage' per collegare i tuoi conti investimento"
+      free_tier_warning: "Il piano gratuito SnapTrade copre 20 connessioni brokerage."
+      oauth_title: "OAuth SnapTrade"
+      oauth_status_ready: "Usa un codice dispositivo per autorizzare Sure per SnapTrade."
+      oauth_status_authorized: "Autorizzato con SnapTrade."
+      oauth_connect_button: "Connetti con SnapTrade"
+      oauth_reauthorize_button: "Riautorizza"
+      legacy_credentials_title: "Usa credenziali API legacy"
+      legacy_credentials_description: "Usa la configurazione con Client ID e Consumer Key se il tuo account SnapTrade non ha abilitato OAuth."
+      client_id_label: "Client ID"
+      client_id_placeholder: "Inserisci il tuo Client ID SnapTrade"
+      client_id_update_placeholder: "Inserisci nuovo Client ID per aggiornare"
+      consumer_key_label: "Consumer Key"
+      consumer_key_placeholder: "Inserisci il tuo Consumer Key SnapTrade"
+      consumer_key_update_placeholder: "Inserisci nuovo Consumer Key per aggiornare"
+      save_button: "Salva configurazione"
+      update_button: "Aggiorna configurazione"
+      status_connected:
+        one: "%{count} conto da SnapTrade"
+        other: "%{count} conti da SnapTrade"
+      status_needs_registration: "Credenziali salvate. Completa la configurazione per connettere un brokerage."
+      needs_setup:
+        one: "%{count} da configurare"
+        other: "%{count} da configurare"
+      status_ready: "Pronto per connettere brokerage"
+      setup_accounts_button: "Configura conti"
+      connect_button: "Connetti Brokerage"
+      connected_brokerages: "Connessi:"
+      manage_connections: "Gestisci connessioni"
+      loading_connections: "Caricamento connessioni..."
+      connections_error: "Caricamento connessioni fallito: %{message}"
+      accounts_count:
+        one: "%{count} conto"
+        other: "%{count} conti"
+      orphaned_connection: "Connessione orfana (non sincronizzata localmente)"
+      needs_linking: "da collegare"
+      no_connections: "Nessuna connessione brokerage trovata."
+      delete_connection: "Elimina"
+      delete_connection_title: "Eliminare la connessione brokerage?"
+      delete_connection_body: "Questo rimuoverà definitivamente la connessione %{brokerage} da SnapTrade. Tutti i conti di questo brokerage saranno scollegati. Dovrai riconnetterti per sincronizzare di nuovo questi conti."
+      delete_connection_confirm: "Elimina connessione"
+      orphaned_users_title:
+        one: "%{count} registrazione orfana"
+        other: "%{count} registrazioni orfane"
+      orphaned_users_description: "Queste sono precedenti registrazioni utente SnapTrade che occupano i tuoi slot di connessione. Eliminale per liberare slot."
+      orphaned_user: "Registrazione orfana"
+      delete_orphaned_user: "Elimina"
+      delete_orphaned_user_title: "Eliminare la registrazione orfana?"
+      delete_orphaned_user_body: "Questo eliminerà definitivamente questo utente SnapTrade orfano e tutte le loro connessioni brokerage, liberando slot di connessione."
+      delete_orphaned_user_confirm: "Elimina registrazione"
+  snaptrade_item:
+    sync_status:
+      no_accounts: "Nessun conto trovato"
+      synced:
+        one: "%{count} conto sincronizzato"
+        other: "%{count} conti sincronizzati"
+      synced_with_setup: "%{linked} sincronizzati, %{unlinked} da configurare"
+    institution_summary:
+      none: "Nessuna istituzione connessa"
+      count:
+        one: "%{count} istituzione"
+        other: "%{count} istituzioni"
+    brokerage_summary:
+      none: "Nessun brokerage connesso"
+      count:
+        one: "%{count} brokerage"
+        other: "%{count} brokerage"
+    syncer:
+      discovering: "Ricerca conti..."
+      importing: "Importazione conti da SnapTrade..."
+      processing: "Elaborazione posizioni e attività..."
+      calculating: "Calcolo saldi..."
+      checking_config: "Verifica configurazione conti..."
+      needs_setup: "%{count} conti da configurare..."
+      activities_fetching_async: "Le attività vengono recuperate in background. Potrebbe richiedere fino a un minuto per le nuove connessioni brokerage."

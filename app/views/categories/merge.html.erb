@@ -4,7 +4,7 @@
     <%= styled_form_with url: perform_merge_categories_path, method: :post, class: "space-y-4" do |f| %>
       <%= f.collection_select :target_id,
             @categories,
-            :id, :name_with_parent,
+            :id, :display_name_with_parent,
             { prompt: t(".select_target"), label: t(".target_label") },
             { required: true } %>
 
@@ -14,7 +14,7 @@
           <% @categories.each do |category| %>
             <label class="flex items-center gap-2 p-2 hover:bg-surface-hover rounded cursor-pointer">
               <%= check_box_tag "source_ids[]", category.id, false, class: "rounded border-secondary" %>
-              <span class="text-sm text-primary"><%= category.name_with_parent %></span>
+              <span class="text-sm text-primary"><%= category.display_name_with_parent %></span>
             </label>
           <% end %>
         </div>

@@ -40,6 +40,14 @@ class Rule < ApplicationRecord
     matching_resources_scope.count
   end
 
+  # Public wrapper around the private matching scope so callers can read the
+  # currently-matching transaction ids WITHOUT running executors (e.g. the
+  # notification baseline pre-seed). Mirrors total_affected_resource_count,
+  # which also reaches matching_resources_scope.
+  def matching_transaction_ids
+    matching_resources_scope.pluck(:id)
+  end
+
   # Creates a categorization rule for the Quick Categorize Wizard.
   # Returns the saved rule, or nil if a duplicate or invalid rule already exists.
   def self.create_from_grouping(family, grouping_key, category, transaction_type: nil)
