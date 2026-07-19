@@ -6,7 +6,7 @@
   <% dialog.with_header(title: t("properties.new.avm_title", provider: provider_name)) %>
   <% dialog.with_body do %>
     <%= styled_form_with model: account, url: properties_path do |form| %>
-      <div class="flex flex-col gap-2 min-h-[320px]">
+      <div class="flex flex-col gap-2 min-h-80">
         <%= render "properties/form_alert", notice: nil, error: @error_message %>
 
         <p class="text-sm text-secondary"><%= t("properties.new.avm_description", provider: provider_name) %></p>

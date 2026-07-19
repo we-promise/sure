@@ -43,7 +43,7 @@ class Provider::Rentcast < Provider
 
       parsed = JSON.parse(response.body)
       price = parsed["price"]
-      raise Error.new("RentCast did not return a value estimate for this address") if price.blank?
+      raise Error.new(I18n.t("providers.rentcast.errors.no_valuation")) if price.blank?
 
       subject = parsed["subjectProperty"] || {}
 
@@ -64,7 +64,7 @@ class Provider::Rentcast < Provider
     def default_error_transformer(error)
       case error
       when Faraday::ResourceNotFound
-        Error.new("RentCast could not find a property matching this address")
+        Error.new(I18n.t("providers.rentcast.errors.not_found"))
       else
         super
       end
@@ -78,6 +78,8 @@ class Provider::Rentcast < Provider
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
         faraday.request :json
         faraday.response :raise_error
+        faraday.options.timeout = 10
+        faraday.options.open_timeout = 5
         faraday.headers["X-Api-Key"] = api_key
         faraday.headers["Accept"] = "application/json"
       end

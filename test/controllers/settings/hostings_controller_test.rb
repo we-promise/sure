@@ -52,6 +52,22 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can update rentcast api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { rentcast_api_key: "rentcast-token" } }
+
+      assert_equal "rentcast-token", Setting.rentcast_api_key
+    end
+  end
+
+  test "can update realie api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { realie_api_key: "realie-token" } }
+
+      assert_equal "realie-token", Setting.realie_api_key
+    end
+  end
+
   test "can update settings when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }

@@ -42,23 +42,23 @@ module Provider::PropertyValuationConcept
     end
 
     def monthly_request_count
-      Rails.cache.read(monthly_request_count_key).to_i
+      ProviderRequestCount.count_for(provider_key)
     end
 
     # Counts every outbound request (user-initiated lookups and daily
-    # refreshes) against the provider's monthly budget. Mirrors the Tiingo
-    # monthly symbol counter: the key is scoped to the calendar month, so the
-    # expiry is just cleanup.
+    # refreshes) against the provider's monthly budget. Backed by a durable
+    # database counter (not Rails.cache) so the hard cap can't be reset by
+    # cache eviction or a restart.
     def record_monthly_request!
-      count = Rails.cache.increment(monthly_request_count_key, 1, expires_in: 35.days).to_i
+      count = ProviderRequestCount.increment!(provider_key)
 
       if count > max_requests_per_month
-        Rails.cache.decrement(monthly_request_count_key, 1)
+        ProviderRequestCount.decrement!(provider_key)
         raise self.class::RateLimitError.new("#{self.class.name.demodulize} monthly request limit reached (#{max_requests_per_month} per month)")
       end
     end
 
-    def monthly_request_count_key
-      "#{self.class.name.demodulize.underscore}:avm_request_count:#{Date.current.strftime('%Y-%m')}"
+    def provider_key
+      self.class.name.demodulize.underscore
     end
 end

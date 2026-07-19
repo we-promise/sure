@@ -307,6 +307,9 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "new skips method selector when no AVM provider is configured" do
+    Provider::Registry.stubs(:rentcast).returns(nil)
+    Provider::Registry.stubs(:realie).returns(nil)
+
     get new_property_path(step: "method_select")
 
     assert_response :success
@@ -323,7 +326,14 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "creates active property from AVM provider lookup" do
-    stub_avm_provider(successful_avm_response)
+    provider = mock
+    provider.expects(:fetch_property_valuation).with(
+      line1: "5500 Grand Lake Dr",
+      locality: "San Antonio",
+      region: "TX",
+      postal_code: "78244"
+    ).returns(successful_avm_response)
+    Provider::Registry.stubs(:rentcast).returns(provider)
 
     assert_difference -> { Account.count } => 1 do
       post properties_path, params: {

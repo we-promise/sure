@@ -4,7 +4,6 @@ class Provider::RentcastTest < ActiveSupport::TestCase
   setup do
     @provider = Provider::Rentcast.new("test_api_key")
     @provider.stubs(:throttle_request)
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
   end
 
   def avm_response_body
@@ -70,13 +69,11 @@ class Provider::RentcastTest < ActiveSupport::TestCase
 
     @provider.fetch_property_valuation(line1: "5500 Grand Lake Dr")
 
-    count_key = "rentcast:avm_request_count:#{Date.current.strftime('%Y-%m')}"
-    assert_equal 1, Rails.cache.read(count_key).to_i
+    assert_equal 1, ProviderRequestCount.count_for("rentcast")
   end
 
   test "monthly limit can be raised via ENV override" do
-    count_key = "rentcast:avm_request_count:#{Date.current.strftime('%Y-%m')}"
-    Rails.cache.write(count_key, Provider::Rentcast::MAX_REQUESTS_PER_MONTH)
+    ProviderRequestCount.create!(provider_key: "rentcast", period: ProviderRequestCount.current_period, count: Provider::Rentcast::MAX_REQUESTS_PER_MONTH)
 
     ENV["RENTCAST_MAX_REQUESTS_PER_MONTH"] = "100"
     assert @provider.requests_remaining?
@@ -85,8 +82,7 @@ class Provider::RentcastTest < ActiveSupport::TestCase
   end
 
   test "stops issuing requests once the monthly limit is reached" do
-    count_key = "rentcast:avm_request_count:#{Date.current.strftime('%Y-%m')}"
-    Rails.cache.write(count_key, Provider::Rentcast::MAX_REQUESTS_PER_MONTH)
+    ProviderRequestCount.create!(provider_key: "rentcast", period: ProviderRequestCount.current_period, count: Provider::Rentcast::MAX_REQUESTS_PER_MONTH)
 
     assert_not @provider.requests_remaining?
 
@@ -94,6 +90,7 @@ class Provider::RentcastTest < ActiveSupport::TestCase
 
     assert_not response.success?
     assert_instance_of Provider::Rentcast::RateLimitError, response.error
+    assert_equal Provider::Rentcast::MAX_REQUESTS_PER_MONTH, ProviderRequestCount.count_for("rentcast")
     assert_not_requested :get, %r{api\.rentcast\.io}
   end
 end

@@ -35,6 +35,23 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
     assert_equal 600_000, @account.reload.balance
   end
 
+  test "does not mark a property synced when the balance update fails" do
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:fetch_property_valuation).returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    Account.any_instance.stubs(:set_current_balance).returns(
+      Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "boom")
+    )
+
+    assert_difference "DebugLogEntry.count" => 1 do
+      SyncPropertyValuationsJob.new.perform
+    end
+
+    assert_nil @property.reload.avm_last_synced_on
+  end
+
   test "skips properties already refreshed today" do
     @property.update!(avm_last_synced_on: Date.current)
 

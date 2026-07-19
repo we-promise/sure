@@ -2,8 +2,8 @@
 #
 # Runs once per day (see config/schedule.yml) — never hourly — because the
 # provider budgets are tight monthly caps (RentCast 50/month, Realie
-# 25/month). Each provider additionally enforces its cap via a monthly
-# request counter, so refreshes stop once the month's budget is spent.
+# 25/month). Each provider additionally enforces its cap via a durable
+# monthly request counter, so refreshes stop once the month's budget is spent.
 class SyncPropertyValuationsJob < ApplicationJob
   queue_as :scheduled
   sidekiq_options lock: :until_executed, on_conflict: :log
@@ -11,7 +11,14 @@ class SyncPropertyValuationsJob < ApplicationJob
   def perform
     registry = Provider::Registry.for_concept(:property_valuations)
 
-    Property.where.not(avm_provider: nil).includes(:address).find_each do |property|
+    # Stalest valuations first (never-synced before oldest-refreshed) so a
+    # tight monthly budget is spent where it matters most, not in
+    # primary-key order.
+    properties = Property.where.not(avm_provider: nil)
+                         .includes(:address, :account)
+                         .order(Arel.sql("avm_last_synced_on ASC NULLS FIRST"))
+
+    properties.each do |property|
       account = property.account
       next unless account&.active?
       next if property.avm_last_synced_on == Date.current
@@ -35,13 +42,35 @@ class SyncPropertyValuationsJob < ApplicationJob
       )
 
       if response.success?
-        account.set_current_balance(response.data.valuation)
-        property.update!(avm_last_synced_on: Date.current)
+        result = nil
+        Property.transaction do
+          result = account.set_current_balance(response.data.valuation)
+          raise ActiveRecord::Rollback unless result.success?
+          property.update!(avm_last_synced_on: Date.current)
+        end
+
+        unless result&.success?
+          capture_failure(property, account, "Failed to update valuation balance: #{result&.error}")
+        end
       else
-        Rails.logger.warn("SyncPropertyValuationsJob: #{property.avm_provider} refresh failed for property #{property.id}: #{response.error.message}")
+        capture_failure(property, account, "Valuation refresh failed: #{response.error.message}")
       end
     rescue => e
-      Rails.logger.error("SyncPropertyValuationsJob: error refreshing property #{property.id}: #{e.message}")
+      capture_failure(property, property.account, "Error refreshing valuation: #{e.class} - #{e.message}")
     end
   end
+
+  private
+
+    def capture_failure(property, account, message)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: message,
+        source: self.class.name,
+        provider_key: property.avm_provider,
+        account: account,
+        metadata: { property_id: property.id }
+      )
+    end
 end

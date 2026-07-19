@@ -4,7 +4,6 @@ class Provider::RealieTest < ActiveSupport::TestCase
   setup do
     @provider = Provider::Realie.new("test_api_key")
     @provider.stubs(:throttle_request)
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
   end
 
   def address_lookup_body(overrides = {})
@@ -16,7 +15,10 @@ class Provider::RealieTest < ActiveSupport::TestCase
         "modelValue" => 420_000.0,
         "modelValueMin" => 390_000.0,
         "modelValueMax" => 450_000.0,
-        "totalMarketValue" => 400_000
+        "totalMarketValue" => 400_000,
+        "city" => "LOS ANGELES",
+        "state" => "CA",
+        "zipCode" => "90001"
       }.merge(overrides)
     }.to_json
   end
@@ -58,6 +60,22 @@ class Provider::RealieTest < ActiveSupport::TestCase
     assert_equal 400_000, response.data.valuation
   end
 
+  test "rejects a property matched in a different city or ZIP" do
+    stub_request(:get, "https://app.realie.ai/api/public/property/address/")
+      .with(query: hash_including("address" => "123 Main Street"))
+      .to_return(status: 200, body: address_lookup_body("city" => "SACRAMENTO", "zipCode" => "95814"))
+
+    response = @provider.fetch_property_valuation(
+      line1: "123 Main Street",
+      locality: "Los Angeles",
+      region: "CA",
+      postal_code: "90001"
+    )
+
+    assert_not response.success?
+    assert_match(/different city or zip/i, response.error.message)
+  end
+
   test "returns a friendly error when no property matches the address" do
     stub_request(:get, "https://app.realie.ai/api/public/property/address/")
       .with(query: hash_including("address" => "1 Nowhere Ln"))
@@ -90,8 +108,7 @@ class Provider::RealieTest < ActiveSupport::TestCase
   end
 
   test "stops issuing requests once the monthly limit is reached" do
-    count_key = "realie:avm_request_count:#{Date.current.strftime('%Y-%m')}"
-    Rails.cache.write(count_key, Provider::Realie::MAX_REQUESTS_PER_MONTH)
+    ProviderRequestCount.create!(provider_key: "realie", period: ProviderRequestCount.current_period, count: Provider::Realie::MAX_REQUESTS_PER_MONTH)
 
     assert_not @provider.requests_remaining?
 

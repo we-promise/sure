@@ -1,0 +1,15 @@
+---
+en:
+  providers:
+    property_valuation:
+      not_configured: This property data provider is not configured.
+    rentcast:
+      errors:
+        no_valuation: RentCast did not return a value estimate for this address.
+        not_found: RentCast could not find a property matching this address.
+    realie:
+      errors:
+        no_property: Realie did not return a property for this address.
+        no_valuation: Realie did not return a valuation for this property.
+        not_found: Realie could not find a property matching this address.
+        location_mismatch: Realie matched a property in a different city or ZIP code. Please double-check the address.

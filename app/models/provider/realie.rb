@@ -35,10 +35,12 @@ class Provider::Realie < Provider
       parsed = JSON.parse(response.body)
       record = parsed["property"]
       record = record.first if record.is_a?(Array)
-      raise Error.new("Realie did not return a property for this address") if record.blank?
+      raise Error.new(I18n.t("providers.realie.errors.no_property")) if record.blank?
+
+      verify_location_match!(record, locality: locality, postal_code: postal_code)
 
       valuation = record["modelValue"] || record["totalMarketValue"]
-      raise Error.new("Realie did not return a valuation for this property") if valuation.blank?
+      raise Error.new(I18n.t("providers.realie.errors.no_valuation")) if valuation.blank?
 
       PropertyValuation.new(
         valuation: valuation.to_d,
@@ -54,9 +56,27 @@ class Provider::Realie < Provider
   private
     attr_reader :api_key
 
-    # Realie use codes are free-form parcel descriptions (e.g. "Single Family
-    # Residential"), so match on keywords rather than exact values. Unmatched
-    # codes leave the subtype unset rather than guessing.
+    # The address lookup matches on street + state only (filtering by city
+    # additionally requires a county, which isn't collected), so a common
+    # street name can resolve to a property in another city. Reject the
+    # record when the returned city/ZIP contradict what the user entered.
+    def verify_location_match!(record, locality:, postal_code:)
+      returned_city = record["city"].to_s.strip
+      returned_zip = record["zipCode"].to_s.strip.first(5)
+      entered_city = locality.to_s.strip
+      entered_zip = postal_code.to_s.strip.first(5)
+
+      city_mismatch = returned_city.present? && entered_city.present? && !returned_city.casecmp?(entered_city)
+      zip_mismatch = returned_zip.present? && entered_zip.present? && returned_zip != entered_zip
+
+      raise Error.new(I18n.t("providers.realie.errors.location_mismatch")) if city_mismatch || zip_mismatch
+    end
+
+    # Realie use codes can be free-form parcel descriptions (e.g. "Single
+    # Family Residential"), so match on keywords rather than exact values.
+    # Some counties return bare numeric codes (e.g. "1001") whose meanings
+    # Realie doesn't publish — those (and any other unmatched codes) leave
+    # the subtype unset rather than guessing.
     def subtype_for_use_code(use_code)
       value = use_code.to_s.downcase
       return nil if value.blank?
@@ -76,7 +96,7 @@ class Provider::Realie < Provider
     def default_error_transformer(error)
       case error
       when Faraday::ResourceNotFound
-        Error.new("Realie could not find a property matching this address")
+        Error.new(I18n.t("providers.realie.errors.not_found"))
       else
         super
       end
@@ -90,6 +110,8 @@ class Provider::Realie < Provider
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
         faraday.request :json
         faraday.response :raise_error
+        faraday.options.timeout = 10
+        faraday.options.open_timeout = 5
         faraday.headers["Authorization"] = api_key
         faraday.headers["Accept"] = "application/json"
       end

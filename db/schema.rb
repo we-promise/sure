@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_18_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_19_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1543,6 +1543,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_18_000000) do
     t.string "subtype"
     t.string "avm_provider"
     t.date "avm_last_synced_on"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying]::text[]))", name: "properties_avm_provider_check"
+  end
+
+  create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.string "period", null: false
+    t.string "provider_key", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider_key", "period"], name: "index_provider_request_counts_on_provider_key_and_period", unique: true
   end
 
   create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

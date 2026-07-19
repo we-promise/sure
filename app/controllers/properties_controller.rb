@@ -107,7 +107,7 @@ class PropertiesController < ApplicationController
       provider_key = params[:avm_provider].to_s
 
       unless @avm_providers.map(&:to_s).include?(provider_key)
-        redirect_to new_property_path, alert: "This property data provider is not configured." and return
+        redirect_to new_property_path, alert: t("providers.property_valuation.not_configured") and return
       end
 
       @account = Property::AvmImport.new(

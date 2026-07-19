@@ -14,7 +14,7 @@ class Property::AvmImport
 
   def call
     provider = Provider::Registry.for_concept(:property_valuations).get_provider(provider_key)
-    raise Error.new("This property data provider is not configured") if provider.nil?
+    raise Error.new(I18n.t("providers.property_valuation.not_configured")) if provider.nil?
 
     response = provider.fetch_property_valuation(
       line1: address_attributes[:line1],
