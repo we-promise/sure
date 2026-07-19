@@ -36,11 +36,9 @@ class WiseItemsController < ApplicationController
     end
 
     session[:wise_pending_profiles] = profiles
-    @pending_profiles = profiles
-    @existing_profile_ids = Current.family.wise_items.pluck(:profile_id).map(&:to_s).to_set
-    @encrypted_pending_token = encrypt_pending_token(token)
+    session[:wise_pending_encrypted_token] = encrypt_pending_token(token)
 
-    render :select_profiles
+    redirect_to select_profiles_wise_items_path
   rescue Provider::Wise::WiseError => e
     @wise_item = Current.family.wise_items.build
     error_key = e.error_type == :unauthorized ? ".invalid_token" : ".connection_failed"
@@ -51,9 +49,10 @@ class WiseItemsController < ApplicationController
   # Step 2: Show profile selection.
   def select_profiles
     @pending_profiles = session[:wise_pending_profiles]
+    @encrypted_pending_token = session[:wise_pending_encrypted_token]
 
-    if @pending_profiles.blank?
-      redirect_to new_wise_item_path, alert: t(".session_expired") and return
+    if @pending_profiles.blank? || @encrypted_pending_token.blank?
+      redirect_to settings_providers_path, alert: t(".session_expired") and return
     end
 
     @existing_profile_ids = Current.family.wise_items.pluck(:profile_id).map(&:to_s).to_set
@@ -65,7 +64,7 @@ class WiseItemsController < ApplicationController
     profiles = session[:wise_pending_profiles]
 
     if token.blank? || profiles.blank?
-      redirect_to new_wise_item_path, alert: t(".session_expired") and return
+      redirect_to settings_providers_path, alert: t(".session_expired") and return
     end
 
     selected_ids = Array(params[:profile_ids]).map(&:to_s).compact_blank
@@ -92,6 +91,7 @@ class WiseItemsController < ApplicationController
     end
 
     session.delete(:wise_pending_profiles)
+    session.delete(:wise_pending_encrypted_token)
 
     if created.zero?
       redirect_to settings_providers_path, alert: t(".already_connected")
