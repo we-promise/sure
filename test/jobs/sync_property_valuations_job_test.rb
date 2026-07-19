@@ -21,6 +21,7 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
   test "refreshes the valuation of linked properties via their provider" do
     provider = mock
     provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:valuation_currency).returns("USD")
     provider.expects(:fetch_property_valuation).with(
       line1: "123 Main Street",
       locality: "Los Angeles",
@@ -49,6 +50,7 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
 
     provider = mock
     provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:valuation_currency).returns("USD")
     provider.stubs(:fetch_property_valuation).twice.returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
     Provider::Registry.expects(:rentcast).once.returns(provider)
 
@@ -56,6 +58,22 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
 
     assert_equal Date.current, @property.reload.avm_last_synced_on
     assert_equal Date.current, second_account.property.reload.avm_last_synced_on
+  end
+
+  test "skips refresh when the account currency no longer matches the provider currency" do
+    @account.update!(currency: "EUR")
+
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:valuation_currency).returns("USD")
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    assert_difference "DebugLogEntry.count" => 1 do
+      SyncPropertyValuationsJob.new.perform
+    end
+
+    assert_nil @property.reload.avm_last_synced_on
   end
 
   test "skips properties with incomplete addresses without spending a request" do
@@ -73,6 +91,7 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
   test "does not mark a property synced when the balance update fails" do
     provider = mock
     provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:valuation_currency).returns("USD")
     provider.stubs(:fetch_property_valuation).returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
     Provider::Registry.stubs(:rentcast).returns(provider)
 

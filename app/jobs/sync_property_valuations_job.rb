@@ -48,6 +48,14 @@ class SyncPropertyValuationsJob < ApplicationJob
       next unless provider # API key was removed after the property was linked
       next unless provider.requests_remaining?
 
+      # The account was created in the provider's currency, but the user can
+      # change it later. Writing a USD valuation as another currency would
+      # corrupt the balance, so skip mismatches — before spending a request.
+      unless account.currency == provider.valuation_currency
+        capture_failure(property, account, "Skipping refresh: account currency #{account.currency} does not match provider valuation currency #{provider.valuation_currency}", level: "warn")
+        next
+      end
+
       response = provider.fetch_property_valuation(
         line1: address.line1,
         locality: address.locality,

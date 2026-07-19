@@ -14,6 +14,13 @@ module Provider::PropertyValuationConcept
     raise NotImplementedError, "Subclasses must implement #fetch_property_valuation"
   end
 
+  # Currency of the valuations this provider returns. Both supported
+  # providers are US-based and always price in USD; the daily refresh job
+  # checks this against the account currency before spending a request.
+  def valuation_currency
+    "USD"
+  end
+
   # Whether the provider still has monthly request budget left. Checked by
   # SyncPropertyValuationsJob before spending a request on a refresh.
   def requests_remaining?
