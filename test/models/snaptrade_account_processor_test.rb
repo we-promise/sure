@@ -424,6 +424,10 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     spaxx = @account.holdings.joins(:security).where(securities: { ticker: "SPAXX" }).order(date: :desc).first
     assert_not_nil spaxx, "the cash-equivalent position is still imported as a holding"
     assert_equal BigDecimal("4000"), spaxx.amount
+
+    debug_entries = DebugLogEntry.where(category: "provider_sync", provider_key: "snaptrade")
+    assert_equal 1, debug_entries.count, "the exclusion is recorded once in /settings/debug"
+    assert_equal "4000.0", debug_entries.first.metadata["cash_equivalent_value"]
   end
 
   test "cash-equivalent positions in a non-primary currency reduce that currency's synthetic cash holding" do
