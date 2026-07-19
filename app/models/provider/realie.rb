@@ -13,6 +13,30 @@ class Provider::Realie < Provider
   # Override with REALIE_MAX_REQUESTS_PER_MONTH for paid plans.
   MAX_REQUESTS_PER_MONTH = 25
 
+  # Realie's documented numeric use codes to Property::SUBTYPES keys
+  # (https://docs.realie.ai/api-reference/feature-key). Codes without a
+  # sensible subtype equivalent (e.g. 1006 mobile/manufactured, commercial
+  # codes) are left unmapped, matching the RentCast mapping's behavior.
+  NUMERIC_USE_CODE_MAP = {
+    "1001" => "single_family_home", # Single family residential
+    "1008" => "single_family_home", # Rural/agricultural residence
+    "1022" => "single_family_home", # SFR with ADU
+    "1024" => "single_family_home", # Multiple SFRs on one parcel
+    "1002" => "townhouse",          # Townhouse (residential)
+    "1004" => "condominium",        # Condominium unit (residential)
+    "1124" => "condominium",        # Condominium building (residential)
+    "1101" => "multi_family_home",  # Duplex
+    "1102" => "multi_family_home",  # Triplex
+    "1103" => "multi_family_home",  # Quadruplex
+    "1104" => "apartment",          # Apartment house (5+ units)
+    "1105" => "apartment",          # Apartment house (100+ units)
+    "7001" => "agri_land",          # Farm
+    "7002" => "agri_land",          # Ranch
+    "8001" => "plot",               # Residential vacant land
+    "8002" => "plot",               # Commercial vacant land
+    "8008" => "plot"                # Rural/agricultural vacant land
+  }.freeze
+
   def initialize(api_key)
     @api_key = api_key # pipelock:ignore
   end
@@ -76,14 +100,14 @@ class Provider::Realie < Provider
       !(city_mismatch || zip_mismatch)
     end
 
-    # Realie use codes can be free-form parcel descriptions (e.g. "Single
-    # Family Residential"), so match on keywords rather than exact values.
-    # Some counties return bare numeric codes (e.g. "1001") whose meanings
-    # Realie doesn't publish — those (and any other unmatched codes) leave
-    # the subtype unset rather than guessing.
+    # Use codes arrive either as Realie's documented numeric codes (mapped
+    # exactly above) or as free-form parcel descriptions, matched on
+    # keywords. Unmatched codes leave the subtype unset rather than guessing.
     def subtype_for_use_code(use_code)
-      value = use_code.to_s.downcase
+      value = use_code.to_s.strip.downcase
       return nil if value.blank?
+
+      return NUMERIC_USE_CODE_MAP[value] if value.match?(/\A\d+\z/)
 
       case value
       when /single family|sfr/ then "single_family_home"

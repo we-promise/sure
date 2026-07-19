@@ -108,6 +108,27 @@ class Provider::RealieTest < ActiveSupport::TestCase
     assert_match(/could not find a property/i, response.error.message)
   end
 
+  test "maps documented numeric use codes to property subtypes" do
+    {
+      "1001" => "single_family_home",
+      "1002" => "townhouse",
+      "1004" => "condominium",
+      "1101" => "multi_family_home",
+      "1104" => "apartment",
+      "7001" => "agri_land",
+      "8001" => "plot",
+      "1006" => nil, # mobile/manufactured — no subtype equivalent
+      "9999" => nil  # unknown numeric code
+    }.each do |use_code, expected|
+      actual = @provider.send(:subtype_for_use_code, use_code)
+      if expected.nil?
+        assert_nil actual, "expected #{use_code.inspect} to map to nil"
+      else
+        assert_equal expected, actual, "expected #{use_code.inspect} to map to #{expected.inspect}"
+      end
+    end
+  end
+
   test "maps use codes to property subtypes by keyword" do
     {
       "Single Family Residential" => "single_family_home",

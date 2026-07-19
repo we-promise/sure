@@ -28,6 +28,14 @@ class SyncPropertyValuationsJob < ApplicationJob
       next unless account&.active?
       next if property.avm_last_synced_on == Date.current
 
+      # Skip before spending a monthly-budget request: a lookup with a blank
+      # street or state can't match a property, but would still be counted.
+      address = property.address
+      if address.nil? || address.line1.blank? || address.region.blank?
+        capture_failure(property, account, "Skipping refresh: property address is incomplete", level: "warn")
+        next
+      end
+
       unless providers.key?(property.avm_provider)
         providers[property.avm_provider] = begin
           registry.get_provider(property.avm_provider)
@@ -39,9 +47,6 @@ class SyncPropertyValuationsJob < ApplicationJob
       provider = providers[property.avm_provider]
       next unless provider # API key was removed after the property was linked
       next unless provider.requests_remaining?
-
-      address = property.address
-      next unless address
 
       response = provider.fetch_property_valuation(
         line1: address.line1,
@@ -71,10 +76,10 @@ class SyncPropertyValuationsJob < ApplicationJob
 
   private
 
-    def capture_failure(property, account, message)
+    def capture_failure(property, account, message, level: "error")
       DebugLogEntry.capture(
         category: "provider_sync_error",
-        level: "error",
+        level: level,
         message: message,
         source: self.class.name,
         provider_key: property.avm_provider,

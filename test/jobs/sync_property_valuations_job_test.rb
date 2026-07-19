@@ -58,6 +58,18 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
     assert_equal Date.current, second_account.property.reload.avm_last_synced_on
   end
 
+  test "skips properties with incomplete addresses without spending a request" do
+    @property.address.update!(region: "")
+
+    Provider::Registry.expects(:rentcast).never
+
+    assert_difference "DebugLogEntry.count" => 1 do
+      SyncPropertyValuationsJob.new.perform
+    end
+
+    assert_nil @property.reload.avm_last_synced_on
+  end
+
   test "does not mark a property synced when the balance update fails" do
     provider = mock
     provider.stubs(:requests_remaining?).returns(true)
