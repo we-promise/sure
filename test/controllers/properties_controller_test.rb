@@ -381,7 +381,31 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_match "Unknown", response.body
   end
 
-  test "AVM confirm creates the account from reviewed data without a provider call" do
+  def signed_preview_token
+    Rails.application.message_verifier(:avm_preview).generate(
+      {
+        "provider_key" => "rentcast",
+        "name" => "AVM Home",
+        "address" => {
+          "line1" => "5500 Grand Lake Dr",
+          "locality" => "San Antonio",
+          "region" => "TX",
+          "postal_code" => "78244"
+        },
+        "data" => {
+          "valuation" => "356000.0",
+          "currency" => "USD",
+          "property_type" => "single_family_home",
+          "year_built" => "1973",
+          "area_value" => "1878",
+          "area_unit" => "sqft"
+        }
+      },
+      expires_in: 1.hour
+    )
+  end
+
+  test "AVM confirm creates the account from the signed preview token without a provider call" do
     provider = mock
     provider.expects(:fetch_property_valuation).never
     Provider::Registry.stubs(:rentcast).returns(provider)
@@ -390,24 +414,8 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       post properties_path, params: {
         avm_provider: "rentcast",
         avm_step: "confirm",
-        account: {
-          name: "AVM Home",
-          accountable_type: "Property",
-          address: {
-            line1: "5500 Grand Lake Dr",
-            locality: "San Antonio",
-            region: "TX",
-            postal_code: "78244"
-          }
-        },
-        avm_data: {
-          valuation: "356000.0",
-          currency: "USD",
-          property_type: "single_family_home",
-          year_built: "1973",
-          area_value: "1878",
-          area_unit: "sqft"
-        }
+        avm_preview_token: signed_preview_token,
+        account: { accountable_type: "Property" }
       }
     end
 
@@ -456,6 +464,24 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_match "could not find a property", response.body
+  end
+
+  test "rejects AVM confirm without a valid signed preview token" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    assert_no_difference "Account.count" do
+      post properties_path, params: {
+        avm_provider: "rentcast",
+        avm_step: "confirm",
+        avm_preview_token: "forged-token",
+        account: { accountable_type: "Property" }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "preview has expired", response.body
   end
 
   test "rejects incomplete AVM submissions before calling the provider" do

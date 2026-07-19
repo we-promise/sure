@@ -110,18 +110,23 @@ class PropertiesController < ApplicationController
         redirect_to new_property_path, alert: t("providers.property_valuation.not_configured") and return
       end
 
-      importer = Property::AvmImport.new(
-        family: Current.family,
-        owner: Current.user,
-        provider_key: provider_key,
-        name: params.dig(:account, :name),
-        address_attributes: avm_address_params.to_h.symbolize_keys
-      )
-
       if params[:avm_step] == "confirm"
-        # The lookup already spent the provider request; the account is
-        # created from the data the user reviewed — no second request.
-        @account = importer.create_account(confirmed_avm_data)
+        # The signed token proves the lookup step actually ran (and spent its
+        # provider request) — a direct confirm POST with fabricated data
+        # would otherwise create provider-linked properties that the daily
+        # refresh job then spends quota on. Everything is rebuilt from the
+        # token payload, so nothing user-editable is trusted.
+        payload = verify_avm_preview_token!
+
+        importer = Property::AvmImport.new(
+          family: Current.family,
+          owner: Current.user,
+          provider_key: payload["provider_key"],
+          name: payload["name"],
+          address_attributes: payload["address"].symbolize_keys
+        )
+
+        @account = importer.create_account(avm_data_from_payload(payload))
 
         # The provider lookup fills in what the manual wizard's balance and
         # address steps would have collected, so the account is complete —
@@ -135,7 +140,24 @@ class PropertiesController < ApplicationController
       else
         # Step 1: spend one provider request, then show the fetched data for
         # review before anything is created.
+        importer = Property::AvmImport.new(
+          family: Current.family,
+          owner: Current.user,
+          provider_key: provider_key,
+          name: params.dig(:account, :name),
+          address_attributes: avm_address_params.to_h.symbolize_keys
+        )
+
         @avm_preview = importer.lookup
+        @avm_preview_token = avm_preview_verifier.generate(
+          {
+            "provider_key" => provider_key,
+            "name" => params.dig(:account, :name),
+            "address" => avm_address_params.to_h,
+            "data" => @avm_preview.to_h.transform_values(&:to_s)
+          },
+          expires_in: 1.hour
+        )
         @avm_provider_key = provider_key
         @account = Current.family.accounts.build(name: params.dig(:account, :name), accountable: Property.new)
         @avm_address = Address.new(avm_address_params.to_h)
@@ -145,7 +167,9 @@ class PropertiesController < ApplicationController
       @avm_provider_key = provider_key
       @error_message = error.message
       @account = Current.family.accounts.build(name: params.dig(:account, :name), accountable: Property.new)
-      @avm_address = Address.new(avm_address_params.to_h)
+      # The confirm step doesn't resubmit the address fields, so build
+      # defensively — an expired token re-renders an empty lookup form.
+      @avm_address = Address.new(params.dig(:account, :address)&.permit(:line1, :locality, :region, :postal_code)&.to_h || {})
       render :new, status: :unprocessable_entity
     end
 
@@ -153,27 +177,28 @@ class PropertiesController < ApplicationController
       params.require(:account).require(:address).permit(:line1, :locality, :region, :postal_code)
     end
 
-    # Rebuilds the valuation data the preview round-tripped through hidden
-    # fields. Values are sanitized rather than trusted: the subtype must be a
-    # known key, the currency a plausible ISO code, and the valuation positive.
-    # (Tampering is not a security concern — manual entry already lets users
-    # set arbitrary balances — this only guards data integrity.)
-    def confirmed_avm_data
-      raw = params.require(:avm_data).permit(:valuation, :currency, :property_type, :year_built, :area_value, :area_unit)
+    def avm_preview_verifier
+      Rails.application.message_verifier(:avm_preview)
+    end
 
-      valuation = BigDecimal(raw[:valuation].to_s, exception: false)
-      raise Property::AvmImport::Error.new(t("providers.property_valuation.missing_fields")) if valuation.nil? || valuation <= 0
+    def verify_avm_preview_token!
+      avm_preview_verifier.verify(params[:avm_preview_token].to_s)
+    rescue ActiveSupport::MessageVerifier::InvalidSignature
+      raise Property::AvmImport::Error.new(t("providers.property_valuation.preview_expired"))
+    end
 
-      currency = raw[:currency].to_s.upcase
-      currency = "USD" unless currency.match?(/\A[A-Z]{3}\z/)
+    # Rebuilds the valuation data from the signed preview payload (values
+    # were stringified for serialization; blanks were nil).
+    def avm_data_from_payload(payload)
+      raw = payload["data"] || {}
 
       Provider::PropertyValuationConcept::PropertyValuation.new(
-        valuation: valuation,
-        currency: currency,
-        property_type: Property::SUBTYPES.key?(raw[:property_type]) ? raw[:property_type] : nil,
-        year_built: raw[:year_built].presence&.to_i,
-        area_value: raw[:area_value].presence&.to_i,
-        area_unit: raw[:area_unit].presence || "sqft"
+        valuation: raw["valuation"].to_d,
+        currency: raw["currency"].presence || "USD",
+        property_type: raw["property_type"].presence,
+        year_built: raw["year_built"].presence&.to_i,
+        area_value: raw["area_value"].presence&.to_i,
+        area_unit: raw["area_unit"].presence || "sqft"
       )
     end
 
