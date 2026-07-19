@@ -87,4 +87,17 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     sso_user.reload
     assert_nil sso_user.password_digest, "SSO-only user should still have nil password_digest"
   end
+
+  # Security: Password reset should invalidate all active sessions (FIX-13)
+  test "update invalidates all existing sessions" do
+    sign_in @user
+    session_count_before = @user.reload.sessions.count
+    assert session_count_before >= 1
+
+    token = @user.generate_token_for(:password_reset) # pipelock:ignore
+    patch password_reset_path(token: token),
+      params: { user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" } }
+
+    assert_equal 0, @user.reload.sessions.count, "All sessions should be destroyed after password reset"
+  end
 end
