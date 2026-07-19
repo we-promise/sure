@@ -3,9 +3,24 @@ class Import < ApplicationRecord
   MappingError = Class.new(StandardError)
 
   # A hard-killed worker (OOM, SIGKILL during deploy) loses its in-flight job
-  # permanently, leaving the record wedged in importing/reverting forever.
-  # SyncCleanerJob reaps records stuck past this window (see Import.clean).
+  # permanently, wedging the record in importing/reverting with no UI recourse.
+  # After this idle window the job is presumed lost and the user may force the
+  # record into a retryable terminal status. Imports finish in minutes, so an
+  # hour of silence dwarfs any legitimate run.
+  PRESUMED_LOST_AFTER = 1.hour
+
+  # The automated counterpart to the manual escape hatch above: SyncCleanerJob
+  # reaps records stuck past this longer window (see Import.clean).
   STUCK_AFTER = 6.hours
+
+  # User-facing (shown as the import's error in the UI), so resolved through
+  # i18n at call time rather than frozen at boot.
+  def self.lost_error_message
+    I18n.t(
+      "imports.errors.presumed_lost",
+      default: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
+    )
+  end
 
   # User-facing (shown as the import's error in the UI). Resolved at reap
   # time; the sweep runs from cron so this snapshots the default locale.
@@ -112,6 +127,7 @@ class Import < ApplicationRecord
         .where.not(type: "PdfImport")
         .where(import_session_id: nil)
         .where("updated_at < ?", STUCK_AFTER.ago)
+        .includes(:family)
         .find_each do |import|
           reap_stuck!(import)
         rescue => e
@@ -124,6 +140,9 @@ class Import < ApplicationRecord
 
     def reap_stuck!(import)
       needs_sync = false
+      # Read before the lock: with_lock reloads the row and drops the
+      # association cache, which would turn the sweep's preload into an N+1.
+      family = import.family
 
       # Same guard Sync#perform gained in #2680: between the sweep query
       # and this row the owning job may have finished (or another sweep
@@ -146,7 +165,7 @@ class Import < ApplicationRecord
           level: "warn",
           message: "Reaped #{import.type} stuck in #{previous_status} for over #{STUCK_AFTER.inspect} (→ #{import.status})",
           source: name,
-          family: import.family,
+          family: family,
           metadata: { record_type: import.type, record_id: import.id, previous_status: previous_status, new_status: import.status }
         )
       end
@@ -154,7 +173,7 @@ class Import < ApplicationRecord
       # Outside the row-lock transaction: Rails doesn't defer enqueues to
       # after-commit by default, so enqueuing inside the lock could hand
       # Sidekiq a job before the status write is visible.
-      import.family.sync_later if needs_sync
+      family.sync_later if needs_sync
     end
 
     def parse_csv_str(csv_str, col_sep: ",")
@@ -271,6 +290,29 @@ class Import < ApplicationRecord
     update! status: :reverting
 
     RevertImportJob.perform_later(self)
+  end
+
+  def presumed_lost?
+    (importing? || reverting?) && updated_at < PRESUMED_LOST_AFTER.ago
+  end
+
+  # Escape hatch for imports whose background job died mid-flight. Only
+  # allowed once the record has been idle past PRESUMED_LOST_AFTER, and the
+  # with_lock re-check means a job finishing between page render and button
+  # click wins. Every import! runs in a single DB transaction, so a lost job
+  # rolled its data back — failing the record is safe and re-enables the
+  # existing "Try again" (failed) / revert-retry (revert_failed) paths.
+  def force_fail!(error_message = self.class.lost_error_message)
+    with_lock do
+      return false unless presumed_lost?
+
+      update!(
+        status: reverting? ? :revert_failed : :failed,
+        error: error_message
+      )
+    end
+
+    true
   end
 
   def revert
@@ -565,6 +607,13 @@ class Import < ApplicationRecord
       @parsed_csv = self.class.parse_csv_str(csv_content, col_sep: col_sep)
     end
 
+    # Normalizes a raw CSV numeric string into a plain, parseable decimal string
+    # based on the import's configured +number_format+ (thousands delimiter and
+    # decimal separator). Returns "" when the value is blank, the format is
+    # unknown, or the result is not a valid number.
+    #
+    # @param value [String, nil] the raw cell value from the CSV
+    # @return [String] a normalized number like "1234.56", or "" if invalid
     def sanitize_number(value)
       return "" if value.nil?
 
@@ -576,7 +625,20 @@ class Import < ApplicationRecord
 
       # Handle French/Scandinavian format specially
       if format[:delimiter] == " "
-        sanitized = sanitized.gsub(/\s+/, "") # Remove all spaces first
+        # The thousands "space" can be an ASCII space, a non-breaking space
+        # (U+00A0) or a narrow no-break space (U+202F) depending on the locale
+        # or exporter. Ruby's \s does not match those Unicode spaces, so strip
+        # every kind of whitespace via the Unicode property.
+        sanitized = sanitized.gsub(/\p{Space}/, "")
+
+        # Strip currency symbols/codes only at the leading/trailing edges (e.g.
+        # "€1 234,56" or "1 234,56 kr"). Interior characters are deliberately
+        # left in place so a misconfigured US-style value like "1,234.56" keeps
+        # its period and is rejected by the numeric guard below, rather than
+        # being silently reinterpreted as 1.23456. Digits, the separator, and a
+        # minus sign are preserved so signed values and the guard still work.
+        edge_junk = /\A[^\d#{Regexp.escape(format[:separator])}\-]+|[^\d#{Regexp.escape(format[:separator])}\-]+\z/
+        sanitized = sanitized.gsub(edge_junk, "")
       else
         sanitized = sanitized.gsub(/[^\d#{Regexp.escape(format[:delimiter])}#{Regexp.escape(format[:separator])}\-]/, "")
 

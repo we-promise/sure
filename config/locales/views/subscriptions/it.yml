@@ -1,0 +1,24 @@
+---
+it:
+  subscriptions:
+    self_hosted_alert: "%{product_name} non è disponibile in modalità self-hosted."
+    upgrade:
+      already_contributing: Stai già contribuendo. Grazie!
+      page_title: "Aggiorna"
+      account_settings: "Impostazioni account"
+      sign_out: "Esci"
+      contribute_and_support_sure: "Contribuisci e supporta Sure"
+      cta: "Continua a supportare lo sviluppo di questo progetto!"
+      header:
+        support: "Supporta"
+        sure: "Sure"
+        today: "oggi"
+      redirect_to_stripe: "Nel passo successivo, verrai reindirizzato a Stripe che gestisce le carte di credito per noi."
+      trialing: "I tuoi dati verranno eliminati tra %{days} giorni"
+      trial_over: "Il tuo periodo di prova è terminato"
+    create:
+      welcome: "Benvenuto su Sure!"
+      trial_already_used: "Hai già iniziato o completato una prova. Effettua l'upgrade per continuare."
+    success:
+      welcome_with_contribution: "Benvenuto su Sure! Il tuo contributo è apprezzato."
+      contribution_failed: "Si è verificato un errore nell'elaborazione del tuo contributo. Riprova."

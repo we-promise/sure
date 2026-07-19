@@ -40,7 +40,11 @@ class ImportSession < ApplicationRecord
   def self.clean
     where(status: :importing)
       .where("updated_at < ?", Import::STUCK_AFTER.ago)
+      .includes(:family)
       .find_each do |session|
+        # Read before the lock — see Import.reap_stuck!.
+        family = session.family
+
         # Row-lock + staleness re-check before mutating, as Sync#perform
         # does since #2680 — the owning job may have finished in between.
         session.with_lock do
@@ -60,7 +64,7 @@ class ImportSession < ApplicationRecord
             level: "warn",
             message: "Reaped ImportSession stuck in importing for over #{Import::STUCK_AFTER.inspect}",
             source: name,
-            family: session.family,
+            family: family,
             metadata: { record_type: name, record_id: session.id, previous_status: "importing", new_status: "failed" }
           )
         end

@@ -18,6 +18,7 @@ class PdfImport < Import
     def clean
       where(status: [ :importing, :reverting ])
         .where("updated_at < ?", Import::STUCK_AFTER.ago)
+        .includes(:family)
         .find_each do |pdf_import|
           reap_stuck!(pdf_import)
         rescue => e
@@ -29,6 +30,8 @@ class PdfImport < Import
 
     def reap_stuck!(pdf_import)
       needs_sync = false
+      # Read before the lock — see Import.reap_stuck!.
+      family = pdf_import.family
 
       pdf_import.with_lock do
         next unless pdf_import.reapable_since?(Import::STUCK_AFTER.ago)
@@ -48,13 +51,13 @@ class PdfImport < Import
           level: "warn",
           message: "Reclaimed PdfImport stuck in #{previous_status} for over #{Import::STUCK_AFTER.inspect} (→ #{pdf_import.status})",
           source: name,
-          family: pdf_import.family,
+          family: family,
           metadata: { record_type: name, record_id: pdf_import.id, previous_status: previous_status, new_status: pdf_import.status }
         )
       end
 
       # Outside the row lock — see Import.reap_stuck!.
-      pdf_import.family.sync_later if needs_sync
+      family.sync_later if needs_sync
     end
 
     def create_from_upload!(family:, file:, user:)
@@ -79,6 +82,22 @@ class PdfImport < Import
 
       create!(family: statement.family, account: statement.account, account_statement: statement, date_format: statement.family.date_format, status: :pending)
     end
+  end
+
+  # A PdfImport's importing status is a processing claim (AI extraction or
+  # publish). Release a lost claim back to pending so the user can re-trigger
+  # processing, mirroring ProcessPdfJob's own reclaim; lost reverts keep the
+  # base revert_failed behavior.
+  def force_fail!(error_message = Import.lost_error_message)
+    return super if reverting?
+
+    with_lock do
+      return false unless presumed_lost?
+
+      update!(status: :pending)
+    end
+
+    true
   end
 
   def import!

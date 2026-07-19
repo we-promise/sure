@@ -33,9 +33,13 @@ class SyncCleanerJob < ApplicationJob
     def clear_stuck_activity_fetch_flags
       ACTIVITY_FLAG_MODELS.each do |model_name|
         model = model_name.constantize
-        model.where(activities_fetch_pending: true)
-             .where("updated_at < ?", ACTIVITY_FLAG_STUCK_AFTER.ago)
-             .find_each do |record|
+        scope = model.where(activities_fetch_pending: true)
+                     .where("updated_at < ?", ACTIVITY_FLAG_STUCK_AFTER.ago)
+        scope = scope.includes(:account) if model.reflect_on_association(:account)
+        scope.find_each do |record|
+          # Read before the lock — see Import.reap_stuck!.
+          account = record.respond_to?(:account) ? record.account : nil
+
           # Row-lock + re-check so a fetch chain finishing right now isn't
           # clobbered mid-write (same guard as the reapers, see #2680).
           record.with_lock do
@@ -48,7 +52,7 @@ class SyncCleanerJob < ApplicationJob
               level: "warn",
               message: "Cleared #{model_name} activities_fetch_pending flag stuck for over #{ACTIVITY_FLAG_STUCK_AFTER.inspect}",
               source: self.class.name,
-              account: record.respond_to?(:account) ? record.account : nil,
+              account: account,
               metadata: { record_type: model_name, record_id: record.id }
             )
           end
