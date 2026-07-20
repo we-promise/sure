@@ -1,0 +1,23 @@
+---
+tr:
+  goal_pledges:
+    create:
+      success: Taahhüt kaydedildi. Sure bir sonraki senkronizasyonda bunu onaylayacak.
+    destroy:
+      not_open: Yalnızca açık taahhütler iptal edilebilir.
+      success: Taahhüt iptal edildi.
+    new:
+      account_label: Hesaba
+      amount_label: Tutar
+      helper_manual: Sure bunu bir sonraki manuel bakiye düzenlemenizde kaydedecek
+        ve katkıyı onaylayacaktır.
+      helper_transfer: Sure, bağlı hesabınızda eşleşen bir yatırma işlemi arayacaktır.
+        Taahhüt 7 gün boyunca beklemede kalır, Sure onu tespit ettiğinde otomatik
+        olarak onaylanır.
+      preview_nonzero: "{target} hedefinin {percent}%'ine ulaşılıyor, {newTotal}."
+      preview_reached: "{target} hedefinize ulaşıldı. Hedef tamamlandı."
+      preview_zero: Şu anda {target} hedefinin {current} kısmı biriktirildi.
+      submit: Taahhüdü kaydet
+    renew:
+      not_open: Yalnızca açık taahhütler uzatılabilir.
+      success: Taahhüt süresi 7 gün uzatıldı.

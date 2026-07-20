@@ -1,0 +1,58 @@
+---
+tr:
+  admin:
+    users:
+      index:
+        description: Örneğiniz için kullanıcı rollerini yönetin. Süper yöneticiler
+          SSO sağlayıcı ayarlarına ve kullanıcı yönetimine erişebilir.
+        family_summary: "%{members} üye · %{accounts} hesap · %{transactions} işlem"
+        filters:
+          role: Rol
+          role_all: Tüm roller
+          submit: Filtrele
+          trial_all: Tümü
+          trial_expiring_soon: 7 gün içinde sona erecek
+          trial_status: Deneme durumu
+          trial_trialing: Deneme sürümünde
+        invitations:
+          delete: Sil
+          delete_all: Tümünü Sil
+          expires: "%{date} tarihinde sona erecek"
+          pending_label: Davet edildi (beklemede)
+        no_subscription: Abonelik yok
+        no_users: Kullanıcı bulunamadı.
+        not_available: yok
+        role_descriptions:
+          admin: Aile yöneticisi. API anahtarları, içe aktarmalar ve AI komutları
+            gibi gelişmiş ayarlara erişebilir.
+          guest: Giriş iş akışları için kasıtlı olarak kısıtlanmış izinlere sahip
+            asistan öncelikli deneyim.
+          member: Temel kullanıcı erişimi. Kendi hesaplarını, işlemlerini ve ayarlarını
+            yönetebilir.
+          super_admin: Örnek yöneticisi. SSO sağlayıcılarını, kullanıcı rollerini
+            yönetebilir ve destek için kullanıcı kimliğine bürünebilir.
+        role_descriptions_title: Rol Açıklamaları
+        roles:
+          admin: Yönetici
+          guest: Misafir
+          member: Üye
+          super_admin: Süper Yönetici
+        section_title: Aileler / Gruplar
+        summary:
+          trials_expiring_7_days: Önümüzdeki 7 gün içinde sona erecek denemeler
+        table:
+          family_accounts: Aile hesapları
+          family_transactions: Aile işlemleri
+          last_login: Son giriş
+          never: Hiç
+          role: Rol
+          session_count: Oturum sayısı
+          trial_ends_at: Deneme bitişi
+          user: Kullanıcı
+        title: Kullanıcı Yönetimi
+        trial_ends_at: Deneme bitişi
+        unnamed_family: İsimsiz Aile/Grup
+        you: "(Siz)"
+      update:
+        failure: Kullanıcı rolü güncellenemedi.
+        success: Kullanıcı rolü başarıyla güncellendi.

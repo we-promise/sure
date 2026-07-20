@@ -1,0 +1,61 @@
+---
+tr:
+  recurring_transactions:
+    already_exists: Bu desen için zaten manuel bir yinelenen işlem var
+    amount_range: 'Aralık: %{min} - %{max}'
+    badges:
+      manual: Manuel
+    cleaned_up: "%{count} eski yinelenen işlem temizlendi"
+    cleanup_stale: Eskileri Temizle
+    confirm_delete: Bu yinelenen işlemi silmek istediğinizden emin misiniz?
+    creation_failed: Yinelenen işlem oluşturulamadı. Lütfen işlem bilgilerini kontrol
+      edip tekrar deneyin.
+    day_of_month: Ayın %{day}. günü
+    deleted: Yinelenen işlem silindi
+    empty:
+      description: İşlem geçmişinizden yinelenen işlemleri otomatik olarak tespit
+        etmek için "Desenleri Tespit Et"e tıklayın.
+      title: Yinelenen işlem bulunamadı
+    expected_in:
+      one: "%{count} gün içinde bekleniyor"
+      other: "%{count} gün içinde bekleniyor"
+    expected_today: Bugün bekleniyor
+    identified: "%{count} yinelenen işlem deseni tespit edildi"
+    identify_patterns: Desenleri Tespit Et
+    info:
+      automatic_description: 'Otomatik tespit ayrıca şunlardan sonra da çalışır:'
+      manual_description: Yukarıdaki düğmeleri kullanarak desenleri manuel olarak
+        tespit edebilir veya eski yinelenen işlemleri temizleyebilirsiniz.
+      title: Otomatik Desen Tespiti
+      triggers: '["CSV içe aktarmaları tamamlandığında (işlemler, alım satımlar, hesaplar
+        vb.)", "Herhangi bir sağlayıcı senkronizasyonu tamamlandığında (Plaid, SimpleFIN
+        vb.)"]'
+    marked_active: Yinelenen işlem etkin olarak işaretlendi
+    marked_as_recurring: İşlem yinelenen olarak işaretlendi
+    marked_inactive: Yinelenen işlem etkin değil olarak işaretlendi
+    projected: Projeksiyon
+    recurring: Yinelenen
+    settings:
+      enable_description: Yinelenen işlem desenlerini otomatik olarak tespit edin
+        ve yaklaşan projeksiyon işlemlerini gösterin.
+      enable_label: Yinelenen İşlemleri Etkinleştir
+    settings_updated: Yinelenen işlem ayarları güncellendi
+    status:
+      active: Etkin
+      inactive: Etkin değil
+    table:
+      actions: Eylemler
+      amount: Tutar
+      expected_day: Beklenen Gün
+      last_occurrence: Son Gerçekleşme
+      merchant: Ad
+      next_date: Sonraki Tarih
+      status: Durum
+    title: Yinelenen İşlemler
+    transfer_already_exists: Bu hesap çifti için zaten yinelenen bir transfer var
+    transfer_creation_failed: Yinelenen transfer oluşturulamadı. Lütfen transfer bilgilerini
+      kontrol edip tekrar deneyin.
+    transfer_feature_disabled: Yinelenen işlemler bu aile için devre dışı bırakılmıştır
+    transfer_marked_as_recurring: Transfer yinelenen olarak işaretlendi
+    unexpected_error: Yinelenen işlem oluşturulurken beklenmeyen bir hata oluştu
+    upcoming: Yaklaşan Yinelenen İşlemler

@@ -1,0 +1,254 @@
+---
+tr:
+  reports:
+    budget_performance:
+      budgeted: Bütçelenen
+      no_budgets: Bu ay için ayarlanmış bütçe kategorisi yok
+      over_by: Aşım
+      remaining: Kalan
+      shared: paylaşılan
+      spent: Harcanan
+      status:
+        good: Yolunda
+        over: Bütçe Aşıldı
+        warning: Limite Yakın
+      suggested_daily: Kalan %{days} gün için günlük %{amount} önerilir
+      title: Bütçe Performansı
+    empty_state:
+      add_account: Hesap Ekle
+      add_transaction: İşlem Ekle
+      description: Kapsamlı raporlar görmek için işlem ekleyerek veya hesaplarınızı
+        bağlayarak finansal durumunuzu takip etmeye başlayın
+      title: Veri Yok
+    google_sheets_instructions:
+      close: Anladım
+      example: Örnek
+      go_to_api_keys: API Anahtarlarına Git
+      need_key: Google E-Tablolar'a veri aktarmak için bir API anahtarına ihtiyacınız
+        var.
+      open_sheets: Google E-Tablolar'ı Aç
+      ready: CSV URL'niz (API anahtarıyla birlikte) hazır.
+      security_warning: Bu URL, API anahtarınızı içerir. Güvende tutun!
+      step1: Ayarlar → API Anahtarları'na gidin
+      step2: '"okuma" izniyle yeni bir API anahtarı oluşturun'
+      step3: API anahtarını kopyalayın
+      step4: 'Bu URL''ye şu şekilde ekleyin: ?api_key=ANAHTARINIZ'
+      steps: |-
+        Google E-Tablolar'a aktarmak için:
+        1. Yeni bir Google E-Tablo oluşturun
+        2. A1 hücresine aşağıda gösterilen formülü girin
+        3. Enter'a basın
+      then_use: Ardından Google E-Tablolar'da =IMPORTDATA() ile tam URL'yi kullanın.
+      title_no_key: "⚠️ API Anahtarı Gerekli"
+      title_with_key: "✅ Google E-Tablolar için URL'yi Kopyala"
+    index:
+      date_range:
+        from: Başlangıç
+        to: Bitiş
+      drag_to_reorder: Bölümü yeniden sıralamak için sürükleyin
+      export: CSV Dışa Aktar
+      next_decade: Sonraki on yıl
+      next_period: Sonraki dönem
+      next_year: Sonraki yıl
+      period_label:
+        last_6_months: "%{start} – %{end}"
+        past_year: "%{year}"
+        quarterly: "%{quarter}. Ç %{year}"
+        ytd: "%{year} YBB"
+      period_picker:
+        quarter: "%{quarter}. Ç %{year}"
+        ytd: "%{year} YBB"
+      periods:
+        custom: Özel Aralık
+        last_6_months: Son 6 Ay
+        monthly: Aylık
+        quarterly: Üç Aylık
+        ytd: Yıl Başından Bugüne
+      previous_decade: Önceki on yıl
+      previous_period: Önceki dönem
+      previous_year: Önceki yıl
+      print_report: Raporu Yazdır
+      showing_period: "%{start} - %{end} tarihleri arasındaki veriler gösteriliyor"
+      subtitle: Finansal sağlığınıza dair kapsamlı içgörüler
+      title: Raporlar
+      today: Bugün
+      toggle_section: Bölüm görünürlüğünü değiştir
+    invalid_date_range: Bitiş tarihi başlangıç tarihinden önce olamaz. Tarihler yer
+      değiştirildi.
+    investment_flows:
+      contributions: Katkılar
+      contributions_description: Yatırımlara eklenen para
+      description: Katkılar ve çekimler yoluyla yatırım hesaplarınıza giren ve çıkan
+        parayı takip edin.
+      net_flow: Net Akış
+      net_flow_description: Toplam net değişim
+      title: Yatırım Akışları
+      withdrawals: Çekimler
+      withdrawals_description: Yatırımlardan çekilen para
+    investment_performance:
+      accounts: Yatırım Hesapları
+      and_more: "+%{count} daha fazla"
+      contributions: Dönem Katkıları
+      gains_by_tax_treatment: Vergi Durumuna Göre Kazançlar
+      holding: Varlık
+      holdings: Varlıklar
+      holdings_count:
+        one: "%{count} varlık"
+        other: "%{count} varlık"
+      no_data: "-"
+      period_return: Dönem Getirisi
+      portfolio_value: Portföy Değeri
+      realized_gains: Gerçekleşen Kazançlar
+      return: Getiri
+      sell_trades: Satış İşlemleri
+      sells_count:
+        one: "%{count} satış"
+        other: "%{count} satış"
+      taxable_realized_note: Bu kazançlar vergiye tabi olabilir
+      title: Yatırım Performansı
+      top_holdings: En Büyük Varlıklar
+      total_gains: Toplam Kazanç
+      total_return: Toplam Getiri
+      unrealized_gains: Gerçekleşmemiş Kazançlar
+      value: Değer
+      view_details: Ayrıntıları görüntüle
+      weight: Ağırlık
+      withdrawals: Dönem Çekimleri
+    net_worth:
+      assets_vs_liabilities: Varlıklar ve Yükümlülükler
+      current_net_worth: Güncel Net Değer
+      no_assets: Varlık yok
+      no_liabilities: Yükümlülük yok
+      period_change: Dönemsel Değişim
+      title: Net Değer
+      total_assets: Varlıklar
+      total_liabilities: Yükümlülükler
+    print:
+      document_title: Finansal Rapor
+      generated_on: "%{date} tarihinde oluşturuldu"
+      investments:
+        contributions: Katkılar
+        holding: Varlık
+        period_return: Dönem Getirisi
+        portfolio_value: Portföy Değeri
+        return: Getiri
+        this_period: bu dönem
+        title: Yatırımlar
+        top_holdings: En Büyük Varlıklar
+        total_return: Toplam Getiri
+        value: Değer
+        weight: Ağırlık
+        withdrawals: Çekimler
+      net_worth:
+        assets: Varlıklar
+        current_balance: Güncel Bakiye
+        liabilities: Yükümlülükler
+        no_liabilities: Yükümlülük yok
+        this_period: bu dönem
+        title: Net Değer
+      spending:
+        amount: Tutar
+        category: Kategori
+        expenses: Giderler
+        income: Gelir
+        more_categories: "+ %{count} kategori daha"
+        percent: "%"
+        title: Kategoriye Göre Harcama
+      summary:
+        budget: Bütçe
+        expenses: Giderler
+        income: Gelir
+        net_savings: Net Tasarruf
+        of_income: "gelirin %{percent}%'i"
+        title: Özet
+        used: kullanıldı
+        vs_prior: "öncekine göre %{percent}%"
+      title: Finansal Rapor
+      trends:
+        average: Ortalama
+        current_month_note: "* Bu ay (kısmi veri)"
+        expenses: Giderler
+        income: Gelir
+        month: Ay
+        net: Net
+        savings_rate: Tasarruf Oranı
+        title: Aylık Eğilimler
+    summary:
+      budget_performance: Bütçe Performansı
+      income_minus_expenses: Gelir eksi giderler
+      net_savings: Net Tasarruf
+      no_budget_data: Bu dönem için bütçe verisi yok
+      of_budget_used: bütçe kullanıldı
+      total_expenses: Toplam Gider
+      total_income: Toplam Gelir
+      vs_previous: önceki döneme göre
+    transactions_breakdown:
+      export:
+        csv: CSV
+        excel: Excel
+        google_sheets: Google E-Tablolar'da Aç
+        label: Dışa Aktar
+        pdf: PDF
+      filters:
+        account: Hesap
+        all_accounts: Tüm Hesaplar
+        all_categories: Tüm Kategoriler
+        all_tags: Tüm Etiketler
+        amount_max: Maksimum Tutar
+        amount_min: Minimum Tutar
+        apply: Filtreleri Uygula
+        category: Kategori
+        clear: Filtreleri Temizle
+        date_range: Tarih Aralığı
+        tag: Etiket
+        title: Filtreler
+      no_transactions: Seçilen dönem ve filtreler için etkinlik bulunamadı
+      pagination:
+        next: Sonraki
+        previous: Önceki
+        showing:
+          one: "%{count} kayıt gösteriliyor"
+          other: "%{count} kayıt gösteriliyor"
+      sort:
+        amount_asc: Tutar (Düşükten Yükseğe)
+        amount_desc: Tutar (Yüksekten Düşüğe)
+        date_desc: Tarih (En Yeni)
+        label: Sırala
+      table:
+        amount: Tutar
+        category: Kategori
+        entries:
+          one: "%{count} kayıt"
+          other: "%{count} kayıt"
+        expense: Giderler
+        income: Gelir
+        percentage: Toplamın %'si
+        type: Tür
+        uncategorized: Kategorisiz
+      title: Etkinlik Dökümü
+    trends:
+      avg_monthly_expenses: Ort. Aylık Gider
+      avg_monthly_income: Ort. Aylık Gelir
+      avg_monthly_savings: Ort. Aylık Tasarruf
+      avg_per_transaction: İşlem başına ort.
+      current: güncel
+      expenses: Giderler
+      income: Gelir
+      insight_higher_weekday: "Hafta içi işlem başına hafta sonundan %{percent}% daha
+        fazla harcıyorsunuz"
+      insight_higher_weekend: "Hafta sonu işlem başına hafta içinden %{percent}% daha
+        fazla harcıyorsunuz"
+      insight_similar: İşlem başına harcamanız hafta içi ve hafta sonu benzer
+      insight_title: İçgörü
+      month: Ay
+      monthly_breakdown: Aylık Döküm
+      net: Net
+      no_data: Kullanılabilir eğilim verisi yok
+      no_spending_data: Bu dönem için harcama verisi yok
+      savings_rate: Tasarruf Oranı
+      spending_patterns: Harcama Kalıpları
+      title: Eğilimler ve İçgörüler
+      total: Toplam
+      transactions: İşlemler
+      weekday_spending: Hafta İçi Harcama
+      weekend_spending: Hafta Sonu Harcama

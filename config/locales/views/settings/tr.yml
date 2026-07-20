@@ -1,72 +1,253 @@
 ---
 tr:
-  views:
-    settings:
-      payments:
-        renewal: "Katkınız %{date} tarihinde devam edecek."
   settings:
+    ai_prompts:
+      show:
+        disable_ai: Yapay Zeka Asistanını Devre Dışı Bırak
+        main_system_prompt:
+          subtitle: Yapay zeka asistanının tüm sohbet konuşmalarında nasıl davrandığını
+            tanımlayan temel talimatlar
+          title: Ana Sistem İstemi
+        merchant_detector:
+          subtitle: Yapay zeka, işlem verilerini satıcı bilgileriyle tanımlar ve zenginleştirir
+          title: Satıcı Algılayıcı
+        openai_label: OpenAI
+        page_title: Yapay Zeka İstemleri
+        prompt_instructions: İstem Talimatları
+        transaction_categorizer:
+          subtitle: Yapay zeka, tanımladığınız kategorilere göre işlemlerinizi otomatik
+            olarak kategorilendirir
+          title: İşlem Kategorileyici
+    appearances:
+      show:
+        dashboard_subtitle: Panelin nasıl görüntüleneceğini özelleştirin
+        dashboard_title: Panel
+        dashboard_two_column_description: Panel bileşenlerini büyük ekranlarda iki
+          sütun halinde görüntüleyin; her bileşenin başlığında genişlik ve yükseklik
+          kontrolleri bulunur. Kapalıyken bileşenler tek bir sütunda üst üste sıralanır.
+        dashboard_two_column_title: İki sütunlu düzen
+        disable_modal_click_outside_description: Modalların dışına tıklandığında kapanmasını
+          engeller. Kaydedilmemiş değişiklikleri yanlışlıkla kaybetmemek için kullanışlıdır.
+        disable_modal_click_outside_title: Dışarı tıklandığında modalleri açık tut
+        modals_subtitle: Modal davranışını özelleştir
+        modals_title: Modaller
+        page_title: Görünüm
+        split_grouped_description: Bölünmüş işlemleri işlem listesinde üst işlemin
+          altında gruplandırılmış olarak gösterin. Kapalıyken bölünen alt işlemler
+          ayrı satırlar olarak görünür.
+        split_grouped_title: Bölünmüş işlemleri grupla
+        theme_dark: Koyu
+        theme_light: Açık
+        theme_subtitle: Uygulama için tercih edilen temayı seçin
+        theme_system: Sistem
+        theme_title: Tema
+        transactions_subtitle: İşlemlerin nasıl görüntüleneceğini özelleştirin
+        transactions_title: İşlemler
+    debugs:
+      show:
+        context:
+          account: account=%{value}
+          account_provider: account_provider=%{value}
+          family: family=%{value}
+          provider: provider=%{value}
+          user: user=%{value}
+        empty: Hiç debug olayı bulunamadı.
+        filters:
+          account_id: Hesap ID
+          account_provider_id: Hesap sağlayıcı ID
+          all: Tümü
+          category: Kategori
+          end_date: Bitiş
+          family_id: Aile ID
+          level: Seviye
+          provider: Sağlayıcı
+          reset: Sıfırla
+          source: Kaynak
+          start_date: Başlangıç
+          submit: Filtrele
+          user_id: Kullanıcı ID
+        missing_value: "-"
+        page_title: Hata Ayıklama
+        subtitle: Süper yöneticiler için anlamlı operasyonel olaylar. En yeniden en
+          eskiye sıralanır.
+        table:
+          category: Kategori
+          context: Bağlam
+          level: Seviye
+          message: Mesaj
+          metadata: Meta Veri
+          source: Kaynak
+          time: Zaman
+          view_metadata: Görüntüle
+        title: Hata ayıklama olay günlüğü
+    llm_usages:
+      show:
+        avg_cost_per_request: Ort. Maliyet/İstek
+        based_on_requests: Maliyet verisi bulunan %{total} istekten %{with_cost} tanesine
+          dayanmaktadır
+        col_cost: Maliyet
+        col_date: Tarih
+        col_model: Model
+        col_operation: İşlem
+        col_tokens: Jeton
+        completion: tamamlama
+        cost_by_model: Modele Göre Maliyet
+        cost_by_operation: İşleme Göre Maliyet
+        cost_estimates_description: Maliyetler, Temmuz 2026 itibarıyla OpenAI fiyatlandırması
+          dahil olmak üzere yayınlanan sağlayıcı fiyatlarına göre tahmin edilir. Gerçek
+          maliyetler farklılık gösterebilir. Fiyatlandırma 1 milyon jeton başınadır
+          ve modele göre değişir. Özel veya kendi sunucunuzda barındırılan modeller
+          "Yok" olarak gösterilir ve maliyet toplamlarına dahil edilmez.
+        cost_estimates_title: Maliyet Tahminleri Hakkında
+        end_date: Bitiş Tarihi
+        failed: Başarısız
+        filter: Filtrele
+        no_usage_data: Seçilen dönem için kullanım verisi bulunamadı
+        page_title: LLM Kullanımı ve Maliyetleri
+        prompt: istem
+        recent_usage: Son Kullanım
+        start_date: Başlangıç Tarihi
+        subtitle: Yapay zeka kullanımınızı ve tahmini maliyetlerinizi takip edin
+        total_cost: Toplam Maliyet
+        total_requests: Toplam İstek
+        total_tokens: Toplam Jeton
+    mcp:
+      revoke:
+        revoked: Bağlantı iptal edildi.
+      show:
+        connect_subtitle: Bu URL'yi Claude.ai'ye (veya herhangi bir MCP uyumlu istemciye)
+          yapıştırarak Sure hesabınıza bağlayın.
+        connect_title: Bir yapay zeka asistanı bağlayın
+        connected_ago: "%{time} önce bağlandı"
+        connected_subtitle: Bu uygulamalar şu anda Sure verilerinize erişebiliyor.
+          Artık kullanmadıklarınızın erişimini iptal edin.
+        connected_title: Bağlı istemciler
+        copied: Kopyalandı!
+        copy_url: Kopyala
+        how_to_connect_title: Claude nasıl bağlanır
+        page_title: MCP Sunucusu
+        revoke: İptal Et
+        revoke_confirm: Bu istemcinin erişimi iptal edilsin mi?
+        step_1: Claude.ai'yi açın ve Ayarlar → Entegrasyonlar'a gidin.
+        step_2: '"Entegrasyon ekle"ye tıklayın ve yukarıdaki MCP sunucu URL''sini
+          yapıştırın.'
+        step_3: Bağlan'a tıklayın — giriş yapmak ve erişimi yetkilendirmek için Sure'a
+          yönlendirileceksiniz.
+        step_4: Yetkilendirildikten sonra Claude, hesaplarınızı, işlemlerinizi ve
+          bakiye verilerinizi okuyabilir.
+        unknown_client: Bilinmeyen istemci
     payments:
       show:
+        choose_level: Seviye seçin
+        contributions_note: "%{product_name}'e yapılan katkılar burada gösterilecek."
+        currently_on_plan: 'Şu anda kullanılan plan:'
+        manage: Yönet
+        not_contributing_emphasis: katkıda bulunmuyor
+        not_contributing_prefix: Şu anda
         page_title: Ödeme
+        payment_via_stripe: Stripe ile ödeme
         subscription_subtitle: Abonelik ve ödeme bilgilerinizi güncelleyin
         subscription_title: Aboneliği yönet
+        trial_days_left:
+          one: Veriler %{count} gün içinde silinecek
+          other: Veriler %{count} gün içinde silinecek
+        trialing: Şu anda %{product_name}'in açık demosu kullanılıyor
     preferences:
       show:
+        additional_currencies_label: Ek para birimleri
+        base_currency_badge: Ana para birimi
+        base_currency_label: Ana para birimi
         country: Ülke
+        currencies_more: "+%{count} tane daha"
+        currencies_subtitle: "%{moniker} için para birimi alanlarında hangi para birimlerinin
+          görüneceğini seçin"
+        currencies_title: "%{moniker} Para Birimleri"
         currency: Para birimi
+        currency_search_placeholder: Para birimi ara
         date_format: Tarih formatı
+        default_account_order: Varsayılan Hesap Sırası
+        default_period: Varsayılan Dönem
         general_subtitle: Tercihlerinizi yapılandırın
         general_title: Genel
-        default_period: Varsayılan Dönem
         language: Dil
         language_auto: Tarayıcı dili
+        manage_currencies: Para birimlerini yönet
+        manage_currencies_subtitle: Hiç kullanmadığınız para birimlerinin seçimini
+          kaldırın veya listeyi yalnızca birkaç taneye indirin.
+        month_start_day: Bütçe ayı başlangıcı
+        month_start_day_hint: Bütçe ayınızın ne zaman başlayacağını ayarlayın (ör.
+          maaş günü)
+        month_start_day_warning: Bütçeleriniz ve ay-başı-bugüne hesaplamalarınız,
+          her ayın 1'i yerine bu özel başlangıç gününü kullanacaktır.
+        no_additional_currencies: Hiçbiri seçilmedi
+        no_matching_currencies: Para birimi bulunamadı
         page_title: Tercihler
+        preview:
+          description: Önizleme veya deneysel olarak etiketlenen devam eden özelliklere
+            katılın.
+          title: Önizleme özelliklerini etkinleştir
+        save_currencies: Para birimlerini kaydet
+        select_all_currencies: Tümünü seç
+        select_base_only: Yalnızca ana para birimi
+        selected_currencies_count:
+          one: "%{count} seçildi"
+          other: "%{count} seçildi"
+        sharing_default_label: Yeni hesaplar için varsayılan paylaşım
+        sharing_private: Varsayılan olarak özel tut
+        sharing_shared: Tüm üyelerle paylaş
+        sharing_subtitle: "%{moniker} içinde hesapların nasıl paylaşılacağını kontrol
+          edin"
+        sharing_title: "%{moniker} Paylaşımı"
         theme_dark: Koyu
         theme_light: Açık
         theme_subtitle: Uygulama için tercih edilen temayı seçin
         theme_system: Sistem
         theme_title: Tema
         timezone: Zaman dilimi
-    appearances:
-      show:
-        modals_title: Modaller
-        modals_subtitle: Modal davranışını özelleştir
-        disable_modal_click_outside_title: Dışarı tıklandığında modalleri açık tut
-        disable_modal_click_outside_description: Modalların dışına tıklandığında kapanmasını engeller. Kaydedilmemiş değişiklikleri yanlışlıkla kaybetmemek için kullanışlıdır.
+        translations_notice: Lütfen unutmayın, çeşitli diller için çeviriler üzerinde
+          hala çalışıyoruz.
     profiles:
       destroy:
         cannot_remove_self: Kendinizi hesaptan çıkaramazsınız.
+        member_owns_other_family_data: Bu üye, başka bir hanede hesaplara sahip olduğu
+          için kaldırılamıyor. Önce bu hesapları devretmeniz veya kaldırmanız gerekiyor.
         member_removal_failed: Üye kaldırılırken bir sorun oluştu.
         member_removed: Üye başarıyla kaldırıldı.
         not_authorized: Üyeleri kaldırmaya yetkiniz yok.
       show:
         confirm_delete:
-          body: Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+          body: Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem
+            geri alınamaz.
           title: Hesap silinsin mi?
-        confirm_reset:
-          body: Hesabınızı sıfırlamak istediğinizden emin misiniz? Bu işlem tüm hesaplarınızı, kategorilerinizi, satıcılarınızı, etiketlerinizi ve diğer verilerinizi silecektir. Bu işlem geri alınamaz.
-          title: Hesap sıfırlansın mı?
-        confirm_reset_with_sample_data:
-          body: Are you sure you want to reset your account and load sample data? This will delete your existing data and replace it with demo data so you can explore Sure safely.
-          title: Reset account and load sample data?
         confirm_remove_invitation:
           body: "%{email} için daveti kaldırmak istediğinizden emin misiniz?"
-          title: "Daveti Kaldır"
+          title: Daveti Kaldır
         confirm_remove_member:
           body: "%{name} kişisini hesabınızdan kaldırmak istediğinizden emin misiniz?"
-          title: "Üyeyi Kaldır"
+          title: Üyeyi Kaldır
+        confirm_reset:
+          body: Hesabınızı sıfırlamak istediğinizden emin misiniz? Bu işlem tüm hesaplarınızı,
+            kategorilerinizi, satıcılarınızı, etiketlerinizi ve diğer verilerinizi
+            silecektir. Bu işlem geri alınamaz.
+          title: Hesap sıfırlansın mı?
+        confirm_reset_with_sample_data:
+          body: Hesabınızı sıfırlamak ve örnek veri yüklemek istediğinizden emin misiniz?
+            Bu işlem mevcut verilerinizi silecek ve Sure'u güvenle keşfedebilmeniz
+            için demo verilerle değiştirecektir.
+          title: Hesap sıfırlansın ve örnek veri yüklensin mi?
         danger_zone_title: Tehlikeli Alan
         delete_account: Hesabı sil
-        delete_account_warning: Hesabınızı silmek tüm verilerinizi kalıcı olarak kaldırır ve geri alınamaz.
-        reset_account: Hesabı sıfırla
-        reset_account_warning: Hesabınızı sıfırlamak tüm hesaplarınızı, kategorilerinizi, satıcılarınızı, etiketlerinizi ve diğer verilerinizi silecek, ancak kullanıcı hesabınızı koruyacaktır.
-        reset_account_with_sample_data: Reset account and load sample data
-        reset_account_with_sample_data_warning: Resetting your account will delete all your existing data and then load fresh sample data so you can explore Sure with a pre-filled environment.
+        delete_account_warning: Hesabınızı silmek tüm verilerinizi kalıcı olarak kaldırır
+          ve geri alınamaz.
         email: E-posta
         first_name: Ad
+        group_form_input_placeholder: Grup adı girin
+        group_form_label: Grup adı
+        group_title: Grup Üyeleri
         household_form_input_placeholder: Hane adı girin
         household_form_label: Hane adı
-        household_subtitle: Aile üyelerini, partnerleri ve diğer kişileri davet edin. Davetliler hanenize giriş yapabilir ve paylaşılan hesaplarınıza erişebilir.
+        household_subtitle: Aile üyelerini, partnerleri ve diğer kişileri davet edin.
+          Davetliler hanenize giriş yapabilir ve paylaşılan hesaplarınıza erişebilir.
         household_title: Hane
         invitation_link: Davet bağlantısı
         invite_member: Üye ekle
@@ -77,35 +258,406 @@ tr:
         profile_title: Profil
         remove_invitation: Daveti Kaldır
         remove_member: Üyeyi Kaldır
+        resend_confirmation_link: yeni bir onay e-postası isteyin
+        reset_account: Hesabı sıfırla
+        reset_account_warning: Hesabınızı sıfırlamak tüm hesaplarınızı, kategorilerinizi,
+          satıcılarınızı, etiketlerinizi ve diğer verilerinizi silecek, ancak kullanıcı
+          hesabınızı koruyacaktır.
+        reset_account_with_sample_data: Hesabı sıfırla ve örnek veri yükle
+        reset_account_with_sample_data_warning: Hesabınızı sıfırlamak mevcut tüm verilerinizi
+          silecek ve önceden doldurulmuş bir ortamda Sure'u keşfedebilmeniz için yeni
+          örnek veriler yükleyecektir.
         save: Kaydet
+        unconfirmed_email_notice_html: E-postanızı %{email} olarak değiştirmeyi talep
+          ettiniz. Değişikliğin geçerli olması için lütfen e-postanıza gidip onaylayın.
+          E-postayı almadıysanız lütfen spam klasörünüzü kontrol edin veya %{resend_link}.
+    providers:
+      akahu_panel:
+        step_1_html: "%{link} adresine gidin ve kişisel bir uygulama oluşturun."
+        step_2: Uygulama jetonunuzu ve kullanıcı jetonunuzu kopyalayın.
+        step_3: Jetonları aşağıya yapıştırın, kaydedin, ardından senkronize hesaplarınızı
+          bağlayın.
+      bank_sync:
+        lede: İşlemlerin, bakiyelerin ve varlıkların otomatik olarak Sure'a akması
+          için harici hesapları bağlayın.
+        page_title: Banka senkronizasyonu
+      binance_panel:
+        api_key_label: API Anahtarı
+        api_key_placeholder: Binance API Anahtarınızı yapıştırın
+        api_secret_label: API Gizli Anahtarı
+        api_secret_placeholder: Binance API Gizli Anahtarınızı yapıştırın
+        connect_button: Binance'a Bağlan
+        disconnect_confirm: Binance bağlantısını kesmek istediğinizden emin misiniz?
+        historical_import: Geçmiş İçe Aktarma Ayarları
+        ip_hint_body: 'Uygulama sunucusunun çıkış IP adresini Binance API Anahtarı
+          beyaz listesine ekleyin:'
+        ip_hint_contact_admin: Uygulama sunucusunun çıkış IP adresini almak için yöneticinizle
+          iletişime geçin.
+        ip_hint_title: IP beyaz listeye alma gerekli
+        no_withdraw_body: Binance API anahtarınızı oluştururken çekme izinlerini etkinleştirmeyin.
+          Sure yalnızca okuma erişimine ihtiyaç duyar.
+        no_withdraw_title: Yalnızca salt okunur anahtar
+        setup_instructions: 'Binance''ı bağlamak için salt okunur bir API anahtarı
+          oluşturun:'
+        step1_html: Go to <a href="https://www.binance.com/en/my/settings/api-management"
+          target="_blank" rel="noopener noreferrer" class="underline">Binance API
+          Yönetimi</a>'ne gidin
+        step2: Yalnızca Okumayı Etkinleştir izniyle yeni bir API anahtarı oluşturun
+        step3: API Anahtarınızı ve Gizli Anahtarınızı aşağıya yapıştırın
+        sync: Senkronize et
+        sync_start_date_help: Geçmiş işlemlerin ne kadar geriye gidilerek alınacağını
+          seçin.
+        sync_start_date_label: Verileri içe aktar
+        syncing: Senkronize ediliyor...
+      clear_filter: Filtreleri temizle
+      coinbase_panel:
+        api_key_label: API Anahtarı
+        api_key_placeholder: Coinbase API anahtarınızı girin
+        api_secret_label: API Gizli Anahtarı
+        api_secret_placeholder: Coinbase API gizli anahtarınızı girin
+        connect_button: Coinbase'e Bağlan
+        disconnect_confirm: Bu Coinbase bağlantısını kesmek istediğinizden emin misiniz?
+          Senkronize hesaplarınız manuel hesaplara dönüşecektir.
+        setup_instructions: 'Coinbase''i bağlamak için:'
+        step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase
+          API Ayarları</a>
+        step2: Salt okunur izinlerle (hesapları görüntüleme, işlemleri görüntüleme)
+          yeni bir API anahtarı oluşturun
+        step3: API anahtarınızı ve API gizli anahtarınızı kopyalayıp aşağıya yapıştırın
+        sync: Senkronize et
+        syncing: Senkronize ediliyor...
+      connect: Bağlan
+      drawer_trust_statement: Salt okunur erişim. Sure asla para transferi yapamaz
+        ve kimlik bilgileriniz şifrelenmiş olarak saklanır.
+      empty_filter: Filtrenizle eşleşen sağlayıcı yok.
+      enable_banking_panel:
+        add_connection: Bağlantı Ekle
+        application_id_label: Uygulama ID
+        application_id_placeholder_new: Uygulama ID girin
+        application_id_placeholder_update: Güncellemek için yeni ID girin
+        callback_url_instruction: Geri çağırma URL'si için %{callback_url} kullanın.
+        client_certificate_label: İstemci Sertifikası (Özel Anahtar ile)
+        config_locked_message: Bu kimlik bilgilerini değiştirmeden önce bağlı tüm
+          bankaların bağlantısını kesin.
+        config_locked_title: Yapılandırma kilitli
+        configured: Yapılandırıldı
+        connect_bank: Banka bağla
+        connected_bank: Bağlı Banka
+        connection: Bağlantı
+        connection_error: Bağlantı Hatası
+        country_label: Ülke
+        ready_to_link: Hesapları bağlamaya hazır
+        reconnect: Yeniden bağlan
+        remove: Kaldır
+        remove_confirm: Bu bağlantıyı kaldırmak istediğinizden emin misiniz?
+        save_and_connect: Kaydet ve bağlan
+        select_country: Ülke seçin...
+        session_expired_reconnect: Oturum süresi doldu - yeniden bağlan
+        session_expires: 'Oturum sona eriyor: %{date}'
+        step_1_html: "%{link} adresine gidin ve geliştirici kimlik bilgilerinizi alın."
+        step_2: Ülkenizi seçin ve Uygulama ID + İstemci Sertifikasını aşağıya yapıştırın.
+        step_3: Kaydedin, ardından bankanızı bağlamak için Bağlantı Ekle'yi kullanın.
+        sync: Senkronize et
+        syncing: Senkronize ediliyor
+        unknown: Bilinmiyor
+        update_connection: Bağlantıyı güncelle
+      encryption_error:
+        message: Banka senkronizasyonu için Active Record şifrelemesinin yapılandırılması
+          gerekir. Rails kimlik bilgilerinizde veya ortam değişkenlerinizde primary_key,
+          deterministic_key ve key_derivation_salt değerlerini ayarlayın.
+        title: Şifreleme anahtarları eksik
+      groups:
+        available: Kullanılabilir
+        empty_available: Kullanılabilir tüm sağlayıcılar bağlı.
+        your_connections: Bağlantılarınız
+      health_strip:
+        accounts_syncing: hesap senkronize ediliyor
+        connected: bağlı
+        last_synced: Son senkronizasyon %{time} önce
+        needs_attention: dikkat gerekiyor
+      ibkr_panel:
+        accounts_tab: Hesaplar
+        configuration:
+          all_other_options: 'Diğer tüm yapılandırma seçenekleri: "No"'
+          date_format: 'Tarih Formatı: yyyy-MM-dd'
+          date_time_separator: 'Tarih/Saat Ayırıcı: ; (noktalı virgül)'
+          format: 'Format: XML'
+          models: 'Modeller: İsteğe Bağlı'
+          period: 'Dönem: Son 365 Takvim Günü'
+          profit_and_loss: 'Kar ve Zarar: Varsayılan'
+          time_format: 'Saat Formatı: HH:mm:ss'
+        disconnect_confirm: Interactive Brokers bağlantısı kesilsin mi?
+        flex_query_details:
+          configuration_heading: Bu sorgu seçeneklerini ayarlayın
+          eyebrow: Flex Query
+          sections_heading: Bu bölümleri ve alanları etkinleştirin
+          summary: IBKR Activity Flex Query'nizin içermesi gereken tam bölümleri,
+            alanları ve ayarları görmek için genişletin.
+          title: Bölümler, alanlar ve yapılandırma
+        not_configured: Yapılandırılmadı.
+        query_id_label: Sorgu ID
+        query_id_placeholder_existing: Mevcut Sorgu ID'sini korumak için boş bırakın
+        query_id_placeholder_new: IBKR Flex Query ID'nizi girin
+        report_window_note: IBKR Flex raporları, IBKR'de yapılandırdığınız sorgu penceresiyle
+          sınırlıdır. Sure, bu rapordan mevcut tüm varlıkları ve son 365 güne kadar
+          olan işlem geçmişini içe aktaracaktır.
+        save_configuration: Yapılandırmayı Kaydet
+        sections:
+          account_information: 'Hesap Bilgileri: Account ID, Currency'
+          cash_report: 'Nakit Raporu:'
+          cash_report_fields: 'Alanlar: Currency, Ending Cash'
+          cash_report_options: 'Seçenekler: None'
+          cash_transactions: 'Nakit İşlemleri:'
+          cash_transactions_fields: 'Alanlar: Amount, Conid, Currency, FX Rate To
+            Base, Report Date, Transaction ID, Type'
+          cash_transactions_options: 'Seçenekler: Dividends, Deposits & Withdrawals,
+            Detail'
+          change_in_position_value_summary: 'Pozisyon Değeri Değişim Özeti: Currency,
+            End Of Period Value'
+          net_asset_value: 'Ana Para Biriminde Net Varlık Değeri (NAV):'
+          net_asset_value_fields: 'Alanlar: Currency, Report Date, Total'
+          net_asset_value_options: 'Seçenekler: None'
+          open_positions: 'Açık Pozisyonlar:'
+          open_positions_fields: 'Alanlar: Asset Class, Conid, Cost Basis Price, Currency,
+            FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security
+            ID Type, Side, Symbol'
+          open_positions_options: 'Seçenekler: Summary'
+          trades: 'İşlemler:'
+          trades_fields: 'Alanlar: Asset Class, Buy/Sell, Conid, Currency, FX Rate
+            To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
+            Date, Trade ID, TradePrice, Transaction ID'
+          trades_options: 'Seçenekler: Execution'
+        status_configured_prefix: "%{summary}. Şuraya gidin:"
+        status_configured_suffix: sekmesine giderek keşfedilen hesapları yönetin.
+        steps:
+          step_1: IBKR Client Portal'ınızda "Performance & Reports" > "Flex Queries"
+            bölümüne gidin.
+          step_2: Yeni bir sorgu oluşturmak için "Activity Flex Query" bölümündeki
+            "+" simgesine tıklayın.
+          step_3: Sorgunuza bir ad verin (ör. "Sure Sync"), ardından aşağıdaki Flex
+            Query ayrıntılarını inceleyin ve listelenen bölümleri, alanları ve yapılandırma
+            seçeneklerini etkinleştirin.
+          step_4: Sorguyu kaydedin, "Query ID"nizi not edin, ardından bir erişim Token'ı
+            oluşturmak için "Flex Web Service Configuration" bölümündeki dişli simgesini
+            kullanın.
+          step_5: Sorgu ID'nizi ve Token'ınızı aşağıya yapıştırın, yapılandırmayı
+            kaydedin, ardından keşfedilen IBKR hesaplarını bağlamak için Hesaplar'a
+            gidin.
+        sync: Senkronize et
+        token_label: Token
+        token_placeholder_existing: Mevcut Token'ı korumak için boş bırakın
+        token_placeholder_new: IBKR Flex Web Service Token'ınızı girin
+        update_configuration: Yapılandırmayı Güncelle
+      kraken_panel:
+        add_connection: Kraken bağlantısı ekle
+        api_key_label: API Anahtarı
+        api_key_placeholder: Kraken API anahtarınızı yapıştırın
+        api_secret_label: Özel Anahtar
+        api_secret_placeholder: Kraken özel anahtarınızı yapıştırın
+        connection_name_label: Bağlantı adı
+        connection_name_placeholder: Ana Kraken
+        default_connection_name: Kraken
+        disconnect: Bağlantıyı kes
+        disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?"
+        keep_api_key_placeholder: Mevcut API anahtarını korumak için boş bırakın
+        keep_api_secret_placeholder: Mevcut özel anahtarı korumak için boş bırakın
+        read_only_body: İşlem yapma, iptal etme, çekme, dışa aktarma, defter, Earn,
+          stake etme veya transfer izinleri vermeyin. Sure yalnızca bakiyeleri, varlıkları
+          ve spot işlem gerçekleşmelerini içe aktarır.
+        read_only_title: Yalnızca salt okunur borsa senkronizasyonu
+        setup_accounts: Hesabı kur
+        step1_html: Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank"
+          rel="noopener noreferrer" class="underline">Kraken API ayarları</a>'na gidin
+        step2: Yalnızca Query Funds ve Query Closed Orders & Trades izinleriyle bir
+          API anahtarı oluşturun.
+        step3: API anahtarını ve özel anahtarı aşağıya yapıştırın.
+        sync: Senkronize et
+        syncing: Senkronize ediliyor...
+        update_connection: Bağlantıyı güncelle
+      lunchflow_panel:
+        api_key_label: API Anahtarı
+        api_key_placeholder_new: API anahtarını buraya yapıştırın
+        api_key_placeholder_update: Güncellemek için yeni API anahtarı girin
+        base_url_label: Temel URL (İsteğe Bağlı)
+        base_url_placeholder: https://lunchflow.app/api/v1 (varsayılan)
+        save_and_connect: Kaydet ve bağlan
+        step_1_html: "%{link} adresine gidin ve bir API anahtarı oluşturun."
+        step_2: Anahtarınızı aşağıya yapıştırın ve bağlanın.
+        step_3: Ardından senkronize hesaplarınızı bağlamak için Hesaplar'a gidin.
+        update_connection: Bağlantıyı güncelle
+      maturity:
+        alpha: Alfa
+        beta: Beta
+      meta:
+        last_synced: "%{time} önce senkronize edildi"
+        no_recent_sync: Senkronizasyon gecikti
+        reconsent_needed:
+          one: 1 gün içinde yeniden onay gerekiyor
+          other: "%{count} gün içinde yeniden onay gerekiyor"
+        reconsent_required: Yeniden onay gerekiyor
+        registration_needed: Kayıt gerekiyor
+        sync_error: Senkronizasyon hatası
+      not_authorized: Yetkiniz yok
+      not_found: Sağlayıcı bulunamadı.
+      plaid_eu_panel:
+        step_1_html: "%{link} sayfasını açın ve AB İstemci ID'nizi ve Gizli Anahtarınızı
+          kopyalayın."
+      plaid_panel:
+        step_1_html: "%{link} sayfasını açın ve İstemci ID'nizi ve Gizli Anahtarınızı
+          kopyalayın."
+        step_2: Bir ortam seçin. Test için sandbox, gerçek hesaplar için production
+          kullanın.
+        step_3: Kimlik bilgilerinizi aşağıya yapıştırın ve bağlanın.
+      provider_form:
+        save_and_connect: Kaydet ve bağlan
+      recently_synced: Yakın zamanda senkronize edildi. Biraz sonra tekrar deneyin.
+      search_filters:
+        aria_label: Sağlayıcıları ara
+        chips:
+          all: Tümü
+          bank: Bankalar
+          crypto: Kripto
+          investment: Yatırımlar
+        placeholder: Sağlayıcıları ara
+      setup_steps:
+        eyebrow: Kurulum
+        need_help: Yardıma mı ihtiyacınız var?
+      simplefin_panel:
+        save_and_connect: Kaydet ve bağlan
+        setup_token_label: Kurulum Jetonu
+        setup_token_placeholder: SimpleFIN kurulum jetonunu yapıştırın
+        step_1_html: Tek seferlik kurulum jetonu için %{link} adresine gidin.
+        step_2: Jetonu aşağıya yapıştırın ve bağlanın.
+        step_3: Ardından senkronize hesaplarınızı bağlamak için Hesaplar'a gidin.
+      status:
+        err: Hata
+        'false': Yapılandırılmadı
+        ok: Bağlandı
+        warn: İşlem gerekiyor
+      sync_all: Tümünü senkronize et
+      sync_all_in_progress: Bağlı tüm sağlayıcılar senkronize ediliyor…
+      sync_all_recently: Senkronizasyon zaten devam ediyor. Biraz sonra tekrar deneyin.
+      sync_provider: Şimdi senkronize et
+      sync_provider_in_progress: Senkronizasyon başladı.
+      sync_provider_no_items: Senkronize edilecek bağlantı yok.
+      taglines:
+        akahu: Akahu üzerinden Yeni Zelanda finans kurumlarını senkronize edin.
+        binance: Salt okunur bir API anahtarı kullanarak Binance spot bakiyelerinizi
+          senkronize edin.
+        brex: Salt okunur erişimle Brex nakit ve kurumsal kart hareketlerinizi senkronize
+          edin.
+        coinbase: Coinbase kripto varlıklarınızı içe aktarın ve performansı takip
+          edin.
+        coinstats: Tüm kripto portföyünüzü cüzdanlar ve borsalar genelinde takip edin.
+        enable_banking: PSD2 açık bankacılığı üzerinden Avrupa banka hesaplarınızı
+          senkronize edin.
+        ibkr: Flex Query içe aktarmaları yoluyla Interactive Brokers yatırım hesaplarınızı
+          senkronize edin.
+        indexa_capital: Indexa Capital otomatik yatırım portföyünüzü takip edin.
+        kraken: Salt okunur bir API anahtarı kullanarak Kraken bakiyelerinizi ve spot
+          işlem gerçekleşmelerinizi senkronize edin.
+        lunchflow: 40'tan fazla ülkeden 20 bin+ bankayı bağlayın (İngiltere, AB, ABD
+          ve daha fazlası!)
+        mercury: Mercury işletme bankacılığı hesaplarınızı otomatik olarak senkronize
+          edin.
+        plaid: Plaid üzerinden binlerce ABD finans kurumunu bağlayın.
+        plaid_eu: Plaid üzerinden (PSD2 / Açık Bankacılık) Avrupa finans kurumlarını
+          bağlayın.
+        questrade: Questrade API'si aracılığıyla Questrade yatırım hesaplarınızı doğrudan
+          senkronize edin.
+        simplefin: Açık SimpleFIN protokolü üzerinden ABD banka hesaplarını bağlayın.
+        snaptrade: SnapTrade birleştirme ağı üzerinden aracı kurum hesaplarını bağlayın.
+        sophtron: ABD ve Kanada bankalarını ve kurumlarını bağlayın.
+        wise: Wise çoklu para birimi bakiyelerinizi ve uluslararası transferlerinizi
+          otomatik olarak senkronize edin.
+      up_panel:
+        step_1_html: "%{link} adresine gidin ve kişisel bir erişim jetonu oluşturun."
+        step_2: Kişisel erişim jetonunuzu kopyalayın.
+        step_3: Jetonu aşağıya yapıştırın, kaydedin, ardından senkronize hesaplarınızı
+          bağlayın.
+      update:
+        no_changes: Herhangi bir değişiklik yapılmadı
+        updated_successfully: Sağlayıcı ayarları başarıyla güncellendi
     securities:
       show:
+        disable_mfa: 2FA'yı devre dışı bırak
+        disable_mfa_confirm: İki faktörlü kimlik doğrulamayı devre dışı bırakmak istediğinizden
+          emin misiniz?
+        enable_mfa: 2FA'yı etkinleştir
+        encryption_warning:
+          generate: 'Şununla bir set oluşturun: bin/rails db:encryption:init'
+          intro: 'Hassas veriler (API anahtarları, sağlayıcı jetonları, MFA gizli
+            anahtarları ve kişisel veriler) şu anda şifrelenmeden depolanıyor. Şifrelemeyi
+            etkinleştirmek için ortam değişkenlerinizde veya Rails kimlik bilgilerinizde
+            aşağıdaki anahtarları ayarlayın:'
+          keys: '["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY", "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY",
+            "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"]'
+          title: Şifreleme anahtarları eksik
+        mfa_description: Hesabınıza, oturum açarken kimlik doğrulayıcı uygulamanızdan
+          bir kod isteyerek ekstra bir güvenlik katmanı ekleyin
+        mfa_title: İki Faktörlü Kimlik Doğrulama
         page_title: Menkul Kıymet
+        sso_confirm_body: "%{provider} hesabınızın bağlantısını kesmek istediğinizden
+          emin misiniz? Daha sonra o sağlayıcıyla tekrar giriş yaparak yeniden bağlayabilirsiniz."
+        sso_confirm_button: Bağlantıyı kes
+        sso_confirm_title: Hesap bağlantısı kesilsin mi?
+        sso_connect_hint: Bir hesap bağlamak için çıkış yapın ve bir SSO sağlayıcısıyla
+          giriş yapın.
+        sso_disconnect: Bağlantıyı kes
+        sso_last_used: Son kullanım
+        sso_never: Hiçbir zaman
+        sso_no_email: E-posta yok
+        sso_no_identities: Bağlı SSO hesabı yok
+        sso_subtitle: Tekli oturum açma hesap bağlantılarınızı yönetin
+        sso_title: Bağlı Hesaplar
+        sso_warning_message: Bu sizin tek giriş yönteminiz. Bağlantıyı kesmeden önce
+          güvenlik ayarlarınızda bir şifre belirlemelisiniz, aksi takdirde hesabınızın
+          dışında kalabilirsiniz.
     settings_nav:
       accounts_label: Hesaplar
-      api_key_label: API Anahtarı
       advanced_section_title: Gelişmiş
-      payment_label: Ödeme
+      ai_prompts_label: Yapay Zeka İstemleri
+      api_key_label: API Anahtarı
+      api_keys_label: API Anahtarları
+      appearance_label: Görünüm
+      bank_sync_label: Banka senkronizasyonu
       categories_label: Kategoriler
+      debug_label: Hata Ayıklama
+      exports_label: Dışa Aktarımlar
       feedback_label: Geri Bildirim
       general_section_title: Genel
+      guides_label: Rehberler
       imports_label: İçe Aktarımlar
+      llm_usage_label: LLM Kullanımı
       logout: Çıkış Yap
+      mcp_label: MCP
       merchants_label: Satıcılar
       other_section_title: Diğer
+      payment_label: Ödeme
       preferences_label: Tercihler
       profile_label: Hesap
+      providers_label: Sağlayıcılar
+      recurring_transactions_label: Yinelenen
       rules_label: Kurallar
       security_label: Güvenlik
       self_hosting_label: Kendi Sunucunda Barındırma
+      sso_providers_label: SSO Sağlayıcıları
+      statement_vault_label: Ekstre Kasası
       tags_label: Etiketler
       transactions_section_title: İşlemler
+      users_label: Kullanıcılar
       whats_new_label: Yenilikler
     settings_nav_link_large:
       next: Sonraki
       previous: Geri
     user_avatar_field:
       accepted_formats: JPG veya PNG. Maksimum 5MB.
-      choose: Fotoğraf yükle
-      choose_label: (isteğe bağlı)
       change: Fotoğrafı değiştir
+      choose: Fotoğraf yükle
+      choose_label: "(isteğe bağlı)"
+  views:
+    settings:
+      payments:
+        cancellation: Katkınız %{date} tarihinde sona erecek.
+        renewal: Katkınız %{date} tarihinde devam edecek.

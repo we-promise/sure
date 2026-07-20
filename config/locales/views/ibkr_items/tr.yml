@@ -1,0 +1,98 @@
+---
+tr:
+  ibkr_items:
+    complete_account_setup:
+      none_created: Hiçbir hesap oluşturulmadı.
+      none_selected: Hiçbir hesap seçilmedi.
+      success:
+        one: "%{count} Interactive Brokers hesabı başarıyla oluşturuldu."
+        other: "%{count} Interactive Brokers hesabı başarıyla oluşturuldu."
+    create:
+      success: Interactive Brokers başarıyla yapılandırıldı.
+    defaults:
+      name: Interactive Brokers
+    destroy:
+      success: Interactive Brokers bağlantısı silinmek üzere zamanlandı.
+    ibkr_item:
+      accounts_need_setup: Hesaplar kurulum gerektiriyor
+      accounts_need_setup_description: IBKR'den bazı hesapların Sure hesaplarıyla
+        bağlantılandırılması gerekiyor.
+      delete: Sil
+      deletion_in_progress: Silme işlemi devam ediyor
+      error: Hata
+      flex_web_service: Flex Web Service
+      never_synced: Hiç senkronize edilmedi.
+      no_accounts_discovered: Henüz IBKR hesabı bulunamadı.
+      no_accounts_discovered_description: Hesapları bulmak için Flex sorgunuzu yapılandırdıktan
+        sonra bir senkronizasyon çalıştırın.
+      requires_update: Kimlik bilgileri dikkat gerektiriyor
+      setup_accounts: Hesapları kur
+      synced: "%{time} önce senkronize edildi. %{summary}."
+      syncing: Senkronize ediliyor
+    link_existing_account:
+      already_linked: Bu Interactive Brokers hesabı zaten bağlı.
+      failed: Interactive Brokers hesabı bağlanamadı.
+      not_found: Hesap veya Interactive Brokers yapılandırması bulunamadı.
+      only_manual_investment: Yalnızca manuel yatırım hesapları Interactive Brokers'a
+        bağlanabilir.
+      success: Interactive Brokers hesabına başarıyla bağlandı.
+    select_accounts:
+      not_configured: Interactive Brokers yapılandırılmamış.
+    select_existing_account:
+      balance: Bakiye
+      cancel: İptal
+      link: Bağla
+      no_accounts_available: Henüz bağlanmamış Interactive Brokers hesabı yok.
+      run_sync_hint: Flex sorgunuzu güncelledikten sonra Ayarlar > Sağlayıcılar bölümünden
+        bir senkronizasyon çalıştırın.
+      title: Interactive Brokers hesabını bağla
+      wait_for_sync: Hesap keşif senkronizasyonunun tamamlanmasını bekleyin.
+    setup_accounts:
+      available_accounts:
+        account_id: 'Hesap Kimliği: %{account_id}'
+        account_summary: "%{account_type} • Bakiye: %{balance}"
+        account_type_investment: Yatırım
+        title: Kullanılabilir hesaplar
+      buttons:
+        back_to_settings: Ayarlara Dön
+        cancel: İptal
+        create_selected_accounts: Seçilen hesapları oluştur
+        done: Tamam
+        link: Bağla
+        refresh: Yenile
+      dialog_title: Interactive Brokers Hesaplarınızı Kurun
+      info_box:
+        items:
+          item_1: Güncel fiyat ve miktarlarla varlıklar
+          item_2: Pozisyon başına maliyet esası
+          item_3: İşlemler, temettüler, komisyonlar ve nakit yatırma veya çekmeler
+        title: IBKR Flex Sorgu İçe Aktarımı
+        warning: Geçmiş etkinlik, Flex Sorgusunun rapor penceresiyle sınırlıdır
+      link_existing:
+        description: Ya da bulunan bir IBKR hesabını mevcut bir manuel yatırım hesabına
+          bağlayın.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Bir hesap seçin...
+      linked_accounts:
+        linked_to_html: 'Bağlı: %{account}'
+        title: Zaten bağlı
+      page_title: Interactive Brokers Hesaplarını Kur
+      status:
+        fetching_accounts: Interactive Brokers'dan hesaplar alınıyor...
+        no_accounts_found_description: Sure, en son Flex raporunda herhangi bir IBKR
+          hesabı bulamadı.
+        no_accounts_found_title: Hesap bulunamadı.
+      subtitle: Bağlanacak IBKR aracı kurum hesaplarını seçin.
+    sync_status:
+      all_linked:
+        one: 1 hesap bağlandı
+        other: "%{count} hesap bağlandı"
+      no_accounts: Henüz IBKR hesabı bulunamadı
+      partial: "%{linked} bağlandı, %{unlinked} kurulum gerektiriyor"
+    update:
+      success: Interactive Brokers yapılandırması başarıyla güncellendi.
+  providers:
+    ibkr:
+      connection_description: Bir Interactive Brokers Flex Web Service raporu bağlayın
+      institution_name: Interactive Brokers
+      name: Interactive Brokers

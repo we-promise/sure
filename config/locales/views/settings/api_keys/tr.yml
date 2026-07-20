@@ -1,75 +1,151 @@
 ---
 tr:
   settings:
-    api_keys_controller:
-      success: "API anahtarınız başarıyla oluşturuldu"
-      revoked_successfully: "API anahtarı başarıyla iptal edildi"
-      revoke_failed: "API anahtarı iptal edilemedi"
-      scope_descriptions:
-        read_accounts: "Hesapları Görüntüle"
-        read_transactions: "İşlemleri Görüntüle"
-        read_balances: "Bakiyeleri Görüntüle"
-        write_transactions: "İşlem Oluştur"
     api_keys:
-      show:
-        title: "API Anahtarı Yönetimi"
-      no_api_key:
-        title: "API Anahtarınızı Oluşturun"
-        description: "Maybe verilerinize güvenli bir API anahtarı ile programatik erişim sağlayın."
-        what_you_can_do: "API ile yapabilecekleriniz:"
-        feature_1: "Hesap verilerinize programatik olarak erişin"
-        feature_2: "Özel entegrasyonlar ve uygulamalar oluşturun"
-        feature_3: "Veri çekme ve analizini otomatikleştirin"
-        security_note_title: "Önce Güvenlik"
-        security_note: "API anahtarınız, seçtiğiniz yetkilere göre kısıtlanacaktır. Aynı anda yalnızca bir aktif API anahtarınız olabilir."
-        create_api_key: "API Anahtarı Oluştur"
-      current_api_key:
-        title: "API Anahtarınız"
-        description: "Aktif API anahtarınız kullanıma hazır. Güvende tutun ve asla herkese açık şekilde paylaşmayın."
-        active: "Aktif"
-        key_name: "Adı"
-        created_at: "Oluşturulma"
-        last_used: "Son Kullanım"
-        expires: "Bitiş"
-        ago: "önce"
-        never_used: "Hiç kullanılmadı"
-        never_expires: "Süresiz"
-        permissions: "Yetkiler"
-        usage_instructions_title: "API anahtarınızı nasıl kullanırsınız"
-        usage_instructions: "%{product_name} API'ye istek yaparken API anahtarınızı X-Api-Key başlığına ekleyin:"
-        regenerate_key: "Yeni Anahtar Oluştur"
-        revoke_key: "Anahtarı İptal Et"
-        revoke_confirmation: "Bu API anahtarını iptal etmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve bu anahtarı kullanan tüm uygulamalar hemen devre dışı kalır."
-      new:
-        title: "API Anahtarı Oluştur"
-        create_new_key: "Yeni API Anahtarı Oluştur"
-        description: "Yeni API anahtarınızı açıklayıcı bir ad ve uygun yetkilerle yapılandırın."
-        name_label: "API Anahtarı Adı"
-        name_placeholder: "örn. Üretim Uygulaması, Analitik Paneli"
-        name_help: "Bu anahtarın amacını tanımlamanıza yardımcı olacak açıklayıcı bir ad seçin."
-        permissions_label: "Yetkiler"
-        permissions_help: "API anahtarınızın ihtiyaç duyduğu yetkileri seçin. Her zaman farklı yetkilerle yeni bir anahtar oluşturabilirsiniz."
-        scope_details:
-          read_accounts: "Hesap bilgilerini, bakiyeleri ve hesap düzeyindeki verileri görüntüle"
-          read_transactions: "İşlem verilerini, kategorileri ve işlem detaylarını görüntüle"
-          read_balances: "Geçmiş bakiye verilerini ve hesap değer eğilimlerini görüntüle"
-          write_transactions: "İşlem kayıtları oluştur ve güncelle (yakında)"
-        security_warning_title: "Önemli Güvenlik Uyarısı"
-        security_warning: "API anahtarınız oluşturulduktan sonra yalnızca bir kez gösterilecektir. Güvenli bir şekilde saklayın ve asla herkese açık şekilde paylaşmayın. Kaybederseniz, yeni bir anahtar oluşturmanız gerekir."
-        create_key: "API Anahtarı Oluştur"
-        cancel: "İptal"
+      create:
+        success: API anahtarınız başarıyla oluşturuldu
       created:
-        title: "API Anahtarı Oluşturuldu"
-        success_title: "API Anahtarı Başarıyla Oluşturuldu"
-        success_description: "Yeni API anahtarınız kullanıma hazır. Şimdi kopyaladığınızdan emin olun, çünkü tekrar göremeyeceksiniz."
-        your_api_key: "API Anahtarınız"
-        key_name: "Adı"
-        permissions: "Yetkiler"
+        continue: API Anahtarı Ayarlarına Devam Et
+        copy_key: API Anahtarını Kopyala
+        critical_warning_1: API anahtarınızı düz metin olarak göreceğiniz tek zaman
+          budur.
+        critical_warning_2: Kopyalayın ve güvenli bir şekilde şifre yöneticinize veya
+          uygulamanıza kaydedin.
+        critical_warning_3: Bu anahtarı kaybederseniz, yeni bir anahtar oluşturmanız
+          gerekir.
         critical_warning_title: "⚠️ Kritik: API Anahtarınızı Şimdi Kaydedin"
-        critical_warning_1: "API anahtarınızı düz metin olarak göreceğiniz tek zaman budur."
-        critical_warning_2: "Kopyalayın ve güvenli bir şekilde şifre yöneticinize veya uygulamanıza kaydedin."
-        critical_warning_3: "Bu anahtarı kaybederseniz, yeni bir anahtar oluşturmanız gerekir."
-        usage_instructions_title: "Hızlı Başlangıç"
-        usage_instructions: "API anahtarınızı X-Api-Key başlığına ekleyerek kullanın:"
-        copy_key: "API Anahtarını Kopyala"
-        continue: "API Anahtarı Ayarlarına Devam Et"
+        key_name: Adı
+        permissions: Yetkiler
+        success_description: Yeni API anahtarınız kullanıma hazır. Şimdi kopyaladığınızdan
+          emin olun, çünkü tekrar göremeyeceksiniz.
+        success_title: API Anahtarı Başarıyla Oluşturuldu
+        title: API Anahtarı Oluşturuldu
+        usage_instructions: 'API anahtarınızı X-Api-Key başlığına ekleyerek kullanın:'
+        usage_instructions_title: Hızlı Başlangıç
+        your_api_key: API Anahtarınız
+      current_api_key:
+        active: Aktif
+        ago: önce
+        created_at: Oluşturulma
+        description: Aktif API anahtarınız kullanıma hazır. Güvende tutun ve asla
+          herkese açık şekilde paylaşmayın.
+        expires: Bitiş
+        key_name: Adı
+        last_used: Son Kullanım
+        never_expires: Süresiz
+        never_used: Hiç kullanılmadı
+        permissions: Yetkiler
+        regenerate_key: Yeni Anahtar Oluştur
+        revoke_confirmation: Bu API anahtarını iptal etmek istediğinizden emin misiniz?
+          Bu işlem geri alınamaz ve bu anahtarı kullanan tüm uygulamalar hemen devre
+          dışı kalır.
+        revoke_key: Anahtarı İptal Et
+        title: API Anahtarınız
+        usage_instructions: "%{product_name} API'ye istek yaparken API anahtarınızı
+          X-Api-Key başlığına ekleyin:"
+        usage_instructions_title: API anahtarınızı nasıl kullanırsınız
+      destroy:
+        revoke_failed: API anahtarı iptal edilemedi
+        revoked_successfully: API anahtarı başarıyla iptal edildi
+      index:
+        empty_description: Verilerinize programatik olarak erişmek için bir API anahtarı
+          oluşturun.
+        empty_heading: Henüz API anahtarı yok
+        new_key: Yeni API Anahtarı
+        revoke_confirmation: '"%{name}" anahtarını iptal etmek istediğinizden emin
+          misiniz? Bu, bu anahtarı kullanan tüm uygulamaları hemen devre dışı bırakacaktır.'
+        revoke_key: İptal Et
+        subtitle: Verilerinize programatik erişim için API anahtarlarını yönetin.
+        title: API Anahtarları
+      new:
+        cancel: İptal
+        create_key: API Anahtarı Oluştur
+        create_new_api_key: Yeni API Anahtarı Oluştur
+        create_new_key: Yeni API Anahtarı Oluştur
+        description: Yeni API anahtarınızı açıklayıcı bir ad ve uygun yetkilerle yapılandırın.
+        name_help: Bu anahtarın amacını tanımlamanıza yardımcı olacak açıklayıcı bir
+          ad seçin.
+        name_help_text: Bu anahtarı daha sonra tanımanıza yardımcı olacak açıklayıcı
+          bir ad seçin.
+        name_label: API Anahtarı Adı
+        name_placeholder: örn. Üretim Uygulaması, Analitik Paneli
+        permissions_help: API anahtarınızın ihtiyaç duyduğu yetkileri seçin. Her zaman
+          farklı yetkilerle yeni bir anahtar oluşturabilirsiniz.
+        permissions_label: Yetkiler
+        save_api_key: API Anahtarını Kaydet
+        scope_details:
+          read_accounts: Hesap bilgilerini, bakiyeleri ve hesap düzeyindeki verileri
+            görüntüle
+          read_balances: Geçmiş bakiye verilerini ve hesap değer eğilimlerini görüntüle
+          read_transactions: İşlem verilerini, kategorileri ve işlem detaylarını görüntüle
+          write_transactions: İşlem kayıtları oluştur ve güncelle (yakında)
+        scope_read_only: Salt Okunur
+        scope_read_only_description: Hesaplarınızı, işlemlerinizi ve bakiyelerinizi
+          görüntüleyin
+        scope_read_write: Okuma/Yazma
+        scope_read_write_description: Verilerinizi görüntüleyin ve yeni işlemler oluşturun
+        security_warning: API anahtarınız oluşturulduktan sonra yalnızca bir kez gösterilecektir.
+          Güvenli bir şekilde saklayın ve asla herkese açık şekilde paylaşmayın. Kaybederseniz,
+          yeni bir anahtar oluşturmanız gerekir.
+        security_warning_body: API anahtarınız oluşturulduktan sonra yalnızca bir
+          kez görüntülenecektir. Kopyaladığınızdan ve güvenli bir şekilde sakladığınızdan
+          emin olun. Bu anahtara erişimi olan herkes, seçtiğiniz izinlere göre verilerinize
+          erişebilir.
+        security_warning_title: Önemli Güvenlik Uyarısı
+        subtitle: Sure verilerinize programatik olarak erişmek için yeni bir API anahtarı
+          oluşturun.
+        title: API Anahtarı Oluştur
+      no_api_key:
+        create_api_key: API Anahtarı Oluştur
+        description: Maybe verilerinize güvenli bir API anahtarı ile programatik erişim
+          sağlayın.
+        feature_1: Hesap verilerinize programatik olarak erişin
+        feature_2: Özel entegrasyonlar ve uygulamalar oluşturun
+        feature_3: Veri çekme ve analizini otomatikleştirin
+        security_note: API anahtarınız, seçtiğiniz yetkilere göre kısıtlanacaktır.
+          Aynı anda yalnızca bir aktif API anahtarınız olabilir.
+        security_note_title: Önce Güvenlik
+        title: API Anahtarınızı Oluşturun
+        what_you_can_do: 'API ile yapabilecekleriniz:'
+      shared:
+        active: Aktif
+        created_ago: "%{time} önce oluşturuldu"
+        last_used_ago: Son kullanım %{time} önce
+        never_used: Hiç kullanılmadı
+        scope_read_only: Salt Okunur
+        scope_read_write: Okuma/Yazma
+      show:
+        current_api_key:
+          back_to_keys: API Anahtarlarına Dön
+          copy_api_key: API Anahtarını Kopyala
+          copy_store_securely: Bu anahtarı kopyalayıp güvenli bir şekilde saklayın.
+            API isteklerinizi doğrulamak için buna ihtiyacınız olacak.
+          permissions: Yetkiler
+          revoke_confirmation: Bu API anahtarını iptal etmek istediğinizden emin misiniz?
+            Bu işlem geri alınamaz ve bu anahtarı kullanan tüm uygulamaları hemen
+            devre dışı bırakır.
+          revoke_key: Anahtarı İptal Et
+          title: API Anahtarınız
+          usage_instructions: 'API anahtarınızı %{product_name} API''sine istek yaparken
+            X-Api-Key başlığına ekleyin:'
+          usage_instructions_title: API anahtarınızı nasıl kullanırsınız
+        newly_created:
+          continue: API Anahtarı Ayarlarına Devam Et
+          copy_api_key: API Anahtarını Kopyala
+          copy_store_securely: Bu anahtarı kopyalayıp güvenli bir şekilde saklayın.
+            API isteklerinizi doğrulamak için buna ihtiyacınız olacak.
+          heading: API Anahtarı Başarıyla Oluşturuldu!
+          how_to_use: API anahtarınızı nasıl kullanırsınız
+          key_ready: Yeni "%{name}" API anahtarınız oluşturuldu ve kullanıma hazır.
+          page_title: API Anahtarı Başarıyla Oluşturuldu
+          your_api_key: API Anahtarınız
+        title: API Anahtarı Yönetimi
+    api_keys_controller:
+      revoke_failed: API anahtarı iptal edilemedi
+      revoked_successfully: API anahtarı başarıyla iptal edildi
+      scope_descriptions:
+        read_accounts: Hesapları Görüntüle
+        read_balances: Bakiyeleri Görüntüle
+        read_transactions: İşlemleri Görüntüle
+        write_transactions: İşlem Oluştur
+      success: API anahtarınız başarıyla oluşturuldu

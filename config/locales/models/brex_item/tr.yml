@@ -1,0 +1,15 @@
+---
+tr:
+  activerecord:
+    attributes:
+      brex_item:
+        base_url: Temel URL
+        name: Bağlantı adı
+        token: Token
+    errors:
+      models:
+        brex_item:
+          attributes:
+            base_url:
+              official_hosts_only: boş bırakılmalı, https://api.brex.com ya da https://api-staging.brex.com
+                olmalıdır

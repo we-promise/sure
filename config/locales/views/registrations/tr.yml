@@ -16,15 +16,17 @@ tr:
     new:
       invitation_message: "%{inviter}, sizi %{role} olarak katılmaya davet etti"
       join_family_title: "%{family} ailesine katıl"
+      password_placeholder: Şifrenizi girin
+      password_requirements:
+        case: Büyük ve küçük harfler
+        length: En az 8 karakter
+        number: Bir rakam (0-9)
+        special: 'Bir özel karakter (!, @, #, $, %, etc)'
       role_admin: yönetici
+      role_guest: misafir
       role_member: üye
       submit: Hesap oluştur
       title: Hesabınızı oluşturun
-      welcome_body: Başlamak için yeni bir hesap oluşturmalısınız. Daha sonra uygulama içinde ek ayarları yapılandırabileceksiniz.
+      welcome_body: Başlamak için yeni bir hesap oluşturmalısınız. Daha sonra uygulama
+        içinde ek ayarları yapılandırabileceksiniz.
       welcome_title: Self Hosted %{product_name}'ye Hoş Geldiniz!
-      password_placeholder: Şifrenizi girin
-      password_requirements:
-        length: En az 8 karakter
-        case: Büyük ve küçük harfler
-        number: Bir rakam (0-9)
-        special: "Bir özel karakter (!, @, #, $, %, etc)"

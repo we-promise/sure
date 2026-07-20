@@ -1,0 +1,250 @@
+---
+tr:
+  indexa_capital_items:
+    complete_account_setup:
+      all_skipped: Tüm hesaplar atlandı. Hiçbir hesap oluşturulmadı.
+      creation_failed: 'Hesaplar oluşturulamadı: %{error}'
+      no_accounts: Kurulacak hesap yok.
+      success: "%{count} hesap başarıyla oluşturuldu."
+    create:
+      success: IndexaCapital bağlantısı başarıyla oluşturuldu
+    destroy:
+      success: IndexaCapital bağlantısı kaldırıldı
+    errors:
+      provider_not_configured: IndexaCapital sağlayıcısı yapılandırılmamış
+    index:
+      title: IndexaCapital Bağlantıları
+    indexa_capital_item:
+      accounts_need_setup: Hesaplar kurulum gerektiriyor
+      delete: Bağlantıyı sil
+      deletion_in_progress: silme işlemi devam ediyor...
+      error: Hata
+      more_accounts_available:
+        one: "%{count} hesap daha mevcut"
+        other: "%{count} hesap daha mevcut"
+      no_accounts_description: Bu bağlantının henüz bağlı hesabı yok.
+      no_accounts_title: Hesap yok
+      provider_name: IndexaCapital
+      requires_update: Bağlantının güncellenmesi gerekiyor
+      setup_action: Yeni Hesaplar Kur
+      setup_description: "%{linked}/%{total} hesap bağlandı. Yeni içe aktarılan IndexaCapital
+        hesaplarınız için hesap türlerini seçin."
+      setup_needed: Kurulacak yeni hesaplar hazır
+      status: "%{timestamp} önce senkronize edildi — %{summary}"
+      status_never: Hiç senkronize edilmedi
+      syncing: Senkronize ediliyor...
+      total: Toplam
+      unlinked: Bağlı değil
+      update_credentials: Kimlik bilgilerini güncelle
+    institution_summary:
+      count:
+        one: "%{count} kurum"
+        other: "%{count} kurum"
+      none: Bağlı kurum yok
+    link_accounts:
+      all_already_linked:
+        one: Seçilen hesap (%{names}) zaten bağlı
+        other: 'Seçilen %{count} hesabın tümü zaten bağlı: %{names}'
+      api_error: 'API hatası: %{message}'
+      invalid_account_names:
+        one: Boş adlı hesap bağlanamaz
+        other: Boş adlı %{count} hesap bağlanamaz
+      link_failed: Hesaplar bağlanamadı
+      no_accounts_selected: Lütfen en az bir hesap seçin
+      no_api_key: IndexaCapital kimlik bilgileri bulunamadı. Lütfen Sağlayıcı Ayarları'ndan
+        yapılandırın.
+      partial_invalid: "%{created_count} hesap başarıyla bağlandı, %{already_linked_count}
+        hesap zaten bağlıydı, %{invalid_count} hesabın adı geçersizdi"
+      partial_success: "%{created_count} hesap başarıyla bağlandı. %{already_linked_count}
+        hesap zaten bağlıydı: %{already_linked_names}"
+      success:
+        one: "%{count} hesap başarıyla bağlandı"
+        other: "%{count} hesap başarıyla bağlandı"
+    link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      api_error: 'API hatası: %{message}'
+      invalid_account_name: Boş adlı hesap bağlanamaz
+      missing_parameters: Gerekli parametreler eksik
+      no_api_key: IndexaCapital kimlik bilgileri bulunamadı. Lütfen Sağlayıcı Ayarları'ndan
+        yapılandırın.
+      provider_account_already_linked: Bu IndexaCapital hesabı zaten başka bir hesaba
+        bağlı
+      provider_account_not_found: IndexaCapital hesabı bulunamadı
+      success: "%{account_name} IndexaCapital ile başarıyla bağlandı"
+    loading:
+      loading_message: IndexaCapital hesapları yükleniyor...
+      loading_title: Yükleniyor
+    panel:
+      alternative_auth: Ya da kullanıcı adı/parola kimlik doğrulamasını kullanın...
+      field_descriptions: 'Alan açıklamaları:'
+      fields:
+        api_token:
+          description: Indexa Capital panelinizden alınan salt okunur API belirteciniz
+          label: API Belirteci
+          placeholder_new: API belirtecinizi buraya yapıştırın
+          placeholder_update: Güncellemek için yeni API belirteci girin
+        document:
+          description: Indexa Capital belge/kimlik numaranız
+          label: Belge Kimliği
+          placeholder_new: Belge kimliğini buraya yapıştırın
+          placeholder_update: Güncellemek için yeni belge kimliği girin
+        password:
+          description: Indexa Capital parolanız
+          label: Parola
+          placeholder_new: Parolayı buraya yapıştırın
+          placeholder_update: Güncellemek için yeni parola girin
+        username:
+          description: Indexa Capital kullanıcı adınız/e-postanız
+          label: Kullanıcı Adı
+          placeholder_new: Kullanıcı adını buraya yapıştırın
+          placeholder_update: Güncellemek için yeni kullanıcı adı girin
+      optional: "(İsteğe bağlı)"
+      optional_with_default: "(isteğe bağlı, varsayılan %{default_value})"
+      required: "(zorunlu)"
+      save_button: Yapılandırmayı Kaydet
+      setup_instructions: 'Kurulum talimatları:'
+      step_1: Salt okunur bir API belirteci oluşturmak için Indexa Capital panelinizi
+        ziyaret edin
+      step_2: API belirtecinizi aşağıya yapıştırın ve Kaydet'e tıklayın
+      step_3: Bağlantı başarılı olduktan sonra yeni hesaplar kurmak için Hesaplar
+        sekmesine gidin
+      update_button: Yapılandırmayı Güncelle
+    preload_accounts:
+      no_credentials_configured: Lütfen önce IndexaCapital kimlik bilgilerinizi Sağlayıcı
+        Ayarları'nda yapılandırın.
+    select_accounts:
+      accounts_selected: hesap seçildi
+      api_error: 'API hatası: %{message}'
+      cancel: İptal
+      configure_name_in_provider: İçe aktarılamıyor - lütfen IndexaCapital'de hesap
+        adını yapılandırın
+      description: "%{product_name} hesabınıza bağlamak istediğiniz hesapları seçin."
+      link_accounts: Seçilen hesapları bağla
+      no_accounts_found: Hesap bulunamadı. Lütfen IndexaCapital kimlik bilgilerinizi
+        kontrol edin.
+      no_api_key: IndexaCapital kimlik bilgileri yapılandırılmamış. Lütfen Ayarlar'dan
+        yapılandırın.
+      no_credentials_configured: Lütfen önce IndexaCapital kimlik bilgilerinizi Sağlayıcı
+        Ayarları'nda yapılandırın.
+      no_name_placeholder: "(Ad yok)"
+      title: IndexaCapital Hesaplarını Seç
+    select_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      all_accounts_already_linked: Tüm IndexaCapital hesapları zaten bağlı
+      api_error: 'API hatası: %{message}'
+      balance_label: 'Bakiye:'
+      cancel: İptal
+      cancel_button: İptal
+      configure_name_in_provider: İçe aktarılamıyor - lütfen IndexaCapital'de hesap
+        adını yapılandırın
+      connect_hint: Otomatik senkronizasyonu etkinleştirmek için bir IndexaCapital
+        hesabı bağlayın.
+      description: Bu hesapla bağlamak için bir IndexaCapital hesabı seçin. İşlemler
+        otomatik olarak senkronize edilecek ve mükerrer kayıtlar önlenecektir.
+      header: IndexaCapital ile Bağla
+      link_account: Hesabı bağla
+      link_button: Bu hesabı bağla
+      linking_to: 'Şuna bağlanıyor:'
+      no_account_specified: Hesap belirtilmedi
+      no_accounts: Bağlı olmayan IndexaCapital hesabı bulunamadı.
+      no_accounts_found: IndexaCapital hesabı bulunamadı. Lütfen kimlik bilgilerinizi
+        kontrol edin.
+      no_api_key: IndexaCapital kimlik bilgileri yapılandırılmamış. Lütfen Ayarlar'dan
+        yapılandırın.
+      no_credentials_configured: Lütfen önce IndexaCapital kimlik bilgilerinizi Sağlayıcı
+        Ayarları'nda yapılandırın.
+      no_name_placeholder: "(Ad yok)"
+      settings_link: Sağlayıcı Ayarları'na git
+      subtitle: Bir IndexaCapital hesabı seçin
+      title: "%{account_name} ile IndexaCapital'i bağla"
+    setup_accounts:
+      account_type_label: 'Hesap Türü:'
+      account_types:
+        credit_card: Kredi Kartı
+        crypto: Kripto Para Hesabı
+        depository: Vadesiz veya Vadeli Mevduat Hesabı
+        investment: Yatırım Hesabı
+        loan: Kredi veya İpotek
+        other_asset: Diğer Varlık
+        skip: Bu hesabı atla
+      accounts_count:
+        one: "%{count} hesap mevcut"
+        other: "%{count} hesap mevcut"
+      all_accounts_linked: Tüm IndexaCapital hesaplarınız zaten kuruldu.
+      api_error: 'API hatası: %{message}'
+      balance: Bakiye
+      cancel: İptal
+      choose_account_type: 'Her IndexaCapital hesabı için doğru hesap türünü seçin:'
+      create_accounts: Hesapları Oluştur
+      creating: Hesaplar oluşturuluyor...
+      creating_accounts: Hesaplar Oluşturuluyor...
+      fetch_failed: Hesaplar Getirilemedi
+      historical_data_range: 'Geçmiş Veri Aralığı:'
+      import_selected: Seçilen hesapları içe aktar
+      instructions: IndexaCapital'den içe aktarmak istediğiniz hesapları seçin. Birden
+        fazla hesap seçebilirsiniz.
+      no_accounts: Bu IndexaCapital bağlantısından bağlı olmayan hesap bulunamadı.
+      no_accounts_to_setup: Kurulacak Hesap Yok
+      no_api_key: IndexaCapital kimlik bilgileri yapılandırılmamış. Lütfen bağlantı
+        ayarlarınızı kontrol edin.
+      select_all: Tümünü seç
+      subtitle: İçe aktarılan hesaplarınız için doğru hesap türlerini seçin
+      subtype_labels:
+        credit_card: ''
+        crypto: ''
+        depository: 'Hesap Alt Türü:'
+        investment: 'Yatırım Türü:'
+        loan: 'Kredi Türü:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredi kartları otomatik olarak kredi kartı hesabı olarak kurulacaktır.
+        crypto: Kripto para hesapları, varlıkları ve işlemleri takip edecek şekilde
+          kurulacaktır.
+        other_asset: Diğer Varlıklar için ek seçenek gerekmez.
+      subtypes:
+        depository:
+          cd: Mevduat Sertifikası
+          checking: Vadesiz Hesap
+          hsa: Sağlık Tasarruf Hesabı
+          money_market: Para Piyasası
+          savings: Vadeli Hesap
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: 529 Planı
+          angel: Melek Yatırımı
+          brokerage: Aracılık
+          hsa: Sağlık Tasarruf Hesabı
+          ira: Geleneksel IRA
+          mutual_fund: Yatırım Fonu
+          pension: Emeklilik
+          retirement: Emeklilik
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Tasarruf Planı (TSP)
+        loan:
+          auto: Taşıt Kredisi
+          mortgage: İpotek
+          other: Diğer Kredi
+          student: Öğrenim Kredisi
+      sync_start_date_help: İşlem geçmişini ne kadar geriye senkronize etmek istediğinizi
+        seçin.
+      sync_start_date_label: 'Şu tarihten itibaren işlemleri senkronize et:'
+      title: IndexaCapital Hesaplarınızı Kurun
+    sync:
+      status:
+        calculating: Bakiyeler hesaplanıyor...
+        checking_setup: Hesap yapılandırması kontrol ediliyor...
+        importing: IndexaCapital'den hesaplar içe aktarılıyor...
+        importing_data: Hesap verileri içe aktarılıyor...
+        needs_setup: "%{count} hesap kurulum gerektiriyor..."
+        processing: Varlıklar ve işlemler işleniyor...
+      success: Senkronizasyon başlatıldı
+    sync_status:
+      no_accounts: Hesap bulunamadı
+      synced:
+        one: "%{count} hesap senkronize edildi"
+        other: "%{count} hesap senkronize edildi"
+      synced_with_setup: "%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor"
+    update:
+      success: IndexaCapital bağlantısı güncellendi
