@@ -8,9 +8,9 @@ class AccountChartDragSelectTest < ApplicationSystemTestCase
 
   test "dragging across the balance chart navigates to the dragged date range" do
     # The shared `sign_in` helper looks up fields by their English label text,
-    # which breaks when the browser negotiates a non-English locale (as this
-    # session's Chrome does). Sign in via field type instead so this test
-    # doesn't depend on the browser's language.
+    # which breaks whenever the browser negotiates a non-English locale. Sign
+    # in via field type instead so this test doesn't depend on the browser's
+    # language.
     visit new_session_path
     within %(form[action='#{sessions_path}']) do
       find("input[type='email']").set(@user.email)

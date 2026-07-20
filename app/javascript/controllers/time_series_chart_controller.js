@@ -345,6 +345,12 @@ export default class extends Controller {
         [0, 0],
         [this._d3ContainerWidth, this._d3ContainerHeight],
       ])
+      // d3-brush treats any touch-capable device as "touchable" by default,
+      // which makes it bind touchstart/touchmove and set touch-action: none
+      // on the overlay — silently disabling native scroll on these full-width
+      // charts. Drag-select is a mouse-only affordance for now, so opt out of
+      // touch handling and leave scrolling/panning untouched on mobile.
+      .touchable(false)
       .on("start brush", (event) => this._handleDragSelectMove(event))
       .on("end", (event) => this._handleDragSelectEnd(event));
 
