@@ -15,7 +15,7 @@ tr:
       success: Başarıyla kaydoldunuz.
     new:
       invitation_message: "%{inviter}, sizi %{role} olarak katılmaya davet etti"
-      join_family_title: "%{family} ailesine katıl"
+      join_family_title: "%{family} %{moniker} hesabına katıl"
       password_placeholder: Şifrenizi girin
       password_requirements:
         case: Büyük ve küçük harfler

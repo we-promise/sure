@@ -246,8 +246,8 @@ tr:
         group_title: Grup Üyeleri
         household_form_input_placeholder: Hane adı girin
         household_form_label: Hane adı
-        household_subtitle: Aile üyelerini, partnerleri ve diğer kişileri davet edin.
-          Davetliler hanenize giriş yapabilir ve paylaşılan hesaplarınıza erişebilir.
+        household_subtitle: Davetliler %{moniker} hesabınıza giriş yapabilir ve paylaşılan
+          kaynaklara erişebilir.
         household_title: Hane
         invitation_link: Davet bağlantısı
         invite_member: Üye ekle
@@ -533,7 +533,7 @@ tr:
         step_3: Ardından senkronize hesaplarınızı bağlamak için Hesaplar'a gidin.
       status:
         err: Hata
-        'false': Yapılandırılmadı
+        off: Yapılandırılmadı
         ok: Bağlandı
         warn: İşlem gerekiyor
       sync_all: Tümünü senkronize et

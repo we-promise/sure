@@ -131,9 +131,9 @@ tr:
             one: 1 ulaşıldı
             other: "%{count} ulaşıldı"
         on_track_value: "%{total} içinden %{on_track}"
-        velocity_delta_down: "↓ %{percent}%% önceki 30 güne göre"
+        velocity_delta_down: "↓ %{percent}% önceki 30 güne göre"
         velocity_delta_flat: önceki 30 güne göre
-        velocity_delta_up: "↑ %{percent}%% önceki 30 güne göre"
+        velocity_delta_up: "↑ %{percent}% önceki 30 güne göre"
         velocity_delta_zero_base: İlk 30 günlük hareket
       new_goal: Yeni hedef
       ongoing_section:

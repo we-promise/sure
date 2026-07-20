@@ -31,12 +31,12 @@ tr:
         other: "%{count} sağlayıcı satıcısının web sitesi bilgisi eksik. Web sitelerini
           tespit etmek, logoları görüntülemek ve yinelenen satıcıları birleştirmek
           için Yapay Zeka ile İyileştirin."
-      family_empty: Henüz aile satıcısı yok
-      family_title: Aile satıcıları
+      family_empty: Henüz %{moniker} satıcısı yok
+      family_title: "%{moniker} satıcıları"
       import: Satıcıları içe aktar
       merge: Satıcıları birleştir
       new: Yeni satıcı
-      provider_empty: Bu aileye bağlı sağlayıcı satıcısı yok
+      provider_empty: Bu %{moniker} hesabına bağlı sağlayıcı satıcısı yok
       provider_info: Bu satıcılar banka bağlantılarınız veya Yapay Zeka tarafından
         otomatik olarak tespit edildi. Kendi kopyanızı oluşturmak için düzenleyebilir
         veya işlemlerinizden bağlantısını kaldırmak için kaldırabilirsiniz.

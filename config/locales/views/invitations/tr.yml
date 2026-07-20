@@ -25,6 +25,6 @@ tr:
       role_label: Rol
       role_member: Üye
       submit: Davet Gönder
-      subtitle: "%{product_name}'de aile hesabınıza katılmaları için bir davetiye
+      subtitle: "%{product_name}'de %{moniker} hesabınıza katılmaları için bir davetiye
         gönderin"
       title: Birini Davet Et

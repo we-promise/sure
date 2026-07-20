@@ -18,8 +18,8 @@ tr:
       account:
         balance: Bakiye
         currency: Para Birimi
-        family: Aile
-        family_id: Aile
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         name: Ad
         subtype: Alt Tür
     models:
