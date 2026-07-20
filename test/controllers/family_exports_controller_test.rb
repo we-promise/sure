@@ -28,6 +28,37 @@ class FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "Export your data"
   end
 
+  test "admin can mark a lost export as failed" do
+    export = @family.family_exports.create!
+    export.update_columns(status: "processing", updated_at: 2.hours.ago)
+
+    post cancel_family_export_path(export)
+
+    assert_redirected_to family_exports_path
+    assert_equal "failed", export.reload.status
+  end
+
+  test "cancel refuses an export that is not presumed lost" do
+    export = @family.family_exports.create!
+    export.update_columns(status: "processing", updated_at: 5.minutes.ago)
+
+    post cancel_family_export_path(export)
+
+    assert_equal I18n.t("family_exports.cancel.not_cancellable"), flash[:alert]
+    assert_equal "processing", export.reload.status
+  end
+
+  test "non-admin cannot cancel an export" do
+    export = @family.family_exports.create!
+    export.update_columns(status: "processing", updated_at: 2.hours.ago)
+
+    sign_in @non_admin
+    post cancel_family_export_path(export)
+
+    assert_redirected_to root_path
+    assert_equal "processing", export.reload.status
+  end
+
   test "admin can create export" do
     assert_enqueued_with(job: FamilyDataExportJob) do
       post family_exports_path

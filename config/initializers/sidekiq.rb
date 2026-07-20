@@ -1,9 +1,13 @@
 require "sidekiq/web"
 
-if Rails.env.production?
+# Optional second authentication layer for /sidekiq. The route itself only
+# exists for signed-in super admins (see SuperAdminConstraint in routes.rb);
+# basic auth is layered on top ONLY when both variables are explicitly set.
+# There are deliberately no default credentials.
+if ENV["SIDEKIQ_WEB_USERNAME"].present? && ENV["SIDEKIQ_WEB_PASSWORD"].present?
   Sidekiq::Web.use(Rack::Auth::Basic) do |username, password|
-    configured_username = ::Digest::SHA256.hexdigest(ENV.fetch("SIDEKIQ_WEB_USERNAME", "sure"))
-    configured_password = ::Digest::SHA256.hexdigest(ENV.fetch("SIDEKIQ_WEB_PASSWORD", "sure"))
+    configured_username = ::Digest::SHA256.hexdigest(ENV["SIDEKIQ_WEB_USERNAME"])
+    configured_password = ::Digest::SHA256.hexdigest(ENV["SIDEKIQ_WEB_PASSWORD"])
 
     ActiveSupport::SecurityUtils.secure_compare(::Digest::SHA256.hexdigest(username), configured_username) &
       ActiveSupport::SecurityUtils.secure_compare(::Digest::SHA256.hexdigest(password), configured_password)

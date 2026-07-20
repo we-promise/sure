@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -120,6 +120,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
     t.datetime "disabled_at"
     t.boolean "exclude_from_reports", default: false, null: false
     t.integer "account_providers_count", default: 0, null: false
+    t.boolean "enable_category_matcher", default: true, null: false
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -1152,6 +1153,31 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
     t.string "subtype"
   end
 
+  create_table "insights", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", default: "USD", null: false
+    t.string "dedup_key", null: false
+    t.datetime "dismissed_at"
+    t.jsonb "facts", default: {}, null: false
+    t.uuid "family_id", null: false
+    t.datetime "generated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.string "insight_type", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.date "period_end"
+    t.date "period_start"
+    t.string "priority", default: "medium", null: false
+    t.datetime "read_at"
+    t.string "status", default: "active", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "dedup_key"], name: "index_insights_on_family_id_and_dedup_key", unique: true
+    t.index ["family_id", "generated_at"], name: "index_insights_on_family_id_and_generated_at"
+    t.index ["family_id", "status"], name: "index_insights_on_family_id_and_status"
+    t.check_constraint "priority::text = ANY (ARRAY['high'::character varying, 'medium'::character varying, 'low'::character varying]::text[])", name: "chk_insights_priority"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'read'::character varying, 'dismissed'::character varying, 'expired'::character varying]::text[])", name: "chk_insights_status"
+  end
+
   create_table "invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "email"
     t.string "role"
@@ -1378,6 +1404,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
     t.datetime "updated_at", null: false
     t.index ["user_id", "device_id"], name: "index_mobile_devices_on_user_id_and_device_id", unique: true
     t.index ["user_id"], name: "index_mobile_devices_on_user_id"
+  end
+
+  create_table "notification_deliveries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "rule_id", null: false
+    t.uuid "transaction_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["rule_id", "transaction_id"], name: "index_notification_deliveries_on_rule_and_transaction", unique: true
+    t.index ["rule_id"], name: "index_notification_deliveries_on_rule_id"
+    t.index ["transaction_id"], name: "index_notification_deliveries_on_transaction_id"
   end
 
   create_table "oauth_access_grants", force: :cascade do |t|
@@ -1943,6 +1979,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
     t.date "window_start_date"
     t.date "window_end_date"
     t.text "sync_stats"
+    t.datetime "cancel_requested_at"
     t.index ["parent_id"], name: "index_syncs_on_parent_id"
     t.index ["status"], name: "index_syncs_on_status"
     t.index ["syncable_type", "syncable_id"], name: "index_syncs_on_syncable"
@@ -2188,6 +2225,39 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
     t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
+  create_table "wise_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "balance_id", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "name"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.decimal "reserved_balance", precision: 19, scale: 4
+    t.datetime "updated_at", null: false
+    t.uuid "wise_item_id", null: false
+    t.index ["wise_item_id", "balance_id"], name: "index_wise_accounts_on_wise_item_id_and_balance_id", unique: true
+    t.index ["wise_item_id"], name: "index_wise_accounts_on_wise_item_id"
+  end
+
+  create_table "wise_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.string "profile_id", null: false
+    t.string "profile_type", null: false
+    t.jsonb "raw_payload"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "sync_start_date"
+    t.text "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "profile_id"], name: "index_wise_items_on_family_id_and_profile_id", unique: true
+    t.index ["family_id"], name: "index_wise_items_on_family_id"
+    t.index ["status"], name: "index_wise_items_on_status"
+  end
+
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
   add_foreign_key "account_shares", "accounts"
   add_foreign_key "account_shares", "users"
@@ -2259,6 +2329,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
   add_foreign_key "imports", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_imports_session_family", on_delete: :cascade
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
+  add_foreign_key "insights", "families"
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "kraken_accounts", "kraken_items"
@@ -2271,6 +2342,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
   add_foreign_key "mercury_items", "families"
   add_foreign_key "messages", "chats"
   add_foreign_key "mobile_devices", "users"
+  add_foreign_key "notification_deliveries", "rules", on_delete: :cascade
+  add_foreign_key "notification_deliveries", "transactions", on_delete: :cascade
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oidc_identities", "users"
@@ -2318,4 +2391,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_28_200000) do
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
   add_foreign_key "webauthn_credentials", "users"
+  add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
+  add_foreign_key "wise_items", "families"
 end

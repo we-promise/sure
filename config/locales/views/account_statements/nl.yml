@@ -102,6 +102,7 @@ nl:
       account: Account
       actions: Acties
       download: Downloaden
+      edit: Bewerken
       file: Bestand
       link_suggestion: Koppelsuggestie
       period: Periode

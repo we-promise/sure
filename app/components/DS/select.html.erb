@@ -23,9 +23,10 @@
                 id="<%= method %>_trigger"
                 class="form-field__input w-full"
                 data-select-target="button"
-                data-action="click->select#toggle"
+                data-action="click->select#toggle focus->select#handleButtonFocus"
                 aria-haspopup="listbox"
                 aria-expanded="false"
+                tabindex="0"
                 <%= "aria-labelledby=\"#{method}_label #{method}_trigger\"".html_safe if options[:label].present? %>>
           <%= selected_item&.dig(:label) || @placeholder %>
         </button>
@@ -50,12 +51,12 @@
         <% is_selected = item[:value] == selected_value %>
         <% obj = item[:object] %>
 
-        <%# Roving tabindex: selected option is in tab order (`0`); others
-            are reachable only via ArrowUp/Down (`-1`). WAI-ARIA APG
-            listbox keyboard pattern. %>
+        <%# Options use tabindex="-1" always — keyboard focus is managed
+            programmatically so listbox items never appear in the Tab
+            sequence and skip past the trigger to the next form field. %>
         <div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
               role="option"
-              tabindex="<%= is_selected ? "0" : "-1" %>"
+              tabindex="-1"
               aria-selected="<%= is_selected %>"
               data-select-target="option"
               data-action="click->select#select"
