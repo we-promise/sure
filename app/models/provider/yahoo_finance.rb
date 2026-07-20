@@ -19,6 +19,8 @@ class Provider::YahooFinance < Provider
   # Even if cookie has longer expiry, cap it to avoid stale crumbs
   MAX_CRUMB_CACHE_DURATION = 1.hour
 
+  INVALID_CRUMBS = Set.new([ "too many requests" ]).freeze
+
   # Maximum lookback window for historical data (configurable)
   MAX_LOOKBACK_WINDOW = 10.years
 
@@ -49,6 +51,19 @@ class Provider::YahooFinance < Provider
     data = fetch_authenticated_chart("AAPL", { "interval" => "1d", "range" => "1d" })
     result = data.dig("chart", "result")
     result.present? && result.any?
+  rescue RateLimitError => e
+    DebugLogEntry.capture(
+      category: "provider_rate_limit",
+      level: "warn",
+      message: e.message,
+      source: self.class.name,
+      provider_key: "yahoo_finance",
+      metadata: {
+        error_class: e.class.name,
+        response_status: e.details&.dig(:status)
+      }
+    )
+    false
   rescue => e
     false
   end
@@ -631,7 +646,11 @@ class Provider::YahooFinance < Provider
     def fetch_cookie_and_crumb
       cache_key = "#{@cache_prefix}_auth_crumb"
       cached = Rails.cache.read(cache_key)
-      return cached if cached.present?
+      if cached.present?
+        return cached if valid_crumb?(cached.second)
+
+        Rails.cache.delete(cache_key)
+      end
 
       # Step 1: Get cookie from Yahoo Finance
       cookie_response = auth_client.get("https://fc.yahoo.com")
@@ -645,17 +664,43 @@ class Provider::YahooFinance < Provider
         req.headers["Cookie"] = cookie
       end
 
-      crumb = crumb_response.body.strip
+      if crumb_response.status == 429
+        raise RateLimitError.new(
+          "Yahoo Finance rate limit exceeded",
+          details: { status: crumb_response.status }
+        )
+      end
 
-      raise AuthenticationError, "Failed to obtain Yahoo Finance crumb" if crumb.blank?
+      unless crumb_response.success?
+        raise AuthenticationError, "Failed to obtain Yahoo Finance crumb (HTTP #{crumb_response.status})"
+      end
+
+      crumb = crumb_response.body.to_s.strip
+
+      if !valid_crumb?(crumb)
+        error_class = INVALID_CRUMBS.include?(crumb.downcase) ? RateLimitError : AuthenticationError
+        raise error_class.new(
+          "Failed to obtain Yahoo Finance crumb",
+          details: { status: crumb_response.status }
+        )
+      end
 
       # Cache the cookie/crumb pair using cookie's max-age, capped at MAX_CRUMB_CACHE_DURATION
       cache_duration = [ cookie_max_age || MAX_CRUMB_CACHE_DURATION, MAX_CRUMB_CACHE_DURATION ].min
       result = [ cookie, crumb ]
       Rails.cache.write(cache_key, result, expires_in: cache_duration)
       result
+    rescue Faraday::TooManyRequestsError => e
+      raise RateLimitError.new(
+        "Yahoo Finance rate limit exceeded",
+        details: { status: e.response&.dig(:status) }
+      )
     rescue Faraday::Error => e
       raise AuthenticationError, "Failed to authenticate with Yahoo Finance: #{e.message}"
+    end
+
+    def valid_crumb?(crumb)
+      crumb.present? && !INVALID_CRUMBS.include?(crumb.to_s.strip.downcase)
     end
 
     def clear_crumb_cache

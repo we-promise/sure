@@ -46,6 +46,87 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert @provider.healthy?
   end
 
+  test "healthy? recovers after crumb request is rate limited" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    cookie_response = mock
+    cookie_response.stubs(:headers).returns({ "set-cookie" => "A3=test-cookie; Max-Age=3600" })
+    cookie_response.stubs(:success?).returns(false)
+
+    rate_limited_crumb_response = mock
+    rate_limited_crumb_response.stubs(:status).returns(429)
+    rate_limited_crumb_response.stubs(:body).returns("Too Many Requests")
+    rate_limited_crumb_response.stubs(:success?).returns(false)
+
+    valid_crumb_response = mock
+    valid_crumb_response.stubs(:status).returns(200)
+    valid_crumb_response.stubs(:body).returns("valid-crumb")
+    valid_crumb_response.stubs(:success?).returns(true)
+
+    auth_client = mock
+    auth_client.expects(:get).times(4).returns(
+      cookie_response,
+      rate_limited_crumb_response,
+      cookie_response,
+      valid_crumb_response
+    )
+    @provider.stubs(:auth_client).returns(auth_client)
+
+    chart_response = mock
+    chart_response.stubs(:body).returns('{"chart":{"result":[{"meta":{"symbol":"AAPL"}}]}}')
+    chart_client = mock
+    chart_client.expects(:get).once.returns(chart_response)
+    @provider.stubs(:authenticated_client).returns(chart_client)
+
+    DebugLogEntry.expects(:capture).with(
+      category: "provider_rate_limit",
+      level: "warn",
+      message: "Yahoo Finance rate limit exceeded",
+      source: "Provider::YahooFinance",
+      provider_key: "yahoo_finance",
+      metadata: {
+        error_class: "Provider::YahooFinance::RateLimitError",
+        response_status: 429
+      }
+    )
+
+    assert_not @provider.healthy?
+    assert @provider.healthy?
+  end
+
+  test "healthy? discards an already-cached rate limit response" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    cache.write("yahoo_finance_auth_crumb", [ "poisoned-cookie", "Too Many Requests" ])
+    Rails.stubs(:cache).returns(cache)
+
+    cookie_response = mock
+    cookie_response.stubs(:headers).returns({ "set-cookie" => "A3=fresh-cookie; Max-Age=3600" })
+
+    crumb_response = mock
+    crumb_response.stubs(:status).returns(200)
+    crumb_response.stubs(:body).returns("valid-crumb")
+    crumb_response.stubs(:success?).returns(true)
+
+    auth_client = mock
+    auth_client.stubs(:get).returns(cookie_response, crumb_response)
+    @provider.stubs(:auth_client).returns(auth_client)
+
+    chart_client = Object.new
+    chart_client.define_singleton_method(:get) do |_url, &request_block|
+      request = OpenStruct.new(params: {})
+      request_block.call(request)
+      body = if request.params["crumb"] == "valid-crumb"
+        '{"chart":{"result":[{"meta":{"symbol":"AAPL"}}]}}'
+      else
+        "Too Many Requests"
+      end
+      OpenStruct.new(body: body)
+    end
+    @provider.stubs(:authenticated_client).returns(chart_client)
+
+    assert @provider.healthy?
+  end
+
   # ================================
   #      Exchange Rate Tests
   # ================================
@@ -180,6 +261,26 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
       assert_not result.success?
       assert_instance_of Provider::YahooFinance::RateLimitError, result.error
     end
+  end
+
+  test "classifies a successful crumb response containing a rate limit body" do
+    cookie_response = mock
+    cookie_response.stubs(:headers).returns({ "set-cookie" => "A3=test-cookie; Max-Age=3600" })
+
+    crumb_response = mock
+    crumb_response.stubs(:status).returns(200)
+    crumb_response.stubs(:body).returns("Too Many Requests")
+    crumb_response.stubs(:success?).returns(true)
+
+    auth_client = mock
+    auth_client.stubs(:get).returns(cookie_response, crumb_response)
+    @provider.stubs(:auth_client).returns(auth_client)
+    @provider.stubs(:throttle_request)
+
+    result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNAS")
+
+    assert_not result.success?
+    assert_instance_of Provider::YahooFinance::RateLimitError, result.error
   end
 
   test "handles 401 unauthorized as authentication error" do
