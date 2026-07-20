@@ -146,7 +146,7 @@ components:
           type: string
           format: uuid
           description: Import ID preserved for retry or inspection after upload succeeds
-            but publish fails
+            but preparation or publish fails
     MfaRequiredResponse:
       type: object
       required:
@@ -5121,7 +5121,7 @@ paths:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/ErrorResponseWithImportId"
         '500':
-          description: import uploaded but publish enqueue failed
+          description: import uploaded but preparation or publish enqueue failed
           content:
             application/json:
               schema:

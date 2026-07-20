@@ -110,8 +110,16 @@ class Api::V1::ImportsController < Api::V1::BaseController
         begin
           @import.generate_rows_from_csv
           @import.reload
+          @import.sync_mappings
         rescue StandardError => e
-          Rails.logger.error "Row generation failed for import #{@import.id}: #{e.message}"
+          Rails.logger.error "Row generation or mapping sync failed for import #{@import.id}: #{e.message}"
+          @import.update!(status: :failed, error: e.message)
+          render json: {
+            error: "processing_failed",
+            message: "Import was uploaded but could not be processed.",
+            import_id: @import.id
+          }, status: :internal_server_error
+          return
         end
       end
 
