@@ -156,7 +156,8 @@ class PropertiesController < ApplicationController
             "address" => avm_address_params.to_h,
             "data" => @avm_preview.to_h.transform_values(&:to_s)
           },
-          expires_in: 1.hour
+          expires_in: 1.hour,
+          purpose: avm_preview_token_purpose
         )
         @avm_provider_key = provider_key
         @account = Current.family.accounts.build(name: params.dig(:account, :name), accountable: Property.new)
@@ -181,8 +182,15 @@ class PropertiesController < ApplicationController
       Rails.application.message_verifier(:avm_preview)
     end
 
+    # Scoping the token's purpose to the family means a token minted in one
+    # family's session can't be replayed to seed a property in another —
+    # a purpose mismatch fails verification just like a bad signature.
+    def avm_preview_token_purpose
+      "avm_preview/family/#{Current.family.id}"
+    end
+
     def verify_avm_preview_token!
-      avm_preview_verifier.verify(params[:avm_preview_token].to_s)
+      avm_preview_verifier.verify(params[:avm_preview_token].to_s, purpose: avm_preview_token_purpose)
     rescue ActiveSupport::MessageVerifier::InvalidSignature
       raise Property::AvmImport::Error.new(t("providers.property_valuation.preview_expired"))
     end

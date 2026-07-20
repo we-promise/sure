@@ -381,7 +381,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_match "Unknown", response.body
   end
 
-  def signed_preview_token
+  def signed_preview_token(family: @user.family)
     Rails.application.message_verifier(:avm_preview).generate(
       {
         "provider_key" => "rentcast",
@@ -401,7 +401,8 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
           "area_unit" => "sqft"
         }
       },
-      expires_in: 1.hour
+      expires_in: 1.hour,
+      purpose: "avm_preview/family/#{family.id}"
     )
   end
 
@@ -476,6 +477,24 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
         avm_provider: "rentcast",
         avm_step: "confirm",
         avm_preview_token: "forged-token",
+        account: { accountable_type: "Property" }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "preview has expired", response.body
+  end
+
+  test "rejects an AVM preview token minted for another family" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    assert_no_difference "Account.count" do
+      post properties_path, params: {
+        avm_provider: "rentcast",
+        avm_step: "confirm",
+        avm_preview_token: signed_preview_token(family: families(:empty)),
         account: { accountable_type: "Property" }
       }
     end

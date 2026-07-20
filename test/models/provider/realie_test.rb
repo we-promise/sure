@@ -60,6 +60,28 @@ class Provider::RealieTest < ActiveSupport::TestCase
     assert_equal 400_000, response.data.valuation
   end
 
+  test "treats a zero model value as absent and falls back to the market value" do
+    stub_request(:get, "https://app.realie.ai/api/public/property/address/")
+      .with(query: hash_including("address" => "123 Main Street"))
+      .to_return(status: 200, body: address_lookup_body("modelValue" => 0))
+
+    response = @provider.fetch_property_valuation(line1: "123 Main Street", region: "CA")
+
+    assert response.success?
+    assert_equal 400_000, response.data.valuation
+  end
+
+  test "returns an error when both model and market values are zero" do
+    stub_request(:get, "https://app.realie.ai/api/public/property/address/")
+      .with(query: hash_including("address" => "123 Main Street"))
+      .to_return(status: 200, body: address_lookup_body("modelValue" => 0, "totalMarketValue" => 0))
+
+    response = @provider.fetch_property_valuation(line1: "123 Main Street", region: "CA")
+
+    assert_not response.success?
+    assert_match(/valuation/i, response.error.message)
+  end
+
   test "picks the candidate matching the entered city and ZIP from multiple results" do
     wrong_city = { "useCode" => "Commercial", "yearBuilt" => 1970, "buildingArea" => 9_000.0, "modelValue" => 2_000_000.0, "city" => "SACRAMENTO", "state" => "CA", "zipCode" => "95814" }
     right_city = { "useCode" => "Single Family Residential", "yearBuilt" => 1985, "buildingArea" => 1500.0, "modelValue" => 420_000.0, "city" => "LOS ANGELES", "state" => "CA", "zipCode" => "90001" }

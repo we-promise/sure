@@ -67,11 +67,14 @@ class Provider::Realie < Provider
       record = records.find { |candidate| location_match?(candidate, locality: locality, postal_code: postal_code) }
       raise Error.new(I18n.t("providers.realie.errors.location_mismatch")) if record.nil?
 
-      valuation = record["modelValue"] || record["totalMarketValue"]
-      raise Error.new(I18n.t("providers.realie.errors.no_valuation")) if valuation.blank?
+      # Realie returns modelValue: 0 when it couldn't produce an AVM
+      # estimate, so zero counts as absent and falls back to the assessed
+      # total market value.
+      valuation = [ record["modelValue"], record["totalMarketValue"] ].find { |value| value.present? && value.to_d.positive? }
+      raise Error.new(I18n.t("providers.realie.errors.no_valuation")) if valuation.nil?
 
       PropertyValuation.new(
-        valuation: valuation.to_d,
+        valuation: BigDecimal(valuation.to_s),
         currency: "USD",
         property_type: subtype_for_use_code(record["useCode"]),
         year_built: record["yearBuilt"],

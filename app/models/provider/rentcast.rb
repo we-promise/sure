@@ -48,7 +48,7 @@ class Provider::Rentcast < Provider
       subject = parsed["subjectProperty"] || {}
 
       PropertyValuation.new(
-        valuation: price.to_d,
+        valuation: BigDecimal(price.to_s),
         currency: "USD",
         property_type: PROPERTY_TYPE_MAP[subject["propertyType"]],
         year_built: subject["yearBuilt"],
