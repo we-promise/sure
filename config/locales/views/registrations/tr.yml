@@ -21,7 +21,7 @@ tr:
         case: Büyük ve küçük harfler
         length: En az 8 karakter
         number: Bir rakam (0-9)
-        special: 'Bir özel karakter (!, @, #, $, %, etc)'
+        special: 'Bir özel karakter (!, @, #, $, %, vb.)'
       role_admin: yönetici
       role_guest: misafir
       role_member: üye

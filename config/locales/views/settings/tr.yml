@@ -299,9 +299,9 @@ tr:
         no_withdraw_title: Yalnızca salt okunur anahtar
         setup_instructions: 'Binance''ı bağlamak için salt okunur bir API anahtarı
           oluşturun:'
-        step1_html: Go to <a href="https://www.binance.com/en/my/settings/api-management"
+        step1_html: <a href="https://www.binance.com/en/my/settings/api-management"
           target="_blank" rel="noopener noreferrer" class="underline">Binance API
-          Yönetimi</a>'ne gidin
+          Yönetimi</a> sayfasına gidin
         step2: Yalnızca Okumayı Etkinleştir izniyle yeni bir API anahtarı oluşturun
         step3: API Anahtarınızı ve Gizli Anahtarınızı aşağıya yapıştırın
         sync: Senkronize et
@@ -319,9 +319,9 @@ tr:
         disconnect_confirm: Bu Coinbase bağlantısını kesmek istediğinizden emin misiniz?
           Senkronize hesaplarınız manuel hesaplara dönüşecektir.
         setup_instructions: 'Coinbase''i bağlamak için:'
-        step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+        step1_html: <a href="https://portal.cdp.coinbase.com/projects/api-keys"
           target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase
-          API Ayarları</a>
+          API Ayarları</a> sayfasına gidin
         step2: Salt okunur izinlerle (hesapları görüntüleme, işlemleri görüntüleme)
           yeni bir API anahtarı oluşturun
         step3: API anahtarınızı ve API gizli anahtarınızı kopyalayıp aşağıya yapıştırın
@@ -467,8 +467,9 @@ tr:
           ve spot işlem gerçekleşmelerini içe aktarır.
         read_only_title: Yalnızca salt okunur borsa senkronizasyonu
         setup_accounts: Hesabı kur
-        step1_html: Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank"
-          rel="noopener noreferrer" class="underline">Kraken API ayarları</a>'na gidin
+        step1_html: <a href="https://pro.kraken.com/app/settings/api" target="_blank"
+          rel="noopener noreferrer" class="underline">Kraken API ayarları</a> sayfasına
+          gidin
         step2: Yalnızca Query Funds ve Query Closed Orders & Trades izinleriyle bir
           API anahtarı oluşturun.
         step3: API anahtarını ve özel anahtarı aşağıya yapıştırın.

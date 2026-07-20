@@ -208,10 +208,10 @@ tr:
     pending_duplicate_merge:
       confirm_title: Gerçekleşen işlemle birleştir (%{posted_amount})
       possible_duplicate: Kopya mı?
-      possible_duplicate_short: Kop?
+      possible_duplicate_short: Kopya?
       reject_title: Ayrı işlemler olarak tut
       review_recommended: İncele
-      review_recommended_short: İnc
+      review_recommended_short: İncele
     potential_duplicate_description: Bu bekleyen işlem aşağıdaki gerçekleşen işlemle
       aynı olabilir. Öyleyse, çift sayımı önlemek için bunları birleştirin.
     potential_duplicate_title: Olası kopya tespit edildi

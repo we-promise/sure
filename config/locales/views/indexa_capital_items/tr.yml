@@ -207,7 +207,7 @@ tr:
           checking: Vadesiz Hesap
           hsa: Sağlık Tasarruf Hesabı
           money_market: Para Piyasası
-          savings: Vadeli Hesap
+          savings: Tasarruf Hesabı
         investment:
           401k: 401(k)
           403b: 403(b)

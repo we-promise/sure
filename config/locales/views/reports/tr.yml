@@ -159,7 +159,7 @@ tr:
         expenses: Giderler
         income: Gelir
         net_savings: Net Tasarruf
-        of_income: "gelirin %{percent}%'i"
+        of_income: "gelirin yüzde %{percent}'i"
         title: Özet
         used: kullanıldı
         vs_prior: "öncekine göre %{percent}%"

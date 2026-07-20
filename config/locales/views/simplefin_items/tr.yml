@@ -44,7 +44,7 @@ tr:
         underline">SimpleFIN Bridge</a> adresini ziyaret edin
       step_2: Anahtarı kopyalayın ve aşağıya yapıştırın
       step_3: Erişimi geri yüklemek için "Güncelle"ye tıklayın
-      title: SimpleFin Bağlantısını Güncelle
+      title: SimpleFIN Bağlantısını Güncelle
       update: Güncelle
     link_existing_account:
       errors:
@@ -113,7 +113,7 @@ tr:
         today: bugün
         yesterday: dün
       cancel: İptal
-      choose_account_type: 'Her SimpleFin hesabı için doğru hesap türünü seçin:'
+      choose_account_type: 'Her SimpleFIN hesabı için doğru hesap türünü seçin:'
       create_accounts: Hesapları Oluştur
       creating_accounts: Hesaplar Oluşturuluyor...
       header_subtitle: İçe aktarılan hesaplarınız için doğru hesap türlerini seçin
@@ -128,8 +128,8 @@ tr:
         transaction_count:
           one: "%{count} işlem"
           other: "%{count} işlem"
-      title: SimpleFin Hesaplarınızı Kurun
-      transaction_history_description_html: SimpleFin genellikle bankanıza bağlı olarak
+      title: SimpleFIN Hesaplarınızı Kurun
+      transaction_history_description_html: SimpleFIN genellikle bankanıza bağlı olarak
         <strong>60-90 gün</strong> işlem geçmişi sağlar. İlk kurulumdan sonra yeni
         işlemler ileriye dönük olarak otomatik senkronize edilir. Geçmiş veri kullanılabilirliği
         kuruma ve hesap türüne göre değişir.

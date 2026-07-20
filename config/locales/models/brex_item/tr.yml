@@ -11,5 +11,5 @@ tr:
         brex_item:
           attributes:
             base_url:
-              official_hosts_only: boş bırakılmalı, https://api.brex.com ya da https://api-staging.brex.com
+              official_hosts_only: boş bırakılamaz; https://api.brex.com ya da https://api-staging.brex.com
                 olmalıdır

@@ -83,7 +83,7 @@ tr:
       cancel: İptal
       creating: İçe aktarılıyor...
       import_selected: Seçilenleri İçe Aktar
-      instructions: Kraken, bu bağlantı için yalnızca varlıkları ve spot işlem dolgularını
+      instructions: Kraken, bu bağlantı için yalnızca varlıkları ve spot işlem gerçekleşmelerini
         içeren tek bir birleşik Kripto borsa hesabını içe aktarır.
       no_accounts: Tüm Kraken hesapları içe aktarıldı.
       select_all: Tümünü seç

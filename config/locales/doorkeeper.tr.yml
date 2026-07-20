@@ -69,7 +69,7 @@ tr:
         authorize: Yetkilendir
         deny: Reddet
       error:
-        go_back: Go back
+        go_back: Geri dön
         title: Bir hata oluştu
       form_post:
         title: Bu formu gönder
@@ -79,8 +79,8 @@ tr:
           mi?"
         title: Yetkilendirme gerekli
       show:
-        authorization_code_label: 'Authorization Code:'
-        copy_instructions: Copy this code and paste it into the application.
+        authorization_code_label: 'Yetkilendirme Kodu:'
+        copy_instructions: Bu kodu kopyalayın ve uygulamaya yapıştırın.
         title: Yetkilendirme kodu
     authorized_applications:
       buttons:
@@ -90,7 +90,7 @@ tr:
       index:
         application: Uygulama
         created_at: Oluşturulma Tarihi
-        date_format: "%Y-%m-%d %H:%M:%S"
+        date_format: "%d.%m.%Y %H:%M:%S"
         title: Yetkilendirilmiş uygulamalarınız
     errors:
       messages:

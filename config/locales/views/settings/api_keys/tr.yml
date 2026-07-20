@@ -97,7 +97,7 @@ tr:
         title: API Anahtarı Oluştur
       no_api_key:
         create_api_key: API Anahtarı Oluştur
-        description: Maybe verilerinize güvenli bir API anahtarı ile programatik erişim
+        description: Verilerinize güvenli bir API anahtarıyla programatik erişim
           sağlayın.
         feature_1: Hesap verilerinize programatik olarak erişin
         feature_2: Özel entegrasyonlar ve uygulamalar oluşturun

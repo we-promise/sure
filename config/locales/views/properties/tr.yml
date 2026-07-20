@@ -60,7 +60,7 @@ tr:
       name_placeholder: Yazlık ev
       property_type_label: Mülk türü
       square_feet: Fit Kare
-      square_meters: Metre Kare
+      square_meters: Metrekare
       subtype_prompt: Tür seçin
       year_built_label: İnşa Yılı (isteğe bağlı)
       year_built_placeholder: '1990'

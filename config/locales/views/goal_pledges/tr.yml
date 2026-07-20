@@ -14,7 +14,7 @@ tr:
       helper_transfer: Sure, bağlı hesabınızda eşleşen bir yatırma işlemi arayacaktır.
         Taahhüt 7 gün boyunca beklemede kalır, Sure onu tespit ettiğinde otomatik
         olarak onaylanır.
-      preview_nonzero: "{target} hedefinin {percent}%'ine ulaşılıyor, {newTotal}."
+      preview_nonzero: "{target} hedefinin yüzde {percent}'ine ulaşılıyor, {newTotal}."
       preview_reached: "{target} hedefinize ulaşıldı. Hedef tamamlandı."
       preview_zero: Şu anda {target} hedefinin {current} kısmı biriktirildi.
       submit: Taahhüdü kaydet

@@ -6,7 +6,7 @@ tr:
       joined_household: Haneye katıldınız.
       message: "%{inviter} sizi %{role} olarak katılmaya davet etti."
       sign_in_existing: Zaten bir hesabım var
-      title: "%{family}'e katıl"
+      title: "%{family} hanesine katıl"
     create:
       existing_user_added: Kullanıcı hanenize eklendi.
       existing_user_has_family_data: Bu kullanıcının zaten hesapları olan bir hanesi

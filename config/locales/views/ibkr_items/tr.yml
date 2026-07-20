@@ -78,7 +78,7 @@ tr:
         title: Zaten bağlı
       page_title: Interactive Brokers Hesaplarını Kur
       status:
-        fetching_accounts: Interactive Brokers'dan hesaplar alınıyor...
+        fetching_accounts: Interactive Brokers'tan hesaplar alınıyor...
         no_accounts_found_description: Sure, en son Flex raporunda herhangi bir IBKR
           hesabı bulamadı.
         no_accounts_found_title: Hesap bulunamadı.
