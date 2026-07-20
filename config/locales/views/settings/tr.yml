@@ -600,7 +600,7 @@ tr:
         mfa_description: Hesabınıza, oturum açarken kimlik doğrulayıcı uygulamanızdan
           bir kod isteyerek ekstra bir güvenlik katmanı ekleyin
         mfa_title: İki Faktörlü Kimlik Doğrulama
-        page_title: Menkul Kıymet
+        page_title: Güvenlik
         sso_confirm_body: "%{provider} hesabınızın bağlantısını kesmek istediğinizden
           emin misiniz? Daha sonra o sağlayıcıyla tekrar giriş yaparak yeniden bağlayabilirsiniz."
         sso_confirm_button: Bağlantıyı kes
