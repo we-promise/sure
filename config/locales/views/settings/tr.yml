@@ -592,8 +592,10 @@ tr:
             anahtarları ve kişisel veriler) şu anda şifrelenmeden depolanıyor. Şifrelemeyi
             etkinleştirmek için ortam değişkenlerinizde veya Rails kimlik bilgilerinizde
             aşağıdaki anahtarları ayarlayın:'
-          keys: '["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY", "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY",
-            "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"]'
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
           title: Şifreleme anahtarları eksik
         mfa_description: Hesabınıza, oturum açarken kimlik doğrulayıcı uygulamanızdan
           bir kod isteyerek ekstra bir güvenlik katmanı ekleyin

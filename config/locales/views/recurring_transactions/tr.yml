@@ -27,9 +27,11 @@ tr:
       manual_description: Yukarıdaki düğmeleri kullanarak desenleri manuel olarak
         tespit edebilir veya eski yinelenen işlemleri temizleyebilirsiniz.
       title: Otomatik Desen Tespiti
-      triggers: '["CSV içe aktarmaları tamamlandığında (işlemler, alım satımlar, hesaplar
-        vb.)", "Herhangi bir sağlayıcı senkronizasyonu tamamlandığında (Plaid, SimpleFIN
-        vb.)"]'
+      triggers:
+        - CSV içe aktarmaları tamamlandığında (işlemler, alım satımlar, hesaplar
+          vb.)
+        - Herhangi bir sağlayıcı senkronizasyonu tamamlandığında (Plaid, SimpleFIN
+          vb.)
     marked_active: Yinelenen işlem etkin olarak işaretlendi
     marked_as_recurring: İşlem yinelenen olarak işaretlendi
     marked_inactive: Yinelenen işlem etkin değil olarak işaretlendi
