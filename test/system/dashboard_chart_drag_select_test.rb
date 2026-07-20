@@ -26,14 +26,23 @@ class DashboardChartDragSelectTest < ApplicationSystemTestCase
 
     overlay = find("#netWorthChart .drag-select-brush .overlay", visible: :all)
 
+    # Drive the drag off the overlay's own rendered width rather than fixed
+    # pixel offsets — the chart's actual width varies with viewport/layout
+    # (e.g. font metrics differ between local and CI headless Chrome), and a
+    # start point that lands outside the overlay never triggers the brush.
+    overlay_width = overlay.native.rect.width
+    inset = 20
+    start_offset = -(overlay_width / 2 - inset).round
+    drag_distance = (overlay_width - (2 * inset)).round
+
     # The net worth chart sits inside a `<section draggable="true">` used by
     # dashboard-sortable for card reordering. Without an explicit
     # `draggable="false"` on the chart container, this same gesture would be
     # hijacked by the native HTML5 drag-and-drop instead of the chart's brush.
     page.driver.browser.action
-      .move_to(overlay.native, -100, 0)
+      .move_to(overlay.native, start_offset, 0)
       .click_and_hold
-      .move_by(200, 0)
+      .move_by(drag_distance, 0)
       .release
       .perform
 
