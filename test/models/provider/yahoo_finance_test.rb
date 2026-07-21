@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Provider::YahooFinanceTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @provider = Provider::YahooFinance.new
     @cache = ActiveSupport::Cache::MemoryStore.new
@@ -12,12 +14,45 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   #        Health Check Tests
   # ================================
 
+  test "health_status returns cached status and schedules a stale refresh" do
+    @cache.write(
+      Provider::YahooFinance::HEALTH_STATUS_CACHE_KEY,
+      { status: :healthy, checked_at: 16.minutes.ago },
+      expires_in: Provider::YahooFinance::HEALTH_STATUS_RETENTION
+    )
+    @provider.expects(:perform_health_check).never
+
+    assert_enqueued_with(job: YahooFinanceHealthCheckJob) do
+      assert_equal :healthy, @provider.health_status
+    end
+  end
+
+  test "health_status returns unknown and schedules a cold refresh" do
+    @provider.expects(:perform_health_check).never
+
+    assert_enqueued_with(job: YahooFinanceHealthCheckJob) do
+      assert_equal :unknown, @provider.health_status
+    end
+  end
+
+  test "health_status does not schedule a refresh for fresh evidence" do
+    @cache.write(
+      Provider::YahooFinance::HEALTH_STATUS_CACHE_KEY,
+      { status: :healthy, checked_at: Time.current },
+      expires_in: Provider::YahooFinance::HEALTH_STATUS_RETENTION
+    )
+
+    assert_no_enqueued_jobs only: YahooFinanceHealthCheckJob do
+      assert_equal :healthy, @provider.health_status
+    end
+  end
+
   test "health_status caches a healthy provider assessment" do
     stub_successful_health_authentication
     stub_health_chart_responses(healthy_chart_response)
 
-    assert_equal :healthy, @provider.health_status
-    assert_equal :healthy, @provider.health_status
+    assert_equal :healthy, @provider.refresh_health_status
+    assert_equal :healthy, @provider.refresh_health_status
   end
 
   test "health_status classifies a crumb HTTP 429 without retrying" do
@@ -31,7 +66,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     @provider.stubs(:health_auth_client).returns(auth_client)
     @provider.expects(:health_authenticated_client).never
 
-    assert_equal :rate_limited, @provider.health_status
+    assert_equal :rate_limited, @provider.refresh_health_status
   end
 
   test "health_status classifies a cookie HTTP 429 without continuing crumb acquisition" do
@@ -40,14 +75,14 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     @provider.stubs(:health_auth_client).returns(auth_client)
     @provider.expects(:health_authenticated_client).never
 
-    assert_equal :rate_limited, @provider.health_status
+    assert_equal :rate_limited, @provider.refresh_health_status
   end
 
   test "health_status classifies a chart HTTP 429 without retrying" do
     stub_successful_health_authentication
     stub_health_chart_responses(health_response(status: 429, body: "secret response body"))
 
-    assert_equal :rate_limited, @provider.health_status
+    assert_equal :rate_limited, @provider.refresh_health_status
   end
 
   test "health_status classifies connection failures and timeouts as unavailable" do
@@ -58,7 +93,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
       auth_client.expects(:get).once.raises(error)
       provider.stubs(:health_auth_client).returns(auth_client)
 
-      assert_equal :unavailable, provider.health_status
+      assert_equal :unavailable, provider.refresh_health_status
     end
   end
 
@@ -75,9 +110,9 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     )
 
     travel_to Time.zone.parse("2026-07-20 12:00:00") do
-      assert_equal :unavailable, @provider.health_status
+      assert_equal :unavailable, @provider.refresh_health_status
       travel 5.minutes + 1.second
-      assert_equal :healthy, @provider.health_status
+      assert_equal :healthy, @provider.refresh_health_status
     end
   end
 
@@ -89,9 +124,9 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     )
 
     travel_to Time.zone.parse("2026-07-20 12:00:00") do
-      assert_equal :unavailable, @provider.health_status
+      assert_equal :unavailable, @provider.refresh_health_status
       travel 5.minutes + 1.second
-      assert_equal :unavailable, @provider.health_status
+      assert_equal :unavailable, @provider.refresh_health_status
     end
   end
 
@@ -107,11 +142,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
       stub_health_chart_responses(first_response, healthy_chart_response, provider: provider)
 
       travel_to Time.zone.parse("2026-07-20 12:00:00") do
-        assert_equal first_status, provider.health_status
+        assert_equal first_status, provider.refresh_health_status
         travel freshness - 1.second
-        assert_equal first_status, provider.health_status
+        assert_equal first_status, provider.refresh_health_status
         travel 2.seconds
-        assert_equal :healthy, provider.health_status
+        assert_equal :healthy, provider.refresh_health_status
       end
     end
   end
@@ -137,10 +172,10 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     @provider.stubs(:health_authenticated_client).returns(chart_client)
 
     travel_to Time.zone.parse("2026-07-20 12:00:00") do
-      assert_equal :healthy, @provider.health_status
+      assert_equal :healthy, @provider.refresh_health_status
       travel 15.minutes + 1.second
 
-      refreshing = Thread.new { @provider.health_status }
+      refreshing = Thread.new { @provider.refresh_health_status }
       started.pop
       assert_equal :healthy, Provider::YahooFinance.new.health_status
       finish << true
@@ -161,7 +196,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     end
     @provider.stubs(:health_authenticated_client).returns(chart_client)
 
-    refreshing = Thread.new { @provider.health_status }
+    refreshing = Thread.new { @provider.refresh_health_status }
     started.pop
     assert_equal :unknown, Provider::YahooFinance.new.health_status
     finish << true
@@ -187,10 +222,10 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     @provider.stubs(:health_authenticated_client).returns(chart_client)
 
     travel_to Time.zone.parse("2026-07-20 12:00:00") do
-      assert_equal :healthy, @provider.health_status
+      assert_equal :healthy, @provider.refresh_health_status
       travel 1.hour + 1.second
 
-      refreshing = Thread.new { @provider.health_status }
+      refreshing = Thread.new { @provider.refresh_health_status }
       started.pop
       assert_equal :unknown, Provider::YahooFinance.new.health_status
       finish << true
@@ -211,12 +246,12 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     end
     @provider.stubs(:health_authenticated_client).returns(blocking_client)
 
-    first_refresh = Thread.new { @provider.health_status }
+    first_refresh = Thread.new { @provider.refresh_health_status }
     started.pop
     travel 15.seconds + 1.second do
       replacement = Provider::YahooFinance.new
       stub_health_chart_responses(healthy_chart_response, provider: replacement)
-      assert_equal :healthy, replacement.health_status
+      assert_equal :healthy, replacement.refresh_health_status
     end
     finish << true
 
@@ -256,7 +291,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     diagnostics = []
     DebugLogEntry.stubs(:capture).with { |attributes| diagnostics << attributes }
 
-    assert_equal :unknown, @provider.health_status
+    assert_equal :unknown, @provider.refresh_health_status
     assert_equal [ "provider_health_cache" ], diagnostics.map { |entry| entry[:category] }
     assert diagnostics.none? { |entry| entry.to_s.include?("cache details") }
   end
@@ -276,7 +311,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
         attributes.to_s.exclude?("secret-body")
     end
 
-    assert_equal :rate_limited, @provider.health_status
+    assert_equal :rate_limited, @provider.refresh_health_status
   end
 
   test "health_status omits repeated diagnostics and records healthy recovery" do
@@ -290,11 +325,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     DebugLogEntry.stubs(:capture).with { |attributes| events << attributes }
 
     travel_to Time.zone.parse("2026-07-20 12:00:00") do
-      assert_equal :rate_limited, @provider.health_status
+      assert_equal :rate_limited, @provider.refresh_health_status
       travel 30.minutes + 1.second
-      assert_equal :rate_limited, @provider.health_status
+      assert_equal :rate_limited, @provider.refresh_health_status
       travel 30.minutes + 1.second
-      assert_equal :healthy, @provider.health_status
+      assert_equal :healthy, @provider.refresh_health_status
     end
 
     assert_equal %i[rate_limited healthy], events.map { |event| event.dig(:metadata, :new_state) }
@@ -313,7 +348,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   test "rate-limited health status does not gate or change normal price and exchange-rate operations" do
     stub_successful_health_authentication
     stub_health_chart_responses(health_response(status: 429))
-    assert_equal :rate_limited, @provider.health_status
+    assert_equal :rate_limited, @provider.refresh_health_status
 
     @provider.stubs(:fetch_authenticated_chart).returns(
       "chart" => {
@@ -341,7 +376,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
 
     assert price_response.success?
     assert exchange_rate_response.success?
-    assert_equal :rate_limited, @provider.health_status
+    assert_equal :rate_limited, @provider.refresh_health_status
   end
 
   # ================================

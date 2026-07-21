@@ -1,5 +1,4 @@
 require "set"
-require "timeout"
 
 class Provider::YahooFinance < Provider
   include ExchangeRateConcept, SecurityConcept
@@ -27,7 +26,6 @@ class Provider::YahooFinance < Provider
   }.freeze
   HEALTH_STATUS_RETENTION = 1.hour
   HEALTH_LOCK_DURATION = 15.seconds
-  HEALTH_CHECK_TIMEOUT = 10.seconds
   HEALTH_STATUS_CACHE_KEY = "yahoo_finance_health_status"
   HEALTH_LOCK_CACHE_KEY = "yahoo_finance_health_status_lock"
 
@@ -60,6 +58,17 @@ class Provider::YahooFinance < Provider
   end
 
   def health_status
+    assessment = read_health_cache(HEALTH_STATUS_CACHE_KEY)
+    return assessment[:status] if assessment_fresh?(assessment)
+
+    YahooFinanceHealthCheckJob.perform_later
+    assessment&.dig(:status) || :unknown
+  rescue HealthCacheError => e
+    record_health_cache_failure(e)
+    :unknown
+  end
+
+  def refresh_health_status
     assessment = read_health_cache(HEALTH_STATUS_CACHE_KEY)
     return assessment[:status] if assessment_fresh?(assessment)
 
@@ -372,31 +381,29 @@ class Provider::YahooFinance < Provider
     def perform_health_check
       stage = :cookie
 
-      Timeout.timeout(HEALTH_CHECK_TIMEOUT) do
-        cookie, crumb, stage = fetch_health_cookie_and_crumb
+      cookie, crumb, stage = fetch_health_cookie_and_crumb
 
-        stage = :chart
-        chart_response = health_authenticated_client(cookie).get("#{base_url}/v8/finance/chart/AAPL") do |req|
-          req.params["interval"] = "1d"
-          req.params["range"] = "1d"
-          req.params["crumb"] = crumb
-        end
-        return health_result(:rate_limited, stage:, http_status: 429) if chart_response.status == 429
-        return health_result(:unavailable, stage:, http_status: chart_response.status) unless chart_response.success?
-
-        data = JSON.parse(chart_response.body)
-        if data.dig("chart", "error", "code") == "Unauthorized"
-          delete_health_cache("#{@cache_prefix}_auth_crumb")
-          return health_result(:unavailable, stage:, http_status: chart_response.status)
-        end
-        return health_result(:unavailable, stage:, http_status: chart_response.status) if data.dig("chart", "error").present?
-
-        results = data.dig("chart", "result")
-        health_result(results.present? ? :healthy : :unavailable, stage:, http_status: chart_response.status)
+      stage = :chart
+      chart_response = health_authenticated_client(cookie).get("#{base_url}/v8/finance/chart/AAPL") do |req|
+        req.params["interval"] = "1d"
+        req.params["range"] = "1d"
+        req.params["crumb"] = crumb
       end
+      return health_result(:rate_limited, stage:, http_status: 429) if chart_response.status == 429
+      return health_result(:unavailable, stage:, http_status: chart_response.status) unless chart_response.success?
+
+      data = JSON.parse(chart_response.body)
+      if data.dig("chart", "error", "code") == "Unauthorized"
+        delete_health_cache("#{@cache_prefix}_auth_crumb")
+        return health_result(:unavailable, stage:, http_status: chart_response.status)
+      end
+      return health_result(:unavailable, stage:, http_status: chart_response.status) if data.dig("chart", "error").present?
+
+      results = data.dig("chart", "result")
+      health_result(results.present? ? :healthy : :unavailable, stage:, http_status: chart_response.status)
     rescue HealthCacheError
       raise
-    rescue Timeout::Error, Faraday::Error, JSON::ParserError => e
+    rescue Faraday::Error, JSON::ParserError => e
       health_result(:unavailable, stage:, exception_class: e.class.name, http_status: faraday_status(e))
     rescue RateLimitError => e
       health_result(:rate_limited, stage: :crumb, exception_class: e.class.name, http_status: e.details&.dig(:status))
