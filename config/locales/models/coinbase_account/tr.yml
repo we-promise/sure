@@ -1,0 +1,5 @@
+---
+tr:
+  coinbase:
+    processor:
+      paid_via: "%{method} ile ödendi"

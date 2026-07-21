@@ -52,6 +52,11 @@ module Account::Linkable
     account_provider&.adapter
   end
 
+  # Returns the raw provider account record (e.g. EnableBankingAccount) for a specific provider type
+  def provider_account_for(provider_type)
+    account_providers.find_by(provider_type: provider_type)&.provider
+  end
+
   # Convenience method to get the provider name
   def provider_name
     # Try new system first
