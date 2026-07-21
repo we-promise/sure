@@ -11,7 +11,6 @@ es:
     show:
       chart_title: Valor total
     subtypes:
-      # Estados Unidos
       brokerage:
         short: Corretaje
         long: Cuenta de corretaje (Brokerage)
@@ -54,7 +53,6 @@ es:
       utma:
         short: UTMA
         long: Cuenta de custodia UTMA
-      # Reino Unido
       isa:
         short: ISA
         long: Cuenta de ahorro individual (ISA)
@@ -67,7 +65,6 @@ es:
       workplace_pension_uk:
         short: Pensión
         long: Pensión del lugar de trabajo
-      # Canadá
       rrsp:
         short: RRSP
         long: Plan registrado de ahorro para la jubilación (RRSP)
@@ -83,14 +80,12 @@ es:
       rrif:
         short: RRIF
         long: Fondo registrado de ingresos para la jubilación (RRIF)
-      # Australia
       super:
         short: Super
         long: Superannuation (Fondo de pensiones australiano)
       smsf:
         short: SMSF
         long: Fondo de pensiones gestionado por uno mismo (SMSF)
-      # Europa
       pea:
         short: PEA
         long: Plan de ahorro en acciones (PEA - Francia)
@@ -100,7 +95,72 @@ es:
       riester:
         short: Riester
         long: Plan de pensiones Riester (Riester-Rente - Alemania)
-      # Genéricos
+      nps:
+        short: NPS
+        long: National Pension System
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Acciones indias
+        long: Acciones indias (Demat)
+      indian_equity:
+        short: Renta variable india
+        long: Renta variable india
+      indian_etf:
+        short: ETF indio
+        long: ETF indio
+      life_insurance:
+        short: Seguro de vida
+        long: Seguro de vida
+      ppf:
+        short: PPF
+        long: Public Provident Fund
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: National Savings Certificate
+      scss:
+        short: SCSS
+        long: Senior Citizens' Savings Scheme
+      fd:
+        short: FD
+        long: Depósito a plazo fijo
+      rd:
+        short: RD
+        long: Depósito recurrente
+      pomis:
+        short: POMIS
+        long: Post Office Monthly Income Scheme
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: ETF de oro
+        long: ETF de oro
+      gold_mf:
+        short: Fondo de oro
+        long: Fondo de inversión de oro
+      sgb:
+        short: SGB
+        long: Sovereign Gold Bond
+      g_sec:
+        short: G-Sec
+        long: Valores del Estado (G-Secs)
+      sdl:
+        short: SDL
+        long: Préstamos de desarrollo estatal (SDL)
+      corporate_bond:
+        short: Bono corporativo
+        long: Bono corporativo
+      infrastructure_bond:
+        short: Bono de infraestructuras
+        long: Bono de infraestructuras
+      tax_free_bond:
+        short: Bono exento de impuestos
+        long: Bono exento de impuestos
       pension:
         short: Pensión
         long: Plan de pensiones
@@ -110,6 +170,9 @@ es:
       mutual_fund:
         short: Fondo de inversión
         long: Fondo de inversión (Mutual Fund)
+      gold:
+        short: Oro
+        long: Oro (físico o digital)
       angel:
         short: Angel
         long: Inversión Angel (Capital riesgo)

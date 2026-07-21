@@ -1,8 +1,34 @@
 ---
 es:
   pages:
+    feedback:
+      title: Comentarios
+      heading: Deja tus comentarios
+      description: Cuéntanos si tienes algún comentario concreto. No dudes en incluir enlaces a vídeos o capturas de pantalla.
+      feature_request: Escribir una petición de funcionalidad
+      bug_report: Informar de un error
+      discuss: Comenta %{product} con otras personas
+    intro:
+      not_authorized: La introducción solo está disponible para usuarios invitados.
+      welcome: ¡Bienvenido!
+      coming_soon: La experiencia de introducción llegará pronto
+      description: Estamos construyendo una experiencia de bienvenida más completa para conocer tus objetivos, hitos y necesidades del día a día. Por ahora, ve a la barra lateral del chat para iniciar una conversación con Sure y cuéntanos en qué punto de tu camino financiero te encuentras.
+      start_chatting: Empezar a chatear
+    redis_configuration_error:
+      page_title: Se requiere configurar Redis - Sure
+      heading: Se requiere configurar Redis
+      subheading: Tu instalación autoalojada de Sure necesita que Redis esté configurado correctamente.
+      why_required_title: ¿Por qué es necesario Redis?
+      why_required_body: Sure usa Redis para ejecutar los trabajos en segundo plano de Sidekiq, como sincronizar datos de cuentas, procesar importaciones y otras operaciones en segundo plano que mantienen tus datos financieros al día.
+      view_setup_guide: Ver guía de configuración
+      setup_guide_hint: Sigue nuestra guía completa de configuración con Docker para configurar Redis
+      refresh_hint: Cuando hayas configurado Redis, actualiza esta página para continuar.
+      refresh_page: Actualizar página
     changelog:
       title: Novedades
+    release_notes_unavailable:
+      name: Notas de la versión no disponibles
+      body_html: <p>No se han podido obtener las últimas notas de la versión en este momento. Vuelve a intentarlo más tarde o visita directamente nuestra <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>página de versiones en GitHub</a>.</p>
     privacy:
       title: Política de privacidad
       heading: Política de privacidad
@@ -12,11 +38,21 @@ es:
       heading: Condiciones del servicio
       placeholder: El contenido de las condiciones del servicio se mostrará aquí.
     dashboard:
-      welcome: "Bienvenido de nuevo, %{name}"
-      subtitle: "Esto es lo que está pasando con tus finanzas"
-      new: "Nuevo"
-      drag_to_reorder: "Arrastra para reordenar la sección"
-      toggle_section: "Alternar visibilidad de la sección"
+      welcome: Bienvenido de nuevo, %{name}
+      subtitle: Esto es lo que está pasando con tus finanzas
+      new: Nuevo
+      sections_aria_label: Secciones del panel
+      drag_to_reorder: Arrastra para reordenar la sección
+      toggle_section: Alternar visibilidad de la sección
+      widget_size:
+        label: Ajustar tamaño
+        width_label: Ancho
+        half: Media
+        full: Completa
+        height_label: Alto
+        compact: Compacto
+        auto: Automático
+        tall: Alto
       net_worth_chart:
         data_not_available: Datos no disponibles para el período seleccionado
         title: Patrimonio neto
@@ -25,34 +61,45 @@ es:
         no_account_subtitle: Como no se han añadido cuentas, no hay datos para mostrar. Añade tus primeras cuentas para empezar a ver los datos del panel.
         no_account_title: Aún no hay cuentas
       balance_sheet:
-        title: "Balance de situación"
-        no_items: "Aún no hay %{name}"
-        add_accounts: "Añade tus cuentas de %{name} para ver un desglose completo"
+        title: Balance de situación
+        no_items: Aún no hay %{name}
+        add_accounts: Añade tus cuentas de %{name} para ver un desglose completo
+        no_asset: Aún no hay activos
+        no_liability: Aún no hay pasivos
+        add_asset_accounts: Añade tus cuentas de activos para ver un desglose completo
+        add_liability_accounts: Añade tus cuentas de pasivos para ver un desglose completo
+        name: Nombre
+        weight: Peso
+        value: Valor
+        classifications:
+          asset: Activos
+          liability: Pasivos
       cashflow_sankey:
-        title: "Flujo de caja"
-        no_data_title: "No hay datos de flujo de caja para este período"
-        no_data_description: "Añade transacciones para mostrar datos de flujo de caja o amplía el período de tiempo"
-        add_transaction: "Añadir transacción"
+        title: Flujo de caja
+        zoom_out: Volver al flujo de caja completo
+        no_data_title: No hay datos de flujo de caja para este período
+        no_data_description: Añade transacciones para mostrar datos de flujo de caja o amplía el período de tiempo
+        add_transaction: Añadir transacción
       no_accounts:
-        title: "Aún no hay cuentas"
-        description: "Añade cuentas para mostrar datos de patrimonio neto"
-        add_account: "Añadir cuenta"
+        title: Aún no hay cuentas
+        description: Añade cuentas para mostrar datos de patrimonio neto
+        add_account: Añadir cuenta
       outflows_donut:
-        title: "Salidas"
-        total_outflows: "Salidas totales"
-        categories: "Categorías"
-        value: "Valor"
-        weight: "Peso"
+        title: Salidas
+        total_outflows: Salidas totales
+        categories: Categorías
+        value: Valor
+        weight: Peso
       investment_summary:
-        title: "Inversiones"
-        total_return: "Rentabilidad total"
-        holding: "Activo"
-        weight: "Peso"
-        value: "Valor"
-        return: "Rentabilidad"
-        period_activity: "Actividad de %{period}"
-        contributions: "Aportaciones"
-        withdrawals: "Retiradas"
-        trades: "Operaciones"
-        no_investments: "No hay cuentas de inversión"
-        add_investment: "Añade una cuenta de inversión para realizar el seguimiento de tu cartera"
+        title: Inversiones
+        total_return: Rentabilidad total
+        holding: Activo
+        weight: Peso
+        value: Valor
+        return: Rentabilidad
+        period_activity: Actividad de %{period}
+        contributions: Aportaciones
+        withdrawals: Retiradas
+        trades: Operaciones
+        no_investments: No hay cuentas de inversión
+        add_investment: Añade una cuenta de inversión para realizar el seguimiento de tu cartera

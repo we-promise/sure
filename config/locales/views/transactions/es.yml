@@ -1,18 +1,43 @@
 ---
 es:
   transactions:
+    bulk_updates:
+      new:
+        cancel: Cancelar
+        category_label: Categoría
+        category_prompt: Selecciona una categoría
+        date_label: Fecha
+        header_title: Editar transacciones
+        merchant_label: Comercio
+        merchant_prompt: Selecciona un comercio
+        name_label: Nombre
+        name_placeholder: Introduce un nombre que se aplicará a las transacciones seleccionadas
+        none: (ninguno)
+        notes_label: Notas
+        notes_placeholder: Introduce una nota que se aplicará a las transacciones seleccionadas
+        overview: Resumen
+        save: Guardar
+        tags_label: Etiquetas
+        transactions_section: Transacciones
     unknown_name: Transacción desconocida
+    selection_bar:
+      duplicate: Duplicar
+      edit: Editar
+      selected: seleccionadas
     form:
+      details: Detalles
       account: Cuenta
       account_prompt: Selecciona una cuenta
       amount: Importe
       category: Categoría
+      category_label: Categoría
       category_prompt: Selecciona una categoría
       date: Fecha
       description: Descripción
       description_placeholder: Describe la transacción
       expense: Gasto
       income: Ingreso
+      merchant_label: Comercio
       none: (ninguno)
       note_label: Notas
       note_placeholder: Introduce una nota
@@ -21,9 +46,22 @@ es:
       tag_search_placeholder: Buscar o crear etiqueta
       tags_label: Etiquetas
       transfer: Transferencia
+    create:
+      created: Transacción creada
+    update:
+      updated: Transacción actualizada
     new:
       new_transaction: Nueva transacción
     show:
+      keep_both: No, conservar ambas
+      loan_payment: Pago de préstamo
+      mark_recurring: Marcar como recurrente
+      mark_recurring_subtitle: Haz seguimiento de esta transacción como recurrente. La variación del importe se calcula automáticamente a partir de transacciones similares de los últimos 6 meses.
+      mark_recurring_title: Transacción recurrente
+      merge_duplicate: Sí, fusionarlas
+      potential_duplicate_description: Esta transacción pendiente puede ser la misma que la transacción contabilizada de abajo. Si es así, fusiónalas para evitar contarlas dos veces.
+      potential_duplicate_title: Posible duplicado detectado
+      transfer: Transferencia
       account_label: Cuenta
       amount: Importe
       category_label: Categoría
@@ -32,6 +70,7 @@ es:
       delete_subtitle: Esto eliminará permanentemente la transacción, afectará tus saldos históricos y no se podrá deshacer.
       delete_title: Eliminar transacción
       details: Detalles
+      attachments: Adjuntos
       exclude: Excluir
       exclude_description: Las transacciones excluidas se eliminarán de los cálculos y presupuestos e informes.
       activity_type: Tipo de actividad
@@ -41,10 +80,14 @@ es:
       convert_to_trade_title: Convertir en operación de valores
       convert_to_trade_description: Convierte esta transacción en una operación de compra o venta con detalles del valor para el seguimiento de la cartera.
       convert_to_trade_button: Convertir en operación
+      transfer_matcher_description: Conecta esta transacción con su contrapartida en otra cuenta.
+      pending_duplicate_merger_title: ¿Duplicado de una transacción contabilizada?
+      pending_duplicate_merger_description: Fusiona manualmente esta transacción pendiente con su versión contabilizada.
+      pending_duplicate_merger_button: Abrir fusionador
       merchant_label: Comerciante
       name_label: Nombre
       nature: Tipo
-      none: "(ninguno)"
+      none: (ninguno)
       note_label: Notas
       note_placeholder: Introduce una nota
       overview: Resumen
@@ -52,7 +95,15 @@ es:
       tags_label: Etiquetas
       tab_transactions: Transacciones
       tab_upcoming: Próximas
-      uncategorized: "(sin categorizar)"
+      uncategorized: (sin categorizar)
+      additional_details: Detalles adicionales
+      payee: Beneficiario
+      description: Descripción
+      memo: Concepto
+      provider_extras: Extras del proveedor
+      transfer_or_debt_payment: ¿Transferencia o pago de deuda?
+      open_matcher: Abrir emparejador
+      convert: Convertir
     activity_labels:
       buy: Compra
       sell: Venta
@@ -72,9 +123,19 @@ es:
     mark_recurring_title: Transacción recurrente
     potential_duplicate_title: Posible duplicado detectado
     potential_duplicate_description: Esta transacción pendiente podría ser la misma que la transacción confirmada a continuación. Si es así, combínalas para evitar una doble contabilización.
-    duplicate_resolution:
-      merge_duplicate: Sí, combinarlas
-      keep_both: No, mantener ambas
+    merge_duplicate:
+      success: Transacciones combinadas correctamente
+      failure: No se pudieron combinar las transacciones
+    keep_both: No, conservar ambas
+    split_parent_row:
+      split_label: Dividida
+    transfer_match:
+      auto_matched: Emparejada automáticamente
+      auto_matched_short: Auto
+      confirm_match: Confirmar coincidencia
+      payment_confirmed: El pago está confirmado
+      reject_match: Rechazar coincidencia
+      transfer_confirmed: La transferencia está confirmada
     transaction:
       pending: Pendiente
       pending_tooltip: Transacción pendiente — puede cambiar al confirmarse
@@ -84,12 +145,25 @@ es:
       potential_duplicate_tooltip: Esto puede ser un duplicado de otra transacción
       review_recommended: Revisar
       review_recommended_tooltip: Gran diferencia de importe — se recomienda revisar para comprobar si es un duplicado
-    merge_duplicate:
-      success: Transacciones combinadas correctamente
-      failure: No se pudieron combinar las transacciones
+      split: Dividida
+      split_tooltip: Esta transacción se ha dividido en varias entradas
+      split_child_tooltip: Parte de una transacción dividida
     dismiss_duplicate:
       success: Mantenidas como transacciones separadas
       failure: No se pudo descartar la sugerencia de duplicado
+    pending_duplicate_merge:
+      possible_duplicate: ¿Duplicado?
+      possible_duplicate_short: ¿Dup?
+      review_recommended: Revisar
+      review_recommended_short: Rev
+      confirm_title: Fusionar con la transacción contabilizada (%{posted_amount})
+      reject_title: Mantener como transacciones separadas
+    summary:
+      total_transactions: Total de transacciones
+      income: Ingresos
+      expenses: Gastos
+      inflow: Entradas
+      outflow: Salidas
     header:
       edit_categories: Editar categorías
       edit_imports: Editar importaciones
@@ -97,9 +171,53 @@ es:
       edit_tags: Editar etiquetas
       import: Importar
     index:
+      title: Transacciones
       transaction: transacción
       transactions: transacciones
       import: Importar
+      new_rule: Nueva regla
+      edit_rules: Editar reglas
+      edit_categories: Editar categorías
+      edit_tags: Editar etiquetas
+      edit_merchants: Editar comercios
+      edit_imports: Editar importaciones
+      new_transaction: Nueva transacción
+      categorize_button:
+        one: Categorizar (1)
+        other: Categorizar (%{count})
+    categorizes:
+      show:
+        exit: Salir
+        skip: Omitir
+        remaining:
+          one: Queda 1 transacción sin categorizar
+          other: Quedan %{count} transacciones sin categorizar
+        transaction_count:
+          one: 1 transacción
+          other: '%{count} transacciones'
+        transactions_hint: Desmarca para excluir una transacción, o asígnale una categoría distinta directamente en su fila.
+        assign_category: Asignar una categoría
+        assign_category_prompt: → asignar
+        filter_placeholder: Buscar categorías...
+        col_transaction: Transacción
+        col_date: Fecha
+        col_amount: Importe
+        col_category: Categoría
+        type_income: Ingreso
+        type_expense: Gasto
+        create_rule_label: Crear regla de categorización
+        rule_description_prefix: Las futuras transacciones de %{type} cuyo nombre contenga
+        rule_description_suffix: también recibirán esta categoría.
+        no_categories: No hay categorías coincidentes
+        all_done: Todas las transacciones están categorizadas
+      create:
+        categorized:
+          one: 1 transacción categorizada
+          other: '%{count} transacciones categorizadas'
+        rule_creation_failed: Transacciones categorizadas, pero no se pudo crear la regla (puede que ya exista).
+      entry_row:
+        include_checkbox: Incluir %{name}
+        assign_category_select: Asignar categoría a %{name}
     list:
       drag_drop_title: Suelta el CSV para importar
       drag_drop_subtitle: Sube transacciones directamente
@@ -119,19 +237,19 @@ es:
     convert_to_trade:
       title: Convertir en operación de valores
       description: Convierte esta transacción en una operación con detalles del valor
-      date_label: "Fecha:"
-      account_label: "Cuenta:"
-      amount_label: "Importe:"
+      date_label: 'Fecha:'
+      account_label: 'Cuenta:'
+      amount_label: 'Importe:'
       security_label: Valor
       security_prompt: Selecciona un valor...
-      security_custom: "+ Introducir ticker personalizado"
+      security_custom: + Introducir ticker personalizado
       security_not_listed_hint: ¿No ves tu valor? Selecciona "Introducir ticker personalizado" al final de la lista.
       ticker_placeholder: AAPL
       ticker_hint: Introduce el símbolo del ticker de la acción/ETF (ej. AAPL, MSFT)
       ticker_search_placeholder: Buscar un ticker...
       ticker_search_hint: Busca por símbolo de ticker o nombre de empresa, o escribe un ticker personalizado
       price_mismatch_title: Es posible que el precio no coincida
-      price_mismatch_message: "Tu precio (%{entered_price}/acción) difiere significativamente del precio de mercado actual de %{ticker} (%{market_price}). Si esto parece incorrecto, es posible que hayas seleccionado el valor equivocado — intenta usar \"Introducir ticker personalizado\" para especificar el correcto."
+      price_mismatch_message: Tu precio (%{entered_price}/acción) difiere significativamente del precio de mercado actual de %{ticker} (%{market_price}). Si esto parece incorrecto, es posible que hayas seleccionado el valor equivocado — intenta usar "Introducir ticker personalizado" para especificar el correcto.
       quantity_label: Cantidad (Acciones)
       quantity_placeholder: ej. 20
       quantity_hint: Número de acciones negociadas
@@ -147,7 +265,7 @@ es:
       cancel: Cancelar
       submit: Convertir en operación
       success: Transacción convertida en operación correctamente
-      conversion_note: "Convertido desde la transacción: %{original_name} (%{original_date})"
+      conversion_note: 'Convertido desde la transacción: %{original_name} (%{original_date})'
       errors:
         not_investment_account: Solo las transacciones en cuentas de inversión pueden convertirse en operaciones
         already_converted: Esta transacción ya ha sido convertida o excluida
@@ -156,10 +274,21 @@ es:
         select_security: Por favor, selecciona o introduce un valor
         enter_qty_or_price: Por favor, introduce la cantidad o el precio por acción. El otro se calculará a partir del importe de la transacción.
         invalid_qty_or_price: Cantidad o precio no válidos. Por favor, introduce valores positivos válidos.
-        conversion_failed: "Error al convertir la transacción: %{error}"
-        unexpected_error: "Error inesperado durante la conversión: %{error}"
+        conversion_failed: 'Error al convertir la transacción: %{error}'
+        unexpected_error: 'Error inesperado durante la conversión: %{error}'
     searches:
       filters:
+        account_filter:
+          filter_accounts: Filtrar cuentas
+        category_filter:
+          filter_category: Filtrar categoría
+        date_filter:
+          start_date: Fecha de inicio
+          end_date: Fecha de fin
+        merchant_filter:
+          filter_merchants: Filtrar comercios
+        tag_filter:
+          filter_tags: Filtrar etiquetas
         amount_filter:
           equal_to: Igual a
           greater_than: Mayor que
@@ -198,3 +327,26 @@ es:
         less_than: menor que
       form:
         toggle_selection_checkboxes: Alternar todas las casillas
+        search_placeholder: Buscar transacciones ...
+        filter: Filtrar
+    attachments:
+      cannot_exceed: No se pueden superar los %{count} adjuntos por transacción
+      uploaded_one: Adjunto subido correctamente
+      uploaded_many: '%{count} adjuntos subidos correctamente'
+      failed_upload: 'Error al subir el adjunto: %{error}'
+      no_files_selected: No se han seleccionado archivos para subir
+      attachment_deleted: Adjunto eliminado correctamente
+      failed_delete: 'Error al eliminar el adjunto: %{error}'
+      upload_failed: Error al subir el adjunto. Inténtalo de nuevo o contacta con soporte.
+      delete_failed: Error al eliminar el adjunto. Inténtalo de nuevo o contacta con soporte.
+      upload: Subir
+      no_attachments: Aún no hay adjuntos
+      select_up_to: Selecciona hasta %{count} archivos (imágenes o PDF, máx. %{size}MB cada uno) • %{used} de %{count} usados
+      files:
+        one: Archivo (1)
+        other: Archivos (%{count})
+      browse_to_add: Explora para añadir archivos
+      max_reached: Se ha alcanzado el límite de archivos (%{count}/%{max}). Elimina un archivo existente para subir otro.
+    duplicate_resolution:
+      merge_duplicate: Sí, combinarlas
+      keep_both: No, mantener ambas

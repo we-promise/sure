@@ -5,6 +5,7 @@ es:
       account: Cuenta de transferencia (opcional)
       account_prompt: Buscar cuenta
       amount: Importe
+      fee: Comisión de la transacción
       holding: Símbolo del ticker
       holding_optional: Símbolo del ticker (opcional)
       price: Precio por acción
@@ -19,6 +20,7 @@ es:
       type_dividend: Dividendo
       type_interest: Interés
       dividend_requires_security: Se requiere un valor para los dividendos
+      trade_requires_security: Se requiere un valor (símbolo) para las operaciones de compra y venta
     header:
       buy: Comprar
       sell: Vender
@@ -40,9 +42,11 @@ es:
       cost_per_share_label: Costo por acción
       date_label: Fecha
       delete: Eliminar
+      fee_label: Comisión de la transacción
       delete_subtitle: Esta acción no se puede deshacer
       delete_title: Eliminar operación
       details: Detalles
+      provider_disabled_warning: Actualizaciones de precios en pausa — el proveedor %{provider} está desactivado. Vuelve a activarlo en Ajustes o reasigna la posición a otro proveedor.
       exclude_subtitle: Esta operación no se incluirá en informes y cálculos
       exclude_title: Excluir de los análisis
       no_category: Sin categoría

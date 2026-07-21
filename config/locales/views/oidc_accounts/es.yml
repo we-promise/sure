@@ -2,11 +2,12 @@
 es:
   oidc_accounts:
     link:
+      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
       title_link: Vincular cuenta OIDC
       title_create: Crear cuenta
       verify_heading: Verificar su identidad
-      verify_description_html: "Para vincular su cuenta de %{provider}%{email_suffix}, verifique su identidad ingresando su contraseña."
-      email_suffix_html: " (<strong>%{email}</strong>)"
+      verify_description_html: Para vincular su cuenta de %{provider}%{email_suffix}, verifique su identidad ingresando su contraseña.
+      email_suffix_html: ' (<strong>%{email}</strong>)'
       email_label: Correo electrónico
       email_placeholder: Ingrese su correo electrónico
       password_label: Contraseña
@@ -14,13 +15,17 @@ es:
       verify_hint: Esto garantiza que solo usted pueda vincular cuentas externas a su perfil.
       submit_link: Vincular cuenta
       create_heading: Crear cuenta nueva
-      create_description_html: "No se encontró ninguna cuenta con el correo electrónico <strong>%{email}</strong>. Haga clic a continuación para crear una cuenta nueva con su identidad de %{provider}."
-      info_email: "Correo electrónico:"
-      info_name: "Nombre:"
+      create_description_html: No se encontró ninguna cuenta con el correo electrónico <strong>%{email}</strong>. Haga clic a continuación para crear una cuenta nueva con su identidad de %{provider}.
+      info_email: 'Correo electrónico:'
+      info_name: 'Nombre:'
       submit_create: Crear cuenta
+      submit_accept_invitation: Aceptar invitación
       account_creation_disabled: La creación de cuentas mediante inicio de sesión único está desactivada. Contacte a un administrador.
       cancel: Cancelar
+    create_link:
+      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
     new_user:
+      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
       title: Completar su cuenta
       heading: Crear su cuenta
       description: Confirme sus datos para completar la creación de cuenta con su identidad de %{provider}.
@@ -31,3 +36,7 @@ es:
       last_name_placeholder: Ingrese su apellido
       submit: Crear cuenta
       cancel: Cancelar
+    create_user:
+      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
+      account_creation_disabled: La creación de cuentas por SSO está desactivada. Contacta con un administrador.
+      account_created: ¡Bienvenido! Tu cuenta se ha creado.

@@ -1,0 +1,277 @@
+---
+es:
+  goals:
+    color_picker:
+      trigger_label: Elige color e icono
+      color_heading: Color
+      icon_heading: Icono
+      poor_contrast: Contraste insuficiente, elige un color más oscuro o
+      auto_adjust: ajústalo automáticamente.
+    index:
+      title: Objetivos
+      subtitle: Ahorra para lo que importa.
+      new_goal: Nuevo objetivo
+      empty_filtered: Ningún objetivo coincide.
+      pending_pledges_callout: Tienes aportaciones pendientes. Sure las confirmará en la próxima sincronización.
+      kpi:
+        contributed_label: Aportado · últimos 30 días
+        velocity_delta_up: ↑ %{percent}%% vs. 30 días anteriores
+        velocity_delta_down: ↓ %{percent}%% vs. 30 días anteriores
+        velocity_delta_flat: vs. 30 días anteriores
+        velocity_delta_zero_base: Primeros 30 días de actividad
+        needs_this_month_label: Necesita este mes
+        needs_this_month_sub:
+          one: 1 objetivo por debajo del ritmo
+          other: '%{count} objetivos por debajo del ritmo'
+        needs_this_month_zero_sub: Ningún objetivo por debajo del ritmo
+        on_track_label: Objetivos en camino
+        on_track_value: '%{on_track} de %{total}'
+        on_track_sub_parts:
+          reached:
+            one: 1 alcanzado
+            other: '%{count} alcanzados'
+          behind:
+            one: 1 rezagado
+            other: '%{count} rezagados'
+          no_date:
+            one: 1 sin fecha límite
+            other: '%{count} sin fecha límite'
+          paused:
+            one: 1 en pausa
+            other: '%{count} en pausa'
+        on_track_sub_all_good: Todos los objetivos activos al ritmo previsto
+        on_track_all_caught_up: Todo al día
+      goals_section:
+        heading: Objetivos
+        subtitle: Ahorra para lo que importa.
+      ongoing_section:
+        heading: Objetivos
+      archived_section:
+        heading: Archivados
+      search:
+        placeholder: Buscar objetivos…
+        aria_label: Buscar objetivos
+        empty: Ningún objetivo coincide.
+        empty_with_query: Ningún objetivo coincide con "%{query}".
+        empty_with_filter: Ningún objetivo coincide con este filtro.
+        empty_with_both: Ningún objetivo coincide con "%{query}" con este filtro.
+        clear_search: Borrar búsqueda
+        show_all: Mostrar todos
+      chips:
+        all: Todos
+        on_track: En camino
+        behind: Rezagados
+        no_target_date: Abiertos
+        paused: En pausa
+        completed: Completados
+    new:
+      heading: Nuevo objetivo
+      subtitle: Ahorra para algo concreto.
+    edit:
+      heading: Editar objetivo
+      save: Guardar cambios
+    create:
+      success: Objetivo creado.
+    update:
+      success: Objetivo actualizado.
+    destroy:
+      success: Objetivo eliminado.
+      archive_first: Archiva el objetivo antes de eliminarlo.
+    pause:
+      success: Objetivo pausado.
+      invalid_transition: El objetivo no puede pausarse desde su estado actual.
+    resume:
+      success: Objetivo reanudado.
+      invalid_transition: El objetivo no puede reanudarse desde su estado actual.
+    complete:
+      success: Objetivo marcado como completado.
+      invalid_transition: El objetivo no puede completarse desde su estado actual.
+    archive:
+      success: Objetivo archivado.
+      invalid_transition: El objetivo no puede archivarse desde su estado actual.
+    unarchive:
+      success: Objetivo restaurado.
+      invalid_transition: El objetivo no puede restaurarse desde su estado actual.
+    reopen:
+      success: Objetivo reabierto.
+      invalid_transition: El objetivo no puede reabrirse desde su estado actual.
+    show:
+      edit: Editar
+      pause: Pausar
+      resume: Reanudar
+      complete: Marcar como completado
+      archive: Archivar
+      unarchive: Restaurar
+      reopen: Reabrir objetivo
+      delete: Eliminar definitivamente
+      record_pledge_cta: Registrar aportación
+      pledge_just_transferred: Registra una transferencia que ya has hecho
+      pledge_just_saved: Registra dinero que has apartado
+      funding_accounts_heading: Cuentas de financiación
+      funding_accounts:
+        earmarked_of: '%{earmarked} reservados de %{balance}'
+        empty:
+          heading: Aún no hay cuentas de financiación vinculadas
+          body: Edita el objetivo para vincular las cuentas de depósito en las que ahorras.
+      notes: Notas
+      funding_last_30d: últimos 30 días
+      funding_last_90d: últimos 90 días
+      status_callout:
+        behind: ahorra %{amount}/mes más para ponerte al día
+        behind_covered: las aportaciones pendientes cubren la diferencia
+        on_track: alcanza el objetivo hacia el %{date}
+        no_target_date: establece una fecha objetivo para proyectar la línea de meta
+      pending_pledge:
+        title:
+          zero: 'Pendiente: %{amount} en %{account} · caduca hoy'
+          one: 'Pendiente: %{amount} en %{account} · queda 1 día'
+          other: 'Pendiente: %{amount} en %{account} · quedan %{count} días'
+        body_transfer: Se confirma automáticamente cuando Sure detecte un ingreso coincidente en la próxima sincronización.
+        body_manual: Se confirma con tu próxima edición manual del saldo.
+        pledged_at: Registrada hace %{time_ago}
+        extend: Ampliar 7 días
+        cancel: Cancelar
+        confirm_cancel_title: ¿Cancelar esta aportación?
+        confirm_cancel_body: Se eliminará la aportación de %{amount}. Puedes registrar una nueva cuando quieras.
+        confirm_cancel_cta: Cancelar aportación
+      header:
+        target: Meta %{amount}
+        target_by: Meta %{amount} para el %{date}
+        target_by_past: Meta %{amount} · vencía el %{date}
+      ring:
+        saved: Ahorrado
+        of: de %{target}
+        to_go: faltan %{amount}
+        of_target: de la meta
+        market_value: Valor de mercado %{amount}
+        aria_label: Objetivo completado al %{percent}%. %{amount} de %{target} ahorrados.
+      projection:
+        heading: Proyección
+        legend_saved: Ahorrado
+        legend_projection: Proyección
+        legend_required: Necesario
+        reached: Has alcanzado la meta. No hace falta proyección.
+        no_target_date: No hay fecha objetivo. Establece una para proyectar la línea de meta.
+        no_pace: Aún no hay ingresos. Añade dinero a una cuenta vinculada para iniciar la proyección.
+        behind: Al ritmo actual te quedarás corto.
+        on_track_html: A tu ritmo actual, alcanzarás este objetivo hacia el <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: Gráfico de proyección de %{name}
+        today_marker: Hoy
+        tooltip_projected: 'Proyectado: %{amount}'
+        tooltip_saved: 'Ahorrado: %{amount}'
+        tooltip_target_relation: '%{percent}% de la meta de %{target}'
+      catch_up:
+        title: Ahorra %{amount}/mes más para ponerte al día
+        body: Ritmo actual %{avg}/mes · necesario %{required}/mes para alcanzar tu meta.
+        adjust_target_cta: Mejor ajustar la meta
+      confirm_complete_title: ¿Marcar este objetivo como completado?
+      confirm_complete_body: Saldrá de la lista de objetivos en curso. Podrás archivarlo o restaurarlo más adelante.
+      confirm_complete_body_short: Estás al %{progress}%, %{saved} de %{target}. Al marcarlo como completado se registrará este logro en lugar de la meta original. ¿Continúas, o cierras esto y ajustas la meta?
+      confirm_complete_cta: Marcar como completado
+      confirm_archive_title: ¿Archivar este objetivo?
+      confirm_archive_body: Los objetivos archivados desaparecen de la lista principal. Puedes restaurarlos más adelante.
+      confirm_archive_cta: Archivar
+      paused_banner:
+        title: Este objetivo está en pausa
+        body: Reanúdalo para seguir registrando tu progreso.
+        resume_cta: Reanudar objetivo
+      archived_banner:
+        title: Este objetivo está archivado
+        body: Restáuralo para seguir aportando, o déjalo como registro.
+        restore_cta: Restaurar objetivo
+      celebration:
+        heading: Objetivo alcanzado. Buen trabajo.
+        body: Objetivo cerrado con %{saved} de %{target}. Consérvalo como registro o archívalo ahora.
+        archive_cta: Archivar objetivo
+      inactive:
+        heading_paused: Este objetivo está en pausa
+        heading_archived: Este objetivo está archivado
+        body: '%{saved} de %{target} ahorrados hasta ahora.'
+      no_target_date:
+        heading: Añade una fecha objetivo
+        body: Establece una fecha límite para proyectar la línea de meta y seguir el ritmo necesario.
+        cta: Establecer fecha objetivo
+      empty:
+        heading: Aún no hay ingresos
+        body: Haz una transferencia a tu cuenta vinculada. Sure la detectará en la próxima sincronización. O actualiza el saldo de tu cuenta manual.
+    errors:
+      not_found: No se ha encontrado este objetivo. Puede que se haya eliminado.
+    states:
+      active: Activo
+      paused: En pausa
+      completed: Completado
+      archived: Archivado
+    status:
+      on_track: En camino
+      behind: Rezagado
+      reached: Alcanzado
+      completed: Completado
+      no_target_date: Abierto
+      paused: En pausa
+      archived: Archivado
+    empty_state:
+      heading: Aún no hay objetivos
+      body: Establece una meta, vincula las cuentas en las que ahorras y observa cómo crece tu progreso.
+      subtitle: Establece una meta y empieza a ahorrar para conseguirla.
+      new_goal: Crea tu primer objetivo
+      no_depository_accounts: Necesitas al menos una cuenta de depósito (corriente, de ahorro, HSA, depósito a plazo, mercado monetario) antes de crear un objetivo.
+      add_account: Añadir una cuenta
+    goal_card:
+      no_accounts: Sin cuentas vinculadas
+      n_accounts: '%{first} +%{count}'
+      left: restante
+      aria_progress: '%{percent}% de %{target}'
+      accounts:
+        one: 1 cuenta
+        other: '%{count} cuentas'
+      no_target_date: Abierto
+      completed: Completado
+      past_due: Vencido
+      days_left:
+        one: Queda 1 día
+        other: Quedan %{count} días
+      pace_with_target: '%{avg}/mes · meta %{target}/mes'
+      pace_no_target: '%{avg}/mes de media'
+      footer_paused: En pausa
+      footer_archived: Archivado
+      footer_reached: Objetivo alcanzado
+      footer_catch_up: Ahorra %{amount}/mes para ponerte al día
+      footer_no_deadline: Abierto
+      pending_pledge: Aportación pendiente
+      pending_count:
+        one: 1 pendiente
+        other: '%{count} pendientes'
+      footer_no_pledges: Aún no hay aportaciones confirmadas
+      footer_last_today: Última aportación confirmada hoy
+      footer_last_days:
+        one: Última aportación confirmada hace 1 día
+        other: Última aportación confirmada hace %{count} días
+    form:
+      create: Crear objetivo
+      save: Guardar cambios
+      suggested_with_date: Ahorra {monthly}/mes entre {accounts} para llegar a tiempo.
+      suggested_no_date: Establece una fecha objetivo para proyectar la línea de meta.
+      errors:
+        name_required: Ponle un nombre a tu objetivo.
+        amount_required: Establece una meta mayor que cero.
+        accounts_required: Elige al menos una cuenta de financiación.
+      fields:
+        name: Nombre
+        name_placeholder: Fondo de emergencia, entrada de la casa…
+        target_amount: Importe objetivo
+        target_date: Fecha objetivo
+        color: Color
+        notes: Notas (opcional)
+        notes_placeholder: Un recordatorio para tu yo del futuro…
+        funding_accounts: Cuentas de financiación
+        funding_accounts_hint: El saldo de este objetivo es el saldo (o la parte reservada) de estas cuentas.
+        whole_balance: Saldo completo
+        earmark_for: Importe reservado para %{account}
+        earmark_hint: Deja un importe en blanco para dedicar todo el saldo de esa cuenta.
+      subtypes:
+        checking: Corriente
+        savings: Ahorro
+        hsa: HSA
+        cd: Depósito a plazo
+        money_market: Mercado monetario
+        other: Otra

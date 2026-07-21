@@ -86,7 +86,7 @@ es:
       partial_invalid: "Se han vinculado correctamente %{created_count} cuenta(s), %{already_linked_count} ya estaban vinculadas, %{invalid_count} cuenta(s) tenían nombres no válidos"
       partial_success: "Se han vinculado correctamente %{created_count} cuenta(s). %{already_linked_count} cuenta(s) ya estaban vinculadas: %{already_linked_names}"
       success:
-        one: "Cuenta vinculada correctamente"
+        one: "%{count} cuenta vinculada correctamente"
         other: "%{count} cuentas vinculadas correctamente"
 
     indexa_capital_item:
