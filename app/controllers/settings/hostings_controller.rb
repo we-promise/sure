@@ -45,6 +45,7 @@ class Settings::HostingsController < ApplicationController
 
     if @show_yahoo_finance_settings
       @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
+      @yahoo_finance_health_status = @yahoo_finance_provider&.health_status || :unknown
     end
   end
 

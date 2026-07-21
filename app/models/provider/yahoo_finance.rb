@@ -1,4 +1,5 @@
 require "set"
+require "timeout"
 
 class Provider::YahooFinance < Provider
   include ExchangeRateConcept, SecurityConcept
@@ -18,6 +19,17 @@ class Provider::YahooFinance < Provider
   # Maximum cache duration for cookie/crumb authentication
   # Even if cookie has longer expiry, cap it to avoid stale crumbs
   MAX_CRUMB_CACHE_DURATION = 1.hour
+
+  HEALTH_STATUS_FRESHNESS = {
+    healthy: 15.minutes,
+    rate_limited: 30.minutes,
+    unavailable: 5.minutes
+  }.freeze
+  HEALTH_STATUS_RETENTION = 1.hour
+  HEALTH_LOCK_DURATION = 15.seconds
+  HEALTH_CHECK_TIMEOUT = 10.seconds
+  HEALTH_STATUS_CACHE_KEY = "yahoo_finance_health_status"
+  HEALTH_LOCK_CACHE_KEY = "yahoo_finance_health_status_lock"
 
   INVALID_CRUMBS = Set.new([ "too many requests" ]).freeze
 
@@ -47,25 +59,40 @@ class Provider::YahooFinance < Provider
     @cache_prefix = "yahoo_finance"
   end
 
-  def healthy?
-    data = fetch_authenticated_chart("AAPL", { "interval" => "1d", "range" => "1d" })
-    result = data.dig("chart", "result")
-    result.present? && result.any?
-  rescue RateLimitError => e
-    DebugLogEntry.capture(
-      category: "provider_rate_limit",
-      level: "warn",
-      message: e.message,
-      source: self.class.name,
-      provider_key: "yahoo_finance",
-      metadata: {
-        error_class: e.class.name,
-        response_status: e.details&.dig(:status)
-      }
+  def health_status
+    assessment = read_health_cache(HEALTH_STATUS_CACHE_KEY)
+    return assessment[:status] if assessment_fresh?(assessment)
+
+    lock_token = SecureRandom.uuid
+    lock_acquired = write_health_cache(
+      HEALTH_LOCK_CACHE_KEY,
+      lock_token,
+      expires_in: HEALTH_LOCK_DURATION,
+      unless_exist: true
     )
-    false
-  rescue => e
-    false
+    return assessment&.dig(:status) || :unknown unless lock_acquired
+    return :unknown unless health_lock_owned?(lock_token)
+
+    result = perform_health_check
+    completed_assessment = result.merge(checked_at: Time.current)
+    unless publish_health_assessment(lock_token, completed_assessment)
+      return read_health_cache(HEALTH_STATUS_CACHE_KEY)&.dig(:status) || :unknown
+    end
+
+    record_health_transition(assessment, result)
+    status = result.fetch(:status)
+    released = release_health_lock(lock_token)
+    lock_token = nil
+    released ? status : :unknown
+  rescue HealthCacheError => e
+    record_health_cache_failure(e)
+    :unknown
+  ensure
+    release_health_lock(lock_token) if lock_token.present?
+  end
+
+  def healthy?
+    health_status == :healthy
   end
 
   def usage
@@ -337,6 +364,187 @@ class Provider::YahooFinance < Provider
   end
 
   private
+
+    HealthCacheError = Class.new(StandardError)
+
+    def perform_health_check
+      stage = :cookie
+
+      Timeout.timeout(HEALTH_CHECK_TIMEOUT) do
+        cookie, crumb, stage = fetch_health_cookie_and_crumb
+
+        stage = :chart
+        chart_response = health_authenticated_client(cookie).get("#{base_url}/v8/finance/chart/AAPL") do |req|
+          req.params["interval"] = "1d"
+          req.params["range"] = "1d"
+          req.params["crumb"] = crumb
+        end
+        return health_result(:rate_limited, stage:, http_status: 429) if chart_response.status == 429
+        return health_result(:unavailable, stage:, http_status: chart_response.status) unless chart_response.success?
+
+        data = JSON.parse(chart_response.body)
+        if data.dig("chart", "error", "code") == "Unauthorized"
+          delete_health_cache("#{@cache_prefix}_auth_crumb")
+          return health_result(:unavailable, stage:, http_status: chart_response.status)
+        end
+        return health_result(:unavailable, stage:, http_status: chart_response.status) if data.dig("chart", "error").present?
+
+        results = data.dig("chart", "result")
+        health_result(results.present? ? :healthy : :unavailable, stage:, http_status: chart_response.status)
+      end
+    rescue HealthCacheError
+      raise
+    rescue Timeout::Error, Faraday::Error, JSON::ParserError => e
+      health_result(:unavailable, stage:, exception_class: e.class.name, http_status: faraday_status(e))
+    rescue RateLimitError => e
+      health_result(:rate_limited, stage: :crumb, exception_class: e.class.name, http_status: e.details&.dig(:status))
+    rescue AuthenticationError => e
+      health_result(:unavailable, stage:, exception_class: e.class.name, http_status: e.details&.dig(:status))
+    rescue => e
+      health_result(:unavailable, stage:, exception_class: e.class.name)
+    end
+
+    def health_result(status, stage:, exception_class: nil, http_status: nil)
+      {
+        status: status,
+        stage: stage,
+        exception_class: exception_class,
+        http_status: http_status
+      }.compact
+    end
+
+    def fetch_health_cookie_and_crumb
+      cache_key = "#{@cache_prefix}_auth_crumb"
+      cached = read_health_cache(cache_key)
+      if cached.present?
+        return [ cached.first, cached.second, :authentication_cache ] if valid_crumb?(cached.second)
+
+        delete_health_cache(cache_key)
+      end
+
+      cookie, crumb, cache_duration = request_cookie_and_crumb(health_auth_client)
+      write_health_cache!(cache_key, [ cookie, crumb ], expires_in: cache_duration)
+      [ cookie, crumb, :crumb ]
+    end
+
+    def faraday_status(error)
+      error.response&.dig(:status) if error.respond_to?(:response)
+    end
+
+    def health_auth_client
+      @health_auth_client ||= Faraday.new(ssl: self.class.faraday_ssl_options) do |faraday|
+        configure_health_client(faraday)
+        faraday.headers["Accept"] = "*/*"
+      end
+    end
+
+    def health_authenticated_client(cookie)
+      Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        configure_health_client(faraday)
+        faraday.request :json
+        faraday.headers["Accept"] = "application/json"
+        faraday.headers["Cookie"] = cookie
+      end
+    end
+
+    def configure_health_client(faraday)
+      faraday.headers["User-Agent"] = random_user_agent
+      faraday.headers["Accept-Language"] = "en-US,en;q=0.9"
+      faraday.headers["Cache-Control"] = "no-cache"
+      faraday.headers["Pragma"] = "no-cache"
+      faraday.options.timeout = 5
+      faraday.options.open_timeout = 3
+    end
+
+    def read_health_cache(key)
+      Rails.cache.read(key)
+    rescue => e
+      raise HealthCacheError, e.class.name
+    end
+
+    def write_health_cache(key, value, **options)
+      Rails.cache.write(key, value, **options)
+    rescue => e
+      raise HealthCacheError, e.class.name
+    end
+
+    def write_health_cache!(key, value, **options)
+      return true if write_health_cache(key, value, **options)
+
+      raise HealthCacheError, "CacheWriteFailed"
+    end
+
+    def delete_health_cache(key)
+      Rails.cache.delete(key)
+    rescue => e
+      raise HealthCacheError, e.class.name
+    end
+
+    def publish_health_assessment(lock_token, assessment)
+      return false unless health_lock_owned?(lock_token)
+
+      write_health_cache!(HEALTH_STATUS_CACHE_KEY, assessment, expires_in: HEALTH_STATUS_RETENTION)
+      return true if health_lock_owned?(lock_token)
+
+      delete_health_cache(HEALTH_STATUS_CACHE_KEY) if read_health_cache(HEALTH_STATUS_CACHE_KEY) == assessment
+      false
+    end
+
+    def release_health_lock(lock_token)
+      return true unless health_lock_owned?(lock_token)
+
+      Rails.cache.delete(HEALTH_LOCK_CACHE_KEY)
+      true
+    rescue HealthCacheError => e
+      record_health_cache_failure(e)
+      false
+    rescue => e
+      record_health_cache_failure(HealthCacheError.new(e.class.name))
+      false
+    end
+
+    def health_lock_owned?(lock_token)
+      read_health_cache(HEALTH_LOCK_CACHE_KEY) == lock_token
+    end
+
+    def record_health_transition(previous_assessment, result)
+      previous_status = previous_assessment&.dig(:status)
+      return if previous_status == result[:status]
+
+      status = result.fetch(:status)
+      DebugLogEntry.capture(
+        category: "provider_health",
+        level: status == :healthy ? "info" : "warn",
+        message: "Yahoo Finance Provider Health Status changed to #{status}",
+        source: self.class.name,
+        provider_key: "yahoo_finance",
+        metadata: {
+          previous_state: previous_status || :unknown,
+          new_state: status,
+          health_check_stage: result[:stage],
+          exception_class: result[:exception_class],
+          http_status: result[:http_status]
+        }.compact
+      )
+    end
+
+    def record_health_cache_failure(error)
+      DebugLogEntry.capture(
+        category: "provider_health_cache",
+        level: "warn",
+        message: "Yahoo Finance Provider Health Status cache is unavailable",
+        source: self.class.name,
+        provider_key: "yahoo_finance",
+        metadata: { exception_class: error.message }
+      )
+    end
+
+    def assessment_fresh?(assessment)
+      return false unless assessment
+
+      freshness = HEALTH_STATUS_FRESHNESS[assessment[:status]]
+      freshness && assessment[:checked_at] >= freshness.ago
+    end
 
     def base_url
       ENV["YAHOO_FINANCE_URL"] || "https://query1.finance.yahoo.com"
@@ -652,41 +860,7 @@ class Provider::YahooFinance < Provider
         Rails.cache.delete(cache_key)
       end
 
-      # Step 1: Get cookie from Yahoo Finance
-      cookie_response = auth_client.get("https://fc.yahoo.com")
-      cookie = extract_cookie(cookie_response)
-      cookie_max_age = extract_cookie_max_age(cookie_response)
-
-      raise AuthenticationError, "Failed to obtain Yahoo Finance cookie" if cookie.blank?
-
-      # Step 2: Get crumb using the cookie
-      crumb_response = auth_client.get("#{base_url}/v1/test/getcrumb") do |req|
-        req.headers["Cookie"] = cookie
-      end
-
-      if crumb_response.status == 429
-        raise RateLimitError.new(
-          "Yahoo Finance rate limit exceeded",
-          details: { status: crumb_response.status }
-        )
-      end
-
-      unless crumb_response.success?
-        raise AuthenticationError, "Failed to obtain Yahoo Finance crumb (HTTP #{crumb_response.status})"
-      end
-
-      crumb = crumb_response.body.to_s.strip
-
-      if !valid_crumb?(crumb)
-        error_class = INVALID_CRUMBS.include?(crumb.downcase) ? RateLimitError : AuthenticationError
-        raise error_class.new(
-          "Failed to obtain Yahoo Finance crumb",
-          details: { status: crumb_response.status }
-        )
-      end
-
-      # Cache the cookie/crumb pair using cookie's max-age, capped at MAX_CRUMB_CACHE_DURATION
-      cache_duration = [ cookie_max_age || MAX_CRUMB_CACHE_DURATION, MAX_CRUMB_CACHE_DURATION ].min
+      cookie, crumb, cache_duration = request_cookie_and_crumb(auth_client)
       result = [ cookie, crumb ]
       Rails.cache.write(cache_key, result, expires_in: cache_duration)
       result
@@ -697,6 +871,48 @@ class Provider::YahooFinance < Provider
       )
     rescue Faraday::Error => e
       raise AuthenticationError, "Failed to authenticate with Yahoo Finance: #{e.message}"
+    end
+
+    def request_cookie_and_crumb(authentication_client)
+      cookie_response = authentication_client.get("https://fc.yahoo.com")
+      if cookie_response.respond_to?(:status) && cookie_response.status == 429
+        raise RateLimitError.new(
+          "Yahoo Finance rate limit exceeded",
+          details: { status: cookie_response.status }
+        )
+      end
+
+      cookie = extract_cookie(cookie_response)
+      cookie_max_age = extract_cookie_max_age(cookie_response)
+      raise AuthenticationError, "Failed to obtain Yahoo Finance cookie" if cookie.blank?
+
+      crumb_response = authentication_client.get("#{base_url}/v1/test/getcrumb") do |req|
+        req.headers["Cookie"] = cookie
+      end
+      if crumb_response.status == 429
+        raise RateLimitError.new(
+          "Yahoo Finance rate limit exceeded",
+          details: { status: crumb_response.status }
+        )
+      end
+      unless crumb_response.success?
+        raise AuthenticationError.new(
+          "Failed to obtain Yahoo Finance crumb",
+          details: { status: crumb_response.status }
+        )
+      end
+
+      crumb = crumb_response.body.to_s.strip
+      unless valid_crumb?(crumb)
+        error_class = INVALID_CRUMBS.include?(crumb.downcase) ? RateLimitError : AuthenticationError
+        raise error_class.new(
+          "Failed to obtain Yahoo Finance crumb",
+          details: { status: crumb_response.status }
+        )
+      end
+
+      cache_duration = [ cookie_max_age || MAX_CRUMB_CACHE_DURATION, MAX_CRUMB_CACHE_DURATION ].min
+      [ cookie, crumb, cache_duration ]
     end
 
     def valid_crumb?(crumb)
