@@ -104,7 +104,7 @@ class AkahuEntry::ProcessorTest < ActiveSupport::TestCase
     transaction_data = {
       _id: "tz_nz_test",
       _account: "acc_123",
-      date: 1752537000, # 2025-07-14 23:30:00 UTC
+      date: 1752535800, # 2025-07-14 23:30:00 UTC
       merchant: { name: "Late Night Shop" },
       description: "After midnight",
       amount: -10.00,

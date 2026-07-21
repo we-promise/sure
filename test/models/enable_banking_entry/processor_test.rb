@@ -438,7 +438,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     tx = {
       entry_reference: "tz_ref",
       transaction_id: nil,
-      booking_date: 1752537000, # 2025-07-14 23:30:00 UTC
+      booking_date: 1752535800, # 2025-07-14 23:30:00 UTC
       transaction_amount: { amount: "10.00", currency: "EUR" },
       creditor: { name: "Late Night Shop" },
       credit_debit_indicator: "DBIT",

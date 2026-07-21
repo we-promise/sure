@@ -388,7 +388,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
       accountId: 456,
       amount: -10.00,
       currency: "GBP",
-      date: 1752537000, # 2025-07-14 23:30:00 UTC
+      date: 1752535800, # 2025-07-14 23:30:00 UTC
       merchant: "Late Night Shop",
       description: "After midnight"
     }
