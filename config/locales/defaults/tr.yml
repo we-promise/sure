@@ -7,8 +7,6 @@ tr:
         restrict_dependent_destroy:
           has_many: Bağlı kayıtlar %{record} bulunduğu için kayıt silinemedi
           has_one: Bağlı bir kayıt %{record} bulunduğu için kayıt silinemedi
-  common:
-    close: Kapat
   date:
     abbr_day_names:
     - Pzr
