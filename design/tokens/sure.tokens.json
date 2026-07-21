@@ -1,6 +1,6 @@
 {
   "$schema": "https://design-tokens.github.io/community-group/format/",
-  "$version": "2.1.0",
+  "$version": "2.1.1",
   "$description": "Sure design tokens. Single source of truth. Hand-edit; run `npm run tokens:build` to regenerate CSS. Template syntax in $value strings: `{path.to.token}` resolves to `var(--path-to-token)`; `{path|N%}` becomes `--alpha(var(--path) / N%)`. Utility tokens whose value lacks `{}` are treated as raw Tailwind class lists for @apply.",
 
   "font": {
@@ -31,13 +31,13 @@
     "link":                  { "$value": "{color.blue.600}",         "$type": "color", "$extensions": { "sure.dark": "{color.blue.500}" } },
     "focus-ring":            { "$value": "{color.alpha-black.700}",  "$type": "color", "$extensions": { "sure.dark": "{color.alpha-white.700}" } },
     "tertiary":              { "$value": "{color.alpha-black.100}",  "$type": "color", "$extensions": { "sure.dark": "{color.alpha-white.200}" } },
-    "surface":               { "$value": "{color.gray.50}",          "$type": "color", "$extensions": { "sure.dark": "{color.black}" } },
-    "surface-hover":         { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
-    "surface-inset":         { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
-    "surface-inset-hover":   { "$value": "{color.gray.200}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
-    "container":             { "$value": "{color.white}",            "$type": "color", "$extensions": { "sure.dark": "{color.gray.900}" } },
-    "container-hover":       { "$value": "{color.gray.50}",          "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
-    "container-inset":       { "$value": "{color.gray.50}",          "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
+    "surface":               { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.black}" } },
+    "surface-hover":         { "$value": "{color.gray.200}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
+    "surface-inset":         { "$value": "{color.gray.200}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
+    "surface-inset-hover":   { "$value": "{color.gray.300}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
+    "container":             { "$value": "{color.gray.25}",          "$type": "color", "$extensions": { "sure.dark": "{color.gray.900}" } },
+    "container-hover":       { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
+    "container-inset":       { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
     "container-inset-hover": { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.700}" } },
     "nav-indicator":         { "$value": "{color.black}",            "$type": "color", "$extensions": { "sure.dark": "{color.white}" } },
     "toggle-track":          { "$value": "{color.gray.300}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.700}" } },

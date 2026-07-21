@@ -1,19 +1,19 @@
 class DS::Buttonish < DesignSystemComponent
   VARIANTS = {
     primary: {
-      container_classes: "text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400",
+      container_classes: "text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400 shadow-xs",
       icon_classes: "text-inverse"
     },
     secondary: {
-      container_classes: "text-primary bg-gray-200 theme-dark:bg-gray-700 hover:bg-gray-300 theme-dark:hover:bg-gray-600 disabled:bg-gray-200 theme-dark:disabled:bg-gray-600",
+      container_classes: "text-primary bg-gray-200 theme-dark:bg-gray-700 hover:bg-gray-300 theme-dark:hover:bg-gray-600 disabled:bg-gray-200 theme-dark:disabled:bg-gray-600 shadow-xs",
       icon_classes: "text-primary"
     },
     destructive: {
-      container_classes: "text-inverse button-bg-destructive hover:button-bg-destructive-hover disabled:bg-red-200 theme-dark:disabled:bg-red-600",
+      container_classes: "text-inverse button-bg-destructive hover:button-bg-destructive-hover disabled:bg-red-200 theme-dark:disabled:bg-red-600 shadow-xs",
       icon_classes: "text-inverse"
     },
     outline: {
-      container_classes: "text-primary border border-secondary bg-transparent hover:bg-surface-hover",
+      container_classes: "text-primary border border-secondary bg-transparent hover:bg-surface-hover shadow-xs",
       icon_classes: "text-secondary"
     },
     outline_destructive: {
@@ -45,22 +45,22 @@ class DS::Buttonish < DesignSystemComponent
   # target; fine-pointer users get the aligned row.
   SIZES = {
     sm: {
-      container_classes: "px-2 py-1",
-      icon_container_classes: "inline-flex items-center justify-center w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11",
+      container_classes: "px-1.5 py-0.5",
+      icon_container_classes: "inline-flex items-center justify-center w-6 h-6 pointer-coarse:w-11 pointer-coarse:h-11",
+      radius_classes: "rounded-md",
+      text_classes: "text-xs"
+    },
+    md: {
+      container_classes: "px-2.5 py-1.5",
+      icon_container_classes: "inline-flex items-center justify-center w-8 h-8 pointer-coarse:w-11 pointer-coarse:h-11",
       radius_classes: "rounded-md",
       text_classes: "text-sm"
     },
-    md: {
+    lg: {
       container_classes: "px-3 py-2",
-      icon_container_classes: "inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11",
+      icon_container_classes: "inline-flex items-center justify-center w-10 h-10",
       radius_classes: "rounded-lg",
       text_classes: "text-sm"
-    },
-    lg: {
-      container_classes: "px-4 py-3",
-      icon_container_classes: "inline-flex items-center justify-center w-12 h-12",
-      radius_classes: "rounded-xl",
-      text_classes: "text-base"
     }
   }.freeze
 
