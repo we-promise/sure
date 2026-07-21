@@ -1,6 +1,31 @@
 ---
 tr:
   valuations:
+    confirmation_contents:
+      account_balance: hesap bakiyesi
+      asset_value: varlık değeri
+      balance: bakiye
+      brokerage_cash: Aracı kurum nakdi
+      change: değişiklik
+      credit_card_balance: kredi kartı bakiyesi
+      crypto_balance: kripto bakiyesi
+      holdings_value: Varlık değeri
+      liability_balance: borç bakiyesi
+      loan_balance: kredi bakiyesi
+      'on': tarihinde
+      property_value: mülk değeri
+      recalculate_notice: Bu %{change_or_update} temel alınarak gelecekteki tüm işlemler
+        ve bakiyeler yeniden hesaplanacaktır.
+      this_will: Bu, hesap değerini %{action_verb} yapacak
+      to: şuraya
+      to_colon: 'şuraya:'
+      total_account_value: Toplam hesap değeri
+      update: güncelleme
+      vehicle_value: araç değeri
+    create:
+      account_updated: Hesap güncellendi
+    errors:
+      amount_required: Tutar gereklidir
     form:
       amount: Tutar
       submit: Bakiye güncellemesi ekle
@@ -14,9 +39,12 @@ tr:
       valuations: Değer
       value: Değer
     new:
+      amount: ''
+      submit: ''
       title: Yeni bakiye
     show:
       amount: Tutar
+      amount_label: Tarihindeki hesap değeri
       date_label: Tarih
       delete: Sil
       delete_subtitle: Bu işlem geri alınamaz
@@ -26,6 +54,10 @@ tr:
       name_placeholder: Bu giriş için bir isim girin
       note_label: Notlar
       note_placeholder: Bu girişle ilgili ek detaylar ekleyin
+      opening_balance: Açılış bakiyesi
       overview: Genel Bakış
       settings: Ayarlar
-      opening_balance: Açılış bakiyesi
+      update_value: Değeri güncelle
+    update:
+      account_updated: Hesap güncellendi
+      entry_updated: Giriş güncellendi
