@@ -1,0 +1,3 @@
+:root { color-scheme: light dark; font-family: -apple-system, system-ui, sans-serif; }
+html, body { margin: 0; height: 100%; background: transparent; }
+#app { display: grid; place-items: center; height: 100vh; }
