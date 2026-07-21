@@ -71,16 +71,16 @@
         </div>
         <div class="flex gap-3 justify-center">
           <%
-            brokerage_connect_href = if @snaptrade_item.user_registered?
+            brokerage_connect_href = if @snaptrade_item.oauth_configured?
               connect_snaptrade_item_path(@snaptrade_item)
             else
-              oauth_connect_snaptrade_items_path(
+              oauth_authorize_snaptrade_items_path(
                 item_id: @snaptrade_item.id,
                 accountable_type: params[:accountable_type],
                 return_to: params[:return_to]
               )
             end
-            brokerage_connect_frame = @snaptrade_item.user_registered? ? "_top" : "drawer"
+            brokerage_connect_frame = @snaptrade_item.oauth_configured? ? "_top" : "drawer"
           %>
           <%= render DS::Link.new(
             text: t("snaptrade_items.setup_accounts.try_again", default: "Connect Brokerage"),

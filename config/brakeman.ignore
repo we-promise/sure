@@ -26,6 +26,29 @@
     {
       "warning_type": "Redirect",
       "warning_code": 18,
+      "fingerprint": "fc14dec97ce908f7483a8eb1f3aa6ea38f4369b8f9fe656e089c91a91c01a125",
+      "check_name": "Redirect",
+      "message": "Possible unprotected redirect",
+      "file": "app/controllers/snaptrade_items_controller.rb",
+      "line": 201,
+      "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
+      "code": "redirect_to(Provider::Snaptrade.authorize_url(:redirect_uri => oauth_callback_snaptrade_items_url, :state => SecureRandom.hex(32), :code_challenge => Provider::Snaptrade.generate_pkce[:challenge]), :allow_other_host => true)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "SnaptradeItemsController",
+        "method": "oauth_authorize"
+      },
+      "user_input": "Provider::Snaptrade.authorize_url(:redirect_uri => oauth_callback_snaptrade_items_url, :state => SecureRandom.hex(32), :code_challenge => Provider::Snaptrade.generate_pkce[:challenge])",
+      "confidence": "Weak",
+      "cwe_id": [
+        601
+      ],
+      "note": "Intentional redirect to SnapTrade's external OAuth authorize endpoint. URL is built entirely from Provider::Snaptrade::AUTHORIZE_URL (hardcoded constant), server-side oauth_client_id config, the internal oauth_callback_snaptrade_items_url named route, and locally generated SecureRandom state/PKCE values -- no request params are interpolated into the redirect target."
+    },
+    {
+      "warning_type": "Redirect",
+      "warning_code": 18,
       "fingerprint": "723b1970ca6bf16ea0c2c1afa0c00d3c54854a16568d6cb933e497947565d9ab",
       "check_name": "Redirect",
       "message": "Possible unprotected redirect",

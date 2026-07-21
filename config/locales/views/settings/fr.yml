@@ -414,7 +414,6 @@ fr:
           one: Consentement requis dans 1 jour
           other: Consentement requis dans %{count} jours
         reconsent_required: Consentement requis
-        registration_needed: Enregistrement requis
         sync_error: Erreur de synchro
       not_authorized: Non autorisé
       not_found: Fournisseur non trouvé.

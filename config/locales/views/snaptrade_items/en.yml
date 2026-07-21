@@ -1,12 +1,6 @@
 en:
   snaptrade_items:
     default_name: "SnapTrade Connection"
-    link_accounts:
-      use_setup_flow: Use the account setup flow instead
-    create:
-      success: "Successfully configured SnapTrade."
-    update:
-      success: "Successfully updated SnapTrade configuration."
     destroy:
       success: "Scheduled SnapTrade connection for deletion."
     connect:
@@ -28,22 +22,13 @@ en:
       not_configured: "SnapTrade is not configured."
     select_accounts:
       not_configured: "SnapTrade is not configured."
-    oauth_device_flow:
-      title: "Connect SnapTrade"
-      subtitle: "Authorize Sure for SnapTrade"
-      instructions: "Open SnapTrade and confirm this device code, then return here to complete authorization."
-      code_label: "Device code"
-      open_snaptrade: "Open SnapTrade"
-      start_button: "Start authorization"
-      complete_button: "I've authorized SnapTrade"
-      cancel_button: "Cancel"
-      missing_client_id: "SnapTrade OAuth client ID is not configured. Add SNAPTRADE_OAUTH_CLIENT_ID to .env.local, restart the app, then try again."
-    complete_oauth_device_flow:
+    oauth_authorize:
+      not_configured: "SnapTrade OAuth is not configured. Set SNAPTRADE_OAUTH_CLIENT_ID and SNAPTRADE_OAUTH_CLIENT_SECRET, restart the app, then try again."
+    oauth_callback:
       success: "SnapTrade authorization complete."
-      setup_incomplete: "SnapTrade authorization is complete, but API credentials are required before accounts can sync."
-      failed: "Unable to complete SnapTrade OAuth device authorization. Please try again."
-    start_oauth_device_flow:
-      failed: "Unable to start SnapTrade OAuth device authorization. Please try again."
+      access_denied: "SnapTrade authorization was cancelled."
+      state_mismatch: "SnapTrade authorization failed a security check. Please try again."
+      failed: "Unable to complete SnapTrade authorization. Please try again."
     select_existing_account:
       not_found: "Account or SnapTrade configuration not found."
       title: "Link to SnapTrade Account"
@@ -66,10 +51,7 @@ en:
       success: "Connection deleted successfully. One slot freed up."
       failed: "Failed to delete connection: %{message}"
       missing_authorization_id: "Missing authorization ID"
-      api_deletion_failed: "Could not delete connection from SnapTrade - missing credentials. The connection may still exist in your SnapTrade account."
-    delete_orphaned_user:
-      success: "Orphaned registration deleted successfully."
-      failed: "Failed to delete orphaned registration."
+      api_deletion_failed: "Could not delete connection from SnapTrade - this item is not authorized. The connection may still exist in your SnapTrade account."
     setup_accounts:
       title: "Set Up SnapTrade Accounts"
       header: "Set Up Your SnapTrade Accounts"
@@ -132,31 +114,18 @@ en:
       name: "SnapTrade"
       connection_description: "Connect to your brokerage via SnapTrade (25+ brokers supported)"
       description: "SnapTrade connects to 25+ major brokerages (Fidelity, Vanguard, Schwab, Robinhood, etc.) and provides full trade history with activity labels and cost basis."
-      setup_title: "Setup instructions:"
-      step_1_html: "Create an account at <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
-      step_2: "Copy your Client ID and Consumer Key from the dashboard"
-      step_3: "Enter your credentials below and click Save"
-      step_4: "Go to the Accounts page and use 'Connect another brokerage' to link your investment accounts"
+      oauth_setup_step_1_html: "Register an OAuth app at <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">dashboard.snaptrade.com</a>"
+      oauth_setup_step_2: "Add this app's callback URL (/snaptrade_items/oauth_callback) as a registered redirect URI"
+      oauth_setup_step_3: "Set SNAPTRADE_OAUTH_CLIENT_ID and SNAPTRADE_OAUTH_CLIENT_SECRET in your environment and restart"
       free_tier_warning: "SnapTrade's free tier covers 20 brokerage connections."
       oauth_title: "SnapTrade OAuth"
-      oauth_status_ready: "Use a device code to authorize Sure for SnapTrade."
+      oauth_status_ready: "Authorize Sure to read your SnapTrade account data."
       oauth_status_authorized: "Authorized with SnapTrade."
       oauth_connect_button: "Connect with SnapTrade"
       oauth_reauthorize_button: "Reauthorize"
-      legacy_credentials_title: "Use legacy API credentials"
-      legacy_credentials_description: "Use Client ID and Consumer Key setup if your SnapTrade account has not enabled OAuth."
-      client_id_label: "Client ID"
-      client_id_placeholder: "Enter your SnapTrade Client ID"
-      client_id_update_placeholder: "Enter new Client ID to update"
-      consumer_key_label: "Consumer Key"
-      consumer_key_placeholder: "Enter your SnapTrade Consumer Key"
-      consumer_key_update_placeholder: "Enter new Consumer Key to update"
-      save_button: "Save Configuration"
-      update_button: "Update Configuration"
       status_connected:
         one: "%{count} account from SnapTrade"
         other: "%{count} accounts from SnapTrade"
-      status_needs_registration: "Credentials saved. Finish setup to connect a brokerage."
       needs_setup:
         one: "%{count} needs setup"
         other: "%{count} need setup"
@@ -177,15 +146,7 @@ en:
       delete_connection_title: "Delete Brokerage Connection?"
       delete_connection_body: "This will permanently remove the %{brokerage} connection from SnapTrade. All accounts from this brokerage will be unlinked. You'll need to reconnect to sync these accounts again."
       delete_connection_confirm: "Delete Connection"
-      orphaned_users_title:
-        one: "%{count} orphaned registration"
-        other: "%{count} orphaned registrations"
-      orphaned_users_description: "These are previous SnapTrade user registrations that are using your connection slots. Delete them to free up slots."
-      orphaned_user: "Orphaned Registration"
-      delete_orphaned_user: "Delete"
-      delete_orphaned_user_title: "Delete Orphaned Registration?"
-      delete_orphaned_user_body: "This will permanently delete this orphaned SnapTrade user and all their brokerage connections, freeing up connection slots."
-      delete_orphaned_user_confirm: "Delete Registration"
+      manage_at_snaptrade: "Manage connections at SnapTrade"
 
   snaptrade_item:
     sync_status:

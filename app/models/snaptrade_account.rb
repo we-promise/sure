@@ -202,11 +202,6 @@ class SnaptradeAccount < ApplicationRecord
     snaptrade_item.snaptrade_provider
   end
 
-  # Get SnapTrade credentials for API calls
-  def snaptrade_credentials
-    snaptrade_item.snaptrade_credentials
-  end
-
   private
 
     def normalized_balance_entries
