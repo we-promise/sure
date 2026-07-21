@@ -9,10 +9,14 @@ class FamilyMerchantsController < ApplicationController
     @all_provider_merchants = Current.family.assigned_merchants_for(Current.user).where(type: "ProviderMerchant").alphabetically
 
     family_scope = @all_family_merchants
-    family_scope = family_scope.where("LOWER(name) LIKE ?", "%#{params[:family_search].downcase}%") if params[:family_search].present?
+    if params[:family_search].is_a?(String) && params[:family_search].strip.present?
+      family_scope = family_scope.where("LOWER(name) LIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:family_search].strip.downcase)}%")
+    end
 
     provider_scope = @all_provider_merchants
-    provider_scope = provider_scope.where("LOWER(name) LIKE ?", "%#{params[:provider_search].downcase}%") if params[:provider_search].present?
+    if params[:provider_search].is_a?(String) && params[:provider_search].strip.present?
+      provider_scope = provider_scope.where("LOWER(name) LIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params[:provider_search].strip.downcase)}%")
+    end
 
     # Show recently unlinked ProviderMerchants (within last 30 days)
     # Exclude merchants that are already assigned to transactions (they appear in provider_merchants)

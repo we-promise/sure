@@ -15,7 +15,7 @@
           placeholder: t(".sources_search_placeholder"),
           data: {
             list_filter_target: "input",
-            action: "input->list-filter#filter"
+            action: "input->list-filter#filter keydown->list-filter#handleKeydown"
           }
         ) %>
         <div data-list-filter-target="list" class="max-h-64 overflow-y-auto space-y-1 border border-secondary rounded-lg p-2">
