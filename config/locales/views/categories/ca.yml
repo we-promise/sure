@@ -15,6 +15,7 @@ ca:
     edit:
       edit: Edita la categoria
     form:
+      trigger_label: Tria color i icona
       color: Color
       icon: Icona
       name_label: Nom
