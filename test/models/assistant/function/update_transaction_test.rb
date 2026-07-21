@@ -45,6 +45,7 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     assert_nil @transaction.merchant
     assert_nil @transaction.entry.notes
     assert_empty @transaction.tags
+    assert @transaction.locked?(:tag_ids)
   end
 
   test "rejects categories outside the family" do
@@ -64,18 +65,29 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     assert_equal "invalid_category", result[:error]
   end
 
-  test "get_transactions returns ids needed by update_transaction" do
-    @transaction.entry.update!(notes: "Visible note")
+  test "does not let read-only collaborators update transactions" do
+    transaction = transactions(:transfer_in)
+    function = Assistant::Function::UpdateTransaction.new(users(:family_member))
 
-    result = Assistant::Function::GetTransactions.new(@user).call(
-      "page" => 1,
-      "order" => "asc",
-      "search" => @transaction.entry.name
-    )
+    result = function.call("id" => transaction.id, "notes" => "Should not be saved")
 
-    transaction = result[:transactions].find { |item| item[:id] == @transaction.id }
+    assert_equal false, result[:success]
+    assert_equal "not_authorized", result[:error]
+    assert_nil transaction.reload.entry.notes
+  end
 
-    assert_not_nil transaction
-    assert_equal @transaction.entry.notes, transaction[:notes]
+  test "lets read-write collaborators update annotations but not names" do
+    transaction = transactions(:transfer_in)
+    transaction.entry.account.account_shares.find_by!(user: users(:family_member)).update!(permission: "read_write")
+    function = Assistant::Function::UpdateTransaction.new(users(:family_member))
+
+    annotation_result = function.call("id" => transaction.id, "notes" => "Shared note")
+    rename_result = function.call("id" => transaction.id, "name" => "Renamed transaction")
+
+    assert_equal true, annotation_result[:success]
+    assert_equal "Shared note", transaction.reload.entry.notes
+    assert_equal false, rename_result[:success]
+    assert_equal "not_authorized", rename_result[:error]
+    assert_equal "Payment received from checking account", transaction.reload.entry.name
   end
 end

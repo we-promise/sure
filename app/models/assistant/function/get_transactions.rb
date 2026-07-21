@@ -134,7 +134,11 @@ class Assistant::Function::GetTransactions < Assistant::Function
   def call(params = {})
     search_params = params.except("order", "page")
 
-    search = Transaction::Search.new(family, filters: search_params)
+    search = Transaction::Search.new(
+      family,
+      filters: search_params,
+      accessible_account_ids: user.accessible_accounts.visible.pluck(:id)
+    )
     transactions_query = search.transactions_scope
     pagy_query = params["order"] == "asc" ? transactions_query.chronological : transactions_query.reverse_chronological
 

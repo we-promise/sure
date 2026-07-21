@@ -60,6 +60,7 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
 
     entry = transaction.entry
     return error("split_child", "Split child transactions cannot be edited directly. Use the split editor.") if entry.split_child?
+    return error("not_authorized", "You do not have permission to update this transaction.") unless permitted_to_update?(entry.account, params)
 
     entry_attrs = entry_attributes(params, entry)
     return entry_attrs if error_response?(entry_attrs)
@@ -78,7 +79,7 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
       if params.key?("tag_ids")
         transaction.tag_ids = tag_ids
         transaction.save!
-        transaction.lock_attr!(:tag_ids) if transaction.tags.any?
+        transaction.lock_attr!(:tag_ids)
       end
 
       entry.sync_account_later
@@ -102,6 +103,13 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
         .joins(:entry)
         .where(entries: { account_id: user.accessible_accounts.visible.select(:id) })
         .find_by(id: id)
+    end
+
+    def permitted_to_update?(account, params)
+      permission = account.permission_for(user)
+      return true if permission.in?([ :owner, :full_control ])
+
+      permission == :read_write && !params.key?("name")
     end
 
     def entry_attributes(params, entry)
