@@ -41,7 +41,7 @@ module ExchangeRate::Provided
         ) do |exchange_rate|
           exchange_rate.rate = rate.rate
         end if cache
-      rescue ActiveRecord::RecordNotUnique
+      rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
         # Race condition: another process inserted between our SELECT and INSERT
         # Retry by finding the existing record
         ExchangeRate.find_by!(
