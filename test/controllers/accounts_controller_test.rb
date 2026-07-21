@@ -84,6 +84,28 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(@account, :container)}", count: 0
   end
 
+  test "holdings tab lazy frame returns matching frame content" do
+    account = accounts(:investment)
+    frame_id = dom_id(account, "holdings_tab")
+
+    get account_url(account, tab: "holdings"), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id}", count: 1
+    assert_select "turbo-frame##{dom_id(account, :container)}", count: 0
+  end
+
+  test "overview tab lazy frame returns matching frame content" do
+    account = accounts(:property)
+    frame_id = dom_id(account, "overview_tab")
+
+    get account_url(account, tab: "overview"), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id}", count: 1
+    assert_select "turbo-frame##{dom_id(account, :container)}", count: 0
+  end
+
   test "statements tab filters historical coverage by year" do
     account = Account.create!(
       family: @user.family,
@@ -204,7 +226,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
   test "syncing linked account triggers sync for all provider items" do
     plaid_account = plaid_accounts(:one)
-    plaid_item = plaid_account.plaid_item
+    plaid_account.plaid_item
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     # Reload to ensure the account has the provider association loaded

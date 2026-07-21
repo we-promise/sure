@@ -54,6 +54,11 @@ class AccountsController < ApplicationController
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     @q = params.fetch(:q, {}).permit(:search, status: [])
+
+    if tab_panel_frame_request?
+      return render_tab_panel_frame
+    end
+
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
@@ -65,6 +70,7 @@ class AccountsController < ApplicationController
       limit: safe_per_page,
       params: request.query_parameters.except("tab").merge("tab" => "activity")
     )
+    Entry::ActivityFeedPreloader.new(@entries).preload
     Transaction::ActivitySecurityPreloader.new(@entries).preload
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
@@ -232,7 +238,9 @@ class AccountsController < ApplicationController
     end
 
     def set_account
-      @account = Current.user.accessible_accounts.find(params[:id])
+      @account = Current.user.accessible_accounts
+        .includes(:accountable, :plaid_account, :simplefin_account, account_providers: :provider)
+        .find(params[:id])
     end
 
     def set_manageable_account
@@ -271,6 +279,32 @@ class AccountsController < ApplicationController
 
     def render_statement_tab_frame
       render partial: "accounts/show/statements_frame", locals: statement_tab_locals, layout: false
+    end
+
+    def tab_panel_frame_request?
+      return false unless turbo_frame_request?
+
+      frame_id = request.headers["Turbo-Frame"]
+      return false if frame_id.blank?
+
+      case @tab
+      when "holdings", "overview"
+        frame_id == helpers.account_tab_panel_frame_id(account: @account, tab: @tab.to_sym)
+      else
+        false
+      end
+    end
+
+    def render_tab_panel_frame
+      tab = @tab&.to_sym
+      unless tab.in?([ :holdings, :overview ])
+        head :bad_request
+        return
+      end
+
+      frame_id = helpers.account_tab_panel_frame_id(account: @account, tab: tab)
+      partial_path = "#{@account.accountable_type.downcase.pluralize}/tabs/#{tab}"
+      render partial: "accounts/show/tab_panel_frame", locals: { frame_id: frame_id, partial_path: partial_path, account: @account }, layout: false
     end
 
     def statement_tab_locals
