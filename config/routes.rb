@@ -313,6 +313,9 @@ Rails.application.routes.draw do
     resource :preferences, only: %i[show update]
     resource :appearance, only: %i[show update]
     resource :debug, only: :show
+    resource :background_jobs, controller: "background_jobs", only: :show do
+      post :cancel
+    end
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
       delete :disconnect_external_assistant, on: :collection
