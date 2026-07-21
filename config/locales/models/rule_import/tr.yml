@@ -1,0 +1,9 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        rule_import:
+          invalid_json: 'Koşullar veya eylemlerde geçersiz JSON: %{message}'
+          min_actions: Kuralın en az bir eylemi olmalıdır
+          unsupported_resource_type: 'Desteklenmeyen kaynak türü: %{resource_type}'

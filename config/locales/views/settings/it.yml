@@ -1,0 +1,556 @@
+---
+it:
+  views:
+    settings:
+      payments:
+        renewal: "Il tuo contributo continua il %{date}."
+        cancellation: "Il tuo contributo termina il %{date}."
+  settings:
+    debugs:
+      show:
+        page_title: "Debug"
+        title: "Registro eventi debug"
+        subtitle: "Eventi operativi significativi per super amministratori. Dal più recente."
+        empty: "Nessun evento debug trovato."
+        missing_value: "-"
+        filters:
+          all: "Tutti"
+          category: "Categoria"
+          level: "Livello"
+          source: "Sorgente"
+          provider: "Provider"
+          start_date: "Da"
+          end_date: "A"
+          family_id: "ID famiglia"
+          account_id: "ID conto"
+          user_id: "ID utente"
+          account_provider_id: "ID provider conto"
+          submit: "Filtra"
+          reset: "Reimposta"
+        table:
+          time: "Ora"
+          level: "Livello"
+          category: "Categoria"
+          source: "Sorgente"
+          message: "Messaggio"
+          context: "Contesto"
+          metadata: "Metadati"
+          view_metadata: "Vedi"
+        context:
+          provider: "provider=%{value}"
+          family: "famiglia=%{value}"
+          account: "conto=%{value}"
+          user: "utente=%{value}"
+          account_provider: "account_provider=%{value}"
+    llm_usages:
+      show:
+        page_title: "Utilizzo e costi LLM"
+        subtitle: "Monitora l'utilizzo AI e i costi stimati"
+        start_date: "Data inizio"
+        end_date: "Data fine"
+        filter: "Filtra"
+        total_requests: "Richieste totali"
+        total_tokens: "Token totali"
+        prompt: "prompt"
+        completion: "completamento"
+        total_cost: "Costo totale"
+        avg_cost_per_request: "Costo medio/richiesta"
+        based_on_requests: "Basato su %{with_cost} di %{total} richieste con dati di costo"
+        cost_by_operation: "Costo per operazione"
+        cost_by_model: "Costo per modello"
+        recent_usage: "Utilizzo recente"
+        col_date: "Data"
+        col_operation: "Operazione"
+        col_model: "Modello"
+        col_tokens: "Token"
+        col_cost: "Costo"
+        failed: "Fallita"
+        no_usage_data: "Nessun dato di utilizzo trovato per il periodo selezionato"
+        cost_estimates_title: "Informazioni sulle stime dei costi"
+        cost_estimates_description: "I costi sono stimati in base ai prezzi di OpenAI del 2025. I costi effettivi possono variare. I prezzi sono per 1 milione di token e variano per modello. I modelli personalizzati o self-hosted mostreranno \"N/A\" e non sono inclusi nei totali dei costi."
+    ai_prompts:
+      show:
+        page_title: Prompt AI
+        openai_label: OpenAI
+        disable_ai: Disabilita assistente AI
+        prompt_instructions: Istruzioni prompt
+        main_system_prompt:
+          title: Prompt di sistema principale
+          subtitle: Istruzioni fondamentali che definiscono come l'assistente AI si comporta in tutte le conversazioni
+        transaction_categorizer:
+          title: Categorizzatore transazioni
+          subtitle: L'AI categorizza automaticamente le tue transazioni in base alle categorie definite
+        merchant_detector:
+          title: Rilevatore esercenti
+          subtitle: L'AI identifica e arricchisce i dati delle transazioni con informazioni sull'esercente
+    payments:
+      show:
+        page_title: Pagamenti
+        subscription_subtitle: Aggiorna i dettagli della tua carta di credito
+        subscription_title: Gestisci contributi
+        currently_on_plan: "Attualmente nel piano"
+        trialing: "Stai usando la demo aperta di %{product_name}"
+        trial_days_left:
+          one: "I dati verranno eliminati tra %{count} giorno"
+          other: "I dati verranno eliminati tra %{count} giorni"
+        not_contributing_prefix: "Attualmente"
+        not_contributing_emphasis: "non stai contribuendo"
+        contributions_note: "I contributi a %{product_name} appariranno qui."
+        manage: "Gestisci"
+        choose_level: "Scegli livello"
+        payment_via_stripe: "Pagamento tramite Stripe"
+    appearances:
+      show:
+        page_title: Aspetto
+        theme_title: Tema
+        theme_subtitle: Scegli un tema preferito per l'app
+        theme_dark: Scuro
+        theme_light: Chiaro
+        theme_system: Sistema
+        modals_title: Finestre modali
+        modals_subtitle: Personalizza il comportamento delle finestre modali
+        disable_modal_click_outside_title: Mantieni le finestre modali aperte al clic esterno
+        disable_modal_click_outside_description: Impedisce la chiusura delle finestre modali quando si fa clic all'esterno. Utile per evitare di perdere accidentalmente le modifiche non salvate.
+        transactions_title: Transazioni
+        transactions_subtitle: Personalizza come vengono visualizzate le transazioni
+        dashboard_title: Dashboard
+        dashboard_subtitle: Personalizza come viene visualizzato il dashboard
+        dashboard_two_column_title: Layout a due colonne
+        dashboard_two_column_description: Visualizza i widget del dashboard in due colonne su schermi grandi, con controlli larghezza e altezza per widget nell'intestazione di ciascun widget. Se disattivato, i widget si impilano in una singola colonna.
+        split_grouped_title: Raggruppa transazioni suddivise
+        split_grouped_description: Mostra le transazioni suddivise raggruppate sotto la voce principale nell'elenco transazioni. Se disattivato, le voci figlie appaiono come righe individuali.
+    preferences:
+      show:
+        country: Paese
+        currency: Valuta
+        date_format: Formato data
+        general_subtitle: Configura le tue preferenze
+        general_title: Generali
+        default_period: Periodo predefinito
+        default_account_order: Ordine predefinito conti
+        language: Lingua
+        language_auto: Lingua del browser
+        page_title: Preferenze
+        timezone: Fuso orario
+        month_start_day: Il mese budget inizia il
+        month_start_day_hint: Imposta quando inizia il mese del budget (es. giorno di paga)
+        month_start_day_warning: I tuoi budget e i calcoli MTD useranno questo giorno di inizio personalizzato invece del 1° di ogni mese.
+        translations_notice: Nota che stiamo ancora lavorando alle traduzioni per varie lingue.
+        currencies_title: "Valute %{moniker}"
+        currencies_subtitle: Scegli quali valute appaiono nei campi importo per il tuo %{moniker}
+        base_currency_label: Valuta base
+        base_currency_badge: Valuta base
+        additional_currencies_label: Valute aggiuntive
+        no_additional_currencies: Nessuna selezionata
+        currencies_more: "+%{count} altre"
+        manage_currencies: Gestisci valute
+        manage_currencies_subtitle: Deseleziona le valute che non usi mai, o riduci la lista a poche.
+        select_all_currencies: Seleziona tutte
+        select_base_only: Solo valuta base
+        currency_search_placeholder: Cerca valute
+        no_matching_currencies: Nessuna valuta trovata
+        selected_currencies_count:
+          one: "%{count} selezionata"
+          other: "%{count} selezionate"
+        save_currencies: Salva valute
+        sharing_title: "Condivisione %{moniker}"
+        sharing_subtitle: "Controlla come i conti vengono condivisi nel tuo %{moniker}"
+        sharing_default_label: Condivisione predefinita per nuovi conti
+        sharing_shared: Condividi con tutti i membri
+        sharing_private: Mantieni privato per impostazione predefinita
+        preview:
+          title: Abilita funzionalità in anteprima
+          description: Opta per le funzionalità in corso contrassegnate come anteprima o canary.
+    profiles:
+      destroy:
+        cannot_remove_self: Non puoi rimuovere te stesso dall'account.
+        member_owns_other_family_data: Questo membro possiede ancora conti in un altro nucleo familiare e non può essere rimosso. Trasferisci o rimuovi prima quei conti.
+        member_removal_failed: Si è verificato un problema durante la rimozione del membro.
+        member_removed: Il membro è stato rimosso con successo.
+        not_authorized: Non sei autorizzato a rimuovere membri.
+      show:
+        confirm_delete:
+          body: Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione è irreversibile.
+          title: Eliminare l'account?
+        confirm_reset:
+          body: Sei sicuro di voler ripristinare il tuo account? Verranno eliminati tutti i tuoi conti, categorie, esercenti, etichette e altri dati. Questa azione non può essere annullata.
+          title: Ripristinare l'account?
+        confirm_reset_with_sample_data:
+          body: Sei sicuro di voler ripristinare il tuo account e caricare dati di esempio? Verranno eliminati i tuoi dati esistenti e sostituiti con dati demo per esplorare Sure in sicurezza.
+          title: Ripristinare l'account e caricare dati di esempio?
+        confirm_remove_invitation:
+          body: Sei sicuro di voler rimuovere l'invito per %{email}?
+          title: Rimuovi invito
+        confirm_remove_member:
+          body: Sei sicuro di voler rimuovere %{name} dal tuo account?
+          title: Rimuovi membro
+        danger_zone_title: Zona pericolo
+        delete_account: Elimina account
+        delete_account_warning: L'eliminazione del tuo account rimuoverà permanentemente tutti i tuoi dati e non può essere annullata.
+        reset_account: Ripristina account
+        reset_account_warning: Il ripristino del tuo account eliminerà tutti i tuoi conti, categorie, esercenti, etichette e altri dati, mantenendo intatto il tuo account utente.
+        reset_account_with_sample_data: Ripristina e precarica
+        reset_account_with_sample_data_warning: Elimina tutti i tuoi dati esistenti e poi carica dati di esempio freschi per esplorare con un ambiente precompilato.
+        email: Email
+        first_name: Nome
+        group_form_input_placeholder: Inserisci nome del gruppo
+        group_form_label: Nome del gruppo
+        group_title: Membri del gruppo
+        household_form_input_placeholder: Inserisci nome del nucleo familiare
+        household_form_label: Nome del nucleo familiare
+        household_subtitle: Gli invitati possono accedere al tuo account %{moniker} e alle risorse condivise.
+        household_title: Nucleo familiare
+        invitation_link: Link di invito
+        invite_member: Aggiungi membro
+        last_name: Cognome
+        page_title: Informazioni profilo
+        pending: In sospeso
+        profile_subtitle: Personalizza come appari su %{product_name}
+        profile_title: Personale
+        remove_invitation: Rimuovi invito
+        remove_member: Rimuovi membro
+        resend_confirmation_link: richiedi una nuova email di conferma
+        save: Salva
+        unconfirmed_email_notice_html: Hai richiesto di cambiare la tua email in %{email}. Vai alla tua email e conferma affinché la modifica abbia effetto. Se non hai ricevuto l'email, controlla la cartella spam, o %{resend_link}.
+    securities:
+      show:
+        page_title: Sicurezza
+        encryption_warning:
+          title: Chiavi di crittografia mancanti
+          intro: "I dati sensibili (chiavi API, token provider, segreti MFA e dati personali) vengono archiviati non crittografati. Per abilitare la crittografia, imposta le seguenti chiavi nelle variabili d'ambiente o nelle credenziali Rails:"
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: "Genera un set con: bin/rails db:encryption:init"
+        mfa_title: Autenticazione a due fattori
+        mfa_description: Aggiungi un ulteriore livello di sicurezza al tuo account richiedendo un codice dalla tua app di autenticazione durante l'accesso
+        enable_mfa: Abilita 2FA
+        disable_mfa: Disabilita 2FA
+        disable_mfa_confirm: Sei sicuro di voler disabilitare l'autenticazione a due fattori?
+        sso_title: Account collegati
+        sso_subtitle: Gestisci le connessioni al tuo account single sign-on
+        sso_disconnect: Disconnetti
+        sso_last_used: Ultimo utilizzo
+        sso_never: Mai
+        sso_no_email: Nessuna email
+        sso_no_identities: Nessun account SSO collegato
+        sso_connect_hint: Disconnetti e accedi con un provider SSO per collegare un account.
+        sso_confirm_title: Disconnettere l'account?
+        sso_confirm_body: Sei sicuro di voler disconnettere il tuo account %{provider}? Puoi ricollegarlo in seguito accedendo di nuovo con quel provider.
+        sso_confirm_button: Disconnetti
+        sso_warning_message: Questo è il tuo unico metodo di accesso. Dovresti impostare una password nelle impostazioni di sicurezza prima di disconnetterti, altrimenti potresti essere escluso dal tuo account.
+    mcp:
+      show:
+        page_title: Server MCP
+        connect_title: Connetti un assistente AI
+        connect_subtitle: Incolla questo URL in Claude.ai (o qualsiasi client compatibile con MCP) per collegarlo al tuo account Sure.
+        copy_url: Copia
+        copied: Copiato!
+        how_to_connect_title: Come connettere Claude
+        step_1: "Apri Claude.ai e vai su Impostazioni → Integrazioni."
+        step_2: Clicca "Aggiungi integrazione" e incolla l'URL del server MCP sopra.
+        step_3: Clicca Connetti — verrai reindirizzato a Sure per accedere e autorizzare l'accesso.
+        step_4: Una volta autorizzato, Claude può leggere i tuoi conti, transazioni e dati di saldo.
+        connected_title: Client connessi
+        connected_subtitle: Queste app hanno attualmente accesso ai tuoi dati Sure. Revoca quelle che non usi più.
+        unknown_client: Client sconosciuto
+        connected_ago: "Connesso %{time} fa"
+        revoke: Revoca
+        revoke_confirm: Revocare l'accesso per questo client?
+      revoke:
+        revoked: Connessione revocata.
+    settings_nav:
+      accounts_label: Conti
+      advanced_section_title: Avanzate
+      ai_prompts_label: Prompt AI
+      api_key_label: Chiave API
+      payment_label: Pagamento
+      categories_label: Categorie
+      feedback_label: Feedback
+      general_section_title: Generali
+      imports_label: Importazioni
+      exports_label: Esportazioni
+      llm_usage_label: Utilizzo LLM
+      logout: Disconnetti
+      merchants_label: Esercenti
+      providers_label: Provider
+      guides_label: Guide
+      other_section_title: Altro
+      preferences_label: Preferenze
+      profile_label: Informazioni profilo
+      recurring_transactions_label: Ricorrenti
+      rules_label: Regole
+      mcp_label: MCP
+      security_label: Sicurezza
+      self_hosting_label: Self-Hosting
+      sso_providers_label: Provider SSO
+      statement_vault_label: Archivio estratti
+      tags_label: Etichette
+      transactions_section_title: Transazioni
+      users_label: Utenti
+      whats_new_label: Novità
+      api_keys_label: Chiave API
+      appearance_label: Aspetto
+      bank_sync_label: Sincronizzazione bancaria
+      debug_label: Debug
+    settings_nav_link_large:
+      next: Avanti
+      previous: Indietro
+    user_avatar_field:
+      accepted_formats: JPG o PNG. Max 5MB.
+      choose: Carica foto
+      choose_label: (opzionale)
+      change: Cambia foto
+    providers:
+      update:
+        updated_successfully: Impostazioni provider aggiornate con successo
+        no_changes: Nessuna modifica apportata
+      not_authorized: Non autorizzato
+      bank_sync:
+        page_title: Sincronizzazione bancaria
+        lede: Connetti conti esterni affinché transazioni, saldi e posizioni fluiscano automaticamente in Sure.
+      status:
+        ok: Connesso
+        warn: Azione richiesta
+        err: Errore
+        off: Non configurato
+      maturity:
+        beta: Beta
+        alpha: Alpha
+      drawer_trust_statement: "Accesso in sola lettura. Sure non può mai spostare denaro, e le tue credenziali sono archiviate in modo crittografato."
+      setup_steps:
+        eyebrow: Configurazione
+        need_help: "Hai bisogno di aiuto?"
+      connect: Connetti
+      groups:
+        your_connections: Le tue connessioni
+        available: Disponibili
+        empty_available: Tutti i provider disponibili sono connessi.
+      health_strip:
+        connected: connesso
+        needs_attention: richiede attenzione
+        accounts_syncing: conti in sincronizzazione
+        last_synced: Ultima sincronizzazione %{time} fa
+      meta:
+        sync_error: Errore di sincronizzazione
+        no_recent_sync: Sincronizzazione in ritardo
+        registration_needed: Registrazione richiesta
+        reconsent_required: Nuovo consenso richiesto
+        reconsent_needed:
+          one: Nuovo consenso richiesto tra 1 giorno
+          other: Nuovo consenso richiesto tra %{count} giorni
+        last_synced: Sincronizzato %{time} fa
+      sync_all: Sincronizza tutti
+      sync_all_in_progress: Sincronizzazione di tutti i provider connessi…
+      sync_all_recently: Sincronizzazione già in corso. Riprova tra un momento.
+      sync_provider: Sincronizza ora
+      sync_provider_in_progress: Sincronizzazione avviata.
+      recently_synced: Sincronizzato di recente. Riprova tra un momento.
+      taglines:
+        akahu: Sincronizza gli istituti finanziari neozelandesi tramite Akahu.
+        simplefin: Connetti conti bancari USA tramite il protocollo aperto SimpleFIN.
+        lunchflow: Connetti 20.000+ banche da 40+ paesi (UK, EU, USA e altro!)
+        enable_banking: Sincronizza conti bancari europei tramite PSD2 open banking.
+        coinstats: Monitora l'intero portafoglio crypto su wallet e exchange.
+        mercury: Sincronizza automaticamente i tuoi conti bancari aziendali Mercury.
+        brex: Sincronizza liquidità e attività corporate card Brex con accesso in sola lettura.
+        coinbase: Importa le tue posizioni crypto Coinbase e monitora le performance.
+        binance: Sincronizza i tuoi saldi spot Binance usando una chiave API in sola lettura.
+        kraken: Sincronizza saldi e operazioni spot Kraken usando una chiave API in sola lettura.
+        snaptrade: Connetti conti di intermediazione tramite la rete di aggregazione SnapTrade.
+        ibkr: Sincronizza conti di investimento Interactive Brokers tramite importazioni Flex Query.
+        indexa_capital: Monitora il tuo portafoglio di investimento automatizzato Indexa Capital.
+        sophtron: Connetti banche e utility USA e canadesi.
+        plaid: Connetti migliaia di istituti finanziari USA tramite Plaid.
+        plaid_eu: Connetti istituti finanziari europei tramite Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Cerca provider
+        placeholder: Cerca provider
+        chips:
+          all: Tutti
+          bank: Banche
+          crypto: Crypto
+          investment: Investimenti
+      empty_filter: Nessun provider corrisponde al filtro.
+      clear_filter: Rimuovi filtri
+      encryption_error:
+        title: Chiavi di crittografia mancanti
+        message: "La sincronizzazione bancaria necessita di Active Record encryption configurato. Imposta primary_key, deterministic_key e key_derivation_salt nelle credenziali Rails o nelle variabili d'ambiente."
+      provider_form:
+        save_and_connect: "Salva e connetti"
+      coinbase_panel:
+        setup_instructions: "Per connettere Coinbase:"
+        step1_html: Vai alle <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Impostazioni API Coinbase</a>
+        step2: Crea una nuova chiave API con permessi in sola lettura (visualizza conti, visualizza transazioni)
+        step3: Copia la tua chiave API e il segreto API e incollali qui sotto
+        api_key_label: Chiave API
+        api_key_placeholder: Inserisci la tua chiave API Coinbase
+        api_secret_label: Segreto API
+        api_secret_placeholder: Inserisci il tuo segreto API Coinbase
+        connect_button: Connetti Coinbase
+        syncing: Sincronizzazione...
+        sync: Sincronizza
+        disconnect_confirm: Sei sicuro di voler disconnettere questa connessione Coinbase? I tuoi conti sincronizzati diventeranno conti manuali.
+      binance_panel:
+        setup_instructions: "Per connettere Binance, crea una chiave API in sola lettura:"
+        step1_html: 'Vai alla <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestione API Binance</a>'
+        step2: "Crea una nuova chiave API con solo il permesso Abilita lettura"
+        step3: "Incolla la tua chiave API e il segreto qui sotto"
+        no_withdraw_title: "Solo chiave in sola lettura"
+        no_withdraw_body: "Non abilitare i permessi di prelievo quando crei la tua chiave API Binance. Sure ha bisogno solo dell'accesso in lettura."
+        ip_hint_title: "Whitelist IP richiesta"
+        ip_hint_body: "Aggiungi l'IP di uscita del server app alla whitelist della chiave API Binance:"
+        ip_hint_contact_admin: "Contatta il tuo amministratore per ottenere l'indirizzo IP di uscita del server app."
+        api_key_label: Chiave API
+        api_key_placeholder: Incolla la tua chiave API Binance
+        api_secret_label: Segreto API
+        api_secret_placeholder: Incolla il tuo segreto API Binance
+        connect_button: Connetti Binance
+        syncing: Sincronizzazione...
+        sync: Sincronizza
+        historical_import: "Impostazioni importazione storica"
+        sync_start_date_label: "Importa dati da"
+        sync_start_date_help: "Seleziona fino a quando indietro recuperare le operazioni storiche."
+        disconnect_confirm: "Sei sicuro di voler disconnettere Binance?"
+      kraken_panel:
+        step1_html: 'Vai alle <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">impostazioni API Kraken</a>'
+        step2: "Crea una chiave API con solo Query Funds e Query Closed Orders & Trades."
+        step3: "Incolla la chiave API e la chiave privata qui sotto."
+        read_only_title: "Solo sincronizzazione exchange in sola lettura"
+        read_only_body: "Non concedere permessi di trading, annullamento, prelievo, esportazione, ledger, Earn, staking o trasferimento. Sure importa solo saldi, posizioni e operazioni spot."
+        default_connection_name: Kraken
+        add_connection: Aggiungi connessione Kraken
+        update_connection: Aggiorna connessione
+        connection_name_label: Nome connessione
+        connection_name_placeholder: Kraken principale
+        api_key_label: Chiave API
+        api_key_placeholder: Incolla la tua chiave API Kraken
+        keep_api_key_placeholder: Lascia vuoto per mantenere la chiave API esistente
+        api_secret_label: Chiave privata
+        api_secret_placeholder: Incolla la tua chiave privata Kraken
+        keep_api_secret_placeholder: Lascia vuoto per mantenere la chiave privata esistente
+        setup_accounts: Configura conto
+        syncing: Sincronizzazione...
+        sync: Sincronizza
+        disconnect: Disconnetti
+        disconnect_confirm: "Sei sicuro di voler disconnettere %{name}?"
+      enable_banking_panel:
+        callback_url_instruction: "Per l'URL di callback, usa %{callback_url}."
+        connection_error: Errore di connessione
+        step_1_html: "Vai su %{link} e ottieni le tue credenziali sviluppatore."
+        step_2: "Scegli il tuo paese e incolla l'ID applicazione + certificato client qui sotto."
+        step_3: "Salva, poi usa Aggiungi connessione per collegare la tua banca."
+        config_locked_title: "Configurazione bloccata"
+        config_locked_message: "Disconnetti tutte le banche collegate prima di modificare queste credenziali."
+        application_id_label: "ID applicazione"
+        application_id_placeholder_new: "Inserisci ID applicazione"
+        application_id_placeholder_update: "Inserisci nuovo ID per aggiornare"
+        client_certificate_label: "Certificato client (con chiave privata)"
+        save_and_connect: "Salva e connetti"
+        update_connection: "Aggiorna connessione"
+        connected_bank: "Banca collegata"
+        session_expires: "Sessione scade: %{date}"
+        unknown: "Sconosciuto"
+        connection: "Connessione"
+        session_expired_reconnect: "Sessione scaduta - riconnetti"
+        configured: "Configurato"
+        ready_to_link: "Pronto per collegare conti"
+        sync: "Sincronizza"
+        reconnect: "Riconnetti"
+        connect_bank: "Connetti banca"
+        remove: "Rimuovi"
+        remove_confirm: "Sei sicuro di voler rimuovere questa connessione?"
+        add_connection: "Aggiungi connessione"
+        syncing: "Sincronizzazione"
+        select_country: "Seleziona paese..."
+        country_label: "Paese"
+      lunchflow_panel:
+        step_1_html: "Vai su %{link} e crea una chiave API."
+        step_2: "Incolla la tua chiave qui sotto e connetti."
+        step_3: "Poi vai su Conti per collegare i tuoi conti sincronizzati."
+        api_key_label: "Chiave API"
+        api_key_placeholder_new: "Incolla chiave API qui"
+        api_key_placeholder_update: "Inserisci nuova chiave API per aggiornare"
+        base_url_label: "URL base (opzionale)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (predefinito)"
+        save_and_connect: "Salva e connetti"
+        update_connection: "Aggiorna connessione"
+      akahu_panel:
+        step_1_html: "Vai su %{link} e crea un'app personale."
+        step_2: "Copia il token dell'app e il token utente."
+        step_3: "Incolla i token qui sotto, salva, poi collega i tuoi conti sincronizzati."
+      up_panel:
+        step_1_html: "Vai su %{link} e genera un token di accesso personale."
+        step_2: "Copia il tuo token di accesso personale."
+        step_3: "Incolla il token qui sotto, salva, poi collega i tuoi conti sincronizzati."
+      simplefin_panel:
+        step_1_html: "Vai su %{link} per un token di configurazione una tantum."
+        step_2: "Incolla il token qui sotto e connetti."
+        step_3: "Poi vai su Conti per collegare i tuoi conti sincronizzati."
+        setup_token_label: "Token di configurazione"
+        setup_token_placeholder: "Incolla token di configurazione SimpleFIN"
+        save_and_connect: "Salva e connetti"
+      plaid_panel:
+        step_1_html: "Apri il %{link} e copia il tuo Client ID e la chiave segreta."
+        step_2: "Scegli un ambiente. Usa sandbox per i test e production per conti reali."
+        step_3: "Incolla le tue credenziali qui sotto e connetti."
+      plaid_eu_panel:
+        step_1_html: "Apri il %{link} e copia il tuo EU Client ID e la chiave segreta."
+      not_found: Provider non trovato.
+      sync_provider_no_items: Nessuna connessione disponibile per la sincronizzazione.
+      ibkr_panel:
+        steps:
+          step_1: 'Nel tuo portale clienti IBKR, vai su "Performance e rapporti" > "Flex Queries".'
+          step_2: 'Clicca sull''icona "+" nella sezione "Activity Flex Query" per creare una nuova query.'
+          step_3: 'Assegna un nome alla query (es. "Sure Sync"), poi esamina i dettagli della Flex Query qui sotto e abilita le sezioni, i campi e le opzioni di configurazione elencati.'
+          step_4: 'Salva la query, annota il tuo "Query ID", poi usa l''icona ingranaggio nella sezione "Flex Web Service Configuration" per generare un token di accesso.'
+          step_5: "Incolla il tuo Query ID e Token qui sotto, salva la configurazione, poi vai su Conti per collegare i conti IBKR scoperti."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Sezioni, campi e configurazione
+          summary: Espandi per vedere le esatte sezioni, campi e impostazioni che la tua IBKR Activity Flex Query deve includere.
+          sections_heading: Abilita queste sezioni e campi
+          configuration_heading: Imposta queste opzioni di query
+        sections:
+          account_information: "Informazioni conto: Account ID, Valuta"
+          cash_report: "Rapporto liquidità:"
+          cash_report_options: "Opzioni: Nessuna"
+          cash_report_fields: "Campi: Valuta, Liquidità finale"
+          cash_transactions: "Transazioni liquidità:"
+          cash_transactions_options: "Opzioni: Dividendi, Depositi e prelievi, Dettaglio"
+          cash_transactions_fields: "Campi: Importo, Conid, Valuta, Tasso FX alla base, Data rapporto, ID transazione, Tipo"
+          change_in_position_value_summary: "Riepilogo variazione valore posizione: Valuta, Valore fine periodo"
+          net_asset_value: "Valore patrimoniale netto (NAV) in base:"
+          net_asset_value_options: "Opzioni: Nessuna"
+          net_asset_value_fields: "Campi: Valuta, Data rapporto, Totale"
+          open_positions: "Posizioni aperte:"
+          open_positions_options: "Opzioni: Riepilogo"
+          open_positions_fields: "Campi: Classe asset, Conid, Prezzo base costo, Valuta, Tasso FX alla base, Prezzo mark, Quantità, Data rapporto, ID titolo, Tipo ID titolo, Lato, Simbolo"
+          trades: "Operazioni:"
+          trades_options: "Opzioni: Esecuzione"
+          trades_fields: "Campi: Classe asset, Acquisto/Vendita, Conid, Valuta, Tasso FX alla base, Commissione IB, Valuta commissione IB, Quantità, Simbolo, Data operazione, ID operazione, Prezzo operazione, ID transazione"
+        configuration:
+          models: "Modelli: Opzionale"
+          format: "Formato: XML"
+          period: "Periodo: Ultimi 365 giorni di calendario"
+          date_format: "Formato data: yyyy-MM-dd"
+          time_format: "Formato ora: HH:mm:ss"
+          date_time_separator: "Separatore data/ora: ; (punto e virgola)"
+          profit_and_loss: "Profitti e perdite: Predefinito"
+          all_other_options: 'Tutte le altre opzioni: "No"'
+        report_window_note: "I rapporti IBKR Flex sono limitati alla finestra di query configurata in IBKR. Sure importerà le posizioni attuali complete più fino agli ultimi 365 giorni di attività da questo rapporto."
+        sync: Sincronizza
+        disconnect_confirm: Disconnettere Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Inserisci il tuo IBKR Flex Query ID
+        query_id_placeholder_existing: Lascia vuoto per mantenere il Query ID attuale
+        token_label: Token
+        token_placeholder_new: Inserisci il tuo IBKR Flex Web Service Token
+        token_placeholder_existing: Lascia vuoto per mantenere il Token attuale
+        save_configuration: Salva configurazione
+        update_configuration: Aggiorna configurazione
+        status_configured_prefix: "%{summary}. Visita la scheda"
+        accounts_tab: Conti
+        status_configured_suffix: per gestire i conti scoperti.
+        not_configured: Non configurato.
