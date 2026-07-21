@@ -433,6 +433,51 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal [], response.data
   end
 
+  test "search_securities returns canonical Colombian identity for Yahoo BVC listings" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({
+      quotes: [ {
+        symbol: "CIBEST.CL",
+        longname: "Grupo Cibest S.A.",
+        exchange: "BVC",
+        exchDisp: "Colombia"
+      } ]
+    }.to_json)
+
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    response = @provider.search_securities("CIBEST.CL")
+
+    assert response.success?
+    security = response.data.sole
+    assert_equal "CIBEST.CL", security.symbol
+    assert_equal "XBOG", security.exchange_operating_mic
+    assert_equal "CO", security.country_code
+  end
+
+  test "search_securities preserves catalog countries and display-name fallback" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({
+      quotes: [
+        { symbol: "AAPL", shortname: "Apple", exchange: "NMS", exchDisp: "NASDAQ" },
+        { symbol: "SAP.F", shortname: "SAP", exchange: "FRA", exchDisp: "Frankfurt" },
+        { symbol: "FALLBACK", shortname: "Fallback", exchange: "UNKNOWN", exchDisp: "Frankfurt" }
+      ]
+    }.to_json)
+
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    response = @provider.search_securities("company")
+
+    assert response.success?
+    results_by_symbol = response.data.index_by(&:symbol)
+    assert_equal "US", results_by_symbol.fetch("AAPL").country_code
+    assert_equal "DE", results_by_symbol.fetch("SAP.F").country_code
+    assert_equal "DE", results_by_symbol.fetch("FALLBACK").country_code
+  end
+
   # ================================
   #     Security Price Tests
   # ================================
@@ -444,6 +489,42 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     response = @provider.fetch_security_price(symbol: "", exchange_operating_mic: "XNAS", date: date)
     assert_not response.success?
     assert_instance_of Provider::YahooFinance::Error, response.error
+  end
+
+  test "fetch_security_prices uses the Colombian Yahoo suffix once and COP fallback" do
+    date = Date.new(2024, 1, 15)
+    chart_response = mock
+    chart_response.stubs(:body).returns({
+      chart: {
+        result: [ {
+          meta: { exchangeName: "BVC" },
+          timestamp: [ Time.utc(2024, 1, 15).to_i ],
+          indicators: { quote: [ { close: [ 42_350.0 ] } ] }
+        } ]
+      }
+    }.to_json)
+    chart_client = mock
+    chart_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/CIBEST\.CL$})).twice.returns(chart_response)
+    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie", "crumb" ])
+    @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
+    @provider.stubs(:throttle_request)
+
+    responses = [ "CIBEST", "CIBEST.CL" ].map do |symbol|
+      @provider.fetch_security_prices(
+        symbol: symbol,
+        exchange_operating_mic: "XBOG",
+        start_date: date,
+        end_date: date
+      )
+    end
+
+    responses.each do |response|
+      assert response.success?
+      price = response.data.sole
+      assert_equal "CIBEST.CL", price.symbol
+      assert_equal "COP", price.currency
+      assert_equal "XBOG", price.exchange_operating_mic
+    end
   end
 
   # ================================

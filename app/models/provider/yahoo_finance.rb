@@ -200,12 +200,14 @@ class Provider::YahooFinance < Provider
         quotes = data.dig("quotes") || []
 
         securities = quotes.filter_map do |quote|
+          mic = map_exchange_mic(quote["exchange"])
+
           Security.new(
             symbol: quote["symbol"],
             name: quote["longname"] || quote["shortname"] || quote["symbol"],
             logo_url: nil, # Yahoo search doesn't provide logos
-            exchange_operating_mic: map_exchange_mic(quote["exchange"]),
-            country_code: map_country_code(quote["exchDisp"])
+            exchange_operating_mic: mic,
+            country_code: ::Security::EXCHANGES.dig(mic, "country") || map_country_code(quote["exchDisp"])
           )
         end
 
@@ -560,7 +562,8 @@ class Provider::YahooFinance < Provider
     # rank (lower = preferred).  Adding a new market is a one-line hash entry.
     EXCHANGE_CONFIG = {
       "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
-      "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 }
+      "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },
+      "XBOG" => { yahoo_suffix: ".CL", default_currency: "COP" }
     }.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
@@ -1096,6 +1099,8 @@ class Provider::YahooFinance < Provider
         "XNSE" # National Stock Exchange of India
       when "BSE", "BOM"
         "XBOM" # BSE (Bombay Stock Exchange)
+      when "BVC"
+        "XBOG" # Colombian Securities Exchange
       else
         exchange_code.upcase
       end
