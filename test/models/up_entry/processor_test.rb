@@ -151,4 +151,50 @@ class UpEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "standard", entry.entryable.kind
     assert_nil entry.entryable.extra.dig("up", "transfer_account_id")
   end
+
+  test "applies the matched Sure category when a category_matcher is provided" do
+    @family.categories.bootstrap!
+    matcher = UpAccount::Transactions::CategoryMatcher.new(@family.categories.to_a)
+
+    entry = UpEntry::Processor.new(
+      {
+        id: "tx_cat_1",
+        account_id: "acc_123",
+        status: "SETTLED",
+        description: "Woolworths",
+        amount: { currencyCode: "AUD", value: "-40.00", valueInBaseUnits: -4000 },
+        settledAt: "2026-01-15T00:00:00+11:00",
+        createdAt: "2026-01-15T00:00:00+11:00",
+        category_id: "groceries"
+      },
+      up_account: @up_account,
+      category_matcher: matcher
+    ).process
+
+    assert_equal "Groceries", entry.transaction.category&.name
+    # The raw Up slug is still preserved in extra for reference.
+    assert_equal "groceries", entry.transaction.extra.dig("up", "category_id")
+  end
+
+  test "leaves the transaction uncategorised when the Up category has no confident match" do
+    @family.categories.bootstrap!
+    matcher = UpAccount::Transactions::CategoryMatcher.new(@family.categories.to_a)
+
+    entry = UpEntry::Processor.new(
+      {
+        id: "tx_cat_2",
+        account_id: "acc_123",
+        status: "SETTLED",
+        description: "BWS",
+        amount: { currencyCode: "AUD", value: "-25.00", valueInBaseUnits: -2500 },
+        settledAt: "2026-01-15T00:00:00+11:00",
+        createdAt: "2026-01-15T00:00:00+11:00",
+        category_id: "booze"
+      },
+      up_account: @up_account,
+      category_matcher: matcher
+    ).process
+
+    assert_nil entry.transaction.category_id
+  end
 end
