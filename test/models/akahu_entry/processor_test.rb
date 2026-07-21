@@ -96,4 +96,24 @@ class AkahuEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal first_entry.id, second_entry.id
     assert_equal 1, @account.entries.where(source: "akahu").count
   end
+
+  test "converts unix timestamp date using family timezone not UTC" do
+    # 2025-07-14 23:30:00 UTC == 2025-07-15 11:30:00 NZST
+    @family.update!(timezone: "Pacific/Auckland")
+
+    transaction_data = {
+      _id: "tz_nz_test",
+      _account: "acc_123",
+      date: 1752537000, # 2025-07-14 23:30:00 UTC
+      merchant: { name: "Late Night Shop" },
+      description: "After midnight",
+      amount: -10.00,
+      currency: "NZD"
+    }
+
+    entry = AkahuEntry::Processor.new(transaction_data, akahu_account: @akahu_account).process
+
+    assert_not_nil entry
+    assert_equal Date.new(2025, 7, 15), entry.date
+  end
 end

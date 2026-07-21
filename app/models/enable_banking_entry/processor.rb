@@ -260,9 +260,9 @@ class EnableBankingEntry::Processor
       when String
         Date.parse(date_value)
       when Integer, Float
-        Time.at(date_value).to_date
+        Time.at(date_value).in_time_zone(account&.family&.timezone).to_date
       when Time, DateTime
-        date_value.to_date
+        date_value.in_time_zone(account&.family&.timezone).to_date
       when Date
         date_value
       else

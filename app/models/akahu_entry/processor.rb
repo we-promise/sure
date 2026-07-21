@@ -174,9 +174,9 @@ class AkahuEntry::Processor
       when String
         Date.parse(value)
       when Integer, Float
-        Time.at(value).to_date
+        Time.at(value).in_time_zone(account&.family&.timezone).to_date
       when Time, DateTime
-        value.to_date
+        value.in_time_zone(account&.family&.timezone).to_date
       when Date
         value
       else

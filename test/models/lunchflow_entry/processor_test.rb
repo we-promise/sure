@@ -378,4 +378,27 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert result.entryable.pending?, "Should create new pending entry when merchant doesn't match"
     assert result.external_id.start_with?("lunchflow_pending_"), "Should have temporary ID"
   end
+
+  test "converts unix timestamp date using family timezone not UTC" do
+    # 2025-07-14 23:30:00 UTC == 2025-07-15 00:30:00 BST
+    @family.update!(timezone: "Europe/London")
+
+    transaction_data = {
+      id: "lf_tz_test",
+      accountId: 456,
+      amount: -10.00,
+      currency: "GBP",
+      date: 1752537000, # 2025-07-14 23:30:00 UTC
+      merchant: "Late Night Shop",
+      description: "After midnight"
+    }
+
+    result = LunchflowEntry::Processor.new(
+      transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result
+    assert_equal Date.new(2025, 7, 15), result.date
+  end
 end

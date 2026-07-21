@@ -191,9 +191,9 @@ class LunchflowEntry::Processor
         Date.parse(data[:date])
       when Integer, Float
         # Unix timestamp
-        Time.at(data[:date]).to_date
+        Time.at(data[:date]).in_time_zone(account&.family&.timezone).to_date
       when Time, DateTime
-        data[:date].to_date
+        data[:date].in_time_zone(account&.family&.timezone).to_date
       when Date
         data[:date]
       else
