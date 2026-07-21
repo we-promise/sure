@@ -7,7 +7,7 @@
       aria_selected: is_selected.to_s,
       class: ["filterable-item flex justify-between items-center border-none rounded-lg px-2 py-1 group w-full hover:bg-container-inset-hover",
               { "bg-container-inset": is_selected }],
-      data: { filter_name: category.name } do %>
+      data: { filter_name: category.display_name } do %>
   <%= button_to transaction_category_path(
         @transaction.entry,
         grouped: params[:grouped],

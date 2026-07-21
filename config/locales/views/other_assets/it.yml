@@ -1,0 +1,9 @@
+---
+it:
+  other_assets:
+    edit:
+      edit: Modifica %{account}
+      balance_tracking_info: "Gli altri asset vengono tracciati tramite valutazioni manuali usando 'Nuovo saldo', non con le transazioni. Il flusso di cassa non influisce sul saldo del conto."
+    new:
+      title: Inserisci i dettagli dell'asset
+      balance_tracking_info: "Gli altri asset vengono tracciati tramite valutazioni manuali usando 'Nuovo saldo', non con le transazioni. Il flusso di cassa non influisce sul saldo del conto."

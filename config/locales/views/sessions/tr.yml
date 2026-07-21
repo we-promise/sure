@@ -3,17 +3,40 @@ tr:
   sessions:
     create:
       invalid_credentials: Geçersiz e-posta veya şifre.
+      local_login_disabled: Yerel şifre girişi devre dışı. Lütfen tekli oturum açmayı
+        kullanın.
     destroy:
       logout_successful: Başarıyla çıkış yaptınız.
-    openid_connect:
-      failed: OpenID Connect ile kimlik doğrulaması yapılamadı.
+    failure:
+      failed: Kimlik doğrulanamadı.
+      sso_failed: Tekli oturum açma kimlik doğrulaması başarısız oldu. Lütfen tekrar
+        deneyin.
+      sso_invalid_response: SSO sağlayıcısından geçersiz bir yanıt alındı. Lütfen
+        tekrar deneyin.
+      sso_provider_unavailable: SSO sağlayıcısı şu anda kullanılamıyor. Lütfen daha
+        sonra tekrar deneyin veya bir yöneticiyle iletişime geçin.
+    mobile_sso_start:
+      redirecting_html: Girişe yönlendiriliyorsunuz... Yönlendirilmezseniz <a href="%{url}">buraya
+        tıklayın</a>.
     new:
+      demo_banner_message: Bu bir demo ortamıdır. Kolaylığınız için giriş bilgileri
+        önceden doldurulmuştur. Lütfen gerçek veya hassas bilgi girmeyin.
+      demo_banner_title: Demo Modu Aktif
       email: E-posta adresi
       email_placeholder: ornek@eposta.com
       forgot_password: Şifrenizi mi unuttunuz?
+      google_auth_connect: Google ile giriş yap
+      local_login_admin_only: Yerel giriş yalnızca yöneticilerle sınırlıdır.
+      no_auth_methods_enabled: Şu anda hiçbir kimlik doğrulama yöntemi etkin değil.
+        Lütfen bir yöneticiyle iletişime geçin.
+      oidc: OpenID Connect ile giriş yap
+      openid_connect: OpenID Connect ile giriş yap
       password: Şifre
+      password_placeholder: Şifrenizi girin
       submit: Giriş yap
       title: Hesabınıza giriş yapın
-      password_placeholder: Şifrenizi girin
-      openid_connect: OpenID Connect ile giriş yap
-      oidc: OpenID Connect ile giriş yap
+    openid_connect:
+      account_linked: Hesap %{provider} ile başarıyla bağlandı
+      failed: OpenID Connect ile kimlik doğrulaması yapılamadı.
+    post_logout:
+      logout_successful: Başarıyla çıkış yaptınız.

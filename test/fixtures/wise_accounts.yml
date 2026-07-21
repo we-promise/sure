@@ -1,0 +1,13 @@
+checking:
+  wise_item: one
+  balance_id: "10000001"
+  name: "Wise EUR"
+  currency: EUR
+  current_balance: 1000.00
+
+jar:
+  wise_item: one
+  balance_id: "10000002"
+  name: "Jar"
+  currency: EUR
+  current_balance: 5000.00

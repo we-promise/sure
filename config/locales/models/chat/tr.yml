@@ -1,0 +1,13 @@
+---
+tr:
+  chat:
+    errors:
+      default: Yanıt oluşturulamadı. Lütfen tekrar deneyin.
+      misconfigured: Yapay zeka sağlayıcısı doğru yapılandırılmamış. Lütfen yöneticinizle
+        iletişime geçin.
+      no_response: Asistan yanıt vermedi. Arka plan işleyicisi çalışmıyor olabilir
+        veya yapay zeka tam olarak yapılandırılmamış olabilir. Lütfen tekrar deneyin.
+      rate_limited: Yapay zeka sağlayıcısı şu anda hız sınırına takıldı. Lütfen birkaç
+        dakika sonra tekrar deneyin.
+      temporarily_unavailable: Yapay zeka sağlayıcısı şu anda geçici olarak kullanılamıyor.
+        Lütfen birkaç dakika sonra tekrar deneyin.

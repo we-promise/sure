@@ -84,7 +84,7 @@
       <%= styled_form_with model: @transfer,
               data: { controller: "auto-submit-form" }, class: "space-y-2" do |f| %>
         <% if @transfer.categorizable? %>
-          <%= f.collection_select :category_id, @categories.alphabetically, :id, :name, { label: t(".category"), include_blank: t(".uncategorized"), selected: @transfer.outflow_transaction.category&.id }, "data-auto-submit-form-target": "auto" %>
+          <%= f.collection_select :category_id, @categories.alphabetically, :id, :name, { label: t(".category"), include_blank: t(".uncategorized"), selected: @transfer.outflow_transaction.category&.id, variant: :badge, searchable: true }, "data-auto-submit-form-target": "auto" %>
         <% end %>
         <%= f.text_area :notes,
                   label: t(".note_label"),

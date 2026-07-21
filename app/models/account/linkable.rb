@@ -74,6 +74,13 @@ module Account::Linkable
     account_providers.exists?(provider_type: provider_type)
   end
 
+  # Whether this account's provider applies the category matcher to imported
+  # transactions. Only Plaid honors `enable_category_matcher` today; extend this
+  # when other providers (e.g. SimpleFIN) wire up category matching.
+  def supports_category_matcher?
+    plaid_account.present? || linked_to?("PlaidAccount")
+  end
+
   # Check if holdings can be deleted
   # If account has multiple providers, returns true only if ALL providers allow deletion
   # This prevents deleting holdings that would be recreated on next sync
