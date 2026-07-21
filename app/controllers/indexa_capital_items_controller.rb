@@ -125,13 +125,9 @@ class IndexaCapitalItemsController < ApplicationController
       return
     end
 
-    # Always fetch fresh data (accounts + balances) when user visits this page
-    fetch_accounts_synchronously(indexa_capital_item)
+    schedule_accounts_refresh(indexa_capital_item)
 
-    @indexa_capital_accounts = indexa_capital_item.indexa_capital_accounts
-                                                .left_joins(:account_provider)
-                                                .where(account_providers: { id: nil })
-                                                .order(:name)
+    @indexa_capital_accounts = unlinked_indexa_capital_accounts(indexa_capital_item)
   end
 
   def link_accounts
@@ -356,37 +352,19 @@ class IndexaCapitalItemsController < ApplicationController
       accountable_type.constantize
     end
 
-    def fetch_accounts_synchronously(indexa_capital_item)
-      provider = indexa_capital_item.indexa_capital_provider
-      return unless provider
-
-      accounts_data = provider.list_accounts
-
-      accounts_data.each do |account_data|
-        account_number = account_data[:account_number].to_s
-        next if account_number.blank?
-
-        # Fetch current balance from performance endpoint
-        balance = provider.get_account_balance(account_number: account_number)
-        account_data[:current_balance] = balance
-      rescue => e
-        Rails.logger.warn "IndexaCapitalItemsController - Failed to fetch balance for #{account_number}: #{e.message}"
-      end
-
-      accounts_data.each do |account_data|
-        account_number = account_data[:account_number].to_s
-        next if account_number.blank?
-
-        indexa_capital_account = indexa_capital_item.indexa_capital_accounts.find_or_initialize_by(
-          indexa_capital_account_id: account_number
-        )
-        indexa_capital_account.upsert_from_indexa_capital!(account_data)
-      end
-    rescue Provider::IndexaCapital::AuthenticationError => e
-      Rails.logger.error "IndexaCapitalItemsController - Auth failed during sync: #{e.message}"
+    def schedule_accounts_refresh(indexa_capital_item)
+      indexa_capital_item.sync_later unless indexa_capital_item.syncing?
+    rescue => e
+      Rails.logger.error(
+        "IndexaCapitalItemsController#select_accounts - Failed to schedule refresh: #{e.class} - #{e.message}"
+      )
       flash.now[:alert] = t("indexa_capital_items.select_accounts.api_error", message: e.message)
-    rescue Provider::IndexaCapital::Error => e
-      Rails.logger.error "IndexaCapitalItemsController - API error during sync: #{e.message}"
-      flash.now[:alert] = t("indexa_capital_items.select_accounts.api_error", message: e.message)
+    end
+
+    def unlinked_indexa_capital_accounts(indexa_capital_item)
+      indexa_capital_item.indexa_capital_accounts
+                         .left_joins(:account_provider)
+                         .where(account_providers: { id: nil })
+                         .order(:name)
     end
 end
