@@ -1,0 +1,49 @@
+---
+tr:
+  splits:
+    child:
+      description: Bu kayıt, bölünmüş bir işlemin parçasıdır.
+      edit_split: Bölünmeyi Düzenle
+      title: Bölünmenin Parçası
+      unsplit: Bölünmeyi Geri Al
+    create:
+      not_splittable: Bu işlem bölünemez.
+      success: İşlem başarıyla bölündü
+    destroy:
+      success: İşlemin bölünmesi başarıyla geri alındı
+    edit:
+      description: Bu işlem için bölünmüş kayıtları düzenleyin.
+      not_split: Bu işlem bölünmemiş.
+      submit: Bölünmeyi Güncelle
+      title: Bölünmeyi Düzenle
+    new:
+      add_row: Bölüm ekle
+      amount_label: Tutar
+      amounts_must_match: Bölüm tutarları, orijinal işlem tutarına eşit olmalıdır.
+      cancel: İptal
+      category_label: Kategori
+      description: Bu işlemi farklı kategoriler ve tutarlarla birden fazla kayda bölün.
+      name_label: Ad
+      name_placeholder: Bölüm adı
+      original_amount: Tutar
+      original_date: 'Tarih:'
+      original_name: 'Ad:'
+      remaining: Kalan
+      remove_row: Kaldır
+      split_number: 'Bölüm #%{number}'
+      submit: İşlemi Böl
+      title: İşlemi Böl
+      uncategorized: "(kategorisiz)"
+    show:
+      button: Böl
+      button_description: Bu işlemi farklı kategoriler ve tutarlarla birden fazla
+        kayda bölün.
+      button_title: İşlemi Böl
+      description: Bu işlem aşağıdaki kayıtlara bölündü.
+      title: Bölünmüş Kayıtlar
+      unsplit_button: Bölünmeyi Geri Al
+      unsplit_confirm: Bu, tüm bölünmüş kayıtları kaldıracak ve orijinal işlemi geri
+        yükleyecektir.
+      unsplit_title: İşlemin Bölünmesini Geri Al
+    update:
+      success: Bölünme başarıyla güncellendi

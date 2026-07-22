@@ -26,7 +26,7 @@
         <% else %>
           <span class="size-1.5 rounded-full" style="background-color: <%= hex_color %>;"></span>
         <% end %>
-        <%= selected_category.name %>
+        <%= selected_category.display_name %>
       </span>
     <% else %>
       <%= t("splits.new.uncategorized") %>
@@ -68,7 +68,7 @@
              aria-selected="<%= is_selected %>"
              data-action="click->select#select"
              data-value="<%= category.id %>"
-             data-filter-name="<%= category.name %>">
+             data-filter-name="<%= category.display_name %>">
           <span class="check-icon <%= "hidden" unless is_selected %>">
             <%= icon("check") %>
           </span>
@@ -79,7 +79,7 @@
             <% else %>
               <span class="size-1.5 rounded-full" style="background-color: <%= hex_color %>;"></span>
             <% end %>
-            <%= category.name %>
+            <%= category.display_name %>
           </span>
         </div>
       <% end %>

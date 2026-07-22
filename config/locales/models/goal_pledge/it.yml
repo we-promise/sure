@@ -1,0 +1,20 @@
+---
+it:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: Importo
+        currency: Valuta
+        account: Conto
+        kind: Tipo
+        status: Stato
+        expires_at: Scade il
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Scegli uno dei conti collegati all'obiettivo.
+            currency:
+              must_match_goal: La valuta dell'impegno deve corrispondere alla valuta dell'obiettivo.
+          duplicate_open_pledge: Hai già un impegno aperto per questo importo su questo conto. Annulla o estendi quello esistente prima di registrarne un altro.

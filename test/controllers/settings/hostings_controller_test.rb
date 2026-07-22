@@ -10,7 +10,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     @provider = mock
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(@provider)
 
-    @provider.stubs(:healthy?).returns(true)
+    @provider.stubs(:health_status).returns(:healthy)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(@provider)
     @provider.stubs(:usage).returns(provider_success_response(
       OpenStruct.new(
@@ -25,7 +25,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider].each do |key|
+    %i[openai_oauth_token openai_oauth_account_id anthropic_access_token anthropic_base_url anthropic_model llm_provider].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -47,6 +47,80 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       get settings_hosting_url
       assert_response :success
+    end
+  end
+
+  test "shows Yahoo Finance rate limiting as a warning" do
+    @provider.stubs(:health_status).returns(:rate_limited)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "div[class~=?]", "bg-warning/10"
+        assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
+        assert_includes response.body, "Yahoo Finance rate limit reached."
+        assert_includes response.body, "No action is required."
+        assert_not_includes response.body, "firewall"
+      end
+    end
+  end
+
+  test "renders healthy unavailable and unknown Yahoo Finance states" do
+    @provider.stubs(:health_status).returns(:healthy, :unavailable, :unknown)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance is active and working."
+        assert_select "div[class~=?]", "bg-success"
+
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance is currently unavailable."
+        assert_includes response.body, "Could not verify Yahoo Finance."
+        assert_includes response.body, "Check your internet connection and try again later."
+        assert_not_includes response.body, "firewall"
+        assert_select "div[class~=?]", "bg-destructive"
+
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance status is being checked."
+        assert_not_includes response.body, "Could not verify Yahoo Finance."
+        assert_not_includes response.body, "Yahoo Finance rate limit reached."
+        assert_select "div[class~=?]", "bg-surface-inset"
+      end
+    end
+  end
+
+  test "renders Spanish Yahoo Finance health guidance" do
+    @provider.stubs(:health_status).returns(:rate_limited, :unavailable, :unknown)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Yahoo Finance está limitando temporalmente las solicitudes."
+        assert_includes response.body, "No es necesario realizar ninguna acción."
+
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Yahoo Finance no está disponible en este momento."
+        assert_includes response.body, "Comprueba tu conexión a internet"
+
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Se está comprobando el estado de Yahoo Finance."
+      end
+    end
+  end
+
+  test "falls back to English for untranslated Yahoo Finance health guidance" do
+    @provider.stubs(:health_status).returns(:rate_limited)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url(locale: :fr)
+
+        assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
+        assert_not_includes response.body, "translation missing"
+      end
     end
   end
 
@@ -79,6 +153,43 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { openai_access_token: "token" } }
 
       assert_equal "token", Setting.openai_access_token
+    end
+  end
+
+  test "can update Codex OAuth credentials when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: {
+        setting: {
+          openai_oauth_token: "oauth-token",
+          openai_oauth_account_id: "account-123"
+        }
+      }
+
+      assert_equal "oauth-token", Setting.openai_oauth_token
+      assert_equal "account-123", Setting.openai_oauth_account_id
+    end
+  end
+
+  test "infers ChatGPT account ID from Codex OAuth token" do
+    payload = Base64.urlsafe_encode64({
+      "https://api.openai.com/auth" => { "chatgpt_account_id" => "account-from-token" }
+    }.to_json, padding: false)
+    token = "header.#{payload}.signature"
+
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { openai_oauth_token: token } }
+
+      assert_equal "account-from-token", Setting.openai_oauth_account_id
+    end
+  end
+
+  test "ignores redacted Codex OAuth token placeholder" do
+    with_self_hosting do
+      Setting.openai_oauth_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { openai_oauth_token: "********" } }
+
+      assert_equal "previous-token", Setting.openai_oauth_token
     end
   end
 
