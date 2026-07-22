@@ -83,20 +83,31 @@ jobs:
         working-directory: desktop
         run: npm ci
 
-      # Builds the universal .dmg (unsigned) and creates the tag + GitHub Release
-      # with the artifacts. tauri-action runs beforeBuildCommand (npm run build).
-      # To sign + notarize later, add the Apple secrets (APPLE_CERTIFICATE,
-      # APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID) as env
-      # here — no other change needed.
+      # Build only (no release here). tauri-action runs beforeBuildCommand
+      # (npm run build). To sign + notarize later, add the Apple secrets
+      # (APPLE_CERTIFICATE, APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD,
+      # APPLE_TEAM_ID) as env here — no other change needed.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: desktop
-          tagName: ${{ steps.ver.outputs.tag }}
-          releaseName: "Sure Desktop ${{ steps.ver.outputs.tag }}"
-          releaseBody: |
-            Universal macOS build (Apple Silicon + Intel).
+          includeUpdaterJson: false
+          args: --target universal-apple-darwin
+
+      # Publish the desktop release separately with make_latest:false, so it
+      # never claims the repo's "Latest release" badge — that stays on the main
+      # product's v* release. The desktop-v* prefix keeps it labeled in the list.
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: "Sure Desktop ${{ steps.ver.outputs.tag }}"
+          prerelease: ${{ steps.ver.outputs.prerelease }}
+          make_latest: "false"
+          files: desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          body: |
+            Universal macOS build (Apple Silicon + Intel) of the **Sure desktop app**
+            (not the Sure server — see the `v*` releases for that).
 
             **This build is unsigned.** On first launch macOS will block it. To open:
             1. Try to open Sure, then dismiss the warning.
@@ -104,7 +115,3 @@ jobs:
 
             If it says the app is "damaged", run once in Terminal:
             `xattr -cr /Applications/Sure.app`
-          releaseDraft: false
-          prerelease: ${{ steps.ver.outputs.prerelease }}
-          includeUpdaterJson: false
-          args: --target universal-apple-darwin
