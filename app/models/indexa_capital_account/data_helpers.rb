@@ -64,8 +64,6 @@ module IndexaCapitalAccount::DataHelpers
       tz = family&.timezone
 
       case date_value
-      when Date
-        date_value
       when String
         if tz && (date_value.include?("T") || date_value.include?(":"))
           Time.parse(date_value).in_time_zone(tz).to_date
@@ -74,6 +72,8 @@ module IndexaCapitalAccount::DataHelpers
         end
       when Time, DateTime, ActiveSupport::TimeWithZone
         date_value.in_time_zone(tz).to_date
+      when Date
+        date_value
       else
         nil
       end

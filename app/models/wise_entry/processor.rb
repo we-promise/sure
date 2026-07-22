@@ -159,6 +159,7 @@ class WiseEntry::Processor
         end
       when Time, DateTime
         raw.in_time_zone(account&.family&.timezone).to_date
+      when Date then raw
       else raise ArgumentError, "Invalid date format: #{raw.inspect}"
       end
     rescue ArgumentError
