@@ -58,17 +58,22 @@ module IndexaCapitalAccount::DataHelpers
       hash[:identifier] || hash[:isin_code] || hash[:isin] || hash[:symbol] || hash[:ticker]
     end
 
-    def parse_date(date_value)
+    def parse_date(date_value, family: nil)
       return nil if date_value.nil?
+
+      tz = family&.timezone
 
       case date_value
       when Date
         date_value
       when String
-        # Use Time.zone.parse for external timestamps (Rails timezone guidelines)
-        Time.zone.parse(date_value)&.to_date
+        if tz && (date_value.include?("T") || date_value.include?(":"))
+          Time.parse(date_value).in_time_zone(tz).to_date
+        else
+          Date.parse(date_value)
+        end
       when Time, DateTime, ActiveSupport::TimeWithZone
-        date_value.to_date
+        date_value.in_time_zone(tz).to_date
       else
         nil
       end

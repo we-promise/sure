@@ -258,7 +258,11 @@ class EnableBankingEntry::Processor
 
       case date_value
       when String
-        Date.parse(date_value)
+        if date_value.include?("T") || date_value.include?(":")
+          Time.parse(date_value).in_time_zone(account&.family&.timezone).to_date
+        else
+          Date.parse(date_value)
+        end
       when Integer, Float
         Time.at(date_value).in_time_zone(account&.family&.timezone).to_date
       when Time, DateTime

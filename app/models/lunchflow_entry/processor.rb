@@ -188,9 +188,12 @@ class LunchflowEntry::Processor
     def date
       case data[:date]
       when String
-        Date.parse(data[:date])
+        if data[:date].include?("T") || data[:date].include?(":")
+          Time.parse(data[:date]).in_time_zone(account&.family&.timezone).to_date
+        else
+          Date.parse(data[:date])
+        end
       when Integer, Float
-        # Unix timestamp
         Time.at(data[:date]).in_time_zone(account&.family&.timezone).to_date
       when Time, DateTime
         data[:date].in_time_zone(account&.family&.timezone).to_date
