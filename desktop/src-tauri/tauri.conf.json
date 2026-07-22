@@ -23,6 +23,17 @@
         "transparent": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true
+      },
+      {
+        "label": "prefs",
+        "title": "Preferences",
+        "width": 420,
+        "height": 520,
+        "visible": false,
+        "transparent": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "url": "prefs.html"
       }
     ],
     "security": { "csp": null }

@@ -4,6 +4,22 @@
   if (!tauri?.event) return;
   const emit = tauri.event.emit as (e: string, p: unknown) => void;
 
+  // Menu wiring: registered here too because the main window may show the
+  // remote Sure site (not the bundled main.ts document) when these fire.
+  if (!(window as any).__sureMenuListeners) {
+    (window as any).__sureMenuListeners = true;
+    const show = async () => {
+      const wins = await tauri.window.getAllWindows();
+      const prefs = wins.find((w: any) => w.label === "prefs");
+      if (prefs) { await prefs.show(); await prefs.setFocus(); }
+    };
+    tauri.event.listen("menu://preferences", show);
+    tauri.event.listen("menu://switch-server", show);
+    tauri.event.listen("active-server-changed", (e: any) =>
+      window.location.assign(`${e.payload}/session/new`)
+    );
+  }
+
   // Sync-complete + alert toasts: Sure renders flash/notification nodes.
   const seen = new WeakSet<Element>();
   const scan = () => {

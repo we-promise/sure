@@ -1,4 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { getAllWindows } from "@tauri-apps/api/window";
 import { S } from "./strings";
 
 interface ServerEntry { url: string; label: string; }
@@ -67,4 +69,16 @@ $("server-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const url = ($("server-url") as HTMLInputElement).value.trim();
   if (url) connect(url);
+});
+
+async function showPrefs() {
+  const wins = await getAllWindows();
+  const prefs = wins.find((w) => w.label === "prefs");
+  if (prefs) { await prefs.show(); await prefs.setFocus(); }
+}
+
+listen("menu://preferences", showPrefs);
+listen("menu://switch-server", showPrefs);
+listen<string>("active-server-changed", (e) => {
+  window.location.assign(`${e.payload}/session/new`);
 });

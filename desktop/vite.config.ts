@@ -11,6 +11,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, "index.html"),
+        prefs: resolve(__dirname, "prefs.html"),
         bridge: resolve(__dirname, "src/bridge.ts"),
       },
       output: {

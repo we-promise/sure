@@ -9,3 +9,11 @@ export const S = {
   remembered: "Remembered servers",
   remove: "Remove",
 } as const;
+
+export const P = {
+  title: "Preferences",
+  servers: "Servers",
+  add: "Add",
+  launchAtLogin: "Launch Sure at login",
+  switchTo: "Switch to",
+} as const;
