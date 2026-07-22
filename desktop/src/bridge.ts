@@ -41,9 +41,15 @@
     };
     tauri.event.listen("menu://preferences", show);
     tauri.event.listen("menu://switch-server", show);
-    tauri.event.listen("active-server-changed", (e: any) =>
-      window.location.assign(`${e.payload}/sessions/new`)
-    );
+    tauri.event.listen("active-server-changed", (e: any) => {
+      // De-dupe: only the first navigation request for a server wins, so a
+      // single connect never fires multiple concurrent GET /sessions/new
+      // (which would race the session cookie against the form's CSRF token).
+      const w = window as any;
+      if (w.__sureNav) return;
+      w.__sureNav = e.payload;
+      window.location.assign(`${e.payload}/sessions/new`);
+    });
   }
 
   // Sync-complete + alert toasts: Sure renders flash/notification nodes.

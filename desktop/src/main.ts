@@ -7,6 +7,18 @@ interface ServerEntry { url: string; label: string; }
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
+// Navigate to a server's login page exactly once. connect() and the
+// active-server-changed listener(s) can all request navigation for the same
+// server; without this guard they fire multiple concurrent GET /sessions/new
+// requests, each minting a new session + CSRF token, which race and cause
+// "Can't verify CSRF token authenticity" on the POST.
+function goToServer(url: string) {
+  const w = window as unknown as { __sureNav?: string };
+  if (w.__sureNav) return;
+  w.__sureNav = url;
+  window.location.assign(`${url}/sessions/new`);
+}
+
 function fill() {
   ($("logo") as HTMLImageElement).src = new URL("./assets/logomark.svg", import.meta.url).href;
   $("title").textContent = S.title;
@@ -35,7 +47,7 @@ async function connect(rawUrl: string) {
   const list = await invoke<ServerEntry[]>("add_server", { url: rawUrl, label: "" });
   const canonical = list[0].url;
   await invoke("set_active_server", { url: canonical });
-  window.location.assign(`${canonical}/sessions/new`);
+  goToServer(canonical);
 }
 
 async function renderRemembered() {
@@ -80,6 +92,4 @@ async function showPrefs() {
 
 listen("menu://preferences", showPrefs);
 listen("menu://switch-server", showPrefs);
-listen<string>("active-server-changed", (e) => {
-  window.location.assign(`${e.payload}/sessions/new`);
-});
+listen<string>("active-server-changed", (e) => goToServer(e.payload));
