@@ -28,9 +28,11 @@ pub fn run() {
             notifications::register(app.handle());
             Ok(())
         })
-        .on_page_load(|window, _payload| {
-            const BRIDGE: &str = include_str!("../../dist/bridge.js");
-            let _ = window.eval(BRIDGE);
+        .on_page_load(|window, payload| {
+            if payload.event() == tauri::webview::PageLoadEvent::Finished {
+                const BRIDGE: &str = include_str!("../../dist/bridge.js");
+                let _ = window.eval(BRIDGE);
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running Sure Desktop");
