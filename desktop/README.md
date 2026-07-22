@@ -29,18 +29,20 @@ npm run tauri build -- --target universal-apple-darwin
 # Output: src-tauri/target/universal-apple-darwin/release/bundle/dmg/Sure_<ver>_universal.dmg
 ```
 
-## Publishing a release
-Releases are built and published by GitHub Actions
-(`.github/workflows/desktop-release.yml`) on a version tag:
-```bash
-# 1. Bump the version in BOTH desktop/package.json and desktop/src-tauri/tauri.conf.json
-# 2. Tag and push:
-git tag desktop-v0.1.0
-git push origin desktop-v0.1.0
+## Publishing
+`.github/workflows/desktop-build.yml` builds and publishes automatically — no
+manual tagging. It runs **only when `desktop/**` changes** on `main` (path
+filter), so the published `.dmg` never changes unless the desktop app did. It
+publishes to a rolling `desktop-latest` prerelease with a stable filename, so
+there is one permanent download URL:
+
 ```
-The workflow builds the universal `.dmg` on a macOS runner and attaches it to a
-GitHub Release named `Sure Desktop desktop-v0.1.0`. (`workflow_dispatch` builds
-without publishing, for testing.)
+https://github.com/<owner>/<repo>/releases/download/desktop-latest/Sure.dmg
+```
+
+Bump the version in `desktop/package.json` + `desktop/src-tauri/tauri.conf.json`
+when you want the reported app version to change. Trigger a rebuild without a
+code change via **Actions → Desktop Build → Run workflow** (`workflow_dispatch`).
 
 ## Installing an unsigned build (end users)
 The published `.dmg` is **not code-signed**, so macOS Gatekeeper blocks the first
