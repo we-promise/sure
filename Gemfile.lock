@@ -157,7 +157,7 @@ GEM
     crack (1.0.0)
       bigdecimal
       rexml
-    crass (1.0.6)
+    crass (1.0.7)
     cronex (0.15.0)
       tzinfo
       unicode (>= 0.4.4.5)
@@ -377,7 +377,7 @@ GEM
       logtail (~> 0.1, >= 0.1.14)
       logtail-rack (~> 0.1)
       railties (>= 5.0.0)
-    loofah (2.25.1)
+    loofah (2.25.2)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
     lookbook (2.3.11)
