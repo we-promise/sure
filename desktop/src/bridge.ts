@@ -16,7 +16,7 @@
     tauri.event.listen("menu://preferences", show);
     tauri.event.listen("menu://switch-server", show);
     tauri.event.listen("active-server-changed", (e: any) =>
-      window.location.assign(`${e.payload}/session/new`)
+      window.location.assign(`${e.payload}/sessions/new`)
     );
   }
 

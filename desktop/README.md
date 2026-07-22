@@ -16,7 +16,7 @@ npm run tauri dev
 ```
 On first launch, enter your Sure server URL (e.g. `http://localhost:3000` when
 running `bin/dev`). The app health-checks `{server}/up`, then loads the real
-`/session/new` where you sign in with password or SSO (MFA supported).
+`/sessions/new` where you sign in with password or SSO (MFA supported).
 
 ## Build a release .dmg (unsigned)
 ```bash

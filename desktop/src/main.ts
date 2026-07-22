@@ -34,7 +34,7 @@ async function connect(rawUrl: string) {
   const list = await invoke<ServerEntry[]>("add_server", { url: rawUrl, label: "" });
   const canonical = list[0].url;
   await invoke("set_active_server", { url: canonical });
-  window.location.assign(`${canonical}/session/new`);
+  window.location.assign(`${canonical}/sessions/new`);
 }
 
 async function renderRemembered() {
@@ -80,5 +80,5 @@ async function showPrefs() {
 listen("menu://preferences", showPrefs);
 listen("menu://switch-server", showPrefs);
 listen<string>("active-server-changed", (e) => {
-  window.location.assign(`${e.payload}/session/new`);
+  window.location.assign(`${e.payload}/sessions/new`);
 });
