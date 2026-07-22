@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod menu;
 pub mod servers;
 pub mod state;
 pub mod window;
@@ -20,6 +21,9 @@ pub fn run() {
         ])
         .setup(|app| {
             window::setup(app)?;
+            let menu = menu::build(app.handle())?;
+            app.set_menu(menu)?;
+            app.on_menu_event(|app, event| menu::on_event(app, event.id().as_ref()));
             Ok(())
         })
         .run(tauri::generate_context!())
