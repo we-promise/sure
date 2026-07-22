@@ -35,11 +35,16 @@ pub fn check_server(url: String) -> Result<bool, String> {
 
 #[tauri::command]
 pub fn active_server(state: State<AppState>) -> Option<String> {
-    state.active_server.lock().unwrap().clone()
+    if let Some(url) = state.active_server.lock().unwrap().clone() {
+        return Some(url);
+    }
+    // Fall back to the persisted value so a relaunch resumes the last server.
+    crate::servers::load_active()
 }
 
 #[tauri::command]
 pub fn set_active_server(url: String, state: State<AppState>, app: tauri::AppHandle) {
+    let _ = crate::servers::save_active(&url);
     *state.active_server.lock().unwrap() = Some(url.clone());
     let _ = app.emit("active-server-changed", url);
 }

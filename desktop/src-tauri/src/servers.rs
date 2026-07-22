@@ -3,6 +3,7 @@ use url::Url;
 
 const KEYRING_SERVICE: &str = "app.sure.desktop";
 const KEYRING_ACCOUNT: &str = "servers";
+const KEYRING_ACTIVE: &str = "active_server";
 
 #[derive(Debug)]
 pub enum ServerError {
@@ -99,4 +100,17 @@ impl ServerStore {
         Self::save(&list)?;
         Ok(list)
     }
+}
+
+/// The last server the user connected to, persisted so the app can resume
+/// straight to it on the next launch instead of showing the picker again.
+pub fn load_active() -> Option<String> {
+    let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACTIVE).ok()?;
+    entry.get_password().ok()
+}
+
+pub fn save_active(url: &str) -> Result<(), ServerError> {
+    keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACTIVE)
+        .and_then(|e| e.set_password(url))
+        .map_err(|e| ServerError::Keyring(e.to_string()))
 }

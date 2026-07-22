@@ -16,7 +16,10 @@ function goToServer(url: string) {
   const w = window as unknown as { __sureNav?: string };
   if (w.__sureNav) return;
   w.__sureNav = url;
-  window.location.assign(`${url}/sessions/new`);
+  // Navigate to the server root: Rails serves the dashboard if the session
+  // cookie is still valid, or redirects to the login page if not — so a
+  // relaunch with a live session resumes without re-logging in.
+  window.location.assign(`${url}/`);
 }
 
 function fill() {
@@ -76,13 +79,24 @@ async function renderRemembered() {
   }
 }
 
-fill();
-renderRemembered();
 $("server-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const url = ($("server-url") as HTMLInputElement).value.trim();
   if (url) connect(url);
 });
+
+// On launch, resume straight to the last server if there is one; otherwise
+// show the picker.
+async function boot() {
+  const active = await invoke<string | null>("active_server");
+  if (active) {
+    goToServer(active);
+    return;
+  }
+  fill();
+  renderRemembered();
+}
+boot();
 
 async function showPrefs() {
   const wins = await getAllWindows();

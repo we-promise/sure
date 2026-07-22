@@ -51,7 +51,7 @@
       const w = window as any;
       if (w.__sureNav) return;
       w.__sureNav = e.payload;
-      window.location.assign(`${e.payload}/sessions/new`);
+      window.location.assign(`${e.payload}/`);
     });
   }
 
