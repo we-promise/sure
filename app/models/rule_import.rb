@@ -7,6 +7,13 @@ class RuleImport < Import
     end
   end
 
+  # Rules hang off the family, not the import — see
+  # Import#committed_by_named_records?. Nameless rows build unconditionally and
+  # carry no stable key, so a file of only nameless rows has no commit signal.
+  def data_committed?
+    committed_by_named_records?(family.rules)
+  end
+
   def column_keys
     %i[name resource_type active effective_date conditions actions]
   end

@@ -531,6 +531,20 @@ class Import < ApplicationRecord
   end
 
   private
+    # Commit signal for import types whose records hang off the family rather
+    # than the import itself (Category/Merchant/Rule imports create no entries
+    # or accounts, so the base data_committed? can't see them). import! runs as
+    # a single find-or-create-by-name transaction, so once every named row has
+    # a matching family record the data committed — or every name already
+    # existed, leaving the family in the same end state. Either way the
+    # truthful terminal status is complete, not a retryable failed. Rows with
+    # blank names carry no stable key, so a file with only blank names yields
+    # no signal and stays retryable (the conservative side of the reaper).
+    def committed_by_named_records?(scope)
+      names = rows.pluck(:name).filter_map { |value| value.to_s.strip.presence }.uniq
+      names.any? && (names - scope.where(name: names).pluck(:name)).empty?
+    end
+
     def row_count_exceeded?
       rows_count > max_row_count
     end

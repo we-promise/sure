@@ -135,4 +135,68 @@ class ImportTest < ActiveSupport::TestCase
     assert pdf.force_fail!
     assert_equal "pending", pdf.reload.status
   end
+
+  # Category/Merchant/Rule imports attach nothing to the import (their records
+  # hang off the family), so reap_stuck! leans on the type-specific
+  # data_committed? override to tell a committed run from a rolled-back one.
+  test "clean completes a stuck CategoryImport whose categories committed" do
+    family = families(:dylan_family)
+    stuck = CategoryImport.create!(family: family, status: "importing")
+    stuck.rows.create!(source_row_number: 1, name: categories(:income).name, currency: "USD")
+    stuck.update_columns(updated_at: 7.hours.ago)
+
+    Import.clean
+
+    stuck.reload
+    assert_equal "complete", stuck.status
+    assert_nil stuck.error
+  end
+
+  test "clean fails a stuck CategoryImport whose categories never committed" do
+    family = families(:dylan_family)
+    stuck = CategoryImport.create!(family: family, status: "importing")
+    stuck.rows.create!(source_row_number: 1, name: "Never Committed Category", currency: "USD")
+    stuck.update_columns(updated_at: 7.hours.ago)
+
+    Import.clean
+
+    assert_equal "failed", stuck.reload.status
+  end
+
+  test "clean completes a stuck MerchantImport whose merchants committed" do
+    family = families(:dylan_family)
+    stuck = MerchantImport.create!(family: family, status: "importing")
+    stuck.rows.create!(source_row_number: 1, name: merchants(:netflix).name, currency: "USD")
+    stuck.update_columns(updated_at: 7.hours.ago)
+
+    Import.clean
+
+    assert_equal "complete", stuck.reload.status
+  end
+
+  test "clean completes a stuck RuleImport whose named rules committed" do
+    family = families(:dylan_family)
+    # Skip Rule's own validations — the reaper only asks whether a rule with
+    # this name exists in the family, which is the state a committed import
+    # leaves behind.
+    family.rules.new(resource_type: "transaction", name: "Committed rule").save!(validate: false)
+    stuck = RuleImport.create!(family: family, status: "importing")
+    stuck.rows.create!(source_row_number: 1, name: "Committed rule", resource_type: "transaction", conditions: "[]", actions: "[]", currency: "USD")
+    stuck.update_columns(updated_at: 7.hours.ago)
+
+    Import.clean
+
+    assert_equal "complete", stuck.reload.status
+  end
+
+  test "clean fails a stuck RuleImport of only nameless rows (no commit signal)" do
+    family = families(:dylan_family)
+    stuck = RuleImport.create!(family: family, status: "importing")
+    stuck.rows.create!(source_row_number: 1, name: "", resource_type: "transaction", conditions: "[]", actions: "[]", currency: "USD")
+    stuck.update_columns(updated_at: 7.hours.ago)
+
+    Import.clean
+
+    assert_equal "failed", stuck.reload.status
+  end
 end

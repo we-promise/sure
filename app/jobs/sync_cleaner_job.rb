@@ -56,6 +56,11 @@ class SyncCleanerJob < ApplicationJob
               metadata: { record_type: model_name, record_id: record.id }
             )
           end
+        rescue => e
+          # One bad record must not abort the sweep for the rest of this
+          # model or the models still to come.
+          Rails.logger.error("SyncCleanerJob activity-flag sweep failed for #{model_name} #{record.id}: #{e.class}: #{e.message}")
+          Sentry.capture_exception(e) { |scope| scope.set_tags(record_type: model_name, record_id: record.id) } if defined?(Sentry)
         end
       end
     end

@@ -753,6 +753,18 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_equal "importing", session.reload.status
   end
 
+  test "clean isolates a session whose update! fails so the sweep does not abort" do
+    session = @family.import_sessions.create!(status: "importing")
+    session.update_columns(updated_at: 7.hours.ago)
+
+    # A validation/DB error on one stuck session must not abort the sweep for
+    # the rest (mirrors Import.clean's per-record rescue).
+    ImportSession.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(ImportSession.new))
+
+    assert_nothing_raised { ImportSession.clean }
+    assert_equal "importing", session.reload.status
+  end
+
   private
     def entity_records
       [

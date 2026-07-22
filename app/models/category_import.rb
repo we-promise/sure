@@ -28,6 +28,12 @@ class CategoryImport < Import
     end
   end
 
+  # Categories hang off the family, not the import — see
+  # Import#committed_by_named_records?.
+  def data_committed?
+    committed_by_named_records?(family.categories)
+  end
+
   def column_keys
     %i[name category_color category_parent category_icon]
   end
