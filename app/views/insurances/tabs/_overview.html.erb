@@ -1,0 +1,70 @@
+<%# locals: (account:) %>
+<% insurance = account.insurance %>
+<% status_tone = { active: :success, upcoming: :neutral, renewal_due: :warning, expiring_soon: :warning, expired: :error }.fetch(insurance.policy_status) %>
+
+<div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+  <%= summary_card title: t(".status") do %>
+    <%= render DS::Pill.new(
+      label: t("insurances.statuses.#{insurance.policy_status}"),
+      tone: status_tone,
+      marker: false
+    ) %>
+  <% end %>
+
+  <%= summary_card title: t(".type") do %>
+    <%= Insurance.long_subtype_label_for(insurance.subtype) || t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".policy_number") do %>
+    <%= insurance.policy_number.presence || t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".coverage_amount") do %>
+    <%= insurance.coverage_amount_money ? format_money(insurance.coverage_amount_money) : t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".cash_value") do %>
+    <%= format_money(account.balance_money) %>
+  <% end %>
+
+  <%= summary_card title: t(".premium") do %>
+    <% if insurance.premium_amount_money %>
+      <%= t(
+        ".premium_with_frequency",
+        amount: format_money(insurance.premium_amount_money),
+        frequency: insurance.premium_frequency.present? ? t("insurances.premium_frequencies.#{insurance.premium_frequency}") : t(".frequency_unknown")
+      ) %>
+    <% else %>
+      <%= t(".unknown") %>
+    <% end %>
+  <% end %>
+
+  <%= summary_card title: t(".effective_date") do %>
+    <%= insurance.effective_date ? l(insurance.effective_date, format: :long) : t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".renewal_date") do %>
+    <%= insurance.renewal_date ? l(insurance.renewal_date, format: :long) : t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".expiration_date") do %>
+    <%= insurance.expiration_date ? l(insurance.expiration_date, format: :long) : t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".insured_name") do %>
+    <%= insurance.insured_name.presence || t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".beneficiaries") do %>
+    <%= insurance.beneficiaries.presence || t(".unknown") %>
+  <% end %>
+</div>
+
+<div class="flex justify-center py-8">
+  <%= render DS::Link.new(
+    text: t(".edit_insurance_details"),
+    variant: "ghost",
+    href: edit_insurance_path(account),
+    frame: :modal
+  ) %>
+</div>

@@ -436,7 +436,7 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
   end
 
   test "non cash accounts can only use valuations and transactions will be recorded but ignored for balance calculation" do
-    [ Property, Vehicle, OtherAsset, OtherLiability ].each do |account_type|
+    [ Insurance, Property, Vehicle, OtherAsset, OtherLiability ].each do |account_type|
       account = create_account_with_ledger(
         account: { type: account_type, currency: "USD" },
         entries: [

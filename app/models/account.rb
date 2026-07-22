@@ -584,7 +584,7 @@ class Account < ApplicationRecord
     case accountable_type
     when "Depository", "CreditCard"
       :cash
-    when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
+    when "Insurance", "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
       :non_cash
     when "Investment", "Crypto"
       :investment

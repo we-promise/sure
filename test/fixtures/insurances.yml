@@ -1,0 +1,11 @@
+one:
+  subtype: life
+  policy_number: LIFE-12345
+  coverage_amount: 500000
+  premium_amount: 150
+  premium_frequency: monthly
+  effective_date: <%= 1.year.ago.to_date %>
+  expiration_date: <%= 10.years.from_now.to_date %>
+  renewal_date: <%= 6.months.from_now.to_date %>
+  insured_name: Dylan Family
+  beneficiaries: Family trust

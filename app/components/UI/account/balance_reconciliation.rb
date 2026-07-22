@@ -16,7 +16,7 @@ class UI::Account::BalanceReconciliation < ApplicationComponent
       investment_items
     when "Loan"
       loan_items
-    when "Property", "Vehicle"
+    when "Insurance", "Property", "Vehicle"
       asset_items
     when "Crypto"
       crypto_items

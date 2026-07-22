@@ -6,6 +6,7 @@
     <% unless params[:classification] == "liability" %>
       <%= render "account_type", accountable: Depository.new %>
       <%= render "account_type", accountable: Investment.new %>
+      <%= render "account_type", accountable: Insurance.new %>
       <%= render "account_type", accountable: Crypto.new %>
       <%= render "account_type", accountable: Property.new %>
       <%= render "account_type", accountable: Vehicle.new %>

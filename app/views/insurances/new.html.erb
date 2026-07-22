@@ -1,0 +1,13 @@
+<% if params[:step] == "method_select" %>
+  <%= render "accounts/new/method_selector",
+             path: new_insurance_path(return_to: params[:return_to]),
+             provider_configs: @provider_configs,
+             accountable_type: "Insurance" %>
+<% else %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+    <% dialog.with_body do %>
+      <%= render "insurances/form", account: @account, url: insurances_path %>
+    <% end %>
+  <% end %>
+<% end %>

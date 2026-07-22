@@ -18,6 +18,16 @@ class AccountsTest < ApplicationSystemTestCase
     assert_account_created("Investment")
   end
 
+  test "can create insurance account" do
+    assert_account_created "Insurance" do
+      select "Life Insurance", from: "Insurance type"
+      fill_in "Policy number", with: "POL-123"
+      fill_in "account[accountable_attributes][coverage_amount]", with: 500000
+      fill_in "account[accountable_attributes][premium_amount]", with: 150
+      select "Monthly", from: "Premium frequency"
+    end
+  end
+
   test "can create crypto account" do
     assert_account_created("Crypto")
   end
@@ -140,7 +150,7 @@ class AccountsTest < ApplicationSystemTestCase
 
     def assert_account_created(accountable_type, &block)
       click_link Accountable.from_type(accountable_type).singular_display_name
-      click_link "Enter account balance" if accountable_type.in?(%w[Depository Investment Crypto Loan CreditCard])
+      click_link "Enter account balance" if accountable_type.in?(%w[Depository Investment Insurance Crypto Loan CreditCard])
 
       account_name = "[system test] #{accountable_type} Account"
       institution_name = "[system test] Institution"

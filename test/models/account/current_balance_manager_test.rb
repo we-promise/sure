@@ -53,7 +53,7 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
   end
 
   test "all manual non cash accounts append reconciliations for current balance updates" do
-    [ Property, Vehicle, OtherAsset, Loan, OtherLiability ].each do |account_type|
+    [ Insurance, Property, Vehicle, OtherAsset, Loan, OtherLiability ].each do |account_type|
       account = @family.accounts.create!(
         name: "Test",
         balance: 1000,

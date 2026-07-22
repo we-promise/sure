@@ -1,4 +1,4 @@
-<%# locals: (account:, url:) %>
+<%# locals: (account:, url:, balance_label: nil) %>
 
 <% if @error_message.present? %>
   <%= render DS::Alert.new(message: @error_message, variant: :error) %>
@@ -12,7 +12,7 @@
     <%= form.text_field :name, placeholder: t(".name_placeholder"), required: "required", label: t(".name_label") %>
 
     <% unless account.linked? %>
-      <%= form.money_field :balance, label: t(".balance"), required: true, default_currency: Current.family.currency %>
+      <%= form.money_field :balance, label: balance_label || t(".balance"), required: true, default_currency: Current.family.currency %>
     <% end %>
 
     <% if account.new_record? && !account.linked? %>

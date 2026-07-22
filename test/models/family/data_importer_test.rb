@@ -31,6 +31,48 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "imports insurance policy details" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "insurance-1",
+          name: "Whole Life Policy",
+          balance: "25000.00",
+          currency: "USD",
+          accountable_type: "Insurance",
+          accountable: {
+            subtype: "life",
+            policy_number: "LIFE-123",
+            coverage_amount: "500000.00",
+            premium_amount: "150.00",
+            premium_frequency: "monthly",
+            effective_date: "2026-01-01",
+            expiration_date: "2036-01-01",
+            renewal_date: "2027-01-01",
+            insured_name: "Dylan",
+            beneficiaries: "Family trust"
+          }
+        }
+      }
+    ])
+
+    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+    insurance = account.insurance
+
+    assert_equal "Insurance", account.accountable_type
+    assert_equal "life", insurance.subtype
+    assert_equal "LIFE-123", insurance.policy_number
+    assert_equal 500000, insurance.coverage_amount
+    assert_equal 150, insurance.premium_amount
+    assert_equal "monthly", insurance.premium_frequency
+    assert_equal Date.new(2026, 1, 1), insurance.effective_date
+    assert_equal Date.new(2036, 1, 1), insurance.expiration_date
+    assert_equal Date.new(2027, 1, 1), insurance.renewal_date
+    assert_equal "Dylan", insurance.insured_name
+    assert_equal "Family trust", insurance.beneficiaries
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
