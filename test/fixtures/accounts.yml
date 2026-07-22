@@ -8,6 +8,16 @@ other_asset:
   accountable: one
   status: active
 
+insurance:
+  family: dylan_family
+  owner: family_admin
+  name: Whole Life Policy
+  balance: 25000
+  currency: USD
+  accountable_type: Insurance
+  accountable: one
+  status: active
+
 other_liability:
   family: dylan_family
   owner: family_admin

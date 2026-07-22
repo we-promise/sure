@@ -33,7 +33,7 @@ class Family::DataImporter
 
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
-    "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
+    "Depository" => Depository, "Investment" => Investment, "Insurance" => Insurance, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
     "CreditCard" => CreditCard, "Loan" => Loan, "OtherLiability" => OtherLiability
   }.freeze
@@ -293,6 +293,7 @@ class Family::DataImporter
 
           # Copy any other accountable attributes
           safe_accountable_attrs = %w[subtype locked_attributes]
+          safe_accountable_attrs += Insurance::POLICY_ATTRIBUTES.map(&:to_s) if accountable_type == "Insurance"
           safe_accountable_attrs.each do |attr|
             if accountable.respond_to?("#{attr}=") && accountable_data[attr].present?
               accountable.send("#{attr}=", accountable_data[attr])
@@ -307,7 +308,7 @@ class Family::DataImporter
           balance: data["balance"].to_d,
           cash_balance: data["cash_balance"]&.to_d || data["balance"].to_d,
           currency: data["currency"] || @family.currency,
-          subtype: data["subtype"],
+          subtype: data["subtype"].presence || accountable_data["subtype"],
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],

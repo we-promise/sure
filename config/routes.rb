@@ -553,6 +553,7 @@ Rails.application.routes.draw do
 
   resources :depositories, only: %i[new create edit update]
   resources :investments, only: %i[new create edit update]
+  resources :insurances, only: %i[new create edit update]
   resources :properties, only: %i[new create edit update] do
     member do
       get :balances

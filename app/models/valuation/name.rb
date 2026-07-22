@@ -24,6 +24,8 @@ class Valuation::Name
         "Original purchase price"
       when "Loan"
         "Original principal"
+      when "Insurance"
+        "Opening cash value"
       when "Investment", "Crypto", "OtherAsset"
         "Opening account value"
       else
@@ -37,6 +39,8 @@ class Valuation::Name
         "Current market value"
       when "Loan"
         "Current loan balance"
+      when "Insurance"
+        "Current cash value"
       when "Investment", "Crypto", "OtherAsset"
         "Current account value"
       else
@@ -50,6 +54,8 @@ class Valuation::Name
         "Manual value update"
       when "Loan"
         "Manual principal update"
+      when "Insurance"
+        "Manual cash value update"
       else
         "Manual balance update"
       end

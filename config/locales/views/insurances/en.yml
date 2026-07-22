@@ -1,0 +1,97 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        insurance:
+          attributes:
+            expiration_date:
+              before_effective_date: must be on or after the effective date
+  insurances:
+    edit:
+      edit: Edit %{account}
+    form:
+      beneficiaries: Beneficiaries
+      beneficiaries_placeholder: Names and allocation details
+      cash_value_hint: Enter the policy's current cash or surrender value as the account balance. Use zero for policies without a cash value; coverage is tracked separately.
+      cash_value_title: How this affects net worth
+      cash_value: Cash or surrender value
+      coverage_amount: Coverage amount
+      effective_date: Effective date
+      expiration_date: Expiration date
+      insured_name: Insured person or asset
+      insured_name_placeholder: Name of the covered person or asset
+      policy_number: Policy number
+      policy_number_placeholder: e.g., POL-123456
+      premium_amount: Premium amount
+      premium_frequency: Premium frequency
+      premium_frequency_prompt: Select a frequency
+      renewal_date: Renewal date
+      subtype: Insurance type
+      subtype_prompt: Select insurance type
+    new:
+      title: Enter insurance details
+    premium_frequencies:
+      annual: Annual
+      monthly: Monthly
+      one_time: One time
+      other: Other
+      quarterly: Quarterly
+      semi_annual: Semiannual
+    statuses:
+      active: Active
+      expired: Expired
+      expiring_soon: Expiring soon
+      renewal_due: Renewal due
+      upcoming: Upcoming
+    subtypes:
+      auto:
+        long: Auto Insurance
+        short: Auto
+      disability:
+        long: Disability Insurance
+        short: Disability
+      health:
+        long: Health Insurance
+        short: Health
+      homeowners:
+        long: Homeowners Insurance
+        short: Homeowners
+      life:
+        long: Life Insurance
+        short: Life
+      long_term_care:
+        long: Long-term Care Insurance
+        short: Long-term Care
+      other:
+        long: Other Insurance
+        short: Other
+      pet:
+        long: Pet Insurance
+        short: Pet
+      renters:
+        long: Renters Insurance
+        short: Renters
+      travel:
+        long: Travel Insurance
+        short: Travel
+      umbrella:
+        long: Umbrella Insurance
+        short: Umbrella
+    tabs:
+      overview:
+        beneficiaries: Beneficiaries
+        cash_value: Cash value
+        coverage_amount: Coverage amount
+        edit_insurance_details: Edit insurance details
+        effective_date: Effective date
+        expiration_date: Expiration date
+        frequency_unknown: Frequency not set
+        insured_name: Insured person or asset
+        policy_number: Policy number
+        premium: Premium
+        premium_with_frequency: "%{amount} · %{frequency}"
+        renewal_date: Renewal date
+        status: Policy status
+        type: Type
+        unknown: Unknown

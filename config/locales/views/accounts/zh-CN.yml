@@ -131,6 +131,7 @@ zh-CN:
     types:
       depository: 现金
       investment: 投资
+      insurance: 保险
       crypto: 加密资产
       property: 房产
       vehicle: 车辆
@@ -141,6 +142,7 @@ zh-CN:
     types_plural:
       depository: 现金
       investment: 投资
+      insurance: 保险
       crypto: 加密资产
       property: 房产
       vehicle: 车辆

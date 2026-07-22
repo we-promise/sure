@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_14_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1173,6 +1173,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_120000) do
     t.index ["family_id", "status"], name: "index_insights_on_family_id_and_status"
     t.check_constraint "priority::text = ANY (ARRAY['high'::character varying, 'medium'::character varying, 'low'::character varying]::text[])", name: "chk_insights_priority"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'read'::character varying, 'dismissed'::character varying, 'expired'::character varying]::text[])", name: "chk_insights_status"
+  end
+
+  create_table "insurances", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "beneficiaries"
+    t.decimal "coverage_amount", precision: 19, scale: 4
+    t.datetime "created_at", null: false
+    t.date "effective_date"
+    t.date "expiration_date"
+    t.string "insured_name"
+    t.jsonb "locked_attributes", default: {}
+    t.string "policy_number"
+    t.decimal "premium_amount", precision: 19, scale: 4
+    t.string "premium_frequency"
+    t.date "renewal_date"
+    t.string "subtype"
+    t.datetime "updated_at", null: false
   end
 
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

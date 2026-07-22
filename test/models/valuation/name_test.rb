@@ -1,6 +1,12 @@
 require "test_helper"
 
 class Valuation::NameTest < ActiveSupport::TestCase
+  test "generates cash value names for Insurance" do
+    assert_equal "Opening cash value", Valuation::Name.new("opening_anchor", "Insurance").to_s
+    assert_equal "Current cash value", Valuation::Name.new("current_anchor", "Insurance").to_s
+    assert_equal "Manual cash value update", Valuation::Name.new("reconciliation", "Insurance").to_s
+  end
+
   # Opening anchor tests
   test "generates opening anchor name for Property" do
     name = Valuation::Name.new("opening_anchor", "Property")

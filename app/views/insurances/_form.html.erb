@@ -1,0 +1,57 @@
+<%# locals: (account:, url:) %>
+
+<%= render DS::Alert.new(
+  title: t("insurances.form.cash_value_title"),
+  message: t("insurances.form.cash_value_hint"),
+  variant: :info
+) %>
+
+<div class="mt-4">
+  <%= render "accounts/form", account: account, url: url, balance_label: t("insurances.form.cash_value") do |form| %>
+    <%= render "shared/ruler", classes: "my-4" %>
+
+    <div class="space-y-2">
+      <%= form.fields_for :accountable do |insurance_form| %>
+        <%= insurance_form.select :subtype,
+                                  Insurance.subtype_options_for_select,
+                                  { label: t("insurances.form.subtype"), prompt: t("insurances.form.subtype_prompt") } %>
+
+        <%= insurance_form.text_field :policy_number,
+                                      label: t("insurances.form.policy_number"),
+                                      placeholder: t("insurances.form.policy_number_placeholder") %>
+
+        <div class="flex items-center gap-2">
+          <%= insurance_form.money_field :coverage_amount,
+                                         label: t("insurances.form.coverage_amount"),
+                                         default_currency: Current.family.currency,
+                                         hide_currency: true,
+                                         min: 0 %>
+          <%= insurance_form.money_field :premium_amount,
+                                         label: t("insurances.form.premium_amount"),
+                                         default_currency: Current.family.currency,
+                                         hide_currency: true,
+                                         min: 0 %>
+        </div>
+
+        <%= insurance_form.select :premium_frequency,
+                                  Insurance::PREMIUM_FREQUENCIES.map { |frequency| [t("insurances.premium_frequencies.#{frequency}"), frequency] },
+                                  { label: t("insurances.form.premium_frequency"), prompt: t("insurances.form.premium_frequency_prompt") } %>
+
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <%= insurance_form.date_field :effective_date, label: t("insurances.form.effective_date") %>
+          <%= insurance_form.date_field :renewal_date, label: t("insurances.form.renewal_date") %>
+          <%= insurance_form.date_field :expiration_date, label: t("insurances.form.expiration_date") %>
+        </div>
+
+        <%= insurance_form.text_field :insured_name,
+                                      label: t("insurances.form.insured_name"),
+                                      placeholder: t("insurances.form.insured_name_placeholder") %>
+
+        <%= insurance_form.text_area :beneficiaries,
+                                    label: t("insurances.form.beneficiaries"),
+                                    placeholder: t("insurances.form.beneficiaries_placeholder"),
+                                    rows: 3 %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

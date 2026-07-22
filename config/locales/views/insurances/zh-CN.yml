@@ -1,0 +1,97 @@
+---
+zh-CN:
+  activerecord:
+    errors:
+      models:
+        insurance:
+          attributes:
+            expiration_date:
+              before_effective_date: 不能早于生效日期
+  insurances:
+    edit:
+      edit: 编辑%{account}
+    form:
+      beneficiaries: 受益人
+      beneficiaries_placeholder: 姓名及分配说明
+      cash_value_hint: 请将保单当前的现金价值或退保价值填为账户余额。没有现金价值的保单请填 0；保额会单独记录。
+      cash_value_title: 对净资产的影响
+      cash_value: 现金价值或退保价值
+      coverage_amount: 保额
+      effective_date: 生效日期
+      expiration_date: 到期日期
+      insured_name: 被保险人或标的
+      insured_name_placeholder: 被保障的人或资产名称
+      policy_number: 保单号
+      policy_number_placeholder: 例如 POL-123456
+      premium_amount: 保费金额
+      premium_frequency: 缴费频率
+      premium_frequency_prompt: 选择缴费频率
+      renewal_date: 续保日期
+      subtype: 保险类型
+      subtype_prompt: 选择保险类型
+    new:
+      title: 请输入保险详情
+    premium_frequencies:
+      annual: 每年
+      monthly: 每月
+      one_time: 一次性
+      other: 其他
+      quarterly: 每季度
+      semi_annual: 每半年
+    statuses:
+      active: 生效中
+      expired: 已到期
+      expiring_soon: 即将到期
+      renewal_due: 即将续保
+      upcoming: 尚未生效
+    subtypes:
+      auto:
+        long: 车险
+        short: 车险
+      disability:
+        long: 伤残保险
+        short: 伤残险
+      health:
+        long: 健康保险
+        short: 健康险
+      homeowners:
+        long: 房主保险
+        short: 房主险
+      life:
+        long: 人寿保险
+        short: 寿险
+      long_term_care:
+        long: 长期护理保险
+        short: 长护险
+      other:
+        long: 其他保险
+        short: 其他
+      pet:
+        long: 宠物保险
+        short: 宠物险
+      renters:
+        long: 租客保险
+        short: 租客险
+      travel:
+        long: 旅行保险
+        short: 旅行险
+      umbrella:
+        long: 伞式责任保险
+        short: 伞式保险
+    tabs:
+      overview:
+        beneficiaries: 受益人
+        cash_value: 现金价值
+        coverage_amount: 保额
+        edit_insurance_details: 编辑保险详情
+        effective_date: 生效日期
+        expiration_date: 到期日期
+        frequency_unknown: 未设置频率
+        insured_name: 被保险人或标的
+        policy_number: 保单号
+        premium: 保费
+        premium_with_frequency: "%{amount} · %{frequency}"
+        renewal_date: 续保日期
+        status: 保单状态
+        type: 类型
+        unknown: 未填写

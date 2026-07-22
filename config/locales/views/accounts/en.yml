@@ -144,6 +144,7 @@ en:
     types:
       depository: Cash
       investment: Investment
+      insurance: Insurance
       crypto: Crypto
       property: Property
       vehicle: Vehicle
@@ -154,6 +155,7 @@ en:
     types_plural:
       depository: Cash
       investment: Investments
+      insurance: Insurance
       crypto: Crypto
       property: Properties
       vehicle: Vehicles
