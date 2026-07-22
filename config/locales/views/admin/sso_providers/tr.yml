@@ -1,0 +1,162 @@
+---
+tr:
+  admin:
+    sso_providers:
+      create:
+        success: SSO sağlayıcısı başarıyla oluşturuldu.
+      destroy:
+        confirm: Bu sağlayıcıyı silmek istediğinizden emin misiniz? Bu işlem geri
+          alınamaz.
+        success: SSO sağlayıcısı başarıyla silindi.
+      edit:
+        description: "%{label} için yapılandırmayı güncelle"
+        title: SSO Sağlayıcısını Düzenle
+      form:
+        admin_groups: Yönetici Grupları
+        advanced_title: Gelişmiş OIDC Ayarları
+        basic_information: Temel Bilgiler
+        cancel: İptal
+        client_id_help: Kimlik sağlayıcınızdan alınan OAuth istemci kimliği
+        client_id_label: İstemci Kimliği
+        client_id_placeholder: istemci-kimliginiz
+        client_secret_help: OAuth istemci gizli anahtarı (veritabanında şifrelenir)
+        client_secret_help_existing: Mevcut gizli anahtarı korumak için boş bırakın
+        client_secret_label: İstemci Gizli Anahtarı
+        client_secret_placeholder_existing: "••••••••"
+        client_secret_placeholder_new: istemci-gizli-anahtariniz
+        copy_button: Kopyala
+        create_provider: Sağlayıcı Oluştur
+        default_role_help: Anlık (JIT) SSO hesap oluşturma yoluyla oluşturulan kullanıcılara
+          atanan rol. Varsayılan olarak Üye.
+        default_role_label: Yeni Kullanıcılar İçin Varsayılan Rol
+        enabled_help: Etkinleştirildiğinde kullanıcılar bu sağlayıcıyla giriş yapabilir
+        enabled_label: Bu sağlayıcıyı etkinleştir
+        errors_title:
+          one: 'Bir hata nedeniyle bu sağlayıcı kaydedilemedi:'
+          other: "%{count} hata nedeniyle bu sağlayıcı kaydedilemedi:"
+        groups_help: Virgülle ayrılmış IdP grup adları listesi. Tüm gruplarla eşleşmesi
+          için * kullanın.
+        guest_groups: Misafir Grupları
+        icon_help: Giriş düğmesi için Lucide simge adı
+        icon_label: Simge (isteğe bağlı)
+        icon_placeholder: örn. key, shield
+        idp_cert_fingerprint: Sertifika Parmak İzi (alternatif)
+        idp_certificate: IdP Sertifikası
+        idp_certificate_help: PEM biçiminde X.509 sertifikası. Metadata URL'si kullanılmıyorsa
+          zorunludur.
+        idp_metadata_url: IdP Metadata URL'si
+        idp_metadata_url_help: IdP'nizin SAML metadata'sının URL'si. Belirtilirse
+          diğer SAML ayarları otomatik olarak yapılandırılır.
+        idp_slo_url: IdP SLO URL'si (isteğe bağlı)
+        idp_sso_url: IdP SSO URL'si
+        issuer_help: OIDC issuer URL'si (.well-known/openid-configuration doğrular)
+        issuer_label: Issuer URL'si
+        issuer_placeholder: https://your-idp.example.com/realms/your-realm
+        label_help: Kullanıcılara gösterilen düğme metni
+        label_label: Düğme Etiketi
+        label_placeholder: örn. Keycloak ile giriş yap
+        manual_saml_config: Manuel Yapılandırma (metadata URL'si kullanılmıyorsa)
+        manual_saml_help: Bu ayarları yalnızca IdP'niz bir metadata URL'si sağlamıyorsa
+          kullanın.
+        member_groups: Üye Grupları
+        name_help: Benzersiz tanımlayıcı (yalnızca küçük harf, rakam, alt çizgi)
+        name_id_email: E-posta Adresi (varsayılan)
+        name_id_format: NameID Biçimi
+        name_id_persistent: Kalıcı
+        name_id_transient: Geçici
+        name_id_unspecified: Belirtilmemiş
+        name_label: Ad
+        name_placeholder: örn. keycloak, authentik
+        oauth_configuration: OAuth/OIDC Yapılandırması
+        prompt_consent: Onayı Zorunlu Kıl (yeniden yetkilendir)
+        prompt_default: Varsayılan (IdP karar verir)
+        prompt_help: IdP'nin kimlik doğrulama sırasında kullanıcıyı nasıl yönlendireceğini
+          kontrol eder.
+        prompt_label: Kimlik Doğrulama İstemi
+        prompt_login: Girişi Zorunlu Kıl (yeniden kimlik doğrula)
+        prompt_none: İstem Yok (sessiz kimlik doğrulama)
+        prompt_select_account: Hesap Seçimi (hesap seç)
+        provisioning_title: Kullanıcı Oluşturma
+        redirect_uri_help: Bu URL'yi kimlik sağlayıcınızda yapılandırın
+        redirect_uri_label: Geri Çağırma URL'si
+        redirect_uri_placeholder: https://yourdomain.com/auth/openid_connect/callback
+        role_admin: Yönetici
+        role_guest: Misafir
+        role_mapping_help: IdP gruplarını/taleplerini uygulama rollerine eşleyin.
+          Kullanıcılara eşleşen en yüksek rol atanır. Yukarıdaki varsayılan rolü kullanmak
+          için boş bırakın.
+        role_mapping_title: Grup - Rol Eşlemesi (İsteğe Bağlı)
+        role_member: Üye
+        role_super_admin: Süper Yönetici
+        saml_configuration: SAML Yapılandırması
+        saml_sp_callback_url_help: Bu URL'yi IdP'nizde Assertion Consumer Service
+          URL'si olarak yapılandırın
+        saml_sp_callback_url_label: SP Geri Çağırma URL'si (ACS URL'si)
+        scopes_help: Boşlukla ayrılmış OIDC kapsamları listesi. Varsayılanlar için
+          boş bırakın (openid email profile). Grup taleplerini almak için 'groups'
+          ekleyin.
+        scopes_label: Özel Kapsamlar
+        strategy_github: GitHub
+        strategy_google_oauth2: Google OAuth2
+        strategy_help: Kullanılacak kimlik doğrulama stratejisi
+        strategy_label: Strateji
+        strategy_openid_connect: OpenID Connect
+        strategy_saml: SAML 2.0
+        submit: Sağlayıcıyı Kaydet
+        super_admin_groups: Süper Yönetici Grupları
+        test_connection: Bağlantıyı Test Et
+        update_provider: Sağlayıcıyı Güncelle
+      index:
+        add_provider: Sağlayıcı Ekle
+        configuration_mode: Yapılandırma Modu
+        configured_providers: Yapılandırılmış Sağlayıcılar
+        db_backed_providers: Veritabanı tabanlı sağlayıcılar
+        db_backed_providers_description: Sağlayıcıları YAML yapılandırması yerine
+          veritabanından yükle
+        db_backed_providers_help_html: Veritabanı tabanlı sağlayıcıları etkinleştirmek
+          için <code class="bg-surface px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code>
+          ayarlayın. Bu, sunucu yeniden başlatmadan değişiklik yapılmasına olanak
+          tanır.
+        delete: Sil
+        description: Örneğiniz için tek oturum açma kimlik doğrulama sağlayıcılarını
+          yönetin.
+        disable: Devre dışı bırak
+        disabled: Devre dışı
+        edit: Düzenle
+        enable: Etkinleştir
+        enabled: Etkin
+        env_configured: Ortam/YAML
+        legacy_providers_notice: Bu sağlayıcılar ortam değişkenleri veya YAML aracılığıyla
+          yapılandırılmıştır ve bu arayüzden yönetilemez. Bunları burada yönetmek
+          için AUTH_PROVIDERS_SOURCE=db özelliğini etkinleştirerek veritabanı tabanlı
+          sağlayıcılara taşıyın ve arayüzde yeniden oluşturun.
+        legacy_providers_title: Ortamda Yapılandırılmış Sağlayıcılar
+        no_providers_message: Henüz yapılandırılmış SSO sağlayıcısı yok.
+        no_providers_title: SSO Sağlayıcısı Yok
+        note: SSO sağlayıcılarındaki değişikliklerin etkili olması için sunucunun
+          yeniden başlatılması gerekir. Alternatif olarak, sağlayıcıları veritabanından
+          dinamik olarak yüklemek için AUTH_PROVIDERS_SOURCE=db özellik bayrağını
+          etkinleştirin.
+        page_title: SSO Sağlayıcıları
+        restart_required: Değişikliklerin etkili olması için sunucunun yeniden başlatılması
+          gerekir.
+        table:
+          actions: İşlemler
+          disabled: Devre dışı
+          enabled: Etkin
+          issuer: Issuer
+          name: Ad
+          status: Durum
+          strategy: Strateji
+        title: SSO Sağlayıcıları
+      new:
+        description: Yeni bir tek oturum açma kimlik doğrulama sağlayıcısı yapılandırın
+        title: SSO Sağlayıcısı Ekle
+      toggle:
+        confirm_disable: Bu sağlayıcıyı devre dışı bırakmak istediğinizden emin misiniz?
+        confirm_enable: Bu sağlayıcıyı etkinleştirmek istediğinizden emin misiniz?
+        success_disabled: SSO sağlayıcısı başarıyla devre dışı bırakıldı.
+        success_enabled: SSO sağlayıcısı başarıyla etkinleştirildi.
+      update:
+        success: SSO sağlayıcısı başarıyla güncellendi.
+    unauthorized: Bu alana erişim yetkiniz yok.

@@ -1,6 +1,11 @@
 ---
 tr:
   invite_codes:
+    create:
+      success: Kod oluşturuldu
+    destroy:
+      success: Kod silindi
     index:
-      invite_code_description: Yeni bir kod oluşturduğunuzda burada görüntülenecektir. Kullanılmış olan oluşturulan kodlar artık gösterilmeyecek.
+      invite_code_description: Yeni bir kod oluşturduğunuzda burada görüntülenecektir.
+        Kullanılmış olan oluşturulan kodlar artık gösterilmeyecek.
       no_invite_codes: Gösterilecek kod yok
