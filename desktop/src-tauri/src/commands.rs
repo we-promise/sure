@@ -3,6 +3,7 @@ use crate::servers::{
 };
 use crate::state::AppState;
 use tauri::{Emitter, State};
+use tauri_plugin_autostart::ManagerExt;
 
 #[tauri::command]
 pub fn list_servers() -> Vec<ServerEntry> {
@@ -41,4 +42,16 @@ pub fn active_server(state: State<AppState>) -> Option<String> {
 pub fn set_active_server(url: String, state: State<AppState>, app: tauri::AppHandle) {
     *state.active_server.lock().unwrap() = Some(url.clone());
     let _ = app.emit("active-server-changed", url);
+}
+
+#[tauri::command]
+pub fn get_launch_at_login(app: tauri::AppHandle) -> bool {
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+
+#[tauri::command]
+pub fn set_launch_at_login(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    let mgr = app.autolaunch();
+    let res = if enabled { mgr.enable() } else { mgr.disable() };
+    res.map_err(|e| e.to_string())
 }

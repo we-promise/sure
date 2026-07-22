@@ -12,6 +12,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_decorum::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
             commands::list_servers,
@@ -20,6 +24,8 @@ pub fn run() {
             commands::check_server,
             commands::active_server,
             commands::set_active_server,
+            commands::get_launch_at_login,
+            commands::set_launch_at_login,
         ])
         .setup(|app| {
             window::setup(app)?;
