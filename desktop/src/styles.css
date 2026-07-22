@@ -1,3 +1,31 @@
 :root { color-scheme: light dark; font-family: -apple-system, system-ui, sans-serif; }
 html, body { margin: 0; height: 100%; background: transparent; }
-#app { display: grid; place-items: center; height: 100vh; }
+.onboarding { height: 100vh; display: grid; place-items: center; }
+.card {
+  width: 360px; padding: 32px; border-radius: 16px;
+  background: color-mix(in srgb, Canvas 70%, transparent);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+  text-align: center;
+}
+h1 { font-size: 20px; margin: 0 0 4px; }
+.muted { color: color-mix(in srgb, CanvasText 55%, transparent); font-size: 13px; }
+form { display: flex; gap: 8px; margin: 20px 0 8px; }
+input {
+  flex: 1; padding: 10px 12px; border-radius: 9px; font-size: 14px;
+  border: 1px solid color-mix(in srgb, CanvasText 20%, transparent);
+  background: color-mix(in srgb, Canvas 60%, transparent); color: CanvasText;
+}
+button { padding: 10px 14px; border-radius: 9px; border: none; cursor: pointer;
+  background: #1f6f4f; color: white; font-weight: 600; font-size: 14px; }
+.status { min-height: 18px; font-size: 13px; margin: 4px 0 0; }
+.status[data-kind="error"] { color: #d1453b; }
+.remembered { margin-top: 24px; text-align: left; }
+.remembered h2 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+#server-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#server-list li { display: flex; gap: 8px; align-items: center; }
+.server-open { flex: 1; background: color-mix(in srgb, Canvas 50%, transparent); color: CanvasText; text-align: left; }
+.server-remove { background: transparent; color: color-mix(in srgb, CanvasText 55%, transparent); font-weight: 400; }
+.hidden { display: none; }
+[data-tauri-drag-region] { -webkit-app-region: drag; }
+input, button, #server-list { -webkit-app-region: no-drag; }

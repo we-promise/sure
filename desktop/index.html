@@ -7,7 +7,21 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
-    <main id="app"><h1>Sure Desktop</h1></main>
+    <main id="onboarding" class="onboarding" data-tauri-drag-region>
+      <div class="card">
+        <h1 id="title"></h1>
+        <p id="subtitle" class="muted"></p>
+        <form id="server-form">
+          <input id="server-url" type="text" autocomplete="off" spellcheck="false" />
+          <button id="connect" type="submit"></button>
+        </form>
+        <p id="status" class="status" role="status"></p>
+        <section id="remembered" class="remembered hidden">
+          <h2 id="remembered-title" class="muted"></h2>
+          <ul id="server-list"></ul>
+        </section>
+      </div>
+    </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
