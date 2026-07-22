@@ -26,6 +26,15 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     )
 
     @chat = chats(:one)
+
+    @user.api_keys.active.destroy_all
+    @api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "chat_test_#{SecureRandom.hex(8)}"
+    )
   end
 
   test "should require authentication" do
@@ -59,6 +68,34 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     response_body = JSON.parse(response.body)
     assert_equal @chat.id, response_body["id"]
     assert response_body["messages"].is_a?(Array)
+  end
+
+  test "show caps response at 50 newest messages and omits pagination key" do
+    # chats(:one) has 3 fixture messages (oldest first: chat1_user, chat1_assistant_reasoning,
+    # chat1_assistant_response). Add 48 more so the total is 51 — the oldest fixture
+    # message must be trimmed and the rest returned in ascending chronological order.
+    48.times do |i|
+      @chat.messages.create!(type: "AssistantMessage", content: "msg #{i}", ai_model: "gpt-4.1")
+    end
+
+    get "/api/v1/chats/#{@chat.id}", headers: api_headers(@api_key)
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert_equal 50, response_body["messages"].size
+    assert_not response_body.key?("pagination"), "show must not include a pagination key"
+
+    # The oldest message must be excluded (falls outside the 50-message window)
+    assert_not response_body["messages"].any? { |m| m["content"] == messages(:chat1_user).content },
+      "oldest message must be excluded from the newest-50 window"
+
+    # A non-oldest fixture message must be present
+    assert response_body["messages"].any? { |m| m["content"] == messages(:chat1_assistant_response).content },
+      "non-oldest messages must be present in the newest-50 window"
+
+    # Messages must be returned in ascending chronological order
+    timestamps = response_body["messages"].map { |m| m["created_at"] }
+    assert_equal timestamps.sort, timestamps, "messages must be in ascending chronological order"
   end
 
   test "should create chat with write scope" do
@@ -191,5 +228,9 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
 
     def bearer_auth_header(token)
       { "Authorization" => "Bearer #{token.token}" }
+    end
+
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.plain_key }
     end
 end
