@@ -7,12 +7,15 @@
   // must match --titlebar-h in styles.css.
   if (!(window as any).__sureChrome) {
     (window as any).__sureChrome = true;
-    const H = 38;
     const style = document.createElement("style");
     style.textContent =
-      '[data-controller~="app-layout"]{padding-top:' + H + "px !important;box-sizing:border-box}" +
-      ".__sure-drag{position:fixed;top:0;left:0;right:0;height:" + H +
-      "px;z-index:2147483647;-webkit-app-region:drag}";
+      // Offset ONLY the left icon rail (the 84px column holding the logomark),
+      // so its logo clears the macOS traffic lights. Main content stays full-height.
+      'nav[class~="w-[84px]"]{padding-top:44px !important;box-sizing:border-box}' +
+      // Draggable top strip. z-index sits below Sure's sticky headers/overlays
+      // (which use z-10+), so empty top areas drag the window while Sure's own
+      // controls stay clickable.
+      ".__sure-drag{position:fixed;top:0;left:0;right:0;height:34px;z-index:5;-webkit-app-region:drag}";
     (document.head || document.documentElement).appendChild(style);
     const addBar = () => {
       if (document.body && !document.querySelector(".__sure-drag")) {
