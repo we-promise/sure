@@ -39,6 +39,24 @@ pub fn run() {
             notifications::register(app.handle());
             badge::register(app.handle());
             {
+                // The remote Sure page can emit events but cannot invoke custom
+                // commands, so SSO is triggered via an event instead of invoke.
+                use tauri::Listener;
+                let handle = app.handle().clone();
+                app.listen_any("sure://start-sso", move |event| {
+                    #[derive(serde::Deserialize)]
+                    struct StartSso {
+                        server: String,
+                        provider: String,
+                    }
+                    if let Ok(p) = serde_json::from_str::<StartSso>(event.payload()) {
+                        if let Err(e) = commands::begin_sso(&handle, p.server, p.provider) {
+                            eprintln!("[sure] start-sso failed: {e}");
+                        }
+                    }
+                });
+            }
+            {
                 use tauri::Manager;
                 use tauri_plugin_deep_link::DeepLinkExt;
                 let handle = app.handle().clone();

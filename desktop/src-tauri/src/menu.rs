@@ -66,9 +66,18 @@ pub fn on_event(app: &tauri::AppHandle, id: &str) {
         // Handled entirely in Rust: showing the prefs window does not depend on
         // the remote page's IPC being available, so it works on any page.
         "preferences" | "switch_server" => {
-            if let Some(w) = app.get_webview_window("prefs") {
+            let prefs = app.get_webview_window("prefs");
+            if let Some(main) = app.get_webview_window("main") {
+                let _ = main.eval(&format!(
+                    "console.log('[sure] menu {} -> prefs window present: {}')",
+                    id,
+                    prefs.is_some()
+                ));
+            }
+            if let Some(w) = prefs {
                 let _ = w.show();
                 let _ = w.set_focus();
+                let _ = w.unminimize();
             }
         }
         "reload" => {

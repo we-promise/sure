@@ -11,6 +11,7 @@
     "core:window:allow-show",
     "core:window:allow-set-focus",
     "core:event:allow-emit",
-    "core:event:allow-listen"
+    "core:event:allow-listen",
+    "notification:default"
   ]
 }

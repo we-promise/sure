@@ -68,22 +68,51 @@ fn keyring_entry() -> Result<keyring::Entry, ServerError> {
         .map_err(|e| ServerError::Keyring(e.to_string()))
 }
 
+// On-disk fallback: Keychain items are unreliable for unsigned/dev builds
+// (they don't persist across launches without proper code signing), so we also
+// mirror the data to the app support directory. Server URLs are not secrets.
+fn data_dir() -> Option<std::path::PathBuf> {
+    let home = std::env::var_os("HOME")?;
+    let dir = std::path::Path::new(&home)
+        .join("Library/Application Support")
+        .join(KEYRING_SERVICE);
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir)
+}
+
+fn file_read(name: &str) -> Option<String> {
+    std::fs::read_to_string(data_dir()?.join(name)).ok()
+}
+
+fn file_write(name: &str, contents: &str) -> Result<(), ServerError> {
+    let dir = data_dir().ok_or_else(|| ServerError::Keyring("no data dir".into()))?;
+    std::fs::write(dir.join(name), contents).map_err(|e| ServerError::Keyring(e.to_string()))
+}
+
 pub struct ServerStore;
 
 impl ServerStore {
     pub fn load() -> Vec<ServerEntry> {
-        let Ok(entry) = keyring_entry() else { return vec![] };
-        match entry.get_password() {
-            Ok(json) => serde_json::from_str(&json).unwrap_or_default(),
-            Err(_) => vec![],
+        // Keychain first (signed builds), then the on-disk fallback.
+        if let Ok(entry) = keyring_entry() {
+            if let Ok(json) = entry.get_password() {
+                if let Ok(list) = serde_json::from_str::<Vec<ServerEntry>>(&json) {
+                    return list;
+                }
+            }
         }
+        file_read("servers.json")
+            .and_then(|j| serde_json::from_str::<Vec<ServerEntry>>(&j).ok())
+            .unwrap_or_default()
     }
 
     pub fn save(entries: &[ServerEntry]) -> Result<(), ServerError> {
         let json = serde_json::to_string(entries).map_err(|e| ServerError::Keyring(e.to_string()))?;
-        keyring_entry()?
-            .set_password(&json)
-            .map_err(|e| ServerError::Keyring(e.to_string()))
+        // Best-effort Keychain; authoritative on-disk write.
+        if let Ok(entry) = keyring_entry() {
+            let _ = entry.set_password(&json);
+        }
+        file_write("servers.json", &json)
     }
 
     pub fn add(entry: ServerEntry) -> Result<Vec<ServerEntry>, ServerError> {
@@ -105,12 +134,19 @@ impl ServerStore {
 /// The last server the user connected to, persisted so the app can resume
 /// straight to it on the next launch instead of showing the picker again.
 pub fn load_active() -> Option<String> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACTIVE).ok()?;
-    entry.get_password().ok()
+    if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACTIVE) {
+        if let Ok(url) = entry.get_password() {
+            if !url.is_empty() {
+                return Some(url);
+            }
+        }
+    }
+    file_read("active_server").filter(|s| !s.is_empty())
 }
 
 pub fn save_active(url: &str) -> Result<(), ServerError> {
-    keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACTIVE)
-        .and_then(|e| e.set_password(url))
-        .map_err(|e| ServerError::Keyring(e.to_string()))
+    if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACTIVE) {
+        let _ = entry.set_password(url);
+    }
+    file_write("active_server", url)
 }

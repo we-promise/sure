@@ -88,6 +88,8 @@ $("server-form").addEventListener("submit", (e) => {
 // show the picker.
 async function boot() {
   const active = await invoke<string | null>("active_server");
+  // eslint-disable-next-line no-console
+  console.log("[sure] boot, persisted active server:", active);
   if (active) {
     goToServer(active);
     return;
