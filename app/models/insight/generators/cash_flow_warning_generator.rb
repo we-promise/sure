@@ -51,9 +51,9 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         title: I18n.t("insights.titles.#{template_key}"),
         template_key: template_key,
         facts: {
-          projected_low: format_money(low_point),
+          projected_low: money_fact(low_point),
           projected_low_date: low_date.iso8601,
-          current_balance: format_money(starting_balance),
+          current_balance: money_fact(starting_balance),
           horizon_days: HORIZON_DAYS
         },
         # Balances and projected dates drift with nearly every transaction, so

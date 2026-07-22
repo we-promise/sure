@@ -67,8 +67,8 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
         title: I18n.t("insights.titles.budget_on_track"),
         template_key: "budget_on_track",
         facts: {
-          spent: format_money(budget.actual_spending),
-          budgeted: format_money(budget.budgeted_spending),
+          spent: money_fact(budget.actual_spending),
+          budgeted: money_fact(budget.budgeted_spending),
           budget_spent_pct: round(budget.percent_of_budget_spent, 0).to_i
         },
         # Bucketed to damp nightly churn: a one-point move shouldn't count as

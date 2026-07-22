@@ -19,7 +19,7 @@ class Insight::Generators::IdleCashGenerator < Insight::Generator
         template_key: "idle_cash",
         facts: {
           account: account.name,
-          balance: format_money(account.balance),
+          balance: money_fact(account.balance),
           idle_days: IDLE_DAYS
         },
         metadata: {

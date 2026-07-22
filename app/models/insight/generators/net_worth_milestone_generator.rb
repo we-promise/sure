@@ -32,8 +32,8 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
         title: I18n.t("insights.titles.net_worth_milestone", milestone: format_whole_money(milestone)),
         template_key: "net_worth_milestone",
         facts: {
-          milestone: format_whole_money(milestone),
-          net_worth: format_money(current)
+          milestone: money_fact(milestone, precision: 0),
+          net_worth: money_fact(current)
         },
         # The milestone alone is the signal. Net worth itself drifts daily for
         # the ~30 days the crossing stays in the series window — storing it
