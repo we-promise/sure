@@ -32,5 +32,10 @@
     "targets": ["app", "dmg"],
     "icon": ["icons/icon.icns"],
     "category": "public.app-category.finance"
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": { "schemes": ["sure"] }
+    }
   }
 }

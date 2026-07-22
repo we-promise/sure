@@ -1,5 +1,6 @@
 pub mod badge;
 pub mod commands;
+pub mod deep_link;
 pub mod menu;
 pub mod notifications;
 pub mod servers;
@@ -16,6 +17,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_deep_link::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
             commands::list_servers,
@@ -34,6 +36,21 @@ pub fn run() {
             app.on_menu_event(|app, event| menu::on_event(app, event.id().as_ref()));
             notifications::register(app.handle());
             badge::register(app.handle());
+            {
+                use tauri::Manager;
+                use tauri_plugin_deep_link::DeepLinkExt;
+                let handle = app.handle().clone();
+                app.deep_link().on_open_url(move |event| {
+                    for url in event.urls() {
+                        if let Some(target) = deep_link::parse(url.as_str()) {
+                            if let Some(w) = handle.get_webview_window("main") {
+                                let dest = format!("{}{}", target.server, target.path);
+                                let _ = w.eval(&format!("window.location.assign({:?})", dest));
+                            }
+                        }
+                    }
+                });
+            }
             Ok(())
         })
         .on_page_load(|window, payload| {
