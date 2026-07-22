@@ -1,0 +1,81 @@
+---
+tr:
+  binance_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} hesap kurulum gerektiriyor"
+        other: "%{count} hesap kurulum gerektiriyor"
+      calculating_balances: Bakiyeler hesaplanıyor...
+      checking_configuration: Hesap yapılandırması kontrol ediliyor...
+      checking_credentials: Kimlik bilgileri kontrol ediliyor...
+      credentials_invalid: Geçersiz API kimlik bilgileri. Lütfen API anahtarınızı
+        ve gizli anahtarınızı kontrol edin.
+      importing_accounts: Binance'tan hesaplar içe aktarılıyor...
+      processing_accounts: Hesap verileri işleniyor...
+  binance_items:
+    binance_item:
+      delete: Sil
+      deletion_in_progress: Siliniyor...
+      import_accounts_menu: Hesap İçe Aktar
+      no_accounts_message: Binance portföyünüz senkronizasyondan sonra burada görünecek.
+      no_accounts_title: Hesap bulunamadı
+      provider_name: Binance
+      reconnect: Kimlik bilgileri güncellenmeli
+      setup_action: Hesap İçe Aktar
+      setup_description: Takip etmek istediğiniz Binance portföylerini seçin.
+      setup_needed: Hesap içe aktarmaya hazır
+      stale_rate_warning: Bakiye yaklaşık bir değerdir — %{date} tarihi için kesin
+        döviz kuru mevcut değildi. Bir sonraki senkronizasyonda güncellenecektir.
+      status: Son senkronizasyon %{timestamp} önce
+      status_never: Hiç senkronize edilmedi
+      status_with_summary: Son senkronizasyon %{timestamp} önce - %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} hesap senkronize edildi"
+          other: "%{count} hesap senkronize edildi"
+        no_accounts: Hesap bulunamadı
+        partial_sync: "%{linked_count} senkronize edildi, %{unlinked_count} kurulum
+          gerektiriyor"
+      syncing: Senkronize ediliyor...
+      update_credentials: Kimlik bilgilerini güncelle
+    complete_account_setup:
+      no_accounts: İçe aktarılacak hesap yok
+      none_selected: Hiç hesap seçilmedi
+      success:
+        one: "%{count} hesap içe aktarıldı"
+        other: "%{count} hesap içe aktarıldı"
+    create:
+      default_name: Binance
+      success: Binance'a başarıyla bağlandı! Hesabınız senkronize ediliyor.
+    destroy:
+      success: Binance bağlantısı silinmek üzere zamanlandı.
+    link_existing_account:
+      errors:
+        invalid_binance_account: Geçersiz Binance hesabı
+        only_manual: Yalnızca manuel hesaplar Binance'a bağlanabilir
+      success: Binance hesabına başarıyla bağlandı
+    select_existing_account:
+      cancel: İptal
+      check_provider_health: Binance API kimlik bilgilerinizin geçerli olduğunu kontrol
+        edin
+      currently_linked_to: 'Şu anda bağlı: %{account_name}'
+      link: Bağla
+      no_accounts_found: Binance hesabı bulunamadı.
+      title: Binance Hesabını Bağla
+      wait_for_sync: Binance'ın senkronizasyonu bitirmesini bekleyin
+    setup_accounts:
+      accounts_count:
+        one: "%{count} hesap mevcut"
+        other: "%{count} hesap mevcut"
+      cancel: İptal
+      creating: İçe aktarılıyor...
+      historical_import: ''
+      import_selected: Seçilenleri İçe Aktar
+      instructions: İçe aktarmak istediğiniz Binance portföylerini seçin. Yalnızca
+        bakiyesi olan portföyler gösterilir.
+      no_accounts: Tüm hesaplar içe aktarıldı.
+      select_all: Tümünü seç
+      subtitle: Takip edilecek portföyleri seçin
+      title: Binance Hesabını İçe Aktar
+    update:
+      success: Binance yapılandırması başarıyla güncellendi.

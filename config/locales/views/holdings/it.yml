@@ -1,0 +1,101 @@
+---
+it:
+  holdings:
+    cash:
+      brokerage_cash: Liquidità di conto
+    destroy:
+      success: Posizione eliminata
+      cannot_delete: Non puoi eliminare questa posizione
+    update:
+      success: Costo base salvato.
+      error: Valore del costo base non valido.
+    unlock_cost_basis:
+      success: Costo base sbloccato. Potrebbe essere aggiornato alla prossima sincronizzazione.
+    remap_security:
+      success: Titolo aggiornato con successo.
+      security_not_found: Impossibile trovare il titolo selezionato.
+    reset_security:
+      success: Titolo reimpostato al valore del provider.
+    sync_prices:
+      success: Dati di mercato sincronizzati con successo.
+      unavailable: La sincronizzazione dei dati di mercato non è disponibile per i titoli offline.
+      provider_error: Impossibile recuperare i prezzi aggiornati. Riprova tra qualche minuto.
+    errors:
+      security_collision: "Impossibile rimappare: hai già una posizione per %{ticker} in data %{date}."
+    cost_basis_sources:
+      manual: Impostato dall'utente
+      calculated: Dai movimenti
+      provider: Dal provider
+    cost_basis_cell:
+      unknown: "--"
+      set: Imposta
+      set_cost_basis_header: "Imposta costo base per %{ticker} (%{qty} azioni)"
+      total_cost_basis_label: Costo base totale
+      or_per_share_label: "Oppure inserisci per azione:"
+      per_share: per azione
+      cancel: Annulla
+      save: Salva
+      overwrite_confirm_title: Sovrascrivere il costo base?
+      overwrite_confirm_body: "Questo sostituirà il costo base attuale di %{current}."
+    holding:
+      per_share: per azione
+      shares: "%{qty} azioni"
+      unknown: "--"
+      no_cost_basis: Nessun costo base
+    index:
+      average_cost: Costo medio
+      holdings: Portafoglio
+      name: Nome
+      new_holding: Nuova attività
+      no_holdings: Nessuna posizione da mostrare.
+      return: Rendimento totale
+      weight: Peso
+    missing_price_tooltip:
+      description: Questo investimento ha valori mancanti e non è stato possibile calcolarne i rendimenti o il valore.
+      missing_data: Dati mancanti
+    show:
+      avg_cost_label: Costo Medio
+      current_market_price_label: Prezzo di Mercato Attuale
+      delete: Elimina
+      delete_subtitle: Questo eliminerà la posizione e tutti i movimenti associati su questo conto. Questa azione non può essere annullata.
+      delete_title: Elimina posizione
+      edit_security: Modifica titolo
+      history: Cronologia
+      no_trade_history: Nessuna cronologia movimenti disponibile per questa posizione.
+      overview: Panoramica
+      portfolio_weight_label: Peso in Portafoglio
+      settings: Impostazioni
+      security_label: Titolo
+      originally: "era %{ticker}"
+      search_security: Cerca titolo
+      search_security_placeholder: Cerca per simbolo o nome
+      cancel: Annulla
+      remap_security: Salva
+      provider_disabled_warning: "Aggiornamenti prezzi in pausa — il provider %{provider} è disabilitato. Passa a un altro provider qui sotto o riabilitalo nelle Impostazioni."
+      truncated_history_warning: "Lo storico dei prezzi è disponibile solo dal %{date} in poi. Le date precedenti non hanno dati dal provider selezionato — questo può succedere quando l'asset è stato quotato dopo la data del tuo acquisto, o quando il provider offre solo una finestra storica limitata nel suo piano attuale."
+      switch_provider_label: Cambia provider
+      switch_provider_description: "%{provider} è disabilitato. Cerca questo titolo su un altro provider abilitato."
+      switch_provider_button: Cambia
+      no_security_provider: Provider titoli non configurato. Impossibile cercare titoli.
+      security_remapped_label: Titolo rimappato
+      provider_sent: "Provider ha inviato: %{ticker}"
+      reset_to_provider: Reimposta al provider
+      reset_confirm_title: Reimpostare il titolo al provider?
+      reset_confirm_body: "Questo cambierà il titolo da %{current} a %{original} e sposterà tutti i movimenti associati."
+      ticker_label: Simbolo
+      trade_history_entry: "%{qty} azioni di %{security} a %{price}"
+      total_return_label: Rendimento Totale
+      unknown: Sconosciuto
+      cost_basis_locked_label: Costo base bloccato
+      cost_basis_locked_description: Il costo base impostato manualmente non verrà modificato dalle sincronizzazioni.
+      unlock_cost_basis: Sblocca
+      unlock_confirm_title: Sbloccare il costo base?
+      unlock_confirm_body: Questo permetterà al costo base di essere aggiornato dalle sincronizzazioni del provider o dai calcoli sui movimenti.
+      shares_label: Azioni
+      book_value_label: Valore di Libro
+      market_value_label: Valore di Mercato
+      market_data_label: Dati di mercato
+      market_data_sync_button: Aggiorna
+      last_price_update: Ultimo aggiornamento prezzo
+      syncing: Sincronizzazione in corso...
+      never: Mai

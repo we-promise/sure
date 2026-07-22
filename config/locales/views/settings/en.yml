@@ -6,6 +6,49 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    background_jobs:
+      show:
+        page_title: "Background jobs"
+        title: "Worker status"
+        subtitle: "Live Sidekiq runtime state: worker processes, queue depths, and retry/dead sets."
+        redis_unreachable: "Sidekiq state is unavailable (Redis unreachable). Liveness is unknown, so actions are disabled."
+        operations_title: "In-flight operations"
+        operations_subtitle: "Syncs, imports, and exports across all families that have not reached a terminal status. Operations idle for over 30 minutes with no visible job are presumed lost and can be marked as such."
+        empty: "No in-flight operations."
+        missing_value: "-"
+        stats:
+          workers: "Workers"
+          busy: "Busy"
+          enqueued: "Enqueued"
+          retries: "Retries"
+          scheduled: "Scheduled"
+          dead: "Dead"
+          latency: "%{value}s latency"
+        table:
+          type: "Operation"
+          family: "Family"
+          status: "Status"
+          last_activity: "Last activity"
+          liveness: "Liveness"
+          action: "Action"
+      operation:
+        ago: "%{time} ago"
+        sync_label: "Sync · %{type}"
+        running: "Running"
+        queued: "Queued"
+        recent: "Recent"
+        unknown: "Unknown"
+        stuck: "Stuck — presumed lost"
+        confirm: "Mark this operation as lost? The record is moved to a terminal status so it can be retried. The underlying data is not touched."
+        missing_value: "-"
+        actions:
+          mark_stale: "Mark stale"
+          mark_failed: "Mark failed"
+          release_claim: "Release claim"
+      cancel:
+        cancelled: "%{type} marked as lost."
+        not_cancellable: "This operation can't be modified right now — its job may still be queued or running. Try again once it has been idle for 30 minutes."
+        cancelled_error: "Marked as failed by an administrator — the background job was presumed lost."
     debugs:
       show:
         page_title: "Debug"
@@ -67,7 +110,7 @@ en:
         failed: "Failed"
         no_usage_data: "No usage data found for the selected period"
         cost_estimates_title: "About Cost Estimates"
-        cost_estimates_description: "Costs are estimated based on OpenAI's pricing as of 2025. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
+        cost_estimates_description: "Costs are estimated from published provider pricing, including OpenAI pricing as of July 2026. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
     ai_prompts:
       show:
         page_title: AI Prompts
@@ -266,6 +309,7 @@ en:
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
+      background_jobs_label: Background jobs
       api_key_label: API Keys
       payment_label: Payment
       categories_label: Categories

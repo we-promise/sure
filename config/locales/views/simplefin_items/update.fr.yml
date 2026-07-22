@@ -1,0 +1,7 @@
+fr:
+  simplefin_items:
+    update:
+      success: "Connexion SimpleFIN mise à jour avec succès ! Vos comptes sont en cours de reconnexion."
+      errors:
+        blank_token: "Veuillez entrer un jeton de configuration SimpleFIN."
+        update_failed: "Échec de la mise à jour de la connexion : %{message}"

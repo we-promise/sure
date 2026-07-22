@@ -26,6 +26,19 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show renders full dates so multi-year lists are unambiguous" do
+    create_transaction(account: @account, name: "Starbucks", date: Date.new(2024, 7, 8))
+
+    get transactions_categorize_url
+
+    assert_response :success
+    # format_date uses the family's date_format preference, every variant of
+    # which includes the year; the previous :short format ("%b %d") did not,
+    # making rows ambiguous when the uncategorized list spans years.
+    expected = Date.new(2024, 7, 8).strftime(@family.date_format)
+    assert_match expected, response.body
+  end
+
   test "show renders the first group at position 0" do
     2.times { create_transaction(account: @account, name: "Netflix") }
     3.times { create_transaction(account: @account, name: "Starbucks") }

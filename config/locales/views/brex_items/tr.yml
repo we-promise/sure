@@ -1,0 +1,304 @@
+---
+tr:
+  brex_items:
+    account_metadata:
+      provider: Brex
+      separator: " • "
+    api_error:
+      common_issues: 'Sık karşılaşılan sorunlar:'
+      expired_credentials: Brex'ten yeni bir API anahtarı oluşturun.
+      expired_credentials_label: 'Süresi dolmuş kimlik bilgileri:'
+      heading: Brex'e bağlanılamıyor
+      invalid_token: API anahtarınızı Sağlayıcı Ayarları'nda kontrol edin.
+      invalid_token_label: 'Geçersiz API anahtarı:'
+      network: İnternet bağlantınızı kontrol edin.
+      network_label: 'Ağ sorunu:'
+      permissions: Anahtarınızın gerekli salt okunur hesap ve işlem kapsamlarına sahip
+        olduğundan emin olun.
+      permissions_label: 'Yetersiz izinler:'
+      service: Brex API geçici olarak kullanılamıyor olabilir.
+      service_label: 'Hizmet kapalı:'
+      settings_link: Sağlayıcı Ayarlarını Kontrol Et
+      title: Brex Bağlantı Hatası
+    brex_item:
+      accounts_need_setup: Hesapların kurulması gerekiyor
+      delete: Bağlantıyı sil
+      deletion_in_progress: siliniyor...
+      error: Hata
+      no_accounts_description: Bu bağlantıda henüz bağlı hesap yok.
+      no_accounts_title: Hesap yok
+      setup_action: Yeni Hesapları Kur
+      setup_description: "%{total} hesabın %{linked} tanesi bağlı. Yeni içe aktarılan
+        Brex hesaplarınız için hesap türlerini seçin."
+      setup_needed: Yeni hesaplar kurulmaya hazır
+      status: "%{timestamp} önce senkronize edildi"
+      status_never: Hiç senkronize edilmedi
+      status_with_summary: 'Son senkronizasyon: %{timestamp} önce - %{summary}'
+      syncing: Senkronize ediliyor...
+      total: Toplam
+      unlinked: Bağlı değil
+    complete_account_setup:
+      all_skipped: Tüm hesaplar atlandı. Hesap oluşturulmadı.
+      creation_failed: 'Hesaplar oluşturulamadı: %{error}'
+      creation_failed_count: "%{count} hesap oluşturulamadı."
+      no_accounts: Kurulacak hesap yok.
+      partial_skipped: "%{created_count} hesap başarıyla oluşturuldu; %{skipped_count}
+        hesap atlandı."
+      partial_success: "%{created_count} hesap başarıyla oluşturuldu, ancak %{failed_count}
+        hesap başarısız oldu."
+      success: "%{count} hesap başarıyla oluşturuldu."
+      unexpected_error: Beklenmeyen bir hata oluştu.
+    create:
+      success: Brex bağlantısı başarıyla oluşturuldu
+    default_card_name: Brex Kartı
+    default_cash_name: Brex Nakit %{id}
+    default_connection_name: Brex Bağlantısı
+    destroy:
+      success: Brex bağlantısı kaldırıldı
+    entries:
+      default_name: Brex işlemi
+    errors:
+      unexpected_error: Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.
+    index:
+      title: Brex Bağlantıları
+    institution_summary:
+      count:
+        one: "%{count} kurum"
+        other: "%{count} kurum"
+      none: Bağlı kurum yok
+      one: "%{name}"
+    kinds:
+      card: Kart
+      cash: Nakit
+    link_accounts:
+      all_already_linked:
+        one: Seçilen hesap (%{names}) zaten bağlı
+        other: 'Seçilen %{count} hesabın tümü zaten bağlı: %{names}'
+      api_error: 'API hatası: %{message}'
+      invalid_account_names:
+        one: Adı boş olan hesap bağlanamaz
+        other: Adı boş olan %{count} hesap bağlanamaz
+      invalid_account_type: Desteklenmeyen Brex hesap türü
+      link_failed: Hesaplar bağlanamadı
+      no_accounts_selected: Lütfen en az bir hesap seçin
+      no_api_token: Brex API anahtarı bulunamadı. Lütfen Sağlayıcı Ayarları'nda yapılandırın.
+      partial_invalid: "%{created_count} hesap başarıyla bağlandı, %{already_linked_count}
+        hesap zaten bağlıydı, %{invalid_count} hesabın adı geçersizdi"
+      partial_success: "%{created_count} hesap başarıyla bağlandı. %{already_linked_count}
+        hesap zaten bağlıydı: %{already_linked_names}"
+      select_connection: Hesapları bağlamadan önce bir Brex bağlantısı seçin.
+      success:
+        one: "%{count} hesap başarıyla bağlandı"
+        other: "%{count} hesap başarıyla bağlandı"
+    link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      api_error: 'API hatası: %{message}'
+      invalid_account_name: Adı boş olan hesap bağlanamaz
+      missing_parameters: Gerekli parametreler eksik
+      no_account_specified: Hesap belirtilmedi
+      no_api_token: Brex API anahtarı bulunamadı. Lütfen Sağlayıcı Ayarları'nda yapılandırın.
+      provider_account_already_linked: Bu Brex hesabı zaten başka bir hesaba bağlı
+      provider_account_not_found: Brex hesabı bulunamadı
+      select_connection: Hesapları bağlamadan önce bir Brex bağlantısı seçin.
+      success: "%{account_name} Brex ile başarıyla bağlandı"
+    loading:
+      loading_message: Brex hesapları yükleniyor...
+      loading_title: Yükleniyor
+    provider_connection:
+      default_description: Brex hesabınıza bağlanın
+      default_name: Brex
+      description: "%{name} kullanarak bağlanın"
+      name: Brex - %{name}
+    provider_panel:
+      accounts_link: Hesaplar
+      add_connection: Brex bağlantısı ekle
+      base_url_label: Temel URL (isteğe bağlı)
+      base_url_placeholder: https://api.brex.com
+      configured_html: Yapılandırıldı ve kullanıma hazır. Hesapları yönetmek ve kurmak
+        için %{accounts_link} sekmesini ziyaret edin.
+      connection_name_label: Bağlantı adı
+      connection_name_placeholder: İşletme vadesiz hesabı
+      default_connection_name: Brex Bağlantısı
+      disconnect_confirm: "%{name} bağlantısı kesilsin mi?"
+      disconnect_label: "%{name} bağlantısını kes"
+      encryption_warning:
+        message: Üretimde Brex anahtarlarını eklemeden önce Active Record şifreleme
+          anahtarlarını yapılandırın. Şifreleme anahtarları olmadan Sure, Brex sağlayıcı
+          kimlik bilgilerini ve anlık görüntülerini diğer sağlayıcı kayıtları gibi
+          düz metin olarak saklar.
+        title: Veritabanı şifrelemesi yapılandırılmamış
+      instructions:
+        copy_token_html: Anahtarı kopyalayın ve aşağıda adlandırılmış bir bağlantı
+          olarak ekleyin. Sure, anahtarı yalnızca bu aileyi senkronize etmek için
+          saklar.
+        create_token: 'Şu salt okunur kapsamlara sahip bir API anahtarı oluşturun:
+          accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly,
+          transactions.card.readonly'
+        open_tokens: Bağlanmak istediğiniz şirket için Brex geliştirici/API anahtarı
+          ayarlarına gidin
+        sign_in_html: "%{link} adresini ziyaret edin ve bağlanmak istediğiniz hesapla
+          oturum açın"
+      keep_token_placeholder: Mevcut anahtarı korumak için boş bırakın
+      not_configured: Yapılandırılmadı
+      sandbox_note_html: Senkronize etmek istediğiniz her Brex şirket/API anahtarı
+        için ayrı bir adlandırılmış bağlantı kullanın. Üretim için Temel URL'yi boş
+        bırakın. Hazırlık ortamı yalnızca Brex onaylı testlerle sınırlıdır ve müşteri
+        anahtarlarıyla çalışmaz.
+      setup_accounts: Hesapları kur
+      setup_title: 'Kurulum talimatları:'
+      sync: Senkronize et
+      token_label: Anahtar
+      token_placeholder: Anahtarı buraya yapıştırın
+      update_connection: Bağlantıyı güncelle
+    select_accounts:
+      accounts_selected: hesap seçildi
+      api_error: 'API hatası: %{message}'
+      cancel: İptal
+      configure_name_in_brex: İçe aktarılamıyor - lütfen Brex'te hesap adını yapılandırın
+      description: "%{product_name} hesabınıza bağlamak istediğiniz hesapları seçin."
+      link_accounts: Seçili hesapları bağla
+      no_accounts_found: Hesap bulunamadı. Lütfen API anahtar yapılandırmanızı kontrol
+        edin.
+      no_api_token: Brex API anahtarı bulunamadı. Lütfen Sağlayıcı Ayarları'nda yapılandırın.
+      no_credentials_configured: Önce Brex API anahtarınızı Sağlayıcı Ayarları'nda
+        yapılandırın.
+      no_name_placeholder: "(Adsız)"
+      select_connection: Sağlayıcı Ayarları'nda bir Brex bağlantısı seçin.
+      title: Brex Hesaplarını Seç
+      unexpected_error: Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.
+    select_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      all_accounts_already_linked: Tüm Brex hesapları zaten bağlı
+      api_error: 'API hatası: %{message}'
+      cancel: İptal
+      configure_name_in_brex: İçe aktarılamıyor - lütfen Brex'te hesap adını yapılandırın
+      description: Bu hesaba bağlamak için bir Brex hesabı seçin. İşlemler otomatik
+        olarak senkronize edilir ve tekilleştirilir.
+      link_account: Hesabı bağla
+      no_account_specified: Hesap belirtilmedi
+      no_accounts_found: Brex hesabı bulunamadı. Lütfen API anahtar yapılandırmanızı
+        kontrol edin.
+      no_api_token: Brex API anahtarı bulunamadı. Lütfen Sağlayıcı Ayarları'nda yapılandırın.
+      no_credentials_configured: Önce Brex API anahtarınızı Sağlayıcı Ayarları'nda
+        yapılandırın.
+      no_name_placeholder: "(Adsız)"
+      select_connection: Sağlayıcı Ayarları'nda bir Brex bağlantısı seçin.
+      title: "%{account_name} hesabını Brex ile bağla"
+      unexpected_error: Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.
+    setup_accounts:
+      account_type_label: 'Hesap Türü:'
+      account_types:
+        credit_card: Kredi Kartı
+        depository: Vadesiz veya Tasarruf Hesabı
+        investment: Yatırım Hesabı
+        loan: Kredi veya İpotek
+        other_asset: Diğer Varlık
+        skip: Bu hesabı atla
+      all_accounts_linked: Tüm Brex hesaplarınız zaten kuruldu.
+      api_error: 'API hatası: %{message}'
+      balance: Bakiye
+      cancel: İptal
+      choose_account_type: 'Her Brex hesabı için doğru hesap türünü seçin:'
+      create_accounts: Hesapları Oluştur
+      creating_accounts: Hesaplar Oluşturuluyor...
+      fetch_failed: Hesaplar Getirilemedi
+      historical_data_range: 'Geçmiş Veri Aralığı:'
+      no_accounts_to_setup: Kurulacak Hesap Yok
+      no_api_token: Brex API anahtarı bulunamadı. Lütfen Sağlayıcı Ayarları'nda yapılandırın.
+      subtitle: İçe aktarılan hesaplarınız için doğru hesap türlerini seçin
+      subtype_labels:
+        credit_card: ''
+        depository: 'Hesap Alt Türü:'
+        investment: 'Yatırım Türü:'
+        loan: 'Kredi Türü:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredi kartları otomatik olarak kredi kartı hesapları olarak kurulacaktır.
+        other_asset: Diğer Varlıklar için ek seçenek gerekmez.
+      subtypes:
+        depository:
+          cd: Vadeli Mevduat Sertifikası
+          checking: Vadesiz
+          hsa: Sağlık Tasarruf Hesabı
+          money_market: Para Piyasası
+          savings: Tasarruf
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: 529 Planı
+          angel: Melek
+          brokerage: Aracılık
+          hsa: Sağlık Tasarruf Hesabı
+          ira: Geleneksel IRA
+          mutual_fund: Yatırım Fonu
+          pension: Emeklilik
+          retirement: Emeklilik
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Tasarruf Planı
+        loan:
+          auto: Araç Kredisi
+          mortgage: İpotek
+          other: Diğer Kredi
+          student: Öğrenci Kredisi
+      sync_start_date_help: İşlem geçmişinizin ne kadar geriye senkronize edilmesini
+        istediğinizi seçin. En fazla 3 yıllık geçmiş kullanılabilir.
+      sync_start_date_label: 'İşlemleri şu tarihten itibaren senkronize et:'
+      title: Brex Hesaplarınızı Kurun
+    setup_required:
+      description: Brex hesaplarını bağlamadan önce Brex API anahtarınızı yapılandırmanız
+        gerekir.
+      heading: API Anahtarı Yapılandırılmamış
+      settings_link: Sağlayıcı Ayarlarına Git
+      setup_steps: 'Kurulum adımları:'
+      steps:
+        enter_token: Brex API anahtarınızı girin
+        find_section_html: "<strong>Brex</strong> bölümünü bulun"
+        open_settings_html: "<strong>Ayarlar > Sağlayıcılar</strong> bölümüne gidin"
+        return_to_link: Hesaplarınızı bağlamak için buraya dönün
+      title: Brex Kurulumu Gerekli
+    statuses:
+      ACTIVE: Aktif
+      CLOSED: Kapalı
+      FROZEN: Dondurulmuş
+      active: Aktif
+      closed: Kapalı
+      frozen: Dondurulmuş
+    subtype_select:
+      placeholder:
+        subtype: Alt türü seçin
+        type: Tür seçin
+    sync:
+      success: Senkronizasyon başladı
+    sync_status:
+      all_synced:
+        one: "%{count} hesap senkronize edildi"
+        other: "%{count} hesap senkronize edildi"
+      no_accounts: Hesap bulunamadı
+      partial_setup: "%{synced} senkronize edildi, %{pending} kurulmayı bekliyor"
+    syncer:
+      account_processing_failed:
+        one: "%{count} Brex hesabı işlenirken başarısız oldu."
+        other: "%{count} Brex hesabı işlenirken başarısız oldu."
+      account_sync_failed:
+        one: "%{count} Brex hesap senkronizasyonu zamanlanamadı."
+        other: "%{count} Brex hesap senkronizasyonu zamanlanamadı."
+      accounts_failed:
+        one: "%{count} Brex hesabı içe aktarılamadı."
+        other: "%{count} Brex hesabı içe aktarılamadı."
+      accounts_need_setup:
+        one: "%{count} hesabın kurulması gerekiyor..."
+        other: "%{count} hesabın kurulması gerekiyor..."
+      calculating_balances: Bakiyeler hesaplanıyor...
+      checking_account_configuration: Hesap yapılandırması kontrol ediliyor...
+      credentials_invalid: Geçersiz Brex API anahtarı veya hesap izinleri
+      failed: Senkronizasyon başarısız oldu. Lütfen tekrar deneyin veya destekle iletişime
+        geçin.
+      import_failed: Brex içe aktarımı başarısız.
+      importing_accounts: Brex'ten hesaplar içe aktarılıyor...
+      processing_transactions: İşlemler işleniyor...
+      transactions_failed:
+        one: "%{count} Brex hesabında işlem içe aktarımı başarısız oldu."
+        other: "%{count} Brex hesabında işlem içe aktarımı başarısız oldu."
+    update:
+      success: Brex bağlantısı güncellendi
