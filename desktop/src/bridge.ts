@@ -16,35 +16,38 @@
     hasWindow: !!tauri?.window,
   });
 
-  // Native titlebar chrome — a draggable top strip plus a top offset so the
-  // logged-in app's sidebar logo clears the macOS traffic lights. The strip
-  // both carries data-tauri-drag-region (native) and calls startDragging on
-  // mousedown (works whenever IPC is granted), so at least one path drags.
+  // Native titlebar chrome — offset the left icon rail so its logo clears the
+  // traffic lights, and make the top ~34px band drag the window. Using a
+  // document-level mousedown (rather than a fixed overlay strip) means dragging
+  // works on every page regardless of Sure's own sticky headers, while its
+  // interactive controls in that band stay clickable. Main content is not
+  // pushed down.
   if (!(window as any).__sureChrome) {
     (window as any).__sureChrome = true;
     const style = document.createElement("style");
-    style.textContent =
-      'nav[class~="w-[84px]"]{padding-top:44px !important;box-sizing:border-box}' +
-      ".__sure-drag{position:fixed;top:0;left:0;right:0;height:34px;z-index:5;-webkit-app-region:drag}";
+    style.textContent = 'nav[class~="w-[84px]"]{padding-top:44px !important;box-sizing:border-box}';
     (document.head || document.documentElement).appendChild(style);
-    const addBar = () => {
-      if (document.body && !document.querySelector(".__sure-drag")) {
-        const bar = document.createElement("div");
-        bar.className = "__sure-drag";
-        bar.setAttribute("data-tauri-drag-region", "");
-        bar.addEventListener("mousedown", (ev) => {
-          if ((ev as MouseEvent).button !== 0) return;
-          try {
-            tauri?.window?.getCurrentWindow?.().startDragging?.();
-          } catch {
-            /* ignore — data-tauri-drag-region is the fallback */
-          }
-        });
-        document.body.appendChild(bar);
-      }
-    };
-    if (document.body) addBar();
-    else document.addEventListener("DOMContentLoaded", addBar);
+
+    const DRAG_H = 34;
+    document.addEventListener(
+      "mousedown",
+      (ev) => {
+        if (ev.button !== 0 || ev.clientY > DRAG_H) return;
+        const el = ev.target as Element | null;
+        if (
+          el &&
+          el.closest("a,button,input,select,textarea,label,[role='button'],[contenteditable],[data-no-drag]")
+        ) {
+          return; // let Sure's own controls in the titlebar band work
+        }
+        try {
+          tauri?.window?.getCurrentWindow?.().startDragging?.();
+        } catch {
+          /* IPC unavailable on this page */
+        }
+      },
+      true
+    );
   }
 
   if (!tauri?.event) {
