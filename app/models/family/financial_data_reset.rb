@@ -74,7 +74,10 @@ class Family::FinancialDataReset
 
   attr_reader :user, :family
 
-  def initialize(user: nil, family: nil, dry_run: true, confirmed: false)
+  # report: false skips the ~33 COUNT queries taken before and after the
+  # deletion. Callers that discard the Result's counts (e.g. FamilyResetJob)
+  # can opt out; the returned Result then carries empty count hashes.
+  def initialize(user: nil, family: nil, dry_run: true, confirmed: false, report: true)
     if user && family && user.family != family
       raise ArgumentError, "user and family must belong to the same family"
     end
@@ -83,12 +86,13 @@ class Family::FinancialDataReset
     @family = family || user&.family
     @dry_run = ActiveModel::Type::Boolean.new.cast(dry_run)
     @confirmed = ActiveModel::Type::Boolean.new.cast(confirmed)
+    @report = ActiveModel::Type::Boolean.new.cast(report)
 
     raise ArgumentError, "user or family is required" unless @family
   end
 
   def call
-    before_counts = counts
+    before_counts = report? ? counts : {}
     if destructive_without_confirmation?
       raise ConfirmationRequiredError, "Pass confirmed: true to Family::FinancialDataReset to delete financial data."
     end
@@ -103,7 +107,7 @@ class Family::FinancialDataReset
       end
       purge_unattached_blobs(blob_ids)
       family.reload
-      after_counts = counts
+      after_counts = report? ? counts : {}
     end
 
     Result.new(
@@ -118,6 +122,10 @@ class Family::FinancialDataReset
 
   def dry_run?
     @dry_run
+  end
+
+  def report?
+    @report
   end
 
   private
