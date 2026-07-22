@@ -30,20 +30,18 @@ npm run tauri build -- --target universal-apple-darwin
 ```
 
 ## Publishing a release
-`.github/workflows/desktop-release.yml` builds and publishes on a version tag —
-**the tag is the single source of truth for the version**, so you control
-numbering and don't need to edit any version files by hand:
+Everything happens in GitHub — no local git commands:
 
-```bash
-git tag desktop-v0.1.0
-git push origin desktop-v0.1.0
-```
+> **Actions → Desktop Release → Run workflow → enter a version (e.g. `0.1.0`)**
 
-The workflow syncs `desktop/package.json` + `desktop/src-tauri/tauri.conf.json`
-to `0.1.0`, builds the universal `.dmg` on a macOS runner, and creates a GitHub
-Release named `Sure Desktop desktop-v0.1.0` with the `.dmg` attached.
-(**Actions → Desktop Release → Run workflow** builds without publishing, to test
-the pipeline.)
+`.github/workflows/desktop-release.yml` then syncs the version into
+`desktop/package.json` + `desktop/src-tauri/tauri.conf.json`, builds the
+universal `.dmg` on a macOS runner, and creates the `desktop-v0.1.0` tag + a
+GitHub Release with the `.dmg` attached. It refuses to reuse an existing
+version, and marks pre-release versions (e.g. `0.1.0-beta.1`) as prereleases.
+
+Prefer git tags? Pushing `desktop-v0.1.0` triggers the same build (version
+derived from the tag).
 
 ## Installing an unsigned build (end users)
 The published `.dmg` is **not code-signed**, so macOS Gatekeeper blocks the first
