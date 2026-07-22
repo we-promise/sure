@@ -6,11 +6,14 @@ tr:
       error: 'Etiket oluşturulurken hata: %{error}'
     destroy:
       deleted: Etiket silindi
+    destroy_all:
+      all_deleted: Tüm etiketler silindi
     edit:
       edit: Etiketi düzenle
     form:
       placeholder: Etiket adı
     index:
+      delete_all: Tümünü sil
       empty: Henüz hiç etiket yok
       new: Yeni etiket
       tags: Etiketler

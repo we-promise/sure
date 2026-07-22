@@ -1,6 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
 import { autoUpdate } from "@floating-ui/dom"
 
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "textarea:not([disabled])",
+  "input:not([disabled]):not([type=hidden])",
+  "select:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ")
+
 export default class extends Controller {
   static targets = ["button", "menu", "input", "content", "option"]
   static values = {
@@ -10,14 +19,19 @@ export default class extends Controller {
 
   connect() {
     this.isOpen = false
+    this.suppressReopenOnFocus = false
     this.boundOutsideClick = this.handleOutsideClick.bind(this)
     this.boundKeydown = this.handleKeydown.bind(this)
     this.boundTurboLoad = this.handleTurboLoad.bind(this)
+    this.boundFocusOut = this.handleFocusOut.bind(this)
 
     document.addEventListener("click", this.boundOutsideClick)
     document.addEventListener("turbo:load", this.boundTurboLoad)
     this.element.addEventListener("keydown", this.boundKeydown)
+    this.element.addEventListener("focusout", this.boundFocusOut)
 
+    this.resetOptionTabindex()
+    this.setMenuInert(true)
     this.observeMenuResize()
   }
 
@@ -25,6 +39,7 @@ export default class extends Controller {
     document.removeEventListener("click", this.boundOutsideClick)
     document.removeEventListener("turbo:load", this.boundTurboLoad)
     this.element.removeEventListener("keydown", this.boundKeydown)
+    this.element.removeEventListener("focusout", this.boundFocusOut)
     this.stopAutoUpdate()
     if (this.resizeObserver) this.resizeObserver.disconnect()
   }
@@ -33,8 +48,63 @@ export default class extends Controller {
     this.isOpen ? this.close() : this.openMenu()
   }
 
+  // Tab lands on the trigger — open the menu but keep focus here so the
+  // browser doesn't continue Tab into the listbox and skip to the next field.
+  // Skip when we just closed via Escape/Enter and re-focused the trigger:
+  // keyboard modality keeps :focus-visible, which would otherwise reopen.
+  handleButtonFocus() {
+    if (this.isOpen) return
+    if (this.suppressReopenOnFocus) return
+    if (!this.buttonTarget.matches(":focus-visible")) return
+    this.openMenu()
+  }
+
+  focusTriggerWithoutReopening() {
+    this.suppressReopenOnFocus = true
+    this.buttonTarget.focus()
+    requestAnimationFrame(() => { this.suppressReopenOnFocus = false })
+  }
+
+  // Move focus to the next/previous tab stop after the trigger. Used when Tab
+  // closes the listbox: options are tabindex="-1" and close() sets inert on
+  // the menu, so the browser can't reliably continue native Tab navigation.
+  focusAdjacentTabStop(reverse = false) {
+    const scope = this.element.closest("dialog") || document
+    const focusables = this.#focusablesIn(scope)
+    const index = focusables.indexOf(this.buttonTarget)
+    if (index === -1) return
+
+    const next = focusables[index + (reverse ? -1 : 1)]
+    next?.focus()
+  }
+
+  #focusablesIn(scope) {
+    return Array.from(scope.querySelectorAll(FOCUSABLE_SELECTOR)).filter((el) => {
+      if (el.closest("[inert]")) return false
+      return el.offsetParent !== null || el === document.activeElement
+    })
+  }
+
+  // Arrow / Space / Enter from a closed trigger — open and move focus in.
+  openAndFocusMenu() {
+    this.openMenu()
+    requestAnimationFrame(() => {
+      if (this.focusSearch()) return
+      this.focusSelectedOrFirstOption()
+    })
+  }
+
+  focusSelectedOrFirstOption() {
+    const visible = this.visibleOptions()
+    if (visible.length === 0) return
+
+    const selected = visible.find(opt => opt.getAttribute("aria-selected") === "true")
+    this.focusOption(selected || visible[0])
+  }
+
   openMenu() {
     this.isOpen = true
+    this.setMenuInert(false)
     this.menuTarget.classList.remove("hidden")
     this.buttonTarget.setAttribute("aria-expanded", "true")
     this.startAutoUpdate()
@@ -53,6 +123,8 @@ export default class extends Controller {
     this.menuTarget.classList.remove("opacity-100", "translate-y-0")
     this.menuTarget.classList.add("opacity-0", "-translate-y-1", "pointer-events-none")
     this.buttonTarget.setAttribute("aria-expanded", "false")
+    this.resetOptionTabindex()
+    this.setMenuInert(true)
     setTimeout(() => { if (!this.isOpen && this.hasMenuTarget) this.menuTarget.classList.add("hidden") }, 150)
   }
 
@@ -70,14 +142,12 @@ export default class extends Controller {
     const previousSelected = this.menuTarget.querySelector("[aria-selected='true']")
     if (previousSelected) {
       previousSelected.setAttribute("aria-selected", "false")
-      previousSelected.setAttribute("tabindex", "-1")
       previousSelected.classList.remove("bg-container-inset")
       const prevIcon = previousSelected.querySelector(".check-icon")
       if (prevIcon) prevIcon.classList.add("hidden")
     }
 
     selectedElement.setAttribute("aria-selected", "true")
-    selectedElement.setAttribute("tabindex", "0")
     selectedElement.classList.add("bg-container-inset")
     const selectedIcon = selectedElement.querySelector(".check-icon")
     if (selectedIcon) selectedIcon.classList.remove("hidden")
@@ -87,8 +157,8 @@ export default class extends Controller {
       bubbles: true
     }))
 
+    this.focusTriggerWithoutReopening()
     this.close()
-    this.buttonTarget.focus()
   }
 
   focusSearch() {
@@ -130,24 +200,66 @@ export default class extends Controller {
     if (this.isOpen && !this.element.contains(event.target)) this.close()
   }
 
-  handleKeydown(event) {
+  handleFocusOut(event) {
     if (!this.isOpen) return
-    if (event.key === "Escape") { this.close(); this.buttonTarget.focus(); return }
+    const related = event.relatedTarget
+    if (related && this.element.contains(related)) return
+    this.close()
+  }
+
+  handleKeydown(event) {
+    if (!this.isOpen && event.target === this.buttonTarget) {
+      if (["ArrowDown", "ArrowUp", " ", "Enter"].includes(event.key)) {
+        event.preventDefault()
+        this.openAndFocusMenu()
+      }
+      return
+    }
+
+    if (!this.isOpen) return
+
+    if (event.key === "Tab") {
+      const reverse = event.shiftKey
+      event.preventDefault()
+      // Focus the trigger before close() sets inert on the menu — otherwise
+      // focus is still on an option and the UA drops it to <body>.
+      this.focusTriggerWithoutReopening()
+      this.close()
+      this.focusAdjacentTabStop(reverse)
+      return
+    }
+
+    // Stop Escape from reaching DS::Dialog's esc hotkey so only the
+    // listbox closes; a second Escape can still dismiss the modal.
+    if (event.key === "Escape") {
+      event.preventDefault()
+      event.stopPropagation()
+      this.focusTriggerWithoutReopening()
+      this.close()
+      return
+    }
     if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click(); return }
 
     // WAI-ARIA APG listbox keyboard pattern: ArrowUp/Down moves focus
-    // between options (roving tabindex), Home/End jump to first/last.
-    // From the search input, ArrowDown/Up bridge into the visible
-    // options so users can reach the filtered matches; other keys
-    // (typing, caret movement) stay with the input.
+    // between options, Home/End jump to first/last. Options stay at
+    // tabindex="-1" so they never appear in the Tab sequence — focus moves
+    // programmatically only.
+    // From the search input, ArrowDown/Up bridge into the visible options.
     const fromSearch = event.target.matches('input[type="search"]')
+    const fromButton = event.target === this.buttonTarget
     const visibleOptions = this.visibleOptions()
+
     if (fromSearch) {
       if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return
       if (visibleOptions.length === 0) return
       event.preventDefault()
       const targetIndex = event.key === "ArrowDown" ? 0 : visibleOptions.length - 1
-      this.rovingFocus(visibleOptions, targetIndex)
+      this.focusOption(visibleOptions[targetIndex])
+      return
+    }
+
+    if (fromButton && event.key === "ArrowDown" && this.focusSearch()) {
+      event.preventDefault()
       return
     }
 
@@ -162,16 +274,27 @@ export default class extends Controller {
       default: return
     }
     event.preventDefault()
-    this.rovingFocus(visibleOptions, nextIndex)
+    this.focusOption(visibleOptions[nextIndex])
   }
 
-  // Roving tabindex helper: makes the target option tabbable (and
-  // focuses it), clears tabindex on every other option in the listbox.
-  rovingFocus(visibleOptions, index) {
-    const all = this.hasOptionTarget ? this.optionTargets : []
-    const target = visibleOptions[index]
-    all.forEach(opt => opt.setAttribute("tabindex", opt === target ? "0" : "-1"))
-    target.focus()
+  focusOption(option) {
+    if (!option) return
+    option.focus({ preventScroll: true })
+    option.scrollIntoView({ block: "nearest" })
+  }
+
+  resetOptionTabindex() {
+    if (!this.hasOptionTarget) return
+    this.optionTargets.forEach(opt => opt.setAttribute("tabindex", "-1"))
+  }
+
+  setMenuInert(inert) {
+    if (!this.hasMenuTarget) return
+    if (inert) {
+      this.menuTarget.setAttribute("inert", "")
+    } else {
+      this.menuTarget.removeAttribute("inert")
+    }
   }
 
   // Options the user can currently see — list-filter hides non-matches
@@ -181,17 +304,19 @@ export default class extends Controller {
     return options.filter(opt => opt.style.display !== "none")
   }
 
-  // After list-filter#filter runs, the option holding tabindex="0" may
-  // be hidden. Promote the first visible option so Tab from the search
-  // input still lands somewhere reachable; if none match, no-op.
+  // After list-filter#filter runs, a keyboard-focused option may be hidden.
+  // Repoint focus to the first visible match. Leave the search input and
+  // trigger alone — this handler also runs on every search keystroke.
   syncTabindex() {
     const visible = this.visibleOptions()
     if (visible.length === 0) return
-    const tabbable = visible.find(opt => opt.getAttribute("tabindex") === "0")
-    if (tabbable) return
-    const all = this.hasOptionTarget ? this.optionTargets : []
-    all.forEach(opt => opt.setAttribute("tabindex", "-1"))
-    visible[0].setAttribute("tabindex", "0")
+
+    const active = document.activeElement
+    if (active.matches('input[type="search"]') && this.menuTarget.contains(active)) return
+    if (!this.hasOptionTarget || !this.optionTargets.includes(active)) return
+    if (visible.includes(active)) return
+
+    this.focusOption(visible[0])
   }
 
   handleTurboLoad() { if (this.isOpen) this.close() }

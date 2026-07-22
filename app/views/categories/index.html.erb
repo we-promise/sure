@@ -31,6 +31,7 @@
       <%= render "categories/category_list_group",
                  title: t(".categories"),
                  categories: @categories,
+                 family: Current.family,
                  category_groups: @category_groups,
                  category_ids_with_transactions: @category_ids_with_transactions %>
     </div>

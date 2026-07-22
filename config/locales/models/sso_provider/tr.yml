@@ -1,0 +1,14 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              metadata_url_invalid: IdP Metadata URL'si geçerli bir URL olmalıdır
+              saml_cert_required: Metadata URL kullanılmıyorsa IdP Sertifikası veya
+                Sertifika Parmak İzi gereklidir
+              saml_url_required: SAML sağlayıcıları için IdP Metadata URL'si veya
+                IdP SSO URL'si gereklidir
+              sso_url_invalid: IdP SSO URL'si geçerli bir URL olmalıdır

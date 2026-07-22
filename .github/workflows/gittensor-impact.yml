@@ -1,0 +1,32 @@
+name: Gittensor Impact Report
+
+on:
+  schedule:
+    # Refresh daily at 14:00 UTC.
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+    inputs:
+      since:
+        description: "Git date window for the report"
+        default: "30 days ago"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    name: Refresh Gittensor impact assets
+    if: github.repository == 'we-promise/sure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: matthewevans/gittensor-impact-action@v1
+        with:
+          repo: we-promise/sure
+          since: ${{ inputs.since || '30 days ago' }}
+          publish-mode: branch
+          asset-branch: gittensor-impact-assets
+          title: "Sure is part of the Gittensor community"
+          accent-color: "#ff6a00"
+          neutral-color: "#85898b"

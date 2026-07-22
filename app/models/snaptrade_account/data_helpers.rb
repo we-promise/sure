@@ -129,6 +129,14 @@ module SnaptradeAccount::DataHelpers
       end
     end
 
+    # SnapTrade positions nest the security data as holding.symbol.symbol
+    def extract_symbol_data(data)
+      symbol_wrapper = data[:symbol].is_a?(Hash) ? data[:symbol].with_indifferent_access : {}
+      raw_symbol_data = symbol_wrapper[:symbol]
+
+      raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
+    end
+
     def extract_currency(data, symbol_data = {}, fallback_currency = nil)
       currency_data = data[:currency] || data["currency"] || symbol_data[:currency] || symbol_data["currency"]
 
