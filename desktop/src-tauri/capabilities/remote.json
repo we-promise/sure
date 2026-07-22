@@ -4,7 +4,7 @@
   "description": "Minimal IPC granted to the remote Sure server pages loaded in the main webview: drag the window, the event bridge (notifications/badge), opening the prefs window, and starting SSO in the system browser. No filesystem/shell/HTTP access. You only ever point the app at your own Sure server, which already holds your data.",
   "windows": ["main"],
   "remote": {
-    "urls": ["https://*", "http://*"]
+    "urls": ["https://*/**", "http://*/**", "https://*", "http://*"]
   },
   "permissions": [
     "core:window:allow-start-dragging",

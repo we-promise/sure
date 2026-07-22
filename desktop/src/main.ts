@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { getAllWindows } from "@tauri-apps/api/window";
 import { S } from "./strings";
 
 interface ServerEntry { url: string; label: string; }
@@ -98,12 +97,5 @@ async function boot() {
 }
 boot();
 
-async function showPrefs() {
-  const wins = await getAllWindows();
-  const prefs = wins.find((w) => w.label === "prefs");
-  if (prefs) { await prefs.show(); await prefs.setFocus(); }
-}
-
-listen("menu://preferences", showPrefs);
-listen("menu://switch-server", showPrefs);
+// Navigate when the active server changes (e.g. picked from Preferences).
 listen<string>("active-server-changed", (e) => goToServer(e.payload));
