@@ -1,3 +1,4 @@
+pub mod badge;
 pub mod commands;
 pub mod menu;
 pub mod notifications;
@@ -26,6 +27,7 @@ pub fn run() {
             app.set_menu(menu)?;
             app.on_menu_event(|app, event| menu::on_event(app, event.id().as_ref()));
             notifications::register(app.handle());
+            badge::register(app.handle());
             Ok(())
         })
         .on_page_load(|window, payload| {
