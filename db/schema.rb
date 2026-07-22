@@ -2043,6 +2043,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_120000) do
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
     t.string "investment_activity_label"
+    t.string "kind", default: "standard", null: false
+    t.jsonb "locked_attributes", default: {}
+    t.uuid "merchant_id"
     t.boolean "refund", default: false, null: false
     t.uuid "transfer_id"
     t.datetime "updated_at", null: false
