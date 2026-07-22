@@ -1,0 +1,8 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        merchant_import:
+          duplicate_columns: 'Normalleştirmeden sonra yinelenen sütun adları: %{columns}'
+          missing_columns: 'Eksik zorunlu sütunlar: %{columns}'

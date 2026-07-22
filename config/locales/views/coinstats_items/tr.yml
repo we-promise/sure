@@ -1,0 +1,87 @@
+---
+tr:
+  coinstats_items:
+    coinstats_item:
+      delete: Sil
+      deletion_in_progress: Kripto cüzdan verileri siliniyor…
+      no_wallets_message: Şu anda CoinStats'a bağlı kripto cüzdanı yok.
+      no_wallets_title: Bağlı kripto cüzdanı yok
+      provider_name: CoinStats
+      reconnect: Yeniden bağlan
+      status: Son senkronizasyon %{timestamp} önce
+      status_never: Hiç senkronize edilmedi
+      status_with_summary: Son senkronizasyon %{timestamp} önce • %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} kripto cüzdanı senkronize edildi"
+          other: "%{count} kripto cüzdanı senkronize edildi"
+        no_accounts: Kripto cüzdanı bulunamadı
+        partial_sync: "%{linked_count} kripto cüzdanı senkronize edildi, %{unlinked_count}
+          kurulum gerektiriyor"
+      syncing: Senkronize ediliyor…
+      update_api_key: API Anahtarını Güncelle
+    create:
+      default_name: CoinStats Bağlantısı
+      errors:
+        validation_failed: 'Doğrulama başarısız: %{message}.'
+      success: CoinStats sağlayıcı bağlantısı başarıyla yapılandırıldı.
+    destroy:
+      success: CoinStats sağlayıcı bağlantısı silinmek üzere planlandı.
+    link_exchange:
+      error: 'Borsa bağlanamadı: %{message}.'
+      failed: Borsa bağlanamadı.
+      invalid_exchange: Seçilen borsa artık desteklenmiyor.
+      missing_params: Borsa ve kimlik bilgileri gereklidir.
+      success: "%{name} borsası bağlandı."
+    link_wallet:
+      error: 'Kripto cüzdan bağlantısı başarısız oldu: %{message}.'
+      failed: Kripto cüzdan bağlantısı başarısız oldu.
+      missing_params: 'Eksik gerekli parametreler: adres ve blok zinciri.'
+      success: "%{count} kripto cüzdanı başarıyla bağlandı."
+    new:
+      address_label: Adres
+      address_placeholder: Zorunlu
+      api_key_label: API Anahtarı
+      api_key_placeholder: Zorunlu
+      blockchain_fetch_error: Blok zincirleri yüklenemedi. Lütfen daha sonra tekrar
+        deneyin.
+      blockchain_label: Blok Zinciri
+      blockchain_placeholder: Zorunlu
+      blockchain_select_blank: Bir Blok Zinciri Seçin
+      configure: Yapılandır
+      default_name: CoinStats Bağlantısı
+      exchange_label: Borsa
+      exchange_select_blank: Bir borsa seçin
+      go_to_settings: Sağlayıcı Ayarlarına Git
+      link_exchange_description: CoinStats'ın Bitvavo, Binance ve diğer desteklenen
+        borsalardan bakiye ve işlemleri senkronize edebilmesi için salt okunur bir
+        borsa API anahtarı kullanın.
+      link_exchange_note: Borsanız API anahtarı etkinleştirmesi veya e-posta onayı
+        gerektiriyorsa, buradan bağlamadan önce bu adımı tamamlayın.
+      link_exchange_submit: Borsayı Bağla
+      link_exchange_title: Borsa API'sini Bağla
+      link_wallet_description: CoinStats üzerinden kendi kontrolünüzdeki bir cüzdanı
+        veya tek bir zincir üstü adresi takip edin.
+      link_wallet_submit: Kripto Cüzdanı Bağla
+      link_wallet_title: Cüzdan Adresini Bağla
+      not_configured_message: Bir kripto cüzdanı veya borsa bağlamak için önce CoinStats
+        sağlayıcı bağlantısını yapılandırmanız gerekir.
+      not_configured_step1_html: "<strong>Ayarlar → Sağlayıcılar</strong>'a gidin"
+      not_configured_step2_html: "<strong>CoinStats</strong> sağlayıcısını bulun"
+      not_configured_step3_html: Sağlayıcı yapılandırmasını tamamlamak için verilen
+        <strong>kurulum talimatlarını</strong> izleyin
+      not_configured_title: CoinStats sağlayıcı bağlantısı yapılandırılmamış
+      setup_instructions: 'Kurulum Talimatları:'
+      step1_html: API anahtarı almak için <a href="https://openapi.coinstats.app/"
+        class="link" target="_blank" rel="noopener noreferrer">CoinStats Genel API
+        Panosunu</a> ziyaret edin.
+      step2: API anahtarınızı aşağıya girin ve Yapılandır'a tıklayın.
+      step3_html: Bağlantı başarılı olduktan sonra, kripto hesaplarınızı ayarlamak
+        için <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Hesaplar</a>
+        sekmesini ziyaret edin.
+      title: CoinStats ile Kripto Bağla
+      update_configuration: Yeniden Yapılandır
+    update:
+      errors:
+        validation_failed: 'Doğrulama başarısız: %{message}.'
+      success: CoinStats sağlayıcı bağlantısı başarıyla güncellendi.
