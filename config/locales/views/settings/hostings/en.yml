@@ -118,10 +118,17 @@ en:
         model_placeholder: "claude-sonnet-4-6 (default)"
         model_help: Used for chat and PDF processing. Batch operations (categorize, merchant detection) default to Haiku for cost.
       openai_settings:
-        description: Enter the access token and optionally configure a custom OpenAI-compatible provider
+        description: Enter an API key, a Codex OAuth token, or configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
-        access_token_label: Access Token
-        access_token_placeholder: Enter your access token here
+        access_token_label: API Key
+        access_token_placeholder: Enter your OpenAI-compatible API key here
+        oauth_heading: Codex Subscription (OAuth)
+        oauth_description: Use a ChatGPT-backed Codex OAuth access token instead of API billing. OAuth takes precedence when both credential types are configured. Tokens expire and must be replaced after you sign in again.
+        oauth_token_label: OAuth Access Token
+        oauth_token_placeholder: Enter your Codex OAuth access token here
+        oauth_account_id_label: ChatGPT Account ID (Optional)
+        oauth_account_id_placeholder: Account ID from your Codex login
+        oauth_account_id_help: Usually read from the token automatically. Enter it when your token does not contain the ChatGPT account claim.
         uri_base_label: API Base URL (Optional)
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
         model_label: Model (Optional)
