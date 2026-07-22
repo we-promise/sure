@@ -21,10 +21,41 @@ running `bin/dev`). The app health-checks `{server}/up`, then loads the real
 ## Build a release .dmg (unsigned)
 ```bash
 cd desktop
+# Single-arch (host only):
 npm run tauri build
-# Output: src-tauri/target/release/bundle/dmg/Sure_0.1.0_aarch64.dmg
-#         src-tauri/target/release/bundle/macos/Sure.app
+# Universal (Apple Silicon + Intel) — what releases ship:
+rustup target add aarch64-apple-darwin x86_64-apple-darwin
+npm run tauri build -- --target universal-apple-darwin
+# Output: src-tauri/target/universal-apple-darwin/release/bundle/dmg/Sure_<ver>_universal.dmg
 ```
+
+## Publishing a release
+Releases are built and published by GitHub Actions
+(`.github/workflows/desktop-release.yml`) on a version tag:
+```bash
+# 1. Bump the version in BOTH desktop/package.json and desktop/src-tauri/tauri.conf.json
+# 2. Tag and push:
+git tag desktop-v0.1.0
+git push origin desktop-v0.1.0
+```
+The workflow builds the universal `.dmg` on a macOS runner and attaches it to a
+GitHub Release named `Sure Desktop desktop-v0.1.0`. (`workflow_dispatch` builds
+without publishing, for testing.)
+
+## Installing an unsigned build (end users)
+The published `.dmg` is **not code-signed**, so macOS Gatekeeper blocks the first
+launch. To open it:
+1. Drag Sure to Applications and try to open it; dismiss the warning.
+2. **System Settings → Privacy & Security**, scroll down, click **Open Anyway**,
+   and confirm. (On macOS 15 Sequoia the old right-click→Open shortcut is gone;
+   this Settings path is the way.)
+
+If macOS instead says the app is "damaged", the download was quarantined — strip
+it once in Terminal:
+```bash
+xattr -cr /Applications/Sure.app
+```
+Signing + notarization (below) removes this friction entirely.
 
 ## Rust tests
 ```bash
