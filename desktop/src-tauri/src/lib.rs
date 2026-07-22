@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod menu;
+pub mod notifications;
 pub mod servers;
 pub mod state;
 pub mod window;
@@ -24,7 +25,12 @@ pub fn run() {
             let menu = menu::build(app.handle())?;
             app.set_menu(menu)?;
             app.on_menu_event(|app, event| menu::on_event(app, event.id().as_ref()));
+            notifications::register(app.handle());
             Ok(())
+        })
+        .on_page_load(|window, _payload| {
+            const BRIDGE: &str = include_str!("../../dist/bridge.js");
+            let _ = window.eval(BRIDGE);
         })
         .run(tauri::generate_context!())
         .expect("error while running Sure Desktop");
