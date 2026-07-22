@@ -419,7 +419,8 @@ class SimplefinItem < ApplicationRecord
   def setup_token_update_required?(latest_sync: nil)
     return false unless requires_update?
 
-    latest = latest_sync || syncs.ordered.first
+    # The keyword arg shadows Syncable#latest_sync, hence the explicit self.
+    latest = latest_sync || self.latest_sync
     return true unless latest
     return false if latest.in_progress?
 
@@ -434,10 +435,10 @@ class SimplefinItem < ApplicationRecord
   # Get reconciled duplicates count from the last sync
   # Returns { count: N, message: "..." } or { count: 0 } if none
   def last_sync_reconciled_status
-    latest_sync = syncs.ordered.first
-    return { count: 0 } unless latest_sync
+    latest = latest_sync
+    return { count: 0 } unless latest
 
-    stats = parse_sync_stats(latest_sync.sync_stats)
+    stats = parse_sync_stats(latest.sync_stats)
     count = stats&.dig("pending_reconciled").to_i
     if count > 0
       {
