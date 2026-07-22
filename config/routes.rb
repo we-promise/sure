@@ -457,6 +457,7 @@ Rails.application.routes.draw do
     collection do
       delete :clear_filter
       patch :update_preferences
+      get :filters, to: "transactions/filters#show"
     end
 
     member do
