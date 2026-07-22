@@ -8,8 +8,9 @@ interface ServerEntry { url: string; label: string; }
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 function fill() {
+  ($("logo") as HTMLImageElement).src = new URL("./assets/logomark.svg", import.meta.url).href;
   $("title").textContent = S.title;
-  $("subtitle").textContent = S.subtitle;
+  $("url-label").textContent = S.serverLabel;
   ($("server-url") as HTMLInputElement).placeholder = S.urlPlaceholder;
   $("connect").textContent = S.connect;
   $("remembered-title").textContent = S.remembered;

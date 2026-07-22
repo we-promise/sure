@@ -6,12 +6,18 @@
     <title>Preferences</title>
   </head>
   <body>
-    <main class="prefs" data-tauri-drag-region>
+    <div class="titlebar" data-tauri-drag-region></div>
+    <main class="prefs">
       <h1 id="prefs-title"></h1>
       <section>
-        <h2 id="servers-title" class="muted"></h2>
+        <h2 id="servers-title"></h2>
         <ul id="prefs-server-list"></ul>
-        <form id="prefs-add"><input id="prefs-url" type="text" /><button type="submit" id="prefs-add-btn"></button></form>
+        <form id="prefs-add">
+          <div class="form-field">
+            <input class="form-field__input" id="prefs-url" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          </div>
+          <button type="submit" id="prefs-add-btn" class="btn-primary"></button>
+        </form>
         <p id="prefs-status" class="status" role="status"></p>
       </section>
       <section class="row">

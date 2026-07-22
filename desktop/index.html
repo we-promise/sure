@@ -7,17 +7,28 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
+    <div class="titlebar" data-tauri-drag-region></div>
     <main id="onboarding" class="onboarding" data-tauri-drag-region>
-      <div class="card">
-        <h1 id="title"></h1>
-        <p id="subtitle" class="muted"></p>
-        <form id="server-form">
-          <input id="server-url" type="text" autocomplete="off" spellcheck="false" />
-          <button id="connect" type="submit"></button>
+      <div class="auth">
+        <img class="logo" id="logo" alt="Sure" draggable="false" />
+        <h1 id="title" class="auth-title"></h1>
+        <form id="server-form" class="auth-form">
+          <div class="form-field">
+            <label class="form-field__label" id="url-label" for="server-url"></label>
+            <input
+              class="form-field__input"
+              id="server-url"
+              type="text"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </div>
+          <button id="connect" class="btn-primary" type="submit"></button>
         </form>
         <p id="status" class="status" role="status"></p>
         <section id="remembered" class="remembered hidden">
-          <h2 id="remembered-title" class="muted"></h2>
+          <h2 id="remembered-title" class="remembered-title"></h2>
           <ul id="server-list"></ul>
         </section>
       </div>
