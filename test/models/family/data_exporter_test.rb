@@ -55,7 +55,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     assert zip_data.is_a?(StringIO)
 
     # Check that the zip contains all expected files
-    expected_files = [ "version.txt", "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "rules.csv", "attachments.json", "all.ndjson" ]
+    expected_files = [ "version.txt", "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "merchants.csv", "rules.csv", "attachments.json", "all.ndjson" ]
 
     Zip::File.open_buffer(zip_data) do |zip|
       actual_files = zip.entries.map(&:name)
@@ -194,9 +194,56 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       categories_csv = zip.read("categories.csv")
       assert categories_csv.include?("name,color,parent_category,lucide_icon")
 
+      # Check merchants.csv
+      merchants_csv = zip.read("merchants.csv")
+      assert merchants_csv.include?("name,color,website_url")
+
       # Check rules.csv
       rules_csv = zip.read("rules.csv")
       assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions")
+    end
+  end
+
+  test "exports merchants in CSV format scoped to the family" do
+    merchant = @family.merchants.create!(name: "Coffee Shop", website_url: "https://coffeeshop.com")
+    other_merchant = @other_family.merchants.create!(name: "Other Family Store")
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rows = CSV.parse(zip.read("merchants.csv"), headers: true)
+      row = rows.find { |csv_row| csv_row["name"] == merchant.name }
+
+      assert_not_nil row
+      assert_equal merchant.color, row["color"]
+      assert_equal merchant.website_url, row["website_url"]
+      refute rows.any? { |csv_row| csv_row["name"] == other_merchant.name }
+    end
+  end
+
+  test "exported merchants CSV round-trips through MerchantImport" do
+    merchant = @family.merchants.create!(name: "Pizza Palace", website_url: "https://pizzapalace.com")
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      import = @other_family.imports.create!(
+        type: "MerchantImport",
+        raw_file_str: zip.read("merchants.csv"),
+        col_sep: ","
+      )
+      import.generate_rows_from_csv
+      row = import.rows.reload.find_by!(name: "Pizza Palace")
+
+      assert_equal merchant.color, row.merchant_color
+      assert_equal "https://pizzapalace.com", row.merchant_website
+
+      assert_difference -> { @other_family.merchants.count }, 1 do
+        import.send(:import!)
+      end
+
+      imported = @other_family.merchants.find_by!(name: "Pizza Palace")
+      assert_equal "https://pizzapalace.com", imported.website_url
     end
   end
 

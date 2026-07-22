@@ -31,6 +31,10 @@ class Family::DataExporter
       zipfile.put_next_entry("categories.csv")
       zipfile.write generate_categories_csv
 
+      # Add merchants.csv
+      zipfile.put_next_entry("merchants.csv")
+      zipfile.write generate_merchants_csv
+
       # Add rules.csv
       zipfile.put_next_entry("rules.csv")
       zipfile.write generate_rules_csv
@@ -134,6 +138,22 @@ class Family::DataExporter
             category.color,
             category.parent&.name,
             category.lucide_icon
+          ]
+        end
+      end
+    end
+
+    def generate_merchants_csv
+      CSV.generate do |csv|
+        # Headers match MerchantImport's expected columns so the export round-trips
+        csv << [ "name", "color", "website_url" ]
+
+        # Only export family merchants belonging to this family
+        @family.merchants.find_each do |merchant|
+          csv << [
+            merchant.name,
+            merchant.color,
+            merchant.website_url
           ]
         end
       end
