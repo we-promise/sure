@@ -39,6 +39,31 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
   end
 
+  test "monthly income/expense totals match per-month period totals" do
+    # Spread entries over two months
+    create_transaction(account: @checking_account, amount: -500, category: @income_category, date: 40.days.ago.to_date)
+    create_transaction(account: @checking_account, amount: 250, category: @groceries_category, date: 40.days.ago.to_date)
+
+    income_statement = IncomeStatement.new(@family)
+    start_date = 60.days.ago.to_date.beginning_of_month
+    period = Period.custom(start_date: start_date, end_date: Date.current)
+
+    monthly = income_statement.monthly_income_expense_totals(period: period)
+
+    month = start_date
+    while month <= Date.current
+      month_end = [ month.end_of_month, Date.current ].min
+      expected_income = income_statement.income_totals(period: Period.custom(start_date: month, end_date: month_end)).total
+      expected_expense = income_statement.expense_totals(period: Period.custom(start_date: month, end_date: month_end)).total
+
+      actual = monthly[month] || { income: 0.to_d, expense: 0.to_d }
+      assert_equal expected_income.to_d, actual[:income].to_d, "income mismatch for #{month}"
+      assert_equal expected_expense.to_d, actual[:expense].to_d, "expense mismatch for #{month}"
+
+      month = month.next_month
+    end
+  end
+
   test "orphaned categories still count as root category totals" do
     orphan_category = @family.categories.create! name: "Orphaned Category"
     orphan_category.update_column(:parent_id, SecureRandom.uuid)

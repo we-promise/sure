@@ -29,6 +29,28 @@ class IncomeStatement
     )
   end
 
+  # Income/expense sums per calendar month over the period, computed in a
+  # single query. Returns a hash of { Date (first of month) => { income:, expense: } }
+  # with BigDecimal sums. Used by the reports trends chart, which previously
+  # issued a totals query per month of the period.
+  def monthly_income_expense_totals(period:)
+    key = period_cache_key(period)
+    @monthly_income_expense_totals ||= {}
+    @monthly_income_expense_totals[key] ||= begin
+      rows = monthly_totals_query(
+        transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
+        date_range: period.date_range
+      )
+
+      rows.group_by(&:month).transform_values do |month_rows|
+        {
+          income: month_rows.select { |r| r.classification == "income" }.sum { |r| r.total.to_d },
+          expense: month_rows.select { |r| r.classification == "expense" }.sum { |r| r.total.to_d }
+        }
+      end
+    end
+  end
+
   def expense_totals(period: Period.current_month)
     # Memoized per instance so callers that also invoke `net_category_totals`
     key = period_cache_key(period)
@@ -224,6 +246,14 @@ class IncomeStatement
       Rails.cache.fetch([
         "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
+    end
+
+    def monthly_totals_query(transactions_scope:, date_range:)
+      sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
+
+      Rails.cache.fetch([
+        "income_statement", "monthly_totals_query", "v1", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i
+      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids, group_by_month: true).call }
     end
 
     def monetizable_currency
