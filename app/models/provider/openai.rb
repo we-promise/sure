@@ -1,3 +1,5 @@
+require "base64"
+
 class Provider::Openai < Provider
   include LlmConcept
 
@@ -5,32 +7,65 @@ class Provider::Openai < Provider
   Error = Class.new(Provider::Error)
 
   DEFAULT_MODEL = "gpt-4.1".freeze
+  CODEX_DEFAULT_MODEL = "gpt-5.6".freeze
+  CODEX_URI_BASE = "https://chatgpt.com/backend-api/codex".freeze
+  CODEX_ORIGINATOR = "codex_cli_rs".freeze
   SUPPORTED_MODELS = %w[gpt-4 gpt-5 o1 o3].freeze
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
 
   # Returns the effective model that would be used by the provider.
   # Priority: explicit ENV > Setting > DEFAULT_MODEL.
   def self.effective_model
-    ENV.fetch("OPENAI_MODEL") { Setting.openai_model }.presence || DEFAULT_MODEL
+    configured_model = ENV.fetch("OPENAI_MODEL") { Setting.openai_model }.presence
+    configured_model || (oauth_configured? ? CODEX_DEFAULT_MODEL : DEFAULT_MODEL)
   end
 
   def self.configured?
-    ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+    oauth_configured? || ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
   end
 
-  def initialize(access_token, uri_base: nil, model: nil)
+  def self.oauth_configured?
+    ENV["OPENAI_OAUTH_TOKEN"].present? || Setting.openai_oauth_token.present?
+  end
+
+  def self.oauth_account_id(access_token)
+    payload = access_token.to_s.split(".", 3).second
+    return if payload.blank?
+
+    payload = payload.ljust((payload.length + 3) / 4 * 4, "=")
+    claims = JSON.parse(Base64.urlsafe_decode64(payload))
+    claims["chatgpt_account_id"].presence ||
+      claims.dig("https://api.openai.com/auth", "chatgpt_account_id").presence
+  rescue ArgumentError, JSON::ParserError
+    nil
+  end
+
+  def initialize(access_token, uri_base: nil, model: nil, oauth: false, account_id: nil)
     client_options = { access_token: access_token }
-    llm_uri_base = uri_base.presence
+    @oauth = oauth
+    llm_uri_base = oauth? ? CODEX_URI_BASE : uri_base.presence
     llm_model = model.presence
     client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
     client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
+
+    if oauth?
+      oauth_account_id = account_id.presence || self.class.oauth_account_id(access_token)
+      if oauth_account_id.blank?
+        raise Error, "ChatGPT account ID is required when using a Codex OAuth token"
+      end
+
+      client_options[:extra_headers] = {
+        "ChatGPT-Account-ID" => oauth_account_id,
+        "originator" => CODEX_ORIGINATOR
+      }
+    end
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = llm_uri_base
     if custom_provider? && llm_model.blank?
       raise Error, "Model is required when using a custom OpenAI‑compatible provider"
     end
-    @default_model = llm_model.presence || self.class.effective_model
+    @default_model = llm_model.presence || (oauth? ? CODEX_DEFAULT_MODEL : self.class.effective_model)
   end
 
   def supports_model?(model)
@@ -53,6 +88,8 @@ class Provider::Openai < Provider
   end
 
   def provider_name
+    return "OpenAI (Codex subscription)" if oauth?
+
     custom_provider? ? "Custom OpenAI-compatible (#{@uri_base})" : "OpenAI"
   end
 
@@ -65,7 +102,11 @@ class Provider::Openai < Provider
   end
 
   def custom_provider?
-    @uri_base.present?
+    @uri_base.present? && !oauth?
+  end
+
+  def oauth?
+    @oauth
   end
 
   # Token-budget knobs. Precedence: ENV > Setting > default. Defaults match

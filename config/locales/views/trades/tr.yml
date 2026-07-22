@@ -5,15 +5,28 @@ tr:
       account: Transfer hesabı (isteğe bağlı)
       account_prompt: Hesap ara
       amount: Tutar
+      dividend_requires_security: Temettüler için menkul kıymet gereklidir
+      fee: İşlem ücreti
       holding: Sembol
+      holding_optional: Sembol (isteğe bağlı)
       price: Hisse başı fiyat
       qty: Miktar
       submit: İşlem ekle
       ticker_placeholder: AAPL
+      trade_requires_security: Alım ve satım işlemleri için bir menkul kıymet (sembol)
+        gereklidir
       type: Tür
+      type_buy: Al
+      type_deposit: Yatırma
+      type_dividend: Temettü
+      type_interest: Faiz
+      type_sell: Sat
+      type_withdrawal: Çekme
     header:
       buy: Al
       current_market_price_label: Güncel Piyasa Fiyatı
+      dividend: Temettü
+      interest: Faiz
       overview: Genel Bakış
       purchase_price_label: Alış Fiyatı
       purchase_qty_label: Alış Miktarı
@@ -24,6 +37,9 @@ tr:
       title: Yeni işlem
     show:
       additional: Ekstra
+      amount_label: Tutar
+      buy: Al
+      category_label: Kategori
       cost_per_share_label: Hisse başı maliyet
       date_label: Tarih
       delete: Sil
@@ -32,7 +48,14 @@ tr:
       details: Detaylar
       exclude_subtitle: Bu işlem rapor ve hesaplamalara dahil edilmeyecek
       exclude_title: Analizlerden hariç tut
+      fee_label: İşlem ücreti
+      no_category: Kategori yok
       note_label: Not
       note_placeholder: Ek notlarınızı buraya ekleyin...
+      provider_disabled_warning: Fiyat güncellemeleri duraklatıldı — %{provider} sağlayıcısı
+        devre dışı. Ayarlar'dan yeniden etkinleştirin veya varlığı başka bir sağlayıcıya
+        yeniden eşleyin.
       quantity_label: Miktar
+      sell: Sat
       settings: Ayarlar
+      type_label: Tür

@@ -1,0 +1,58 @@
+---
+tr:
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Asistan gerekçesi
+    tool_calls:
+      arguments: 'Argümanlar:'
+      function: 'Fonksiyon:'
+      tool_calls: Araç Çağrıları
+  chats:
+    ai_consent:
+      available_description: Yapay zeka sohbeti finansal sorularınızı yanıtlayabilir
+        ve verilerinize dayalı öngörüler sunabilir. Bu özelliği kullanmak için açıkça
+        etkinleştirmeniz gerekir.
+      disable_note: İstediğiniz zaman devre dışı bırakabilirsiniz. LLM sağlayıcılarımıza
+        gönderilen tüm veriler anonimleştirilir.
+      enable_button: Yapay Zeka Sohbetlerini Etkinleştir
+      title: Yapay Zeka Sohbetlerini Etkinleştir
+      unavailable_description_html: Yapay zeka asistanını kullanmak için <code class="bg-surface-inset
+        px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> ortam değişkenini
+        ayarlamanız veya bunu örneğinizin Kendi Sunucunuzda Barındırma ayarlarında
+        yapılandırmanız gerekir.
+    ai_greeting:
+      commands_hint_html: Komutlara erişmek için <span class="bg-container border
+        border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> kullanabilirsiniz
+      evaluate_portfolio: Yatırım portföyünü değerlendir
+      greeting: Merhaba %{name}! Finansal konularınızda yardımcı olabilecek bir yapay
+        zeka/büyük dil modeliyim. Web'e ve hesap verilerinize erişimim var.
+      questions_intro: 'Sorabileceğiniz birkaç örnek soru:'
+      spending_insights: Harcama öngörülerini göster
+      there: değerli kullanıcı
+      unusual_patterns: Olağandışı örüntüleri bul
+    chat:
+      delete_chat: Sohbeti sil
+      edit_chat_title: Sohbet başlığını düzenle
+    chat_nav:
+      all_chats: Tüm sohbetler
+      delete_chat: Sohbeti sil
+      edit_chat_title: Sohbet başlığını düzenle
+      start_new_chat: Yeni sohbet başlat
+    demo_banner_message: "Cloudflare Workers AI tarafından sağlanan krediler aracılığıyla
+      LLM'ler kullanıyorsunuz. Kod tabanı `gpt-4.1` ile test edildiğinden sonuçlar
+      farklılık gösterebilir, ancak jetonlarınız eğitim için başka hiçbir yere gitmez!
+      🤖"
+    demo_banner_title: Demo Modu Aktif
+    destroy:
+      notice: Sohbet başarıyla silindi
+    error:
+      retry: Yeniden dene
+    index:
+      chats: Sohbetler
+      new_chat: Yeni sohbet
+    thinking: Düşünüyor ...
+    update:
+      success: Sohbet güncellendi
+    worker_unhealthy_warning: Yapay zeka yanıtları şu anda iletilemeyebilir — arka
+      plan çalışanı kapalı veya birikmiş görünüyor. Sidekiq çalışanınızın çalıştığından
+      emin olun.

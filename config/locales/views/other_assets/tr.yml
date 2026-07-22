@@ -2,6 +2,10 @@
 tr:
   other_assets:
     edit:
+      balance_tracking_info: Diğer Varlıklar, işlemler yerine 'Yeni Bakiye' kullanılarak
+        yapılan manuel değerlemelerle takip edilir. Nakit akışı hesap bakiyesini etkilemez.
       edit: "%{account} düzenle"
     new:
+      balance_tracking_info: Diğer Varlıklar, işlemler yerine 'Yeni Bakiye' kullanılarak
+        yapılan manuel değerlemelerle takip edilir. Nakit akışı hesap bakiyesini etkilemez.
       title: Varlık detaylarını gir
