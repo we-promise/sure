@@ -30,6 +30,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
         metadata: {
           recurring_transaction_id: recurring.id,
           amount: round(recurring.amount, 2),
+          currency: recurring.currency,
           expected_on: recurring.next_expected_date.iso8601
         },
         dedup_key: "subscription_audit:#{recurring.id}"
