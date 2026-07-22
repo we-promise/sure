@@ -129,23 +129,27 @@ class InsightTest < ActiveSupport::TestCase
     assert_equal I18n.t("insights.titles.budget_at_risk", count: 2), insight.display_title
   end
 
-  test "localize_fact_value formats floats and ISO dates for the locale and passes the rest through" do
+  test "localize_fact_value formats floats, ISO dates, and money facts for the locale and passes the rest through" do
     date = Date.new(2026, 7, 28)
+    money = { "amount" => 28_400.00, "currency" => "USD" }
 
     I18n.with_locale(:en) do
       assert_equal "12.8", Insight.localize_fact_value(12.8)
       assert_equal "−4.3", Insight.localize_fact_value(-4.3)
       assert_equal "12", Insight.localize_fact_value(12.0)
       assert_equal I18n.l(date), Insight.localize_fact_value("2026-07-28")
+      assert_equal "$28,400.00", Insight.localize_fact_value(money)
     end
 
     I18n.with_locale(:fr) do
       assert_equal "12,8", Insight.localize_fact_value(12.8)
       assert_equal I18n.l(date), Insight.localize_fact_value("2026-07-28")
+      assert_equal "28 400,00 $", Insight.localize_fact_value(money)
     end
 
     assert_equal 60, Insight.localize_fact_value(60)
-    assert_equal "$28,400.00", Insight.localize_fact_value("$28,400.00")
+    assert_equal "Emergency fund", Insight.localize_fact_value("Emergency fund")
+    assert_equal "$500,000", Insight.localize_fact_value({ "amount" => 500_000, "currency" => "USD", "precision" => 0 })
   end
 
   private

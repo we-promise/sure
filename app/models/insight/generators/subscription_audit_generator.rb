@@ -10,7 +10,6 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
   def generate
     overdue_recurring.map do |recurring|
       name = recurring.merchant&.name.presence || recurring.name
-      amount = Money.new(recurring.amount, recurring.currency).format
       days_overdue = (Date.current - recurring.next_expected_date).to_i
 
       build_insight(
@@ -20,7 +19,9 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
         template_key: "subscription_audit",
         facts: {
           name: name,
-          amount: amount,
+          # Recurring transaction currency may differ from the family's base
+          # currency, so this fact carries its own instead of defaulting.
+          amount: money_fact(recurring.amount, currency: recurring.currency),
           days_overdue: days_overdue,
           expected_on: recurring.next_expected_date.iso8601
         },

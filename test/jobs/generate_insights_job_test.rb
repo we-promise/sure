@@ -64,7 +64,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
     insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
-    assert_equal "$5000", insight.facts["balance"]
+    assert_equal({ "amount" => 5000.0, "currency" => "USD" }, insight.facts["balance"])
     insight.mark_read!
 
     stub_generated([ generated_insight(display_balance: 5040) ])
@@ -72,7 +72,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
     insight.reload
-    assert_equal "$5040", insight.facts["balance"]
+    assert_equal({ "amount" => 5040.0, "currency" => "USD" }, insight.facts["balance"])
     assert insight.read?
   end
 
@@ -93,6 +93,21 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal "Idle cash in Test Checking", insight.title
     assert_nil insight.body
     assert insight.read?
+  end
+
+  test "broadcasts the refreshed feed rendered in the family's locale" do
+    @family.update!(locale: "fr")
+    stub_generated([ generated_insight ])
+
+    seen_locales = []
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to).with do
+      seen_locales << I18n.locale
+      true
+    end
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert_equal [ :fr, :fr ], seen_locales
   end
 
   test "dismissed insight stays dismissed when numbers are unchanged" do
@@ -191,7 +206,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
         priority: "low",
         title: "Idle cash in Test Checking",
         template_key: "idle_cash",
-        facts: { account: "Test Checking", balance: "$#{(display_balance || balance).to_i}", idle_days: 60 },
+        facts: { account: "Test Checking", balance: { amount: (display_balance || balance).to_f, currency: "USD" }, idle_days: 60 },
         metadata: { account_id: "test-account", balance: balance },
         currency: "USD",
         period_start: nil,

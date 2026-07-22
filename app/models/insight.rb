@@ -46,8 +46,8 @@ class Insight < ApplicationRecord
   ISO_DATE_FACT = /\A\d{4}-\d{2}-\d{2}\z/
 
   class << self
-    # Facts are stored as raw values (floats, ISO date strings, pre-formatted
-    # money) and localized at interpolation time, both here for live-rendered
+    # Facts are stored as raw values (floats, ISO date strings, money facts)
+    # and localized at interpolation time, both here for live-rendered
     # templates and by Insight::BodyWriter before handing them to the LLM.
     def localize_facts(facts)
       (facts || {}).to_h { |key, value| [ key.to_sym, localize_fact_value(value) ] }
@@ -55,7 +55,8 @@ class Insight < ApplicationRecord
 
     # Floats get the locale's decimal separator and a true minus sign (U+2212 —
     # the app types negatives with a minus, not a hyphen); ISO dates localize;
-    # everything else (money strings, names, integer counts) passes through.
+    # money facts (built via Insight::Generator#money_fact) format in their
+    # own currency; everything else (names, integer counts) passes through.
     # Integers stay raw so i18n pluralization keeps working on `count` facts.
     def localize_fact_value(value)
       case value
@@ -64,10 +65,24 @@ class Insight < ApplicationRecord
         value.negative? ? "−#{formatted}" : formatted
       when ISO_DATE_FACT
         I18n.l(Date.iso8601(value))
+      when Hash
+        money_fact?(value) ? format_money_fact(value) : value
       else
         value
       end
     end
+
+    private
+      def money_fact?(value)
+        value = value.with_indifferent_access
+        value[:amount].present? && value[:currency].present?
+      end
+
+      def format_money_fact(value)
+        value = value.with_indifferent_access
+        options = value[:precision].present? ? { precision: value[:precision].to_i } : {}
+        Money.new(value[:amount], value[:currency]).format(**options)
+      end
   end
 
   def display_title
@@ -80,7 +95,7 @@ class Insight < ApplicationRecord
     return body if body.present?
     return "" if template_key.blank?
 
-    I18n.t("insights.templates.#{template_key}", **localized_facts)
+    I18n.t("insights.templates.#{template_key}", **localized_facts, default: body)
   end
 
   def mark_read!

@@ -37,15 +37,15 @@ module InsightsHelper
       value = "#{sign}#{Insight.localize_fact_value(facts["change_pp"])}"
       [ t("insights.figures.savings_rate_delta", value: value), t("insights.figures.vs_previous") ]
     when "net_worth_milestone"
-      facts["net_worth"] && [ facts["net_worth"], t("insights.figures.today") ]
+      facts["net_worth"] && [ Insight.localize_fact_value(facts["net_worth"]), t("insights.figures.today") ]
     when "spending_anomaly"
-      facts["projected_spend"] && [ facts["projected_spend"], t("insights.figures.on_pace") ]
+      facts["projected_spend"] && [ Insight.localize_fact_value(facts["projected_spend"]), t("insights.figures.on_pace") ]
     when "cash_flow_warning"
-      facts["projected_low"] && [ facts["projected_low"], Insight.localize_fact_value(facts["projected_low_date"]) ]
+      facts["projected_low"] && [ Insight.localize_fact_value(facts["projected_low"]), Insight.localize_fact_value(facts["projected_low_date"]) ]
     when "subscription_audit"
-      facts["amount"] && [ facts["amount"], t("insights.figures.days_overdue", count: facts["days_overdue"].to_i) ]
+      facts["amount"] && [ Insight.localize_fact_value(facts["amount"]), t("insights.figures.days_overdue", count: facts["days_overdue"].to_i) ]
     when "idle_cash"
-      facts["balance"] && [ facts["balance"], t("insights.figures.idle_days", count: facts["idle_days"].to_i) ]
+      facts["balance"] && [ Insight.localize_fact_value(facts["balance"]), t("insights.figures.idle_days", count: facts["idle_days"].to_i) ]
     when "budget_at_risk", "budget_on_track"
       facts["budget_spent_pct"] && [ t("insights.figures.percent", value: facts["budget_spent_pct"]), t("insights.figures.of_budget") ]
     end

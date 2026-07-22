@@ -36,8 +36,12 @@ class GenerateInsightsJob < ApplicationJob
 
       # Outside the lock on purpose: even a lock-skipped run re-broadcasts the
       # current state, so a subscribed /insights page (waiting on its manual
-      # refresh) always gets its list and button restored.
-      broadcast_feed(family)
+      # refresh) always gets its list and button restored. Still scoped to the
+      # family's locale — the partial renders Insight#display_title/display_body
+      # live, and a Sidekiq thread carries no per-request locale of its own.
+      I18n.with_locale(family.locale) do
+        broadcast_feed(family)
+      end
     end
 
     def broadcast_feed(family)

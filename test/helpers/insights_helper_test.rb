@@ -86,7 +86,7 @@ class InsightsHelperTest < ActionView::TestCase
   end
 
   test "key figure comes from facts and hides for rows without them" do
-    with_facts = build_insight("idle_cash", facts: { "balance" => "$28,400.00", "idle_days" => 60 })
+    with_facts = build_insight("idle_cash", facts: { "balance" => { "amount" => 28_400.00, "currency" => "USD" }, "idle_days" => 60 })
     without_facts = build_insight("idle_cash")
 
     assert_equal "$28,400.00", insight_key_figure(with_facts).first

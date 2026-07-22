@@ -53,11 +53,11 @@ fr:
     templates:
       budget_at_risk:
         near: "%{categories} approchent de leurs limites ce mois-ci. Vous avez utilisé
-          %{budget_spent_pct}% de votre budget total jusqu'à présent."
+          %{budget_spent_pct} % de votre budget total jusqu'à présent."
         over: "%{categories} ont dépassé le budget ce mois-ci. Vous avez utilisé
-          %{budget_spent_pct}% de votre budget total jusqu'à présent."
+          %{budget_spent_pct} % de votre budget total jusqu'à présent."
       budget_on_track: Vous avez dépensé %{spent} sur votre budget de %{budgeted}
-        (%{budget_spent_pct}%) et tout reste dans les limites.
+        (%{budget_spent_pct} %) et tout reste dans les limites.
       cash_flow_warning:
         low: D'après vos prochaines transactions récurrentes et vos dépenses habituelles,
           votre solde de trésorerie pourrait descendre à %{projected_low} vers le
@@ -70,20 +70,20 @@ fr:
       net_worth_milestone: Votre patrimoine net a franchi %{milestone} et s'élève
         désormais à %{net_worth}.
       savings_rate_change:
-        down: Vous avez épargné %{current_rate}% de vos revenus en %{month}, soit
-          %{change_pp} points de pourcentage de moins que %{previous_rate}% le mois
+        down: Vous avez épargné %{current_rate} % de vos revenus en %{month}, soit
+          %{change_pp} points de pourcentage de moins que %{previous_rate} % le mois
           précédent.
         down_negative: "Vous avez dépensé plus que vous n'avez gagné en %{month}
-          : votre taux d'épargne est tombé à %{current_rate}%, contre %{previous_rate}%
+          : votre taux d'épargne est tombé à %{current_rate} %, contre %{previous_rate} %
           le mois précédent."
-        up: Vous avez épargné %{current_rate}% de vos revenus en %{month}, soit %{change_pp}
-          points de pourcentage de plus que %{previous_rate}% le mois précédent.
+        up: Vous avez épargné %{current_rate} % de vos revenus en %{month}, soit %{change_pp}
+          points de pourcentage de plus que %{previous_rate} % le mois précédent.
       spending_anomaly:
         above: Vous êtes en voie de dépenser %{projected_spend} pour %{category}
-          ce mois-ci, soit environ %{deviation_pct}% de plus que votre moyenne mensuelle
+          ce mois-ci, soit environ %{deviation_pct} % de plus que votre moyenne mensuelle
           récente de %{baseline_spend}.
         below: Vous êtes en voie de dépenser %{projected_spend} pour %{category}
-          ce mois-ci, soit environ %{deviation_pct}% de moins que votre moyenne mensuelle
+          ce mois-ci, soit environ %{deviation_pct} % de moins que votre moyenne mensuelle
           récente de %{baseline_spend}.
       subscription_audit: "%{name} (%{amount}) n'est pas réapparu depuis la date
         prévue du %{expected_on}. Il est possible que l'abonnement ait été annulé
