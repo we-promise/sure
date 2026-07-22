@@ -23,12 +23,11 @@ pub fn build(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         ],
     )?;
 
-    let new_window = MenuItem::with_id(app, "new_window", "New Window", true, Some("Cmd+N"))?;
     let file_menu = Submenu::with_items(
         app,
         "File",
         true,
-        &[&new_window, &PredefinedMenuItem::close_window(app, None)?],
+        &[&PredefinedMenuItem::close_window(app, None)?],
     )?;
 
     let edit_menu = Submenu::with_items(
@@ -74,7 +73,6 @@ pub fn on_event(app: &tauri::AppHandle, id: &str) {
                 let _ = w.eval("window.location.reload()");
             }
         }
-        "new_window" => { let _ = app.emit("menu://new-window", ()); }
         _ => {}
     }
 }
