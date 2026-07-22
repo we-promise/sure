@@ -33,6 +33,34 @@
   if (!tauri?.event) return;
   const emit = tauri.event.emit as (e: string, p: unknown) => void;
 
+  // SSO must run in the system browser (passkeys/WebAuthn don't work in an
+  // embedded webview). Sure renders each SSO provider as a form POSTing to
+  // /auth/{provider}; intercept those submits and hand off to the Rust side,
+  // which opens the browser and completes the PKCE handoff. Password login
+  // (POST /sessions) is untouched.
+  if (!(window as any).__sureSsoHook && tauri.core?.invoke) {
+    (window as any).__sureSsoHook = true;
+    document.addEventListener(
+      "submit",
+      (ev) => {
+        const form = ev.target as HTMLFormElement | null;
+        if (!form || form.tagName !== "FORM") return;
+        let path: string;
+        try {
+          path = new URL(form.action, location.href).pathname;
+        } catch {
+          return;
+        }
+        const m = path.match(/^\/auth\/([A-Za-z0-9_-]+)$/);
+        if (!m) return; // not an SSO provider form (e.g. /sessions, /auth/x/callback)
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        tauri.core.invoke("start_sso", { server: location.origin, provider: m[1] });
+      },
+      true // capture, to beat any page handlers
+    );
+  }
+
   // Menu wiring: registered here too because the main window may show the
   // remote Sure site (not the bundled main.ts document) when these fire.
   if (!(window as any).__sureMenuListeners) {

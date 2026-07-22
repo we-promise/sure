@@ -22,5 +22,9 @@ window-vibrancy = "0.5"
 tauri-plugin-decorum = "1"
 url = "2"
 ureq = { version = "2", features = ["json"] }
+open = "5"
+sha2 = "0.10"
+base64 = "0.22"
+getrandom = "0.2"
 
 [dev-dependencies]

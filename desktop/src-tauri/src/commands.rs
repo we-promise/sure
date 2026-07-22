@@ -49,6 +49,29 @@ pub fn set_active_server(url: String, state: State<AppState>, app: tauri::AppHan
     let _ = app.emit("active-server-changed", url);
 }
 
+/// Begin SSO in the system browser (so passkeys/WebAuthn work). Generates a
+/// PKCE pair, stashes the verifier + server for the sure://sso/callback handoff,
+/// and opens {server}/auth/desktop/{provider}?code_challenge=... in the browser.
+#[tauri::command]
+pub fn start_sso(server: String, provider: String, state: State<AppState>) -> Result<(), String> {
+    let canonical = normalize_server_url(&server).map_err(|e| e.to_string())?;
+    // Providers are simple identifiers ([a-z0-9_]); reject anything else so it
+    // can't smuggle extra path/query into the opened URL.
+    if provider.is_empty() || !provider.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+        return Err("invalid provider".into());
+    }
+
+    let pkce = crate::sso::generate_pkce();
+    let url = format!("{}/auth/desktop/{}?code_challenge={}", canonical, provider, pkce.challenge);
+
+    *state.pending_sso.lock().unwrap() = Some(crate::state::PendingSso {
+        verifier: pkce.verifier,
+        server: canonical,
+    });
+
+    open::that(url).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn get_launch_at_login(app: tauri::AppHandle) -> bool {
     app.autolaunch().is_enabled().unwrap_or(false)

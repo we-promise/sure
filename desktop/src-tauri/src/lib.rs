@@ -4,6 +4,7 @@ pub mod deep_link;
 pub mod menu;
 pub mod notifications;
 pub mod servers;
+pub mod sso;
 pub mod state;
 pub mod window;
 
@@ -28,6 +29,7 @@ pub fn run() {
             commands::set_active_server,
             commands::get_launch_at_login,
             commands::set_launch_at_login,
+            commands::start_sso,
         ])
         .setup(|app| {
             window::setup(app)?;
@@ -42,7 +44,23 @@ pub fn run() {
                 let handle = app.handle().clone();
                 app.deep_link().on_open_url(move |event| {
                     for url in event.urls() {
-                        if let Some(target) = deep_link::parse(url.as_str()) {
+                        let u = url.as_str();
+                        // SSO handoff first: exchange the one-time code (bound to
+                        // our stored PKCE verifier) for a session in the webview.
+                        if let Some(cb) = deep_link::parse_sso_callback(u) {
+                            let pending = handle.state::<AppState>().pending_sso.lock().unwrap().take();
+                            if let (deep_link::SsoCallback::Code(code), Some(p)) = (cb, pending) {
+                                if let Some(w) = handle.get_webview_window("main") {
+                                    let dest = format!(
+                                        "{}/sessions/desktop_exchange?code={}&code_verifier={}",
+                                        p.server, code, p.verifier
+                                    );
+                                    let _ = w.eval(&format!("window.location.assign({:?})", dest));
+                                }
+                            }
+                            continue;
+                        }
+                        if let Some(target) = deep_link::parse(u) {
                             if let Some(w) = handle.get_webview_window("main") {
                                 let dest = format!("{}{}", target.server, target.path);
                                 let _ = w.eval(&format!("window.location.assign({:?})", dest));
