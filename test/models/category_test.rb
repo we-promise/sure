@@ -43,6 +43,20 @@ class CategoryTest < ActiveSupport::TestCase
     assert_equal subcategory, transaction.reload.category
   end
 
+  test "invalid parent_id does not raise during validation" do
+    category = Category.new(
+      name: "Orphan Subcategory",
+      color: "#000000",
+      lucide_icon: "folder",
+      family: @family,
+      parent_id: SecureRandom.uuid
+    )
+
+    assert_nothing_raised { category.valid? }
+    assert_not category.subcategory?
+    assert_nil category.parent
+  end
+
   test "subcategory can only be one level deep" do
     category = categories(:subcategory)
 
@@ -126,5 +140,23 @@ class CategoryTest < ActiveSupport::TestCase
       assert_not category.valid?, "#{color} should be invalid"
       assert_includes category.errors[:color], "is invalid"
     end
+  end
+
+  test "ids_with_transactions returns a lookup hash for categorized transactions" do
+    category = categories(:food_and_drink)
+    transaction = Transaction.create!(category: category)
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: transaction,
+      name: "Lookup transaction",
+      date: Date.current,
+      amount: 10,
+      currency: "USD"
+    )
+
+    lookup = Category.ids_with_transactions(family: @family, category_ids: [ category.id, 0 ])
+
+    assert lookup.key?(category.id)
+    assert_not lookup.key?(0)
   end
 end

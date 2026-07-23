@@ -3,5 +3,19 @@ tr:
   cryptos:
     edit:
       edit: "%{account} hesabını düzenle"
+    form:
+      subtype_label: Hesap türü
+      subtype_none: Yok
+      subtype_prompt: Hesap türünü seçin
+      tax_treatment_hint: Çoğu kripto para vergiye tabi hesaplarda tutulur. Vergi
+        avantajlı bir hesapta tutuluyorsa farklı bir seçenek belirleyin.
+      tax_treatment_label: Vergi Muamelesi
     new:
       title: Hesap bakiyesini gir
+    subtypes:
+      exchange:
+        long: Kripto Borsası
+        short: Borsa
+      wallet:
+        long: Kripto Cüzdanı
+        short: Cüzdan
