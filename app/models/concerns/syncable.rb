@@ -3,12 +3,19 @@ module Syncable
 
   included do
     has_many :syncs, as: :syncable, dependent: :destroy
+    # Only the syncs still visible in the UI (incomplete, < 5 min old, not cancelled).
+    # Preload THIS instead of the full :syncs history when all you need is syncing? --
+    # a long-lived account can accumulate thousands of retained sync rows.
+    has_many :visible_syncs, -> { visible }, as: :syncable, class_name: "Sync"
   end
 
   def syncing?
-    # Use the preloaded collection when available to avoid an N+1 of one query
-    # per syncable (e.g. AccountsController#index renders many accounts).
-    if syncs.loaded?
+    # Prefer a preloaded visible-syncs collection (AccountsController#index preloads it
+    # to avoid an N+1 of one query per syncable) and fall back to the full preloaded
+    # collection, then a scoped query.
+    if visible_syncs.loaded?
+      visible_syncs.any?
+    elsif syncs.loaded?
       syncs.any?(&:visible?)
     else
       syncs.visible.any?

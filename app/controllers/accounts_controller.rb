@@ -296,9 +296,10 @@ class AccountsController < ApplicationController
       @simplefin_show_relink_map = {}
       @simplefin_duplicate_only_map = {}
 
-      # The answer is identical for every item (all belong to the same family),
-      # so compute it once instead of firing one query per SimpleFIN item.
-      manuals_exist = family.accounts.listable_manual.exists?
+      # The answer is identical for every item (all belong to the same family), so
+      # compute it once instead of firing one query per SimpleFIN item -- but only when
+      # there are items to answer for, so an empty list adds no query at all.
+      manuals_exist = family.accounts.listable_manual.exists? if @simplefin_items.present?
 
       @simplefin_items.each do |item|
         latest_sync = item.syncs.ordered.first

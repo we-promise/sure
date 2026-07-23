@@ -332,6 +332,24 @@ class SyncTest < ActiveSupport::TestCase
     assert account.syncing?
   end
 
+  test "syncing? reads the preloaded visible_syncs collection when available" do
+    account = accounts(:depository)
+    Sync.where(syncable: account).destroy_all
+
+    # AccountsController#index preloads the scoped :visible_syncs association (only
+    # recent, incomplete syncs) rather than the full :syncs history.
+    Sync.create!(syncable: account, status: :syncing)
+    account.association(:visible_syncs).load_target
+    assert account.visible_syncs.loaded?
+    assert account.syncing?
+
+    # A non-visible sync is excluded from the preloaded scope, so syncing? is false.
+    Sync.where(syncable: account).destroy_all
+    Sync.create!(syncable: account, status: :completed)
+    account.association(:visible_syncs).reload
+    assert_not account.syncing?
+  end
+
   test "syncing? matches the visible scope for various sync states when preloaded" do
     account = accounts(:depository)
 
