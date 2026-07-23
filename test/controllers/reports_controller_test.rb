@@ -331,6 +331,31 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match /Invalid or expired API key/, @response.body
   end
 
+  test "export neutralizes formula injection in category names" do
+    category = @family.categories.create!(
+      name: "=1+1",
+      color: "#737373",
+      lucide_icon: "circle"
+    )
+    create_transaction(
+      account: @family.accounts.first,
+      name: "Formula category spend",
+      amount: -10,
+      category: category
+    )
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :ytd,
+      start_date: Date.current.beginning_of_year,
+      end_date: Date.current
+    )
+
+    assert_response :ok
+    assert_match(/'=1\+1/, @response.body)
+    refute_match(/\n=1\+1,/, @response.body)
+  end
+
   test "export transactions without API key uses session auth" do
     # Should use normal session-based authentication
     # The setup already signs in @user = users(:family_admin)
