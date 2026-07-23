@@ -45,6 +45,7 @@ class Settings::HostingsController < ApplicationController
 
     if @show_yahoo_finance_settings
       @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
+      @yahoo_finance_health_status = @yahoo_finance_provider&.health_status || :unknown
     end
 
     # Property valuation (AVM) providers — usage is shown against their tight
@@ -156,6 +157,19 @@ class Settings::HostingsController < ApplicationController
       unless token_param.blank? || token_param == "********"
         Setting.openai_access_token = token_param
       end
+    end
+
+    if hosting_params.key?(:openai_oauth_token)
+      token_param = hosting_params[:openai_oauth_token].to_s.strip
+      unless token_param.blank? || token_param == "********"
+        Setting.openai_oauth_token = token_param
+        inferred_account_id = Provider::Openai.oauth_account_id(token_param)
+        Setting.openai_oauth_account_id = inferred_account_id if inferred_account_id.present? && Setting.openai_oauth_account_id.blank?
+      end
+    end
+
+    if hosting_params.key?(:openai_oauth_account_id)
+      Setting.openai_oauth_account_id = hosting_params[:openai_oauth_account_id].to_s.strip.presence
     end
 
     # Validate OpenAI configuration before updating
@@ -286,7 +300,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_oauth_token, :openai_oauth_account_id, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type

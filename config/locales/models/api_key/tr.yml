@@ -1,0 +1,7 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: Demo izleme API anahtarı silinemez

@@ -77,12 +77,18 @@ class Provider::Registry
       end
 
       def openai
-        access_token = ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
+        oauth_token = ENV["OPENAI_OAUTH_TOKEN"].presence || Setting.openai_oauth_token
+        access_token = oauth_token || ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
 
         return nil unless access_token.present?
 
         uri_base = ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
         model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
+
+        if oauth_token.present?
+          account_id = ENV["OPENAI_ACCOUNT_ID"].presence || Setting.openai_oauth_account_id
+          return Provider::Openai.new(access_token, model: model, oauth: true, account_id: account_id)
+        end
 
         if uri_base.present? && model.blank?
           Rails.logger.error("Custom OpenAI provider configured without a model; please set OPENAI_MODEL or Setting.openai_model")
