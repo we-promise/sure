@@ -10,6 +10,24 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new form does not leak unshared account ids in account-currencies JSON (#1803)" do
+    sign_in users(:family_member)
+    unshared_account = accounts(:other_asset)
+    shared_account = accounts(:depository)
+
+    get new_transfer_url
+
+    assert_response :success
+    map_node = css_select("[data-transfer-form-account-currencies-value]").first
+    assert map_node, "Expected the form to render data-transfer-form-account-currencies-value"
+    account_currencies = JSON.parse(map_node["data-transfer-form-account-currencies-value"])
+
+    assert_includes account_currencies.keys, shared_account.id,
+      "Expected the shared account id to be present in the account-currencies map"
+    refute_includes account_currencies.keys, unshared_account.id,
+      "Family member must not receive ids of unshared family accounts via the transfer form JSON"
+  end
+
   test "can create transfers" do
     assert_difference "Transfer.count", 1 do
       post transfers_url, params: {
