@@ -40,7 +40,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     original = Transfer.method(:find_or_create_by!)
     Transfer.singleton_class.send(:define_method, :find_or_create_by!) do |attributes|
       if attributes[:inflow_transaction_id] == inflow_id
-        insert!(inflow_transaction_id: rival.inflow_transaction_id, outflow_transaction_id: rival.outflow_transaction_id)
+        insert!({ inflow_transaction_id: rival.inflow_transaction_id, outflow_transaction_id: rival.outflow_transaction_id })
       else
         original.call(attributes)
       end
