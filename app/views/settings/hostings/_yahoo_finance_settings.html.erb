@@ -3,28 +3,20 @@
     <h2 class="font-medium mb-1"><%= t(".title") %></h2>
     <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
   </div>
-  <% if @yahoo_finance_provider&.healthy? %>
-    <div class="space-y-4">
-      <div class="flex items-center space-x-3">
-        <div class="w-3 h-3 bg-success rounded-full"></div>
-        <p class="text-sm text-secondary">
-          <%= t(".status_active") %>
-        </p>
-      </div>
+  <% health = yahoo_finance_health_presentation(@yahoo_finance_health_status) %>
+  <div class="space-y-4">
+    <div class="flex items-center space-x-3">
+      <div class="w-3 h-3 <%= health[:status_class] %> rounded-full"></div>
+      <p class="text-sm text-secondary">
+        <%= health[:status_text] %>
+      </p>
     </div>
-  <% else %>
-    <div class="space-y-4">
-      <div class="flex items-center space-x-3">
-        <div class="w-3 h-3 bg-destructive rounded-full"></div>
-        <p class="text-sm text-secondary">
-          <%= t(".status_inactive") %>
-        </p>
-      </div>
+    <% if health[:alert] %>
       <%= render DS::Alert.new(
-        title: t(".connection_failed"),
-        message: t(".troubleshooting"),
-        variant: :warning
+        title: health.dig(:alert, :title),
+        message: health.dig(:alert, :message),
+        variant: health.dig(:alert, :variant)
       ) %>
-    </div>
-  <% end %>
+    <% end %>
+  </div>
 </div>
