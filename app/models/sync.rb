@@ -102,6 +102,12 @@ class Sync < ApplicationRecord
     pending? || syncing?
   end
 
+  # In-memory equivalent of the `visible` scope, so callers with a preloaded
+  # `syncs` collection can check syncing status without firing SQL.
+  def visible?
+    in_progress? && cancel_requested_at.nil? && created_at.present? && created_at > VISIBLE_FOR.ago
+  end
+
   def terminal?
     completed? || failed? || stale?
   end
