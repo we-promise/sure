@@ -597,6 +597,11 @@ class Family::DataExporter
         return rule_operand(condition.value, type: "Merchant", relation: @family.merchants)
       end
 
+      # Map tag UUIDs to names for portability
+      if condition.condition_type == "transaction_tag"
+        return rule_operand(condition.value, type: "Tag", relation: @family.tags)
+      end
+
       rule_operand(condition.value)
     end
 
