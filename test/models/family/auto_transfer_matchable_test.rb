@@ -32,6 +32,11 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     rival_in = create_transaction(date: Date.current, account: @credit_card, amount: -250)
     rival = Transfer.create!(inflow_transaction_id: rival_in.entryable_id, outflow_transaction_id: rival_out.entryable_id)
 
+    # A second, non-conflicting candidate: matching must CONTINUE past the skipped
+    # collision and still create this transfer.
+    good_out = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 700)
+    good_in = create_transaction(date: Date.current, account: @credit_card, amount: -700)
+
     original = Transfer.method(:find_or_create_by!)
     Transfer.singleton_class.send(:define_method, :find_or_create_by!) do |attributes|
       if attributes[:inflow_transaction_id] == inflow_id
@@ -55,6 +60,14 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     # transaction healthy (no abort asserted above).
     assert_nil Transfer.find_by(inflow_transaction_id: inflow_id, outflow_transaction_id: outflow_entry.entryable_id)
     refute_equal "funds_movement", inflow_entry.entryable.kind
+
+    # ...and matching did not stop at the skip: the non-conflicting candidate was
+    # still created and both its entries marked.
+    good_in.reload
+    good_out.reload
+    assert Transfer.exists?(inflow_transaction_id: good_in.entryable_id, outflow_transaction_id: good_out.entryable_id)
+    assert_equal "funds_movement", good_in.entryable.kind
+    assert_equal "cc_payment", good_out.entryable.kind
   end
 
   test "a :taken on one column from a different pairing is skipped, not marked" do
