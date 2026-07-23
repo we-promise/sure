@@ -138,6 +138,29 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "since_date bounds matching to recent entries" do
+    old_outflow = create_transaction(date: 100.days.ago.to_date, account: @depository, amount: 500)
+    old_inflow = create_transaction(date: 100.days.ago.to_date, account: @credit_card, amount: -500)
+
+    # Old pair is ignored when a recent window is requested
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!(since_date: 90.days.ago.to_date)
+    end
+
+    # A recent pair within the window is still matched
+    create_transaction(date: Date.current, account: @depository, amount: 700)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700)
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!(since_date: 90.days.ago.to_date)
+    end
+
+    # Without a window (default), the old pair is matched for full-history matching
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "does not match transactions outside the 4-day window" do
     create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
