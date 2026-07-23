@@ -95,7 +95,11 @@ class Insight < ApplicationRecord
     return body if body.present?
     return "" if template_key.blank?
 
-    I18n.t("insights.templates.#{template_key}", **localized_facts, default: body)
+    # body is always nil here (the presence check above already returned),
+    # so default: body would be default: nil — i18n treats Array(nil) as no
+    # default at all and raises/renders "translation missing" instead of
+    # falling back gracefully, unlike display_title's default: title.
+    I18n.t("insights.templates.#{template_key}", **localized_facts, default: "")
   end
 
   def mark_read!

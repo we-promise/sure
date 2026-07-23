@@ -116,6 +116,13 @@ class InsightTest < ActiveSupport::TestCase
     assert_equal @insight.body, @insight.display_body
   end
 
+  test "display_body renders blank instead of a translation-missing string for an unresolved template_key" do
+    insight = savings_rate_insight
+    insight.template_key = "savings_rate_change.no_longer_exists"
+
+    assert_equal "", insight.display_body
+  end
+
   test "budget_at_risk title pluralizes on the flagged-category count" do
     insight = Insight.new(
       family: families(:dylan_family),
