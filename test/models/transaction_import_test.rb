@@ -401,6 +401,55 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal [ "First", "Second", "Third", "Fourth" ], names
   end
 
+  test "preserves intra-day CSV row order when a same-day row matches an existing transaction" do
+    account = accounts(:depository)
+
+    # The first CSV row matches this existing transaction, so it is claimed as a
+    # duplicate (updated) instead of inserted -- it must still be re-ordered with the
+    # new rows, or it keeps its old created_at and sorts out of CSV order.
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 10,
+      currency: "USD",
+      name: "First",
+      entryable: Transaction.new
+    )
+
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,First,10
+      01/01/2024,Second,20
+      01/01/2024,Third,30
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Only the two new rows create entries; the first row updates the existing one.
+    assert_difference -> { Entry.count } => 2 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+
+    # The matched row is re-ordered with the new rows, so the whole import renders in
+    # CSV order rather than leaving the matched row stuck at its original created_at.
+    names = @import.entries.reverse_chronological.map(&:name)
+    assert_equal [ "First", "Second", "Third" ], names
+    assert_equal @import.id, existing_entry.reload.import_id
+  end
+
   test "uses family currency as fallback when account has no currency and no CSV currency column" do
     account = accounts(:depository)
     family = account.family
