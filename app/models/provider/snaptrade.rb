@@ -101,7 +101,11 @@ class Provider::Snaptrade
       def token_request(params)
         raise ConfigurationError, "SnapTrade OAuth is not configured" unless oauth_configured?
 
-        response = with_retries("POST #{TOKEN_URL}") do
+        # Not retried: a token request consumes a single-use authorization code
+        # or rotates the refresh token. If the response is lost after SnapTrade
+        # processed it, replaying the same params would fail with invalid_grant
+        # even though the original request actually succeeded.
+        response = without_retry("POST #{TOKEN_URL}") do
           oauth_connection.post(TOKEN_URL) do |request|
             request.headers["Authorization"] = basic_auth_header
             request.headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -164,6 +168,15 @@ class Provider::Snaptrade
             raise ApiError.new("Network error after #{max_retries} retries: #{e.message}")
           end
         end
+      end
+
+      # For requests that must not be replayed (single-use codes, token rotation):
+      # translate a network failure into an ApiError without retrying.
+      def without_retry(operation_name)
+        yield
+      rescue Faraday::TimeoutError, Faraday::ConnectionFailed, Errno::ECONNRESET, Errno::ETIMEDOUT => e
+        Rails.logger.error("SnapTrade OAuth: #{operation_name} failed (not retried, non-idempotent): #{e.class}: #{e.message}")
+        raise ApiError.new("Network error (not retried, non-idempotent request): #{e.message}")
       end
 
       def calculate_retry_delay(retry_count)
@@ -244,7 +257,11 @@ class Provider::Snaptrade
       operation = "#{method.to_s.upcase} #{path}"
       used_access_token = snaptrade_item.oauth_access_token
 
-      response = with_retries(operation) do
+      # Only GET is safe to retry: a lost response to a POST/DELETE (e.g.
+      # get_connection_url, delete_connection) may already have been applied by
+      # SnapTrade, so replaying it risks duplicate side effects.
+      retrier = method == :get ? method(:with_retries) : method(:without_retry)
+      response = retrier.call(operation) do
         api_connection.public_send(method, "#{API_BASE_URL}#{path}") do |request|
           request.headers["Authorization"] = "Bearer #{used_access_token}"
           request.headers["Accept"] = "application/json"
@@ -383,6 +400,13 @@ class Provider::Snaptrade
           raise ApiError.new("Network error after #{max_retries} retries: #{e.message}")
         end
       end
+    end
+
+    def without_retry(operation_name)
+      yield
+    rescue Faraday::TimeoutError, Faraday::ConnectionFailed, Errno::ECONNRESET, Errno::ETIMEDOUT => e
+      Rails.logger.error("SnapTrade API: #{operation_name} failed (not retried, non-idempotent): #{e.class}: #{e.message}")
+      raise ApiError.new("Network error (not retried, non-idempotent request): #{e.message}")
     end
 
     def calculate_retry_delay(retry_count)
