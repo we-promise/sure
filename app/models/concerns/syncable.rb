@@ -6,7 +6,13 @@ module Syncable
   end
 
   def syncing?
-    syncs.visible.any?
+    # Use the preloaded collection when available to avoid an N+1 of one query
+    # per syncable (e.g. AccountsController#index renders many accounts).
+    if syncs.loaded?
+      syncs.any?(&:visible?)
+    else
+      syncs.visible.any?
+    end
   end
 
   # Schedules a sync for syncable.  If there is an existing sync pending/syncing for this syncable,

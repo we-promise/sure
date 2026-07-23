@@ -310,6 +310,46 @@ class SyncTest < ActiveSupport::TestCase
     assert_not_equal sync.id, new_sync.id
   end
 
+  test "syncing? reads the preloaded syncs collection instead of firing a query" do
+    account = accounts(:depository)
+    Sync.where(syncable: account).destroy_all
+
+    # Simulate the controller preloading `:syncs` (e.g. AccountsController#index)
+    # with an empty collection.
+    account.association(:syncs).load_target
+    assert account.syncs.loaded?
+
+    # Create a visible sync from the Sync side so it lands in the DB but NOT in
+    # the account's already-loaded association cache.
+    Sync.create!(syncable: account, status: :syncing)
+
+    # Because syncs is loaded, syncing? must reflect the in-memory collection and
+    # not fire a fresh query that would pick up the new row.
+    assert_not account.syncing?
+
+    # Reloading the association surfaces the new row to the in-memory check.
+    account.association(:syncs).reload
+    assert account.syncing?
+  end
+
+  test "syncing? matches the visible scope for various sync states when preloaded" do
+    account = accounts(:depository)
+
+    [
+      [ { status: :syncing }, true ],
+      [ { status: :pending }, true ],
+      [ { status: :completed }, false ],
+      [ { status: :syncing, cancel_requested_at: Time.current }, false ],
+      [ { status: :syncing, created_at: (Sync::VISIBLE_FOR + 1.minute).ago }, false ]
+    ].each do |attrs, expected|
+      Sync.where(syncable: account).destroy_all
+      Sync.create!({ syncable: account }.merge(attrs))
+      account.association(:syncs).reload
+
+      assert_equal expected, account.syncing?, "expected syncing? == #{expected} for #{attrs.inspect}"
+    end
+  end
+
   test "family syncer stops scheduling children once cancel is requested" do
     family = families(:dylan_family)
     sync = Sync.create!(syncable: family, status: :syncing, cancel_requested_at: Time.current)
