@@ -1636,6 +1636,45 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Candidate outflow", rejected_transfer.outflow_transaction.entry.name
   end
 
+  test "skips rejected transfers with missing transactions under strict import" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" }
+      },
+      {
+        type: "Account",
+        data: { id: "savings", name: "Savings", balance: "2500", currency: "USD", accountable_type: "Depository" }
+      },
+      {
+        type: "Transaction",
+        data: { id: "rejected-outflow", account_id: "checking", date: "2024-01-20", amount: "25.00", name: "Candidate outflow", currency: "USD", kind: "standard" }
+      },
+      {
+        type: "Transaction",
+        data: { id: "rejected-inflow", account_id: "savings", date: "2024-01-20", amount: "-25.00", name: "Candidate inflow", currency: "USD", kind: "standard" }
+      },
+      {
+        type: "RejectedTransfer",
+        data: { id: "rejected-valid", inflow_transaction_id: "rejected-inflow", outflow_transaction_id: "rejected-outflow" }
+      },
+      {
+        type: "RejectedTransfer",
+        data: { id: "rejected-orphan", inflow_transaction_id: "rejected-inflow", outflow_transaction_id: "missing-outflow" }
+      }
+    ])
+
+    result = nil
+    assert_difference -> { RejectedTransfer.count }, 1 do
+      result = Family::DataImporter.new(@family, ndjson, import_session: session).import!
+    end
+
+    assert_equal 1, result[:summary].dig("rejected_transfers", "created")
+    assert_equal 1, result[:summary].dig("rejected_transfers", "skipped")
+  end
+
   test "imports duplicate transfer decisions idempotently with unknown status fallback" do
     ndjson = build_ndjson([
       {

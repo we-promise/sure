@@ -25,8 +25,13 @@ class SureImport::Preflight
     "Valuation" => %w[account_id date amount],
     "Budget" => %w[id start_date end_date],
     "BudgetCategory" => %w[budget_id category_id],
-    "Rule" => %w[name]
+    "Rule" => %w[id]
   }.freeze
+
+  # Record types whose references are advisory: the importer skips rows whose
+  # referenced records are absent instead of failing, so a dangling reference is
+  # a warning rather than a blocking error.
+  SOFT_REFERENCE_TYPES = %w[RejectedTransfer].freeze
 
   TAXONOMY_TYPES = { "Category" => :categories, "Tag" => :tags, "Merchant" => :merchants }.freeze
 
@@ -265,7 +270,12 @@ class SureImport::Preflight
     def validate_reference(record, type, mapping_key, field, value)
       return if value.blank?
       return if @source_ids[mapping_key].include?(value.to_s)
-      add_error(:missing_reference, "Line #{record[:line_number]} #{type} references missing #{field} #{value.inspect}.")
+      message = "Line #{record[:line_number]} #{type} references missing #{field} #{value.inspect}."
+      if SOFT_REFERENCE_TYPES.include?(type)
+        add_warning(:skipped_missing_reference, "#{message} It will be skipped during import.")
+      else
+        add_error(:missing_reference, message)
+      end
     end
 
     def validate_tag_references(record, type)
@@ -309,4 +319,6 @@ class SureImport::Preflight
     def blank_required_value?(value) = value.blank?
 
     def add_error(code, message) = @errors << { code: code.to_s, message: message }
+
+    def add_warning(code, message) = @warnings << { code: code.to_s, message: message }
 end

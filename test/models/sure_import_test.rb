@@ -611,6 +611,23 @@ class SureImportTest < ActiveSupport::TestCase
     assert_includes codes, "missing_reference"
   end
 
+  test "preflight allows null rule names and treats orphaned rejected transfers as warnings" do
+    attach_ndjson(build_ndjson([
+      { type: "Rule", data: { id: "rule-1", name: nil, resource_type: "transaction" } },
+      { type: "RejectedTransfer", data: {
+        id: "rejected-1",
+        inflow_transaction_id: "missing-inflow",
+        outflow_transaction_id: "missing-outflow"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert result.valid?, result.error_message
+    assert_empty result.errors
+    assert_includes result.warnings.map { |warning| warning[:code] }, "skipped_missing_reference"
+  end
+
   test "preflight rejects invalid accountable types through explicit allowlist" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
