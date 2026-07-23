@@ -352,6 +352,24 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_trading212_account(trading212_account)
+      family = trading212_account.trading212_item.family
+
+      attributes = {
+        family: family,
+        name: trading212_account.name.presence || "Trading 212",
+        balance: 0,
+        cash_balance: 0,
+        currency: trading212_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     def create_from_kraken_account(kraken_account)
       create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
     end
