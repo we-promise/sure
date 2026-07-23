@@ -270,11 +270,16 @@ class SureImport::Preflight
     def validate_reference(record, type, mapping_key, field, value)
       return if value.blank?
       return if @source_ids[mapping_key].include?(value.to_s)
-      message = "Line #{record[:line_number]} #{type} references missing #{field} #{value.inspect}."
+      interpolations = {
+        line: record[:line_number],
+        type: type,
+        field: field,
+        value: value.inspect
+      }
       if SOFT_REFERENCE_TYPES.include?(type)
-        add_warning(:skipped_missing_reference, "#{message} It will be skipped during import.")
+        add_warning(:skipped_missing_reference, I18n.t("sure_import.preflight.skipped_missing_reference", **interpolations))
       else
-        add_error(:missing_reference, message)
+        add_error(:missing_reference, I18n.t("sure_import.preflight.missing_reference", **interpolations))
       end
     end
 
