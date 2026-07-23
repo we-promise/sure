@@ -378,4 +378,29 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert result.entryable.pending?, "Should create new pending entry when merchant doesn't match"
     assert result.external_id.start_with?("lunchflow_pending_"), "Should have temporary ID"
   end
+
+  test "converts unix timestamp date using negative family timezone offset" do
+    # 2025-07-15 01:20:00 UTC == 2025-07-14 21:20:00 EDT (UTC-4 in summer)
+    # Without timezone fix this would land on July 15; with fix it lands on July 14.
+    @family.update!(timezone: "America/New_York")
+
+    transaction_data = {
+      id: "lf_tz_neg_test",
+      accountId: 456,
+      amount: -10.00,
+      currency: "USD",
+      date: 1752542400, # 2025-07-15 01:20:00 UTC == 2025-07-14 21:20:00 EDT
+      merchant: "Late Night Shop",
+      description: "After midnight"
+    }
+
+    result = LunchflowEntry::Processor.new(
+      transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result
+    assert_equal Date.new(2025, 7, 14), result.date,
+      "Transaction at 21:20 EDT should land on July 14, not July 15"
+  end
 end

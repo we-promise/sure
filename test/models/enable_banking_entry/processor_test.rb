@@ -430,4 +430,25 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_nil processor.send(:merchant)
   end
+
+  test "converts unix timestamp date using family timezone not UTC" do
+    # 2025-07-14 23:30:00 UTC == 2025-07-15 01:30:00 CEST
+    @family.update!(timezone: "Europe/Berlin")
+
+    tx = {
+      entry_reference: "tz_ref",
+      transaction_id: nil,
+      booking_date: 1752535800, # 2025-07-14 23:30:00 UTC
+      transaction_amount: { amount: "10.00", currency: "EUR" },
+      creditor: { name: "Late Night Shop" },
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "After midnight" ],
+      status: "BOOK"
+    }
+
+    result = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+
+    assert_not_nil result
+    assert_equal Date.new(2025, 7, 15), result.date
+  end
 end
