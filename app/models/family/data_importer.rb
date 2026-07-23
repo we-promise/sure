@@ -735,9 +735,15 @@ class Family::DataImporter
     def import_rejected_transfers(records)
       records.each do |record|
         data = record["data"]
-        inflow_transaction_id = mapped_id(:transactions, data["inflow_transaction_id"], record_type: "RejectedTransfer")
-        outflow_transaction_id = mapped_id(:transactions, data["outflow_transaction_id"], record_type: "RejectedTransfer")
-        next unless inflow_transaction_id && outflow_transaction_id
+        # A rejected transfer is an advisory hint that stops two transactions from
+        # being re-matched. When either side is missing (e.g. the transaction was
+        # deleted after the rejection), skip the row instead of failing the import.
+        inflow_transaction_id = mapped_id(:transactions, data["inflow_transaction_id"], record_type: "RejectedTransfer", required: false)
+        outflow_transaction_id = mapped_id(:transactions, data["outflow_transaction_id"], record_type: "RejectedTransfer", required: false)
+        unless inflow_transaction_id && outflow_transaction_id
+          increment_summary("RejectedTransfer", :skipped)
+          next
+        end
 
         rejected_transfer = RejectedTransfer.find_or_create_by!(
           inflow_transaction_id: inflow_transaction_id,

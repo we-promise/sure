@@ -611,6 +611,23 @@ class SureImportTest < ActiveSupport::TestCase
     assert_includes codes, "missing_reference"
   end
 
+  test "preflight allows null rule names and treats orphaned rejected transfers as warnings" do
+    attach_ndjson(build_ndjson([
+      { type: "Rule", data: { id: "rule-1", name: nil, resource_type: "transaction" } },
+      { type: "RejectedTransfer", data: {
+        id: "rejected-1",
+        inflow_transaction_id: "missing-inflow",
+        outflow_transaction_id: "missing-outflow"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert result.valid?, result.error_message
+    assert_empty result.errors
+    assert_includes result.warnings.map { |warning| warning[:code] }, "skipped_missing_reference"
+  end
+
   test "preflight rejects invalid accountable types through explicit allowlist" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
@@ -846,6 +863,30 @@ class Import::PreflightTest < ActiveSupport::TestCase
 
     assert_equal :ok, response.status
     assert_includes payload[:warnings], "No importable records were found."
+  end
+
+  test "SureImport preflight serializes hash warnings as strings at the API boundary" do
+    result = Struct.new(:stats, :errors, :warnings, keyword_init: true) do
+      def valid?
+        true
+      end
+    end.new(
+      stats: { rows_count: 2, valid_rows_count: 2, invalid_rows_count: 0, entity_counts: { accounts: 2 } },
+      errors: [],
+      warnings: [ { code: "skipped_missing_reference", message: "Skipped an orphaned rejected transfer." } ]
+    )
+    SureImport::Preflight.stubs(:new).returns(stub(call: result))
+
+    response = Import::Preflight.new(
+      family: @family,
+      params: { type: "SureImport", raw_file_content: "{}" }
+    ).call
+    payload = response.payload[:data]
+
+    # The contract documents warnings as strings, so the {code, message} hash must
+    # surface as its message -- never leak the hash into the response.
+    assert payload[:warnings].all? { |warning| warning.is_a?(String) }, "preflight warnings must be strings"
+    assert_includes payload[:warnings], "Skipped an orphaned rejected transfer."
   end
 
   private
