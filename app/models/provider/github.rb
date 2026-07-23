@@ -1,6 +1,4 @@
 class Provider::Github
-  CACHE_TTL = 2.hours
-
   attr_reader :name, :owner, :branch, :client
 
   def initialize
@@ -19,7 +17,7 @@ class Provider::Github
 
   def fetch_latest_release_notes
     begin
-      Rails.cache.fetch(release_notes_cache_key, expires_in: CACHE_TTL) do
+      Rails.cache.fetch("latest_github_release_notes", expires_in: 2.hours) do
         release = client.releases(repo).first
         if release
           {
@@ -43,9 +41,5 @@ class Provider::Github
   private
     def repo
       "#{owner}/#{name}"
-    end
-
-    def release_notes_cache_key
-      "latest_github_release_notes/#{repo}"
     end
 end

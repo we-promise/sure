@@ -27,7 +27,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[openai_oauth_token openai_oauth_account_id anthropic_access_token anthropic_base_url anthropic_model llm_provider rentcast_api_key realie_api_key].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider rentcast_api_key realie_api_key].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -171,43 +171,6 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { openai_access_token: "token" } }
 
       assert_equal "token", Setting.openai_access_token
-    end
-  end
-
-  test "can update Codex OAuth credentials when self hosting is enabled" do
-    with_self_hosting do
-      patch settings_hosting_url, params: {
-        setting: {
-          openai_oauth_token: "oauth-token",
-          openai_oauth_account_id: "account-123"
-        }
-      }
-
-      assert_equal "oauth-token", Setting.openai_oauth_token
-      assert_equal "account-123", Setting.openai_oauth_account_id
-    end
-  end
-
-  test "infers ChatGPT account ID from Codex OAuth token" do
-    payload = Base64.urlsafe_encode64({
-      "https://api.openai.com/auth" => { "chatgpt_account_id" => "account-from-token" }
-    }.to_json, padding: false)
-    token = "header.#{payload}.signature"
-
-    with_self_hosting do
-      patch settings_hosting_url, params: { setting: { openai_oauth_token: token } }
-
-      assert_equal "account-from-token", Setting.openai_oauth_account_id
-    end
-  end
-
-  test "ignores redacted Codex OAuth token placeholder" do
-    with_self_hosting do
-      Setting.openai_oauth_token = "previous-token"
-
-      patch settings_hosting_url, params: { setting: { openai_oauth_token: "********" } }
-
-      assert_equal "previous-token", Setting.openai_oauth_token
     end
   end
 
