@@ -43,7 +43,10 @@ module Family::AutoTransferMatchable
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
 
-        find_or_create_transfer!(match)
+        # Skip this candidate when the transfer for this exact pair was not created
+        # (a concurrent sync claimed one of the transactions for a different pairing);
+        # marking it matched here would leave a transaction matched with no Transfer.
+        next unless find_or_create_transfer!(match)
 
         inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
         outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
@@ -90,12 +93,26 @@ module Family::AutoTransferMatchable
         )
       end
     rescue ActiveRecord::RecordNotUnique
-      # Another concurrent job won the insert race; the savepoint rolled back and
-      # the transfer already exists, so treat it as created.
+      # The composite unique index rejected the insert because this exact
+      # (inflow, outflow) pair was committed concurrently between our find and our
+      # insert. Return that committed row; if it is somehow absent, return nil so the
+      # caller skips rather than marking a transaction with no Transfer behind it.
+      existing_transfer(match)
     rescue ActiveRecord::RecordInvalid => e
-      # The same race can surface through the uniqueness validation when the rival
-      # row is already committed. Swallow only that case; re-raise anything else.
+      # The same race surfaces through the per-column uniqueness validation. Re-raise
+      # anything that is not a :taken on the transfer's transaction ids...
       raise unless %i[inflow_transaction_id outflow_transaction_id].any? { |attr| e.record.errors.of_kind?(attr, :taken) }
+      # ...and even for :taken, only accept it once the exact (inflow, outflow) row is
+      # confirmed present; otherwise the :taken came from a different pairing.
+      existing_transfer(match)
+    end
+
+    # The committed transfer for this exact candidate pair, or nil if none exists.
+    def existing_transfer(match)
+      Transfer.find_by(
+        inflow_transaction_id: match.inflow_transaction_id,
+        outflow_transaction_id: match.outflow_transaction_id,
+      )
     end
 
     def coerce_transfer_match_date_window!(value)

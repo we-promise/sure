@@ -50,17 +50,20 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     inflow_entry.reload
     outflow_entry.reload
 
-    # The surrounding transaction stayed healthy, so the kinds were still written.
-    assert_equal "funds_movement", inflow_entry.entryable.kind
-    assert_equal "cc_payment", outflow_entry.entryable.kind
+    # The collision was with a DIFFERENT pair (the rival), so no Transfer exists for
+    # THIS pair: the match is skipped, not marked. The savepoint kept the surrounding
+    # transaction healthy (no abort asserted above).
+    assert_nil Transfer.find_by(inflow_transaction_id: inflow_id, outflow_transaction_id: outflow_entry.entryable_id)
+    refute_equal "funds_movement", inflow_entry.entryable.kind
   end
 
-  test "validation-path race during matching does not abort the run" do
+  test "a :taken on one column from a different pairing is skipped, not marked" do
     outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
-    # A concurrent job already committed the rival row, so the uniqueness
-    # validation rejects the insert with :taken before any SQL is issued.
+    # A concurrent sync matched this inflow to a DIFFERENT outflow, so the per-column
+    # uniqueness validation raises :taken on inflow_transaction_id -- but no Transfer
+    # exists for THIS (inflow, outflow) pair.
     invalid = Transfer.new(inflow_transaction_id: inflow_entry.entryable_id, outflow_transaction_id: outflow_entry.entryable_id)
     invalid.errors.add(:inflow_transaction_id, :taken)
     Transfer.stubs(:find_or_create_by!).raises(ActiveRecord::RecordInvalid.new(invalid))
@@ -70,8 +73,10 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     inflow_entry.reload
     outflow_entry.reload
 
-    assert_equal "funds_movement", inflow_entry.entryable.kind
-    assert_equal "cc_payment", outflow_entry.entryable.kind
+    # No Transfer was created for this pair, so neither transaction may be marked.
+    assert_nil Transfer.find_by(inflow_transaction_id: inflow_entry.entryable_id, outflow_transaction_id: outflow_entry.entryable_id)
+    refute_equal "funds_movement", inflow_entry.entryable.kind
+    refute_equal "cc_payment", outflow_entry.entryable.kind
   end
 
   test "non-uniqueness validation failure during matching is not swallowed" do
