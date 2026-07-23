@@ -49,6 +49,6 @@ class Assistant::FunctionToolCallerTest < ActiveSupport::TestCase
       @caller.fulfill_requests([ request ]).first
     end
 
-    assert_equal({}, JSON.parse(result.function_result))
+    assert_equal({}, result.function_result)
   end
 end
