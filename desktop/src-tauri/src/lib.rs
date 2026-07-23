@@ -38,6 +38,15 @@ pub fn run() {
             app.on_menu_event(|app, event| menu::on_event(app, event.id().as_ref()));
             notifications::register(app.handle());
             badge::register(app.handle());
+            // Grant runtime IPC capabilities for every already-known server
+            // origin (saved + active) so the bridge works when the app resumes
+            // or switches to them — instead of a static wildcard capability.
+            for entry in servers::ServerStore::load() {
+                commands::grant_server_capability(app.handle(), &entry.url);
+            }
+            if let Some(active) = servers::load_active() {
+                commands::grant_server_capability(app.handle(), &active);
+            }
             {
                 // Hide the prefs window on close instead of destroying it, so
                 // reopening it from the menu keeps working (a destroyed webview

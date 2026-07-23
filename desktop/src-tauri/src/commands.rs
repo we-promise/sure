@@ -45,8 +45,47 @@ pub fn active_server(state: State<AppState>) -> Option<String> {
 #[tauri::command]
 pub fn set_active_server(url: String, state: State<AppState>, app: tauri::AppHandle) {
     let _ = crate::servers::save_active(&url);
+    // Grant this origin the runtime IPC capability before we navigate to it, so
+    // the injected bridge works — instead of a static wildcard that would grant
+    // IPC to any origin.
+    grant_server_capability(&app, &url);
     *state.active_server.lock().unwrap() = Some(url.clone());
     let _ = app.emit("active-server-changed", url);
+}
+
+/// Grant the main webview IPC access for exactly one server origin, added at
+/// runtime so we never whitelist arbitrary (`https://*`) origins. Idempotent per
+/// origin. Mirrors the minimal permission set the bridge needs.
+pub fn grant_server_capability(app: &tauri::AppHandle, origin: &str) {
+    let Ok(canonical) = normalize_server_url(origin) else {
+        return;
+    };
+    {
+        let state = app.state::<AppState>();
+        let mut granted = state.granted_origins.lock().unwrap();
+        if !granted.insert(canonical.clone()) {
+            return; // already granted this origin
+        }
+    }
+    let id: String = format!(
+        "remote-{}",
+        canonical
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+            .collect::<String>()
+    );
+    let capability = tauri::ipc::CapabilityBuilder::new(id)
+        .window("main")
+        .remote(format!("{canonical}/**"))
+        .permission("core:window:allow-start-dragging")
+        .permission("core:window:allow-show")
+        .permission("core:window:allow-set-focus")
+        .permission("core:event:allow-emit")
+        .permission("core:event:allow-listen")
+        .permission("notification:default");
+    if let Err(e) = app.add_capability(capability) {
+        eprintln!("[sure] failed to grant capability for {canonical}: {e}");
+    }
 }
 
 /// Begin SSO in the system browser (so passkeys/WebAuthn work). Generates a
