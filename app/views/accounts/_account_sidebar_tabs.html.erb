@@ -1,6 +1,14 @@
 <%# locals: (family:, active_tab:, mobile: false) %>
 
-<% cache account_sidebar_tabs_cache_key(family: family, active_tab: active_tab, mobile: mobile), expires_in: 12.hours do %>
+<%# skip_digest: this fragment renders DS::* view components, which Rails'
+    ERB dependency tracker mis-parses as a bogus "Ds/D" template dependency
+    and then logs "Couldn't find template for digesting: Ds/D" on every cache
+    miss. The cache key is already manually versioned via
+    account_sidebar_tabs_cache_key ("account_sidebar_tabs_v2",
+    invalidate_on_data_updates: true), so we opt out of automatic template
+    digesting. Bump that version suffix when changing this template or its
+    sidebar dependencies. %>
+<% cache account_sidebar_tabs_cache_key(family: family, active_tab: active_tab, mobile: mobile), expires_in: 12.hours, skip_digest: true do %>
 <div id="account-sidebar-tabs">
   <% if family.missing_data_provider? %>
     <div class="mb-3">
