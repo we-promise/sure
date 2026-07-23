@@ -27,6 +27,7 @@ class AccountsController < ApplicationController
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts))
     @binance_items = visible_provider_items(family.binance_items.ordered.includes(:binance_accounts, :accounts, :syncs))
+    @kraken_items = visible_provider_items(family.kraken_items.ordered.includes(:kraken_accounts, :accounts, :syncs))
     @questrade_items = visible_provider_items(family.questrade_items.ordered.includes(:syncs, questrade_accounts: :account_provider))
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:syncs, :wise_accounts))
 
