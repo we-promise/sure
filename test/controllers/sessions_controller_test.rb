@@ -706,13 +706,13 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert code.present?
 
     assert_difference -> { oidc_identity.user.sessions.count }, 1 do
-      get desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
     end
     assert_redirected_to root_path
 
     # Single-use: the same code cannot be redeemed again.
     assert_no_difference -> { oidc_identity.user.sessions.count } do
-      get desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
     end
     assert_redirected_to new_session_path
   ensure
@@ -736,7 +736,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     code = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)["code"]
 
     assert_no_difference -> { oidc_identity.user.sessions.count } do
-      get desktop_sso_exchange_path, params: { code: code, code_verifier: "an-attacker-guess" }
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: "an-attacker-guess" }
     end
     assert_redirected_to new_session_path
   ensure

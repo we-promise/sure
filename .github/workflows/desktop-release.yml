@@ -30,14 +30,18 @@ jobs:
   build:
     runs-on: macos-latest # Apple Silicon runner; cross-builds the x86_64 slice
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
       - name: Resolve version
         id: ver
+        env:
+          # Pass the untrusted input through env, never interpolate it into the
+          # shell source (that would allow command injection via $(...)/backticks).
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            V="${{ inputs.version }}"
+            V="$RELEASE_VERSION"
           else
             V="${GITHUB_REF_NAME#desktop-v}"
           fi
@@ -65,17 +69,17 @@ jobs:
           jq --arg v "$V" '.version = $v' desktop/src-tauri/tauri.conf.json > "$tmp" && mv "$tmp" desktop/src-tauri/tauri.conf.json
           jq --arg v "$V" '.version = $v' desktop/package.json > "$tmp" && mv "$tmp" desktop/package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: desktop/package-lock.json
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - uses: swatinem/rust-cache@v2
+      - uses: swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: desktop/src-tauri
 
@@ -87,7 +91,7 @@ jobs:
       # (npm run build). To sign + notarize later, add the Apple secrets
       # (APPLE_CERTIFICATE, APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD,
       # APPLE_TEAM_ID) as env here — no other change needed.
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -98,7 +102,7 @@ jobs:
       # Publish the desktop release separately with make_latest:false, so it
       # never claims the repo's "Latest release" badge — that stays on the main
       # product's v* release. The desktop-v* prefix keeps it labeled in the list.
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ steps.ver.outputs.tag }}
           name: "Sure Desktop ${{ steps.ver.outputs.tag }}"

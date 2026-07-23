@@ -86,14 +86,25 @@ fn file_read(name: &str) -> Option<String> {
 
 fn file_write(name: &str, contents: &str) -> Result<(), ServerError> {
     let dir = data_dir().ok_or_else(|| ServerError::Keyring("no data dir".into()))?;
-    std::fs::write(dir.join(name), contents).map_err(|e| ServerError::Keyring(e.to_string()))
+    // Atomic write: write a temp file in the same dir then rename over the
+    // destination, so an interrupted write can't leave truncated/invalid JSON.
+    let tmp = dir.join(format!(".{name}.tmp"));
+    std::fs::write(&tmp, contents).map_err(|e| ServerError::Keyring(e.to_string()))?;
+    std::fs::rename(&tmp, dir.join(name)).map_err(|e| ServerError::Keyring(e.to_string()))
 }
 
 pub struct ServerStore;
 
 impl ServerStore {
     pub fn load() -> Vec<ServerEntry> {
-        // Keychain first (signed builds), then the on-disk fallback.
+        // The on-disk file is the durable source (Keychain is best-effort and
+        // may not persist on unsigned builds), so read it first and fall back to
+        // Keychain only when the file is missing/invalid.
+        if let Some(list) =
+            file_read("servers.json").and_then(|j| serde_json::from_str::<Vec<ServerEntry>>(&j).ok())
+        {
+            return list;
+        }
         if let Ok(entry) = keyring_entry() {
             if let Ok(json) = entry.get_password() {
                 if let Ok(list) = serde_json::from_str::<Vec<ServerEntry>>(&json) {
@@ -101,9 +112,7 @@ impl ServerStore {
                 }
             }
         }
-        file_read("servers.json")
-            .and_then(|j| serde_json::from_str::<Vec<ServerEntry>>(&j).ok())
-            .unwrap_or_default()
+        Vec::new()
     }
 
     pub fn save(entries: &[ServerEntry]) -> Result<(), ServerError> {
@@ -134,6 +143,9 @@ impl ServerStore {
 /// The last server the user connected to, persisted so the app can resume
 /// straight to it on the next launch instead of showing the picker again.
 pub fn load_active() -> Option<String> {
+    if let Some(url) = file_read("active_server").filter(|s| !s.is_empty()) {
+        return Some(url);
+    }
     if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACTIVE) {
         if let Ok(url) = entry.get_password() {
             if !url.is_empty() {
@@ -141,7 +153,7 @@ pub fn load_active() -> Option<String> {
             }
         }
     }
-    file_read("active_server").filter(|s| !s.is_empty())
+    None
 }
 
 pub fn save_active(url: &str) -> Result<(), ServerError> {
@@ -149,4 +161,14 @@ pub fn save_active(url: &str) -> Result<(), ServerError> {
         let _ = entry.set_password(url);
     }
     file_write("active_server", url)
+}
+
+/// True if `url` normalizes to a server the user has saved (or the active one).
+/// Gates deep-link navigation and SSO so only trusted origins can drive them.
+pub fn is_known_server(url: &str) -> bool {
+    let Ok(canonical) = normalize_server_url(url) else {
+        return false;
+    };
+    ServerStore::load().iter().any(|e| e.url == canonical)
+        || load_active().as_deref() == Some(canonical.as_str())
 }

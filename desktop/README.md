@@ -78,9 +78,9 @@ distributable, signed, notarized `.dmg`, add:
    `"hardenedRuntime": true`, and an `entitlements` plist if needed.
 3. Notarization after build:
    ```bash
-   xcrun notarytool submit Sure_0.1.0_aarch64.dmg \
+   xcrun notarytool submit Sure_0.1.0_universal.dmg \
      --apple-id "<APPLE_ID>" --team-id "<TEAMID>" --password "<APP_SPECIFIC_PW>" --wait
-   xcrun stapler staple Sure_0.1.0_aarch64.dmg
+   xcrun stapler staple Sure_0.1.0_universal.dmg
    ```
 These steps require an Apple Developer account and are intentionally left as a
 documented follow-up.

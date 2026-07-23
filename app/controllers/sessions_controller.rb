@@ -3,6 +3,10 @@ class SessionsController < ApplicationController
 
   before_action :set_session, only: :destroy
   skip_authentication only: %i[index new create openid_connect failure post_logout mobile_sso_start desktop_sso_start desktop_exchange]
+  # The desktop exchange is a cross-context POST from the app's webview that
+  # can't carry a CSRF token; the single-use, PKCE-bound one-time code is the
+  # protection instead (same model as the OAuth callback).
+  skip_forgery_protection only: :desktop_exchange
 
   layout "auth"
 
@@ -156,10 +160,11 @@ class SessionsController < ApplicationController
     end
 
     code_challenge = params[:code_challenge].to_s
-    # Require a PKCE (S256) challenge so the one-time code returned via the
-    # custom URL scheme can only be redeemed by the app instance that started
-    # the flow (it alone holds the verifier).
-    if code_challenge.blank?
+    # Require a well-formed PKCE (S256) challenge — a 43-char base64url SHA-256
+    # digest — so the one-time code returned via the custom URL scheme can only
+    # be redeemed by the app instance that started the flow (it alone holds the
+    # verifier). Validate the format before copying it into session state.
+    unless code_challenge.match?(/\A[A-Za-z0-9_-]{43}\z/)
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
       return
     end
@@ -177,9 +182,12 @@ class SessionsController < ApplicationController
 
     cache_key = "desktop_sso:#{code}"
     data = Rails.cache.read(cache_key)
-    Rails.cache.delete(cache_key) # single-use: consume immediately
+    # Atomically claim the code: only the request whose delete actually removes
+    # the entry may proceed, so two concurrent exchanges can't both succeed
+    # (delete returns false for the loser). Redis/MemoryStore both report this.
+    claimed = Rails.cache.delete(cache_key)
 
-    if code.blank? || code_verifier.blank? || data.blank?
+    if code.blank? || code_verifier.blank? || data.blank? || !claimed
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
       return
     end
@@ -308,6 +316,14 @@ class SessionsController < ApplicationController
     if session[:mobile_sso].present?
       session.delete(:mobile_sso)
       mobile_sso_redirect(error: sanitized_reason, message: "SSO authentication failed")
+      return
+    end
+
+    # Desktop SSO: send the error back to the app via the custom scheme so it
+    # stops waiting, instead of stranding the flow on the web login page.
+    if session[:desktop_sso].present?
+      session.delete(:desktop_sso)
+      redirect_to "sure://sso/callback?error=#{sanitized_reason}", allow_other_host: true
       return
     end
 

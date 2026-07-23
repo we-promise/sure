@@ -120,7 +120,17 @@
     emit("bridge://badge", { count: Number.isFinite(count) ? count : 0 });
   };
 
-  const obs = new MutationObserver(() => scan());
+  // Coalesce bursts of DOM mutations into one scan per frame rather than
+  // re-querying the whole document on every mutation.
+  let scheduled = false;
+  const obs = new MutationObserver(() => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      scan();
+    });
+  });
   obs.observe(document.documentElement, { childList: true, subtree: true });
   scan();
 })();

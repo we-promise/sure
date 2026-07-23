@@ -57,6 +57,12 @@ pub fn set_active_server(url: String, state: State<AppState>, app: tauri::AppHan
 /// remote Sure page can emit events but cannot invoke custom commands).
 pub fn begin_sso(app: &tauri::AppHandle, server: String, provider: String) -> Result<(), String> {
     let canonical = normalize_server_url(&server).map_err(|e| e.to_string())?;
+    // Only start SSO for a server the user has actually added. This event can be
+    // emitted by any page loaded in the webview, so gate it to trusted origins
+    // to prevent a rogue page from opening the browser to an attacker URL.
+    if !crate::servers::is_known_server(&canonical) {
+        return Err("unknown server".into());
+    }
     // Providers are simple identifiers ([a-z0-9_-]); reject anything else so it
     // can't smuggle extra path/query into the opened URL.
     if provider.is_empty() || !provider.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {

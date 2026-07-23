@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { S } from "./strings";
+import { serverErrorMessage } from "./status";
 
 interface ServerEntry { url: string; label: string; }
 
@@ -42,14 +43,18 @@ async function connect(rawUrl: string) {
   try {
     healthy = await invoke<boolean>("check_server", { url: rawUrl });
   } catch (e) {
-    setStatus(String(e).includes("Invalid") ? S.invalidUrl : S.unreachable, "error");
+    setStatus(serverErrorMessage(e), "error");
     return;
   }
   if (!healthy) { setStatus(S.unreachable, "error"); return; }
-  const list = await invoke<ServerEntry[]>("add_server", { url: rawUrl, label: "" });
-  const canonical = list[0].url;
-  await invoke("set_active_server", { url: canonical });
-  goToServer(canonical);
+  try {
+    const list = await invoke<ServerEntry[]>("add_server", { url: rawUrl, label: "" });
+    const canonical = list.find((s) => s.url === rawUrl)?.url ?? list[0].url;
+    await invoke("set_active_server", { url: canonical });
+    goToServer(canonical);
+  } catch (e) {
+    setStatus(serverErrorMessage(e), "error");
+  }
 }
 
 async function renderRemembered() {
@@ -87,9 +92,14 @@ $("server-form").addEventListener("submit", (e) => {
 // On launch, resume straight to the last server if there is one; otherwise
 // show the picker.
 async function boot() {
-  const active = await invoke<string | null>("active_server");
-  // eslint-disable-next-line no-console
-  console.log("[sure] boot, persisted active server:", active);
+  let active: string | null = null;
+  try {
+    active = await invoke<string | null>("active_server");
+  } catch (e) {
+    // Don't let a failed read abort startup and leave a blank onboarding window.
+    // eslint-disable-next-line no-console
+    console.error("[sure] failed to read active server", e);
+  }
   if (active) {
     goToServer(active);
     return;

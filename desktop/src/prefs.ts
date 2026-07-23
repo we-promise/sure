@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { P, S } from "./strings";
+import { serverErrorMessage } from "./status";
 
 interface ServerEntry { url: string; label: string; }
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -21,16 +22,24 @@ async function renderServers() {
     open.className = "server-open";
     open.textContent = s.label;
     open.addEventListener("click", async () => {
-      await invoke("set_active_server", { url: s.url });
-      await getCurrentWindow().hide();
+      try {
+        await invoke("set_active_server", { url: s.url });
+        await getCurrentWindow().hide();
+      } catch (err) {
+        $("prefs-status").textContent = serverErrorMessage(err);
+      }
     });
     const rm = document.createElement("button");
     rm.className = "server-remove";
     rm.textContent = S.remove;
     rm.addEventListener("click", async (e) => {
       e.stopPropagation();
-      await invoke("remove_server", { url: s.url });
-      renderServers();
+      try {
+        await invoke("remove_server", { url: s.url });
+        renderServers();
+      } catch (err) {
+        $("prefs-status").textContent = serverErrorMessage(err);
+      }
     });
     li.append(open, rm);
     list.append(li);
@@ -50,7 +59,7 @@ $("prefs-add").addEventListener("submit", async (e) => {
     $("prefs-status").textContent = "";
     renderServers();
   } catch (err) {
-    $("prefs-status").textContent = String(err).includes("Invalid") ? S.invalidUrl : S.unreachable;
+    $("prefs-status").textContent = serverErrorMessage(err);
   }
 });
 
