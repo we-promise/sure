@@ -56,27 +56,55 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(expected_nvda), @nvda.avg_cost
   end
 
-  test "calculates average cost basis from another currency" do
+  test "calculates average cost basis from another currency when exchange rates are present" do
+    rate_yesterday = BigDecimal("0.75")
+    rate_today     = BigDecimal("0.74")
+
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: rate_yesterday)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current,       rate: rate_today)
+
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
-    create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current, currency: "CAD")
+    create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current,       currency: "CAD")
 
-    create_trade(@nvda.security, account: @account, qty: 5, price: 128.00, date: 1.day.ago.to_date, currency: "CAD")
-    create_trade(@nvda.security, account: @account, qty: 30, price: 124.00, date: Date.current, currency: "CAD")
+    create_trade(@nvda.security, account: @account, qty: 5,  price: 128.00, date: 1.day.ago.to_date, currency: "CAD")
+    create_trade(@nvda.security, account: @account, qty: 30, price: 124.00, date: Date.current,       currency: "CAD")
 
-    # compute expected: sum(price * qty * rate) / sum(qty)
-    amzn_total_usd = BigDecimal("10") * BigDecimal("212.00") * BigDecimal("1") +
-                     BigDecimal("15") * BigDecimal("216.00") * BigDecimal("1")
-    amzn_qty = BigDecimal("10") + BigDecimal("15")
-    expected_amzn_usd = amzn_total_usd / amzn_qty
+    amzn_total = BigDecimal("10") * BigDecimal("212.00") * rate_yesterday +
+                 BigDecimal("15") * BigDecimal("216.00") * rate_today
+    expected_amzn = amzn_total / (BigDecimal("10") + BigDecimal("15"))
 
-    nvda_total_usd = BigDecimal("5") * BigDecimal("128.00") * BigDecimal("1") +
-                     BigDecimal("30") * BigDecimal("124.00") * BigDecimal("1")
-    nvda_qty = BigDecimal("5") + BigDecimal("30")
-    expected_nvda_usd = nvda_total_usd / nvda_qty
+    nvda_total = BigDecimal("5")  * BigDecimal("128.00") * rate_yesterday +
+                 BigDecimal("30") * BigDecimal("124.00") * rate_today
+    expected_nvda = nvda_total / (BigDecimal("5") + BigDecimal("30"))
 
-    ExchangeRate.stubs(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1))
-    assert_equal Money.new(expected_amzn_usd, "CAD").exchange_to("USD"), @amzn.avg_cost
-    assert_equal Money.new(expected_nvda_usd, "CAD").exchange_to("USD"), @nvda.avg_cost
+    assert_equal Money.new(expected_amzn, "USD"), @amzn.avg_cost
+    assert_equal Money.new(expected_nvda, "USD"), @nvda.avg_cost
+  end
+
+  test "avg_cost returns nil when foreign-currency trade has no exchange rate" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "EUR")
+
+    # No ExchangeRate rows exist for EUR→USD on that trade date, so cost basis is unknowable.
+    assert_nil @amzn.avg_cost
+  end
+
+  test "avg_cost returns nil when mixed domestic and foreign trades with missing foreign rate" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 200.00, date: 2.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty:  5, price: 212.00, date: 1.day.ago.to_date, currency: "EUR")
+
+    # Even though the first trade has a known domestic rate, the second has no EUR→USD rate.
+    # A partial average would be silently wrong, so nil is the correct result.
+    assert_nil @amzn.avg_cost
+  end
+
+  test "avg_cost is computable when all foreign-currency trades have exchange rates" do
+    rate = BigDecimal("1.08")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 1.day.ago.to_date, rate: rate)
+
+    create_trade(@amzn.security, account: @account, qty: 10, price: 50.00, date: 1.day.ago.to_date, currency: "EUR")
+
+    expected = BigDecimal("50.00") * rate
+    assert_equal Money.new(expected, "USD"), @amzn.avg_cost
   end
 
   test "calculates total return trend" do
