@@ -1,4 +1,8 @@
 class Assistant::Responder
+  ToolCallLimitError = Class.new(StandardError)
+  EmptyResponseError = Class.new(StandardError)
+  DEFAULT_MAX_TOOL_CALL_ITERATIONS = 5
+
   def initialize(message:, instructions:, function_tool_caller:, llm:)
     @message = message
     @instructions = instructions
@@ -11,50 +15,14 @@ class Assistant::Responder
   end
 
   def respond(previous_response_id: nil)
-    # Track whether response was handled by streamer
-    response_handled = false
+    response, response_has_text = request_response(previous_response_id: previous_response_id)
+    iteration = 0
 
-    # For the first response
-    streamer = proc do |chunk|
-      case chunk.type
-      when "output_text"
-        emit(:output_text, chunk.data)
-      when "response"
-        response = chunk.data
-        response_handled = true
-
-        if response.function_requests.any?
-          handle_follow_up_response(response)
-        else
-          emit(:response, { id: response.id })
-        end
-      end
-    end
-
-    response = get_llm_response(streamer: streamer, previous_response_id: previous_response_id)
-
-    # For synchronous (non-streaming) responses, handle function requests if not already handled by streamer
-    unless response_handled
-      if response && response.function_requests.any?
-        handle_follow_up_response(response)
-      elsif response
-        emit(:response, { id: response.id })
-      end
-    end
-  end
-
-  private
-    attr_reader :message, :instructions, :function_tool_caller, :llm
-
-    def handle_follow_up_response(response)
-      streamer = proc do |chunk|
-        case chunk.type
-        when "output_text"
-          emit(:output_text, chunk.data)
-        when "response"
-          # We do not currently support function executions for a follow-up response (avoid recursive LLM calls that could lead to high spend)
-          emit(:response, { id: chunk.data.id })
-        end
+    while response.function_requests.any?
+      iteration += 1
+      if iteration > max_tool_call_iterations
+        raise ToolCallLimitError,
+              "Assistant exceeded the tool-call limit of #{max_tool_call_iterations} for one response"
       end
 
       function_tool_calls = function_tool_caller.fulfill_requests(response.function_requests)
@@ -64,12 +32,45 @@ class Assistant::Responder
         function_tool_calls: function_tool_calls
       })
 
-      # Get follow-up response with tool call results
-      get_llm_response(
-        streamer: streamer,
+      response, response_has_text = request_response(
         function_results: function_tool_calls.map(&:to_result),
         previous_response_id: response.id
       )
+    end
+
+    raise EmptyResponseError, "Assistant returned neither text nor tool calls" unless response_has_text
+
+    emit(:response, { id: response.id })
+  end
+
+  private
+    attr_reader :message, :instructions, :function_tool_caller, :llm
+
+    def request_response(function_results: [], previous_response_id: nil)
+      response_has_text = false
+
+      streamer = proc do |chunk|
+        if chunk.type == "output_text" && chunk.data.present?
+          response_has_text = true
+          emit(:output_text, chunk.data)
+        end
+      end
+
+      response = get_llm_response(
+        streamer: streamer,
+        function_results: function_results,
+        previous_response_id: previous_response_id
+      )
+
+      response_has_text ||= response.messages.any? { |response_message| response_message.output_text.present? }
+      [ response, response_has_text ]
+    end
+
+    def max_tool_call_iterations
+      configured = Integer(ENV.fetch("ASSISTANT_MAX_TOOL_CALL_ITERATIONS", DEFAULT_MAX_TOOL_CALL_ITERATIONS).to_s, 10)
+      configured.positive? ? configured : DEFAULT_MAX_TOOL_CALL_ITERATIONS
+    rescue ArgumentError
+      DEFAULT_MAX_TOOL_CALL_ITERATIONS
     end
 
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil)
