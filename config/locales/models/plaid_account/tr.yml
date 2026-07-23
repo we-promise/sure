@@ -1,0 +1,7 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        plaid_account:
+          no_balance: Plaid hesabının güncel veya kullanılabilir bakiyesi olmalıdır

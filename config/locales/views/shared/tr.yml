@@ -1,20 +1,43 @@
 ---
 tr:
+  concerns:
+    self_hostable:
+      redis_configured: Redis artık düzgün şekilde yapılandırıldı! Artık Sure uygulamanızı
+        kurabilirsiniz.
   shared:
+    cancel: İptal
     confirm_modal:
       accept: Onayla
       body_html: "<p>Bu kararı geri alamayacaksınız</p>"
       cancel: İptal
       title: Emin misiniz?
-    money_field:
-      label: Tutar
+    custom_confirm:
+      default_body: Bu işlem geri alınamaz.
+      default_btn_text: Onayla
+      default_title: Emin misiniz?
     exchange_rate_tabs:
       calculate_rate_tab: Döviz Kuru Hesapla
       convert_tab: Döviz Kuru ile Dönüştür
       destination_amount: Hedef Tutar
       exchange_rate: Döviz Kuru
       exchange_rate_help: Tutar girişiniz için yöntemi seçin.
+    family_moniker:
+      group_plural: Gruplar
+      group_singular: Grup
+      plural: Aileler
+      singular: Aile
+    money_field:
+      label: Tutar
+    preview: Önizleme
+    require_admin: Bu işlemi yalnızca yöneticiler gerçekleştirebilir
+    sync_toast:
+      message: Yeni veri mevcut
+      refresh: Yenile
     syncing_notice:
       syncing: Hesap verileri senkronize ediliyor...
+    transaction_tabs:
+      expense: Gider
+      income: Gelir
+      transfer: Transfer
     trend_change:
-      no_change: "değişiklik yok"
+      no_change: değişiklik yok

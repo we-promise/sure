@@ -151,10 +151,7 @@ class SnaptradeAccount < ApplicationRecord
   # multi-currency cash isn't discarded (issue #1809). Excludes the actual
   # primary currency — including the USD fallback — to avoid double-counting.
   def non_primary_cash_entries
-    entries = Array(raw_balances_payload).map do |entry|
-      entry.respond_to?(:with_indifferent_access) ? entry.with_indifferent_access : {}
-    end
-
+    entries = normalized_balance_entries
     primary_code = primary_cash_entry(entries)&.dig(:currency, :code)
 
     entries.filter_map do |e|
@@ -163,6 +160,40 @@ class SnaptradeAccount < ApplicationRecord
       amount = e[:cash]
       next if amount.blank?
       { currency: code, amount: amount }
+    end
+  end
+
+  # Currency of the amount stored in cash_balance. upsert_balances! falls back
+  # to a USD (or first) balance entry when there is no entry in the account
+  # currency, so the stored cash is not guaranteed to be denominated in
+  # `currency` — cash adjustments must use this instead.
+  def primary_cash_currency
+    primary_cash_entry(normalized_balance_entries)&.dig(:currency, :code) || currency
+  end
+
+  # Total value of positions SnapTrade flags as `cash_equivalent` (usually
+  # money market / sweep funds such as Fidelity's SPAXX) held in the given
+  # currency. Per SnapTrade's docs, these positions are ALSO included in the
+  # balances endpoint's `cash` figure, so cash figures must have this value
+  # removed to avoid double counting the same money. The positions themselves
+  # are still imported as holdings by SnaptradeAccount::HoldingsProcessor.
+  def cash_equivalent_position_value(currency_code = currency)
+    Array(raw_holdings_payload).sum(BigDecimal("0")) do |holding|
+      data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
+      next BigDecimal("0") unless data[:cash_equivalent] == true
+
+      # Positions without currency metadata deliberately fall back to the
+      # ACCOUNT currency (not currency_code): that's where HoldingsProcessor
+      # books such a position as a holding, so it must be subtracted from that
+      # same bucket — using currency_code here would subtract the position
+      # from every caller's currency bucket.
+      position_currency = extract_currency(data, extract_symbol_data(data), currency)
+      next BigDecimal("0") unless position_currency == currency_code
+
+      units = parse_decimal(data[:units]) || BigDecimal("0")
+      price = parse_decimal(data[:price]) || BigDecimal("0")
+
+      units * price
     end
   end
 
@@ -178,9 +209,16 @@ class SnaptradeAccount < ApplicationRecord
 
   private
 
+    def normalized_balance_entries
+      Array(raw_balances_payload).map do |entry|
+        entry.respond_to?(:with_indifferent_access) ? entry.with_indifferent_access : {}
+      end
+    end
+
     # Selects the primary cash entry from a list of indifferent-access balance
     # hashes: account currency first, then USD, then the first entry. Shared by
-    # upsert_balances! and non_primary_cash_entries so both stay in sync.
+    # upsert_balances!, non_primary_cash_entries, and primary_cash_currency so
+    # they stay in sync.
     def primary_cash_entry(entries)
       entries.find { |b| b.dig(:currency, :code) == currency } ||
         entries.find { |b| b.dig(:currency, :code) == "USD" } ||
