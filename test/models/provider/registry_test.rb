@@ -5,12 +5,10 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     # Ensure no LLM provider is configured
     ClimateControl.modify(
       "OPENAI_ACCESS_TOKEN" => nil,
-      "OPENAI_OAUTH_TOKEN" => nil,
       "ANTHROPIC_ACCESS_TOKEN" => nil,
       "ANTHROPIC_API_KEY" => nil
     ) do
       Setting.stubs(:openai_access_token).returns(nil)
-      Setting.stubs(:openai_oauth_token).returns(nil)
       Setting.stubs(:anthropic_access_token).returns(nil)
 
       registry = Provider::Registry.for_concept(:llm)
@@ -42,9 +40,8 @@ class Provider::RegistryTest < ActiveSupport::TestCase
 
   test "get_provider returns nil when provider not configured" do
     # Ensure OpenAI is not configured
-    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil, "OPENAI_OAUTH_TOKEN" => nil) do
+    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil) do
       Setting.stubs(:openai_access_token).returns(nil)
-      Setting.stubs(:openai_oauth_token).returns(nil)
 
       registry = Provider::Registry.for_concept(:llm)
 
@@ -96,12 +93,10 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     # Use stub_env helper which properly stubs ENV access
     ClimateControl.modify(
       "OPENAI_ACCESS_TOKEN" => "",
-      "OPENAI_OAUTH_TOKEN" => "",
       "OPENAI_URI_BASE" => "",
       "OPENAI_MODEL" => ""
     ) do
       Setting.stubs(:openai_access_token).returns("test-token-from-setting")
-      Setting.stubs(:openai_oauth_token).returns(nil)
       Setting.stubs(:openai_uri_base).returns(nil)
       Setting.stubs(:openai_model).returns(nil)
 
@@ -110,22 +105,6 @@ class Provider::RegistryTest < ActiveSupport::TestCase
       # Should successfully create provider using Setting value
       assert_not_nil provider
       assert_instance_of Provider::Openai, provider
-    end
-  end
-
-
-  test "openai provider uses Codex OAuth credentials when configured" do
-    ClimateControl.modify(
-      "OPENAI_OAUTH_TOKEN" => "oauth-token",
-      "OPENAI_ACCOUNT_ID" => "account-123",
-      "OPENAI_ACCESS_TOKEN" => "api-key",
-      "OPENAI_MODEL" => "gpt-5.6"
-    ) do
-      provider = Provider::Registry.get_provider(:openai)
-
-      assert provider.oauth?
-      assert_equal "account-123", provider.send(:client).extra_headers["ChatGPT-Account-ID"]
-      assert_equal Provider::Openai::CODEX_URI_BASE, provider.send(:client).uri_base
     end
   end
 
