@@ -16,6 +16,8 @@ class Assistant::Responder
 
   def respond(previous_response_id: nil)
     response, response_has_text = request_response(previous_response_id: previous_response_id)
+    any_response_has_text = response_has_text
+    in_flight_function_results = []
     iteration = 0
 
     while response.function_requests.any?
@@ -26,6 +28,8 @@ class Assistant::Responder
       end
 
       function_tool_calls = function_tool_caller.fulfill_requests(response.function_requests)
+      function_results = function_tool_calls.map(&:to_result)
+      in_flight_function_results.concat(function_results)
 
       emit(:response, {
         id: response.id,
@@ -33,12 +37,13 @@ class Assistant::Responder
       })
 
       response, response_has_text = request_response(
-        function_results: function_tool_calls.map(&:to_result),
+        function_results: provider_preserves_response_context? ? function_results : in_flight_function_results.dup,
         previous_response_id: response.id
       )
+      any_response_has_text ||= response_has_text
     end
 
-    raise EmptyResponseError, "Assistant returned neither text nor tool calls" unless response_has_text
+    raise EmptyResponseError, "Assistant returned neither text nor tool calls" unless any_response_has_text
 
     emit(:response, { id: response.id })
   end
@@ -64,6 +69,10 @@ class Assistant::Responder
 
       response_has_text ||= response.messages.any? { |response_message| response_message.output_text.present? }
       [ response, response_has_text ]
+    end
+
+    def provider_preserves_response_context?
+      llm.respond_to?(:supports_responses_endpoint?) && llm.supports_responses_endpoint?
     end
 
     def max_tool_call_iterations

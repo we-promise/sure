@@ -163,6 +163,7 @@ class AssistantTest < ActiveSupport::TestCase
 
   test "responds after multiple rounds of tool calls" do
     @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
+    @provider.stubs(:supports_responses_endpoint?).returns(false)
 
     Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("accounts").twice
     Assistant::Function::GetIncomeStatement.any_instance.stubs(:call).returns("income").once
@@ -195,7 +196,8 @@ class AssistantTest < ActiveSupport::TestCase
     expect_provider_rounds(
       [ first_tools ],
       [ second_tools ],
-      [ final_text, final_response ]
+      [ final_text, final_response ],
+      expected_function_result_ids: [ [], [ "1" ], [ "1", "2", "3" ] ]
     )
 
     assert_difference "AssistantMessage.count", 1 do
@@ -207,6 +209,39 @@ class AssistantTest < ActiveSupport::TestCase
     assert_equal "Final answer.", response.content
     assert_equal [ "get_accounts", "get_accounts", "get_income_statement" ],
                  response.tool_calls.map(&:function_name).sort
+  end
+
+  test "keeps earlier text when the final tool follow-up is empty" do
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
+    Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("accounts").once
+
+    partial_text = provider_text_chunk("I found your accounts.")
+    tools_with_text = provider_response_chunk(
+      id: "1",
+      model: "gpt-4.1",
+      messages: [ provider_message(id: "1", text: partial_text.data) ],
+      function_requests: [
+        provider_function_request(id: "1", call_id: "1", function_name: "get_accounts", function_args: "{}")
+      ]
+    )
+    empty_follow_up = provider_response_chunk(
+      id: "2",
+      model: "gpt-4.1",
+      messages: [],
+      function_requests: []
+    )
+
+    expect_provider_rounds(
+      [ partial_text, tools_with_text ],
+      [ empty_follow_up ]
+    )
+
+    @assistant.respond_to(@message)
+
+    response = @chat.messages.ordered.where(type: "AssistantMessage").last
+    assert_equal "complete", response.status
+    assert_equal "I found your accounts.", response.content
+    assert_equal 1, response.tool_calls.size
   end
 
   test "cleans up the pending message when the tool-call limit is exceeded" do
@@ -651,8 +686,9 @@ class AssistantTest < ActiveSupport::TestCase
       )
     end
 
-    def expect_provider_rounds(*rounds)
+    def expect_provider_rounds(*rounds, expected_function_result_ids: nil)
       queued_rounds = rounds.dup
+      queued_result_ids = expected_function_result_ids&.dup
       responses = rounds.map do |chunks|
         response_chunk = chunks.find { |chunk| chunk.type == "response" }
         provider_success_response(response_chunk.data)
@@ -662,6 +698,9 @@ class AssistantTest < ActiveSupport::TestCase
         assert_equal @expected_session_id, options[:session_id]
         assert_equal @expected_user_identifier, options[:user_identifier]
         assert_equal @expected_conversation_history, options[:messages]
+        if queued_result_ids
+          assert_equal queued_result_ids.shift, options[:function_results].map { |result| result[:call_id] }
+        end
         chunks = queued_rounds.shift
         chunks.each { |chunk| options[:streamer].call(chunk) }
         true
