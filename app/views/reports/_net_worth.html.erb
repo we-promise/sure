@@ -36,6 +36,18 @@
     </div>
   </div>
 
+  <%# Net Worth Over Time chart %>
+  <% breakdown_series = net_worth_metrics[:breakdown_series] %>
+  <% if breakdown_series && breakdown_series[:values].size >= 2 %>
+    <div
+      id="reportsNetWorthChart"
+      class="w-full h-72 privacy-sensitive"
+      data-controller="net-worth-chart"
+      data-net-worth-chart-data-value="<%= breakdown_series.to_json %>"
+      data-net-worth-chart-assets-label-value="<%= t("reports.net_worth.total_assets") %>"
+      data-net-worth-chart-liabilities-label-value="<%= t("reports.net_worth.total_liabilities") %>"></div>
+  <% end %>
+
   <%# Asset/Liability Breakdown %>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <%# Assets Summary %>
