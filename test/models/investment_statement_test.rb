@@ -1,6 +1,7 @@
 require "test_helper"
 
 class InvestmentStatementTest < ActiveSupport::TestCase
+  include EntriesTestHelper
   setup do
     @family = families(:empty)
     # families(:empty) defaults to currency "USD"
@@ -40,6 +41,46 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     # No ExchangeRate row → rates_for defaults to 1
     assert_in_delta 2921.92, @statement.portfolio_value, 0.001
+  end
+
+  test "current_holdings returns a relation for downstream includes" do
+    assert_kind_of ActiveRecord::Relation, @statement.current_holdings
+  end
+
+  test "current_holdings supports downstream includes for association access" do
+    account = create_investment_account(balance: 10_000, cash_balance: 0)
+    security = Security.create!(ticker: "AAPL", name: "Apple Inc.")
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD"
+    )
+
+    statement = InvestmentStatement.new(@family)
+    holdings = nil
+    queries = capture_sql_queries do
+      holdings = statement.current_holdings.includes(account: :accountable).to_a
+      holdings.each { |holding| holding.account.tax_treatment }
+    end
+
+    account_queries = queries.grep(/FROM "accounts"/)
+    assert_equal 1, holdings.size
+    assert_operator account_queries.size, :<=, 2
+  end
+
+  test "current_holdings excludes sold positions whose latest snapshot has zero qty" do
+    account = create_investment_account(balance: 10_000, currency: "USD")
+    security = Security.create!(ticker: "SOLD", name: "Sold Security")
+
+    Holding.create!(
+      account: account, security: security, date: 5.days.ago.to_date,
+      qty: 10, price: 100, amount: 1000, currency: "USD"
+    )
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 0, price: 100, amount: 0, currency: "USD"
+    )
+
+    assert_empty @statement.current_holdings
   end
 
   test "current_holdings includes holdings from every investment account regardless of currency" do
@@ -222,6 +263,127 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 5.0, trend.percent, 0.1
   end
 
+  test "current_holdings preloads securities without per-id queries" do
+    account = create_investment_account(balance: 10_000, currency: "USD")
+
+    3.times do |idx|
+      security = Security.create!(ticker: "SEC#{idx}", name: "Security #{idx}")
+      Holding.create!(
+        account: account, security: security, date: Date.current,
+        qty: 10, price: 100 + idx, amount: (100 + idx) * 10, currency: "USD",
+        cost_basis: 90, cost_basis_locked: true
+      )
+    end
+
+    statement = InvestmentStatement.new(@family, user: nil)
+
+    queries = capture_sql_queries do
+      materialized = statement.send(:materialized_current_holdings)
+      materialized.each do |holding|
+        holding.security.logo_url
+        holding.ticker
+        holding.name
+      end
+    end
+
+    assert_empty queries.grep(/FROM "securities" WHERE "securities"\."id" =/)
+    assert_equal 1, queries.grep(/FROM "securities" WHERE "securities"\."id" IN/).size
+  end
+
+  test "current_holdings memoizes across repeated dashboard calculations" do
+    account = create_investment_account(balance: 10_000, currency: "USD")
+    security = Security.create!(ticker: "MEMO", name: "Memo Security")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD",
+      cost_basis: 90, cost_basis_locked: true
+    )
+
+    statement = InvestmentStatement.new(@family, user: nil)
+
+    queries = capture_sql_queries do
+      statement.current_holdings
+      statement.top_holdings(limit: 5)
+      statement.unrealized_gains_trend
+    end
+
+    holdings_queries = queries.grep(/SELECT DISTINCT ON \(holdings\.account_id, holdings\.security_id\)/)
+    assert_equal 1, holdings_queries.size
+  end
+
+  test "dashboard exchange rates load once across balance sheet and investment widgets" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: Date.current, rate: 1.1)
+
+    account = create_investment_account(balance: 10_000, currency: "EUR")
+    security = Security.create!(ticker: "FX", name: "FX Security")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "EUR",
+      cost_basis: 90, cost_basis_locked: true
+    )
+
+    queries = capture_sql_queries do
+      @family.balance_sheet.net_worth
+      statement = InvestmentStatement.new(@family, user: nil)
+      statement.portfolio_value
+      statement.current_holdings.each { |holding| holding.amount }
+    end
+
+    exchange_rate_queries = queries.grep(/FROM "exchange_rates"/)
+    assert_equal 1, exchange_rate_queries.size
+  end
+
+  test "investment_accounts load once without repeated batched account queries" do
+    account = create_investment_account(balance: 10_000, currency: "USD")
+    security = Security.create!(ticker: "ACCT", name: "Account Security")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD",
+      cost_basis: 90, cost_basis_locked: true
+    )
+
+    statement = InvestmentStatement.new(@family, user: nil)
+
+    queries = capture_sql_queries do
+      statement.investment_accounts.map(&:currency)
+      statement.portfolio_value
+      statement.top_holdings(limit: 5)
+      statement.send(:materialized_current_holdings).each { |holding| holding.account.balance }
+    end
+
+    accounts_queries = queries.grep(/FROM "accounts"/)
+    assert_equal 1, accounts_queries.size
+    assert_empty queries.grep(/FROM "accounts" WHERE "accounts"\."id" IN/)
+  end
+
+  test "current_holdings preloads calculated average costs in one batch query" do
+    account = create_investment_account(balance: 10_000, currency: "USD")
+
+    3.times do |idx|
+      security = Security.create!(ticker: "PERF#{idx}", name: "Performance #{idx}")
+      create_trade(account: account, security: security, qty: 10, amount: (100 + idx) * 10, date: 1.day.ago.to_date)
+      Holding.create!(
+        account: account, security: security, date: Date.current,
+        qty: 10, price: 110 + idx, amount: (110 + idx) * 10, currency: "USD"
+      )
+    end
+
+    statement = InvestmentStatement.new(@family, user: nil)
+
+    queries = capture_sql_queries do
+      holdings = statement.send(:materialized_current_holdings)
+      holdings.each(&:trend)
+      statement.unrealized_gains_trend
+    end
+
+    assert_equal 3, statement.current_holdings.count
+    assert_equal 1, queries.grep(/WITH holding_specs/).size
+    assert_empty queries.grep(/FROM "trades" INNER JOIN "entries".*"trades"\."security_id" =/)
+  end
+
   test "totals skips cache when there are no investment accounts" do
     Rails.cache.expects(:fetch).never
 
@@ -279,14 +441,14 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       )
     end
 
-    def create_trade(account:, qty:, amount:, date:)
+    def create_trade(account:, qty:, amount:, date:, security: nil)
       account.entries.create!(
         name: "Trade #{SecureRandom.hex(3)}",
         amount: amount,
         date: date,
         currency: account.currency,
         entryable: Trade.new(
-          security: Security.create!(ticker: "T#{SecureRandom.hex(8)}", name: "Test Security"),
+          security: security || Security.create!(ticker: "T#{SecureRandom.hex(8)}", name: "Test Security"),
           qty: qty,
           price: amount.to_d.abs / qty.to_d.abs,
           currency: account.currency

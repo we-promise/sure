@@ -39,6 +39,17 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
   end
 
+  test "period totals do not query categories by id when filtering subcategories" do
+    income_statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    queries = capture_sql_queries do
+      income_statement.net_category_totals(period: period)
+    end
+
+    assert_empty queries.grep(/FROM "categories" WHERE "categories"\."id" =/)
+  end
+
   test "orphaned categories still count as root category totals" do
     orphan_category = @family.categories.create! name: "Orphaned Category"
     orphan_category.update_column(:parent_id, SecureRandom.uuid)
