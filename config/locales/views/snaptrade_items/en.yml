@@ -115,7 +115,7 @@ en:
       connection_description: "Connect to your brokerage via SnapTrade (25+ brokers supported)"
       description: "SnapTrade connects to 25+ major brokerages (Fidelity, Vanguard, Schwab, Robinhood, etc.) and provides full trade history with activity labels and cost basis."
       oauth_setup_step_1_html: "Register an OAuth app at <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">dashboard.snaptrade.com</a>"
-      oauth_setup_step_2: "Add this app's callback URL (/snaptrade_items/oauth_callback) as a registered redirect URI"
+      oauth_setup_step_2_html: "Add this app's callback URL (<code>%{callback_url}</code>) as a registered redirect URI"
       oauth_setup_step_3: "Set SNAPTRADE_OAUTH_CLIENT_ID and SNAPTRADE_OAUTH_CLIENT_SECRET in your environment and restart"
       free_tier_warning: "SnapTrade's free tier covers 20 brokerage connections."
       oauth_title: "SnapTrade OAuth"

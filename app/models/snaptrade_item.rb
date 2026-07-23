@@ -46,11 +46,6 @@ class SnaptradeItem < ApplicationRecord
   def import_latest_snaptrade_data(sync: nil)
     provider = snaptrade_provider
     unless provider
-      Rails.logger.error "SnaptradeItem #{id} - Cannot import: provider is not configured"
-      raise StandardError, "SnapTrade provider is not configured"
-    end
-
-    unless oauth_configured?
       Rails.logger.error "SnaptradeItem #{id} - Cannot import: OAuth not authorized"
       raise StandardError, "SnapTrade is not authorized"
     end
@@ -116,6 +111,8 @@ class SnaptradeItem < ApplicationRecord
   # Persist an OAuth token payload (string keys, as returned by the token endpoint).
   # A rotation response may omit refresh_token; keep the existing one in that case.
   def apply_oauth_tokens!(payload)
+    raise ArgumentError, "OAuth token payload missing access_token" if payload["access_token"].blank?
+
     update!(
       oauth_access_token: payload["access_token"],
       oauth_refresh_token: payload["refresh_token"].presence || oauth_refresh_token,

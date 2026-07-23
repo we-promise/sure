@@ -17,7 +17,7 @@
     <%= render "settings/providers/setup_steps",
                steps: [
                  t("providers.snaptrade.oauth_setup_step_1_html").html_safe,
-                 t("providers.snaptrade.oauth_setup_step_2"),
+                 t("providers.snaptrade.oauth_setup_step_2_html", callback_url: oauth_callback_snaptrade_items_url).html_safe,
                  t("providers.snaptrade.oauth_setup_step_3")
                ] %>
   <% else %>

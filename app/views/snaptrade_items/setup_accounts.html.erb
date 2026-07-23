@@ -72,7 +72,11 @@
         <div class="flex gap-3 justify-center">
           <%
             brokerage_connect_href = if @snaptrade_item.oauth_configured?
-              connect_snaptrade_item_path(@snaptrade_item)
+              connect_snaptrade_item_path(
+                @snaptrade_item,
+                return_to: "setup_accounts",
+                accountable_type: params[:accountable_type]
+              )
             else
               oauth_authorize_snaptrade_items_path(
                 item_id: @snaptrade_item.id,

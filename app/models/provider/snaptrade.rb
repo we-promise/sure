@@ -101,10 +101,12 @@ class Provider::Snaptrade
       def token_request(params)
         raise ConfigurationError, "SnapTrade OAuth is not configured" unless oauth_configured?
 
-        response = oauth_connection.post(TOKEN_URL) do |request|
-          request.headers["Authorization"] = basic_auth_header
-          request.headers["Content-Type"] = "application/x-www-form-urlencoded"
-          request.body = URI.encode_www_form(params)
+        response = with_retries("POST #{TOKEN_URL}") do
+          oauth_connection.post(TOKEN_URL) do |request|
+            request.headers["Authorization"] = basic_auth_header
+            request.headers["Content-Type"] = "application/x-www-form-urlencoded"
+            request.body = URI.encode_www_form(params)
+          end
         end
 
         payload = parse_json(response.body)
@@ -136,6 +138,38 @@ class Provider::Snaptrade
         body.present? ? JSON.parse(body) : {}
       rescue JSON::ParserError
         {}
+      end
+
+      def with_retries(operation_name, max_retries: MAX_RETRIES)
+        retries = 0
+
+        begin
+          yield
+        rescue Faraday::TimeoutError, Faraday::ConnectionFailed, Errno::ECONNRESET, Errno::ETIMEDOUT => e
+          retries += 1
+
+          if retries <= max_retries
+            delay = calculate_retry_delay(retries)
+            Rails.logger.warn(
+              "SnapTrade OAuth: #{operation_name} failed (attempt #{retries}/#{max_retries}): " \
+              "#{e.class}: #{e.message}. Retrying in #{delay}s..."
+            )
+            sleep(delay)
+            retry
+          else
+            Rails.logger.error(
+              "SnapTrade OAuth: #{operation_name} failed after #{max_retries} retries: " \
+              "#{e.class}: #{e.message}"
+            )
+            raise ApiError.new("Network error after #{max_retries} retries: #{e.message}")
+          end
+        end
+      end
+
+      def calculate_retry_delay(retry_count)
+        base_delay = INITIAL_RETRY_DELAY * (2 ** (retry_count - 1))
+        jitter = base_delay * rand * 0.25
+        [ base_delay + jitter, MAX_RETRY_DELAY ].min
       end
   end
 
@@ -197,12 +231,6 @@ class Provider::Snaptrade
     body[:broker] = broker if broker
     response = request_json(:post, "/api/v1/snapTrade/login", body: body)
     response["redirectURI"] || response["redirectUri"]
-  end
-
-  # Best-effort revocation of this item's tokens (used on destroy)
-  def revoke_token!
-    token = snaptrade_item.oauth_refresh_token.presence || snaptrade_item.oauth_access_token
-    self.class.revoke_token(token: token)
   end
 
   private

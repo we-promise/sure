@@ -3,25 +3,25 @@
     {
       "warning_type": "Redirect",
       "warning_code": 18,
-      "fingerprint": "556f2fdd1f091ed50811cb2cce28dd2b987cd0a2eed4d19bea138c8c083a3a5d",
+      "fingerprint": "6d0cf62d5751106cd05dd3b4622beacaba9bdf91aaf798c2003a2a65e6bb903c",
       "check_name": "Redirect",
       "message": "Possible unprotected redirect",
       "file": "app/controllers/snaptrade_items_controller.rb",
-      "line": 125,
+      "line": 36,
       "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
-      "code": "redirect_to(Current.family.snaptrade_items.find(params[:id]).connection_portal_url(:redirect_url => callback_snaptrade_items_url(:item_id => Current.family.snaptrade_items.find(params[:id]).id)), :allow_other_host => true)",
+      "code": "redirect_to(Current.family.snaptrade_items.find(params[:id]).connection_portal_url(:redirect_url => callback_snaptrade_items_url(:item_id => Current.family.snaptrade_items.find(params[:id]).id, :return_to => params[:return_to], :accountable_type => params[:accountable_type])), :allow_other_host => true)",
       "render_path": null,
       "location": {
         "type": "method",
         "class": "SnaptradeItemsController",
         "method": "connect"
       },
-      "user_input": "Current.family.snaptrade_items.find(params[:id]).connection_portal_url(:redirect_url => callback_snaptrade_items_url(:item_id => Current.family.snaptrade_items.find(params[:id]).id))",
+      "user_input": "Current.family.snaptrade_items.find(params[:id]).connection_portal_url(:redirect_url => callback_snaptrade_items_url(:item_id => Current.family.snaptrade_items.find(params[:id]).id, :return_to => params[:return_to], :accountable_type => params[:accountable_type]))",
       "confidence": "Weak",
       "cwe_id": [
         601
       ],
-      "note": "Intentional redirect to SnapTrade's external OAuth portal for brokerage connection"
+      "note": "Intentional redirect to SnapTrade's external OAuth portal for brokerage connection. return_to/accountable_type are only used to route the user back to setup_accounts after the portal callback and are echoed verbatim, not used to build the redirect target itself."
     },
     {
       "warning_type": "Redirect",

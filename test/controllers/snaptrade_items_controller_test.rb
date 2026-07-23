@@ -342,7 +342,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".no-accounts-found", count: 1, message: "Expected the no-accounts UI to be shown after a completed sync with zero accounts"
     assert_select "#snaptrade-sync-spinner", count: 0, message: "Expected the spinner to be hidden when there is no active sync"
-    assert_select "a[href=?]", connect_snaptrade_item_path(@snaptrade_item), text: /Connect Brokerage/
+    assert_select "a[href=?]", connect_snaptrade_item_path(@snaptrade_item, return_to: "setup_accounts", accountable_type: nil), text: /Connect Brokerage/
     assert_no_match oauth_authorize_snaptrade_items_path(item_id: @snaptrade_item.id), response.body
   end
 

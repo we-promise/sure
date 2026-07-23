@@ -27,7 +27,11 @@ class SnaptradeItemsController < ApplicationController
 
   # Redirect user to SnapTrade connection portal
   def connect
-    redirect_url = callback_snaptrade_items_url(item_id: @snaptrade_item.id)
+    redirect_url = callback_snaptrade_items_url(
+      item_id: @snaptrade_item.id,
+      return_to: params[:return_to].presence,
+      accountable_type: params[:accountable_type].presence
+    )
     portal_url = @snaptrade_item.connection_portal_url(redirect_url: redirect_url)
     redirect_to portal_url, allow_other_host: true
   rescue ActiveRecord::Encryption::Errors::Decryption => e
@@ -52,17 +56,12 @@ class SnaptradeItemsController < ApplicationController
     if snaptrade_item
       snaptrade_item.sync_later unless snaptrade_item.syncing?
 
-      stored_return_to, stored_accountable_type = clear_snaptrade_resume_context
-      return_to = params[:return_to].presence || stored_return_to
-      accountable_type = params[:accountable_type].presence || stored_accountable_type
-
-      if return_to == "setup_accounts"
-        redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: accountable_type.presence), notice: t(".success")
+      if params[:return_to].presence == "setup_accounts"
+        redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: params[:accountable_type].presence), notice: t(".success")
       else
         redirect_to accounts_path, notice: t(".success")
       end
     else
-      clear_snaptrade_resume_context
       redirect_to settings_providers_path, alert: t(".no_item")
     end
   end
@@ -394,11 +393,6 @@ class SnaptradeItemsController < ApplicationController
 
       active_items.syncable.ordered.first ||
         active_items.ordered.first
-    end
-
-    def clear_snaptrade_resume_context
-      resume = (session.delete(:snaptrade_resume) || {}).with_indifferent_access
-      [ resume[:return_to], resume[:accountable_type] ]
     end
 
     def build_connections_list
