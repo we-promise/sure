@@ -26,10 +26,10 @@ sync_hourly:
   description: "Syncs provider items that opt-in to hourly syncing"
 
 sync_property_valuations:
-  cron: "30 1 * * *" # daily at 1:30 AM
+  cron: "30 1 1 * *" # monthly on the 1st at 1:30 AM
   class: "SyncPropertyValuationsJob"
   queue: "scheduled"
-  description: "Refreshes AVM property valuations once a day (providers enforce tight monthly request caps)"
+  description: "Refreshes AVM property valuations once a month (providers enforce tight monthly request caps)"
 
 clean_data:
   cron: "0 3 * * *" # daily at 3:00 AM
