@@ -237,7 +237,11 @@ class Import::Preflight
         content: content
       ).call
       stats = result.stats
-      warnings = result.warnings.dup
+      # result.warnings are {code, message} hashes internally, but the published
+      # OpenAPI contract documents preflight warnings as strings. Surface the
+      # human-readable message at the API boundary so the array stays homogeneous and
+      # contract-generated clients can still deserialize it.
+      warnings = result.warnings.map { |warning| warning.is_a?(Hash) ? warning[:message] : warning }
       warnings << "No importable records were found." if stats[:rows_count].positive? && (stats[:entity_counts] || {}).values.sum.zero?
       warnings << "Row count exceeds this import type's publish limit." if stats[:rows_count] > SureImport.max_row_count
 

@@ -865,6 +865,30 @@ class Import::PreflightTest < ActiveSupport::TestCase
     assert_includes payload[:warnings], "No importable records were found."
   end
 
+  test "SureImport preflight serializes hash warnings as strings at the API boundary" do
+    result = Struct.new(:stats, :errors, :warnings, keyword_init: true) do
+      def valid?
+        true
+      end
+    end.new(
+      stats: { rows_count: 2, valid_rows_count: 2, invalid_rows_count: 0, entity_counts: { accounts: 2 } },
+      errors: [],
+      warnings: [ { code: "skipped_missing_reference", message: "Skipped an orphaned rejected transfer." } ]
+    )
+    SureImport::Preflight.stubs(:new).returns(stub(call: result))
+
+    response = Import::Preflight.new(
+      family: @family,
+      params: { type: "SureImport", raw_file_content: "{}" }
+    ).call
+    payload = response.payload[:data]
+
+    # The contract documents warnings as strings, so the {code, message} hash must
+    # surface as its message -- never leak the hash into the response.
+    assert payload[:warnings].all? { |warning| warning.is_a?(String) }, "preflight warnings must be strings"
+    assert_includes payload[:warnings], "Skipped an orphaned rejected transfer."
+  end
+
   private
 
     def build_ndjson(records)
