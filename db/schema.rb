@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_14_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -577,12 +577,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_120000) do
     t.string "provider"
     t.jsonb "raw_payload"
     t.jsonb "raw_transactions_payload"
+    t.boolean "treat_balance_as_available_credit", default: false, null: false
     t.string "uid"
     t.datetime "updated_at", null: false
-    t.string "product"
-    t.decimal "credit_limit", precision: 19, scale: 4
-    t.jsonb "identification_hashes", default: []
-    t.boolean "treat_balance_as_available_credit", default: false, null: false
     t.index ["account_id"], name: "index_enable_banking_accounts_on_account_id"
     t.index ["enable_banking_item_id"], name: "index_enable_banking_accounts_on_enable_banking_item_id"
     t.index ["identification_hashes"], name: "index_enable_banking_accounts_on_identification_hashes", using: :gin
@@ -1151,7 +1148,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_120000) do
   end
 
   create_table "insights", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.text "body", null: false
+    t.text "body"
     t.datetime "created_at", null: false
     t.string "currency", default: "USD", null: false
     t.string "dedup_key", null: false
@@ -1166,6 +1163,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_14_120000) do
     t.string "priority", default: "medium", null: false
     t.datetime "read_at"
     t.string "status", default: "active", null: false
+    t.string "template_key"
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id", "dedup_key"], name: "index_insights_on_family_id_and_dedup_key", unique: true

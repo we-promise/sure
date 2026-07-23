@@ -51,8 +51,8 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
         facts: {
           category: anomaly[:name],
           deviation_pct: round(anomaly[:deviation_pct].abs, 0).to_i,
-          projected_spend: format_money(anomaly[:projected]),
-          baseline_spend: format_money(anomaly[:baseline])
+          projected_spend: money_fact(anomaly[:projected]),
+          baseline_spend: money_fact(anomaly[:baseline])
         },
         # The projection moves every night by construction (spend accrues and
         # the pace factor shrinks as the month elapses), so exact amounts here

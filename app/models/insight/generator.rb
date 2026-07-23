@@ -4,10 +4,13 @@
 # insight is new or its numbers changed, so nightly re-runs don't re-invoke
 # the LLM for unchanged insights.
 class Insight::Generator
-  # `facts` doubles as the i18n interpolation args for the template fallback
-  # and as the grounding data handed to the LLM writer. `metadata` is what the
-  # job compares between runs to decide whether an insight changed — keep its
-  # values JSON-primitive (floats, strings, ISO dates) so comparisons are stable.
+  # `facts` doubles as the i18n interpolation args for the body template and
+  # as the grounding data handed to the LLM writer. Store raw values — floats,
+  # ISO date strings, money facts built via `money_fact` — Insight.localize_facts
+  # formats them in the viewer's locale (and, for money, the fact's own
+  # currency) at interpolation time. `metadata` is what the job compares
+  # between runs to decide whether an insight changed — keep its values
+  # JSON-primitive (floats, strings, ISO dates) so comparisons are stable.
   GeneratedInsight = Data.define(
     :insight_type,
     :priority,
@@ -69,8 +72,12 @@ class Insight::Generator
       )
     end
 
-    def format_money(amount)
-      Money.new(amount, family.currency).format
+    # A raw, locale-neutral money fact: amount + currency, formatted at
+    # display time (Insight.localize_fact_value) in the viewer's locale.
+    # Currency defaults to the family's, but a fact can carry its own (e.g. a
+    # recurring transaction in a different currency than the family's base).
+    def money_fact(amount, currency: family.currency, precision: nil)
+      { amount: round(amount), currency: Money::Currency.new(currency).iso_code, precision: precision }.compact
     end
 
     # Normalizes BigDecimal/Rational math results so metadata survives a jsonb
@@ -82,12 +89,5 @@ class Insight::Generator
 
     def month_token(date = Date.current)
       date.strftime("%Y-%m")
-    end
-
-    # Formats a number for display facts with a true minus sign (U+2212) —
-    # the app types negatives with a minus, not a hyphen. Keep raw numerics
-    # in `metadata`; this is for interpolation into template/LLM prose only.
-    def signed_number(value)
-      value.negative? ? "−#{value.abs}" : value.to_s
     end
 end

@@ -10,7 +10,7 @@
 
     <div class="flex items-start justify-between gap-3">
       <h3 class="text-sm font-medium text-primary inline-flex items-center gap-2 min-w-0">
-        <%= insight.title %>
+        <%= insight.display_title %>
         <% if unread %>
           <%= render DS::Pill.new(label: t("insights.card.new"), tone: :info, size: :sm) %>
         <% end %>
@@ -35,7 +35,7 @@
       </div>
     </div>
 
-    <p class="text-sm text-secondary"><%= insight.body %></p>
+    <p class="text-sm text-secondary"><%= insight.display_body %></p>
 
     <% if (action = insight_action(insight)) %>
       <div class="pt-1">

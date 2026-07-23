@@ -86,11 +86,33 @@ class InsightsHelperTest < ActionView::TestCase
   end
 
   test "key figure comes from facts and hides for rows without them" do
-    with_facts = build_insight("idle_cash", facts: { "balance" => "$28,400.00", "idle_days" => 60 })
+    with_facts = build_insight("idle_cash", facts: { "balance" => { "amount" => 28_400.00, "currency" => "USD" }, "idle_days" => 60 })
     without_facts = build_insight("idle_cash")
 
     assert_equal "$28,400.00", insight_key_figure(with_facts).first
     assert_nil insight_key_figure(without_facts)
+  end
+
+  test "savings rate figure localizes the delta and its unit" do
+    insight = build_insight(
+      "savings_rate_change",
+      metadata: { "current_rate" => -4.3, "previous_rate" => 8.5 },
+      facts: { "change_pp" => 12.8 }
+    )
+
+    assert_equal "−12.8 pp", insight_key_figure(insight).first
+    I18n.with_locale(:fr) do
+      assert_equal "−12,8 pts", insight_key_figure(insight).first
+    end
+  end
+
+  test "budget figure localizes the percent" do
+    insight = build_insight("budget_on_track", facts: { "budget_spent_pct" => 57 })
+
+    assert_equal "57%", insight_key_figure(insight).first
+    I18n.with_locale(:fr) do
+      assert_equal "57 %", insight_key_figure(insight).first
+    end
   end
 
   test "action link resolves the stored subject and disappears when it cannot" do

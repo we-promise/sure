@@ -31,7 +31,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     end
   end
 
-  test "creates an active insight with a body from a generated insight" do
+  test "creates an active insight rendering a live template body from a generated insight" do
     stub_generated([ generated_insight ])
 
     assert_difference "@family.insights.count", 1 do
@@ -41,7 +41,11 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
     assert_equal "active", insight.status
     assert_equal "idle_cash", insight.insight_type
-    assert insight.body.present?
+    assert_equal "idle_cash", insight.template_key
+    # No LLM is configured in tests, so no body is stored; the card renders
+    # the i18n template live in the viewer's locale.
+    assert_nil insight.body
+    assert insight.display_body.present?
     assert_equal 5000.0, insight.metadata["balance"]
   end
 
@@ -49,32 +53,61 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
-    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
-    original_body = insight.body
-
+    Insight::BodyWriter.any_instance.expects(:write).never
     assert_no_difference "@family.insights.count" do
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
-
-    assert_equal original_body, insight.reload.body
   end
 
-  test "persists display facts and refreshes them without a body rewrite when metadata is unchanged" do
+  test "persists display facts and refreshes them without a prose rewrite when metadata is unchanged" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
     insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
-    assert_equal "$5000", insight.facts["balance"]
-    original_body = insight.body
+    assert_equal({ "amount" => 5000.0, "currency" => "USD" }, insight.facts["balance"])
     insight.mark_read!
 
     stub_generated([ generated_insight(display_balance: 5040) ])
+    Insight::BodyWriter.any_instance.expects(:write).never
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
     insight.reload
-    assert_equal "$5040", insight.facts["balance"]
-    assert_equal original_body, insight.body
+    assert_equal({ "amount" => 5040.0, "currency" => "USD" }, insight.facts["balance"])
     assert insight.read?
+  end
+
+  test "refreshes prose of rows predating template_key without undoing read state" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    insight.mark_read!
+    # A row written before template_key existed: prose snapshotted under
+    # whatever locale and translations generation ran with at the time.
+    insight.update!(template_key: nil, title: "Stale title", body: "Stale body")
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_equal "idle_cash", insight.template_key
+    assert_equal "Idle cash in Test Checking", insight.title
+    assert_nil insight.body
+    assert insight.read?
+  end
+
+  test "broadcasts the refreshed feed rendered in the family's locale" do
+    @family.update!(locale: "fr")
+    stub_generated([ generated_insight ])
+
+    seen_locales = []
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to).with do
+      seen_locales << I18n.locale
+      true
+    end
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert_equal [ :fr, :fr ], seen_locales
   end
 
   test "dismissed insight stays dismissed when numbers are unchanged" do
@@ -135,12 +168,11 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert insight.reload.dismissed?
   end
 
-  test "expired insight reactivates without a body rewrite when the condition returns unchanged" do
+  test "expired insight reactivates without a prose rewrite when the condition returns unchanged" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
     insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
-    original_body = insight.body
     insight.mark_read!
 
     stub_generated([], succeeded_types: [ "idle_cash" ])
@@ -148,11 +180,11 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert insight.reload.expired?
 
     stub_generated([ generated_insight ])
+    Insight::BodyWriter.any_instance.expects(:write).never
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
     insight.reload
     assert insight.active?
-    assert_equal original_body, insight.body
     assert_nil insight.read_at
   end
 
@@ -174,7 +206,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
         priority: "low",
         title: "Idle cash in Test Checking",
         template_key: "idle_cash",
-        facts: { account: "Test Checking", balance: "$#{(display_balance || balance).to_i}", idle_days: 60 },
+        facts: { account: "Test Checking", balance: { amount: (display_balance || balance).to_f, currency: "USD" }, idle_days: 60 },
         metadata: { account_id: "test-account", balance: balance },
         currency: "USD",
         period_start: nil,
