@@ -7,7 +7,7 @@ class TransactionImport < Import
       updated_entries = []
       claimed_entry_ids = Set.new # Track entries we've already claimed in this import
 
-      rows.each_with_index do |row, index|
+      rows.ordered.each_with_index do |row, index|
         mapped_account = if account
           account
         else
@@ -78,7 +78,21 @@ class TransactionImport < Import
       end
 
       # Bulk import new transactions
-      Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
+      if new_transactions.any?
+        # The transactions list is reverse_chronological, which breaks date ties
+        # by created_at and then by a random UUID id. A bulk insert stamps every
+        # entry with the same created_at, so same-day rows would fall back to that
+        # random id and lose the CSV's order. Stamp each new entry in row order so
+        # the first CSV row keeps the latest created_at and sorts first on screen.
+        import_time = Time.current
+        new_transactions.each_with_index do |txn, index|
+          ordered_time = import_time - index.milliseconds
+          txn.entry.created_at = ordered_time
+          txn.entry.updated_at = ordered_time
+        end
+
+        Transaction.import!(new_transactions, recursive: true)
+      end
     end
   end
 

@@ -363,6 +363,44 @@ class TransactionImportTest < ActiveSupport::TestCase
     ).count
   end
 
+  test "preserves intra-day CSV row order in the transactions list" do
+    account = accounts(:depository)
+
+    # Four transactions on the same day - order can only come from the CSV
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,First,10
+      01/01/2024,Second,20
+      01/01/2024,Third,30
+      01/01/2024,Fourth,40
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { Entry.count } => 4 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+
+    # reverse_chronological is the order used by the transactions list; the
+    # imported rows must appear in the same order as the CSV.
+    names = @import.entries.reverse_chronological.map(&:name)
+    assert_equal [ "First", "Second", "Third", "Fourth" ], names
+  end
+
   test "uses family currency as fallback when account has no currency and no CSV currency column" do
     account = accounts(:depository)
     family = account.family
