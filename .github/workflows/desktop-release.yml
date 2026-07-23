@@ -29,6 +29,9 @@ concurrency:
 jobs:
   build:
     runs-on: macos-latest # Apple Silicon runner; cross-builds the x86_64 slice
+    # Publishing is gated behind a deployment environment so it can require
+    # manual approval and scope any signing secrets to release runs only.
+    environment: release
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
@@ -69,19 +72,15 @@ jobs:
           jq --arg v "$V" '.version = $v' desktop/src-tauri/tauri.conf.json > "$tmp" && mv "$tmp" desktop/src-tauri/tauri.conf.json
           jq --arg v "$V" '.version = $v' desktop/package.json > "$tmp" && mv "$tmp" desktop/package.json
 
+      # No dependency/build caches on the release workflow: a poisoned Actions
+      # cache written by another workflow must never flow into a published .dmg.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: desktop/package-lock.json
 
       - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
-
-      - uses: swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
-        with:
-          workspaces: desktop/src-tauri
 
       - name: Install frontend dependencies
         working-directory: desktop
