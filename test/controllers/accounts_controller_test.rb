@@ -139,6 +139,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
   end
 
+  test "account activity keeps excluded entries visible so they can be restored" do
+    trade_entry = entries(:trade)
+    trade_entry.update!(excluded: true)
+
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(trade_entry)}"
+  end
+
   test "activity pagination keeps activity tab when loaded from holdings tab" do
     investment = accounts(:investment)
 
