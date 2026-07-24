@@ -1,0 +1,105 @@
+<%= content_for :page_title, t(".title") %>
+
+<div class="space-y-4">
+  <% unless @health.healthy? %>
+    <%= render DS::Alert.new(
+      title: t(".alert.title"),
+      message: t("shared.sidekiq_health_banner.reasons.#{@health.reason}"),
+      variant: :warning,
+      live: :polite
+    ) %>
+  <% end %>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <h2 class="text-lg font-semibold mb-1"><%= t(".status_section_title") %></h2>
+    <p class="text-sm text-secondary mb-4"><%= t(".status_section_description") %></p>
+
+    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <div>
+        <dt class="text-secondary"><%= t(".labels.status") %></dt>
+        <dd class="text-primary font-medium">
+          <% if @health.healthy? %>
+            <span class="text-success"><%= t(".values.healthy") %></span>
+          <% else %>
+            <span class="text-warning"><%= t(".values.unhealthy") %></span>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t(".labels.processes") %></dt>
+        <dd class="text-primary font-medium"><%= @health.processes_count %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t(".labels.last_heartbeat") %></dt>
+        <dd class="text-primary font-medium">
+          <% if @health.last_heartbeat_at %>
+            <%= t(".values.time_ago", time_ago: time_ago_in_words(@health.last_heartbeat_at)) %>
+          <% else %>
+            <%= t(".values.never") %>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t(".labels.max_queue_latency") %></dt>
+        <dd class="text-primary font-medium">
+          <%= t(".values.seconds", seconds: number_with_precision(@health.max_queue_latency, precision: 1)) %>
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <h2 class="text-lg font-semibold mb-1"><%= t(".counters_section_title") %></h2>
+    <p class="text-sm text-secondary mb-4"><%= t(".counters_section_description") %></p>
+
+    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <div>
+        <dt class="text-secondary"><%= t(".labels.enqueued") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(@health.enqueued_count) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t(".labels.retries") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(@health.retry_count) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t(".labels.failed") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(@health.failed_count) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t(".labels.processed_total") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(@health.processed_count) %></dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <h2 class="text-lg font-semibold mb-1"><%= t(".queues_section_title") %></h2>
+    <p class="text-sm text-secondary mb-4"><%= t(".queues_section_description") %></p>
+
+    <% breakdown = @health.queue_breakdown %>
+    <% if breakdown.empty? %>
+      <p class="text-sm text-secondary"><%= t(".values.no_queues") %></p>
+    <% else %>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-secondary border-b border-primary">
+            <th class="py-2 font-medium"><%= t(".labels.queue") %></th>
+            <th class="py-2 font-medium"><%= t(".labels.size") %></th>
+            <th class="py-2 font-medium"><%= t(".labels.latency") %></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-primary">
+          <% breakdown.each do |name, size, latency| %>
+            <tr>
+              <td class="py-2 text-primary"><%= name %></td>
+              <td class="py-2 text-primary"><%= number_with_delimiter(size) %></td>
+              <td class="py-2 text-primary">
+                <%= t(".values.seconds", seconds: number_with_precision(latency, precision: 1)) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </div>
+</div>
