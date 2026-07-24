@@ -3,10 +3,32 @@ class Rule::ConditionFilter
 
   TYPES = [ "text", "number", "select" ]
 
+  # Operators that don't require a value (and that the form hides the value field for)
+  VALUELESS_OPERATORS = [ "is_null", "is_not_null" ].freeze
+
   OPERATORS_MAP = {
-    "text" => [ [ "Contains", "like" ], [ "Equal to", "=" ], [ "Is empty", "is_null" ] ],
-    "number" => [ [ "Greater than", ">" ], [ "Greater or equal to", ">=" ], [ "Less than", "<" ], [ "Less than or equal to", "<=" ], [ "Is equal to", "=" ] ],
-    "select" => [ [ "Equal to", "=" ], [ "Is empty", "is_null" ] ]
+    "text" => [
+      [ :contains, "like" ],
+      [ :does_not_contain, "not_like" ],
+      [ :equal_to, "=" ],
+      [ :not_equal_to, "!=" ],
+      [ :is_empty, "is_null" ],
+      [ :is_not_empty, "is_not_null" ]
+    ],
+    "number" => [
+      [ :greater_than, ">" ],
+      [ :greater_or_equal_to, ">=" ],
+      [ :less_than, "<" ],
+      [ :less_than_or_equal_to, "<=" ],
+      [ :is_equal_to, "=" ],
+      [ :not_equal_to, "!=" ]
+    ],
+    "select" => [
+      [ :equal_to, "=" ],
+      [ :not_equal_to, "!=" ],
+      [ :is_empty, "is_null" ],
+      [ :is_not_empty, "is_not_null" ]
+    ]
   }
 
   def initialize(rule)
@@ -35,7 +57,7 @@ class Rule::ConditionFilter
   end
 
   def operators
-    OPERATORS_MAP.dig(type)
+    OPERATORS_MAP.dig(type).map { |label_key, operator| [ operator_label(label_key), operator ] }
   end
 
   # Matchers can prepare the scope with joins by implementing this method
@@ -66,20 +88,35 @@ class Rule::ConditionFilter
       rule.family
     end
 
+    def operator_label(key)
+      I18n.t("rules.condition_filters.operators.#{key}")
+    end
+
     def build_sanitized_where_condition(field, operator, value)
-      if operator == "is_null"
+      if VALUELESS_OPERATORS.include?(operator)
         ActiveRecord::Base.sanitize_sql_for_conditions(
           "#{field} #{sanitize_operator(operator)}"
         )
       else
         normalized_value = normalize_value(value)
         normalized_field = normalize_field(field)
-        sanitized_value = operator == "like" ? "%#{ActiveRecord::Base.sanitize_sql_like(normalized_value)}%" : normalized_value
 
-        ActiveRecord::Base.sanitize_sql_for_conditions([
-          "#{normalized_field} #{sanitize_operator(operator)} ?",
-          sanitized_value
-        ])
+        if operator == "like" || operator == "not_like"
+          sanitized_value = "%#{ActiveRecord::Base.sanitize_sql_like(normalized_value)}%"
+          expression = ActiveRecord::Base.sanitize_sql_for_conditions([
+            "#{normalized_field} #{sanitize_operator(operator)} ?",
+            sanitized_value
+          ])
+
+          # "Does not contain" should also match rows where the field is absent (NULL),
+          # otherwise NOT ILIKE silently drops them due to SQL's three-valued logic.
+          operator == "not_like" ? "(#{expression} OR #{field} IS NULL)" : expression
+        else
+          ActiveRecord::Base.sanitize_sql_for_conditions([
+            "#{normalized_field} #{sanitize_operator(operator)} ?",
+            normalized_value
+          ])
+        end
       end
     end
 
@@ -89,8 +126,18 @@ class Rule::ConditionFilter
       case operator
       when "like"
         "ILIKE"
+      when "not_like"
+        "NOT ILIKE"
       when "is_null"
         "IS NULL"
+      when "is_not_null"
+        "IS NOT NULL"
+      when "!="
+        # IS DISTINCT FROM treats NULL as a regular value, so "not equal to X" also
+        # matches rows where the field is NULL. This is intentional for select-type
+        # fields (e.g. merchant_id, category_id) where NULL means "not set". For
+        # number-type fields (e.g. amount), NULL is impossible at the DB level.
+        "IS DISTINCT FROM"
       else
         operator
       end
