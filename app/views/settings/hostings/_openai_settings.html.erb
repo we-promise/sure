@@ -1,7 +1,7 @@
 <div class="space-y-4">
   <div>
     <h2 class="font-medium mb-1"><%= t(".title") %></h2>
-    <% if ENV["OPENAI_ACCESS_TOKEN"].present? || ENV["OPENAI_OAUTH_TOKEN"].present? %>
+    <% if ENV["OPENAI_ACCESS_TOKEN"].present? %>
       <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
     <% else %>
       <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
@@ -26,34 +26,6 @@
                           inputmode: "text",
                           disabled: ENV["OPENAI_ACCESS_TOKEN"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
-
-  <div class="pt-4 border-t border-secondary">
-    <h3 class="font-medium mb-1"><%= t(".oauth_heading") %></h3>
-    <p class="text-xs text-secondary mb-3"><%= t(".oauth_description") %></p>
-
-    <%= form.password_field :openai_oauth_token,
-                            label: t(".oauth_token_label"),
-                            placeholder: t(".oauth_token_placeholder"),
-                            value: (Setting.openai_oauth_token.present? ? "********" : nil),
-                            autocomplete: "off",
-                            autocapitalize: "none",
-                            spellcheck: "false",
-                            inputmode: "text",
-                            disabled: ENV["OPENAI_OAUTH_TOKEN"].present?,
-                            data: { "auto-submit-form-target": "auto" } %>
-
-    <%= form.text_field :openai_oauth_account_id,
-                        label: t(".oauth_account_id_label"),
-                        placeholder: t(".oauth_account_id_placeholder"),
-                        value: Setting.openai_oauth_account_id,
-                        autocomplete: "off",
-                        autocapitalize: "none",
-                        spellcheck: "false",
-                        inputmode: "text",
-                        disabled: ENV["OPENAI_ACCOUNT_ID"].present?,
-                        data: { "auto-submit-form-target": "auto" } %>
-    <p class="text-xs text-secondary mt-1"><%= t(".oauth_account_id_help") %></p>
-  </div>
 
   <%= form.text_field :openai_uri_base,
                       label: t(".uri_base_label"),
