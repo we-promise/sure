@@ -22,23 +22,33 @@ pl:
         needs_this_month_label: Potrzeba w tym miesiącu
         needs_this_month_sub:
           one: 1 cel w tyle za tempem
-          other: "%{count} cele w tyle za tempem"
+          few: "%{count} cele w tyle za tempem"
+          many: "%{count} celów w tyle za tempem"
+          other: "%{count} celu w tyle za tempem"
         needs_this_month_zero_sub: Żaden cel nie jest w tyle
         on_track_label: Cele na dobrej drodze
         on_track_value: "%{on_track} z %{total}"
         on_track_sub_parts:
           reached:
             one: 1 osiągnięty
-            other: "%{count} osiągniętych"
+            few: "%{count} osiągnięte"
+            many: "%{count} osiągniętych"
+            other: "%{count} osiągniętego"
           behind:
             one: 1 w tyle
+            few: "%{count} w tyle"
+            many: "%{count} w tyle"
             other: "%{count} w tyle"
           no_date:
             one: 1 bez terminu
+            few: "%{count} bez terminu"
+            many: "%{count} bez terminu"
             other: "%{count} bez terminu"
           paused:
             one: 1 wstrzymany
-            other: "%{count} wstrzymanych"
+            few: "%{count} wstrzymane"
+            many: "%{count} wstrzymanych"
+            other: "%{count} wstrzymanego"
         on_track_sub_all_good: Wszystkie aktywne cele na dobrej drodze
         on_track_all_caught_up: Wszystko nadrobione
       goals_section:
@@ -125,6 +135,8 @@ pl:
         title:
           zero: "Oczekujące: %{amount} na %{account} · wygasa dzisiaj"
           one: "Oczekujące: %{amount} na %{account} · 1 dzień"
+          few: "Oczekujące: %{amount} na %{account} · %{count} dni"
+          many: "Oczekujące: %{amount} na %{account} · %{count} dni"
           other: "Oczekujące: %{amount} na %{account} · %{count} dni"
         body_transfer: Automatycznie potwierdza się, gdy Sure wykryje pasujący depozyt przy następnej synchronizacji.
         body_manual: Potwierdza się przy następnej ręcznej edycji salda.
