@@ -99,6 +99,17 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "acc_123", provider.transaction_calls.first[:account_id]
   end
 
+  test "initial sync fetches full history instead of clamping to a recent window" do
+    provider = FakeAkahuProvider.new
+
+    AkahuItem::Importer.new(@akahu_item, akahu_provider: provider).import
+
+    start_date = provider.transaction_calls.first[:start_date]
+    assert start_date.present?, "expected an explicit start date for the initial sync"
+    assert start_date < 100.days.ago, "initial sync should reach further back than the recent 90-day window"
+    assert_in_delta AkahuItem::Importer::INITIAL_SYNC_LOOKBACK.ago.to_i, start_date.to_i, 1.day.to_i
+  end
+
   test "removes pending transactions that disappear from latest pending response" do
     pending = [ pending_transaction(description: "Pending card auth", amount: -8.00) ]
     import_with(pending_transactions: pending, posted_transactions: [])
