@@ -20,6 +20,7 @@ ru:
     custom:
       label: Свой период
       label_short: Свой
+      comparison_label: "с %{start} по %{end}"
     last_10_years:
       comparison_label: по сравнению с 10 лет назад
       label: Последние 10 лет

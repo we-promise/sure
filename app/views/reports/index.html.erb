@@ -30,7 +30,7 @@
 
     <%# Period Navigation Tabs %>
     <div class="flex items-center justify-between gap-4">
-      <%= render DS::SegmentedControl.new(aria_label: t("reports.index.period_aria", default: "Report period"), class: "overflow-x-auto no-scrollbar") do |sc| %>
+      <%= render DS::SegmentedControl.new(aria_label: t("reports.index.period_aria"), class: "overflow-x-auto no-scrollbar") do |sc| %>
         <% %i[monthly quarterly ytd last_6_months custom].each do |ptype| %>
           <% sc.with_segment(t("reports.index.periods.#{ptype}"),
                active: @period_type == ptype,
@@ -128,7 +128,7 @@
     </section>
 
     <%# Collapsible & Reorderable Sections %>
-    <div data-controller="reports-sortable" data-action="dragover->reports-sortable#dragOver drop->reports-sortable#drop" role="list" aria-label="Reports sections">
+    <div data-controller="reports-sortable" data-action="dragover->reports-sortable#dragOver drop->reports-sortable#drop" role="list" aria-label="<%= t("reports.index.sections_aria_label") %>">
       <% @reports_sections.each do |section| %>
         <% next unless section[:visible] %>
         <section

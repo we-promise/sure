@@ -54,9 +54,11 @@
     </div>
 
     <div class="my-2">
+      <% account_group_name = account_group.accountable_type.singular_display_name %>
+      <% account_group_name = account_group_name.downcase unless t("accounts.sidebar.capitalize_account_group") %>
       <%= render DS::Link.new(
       href: new_polymorphic_path(account_group.key, step: "method_select"),
-      text: t("accounts.sidebar.new_account_group", account_group: account_group.accountable_type.singular_display_name.downcase),
+      text: t("accounts.sidebar.new_account_group", account_group: account_group_name),
       icon: "plus",
       full_width: true,
       variant: "ghost",

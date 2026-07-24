@@ -8,22 +8,39 @@ de:
       print_report: Bericht drucken
       drag_to_reorder: "Bereich per Drag & Drop neu anordnen"
       toggle_section: "Sichtbarkeit des Bereichs umschalten"
+      period_aria: "Berichtszeitraum"
+      sections_aria_label: "Berichtsabschnitte"
       periods:
         monthly: Monatlich
         quarterly: Vierteljährlich
-        ytd: Jahr bis heute
+        ytd: Seit Jahresbeginn
         last_6_months: Letzte 6 Monate
         custom: Benutzerdefinierter Zeitraum
       date_range:
         from: Von
         to: Bis
       showing_period: "Zeitraum: %{start} bis %{end}"
+      previous_period: "Vorheriger Zeitraum"
+      next_period: "Nächster Zeitraum"
+      today: "Heute"
+      period_label:
+        quarterly: "Q%{quarter} %{year}"
+        ytd: "Seit Jahresbeginn %{year}"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "Q%{quarter} %{year}"
+        ytd: "Seit Jahresbeginn %{year}"
+      previous_year: "Vorheriges Jahr"
+      next_year: "Nächstes Jahr"
+      previous_decade: "Vorheriges Jahrzehnt"
+      next_decade: "Nächstes Jahrzehnt"
     invalid_date_range: "Das Enddatum kann nicht vor dem Startdatum liegen. Die Daten wurden vertauscht."
     summary:
       total_income: Gesamteinnahmen
       total_expenses: Gesamtausgaben
       net_savings: Nettoersparnis
-      budget_performance: Budgetleistung
+      budget_performance: Budgetentwicklung
       vs_previous: im Vergleich zum vorherigen Zeitraum
       income_minus_expenses: Einnahmen minus Ausgaben
       of_budget_used: des Budgets genutzt
@@ -43,7 +60,7 @@ de:
         reduced: Reduziert
         increased: Gestiegen
     budget_performance:
-      title: Budgetleistung
+      title: Budgetentwicklung
       spent: Ausgegeben
       budgeted: Budgetiert
       remaining: Verbleibend
@@ -94,9 +111,10 @@ de:
       no_assets: Keine Vermögenswerte
       no_liabilities: Keine Verbindlichkeiten
     investment_performance:
-      title: Anlageperformance
+      title: Anlageentwicklung
       portfolio_value: Portfoliowert
       total_return: Gesamtrendite
+      period_return: Rendite im Zeitraum
       contributions: Einlagen im Zeitraum
       withdrawals: Entnahmen im Zeitraum
       top_holdings: Top-Positionen
@@ -123,10 +141,13 @@ de:
       and_more: "+%{count} weitere"
     investment_flows:
       title: Anlageflüsse
-      description: Verfolge Geldflüsse in und aus deinen Anlagekonten
+      description: Verfolge Einzahlungen auf und Auszahlungen von deinen Anlagekonten.
       contributions: Einlagen
+      contributions_description: In Anlagen eingezahltes Geld
       withdrawals: Entnahmen
+      withdrawals_description: Aus Anlagen entnommenes Geld
       net_flow: Nettozufluss
+      net_flow_description: Gesamte Nettoveränderung
     transactions_breakdown:
       title: Transaktionsübersicht
       no_transactions: Keine Transaktionen für den ausgewählten Zeitraum und Filter gefunden
@@ -190,6 +211,7 @@ de:
     print:
       document_title: Finanzbericht
       title: Finanzbericht
+      date_range: "%{start} – %{end}"
       generated_on: "Erstellt am %{date}"
       summary:
         title: Zusammenfassung
@@ -220,6 +242,7 @@ de:
         title: Anlagen
         portfolio_value: Portfoliowert
         total_return: Gesamtrendite
+        period_return: Rendite im Zeitraum
         contributions: Einlagen
         withdrawals: Entnahmen
         this_period: dieser Zeitraum

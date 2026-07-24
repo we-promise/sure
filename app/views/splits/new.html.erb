@@ -4,7 +4,7 @@
       <div>
         <h2 class="text-lg font-semibold text-primary"><%= @entry.name %></h2>
         <p class="text-sm text-secondary flex items-center gap-1.5">
-          <span><%= @entry.date.strftime("%b %d, %Y") %></span>
+          <span><%= l(@entry.date, format: :long) %></span>
           <% if (category = @entry.entryable.try(:category)) %>
             <span class="text-secondary">&middot;</span>
             <span style="color: <%= category.color %>"><%= icon category.lucide_icon, size: "xs", color: "current" %></span>

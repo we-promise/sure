@@ -34,9 +34,9 @@
       </div>
 
       <div class="grid grid-cols-3 gap-2 text-sm text-center font-medium">
-        <% Date::ABBR_MONTHNAMES.compact.each_with_index do |month_name, i| %>
-          <% month = i + 1 %>
+        <% (1..12).each do |month| %>
           <% date = Date.new(start_date.year, month, 1) %>
+          <% month_name = l(date, format: "%b") %>
           <% if date <= Date.current %>
             <%= render DS::Link.new(
               variant: date.month == start_date.month ? "secondary" : "ghost",

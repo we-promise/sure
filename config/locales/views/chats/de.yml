@@ -1,6 +1,45 @@
 ---
 de:
   chats:
+    worker_unhealthy_warning: KI-Antworten können derzeit möglicherweise nicht zugestellt werden – der Hintergrunddienst ist nicht erreichbar oder überlastet. Prüfe, ob dein Sidekiq-Worker läuft.
     demo_banner_title: "Demo-Modus aktiv"
-    demo_banner_message: "Sie nutzen ein Open-Weight Qwen3-LLM mit Credits von Cloudflare Workers AI. Die Ergebnisse können variieren, da die Codebasis hauptsächlich mit `gpt-4.1` getestet wurde – Ihre Tokens werden jedoch nicht anderswo zum Training verwendet! 🤖"
+    demo_banner_message: "Du nutzt ein Open-Weight-Qwen3-LLM mit Credits von Cloudflare Workers AI. Die Ergebnisse können variieren, da die Codebasis hauptsächlich mit `gpt-4.1` getestet wurde – deine Tokens werden jedoch nicht anderweitig zum Training verwendet! 🤖"
     thinking: "Wird verarbeitet ..."
+    ai_greeting:
+      greeting: "Hallo %{name}! Ich bin eine KI, die dir bei deinen Finanzen helfen kann. Ich habe Zugriff auf das Internet und deine Kontodaten."
+      there: zusammen
+      commands_hint_html: "Mit <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> kannst du Befehle aufrufen"
+      questions_intro: "Hier sind einige Fragen, die du stellen kannst:"
+      evaluate_portfolio: Anlageportfolio bewerten
+      spending_insights: Ausgaben analysieren
+      unusual_patterns: Ungewöhnliche Muster finden
+    chat:
+      edit_chat_title: Chattitel bearbeiten
+      delete_chat: Chat löschen
+    chat_nav:
+      all_chats: Alle Chats
+      start_new_chat: Neuen Chat starten
+      edit_chat_title: Chattitel bearbeiten
+      delete_chat: Chat löschen
+    error:
+      retry: Erneut versuchen
+    destroy:
+      notice: Chat wurde gelöscht
+    index:
+      chats: Chats
+      new_chat: Neuer Chat
+    update:
+      success: Chat wurde aktualisiert
+    ai_consent:
+      title: KI-Chat aktivieren
+      available_description: Der KI-Chat kann Finanzfragen beantworten und dir auf Basis deiner Daten Einblicke geben. Du musst ihn ausdrücklich aktivieren, um diese Funktion zu nutzen.
+      unavailable_description_html: "Für den KI-Assistenten musst du die Umgebungsvariable <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> setzen oder den Token in den Self-Hosting-Einstellungen deiner Instanz konfigurieren."
+      enable_button: KI-Chat aktivieren
+      disable_note: Du kannst ihn jederzeit deaktivieren. Alle an unsere LLM-Anbieter gesendeten Daten werden anonymisiert.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Überlegungen des Assistenten
+    tool_calls:
+      tool_calls: Werkzeugaufrufe
+      function: "Funktion:"
+      arguments: "Argumente:"

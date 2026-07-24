@@ -4,6 +4,8 @@ en:
     self_hostable:
       redis_configured: "Redis is now configured properly! You can now setup your Sure application."
   shared:
+    app_version:
+      label: Version
     preview: Preview
     sync_toast:
       message: "New data available"

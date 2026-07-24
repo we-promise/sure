@@ -2,12 +2,16 @@
 de:
   layouts:
     application:
+      insights: Einblicke
       privacy_mode: Datenschutzmodus umschalten
+      resize_left_sidebar: Seitenleiste für Konten skalieren
+      resize_right_sidebar: Seitenleiste für den Assistenten skalieren
       skip_to_main: Zum Hauptinhalt springen
       nav:
         assistant: Assistent
         budgets: Budgets
         home: Startseite
+        goals: Ziele
         reports: Berichte
         transactions: Transaktionen
     auth:
@@ -17,10 +21,15 @@ de:
       sign_up: Konto erstellen
       your_account: Dein Konto
     shared:
+      confirm_dialog:
+        are_you_sure: Bist du sicher?
+        cannot_be_undone: Diese Aktion kann nicht rückgängig gemacht werden.
+        confirm: Bestätigen
       footer:
+        community_fork: Community-Fork von Maybe Finance
         privacy_policy: Datenschutzrichtlinie
         terms_of_service: Nutzungsbedingungen
     trial:
-      open_demo: Offene Demo
+      open_demo: Demo öffnen
       data_deleted_in_days: Daten werden in %{days} Tagen gelöscht
       contribute: Beitragen
