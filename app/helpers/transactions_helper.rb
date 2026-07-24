@@ -5,6 +5,7 @@ module TransactionsHelper
       { key: "date_filter", label: t("transactions.search.filters.date"), icon: "calendar" },
       { key: "type_filter", label: t("transactions.search.filters.type"), icon: "tag" },
       { key: "status_filter", label: t("transactions.search.filters.status"), icon: "clock" },
+      { key: "excluded_filter", label: t("transactions.search.filters.excluded"), icon: "eye-off" },
       { key: "amount_filter", label: t("transactions.search.filters.amount"), icon: "hash" },
       { key: "category_filter", label: t("transactions.search.filters.category"), icon: "shapes" },
       { key: "tag_filter", label: t("transactions.search.filters.tag"), icon: "tags" },

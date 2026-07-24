@@ -232,6 +232,7 @@ en:
         date: Date
         type: Type
         status: Status
+        excluded: Excluded
         amount: Amount
         category: Category
         tag: Tag
@@ -297,7 +298,9 @@ en:
           less_than: Less than
           placeholder: '0'
         badge:
+          active: Active
           expense: Expense
+          excluded: Excluded
           income: Income
           on_or_after: on or after %{date}
           on_or_before: on or before %{date}
@@ -311,6 +314,9 @@ en:
         status_filter:
           confirmed: Confirmed
           pending: Pending
+        excluded_filter:
+          active: Active
+          excluded: Excluded
       menu:
         account_filter: Account
         amount_filter: Amount
@@ -319,6 +325,7 @@ en:
         category_filter: Category
         clear_filters: Clear filters
         date_filter: Date
+        excluded_filter: Excluded
         merchant_filter: Merchant
         status_filter: Status
         tag_filter: Tag
