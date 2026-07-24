@@ -1,14 +1,6 @@
 require "digest/md5"
 
 class AkahuItem::Importer
-  # Akahu's transactions endpoint only returns data from the requested `start`
-  # onward (paginating the full range via cursor). On the first sync of an
-  # account we therefore request a long lookback so all historic transactions
-  # the connection can provide are pulled through, rather than clamping to a
-  # short recent window. Akahu returns only the data that actually exists, so an
-  # early start date simply captures everything available.
-  INITIAL_SYNC_LOOKBACK = 5.years
-
   attr_reader :akahu_item, :akahu_provider
 
   def initialize(akahu_item, akahu_provider:)
@@ -244,7 +236,11 @@ class AkahuItem::Importer
       if has_stored_transactions && akahu_item.last_synced_at
         akahu_item.last_synced_at - 7.days
       else
-        INITIAL_SYNC_LOOKBACK.ago
+        # Initial sync: omit the start date entirely. Akahu's transactions
+        # endpoint defaults to the full accessible range when no start is given,
+        # so this pulls the connection's complete history instead of clamping it
+        # to a fixed lookback window (which truncated apps with >5 years of data).
+        nil
       end
     end
 
