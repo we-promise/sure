@@ -51,7 +51,7 @@ class User < ApplicationRecord
   validates :password, length: { minimum: 8 }, allow_nil: true
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
-  normalizes :locale, with: ->(locale) { locale.presence }
+  normalizes :locale, with: ->(locale) { locale.presence&.downcase }
 
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 

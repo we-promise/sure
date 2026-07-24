@@ -115,6 +115,7 @@ class Family < ApplicationRecord
   has_many :recurring_transactions, dependent: :destroy
   has_many :insights, dependent: :destroy
 
+  normalizes :locale, with: ->(locale) { locale.presence&.downcase }
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
   validates :month_start_day, inclusion: { in: 1..28 }
