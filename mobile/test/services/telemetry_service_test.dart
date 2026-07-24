@@ -277,5 +277,25 @@ void main() {
         'Local database operation failed',
       );
     });
+
+    test('conversationId is stable, pseudonymous, and survives sanitization',
+        () {
+      const chatId = 'a3bb189e-8bf9-3888-9912-ace4e6543002';
+
+      final id = TelemetryService.conversationId(chatId);
+
+      // Deterministic per chat, different across chats.
+      expect(TelemetryService.conversationId(chatId), id);
+      expect(
+        TelemetryService.conversationId('b4cc290f-9c0a-4999-aa23-bdf5f7654113'),
+        isNot(id),
+      );
+
+      // Does not leak the raw chat UUID...
+      expect(id, isNot(contains(chatId)));
+      // ...and is not itself redacted by the sanitization pipeline the way a
+      // UUID would be, so gen_ai.conversation.id stays groupable in Sentry.
+      expect(TelemetryService.sanitizeValue(id), id);
+    });
   });
 }

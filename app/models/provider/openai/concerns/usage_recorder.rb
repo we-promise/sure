@@ -8,6 +8,10 @@ module Provider::Openai::Concerns::UsageRecorder
     # Automatically infers provider from model name
     # Returns nil if pricing is unavailable (e.g., custom/self-hosted models)
     def record_usage(model_name, usage_data, operation:, metadata: {})
+      # Attach token usage to the enclosing Sentry gen_ai span (if any) even
+      # when no family is present — observability is independent of billing.
+      LlmInstrumentation.add_current_span_usage(usage_data) if usage_data
+
       return unless family && usage_data
 
       # Handle both old and new OpenAI API response formats
