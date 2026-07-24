@@ -35,6 +35,27 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "create without an account re-renders the form instead of raising" do
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: "",
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: Category.first.id
+          }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "updates with transaction details" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       patch transaction_url(@entry), params: {
