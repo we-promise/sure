@@ -55,22 +55,30 @@ jobs:
           fi
 
           # Delete the worker (this also stops any running containers)
-          response="$(curl -sS -X DELETE \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME" \
+          response_file="$(mktemp)"
+          http_status="$(curl -sS -o "$response_file" -w "%{http_code}" -X DELETE \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME?force=true" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             -H "Content-Type: application/json")" || {
               echo "Failed to delete preview Worker via Cloudflare API"
               exit 1
             }
+          response="$(cat "$response_file")"
 
-          if echo "$response" | jq -e '.success == true' >/dev/null; then
+          if [ -z "$response" ] && [[ "$http_status" =~ ^2 ]]; then
             echo "Deleted Worker: $WORKER_NAME"
-          elif echo "$response" | jq -e '[.errors[]?.code] | index(10007)' >/dev/null; then
+          elif [ -n "$response" ] && echo "$response" | jq -e '.success == true' >/dev/null; then
+            echo "Deleted Worker: $WORKER_NAME"
+          elif [ -n "$response" ] && echo "$response" | jq -e '[.errors[]?.code] | index(10007)' >/dev/null; then
             echo "$response" | jq -c '.errors'
             echo "Worker may not exist"
           else
-            echo "Cloudflare API failed to delete preview Worker"
-            echo "$response" | jq -c '.errors // .'
+            echo "Cloudflare API failed to delete preview Worker (HTTP $http_status)"
+            if [ -n "$response" ]; then
+              echo "$response" | jq -c '.errors // .' || printf '%s\n' "$response"
+            else
+              echo "No response body"
+            fi
             exit 1
           fi
 
