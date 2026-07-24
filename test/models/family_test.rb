@@ -165,6 +165,28 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "Groups", family.moniker_label_plural
   end
 
+  test "entries_cache_version changes when an older entry is destroyed" do
+    family = families(:dylan_family)
+    newer_entry = entries(:transaction)
+    older_entry = Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: categories(:food_and_drink)),
+      date: Date.current,
+      name: "Older duplicate",
+      amount: 42,
+      currency: "USD",
+      created_at: 2.days.ago,
+      updated_at: 2.days.ago
+    )
+
+    newer_entry.update!(updated_at: 1.day.ago)
+
+    before_destroy = family.reload.entries_cache_version
+    older_entry.destroy!
+
+    assert_not_equal before_destroy, family.reload.entries_cache_version
+  end
+
   test "available_merchants includes family merchants without transactions" do
     family = families(:dylan_family)
 

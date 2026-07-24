@@ -429,10 +429,7 @@ class Family < ApplicationRecord
 
   # Used for invalidating entry related aggregation queries
   def entries_cache_version
-    @entries_cache_version ||= begin
-      ts = entries.maximum(:updated_at)
-      ts.present? ? ts.to_i : 0
-    end
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}"
   end
 
   def self_hoster?
