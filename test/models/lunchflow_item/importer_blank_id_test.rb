@@ -178,6 +178,49 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
     assert_equal content_hash, external_id_hash, "Importer content hash should match processor's MD5 hash"
   end
 
+  test "refreshes a stored transaction when it flips from pending to posted" do
+    # Same Lunchflow transaction ID, first returned as pending then as posted.
+    pending_version = {
+      "id" => "txn_456",
+      "accountId" => @lunchflow_account.account_id,
+      "amount" => -42.00,
+      "currency" => "GBP",
+      "date" => Date.today.to_s,
+      "merchant" => "AMAZON",
+      "description" => "Order",
+      "isPending" => true
+    }
+    posted_version = pending_version.merge("isPending" => false)
+
+    mock_provider = mock()
+    mock_provider.stubs(:get_account_balance)
+      .with(@lunchflow_account.account_id)
+      .returns({ balance: 100.0, currency: "GBP" })
+
+    importer = LunchflowItem::Importer.new(@item, lunchflow_provider: mock_provider)
+
+    # First sync stores the pending version
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [ pending_version ], count: 1 })
+
+    importer.send(:fetch_and_store_transactions, @lunchflow_account)
+    payload = @lunchflow_account.reload.raw_transactions_payload
+    assert_equal 1, payload.size
+    assert_equal true, payload.first.with_indifferent_access[:isPending]
+
+    # Second sync returns the same transaction, now posted
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [ posted_version ], count: 1 })
+
+    importer.send(:fetch_and_store_transactions, @lunchflow_account)
+    payload = @lunchflow_account.reload.raw_transactions_payload
+    assert_equal 1, payload.size, "must not duplicate the transaction on status change"
+    assert_equal false, payload.first.with_indifferent_access[:isPending],
+      "stored snapshot must refresh so the pending→posted transition reaches the processor"
+  end
+
   test "transactions with IDs are not affected by content hash logic" do
     # Transaction with a proper ID
     transaction_with_id = {
