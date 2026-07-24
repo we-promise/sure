@@ -296,42 +296,49 @@ class LunchflowItem::Importer
               tx_with_access[:id].presence || content_hash_for_transaction(tx_with_access)
             end
 
-            # Index stored transactions by key, preserving insertion order so
-            # existing transactions stay first and newly seen ones are appended.
-            ordered_keys = []
-            transactions_by_key = {}
+            # Pool the existing snapshot into one bucket per key. Two genuinely
+            # distinct purchases can share a content hash (Lunchflow returns blank IDs
+            # for some pending transactions), so match incoming rows to stored rows
+            # one-for-one rather than collapsing every same-key row into a single
+            # entry. Collapsing regressed identical same-response purchases, dropping
+            # one before LunchflowEntry::Processor could suffix the collision.
+            existing_pool = Hash.new { |pool, key| pool[key] = [] }
             existing_transactions.each do |tx|
               next unless tx.is_a?(Hash)
 
-              key = transaction_key.call(tx)
-              ordered_keys << key unless transactions_by_key.key?(key)
-              transactions_by_key[key] = tx
+              existing_pool[transaction_key.call(tx)] << tx
             end
 
             new_count = 0
             updated_count = 0
+            merged = []
             transactions_data[:transactions].each do |tx|
               next unless tx.is_a?(Hash)
 
-              key = transaction_key.call(tx)
-              if transactions_by_key.key?(key)
-                # Refresh the stored snapshot only when the upstream data actually
-                # changed (e.g. pending → posted), so status transitions propagate
-                # to the processor without needless writes on unchanged syncs.
-                unless transactions_by_key[key].with_indifferent_access == tx.with_indifferent_access
-                  transactions_by_key[key] = tx
-                  updated_count += 1
-                end
-              else
-                ordered_keys << key
-                transactions_by_key[key] = tx
+              stored = existing_pool[transaction_key.call(tx)].shift
+              if stored.nil?
+                # New to the snapshot. A second same-response row that collides with
+                # the first on content hash lands here too, so both are preserved.
+                merged << tx
                 new_count += 1
+              elsif stored.with_indifferent_access == tx.with_indifferent_access
+                # Unchanged since last sync; keep the stored copy as-is.
+                merged << stored
+              else
+                # Upstream data changed (e.g. pending → posted); refresh the stored
+                # snapshot so the status transition propagates to the processor.
+                merged << tx
+                updated_count += 1
               end
             end
 
+            # Keep any stored rows the current response no longer returned — a normal
+            # sync never prunes the snapshot (unchanged prior behaviour).
+            leftover = existing_pool.values.flatten(1)
+
             if new_count > 0 || updated_count > 0
               Rails.logger.info "LunchflowItem::Importer - Storing #{new_count} new and #{updated_count} updated transactions (#{existing_transactions.count} existing) for account #{lunchflow_account.account_id}"
-              lunchflow_account.upsert_lunchflow_transactions_snapshot!(ordered_keys.map { |key| transactions_by_key[key] })
+              lunchflow_account.upsert_lunchflow_transactions_snapshot!(merged + leftover)
             else
               Rails.logger.info "LunchflowItem::Importer - No new or updated transactions to store (all #{transactions_data[:transactions].count} unchanged) for account #{lunchflow_account.account_id}"
             end
