@@ -142,4 +142,15 @@ class FamilyExportTest < ActiveSupport::TestCase
     assert_equal new_export.id, ordered_exports.first.id
     assert_equal old_export.id, ordered_exports.last.id
   end
+
+  test "clean isolates a record whose update! fails so the sweep does not abort" do
+    @export.update_columns(status: "processing", updated_at: 3.hours.ago)
+
+    # A validation/DB error on one stuck record must not abort the sweep for
+    # the rest (mirrors Import.clean's per-record rescue).
+    FamilyExport.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(FamilyExport.new))
+
+    assert_nothing_raised { FamilyExport.clean }
+    assert_equal "processing", @export.reload.status
+  end
 end

@@ -576,9 +576,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
     t.jsonb "raw_transactions_payload"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "product"
-    t.decimal "credit_limit", precision: 19, scale: 4
-    t.jsonb "identification_hashes", default: []
     t.boolean "treat_balance_as_available_credit", default: false, null: false
     t.index ["account_id"], name: "index_enable_banking_accounts_on_account_id"
     t.index ["enable_banking_item_id"], name: "index_enable_banking_accounts_on_enable_banking_item_id"

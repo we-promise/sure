@@ -9,12 +9,25 @@ class Import < ApplicationRecord
   # hour of silence dwarfs any legitimate run.
   PRESUMED_LOST_AFTER = 1.hour
 
+  # The automated counterpart to the manual escape hatch above: SyncCleanerJob
+  # reaps records stuck past this longer window (see Import.clean).
+  STUCK_AFTER = 6.hours
+
   # User-facing (shown as the import's error in the UI), so resolved through
   # i18n at call time rather than frozen at boot.
   def self.lost_error_message
     I18n.t(
       "imports.errors.presumed_lost",
       default: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
+    )
+  end
+
+  # User-facing (shown as the import's error in the UI). Resolved at reap
+  # time; the sweep runs from cron so this snapshots the default locale.
+  def self.interrupted_error_message
+    I18n.t(
+      "imports.errors.interrupted",
+      default: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."
     )
   end
 
@@ -98,6 +111,71 @@ class Import < ApplicationRecord
   has_many :entries, dependent: :destroy
 
   class << self
+    # Reaps imports whose job died mid-flight. import! runs in a single DB
+    # transaction, so which side of its commit the worker died on is
+    # observable: no rows attached → the data rolled back, failing the record
+    # re-enables the "Try again" path; rows attached → the job died between
+    # the commit and the status write, so the truthful terminal state is
+    # complete (re-enabling retry there would double-import types without row
+    # dedup, e.g. TradeImport). Reverts that died the same way go to
+    # revert_failed so the revert can be retried. PdfImports are excluded
+    # (their statuses double as processing claims, see PdfImport.clean), and
+    # so are session-owned chunks — ImportSession.clean reconciles those
+    # within the session flow.
+    def clean
+      where(status: [ :importing, :reverting ])
+        .where.not(type: "PdfImport")
+        .where(import_session_id: nil)
+        .where("updated_at < ?", STUCK_AFTER.ago)
+        .includes(:family)
+        .find_each do |import|
+          reap_stuck!(import)
+        rescue => e
+          # One bad record must not abort the sweep for every other stuck
+          # import this hour.
+          Rails.logger.error("Import.clean failed for #{import.type} #{import.id}: #{e.class}: #{e.message}")
+          Sentry.capture_exception(e) { |scope| scope.set_tags(record_type: import.type, record_id: import.id) } if defined?(Sentry)
+        end
+    end
+
+    def reap_stuck!(import)
+      needs_sync = false
+      # Read before the lock: with_lock reloads the row and drops the
+      # association cache, which would turn the sweep's preload into an N+1.
+      family = import.family
+
+      # Same guard Sync#perform gained in #2680: between the sweep query
+      # and this row the owning job may have finished (or another sweep
+      # won), so re-check staleness under a row lock before mutating.
+      import.with_lock do
+        next unless import.reapable_since?(STUCK_AFTER.ago)
+
+        previous_status = import.status
+        if previous_status == "reverting"
+          import.update!(status: :revert_failed, error: interrupted_error_message)
+        elsif import.data_committed?
+          import.update!(status: :complete, error: nil)
+          needs_sync = true
+        else
+          import.update!(status: :failed, error: interrupted_error_message)
+        end
+
+        DebugLogEntry.capture(
+          category: "background_jobs",
+          level: "warn",
+          message: "Reaped #{import.type} stuck in #{previous_status} for over #{STUCK_AFTER.inspect} (→ #{import.status})",
+          source: name,
+          family: family,
+          metadata: { record_type: import.type, record_id: import.id, previous_status: previous_status, new_status: import.status }
+        )
+      end
+
+      # Outside the row-lock transaction: Rails doesn't defer enqueues to
+      # after-commit by default, so enqueuing inside the lock could hand
+      # Sidekiq a job before the status write is visible.
+      family.sync_later if needs_sync
+    end
+
     def parse_csv_str(csv_str, col_sep: ",")
       CSV.parse(
         (csv_str || "").strip,
@@ -163,7 +241,38 @@ class Import < ApplicationRecord
     ImportJob.perform_later(self)
   end
 
+  # Whether import! already committed rows for this import. Distinguishes a
+  # job that died mid-import (single transaction → rolled back, nothing
+  # attached) from one that died after the data landed but before the status
+  # write. Covers entry-producing imports and account-producing ones
+  # (AccountImport creates accounts, not entries).
+  def data_committed?
+    entries.exists? || accounts.exists?
+  end
+
+  # Reaper guard: still wedged in a job-owned status and untouched since the
+  # sweep's cutoff. Called under the record's row lock (fresh read).
+  def reapable_since?(cutoff)
+    %w[importing reverting].include?(status) && updated_at < cutoff
+  end
+
   def publish
+    # A redelivered or stray ImportJob must not re-import data that already
+    # committed (types without row dedup would double-apply), and must not
+    # race a revert that owns the record. A failed import is deliberately NOT
+    # blocked: its transaction rolled back, so a re-run is a safe retry.
+    if complete? || reverting? || revert_failed?
+      DebugLogEntry.capture(
+        category: "background_jobs",
+        level: "warn",
+        message: "Import publish skipped: job redelivered while record was #{status}",
+        source: self.class.name,
+        family: family,
+        metadata: { record_type: type, record_id: id, status: status }
+      )
+      return
+    end
+
     raise MaxRowCountExceededError if row_count_exceeded?
 
     import!
@@ -422,6 +531,20 @@ class Import < ApplicationRecord
   end
 
   private
+    # Commit signal for import types whose records hang off the family rather
+    # than the import itself (Category/Merchant/Rule imports create no entries
+    # or accounts, so the base data_committed? can't see them). import! runs as
+    # a single find-or-create-by-name transaction, so once every named row has
+    # a matching family record the data committed — or every name already
+    # existed, leaving the family in the same end state. Either way the
+    # truthful terminal status is complete, not a retryable failed. Rows with
+    # blank names carry no stable key, so a file with only blank names yields
+    # no signal and stays retryable (the conservative side of the reaper).
+    def committed_by_named_records?(scope)
+      names = rows.pluck(:name).filter_map { |value| value.to_s.strip.presence }.uniq
+      names.any? && (names - scope.where(name: names).pluck(:name)).empty?
+    end
+
     def row_count_exceeded?
       rows_count > max_row_count
     end
