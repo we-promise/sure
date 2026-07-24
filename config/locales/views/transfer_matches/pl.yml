@@ -1,0 +1,24 @@
+---
+pl:
+  transfer_matches:
+    create:
+      success: Przelew utworzony
+    new:
+      header:
+        title: Dopasuj przelew lub płatność
+        subtitle: Dopasuj odpowiadającą transakcję na innym koncie lub utwórz nową, jeśli nie istnieje.
+      from_account: Z konta
+      from_account_named: "Z konta: %{name}"
+      to_account: Na konto
+      to_account_named: "Na konto: %{name}"
+      outflow_transaction: Transakcja wychodząca
+      inflow_transaction: Transakcja przychodząca
+      create_transfer_match: Utwórz dopasowanie przelewu
+    matching_fields:
+      select_method: Wybierz metodę dopasowania transakcji.
+      match_existing_recommended: Dopasuj istniejącą transakcję (zalecane)
+      create_new_transaction: Utwórz nową transakcję
+      matching_method: Metoda dopasowania
+      matching_transaction: Dopasowywana transakcja
+      target_account: Konto docelowe
+      no_matching_transactions: Nie znaleźliśmy żadnych transakcji do dopasowania z twoich innych kont. Wybierz konto, a utworzymy dla ciebie nową transakcję przychodzącą.

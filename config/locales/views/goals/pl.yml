@@ -1,0 +1,277 @@
+---
+pl:
+  goals:
+    color_picker:
+      trigger_label: Wybierz kolor i ikonę
+      color_heading: Kolor
+      icon_heading: Ikona
+      poor_contrast: Słaby kontrast, wybierz ciemniejszy kolor lub
+      auto_adjust: automatycznie dostosuj.
+    index:
+      title: Cele
+      subtitle: Oszczędzaj na to, co ważne.
+      new_goal: Nowy cel
+      empty_filtered: Brak pasujących celów.
+      pending_pledges_callout: Masz oczekujące zobowiązania. Sure potwierdzi je przy następnej synchronizacji.
+      kpi:
+        contributed_label: Wpłacono · ostatnie 30 dni
+        velocity_delta_up: "↑ %{percent}% vs. poprzednie 30 dni"
+        velocity_delta_down: "↓ %{percent}% vs. poprzednie 30 dni"
+        velocity_delta_flat: vs. poprzednie 30 dni
+        velocity_delta_zero_base: Pierwsze 30 dni aktywności
+        needs_this_month_label: Potrzeba w tym miesiącu
+        needs_this_month_sub:
+          one: 1 cel w tyle za tempem
+          other: "%{count} cele w tyle za tempem"
+        needs_this_month_zero_sub: Żaden cel nie jest w tyle
+        on_track_label: Cele na dobrej drodze
+        on_track_value: "%{on_track} z %{total}"
+        on_track_sub_parts:
+          reached:
+            one: 1 osiągnięty
+            other: "%{count} osiągniętych"
+          behind:
+            one: 1 w tyle
+            other: "%{count} w tyle"
+          no_date:
+            one: 1 bez terminu
+            other: "%{count} bez terminu"
+          paused:
+            one: 1 wstrzymany
+            other: "%{count} wstrzymanych"
+        on_track_sub_all_good: Wszystkie aktywne cele na dobrej drodze
+        on_track_all_caught_up: Wszystko nadrobione
+      goals_section:
+        heading: Cele
+        subtitle: Oszczędzaj na to, co ważne.
+      ongoing_section:
+        heading: Cele
+      archived_section:
+        heading: Zarchiwizowane
+      search:
+        placeholder: Szukaj celów...
+        aria_label: Szukaj celów
+        empty: Brak pasujących celów.
+        empty_with_query: "Brak celów pasujących do \"%{query}\"."
+        empty_with_filter: Żaden cel nie pasuje do tego filtra.
+        empty_with_both: "Brak celów pasujących do \"%{query}\" z tym filtrem."
+        clear_search: Wyczyść wyszukiwanie
+        show_all: Pokaż wszystkie
+      chips:
+        all: Wszystkie
+        on_track: Na dobrej drodze
+        behind: W tyle
+        no_target_date: Otwarte
+        paused: Wstrzymane
+        completed: Zakończone
+    new:
+      heading: Nowy cel
+      subtitle: Oszczędzaj na coś konkretnego.
+    edit:
+      heading: Edytuj cel
+      save: Zapisz zmiany
+    create:
+      success: Cel utworzony.
+    update:
+      success: Cel zaktualizowany.
+    destroy:
+      success: Cel usunięty.
+      archive_first: Zarchiwizuj cel przed jego usunięciem.
+    pause:
+      success: Cel wstrzymany.
+      invalid_transition: Cel nie może być wstrzymany z bieżącego stanu.
+    resume:
+      success: Cel wznowiony.
+      invalid_transition: Cel nie może być wznowiony z bieżącego stanu.
+    complete:
+      success: Cel oznaczony jako zakończony.
+      invalid_transition: Cel nie może być zakończony z bieżącego stanu.
+    archive:
+      success: Cel zarchiwizowany.
+      invalid_transition: Cel nie może być zarchiwizowany z bieżącego stanu.
+    unarchive:
+      success: Cel przywrócony.
+      invalid_transition: Cel nie może być przywrócony z bieżącego stanu.
+    reopen:
+      success: Cel otwarty ponownie.
+      invalid_transition: Cel nie może być ponownie otwarty z bieżącego stanu.
+    show:
+      edit: Edytuj
+      pause: Wstrzymaj
+      resume: Wznów
+      complete: Oznacz jako zakończony
+      archive: Archiwizuj
+      unarchive: Przywróć
+      reopen: Otwórz ponownie
+      delete: Usuń na stałe
+      record_pledge_cta: Zapisz zobowiązanie
+      pledge_just_transferred: Zarejestruj wykonany przelew
+      pledge_just_saved: Zarejestruj odłożone pieniądze
+      funding_accounts_heading: Konta finansujące
+      funding_accounts:
+        earmarked_of: "%{earmarked} przeznaczone z %{balance}"
+        empty:
+          heading: Brak powiązanych kont finansujących
+          body: Edytuj cel, aby powiązać konta depozytowe, na które oszczędzasz.
+      notes: Notatki
+      funding_last_30d: ostatnie 30 dni
+      funding_last_90d: ostatnie 90 dni
+      status_callout:
+        behind: "oszczędzaj %{amount}/mies. więcej, aby nadrobić"
+        behind_covered: "oczekujące zobowiązania wypełniają lukę"
+        on_track: "osiąga cel około %{date}"
+        no_target_date: "ustaw datę docelową, aby przewidzieć metę"
+      pending_pledge:
+        title:
+          zero: "Oczekujące: %{amount} na %{account} · wygasa dzisiaj"
+          one: "Oczekujące: %{amount} na %{account} · 1 dzień"
+          other: "Oczekujące: %{amount} na %{account} · %{count} dni"
+        body_transfer: Automatycznie potwierdza się, gdy Sure wykryje pasujący depozyt przy następnej synchronizacji.
+        body_manual: Potwierdza się przy następnej ręcznej edycji salda.
+        pledged_at: "Zobowiązano %{time_ago} temu"
+        extend: Przedłuż o 7 dni
+        cancel: Anuluj
+        confirm_cancel_title: Anulować to zobowiązanie?
+        confirm_cancel_body: "Zobowiązanie %{amount} zostanie usunięte. Możesz w każdej chwili dodać nowe."
+        confirm_cancel_cta: Anuluj zobowiązanie
+      header:
+        target: "Cel %{amount}"
+        target_by: "Cel %{amount} do %{date}"
+        target_by_past: "Cel %{amount} · termin upłynął %{date}"
+      ring:
+        saved: Zaoszczędzono
+        of: "z %{target}"
+        to_go: "Pozostało %{amount}"
+        of_target: z celu
+        market_value: "Wartość rynkowa %{amount}"
+        aria_label: "Cel ukończony w %{percent}%. Zaoszczędzono %{amount} z %{target}."
+      projection:
+        heading: Prognoza
+        legend_saved: Zaoszczędzono
+        legend_projection: Prognoza
+        legend_required: Wymagane
+        reached: Osiągnąłeś cel. Prognoza nie jest potrzebna.
+        no_target_date: Nie ustawiono daty docelowej. Ustaw ją, aby przewidzieć metę.
+        no_pace: Brak wpłat. Dodaj pieniądze na powiązane konto, aby rozpocząć prognozę.
+        behind: Przy obecnym tempie brakuje do celu.
+        on_track_html: Przy obecnym tempie osiągniesz ten cel około <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: "Wykres prognozy dla %{name}"
+        today_marker: Dzisiaj
+        tooltip_projected: "Prognoza: %{amount}"
+        tooltip_saved: "Zaoszczędzono: %{amount}"
+        tooltip_target_relation: "%{percent}% z celu %{target}"
+      catch_up:
+        title: "Oszczędzaj %{amount}/mies. więcej, aby nadrobić"
+        body: "Obecne tempo %{avg}/mies. · wymagane %{required}/mies. do osiągnięcia celu."
+        adjust_target_cta: Zamiast tego dostosuj cel
+      confirm_complete_title: Oznaczyć ten cel jako zakończony?
+      confirm_complete_body: Opuści listę aktywnych. Nadal możesz go później zarchiwizować lub przywrócić.
+      confirm_complete_body_short: "Jesteś na %{progress}%, %{saved} z %{target}. Oznaczenie jako zakończone zapisze to jako osiągnięcie zamiast pierwotnego celu. Kontynuować, czy zamknąć i dostosować cel?"
+      confirm_complete_cta: Oznacz jako zakończone
+      confirm_archive_title: Zarchiwizować ten cel?
+      confirm_archive_body: Zarchiwizowane cele znikną z głównej listy. Możesz je później przywrócić.
+      confirm_archive_cta: Archiwizuj
+      paused_banner:
+        title: Ten cel jest wstrzymany
+        body: Wznów go, aby kontynuować śledzenie postępów.
+        resume_cta: Wznów cel
+      archived_banner:
+        title: Ten cel jest zarchiwizowany
+        body: Przywróć go, aby kontynuować wpłaty, lub pozostaw jako zapis.
+        restore_cta: Przywróć cel
+      celebration:
+        heading: Cel osiągnięty. Dobra robota.
+        body: "Cel zamknięty na %{saved} z %{target}. Zachowaj go jako zapis lub zarchiwizuj teraz."
+        archive_cta: Archiwizuj cel
+      inactive:
+        heading_paused: Ten cel jest wstrzymany
+        heading_archived: Ten cel jest zarchiwizowany
+        body: "%{saved} z %{target} zaoszczędzonych do tej pory."
+      no_target_date:
+        heading: Dodaj datę docelową
+        body: Ustaw termin, aby przewidzieć metę i śledzić wymagane tempo.
+        cta: Ustaw datę docelową
+      empty:
+        heading: Brak wpłat
+        body: Wykonaj przelew na swoje powiązane konto. Sure wykryje go przy następnej synchronizacji. Lub zaktualizuj saldo ręcznego konta.
+    errors:
+      not_found: Ten cel nie został znaleziony. Mógł zostać usunięty.
+    states:
+      active: Aktywny
+      paused: Wstrzymany
+      completed: Zakończony
+      archived: Zarchiwizowany
+    status:
+      on_track: Na dobrej drodze
+      behind: W tyle
+      reached: Osiągnięty
+      completed: Zakończony
+      no_target_date: Otwarty
+      paused: Wstrzymany
+      archived: Zarchiwizowany
+    empty_state:
+      heading: Brak celów
+      body: Ustaw cel, połącz konta, na które oszczędzasz, i obserwuj, jak rosną postępy.
+      subtitle: Ustaw cel i zacznij oszczędzać.
+      new_goal: Utwórz pierwszy cel
+      no_depository_accounts: Potrzebujesz co najmniej jednego konta depozytowego (czekowe, oszczędnościowe, HSA, CD, rynek pieniężny) przed utworzeniem celu.
+      add_account: Dodaj konto
+    goal_card:
+      no_accounts: Brak połączonych kont
+      n_accounts: "%{first} +%{count}"
+      left: zostało
+      aria_progress: "%{percent}% z %{target}"
+      accounts:
+        one: 1 konto
+        other: "%{count} kont"
+      no_target_date: Otwarty
+      completed: Zakończony
+      past_due: Po terminie
+      days_left:
+        one: 1 dzień
+        other: "%{count} dni"
+      pace_with_target: "%{avg}/mies. · cel %{target}/mies."
+      pace_no_target: "średnio %{avg}/mies."
+      footer_paused: Wstrzymany
+      footer_archived: Zarchiwizowany
+      footer_reached: Cel osiągnięty
+      footer_catch_up: "Oszczędzaj %{amount}/mies., aby nadrobić"
+      footer_no_deadline: Otwarty
+      pending_pledge: Oczekujące zobowiązanie
+      pending_count:
+        one: 1 oczekujące
+        other: "%{count} oczekujących"
+      footer_no_pledges: Brak dopasowanych zobowiązań
+      footer_last_today: Ostatnie zobowiązanie dopasowane dzisiaj
+      footer_last_days:
+        one: Ostatnie zobowiązanie dopasowane 1 dzień temu
+        other: "Ostatnie zobowiązanie dopasowane %{count} dni temu"
+    form:
+      create: Utwórz cel
+      save: Zapisz zmiany
+      suggested_with_date: "Oszczędzaj {monthly}/mies. na {accounts}, aby osiągnąć cel na czas."
+      suggested_no_date: Ustaw datę docelową, aby przewidzieć metę.
+      errors:
+        name_required: Nadaj celowi nazwę.
+        amount_required: Ustaw cel powyżej zera.
+        accounts_required: Wybierz co najmniej jedno konto finansujące.
+      fields:
+        name: Nazwa
+        name_placeholder: Fundusz awaryjny, zaliczka na dom...
+        target_amount: Kwota docelowa
+        target_date: Data docelowa
+        color: Kolor
+        notes: Notatki (opcjonalnie)
+        notes_placeholder: Przypomnienie dla przyszłego Ciebie...
+        funding_accounts: Konta finansujące
+        funding_accounts_hint: Saldo tego celu to saldo (lub przeznaczona część) tych kont.
+        whole_balance: Całe saldo
+        earmark_for: Przeznacz kwotę dla %{account}
+        earmark_hint: Pozostaw kwotę pustą, aby przeznaczyć całe saldo konta.
+      subtypes:
+        checking: Czekowe
+        savings: Oszczędnościowe
+        hsa: HSA
+        cd: CD
+        money_market: Rynek pieniężny
+        other: Inne

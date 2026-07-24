@@ -1,0 +1,75 @@
+---
+pl:
+  binance_items:
+    create:
+      default_name: Binance
+      success: Połączono z Binance! Twoje konto jest synchronizowane.
+    update:
+      success: Zaktualizowano konfigurację Binance.
+    destroy:
+      success: Zaplanowano usunięcie połączenia Binance.
+    setup_accounts:
+      title: Importuj konto Binance
+      subtitle: Wybierz portfele do śledzenia
+      instructions: Wybierz portfele Binance, które chcesz zaimportować. Wyświetlane są tylko portfele z saldem.
+      no_accounts: Wszystkie konta zostały zaimportowane.
+      accounts_count:
+        one: "%{count} konto dostępne"
+        other: "%{count} konta dostępne"
+      select_all: Zaznacz wszystkie
+      import_selected: Importuj zaznaczone
+      cancel: Anuluj
+      creating: Importowanie...
+    complete_account_setup:
+      success:
+        one: "Zaimportowano %{count} konto"
+        other: "Zaimportowano %{count} konta"
+      none_selected: Nie wybrano kont
+      no_accounts: Brak kont do zaimportowania
+    binance_item:
+      provider_name: Binance
+      syncing: Synchronizowanie...
+      reconnect: Wymagana aktualizacja danych uwierzytelniających
+      deletion_in_progress: Usuwanie...
+      sync_status:
+        no_accounts: Nie znaleziono kont
+        all_synced:
+          one: "%{count} konto zsynchronizowane"
+          other: "%{count} konta zsynchronizowane"
+        partial_sync: "%{linked_count} zsynchronizowanych, %{unlinked_count} wymaga konfiguracji"
+      status: "Ostatnia synchronizacja %{timestamp} temu"
+      status_with_summary: "Ostatnia synchronizacja %{timestamp} temu - %{summary}"
+      status_never: Nigdy nie synchronizowano
+      update_credentials: Aktualizuj dane uwierzytelniające
+      delete: Usuń
+      no_accounts_title: Nie znaleziono kont
+      no_accounts_message: Twój portfel Binance pojawi się tutaj po synchronizacji.
+      setup_needed: Konto gotowe do importu
+      setup_description: Wybierz, które portfele Binance chcesz śledzić.
+      setup_action: Importuj konto
+      import_accounts_menu: Importuj konto
+      stale_rate_warning: "Saldo jest przybliżone - dokładny kurs wymiany z %{date} był niedostępny. Zaktualizuje się przy następnej synchronizacji."
+    select_existing_account:
+      title: Połącz konto Binance
+      no_accounts_found: Nie znaleziono kont Binance.
+      wait_for_sync: Poczekaj na zakończenie synchronizacji Binance
+      check_provider_health: Sprawdź, czy dane uwierzytelniające API Binance są prawidłowe
+      currently_linked_to: "Obecnie połączone z: %{account_name}"
+      link: Połącz
+      cancel: Anuluj
+    link_existing_account:
+      success: Połączono z kontem Binance
+      errors:
+        only_manual: Tylko konta ręczne mogą być połączone z Binance
+        invalid_binance_account: Nieprawidłowe konto Binance
+  binance_item:
+    syncer:
+      checking_credentials: Sprawdzanie danych uwierzytelniających...
+      credentials_invalid: Nieprawidłowe dane uwierzytelniające API. Sprawdź swój klucz API i sekret.
+      importing_accounts: Importowanie kont z Binance...
+      checking_configuration: Sprawdzanie konfiguracji konta...
+      accounts_need_setup:
+        one: "%{count} konto wymaga konfiguracji"
+        other: "%{count} konta wymagają konfiguracji"
+      processing_accounts: Przetwarzanie danych kont...
+      calculating_balances: Obliczanie sald...

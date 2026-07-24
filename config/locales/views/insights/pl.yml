@@ -1,0 +1,93 @@
+---
+pl:
+  insights:
+    index:
+      title: Analityka
+      subtitle: Co dzieje się w twoich finansach, odświeżane codziennie.
+      refresh: Sprawdź nowe analizy
+      empty:
+        title: Brak analiz
+        description: Analizy pojawią się tutaj, gdy na kontach będzie wystarczająco dużo aktywności. Odświeżają się automatycznie każdej nocy.
+    refresh:
+      queued: Generujemy świeże analizy. Sprawdź za minutę.
+      checking: Sprawdzanie...
+    card:
+      dismiss: Odrzuć
+      new: Nowa
+      dismissed: Analiza odrzucona
+      undo: Cofnij
+    feed:
+      view_all: Zobacz wszystkie analizy
+      header: Najnowsze
+      header_new: Nowe
+    types:
+      spending_anomaly: Wydatki
+      cash_flow_warning: Przepływy pieniężne
+      net_worth_milestone: Wartość netto
+      subscription_audit: Subskrypcje
+      savings_rate_change: Stopa oszczędności
+      idle_cash: Nieaktywna gotówka
+      budget_at_risk: Budżet
+      budget_on_track: Budżet
+    meta:
+      next_n_days:
+        one: Następny dzień
+        other: Następne %{count} dni
+      last_n_days:
+        one: Ostatni dzień
+        other: Ostatnie %{count} dni
+      date_range: "%{from} do %{to}"
+    figures:
+      vs_previous: vs. poprzedni miesiąc
+      today: dzisiaj
+      on_pace: zgodnie z tempem
+      of_budget: z budżetu
+      days_overdue:
+        one: "%{count} dzień po terminie"
+        other: "%{count} dni po terminie"
+      idle_days:
+        one: nieaktywna %{count} dzień
+        other: nieaktywna %{count} dni
+    actions:
+      spending_anomaly: Zobacz transakcje %{category}
+      cash_flow_warning: Przejrzyj cykliczne transakcje
+      net_worth_milestone: Zobacz raport wartości netto
+      subscription_audit: Przejrzyj cykliczne transakcje
+      savings_rate_change: Zobacz transakcje z tego miesiąca
+      idle_cash: Przejdź do konta
+      budget: Zobacz budżet
+    titles:
+      spending_anomaly:
+        above: "Wydatki w kategorii %{category} rosną"
+        below: "Wydatki w kategorii %{category} spadają"
+      cash_flow_warning:
+        low: Twoje saldo gotówki może się wyczerpać
+        negative: Twoje saldo gotówki może być ujemne
+      net_worth_milestone: "Kamień milowy wartości netto: %{milestone}"
+      subscription_audit: "Czy %{name} jest nadal aktywne?"
+      savings_rate_change:
+        up: Twoja stopa oszczędności poprawiła się w %{month}
+        down: Twoja stopa oszczędności spadła w %{month}
+      idle_cash: Nieaktywna gotówka na %{account}
+      budget_at_risk:
+        one: Jedna kategoria wymaga uwagi w budżecie
+        other: "%{count} kategorie wymagają uwagi w budżecie"
+      budget_on_track: Twój budżet jest na dobrej drodze
+    templates:
+      spending_anomaly:
+        above: Jesteś na dobrej drodze, aby wydać %{projected_spend} na %{category} w tym miesiącu, około %{deviation_pct}% więcej niż Twoja średnia miesięczna %{baseline_spend}.
+        below: Jesteś na dobrej drodze, aby wydać %{projected_spend} na %{category} w tym miesiącu, około %{deviation_pct}% mniej niż Twoja średnia miesięczna %{baseline_spend}.
+      cash_flow_warning:
+        low: Na podstawie nadchodzących cyklicznych transakcji i typowych wydatków, Twoje saldo gotówki może spaść do %{projected_low} około %{projected_low_date}.
+        negative: Na podstawie nadchodzących cyklicznych transakcji i typowych wydatków, Twoje saldo gotówki może spaść do %{projected_low} około %{projected_low_date}.
+      net_worth_milestone: Twoja wartość netto przekroczyła %{milestone} i wynosi teraz %{net_worth}.
+      subscription_audit: "%{name} (%{amount}) nie pojawiło się od oczekiwanej daty %{expected_on}. Mogło zostać anulowane lub opłata mogła zostać przeniesiona."
+      savings_rate_change:
+        up: Zaoszczędziłeś %{current_rate}% swojego dochodu w %{month}, wzrost o %{change_pp} punktów procentowych z %{previous_rate}% w poprzednim miesiącu.
+        down: Zaoszczędziłeś %{current_rate}% swojego dochodu w %{month}, spadek o %{change_pp} punktów procentowych z %{previous_rate}% w poprzednim miesiącu.
+        down_negative: "Wydałeś więcej niż zarobiłeś w %{month}: Twoja stopa oszczędności spadła do %{current_rate}% z %{previous_rate}% w poprzednim miesiącu."
+      idle_cash: "%{account} posiada %{balance} bez aktywności w ostatnich %{idle_days} dniach."
+      budget_at_risk:
+        over: "%{categories} przekroczyło budżet w tym miesiącu. Wykorzystałeś %{budget_spent_pct}% swojego całkowitego budżetu."
+        near: "%{categories} jest blisko swoich limitów w tym miesiącu. Wykorzystałeś %{budget_spent_pct}% swojego całkowitego budżetu."
+      budget_on_track: Wydałeś %{spent} z %{budgeted} budżetu (%{budget_spent_pct}%) i wszystko mieści się w limicie.

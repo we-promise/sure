@@ -1,0 +1,92 @@
+---
+pl:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Połącz raport Flex Web Service od Interactive Brokers
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Trwa usuwanie
+      flex_web_service: Flex Web Service
+      syncing: Synchronizowanie
+      requires_update: Dane uwierzytelniające wymagają uwagi
+      error: Błąd
+      synced: "Zsynchronizowano %{time} temu. %{summary}."
+      never_synced: Nigdy nie synchronizowano.
+      setup_accounts: Konfiguruj konta
+      delete: Usuń
+      accounts_need_setup: Konta wymagają konfiguracji
+      accounts_need_setup_description: Niektóre konta z IBKR wymagają połączenia z kontami Sure.
+      no_accounts_discovered: Nie odkryto jeszcze kont IBKR.
+      no_accounts_discovered_description: Uruchom synchronizację po skonfigurowaniu zapytania Flex, aby odkryć konta.
+    setup_accounts:
+      page_title: Konfiguruj konta Interactive Brokers
+      dialog_title: Skonfiguruj konta Interactive Brokers
+      subtitle: Wybierz, które konta maklerskie IBKR połączyć.
+      info_box:
+        title: Import zapytania Flex IBKR
+        items:
+          item_1: Portfele z bieżącymi cenami i ilościami
+          item_2: Podstawa kosztu na pozycję
+          item_3: Transakcje, dywidendy, prowizje oraz wpłaty i wypłaty gotówki
+        warning: Historyczna aktywność jest ograniczona do okna raportu zapytania Flex
+      status:
+        fetching_accounts: Pobieranie kont z Interactive Brokers...
+        no_accounts_found_title: Nie znaleziono kont.
+        no_accounts_found_description: Sure nie znalazł żadnych kont IBKR w najnowszym raporcie Flex.
+      available_accounts:
+        title: Dostępne konta
+        account_type_investment: Inwestycyjne
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "ID konta: %{account_id}"
+      link_existing:
+        description: Lub połącz odkryte konto IBKR z istniejącym ręcznym kontem inwestycyjnym.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Wybierz konto...
+      linked_accounts:
+        title: Już połączone
+        linked_to_html: "Połączone z: %{account}"
+      buttons:
+        refresh: Odśwież
+        cancel: Anuluj
+        back_to_settings: Powrót do ustawień
+        create_selected_accounts: Utwórz wybrane konta
+        link: Połącz
+        done: Gotowe
+    sync_status:
+      no_accounts: Nie odkryto jeszcze kont IBKR
+      all_linked:
+        one: 1 konto połączone
+        other: "%{count} konta połączone"
+      partial: "%{linked} połączonych, %{unlinked} wymaga konfiguracji"
+    select_existing_account:
+      title: Połącz konto Interactive Brokers
+      no_accounts_available: Nie ma jeszcze dostępnych niepołączonych kont Interactive Brokers.
+      run_sync_hint: "Uruchom synchronizację z Ustawienia > Dostawcy po zaktualizowaniu zapytania Flex."
+      wait_for_sync: Poczekaj na zakończenie synchronizacji wykrywania kont.
+      balance: Saldo
+      link: Połącz
+      cancel: Anuluj
+    create:
+      success: Skonfigurowano Interactive Brokers.
+    update:
+      success: Zaktualizowano konfigurację Interactive Brokers.
+    destroy:
+      success: Zaplanowano usunięcie połączenia Interactive Brokers.
+    select_accounts:
+      not_configured: Interactive Brokers nie jest skonfigurowany.
+    link_existing_account:
+      not_found: Nie znaleziono konta lub konfiguracji Interactive Brokers.
+      only_manual_investment: Tylko ręczne konta inwestycyjne mogą być połączone z Interactive Brokers.
+      already_linked: To konto Interactive Brokers jest już połączone.
+      success: Połączono z kontem Interactive Brokers.
+      failed: Nie można połączyć konta Interactive Brokers.
+    complete_account_setup:
+      success:
+        one: Utworzono %{count} konto Interactive Brokers.
+        other: Utworzono %{count} konta Interactive Brokers.
+      none_selected: Nie wybrano żadnych kont.
+      none_created: Nie utworzono żadnych kont.

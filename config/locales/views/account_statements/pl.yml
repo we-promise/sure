@@ -1,0 +1,117 @@
+---
+pl:
+  account_statements:
+    account_tab:
+      coverage_title: Pokrycie wyciągami
+      coverage_description: Historyczne miesiące poparte przesłanymi wyciągami i uzgodnieniami sald.
+      coverage_range: "%{start} - %{end}"
+      empty: Brak wyciągów powiązanych z tym kontem.
+      open_inbox: Skrzynka odbiorcza
+      statements_title: Wyciągi
+      year_label: Rok pokrycia
+    balance:
+      unknown: Nieznane
+    coverage:
+      status:
+        ambiguous: Niejednoznaczny
+        covered: Pokryty
+        duplicate: Duplikat
+        mismatched: Niezgodny
+        missing: Brakujący
+        not_expected: Niespodziewany
+    create:
+      duplicates:
+        one: Pominięto 1 duplikat wyciągu.
+        other: "Pominięto %{count} duplikaty wyciągów."
+      invalid_file_type: Prześlij wyciąg w formacie PDF, CSV lub XLSX poniżej limitu rozmiaru.
+      no_files: Wybierz co najmniej jeden plik wyciągu.
+      success:
+        one: Przesłano 1 wyciąg.
+        other: "Przesłano %{count} wyciągów."
+    destroy:
+      failure: Nie można usunąć wyciągu.
+      success: Wyciąg usunięty.
+    form:
+      account_upload: Prześlij wyciąg
+      files_hint: "PDF, CSV lub XLSX. Maks. %{max_size} MB na plik."
+      files_label: Pliki wyciągów
+      inbox_upload: Prześlij
+    index:
+      account_label: Konto
+      confidence: "Zgodność %{confidence}"
+      empty_linked: Brak powiązanych wyciągów.
+      empty_unmatched: Skrzynka odbiorcza wyciągów jest pusta.
+      leave_unmatched: Pozostaw niedopasowane
+      linked_title: Powiązane wyciągi
+      no_suggestion: Brak sugestii
+      storage_used: Użyte miejsce
+      title: Magazyn wyciągów
+      unmatched_title: Niedopasowane
+      upload_description: Prześlij wyciągi do skrzynki odbiorczej lub wybierz konto, aby natychmiast powiązać.
+      upload_title: Prześlij wyciągi
+    link:
+      no_account: Wybierz konto przed powiązaniem tego wyciągu.
+      success: "Powiązano wyciąg z %{account}."
+    period:
+      unknown: Nieznany okres
+    reconciliation:
+      checks:
+        closing_balance: Saldo końcowe
+        opening_balance: Saldo początkowe
+        period_movement: Ruch w okresie
+        unknown_check: Nieznana kontrola
+      matched: Zgodne
+      mismatched: Niezgodne
+      unavailable: Niesprawdzone
+    reject:
+      success: Odrzucono dopasowanie wyciągu.
+    show:
+      account_label: Konto
+      account_last4_hint: Ostatnie cztery cyfry konta
+      account_name_hint: Podpowiedź nazwy konta
+      closing_balance: Saldo końcowe
+      currency: Waluta
+      delete: Usuń
+      difference: Różnica
+      download: Pobierz
+      institution_name_hint: Podpowiedź instytucji
+      ledger_amount: Księga Sure
+      linked_to: "Powiązane z %{account}."
+      linking_title: Powiązanie konta
+      link_suggestion: Sugestia powiązania
+      metadata_title: Metadane wyciągu
+      no_suggestion: Brak sugestii konta.
+      opening_balance: Saldo początkowe
+      period_end_on: Koniec okresu
+      period_start_on: Początek okresu
+      reconciliation_title: Uzgodnienie
+      reconciliation_unavailable: Dodaj okres wyciągu oraz saldo początkowe lub końcowe, a następnie upewnij się, że Sure ma historię sald dla tych dat.
+      reject: Odrzuć
+      save: Zapisz wyciąg
+      statement_amount: Wyciąg
+      suggested_account: "Sugerowane konto to %{account} (ufność: %{confidence})."
+      title: Wyciąg
+      unlink: Odłącz
+      unmatched_account: Niedopasowane
+      unknown_value: Nieznane
+    status:
+      linked: Powiązany
+      rejected: Odrzucony
+      unmatched: Niedopasowany
+    table:
+      account: Konto
+      actions: Akcje
+      download: Pobierz
+      edit: Edytuj
+      file: Plik
+      link_suggestion: Sugestia powiązania
+      period: Okres
+      reconciliation: Uzgodnienie
+      reject: Odrzuć sugestię
+      suggestion: Sugestia
+      unlink: Odłącz
+      view: Podgląd
+    unlink:
+      success: Wyciąg przeniesiono z powrotem do skrzynki odbiorczej.
+    update:
+      success: Wyciąg zaktualizowany.

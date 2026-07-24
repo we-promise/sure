@@ -1,0 +1,12 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              saml_url_required: "Adres URL metadanych IdP lub adres URL SSO IdP jest wymagany dla dostawców SAML"
+              saml_cert_required: "Certyfikat IdP lub odcisk palca certyfikatu jest wymagany, gdy nie używano adresu URL metadanych"
+              metadata_url_invalid: "Adres URL metadanych IdP musi być prawidłowym adresem URL"
+              sso_url_invalid: "Adres URL SSO IdP musi być prawidłowym adresem URL"

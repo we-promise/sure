@@ -1,0 +1,9 @@
+---
+pl:
+  chat:
+    errors:
+      rate_limited: "Dostawca AI ma obecnie ograniczenie szybkości. Spróbuj ponownie za kilka minut."
+      temporarily_unavailable: "Dostawca AI jest tymczasowo niedostępny. Spróbuj ponownie za kilka minut."
+      misconfigured: "Dostawca AI nie jest poprawnie skonfigurowany. Skontaktuj się z administratorem."
+      no_response: "Asystent nie odpowiedział. Pracownik w tle może być wyłączony lub AI może nie być w pełni skonfigurowane. Spróbuj ponownie."
+      default: "Nie udało się wygenerować odpowiedzi. Spróbuj ponownie."
