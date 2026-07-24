@@ -27,6 +27,12 @@ en:
     cleaned_up: Cleaned up %{count} stale recurring transactions
     marked_inactive: Recurring transaction marked as inactive
     marked_active: Recurring transaction marked as active
+    auto_post_enabled: Auto-post enabled — a real transaction will be created on the next expected date
+    auto_post_disabled: Auto-post disabled — no transactions will be created automatically
+    auto_post_transfer_not_allowed: Auto-post isn't available for recurring transfers yet. Disable the transfer pairing first, or wait for transfer auto-post support.
+    auto_post_on_tooltip: Auto-post is enabled. A real transaction will be created when the next expected date arrives. Click to disable.
+    auto_post_off_tooltip: Auto-post is disabled. Click to enable automatic posting when the next expected date arrives.
+    auto_post_default_name: Scheduled transaction
     deleted: Recurring transaction deleted
     confirm_delete: Are you sure you want to delete this recurring transaction?
     marked_as_recurring: Transaction marked as recurring

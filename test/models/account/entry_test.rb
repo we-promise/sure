@@ -13,6 +13,16 @@ class EntryTest < ActiveSupport::TestCase
     end
   end
 
+  # Future-dated transactions are allowed (#1080). They appear in the
+  # activity feed with a Scheduled badge and don't affect today's
+  # balance until they post.
+  test "transaction entry can be saved with a future date" do
+    assert_nothing_raised do
+      @entry.update! date: 10.days.from_now.to_date
+    end
+    assert @entry.reload.date.future?
+  end
+
   test "valuations cannot have more than one entry per day" do
     existing_valuation = entries :valuation
 

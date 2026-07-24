@@ -107,6 +107,21 @@
                       ) %>
                     <% end %>
 
+                    <%# Scheduled (future-dated) indicator — does not affect today's balance.
+                        For foreign-currency entries the converted amount is provisional
+                        until the date arrives and the real rate is imported, so flag that
+                        in the tooltip (#1909 review — future entries can't have a final FX rate). %>
+                    <% if entry.date.future? %>
+                      <% scheduled_tooltip_key = entry.currency == Current.family.currency ? "transactions.transaction.scheduled_tooltip" : "transactions.transaction.scheduled_fx_tooltip" %>
+                      <%= render DS::Pill.new(
+                        label: t("transactions.transaction.scheduled"),
+                        tone: :neutral,
+                        marker: false,
+                        icon: "calendar-clock",
+                        title: t(scheduled_tooltip_key)
+                      ) %>
+                    <% end %>
+
                     <%# Potential duplicate indicator - different styling for low vs medium confidence %>
                     <% if transaction.has_potential_duplicate? %>
                       <% if transaction.low_confidence_duplicate? %>

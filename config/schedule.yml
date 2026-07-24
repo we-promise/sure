@@ -60,3 +60,9 @@ sweep_expired_goal_pledges:
   class: "SweepExpiredGoalPledgesJob"
   queue: "scheduled"
   description: "Marks goal pledges that passed their 7-day window as expired"
+
+post_due_recurring_transactions:
+  cron: "0 6 * * *" # daily at 6:00 AM UTC
+  class: "PostDueRecurringTransactionsJob"
+  queue: "scheduled"
+  description: "Materializes a real Entry/Transaction for every recurring transaction flagged auto_post: true whose next_expected_date has arrived (#1080)"

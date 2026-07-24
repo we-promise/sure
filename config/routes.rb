@@ -479,6 +479,11 @@ Rails.application.routes.draw do
 
     member do
       match :toggle_status, via: [ :get, :post ]
+      # POST-only: this is a state-changing action and must not be reachable via GET
+      # (CSRF + prefetch/image-tag exposure — flagged in #1080's security review).
+      # The existing :toggle_status uses the looser match pattern but is out of scope
+      # for this PR.
+      post :toggle_auto_post
     end
   end
 
