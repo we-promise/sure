@@ -204,7 +204,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
   test "syncing linked account triggers sync for all provider items" do
     plaid_account = plaid_accounts(:one)
-    plaid_item = plaid_account.plaid_item
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     # Reload to ensure the account has the provider association loaded

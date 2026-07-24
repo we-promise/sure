@@ -32,8 +32,7 @@ class SimplefinItem < ApplicationRecord
 
   # Get accounts from both new and legacy systems
   def accounts
-    # Preload associations to avoid N+1 queries
-    simplefin_accounts
+    @accounts ||= simplefin_accounts
       .includes(:account, account_provider: :account)
       .map(&:current_account)
       .compact

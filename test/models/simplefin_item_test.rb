@@ -123,6 +123,15 @@ class SimplefinItemTest < ActiveSupport::TestCase
     assert_respond_to @simplefin_item, :syncing?
   end
 
+  test "memoizes accounts across repeated calls" do
+    queries = capture_sql_queries do
+      @simplefin_item.accounts
+      @simplefin_item.accounts
+    end
+
+    assert_equal 1, queries.grep(/FROM "simplefin_accounts"/).size
+  end
+
   test "scopes work correctly" do
     # Create one for deletion
     item_for_deletion = SimplefinItem.create!(
@@ -225,4 +234,25 @@ class SimplefinItemTest < ActiveSupport::TestCase
     )
     assert_equal "2 institutions", @simplefin_item.institution_summary
   end
+
+  private
+    def capture_sql_queries
+      queries = []
+
+      callback = lambda do |_name, _start, _finish, _message_id, payload|
+        sql = payload[:sql].to_s
+        name = payload[:name].to_s
+
+        next if name == "SCHEMA"
+        next if sql.match?(/\A(?:BEGIN|COMMIT|ROLLBACK)\b/i)
+
+        queries << sql
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        yield
+      end
+
+      queries
+    end
 end

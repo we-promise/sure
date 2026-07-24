@@ -1983,6 +1983,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
     t.datetime "cancel_requested_at"
     t.index ["parent_id"], name: "index_syncs_on_parent_id"
     t.index ["status"], name: "index_syncs_on_status"
+    t.index ["syncable_type", "syncable_id", "created_at", "id"], name: "index_syncs_on_syncable_and_created_at_and_id", order: { created_at: :desc, id: :desc }
     t.index ["syncable_type", "syncable_id"], name: "index_syncs_on_syncable"
   end
 
