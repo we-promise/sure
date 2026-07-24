@@ -26,13 +26,17 @@ pl:
     sync_status:
       no_accounts: Nie znaleziono kont
       all_synced:
+        few: "%{count} konta zsynchronizowane"
+        many: "%{count} kont zsynchronizowanych"
         one: 1 konto zsynchronizowane
-        other: "%{count} konta zsynchronizowane"
+        other: "%{count} kont zsynchronizowanych"
       partial: "%{linked} zsynchronizowanych, %{unlinked} wymaga konfiguracji"
     institution_summary:
       none: Brak połączonych instytucji
       one: 1 instytucja
       count:
+        few: "%{count} instytucje"
+        many: "%{count} instytucji"
         one: 1 instytucja
         other: "%{count} instytucji"
   akahu_items:
@@ -69,8 +73,10 @@ pl:
       link_accounts: Połącz konta
     link_accounts:
       success:
+        few: "Połączono %{count} konta Akahu."
+        many: "Połączono %{count} kont Akahu."
         one: Połączono 1 konto Akahu.
-        other: "Połączono %{count} konta Akahu."
+        other: "Połączono %{count} kont Akahu."
       no_accounts_selected: Wybierz co najmniej jedno konto.
       no_credentials_configured: Skonfiguruj Akahu w ustawieniach dostawcy.
       unsupported_account_type: Akahu nie obsługuje tego typu konta.
@@ -108,8 +114,10 @@ pl:
       cancel: Anuluj
     complete_account_setup:
       success:
+        few: "Utworzono %{count} konta Akahu."
+        many: "Utworzono %{count} kont Akahu."
         one: Utworzono 1 konto Akahu.
-        other: "Utworzono %{count} konta Akahu."
+        other: "Utworzono %{count} kont Akahu."
       all_skipped: Nie utworzono żadnych kont Akahu.
       no_accounts: Nie wybrano żadnych kont Akahu.
       creation_failed: Nie można utworzyć kont Akahu.

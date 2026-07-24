@@ -5,12 +5,16 @@ pl:
     sync_status:
       no_accounts: "Nie znaleziono kont"
       synced:
+        few: "%{count} konta zsynchronizowane"
+        many: "%{count} kont zsynchronizowanych"
         one: "%{count} konto zsynchronizowane"
-        other: "%{count} konta zsynchronizowane"
+        other: "%{count} kont zsynchronizowanych"
       synced_with_setup: "%{linked} zsynchronizowanych, %{unlinked} wymaga konfiguracji"
     institution_summary:
       none: "Brak połączonych instytucji"
       count:
+        few: "%{count} instytucje"
+        many: "%{count} instytucji"
         one: "%{count} instytucja"
         other: "%{count} instytucji"
     errors:
@@ -62,10 +66,14 @@ pl:
       loading_title: "Ładowanie"
     link_accounts:
       all_already_linked:
+        few: "Wszystkie %{count} wybrane konta są już połączone: %{names}"
+        many: "Wszystkie %{count} wybranych kont jest już połączonych: %{names}"
         one: "Wybrane konto (%{names}) jest już połączone"
-        other: "Wszystkie %{count} wybrane konta są już połączone: %{names}"
+        other: "Wszystkie %{count} wybranych kont jest już połączonych: %{names}"
       api_error: "Błąd API: %{message}"
       invalid_account_names:
+        few: "Nie można połączyć %{count} kont z pustymi nazwami"
+        many: "Nie można połączyć %{count} kont z pustymi nazwami"
         one: "Nie można połączyć konta z pustą nazwą"
         other: "Nie można połączyć %{count} kont z pustymi nazwami"
       link_failed: "Nie można połączyć kont"
@@ -74,8 +82,10 @@ pl:
       partial_invalid: "Połączono %{created_count} konto(a), %{already_linked_count} było już połączonych, %{invalid_count} miało nieprawidłowe nazwy"
       partial_success: "Połączono %{created_count} konto(a). %{already_linked_count} było już połączonych: %{already_linked_names}"
       success:
+        few: "Połączono %{count} konta"
+        many: "Połączono %{count} kont"
         one: "Połączono %{count} konto"
-        other: "Połączono %{count} konta"
+        other: "Połączono %{count} kont"
     questrade_item:
       kind: Maklerskie
       accounts_need_setup: "Konta wymagają konfiguracji"
@@ -83,6 +93,8 @@ pl:
       deletion_in_progress: "trwa usuwanie..."
       error: "Błąd"
       more_accounts_available:
+        few: "%{count} więcej konta dostępne"
+        many: "%{count} więcej kont dostępnych"
         one: "%{count} więcej konto dostępne"
         other: "%{count} więcej kont dostępnych"
       no_accounts_description: "To połączenie nie ma jeszcze połączonych kont."
@@ -146,8 +158,10 @@ pl:
     setup_accounts:
       account_type_label: "Typ konta:"
       accounts_count:
+        few: "%{count} konta dostępne"
+        many: "%{count} kont dostępnych"
         one: "%{count} konto dostępne"
-        other: "%{count} konta dostępne"
+        other: "%{count} kont dostępnych"
       all_accounts_linked: "Wszystkie konta Questrade zostały już skonfigurowane."
       api_error: "Błąd API: %{message}"
       creating: "Tworzenie kont..."

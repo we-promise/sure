@@ -222,12 +222,16 @@ pl:
       left: zostało
       aria_progress: "%{percent}% z %{target}"
       accounts:
+        few: "%{count} konta"
+        many: "%{count} kont"
         one: 1 konto
         other: "%{count} kont"
       no_target_date: Otwarty
       completed: Zakończony
       past_due: Po terminie
       days_left:
+        few: "%{count} dni"
+        many: "%{count} dni"
         one: 1 dzień
         other: "%{count} dni"
       pace_with_target: "%{avg}/mies. · cel %{target}/mies."
@@ -239,11 +243,15 @@ pl:
       footer_no_deadline: Otwarty
       pending_pledge: Oczekujące zobowiązanie
       pending_count:
+        few: "%{count} oczekujące"
+        many: "%{count} oczekujących"
         one: 1 oczekujące
         other: "%{count} oczekujących"
       footer_no_pledges: Brak dopasowanych zobowiązań
       footer_last_today: Ostatnie zobowiązanie dopasowane dzisiaj
       footer_last_days:
+        few: "Ostatnie zobowiązanie dopasowane %{count} dni temu"
+        many: "Ostatnie zobowiązanie dopasowane %{count} dni temu"
         one: Ostatnie zobowiązanie dopasowane 1 dzień temu
         other: "Ostatnie zobowiązanie dopasowane %{count} dni temu"
     form:

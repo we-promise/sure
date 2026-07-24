@@ -59,8 +59,10 @@ pl:
     sync_status:
       no_accounts: Nie odkryto jeszcze kont IBKR
       all_linked:
+        few: "%{count} konta połączone"
+        many: "%{count} kont połączonych"
         one: 1 konto połączone
-        other: "%{count} konta połączone"
+        other: "%{count} kont połączonych"
       partial: "%{linked} połączonych, %{unlinked} wymaga konfiguracji"
     select_existing_account:
       title: Połącz konto Interactive Brokers
@@ -86,7 +88,9 @@ pl:
       failed: Nie można połączyć konta Interactive Brokers.
     complete_account_setup:
       success:
+        few: Utworzono %{count} konta Interactive Brokers.
+        many: Utworzono %{count} kont Interactive Brokers.
         one: Utworzono %{count} konto Interactive Brokers.
-        other: Utworzono %{count} konta Interactive Brokers.
+        other: Utworzono %{count} kont Interactive Brokers.
       none_selected: Nie wybrano żadnych kont.
       none_created: Nie utworzono żadnych kont.

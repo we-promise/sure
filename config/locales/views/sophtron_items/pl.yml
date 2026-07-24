@@ -42,10 +42,14 @@ pl:
       loading_title: Ładowanie
     link_accounts:
       all_already_linked:
+        few: "Wszystkie %{count} wybrane konta są już połączone: %{names}"
+        many: "Wszystkie %{count} wybranych kont jest już połączonych: %{names}"
         one: "Wybrane konto (%{names}) jest już połączone"
-        other: "Wszystkie %{count} wybrane konta są już połączone: %{names}"
+        other: "Wszystkie %{count} wybranych kont jest już połączonych: %{names}"
       api_error: "Błąd połączenia API"
       invalid_account_names:
+        few: "Nie można połączyć %{count} kont z pustymi nazwami"
+        many: "Nie można połączyć %{count} kont z pustymi nazwami"
         one: "Nie można połączyć konta z pustą nazwą"
         other: "Nie można połączyć %{count} kont z pustymi nazwami"
       link_failed: Nie można połączyć kont
@@ -53,8 +57,10 @@ pl:
       partial_invalid: "Połączono %{created_count} konto(a), %{already_linked_count} było już połączonych, %{invalid_count} miało nieprawidłowe nazwy"
       partial_success: "Połączono %{created_count} konto(a). %{already_linked_count} było już połączonych: %{already_linked_names}"
       success:
+        few: "Połączono %{count} konta"
+        many: "Połączono %{count} kont"
         one: "Połączono %{count} konto"
-        other: "Połączono %{count} konta"
+        other: "Połączono %{count} kont"
       no_credentials_configured: "Najpierw skonfiguruj identyfikator użytkownika API i klucz dostępu Sophtron w ustawieniach dostawcy."
       no_accounts_found: Nie znaleziono kont. Sprawdź konfigurację klucza API.
       no_access_key: Klucz dostępu Sophtron nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
@@ -294,16 +300,22 @@ pl:
       timeout: "Połączenie przekroczyło limit czasu. Spróbuj ponownie."
     redirect_after_account_link:
       invalid_account_names:
+        few: "Nie można połączyć %{count} kont z pustymi nazwami"
+        many: "Nie można połączyć %{count} kont z pustymi nazwami"
         one: "Nie można połączyć %{count} konta z pustą nazwą"
         other: "Nie można połączyć %{count} kont z pustymi nazwami"
       partial_invalid: "Połączono %{created_count} konto(a). %{already_linked_count} już połączonych, %{invalid_count} miało nieprawidłowe nazwy."
       partial_success: "Połączono %{created_count} konto(a). %{already_linked_count} było już połączonych."
       success:
+        few: "Połączono %{count} konta."
+        many: "Połączono %{count} kont."
         one: "Połączono %{count} konto."
-        other: "Połączono %{count} konta."
+        other: "Połączono %{count} kont."
       all_already_linked:
+        few: "Wszystkie %{count} wybrane konta są już połączone"
+        many: "Wszystkie %{count} wybranych kont jest już połączonych"
         one: "Wybrane konto jest już połączone"
-        other: "Wszystkie %{count} wybrane konta są już połączone"
+        other: "Wszystkie %{count} wybranych kont jest już połączonych"
       link_failed: "Nie można połączyć kont"
     start_manual_sync:
       already_running: "Synchronizacja jest już w toku."

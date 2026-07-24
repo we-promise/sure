@@ -21,11 +21,15 @@ pl:
         not_expected: Niespodziewany
     create:
       duplicates:
+        few: "Pominięto %{count} duplikaty wyciągów."
+        many: "Pominięto %{count} duplikatów wyciągów."
         one: Pominięto 1 duplikat wyciągu.
-        other: "Pominięto %{count} duplikaty wyciągów."
+        other: "Pominięto %{count} duplikatów wyciągów."
       invalid_file_type: Prześlij wyciąg w formacie PDF, CSV lub XLSX poniżej limitu rozmiaru.
       no_files: Wybierz co najmniej jeden plik wyciągu.
       success:
+        few: "Przesłano %{count} wyciągi."
+        many: "Przesłano %{count} wyciągów."
         one: Przesłano 1 wyciąg.
         other: "Przesłano %{count} wyciągów."
     destroy:

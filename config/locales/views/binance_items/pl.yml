@@ -14,16 +14,20 @@ pl:
       instructions: Wybierz portfele Binance, które chcesz zaimportować. Wyświetlane są tylko portfele z saldem.
       no_accounts: Wszystkie konta zostały zaimportowane.
       accounts_count:
+        few: "%{count} konta dostępne"
+        many: "%{count} kont dostępnych"
         one: "%{count} konto dostępne"
-        other: "%{count} konta dostępne"
+        other: "%{count} kont dostępnych"
       select_all: Zaznacz wszystkie
       import_selected: Importuj zaznaczone
       cancel: Anuluj
       creating: Importowanie...
     complete_account_setup:
       success:
+        few: "Zaimportowano %{count} konta"
+        many: "Zaimportowano %{count} kont"
         one: "Zaimportowano %{count} konto"
-        other: "Zaimportowano %{count} konta"
+        other: "Zaimportowano %{count} kont"
       none_selected: Nie wybrano kont
       no_accounts: Brak kont do zaimportowania
     binance_item:
@@ -34,8 +38,10 @@ pl:
       sync_status:
         no_accounts: Nie znaleziono kont
         all_synced:
+          few: "%{count} konta zsynchronizowane"
+          many: "%{count} kont zsynchronizowanych"
           one: "%{count} konto zsynchronizowane"
-          other: "%{count} konta zsynchronizowane"
+          other: "%{count} kont zsynchronizowanych"
         partial_sync: "%{linked_count} zsynchronizowanych, %{unlinked_count} wymaga konfiguracji"
       status: "Ostatnia synchronizacja %{timestamp} temu"
       status_with_summary: "Ostatnia synchronizacja %{timestamp} temu - %{summary}"
@@ -69,7 +75,9 @@ pl:
       importing_accounts: Importowanie kont z Binance...
       checking_configuration: Sprawdzanie konfiguracji konta...
       accounts_need_setup:
+        few: "%{count} konta wymagają konfiguracji"
+        many: "%{count} kont wymaga konfiguracji"
         one: "%{count} konto wymaga konfiguracji"
-        other: "%{count} konta wymagają konfiguracji"
+        other: "%{count} kont wymaga konfiguracji"
       processing_accounts: Przetwarzanie danych kont...
       calculating_balances: Obliczanie sald...

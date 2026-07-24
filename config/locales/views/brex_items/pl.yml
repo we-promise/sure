@@ -27,13 +27,17 @@ pl:
       none: Brak połączonych instytucji
       one: "%{name}"
       count:
+        few: "%{count} instytucje"
+        many: "%{count} instytucji"
         one: "%{count} instytucja"
         other: "%{count} instytucji"
     sync_status:
       no_accounts: Nie znaleziono kont
       all_synced:
+        few: "%{count} konta zsynchronizowane"
+        many: "%{count} kont zsynchronizowanych"
         one: "%{count} konto zsynchronizowane"
-        other: "%{count} konta zsynchronizowane"
+        other: "%{count} kont zsynchronizowanych"
       partial_setup: "%{synced} zsynchronizowanych, %{pending} wymaga konfiguracji"
     api_error:
       common_issues: "Najczęstsze problemy:"
@@ -59,10 +63,14 @@ pl:
       loading_title: Ładowanie
     link_accounts:
       all_already_linked:
+        few: "Wszystkie %{count} wybrane konta są już połączone: %{names}"
+        many: "Wszystkie %{count} wybranych kont jest już połączonych: %{names}"
         one: "Wybrane konto (%{names}) jest już połączone"
-        other: "Wszystkie %{count} wybrane konta są już połączone: %{names}"
+        other: "Wszystkie %{count} wybranych kont jest już połączonych: %{names}"
       api_error: "Błąd API: %{message}"
       invalid_account_names:
+        few: "Nie można połączyć %{count} kont z pustymi nazwami"
+        many: "Nie można połączyć %{count} kont z pustymi nazwami"
         one: "Nie można połączyć konta z pustą nazwą"
         other: "Nie można połączyć %{count} kont z pustymi nazwami"
       invalid_account_type: Nieobsługiwany typ konta Brex
@@ -73,8 +81,10 @@ pl:
       partial_success: "Połączono %{created_count} konto(a). %{already_linked_count} było już połączonych: %{already_linked_names}"
       select_connection: Wybierz połączenie Brex przed połączeniem kont.
       success:
+        few: "Połączono %{count} konta"
+        many: "Połączono %{count} kont"
         one: "Połączono %{count} konto"
-        other: "Połączono %{count} konta"
+        other: "Połączono %{count} kont"
     brex_item:
       accounts_need_setup: Konta wymagają konfiguracji
       delete: Usuń połączenie
@@ -252,15 +262,23 @@ pl:
       success: Synchronizacja rozpoczęta
     syncer:
       account_processing_failed:
+        few: "%{count} konta Brex nie powiodły się podczas przetwarzania."
+        many: "%{count} kont Brex nie powiodło się podczas przetwarzania."
         one: "%{count} konto Brex nie powiodło się podczas przetwarzania."
-        other: "%{count} konta Brex nie powiodły się podczas przetwarzania."
+        other: "%{count} kont Brex nie powiodło się podczas przetwarzania."
       account_sync_failed:
+        few: "Nie można zaplanować synchronizacji %{count} kont Brex."
+        many: "Nie można zaplanować synchronizacji %{count} kont Brex."
         one: "Nie można zaplanować synchronizacji %{count} konta Brex."
         other: "Nie można zaplanować synchronizacji %{count} kont Brex."
       accounts_need_setup:
+        few: "%{count} konta wymagają konfiguracji..."
+        many: "%{count} kont wymaga konfiguracji..."
         one: "%{count} konto wymaga konfiguracji..."
-        other: "%{count} konta wymagają konfiguracji..."
+        other: "%{count} kont wymaga konfiguracji..."
       accounts_failed:
+        few: "Nie zaimportowano %{count} konta Brex."
+        many: "Nie zaimportowano %{count} kont Brex."
         one: "Nie zaimportowano %{count} konta Brex."
         other: "Nie zaimportowano %{count} kont Brex."
       calculating_balances: Obliczanie sald...
@@ -271,7 +289,9 @@ pl:
       importing_accounts: Importowanie kont z Brex...
       processing_transactions: Przetwarzanie transakcji...
       transactions_failed:
+        few: "%{count} konta Brex miały błędy importu transakcji."
+        many: "%{count} kont Brex miało błędy importu transakcji."
         one: "%{count} konto Brex miało błędy importu transakcji."
-        other: "%{count} konta Brex miały błędy importu transakcji."
+        other: "%{count} kont Brex miało błędy importu transakcji."
     update:
       success: Połączenie Brex zaktualizowane

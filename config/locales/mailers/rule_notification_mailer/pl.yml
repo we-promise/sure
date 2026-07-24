@@ -3,11 +3,15 @@ pl:
   rule_notification_mailer:
     digest:
       subject:
+        few: "%{count} nowe transakcje pasują do Twojej reguły w %{product_name}"
+        many: "%{count} nowych transakcji pasuje do Twojej reguły w %{product_name}"
         one: "1 nowa transakcja pasuje do Twojej reguły w %{product_name}"
-        other: "%{count} nowe transakcje pasują do Twojej reguły w %{product_name}"
+        other: "%{count} nowych transakcji pasuje do Twojej reguły w %{product_name}"
       heading:
+        few: "%{count} nowe transakcje pasują do Twojej reguły"
+        many: "%{count} nowych transakcji pasuje do Twojej reguły"
         one: "1 nowa transakcja pasuje do Twojej reguły"
-        other: "%{count} nowe transakcje pasują do Twojej reguły"
+        other: "%{count} nowych transakcji pasuje do Twojej reguły"
       intro: "Te transakcje pasują do reguły \"%{rule}\":"
       date: "Data"
       name: "Nazwa"

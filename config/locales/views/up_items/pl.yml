@@ -19,13 +19,17 @@ pl:
     sync_status:
       no_accounts: Nie znaleziono kont
       all_synced:
+        few: "%{count} konta zsynchronizowane"
+        many: "%{count} kont zsynchronizowanych"
         one: 1 konto zsynchronizowane
-        other: "%{count} konta zsynchronizowane"
+        other: "%{count} kont zsynchronizowanych"
       partial: "%{linked} zsynchronizowanych, %{unlinked} wymaga konfiguracji"
     institution_summary:
       none: Brak połączonych instytucji
       one: 1 instytucja
       count:
+        few: "%{count} instytucje"
+        many: "%{count} instytucji"
         one: 1 instytucja
         other: "%{count} instytucji"
   up_items:
@@ -59,8 +63,10 @@ pl:
       link_accounts: Połącz konta
     link_accounts:
       success:
+        few: "Połączono %{count} konta Up."
+        many: "Połączono %{count} kont Up."
         one: Połączono 1 konto Up.
-        other: "Połączono %{count} konta Up."
+        other: "Połączono %{count} kont Up."
       no_accounts_selected: Wybierz co najmniej jedno konto.
       no_credentials_configured: Skonfiguruj Up w ustawieniach dostawcy.
       unsupported_account_type: Up nie obsługuje tego typu konta.
@@ -97,8 +103,10 @@ pl:
       cancel: Anuluj
     complete_account_setup:
       success:
+        few: "Utworzono %{count} konta Up."
+        many: "Utworzono %{count} kont Up."
         one: Utworzono 1 konto Up.
-        other: "Utworzono %{count} konta Up."
+        other: "Utworzono %{count} kont Up."
       all_skipped: Nie utworzono żadnych kont Up.
       no_accounts: Nie wybrano żadnych kont Up.
       creation_failed: Nie można utworzyć kont Up.

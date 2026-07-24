@@ -31,11 +31,15 @@ pl:
       budget_on_track: Budżet
     meta:
       next_n_days:
+        few: Następne %{count} dni
+        many: Następnych %{count} dni
         one: Następny dzień
-        other: Następne %{count} dni
+        other: Następnych %{count} dni
       last_n_days:
+        few: Ostatnie %{count} dni
+        many: Ostatnich %{count} dni
         one: Ostatni dzień
-        other: Ostatnie %{count} dni
+        other: Ostatnich %{count} dni
       date_range: "%{from} do %{to}"
     figures:
       vs_previous: vs. poprzedni miesiąc
@@ -43,9 +47,13 @@ pl:
       on_pace: zgodnie z tempem
       of_budget: z budżetu
       days_overdue:
+        few: "%{count} dni po terminie"
+        many: "%{count} dni po terminie"
         one: "%{count} dzień po terminie"
         other: "%{count} dni po terminie"
       idle_days:
+        few: nieaktywna %{count} dni
+        many: nieaktywna %{count} dni
         one: nieaktywna %{count} dzień
         other: nieaktywna %{count} dni
     actions:
@@ -70,8 +78,10 @@ pl:
         down: Twoja stopa oszczędności spadła w %{month}
       idle_cash: Nieaktywna gotówka na %{account}
       budget_at_risk:
+        few: "%{count} kategorie wymagają uwagi w budżecie"
+        many: "%{count} kategorii wymaga uwagi w budżecie"
         one: Jedna kategoria wymaga uwagi w budżecie
-        other: "%{count} kategorie wymagają uwagi w budżecie"
+        other: "%{count} kategorii wymaga uwagi w budżecie"
       budget_on_track: Twój budżet jest na dobrej drodze
     templates:
       spending_anomaly:
