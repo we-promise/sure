@@ -107,6 +107,29 @@ class IncomeStatement
     )
   end
 
+  # Returns income and expense totals for every month in the given date_range
+  # using a single SQL query — avoids the N+1 that arises from calling
+  # income_totals/expense_totals once per month inside a loop.
+  #
+  # Returns a Hash: { Date(month_start) => { "income" => Numeric, "expense" => Numeric } }
+  def all_monthly_totals(date_range:)
+    @all_monthly_totals ||= {}
+    key = [ date_range.begin, date_range.end ]
+    @all_monthly_totals[key] ||= Rails.cache.fetch([
+      "income_statement", "monthly_totals", "v1",
+      family.id, user&.id, included_account_ids_hash,
+      date_range.begin, date_range.end,
+      family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i
+    ]) do
+      MonthlyTotals.new(
+        family,
+        transactions_scope: family.transactions.visible.excluding_pending,
+        date_range: date_range,
+        included_account_ids: included_account_ids
+      ).call
+    end
+  end
+
   def median_expense(interval: "month", category: nil)
     if category.present?
       category_stats(interval: interval).find { |stat| stat.classification == "expense" && stat.category_id == category.id }&.median || 0
