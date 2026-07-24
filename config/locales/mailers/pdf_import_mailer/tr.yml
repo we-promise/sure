@@ -1,0 +1,5 @@
+---
+tr:
+  pdf_import_mailer:
+    next_steps:
+      subject: PDF belgeniz analiz edildi - %{product_name}

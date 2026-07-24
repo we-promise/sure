@@ -16,6 +16,7 @@ fr:
       edit: Éditer la catégorie
     form:
       auto_adjust: réglage automatique.
+      trigger_label: Choisir la couleur et l'icône
       color: Couleur
       icon: Icône
       name_label: Nom

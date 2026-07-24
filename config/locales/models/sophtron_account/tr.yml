@@ -1,0 +1,7 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        sophtron_account:
+          no_balance: Sophtron hesabının güncel veya kullanılabilir bakiyesi olmalıdır
