@@ -258,4 +258,42 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
     assert result[:success]
     assert_equal 1, @lunchflow_account.reload.raw_transactions_payload.size
   end
+
+  test "preserves identical blank-ID transactions that arrive in the same response" do
+    # Two legitimately distinct but identical purchases (e.g. the same coffee bought
+    # twice). Lunchflow returns blank IDs, so they share a content hash — but both are
+    # real and must survive so LunchflowEntry::Processor can suffix the collision.
+    # Regression: the previous key-Hash merge collapsed the pair into one, dropping a
+    # real transaction before processing.
+    duplicate = {
+      "id" => "",
+      "accountId" => @lunchflow_account.account_id,
+      "amount" => -3.50,
+      "currency" => "GBP",
+      "date" => Date.today.to_s,
+      "merchant" => "CAFE",
+      "description" => "Flat white",
+      "isPending" => true
+    }
+
+    mock_provider = mock()
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [ duplicate.dup, duplicate.dup ], count: 2 })
+    mock_provider.stubs(:get_account_balance)
+      .with(@lunchflow_account.account_id)
+      .returns({ balance: 100.0, currency: "GBP" })
+
+    importer = LunchflowItem::Importer.new(@item, lunchflow_provider: mock_provider)
+
+    # First sync: both identical rows must be stored, not collapsed into one.
+    importer.send(:fetch_and_store_transactions, @lunchflow_account)
+    assert_equal 2, @lunchflow_account.reload.raw_transactions_payload.size,
+      "both same-response blank-ID collisions must be preserved"
+
+    # Second sync returns the same pair: matched one-for-one, so still two, not four.
+    importer.send(:fetch_and_store_transactions, @lunchflow_account)
+    assert_equal 2, @lunchflow_account.reload.raw_transactions_payload.size,
+      "re-syncing the same pair must not accumulate duplicates"
+  end
 end
