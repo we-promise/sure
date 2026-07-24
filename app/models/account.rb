@@ -96,7 +96,21 @@ class Account < ApplicationRecord
   has_many :account_statements
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
-  delegate :subtype, to: :accountable, allow_nil: true
+
+  # Prefer the denormalized column when present. A preloaded accountable can be
+  # blank/stale relative to `accounts.subtype` (e.g. after backfill or partial
+  # updates), so association state must not override a stored value. Fall back
+  # to the accountable only when the column is blank — using the preloaded
+  # target when available to avoid an N+1 on balance-sheet / budget paths.
+  def subtype
+    return self[:subtype] if self[:subtype].present?
+
+    if association(:accountable).loaded?
+      return association(:accountable).target&.subtype
+    end
+
+    accountable&.subtype
+  end
 
   # Writer for subtype that delegates to the accountable, allowing forms to set
   # subtype directly on the account.
@@ -115,10 +129,18 @@ class Account < ApplicationRecord
   #      unknown. We can't build the accountable yet, so stash the value and
   #      apply it from `accountable_type=` once the type is set.
   def subtype=(value)
+    self[:subtype] = value
+
     self.accountable = accountable_class.new if accountable.nil? && accountable_type.present?
 
     if accountable
-      accountable.subtype = value
+      if association(:accountable).loaded? && (target = association(:accountable).target)
+        if target.respond_to?(:subtype=) && (value.present? || target.subtype.blank?)
+          target.subtype = value
+        end
+      elsif accountable.respond_to?(:subtype=)
+        accountable.subtype = value
+      end
     else
       @deferred_subtype = value
     end
@@ -410,14 +432,6 @@ class Account < ApplicationRecord
       manual?
   end
 
-  # True when the account has no live sync provider attached. Mirrors the
-  # `Account.manual` scope so per-instance checks don't drift from the query.
-  def manual?
-    account_providers.none? &&
-      plaid_account_id.blank? &&
-      simplefin_account_id.blank?
-  end
-
   # Default GoalPledge kind for this account. Manual accounts get
   # `manual_save` (resolves on the next valuation), live-synced accounts
   # get `transfer` (resolves when the synced deposit posts). Keeps the
@@ -428,26 +442,6 @@ class Account < ApplicationRecord
     # brokerage is usually a market move, not a deposit, and would false-match a
     # pledge. They resolve on transfer (cash-inflow) entries only.
     manual? && !investment? ? "manual_save" : "transfer"
-  end
-
-  # Total fixed earmark this account currently has reserved across every
-  # non-archived goal (unallocated/whole-balance links reserve no fixed
-  # slice). Mirrors Budget#allocated_spending.
-  def goal_earmarked_total
-    GoalAccount.joins(:goal)
-               .where(account_id: id)
-               .where.not(allocated_amount: nil)
-               .where.not(goals: { state: "archived" })
-               .sum(:allocated_amount)
-               .to_d
-  end
-
-  # Headroom left to earmark toward goals before fixed allocations exceed the
-  # balance. Negative means the account is over-earmarked. Intended to back a
-  # non-blocking over-allocation warning (UI is a follow-up). Mirrors
-  # Budget#available_to_allocate.
-  def free_to_earmark
-    balance.to_d - goal_earmarked_total
   end
 
   # Total fixed earmark this account currently has reserved across every

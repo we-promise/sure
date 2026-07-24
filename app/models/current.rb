@@ -2,6 +2,7 @@ class Current < ActiveSupport::CurrentAttributes
   attribute :user_agent, :ip_address
 
   attribute :session
+  attribute :accessible_accounts_cache, :finance_accounts_cache
 
   delegate :family, to: :user, allow_nil: true
 
@@ -19,12 +20,12 @@ class Current < ActiveSupport::CurrentAttributes
 
   def accessible_accounts
     return family&.accounts unless user
-    user.accessible_accounts
+    self.accessible_accounts_cache ||= user.accessible_accounts
   end
 
   def finance_accounts
     return family&.accounts unless user
-    user.finance_accounts
+    self.finance_accounts_cache ||= user.finance_accounts
   end
 
   def accessible_entries

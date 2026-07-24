@@ -2,7 +2,7 @@ module BudgetsHelper
   def budget_has_over_budget?(budget)
     return false unless budget.initialized?
 
-    budget.budget_categories.any?(&:any_over_budget?)
+    budget_categories_view_state(budget)[:over_budget_count].positive?
   end
 
   def budget_categories_view_state(budget)

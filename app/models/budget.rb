@@ -7,7 +7,7 @@ class Budget < ApplicationRecord
 
   belongs_to :family
 
-  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
+  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy, inverse_of: :budget
 
   validates :start_date, :end_date, presence: true
   validates :start_date, :end_date, uniqueness: { scope: :family_id }
@@ -108,13 +108,21 @@ class Budget < ApplicationRecord
 
     # Remove old categories
     budget_categories.where(category_id: categories_to_remove).destroy_all if categories_to_remove.any?
+
+    association(:budget_categories).reset if association(:budget_categories).loaded?
+    remove_instance_variable(:@budget_categories_by_parent_category_id) if defined?(@budget_categories_by_parent_category_id)
   end
 
   def uncategorized_budget_category
     budget_categories.uncategorized.tap do |bc|
+      bc.budget = self
       bc.budgeted_spending = [ available_to_allocate, 0 ].max
       bc.currency = family.currency
     end
+  end
+
+  def budget_subcategories_for(parent_category_id)
+    budget_categories_by_parent_category_id[parent_category_id] || []
   end
 
   def transactions
@@ -265,7 +273,7 @@ class Budget < ApplicationRecord
   # Budget allocations: How much user has budgeted for all parent categories combined
   # =============================================================================
   def allocated_spending
-    budget_categories.reject { |bc| bc.subcategory? }.sum(&:budgeted_spending)
+    budget_categories.reject(&:subcategory?).sum { |bc| bc.budgeted_spending || 0 }
   end
 
   def allocated_percent
@@ -286,11 +294,11 @@ class Budget < ApplicationRecord
   # Income: How much user earned relative to what they expected to earn
   # =============================================================================
   def estimated_income
-    family.income_statement.median_income(interval: "month")
+    income_statement.median_income(interval: "month")
   end
 
   def actual_income
-    family.income_statement.income_totals(period: self.period).total
+    income_statement.income_totals(period: period).total
   end
 
   def actual_income_percent
@@ -310,6 +318,19 @@ class Budget < ApplicationRecord
   end
 
   private
+    def budget_categories_by_parent_category_id
+      @budget_categories_by_parent_category_id ||= begin
+        if association(:budget_categories).loaded?
+          budget_categories.to_a.group_by { |bc| bc.category.parent_id }
+        else
+          budget_categories
+            .eager_load(:category)
+            .to_a
+            .group_by { |bc| bc.association(:category).target&.parent_id }
+        end
+      end
+    end
+
     def income_statement
       @income_statement ||= family.income_statement(user: current_user)
     end

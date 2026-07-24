@@ -52,6 +52,7 @@ class AccountProviderTest < ActiveSupport::TestCase
     )
 
     assert_equal 2, @account.account_providers.count
+    assert_equal 2, @account.reload.account_providers_count
     assert_includes @account.account_providers, plaid_provider
     assert_includes @account.account_providers, simplefin_provider
   end
@@ -141,6 +142,8 @@ class AccountProviderTest < ActiveSupport::TestCase
     assert PlaidAccount.exists?(plaid_account_id)
 
     provider.destroy!
+
+    assert_equal 0, @account.reload.account_providers_count
 
     # Non-CoinStats provider accounts should remain (can enter "needs setup" state)
     assert PlaidAccount.exists?(plaid_account_id)
