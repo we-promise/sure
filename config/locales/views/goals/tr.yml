@@ -1,0 +1,295 @@
+---
+tr:
+  goals:
+    archive:
+      invalid_transition: Hedef mevcut durumundan arşivlenemez.
+      success: Hedef arşivlendi.
+    color_picker:
+      auto_adjust: otomatik ayarla.
+      color_heading: Renk
+      icon_heading: Simge
+      poor_contrast: Kontrast düşük, daha koyu bir renk seçin veya
+      trigger_label: Renk ve simge seçin
+    complete:
+      invalid_transition: Hedef mevcut durumundan tamamlanamaz.
+      success: Hedef tamamlandı olarak işaretlendi.
+    create:
+      success: Hedef oluşturuldu.
+    destroy:
+      archive_first: Hedefi silmeden önce arşivleyin.
+      success: Hedef silindi.
+    edit:
+      heading: Hedefi düzenle
+      save: Değişiklikleri kaydet
+    empty_state:
+      add_account: Hesap ekle
+      body: Bir hedef belirleyin, biriktirdiğiniz hesapları bağlayın ve ilerlemenizi
+        izleyin.
+      heading: Henüz hedef yok
+      new_goal: İlk hedefinizi oluşturun
+      no_depository_accounts: Bir hedef oluşturmadan önce en az bir mevduat hesabına
+        (vadesiz, vadeli, HSA, CD, para piyasası) ihtiyacınız var.
+      subtitle: Bir hedef belirleyin ve ona doğru birikime başlayın.
+    errors:
+      not_found: Bu hedef bulunamadı. Silinmiş olabilir.
+    form:
+      create: Hedef oluştur
+      errors:
+        accounts_required: En az bir kaynak hesap seçin.
+        amount_required: Sıfırdan büyük bir hedef belirleyin.
+        name_required: Hedefinize bir ad verin.
+      fields:
+        color: Renk
+        earmark_for: "%{account} için ayrılan tutar"
+        earmark_hint: Hesabın tüm bakiyesini ayırmak için tutarı boş bırakın.
+        funding_accounts: Kaynak hesaplar
+        funding_accounts_hint: Bu hedefin bakiyesi, bu hesapların bakiyesi (veya ayrılan
+          kısmı) kadardır.
+        name: Ad
+        name_placeholder: Acil durum fonu, Ev peşinatı…
+        notes: Notlar (isteğe bağlı)
+        notes_placeholder: Gelecekteki siz için bir hatırlatma…
+        target_amount: Hedef tutar
+        target_date: Hedef tarihi
+        whole_balance: Tüm bakiye
+      save: Değişiklikleri kaydet
+      subtypes:
+        cd: CD
+        checking: Vadesiz hesap
+        hsa: HSA
+        money_market: Para piyasası
+        other: Diğer
+        savings: Tasarruf
+      suggested_no_date: Bitiş tarihini öngörmek için bir hedef tarihi belirleyin.
+      suggested_with_date: Zamanında ulaşmak için {accounts} hesaplarında ayda {monthly}
+        biriktirin.
+    goal_card:
+      accounts:
+        one: 1 hesap
+        other: "%{count} hesap"
+      aria_progress: "%{target}'in %{percent}%'i"
+      completed: Tamamlandı
+      days_left:
+        one: 1 gün kaldı
+        other: "%{count} gün kaldı"
+      footer_archived: Arşivlendi
+      footer_catch_up: Yakalamak için ayda %{amount} biriktirin
+      footer_last_days:
+        one: Son taahhüt 1 gün önce eşleşti
+        other: Son taahhüt %{count} gün önce eşleşti
+      footer_last_today: Son taahhüt bugün eşleşti
+      footer_no_deadline: Açık
+      footer_no_pledges: Henüz eşleşen taahhüt yok
+      footer_paused: Duraklatıldı
+      footer_reached: Hedefe ulaşıldı
+      left: kaldı
+      n_accounts: "%{first} +%{count}"
+      no_accounts: Bağlı hesap yok
+      no_target_date: Açık
+      pace_no_target: ortalama %{avg}/ay
+      pace_with_target: "%{avg}/ay · hedef %{target}/ay"
+      past_due: Süresi geçti
+      pending_count:
+        one: 1 bekleyen
+        other: "%{count} bekleyen"
+      pending_pledge: Bekleyen taahhüt
+    index:
+      archived_section:
+        heading: Arşivlenmiş
+      chips:
+        all: Tümü
+        behind: Geride
+        completed: Tamamlandı
+        no_target_date: Açık
+        on_track: Yolunda
+        paused: Duraklatıldı
+      empty_filtered: Eşleşen hedef yok.
+      goals_section:
+        heading: Hedefler
+        subtitle: Önemli olan şey için biriktirin.
+      kpi:
+        contributed_label: Katkı · son 30 gün
+        needs_this_month_label: Bu ay gerekli
+        needs_this_month_sub:
+          one: 1 hedef geride
+          other: "%{count} hedef geride"
+        needs_this_month_zero_sub: Geride kalan hedef yok
+        on_track_all_caught_up: Hepsi yakalandı
+        on_track_label: Yolunda giden hedefler
+        on_track_sub_all_good: Tüm aktif hedefler yolunda
+        on_track_sub_parts:
+          behind:
+            one: 1 geride
+            other: "%{count} geride"
+          no_date:
+            one: 1 tarihsiz
+            other: "%{count} tarihsiz"
+          paused:
+            one: 1 duraklatıldı
+            other: "%{count} duraklatıldı"
+          reached:
+            one: 1 ulaşıldı
+            other: "%{count} ulaşıldı"
+        on_track_value: "%{total} içinden %{on_track}"
+        velocity_delta_down: "↓ %{percent}% önceki 30 güne göre"
+        velocity_delta_flat: önceki 30 güne göre
+        velocity_delta_up: "↑ %{percent}% önceki 30 güne göre"
+        velocity_delta_zero_base: İlk 30 günlük hareket
+      new_goal: Yeni hedef
+      ongoing_section:
+        heading: Hedefler
+      pending_pledges_callout: Bekleyen taahhütleriniz var. Sure bir sonraki eşitlemede
+        bunları onaylayacak.
+      search:
+        aria_label: Hedeflerde ara
+        clear_search: Aramayı temizle
+        empty: Eşleşen hedef yok.
+        empty_with_both: Bu filtreyle "%{query}" ile eşleşen hedef yok.
+        empty_with_filter: Bu filtreyle eşleşen hedef yok.
+        empty_with_query: '"%{query}" ile eşleşen hedef yok.'
+        placeholder: Hedeflerde ara…
+        show_all: Tümünü göster
+      subtitle: Önemli olan şey için biriktirin.
+      title: Hedefler
+    new:
+      heading: Yeni hedef
+      subtitle: Belirli bir şey için biriktirin.
+    pause:
+      invalid_transition: Hedef mevcut durumundan duraklatılamaz.
+      success: Hedef duraklatıldı.
+    reopen:
+      invalid_transition: Hedef mevcut durumundan yeniden açılamaz.
+      success: Hedef yeniden açıldı.
+    resume:
+      invalid_transition: Hedef mevcut durumundan devam ettirilemez.
+      success: Hedef devam ettirildi.
+    show:
+      archive: Arşivle
+      archived_banner:
+        body: Katkıya devam etmek için geri yükleyin veya kayıt olarak bırakın.
+        restore_cta: Hedefi geri yükle
+        title: Bu hedef arşivlenmiş
+      catch_up:
+        adjust_target_cta: Bunun yerine hedefi ayarla
+        body: Mevcut hız %{avg}/ay · hedefinize ulaşmak için %{required}/ay gerekiyor.
+        title: Yakalamak için ayda %{amount} daha fazla biriktirin
+      celebration:
+        archive_cta: Hedefi arşivle
+        body: Hedef %{target} üzerinden %{saved} olarak kapatıldı. Kayıt olarak tutun
+          veya şimdi arşivleyin.
+        heading: Hedefe ulaşıldı. Tebrikler.
+      complete: Tamamlandı olarak işaretle
+      confirm_archive_body: Arşivlenen hedefler ana listeden kaybolur. Daha sonra
+        geri yükleyebilirsiniz.
+      confirm_archive_cta: Arşivle
+      confirm_archive_title: Bu hedef arşivlensin mi?
+      confirm_complete_body: Devam Eden listesinden çıkar. Daha sonra yine de arşivleyebilir
+        veya geri yükleyebilirsiniz.
+      confirm_complete_body_short: "%{progress}%'desiniz, %{target} hedefinin %{saved}
+        kadarını biriktirdiniz. Tamamlandı olarak işaretlemek bunu orijinal hedef
+        yerine başarınız olarak kaydeder. Devam edin ya da bunu kapatıp hedefi ayarlayın."
+      confirm_complete_cta: Tamamlandı olarak işaretle
+      confirm_complete_title: Bu hedef tamamlandı olarak işaretlensin mi?
+      delete: Kalıcı olarak sil
+      edit: Düzenle
+      empty:
+        body: Bağlı hesabınıza bir transfer yapın. Sure bir sonraki eşitlemede bunu
+          yakalayacak. Ya da manuel hesap bakiyenizi güncelleyin.
+        heading: Henüz yatırma yok
+      funding_accounts:
+        earmarked_of: "%{balance} bakiyenin %{earmarked} kadarı ayrıldı"
+        empty:
+          body: Biriktirdiğiniz mevduat hesaplarını bağlamak için hedefi düzenleyin.
+          heading: Henüz bağlı kaynak hesap yok
+      funding_accounts_heading: Kaynak hesaplar
+      funding_last_30d: son 30 gün
+      funding_last_90d: son 90 gün
+      header:
+        target: Hedef %{amount}
+        target_by: Hedef %{amount}, %{date} tarihine kadar
+        target_by_past: Hedef %{amount} · son tarih %{date} idi
+      inactive:
+        body: Şu ana kadar %{target} hedefinin %{saved} kadarı biriktirildi.
+        heading_archived: Bu hedef arşivlenmiş
+        heading_paused: Bu hedef duraklatılmış
+      no_target_date:
+        body: Bitiş çizgisini öngörmek ve gerekli hızı takip etmek için bir son tarih
+          belirleyin.
+        cta: Hedef tarihi belirle
+        heading: Hedef tarihi ekle
+      notes: Notlar
+      pause: Duraklat
+      paused_banner:
+        body: İlerlemenizi takip etmeye devam etmek için devam ettirin.
+        resume_cta: Hedefi devam ettir
+        title: Bu hedef duraklatılmış
+      pending_pledge:
+        body_manual: Bir sonraki manuel bakiye düzenlemenizde onaylanır.
+        body_transfer: Sure bir sonraki eşitlemede eşleşen bir yatırma tespit ettiğinde
+          otomatik olarak onaylanır.
+        cancel: İptal
+        confirm_cancel_body: "%{amount} taahhüdü kaldırılacaktır. İstediğiniz zaman
+          yeni bir tane kaydedebilirsiniz."
+        confirm_cancel_cta: Taahhüdü iptal et
+        confirm_cancel_title: Bu taahhüt iptal edilsin mi?
+        extend: 7 gün uzat
+        pledged_at: "%{time_ago} önce taahhüt edildi"
+        title:
+          one: 'Bekliyor: %{account} hesabına %{amount} · 1 gün kaldı'
+          other: 'Bekliyor: %{account} hesabına %{amount} · %{count} gün kaldı'
+          zero: 'Bekliyor: %{account} hesabına %{amount} · bugün sona eriyor'
+      pledge_just_saved: Ayırdığınız parayı kaydedin
+      pledge_just_transferred: Yaptığınız bir transferi kaydedin
+      projection:
+        aria_label: "%{name} için öngörü grafiği"
+        behind: Mevcut hızda yetersiz kalıyor.
+        heading: Öngörü
+        legend_projection: Öngörü
+        legend_required: Gerekli
+        legend_saved: Biriktirilen
+        no_pace: Henüz yatırma yok. Bir öngörü başlatmak için bağlı bir hesaba para
+          ekleyin.
+        no_target_date: Hedef tarihi belirlenmemiş. Bitiş çizgisini öngörmek için
+          bir tane belirleyin.
+        on_track_html: Mevcut hızınızla bu hedefe yaklaşık <strong class="text-primary
+          whitespace-nowrap">%{date}</strong> tarihinde ulaşacaksınız.
+        reached: Hedefe ulaştınız. Öngörüye gerek yok.
+        today_marker: Bugün
+        tooltip_projected: 'Öngörülen: %{amount}'
+        tooltip_saved: 'Biriktirilen: %{amount}'
+        tooltip_target_relation: "%{target} hedefinin %{percent}%'i"
+      record_pledge_cta: Taahhüt kaydet
+      reopen: Hedefi yeniden aç
+      resume: Devam ettir
+      ring:
+        aria_label: "Hedef %{percent}% tamamlandı. %{target} hedefinin %{amount} kadarı
+          biriktirildi."
+        market_value: Piyasa değeri %{amount}
+        of: "%{target} içinden"
+        of_target: hedeften
+        saved: Biriktirilen
+        to_go: "%{amount} kaldı"
+      status_callout:
+        behind: yakalamak için ayda %{amount} daha fazla biriktirin
+        behind_covered: bekleyen taahhütler farkı kapatıyor
+        no_target_date: bitiş çizgisini öngörmek için bir hedef tarihi belirleyin
+        on_track: hedefe yaklaşık %{date} tarihinde ulaşır
+      unarchive: Geri yükle
+    states:
+      active: Aktif
+      archived: Arşivlendi
+      completed: Tamamlandı
+      paused: Duraklatıldı
+    status:
+      archived: Arşivlendi
+      behind: Geride
+      completed: Tamamlandı
+      no_target_date: Açık
+      on_track: Yolunda
+      paused: Duraklatıldı
+      reached: Ulaşıldı
+    unarchive:
+      invalid_transition: Hedef mevcut durumundan geri yüklenemez.
+      success: Hedef geri yüklendi.
+    update:
+      success: Hedef güncellendi.

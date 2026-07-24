@@ -1,0 +1,29 @@
+---
+tr:
+  models:
+    category:
+      defaults:
+        entertainment: Eğlence
+        fees: Ücretler
+        food_and_drink: Yiyecek ve İçecek
+        gifts_and_donations: Hediye ve Bağışlar
+        groceries: Market
+        healthcare: Sağlık
+        home_improvement: Ev Geliştirme
+        income: Gelir
+        insurance: Sigorta
+        loan_payments: Kredi Ödemeleri
+        mortgage_rent: İpotek / Kira
+        personal_care: Kişisel Bakım
+        savings_and_investments: Tasarruf ve Yatırımlar
+        services: Hizmetler
+        shopping: Alışveriş
+        sports_and_fitness: Spor ve Fitness
+        subscriptions: Abonelikler
+        taxes: Vergiler
+        transportation: Ulaşım
+        travel: Seyahat
+        utilities: Faturalar
+      investment_contributions: Yatırım Katkıları
+      other_investments: Diğer Yatırımlar
+      uncategorized: Kategorisiz

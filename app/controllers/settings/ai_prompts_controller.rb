@@ -1,6 +1,8 @@
 class Settings::AiPromptsController < ApplicationController
   layout "settings"
 
+  before_action :require_admin!
+
   def show
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],

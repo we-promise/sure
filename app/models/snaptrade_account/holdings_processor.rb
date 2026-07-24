@@ -48,6 +48,12 @@ class SnaptradeAccount::HoldingsProcessor
         amount = parse_decimal(entry[:amount])
         next if amount.nil?
 
+        # SnapTrade's per-currency cash includes money market / sweep funds
+        # that are also reported as `cash_equivalent: true` positions and
+        # imported as holdings — remove the overlap so the synthetic cash
+        # holding doesn't double count them.
+        amount -= @snaptrade_account.cash_equivalent_position_value(entry[:currency])
+
         security = Security.cash_for(account, currency: entry[:currency])
 
         Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Importing #{entry[:currency]} cash holding"

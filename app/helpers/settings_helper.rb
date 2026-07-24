@@ -135,6 +135,38 @@ module SettingsHelper
     end
   end
 
+  def yahoo_finance_health_presentation(status)
+    status = status.to_sym if status.respond_to?(:to_sym)
+    status = :unknown unless %i[healthy rate_limited unavailable unknown].include?(status)
+
+    presentation = {
+      status_class: {
+        healthy: "bg-success",
+        rate_limited: "bg-warning",
+        unavailable: "bg-destructive",
+        unknown: "bg-surface-inset"
+      }.fetch(status),
+      status_text: t("settings.hostings.yahoo_finance_settings.status_#{status}")
+    }
+
+    presentation[:alert] = case status
+    when :rate_limited
+      {
+        title: t("settings.hostings.yahoo_finance_settings.rate_limited_title"),
+        message: t("settings.hostings.yahoo_finance_settings.rate_limited_message"),
+        variant: :warning
+      }
+    when :unavailable
+      {
+        title: t("settings.hostings.yahoo_finance_settings.unavailable_title"),
+        message: t("settings.hostings.yahoo_finance_settings.unavailable_message"),
+        variant: :warning
+      }
+    end
+
+    presentation
+  end
+
   # Below this many synced accounts, the per-row pills already give the user
   # enough at-a-glance signal and the strip is redundant chrome.
   HEALTH_STRIP_MIN_ACCOUNTS = 10
