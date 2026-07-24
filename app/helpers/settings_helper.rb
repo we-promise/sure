@@ -75,6 +75,9 @@ module SettingsHelper
     when "coinstats"
       return { status: :off } unless @coinstats_items&.any?
       sync_based_summary(key)
+    when "onchain_wallet"
+      return { status: :off } unless @onchain_wallet_items&.any?
+      sync_based_summary(key)
     when "mercury"
       return { status: :off } unless @mercury_items&.any?
       sync_based_summary(key)

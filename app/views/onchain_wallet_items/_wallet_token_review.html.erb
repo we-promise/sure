@@ -1,0 +1,65 @@
+<%= turbo_frame_tag "modal" do %>
+  <% native = OnchainWalletItem::Importer::EVM_NATIVE.fetch(chain) %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(
+         title: t(".title", chain: chain.titleize),
+         subtitle: t(".subtitle")
+       ) %>
+
+    <% dialog.with_body do %>
+      <%= form_with url: link_wallet_onchain_wallet_items_path,
+                    method: :post,
+                    data: { turbo: true },
+                    class: "space-y-4" do %>
+        <%= hidden_field_tag :source, "account_modal" %>
+        <%= hidden_field_tag :chain, chain %>
+        <%= hidden_field_tag :wallet_address, wallet_address %>
+        <%= hidden_field_tag :reviewed_tokens, "1" %>
+
+        <div class="rounded-lg border border-primary bg-container-inset p-3">
+          <p class="text-sm font-medium text-primary"><%= t(".native_title", symbol: native[:symbol]) %></p>
+          <p class="text-sm text-secondary">
+            <%= t(".native_body",
+                  symbol: native[:symbol],
+                  quantity: number_with_delimiter(preview[:native_quantity].to_d.to_s("F")),
+                  value: format_money(Money.new(preview[:native_current_balance].to_d, Current.family.currency))) %>
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-sm font-medium text-primary"><%= t(".tokens_title") %></p>
+          <% token_candidates.sort_by { |holding| [ holding[:current_balance].to_d.zero? ? 1 : 0, holding[:symbol].to_s ] }.each do |holding| %>
+            <% checkbox_id = "onchain_token_#{holding[:contract]}" %>
+            <% estimated_value = holding[:current_balance].to_d %>
+            <label for="<%= checkbox_id %>" class="flex items-start gap-3 rounded-lg border border-primary bg-container p-3">
+              <%= check_box_tag "selected_token_contracts[]",
+                                holding[:contract],
+                                estimated_value.positive?,
+                                id: checkbox_id,
+                                class: "checkbox checkbox--light mt-1" %>
+              <span class="min-w-0 flex-1">
+                <span class="block text-sm font-medium text-primary truncate"><%= holding[:symbol] %> <span class="font-normal text-secondary"><%= holding[:name] %></span></span>
+                <span class="block text-xs text-secondary truncate"><%= holding[:contract] %></span>
+                <span class="block text-xs text-secondary">
+                  <%= t(".token_detail",
+                        quantity: number_with_delimiter(holding[:quantity].to_d.to_s("F")),
+                        value: estimated_value.positive? ? format_money(Money.new(estimated_value, Current.family.currency)) : t(".unpriced")) %>
+                </span>
+              </span>
+            </label>
+          <% end %>
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <%= render DS::Button.new(
+                text: t(".cancel"),
+                variant: :secondary,
+                type: "button",
+                data: { action: "DS--dialog#close" }
+              ) %>
+          <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

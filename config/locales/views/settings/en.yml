@@ -399,6 +399,7 @@ en:
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
+        onchain_wallet: Track Bitcoin and Ethereum wallet balances by address.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
         mercury: Sync your Mercury business banking accounts automatically.
         brex: Sync Brex cash and corporate card activity with read-only access.
@@ -483,6 +484,35 @@ en:
         sync: Sync
         disconnect: Disconnect
         disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+      onchain_wallet_panel:
+        default_connection_name: On-chain Wallets
+        step1: Choose the Ethereum data source. Blockscout works without an API key.
+        step2: Add Bitcoin, Ethereum, Solana, or supported EVM wallet addresses.
+        step3: Sure imports balances, token holdings, and read-only transaction references.
+        read_only_title: Read-only wallet sync
+        read_only_body: Wallet addresses and explorer API keys cannot move funds. Blockscout powers supported EVM chains without keys; Etherscan is optional for Ethereum only.
+        connection_name_label: Connection name
+        connection_name_placeholder: On-chain Wallets
+        ethereum_data_provider_label: Ethereum data source
+        blockscout_label: Blockscout
+        etherscan_label: Etherscan
+        ethereum_data_provider_help: Blockscout is used for Polygon, Arbitrum, Optimism, Base, and Gnosis. This setting only changes Ethereum.
+        etherscan_api_key_label: Etherscan API key
+        etherscan_api_key_placeholder: Paste your Etherscan API key
+        keep_etherscan_key_placeholder: Leave blank to keep the current Etherscan key
+        etherscan_help: Required only when Etherscan is selected as the Ethereum data source.
+        save_connection: Save connection
+        update_connection: Update connection
+        add_wallet: Add wallet address
+        chain_label: Chain
+        bitcoin: Bitcoin
+        ethereum: Ethereum
+        wallet_address_label: Wallet address
+        wallet_address_placeholder: bc1... or 0x...
+        link_wallet: Link wallet
+        sync: Sync
+        disconnect: Disconnect
+        disconnect_confirm: "Disconnect %{symbol} from On-chain Wallets?"
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error

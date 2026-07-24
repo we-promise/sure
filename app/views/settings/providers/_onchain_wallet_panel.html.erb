@@ -1,0 +1,101 @@
+<div id="onchain-wallet-providers-panel" class="space-y-4">
+  <% items = local_assigns[:onchain_wallet_items] || @onchain_wallet_items || Current.family.onchain_wallet_items.active.ordered.includes(:onchain_wallet_accounts) %>
+  <% item = items.first || Current.family.onchain_wallet_items.build(name: t("settings.providers.onchain_wallet_panel.default_connection_name")) %>
+  <% is_new_record = item.new_record? %>
+
+  <%= render DS::Alert.new(
+        variant: :warning,
+        message: safe_join([
+          content_tag(:p, t("settings.providers.onchain_wallet_panel.read_only_title"), class: "font-medium"),
+          content_tag(:p, t("settings.providers.onchain_wallet_panel.read_only_body"), class: "mt-1")
+        ])
+      ) %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("settings.providers.onchain_wallet_panel.step1"),
+               t("settings.providers.onchain_wallet_panel.step2"),
+               t("settings.providers.onchain_wallet_panel.step3")
+             ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <%= styled_form_with model: item,
+                       url: is_new_record ? onchain_wallet_items_path : onchain_wallet_item_path(item),
+                       scope: :onchain_wallet_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%
+      active_provider = item.ethereum_data_provider.presence || "blockscout"
+      provider_options = [
+        [ "blockscout", t("settings.providers.onchain_wallet_panel.blockscout_label") ],
+        [ "etherscan", t("settings.providers.onchain_wallet_panel.etherscan_label") ]
+      ]
+    %>
+
+    <div class="space-y-3"
+         data-controller="onchain-wallet-provider"
+         data-onchain-wallet-provider-active-value="<%= active_provider %>">
+      <%= form.hidden_field :ethereum_data_provider,
+                            value: active_provider,
+                            data: { "onchain-wallet-provider-target": "field" } %>
+
+      <div class="sm:hidden">
+        <div class="form-field">
+          <div class="form-field__body">
+            <%= label_tag :onchain_wallet_ethereum_data_provider,
+                          t("settings.providers.onchain_wallet_panel.ethereum_data_provider_label"),
+                          class: "form-field__label" %>
+            <%= select_tag :onchain_wallet_ethereum_data_provider,
+                           options_for_select(provider_options.map { |value, label| [ label, value ] }, active_provider),
+                           class: "form-field__input",
+                           data: {
+                             "onchain-wallet-provider-target": "mobileSelect",
+                             action: "change->onchain-wallet-provider#select"
+                           } %>
+          </div>
+        </div>
+      </div>
+
+      <div class="hidden sm:block">
+        <p class="form-field__label mb-1"><%= t("settings.providers.onchain_wallet_panel.ethereum_data_provider_label") %></p>
+        <%= render DS::SegmentedControl.new(full_width: true, aria_label: t("settings.providers.onchain_wallet_panel.ethereum_data_provider_label")) do |sc| %>
+          <% provider_options.each do |value, label| %>
+            <% sc.with_segment(
+                 label,
+                 active: active_provider == value,
+                 data: {
+                   "onchain-wallet-provider-target": "segment",
+                   provider: value,
+                   action: "click->onchain-wallet-provider#select"
+                 }
+               ) %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <p class="text-xs text-secondary"><%= t("settings.providers.onchain_wallet_panel.ethereum_data_provider_help") %></p>
+
+      <div data-onchain-wallet-provider-target="etherscanFields" <%= "hidden" unless active_provider == "etherscan" %>>
+        <%= form.text_field :etherscan_api_key,
+                            label: t("settings.providers.onchain_wallet_panel.etherscan_api_key_label"),
+                            placeholder: item.etherscan_api_key.present? ? t("settings.providers.onchain_wallet_panel.keep_etherscan_key_placeholder") : t("settings.providers.onchain_wallet_panel.etherscan_api_key_placeholder"),
+                            type: :password,
+                            value: nil %>
+        <p class="text-xs text-secondary mt-1"><%= t("settings.providers.onchain_wallet_panel.etherscan_help") %></p>
+      </div>
+    </div>
+
+    <div class="flex justify-end">
+      <%= render DS::Button.new(
+            text: is_new_record ? t("settings.providers.onchain_wallet_panel.save_connection") : t("settings.providers.onchain_wallet_panel.update_connection"),
+            variant: :primary,
+            type: :submit
+          ) %>
+    </div>
+  <% end %>
+</div>

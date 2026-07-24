@@ -422,6 +422,38 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Query ID/i, response.body)
   end
 
+  test "on-chain wallets provider panel configures ethereum data source" do
+    item = families(:dylan_family).onchain_wallet_items.create!(
+      name: "On-chain Wallets",
+      etherscan_api_key: "key"
+    )
+    wallet_account = item.onchain_wallet_accounts.create!(
+      chain: "bitcoin",
+      wallet_address: "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080",
+      asset_kind: "native",
+      symbol: "BTC",
+      name: "Bitcoin",
+      currency: "USD",
+      quantity: 1,
+      current_balance: 50_000
+    )
+
+    get connect_form_settings_providers_path(provider_key: "onchain_wallet")
+
+    assert_response :success
+    assert_select "input[name='onchain_wallet_item[ethereum_data_provider]'][value='blockscout']", count: 1
+    assert_match(/Blockscout/i, response.body)
+    assert_match(/Etherscan/i, response.body)
+    assert_select "input[name='onchain_wallet_item[etherscan_api_key]']", count: 1
+    assert_select "select[name='chain']", count: 0
+    assert_select "input[name='wallet_address']", count: 0
+    assert_select "form[action='#{link_wallet_onchain_wallet_items_path}']", count: 0
+    assert_select "form[action='#{sync_onchain_wallet_item_path(item)}']", count: 0
+    assert_select "form[action='#{account_onchain_wallet_item_path(item, wallet_account)}']", count: 0
+    assert_no_match(/Link wallet/i, response.body)
+    assert_no_match(/#{Regexp.escape(wallet_account.display_address)}/, response.body)
+  end
+
   test "POST sync for ibkr without an active Ibkr sync enqueues SyncJob" do
     item = ibkr_items(:configured_item)
     Sync.where(syncable_type: "IbkrItem", syncable_id: item.id).delete_all

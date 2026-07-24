@@ -308,6 +308,56 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, @account.name
   end
 
+  test "index renders linked on-chain wallets under provider card" do
+    item = @user.family.onchain_wallet_items.create!(name: "On-chain Wallets")
+    wallet_account = item.onchain_wallet_accounts.create!(
+      chain: "bitcoin",
+      wallet_address: "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080",
+      asset_kind: "native",
+      symbol: "BTC",
+      name: "Bitcoin",
+      currency: "USD",
+      quantity: 1,
+      current_balance: 50_000
+    )
+    account = Account.create_from_onchain_wallet_account(wallet_account)
+    wallet_account.ensure_account_provider!(account)
+
+    get accounts_path
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_includes @response.body, "On-chain Wallets"
+    assert_includes @response.body, account.name
+    assert_includes @response.body, sync_onchain_wallet_item_path(item)
+    assert_includes @response.body, manage_onchain_wallet_item_path(item)
+    assert_includes @response.body, new_wallet_onchain_wallet_items_path
+  end
+
+  test "index treats on-chain wallets as account content for empty state" do
+    empty_user = users(:empty)
+    sign_in empty_user
+    item = empty_user.family.onchain_wallet_items.create!(name: "On-chain Wallets")
+    wallet_account = item.onchain_wallet_accounts.create!(
+      chain: "bitcoin",
+      wallet_address: "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080",
+      asset_kind: "native",
+      symbol: "BTC",
+      name: "Bitcoin",
+      currency: "USD",
+      quantity: 1,
+      current_balance: 50_000
+    )
+    account = Account.create_from_onchain_wallet_account(wallet_account)
+    wallet_account.ensure_account_provider!(account)
+
+    get accounts_path
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    refute_includes @response.body, "Add your first account"
+  end
+
   test "toggle_active disables and re-enables an account" do
     patch toggle_active_account_url(@account)
     assert_redirected_to accounts_path
@@ -318,6 +368,30 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
     @account.reload
     assert @account.active?
+  end
+
+  test "family admin can toggle active for shared linked on-chain account" do
+    other_user = users(:family_member)
+    wallet_item = @user.family.onchain_wallet_items.create!(name: "On-chain Wallets")
+    wallet_account = wallet_item.onchain_wallet_accounts.create!(
+      chain: "bitcoin",
+      wallet_address: "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080",
+      asset_kind: "native",
+      symbol: "BTC",
+      name: "Bitcoin",
+      currency: "USD",
+      quantity: 1,
+      current_balance: 50_000
+    )
+    account = Account.create_from_onchain_wallet_account(wallet_account)
+    account.update!(owner: other_user)
+    account.share_with!(@user, permission: "full_control")
+    wallet_account.ensure_account_provider!(account)
+
+    patch toggle_active_account_url(account)
+
+    assert_redirected_to accounts_path
+    assert account.reload.disabled?
   end
 
   test "toggle_exclude_from_reports toggles the flag on an account" do
