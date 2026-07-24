@@ -1,0 +1,66 @@
+<%# locals: (account:, provider_key:, preview:, address:) %>
+
+<% provider_name = t("properties.avm_providers.#{provider_key}") %>
+<% unknown = t("properties.overview.unknown") %>
+<% no_property_record = preview.property_type.nil? && preview.year_built.nil? && preview.area_value.nil? %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("properties.new.avm_preview_title", provider: provider_name)) %>
+  <% dialog.with_body do %>
+    <div class="flex flex-col gap-4 min-h-80">
+      <p class="text-sm text-secondary"><%= t("properties.new.avm_preview_description", provider: provider_name) %></p>
+
+      <div class="flex flex-col gap-2 text-sm">
+        <div class="flex justify-between gap-2">
+          <span class="text-secondary"><%= t("properties.overview_fields.name_label") %></span>
+          <span class="text-primary font-medium"><%= account.name %></span>
+        </div>
+        <div class="flex justify-between gap-2">
+          <span class="text-secondary"><%= t("properties.form.address_line1") %></span>
+          <span class="text-primary font-medium text-right"><%= [ address.line1, address.locality, address.region, address.postal_code ].map(&:presence).compact.join(", ") %></span>
+        </div>
+        <%= render "shared/ruler", classes: "my-1" %>
+        <div class="flex justify-between gap-2">
+          <span class="text-secondary"><%= t("properties.overview_fields.property_type_label") %></span>
+          <span class="text-primary font-medium"><%= preview.property_type ? Property::SUBTYPES.dig(preview.property_type, :long) : unknown %></span>
+        </div>
+        <div class="flex justify-between gap-2">
+          <span class="text-secondary"><%= t("properties.overview.year_built") %></span>
+          <span class="text-primary font-medium"><%= preview.year_built || unknown %></span>
+        </div>
+        <div class="flex justify-between gap-2">
+          <span class="text-secondary"><%= t("properties.overview.living_area") %></span>
+          <span class="text-primary font-medium"><%= preview.area_value ? "#{preview.area_value} #{preview.area_unit}" : unknown %></span>
+        </div>
+        <div class="flex justify-between gap-2">
+          <span class="text-secondary"><%= t("properties.overview.market_value") %></span>
+          <span class="text-primary font-medium privacy-sensitive"><%= format_money(Money.new(preview.valuation, preview.currency)) %></span>
+        </div>
+      </div>
+
+      <% if no_property_record %>
+        <p class="text-sm text-secondary"><%= t("properties.new.avm_preview_no_record", provider: provider_name) %></p>
+      <% end %>
+    </div>
+
+    <%# The confirm step rebuilds everything from the signed token, proving
+        the lookup ran; only routing params travel as plain fields. %>
+    <%= styled_form_with model: account, url: properties_path do |form| %>
+      <%= hidden_field_tag :avm_provider, provider_key %>
+      <%= hidden_field_tag :avm_step, "confirm" %>
+      <%= hidden_field_tag :avm_preview_token, @avm_preview_token %>
+      <%= form.hidden_field :accountable_type, value: "Property" %>
+
+      <div class="flex justify-between items-center mt-4">
+        <%= link_to t("properties.new.avm_preview_back"),
+                    new_property_path(method: provider_key, return_to: params[:return_to]),
+                    class: "text-sm text-secondary hover:text-primary underline" %>
+        <%= render DS::Button.new(
+          text: t("properties.new.avm_preview_confirm"),
+          variant: "primary",
+          type: :submit,
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

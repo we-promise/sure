@@ -1,0 +1,57 @@
+<%# locals: (account:, provider_key:) %>
+
+<% provider_name = t("properties.avm_providers.#{provider_key}") %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("properties.new.avm_title", provider: provider_name)) %>
+  <% dialog.with_body do %>
+    <%= styled_form_with model: account, url: properties_path do |form| %>
+      <div class="flex flex-col gap-2 min-h-80">
+        <%= render "properties/form_alert", notice: nil, error: @error_message %>
+
+        <p class="text-sm text-secondary"><%= t("properties.new.avm_description", provider: provider_name) %></p>
+
+        <%= hidden_field_tag :avm_provider, provider_key %>
+        <%= form.hidden_field :accountable_type, value: "Property" %>
+
+        <%= form.text_field :name,
+                        label: t("properties.overview_fields.name_label"),
+                        placeholder: t("properties.overview_fields.name_placeholder"),
+                        required: true %>
+
+        <%= form.fields_for :address, (@avm_address || Address.new) do |address_form| %>
+          <%= address_form.text_field :line1,
+                                      label: t("properties.form.address_line1"),
+                                      placeholder: t("properties.form.address_line1_placeholder"),
+                                      required: true %>
+          <div class="flex items-center gap-2">
+            <%= address_form.text_field :locality,
+                                      label: t("properties.form.locality"),
+                                      placeholder: t("properties.form.locality_placeholder"),
+                                      required: true %>
+            <%= address_form.text_field :region,
+                                      label: t("properties.form.region"),
+                                      placeholder: t("properties.form.region_placeholder"),
+                                      required: true %>
+          </div>
+          <div class="flex items-center gap-2">
+            <%= address_form.text_field :postal_code,
+                                        label: t("properties.form.postal_code"),
+                                        placeholder: t("properties.form.postal_code_placeholder"),
+                                        required: true %>
+          </div>
+        <% end %>
+
+        <p class="text-sm text-secondary"><%= t("properties.new.avm_us_only", provider: provider_name) %></p>
+      </div>
+
+      <div class="flex justify-end mt-4">
+        <%= render DS::Button.new(
+          text: t("properties.new.avm_submit"),
+          variant: "primary",
+          type: :submit,
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

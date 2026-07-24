@@ -1,28 +1,38 @@
-<%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: t(".title")) %>
-  <% dialog.with_body do %>
-    <div class="flex gap-4">
-      <!-- Left sidebar with tabs -->
-      <%= render "properties/form_tabs", account: @account, active_tab: "overview" %>
+<% avm_provider_key = @avm_provider_key || params[:method] %>
 
-      <!-- Right content area with form -->
-      <div class="flex-1">
-        <%= styled_form_with model: @account, url: properties_path do |form| %>
-          <div class="flex flex-col gap-2 min-h-[320px]">
-            <%= render "properties/form_alert", notice: @success_message, error: @error_message %>
-            <%= render "properties/overview_fields", form: form %>
-          </div>
+<% if @avm_preview.present? %>
+  <%= render "properties/avm_preview", account: @account, provider_key: @avm_provider_key, preview: @avm_preview, address: @avm_address %>
+<% elsif params[:step] == "method_select" && @avm_providers.present? %>
+  <%= render "properties/avm_method_selector", avm_providers: @avm_providers %>
+<% elsif avm_provider_key.present? && @avm_providers&.map(&:to_s)&.include?(avm_provider_key.to_s) %>
+  <%= render "properties/avm_form", account: @account, provider_key: avm_provider_key %>
+<% else %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+    <% dialog.with_body do %>
+      <div class="flex gap-4">
+        <!-- Left sidebar with tabs -->
+        <%= render "properties/form_tabs", account: @account, active_tab: "overview" %>
 
-          <!-- Create button -->
-          <div class="flex justify-end mt-4">
-            <%= render DS::Button.new(
-              text: t(".next"),
-              variant: "primary",
-              type: :submit,
-            ) %>
-          </div>
-        <% end %>
+        <!-- Right content area with form -->
+        <div class="flex-1">
+          <%= styled_form_with model: @account, url: properties_path do |form| %>
+            <div class="flex flex-col gap-2 min-h-[320px]">
+              <%= render "properties/form_alert", notice: @success_message, error: @error_message %>
+              <%= render "properties/overview_fields", form: form %>
+            </div>
+
+            <!-- Create button -->
+            <div class="flex justify-end mt-4">
+              <%= render DS::Button.new(
+                text: t(".next"),
+                variant: "primary",
+                type: :submit,
+              ) %>
+            </div>
+          <% end %>
+        </div>
       </div>
-    </div>
+    <% end %>
   <% end %>
 <% end %>
