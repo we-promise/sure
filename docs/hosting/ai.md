@@ -345,7 +345,7 @@ This is useful when:
 1. User sends a message in the Sure chat UI
 2. Sure sends the conversation to your agent's API endpoint (OpenAI chat completions format)
 3. Your agent processes it using whatever LLM, tools, or context it needs
-4. Your agent can call Sure's `/mcp` endpoint for financial data (accounts, transactions, balance sheet, holdings)
+4. Your agent can call Sure's `/mcp` endpoint for financial data and actions (accounts, transactions, balance sheet, budgets, file search, statement import, goals)
 5. Your agent streams the response back to Sure via Server-Sent Events (SSE)
 
 The agent's API must be **OpenAI chat completions compatible**: accept `POST` with a `messages` array, return SSE with `delta.content` chunks.
@@ -380,7 +380,12 @@ Sure exposes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) 
 
 **Authentication:** Bearer token via `Authorization` header
 
-**Environment variables:**
+Sure supports both:
+
+- OAuth bearer tokens issued through its discovery and registration endpoints (`/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `POST /register`)
+- Static bearer tokens configured with `MCP_API_TOKEN` and `MCP_USER_EMAIL`
+
+**Static-token environment variables:**
 ```bash
 MCP_API_TOKEN=your-secret-token    # Bearer token the agent sends to authenticate
 MCP_USER_EMAIL=user@example.com    # Email of the Sure user the agent acts as
@@ -400,7 +405,7 @@ Content-Type: application/json
 | `tools/list` | Lists available tools with names, descriptions, and input schemas |
 | `tools/call` | Calls a specific tool by name with arguments |
 
-**Available tools** (exposed via `tools/list`):
+**Available tools** (exposed via `tools/list`; this list should be treated as dynamic):
 
 | Tool | Description |
 |------|-------------|
@@ -409,8 +414,10 @@ Content-Type: application/json
 | `get_holdings` | Investment holdings data |
 | `get_balance_sheet` | Current financial position |
 | `get_income_statement` | Income and expenses |
+| `get_budget` | Budget status and category breakdowns |
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search uploaded documents |
+| `create_goal` | Create a savings goal |
 
 **Example: list tools**
 ```bash
@@ -667,8 +674,10 @@ def self.function_classes
     Function::GetHoldings,
     Function::GetBalanceSheet,
     Function::GetIncomeStatement,
+    Function::GetBudget,
     Function::ImportBankStatement,
-    Function::SearchFamilyFiles
+    Function::SearchFamilyFiles,
+    Function::CreateGoal
   ]
 end
 ```
