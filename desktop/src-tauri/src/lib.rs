@@ -48,18 +48,21 @@ pub fn run() {
                 commands::grant_server_capability(app.handle(), &active);
             }
             {
-                // Hide the prefs window on close instead of destroying it, so
-                // reopening it from the menu keeps working (a destroyed webview
-                // makes get_webview_window("prefs") return None).
+                // Hide windows on close instead of destroying them, so reopening
+                // keeps working (a destroyed webview makes get_webview_window
+                // return None). For "main" this also lets the dock icon re-show
+                // it via the RunEvent::Reopen handler below.
                 use tauri::Manager;
-                if let Some(prefs) = app.get_webview_window("prefs") {
-                    let prefs_for_event = prefs.clone();
-                    prefs.on_window_event(move |event| {
-                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                            api.prevent_close();
-                            let _ = prefs_for_event.hide();
-                        }
-                    });
+                for label in ["main", "prefs"] {
+                    if let Some(win) = app.get_webview_window(label) {
+                        let win_for_event = win.clone();
+                        win.on_window_event(move |event| {
+                            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                                api.prevent_close();
+                                let _ = win_for_event.hide();
+                            }
+                        });
+                    }
                 }
             }
             {
@@ -132,6 +135,17 @@ pub fn run() {
                 let _ = window.eval(BRIDGE);
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running Sure Desktop");
+        .build(tauri::generate_context!())
+        .expect("error while running Sure Desktop")
+        .run(|app, event| {
+            // Clicking the dock icon (while the main window is hidden, not
+            // destroyed) fires Reopen — re-show and focus the main window.
+            if let tauri::RunEvent::Reopen { .. } = event {
+                use tauri::Manager;
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.show();
+                    let _ = w.set_focus();
+                }
+            }
+        });
 }

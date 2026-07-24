@@ -20,7 +20,7 @@
         "height": 800,
         "minWidth": 900,
         "minHeight": 600,
-        "transparent": true,
+        "transparent": false,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true
       },
@@ -30,7 +30,7 @@
         "width": 420,
         "height": 520,
         "visible": false,
-        "transparent": true,
+        "transparent": false,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "url": "prefs.html"
