@@ -7,6 +7,12 @@ module EntryableResource
     before_action :set_entry, only: %i[show update destroy]
 
     helper_method :can_edit_entry?, :can_annotate_entry?
+
+    # The new dialog loads into the "modal" frame and show into the "drawer"
+    # frame; Turbo discards everything outside the frame, so skip the
+    # application layout (which renders the account sidebar twice) for those
+    # requests. create/update are included for validation-error re-renders.
+    layout -> { turbo_frame_request? ? false : "application" }, only: %i[new show create update]
   end
 
   def show
