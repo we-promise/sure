@@ -8,12 +8,12 @@ class Api::V1::ChatsController < Api::V1::BaseController
   before_action :set_chat, only: [ :show, :update, :destroy ]
 
   def index
-    @pagy, @chats = pagy(current_resource_owner.chats.ordered, items: 20)
+    @pagy, @chats = pagy(current_resource_owner.chats.ordered, limit: 20)
   end
 
   def show
     return unless @chat
-    @pagy, @messages = pagy(@chat.messages.ordered, items: 50)
+    @pagy, @messages = pagy(@chat.messages.ordered, limit: 50)
   end
 
   def create
@@ -28,12 +28,6 @@ class Api::V1::ChatsController < Api::V1::BaseController
         )
 
         if @message.save
-          # NOTE: Commenting out duplicate job enqueue to fix mobile app receiving duplicate AI responses
-          # UserMessage model already triggers AssistantResponseJob via after_create_commit callback
-          # in app/models/user_message.rb:10-12, so this manual enqueue causes the job to run twice,
-          # resulting in duplicate AI responses with different content and wasted tokens.
-          # See: https://github.com/dwvwdv/sure (mobile app integration issue)
-          # AssistantResponseJob.perform_later(@message)
           render :show, status: :created
         else
           @chat.destroy

@@ -1,6 +1,5 @@
 class Assistant::External < Assistant::Base
   Config = Struct.new(:url, :token, :agent_id, :session_key, keyword_init: true)
-  MAX_CONVERSATION_MESSAGES = 20
 
   class << self
     def for_chat(chat)
@@ -89,7 +88,7 @@ class Assistant::External < Assistant::Base
     end
 
     def build_conversation_messages
-      chat.conversation_messages.where(status: "complete").ordered.last(MAX_CONVERSATION_MESSAGES).map do |msg|
+      chat.conversation_messages.where(status: "complete").ordered.map do |msg|
         { role: msg.role, content: msg.content }
       end
     end
