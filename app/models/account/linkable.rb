@@ -71,7 +71,13 @@ module Account::Linkable
 
   # Check if account is linked to a specific provider
   def linked_to?(provider_type)
-    account_providers.exists?(provider_type: provider_type)
+    # Use `any?` with a block when the association is already loaded (avoids an
+    # extra SQL query); fall back to `exists?` when it is not loaded.
+    if account_providers.loaded?
+      account_providers.any? { |ap| ap.provider_type == provider_type }
+    else
+      account_providers.exists?(provider_type: provider_type)
+    end
   end
 
   # Whether this account's provider applies the category matcher to imported
