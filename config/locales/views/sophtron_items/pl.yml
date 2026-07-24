@@ -54,8 +54,8 @@ pl:
         other: "Nie można połączyć %{count} kont z pustymi nazwami"
       link_failed: Nie można połączyć kont
       no_accounts_selected: Wybierz co najmniej jedno konto
-      partial_invalid: "Połączono %{created_count} konto(a), %{already_linked_count} było już połączonych, %{invalid_count} miało nieprawidłowe nazwy"
-      partial_success: "Połączono %{created_count} konto(a). %{already_linked_count} było już połączonych: %{already_linked_names}"
+      partial_invalid: "Połączono %{created_count}, %{already_linked_count} było już połączonych, %{invalid_count} miało nieprawidłowe nazwy"
+      partial_success: "Połączono %{created_count}. %{already_linked_count} było już połączonych: %{already_linked_names}"
       success:
         few: "Połączono %{count} konta"
         many: "Połączono %{count} kont"

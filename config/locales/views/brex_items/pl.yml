@@ -77,8 +77,8 @@ pl:
       link_failed: Nie można połączyć kont
       no_accounts_selected: Wybierz co najmniej jedno konto
       no_api_token: Nie znaleziono tokenu API Brex. Skonfiguruj go w ustawieniach dostawcy.
-      partial_invalid: "Połączono %{created_count} konto(a), %{already_linked_count} było już połączonych, %{invalid_count} miało nieprawidłowe nazwy"
-      partial_success: "Połączono %{created_count} konto(a). %{already_linked_count} było już połączonych: %{already_linked_names}"
+      partial_invalid: "Połączono %{created_count}, %{already_linked_count} było już połączonych, %{invalid_count} miało nieprawidłowe nazwy"
+      partial_success: "Połączono %{created_count}. %{already_linked_count} było już połączonych: %{already_linked_names}"
       select_connection: Wybierz połączenie Brex przed połączeniem kont.
       success:
         few: "Połączono %{count} konta"
@@ -252,11 +252,19 @@ pl:
     complete_account_setup:
       all_skipped: "Wszystkie konta zostały pominięte. Nie utworzono żadnych kont."
       creation_failed: "Nie utworzono kont: %{error}"
-      creation_failed_count: "Nie utworzono %{count} kont."
+      creation_failed_count:
+        one: "Nie utworzono %{count} konta."
+        few: "Nie utworzono %{count} kont."
+        many: "Nie utworzono %{count} kont."
+        other: "Nie utworzono %{count} kont."
       no_accounts: "Brak kont do skonfigurowania."
-      partial_skipped: "Utworzono %{created_count} konto(a); pominięto %{skipped_count}."
-      partial_success: "Utworzono %{created_count} konto(a), ale %{failed_count} się nie powiodło."
-      success: "Utworzono %{count} konto(a)."
+      partial_skipped: "Utworzono %{created_count}; pominięto %{skipped_count}."
+      partial_success: "Utworzono %{created_count}, ale %{failed_count} się nie powiodło."
+      success:
+        one: "Utworzono %{count} konto."
+        few: "Utworzono %{count} konta."
+        many: "Utworzono %{count} kont."
+        other: "Utworzono %{count} kont."
       unexpected_error: Wystąpił nieoczekiwany błąd.
     sync:
       success: Synchronizacja rozpoczęta

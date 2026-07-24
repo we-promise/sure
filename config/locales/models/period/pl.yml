@@ -46,9 +46,9 @@ pl:
       label: "Ostatnie 10 lat"
       comparison_label: "vs. 10 lat temu"
     all_time:
-      label_short: "All"
+      label_short: "Cały"
       label: "Cały czas"
       comparison_label: "vs. początek"
     custom:
-      label_short: "Custom"
+      label_short: "Niest."
       label: "Okres niestandardowy"
