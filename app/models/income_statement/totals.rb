@@ -14,11 +14,23 @@ class IncomeStatement::Totals
     return [] if @included_account_ids&.empty?
 
     ActiveRecord::Base.connection.select_all(query_sql).map do |row|
+      raw_total = row["total"].to_d
+      classification = row["classification"]
+
+      # When refunds exceed expenses in a category the raw sum for an
+      # 'expense' group can be negative.  Flip the classification so the
+      # net surplus shows as income rather than a fake expense.
+      if classification == "expense" && raw_total < 0
+        classification = "income"
+      elsif classification == "income" && raw_total > 0
+        classification = "expense"
+      end
+
       TotalsRow.new(
         parent_category_id: row["parent_category_id"],
         category_id: row["category_id"],
-        classification: row["classification"],
-        total: row["total"],
+        classification: classification,
+        total: raw_total.abs,
         transactions_count: row["transactions_count"],
         is_uncategorized_investment: row["is_uncategorized_investment"]
       )
@@ -60,8 +72,8 @@ class IncomeStatement::Totals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
+          #{classification_sql} as classification,
+          SUM(#{signed_amount_sql}) as total,
           COUNT(ae.id) as transactions_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -80,7 +92,7 @@ class IncomeStatement::Totals
           AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
+        GROUP BY c.id, c.parent_id, #{classification_sql};
       SQL
     end
 
@@ -89,8 +101,8 @@ class IncomeStatement::Totals
         SELECT
           c.id as category_id,
           c.parent_id as parent_category_id,
-          CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-          ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
+          #{classification_sql} as classification,
+          SUM(#{signed_amount_sql}) as total,
           COUNT(ae.id) as entry_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
@@ -113,7 +125,7 @@ class IncomeStatement::Totals
           AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+        GROUP BY c.id, c.parent_id, #{classification_sql}
       SQL
     end
 
@@ -163,6 +175,14 @@ class IncomeStatement::Totals
 
     def budget_excluded_kinds_sql
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
+    end
+
+    def classification_sql
+      IncomeStatement::ClassificationSql.classification(transactions_alias: "at")
+    end
+
+    def signed_amount_sql
+      IncomeStatement::ClassificationSql.signed_amount(transactions_alias: "at")
     end
 
     def validate_date_range!

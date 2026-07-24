@@ -38,10 +38,17 @@ module Family::AutoTransferMatchable
     investment_category = nil
     investment_category_loaded = false
 
+    # Preload refund flags from in-memory transactions to skip refunds without N+1
+    refund_ids = transactions_by_id.values.select { |t| t.refund? }.map(&:id).to_set
+
     Transfer.transaction do
       candidates_scope.each do |match|
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
+
+        # Refunds are not transfers — skip them
+        next if refund_ids.include?(match.inflow_transaction_id) ||
+                refund_ids.include?(match.outflow_transaction_id)
 
         begin
           Transfer.find_or_create_by!(

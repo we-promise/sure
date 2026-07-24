@@ -171,10 +171,10 @@ class BudgetTest < ActiveSupport::TestCase
       currency: "USD"
     )
 
-    # Create a $200 refund (negative amount = income classification in the SQL)
+    # Create a $200 refund (refund flag classifies it as expense, reducing the expense total)
     Entry.create!(
       account: account,
-      entryable: Transaction.create!(category: healthcare),
+      entryable: Transaction.create!(category: healthcare, refund: true),
       date: Date.current,
       name: "Insurance reimbursement",
       amount: -200,
@@ -210,7 +210,7 @@ class BudgetTest < ActiveSupport::TestCase
     # Only a refund, no expense
     Entry.create!(
       account: account,
-      entryable: Transaction.create!(category: category),
+      entryable: Transaction.create!(category: category, refund: true),
       date: Date.current,
       name: "Full refund",
       amount: -50,
@@ -298,7 +298,7 @@ class BudgetTest < ActiveSupport::TestCase
     # Create an uncategorized refund
     Entry.create!(
       account: account,
-      entryable: Transaction.create!(category: nil),
+      entryable: Transaction.create!(category: nil, refund: true),
       date: Date.current,
       name: "Uncategorized refund",
       amount: -150,

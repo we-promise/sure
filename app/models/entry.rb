@@ -110,8 +110,8 @@ class Entry < ApplicationRecord
               .where("BTRIM(REGEXP_REPLACE(entries.name, '[[:space:]]+', ' ', 'g')) ILIKE ?", "%#{sanitized}%")
 
     scope = case transaction_type
-    when "income"  then scope.where("entries.amount < 0")
-    when "expense" then scope.where("entries.amount >= 0")
+    when "income"  then scope.where("entries.amount < 0 AND transactions.refund != true")
+    when "expense" then scope.where("entries.amount >= 0 OR transactions.refund = true")
     else scope
     end
 
@@ -270,6 +270,10 @@ class Entry < ApplicationRecord
   end
 
   def classification
+    if entryable.is_a?(Transaction)
+      override = entryable.classification
+      return override if override
+    end
     amount.negative? ? "income" : "expense"
   end
 

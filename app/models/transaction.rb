@@ -24,6 +24,7 @@ class Transaction < ApplicationRecord
   ].freeze
 
   validate :validate_attachments, if: -> { attachments.attached? }
+  validates :refund, inclusion: { in: [ false ] }, if: -> { transfer? }
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
@@ -51,7 +52,6 @@ class Transaction < ApplicationRecord
   end
 
   validate :exchange_rate_must_be_valid
-
   private
 
     def exchange_rate_must_be_valid
@@ -142,6 +142,16 @@ class Transaction < ApplicationRecord
     end
 
     update!(category: category)
+  end
+
+  # Classification override for reporting analytics.
+  # Returns "expense" or "income" when a transaction's analytics classification
+  # differs from the sign-based default (negative = income, positive = expense).
+  # Returns nil when the default sign-based classification should be used.
+  # Called by Entry#classification (Ruby) and mirrored by
+  # IncomeStatement::Totals#classification_sql (SQL).
+  def classification
+    "expense" if refund?
   end
 
   def pending?

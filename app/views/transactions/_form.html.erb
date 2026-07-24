@@ -10,6 +10,18 @@
 
     <%= f.hidden_field :nature, value: params[:nature] || "outflow", data: { "transaction-type-tabs-target": "natureField" } %>
     <%= f.hidden_field :entryable_type, value: "Transaction" %>
+
+    <div class="hidden" data-transaction-type-tabs-target="refundFields">
+      <%= f.fields_for :entryable do |ef| %>
+        <div class="flex items-center gap-2 mt-2 p-3 rounded-lg border border-primary bg-container">
+          <%= ef.check_box :refund %>
+          <div class="text-sm">
+            <%= ef.label :refund, t(".refund_title"), class: "text-primary font-medium cursor-pointer" %>
+            <p class="text-secondary text-xs"><%= t(".refund_description") %></p>
+          </div>
+        </div>
+      <% end %>
+    </div>
   </section>
 
   <section class="space-y-2">

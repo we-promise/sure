@@ -5,7 +5,11 @@ import { Controller } from "@hotwired/stimulus";
 // active segment without navigating (the href is a progressive-enhancement
 // fallback). Transfer is a plain link to the transfer form.
 export default class extends Controller {
-  static targets = ["tab", "natureField"];
+  static targets = ["tab", "natureField", "refundFields"];
+
+  connect() {
+    this.toggleRefundFields();
+  }
 
   selectTab(event) {
     event.preventDefault();
@@ -22,5 +26,12 @@ export default class extends Controller {
         tab.removeAttribute("aria-current");
       }
     });
+
+    this.toggleRefundFields();
+  }
+
+  toggleRefundFields() {
+    if (!this.hasRefundFieldsTarget) return;
+    this.refundFieldsTarget.classList.toggle("hidden", this.natureFieldTarget.value !== "inflow");
   }
 }
