@@ -459,9 +459,15 @@ class SimplefinItem < ApplicationRecord
 
     # Batch query to avoid N+1
     account_ids = linked_accounts.map(&:id)
+    # Exclude split parents and children so the displayed count matches what
+    # auto_exclude_stale_pending will actually clear. Without this, the UI warns
+    # about stale pending split children that the auto-exclusion job skips,
+    # leaving a count that can never reach zero.
     counts_by_account = Entry.stale_pending(days: days)
       .where(excluded: false)
       .where(account_id: account_ids)
+      .excluding_split_parents
+      .excluding_split_children
       .group(:account_id)
       .count
 

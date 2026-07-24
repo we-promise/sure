@@ -82,6 +82,12 @@ class UpAccount::Transactions::Processor
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(source: "up")
         .where("(transactions.extra -> 'up' ->> 'pending')::boolean = true")
+        # Never prune split parents or children: a split parent keeps its own pending
+        # flag and is excluded, so without this guard destroy! would cascade
+        # (dependent: :destroy) to the user's split children and silently wipe their
+        # manual split. Children inherit the pending flag but are not authoritative.
+        .excluding_split_parents
+        .excluding_split_children
       stale_pending_entries = stale_pending_entries.where.not(external_id: current_pending_external_ids) if current_pending_external_ids.any?
 
       count = stale_pending_entries.count
