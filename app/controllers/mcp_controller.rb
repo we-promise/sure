@@ -1,7 +1,7 @@
 class McpController < ApplicationController
   include OauthBase
 
-  PROTOCOL_VERSION = "2025-03-26"
+  PROTOCOL_VERSION = "2025-06-18"
 
   # Skip session-based auth and CSRF — this is a token-authenticated API
   skip_authentication
@@ -11,6 +11,7 @@ class McpController < ApplicationController
   skip_before_action :detect_os
 
   before_action :authenticate_mcp_token!
+  after_action :set_mcp_response_headers
 
   def handle
     body = parse_request_body
@@ -62,10 +63,12 @@ class McpController < ApplicationController
     end
 
     def handle_initialize
+      @mcp_session_id = SecureRandom.uuid
       {
         protocolVersion: PROTOCOL_VERSION,
         capabilities: { tools: {} },
-        serverInfo: { name: "sure", version: "1.0" }
+        serverInfo: { name: "sure", version: "1.0" },
+        sessionId: @mcp_session_id
       }
     end
 
@@ -172,5 +175,10 @@ class McpController < ApplicationController
         id: id,
         error: { code: code, message: message }
       }
+    end
+
+    def set_mcp_response_headers
+      response.set_header("Mcp-Protocol-Version", PROTOCOL_VERSION)
+      response.set_header("Mcp-Session-Id", @mcp_session_id) if @mcp_session_id.present?
     end
 end
