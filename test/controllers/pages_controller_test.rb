@@ -124,6 +124,137 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
   end
 
+  test "dashboard renders money flow widget" do
+    get root_path
+
+    assert_response :ok
+    assert_select "[data-controller='bar-chart']"
+  end
+
+  test "dashboard scopes money flow widget to selected month and accounts" do
+    # Dedicated account (rather than @family.accounts.first) so fixture
+    # transactions on other accounts can't skew the computed totals.
+    account = @family.accounts.create!(name: "Money Flow Test Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    selected_month = 1.month.ago.beginning_of_month.to_date
+    create_transaction(account: account, name: "Groceries", amount: 50, date: selected_month + 1.day)
+    create_transaction(account: account, name: "Paycheck", amount: -200, date: selected_month + 2.days)
+
+    get root_path, params: {
+      money_flow_month: selected_month.iso8601,
+      money_flow_account_ids: [ account.id ]
+    }
+
+    assert_response :ok
+    bars = money_flow_bars
+
+    assert_equal 6, bars.size
+    highlighted = bars.find { |bar| bar["highlighted"] }
+    assert_equal selected_month.iso8601, highlighted["date"]
+    assert_equal 50.0, highlighted["expense"]
+    assert_equal 200.0, highlighted["income"]
+  end
+
+  test "dashboard money flow widget ignores account ids not accessible to the current user" do
+    other_family = Family.create!(name: "Other Family", currency: "USD")
+    other_account = other_family.accounts.create!(name: "Other Family Checking", currency: "USD", balance: 0, accountable: Depository.new)
+    create_transaction(account: other_account, name: "Not mine", amount: 999)
+
+    get root_path
+    default_bars = money_flow_bars
+
+    get root_path, params: { money_flow_account_ids: [ other_account.id ] }
+
+    assert_response :ok
+    filtered_bars = money_flow_bars
+
+    # An id outside the current user's accessible accounts is dropped entirely
+    # (money_flow_account_ids_param intersects against accessible ids), so the
+    # widget falls back to its unfiltered "all accessible accounts" state
+    # rather than scoping to a foreign account or erroring.
+    assert_equal default_bars, filtered_bars
+  end
+
+  test "dashboard money flow widget excludes accounts ineligible for cashflow totals from its account filter" do
+    excluded_account = @family.accounts.create!(
+      name: "Excluded From Reports",
+      currency: @family.currency,
+      balance: 0,
+      exclude_from_reports: true,
+      accountable: Depository.new
+    )
+
+    get root_path
+
+    assert_response :ok
+    assert_select "input[type='checkbox'][value=?]", excluded_account.id.to_s, count: 0
+  end
+
+  test "dashboard money flow widget ignores account ids excluded from cashflow totals" do
+    excluded_account = @family.accounts.create!(
+      name: "Excluded From Reports",
+      currency: @family.currency,
+      balance: 0,
+      exclude_from_reports: true,
+      accountable: Depository.new
+    )
+    create_transaction(account: excluded_account, name: "Not counted", amount: 999)
+
+    get root_path
+    default_bars = money_flow_bars
+
+    get root_path, params: { money_flow_account_ids: [ excluded_account.id ] }
+
+    assert_response :ok
+    filtered_bars = money_flow_bars
+
+    # An account excluded from reports is visible/accessible but not eligible
+    # for cashflow totals, so selecting only it must fall back to the
+    # unfiltered state instead of silently computing to zero.
+    assert_equal default_bars, filtered_bars
+  end
+
+  test "dashboard clamps a future money flow month instead of erroring" do
+    get root_path, params: { money_flow_month: 1.month.from_now.beginning_of_month.iso8601 }
+
+    assert_response :ok
+    bars = money_flow_bars
+
+    assert_equal Date.current.beginning_of_month.iso8601, bars.last["date"]
+  end
+
+  test "dashboard money flow income/expense links exclude pending transactions" do
+    get root_path
+
+    assert_response :ok
+    assert_select "a[href*='q%5Btypes%5D%5B%5D=income'][href*='q%5Bstatus%5D%5B%5D=confirmed']"
+    assert_select "a[href*='q%5Btypes%5D%5B%5D=expense'][href*='q%5Bstatus%5D%5B%5D=confirmed']"
+  end
+
+  test "dashboard money flow income/expense links stay scoped to eligible accounts by default" do
+    excluded_account = @family.accounts.create!(
+      name: "Excluded From Reports",
+      currency: @family.currency,
+      balance: 0,
+      exclude_from_reports: true,
+      accountable: Depository.new
+    )
+
+    get root_path
+
+    assert_response :ok
+    income_href = css_select("a[href*='q%5Btypes%5D%5B%5D=income']").first["href"]
+    expense_href = css_select("a[href*='q%5Btypes%5D%5B%5D=expense']").first["href"]
+
+    # The default (unfiltered) state must still pin the drill-down links to
+    # the eligible accounts backing the displayed totals, not the broader
+    # accessible-accounts set transactions_path defaults to when account_ids
+    # is absent.
+    assert_includes income_href, "q%5Baccount_ids%5D%5B%5D="
+    assert_not_includes income_href, excluded_account.id
+    assert_includes expense_href, "q%5Baccount_ids%5D%5B%5D="
+    assert_not_includes expense_href, excluded_account.id
+  end
+
   test "changelog" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path
@@ -161,4 +292,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "Test Release"
     # Should not crash even with nil values
   end
+
+  private
+    def money_flow_bars
+      JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+    end
 end
