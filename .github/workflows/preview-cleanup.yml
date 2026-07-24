@@ -24,7 +24,12 @@ permissions:
 jobs:
   cleanup-on-close:
     name: Cleanup closed PR preview
-    if: github.event_name == 'pull_request' && (github.event.action == 'closed' || (github.event.action == 'unlabeled' && github.event.label.name == 'preview-cf'))
+    if: |
+      github.event_name == 'pull_request' &&
+      (
+        (github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'preview-cf')) ||
+        (github.event.action == 'unlabeled' && github.event.label.name == 'preview-cf')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -47,11 +52,27 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          set -euo pipefail
+
           WORKER_NAME="sure-preview-${{ github.event.pull_request.number }}"
           echo "Deleting Worker: $WORKER_NAME"
 
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "Missing Cloudflare credentials; refusing to mark preview cleanup as successful"
+            exit 1
+          fi
+
           # Delete the worker (this also stops any running containers)
-          wrangler delete --name "$WORKER_NAME" --force || echo "Worker may not exist"
+          delete_output="$(mktemp)"
+          if wrangler delete --name "$WORKER_NAME" --force >"$delete_output" 2>&1; then
+            cat "$delete_output"
+          elif grep -Eiq 'not found|does not exist|could not find' "$delete_output"; then
+            cat "$delete_output"
+            echo "Worker may not exist"
+          else
+            cat "$delete_output"
+            exit 1
+          fi
 
       - name: Delete GitHub Deployment
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
