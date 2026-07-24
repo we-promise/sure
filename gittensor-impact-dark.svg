@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="350" viewBox="0 0 1200 700" role="img">
+<rect x="0.0" y="0.0" width="1200.0" height="700.0" rx="0" fill="#101112"/>
+<text x="48.0" y="58.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="28" font-weight="760" fill="#f5f2ef" text-anchor="start">Sure is part of the Gittensor community</text>
+<text x="48.0" y="92.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="19" font-weight="450" fill="#aba7a2" text-anchor="start">Rewarding meaningful merged contributions to tracked open-source repositories</text>
+<text x="1152.0" y="58.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="18" font-weight="700" fill="#aba7a2" text-anchor="end">we-promise/sure</text>
+<text x="1152.0" y="92.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="16" font-weight="450" fill="#7d7974" text-anchor="end">Reporting window: last 30 days</text>
+<line x1="48" y1="126" x2="1152" y2="126" stroke="#303234" stroke-width="1"/>
+<rect x="48.0" y="154.0" width="1104.0" height="278.0" rx="22" fill="#181a1b" stroke="#303234" stroke-width="1"/>
+<text x="88.0" y="202.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="16" font-weight="760" fill="#aba7a2" text-anchor="start">MERGED PR THROUGHPUT</text>
+<text x="86.0" y="304.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="104" font-weight="870" fill="#ff6a00" text-anchor="start">18%</text>
+<text x="92.0" y="342.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="20" font-weight="520" fill="#aba7a2" text-anchor="start">Gittensor share</text>
+<text x="456.0" y="246.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="46" font-weight="830" fill="#f5f2ef" text-anchor="start">16 of 90 PRs</text>
+<text x="458.0" y="286.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="25" font-weight="650" fill="#f5f2ef" text-anchor="start">merged by Gittensor contributors</text>
+<text x="458.0" y="322.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="20" font-weight="450" fill="#aba7a2" text-anchor="start">in this reporting window</text>
+<rect x="458.0" y="352.0" width="650.0" height="24.0" rx="12.0" fill="#2a2d2f"/>
+<rect x="458.0" y="352.0" width="114.7" height="24.0" rx="12.0" fill="#ff6a00"/>
+<rect x="577.7" y="352.0" width="530.3" height="24.0" rx="12.0" fill="#85898b"/>
+<text x="458.0" y="394.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="18" font-weight="740" fill="#ff6a00" text-anchor="start">Gittensor 16</text>
+<text x="1106.0" y="394.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="18" font-weight="740" fill="#85898b" text-anchor="end">Non-Gittensor 74</text>
+<rect x="48.0" y="464.0" width="536.0" height="138.0" rx="18" fill="#141516" stroke="#303234" stroke-width="1"/>
+<text x="76.0" y="500.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="22" font-weight="720" fill="#f5f2ef" text-anchor="start">Net code LOC</text>
+<text x="76.0" y="552.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="54" font-weight="850" fill="#ff6a00" text-anchor="start">5%</text>
+<text x="216.0" y="536.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="20" font-weight="650" fill="#f5f2ef" text-anchor="start">Gittensor share</text>
+<text x="216.0" y="565.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="17" font-weight="450" fill="#aba7a2" text-anchor="start">additions minus deletions</text>
+<text x="556.0" y="500.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="17" font-weight="680" fill="#aba7a2" text-anchor="end">2.5k / 49.2k</text>
+<rect x="76.0" y="576.0" width="480.0" height="12.0" rx="6.0" fill="#2a2d2f"/>
+<rect x="76.0" y="576.0" width="23.3" height="12.0" rx="6.0" fill="#ff6a00"/>
+<rect x="104.3" y="576.0" width="451.7" height="12.0" rx="6.0" fill="#85898b"/>
+<rect x="616.0" y="464.0" width="536.0" height="138.0" rx="18" fill="#141516" stroke="#303234" stroke-width="1"/>
+<text x="644.0" y="500.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="22" font-weight="720" fill="#f5f2ef" text-anchor="start">Active contributors</text>
+<text x="644.0" y="552.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="54" font-weight="850" fill="#ff6a00" text-anchor="start">18%</text>
+<text x="784.0" y="536.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="20" font-weight="650" fill="#f5f2ef" text-anchor="start">Gittensor share</text>
+<text x="784.0" y="565.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="17" font-weight="450" fill="#aba7a2" text-anchor="start">unique contributors</text>
+<text x="1124.0" y="500.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="17" font-weight="680" fill="#aba7a2" text-anchor="end">9 / 42</text>
+<rect x="644.0" y="576.0" width="480.0" height="12.0" rx="6.0" fill="#2a2d2f"/>
+<rect x="644.0" y="576.0" width="83.8" height="12.0" rx="6.0" fill="#ff6a00"/>
+<rect x="732.8" y="576.0" width="391.2" height="12.0" rx="6.0" fill="#85898b"/>
+<text x="48.0" y="654.0" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="15" font-weight="450" fill="#7d7974" text-anchor="start">Accent = Gittensor contributors | Neutral = non-Gittensor contributors | Source: Gittensor PR API + repository git history</text>
+</svg>
