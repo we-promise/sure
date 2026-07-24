@@ -36,7 +36,8 @@ module Assistant
         Function::UpdateTag,
         Function::GetCategories,
         Function::CreateCategory,
-        Function::UpdateCategory
+        Function::UpdateCategory,
+        Function::UpdateTransaction
       ]
     end
 
