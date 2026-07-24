@@ -1,0 +1,20 @@
+---
+pl:
+  goal_pledges:
+    new:
+      helper_transfer: Sure będzie szukać pasującego depozytu na twoim koncie. Zobowiązanie pozostaje oczekujące przez 7 dni, a następnie automatycznie potwierdza się, gdy Sure je wykryje.
+      helper_manual: Sure odnotuje to przy następnej ręcznej edycji salda i potwierdzi wpłatę.
+      amount_label: Kwota
+      account_label: Na konto
+      submit: Zapisz zobowiązanie
+      preview_zero: "Obecnie zaoszczędzono {current} z {target}."
+      preview_nonzero: "Osiąga {percent}%, {newTotal} z {target}."
+      preview_reached: "Osiąga cel {target}. Cel osiągnięty."
+    create:
+      success: Zobowiązanie zapisane. Sure potwierdzi je przy następnej synchronizacji.
+    renew:
+      success: Okno zobowiązania przedłużone o 7 dni.
+      not_open: Tylko otwarte zobowiązania mogą być przedłużane.
+    destroy:
+      success: Zobowiązanie anulowane.
+      not_open: Tylko otwarte zobowiązania mogą być anulowane.

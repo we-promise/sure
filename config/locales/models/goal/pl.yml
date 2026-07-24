@@ -1,0 +1,25 @@
+---
+pl:
+  activerecord:
+    attributes:
+      goal:
+        name: Nazwa
+        target_amount: Kwota docelowa
+        currency: Waluta
+        target_date: Data docelowa
+        color: Kolor
+        notes: Notatki
+        state: Stan
+        linked_accounts: Połączone konta
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Wybierz co najmniej jedno konto do finansowania tego celu.
+            linked_accounts:
+              must_be_fundable: Wszystkie połączone konta muszą być kontami gotówkowymi lub inwestycyjnymi.
+              currency_mismatch: Wszystkie połączone konta muszą mieć tę samą walutę.
+              must_belong_to_family: Połączone konta muszą należeć do tej samej rodziny co cel.
+            currency:
+              locked_after_linked: Nie można zmienić waluty po połączeniu celu z kontami.
