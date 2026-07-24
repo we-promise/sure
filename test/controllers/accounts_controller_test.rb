@@ -139,6 +139,14 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
   end
 
+  test "renders investment account with gains chart view" do
+    get account_url(accounts(:investment), chart_view: "gains")
+
+    assert_response :success
+    assert_select "option[value=gains][selected]"
+    assert_select "p", text: I18n.t("UI.account.chart.title.total_gains")
+  end
+
   test "activity pagination keeps activity tab when loaded from holdings tab" do
     investment = accounts(:investment)
 
