@@ -33,8 +33,10 @@ class SnaptradeItem < ApplicationRecord
   has_many :linked_accounts, through: :snaptrade_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
-  # Syncable = active + authorized via OAuth (has an access token)
-  scope :syncable, -> { active.where.not(oauth_access_token: [ nil, "" ]) }
+  # Syncable = active + authorized via OAuth (has an access token).
+  # oauth_access_token is non-deterministically encrypted, so it can only be
+  # queried with an IS NULL check (never persisted as "" -- see apply_oauth_tokens!).
+  scope :syncable, -> { active.where.not(oauth_access_token: nil) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
