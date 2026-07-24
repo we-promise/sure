@@ -3,6 +3,7 @@ require "test_helper"
 class InsightsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
+    enable_preview_features
     @insight = insights(:spending_anomaly_dining)
     ensure_tailwind_build
   end
@@ -97,4 +98,55 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to insights_path
   end
+
+  # Preview gate. Insights is opt-in via Settings → Preferences, so a user
+  # without the flag reaches none of it — not the page, not the dashboard
+  # section, not the top-bar entry, and not the job the refresh action would
+  # otherwise enqueue.
+  test "redirects users without preview access" do
+    disable_preview_features
+
+    get insights_url
+
+    assert_redirected_to root_path
+    assert_match(/preview/i, flash[:alert])
+  end
+
+  test "refresh does not enqueue generation for users without preview access" do
+    disable_preview_features
+
+    assert_no_enqueued_jobs only: GenerateInsightsJob do
+      post refresh_insights_url
+    end
+
+    assert_redirected_to root_path
+  end
+
+  test "dismiss is blocked for users without preview access" do
+    disable_preview_features
+
+    patch dismiss_insight_url(@insight), as: :turbo_stream
+
+    assert_redirected_to root_path
+    assert @insight.reload.active?
+  end
+
+  test "dashboard omits the insights feed and top-bar entry without preview access" do
+    disable_preview_features
+
+    get root_url
+
+    assert_response :success
+    assert_select "#insights-feed", count: 0
+    assert_select "a[href=?]", insights_path, count: 0
+  end
+
+  private
+    def enable_preview_features
+      @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    end
+
+    def disable_preview_features
+      @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+    end
 end

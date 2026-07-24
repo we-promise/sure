@@ -312,4 +312,45 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal count_after_first, AccountShare.where(user: newcomer).count,
       "re-running must not create duplicate shares"
   end
+
+  # Preview access is per-user, but jobs that act on family-scoped data have no
+  # Current.user. One opted-in member enables the family.
+  test "preview_features_enabled? is true when any member has opted in" do
+    family = families(:dylan_family)
+    family.users.each { |user| set_preview_features(user, false) }
+
+    assert_not family.reload.preview_features_enabled?
+
+    set_preview_features(family.users.first, true)
+
+    assert family.reload.preview_features_enabled?
+  end
+
+  test "with_preview_features scope agrees with the predicate" do
+    family = families(:dylan_family)
+    family.users.each { |user| set_preview_features(user, false) }
+
+    assert_not_includes Family.with_preview_features, family.reload
+
+    set_preview_features(family.users.first, true)
+
+    assert_includes Family.with_preview_features, family.reload
+  end
+
+  # The scope is a jsonb containment match, which must not be looser than the
+  # predicate's strict `== true` — otherwise the nightly job would fan out to
+  # families the UI still hides.
+  test "with_preview_features ignores truthy non-boolean values" do
+    family = families(:dylan_family)
+    family.users.each { |user| set_preview_features(user, false) }
+    set_preview_features(family.users.first, "yes")
+
+    assert_not family.reload.preview_features_enabled?
+    assert_not_includes Family.with_preview_features, family
+  end
+
+  private
+    def set_preview_features(user, enabled)
+      user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
+    end
 end
