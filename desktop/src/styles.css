@@ -1,0 +1,180 @@
+/* Onboarding chrome styled to match Sure's real auth page (design-system tokens). */
+:root {
+  --titlebar-h: 38px;
+  font-family: -apple-system, system-ui, "Segoe UI", sans-serif;
+  color-scheme: light dark;
+
+  /* Sure light palette */
+  --bg: #f7f7f7;            /* surface (gray-50) */
+  --container: #ffffff;     /* container */
+  --text: #0b0b0b;          /* primary */
+  --secondary: #737373;     /* gray-500 */
+  --subdued: #9e9e9e;       /* gray-400 (placeholder) */
+  --border: rgba(11, 11, 11, 0.12);
+  --focus-ring: rgba(11, 11, 11, 0.12);
+  --btn-bg: #171717;        /* inverse in light */
+  --btn-fg: #ffffff;
+  --error: #e5484d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0b0b;          /* surface = black */
+    --container: #171717;   /* gray-900 */
+    --text: #f0f0f0;        /* primary */
+    --secondary: #9e9e9e;   /* gray-400 */
+    --subdued: #737373;     /* gray-500 */
+    --border: rgba(255, 255, 255, 0.1);
+    --focus-ring: rgba(255, 255, 255, 0.18);
+    --btn-bg: #ffffff;      /* inverse in dark */
+    --btn-fg: #0b0b0b;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); }
+
+/* Draggable titlebar strip (clears the traffic lights). */
+.titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--titlebar-h);
+  z-index: 1000;
+  -webkit-app-region: drag;
+}
+
+.onboarding {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--titlebar-h) + 8px) 24px 32px;
+  -webkit-app-region: drag;
+}
+
+.auth {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.logo { width: 56px; height: auto; margin: 0 auto; display: block; }
+
+.auth-title {
+  margin: -4px 0 4px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--secondary);
+  text-align: center;
+}
+
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+
+/* Mirrors .form-field from Sure's design system. */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--container);
+  text-align: left;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  -webkit-app-region: no-drag;
+}
+.form-field:focus-within { box-shadow: 0 0 0 4px var(--focus-ring); }
+.form-field__label { font-size: 12px; color: var(--secondary); }
+.form-field__input {
+  width: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+.form-field__input::placeholder { color: var(--subdued); }
+
+.btn-primary {
+  -webkit-app-region: no-drag;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.btn-primary:hover { opacity: 0.9; }
+
+.status {
+  min-height: 16px;
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+  color: var(--secondary);
+}
+.status[data-kind="error"] { color: var(--error); }
+
+.remembered { -webkit-app-region: no-drag; }
+.remembered-title {
+  margin: 4px 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--secondary);
+}
+#server-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#server-list li { display: flex; gap: 8px; align-items: center; }
+.server-open {
+  flex: 1;
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--container);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.server-open:hover { border-color: var(--secondary); }
+.server-remove { background: transparent; border: none; color: var(--secondary); font-size: 12px; cursor: pointer; }
+
+.hidden { display: none; }
+
+/* Preferences window — same palette. */
+.prefs {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: calc(var(--titlebar-h) + 8px) 24px 24px;
+  background: var(--bg);
+  color: var(--text);
+}
+.prefs h1 { font-size: 16px; margin: 0 0 16px; }
+.prefs section { margin-bottom: 20px; }
+.prefs h2 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--secondary);
+}
+#prefs-server-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#prefs-server-list li { display: flex; gap: 8px; align-items: center; }
+#prefs-add { display: flex; gap: 8px; margin: 0 0 8px; align-items: stretch; }
+#prefs-add .form-field { flex: 1; }
+#prefs-add .btn-primary { width: auto; padding: 8px 16px; }
+.prefs .status { text-align: left; }
+.prefs .row { display: flex; align-items: center; justify-content: space-between; }
+.prefs .row label { font-size: 13px; }
+
+/* Interactive elements never part of the drag region. */
+input, button, select, a, #server-list, #prefs-server-list { -webkit-app-region: no-drag; }

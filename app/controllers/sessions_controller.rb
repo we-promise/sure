@@ -2,7 +2,11 @@ class SessionsController < ApplicationController
   extend SslConfigurable
 
   before_action :set_session, only: :destroy
-  skip_authentication only: %i[index new create openid_connect failure post_logout mobile_sso_start]
+  skip_authentication only: %i[index new create openid_connect failure post_logout mobile_sso_start desktop_sso_start desktop_exchange]
+  # The desktop exchange is a cross-context POST from the app's webview that
+  # can't carry a CSRF token; the single-use, PKCE-bound one-time code is the
+  # protection instead (same model as the OAuth callback).
+  skip_forgery_protection only: :desktop_exchange
 
   layout "auth"
 
@@ -13,8 +17,9 @@ class SessionsController < ApplicationController
 
   def new
     store_pending_invitation_if_valid
-    # Clear any stale mobile SSO session flag from an abandoned mobile flow
+    # Clear any stale mobile/desktop SSO session flag from an abandoned flow
     session.delete(:mobile_sso)
+    session.delete(:desktop_sso)
 
     begin
       demo = Rails.application.config_for(:demo)
@@ -142,6 +147,75 @@ class SessionsController < ApplicationController
     render layout: false
   end
 
+  # Entry point for desktop-app SSO, opened in the system browser so passkeys
+  # work. Stashes the desktop PKCE challenge, then hands off to OmniAuth exactly
+  # like the mobile flow (reusing its auto-submitting form).
+  def desktop_sso_start
+    provider = params[:provider].to_s
+    configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
+
+    unless configured_providers.include?(provider)
+      redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      return
+    end
+
+    code_challenge = params[:code_challenge].to_s
+    # Require a well-formed PKCE (S256) challenge — a 43-char base64url SHA-256
+    # digest — so the one-time code returned via the custom URL scheme can only
+    # be redeemed by the app instance that started the flow (it alone holds the
+    # verifier). Validate the format before copying it into session state.
+    unless code_challenge.match?(/\A[A-Za-z0-9_-]{43}\z/)
+      redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      return
+    end
+
+    session[:desktop_sso] = { code_challenge: code_challenge }
+    @provider = provider
+    render :mobile_sso_start, layout: false
+  end
+
+  # Exchanges the single-use, PKCE-bound code (delivered to the desktop app via
+  # sure://sso/callback) for a real web session in the app's own webview.
+  def desktop_exchange
+    code = params[:code].to_s
+    code_verifier = params[:code_verifier].to_s
+
+    cache_key = "desktop_sso:#{code}"
+    data = Rails.cache.read(cache_key)
+    # Atomically claim the code: only the request whose delete actually removes
+    # the entry may proceed, so two concurrent exchanges can't both succeed
+    # (delete returns false for the loser). Redis/MemoryStore both report this.
+    claimed = Rails.cache.delete(cache_key)
+
+    if code.blank? || code_verifier.blank? || data.blank? || !claimed
+      redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      return
+    end
+
+    data = data.with_indifferent_access
+    expected_challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(code_verifier), padding: false)
+
+    unless ActiveSupport::SecurityUtils.secure_compare(expected_challenge, data[:code_challenge].to_s)
+      redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      return
+    end
+
+    user = User.find_by(id: data[:user_id])
+    unless user
+      redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      return
+    end
+
+    if user.otp_required?
+      session[:mfa_user_id] = user.id
+      redirect_to verify_mfa_path
+    else
+      @session = create_session_for(user)
+      flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+      redirect_to root_path
+    end
+  end
+
   def openid_connect
     auth = request.env["omniauth.auth"]
 
@@ -174,6 +248,14 @@ class SessionsController < ApplicationController
         return
       end
 
+      # Desktop SSO: hand a single-use, PKCE-bound code back to the desktop app,
+      # which exchanges it for a normal web session. MFA is enforced later, at
+      # exchange time (the desktop webview can complete MFA), so it is supported.
+      if session[:desktop_sso].present?
+        handle_desktop_sso_callback(user)
+        return
+      end
+
       # Store id_token and provider for RP-initiated logout
       session[:id_token_hint] = auth.credentials&.id_token if auth.credentials&.id_token
       session[:sso_login_provider] = auth.provider
@@ -192,6 +274,15 @@ class SessionsController < ApplicationController
       # back to the app with a linking code so the user can link or create an account
       if session[:mobile_sso].present?
         handle_mobile_sso_onboarding(auth)
+        return
+      end
+
+      # Desktop SSO with no linked identity: send the app back to the login
+      # screen with an error. Linking/JIT creation still happens through the
+      # normal web flow; the desktop handoff only resumes already-linked users.
+      if session[:desktop_sso].present?
+        session.delete(:desktop_sso)
+        redirect_to "sure://sso/callback?error=account_not_linked", allow_other_host: true
         return
       end
 
@@ -225,6 +316,14 @@ class SessionsController < ApplicationController
     if session[:mobile_sso].present?
       session.delete(:mobile_sso)
       mobile_sso_redirect(error: sanitized_reason, message: "SSO authentication failed")
+      return
+    end
+
+    # Desktop SSO: send the error back to the app via the custom scheme so it
+    # stops waiting, instead of stranding the flow on the web login page.
+    if session[:desktop_sso].present?
+      session.delete(:desktop_sso)
+      redirect_to "sure://sso/callback?error=#{sanitized_reason}", allow_other_host: true
       return
     end
 
@@ -271,6 +370,27 @@ class SessionsController < ApplicationController
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.warn("[Mobile SSO] Device save failed: #{e.record.errors.full_messages.join(', ')}")
       mobile_sso_redirect(error: "device_error", message: "Unable to register device")
+    end
+
+    def handle_desktop_sso_callback(user)
+      context = (session.delete(:desktop_sso) || {}).with_indifferent_access
+      code_challenge = context[:code_challenge]
+
+      if code_challenge.blank?
+        redirect_to "sure://sso/callback?error=missing_session", allow_other_host: true
+        return
+      end
+
+      # One-time authorization code, bound to the PKCE challenge, exchanged by
+      # the desktop webview for a session. Short TTL + single-use + PKCE.
+      code = SecureRandom.urlsafe_base64(32)
+      Rails.cache.write(
+        "desktop_sso:#{code}",
+        { "user_id" => user.id, "code_challenge" => code_challenge },
+        expires_in: 2.minutes
+      )
+
+      redirect_to "sure://sso/callback?code=#{code}", allow_other_host: true
     end
 
     def handle_mobile_sso_onboarding(auth)

@@ -261,6 +261,11 @@ Rails.application.routes.draw do
 
   resource :registration, only: %i[new create]
   resources :sessions, only: %i[index new create destroy]
+  # Desktop app SSO: opens the flow in the system browser (so passkeys/WebAuthn
+  # work), then hands a single-use, PKCE-bound code back via the sure:// scheme
+  # which the desktop webview exchanges for a normal web session.
+  post "/sessions/desktop_exchange", to: "sessions#desktop_exchange", as: :desktop_sso_exchange
+  get "/auth/desktop/:provider", to: "sessions#desktop_sso_start"
   get "/auth/mobile/:provider", to: "sessions#mobile_sso_start"
   match "/auth/:provider/callback", to: "sessions#openid_connect", via: %i[get post]
   match "/auth/failure", to: "sessions#failure", via: %i[get post]

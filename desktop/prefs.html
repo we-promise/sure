@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <title>Preferences</title>
+  </head>
+  <body>
+    <div class="titlebar" data-tauri-drag-region></div>
+    <main class="prefs">
+      <h1 id="prefs-title"></h1>
+      <section>
+        <h2 id="servers-title"></h2>
+        <ul id="prefs-server-list"></ul>
+        <form id="prefs-add">
+          <div class="form-field">
+            <input class="form-field__input" id="prefs-url" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          </div>
+          <button type="submit" id="prefs-add-btn" class="btn-primary"></button>
+        </form>
+        <p id="prefs-status" class="status" role="status"></p>
+      </section>
+      <section class="row">
+        <label id="autostart-label" for="autostart"></label>
+        <input type="checkbox" id="autostart" />
+      </section>
+    </main>
+    <script type="module" src="/src/prefs.ts"></script>
+  </body>
+</html>

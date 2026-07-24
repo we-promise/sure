@@ -1,0 +1,120 @@
+name: Desktop Release
+
+# Release the macOS desktop app entirely from GitHub — no local git commands.
+#
+#   Actions → Desktop Release → Run workflow → enter a version (e.g. 0.1.0)
+#
+# The workflow syncs the version into the project, builds a universal unsigned
+# .dmg, and creates the `desktop-v<version>` tag + GitHub Release with the .dmg
+# attached. Pushing a `desktop-v*` tag by hand works too (version derived from
+# the tag) for anyone who prefers a git-tag workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, e.g. 0.1.0 (publishes tag desktop-v0.1.0)"
+        required: true
+        type: string
+  push:
+    tags:
+      - "desktop-v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-latest # Apple Silicon runner; cross-builds the x86_64 slice
+    # Publishing is gated behind a deployment environment so it can require
+    # manual approval and scope any signing secrets to release runs only.
+    environment: release
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Resolve version
+        id: ver
+        env:
+          # Pass the untrusted input through env, never interpolate it into the
+          # shell source (that would allow command injection via $(...)/backticks).
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            V="$RELEASE_VERSION"
+          else
+            V="${GITHUB_REF_NAME#desktop-v}"
+          fi
+          # Accept X.Y.Z with an optional pre-release suffix (e.g. 0.1.0-beta.1).
+          echo "$V" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$' \
+            || { echo "::error::invalid version '$V' (expected e.g. 0.1.0)"; exit 1; }
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "tag=desktop-v$V" >> "$GITHUB_OUTPUT"
+          if echo "$V" | grep -q '-'; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Refuse to re-release an existing version
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/${{ steps.ver.outputs.tag }}" >/dev/null 2>&1; then
+            echo "::error::${{ steps.ver.outputs.tag }} already exists — bump the version."
+            exit 1
+          fi
+
+      - name: Sync version into project files
+        run: |
+          set -euo pipefail
+          V="${{ steps.ver.outputs.version }}"
+          tmp="$(mktemp)"
+          jq --arg v "$V" '.version = $v' desktop/src-tauri/tauri.conf.json > "$tmp" && mv "$tmp" desktop/src-tauri/tauri.conf.json
+          jq --arg v "$V" '.version = $v' desktop/package.json > "$tmp" && mv "$tmp" desktop/package.json
+
+      # No dependency/build caches on the release workflow: a poisoned Actions
+      # cache written by another workflow must never flow into a published .dmg.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Install frontend dependencies
+        working-directory: desktop
+        run: npm ci
+
+      # Build only (no release here). tauri-action runs beforeBuildCommand
+      # (npm run build). To sign + notarize later, add the Apple secrets
+      # (APPLE_CERTIFICATE, APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD,
+      # APPLE_TEAM_ID) as env here — no other change needed.
+      - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          includeUpdaterJson: false
+          args: --target universal-apple-darwin
+
+      # Publish the desktop release separately with make_latest:false, so it
+      # never claims the repo's "Latest release" badge — that stays on the main
+      # product's v* release. The desktop-v* prefix keeps it labeled in the list.
+      - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: "Sure Desktop ${{ steps.ver.outputs.tag }}"
+          prerelease: ${{ steps.ver.outputs.prerelease }}
+          make_latest: "false"
+          files: desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          body: |
+            Universal macOS build (Apple Silicon + Intel) of the **Sure desktop app**
+            (not the Sure server — see the `v*` releases for that).
+
+            **This build is unsigned.** On first launch macOS will block it. To open:
+            1. Try to open Sure, then dismiss the warning.
+            2. System Settings → Privacy & Security → scroll down → **Open Anyway** → confirm.
+
+            If it says the app is "damaged", run once in Terminal:
+            `xattr -cr /Applications/Sure.app`
