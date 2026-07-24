@@ -16,6 +16,7 @@ class AccountsController < ApplicationController
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.includes(:syncs))
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts))
     @akahu_items = visible_provider_items(family.akahu_items.ordered.includes(:syncs, :akahu_accounts))
+    @open_banking_io_items = visible_provider_items(family.open_banking_io_items.ordered.includes(:syncs, :open_banking_io_accounts))
     @up_items = visible_provider_items(family.up_items.ordered.includes(:syncs, :up_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.includes(:syncs))
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs))
@@ -343,6 +344,13 @@ class AccountsController < ApplicationController
       @akahu_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @akahu_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # open-banking.io sync stats
+      @open_banking_io_sync_stats_map = {}
+      @open_banking_io_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @open_banking_io_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Up sync stats

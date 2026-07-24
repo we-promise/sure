@@ -1,0 +1,122 @@
+<div id="open_banking_io-providers-panel" class="space-y-4">
+  <% active_items = local_assigns[:open_banking_io_items] || @open_banking_io_items || Current.family.open_banking_io_items.active.ordered %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("settings.providers.open_banking_io_panel.step_1_html", link: link_to(t("providers.open_banking_io.name"), "https://open-banking.io", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")),
+               t("settings.providers.open_banking_io_panel.step_2"),
+               t("settings.providers.open_banking_io_panel.step_3")
+             ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% if active_items.any? %>
+    <div class="space-y-3">
+      <% active_items.each do |item| %>
+        <%= render DS::Disclosure.new(variant: :card) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <div class="flex items-center justify-between gap-2 w-full">
+              <div class="flex items-center gap-3">
+                <div class="flex items-center justify-center h-8 w-8 bg-surface rounded-full">
+                  <p class="text-primary text-xs font-medium"><%= item.name.to_s.first.to_s.upcase %></p>
+                </div>
+                <div>
+                  <p class="font-medium text-primary"><%= item.name %></p>
+                  <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="mt-4 space-y-4">
+            <div class="flex items-center gap-2">
+              <%= render DS::Button.new(
+                text: t("open_banking_io_items.provider_panel.sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                size: :sm,
+                href: sync_open_banking_io_item_path(item),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
+              <%= render DS::Button.new(
+                text: t("open_banking_io_items.provider_panel.disconnect"),
+                icon: "trash-2",
+                variant: :outline_destructive,
+                size: :sm,
+                href: open_banking_io_item_path(item),
+                method: :delete,
+                data: { turbo_confirm: t("open_banking_io_items.provider_panel.disconnect_confirm", name: item.name) }
+              ) %>
+            </div>
+
+            <%= styled_form_with model: item,
+                                 url: open_banking_io_item_path(item),
+                                 scope: :open_banking_io_item,
+                                 method: :patch,
+                                 data: { turbo: true },
+                                 class: "space-y-3" do |form| %>
+              <%= form.text_field :name,
+                                  label: t("open_banking_io_items.provider_panel.connection_name_label"),
+                                  placeholder: t("open_banking_io_items.provider_panel.connection_name_placeholder") %>
+
+              <%= form.text_area :credentials_json,
+                                 label: t("open_banking_io_items.provider_panel.credentials_label"),
+                                 placeholder: t("open_banking_io_items.provider_panel.keep_credentials_placeholder"),
+                                 rows: 6,
+                                 value: nil %>
+
+              <div class="flex flex-wrap justify-end gap-2">
+                <%= render DS::Link.new(
+                  text: t("open_banking_io_items.provider_panel.setup_accounts"),
+                  icon: "settings",
+                  variant: "secondary",
+                  href: setup_accounts_open_banking_io_item_path(item),
+                  frame: :modal
+                ) %>
+                <%= render DS::Button.new(
+                  text: t("open_banking_io_items.provider_panel.update_connection"),
+                  type: "submit"
+                ) %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% open_banking_io_item = Current.family.open_banking_io_items.build(name: t("open_banking_io_items.provider_panel.default_connection_name")) %>
+  <% if active_items.any? %>
+    <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
+      <%= icon "plus", size: "sm" %>
+      <%= t("open_banking_io_items.provider_panel.add_connection") %>
+    </h3>
+  <% end %>
+
+  <%= styled_form_with model: open_banking_io_item,
+                       url: open_banking_io_items_path,
+                       scope: :open_banking_io_item,
+                       method: :post,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :name,
+                        label: t("open_banking_io_items.provider_panel.connection_name_label"),
+                        placeholder: t("open_banking_io_items.provider_panel.connection_name_placeholder") %>
+
+    <%= form.text_area :credentials_json,
+                       label: t("open_banking_io_items.provider_panel.credentials_label"),
+                       placeholder: t("open_banking_io_items.provider_panel.credentials_placeholder"),
+                       rows: 6 %>
+
+    <div class="flex justify-end">
+      <%= render DS::Button.new(
+        text: t("open_banking_io_items.provider_panel.add_connection"),
+        type: "submit"
+      ) %>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,123 @@
+---
+zh-TW:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: 透過 open-banking.io 連結歐洲銀行帳戶
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: open-banking.io 連線
+  open_banking_io_account:
+    fallback: open-banking.io 帳戶
+  open_banking_io_entry:
+    notes:
+      reference: 參考編號
+  open_banking_io_item:
+    errors:
+      account_processing_failed: 無法同步 open-banking.io 帳戶
+      account_sync_schedule_failed: 無法排程 open-banking.io 帳戶同步
+      transactions_failed: 無法取得 open-banking.io 交易紀錄
+      sync_failed: 無法同步 open-banking.io 連線
+    sync_status:
+      no_accounts: 找不到帳戶
+      all_synced:
+        one: 已同步 1 個帳戶
+        other: "已同步 %{count} 個帳戶"
+      partial: "%{linked} 個已同步，%{unlinked} 個需要設定"
+    institution_summary:
+      none: 尚未連結任何機構
+      one: 1 家機構
+      count:
+        one: 1 家機構
+        other: "%{count} 家機構"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: open-banking.io 連線
+      add_connection: 新增 open-banking.io 連線
+      update_connection: 更新連線
+      connection_name_label: 連線名稱
+      connection_name_placeholder: 主要 open-banking.io
+      credentials_label: 憑證 JSON
+      credentials_placeholder: 貼上您匯出的 credentials.json 內容
+      keep_credentials_placeholder: 留空以保留現有憑證
+      credentials_required: 貼上您的 open-banking.io credentials.json 以進行連線。
+      credentials_invalid: 無法讀取 credentials.json。請貼上完整的匯出檔案。
+      credentials_invalid_url: credentials.json 必須使用 https 的 open-banking.io API 網址。
+      setup_accounts: 設定帳戶
+      syncing: 同步中...
+      sync: 同步
+      disconnect: 中斷連線
+      disconnect_confirm: "確定要中斷連線 %{name} 嗎？"
+    create:
+      success: open-banking.io 連線已儲存。
+    update:
+      success: open-banking.io 連線已更新。
+    destroy:
+      success: 已排程刪除 open-banking.io 連線。
+      unlink_failed: 無法中斷 open-banking.io 連線
+    select_accounts:
+      title: 連結 open-banking.io 帳戶
+      description: 選擇要新增的 open-banking.io 帳戶。
+      no_accounts_found: 找不到未連結的 open-banking.io 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 open-banking.io。
+      cancel: 取消
+      link_accounts: 連結帳戶
+    link_accounts:
+      success:
+        one: 已連結 1 個 open-banking.io 帳戶。
+        other: "已連結 %{count} 個 open-banking.io 帳戶。"
+      no_accounts_selected: 請至少選擇一個帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 open-banking.io。
+      unsupported_account_type: open-banking.io 不支援該帳戶類型。
+      link_failed: 沒有帳戶被連結。
+    select_existing_account:
+      title: "將 open-banking.io 帳戶連結至 %{account_name}"
+      description: 選擇一個未連結的 open-banking.io 帳戶來連接至此帳戶。
+      no_accounts_found: 找不到未連結的 open-banking.io 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 open-banking.io。
+      account_already_linked: 此帳戶已連結至某個供應商。
+      cancel: 取消
+      link_account: 連結帳戶
+    link_existing_account:
+      success: "已將 open-banking.io 帳戶連結至 %{account_name}。"
+      account_already_linked: 此帳戶已連結至某個供應商。
+      open_banking_io_account_already_linked: 此 open-banking.io 帳戶已連結。
+    setup_accounts:
+      title: 設定 open-banking.io 帳戶
+      subtitle: 選擇每個 open-banking.io 帳戶要如何顯示於 Sure。
+      no_credentials: 請先設定 open-banking.io 憑證。
+      api_error: 無法取得 open-banking.io 帳戶。
+      fetch_failed: 無法取得帳戶
+      no_accounts_to_setup: 沒有可設定的帳戶
+      all_accounts_linked: 所有 open-banking.io 帳戶皆已連結。
+      choose_account_type: 選擇帳戶類型
+      choose_account_type_description: 略過您不想追蹤的帳戶。
+      account_type_label: 帳戶類型
+      account_types:
+        skip: 略過
+        depository: 現金
+        credit_card: 信用卡
+        investment: 投資
+        loan: 貸款
+      create_accounts: 建立帳戶
+      cancel: 取消
+    complete_account_setup:
+      success:
+        one: 已建立 1 個 open-banking.io 帳戶。
+        other: "已建立 %{count} 個 open-banking.io 帳戶。"
+      all_skipped: 沒有建立任何 open-banking.io 帳戶。
+      no_accounts: 未選擇任何 open-banking.io 帳戶。
+      creation_failed: 無法建立 open-banking.io 帳戶。
+    open_banking_io_item:
+      deletion_in_progress: 刪除進行中
+      syncing: 同步中
+      error: 錯誤
+      status_with_summary: "%{timestamp}前已同步 · %{summary}"
+      status_never: 從未同步
+      delete: 刪除
+      setup_needed: 需要設定帳戶
+      setup_description: "%{total} 個帳戶中已連結 %{linked} 個。"
+      setup_action: 設定帳戶
+      no_accounts_title: 尚未匯入任何帳戶
+      no_accounts_description: 取得 open-banking.io 帳戶並選擇要連結的帳戶。

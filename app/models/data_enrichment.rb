@@ -7,6 +7,7 @@ class DataEnrichment < ApplicationRecord
     simplefin: "simplefin",
     lunchflow: "lunchflow",
     akahu: "akahu",
+    open_banking_io: "open_banking_io",
     up: "up",
     synth: "synth",
     ai: "ai",

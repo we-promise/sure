@@ -395,6 +395,7 @@ en:
       recently_synced: Synced recently. Try again in a moment.
       taglines:
         akahu: Sync New Zealand financial institutions via Akahu.
+        open_banking_io: Sync European bank accounts via open-banking.io.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         enable_banking: Sync European bank accounts via PSD2 open banking.
@@ -528,6 +529,10 @@ en:
         step_1_html: "Go to %{link} and create a personal app."
         step_2: "Copy your app token and user token."
         step_3: "Paste the tokens below, save, then link your synced accounts."
+      open_banking_io_panel:
+        step_1_html: "Go to %{link}, connect your bank, and export your credentials."
+        step_2: "Open the downloaded credentials.json file."
+        step_3: "Paste its full contents below, save, then link your synced accounts."
       up_panel:
         step_1_html: "Go to %{link} and generate a personal access token."
         step_2: "Copy your personal access token."

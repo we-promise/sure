@@ -1,0 +1,123 @@
+---
+tr:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: open-banking.io ile Avrupa banka hesaplarını bağlayın
+  family:
+    open_banking_io:
+      create_open_banking_io_item:
+        default_name: open-banking.io Bağlantısı
+  open_banking_io_account:
+    fallback: open-banking.io hesabı
+  open_banking_io_entry:
+    notes:
+      reference: Referans
+  open_banking_io_item:
+    errors:
+      account_processing_failed: open-banking.io hesabı senkronize edilemedi
+      account_sync_schedule_failed: open-banking.io hesap senkronizasyonu planlanamadı
+      transactions_failed: open-banking.io işlemleri alınamadı
+      sync_failed: open-banking.io bağlantısı senkronize edilemedi
+    sync_status:
+      no_accounts: Hesap bulunamadı
+      all_synced:
+        one: 1 hesap senkronize edildi
+        other: "%{count} hesap senkronize edildi"
+      partial: "%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor"
+    institution_summary:
+      none: Bağlı kurum yok
+      one: 1 kurum
+      count:
+        one: 1 kurum
+        other: "%{count} kurum"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: open-banking.io Bağlantısı
+      add_connection: open-banking.io bağlantısı ekle
+      update_connection: Bağlantıyı güncelle
+      connection_name_label: Bağlantı adı
+      connection_name_placeholder: Ana open-banking.io
+      credentials_label: Kimlik bilgileri JSON
+      credentials_placeholder: Dışa aktardığınız credentials.json içeriğini yapıştırın
+      keep_credentials_placeholder: Mevcut kimlik bilgilerini korumak için boş bırakın
+      credentials_required: Bağlanmak için open-banking.io credentials.json dosyanızı yapıştırın.
+      credentials_invalid: credentials.json okunamadı. Dışa aktarılan dosyanın tamamını yapıştırın.
+      credentials_invalid_url: credentials.json bir https open-banking.io API URL'si kullanmalıdır.
+      setup_accounts: Hesapları kur
+      syncing: Senkronize ediliyor...
+      sync: Senkronize et
+      disconnect: Bağlantıyı kes
+      disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?"
+    create:
+      success: open-banking.io bağlantısı kaydedildi.
+    update:
+      success: open-banking.io bağlantısı güncellendi.
+    destroy:
+      success: open-banking.io bağlantısı silinmek üzere planlandı.
+      unlink_failed: open-banking.io bağlantısı kesilemedi
+    select_accounts:
+      title: open-banking.io hesaplarını bağla
+      description: Eklenecek open-banking.io hesaplarını seçin.
+      no_accounts_found: Bağlanmamış open-banking.io hesabı bulunamadı.
+      no_credentials_configured: Önce sağlayıcı ayarlarından open-banking.io yapılandırın.
+      cancel: İptal
+      link_accounts: Hesapları bağla
+    link_accounts:
+      success:
+        one: 1 open-banking.io hesabı bağlandı.
+        other: "%{count} open-banking.io hesabı bağlandı."
+      no_accounts_selected: En az bir hesap seçin.
+      no_credentials_configured: Önce sağlayıcı ayarlarından open-banking.io yapılandırın.
+      unsupported_account_type: open-banking.io bu hesap türünü desteklemiyor.
+      link_failed: Hiçbir hesap bağlanmadı.
+    select_existing_account:
+      title: "open-banking.io hesabını %{account_name} hesabına bağla"
+      description: Bu hesaba bağlamak için bağlanmamış bir open-banking.io hesabı seçin.
+      no_accounts_found: Bağlanmamış open-banking.io hesabı bulunamadı.
+      no_credentials_configured: Önce sağlayıcı ayarlarından open-banking.io yapılandırın.
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      cancel: İptal
+      link_account: Hesabı bağla
+    link_existing_account:
+      success: "open-banking.io hesabı %{account_name} hesabına bağlandı."
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      open_banking_io_account_already_linked: Bu open-banking.io hesabı zaten bağlı.
+    setup_accounts:
+      title: open-banking.io Hesaplarını Kur
+      subtitle: Her open-banking.io hesabının Sure içinde nasıl görüneceğini seçin.
+      no_credentials: Önce open-banking.io kimlik bilgilerini yapılandırın.
+      api_error: open-banking.io hesapları alınamadı.
+      fetch_failed: Hesaplar alınamadı
+      no_accounts_to_setup: Kurulacak hesap yok
+      all_accounts_linked: Tüm open-banking.io hesapları zaten bağlı.
+      choose_account_type: Bir hesap türü seçin
+      choose_account_type_description: Takip etmek istemediğiniz hesapları atlayın.
+      account_type_label: Hesap türü
+      account_types:
+        skip: Atla
+        depository: Nakit
+        credit_card: Kredi Kartı
+        investment: Yatırım
+        loan: Kredi
+      create_accounts: Hesapları oluştur
+      cancel: İptal
+    complete_account_setup:
+      success:
+        one: 1 open-banking.io hesabı oluşturuldu.
+        other: "%{count} open-banking.io hesabı oluşturuldu."
+      all_skipped: Hiçbir open-banking.io hesabı oluşturulmadı.
+      no_accounts: Hiçbir open-banking.io hesabı seçilmedi.
+      creation_failed: open-banking.io hesapları oluşturulamadı.
+    open_banking_io_item:
+      deletion_in_progress: Silme işlemi sürüyor
+      syncing: Senkronize ediliyor
+      error: Hata
+      status_with_summary: "%{timestamp} önce senkronize edildi · %{summary}"
+      status_never: Hiç senkronize edilmedi
+      delete: Sil
+      setup_needed: Hesap kurulumu gerekli
+      setup_description: "%{total} hesaptan %{linked} tanesi bağlı."
+      setup_action: Hesapları kur
+      no_accounts_title: Henüz hesap içe aktarılmadı
+      no_accounts_description: open-banking.io hesaplarını alın ve hangilerini bağlayacağınızı seçin.
