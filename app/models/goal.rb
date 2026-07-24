@@ -33,6 +33,13 @@ class Goal < ApplicationRecord
 
   monetize :target_amount
 
+  # Account types that can back a goal (see linked_accounts_must_be_fundable).
+  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment].freeze
+
+  # Display order for active (non-completed/non-archived) goals: behind
+  # first, then on-track, then open-ended. Paused sorts after all of these.
+  ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, on_track: 1, no_target_date: 2 }.freeze
+
   scope :alphabetically, -> { order(Arel.sql("LOWER(name) ASC")) }
   scope :active_first, lambda {
     order(Arel.sql("CASE state WHEN 'active' THEN 0 WHEN 'paused' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END"))
@@ -72,6 +79,57 @@ class Goal < ApplicationRecord
   end
 
   attr_writer :market_flows
+
+  # Goals loaded ready to render: association preloads for the card/row
+  # partials plus the family-wide pooled-allocations + market-flows injection
+  # so the per-goal backing math doesn't fire a query per row (N+1). Pass a
+  # narrower scope to limit which of the family's goals are loaded.
+  def self.prepared_for(family, scope: family.goals)
+    goals = scope.alphabetically
+                 .includes(:open_pledges, :goal_accounts, linked_accounts: :account_providers)
+                 .to_a
+    inject_backing_math!(goals, family)
+    goals
+  end
+
+  # One family-wide earmark-pool + market-flows read shared across every
+  # goal in the list (see pooled_allocations_for / market_flows_for).
+  def self.inject_backing_math!(goals, family)
+    pooled = pooled_allocations_for(family)
+    flows = market_flows_for(family)
+    goals.each do |goal|
+      goal.pooled_allocations = pooled
+      goal.market_flows = flows
+    end
+  end
+
+  # Display order shared by the goals index and the Plan hub: behind first,
+  # then on-track, then open-ended, paused last, name as tie-breaker.
+  def self.active_display_sort(goals)
+    goals.sort_by { |goal| [ goal.paused? ? 3 : ACTIVE_DISPLAY_STATUS_RANK.fetch(goal.status, 4), goal.name.downcase ] }
+  end
+
+  # Active goals ready to render outside the goals index (e.g. the Plan hub).
+  def self.active_prepared_for(family)
+    active_display_sort(
+      prepared_for(family, scope: family.goals.where.not(state: %w[completed archived]))
+    )
+  end
+
+  # Aggregates for a summary card over an already-prepared goal list. Money
+  # sums only make sense in one currency, so goals denominated differently
+  # stay in the caller's row list but out of the totals.
+  def self.summary_for(goals, currency:)
+    summable = goals.select { |goal| goal.currency == currency }
+    targeted = summable.select { |goal| goal.target_amount.to_d.positive? }
+
+    {
+      saved_money: Money.new(summable.sum { |goal| goal.current_balance.to_d }, currency),
+      target_money: Money.new(targeted.sum { |goal| goal.target_amount.to_d }, currency),
+      behind_count: goals.count(&:behind_pace?),
+      pending_count: goals.sum { |goal| goal.open_pledges.size }
+    }
+  end
 
   aasm column: :state do
     after_all_transitions :reset_state_dependent_caches!
@@ -332,6 +390,14 @@ class Goal < ApplicationRecord
     else
       :behind
     end
+  end
+
+  # The single definition of "behind pace" for counts and copy. Paused goals
+  # are excluded even when their raw status computes :behind — pausing stops
+  # the pace clock on purpose, so surfacing them as behind (or summing them
+  # into "needs this month") would nag the user about a goal they shelved.
+  def behind_pace?
+    !paused? && status == :behind
   end
 
   # Date of the most-recently-matched pledge's underlying entry. Used by the

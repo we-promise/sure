@@ -1,0 +1,96 @@
+<%# locals: (budget:, top_budget_categories:) %>
+
+<section class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
+  <div class="flex items-center gap-2 mb-4">
+    <span class="w-7 h-7 rounded-lg bg-surface-inset text-secondary flex items-center justify-center shrink-0">
+      <%= icon("layout-grid", size: "sm") %>
+    </span>
+    <h2 class="text-sm font-medium text-primary"><%= t(".title") %></h2>
+    <span class="text-xs text-subdued truncate">· <%= budget.name %></span>
+
+    <% if budget.initialized? %>
+      <div class="ml-auto shrink-0">
+        <% if budget.available_to_spend.negative? %>
+          <%= render DS::Pill.new(label: t("reports.budget_performance.status.over"), tone: :error, marker: false, icon: "alert-circle") %>
+        <% elsif budget.percent_of_budget_spent >= 90 %>
+          <%= render DS::Pill.new(label: t("reports.budget_performance.status.warning"), tone: :warning, marker: false, icon: "alert-triangle") %>
+        <% else %>
+          <%= render DS::Pill.new(label: t("reports.budget_performance.status.good"), tone: :success, marker: false, icon: "check-circle") %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if budget.initialized? %>
+    <div class="flex items-baseline gap-2">
+      <span class="text-3xl font-medium text-primary tabular-nums privacy-sensitive">
+        <%= format_money(budget.actual_spending_money) %>
+      </span>
+      <span class="text-sm text-subdued privacy-sensitive">
+        <%= t(".of_total", total: format_money(budget.budgeted_spending_money)) %>
+      </span>
+    </div>
+    <p class="text-xs text-subdued mt-1 mb-4">
+      <%= t(".days_left", count: budget.days_remaining) %> · <%= t(".percent_used", percent: budget.percent_of_budget_spent.round) %>
+    </p>
+
+    <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
+      <div class="h-full rounded-full <%= budget.available_to_spend.negative? ? "bg-destructive" : "bg-inverse" %>"
+           style="inline-size: <%= budget.percent_of_budget_spent.clamp(0, 100).round(1) %>%"></div>
+    </div>
+
+    <% if top_budget_categories.any? %>
+      <p class="mt-6 mb-1 text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".top_categories") %></p>
+      <div class="flex-1">
+        <% top_budget_categories.each_with_index do |budget_category, index| %>
+          <div class="flex items-center gap-3 py-2.5 <%= "border-b border-primary" unless index == top_budget_categories.size - 1 %>">
+            <div class="w-7 h-7 shrink-0 rounded-full flex items-center justify-center"
+                 style="background-color: color-mix(in oklab, <%= budget_category.category.color %> 10%, transparent); color: <%= budget_category.category.color %>;">
+              <% if budget_category.category.lucide_icon %>
+                <%= icon(budget_category.category.lucide_icon, size: "sm", color: "current") %>
+              <% else %>
+                <%= render DS::FilledIcon.new(
+                  variant: :text,
+                  hex_color: budget_category.category.color,
+                  text: budget_category.category.name,
+                  size: "sm",
+                  rounded: true
+                ) %>
+              <% end %>
+            </div>
+            <span class="flex-1 min-w-0 text-sm text-primary truncate"><%= budget_category.category.name %></span>
+            <div class="hidden @sm:block w-24 shrink-0 h-1 bg-container-inset rounded-full overflow-hidden">
+              <% bar_color = budget_category.over_budget? ? "bg-destructive" : (budget_category.near_limit? ? "bg-warning" : "bg-success") %>
+              <div class="h-full <%= bar_color %> rounded-full" style="inline-size: <%= budget_category.bar_width_percent %>%"></div>
+            </div>
+            <span class="shrink-0 text-xs tabular-nums text-primary privacy-sensitive">
+              <%= format_money(budget_category.actual_spending_money) %><span class="text-subdued">/<%= format_money(budget_category.budgeted_spending_money) %></span>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="flex-1 flex flex-col items-center justify-center text-center gap-3 py-10">
+      <span class="w-12 h-12 rounded-full bg-surface-inset text-secondary flex items-center justify-center">
+        <%= icon("map", size: "md") %>
+      </span>
+      <p class="text-sm text-secondary max-w-xs"><%= t(".empty_body") %></p>
+      <%= render DS::Link.new(
+        text: t(".set_up"),
+        variant: "primary",
+        href: edit_budget_path(budget)
+      ) %>
+    </div>
+  <% end %>
+
+  <%= render DS::Link.new(
+    text: t(".view_budget"),
+    variant: "secondary",
+    href: budget_path(budget),
+    icon: "chevron-right",
+    icon_position: :right,
+    full_width: true,
+    class: "mt-5"
+  ) %>
+</section>

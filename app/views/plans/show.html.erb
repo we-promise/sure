@@ -1,0 +1,44 @@
+<%# Plan hub: budgets + goals under one nav entry. Two summary cards
+    fronting the existing /budgets and /goals pages — the two features
+    share a home here, not a data model. %>
+<div class="@container space-y-6 pb-6 lg:pb-12">
+  <header class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+        <%= render DS::Pill.new(label: t("shared.preview"), size: :md) %>
+      </div>
+      <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <% if @budget.initialized? %>
+        <%= render DS::Link.new(
+          text: t(".edit_budget"),
+          variant: "outline",
+          href: edit_budget_path(@budget),
+          icon: "pencil"
+        ) %>
+      <% end %>
+      <% if @linkable_account_count > 0 %>
+        <%= render DS::Link.new(
+          text: t(".new_goal"),
+          variant: "primary",
+          href: new_goal_path,
+          icon: "plus",
+          frame: :modal
+        ) %>
+      <% end %>
+    </div>
+  </header>
+
+  <div class="grid grid-cols-1 @3xl:grid-cols-2 gap-4 items-stretch">
+    <%= render "plans/budget_card", budget: @budget, top_budget_categories: @top_budget_categories %>
+    <%= render "plans/goals_card", goals: @goals, summary: @goals_summary, linkable_account_count: @linkable_account_count, family_has_goals: @family_has_goals %>
+  </div>
+
+  <p class="flex items-center gap-1.5 text-xs text-subdued">
+    <%= icon("info", size: "xs") %>
+    <span><%= t(".footnote") %></span>
+  </p>
+</div>
