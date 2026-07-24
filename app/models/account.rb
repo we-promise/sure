@@ -356,6 +356,10 @@ class Account < ApplicationRecord
       create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
     end
 
+    def create_from_bitstamp_account(bitstamp_account)
+      create_from_crypto_exchange_account(bitstamp_account, family: bitstamp_account.bitstamp_item.family)
+    end
+
     private
 
       def create_from_crypto_exchange_account(provider_account, family:)

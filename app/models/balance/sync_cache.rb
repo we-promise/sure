@@ -42,12 +42,15 @@ class Balance::SyncCache
 
         custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 
-        # Use Money#exchange_to with custom rate if available, standard lookup otherwise
-        converted_entry.amount = converted_entry.amount_money.exchange_to(
-          account.currency,
-          date: e.date,
-          custom_rate: custom_rate
-        ).amount
+        begin
+          converted_entry.amount = converted_entry.amount_money.exchange_to(
+            account.currency,
+            date: e.date,
+            custom_rate: custom_rate
+          ).amount
+        rescue Money::ConversionError
+          converted_entry.amount = e.amount
+        end
 
         converted_entry.currency = account.currency
         converted_entry
