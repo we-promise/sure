@@ -122,10 +122,13 @@ class Family < ApplicationRecord
   # Family-level rollup of the per-user preview flag, for callers that run
   # without a Current.user (the nightly insights job). Preview access is a
   # personal preference but the data it produces is family-scoped, so one
-  # opted-in member is enough to generate for the family — the same shape as
-  # Insight::BodyWriter's `family.users.any?(&:ai_enabled?)` consent gate.
+  # opted-in member is enough to generate for the family.
+  #
+  # EXISTS rather than `users.any?(&:preview_features_enabled?)`: the job asks
+  # this once per family, and the block form would load and instantiate every
+  # member just to answer a boolean.
   def preview_features_enabled?
-    users.any?(&:preview_features_enabled?)
+    users.with_preview_features.exists?
   end
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }

@@ -337,14 +337,17 @@ class FamilyTest < ActiveSupport::TestCase
     assert_includes Family.with_preview_features, family.reload
   end
 
-  # The scope is a jsonb containment match, which must not be looser than the
-  # predicate's strict `== true` — otherwise the nightly job would fan out to
-  # families the UI still hides.
+  # The family rollup is a jsonb containment match; the UI gates on
+  # User#preview_features_enabled?'s strict `== true`. If containment were the
+  # looser of the two, the nightly job would generate for families whose UI
+  # still hides the feature — so assert the user-level predicate agrees.
   test "with_preview_features ignores truthy non-boolean values" do
     family = families(:dylan_family)
     family.users.each { |user| set_preview_features(user, false) }
     set_preview_features(family.users.first, "yes")
 
+    assert_not family.users.first.reload.preview_features_enabled?,
+      "the per-user predicate the UI reads must reject a non-boolean"
     assert_not family.reload.preview_features_enabled?
     assert_not_includes Family.with_preview_features, family
   end
