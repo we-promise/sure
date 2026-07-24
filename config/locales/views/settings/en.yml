@@ -381,7 +381,6 @@ en:
       meta:
         sync_error: Sync error
         no_recent_sync: Sync overdue
-        registration_needed: Registration needed
         reconsent_required: Re-consent required
         reconsent_needed:
           one: Re-consent needed in 1 day

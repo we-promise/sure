@@ -198,7 +198,6 @@ fr:
           one: Re-consentement nécessaire dans 1 jour
           other: Renouvellement du consentement requis dans %{count} jours
         reconsent_required: Re-consentement requis
-        registration_needed: Inscription nécessaire
         sync_error: Erreur de synchronisation
       not_found: Fournisseur introuvable.
       plaid_eu_panel:

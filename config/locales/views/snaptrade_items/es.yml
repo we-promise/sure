@@ -2,10 +2,6 @@
 es:
   snaptrade_items:
     default_name: "Conexión de SnapTrade"
-    create:
-      success: "SnapTrade configurado correctamente."
-    update:
-      success: "Configuración de SnapTrade actualizada correctamente."
     destroy:
       success: "Conexión de SnapTrade programada para su eliminación."
     connect:
@@ -50,9 +46,6 @@ es:
       failed: "Error al eliminar la conexión: %{message}"
       missing_authorization_id: "Falta el ID de autorización"
       api_deletion_failed: "No se pudo eliminar la conexión de SnapTrade por falta de credenciales. Es posible que la conexión aún exista en tu cuenta de SnapTrade."
-    delete_orphaned_user:
-      success: "Registro huérfano eliminado correctamente."
-      failed: "Error al eliminar el registro huérfano."
     setup_accounts:
       title: "Configurar cuentas de SnapTrade"
       header: "Configura tus cuentas de SnapTrade"
@@ -113,20 +106,7 @@ es:
       name: "SnapTrade"
       connection_description: "Conecta con tu bróker a través de SnapTrade (más de 25 brókers compatibles)"
       description: "SnapTrade conecta con más de 25 brókers principales (Fidelity, Vanguard, Schwab, Robinhood, etc.) y proporciona un historial completo de operaciones con etiquetas de actividad y base de costes."
-      setup_title: "Instrucciones de configuración:"
-      step_1_html: "Crea una cuenta en <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
-      step_2: "Copia tu Client ID y tu Consumer Key desde el panel"
-      step_3: "Introduce tus credenciales a continuación y haz clic en Guardar"
-      step_4: "Ve a la página de Cuentas y usa 'Conectar otro bróker' para vincular tus cuentas de inversión"
       free_tier_warning: "El nivel gratuito incluye 5 conexiones de bróker. Las conexiones adicionales requieren un plan de pago de SnapTrade."
-      client_id_label: "Client ID"
-      client_id_placeholder: "Introduce tu Client ID de SnapTrade"
-      client_id_update_placeholder: "Introduce el nuevo Client ID para actualizar"
-      consumer_key_label: "Consumer Key"
-      consumer_key_placeholder: "Introduce tu Consumer Key de SnapTrade"
-      consumer_key_update_placeholder: "Introduce la nueva Consumer Key para actualizar"
-      save_button: "Guardar configuración"
-      update_button: "Actualizar configuración"
       status_connected:
         one: "%{count} cuenta de SnapTrade"
         other: "%{count} cuentas de SnapTrade"
@@ -151,15 +131,6 @@ es:
       delete_connection_title: "¿Eliminar conexión del bróker?"
       delete_connection_body: "Esto eliminará permanentemente la conexión de %{brokerage} de SnapTrade. Todas las cuentas de este bróker se desvincularán. Deberás volver a conectar para sincronizar estas cuentas de nuevo."
       delete_connection_confirm: "Eliminar conexión"
-      orphaned_users_title:
-        one: "%{count} registro huérfano"
-        other: "%{count} registros huérfanos"
-      orphaned_users_description: "Estos son registros de usuario de SnapTrade anteriores que están ocupando tus espacios de conexión. Elimínalos para liberar espacio."
-      orphaned_user: "Registro huérfano"
-      delete_orphaned_user: "Eliminar"
-      delete_orphaned_user_title: "¿Eliminar registro huérfano?"
-      delete_orphaned_user_body: "Esto eliminará permanentemente este usuario de SnapTrade huérfano y todas sus conexiones de bróker, liberando espacios de conexión."
-      delete_orphaned_user_confirm: "Eliminar registro"
 
   snaptrade_item:
     sync_status:

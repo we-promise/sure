@@ -1,96 +1,12 @@
 class SnaptradeItemsController < ApplicationController
-  PERMITTED_OAUTH_SCOPES = %w[read].freeze
-
-  before_action :set_snaptrade_item, only: [ :show, :edit, :update, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :start_oauth_device_flow, :complete_oauth_device_flow, :delete_connection, :delete_orphaned_user ]
-  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :oauth_connect, :start_oauth_connect, :edit, :update, :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :start_oauth_device_flow, :complete_oauth_device_flow, :delete_connection, :delete_orphaned_user ]
+  before_action :set_snaptrade_item, only: [ :show, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :delete_connection ]
+  before_action :require_admin!, only: [ :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :oauth_authorize, :oauth_callback, :preload_accounts, :select_accounts, :select_existing_account, :link_existing_account ]
 
   def index
     @snaptrade_items = Current.family.snaptrade_items.ordered
   end
 
   def show
-  end
-
-  def new
-    @snaptrade_item = Current.family.snaptrade_items.build
-  end
-
-  def edit
-  end
-
-  def create
-    @snaptrade_item = Current.family.snaptrade_items.build(snaptrade_item_params)
-    @snaptrade_item.name ||= t("snaptrade_items.default_name")
-
-    if @snaptrade_item.save
-      # Register user with SnapTrade after saving credentials
-      if @snaptrade_item.credentials_configured?
-        begin
-          @snaptrade_item.ensure_user_registered!
-        rescue => e
-          Rails.logger.error "SnapTrade user registration failed: #{e.message}"
-          # Don't fail the whole operation - user can retry connection later
-        end
-      end
-
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured SnapTrade.")
-        @snaptrade_items = Current.family.snaptrade_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "snaptrade-providers-panel",
-            partial: "settings/providers/snaptrade_panel",
-            locals: { snaptrade_items: @snaptrade_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
-    else
-      @error_message = @snaptrade_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "snaptrade-providers-panel",
-          partial: "settings/providers/snaptrade_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
-    end
-  end
-
-  def update
-    if @snaptrade_item.update(snaptrade_item_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully updated SnapTrade configuration.")
-        @snaptrade_items = Current.family.snaptrade_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "snaptrade-providers-panel",
-            partial: "settings/providers/snaptrade_panel",
-            locals: { snaptrade_items: @snaptrade_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
-    else
-      @error_message = @snaptrade_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "snaptrade-providers-panel",
-          partial: "settings/providers/snaptrade_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
-    end
   end
 
   def destroy
@@ -111,9 +27,11 @@ class SnaptradeItemsController < ApplicationController
 
   # Redirect user to SnapTrade connection portal
   def connect
-    @snaptrade_item.ensure_user_registered! unless @snaptrade_item.user_registered?
-
-    redirect_url = callback_snaptrade_items_url(item_id: @snaptrade_item.id)
+    redirect_url = callback_snaptrade_items_url(
+      item_id: @snaptrade_item.id,
+      return_to: params[:return_to].presence,
+      accountable_type: params[:accountable_type].presence
+    )
     portal_url = @snaptrade_item.connection_portal_url(redirect_url: redirect_url)
     redirect_to portal_url, allow_other_host: true
   rescue ActiveRecord::Encryption::Errors::Decryption => e
@@ -138,17 +56,12 @@ class SnaptradeItemsController < ApplicationController
     if snaptrade_item
       snaptrade_item.sync_later unless snaptrade_item.syncing?
 
-      stored_return_to, stored_accountable_type = clear_snaptrade_resume_context
-      return_to = params[:return_to].presence || stored_return_to
-      accountable_type = params[:accountable_type].presence || stored_accountable_type
-
-      if return_to == "setup_accounts"
-        redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: accountable_type.presence), notice: t(".success")
+      if params[:return_to].presence == "setup_accounts"
+        redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: params[:accountable_type].presence), notice: t(".success")
       else
         redirect_to accounts_path, notice: t(".success")
       end
     else
-      clear_snaptrade_resume_context
       redirect_to settings_providers_path, alert: t(".no_item")
     end
   end
@@ -166,7 +79,7 @@ class SnaptradeItemsController < ApplicationController
     latest_sync = @snaptrade_item.syncs.ordered.first
     should_sync = latest_sync.nil? || !latest_sync.completed?
 
-    if @snaptrade_item.user_registered? && no_accounts && !@snaptrade_item.syncing? && should_sync
+    if @snaptrade_item.oauth_configured? && no_accounts && !@snaptrade_item.syncing? && should_sync
       @snaptrade_item.sync_later
     end
 
@@ -255,119 +168,89 @@ class SnaptradeItemsController < ApplicationController
     data = build_connections_list
     render partial: "snaptrade_items/connections_list", layout: false, locals: {
       connections: data[:connections],
-      orphaned_users: data[:orphaned_users],
       snaptrade_item: @snaptrade_item,
       error: @error
     }
   end
 
-  def oauth_connect
-    assign_oauth_connect_context
-
-    unless Provider::Snaptrade.oauth_client_id_configured?
-      @error_message = snaptrade_oauth_client_id_missing_message
-      render :oauth_device_flow, status: :unprocessable_entity, formats: :html
+  # Start the SnapTrade OAuth authorization-code + PKCE flow
+  def oauth_authorize
+    unless Provider::Snaptrade.oauth_configured?
+      redirect_to settings_providers_path, alert: t(".not_configured")
       return
     end
 
-    @snaptrade_item = if params[:item_id].present?
-      Current.family.snaptrade_items.find(params[:item_id])
-    else
-      current_snaptrade_item
-    end
-
-    render :oauth_device_flow
-  rescue ActiveRecord::Encryption::Errors::Decryption => e
-    Rails.logger.error "SnapTrade decryption error for item #{@snaptrade_item&.id}: #{e.class} - #{e.message}"
-    @error_message = t("snaptrade_items.connect.decryption_failed")
-    render :oauth_device_flow, status: :unprocessable_entity, formats: :html
-  rescue ActiveRecord::ActiveRecordError, ActiveRecord::Encryption::Errors::Base => e
-    Rails.logger.error "SnapTrade OAuth connect error: #{e.class} - #{e.message}"
-    @error_message = start_oauth_device_flow_error_message
-    render :oauth_device_flow, status: :unprocessable_entity, formats: :html
-  end
-
-  def start_oauth_connect
-    assign_oauth_connect_context
-
-    unless Provider::Snaptrade.oauth_client_id_configured?
-      @error_message = snaptrade_oauth_client_id_missing_message
-      render :oauth_device_flow, status: :unprocessable_entity, formats: :html
-      return
-    end
-
-    @snaptrade_item = if params[:item_id].present?
+    snaptrade_item = if params[:item_id].present?
       Current.family.snaptrade_items.find(params[:item_id])
     else
       current_snaptrade_item || Current.family.snaptrade_items.create!(name: t("snaptrade_items.default_name"))
     end
 
-    @device_authorization = @snaptrade_item.start_oauth_device_flow(scope: @oauth_scope)
+    pkce = Provider::Snaptrade.generate_pkce
+    state = SecureRandom.hex(32)
 
-    render :oauth_device_flow
-  rescue ActiveRecord::Encryption::Errors::Decryption => e
-    Rails.logger.error "SnapTrade decryption error for item #{@snaptrade_item&.id}: #{e.class} - #{e.message}"
-    @error_message = t("snaptrade_items.connect.decryption_failed")
-    render :oauth_device_flow, status: :unprocessable_entity, formats: :html
-  rescue Provider::Snaptrade::Error, ActiveRecord::ActiveRecordError, ActiveRecord::Encryption::Errors::Base => e
-    Rails.logger.error "SnapTrade OAuth connect error: #{e.class} - #{e.message}"
-    @error_message = oauth_connect_error_message(e)
-    render :oauth_device_flow, status: :unprocessable_entity, formats: :html
+    session[:snaptrade_oauth] = {
+      "state" => state,
+      "code_verifier" => pkce[:verifier],
+      "item_id" => snaptrade_item.id,
+      "return_to" => params[:return_to].presence,
+      "accountable_type" => params[:accountable_type].presence
+    }
+
+    redirect_to Provider::Snaptrade.authorize_url(
+      redirect_uri: oauth_callback_snaptrade_items_url,
+      state: state,
+      code_challenge: pkce[:challenge]
+    ), allow_other_host: true
   end
 
-  def start_oauth_device_flow
-    render json: @snaptrade_item.start_oauth_device_flow(scope: permitted_oauth_scope)
-  rescue ActiveRecord::Encryption::Errors::Decryption => e
-    Rails.logger.error "SnapTrade decryption error for item #{@snaptrade_item.id}: #{e.class} - #{e.message}"
-    render json: { error: t("snaptrade_items.connect.decryption_failed") }, status: :unprocessable_entity
-  rescue Provider::Snaptrade::Error => e
-    Rails.logger.error "SnapTrade OAuth device authorization error: #{e.class} - #{e.message}"
-    render json: { error: start_oauth_device_flow_error_message }, status: :unprocessable_entity
-  end
+  # Registered OAuth redirect URI: verify state, exchange code, store tokens
+  def oauth_callback
+    oauth_session = (session.delete(:snaptrade_oauth) || {}).with_indifferent_access
 
-  def complete_oauth_device_flow
-    if params[:device_code].blank?
-      render json: { error: "device_code is required" }, status: :unprocessable_entity
+    if params[:error].present?
+      Rails.logger.warn "SnapTrade OAuth callback error: #{params[:error]}"
+      alert = params[:error] == "access_denied" ? t(".access_denied") : t(".failed")
+      redirect_to settings_providers_path, alert: alert
       return
     end
 
-    token_response = @snaptrade_item.complete_oauth_device_flow!(device_code: params[:device_code])
-    if request.format.json?
-      render json: {
-        token_type: token_response["token_type"],
-        scope: token_response["scope"],
-        expires_in: token_response["expires_in"],
-        expires_at: @snaptrade_item.oauth_token_expires_at&.iso8601
-      }
-    else
-      if prepare_snaptrade_item_for_setup_after_oauth
-        redirect_after_oauth_completion setup_accounts_snaptrade_item_path(
-          @snaptrade_item,
-          accountable_type: params[:accountable_type].presence,
-          return_to: params[:return_to].presence
-        ), notice: t(".success", default: "SnapTrade authorization complete.")
-      else
-        redirect_after_oauth_completion settings_providers_path, alert: snaptrade_oauth_setup_incomplete_message
-      end
+    unless params[:state].present? && oauth_session[:state].present? &&
+           ActiveSupport::SecurityUtils.secure_compare(params[:state].to_s, oauth_session[:state].to_s)
+      redirect_to settings_providers_path, alert: t(".state_mismatch")
+      return
     end
-  rescue Provider::Snaptrade::ApiError => e
-    if request.format.json?
-      render json: oauth_error_payload(e), status: e.status_code || :unprocessable_entity
-    else
-      payload = oauth_error_payload(e)
-      @error_message = payload["error_description"].presence || payload["error"]
-      restore_device_authorization_from_params
-      render :oauth_device_flow, status: e.status_code || :unprocessable_entity, formats: :html
+
+    snaptrade_item = Current.family.snaptrade_items.find_by(id: oauth_session[:item_id])
+    unless snaptrade_item && params[:code].present?
+      redirect_to settings_providers_path, alert: t(".failed")
+      return
     end
-  rescue Provider::Snaptrade::Error, ActiveRecord::ActiveRecordError, ActiveRecord::Encryption::Errors::Base => e
-    Rails.logger.error "SnapTrade OAuth device token error: #{e.class} - #{e.message}"
-    if request.format.json?
-      render json: { error: complete_oauth_device_flow_error_message }, status: :unprocessable_entity
+
+    snaptrade_item.complete_oauth_exchange!(
+      code: params[:code],
+      redirect_uri: oauth_callback_snaptrade_items_url,
+      code_verifier: oauth_session[:code_verifier]
+    )
+
+    snaptrade_item.sync_later unless snaptrade_item.syncing?
+
+    if oauth_session[:return_to] == "setup_accounts"
+      redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: oauth_session[:accountable_type].presence), notice: t(".success")
     else
-      @error_message = complete_oauth_device_flow_error_message
-      restore_device_authorization_from_params
-      render :oauth_device_flow, status: :unprocessable_entity, formats: :html
+      redirect_to settings_providers_path, notice: t(".success")
     end
+  rescue Provider::Snaptrade::Error => e
+    Rails.logger.error "SnapTrade OAuth exchange failed: #{e.class} - #{e.message}"
+    DebugLogEntry.capture(
+      category: "provider_auth",
+      level: :error,
+      message: "SnapTrade OAuth code exchange failed: #{e.message}",
+      source: "SnaptradeItemsController#oauth_callback",
+      provider_key: "snaptrade",
+      family: Current.family
+    )
+    redirect_to settings_providers_path, alert: t(".failed")
   end
 
   # Delete a brokerage connection
@@ -389,16 +272,10 @@ class SnaptradeItemsController < ApplicationController
     api_deletion_failed = false
     if accounts_deleted == 0
       provider = @snaptrade_item.snaptrade_provider
-      creds = @snaptrade_item.snaptrade_credentials
-
-      if provider && creds&.dig(:user_id) && creds&.dig(:user_secret)
-        provider.delete_connection(
-          user_id: creds[:user_id],
-          user_secret: creds[:user_secret],
-          authorization_id: authorization_id
-        )
+      if provider
+        provider.delete_connection(authorization_id: authorization_id)
       else
-        Rails.logger.warn "SnapTrade: Cannot delete orphaned connection #{authorization_id} - missing credentials"
+        Rails.logger.warn "SnapTrade: Cannot delete orphaned connection #{authorization_id} - item not authorized"
         api_deletion_failed = true
       end
     end
@@ -425,38 +302,6 @@ class SnaptradeItemsController < ApplicationController
     end
   end
 
-  # Delete an orphaned SnapTrade user (and all their connections)
-  def delete_orphaned_user
-    user_id = params[:user_id]
-
-    # Security: verify this is actually an orphaned user
-    unless @snaptrade_item.orphaned_users.include?(user_id)
-      respond_to do |format|
-        format.html { redirect_to settings_providers_path, alert: t(".failed") }
-        format.turbo_stream do
-          flash.now[:alert] = t(".failed")
-          render turbo_stream: flash_notification_stream_items
-        end
-      end
-      return
-    end
-
-    if @snaptrade_item.delete_orphaned_user(user_id)
-      respond_to do |format|
-        format.html { redirect_to settings_providers_path, notice: t(".success") }
-        format.turbo_stream { render turbo_stream: turbo_stream.remove("orphaned_user_#{user_id.parameterize}") }
-      end
-    else
-      respond_to do |format|
-        format.html { redirect_to settings_providers_path, alert: t(".failed") }
-        format.turbo_stream do
-          flash.now[:alert] = t(".failed")
-          render turbo_stream: flash_notification_stream_items
-        end
-      end
-    end
-  end
-
   # Collection actions for account linking flow
 
   def preload_accounts
@@ -466,11 +311,11 @@ class SnaptradeItemsController < ApplicationController
       return
     end
 
-    if snaptrade_item.user_registered?
+    if snaptrade_item.oauth_configured?
       snaptrade_item.sync_later unless snaptrade_item.syncing?
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item)
     else
-      redirect_to oauth_connect_snaptrade_items_path(item_id: snaptrade_item.id)
+      redirect_to oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id)
     end
   end
 
@@ -484,16 +329,11 @@ class SnaptradeItemsController < ApplicationController
       return
     end
 
-    if snaptrade_item.user_registered?
+    if snaptrade_item.oauth_configured?
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: @accountable_type, return_to: @return_to)
     else
-      store_snaptrade_resume_context(return_to: @return_to, accountable_type: @accountable_type)
-      redirect_to oauth_connect_snaptrade_items_path(item_id: snaptrade_item.id, accountable_type: @accountable_type, return_to: @return_to)
+      redirect_to oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id, accountable_type: @accountable_type, return_to: @return_to)
     end
-  end
-
-  def link_accounts
-    redirect_to settings_providers_path, alert: t(".use_setup_flow")
   end
 
   def select_existing_account
@@ -552,99 +392,26 @@ class SnaptradeItemsController < ApplicationController
       active_items = Current.family.snaptrade_items.active
 
       active_items.syncable.ordered.first ||
-        active_items.credentials_configured.ordered.first ||
         active_items.ordered.first
     end
 
-    def store_snaptrade_resume_context(return_to:, accountable_type:)
-      session[:snaptrade_resume] = {
-        return_to: return_to,
-        accountable_type: accountable_type
-      }
-    end
-
-    def clear_snaptrade_resume_context
-      resume = (session.delete(:snaptrade_resume) || {}).with_indifferent_access
-      [ resume[:return_to], resume[:accountable_type] ]
-    end
-
-    def restore_device_authorization_from_params
-      @device_authorization = params.permit(
-        :device_code,
-        :user_code,
-        :verification_uri,
-        :verification_uri_complete,
-        :expires_in,
-        :interval
-      ).to_h
-      @return_to = params[:return_to]
-      @accountable_type = params[:accountable_type]
-    end
-
-    def assign_oauth_connect_context
-      @return_to = params[:return_to]
-      @accountable_type = params[:accountable_type]
-      @oauth_scope = permitted_oauth_scope
-    end
-
-    def permitted_oauth_scope
-      requested_scope = params[:scope].to_s
-      return requested_scope if PERMITTED_OAUTH_SCOPES.include?(requested_scope)
-
-      "read"
-    end
-
-    def prepare_snaptrade_item_for_setup_after_oauth
-      if !@snaptrade_item.user_registered? && @snaptrade_item.credentials_configured?
-        @snaptrade_item.ensure_user_registered!
-      end
-
-      return false unless @snaptrade_item.user_registered?
-
-      @snaptrade_item.sync_later unless @snaptrade_item.syncing?
-      true
-    end
-
-    def redirect_after_oauth_completion(path, notice: nil, alert: nil)
-      if turbo_frame_request?
-        flash[:notice] = notice if notice.present?
-        flash[:alert] = alert if alert.present?
-        render turbo_stream: turbo_stream.action(:redirect, path)
-      else
-        redirect_to path, notice: notice, alert: alert
-      end
-    end
-
-    def snaptrade_item_params
-      params.require(:snaptrade_item).permit(
-        :name,
-        :sync_start_date,
-        :client_id,
-        :consumer_key
-      )
-    end
-
     def build_connections_list
-      # Fetch connections for current user from API
       api_connections = @snaptrade_item.fetch_connections
 
-      # Get local accounts grouped by authorization_id
       local_accounts = @snaptrade_item.snaptrade_accounts
         .includes(:account_provider)
         .group_by(&:snaptrade_authorization_id)
 
-      # Build unified list
-      result = { connections: [], orphaned_users: [] }
+      result = { connections: [] }
 
-      # Add connections from API for current user
       api_connections.each do |api_conn|
-        auth_id = api_conn.id
+        auth_id = api_conn["id"]
         local_accts = local_accounts[auth_id] || []
 
         result[:connections] << {
           authorization_id: auth_id,
-          brokerage_name: api_conn.brokerage&.name || I18n.t("snaptrade_items.connections.unknown_brokerage"),
-          brokerage_slug: api_conn.brokerage&.slug,
+          brokerage_name: api_conn.dig("brokerage", "name") || I18n.t("snaptrade_items.connections.unknown_brokerage"),
+          brokerage_slug: api_conn.dig("brokerage", "slug"),
           accounts: local_accts.map { |acct|
             { id: acct.id, name: acct.name, linked: acct.account_provider.present? }
           },
@@ -652,71 +419,10 @@ class SnaptradeItemsController < ApplicationController
         }
       end
 
-      # Add orphaned users (users registered but not current)
-      orphaned = @snaptrade_item.orphaned_users
-      orphaned.each do |user_id|
-        result[:orphaned_users] << {
-          user_id: user_id,
-          display_name: user_id.truncate(30)
-        }
-      end
-
       result
     rescue Provider::Snaptrade::ApiError => e
       @error = e.message
-      { connections: [], orphaned_users: [] }
-    end
-
-    def oauth_error_payload(error)
-      parsed_body = parse_oauth_error_body(error.response_body)
-      payload = parsed_body.slice("error", "error_description", "error_uri", "interval")
-      payload["error"] ||= error.message
-      payload
-    end
-
-    def start_oauth_device_flow_error_message
-      t(
-        "snaptrade_items.start_oauth_device_flow.failed",
-        default: "Unable to start SnapTrade OAuth device authorization. Please try again."
-      )
-    end
-
-    def oauth_connect_error_message(error)
-      if error.is_a?(Provider::Snaptrade::ConfigurationError) && error.message.include?("OAuth client ID")
-        snaptrade_oauth_client_id_missing_message
-      else
-        start_oauth_device_flow_error_message
-      end
-    end
-
-    def snaptrade_oauth_client_id_missing_message
-      t(
-        "snaptrade_items.oauth_device_flow.missing_client_id",
-        default: "SnapTrade OAuth client ID is not configured. Add SNAPTRADE_OAUTH_CLIENT_ID to .env.local, restart the app, then try again."
-      )
-    end
-
-    def snaptrade_oauth_setup_incomplete_message
-      t(
-        "snaptrade_items.complete_oauth_device_flow.setup_incomplete",
-        default: "SnapTrade authorization is complete, but API credentials are required before accounts can sync."
-      )
-    end
-
-    def complete_oauth_device_flow_error_message
-      t(
-        "snaptrade_items.complete_oauth_device_flow.failed",
-        default: "Unable to complete SnapTrade OAuth device authorization. Please try again."
-      )
-    end
-
-    def parse_oauth_error_body(response_body)
-      return {} if response_body.blank?
-
-      parsed_body = JSON.parse(response_body)
-      parsed_body.is_a?(Hash) ? parsed_body : {}
-    rescue JSON::ParserError
-      {}
+      { connections: [] }
     end
 
     def link_snaptrade_account(snaptrade_account)

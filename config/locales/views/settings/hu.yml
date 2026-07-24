@@ -262,7 +262,6 @@ hu:
       meta:
         sync_error: Szinkronizálási hiba
         no_recent_sync: Szinkronizálás lejárt
-        registration_needed: Regisztráció szükséges
         reconsent_required: Újrahozzájárulás szükséges
         reconsent_needed:
           one: Újrahozzájárulás szükséges 1 napon belül

@@ -29,20 +29,19 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
       "retry #{retry_count}/#{MAX_RETRIES}, range: #{start_date} to #{end_date}"
     )
 
-    # Get provider and credentials
+    # Get provider (nil when the item is not authorized)
     snaptrade_item = snaptrade_account.snaptrade_item
     provider = snaptrade_item.snaptrade_provider
-    credentials = snaptrade_item.snaptrade_credentials
 
-    unless provider && credentials
-      Rails.logger.error("SnaptradeActivitiesFetchJob - No provider/credentials for account #{snaptrade_account.id}")
+    if provider.nil?
+      Rails.logger.error("SnaptradeActivitiesFetchJob - Item not authorized for account #{snaptrade_account.id}")
       snaptrade_account.update!(activities_fetch_pending: false)
       snaptrade_account.snaptrade_item.broadcast_sync_complete
       return
     end
 
     # Fetch activities from API
-    activities_data = fetch_activities(snaptrade_account, provider, credentials, start_date, end_date)
+    activities_data = fetch_activities(snaptrade_account, provider, start_date, end_date)
 
     if activities_data.any?
       Rails.logger.info(
@@ -95,25 +94,21 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
 
   private
 
-    def fetch_activities(snaptrade_account, provider, credentials, start_date, end_date)
+    def fetch_activities(snaptrade_account, provider, start_date, end_date)
       response = provider.get_account_activities(
-        user_id: credentials[:user_id],
-        user_secret: credentials[:user_secret],
         account_id: snaptrade_account.snaptrade_account_id,
         start_date: start_date,
         end_date: end_date
       )
 
-      # Handle paginated response
-      activities = if response.respond_to?(:data)
-        response.data || []
+      activities = if response.is_a?(Hash)
+        response["data"] || []
       elsif response.is_a?(Array)
         response
       else
         []
       end
 
-      # Convert SDK objects to hashes
       activities.map { |a| sdk_object_to_hash(a) }
     end
 

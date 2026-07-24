@@ -304,7 +304,6 @@ vi:
       meta:
         sync_error: Lỗi đồng bộ
         no_recent_sync: Đồng bộ quá hạn
-        registration_needed: Cần đăng ký
         reconsent_required: Cần đồng ý lại
         reconsent_needed:
           one: Cần đồng ý lại sau 1 ngày

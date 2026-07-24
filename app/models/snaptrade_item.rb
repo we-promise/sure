@@ -25,10 +25,6 @@ class SnaptradeItem < ApplicationRecord
   end
 
   validates :name, presence: true
-  validates :client_id, presence: true, if: -> { consumer_key.present? }
-  validates :consumer_key, presence: true, if: -> { client_id.present? }
-  # Note: snaptrade_user_id and snaptrade_user_secret are populated after user registration
-  # via ensure_user_registered!, so we don't validate them on create
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -37,10 +33,10 @@ class SnaptradeItem < ApplicationRecord
   has_many :linked_accounts, through: :snaptrade_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
-  scope :credentials_configured, -> { active.where.not(client_id: [ nil, "" ]).where.not(consumer_key: [ nil, "" ]) }
-  # Syncable = active + fully configured (user registered with SnapTrade API)
-  # Items without user registration will fail sync, so exclude them from auto-sync
-  scope :syncable, -> { active.where.not(snaptrade_user_id: [ nil, "" ]).where.not(snaptrade_user_secret: [ nil, "" ]) }
+  # Syncable = active + authorized via OAuth (has an access token).
+  # oauth_access_token is non-deterministically encrypted, so it can only be
+  # queried with an IS NULL check (never persisted as "" -- see apply_oauth_tokens!).
+  scope :syncable, -> { active.where.not(oauth_access_token: nil) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
@@ -52,13 +48,8 @@ class SnaptradeItem < ApplicationRecord
   def import_latest_snaptrade_data(sync: nil)
     provider = snaptrade_provider
     unless provider
-      Rails.logger.error "SnaptradeItem #{id} - Cannot import: provider is not configured"
-      raise StandardError, "SnapTrade provider is not configured"
-    end
-
-    unless user_registered?
-      Rails.logger.error "SnaptradeItem #{id} - Cannot import: user not registered"
-      raise StandardError, "SnapTrade user not registered"
+      Rails.logger.error "SnaptradeItem #{id} - Cannot import: OAuth not authorized"
+      raise StandardError, "SnapTrade is not authorized"
     end
 
     SnaptradeItem::Importer.new(self, snaptrade_provider: provider, sync: sync).import
@@ -119,6 +110,20 @@ class SnaptradeItem < ApplicationRecord
     save!
   end
 
+  # Persist an OAuth token payload (string keys, as returned by the token endpoint).
+  # A rotation response may omit refresh_token; keep the existing one in that case.
+  def apply_oauth_tokens!(payload)
+    raise ArgumentError, "OAuth token payload missing access_token" if payload["access_token"].blank?
+
+    update!(
+      oauth_access_token: payload["access_token"],
+      oauth_refresh_token: payload["refresh_token"].presence || oauth_refresh_token,
+      oauth_token_type: payload["token_type"].presence || oauth_token_type,
+      oauth_scope: payload["scope"].presence || oauth_scope,
+      oauth_token_expires_at: payload["expires_in"].present? ? Time.current + payload["expires_in"].to_i.seconds : oauth_token_expires_at
+    )
+  end
+
   def has_completed_initial_setup?
     # Setup is complete if we have any linked accounts
     accounts.any?
@@ -177,12 +182,13 @@ class SnaptradeItem < ApplicationRecord
     end
   end
 
-  def credentials_configured?
-    client_id.present? && consumer_key.present?
-  end
-
   def oauth_configured?
     oauth_access_token.present?
+  end
+  alias_method :credentials_configured?, :oauth_configured?
+
+  def fully_configured?
+    oauth_configured?
   end
 
   # Override Syncable#syncing? to also show syncing state when activities are being
@@ -190,10 +196,6 @@ class SnaptradeItem < ApplicationRecord
   # is truly imported, not just when the main sync job completes.
   def syncing?
     super || snaptrade_accounts.where(activities_fetch_pending: true).exists?
-  end
-
-  def fully_configured?
-    credentials_configured? && user_registered?
   end
 
   # Get accounts linked via AccountProvider

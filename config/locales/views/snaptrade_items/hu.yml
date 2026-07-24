@@ -2,12 +2,6 @@
 hu:
   snaptrade_items:
     default_name: "SnapTrade kapcsolat"
-    link_accounts:
-      use_setup_flow: Használd helyette a számlabeállítási folyamatot
-    create:
-      success: "SnapTrade sikeresen beállítva."
-    update:
-      success: "SnapTrade konfiguráció sikeresen frissítve."
     destroy:
       success: "SnapTrade kapcsolat törlése ütemezve."
     connect:
@@ -52,9 +46,6 @@ hu:
       failed: "Nem sikerült törölni a kapcsolatot: %{message}"
       missing_authorization_id: "Hiányzó engedélyezési azonosító"
       api_deletion_failed: "Nem sikerült törölni a kapcsolatot a SnapTrade-ből — hiányzó hitelesítő adatok. A kapcsolat még mindig létezhet a SnapTrade fiókodon."
-    delete_orphaned_user:
-      success: "Árva regisztráció sikeresen törölve."
-      failed: "Nem sikerült törölni az árva regisztrációt."
     setup_accounts:
       title: "SnapTrade számlák beállítása"
       header: "SnapTrade számlák beállítása"
@@ -117,27 +108,13 @@ hu:
       name: "SnapTrade"
       connection_description: "Csatlakozás a brókereidhez a SnapTrade-en keresztül (25+ bróker támogatott)"
       description: "A SnapTrade 25+ nagyobb brókercéghez csatlakozik (Fidelity, Vanguard, Schwab, Robinhood stb.), és teljes kereskedési előzményeket biztosít tevékenységcímkékkel és bekerülési értékkel."
-      setup_title: "Beállítási utasítások:"
-      step_1_html: "Hozz létre fiókot a <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a> oldalon"
-      step_2: "Másold ki az Ügyfél-azonosítót és a Fogyasztói kulcsot az irányítópultból"
-      step_3: "Add meg a hitelesítő adatokat alább, majd kattints a Mentésre"
-      step_4: "Menj a Számlák oldalra, és az 'Másik brókercég csatlakoztatása' opcióval kapcsold össze a befektetési számláidat"
       free_tier_warning: "Az ingyenes szint 5 bróker kapcsolatot tartalmaz. További kapcsolatokhoz fizetős SnapTrade előfizetés szükséges."
-      client_id_label: "Ügyfél-azonosító"
-      client_id_placeholder: "Add meg a SnapTrade ügyfél-azonosítódat"
-      client_id_update_placeholder: "Add meg az új ügyfél-azonosítót a frissítéshez"
-      consumer_key_label: "Fogyasztói kulcs"
-      consumer_key_placeholder: "Add meg a SnapTrade fogyasztói kulcsodat"
-      consumer_key_update_placeholder: "Add meg az új fogyasztói kulcsot a frissítéshez"
-      save_button: "Konfiguráció mentése"
-      update_button: "Konfiguráció frissítése"
       status_connected:
         one: "%{count} számla a SnapTrade-ből"
         other: "%{count} számla a SnapTrade-ből"
       needs_setup:
         one: "%{count} beállítást igényel"
         other: "%{count} beállítást igényel"
-      status_needs_registration: "Hitelesítő adatok elmentve. Fejezd be a beállítást egy brókercég csatlakoztatásához."
       status_ready: "Készen áll brókercégek csatlakoztatásához"
       setup_accounts_button: "Számlák beállítása"
       connect_button: "Brókercég csatlakoztatása"
@@ -156,15 +133,6 @@ hu:
       delete_connection_title: "Brókeri kapcsolat törlése?"
       delete_connection_body: "Ez véglegesen eltávolítja a(z) %{brokerage} kapcsolatot a SnapTrade-ből. Az ehhez a brókercéghez tartozó összes számla szétkapcsolásra kerül. A számlák újbóli szinkronizálásához újra kell csatlakoznod."
       delete_connection_confirm: "Kapcsolat törlése"
-      orphaned_users_title:
-        one: "%{count} árva regisztráció"
-        other: "%{count} árva regisztráció"
-      orphaned_users_description: "Ezek korábbi SnapTrade felhasználói regisztrációk, amelyek a kapcsolati helyeidet foglalják. Töröl őket a helyek felszabadításához."
-      orphaned_user: "Árva regisztráció"
-      delete_orphaned_user: "Törlés"
-      delete_orphaned_user_title: "Árva regisztráció törlése?"
-      delete_orphaned_user_body: "Ez véglegesen törli ezt az árva SnapTrade felhasználót és az összes brókeri kapcsolatát, felszabadítva a kapcsolati helyeket."
-      delete_orphaned_user_confirm: "Regisztráció törlése"
 
   snaptrade_item:
     sync_status:
