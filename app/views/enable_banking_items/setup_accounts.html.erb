@@ -47,6 +47,14 @@
           </div>
         </div>
 
+        <% if @hidden_dedup_count > 0 %>
+          <%= render DS::Alert.new(
+            title: t(".shared_accounts_hidden_title", count: @hidden_dedup_count),
+            message: t(".shared_accounts_hidden_description"),
+            variant: :info
+          ) %>
+        <% end %>
+
         <!-- Sync Date Range Selection -->
         <div class="bg-surface border border-primary p-4 rounded-lg">
           <div class="flex items-start gap-3">
