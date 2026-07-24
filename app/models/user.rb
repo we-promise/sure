@@ -56,6 +56,16 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
   enum :role, { guest: "guest", member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+
+  # SQL counterpart to #preview_features_enabled?, for callers that filter
+  # users (or their families) in one query instead of loading and iterating.
+  # The `@>` containment operator uses index_users_on_preferences (GIN) and
+  # matches only a JSON boolean true, so it agrees with that predicate's
+  # strict `== true` — a stray "yes" enables neither.
+  scope :with_preview_features, -> {
+    where("preferences @> ?", { preview_features_enabled: true }.to_json)
+  }
+
   attribute :ui_layout, :string
   enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
 

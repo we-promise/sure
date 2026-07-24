@@ -3,7 +3,10 @@
 <div class="space-y-6 pb-6">
   <header class="flex items-start justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+        <%= render DS::Pill.new(label: t("shared.preview"), size: :md) %>
+      </div>
       <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
     </div>
 

@@ -13,8 +13,14 @@ class GenerateInsightsJob < ApplicationJob
   end
 
   private
+    # Insights are a preview feature, so the nightly sweep only visits families
+    # with an opted-in member. Unlike a job that moves existing data around,
+    # this one manufactures data per family — seven generators over the income
+    # statement and balance sheet, plus paid LLM narration — so running it for
+    # families who can't see the result is pure waste. Scoped in SQL rather
+    # than checked per family to keep the fan-out a single indexed query.
     def fan_out
-      Family.find_each do |family|
+      Family.with_preview_features.find_each do |family|
         GenerateInsightsJob.perform_later(family_id: family.id)
       rescue => e
         Rails.logger.error("Failed to enqueue insight generation for family #{family.id}: #{e.message}")
@@ -25,6 +31,11 @@ class GenerateInsightsJob < ApplicationJob
       family = Family.find_by(id: family_id)
       return unless family
       return if family.accounts.none?
+      # Also checked here, not just at the fan-out: this path is reachable
+      # directly via perform_later(family_id:) from the refresh action and the
+      # console. Returning above the lock means a gated family skips the
+      # broadcast below too, not just the generation.
+      return unless family.preview_features_enabled?
 
       with_advisory_lock(family_id) do
         I18n.with_locale(family.locale) do

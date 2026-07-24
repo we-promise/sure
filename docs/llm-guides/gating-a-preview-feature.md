@@ -140,6 +140,23 @@ Grep for `require_preview_features!` and `preview_features_enabled?` near your f
 
 The flag is per-user, not per-family. Two users in the same family can see different versions of the product if one opts in and the other doesn't. That's intentional. Data is family-scoped, but visibility is a personal preference. If you write a feature that creates family-shared data (goals, budgets, etc.), the data persists when a user toggles preview off. The UI just disappears from their view while still showing up for opted-in family members.
 
-The gate does nothing for background jobs. If your feature has a Sidekiq cron job, it runs regardless of who has preview enabled. That's usually correct (data should keep flowing), but if the job sends notifications or emails, gate those at the send site too.
+The gate does nothing for background jobs on its own — `PreviewGateable` reads `Current.user`, which a Sidekiq worker doesn't have. A cron job runs regardless of who has preview enabled. That's usually correct: data should keep flowing, so it's there when someone opts in. `SweepExpiredGoalPledgesJob` is the typical shape — it only walks pledges that opted-in users created, so it's naturally inert for everyone else and needs no gate.
+
+Gate the job when it does work that isn't free. Two cases: it sends something outward (notifications, emails — gate at the send site), or it *manufactures* data for every family rather than moving existing data around, burning compute or paid API calls per family. `GenerateInsightsJob` is the second case: seven generators over the income statement and balance sheet, plus optional LLM narration, for every family nightly.
+
+For a family-scoped job, roll the per-user flag up to the family:
+
+```ruby
+# app/models/family.rb
+scope :with_preview_features, -> { where(id: User.with_preview_features.select(:family_id)) }
+
+def preview_features_enabled?
+  users.any?(&:preview_features_enabled?)
+end
+```
+
+Filter the fan-out with the scope (one indexed query — `User.with_preview_features` is a jsonb containment match against the GIN index on `users.preferences`, not a load-and-iterate), and re-check with the predicate inside the per-family path, which is reachable directly from controllers and the console. Keep the same predicate name on both models so the GA-removal grep finds every call site. `GenerateInsightsJob` is the reference implementation.
+
+One opted-in member is enough to generate for the whole family — consistent with the per-user-visibility / family-scoped-data split described above.
 
 The redirect target is `/`. If you want gated controllers to land somewhere else (a docs page, an opt-in nudge), override `require_preview_features!` in the controller, or write a thin custom `before_action` that calls `preview_features_enabled?` directly.

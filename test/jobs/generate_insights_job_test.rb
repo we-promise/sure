@@ -3,11 +3,55 @@ require "test_helper"
 class GenerateInsightsJobTest < ActiveJob::TestCase
   setup do
     @family = families(:dylan_family)
+    enable_preview_features(@family)
   end
 
-  test "without args enqueues one job per family" do
-    assert_enqueued_jobs Family.count, only: GenerateInsightsJob do
+  test "without args enqueues one job per preview-enabled family" do
+    assert_operator Family.count, :>, Family.with_preview_features.count,
+      "fixture setup should leave some families without preview access"
+
+    assert_enqueued_jobs Family.with_preview_features.count, only: GenerateInsightsJob do
       GenerateInsightsJob.perform_now
+    end
+
+    assert_enqueued_with(job: GenerateInsightsJob, args: [ { family_id: @family.id } ])
+  end
+
+  # Insights is a preview feature and the job manufactures data (and can spend
+  # LLM budget) per family, so families with nobody opted in are skipped
+  # entirely rather than generated for and hidden.
+  test "without args enqueues nothing when no family has preview access" do
+    disable_preview_features(@family)
+
+    assert_no_enqueued_jobs only: GenerateInsightsJob do
+      GenerateInsightsJob.perform_now
+    end
+  end
+
+  test "does nothing for a family without preview access" do
+    disable_preview_features(@family)
+
+    assert_no_difference "Insight.count" do
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+  end
+
+  test "does not broadcast for a family without preview access" do
+    disable_preview_features(@family)
+
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).never
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+  end
+
+  test "generates for a family where only one member opted in" do
+    @family.users.each { |user| set_preview_features(user, false) }
+    set_preview_features(@family.users.first, true)
+
+    stub_generated([ generated_insight ])
+
+    assert_difference "@family.insights.count", 1 do
+      GenerateInsightsJob.perform_now(family_id: @family.id)
     end
   end
 
@@ -157,6 +201,18 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
   end
 
   private
+    def enable_preview_features(family)
+      family.users.each { |user| set_preview_features(user, true) }
+    end
+
+    def disable_preview_features(family)
+      family.users.each { |user| set_preview_features(user, false) }
+    end
+
+    def set_preview_features(user, enabled)
+      user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
+    end
+
     def stub_generated(generated_insights, succeeded_types: nil)
       result = Insight::GeneratorRegistry::Result.new(
         insights: generated_insights,

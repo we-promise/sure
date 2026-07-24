@@ -46,7 +46,9 @@ class PagesController < ApplicationController
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(net_totals)
-    @feed_insights = Current.family.insights.visible.ordered.limit(3)
+    # Preview-gated: skip the query outright rather than loading rows the
+    # section won't be built from.
+    @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(3) : Insight.none
 
     @dashboard_sections = build_dashboard_sections
 
@@ -108,17 +110,27 @@ class PagesController < ApplicationController
       end
     end
 
+    # Preview-gated, and omitted from the section list entirely rather than
+    # left in it with `visible: false`. Dropping it here means the two
+    # downstream behaviors fall out for free: the saved-order lookup finds
+    # nothing to map, and the insights_feed unshift special-case never fires.
+    def insights_feed_section
+      return nil unless preview_features_enabled?
+
+      {
+        key: "insights_feed",
+        title: "pages.dashboard.insights_feed.title",
+        partial: "pages/dashboard/insights_feed",
+        layout: section_layout("insights_feed"),
+        locals: { insights: @feed_insights },
+        visible: @feed_insights.any?,
+        collapsible: true
+      }
+    end
+
     def build_dashboard_sections
       all_sections = [
-        {
-          key: "insights_feed",
-          title: "pages.dashboard.insights_feed.title",
-          partial: "pages/dashboard/insights_feed",
-          layout: section_layout("insights_feed"),
-          locals: { insights: @feed_insights },
-          visible: @feed_insights.any?,
-          collapsible: true
-        },
+        insights_feed_section,
         {
           key: "cashflow_sankey",
           title: "pages.dashboard.cashflow_sankey.title",
@@ -164,7 +176,7 @@ class PagesController < ApplicationController
           visible: @accounts.any?,
           collapsible: true
         }
-      ]
+      ].compact
 
       # Order sections according to user preference
       section_order = Current.user.dashboard_section_order
