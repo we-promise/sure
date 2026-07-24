@@ -14,16 +14,17 @@ class TransactionsController < ApplicationController
 
   def index
     @q = search_params
-    accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
-    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: accessible_account_ids)
+    @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
+    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: @accessible_account_ids)
 
     base_scope = @search.transactions_scope
                        .reverse_chronological
                        .includes(
-                         { entry: :account },
-                         :category, :merchant, :tags,
-                         :transfer_as_inflow, :transfer_as_outflow
-                       )
+                          { entry: :account },
+                          :category, :merchant, :tags,
+                          transfer_as_outflow: { inflow_transaction: { entry: :account } },
+                          transfer_as_inflow: { outflow_transaction: { entry: :account } }
+                        )
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
     Transaction::ActivitySecurityPreloader.new(@transactions).preload

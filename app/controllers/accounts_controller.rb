@@ -53,8 +53,10 @@ class AccountsController < ApplicationController
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
+    @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
+
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -65,6 +67,17 @@ class AccountsController < ApplicationController
       limit: safe_per_page,
       params: request.query_parameters.except("tab").merge("tab" => "activity")
     )
+
+    # Preload transfer associations only for Transaction entries
+    txn_entryables = @entries.filter_map { |e| e.entryable if e.entryable_type == "Transaction" }
+    ActiveRecord::Associations::Preloader.new(
+      records: txn_entryables,
+      associations: {
+        transfer_as_outflow: { inflow_transaction: { entry: :account } },
+        transfer_as_inflow: { outflow_transaction: { entry: :account } }
+      }
+    ).call
+
     Transaction::ActivitySecurityPreloader.new(@entries).preload
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
