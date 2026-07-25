@@ -45,7 +45,14 @@ module InsightsHelper
       facts["amount"] && [ facts["amount"], t("insights.figures.days_overdue", count: facts["days_overdue"].to_i) ]
     when "idle_cash"
       facts["balance"] && [ facts["balance"], t("insights.figures.idle_days", count: facts["idle_days"].to_i) ]
-    when "budget_at_risk", "budget_on_track"
+    when "budget_at_risk"
+      # Not budget_spent_pct: this card's headline is "N categories need
+      # attention", and total consumption ("14% of budget") reads as reassurance
+      # next to it — a focal figure arguing against its own card. The flagged
+      # count is what the card is actually about.
+      facts["count"] && [ facts["count"].to_s, t("insights.figures.need_attention") ]
+    when "budget_on_track"
+      # Still the right figure here, where overall usage *is* the subject.
       facts["budget_spent_pct"] && [ "#{facts["budget_spent_pct"]}%", t("insights.figures.of_budget") ]
     end
   end

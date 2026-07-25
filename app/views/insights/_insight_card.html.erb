@@ -12,7 +12,11 @@
       <h3 class="text-sm font-medium text-primary inline-flex items-center gap-2 min-w-0">
         <%= insight.title %>
         <% if unread %>
-          <%= render DS::Pill.new(label: t("insights.card.new"), tone: :info, size: :sm) %>
+          <%# A dot, not a labelled chip. Visiting this page marks every insight
+              read in one go, so at first paint the badge is on *every* row and
+              differentiates nothing — an uppercase tracked chip that heavy just
+              steals weight from the title it sits beside. %>
+          <%= render DS::Pill.new(label: t("insights.card.new"), tone: :info, dot_only: true) %>
         <% end %>
       </h3>
 

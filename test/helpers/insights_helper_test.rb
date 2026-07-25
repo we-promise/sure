@@ -93,6 +93,28 @@ class InsightsHelperTest < ActionView::TestCase
     assert_nil insight_key_figure(without_facts)
   end
 
+  # The two budget cards share `budget_spent_pct` in facts but not a subject:
+  # at-risk is about how many categories are in trouble, on-track is about
+  # overall consumption. Showing consumption on the at-risk card put a
+  # reassuring figure next to a warning headline.
+  test "budget at risk leads with the flagged count, not overall consumption" do
+    insight = build_insight("budget_at_risk", facts: { "count" => 2, "budget_spent_pct" => 14 })
+
+    figure, caption = insight_key_figure(insight)
+
+    assert_equal "2", figure
+    assert_equal "need attention", caption
+  end
+
+  test "budget on track still leads with overall consumption" do
+    insight = build_insight("budget_on_track", facts: { "budget_spent_pct" => 62 })
+
+    figure, caption = insight_key_figure(insight)
+
+    assert_equal "62%", figure
+    assert_equal "of budget", caption
+  end
+
   test "action link resolves the stored subject and disappears when it cannot" do
     account = families(:dylan_family).accounts.visible.first
     resolvable = build_insight("idle_cash", metadata: { "account_id" => account.id })

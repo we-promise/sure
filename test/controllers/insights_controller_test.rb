@@ -22,12 +22,16 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert @insight.reload.active?
   end
 
-  test "dashboard renders the insights feed section with unread badges" do
+  # Unread state is carried by the well's header count, not by a pill on every
+  # row. The widget shows three rows, so the pill was usually on all of them,
+  # repeating what the header already says and crowding each title.
+  test "dashboard insights feed counts unread in its header, without per-row badges" do
     get root_url
 
     assert_response :success
     assert_select "#insights-feed", count: 1
-    assert_select "#insights-feed span", text: I18n.t("insights.card.new")
+    assert_select "#insights-feed p", text: /#{Regexp.escape(I18n.t("insights.feed.header_new"))}/
+    assert_select "#insights-feed span", text: I18n.t("insights.card.new"), count: 0
   end
 
   test "insights feed leads the dashboard for users with a saved order that predates it" do
