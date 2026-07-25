@@ -159,6 +159,23 @@ end %>
           </div>
 
           <div class="flex items-center gap-2">
+            <% if Current.family %>
+              <% unread_insights_count = Current.family.insights.active.count %>
+              <%# Prefetch disabled: /insights marks insights read on real visits
+                  and deliberately skips prefetch requests, so a prefetched
+                  response served on click would never clear the badge. %>
+              <%= link_to insights_path,
+                    class: "relative inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring",
+                    title: t("layouts.application.insights"),
+                    aria: { label: t("layouts.application.insights") },
+                    data: { turbo_prefetch: false } do %>
+                <%= icon("lightbulb", size: "sm") %>
+                <% if unread_insights_count.positive? %>
+                  <span class="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-inverse text-inverse text-[10px] font-medium flex items-center justify-center pointer-events-none"><%= unread_insights_count > 9 ? "9+" : unread_insights_count %></span>
+                <% end %>
+              <% end %>
+            <% end %>
+
             <button type="button"
                     class="inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring"
                     data-action="click->privacy-mode#toggle"

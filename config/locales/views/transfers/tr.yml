@@ -7,24 +7,45 @@ tr:
       success: Transfer kaldırıldı
     form:
       amount: Tutar
+      bank_charges: Banka ücretleri
       date: Tarih
+      destination_amount: Hedef tutar
+      destination_amount_display: 'Hedef tutar: %{amount}'
+      exchange_rate_display: 'Döviz kuru: %{rate}'
       expense: Gider
       from: Kimden
       income: Gelir
+      incoming_fee: Gelen transfer ücreti
+      outgoing_fee: Giden transfer ücreti
       select_account: Hesap seçin
+      source_amount: Kaynak tutar
       submit: Transfer oluştur
       to: Kime
       transfer: Transfer
     new:
       title: Yeni transfer
     show:
+      bank_charges: Banka ücretleri
+      category: Kategori
+      date: Tarih
       delete: Transferi kaldır
       delete_subtitle: Bu işlem transferi kaldırır. Altta yatan işlemler silinmeyecektir.
       delete_title: Transfer kaldırılsın mı?
+      destination_fee: Hedef ücret
       details: Detaylar
+      from: Kaynak
+      mark_recurring: Yinelenen olarak işaretle
+      mark_recurring_subtitle: Bu transferi yaklaşan işlemler akışında ve yinelenen
+        sayfasında yinelenen bir desen olarak izleyin.
+      mark_recurring_title: Transferi yinelenen olarak işaretle
       note_label: Notlar
       note_placeholder: Bu transfere bir not ekleyin
       overview: Genel Bakış
       settings: Ayarlar
+      source_fee: Kaynak ücret
+      to: Hedef
+      total: Toplam
+      transfer_amount: Transfer tutarı
+      uncategorized: Kategorisiz
     update:
       success: Transfer güncellendi

@@ -493,7 +493,7 @@ jobs:
       - name: Commit and push version bump
         env:
           SOURCE_BRANCH: ${{ steps.source_branch.outputs.branch }}
-          GH_TOKEN: ${{ secrets.VERSION_BUMP_PR_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
@@ -576,11 +576,11 @@ jobs:
           set -e
 
           if [[ $pr_create_status -ne 0 ]]; then
-            echo "::warning::Pushed ${BUMP_BRANCH}, but could not create the version bump PR: ${pr_create_output}"
+            echo "::error::Pushed ${BUMP_BRANCH}, but could not create the version bump PR: ${pr_create_output}"
             if grep -q "GitHub Actions is not permitted to create or approve pull requests" <<< "$pr_create_output"; then
-              echo "::notice::Enable the repository setting that allows GitHub Actions to create pull requests, or add a VERSION_BUMP_PR_TOKEN secret with contents, pull requests, and workflows permissions."
+              echo "::notice::Enable the organization setting that allows GitHub Actions to create and approve pull requests."
             fi
-            exit 0
+            exit 1
           fi
 
           PR_URL="$pr_create_output"

@@ -1,0 +1,85 @@
+---
+it:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: Collega a un conto exchange Kraken
+      name: "Kraken - %{name}"
+      description: "Collega a %{name}"
+    create:
+      default_name: Kraken
+      success: Connessione a Kraken riuscita. Il tuo conto exchange viene sincronizzato.
+    update:
+      success: Connessione Kraken aggiornata con successo.
+    destroy:
+      success: Connessione Kraken pianificata per l'eliminazione.
+    select_accounts:
+      select_connection: Scegli una connessione Kraken nelle Impostazioni provider.
+      no_credentials_configured: Aggiungi le credenziali API Kraken prima di configurare i conti.
+    link_accounts:
+      select_connection: Scegli una connessione Kraken prima di collegare i conti.
+    select_existing_account:
+      title: Collega conto Kraken
+      no_accounts_found: Nessun conto Kraken trovato.
+      wait_for_sync: Attendi il completamento della sincronizzazione Kraken.
+      check_provider_health: Verifica che le tue credenziali API Kraken siano valide.
+      link: Collega
+      cancel: Annulla
+    link_existing_account:
+      success: Collegato con successo al conto Kraken
+      select_connection: Scegli una connessione Kraken prima di collegare i conti.
+      errors:
+        only_manual: Solo i conti exchange Crypto manuali senza collegamento provider esistente possono essere collegati a Kraken
+        invalid_kraken_account: Conto Kraken non valido
+        kraken_account_already_linked: Questo conto Kraken è già collegato
+    setup_accounts:
+      title: Importa conto Kraken
+      subtitle: Seleziona il conto exchange da tracciare
+      instructions: Kraken importa un unico conto exchange Crypto combinato per questa connessione, con solo posizioni e operazioni spot.
+      no_accounts: Tutti i conti Kraken sono stati importati.
+      accounts_count:
+        one: "%{count} conto disponibile"
+        other: "%{count} conti disponibili"
+      select_all: Seleziona tutto
+      import_selected: Importa selezionati
+      cancel: Annulla
+      creating: Importazione in corso...
+    complete_account_setup:
+      success:
+        one: "Importato %{count} conto"
+        other: "Importati %{count} conti"
+      none_selected: Nessun conto selezionato
+      no_accounts: Nessun conto da importare
+    kraken_item:
+      provider_name: Kraken
+      syncing: Sincronizzazione in corso...
+      reconnect: Le credenziali devono essere aggiornate
+      deletion_in_progress: Eliminazione in corso...
+      sync_status:
+        no_accounts: Nessun conto trovato
+        all_synced:
+          one: "%{count} conto sincronizzato"
+          other: "%{count} conti sincronizzati"
+        partial_sync: "%{linked_count} sincronizzati, %{unlinked_count} da configurare"
+      status: "Ultima sincronizzazione %{timestamp} fa"
+      status_with_summary: "Ultima sincronizzazione %{timestamp} fa - %{summary}"
+      status_never: Mai sincronizzato
+      delete: Elimina
+      no_accounts_title: Nessun conto trovato
+      no_accounts_message: Il tuo conto exchange Kraken apparirà qui dopo la sincronizzazione.
+      setup_needed: Conto pronto per l'importazione
+      setup_description: Importa questa connessione Kraken come conto exchange Crypto.
+      setup_action: Importa conto
+      import_accounts_menu: Importa conto
+      stale_rate_warning: "Il saldo è approssimativo perché il tasso di cambio esatto per %{date} non era disponibile. Verrà aggiornato alla prossima sincronizzazione."
+  kraken_item:
+    syncer:
+      checking_credentials: Verifica credenziali...
+      credentials_invalid: Credenziali API Kraken non valide. Controlla la tua chiave API e il segreto.
+      importing_accounts: Importazione conti da Kraken...
+      checking_configuration: Verifica configurazione conto...
+      accounts_need_setup:
+        one: "%{count} conto da configurare"
+        other: "%{count} conti da configurare"
+      processing_accounts: Elaborazione dati conto...
+      calculating_balances: Calcolo saldi...

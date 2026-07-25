@@ -66,7 +66,7 @@ fr:
       success: Compte Akahu lié à %{account_name}.
     provider_panel:
       add_connection: Ajouter une connexion Akahu
-      app_token_label: App Token
+      app_token_label: Jeton d'application
       app_token_placeholder: Collez votre jeton d'application Akahu
       connection_name_label: Nom de la connexion
       connection_name_placeholder: Akahu principal
@@ -79,7 +79,7 @@ fr:
       sync: Synchroniser
       syncing: Synchronisation...
       update_connection: Mettre à jour la connexion
-      user_token_label: User Token
+      user_token_label: Jeton utilisateur
       user_token_placeholder: Collez votre jeton utilisateur Akahu
     select_accounts:
       cancel: Annuler

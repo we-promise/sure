@@ -1,49 +1,382 @@
 require "test_helper"
 
 class Provider::YahooFinanceTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @provider = Provider::YahooFinance.new
+    @cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(@cache)
+    DebugLogEntry.stubs(:capture)
   end
 
   # ================================
   #        Health Check Tests
   # ================================
 
-  test "healthy? returns true when API is working" do
-    mock_response = mock
-    mock_response.stubs(:body).returns('{"chart":{"result":[{"meta":{"symbol":"AAPL"}}]}}')
+  test "health_status returns cached status and schedules a stale refresh" do
+    @cache.write(
+      Provider::YahooFinance::HEALTH_STATUS_CACHE_KEY,
+      { status: :healthy, checked_at: 16.minutes.ago },
+      expires_in: Provider::YahooFinance::HEALTH_STATUS_RETENTION
+    )
+    @provider.expects(:perform_health_check).never
 
-    @provider.stubs(:fetch_cookie_and_crumb).returns([ "test_cookie", "test_crumb" ])
-    @provider.stubs(:authenticated_client).returns(mock_client = mock)
-    mock_client.stubs(:get).returns(mock_response)
-
-    assert @provider.healthy?
+    assert_enqueued_with(job: YahooFinanceHealthCheckJob) do
+      assert_equal :healthy, @provider.health_status
+    end
   end
 
-  test "healthy? returns false when API fails" do
-    @provider.stubs(:fetch_cookie_and_crumb).raises(Provider::YahooFinance::AuthenticationError.new("auth failed"))
+  test "health_status returns unknown and schedules a cold refresh" do
+    @provider.expects(:perform_health_check).never
 
-    assert_not @provider.healthy?
+    assert_enqueued_with(job: YahooFinanceHealthCheckJob) do
+      assert_equal :unknown, @provider.health_status
+    end
   end
 
-  test "healthy? retries with fresh crumb on Unauthorized body response" do
-    unauthorized_body = '{"chart":{"error":{"code":"Unauthorized","description":"No crumb"}}}'
-    success_body = '{"chart":{"result":[{"meta":{"symbol":"AAPL"}}]}}'
+  test "health_status does not schedule a refresh for fresh evidence" do
+    @cache.write(
+      Provider::YahooFinance::HEALTH_STATUS_CACHE_KEY,
+      { status: :healthy, checked_at: Time.current },
+      expires_in: Provider::YahooFinance::HEALTH_STATUS_RETENTION
+    )
 
-    unauthorized_response = mock
-    unauthorized_response.stubs(:body).returns(unauthorized_body)
+    assert_no_enqueued_jobs only: YahooFinanceHealthCheckJob do
+      assert_equal :healthy, @provider.health_status
+    end
+  end
 
-    success_response = mock
-    success_response.stubs(:body).returns(success_body)
+  test "health_status caches a healthy provider assessment" do
+    stub_successful_health_authentication
+    stub_health_chart_responses(healthy_chart_response)
 
-    mock_client = mock
-    mock_client.stubs(:get).returns(unauthorized_response, success_response)
+    assert_equal :healthy, @provider.refresh_health_status
+    assert_equal :healthy, @provider.refresh_health_status
+  end
 
-    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie1", "crumb1" ], [ "cookie2", "crumb2" ])
-    @provider.stubs(:authenticated_client).returns(mock_client)
-    @provider.expects(:clear_crumb_cache).once
+  test "health_status classifies a crumb HTTP 429 without retrying" do
+    cookie_response = health_response(
+      status: 404,
+      headers: { "set-cookie" => "A3=test-cookie; Max-Age=3600" }
+    )
+    crumb_response = health_response(status: 429, body: "secret response body")
+    auth_client = mock
+    auth_client.expects(:get).twice.returns(cookie_response, crumb_response)
+    @provider.stubs(:health_auth_client).returns(auth_client)
+    @provider.expects(:health_authenticated_client).never
 
-    assert @provider.healthy?
+    assert_equal :rate_limited, @provider.refresh_health_status
+  end
+
+  test "health_status classifies a cookie HTTP 429 without continuing crumb acquisition" do
+    auth_client = mock
+    auth_client.expects(:get).once.returns(health_response(status: 429, body: "secret response body"))
+    @provider.stubs(:health_auth_client).returns(auth_client)
+    @provider.expects(:health_authenticated_client).never
+
+    assert_equal :rate_limited, @provider.refresh_health_status
+  end
+
+  test "health_status classifies a chart HTTP 429 without retrying" do
+    stub_successful_health_authentication
+    stub_health_chart_responses(health_response(status: 429, body: "secret response body"))
+
+    assert_equal :rate_limited, @provider.refresh_health_status
+  end
+
+  test "health_status classifies connection failures and timeouts as unavailable" do
+    [ Faraday::ConnectionFailed.new("connection failed"), Faraday::TimeoutError.new("timed out") ].each do |error|
+      provider = Provider::YahooFinance.new
+      @cache.clear
+      auth_client = mock
+      auth_client.expects(:get).once.raises(error)
+      provider.stubs(:health_auth_client).returns(auth_client)
+
+      assert_equal :unavailable, provider.refresh_health_status
+    end
+  end
+
+  test "health_status clears Unauthorized credentials without retrying immediately" do
+    auth_client = mock
+    auth_client.expects(:get).times(4).returns(
+      cookie_health_response("cookie-1"), health_response(status: 200, body: "crumb-1"),
+      cookie_health_response("cookie-2"), health_response(status: 200, body: "crumb-2")
+    )
+    @provider.stubs(:health_auth_client).returns(auth_client)
+    stub_health_chart_responses(
+      health_response(status: 200, body: '{"chart":{"error":{"code":"Unauthorized"}}}'),
+      healthy_chart_response
+    )
+
+    travel_to Time.zone.parse("2026-07-20 12:00:00") do
+      assert_equal :unavailable, @provider.refresh_health_status
+      travel 5.minutes + 1.second
+      assert_equal :healthy, @provider.refresh_health_status
+    end
+  end
+
+  test "health_status classifies malformed and empty chart responses as unavailable" do
+    stub_successful_health_authentication
+    stub_health_chart_responses(
+      health_response(status: 200, body: "not-json"),
+      health_response(status: 200, body: '{"chart":{"result":[]}}')
+    )
+
+    travel_to Time.zone.parse("2026-07-20 12:00:00") do
+      assert_equal :unavailable, @provider.refresh_health_status
+      travel 5.minutes + 1.second
+      assert_equal :unavailable, @provider.refresh_health_status
+    end
+  end
+
+  test "health_status applies status-specific freshness windows" do
+    [
+      [ healthy_chart_response, 15.minutes, :healthy ],
+      [ health_response(status: 429), 30.minutes, :rate_limited ],
+      [ health_response(status: 503), 5.minutes, :unavailable ]
+    ].each do |first_response, freshness, first_status|
+      provider = Provider::YahooFinance.new
+      @cache.clear
+      stub_successful_health_authentication(provider: provider)
+      stub_health_chart_responses(first_response, healthy_chart_response, provider: provider)
+
+      travel_to Time.zone.parse("2026-07-20 12:00:00") do
+        assert_equal first_status, provider.refresh_health_status
+        travel freshness - 1.second
+        assert_equal first_status, provider.refresh_health_status
+        travel 2.seconds
+        assert_equal :healthy, provider.refresh_health_status
+      end
+    end
+  end
+
+  test "health_status returns stale evidence while one refresh is in progress" do
+    stub_successful_health_authentication
+    started = Queue.new
+    finish = Queue.new
+    calls = 0
+    chart_client = Object.new
+    chart_client.define_singleton_method(:get) do |*_args|
+      calls += 1
+      next healthy_chart_response if calls == 1
+
+      started << true
+      finish.pop
+      health_response(status: 503)
+    end
+    chart_client.define_singleton_method(:healthy_chart_response) { health_response(status: 200, body: '{"chart":{"result":[{}]}}') }
+    chart_client.define_singleton_method(:health_response) do |status:, body: ""|
+      OpenStruct.new(status: status, body: body, headers: {}, success?: status.between?(200, 299))
+    end
+    @provider.stubs(:health_authenticated_client).returns(chart_client)
+
+    travel_to Time.zone.parse("2026-07-20 12:00:00") do
+      assert_equal :healthy, @provider.refresh_health_status
+      travel 15.minutes + 1.second
+
+      refreshing = Thread.new { @provider.refresh_health_status }
+      started.pop
+      assert_equal :healthy, Provider::YahooFinance.new.health_status
+      finish << true
+      assert_equal :unavailable, refreshing.value
+    end
+  end
+
+  test "health_status returns unknown during a cold concurrent refresh" do
+    stub_successful_health_authentication
+    started = Queue.new
+    finish = Queue.new
+    chart_client = Object.new
+    response = healthy_chart_response
+    chart_client.define_singleton_method(:get) do |*_args|
+      started << true
+      finish.pop
+      response
+    end
+    @provider.stubs(:health_authenticated_client).returns(chart_client)
+
+    refreshing = Thread.new { @provider.refresh_health_status }
+    started.pop
+    assert_equal :unknown, Provider::YahooFinance.new.health_status
+    finish << true
+    assert_equal :healthy, refreshing.value
+  end
+
+  test "health_status discards stale evidence after one hour" do
+    stub_successful_health_authentication(count: 2)
+    started = Queue.new
+    finish = Queue.new
+    calls = 0
+    first_response = healthy_chart_response
+    refresh_response = healthy_chart_response
+    chart_client = Object.new
+    chart_client.define_singleton_method(:get) do |*_args|
+      calls += 1
+      next first_response if calls == 1
+
+      started << true
+      finish.pop
+      refresh_response
+    end
+    @provider.stubs(:health_authenticated_client).returns(chart_client)
+
+    travel_to Time.zone.parse("2026-07-20 12:00:00") do
+      assert_equal :healthy, @provider.refresh_health_status
+      travel 1.hour + 1.second
+
+      refreshing = Thread.new { @provider.refresh_health_status }
+      started.pop
+      assert_equal :unknown, Provider::YahooFinance.new.health_status
+      finish << true
+      assert_equal :healthy, refreshing.value
+    end
+  end
+
+  test "health_status lock expires and an obsolete refresh cannot overwrite newer evidence" do
+    stub_successful_health_authentication
+    started = Queue.new
+    finish = Queue.new
+    obsolete_response = health_response(status: 503)
+    blocking_client = Object.new
+    blocking_client.define_singleton_method(:get) do |*_args|
+      started << true
+      finish.pop
+      obsolete_response
+    end
+    @provider.stubs(:health_authenticated_client).returns(blocking_client)
+
+    first_refresh = Thread.new { @provider.refresh_health_status }
+    started.pop
+    travel 15.seconds + 1.second do
+      replacement = Provider::YahooFinance.new
+      stub_health_chart_responses(healthy_chart_response, provider: replacement)
+      assert_equal :healthy, replacement.refresh_health_status
+    end
+    finish << true
+
+    assert_equal :healthy, first_refresh.value
+    assert_equal :healthy, Provider::YahooFinance.new.health_status
+  end
+
+  test "health_status returns unknown without contacting Yahoo when cache access fails" do
+    failing_cache = mock
+    failing_cache.expects(:read).once.raises(Redis::BaseError.new("cache details"))
+    Rails.stubs(:cache).returns(failing_cache)
+    @provider.expects(:perform_health_check).never
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:category] == "provider_health_cache" &&
+        attributes[:metadata] == { exception_class: "Redis::BaseError" } &&
+        attributes.to_s.exclude?("cache details")
+    end
+
+    assert_equal :unknown, @provider.health_status
+  end
+
+  test "health_status reports a credential-cache failure as unknown" do
+    backing_cache = @cache
+    read_count = 0
+    failing_cache = Object.new
+    failing_cache.define_singleton_method(:read) do |key|
+      read_count += 1
+      raise Redis::BaseError, "cache details" if read_count == 3
+
+      backing_cache.read(key)
+    end
+    failing_cache.define_singleton_method(:write) { |key, value, **options| backing_cache.write(key, value, **options) }
+    failing_cache.define_singleton_method(:delete) { |key| backing_cache.delete(key) }
+    Rails.stubs(:cache).returns(failing_cache)
+    @provider.expects(:health_auth_client).never
+
+    diagnostics = []
+    DebugLogEntry.stubs(:capture).with { |attributes| diagnostics << attributes }
+
+    assert_equal :unknown, @provider.refresh_health_status
+    assert_equal [ "provider_health_cache" ], diagnostics.map { |entry| entry[:category] }
+    assert diagnostics.none? { |entry| entry.to_s.include?("cache details") }
+  end
+
+  test "health_status records only safe state transitions" do
+    stub_successful_health_authentication
+    stub_health_chart_responses(health_response(status: 429, body: "secret-body"))
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:category] == "provider_health" &&
+        attributes[:level] == "warn" &&
+        attributes[:metadata] == {
+          previous_state: :unknown,
+          new_state: :rate_limited,
+          health_check_stage: :chart,
+          http_status: 429
+        } &&
+        attributes.to_s.exclude?("secret-body")
+    end
+
+    assert_equal :rate_limited, @provider.refresh_health_status
+  end
+
+  test "health_status omits repeated diagnostics and records healthy recovery" do
+    stub_successful_health_authentication(count: 2)
+    stub_health_chart_responses(
+      health_response(status: 429),
+      health_response(status: 429),
+      healthy_chart_response
+    )
+    events = []
+    DebugLogEntry.stubs(:capture).with { |attributes| events << attributes }
+
+    travel_to Time.zone.parse("2026-07-20 12:00:00") do
+      assert_equal :rate_limited, @provider.refresh_health_status
+      travel 30.minutes + 1.second
+      assert_equal :rate_limited, @provider.refresh_health_status
+      travel 30.minutes + 1.second
+      assert_equal :healthy, @provider.refresh_health_status
+    end
+
+    assert_equal %i[rate_limited healthy], events.map { |event| event.dig(:metadata, :new_state) }
+    assert_equal %w[warn info], events.map { |event| event[:level] }
+  end
+
+  test "healthy? is true only for healthy" do
+    %i[healthy rate_limited unavailable unknown].each do |status|
+      provider = Provider::YahooFinance.new
+      provider.stubs(:health_status).returns(status)
+
+      assert_equal status == :healthy, provider.healthy?
+    end
+  end
+
+  test "rate-limited health status does not gate or change normal price and exchange-rate operations" do
+    stub_successful_health_authentication
+    stub_health_chart_responses(health_response(status: 429))
+    assert_equal :rate_limited, @provider.refresh_health_status
+
+    @provider.stubs(:fetch_authenticated_chart).returns(
+      "chart" => {
+        "result" => [ {
+          "meta" => { "currency" => "USD", "exchangeName" => "NMS" },
+          "timestamp" => [ Time.utc(2026, 7, 17).to_i ],
+          "indicators" => { "quote" => [ { "close" => [ 210.25 ] } ] }
+        } ]
+      }
+    )
+    @provider.stubs(:throttle_request)
+
+    price_response = @provider.fetch_security_prices(
+      symbol: "AAPL",
+      exchange_operating_mic: "XNAS",
+      start_date: Date.new(2026, 7, 17),
+      end_date: Date.new(2026, 7, 17)
+    )
+    exchange_rate_response = @provider.fetch_exchange_rates(
+      from: "USD",
+      to: "EUR",
+      start_date: Date.new(2026, 7, 17),
+      end_date: Date.new(2026, 7, 17)
+    )
+
+    assert price_response.success?
+    assert exchange_rate_response.success?
+    assert_equal :rate_limited, @provider.refresh_health_status
   end
 
   # ================================
@@ -135,6 +468,51 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal [], response.data
   end
 
+  test "search_securities returns canonical Colombian identity for Yahoo BVC listings" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({
+      quotes: [ {
+        symbol: "CIBEST.CL",
+        longname: "Grupo Cibest S.A.",
+        exchange: "BVC",
+        exchDisp: "Colombia"
+      } ]
+    }.to_json)
+
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    response = @provider.search_securities("CIBEST.CL")
+
+    assert response.success?
+    security = response.data.sole
+    assert_equal "CIBEST.CL", security.symbol
+    assert_equal "XBOG", security.exchange_operating_mic
+    assert_equal "CO", security.country_code
+  end
+
+  test "search_securities preserves catalog countries and display-name fallback" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({
+      quotes: [
+        { symbol: "AAPL", shortname: "Apple", exchange: "NMS", exchDisp: "NASDAQ" },
+        { symbol: "SAP.F", shortname: "SAP", exchange: "FRA", exchDisp: "Frankfurt" },
+        { symbol: "FALLBACK", shortname: "Fallback", exchange: "UNKNOWN", exchDisp: "Frankfurt" }
+      ]
+    }.to_json)
+
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    response = @provider.search_securities("company")
+
+    assert response.success?
+    results_by_symbol = response.data.index_by(&:symbol)
+    assert_equal "US", results_by_symbol.fetch("AAPL").country_code
+    assert_equal "DE", results_by_symbol.fetch("SAP.F").country_code
+    assert_equal "DE", results_by_symbol.fetch("FALLBACK").country_code
+  end
+
   # ================================
   #     Security Price Tests
   # ================================
@@ -146,6 +524,42 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     response = @provider.fetch_security_price(symbol: "", exchange_operating_mic: "XNAS", date: date)
     assert_not response.success?
     assert_instance_of Provider::YahooFinance::Error, response.error
+  end
+
+  test "fetch_security_prices uses the Colombian Yahoo suffix once and COP fallback" do
+    date = Date.new(2024, 1, 15)
+    chart_response = mock
+    chart_response.stubs(:body).returns({
+      chart: {
+        result: [ {
+          meta: { exchangeName: "BVC" },
+          timestamp: [ Time.utc(2024, 1, 15).to_i ],
+          indicators: { quote: [ { close: [ 42_350.0 ] } ] }
+        } ]
+      }
+    }.to_json)
+    chart_client = mock
+    chart_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/CIBEST\.CL$})).twice.returns(chart_response)
+    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie", "crumb" ])
+    @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
+    @provider.stubs(:throttle_request)
+
+    responses = [ "CIBEST", "CIBEST.CL" ].map do |symbol|
+      @provider.fetch_security_prices(
+        symbol: symbol,
+        exchange_operating_mic: "XBOG",
+        start_date: date,
+        end_date: date
+      )
+    end
+
+    responses.each do |response|
+      assert response.success?
+      price = response.data.sole
+      assert_equal "CIBEST.CL", price.symbol
+      assert_equal "COP", price.currency
+      assert_equal "XBOG", price.exchange_operating_mic
+    end
   end
 
   # ================================
@@ -180,6 +594,26 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
       assert_not result.success?
       assert_instance_of Provider::YahooFinance::RateLimitError, result.error
     end
+  end
+
+  test "classifies a successful crumb response containing a rate limit body" do
+    cookie_response = mock
+    cookie_response.stubs(:headers).returns({ "set-cookie" => "A3=test-cookie; Max-Age=3600" })
+
+    crumb_response = mock
+    crumb_response.stubs(:status).returns(200)
+    crumb_response.stubs(:body).returns("Too Many Requests")
+    crumb_response.stubs(:success?).returns(true)
+
+    auth_client = mock
+    auth_client.stubs(:get).returns(cookie_response, crumb_response)
+    @provider.stubs(:auth_client).returns(auth_client)
+    @provider.stubs(:throttle_request)
+
+    result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNAS")
+
+    assert_not result.success?
+    assert_instance_of Provider::YahooFinance::RateLimitError, result.error
   end
 
   test "handles 401 unauthorized as authentication error" do
@@ -470,4 +904,47 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     result = @provider.send(:deduplicate_dual_listings, securities)
     assert_equal securities, result
   end
+
+  private
+
+    def stub_successful_health_authentication(provider: @provider, count: 1)
+      responses = count.times.flat_map do |index|
+        [
+          cookie_health_response("test-cookie-#{index}"),
+          health_response(status: 200, body: "test-crumb-#{index}")
+        ]
+      end
+      auth_client = mock
+      auth_client.expects(:get).times(responses.length).returns(*responses)
+      provider.stubs(:health_auth_client).returns(auth_client)
+    end
+
+    def stub_health_chart_responses(*responses, provider: @provider)
+      chart_client = mock
+      chart_client.expects(:get).times(responses.length).returns(*responses)
+      provider.stubs(:health_authenticated_client).returns(chart_client)
+    end
+
+    def cookie_health_response(cookie)
+      health_response(
+        status: 404,
+        headers: { "set-cookie" => "A3=#{cookie}; Max-Age=3600" }
+      )
+    end
+
+    def healthy_chart_response
+      health_response(
+        status: 200,
+        body: '{"chart":{"result":[{"meta":{"symbol":"AAPL"}}]}}'
+      )
+    end
+
+    def health_response(status:, body: "", headers: {})
+      OpenStruct.new(
+        status: status,
+        body: body,
+        headers: headers,
+        success?: status.between?(200, 299)
+      )
+    end
 end

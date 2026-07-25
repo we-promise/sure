@@ -118,7 +118,14 @@ class Holding::PortfolioCache
         end
 
         # Medium priority prices from trades
+        # Exclude income entries (interest/dividend) — they are non-trading
+        # events with qty=0 and their zero price would clobber the security's
+        # market price on that date in the ForwardCalculator, producing a
+        # zero-amount holding.  Use qty (the same heuristic as
+        # Balance::BaseCalculator) rather than price to avoid blocking
+        # non-income zero-price trades such as Questrade journal transfers.
         trade_prices = (trades_by_security_id[security.id] || [])
+          .reject { |t| t.entryable.qty == 0 }
           .map do |trade|
             PriceWithPriority.new(
               price: Security::Price.new(
