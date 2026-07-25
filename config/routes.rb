@@ -127,16 +127,15 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :snaptrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+  resources :snaptrade_items, only: [ :index, :show, :destroy ] do
     collection do
       get :preload_accounts
       get :select_accounts
-      post :link_accounts
       get :select_existing_account
       post :link_existing_account
       get :callback
-      get :oauth_connect
-      post :start_oauth_connect
+      get :oauth_authorize
+      get :oauth_callback
     end
 
     member do
@@ -145,14 +144,25 @@ Rails.application.routes.draw do
       get :setup_accounts
       post :complete_account_setup
       get :connections
-      post :start_oauth_device_flow
-      post :complete_oauth_device_flow
       delete :delete_connection
-      delete :delete_orphaned_user
     end
   end
 
   resources :ibkr_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :trading212_items, only: [ :create, :update, :destroy ] do
     collection do
       get :select_accounts
       get :select_existing_account

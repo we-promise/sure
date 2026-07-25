@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1542,6 +1542,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
     t.string "area_unit"
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.string "avm_provider"
+    t.date "avm_last_synced_on"
+    t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying]::text[]))", name: "properties_avm_provider_check"
+  end
+
+  create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.string "period", null: false
+    t.string "provider_key", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider_key", "period"], name: "index_provider_request_counts_on_provider_key_and_period", unique: true
   end
 
   create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1983,6 +1996,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
     t.datetime "cancel_requested_at"
     t.index ["parent_id"], name: "index_syncs_on_parent_id"
     t.index ["status"], name: "index_syncs_on_status"
+    t.index ["syncable_type", "syncable_id", "created_at", "id"], name: "index_syncs_on_syncable_and_created_at_and_id", order: { created_at: :desc, id: :desc }
     t.index ["syncable_type", "syncable_id"], name: "index_syncs_on_syncable"
   end
 
@@ -2032,6 +2046,43 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
     t.index ["extra"], name: "index_trades_on_extra", using: :gin
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
     t.index ["security_id"], name: "index_trades_on_security_id"
+  end
+
+  create_table "trading212_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_type"
+    t.decimal "cash_balance", precision: 19, scale: 4
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.datetime "last_orders_sync"
+    t.datetime "last_positions_sync"
+    t.string "name"
+    t.jsonb "raw_dividends_payload", default: [], null: false
+    t.jsonb "raw_orders_payload", default: [], null: false
+    t.jsonb "raw_positions_payload", default: [], null: false
+    t.jsonb "raw_transactions_payload", default: [], null: false
+    t.string "trading212_account_id"
+    t.uuid "trading212_item_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["trading212_item_id", "trading212_account_id"], name: "index_trading212_accounts_on_item_and_account_id", unique: true, where: "(trading212_account_id IS NOT NULL)"
+    t.index ["trading212_item_id"], name: "index_trading212_accounts_on_trading212_item_id"
+  end
+
+  create_table "trading212_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "api_key"
+    t.string "api_secret"
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.string "environment", default: "live", null: false
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_instruments_payload", default: [], null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_trading212_items_on_family_id"
+    t.index ["status"], name: "index_trading212_items_on_status"
   end
 
   create_table "transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2342,6 +2393,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_14_120000) do
   add_foreign_key "tags", "families"
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "trades", "securities"
+  add_foreign_key "trading212_accounts", "trading212_items"
+  add_foreign_key "trading212_items", "families"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
   add_foreign_key "transactions", "transfers", column: "transfer_id"
