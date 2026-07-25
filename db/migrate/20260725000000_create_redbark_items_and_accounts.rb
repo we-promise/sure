@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateRedbarkItemsAndAccounts < ActiveRecord::Migration[8.1]
+class CreateRedbarkItemsAndAccounts < ActiveRecord::Migration[7.2]
   def change
     # Create provider items table (stores per-family connection credentials)
     create_table :redbark_items, id: :uuid do |t|
@@ -15,9 +15,9 @@ class CreateRedbarkItemsAndAccounts < ActiveRecord::Migration[8.1]
       t.string :institution_color
 
       # Status and lifecycle
-      t.string :status, default: "good"
-      t.boolean :scheduled_for_deletion, default: false
-      t.boolean :pending_account_setup, default: false
+      t.string :status, default: "good", null: false
+      t.boolean :scheduled_for_deletion, default: false, null: false
+      t.boolean :pending_account_setup, default: false, null: false
 
       # Sync settings
       t.datetime :sync_start_date
@@ -39,17 +39,20 @@ class CreateRedbarkItemsAndAccounts < ActiveRecord::Migration[8.1]
       t.references :redbark_item, null: false, foreign_key: true, type: :uuid
 
       # Account identification
-      t.string :name
-      t.string :redbark_account_id
+      t.string :name, null: false
+      t.string :redbark_account_id, null: false
       t.string :connection_id
       t.string :account_number
 
       # Account details
-      t.string :currency
+      t.string :currency, null: false
       t.decimal :current_balance, precision: 19, scale: 4
       t.string :account_status
       t.string :account_type
       t.string :provider
+
+      # Setup state - accounts the user chose to skip stay hidden from setup prompts
+      t.boolean :ignored, default: false, null: false
 
       # Metadata and raw data
       t.jsonb :institution_metadata

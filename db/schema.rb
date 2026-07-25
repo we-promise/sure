@@ -1642,15 +1642,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
 
   create_table "redbark_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "redbark_item_id", null: false
-    t.string "name"
-    t.string "redbark_account_id"
+    t.string "name", null: false
+    t.string "redbark_account_id", null: false
     t.string "connection_id"
     t.string "account_number"
-    t.string "currency"
+    t.string "currency", null: false
     t.decimal "current_balance", precision: 19, scale: 4
     t.string "account_status"
     t.string "account_type"
     t.string "provider"
+    t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
     t.jsonb "raw_payload"
     t.jsonb "raw_transactions_payload"
@@ -1669,9 +1670,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
     t.string "institution_domain"
     t.string "institution_url"
     t.string "institution_color"
-    t.string "status", default: "good"
-    t.boolean "scheduled_for_deletion", default: false
-    t.boolean "pending_account_setup", default: false
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.jsonb "raw_institution_payload"

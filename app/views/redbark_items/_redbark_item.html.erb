@@ -95,13 +95,13 @@
         ) %>
 
         <%# Compute unlinked accounts (no AccountProvider link) %>
-        <% unlinked_count = redbark_item.unlinked_redbark_accounts&.count || 0 %>
+        <% unlinked_count = redbark_item.unlinked_accounts_count %>
 
         <% if unlinked_count.to_i > 0 && redbark_item.accounts.empty? %>
           <%# No accounts imported yet - show prominent setup prompt %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
-            <p class="text-secondary text-sm"><%= t(".setup_description", linked: redbark_item.accounts.count, total: redbark_item.redbark_accounts.count) %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: redbark_item.linked_accounts_count, total: redbark_item.total_accounts_count) %></p>
             <%= render DS::Link.new(
               text: t(".setup_action"),
               icon: "plus",

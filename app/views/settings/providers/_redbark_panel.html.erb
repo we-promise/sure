@@ -25,7 +25,7 @@
     # - If family has an item WITH credentials, use it (for updates)
     # - If family has an item WITHOUT credentials, use it (to add credentials)
     # - If family has no items at all, create a new one
-    redbark_item = Current.family.redbark_items.first_or_initialize(name: "Redbark Connection")
+    redbark_item = Current.family.redbark_items.first_or_initialize(name: t("redbark_items.default_name"))
     is_new_record = redbark_item.new_record?
   %>
 
@@ -38,7 +38,8 @@
     <%= form.text_field :api_key,
                         label: t("redbark_items.panel.fields.api_key.label"),
                         placeholder: is_new_record ? t("redbark_items.panel.fields.api_key.placeholder_new") : t("redbark_items.panel.fields.api_key.placeholder_update"),
-                        type: :password %>
+                        type: :password,
+                        value: nil %>
 
     <div class="flex justify-end">
       <%= form.submit is_new_record ? t("redbark_items.panel.save_button") : t("redbark_items.panel.update_button"),

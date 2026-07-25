@@ -41,4 +41,16 @@ class RedbarkItemTest < ActiveSupport::TestCase
     assert families(:dylan_family).has_redbark_credentials?
     refute families(:empty).has_redbark_credentials?
   end
+
+  test "ignored accounts are excluded from setup counts" do
+    account = redbark_accounts(:savings_account)
+    assert_equal 1, @redbark_item.unlinked_accounts_count
+
+    account.update!(ignored: true)
+
+    fresh_item = RedbarkItem.find(@redbark_item.id)
+    assert_equal 0, fresh_item.unlinked_accounts_count
+    assert_equal 1, fresh_item.total_accounts_count
+    assert_not RedbarkAccount.needs_setup.exists?(id: account.id)
+  end
 end

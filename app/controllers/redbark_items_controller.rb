@@ -4,6 +4,7 @@ class RedbarkItemsController < ApplicationController
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_redbark_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def index
     @redbark_items = Current.family.redbark_items.ordered
@@ -21,7 +22,7 @@ class RedbarkItemsController < ApplicationController
 
   def create
     @redbark_item = Current.family.redbark_items.build(redbark_item_params)
-    @redbark_item.name ||= "Redbark Connection"
+    @redbark_item.name ||= t("redbark_items.default_name")
 
     if @redbark_item.save
       if turbo_frame_request?
@@ -48,13 +49,17 @@ class RedbarkItemsController < ApplicationController
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+        redirect_to settings_providers_path, alert: @error_message, status: :see_other
       end
     end
   end
 
   def update
-    if @redbark_item.update(redbark_item_params)
+    update_params = redbark_item_params
+    # A fresh key means the connection can be retried - clear requires_update
+    update_params = update_params.merge(status: :good) if update_params[:api_key].present?
+
+    if @redbark_item.update(update_params)
       if turbo_frame_request?
         flash.now[:notice] = t(".success", default: "Successfully updated Redbark configuration.")
         @redbark_items = Current.family.redbark_items.ordered
@@ -79,14 +84,24 @@ class RedbarkItemsController < ApplicationController
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+        redirect_to settings_providers_path, alert: @error_message, status: :see_other
       end
     end
   end
 
   def destroy
+    # Detach provider links before scheduling deletion; abort if anything
+    # failed to unlink so we never orphan holdings or provider links
+    unlink_results = @redbark_item.unlink_all!(dry_run: false)
+    failed = unlink_results.select { |r| r[:error].present? }
+
+    if failed.any?
+      redirect_to settings_providers_path, alert: t(".unlink_failed", count: failed.count), status: :see_other
+      return
+    end
+
     @redbark_item.destroy_later
-    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled Redbark connection for deletion.")
+    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled Redbark connection for deletion."), status: :see_other
   end
 
   def sync
@@ -160,11 +175,21 @@ class RedbarkItemsController < ApplicationController
         next
       end
 
-      # Create Sure account and link
-      link_redbark_account(redbark_account, accountable_type)
+      # Create Sure account and link, atomically
+      ActiveRecord::Base.transaction do
+        link_redbark_account(redbark_account, accountable_type)
+      end
       created_count += 1
     rescue => e
-      Rails.logger.error "RedbarkItemsController#link_accounts - Failed to link account: #{e.message}"
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "error",
+        message: "Redbark account linking failed",
+        source: self.class.name,
+        provider_key: "redbark",
+        family: Current.family,
+        metadata: { redbark_account_id: redbark_account.id, error_class: e.class.name, error: e.message }
+      )
     end
 
     if created_count > 0
@@ -185,8 +210,7 @@ class RedbarkItemsController < ApplicationController
     end
 
     @redbark_accounts = @redbark_item.redbark_accounts
-                                                      .left_joins(:account_provider)
-                                                      .where(account_providers: { id: nil })
+                                                      .without_linked
                                                       .order(:name)
   end
 
@@ -207,6 +231,7 @@ class RedbarkItemsController < ApplicationController
     end
 
     redbark_account.ensure_account_provider!(account)
+    redbark_account.update!(ignored: false)
     redbark_item.sync_later unless redbark_item.syncing?
 
     redirect_to account_path(account), notice: t(".success", account_name: account.name)
@@ -232,24 +257,38 @@ class RedbarkItemsController < ApplicationController
     skipped_count = 0
 
     account_configs.each do |redbark_account_id, config|
-      next if config[:account_type] == "skip"
-
       redbark_account = @redbark_item.redbark_accounts.find_by(id: redbark_account_id)
       next unless redbark_account
       next if redbark_account.account_provider.present?
 
-      accountable_type = infer_accountable_type(config[:account_type], config[:subtype])
-      account = create_account_from_redbark(redbark_account, accountable_type, config)
-
-      if account&.persisted?
-        redbark_account.ensure_account_provider!(account)
-        redbark_account.update!(sync_start_date: config[:sync_start_date]) if config[:sync_start_date].present?
-        created_count += 1
-      else
+      # Remember the user's choice to skip so the account stops resurfacing
+      # as "needs setup" on every sync
+      if config[:account_type] == "skip" || config[:account_type].blank?
+        redbark_account.update!(ignored: true)
         skipped_count += 1
+        next
       end
+
+      accountable_type = infer_accountable_type(config[:account_type], config[:subtype])
+
+      # Atomic: roll back the manual account if linking the provider fails
+      ActiveRecord::Base.transaction do
+        account = create_account_from_redbark(redbark_account, accountable_type, config)
+        redbark_account.ensure_account_provider!(account)
+        redbark_account.update!(ignored: false)
+        redbark_account.update!(sync_start_date: config[:sync_start_date]) if config[:sync_start_date].present?
+      end
+      created_count += 1
     rescue => e
-      Rails.logger.error "RedbarkItemsController#complete_account_setup - Error: #{e.message}"
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "error",
+        message: "Redbark account setup failed",
+        source: self.class.name,
+        provider_key: "redbark",
+        family: Current.family,
+        metadata: { redbark_account_id: redbark_account_id, error_class: e.class.name, error: e.message }
+      )
       skipped_count += 1
     end
 
@@ -305,6 +344,7 @@ class RedbarkItemsController < ApplicationController
       )
 
       redbark_account.ensure_account_provider!(account)
+      redbark_account.update!(ignored: false)
       account
     end
 

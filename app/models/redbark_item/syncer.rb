@@ -14,7 +14,7 @@ class RedbarkItem::Syncer
 
     # Phase 1: Import data from provider API
     sync.update!(status_text: I18n.t("redbark_items.sync.status.importing")) if sync.respond_to?(:status_text)
-    redbark_item.import_latest_redbark_data(sync: sync)
+    import_stats = redbark_item.import_latest_redbark_data(sync: sync)
 
     # Phase 2: Collect setup statistics
     finalize_setup_counts(sync)
@@ -39,8 +39,10 @@ class RedbarkItem::Syncer
       collect_transaction_stats(sync, account_ids: account_ids, source: "redbark")
     end
 
-    # Mark sync health
-    collect_health_stats(sync, errors: nil)
+    # Mark sync health, surfacing per-account import errors instead of
+    # unconditionally reporting a clean run
+    import_errors = import_stats.is_a?(Hash) ? import_stats["errors"] : nil
+    collect_health_stats(sync, errors: import_errors.presence)
   rescue Provider::Redbark::AuthenticationError => e
     redbark_item.update!(status: :requires_update)
     collect_health_stats(sync, errors: [ { message: e.message, category: "auth_error" } ])

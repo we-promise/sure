@@ -33,6 +33,8 @@ class RedbarkItem::Importer
 
     # Store import stats on the item as the raw snapshot
     redbark_item.upsert_redbark_snapshot!(stats)
+
+    stats
   rescue Provider::Redbark::AuthenticationError
     redbark_item.update!(status: :requires_update)
     raise
@@ -57,7 +59,7 @@ class RedbarkItem::Importer
       rescue Provider::Redbark::AuthenticationError
         raise
       rescue => e
-        Rails.logger.warn "RedbarkItem::Importer - Failed to fetch connections (institution metadata will be limited): #{e.message}"
+        capture_failure("Connections fetch failed; institution metadata will be limited", e)
         {}
       end
     end
@@ -88,7 +90,7 @@ class RedbarkItem::Importer
 
           stats["accounts_imported"] = stats.fetch("accounts_imported", 0) + 1
         rescue => e
-          Rails.logger.error "RedbarkItem::Importer - Failed to import account: #{e.message}"
+          capture_failure("Account import failed", e, account_id: account_data[:id])
           stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
           register_error(e, account_id: account_data[:id])
         end
@@ -129,7 +131,7 @@ class RedbarkItem::Importer
       rescue Provider::Redbark::AuthenticationError
         raise
       rescue => e
-        Rails.logger.warn "RedbarkItem::Importer - Failed to fetch transactions: #{e.message}"
+        capture_failure("Transactions fetch failed", e, account_id: redbark_account.redbark_account_id)
         register_error(e, context: "transactions", account_id: redbark_account.id)
       end
     end
@@ -163,7 +165,7 @@ class RedbarkItem::Importer
       rescue Provider::Redbark::AuthenticationError
         raise
       rescue => e
-        Rails.logger.warn "RedbarkItem::Importer - Failed to fetch balances: #{e.message}"
+        capture_failure("Balances fetch failed; keeping previous balances", e)
         register_error(e, context: "balances")
       end
     end
@@ -218,7 +220,7 @@ class RedbarkItem::Importer
           redbark_account.destroy
           stats["accounts_pruned"] = stats.fetch("accounts_pruned", 0) + 1
         rescue => e
-          Rails.logger.error "RedbarkItem::Importer - Failed to prune RedbarkAccount #{redbark_account.id}: #{e.message}"
+          capture_failure("Failed to prune orphaned account", e, redbark_account_id: redbark_account.id)
         end
       end
     end
@@ -230,5 +232,20 @@ class RedbarkItem::Importer
         context: context.to_s,
         timestamp: Time.current.iso8601
       }
+    end
+
+    # Surfaces provider failures in the /settings/debug super-admin UI so
+    # support can diagnose without log access
+    def capture_failure(message, error, **metadata)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: message,
+        source: self.class.name,
+        provider_key: "redbark",
+        family: redbark_item.family,
+        metadata: { error_class: error.class.name, error: error.message }.merge(metadata)
+      )
+      Rails.logger.warn "RedbarkItem::Importer - #{message}: #{error.class}: #{error.message}"
     end
 end

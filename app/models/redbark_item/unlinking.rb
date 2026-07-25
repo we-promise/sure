@@ -36,8 +36,14 @@ module RedbarkItem::Unlinking
           end
         end
       rescue StandardError => e
-        Rails.logger.warn(
-          "RedbarkItem Unlinker: failed to fully unlink provider account ##{provider_account.id} (links=#{link_ids.inspect}): #{e.class} - #{e.message}"
+        DebugLogEntry.capture(
+          category: "provider_sync",
+          level: "error",
+          message: "Failed to fully unlink Redbark provider account",
+          source: "RedbarkItem::Unlinking",
+          provider_key: "redbark",
+          family: family,
+          metadata: { redbark_account_id: provider_account.id, provider_link_ids: link_ids, error_class: e.class.name, error: e.message }
         )
         # Record error for observability; continue with other accounts
         result[:error] = e.message

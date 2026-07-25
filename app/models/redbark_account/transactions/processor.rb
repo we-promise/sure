@@ -65,6 +65,15 @@ class RedbarkAccount::Transactions::Processor
     }
 
     if failed_count > 0
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Redbark transaction processing completed with failures",
+        source: self.class.name,
+        provider_key: "redbark",
+        family: redbark_account.redbark_item.family,
+        metadata: { redbark_account_id: redbark_account.id, total: total_count, failed: failed_count, errors: errors.first(10) }
+      )
       Rails.logger.warn "RedbarkAccount::Transactions::Processor - Completed with #{failed_count} failures out of #{total_count} transactions"
     else
       Rails.logger.info "RedbarkAccount::Transactions::Processor - Successfully processed #{imported_count} transactions"

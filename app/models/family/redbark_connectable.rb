@@ -12,7 +12,7 @@ module Family::RedbarkConnectable
 
   def create_redbark_item!(api_key:, item_name: nil)
     redbark_item = redbark_items.create!(
-      name: item_name || "Redbark Connection",
+      name: item_name || I18n.t("redbark_items.default_name"),
       api_key: api_key
     )
 

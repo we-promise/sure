@@ -13,7 +13,8 @@ class RedbarkItem < ApplicationRecord
   end
 
   validates :name, presence: true
-  validates :api_key, presence: true, on: :create
+  # Validate on every save, not just create - an update must never blank the key
+  validates :api_key, presence: true
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -30,8 +31,10 @@ class RedbarkItem < ApplicationRecord
   end
 
   def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
+    transaction do
+      update!(scheduled_for_deletion: true)
+      DestroyJob.perform_later(self)
+    end
   end
 
 
@@ -59,7 +62,15 @@ class RedbarkItem < ApplicationRecord
         result = RedbarkAccount::Processor.new(redbark_account).process
         results << { redbark_account_id: redbark_account.id, success: true, result: result }
       rescue => e
-        Rails.logger.error "RedbarkItem #{id} - Failed to process account #{redbark_account.id}: #{e.message}"
+        DebugLogEntry.capture(
+          category: "provider_sync",
+          level: "error",
+          message: "Failed to process Redbark account",
+          source: self.class.name,
+          provider_key: "redbark",
+          family: family,
+          metadata: { redbark_account_id: redbark_account.id, error_class: e.class.name, error: e.message }
+        )
         results << { redbark_account_id: redbark_account.id, success: false, error: e.message }
       end
     end
@@ -106,35 +117,31 @@ class RedbarkItem < ApplicationRecord
     redbark_accounts.joins(:account_provider)
   end
 
-  # Unlinked accounts (no AccountProvider association)
+  # Unlinked accounts still awaiting setup (no AccountProvider link, not skipped by the user)
   def unlinked_redbark_accounts
-    redbark_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
+    redbark_accounts.needs_setup
   end
 
   def sync_status_summary
-    total_accounts = total_accounts_count
-    linked_count = linked_accounts_count
-    unlinked_count = unlinked_accounts_count
-
-    if total_accounts == 0
+    if account_counts[:total] == 0
       I18n.t("redbark_items.sync_status.no_accounts")
-    elsif unlinked_count == 0
-      I18n.t("redbark_items.sync_status.synced", count: linked_count)
+    elsif account_counts[:needs_setup] == 0
+      I18n.t("redbark_items.sync_status.synced", count: account_counts[:linked])
     else
-      I18n.t("redbark_items.sync_status.synced_with_setup", linked: linked_count, unlinked: unlinked_count)
+      I18n.t("redbark_items.sync_status.synced_with_setup", linked: account_counts[:linked], unlinked: account_counts[:needs_setup])
     end
   end
 
   def linked_accounts_count
-    redbark_accounts.joins(:account_provider).count
+    account_counts[:linked]
   end
 
   def unlinked_accounts_count
-    redbark_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    account_counts[:needs_setup]
   end
 
   def total_accounts_count
-    redbark_accounts.count
+    account_counts[:total]
   end
 
   def institution_display_name
@@ -161,4 +168,23 @@ class RedbarkItem < ApplicationRecord
   def credentials_configured?
     api_key.present?
   end
+
+  private
+
+    # One grouped query instead of separate COUNTs for each of the
+    # linked/unlinked/total figures the accounts index partial reads.
+    def account_counts
+      @account_counts ||= begin
+        rows = redbark_accounts
+          .left_joins(:account_provider)
+          .group(:ignored, Arel.sql("account_providers.id IS NULL"))
+          .count
+
+        {
+          total: rows.values.sum,
+          linked: rows.sum { |(_ignored, unlinked), count| unlinked ? 0 : count },
+          needs_setup: rows.sum { |(ignored, unlinked), count| unlinked && !ignored ? count : 0 }
+        }
+      end
+    end
 end

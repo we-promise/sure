@@ -23,6 +23,8 @@ class Provider::Redbark
 
   class ConfigurationError < Error; end
   class AuthenticationError < Error; end
+  class RateLimitError < Error; end
+  class ServerError < Error; end
 
   attr_reader :api_key
 
@@ -98,6 +100,7 @@ class Provider::Redbark
     def paginate(operation_name, url, page_size:, query: {})
       results = []
       offset = 0
+      truncated = true
 
       MAX_PAGES.times do
         page = with_retries(operation_name) do
@@ -113,9 +116,17 @@ class Provider::Redbark
         results.concat(data)
 
         pagination = page[:pagination] || {}
-        break unless pagination[:hasMore] && data.any?
+        unless pagination[:hasMore] && data.any?
+          truncated = false
+          break
+        end
 
         offset += data.size
+      end
+
+      # Never silently truncate history - a partial import corrupts balances
+      if truncated
+        raise Error.new("#{operation_name} exceeded #{MAX_PAGES} pages without exhausting results", :too_many_pages)
       end
 
       results
@@ -126,7 +137,7 @@ class Provider::Redbark
 
       begin
         yield
-      rescue *RETRYABLE_ERRORS => e
+      rescue *RETRYABLE_ERRORS, RateLimitError, ServerError => e
         retries += 1
 
         if retries <= max_retries
@@ -142,6 +153,7 @@ class Provider::Redbark
             "Redbark API: #{operation_name} failed after #{max_retries} retries: " \
             "#{e.class}: #{e.message}"
           )
+          raise e if e.is_a?(Error)
           raise Error.new("Network error after #{max_retries} retries: #{e.message}", :network_error)
         end
       end
@@ -162,12 +174,13 @@ class Provider::Redbark
     end
 
     # Redbark error envelope: { error: { message, code, details } }
+    # Error messages carry the parsed provider message only, never the raw
+    # response body - callers log and re-log these strings.
     def handle_response(response)
       case response.code
       when 200, 201
         JSON.parse(response.body, symbolize_names: true)
       when 400
-        Rails.logger.error "Redbark API: Bad request - #{response.body}"
         raise Error.new("Bad request: #{error_message_from(response)}", :bad_request)
       when 401
         raise AuthenticationError.new("Invalid API key", :unauthorized)
@@ -178,19 +191,18 @@ class Provider::Redbark
       when 410
         raise Error.new("Endpoint requires an accountId: #{error_message_from(response)}", :bad_request)
       when 429
-        raise Error.new("Rate limit exceeded. Please try again later.", :rate_limited)
+        raise RateLimitError.new("Rate limit exceeded", :rate_limited)
       when 500..599
-        raise Error.new("Redbark server error (#{response.code}). Please try again later.", :server_error)
+        raise ServerError.new("Redbark server error (#{response.code})", :server_error)
       else
-        Rails.logger.error "Redbark API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
-        raise Error.new("Unexpected error: #{response.code} - #{error_message_from(response)}", :unknown)
+        raise Error.new("Unexpected response #{response.code}: #{error_message_from(response)}", :unknown)
       end
     end
 
     def error_message_from(response)
       parsed = JSON.parse(response.body)
-      parsed.dig("error", "message") || response.body.to_s.truncate(200)
+      parsed.dig("error", "message") || "no error message provided"
     rescue JSON::ParserError
-      response.body.to_s.truncate(200)
+      "unparseable error response"
     end
 end

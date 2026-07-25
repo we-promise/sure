@@ -17,11 +17,13 @@ class RedbarkAccount < ApplicationRecord
   has_one :account, through: :account_provider, source: :account
   has_one :linked_account, through: :account_provider, source: :account
 
-  validates :name, :currency, presence: true
+  validates :name, :currency, :redbark_account_id, presence: true
+  validates :redbark_account_id, uniqueness: { scope: :redbark_item_id }
 
   # Scopes
   scope :with_linked, -> { joins(:account_provider) }
   scope :without_linked, -> { left_joins(:account_provider).where(account_providers: { id: nil }) }
+  scope :needs_setup, -> { without_linked.where(ignored: false) }
   scope :ordered, -> { order(created_at: :desc) }
 
   # Callbacks

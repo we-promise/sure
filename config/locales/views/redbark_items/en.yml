@@ -1,6 +1,7 @@
 ---
 en:
   redbark_items:
+    default_name: "Redbark Connection"
     # Model method strings (i18n for item_model.rb)
     sync_status:
       no_accounts: "No accounts found"
@@ -55,6 +56,9 @@ en:
       success: "Redbark connection updated"
     destroy:
       success: "Redbark connection removed"
+      unlink_failed:
+        one: "Could not unlink %{count} account. Please try again."
+        other: "Could not unlink %{count} accounts. Please try again."
     index:
       title: "Redbark Connections"
 
