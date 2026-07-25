@@ -205,6 +205,26 @@ class Period
     end
   end
 
+  # Compact rendering of the actual dates, sized for a control that has to show
+  # its own value (the period picker trigger). `label_short` answers "which
+  # option is this" and degrades to a bare "Custom" for a keyless range, which
+  # tells the reader nothing; `comparison_label` is the long form shown beside
+  # trend values and is too wide for a button.
+  #
+  # The year is dropped while the whole range sits inside the current year — it
+  # adds width without disambiguating anything.
+  def label_range
+    return label_short if start_date.nil? || end_date.nil?
+
+    if start_date.year == end_date.year && end_date.year == Date.current.year
+      "#{I18n.l(start_date, format: :short)} – #{I18n.l(end_date, format: :short)}"
+    else
+      # Matches `comparison_label`'s format so the trigger and the range printed
+      # above the chart read as the same range.
+      "#{start_date.strftime(@date_format)} – #{end_date.strftime(@date_format)}"
+    end
+  end
+
   private
     def key_metadata
       @key_metadata ||= PERIODS[key]

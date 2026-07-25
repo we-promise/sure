@@ -22,8 +22,10 @@ export default class extends Controller {
   _resizeObserver = null;
   _d3DragSelectBrush = null;
   _d3DragSelectGroup = null;
-  // Below this pixel width, a brush gesture is indistinguishable from a
-  // stray click/tap meant for hovering the tooltip, not selecting a range.
+  // d3 only nulls a truly zero-width selection, so 1-3px of jitter on a click
+  // still arrives here as a real drag. On a dense period (365D is ~2px per
+  // point) that is enough to straddle two data points and navigate somewhere
+  // the user never aimed at, so treat anything this small as a click.
   _dragSelectMinPx = 4;
 
   connect() {
@@ -400,7 +402,7 @@ export default class extends Controller {
     const [x0, x1] = event.selection;
 
     if (x1 - x0 < this._dragSelectMinPx) {
-      this._d3DragSelectGroup.call(this._d3DragSelectBrush.move, null);
+      this._d3DragSelectGroup?.call(this._d3DragSelectBrush.move, null);
       return;
     }
 
@@ -408,10 +410,20 @@ export default class extends Controller {
     // during the drag) rather than the raw continuous pixel-to-time value —
     // a few pixels of mouse imprecision can otherwise land on a date that's
     // days away from the one the user was looking at on a wide chart.
-    const startDate = this._nearestDataPointForPixel(x0).date;
-    const endDate = this._nearestDataPointForPixel(x1).date;
+    const startDatum = this._nearestDataPointForPixel(x0);
+    const endDatum = this._nearestDataPointForPixel(x1);
 
-    this._navigateToDateRange(startDate, endDate);
+    // Reject *after* snapping, which is where the outcome is actually decided:
+    // a 30D chart is ~27px per point, so a drag can clear the pixel floor above
+    // and still collapse to a single date. That range renders one value, which
+    // sends _draw() down the empty-state path — and the empty state has no
+    // brush left to drag back out of.
+    if (startDatum === endDatum) {
+      this._d3DragSelectGroup?.call(this._d3DragSelectBrush.move, null);
+      return;
+    }
+
+    this._navigateToDateRange(startDatum.date, endDatum.date);
   }
 
   _navigateToDateRange(startDate, endDate) {
@@ -508,9 +520,11 @@ export default class extends Controller {
       .attr("fill", this._trendColor)
       .attr("pointer-events", "none");
 
-    // Render tooltip
+    // Render tooltip. Optional, to match _hideTooltip: the brush drives this
+    // method unconditionally, so a selectable chart with use_tooltip=false has
+    // no tooltip node — but it still gets the guideline and circles above.
     this._d3Tooltip
-      .html(this._tooltipTemplate(datum))
+      ?.html(this._tooltipTemplate(datum))
       .style("opacity", 1)
       .style("z-index", 999)
       .style("left", `${adjustedX}px`)

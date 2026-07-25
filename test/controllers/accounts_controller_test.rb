@@ -26,10 +26,17 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#lineChart[data-time-series-chart-selectable-value='true']"
   end
 
-  test "show accepts a custom start_date/end_date range" do
-    get account_url(@account), params: { start_date: 15.days.ago.to_date.to_s, end_date: Date.current.to_s }
+  test "show honors a custom start_date/end_date range" do
+    start_date = 15.days.ago.to_date
+    end_date = Date.current
+
+    get account_url(@account), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
     assert_response :success
+    # If the params were ignored, the user's default preset would render as the
+    # checked option instead of the custom row.
+    assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
+    assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
   end
 
   test "show lazily loads statement tab data unless statements tab is active" do

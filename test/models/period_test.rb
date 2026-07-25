@@ -45,6 +45,21 @@ class PeriodTest < ActiveSupport::TestCase
     assert_equal "Custom Period", period.label
   end
 
+  test "label_range omits the year for a range inside the current year" do
+    period = Period.custom(
+      start_date: Date.new(Date.current.year, 6, 1),
+      end_date: Date.new(Date.current.year, 6, 15)
+    )
+
+    assert_equal "Jun 01 – Jun 15", period.label_range
+  end
+
+  test "label_range includes the year when the range leaves the current year" do
+    period = Period.custom(start_date: Date.new(2020, 12, 20), end_date: Date.new(2021, 1, 5))
+
+    assert_equal "Dec 20, 2020 – Jan 05, 2021", period.label_range
+  end
+
   test "all_time period can be created" do
     period = Period.from_key("all_time")
     assert_equal "all_time", period.key
