@@ -85,12 +85,16 @@ class RedbarkItem::Importer
           next if account_id.blank?
           next if account_data[:name].blank?
 
+          # Only banking and documents connections carry transactions;
+          # brokerage accounts belong to /v1/trades and are out of scope here
+          connection = connections_by_id[account_data[:connectionId].to_s]
+          next unless transactable_connection?(connection)
+
           upstream_account_ids << account_id
 
           redbark_account = redbark_item.redbark_accounts.find_or_initialize_by(
             redbark_account_id: account_id
           )
-          connection = connections_by_id[account_data[:connectionId].to_s]
           redbark_account.upsert_from_redbark!(account_data, connection_data: connection)
 
           stats["accounts_imported"] = stats.fetch("accounts_imported", 0) + 1
@@ -113,6 +117,15 @@ class RedbarkItem::Importer
 
       if redbark_account.connection_id.blank?
         Rails.logger.warn "RedbarkItem::Importer - Account #{redbark_account.id} has no connection_id, skipping transactions"
+        return
+      end
+
+      # A linked account can still sit on a non-transactable connection
+      # (e.g. brokerage rows linked before this guard existed) - the
+      # transactions endpoint rejects those outright
+      connection = connections_by_id[redbark_account.connection_id.to_s]
+      unless transactable_connection?(connection)
+        Rails.logger.info "RedbarkItem::Importer - Skipping transactions for non-banking account #{redbark_account.id}"
         return
       end
 
@@ -278,6 +291,15 @@ class RedbarkItem::Importer
           capture_failure("Failed to prune orphaned account", e, redbark_account_id: redbark_account.id)
         end
       end
+    end
+
+    # Banking and documents connections serve /v1/transactions; anything else
+    # (brokerage) does not. Unknown connections get the benefit of the doubt.
+    def transactable_connection?(connection)
+      return true if connection.nil?
+
+      category = connection[:category].to_s
+      category.blank? || %w[banking documents].include?(category)
     end
 
     def register_error(error, **context)
