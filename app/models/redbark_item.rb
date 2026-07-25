@@ -31,11 +31,10 @@ class RedbarkItem < ApplicationRecord
     RedbarkItem::Syncer.new(self)
   end
 
+  # Deliberately not transactional - the job must enqueue after the flag commits
   def destroy_later
-    transaction do
-      update!(scheduled_for_deletion: true)
-      DestroyJob.perform_later(self)
-    end
+    update!(scheduled_for_deletion: true)
+    DestroyJob.perform_later(self)
   end
 
 

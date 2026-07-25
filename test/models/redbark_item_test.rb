@@ -53,4 +53,21 @@ class RedbarkItemTest < ActiveSupport::TestCase
     assert_equal 1, fresh_item.total_accounts_count
     assert_not RedbarkAccount.needs_setup.exists?(id: account.id)
   end
+
+  test "encrypted jsonb payloads round-trip nested structures" do
+    payload = {
+      "accounts" => [
+        { "id" => "acc_1", "name" => "Everyday", "balances" => { "current" => "1024.55", "currency" => "AUD" } },
+        { "id" => "acc_2", "name" => "Savings", "meta" => { "tags" => [ "a", "b" ], "nested" => { "deep" => true } } }
+      ],
+      "fetched_at" => "2026-07-25T00:00:00Z"
+    }
+    institution = { "name" => "Test Bank", "logo" => "https://example.com/logo.png" }
+
+    @redbark_item.update!(raw_payload: payload, raw_institution_payload: institution)
+    reloaded = RedbarkItem.find(@redbark_item.id)
+
+    assert_equal payload, reloaded.raw_payload
+    assert_equal institution, reloaded.raw_institution_payload
+  end
 end

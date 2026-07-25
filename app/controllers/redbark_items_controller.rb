@@ -15,7 +15,7 @@ class RedbarkItemsController < ApplicationController
       @redbark_item.sync_later
 
       if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured Redbark.")
+        flash.now[:notice] = t(".success")
         @redbark_items = Current.family.redbark_items.ordered
         render turbo_stream: [
           turbo_stream.replace(
@@ -53,7 +53,7 @@ class RedbarkItemsController < ApplicationController
       @redbark_item.sync_later if update_params[:api_key].present? && !@redbark_item.syncing?
 
       if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully updated Redbark configuration.")
+        flash.now[:notice] = t(".success")
         @redbark_items = Current.family.redbark_items.ordered
         render turbo_stream: [
           turbo_stream.replace(
@@ -93,7 +93,7 @@ class RedbarkItemsController < ApplicationController
     end
 
     @redbark_item.destroy_later
-    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled Redbark connection for deletion."), status: :see_other
+    redirect_to settings_providers_path, notice: t(".success"), status: :see_other
   end
 
   def sync
@@ -154,6 +154,11 @@ class RedbarkItemsController < ApplicationController
       return
     end
 
+    if account.account_providers.exists?
+      redirect_to account_path(account), alert: t(".account_already_linked")
+      return
+    end
+
     redbark_account.ensure_account_provider!(account)
     redbark_account.update!(ignored: false)
     redbark_item.sync_later unless redbark_item.syncing?
@@ -183,6 +188,7 @@ class RedbarkItemsController < ApplicationController
 
     created_count = 0
     skipped_count = 0
+    failed_count = 0
 
     account_configs.each do |redbark_account_id, config|
       redbark_account = @redbark_item.redbark_accounts.find_by(id: redbark_account_id)
@@ -217,16 +223,19 @@ class RedbarkItemsController < ApplicationController
         family: Current.family,
         metadata: { redbark_account_id: redbark_account_id, error_class: e.class.name, error: e.message }
       )
-      skipped_count += 1
+      failed_count += 1
     end
 
-    if created_count > 0
-      @redbark_item.sync_later unless @redbark_item.syncing?
+    @redbark_item.sync_later if created_count > 0 && !@redbark_item.syncing?
+
+    if failed_count > 0
+      redirect_to setup_accounts_redbark_item_path(@redbark_item), alert: t(".setup_failed", count: failed_count)
+    elsif created_count > 0
       redirect_to accounts_path, notice: t(".success", count: created_count)
-    elsif skipped_count > 0 && created_count == 0
+    elsif skipped_count > 0
       redirect_to accounts_path, notice: t(".all_skipped")
     else
-      redirect_to setup_accounts_redbark_item_path(@redbark_item), alert: t(".creation_failed", error: "Unknown error")
+      redirect_to setup_accounts_redbark_item_path(@redbark_item), alert: t(".creation_failed_generic")
     end
   end
 

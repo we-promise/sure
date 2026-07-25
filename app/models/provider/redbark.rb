@@ -36,7 +36,12 @@ class Provider::Redbark
   # Returns all accounts across the user's connections.
   # Response items: { id, connectionId, provider, name, type, institutionName, accountNumber, currency }
   def list_accounts
-    paginate("list_accounts", "#{BASE_URL}/accounts", page_size: ACCOUNTS_PAGE_SIZE)
+    results, truncated = paginate("list_accounts", "#{BASE_URL}/accounts", page_size: ACCOUNTS_PAGE_SIZE)
+
+    # A partial account list must never reach downstream pruning
+    raise Error.new("list_accounts returned a truncated account list", :truncated) if truncated
+
+    results
   end
 
   # Returns all connections: { id, provider, category, institutionId, institutionName,
@@ -74,11 +79,14 @@ class Provider::Redbark
       connectionId: connection_id,
       accountId: account_id
     }
-    query[:from] = start_date.to_date.to_s if start_date
-    query[:to] = end_date.to_date.to_s if end_date
-    query[:includePending] = "true" if include_pending
-
-    paginate("get_transactions", "#{BASE_URL}/transactions", page_size: TRANSACTIONS_PAGE_SIZE, query: query)
+    fetch_transactions_window(
+      connection_id: connection_id,
+      account_id: account_id,
+      start_date: start_date&.to_date,
+      end_date: end_date&.to_date,
+      include_pending: include_pending,
+      splits_left: MAX_WINDOW_SPLITS
+    )
   end
 
   private
@@ -91,15 +99,50 @@ class Provider::Redbark
     MAX_RETRIES = 3
     INITIAL_RETRY_DELAY = 2 # seconds
     MAX_PAGES = 50 # safety cap so a bad hasMore can never loop forever
+    MAX_WINDOW_SPLITS = 6 # bounds recursion when halving a truncated date window
 
     def validate_configuration!
       raise ConfigurationError, "Api key is required" if @api_key.blank?
     end
 
-    # Follows limit/offset pagination until hasMore is false, returns the combined data array.
-    # Never silently truncates history - a partial import corrupts balances, so any sign
-    # the server stopped early (its row ceiling via X-Redbark-Truncated, an empty page
-    # that still claims hasMore, or our own page cap) raises instead.
+    # A truncated window cannot be paged past the row ceiling; halve the date
+    # range and recurse until every window fits, raising once it cannot narrow
+    def fetch_transactions_window(connection_id:, account_id:, start_date:, end_date:, include_pending:, splits_left:)
+      query = {
+        connectionId: connection_id,
+        accountId: account_id
+      }
+      query[:from] = start_date.to_s if start_date
+      query[:to] = end_date.to_s if end_date
+      query[:includePending] = "true" if include_pending
+
+      results, truncated = paginate("get_transactions", "#{BASE_URL}/transactions", page_size: TRANSACTIONS_PAGE_SIZE, query: query)
+      return results unless truncated
+
+      if start_date.nil? || end_date.nil? || splits_left <= 0 || start_date >= end_date
+        raise Error.new("get_transactions hit the server row ceiling and the date window cannot be narrowed further", :truncated)
+      end
+
+      mid = start_date + ((end_date - start_date) / 2).to_i
+      Rails.logger.info "Redbark API: get_transactions window #{start_date}..#{end_date} truncated, splitting at #{mid}"
+
+      first_half = fetch_transactions_window(
+        connection_id: connection_id, account_id: account_id,
+        start_date: start_date, end_date: mid,
+        include_pending: include_pending, splits_left: splits_left - 1
+      )
+      second_half = fetch_transactions_window(
+        connection_id: connection_id, account_id: account_id,
+        start_date: mid + 1, end_date: end_date,
+        include_pending: include_pending, splits_left: splits_left - 1
+      )
+
+      (first_half + second_half).uniq { |t| t[:id] || t }
+    end
+
+    # Follows limit/offset pagination until hasMore is false. Returns
+    # [results, truncated] - truncated means the server row ceiling fired
+    # (X-Redbark-Truncated) and the caller decides how to recover
     def paginate(operation_name, url, page_size:, query: {})
       results = []
       offset = 0
@@ -115,12 +158,12 @@ class Provider::Redbark
           [ handle_response(response), response.headers ]
         end
 
-        if headers["x-redbark-truncated"].to_s == "true"
-          raise Error.new("#{operation_name} hit the server row ceiling; narrow the date range", :truncated)
-        end
-
         data = page[:data] || []
         results.concat(data)
+
+        if headers["x-redbark-truncated"].to_s == "true"
+          return [ results, true ]
+        end
 
         pagination = page[:pagination] || {}
         unless pagination[:hasMore]
@@ -140,7 +183,7 @@ class Provider::Redbark
         raise Error.new("#{operation_name} exceeded #{MAX_PAGES} pages without exhausting results", :too_many_pages)
       end
 
-      results
+      [ results, false ]
     end
 
     def with_retries(operation_name, max_retries: MAX_RETRIES)

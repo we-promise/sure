@@ -1664,7 +1664,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
 
   create_table "redbark_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
-    t.string "name"
+    t.string "name", null: false
     t.string "institution_id"
     t.string "institution_name"
     t.string "institution_domain"
@@ -1676,7 +1676,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
     t.datetime "sync_start_date"
     t.jsonb "raw_payload"
     t.jsonb "raw_institution_payload"
-    t.text "api_key"
+    t.text "api_key", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_redbark_items_on_family_id"

@@ -144,7 +144,11 @@ class RedbarkItem::Importer
 
         if transactions_data.any?
           transactions_hashes = transactions_data.map { |t| sdk_object_to_hash(t) }
-          merged = merge_transactions(redbark_account.raw_transactions_payload || [], transactions_hashes)
+          merged = merge_transactions(
+            redbark_account.raw_transactions_payload || [],
+            transactions_hashes,
+            window_start: start_date
+          )
           redbark_account.upsert_redbark_transactions_snapshot!(merged)
           stats["transactions_found"] = stats.fetch("transactions_found", 0) + transactions_data.size
         end
@@ -253,11 +257,29 @@ class RedbarkItem::Importer
       end
     end
 
-    def merge_transactions(existing, new_transactions)
+    # A pending row absent from the refetched window has settled (possibly
+    # under a new id) - keeping it would duplicate the posted transaction
+    def merge_transactions(existing, new_transactions, window_start: nil)
+      new_keys = new_transactions.map { |t| transaction_key(t) }.to_set
+
       by_id = {}
-      existing.each { |t| by_id[transaction_key(t)] = t }
+      existing.each do |t|
+        next if stale_pending?(t, new_keys, window_start)
+        by_id[transaction_key(t)] = t
+      end
       new_transactions.each { |t| by_id[transaction_key(t)] = t }
       by_id.values
+    end
+
+    def stale_pending?(transaction, new_keys, window_start)
+      t = transaction.is_a?(Hash) ? transaction.with_indifferent_access : transaction
+      return false unless t[:status].to_s == "pending"
+      return false if new_keys.include?(transaction_key(t))
+
+      date = Date.parse(t[:date].to_s) rescue nil
+      return true if date.nil? || window_start.nil?
+
+      date >= window_start
     end
 
     def transaction_key(transaction)

@@ -117,7 +117,7 @@ class RedbarkAccount::Transactions::Processor
 
       extra = build_extra_metadata(data)
 
-      Rails.logger.info "RedbarkAccount::Transactions::Processor - Importing transaction: id=#{external_id} amount=#{amount} date=#{date}"
+      Rails.logger.debug "RedbarkAccount::Transactions::Processor - Importing transaction: id=#{external_id} date=#{date}"
 
       # Use ProviderImportAdapter for proper deduplication via external_id + source
       import_adapter.import_transaction(

@@ -5,7 +5,7 @@ class CreateRedbarkItemsAndAccounts < ActiveRecord::Migration[7.2]
     # Create provider items table (stores per-family connection credentials)
     create_table :redbark_items, id: :uuid do |t|
       t.references :family, null: false, foreign_key: true, type: :uuid
-      t.string :name
+      t.string :name, null: false
 
       # Institution metadata
       t.string :institution_id
@@ -27,7 +27,7 @@ class CreateRedbarkItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.jsonb :raw_institution_payload
 
       # Provider-specific credential fields
-      t.text :api_key
+      t.text :api_key, null: false
 
       t.timestamps
     end

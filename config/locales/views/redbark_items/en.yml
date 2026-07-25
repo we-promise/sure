@@ -205,6 +205,8 @@ en:
     complete_account_setup:
       all_skipped: "All accounts were skipped. No accounts were created."
       creation_failed: "Failed to create accounts: %{error}"
+      creation_failed_generic: "Failed to create accounts."
+      setup_failed: "%{count} account(s) could not be created. Nothing else was changed - fix the issue and try again."
       no_accounts: "No accounts to set up."
       success: "Successfully created %{count} account(s)."
 
