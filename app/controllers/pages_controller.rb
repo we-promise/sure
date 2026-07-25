@@ -39,7 +39,7 @@ class PagesController < ApplicationController
 
     @balance_sheet = Current.family.balance_sheet
     @investment_statement = Current.family.investment_statement
-    @accounts = Current.user.accessible_accounts.visible.with_attached_logo
+    @accounts = Current.user.accessible_accounts.visible.with_attached_logo.load
 
     family_currency = Current.family.currency
 
@@ -51,7 +51,7 @@ class PagesController < ApplicationController
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(net_totals)
-    @feed_insights = Current.family.insights.visible.ordered.limit(3)
+    @feed_insights = Current.family.insights.visible.ordered.limit(3).load
 
     @money_flow_accounts = income_statement.eligible_accounts
     @money_flow_month = money_flow_month_param
