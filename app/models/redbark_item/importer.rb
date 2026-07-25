@@ -72,6 +72,11 @@ class RedbarkItem::Importer
       stats["api_requests"] = stats.fetch("api_requests", 0) + 1
       stats["total_accounts"] = accounts_data.size
 
+      # Fetch connections once, before the per-account rescue below - an auth
+      # failure here must propagate and mark the item requires_update, not get
+      # swallowed as N per-account errors
+      connections_by_id
+
       upstream_account_ids = []
 
       accounts_data.each do |account_data|
@@ -97,6 +102,8 @@ class RedbarkItem::Importer
       end
 
       persist_stats!
+
+      @upstream_account_ids = upstream_account_ids
 
       prune_removed_accounts(upstream_account_ids)
     end
@@ -136,20 +143,20 @@ class RedbarkItem::Importer
       end
     end
 
-    # One balances call covers every linked account. A failed fetch leaves
-    # current_balance untouched so the processor keeps the previous balance
-    # instead of writing zeros.
+    # One balances call covers every eligible linked account. A failed fetch
+    # leaves current_balance untouched so the processor keeps the previous
+    # balance instead of writing zeros.
     def import_balances(linked_accounts)
-      account_ids = linked_accounts.map(&:redbark_account_id).compact
+      eligible_accounts = balance_eligible_accounts(linked_accounts)
+      account_ids = eligible_accounts.map(&:redbark_account_id).compact
       return if account_ids.empty?
 
       begin
-        balances = redbark_provider.get_balances(account_ids: account_ids)
-        stats["api_requests"] = stats.fetch("api_requests", 0) + 1
+        balances = fetch_balances_with_fallback(account_ids)
 
         balances_by_id = balances.index_by { |b| b[:accountId].to_s }
 
-        linked_accounts.each do |redbark_account|
+        eligible_accounts.each do |redbark_account|
           balance_data = balances_by_id[redbark_account.redbark_account_id]
           next unless balance_data
 
@@ -170,15 +177,63 @@ class RedbarkItem::Importer
       end
     end
 
-    def calculate_transaction_start_date(redbark_account)
-      user_start = redbark_account.sync_start_date
-      return user_start if user_start.present?
+    # The balances endpoint rejects the WHOLE batch when any requested id is
+    # unknown (404) or non-banking (400), so exclude accounts that no longer
+    # exist upstream and accounts on non-banking connections up front.
+    def balance_eligible_accounts(linked_accounts)
+      linked_accounts.select do |redbark_account|
+        next false if redbark_account.redbark_account_id.blank?
 
+        if @upstream_account_ids.present? && !@upstream_account_ids.include?(redbark_account.redbark_account_id)
+          next false
+        end
+
+        connection = connections_by_id[redbark_account.connection_id.to_s]
+        next true if connection.nil? # no connection metadata - let the fallback sort it out
+
+        category = connection[:category].to_s
+        category.blank? || category == "banking"
+      end
+    end
+
+    # If the batch is still rejected (stale id or category we could not see),
+    # fall back to per-account requests so one bad account cannot freeze
+    # balance updates for the rest of the item.
+    def fetch_balances_with_fallback(account_ids)
+      stats["api_requests"] = stats.fetch("api_requests", 0) + 1
+      redbark_provider.get_balances(account_ids: account_ids)
+    rescue Provider::Redbark::AuthenticationError
+      raise
+    rescue Provider::Redbark::Error => e
+      raise unless %i[not_found bad_request].include?(e.error_type)
+      raise if account_ids.size <= 1
+
+      capture_failure("Batched balances call rejected; retrying per account", e)
+
+      account_ids.flat_map do |account_id|
+        begin
+          stats["api_requests"] = stats.fetch("api_requests", 0) + 1
+          redbark_provider.get_balances(account_ids: [ account_id ])
+        rescue Provider::Redbark::AuthenticationError
+          raise
+        rescue Provider::Redbark::Error => account_error
+          capture_failure("Balance fetch failed for account; keeping previous balance", account_error, account_id: account_id)
+          []
+        end
+      end
+    end
+
+    def calculate_transaction_start_date(redbark_account)
       has_stored_transactions = (redbark_account.raw_transactions_payload || []).any?
 
       if has_stored_transactions && redbark_item.last_synced_at.present?
-        # Incremental: go back 7 days from last sync to catch late-posting transactions
+        # Incremental: go back 7 days from last sync to catch late-posting
+        # transactions. The user's sync_start_date governs the initial
+        # backfill only - re-fetching the whole window every sync would blow
+        # through the API's row ceiling on busy accounts.
         (redbark_item.last_synced_at - 7.days).to_date
+      elsif redbark_account.sync_start_date.present?
+        redbark_account.sync_start_date
       else
         # First sync for this account: pull a 90 day history
         90.days.ago.to_date

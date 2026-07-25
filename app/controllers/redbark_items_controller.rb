@@ -3,28 +3,17 @@
 class RedbarkItemsController < ApplicationController
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
-  before_action :set_redbark_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
-  before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
-
-  def index
-    @redbark_items = Current.family.redbark_items.ordered
-  end
-
-  def show
-  end
-
-  def new
-    @redbark_item = Current.family.redbark_items.build
-  end
-
-  def edit
-  end
+  before_action :set_redbark_item, only: [ :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :require_admin!, only: [ :create, :select_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
   def create
     @redbark_item = Current.family.redbark_items.build(redbark_item_params)
     @redbark_item.name ||= t("redbark_items.default_name")
 
     if @redbark_item.save
+      # Trigger the initial sync so accounts appear without a manual refresh
+      @redbark_item.sync_later
+
       if turbo_frame_request?
         flash.now[:notice] = t(".success", default: "Successfully configured Redbark.")
         @redbark_items = Current.family.redbark_items.ordered
@@ -60,6 +49,9 @@ class RedbarkItemsController < ApplicationController
     update_params = update_params.merge(status: :good) if update_params[:api_key].present?
 
     if @redbark_item.update(update_params)
+      # Rotated credentials should be exercised right away
+      @redbark_item.sync_later if update_params[:api_key].present? && !@redbark_item.syncing?
+
       if turbo_frame_request?
         flash.now[:notice] = t(".success", default: "Successfully updated Redbark configuration.")
         @redbark_items = Current.family.redbark_items.ordered
@@ -117,18 +109,6 @@ class RedbarkItemsController < ApplicationController
 
   # Collection actions for account linking flow
 
-  def preload_accounts
-    # Trigger a sync to fetch accounts from the provider
-    redbark_item = Current.family.redbark_items.first
-    unless redbark_item&.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
-      return
-    end
-
-    redbark_item.sync_later unless redbark_item.syncing?
-    redirect_to select_accounts_redbark_items_path(accountable_type: params[:accountable_type], return_to: params[:return_to])
-  end
-
   def select_accounts
     redbark_item = Current.family.redbark_items.first
     unless redbark_item&.credentials_configured?
@@ -142,62 +122,6 @@ class RedbarkItemsController < ApplicationController
 
     # The account-linking UI lives in the setup_accounts view
     redirect_to setup_accounts_redbark_item_path(redbark_item, return_to: safe_return_to_path)
-  end
-
-  def link_accounts
-    redbark_item = Current.family.redbark_items.first
-    unless redbark_item&.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_api_key")
-      return
-    end
-
-    selected_ids = params[:selected_account_ids] || []
-    if selected_ids.empty?
-      redirect_to select_accounts_redbark_items_path, alert: t(".no_accounts_selected")
-      return
-    end
-
-    accountable_type = params[:accountable_type] || "Depository"
-    created_count = 0
-    already_linked_count = 0
-    invalid_count = 0
-
-    redbark_item.redbark_accounts.where(id: selected_ids).find_each do |redbark_account|
-      # Skip if already linked
-      if redbark_account.account_provider.present?
-        already_linked_count += 1
-        next
-      end
-
-      # Skip if invalid name
-      if redbark_account.name.blank?
-        invalid_count += 1
-        next
-      end
-
-      # Create Sure account and link, atomically
-      ActiveRecord::Base.transaction do
-        link_redbark_account(redbark_account, accountable_type)
-      end
-      created_count += 1
-    rescue => e
-      DebugLogEntry.capture(
-        category: "provider_sync",
-        level: "error",
-        message: "Redbark account linking failed",
-        source: self.class.name,
-        provider_key: "redbark",
-        family: Current.family,
-        metadata: { redbark_account_id: redbark_account.id, error_class: e.class.name, error: e.message }
-      )
-    end
-
-    if created_count > 0
-      redbark_item.sync_later unless redbark_item.syncing?
-      redirect_to accounts_path, notice: t(".success", count: created_count)
-    else
-      redirect_to select_accounts_redbark_items_path, alert: t(".link_failed")
-    end
   end
 
   def select_existing_account
@@ -238,9 +162,13 @@ class RedbarkItemsController < ApplicationController
   end
 
   def setup_accounts
+    # A fresh connection has no imported accounts yet - fetch them inline so
+    # the setup dialog is usable straight after the API key is saved
+    @api_error = fetch_redbark_accounts_from_api
+
     @unlinked_accounts = @redbark_item.unlinked_redbark_accounts.order(:name)
 
-    if @unlinked_accounts.empty?
+    if @unlinked_accounts.empty? && @api_error.nil?
       redirect_to accounts_path, notice: t(".all_accounts_linked")
     end
   end
@@ -306,6 +234,29 @@ class RedbarkItemsController < ApplicationController
 
     def set_redbark_item
       @redbark_item = Current.family.redbark_items.find(params[:id])
+    end
+
+    # Imports accounts synchronously when the item has none yet.
+    # Returns nil on success, or an error message string on failure.
+    def fetch_redbark_accounts_from_api
+      return nil if @redbark_item.redbark_accounts.any?
+      return t("redbark_items.setup_accounts.no_api_key") unless @redbark_item.credentials_configured?
+
+      @redbark_item.import_latest_redbark_data
+      nil
+    rescue Provider::Redbark::Error => e
+      t("redbark_items.setup_accounts.api_error", message: e.message)
+    rescue StandardError => e
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "error",
+        message: "Inline Redbark account fetch failed",
+        source: self.class.name,
+        provider_key: "redbark",
+        family: Current.family,
+        metadata: { redbark_item_id: @redbark_item.id, error_class: e.class.name, error: e.message }
+      )
+      t("redbark_items.setup_accounts.api_error", message: e.message)
     end
 
     # Only allow internal relative paths in return_to

@@ -96,36 +96,47 @@ class Provider::Redbark
       raise ConfigurationError, "Api key is required" if @api_key.blank?
     end
 
-    # Follows limit/offset pagination until hasMore is false, returns the combined data array
+    # Follows limit/offset pagination until hasMore is false, returns the combined data array.
+    # Never silently truncates history - a partial import corrupts balances, so any sign
+    # the server stopped early (its row ceiling via X-Redbark-Truncated, an empty page
+    # that still claims hasMore, or our own page cap) raises instead.
     def paginate(operation_name, url, page_size:, query: {})
       results = []
       offset = 0
-      truncated = true
+      exhausted = false
 
       MAX_PAGES.times do
-        page = with_retries(operation_name) do
+        page, headers = with_retries(operation_name) do
           response = self.class.get(
             url,
             headers: auth_headers,
             query: query.merge(limit: page_size, offset: offset)
           )
-          handle_response(response)
+          [ handle_response(response), response.headers ]
+        end
+
+        if headers["x-redbark-truncated"].to_s == "true"
+          raise Error.new("#{operation_name} hit the server row ceiling; narrow the date range", :truncated)
         end
 
         data = page[:data] || []
         results.concat(data)
 
         pagination = page[:pagination] || {}
-        unless pagination[:hasMore] && data.any?
-          truncated = false
+        unless pagination[:hasMore]
+          exhausted = true
           break
+        end
+
+        # hasMore with an empty page means the server stopped early
+        if data.empty?
+          raise Error.new("#{operation_name} returned an empty page while reporting more results", :truncated)
         end
 
         offset += data.size
       end
 
-      # Never silently truncate history - a partial import corrupts balances
-      if truncated
+      unless exhausted
         raise Error.new("#{operation_name} exceeded #{MAX_PAGES} pages without exhausting results", :too_many_pages)
       end
 

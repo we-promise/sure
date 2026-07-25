@@ -10,10 +10,20 @@
 
   <% dialog.with_body do %>
     <div class="space-y-6">
+      <% if @api_error.present? %>
+        <%= render DS::Alert.new(
+              title: t(".fetch_failed"),
+              message: @api_error,
+              variant: :error
+            ) %>
+      <% end %>
+
       <% if @unlinked_accounts.blank? %>
         <div class="flex flex-col items-center justify-center py-6 space-y-3">
-          <%= icon "check-circle", size: "lg", class: "text-success" %>
-          <p class="text-primary text-center font-medium"><%= t(".all_accounts_linked") %></p>
+          <% if @api_error.blank? %>
+            <%= icon "check-circle", size: "lg", class: "text-success" %>
+            <p class="text-primary text-center font-medium"><%= t(".all_accounts_linked") %></p>
+          <% end %>
           <%= render DS::Link.new(text: t(".done"), variant: "primary", href: accounts_path, frame: "_top") %>
         </div>
       <% else %>

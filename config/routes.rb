@@ -717,11 +717,9 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :redbark_items, only: %i[index new create show edit update destroy] do
+  resources :redbark_items, only: %i[create update destroy] do
     collection do
-      get :preload_accounts
       get :select_accounts
-      post :link_accounts
       get :select_existing_account
       post :link_existing_account
     end

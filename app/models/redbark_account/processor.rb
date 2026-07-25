@@ -39,8 +39,16 @@ class RedbarkAccount::Processor
   private
 
     def update_account_balance(account)
-      # Get balance from provider data
-      balance = redbark_account.current_balance || 0
+      balance = redbark_account.current_balance
+
+      # A nil current_balance means no balances fetch has succeeded for this
+      # account yet. Writing 0 here would clobber a healthy balance (or the
+      # opening balance the user typed during setup) and anchor a $0
+      # valuation, so leave the account untouched instead.
+      if balance.nil?
+        Rails.logger.warn "RedbarkAccount::Processor - No balance available for redbark_account #{redbark_account.id}, skipping balance update"
+        return
+      end
 
       # Banking sign convention:
       # - CreditCard and Loan accounts may need sign inversion
