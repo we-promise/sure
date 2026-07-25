@@ -10,25 +10,28 @@ class AccountsController < ApplicationController
     @manual_accounts = family.accounts
           .listable_manual
           .where(id: @accessible_account_ids)
+          .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
-    @plaid_items = visible_provider_items(family.plaid_items.ordered.includes(:syncs, :plaid_accounts))
-    @simplefin_items = visible_provider_items(family.simplefin_items.ordered.includes(:syncs))
-    @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.includes(:syncs, :lunchflow_accounts))
-    @akahu_items = visible_provider_items(family.akahu_items.ordered.includes(:syncs, :akahu_accounts))
-    @up_items = visible_provider_items(family.up_items.ordered.includes(:syncs, :up_accounts))
-    @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.includes(:syncs))
-    @coinstats_items = visible_provider_items(family.coinstats_items.ordered.includes(:coinstats_accounts, :accounts, :syncs))
-    @mercury_items = visible_provider_items(family.mercury_items.ordered.includes(:syncs, :mercury_accounts))
-    @brex_items = visible_provider_items(family.brex_items.ordered.includes(:accounts, :syncs, brex_accounts: :account_provider))
-    @coinbase_items = visible_provider_items(family.coinbase_items.ordered.includes(:coinbase_accounts, :accounts, :syncs))
-    @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.includes(:syncs, :snaptrade_accounts))
-    @ibkr_items = visible_provider_items(family.ibkr_items.ordered.includes(:syncs, :ibkr_accounts))
-    @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.includes(:syncs, :indexa_capital_accounts))
-    @sophtron_items = visible_provider_items(family.sophtron_items.ordered.includes(:syncs, :sophtron_accounts))
-    @binance_items = visible_provider_items(family.binance_items.ordered.includes(:binance_accounts, :accounts, :syncs))
-    @questrade_items = visible_provider_items(family.questrade_items.ordered.includes(:syncs, questrade_accounts: :account_provider))
-    @wise_items = visible_provider_items(family.wise_items.ordered.includes(:syncs, :wise_accounts))
+    @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
+    @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
+    @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
+    @akahu_items = visible_provider_items(family.akahu_items.ordered.with_attached_logo.includes(:akahu_accounts))
+    @up_items = visible_provider_items(family.up_items.ordered.with_attached_logo.includes(:up_accounts))
+    @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
+    @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))
+    @mercury_items = visible_provider_items(family.mercury_items.ordered.with_attached_logo.includes(:mercury_accounts))
+    @brex_items = visible_provider_items(family.brex_items.ordered.with_attached_logo.includes(:accounts, brex_accounts: :account_provider))
+    @coinbase_items = visible_provider_items(family.coinbase_items.ordered.with_attached_logo.includes(:coinbase_accounts, :accounts))
+    @snaptrade_items = visible_provider_items(family.snaptrade_items.ordered.with_attached_logo.includes(:snaptrade_accounts))
+    @ibkr_items = visible_provider_items(family.ibkr_items.ordered.with_attached_logo.includes(:ibkr_accounts))
+    @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
+    @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
+    @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
+    @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
+    @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
+
+    preload_latest_sync_metadata_for_index!
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -254,6 +257,41 @@ class AccountsController < ApplicationController
       end
     end
 
+    def preload_latest_sync_metadata_for_index!
+      items = [
+        @plaid_items,
+        @simplefin_items,
+        @lunchflow_items,
+        @akahu_items,
+        @up_items,
+        @enable_banking_items,
+        @coinstats_items,
+        @mercury_items,
+        @brex_items,
+        @coinbase_items,
+        @snaptrade_items,
+        @ibkr_items,
+        @indexa_capital_items,
+        @sophtron_items,
+        @binance_items,
+        @questrade_items,
+        @wise_items
+      ].flatten.compact
+
+      accounts = @manual_accounts.to_a
+      items.each do |item|
+        next unless item.respond_to?(:accounts)
+        accounts.concat(item.accounts)
+      end
+      accounts = accounts.uniq { |account| account.id }
+
+      syncables = items + accounts
+
+      Current.latest_sync_by_syncable = Sync.latest_by_syncable(syncables)
+      Current.latest_completed_sync_by_syncable = Sync.latest_completed_by_syncable(syncables)
+      Current.syncing_by_syncable = Sync.syncing_by_syncable(syncables)
+    end
+
     def build_statement_tab_data
       return unless statement_tab_active?
 
@@ -289,6 +327,8 @@ class AccountsController < ApplicationController
 
     # Builds sync stats maps for all provider types to avoid N+1 queries in views
     def build_sync_stats_maps
+      manual_accounts_exist = @manual_accounts.any?
+
       # SimpleFIN sync stats
       @simplefin_sync_stats_map = {}
       @simplefin_has_unlinked_map = {}
@@ -296,22 +336,37 @@ class AccountsController < ApplicationController
       @simplefin_show_relink_map = {}
       @simplefin_duplicate_only_map = {}
 
+      simplefin_item_ids = @simplefin_items.map(&:id)
+      simplefin_accounts_counts_by_item_id =
+        if simplefin_item_ids.any?
+          SimplefinAccount.where(simplefin_item_id: simplefin_item_ids).group(:simplefin_item_id).count
+        else
+          {}
+        end
+      simplefin_unlinked_counts_by_item_id =
+        if simplefin_item_ids.any?
+          SimplefinAccount.where(simplefin_item_id: simplefin_item_ids)
+            .left_joins(:account, :account_provider)
+            .where(accounts: { id: nil }, account_providers: { id: nil })
+            .group(:simplefin_item_id)
+            .count
+        else
+          {}
+        end
+
       @simplefin_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         stats = latest_sync&.sync_stats || {}
         @simplefin_sync_stats_map[item.id] = stats
-        @simplefin_has_unlinked_map[item.id] = item.family.accounts.listable_manual.exists?
+        @simplefin_has_unlinked_map[item.id] = manual_accounts_exist
 
         # Count unlinked accounts
-        count = item.simplefin_accounts
-          .left_joins(:account, :account_provider)
-          .where(accounts: { id: nil }, account_providers: { id: nil })
-          .count
+        count = simplefin_unlinked_counts_by_item_id[item.id].to_i
         @simplefin_unlinked_count_map[item.id] = count
 
         # CTA visibility
         manuals_exist = @simplefin_has_unlinked_map[item.id]
-        sfa_any = item.simplefin_accounts.loaded? ? item.simplefin_accounts.any? : item.simplefin_accounts.exists?
+        sfa_any = simplefin_accounts_counts_by_item_id[item.id].to_i > 0
         @simplefin_show_relink_map[item.id] = (count.to_i == 0 && manuals_exist && sfa_any)
 
         # Check if all errors are duplicate-skips
@@ -327,28 +382,28 @@ class AccountsController < ApplicationController
       # Plaid sync stats
       @plaid_sync_stats_map = {}
       @plaid_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @plaid_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Lunchflow sync stats
       @lunchflow_sync_stats_map = {}
       @lunchflow_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @lunchflow_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Akahu sync stats
       @akahu_sync_stats_map = {}
       @akahu_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @akahu_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Up sync stats
       @up_sync_stats_map = {}
       @up_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @up_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
@@ -356,7 +411,7 @@ class AccountsController < ApplicationController
       @enable_banking_sync_stats_map = {}
       @enable_banking_latest_sync_error_map = {}
       @enable_banking_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @enable_banking_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
         @enable_banking_latest_sync_error_map[item.id] = latest_sync&.error
       end
@@ -364,21 +419,21 @@ class AccountsController < ApplicationController
       # CoinStats sync stats
       @coinstats_sync_stats_map = {}
       @coinstats_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @coinstats_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Sophtron sync stats
       @sophtron_sync_stats_map = {}
       @sophtron_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @sophtron_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Mercury sync stats
       @mercury_sync_stats_map = {}
       @mercury_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @mercury_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
@@ -387,7 +442,7 @@ class AccountsController < ApplicationController
       @brex_account_counts_map = {}
       @brex_institutions_count_map = {}
       @brex_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @brex_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
         brex_accounts = item.brex_accounts.to_a
         linked_count = brex_accounts.count { |brex_account| brex_account.account_provider.present? }
@@ -406,22 +461,31 @@ class AccountsController < ApplicationController
       # Coinbase sync stats
       @coinbase_sync_stats_map = {}
       @coinbase_unlinked_count_map = {}
+
+      coinbase_item_ids = @coinbase_items.map(&:id)
+      coinbase_unlinked_counts_by_item_id =
+        if coinbase_item_ids.any?
+          CoinbaseAccount.where(coinbase_item_id: coinbase_item_ids)
+            .left_joins(:account_provider)
+            .where(account_providers: { id: nil })
+            .group(:coinbase_item_id)
+            .count
+        else
+          {}
+        end
+
       @coinbase_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @coinbase_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
 
         # Count unlinked accounts
-        count = item.coinbase_accounts
-          .left_joins(:account_provider)
-          .where(account_providers: { id: nil })
-          .count
-        @coinbase_unlinked_count_map[item.id] = count
+        @coinbase_unlinked_count_map[item.id] = coinbase_unlinked_counts_by_item_id[item.id].to_i
       end
 
       # IndexaCapital sync stats
       @indexa_capital_sync_stats_map = {}
       @indexa_capital_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @indexa_capital_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
@@ -429,7 +493,7 @@ class AccountsController < ApplicationController
       @binance_sync_stats_map = {}
       @binance_unlinked_count_map = {}
       @binance_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @binance_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
 
         # Count unlinked accounts
@@ -444,7 +508,7 @@ class AccountsController < ApplicationController
       @questrade_sync_stats_map = {}
       @questrade_account_counts_map = {}
       @questrade_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @questrade_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
         accounts = item.questrade_accounts.to_a
         linked = accounts.count { |a| a.account_provider.present? }
@@ -456,7 +520,7 @@ class AccountsController < ApplicationController
       # Wise sync stats
       @wise_sync_stats_map = {}
       @wise_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        latest_sync = item.latest_sync_record
         @wise_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
     end
