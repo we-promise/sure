@@ -1,0 +1,16 @@
+<%# Acknowledging is reachable from two surfaces now, so this response carries
+    the update for both and each applies only the streams whose targets it has —
+    Turbo silently ignores a stream whose target is absent. %>
+
+<%# /insights: drop the card. %>
+<%= turbo_stream.remove dom_id(@insight) %>
+
+<%# Dashboard: re-render the well rather than removing a row, so the next
+    insight is promoted into the freed slot instead of leaving a gap. %>
+<%= turbo_stream.replace "insights-feed" do %>
+  <%= render "pages/dashboard/insights_feed", insights: @feed_insights %>
+<% end %>
+
+<%= turbo_stream.append "notification-tray" do %>
+  <%= render "insights/undo_toast", insight: @insight %>
+<% end %>
