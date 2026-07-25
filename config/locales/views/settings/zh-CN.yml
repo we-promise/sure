@@ -304,7 +304,6 @@ zh-CN:
       meta:
         sync_error: 同步错误
         no_recent_sync: 同步已逾期
-        registration_needed: 需要注册
         reconsent_required: 需要重新授权
         reconsent_needed:
           one: 1 天后需要重新授权

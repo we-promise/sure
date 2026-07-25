@@ -32,24 +32,47 @@
     </div>
 
     <% if @all_family_merchants.any? %>
-      <div class="rounded-xl bg-container-inset space-y-1 p-1">
-        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
-          <table class="w-full">
-            <thead>
-              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
-                <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
-                <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
-              </tr>
-            </thead>
-            <tbody>
-              <%= render partial: "family_merchants/family_merchant", collection: @family_merchants %>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <div class="space-y-2">
+        <%= form_tag family_merchants_path, method: :get, data: { controller: "auto-submit-form" } do %>
+          <%= hidden_field_tag :provider_search, params[:provider_search] if params[:provider_search].present? %>
+          <%= hidden_field_tag :provider_page, params[:provider_page] if params[:provider_page].present? %>
+          <%= hidden_field_tag :per_page, params[:per_page] if params[:per_page].present? %>
+          <%= render DS::SearchInput.new(
+            variant: :standalone,
+            name: :family_search,
+            value: params[:family_search],
+            placeholder: t(".search_family_merchants"),
+            data: {
+              auto_submit_form_target: "auto",
+              autosubmit_trigger_event: "input"
+            }
+          ) %>
+        <% end %>
+        <% if @family_merchants.any? %>
+          <div class="rounded-xl bg-container-inset space-y-1 p-1">
+            <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                    <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
+                    <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <%= render partial: "family_merchants/family_merchant", collection: @family_merchants %>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-      <div class="pt-4">
-        <%= render "shared/pagination", pagy: @pagy_family_merchants %>
+          <div class="pt-4">
+            <%= render "shared/pagination", pagy: @pagy_family_merchants %>
+          </div>
+        <% elsif params[:family_search].present? %>
+          <div class="flex justify-center items-center py-8">
+            <p class="text-secondary text-sm"><%= t(".no_family_merchants_found") %></p>
+          </div>
+        <% end %>
       </div>
     <% else %>
       <div class="flex justify-center items-center py-12">
@@ -98,25 +121,48 @@
     <% end %>
 
     <% if @all_provider_merchants.any? %>
-      <div class="rounded-xl bg-container-inset space-y-1 p-1">
-        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
-          <table class="w-full">
-            <thead>
-              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
-                <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
-                <th scope="col" class="text-left py-3 px-4"><%= t(".table.source") %></th>
-                <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
-              </tr>
-            </thead>
-            <tbody>
-              <%= render partial: "family_merchants/provider_merchant", collection: @provider_merchants %>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <div class="space-y-2">
+        <%= form_tag family_merchants_path, method: :get, data: { controller: "auto-submit-form" } do %>
+          <%= hidden_field_tag :family_search, params[:family_search] if params[:family_search].present? %>
+          <%= hidden_field_tag :family_page, params[:family_page] if params[:family_page].present? %>
+          <%= hidden_field_tag :per_page, params[:per_page] if params[:per_page].present? %>
+          <%= render DS::SearchInput.new(
+            variant: :standalone,
+            name: :provider_search,
+            value: params[:provider_search],
+            placeholder: t(".search_provider_merchants"),
+            data: {
+              auto_submit_form_target: "auto",
+              autosubmit_trigger_event: "input"
+            }
+          ) %>
+        <% end %>
+        <% if @provider_merchants.any? %>
+          <div class="rounded-xl bg-container-inset space-y-1 p-1">
+            <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                    <th scope="col" class="text-left py-3 px-4"><%= t(".table.merchant") %></th>
+                    <th scope="col" class="text-left py-3 px-4"><%= t(".table.source") %></th>
+                    <th scope="col" class="text-right py-3 px-4"><%= t(".table.actions") %></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <%= render partial: "family_merchants/provider_merchant", collection: @provider_merchants %>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-      <div class="pt-4">
-        <%= render "shared/pagination", pagy: @pagy_provider_merchants %>
+          <div class="pt-4">
+            <%= render "shared/pagination", pagy: @pagy_provider_merchants %>
+          </div>
+        <% elsif params[:provider_search].present? %>
+          <div class="flex justify-center items-center py-8">
+            <p class="text-secondary text-sm"><%= t(".no_provider_merchants_found") %></p>
+          </div>
+        <% end %>
       </div>
     <% else %>
       <div class="flex justify-center items-center py-8">

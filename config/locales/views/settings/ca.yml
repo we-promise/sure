@@ -442,7 +442,6 @@ ca:
           one: Cal renovar el consentiment en 1 dia
           other: Cal renovar el consentiment en %{count} dies
         reconsent_required: Cal renovar el consentiment
-        registration_needed: Cal registrar-se
         sync_error: Error de sincronització
       not_authorized: No autoritzat
       not_found: Proveïdor no trobat.
