@@ -43,4 +43,39 @@ class Transaction::RefundTest < ActiveSupport::TestCase
     entry = create_transaction(account: @checking_account, amount: 100)
     assert_equal "expense", entry.classification
   end
+
+  # ---------------------------------------------------------------------------
+  # Validation: refund requires a negative amount
+  # ---------------------------------------------------------------------------
+
+  test "a refund with a negative amount is valid" do
+    entry = create_transaction(account: @checking_account, amount: -50, refund: true, category: @groceries)
+    assert entry.persisted?
+  end
+
+  test "a refund with a positive amount is invalid on create" do
+    entry = Entry.new(
+      account: @checking_account, name: "Bad refund", date: Date.current, currency: "USD", amount: 50,
+      entryable: Transaction.new(refund: true, category: @groceries)
+    )
+
+    assert_not entry.valid?
+    assert_includes entry.errors[:amount], "must be negative for a refund"
+  end
+
+  test "toggling refund on an existing positive-amount transaction is invalid" do
+    entry = create_transaction(account: @checking_account, amount: 50, category: @groceries)
+
+    entry.entryable.refund = true
+    assert_not entry.entryable.valid?
+    assert_includes entry.entryable.errors[:refund], "requires a negative transaction amount"
+  end
+
+  test "non-refund transactions are unaffected by the refund-amount validation regardless of sign" do
+    positive = create_transaction(account: @checking_account, amount: 100)
+    negative = create_transaction(account: @checking_account, amount: -100)
+
+    assert positive.persisted?
+    assert negative.persisted?
+  end
 end

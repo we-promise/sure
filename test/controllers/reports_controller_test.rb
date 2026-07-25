@@ -38,6 +38,38 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "refund nets against expense in the transactions breakdown, not against income" do
+    category = @family.categories.create!(name: "Refund Fix Test Category")
+    create_transaction(account: accounts(:depository), amount: 200, category: category, date: Date.current)
+    create_transaction(account: accounts(:depository), amount: -50, refund: true, category: category, date: Date.current)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    breakdown = controller.send(:build_transactions_breakdown)
+    expense_group = breakdown.find { |g| g[:type] == "expense" && g[:category_id] == category.id }
+    income_group  = breakdown.find { |g| g[:type] == "income"  && g[:category_id] == category.id }
+
+    assert expense_group.present?, "expected the category to appear in the expense breakdown"
+    assert_equal 150, expense_group[:total], "the $50 refund should net against the $200 expense, not add to it"
+    assert_nil income_group, "a refund should not create a separate income entry for this category"
+  end
+
+  test "monthly export breakdown agrees with the on-screen breakdown for the same refund" do
+    category = @family.categories.create!(name: "Refund Fix Export Test Category")
+    create_transaction(account: accounts(:depository), amount: 200, category: category, date: Date.current)
+    create_transaction(account: accounts(:depository), amount: -50, refund: true, category: category, date: Date.current)
+
+    get reports_path(period_type: :monthly)
+
+    export_rows = controller.send(:build_monthly_breakdown_for_export)
+    row = export_rows.find { |r| r[:category] == category.name }
+
+    assert row.present?
+    assert_equal "expense", row[:type], "the export should classify the refund's category as expense, matching build_transactions_breakdown"
+    assert_equal 150, row[:total]
+  end
+
   test "index with last 6 months period" do
     get reports_path(period_type: :last_6_months)
     assert_response :ok

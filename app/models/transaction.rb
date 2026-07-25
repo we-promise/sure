@@ -25,6 +25,12 @@ class Transaction < ApplicationRecord
 
   validate :validate_attachments, if: -> { attachments.attached? }
   validates :refund, inclusion: { in: [ false ] }, if: -> { transfer? }
+  # Entry#refund_must_have_negative_amount covers the normal create/update
+  # paths (both go through Entry's nested entryable_attributes). This is a
+  # second line of defense for Api::V1::TransactionsController#update, which
+  # sets `refund` via `@entry.transaction.update!(refund: ...)` directly on
+  # an already-persisted transaction, bypassing Entry's validation entirely.
+  validate :refund_must_have_negative_amount, if: -> { refund? && entry.present? }
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
@@ -360,6 +366,12 @@ class Transaction < ApplicationRecord
   end
 
   private
+
+    def refund_must_have_negative_amount
+      return if entry.amount.blank? || entry.amount.negative?
+
+      errors.add(:refund, "requires a negative transaction amount")
+    end
 
     def validate_attachments
       # Check attachment count limit
