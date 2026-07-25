@@ -63,9 +63,12 @@ class SessionsController < ApplicationController
       if user.otp_required?
         log_super_admin_override_login(user)
         session[:mfa_user_id] = user.id
+        session[:mfa_started_at] = Time.current.iso8601
+        session[:mfa_attempts] = 0
         redirect_to verify_mfa_path
       else
         log_super_admin_override_login(user)
+        reset_session_preserving_pending_invitation # FIX-01 + preserve invitation token
         @session = create_session_for(user)
         flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
@@ -180,9 +183,17 @@ class SessionsController < ApplicationController
 
       # MFA check: If user has MFA enabled, require verification
       if user.otp_required?
+        # Mirror the local-password MFA handoff so verify_code's TTL + attempt
+        # limit are actually enforced for OIDC logins (otherwise mfa_started_at
+        # is absent and the 5-min TTL check is silently skipped).
         session[:mfa_user_id] = user.id
+        session[:mfa_started_at] = Time.current.iso8601
+        session[:mfa_attempts] = 0
         redirect_to verify_mfa_path
       else
+        # OIDC sign-in: preserve the id_token_hint / sso_login_provider just
+        # set above so RP-initiated federated logout works at /sessions#destroy.
+        reset_session_preserving_handoff(preserve_oidc_handoff: true)
         @session = create_session_for(user)
         flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path

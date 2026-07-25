@@ -27,19 +27,101 @@ module Authentication
       end
     end
 
+    # Session TTL constants (F-04, CWE-613)
+    SESSION_ABSOLUTE_TTL = 30.days
+    SESSION_IDLE_TTL = 24.hours
+    # Throttle the per-request `updated_at` touch so every authenticated request
+    # doesn't issue a write against `sessions`. 1 minute is granular enough for
+    # the 24h idle TTL while keeping write amplification bounded.
+    SESSION_TOUCH_THROTTLE = 1.minute
+
     def find_session_by_cookie
       cookie_value = cookies.signed[:session_token]
+      return nil unless cookie_value.present?
 
-      if cookie_value.present?
-        Session.find_by(id: cookie_value)
-      else
-        nil
+      session = Session.find_by(id: cookie_value)
+      unless session
+        # Stale cookie (session row was deleted or recycled) — remove it so the
+        # browser doesn't keep resending a dead token.
+        cookies.delete(:session_token)
+        return nil
       end
+
+      now = Time.current
+
+      # Absolute TTL: session older than 30 days is always expired
+      if session.created_at < now - SESSION_ABSOLUTE_TTL
+        session.destroy
+        cookies.delete(:session_token)
+        return nil
+      end
+
+      # Idle TTL: session not used in 24h is expired
+      if session.updated_at < now - SESSION_IDLE_TTL
+        session.destroy
+        cookies.delete(:session_token)
+        return nil
+      end
+
+      # Refresh idle timer, throttled to avoid a write per request.
+      session.touch if session.updated_at < now - SESSION_TOUCH_THROTTLE
+      session
     end
+
+    # Resets the Rails session to prevent session fixation on privilege change
+    # (login, MFA verify) while preserving the pending invitation token stored
+    # pre-login. `reset_session` clears everything by default, which would drop
+    # a legitimate pending invitation before `accept_pending_invitation_for`
+    # could use it.
+    # Keys preserved across a privilege-change `reset_session`:
+    # - pending_invitation_token: must survive so accept_pending_invitation_for
+    #   can still honour an invite that the user followed before signing in.
+    # - id_token_hint / sso_login_provider: required for RP-initiated federated
+    #   logout. Set on OIDC sign-in BEFORE the privilege-change reset (so the
+    #   provider data exists to be preserved here). Without preserving them,
+    #   federated logout falls back to local-only, breaking IdP single sign-out.
+    # pending_invitation_token must survive every privilege-change reset so
+    # accept_pending_invitation_for can still honour an invite that the user
+    # followed before signing in.
+    SESSION_KEY_ALWAYS_PRESERVED = :pending_invitation_token
+
+    # id_token_hint / sso_login_provider are only meaningful for federated
+    # logout, and must NOT survive a local sign-in. Otherwise, if a prior
+    # OIDC session leaked these keys into the cookie (e.g. via an out-of-band
+    # password-reset that destroyed only the DB session row), a subsequent
+    # local login would inherit the stale OIDC metadata and SessionsController
+    # #destroy would incorrectly attempt RP-initiated federated logout for a
+    # local session.
+    SESSION_KEYS_OIDC_HANDOFF = %i[id_token_hint sso_login_provider].freeze
+    private_constant :SESSION_KEY_ALWAYS_PRESERVED, :SESSION_KEYS_OIDC_HANDOFF
+
+    def reset_session_preserving_handoff(preserve_oidc_handoff: false)
+      keys = [ SESSION_KEY_ALWAYS_PRESERVED ]
+      keys += SESSION_KEYS_OIDC_HANDOFF if preserve_oidc_handoff
+
+      preserved = keys.each_with_object({}) do |k, h|
+        v = session[k]
+        h[k] = v if v.present?
+      end
+      reset_session
+      preserved.each { |k, v| session[k] = v }
+    end
+
+    # Backwards-compatible alias. Defaults to NOT preserving OIDC handoff keys
+    # (matches the safe behaviour expected for local sign-ins).
+    alias_method :reset_session_preserving_pending_invitation, :reset_session_preserving_handoff
 
     def create_session_for(user)
       session = user.sessions.create!
-      cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
+      cookies.signed.permanent[:session_token] = {
+        value: session.id,
+        httponly: true,
+        # Use force_ssl rather than env name so staging/preview environments
+        # that already enforce HTTPS automatically get a Secure cookie without
+        # having to enumerate environment names.
+        secure: Rails.application.config.force_ssl,
+        same_site: :lax
+      }
       session
     end
 

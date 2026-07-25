@@ -51,7 +51,11 @@ class OidcAccountsController < ApplicationController
       session.delete(:pending_oidc_auth)
 
       if user.otp_required?
+        # MFA handoff: set TTL + attempt counter so verify_code enforces them
+        # (see SessionsController#create — same invariants apply here).
         session[:mfa_user_id] = user.id
+        session[:mfa_started_at] = Time.current.iso8601
+        session[:mfa_attempts] = 0
         redirect_to verify_mfa_path
       else
         @session = create_session_for(user)
