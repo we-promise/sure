@@ -73,7 +73,7 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
       messages = external.send(:build_conversation_messages)
 
       # All 25 created + 3 fixture messages = 28 complete messages returned
-      assert messages.length > 20, "Expected all messages to be included, not truncated at 20"
+      assert_equal 28, messages.length, "Expected all complete messages to be included"
       # Last message should be the most recent one we created
       assert_equal "msg 24", messages.last[:content]
     end

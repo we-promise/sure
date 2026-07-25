@@ -88,8 +88,15 @@ class Assistant::External < Assistant::Base
     end
 
     def build_conversation_messages
-      chat.conversation_messages.where(status: "complete").ordered.map do |msg|
+      messages = chat.conversation_messages.where(status: "complete").ordered.map do |msg|
         { role: msg.role, content: msg.content }
       end
+      Assistant::HistoryTrimmer.new(messages, max_tokens: max_history_tokens).call
+    end
+
+    def max_history_tokens
+      explicit = ENV["EXTERNAL_ASSISTANT_MAX_HISTORY_TOKENS"].presence&.to_i
+      return explicit if explicit&.positive?
+      100_000
     end
 end
