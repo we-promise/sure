@@ -17,6 +17,7 @@ de:
       name_label: Name
       unassigned: "(nicht zugewiesen)"
       parent_category_label: "Übergeordnete Kategorie (optional)"
+      trigger_label: Farbe und Symbol auswählen
       color: Farbe
       icon: Symbol
       auto_adjust: automatisch anpassen.

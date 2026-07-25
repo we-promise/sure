@@ -51,8 +51,11 @@ de:
       notes_label: Notizen
       notes_placeholder: Zusätzliche Informationen wie Kontonummern, Sort codes, IBAN, Routing-Nummern usw.
       exclude_from_reports: Aus allen Berichten ausschließen
+      enable_category_matcher_label: Kategorieabgleich aktivieren
+      enable_category_matcher_hint: Wenn aktiviert, wird die vom Anbieter vorgeschlagene Kategorie auf importierte Transaktionen angewendet. Deaktiviere diese Option, damit neue Transaktionen unkategorisiert bleiben.
     index:
       accounts: Konten
+      cancel_sync: Synchronisierung abbrechen
       manual_accounts:
         other_accounts: Andere Konten
       new_account: Neues Konto
