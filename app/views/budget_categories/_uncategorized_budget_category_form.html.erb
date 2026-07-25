@@ -6,7 +6,7 @@
   <div class="w-1 h-3 rounded-xl mt-1" style="background-color: <%= budget_category.category.color %>"></div>
 
   <div class="text-sm mr-3">
-    <p class="text-primary font-medium mb-0.5"><%= budget_category.category.name %></p>
+    <p class="text-primary font-medium mb-0.5"><%= budget_category.category.display_name %></p>
     <p class="text-secondary privacy-sensitive"><%= t("budget_categories.budget_category_form.monthly_average", amount: budget_category.avg_monthly_expense_money.format(precision: 0)) %></p>
   </div>
 

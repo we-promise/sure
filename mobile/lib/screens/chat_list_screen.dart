@@ -155,7 +155,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       return l.chatListDaysAgo(difference.inDays);
     } else {
       return DateFormat.yMd(Localizations.localeOf(context).toString())
-          .format(dateTime);
+          .format(dateTime.toLocal());
     }
   }
 

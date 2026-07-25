@@ -1,0 +1,9 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        rule:
+          min_actions: "musi mieć co najmniej jedną akcję"
+          duplicate_actions: "Reguła nie może mieć zduplikowanych akcji %{types}"
+          nested_conditions: "Warunki złożone nie mogą być zagnieżdżone"

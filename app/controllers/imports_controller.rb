@@ -1,8 +1,8 @@
 class ImportsController < ApplicationController
   include SettingsHelper
 
-  before_action :set_import, only: %i[show update publish destroy revert apply_template]
-  before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template]
+  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel]
+  before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -28,6 +28,14 @@ class ImportsController < ApplicationController
     redirect_to import_path(@import), notice: t(".started")
   rescue Import::MaxRowCountExceededError
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
+  end
+
+  def cancel
+    if @import.force_fail!
+      redirect_to imports_path, notice: t(".cancelled")
+    else
+      redirect_to imports_path, alert: t(".not_cancellable")
+    end
   end
 
   def index

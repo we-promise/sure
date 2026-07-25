@@ -10,7 +10,7 @@ class LocalizeTest < ActionDispatch::IntegrationTest
   test "falls back to English when Accept-Language is unsupported" do
     get new_session_url, headers: { "Accept-Language" => "ru-RU,ru;q=0.9" }
     assert_response :success
-    assert_select "button", text: /Log in/i
+    assert_select "button", text: /Войти/i
   end
 
   test "uses Accept-Language for onboarding when user locale is not set" do
@@ -26,7 +26,7 @@ class LocalizeTest < ActionDispatch::IntegrationTest
 
     get preferences_onboarding_url, headers: { "Accept-Language" => "ru-RU,ru;q=0.9" }
     assert_response :success
-    assert_select "h1", text: /Configure your preferences/i
+    assert_select "h1", text: /Настройте ваши предпочтения/i
   end
 
   test "respects user locale override even when Accept-Language differs" do

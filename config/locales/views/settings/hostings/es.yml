@@ -87,10 +87,14 @@ es:
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance proporciona acceso gratuito a precios de acciones, tipos de cambio y datos financieros sin necesidad de una clave API.
-        status_active: Yahoo Finance está activo y funcionando
-        status_inactive: La conexión con Yahoo Finance falló
-        connection_failed: No se pudo conectar con Yahoo Finance
-        troubleshooting: Verifica tu conexión a internet y la configuración del firewall. Yahoo Finance puede estar temporalmente no disponible.
+        status_healthy: Yahoo Finance está activo y funcionando.
+        status_rate_limited: Yahoo Finance está limitando temporalmente las solicitudes.
+        rate_limited_title: Se alcanzó el límite de solicitudes de Yahoo Finance.
+        rate_limited_message: No es necesario realizar ninguna acción. Sure evitará comprobaciones de estado adicionales durante 30 minutos. Las operaciones de precios y tipos de cambio continuarán de forma independiente.
+        status_unavailable: Yahoo Finance no está disponible en este momento.
+        unavailable_title: No se pudo verificar Yahoo Finance.
+        unavailable_message: No se pudo contactar con Yahoo Finance o se recibió una respuesta inesperada. Comprueba tu conexión a internet e inténtalo de nuevo más tarde.
+        status_unknown: Se está comprobando el estado de Yahoo Finance.
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} llamadas diarias a la API utilizadas (%{percentage})"
         description: Introduce la clave API proporcionada por Twelve Data

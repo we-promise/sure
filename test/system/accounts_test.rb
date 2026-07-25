@@ -173,25 +173,53 @@ class AccountsTest < ApplicationSystemTestCase
       assert_equal notes, created_account[:notes]
 
       visit account_url(created_account)
-
-      open_account_edit_dialog
+      # Let the initial page (and any immediate Turbo morph) settle before
+      # opening the edit dialog — same race as open_account_edit_dialog.
+      assert_selector "h2", text: account_name
 
       updated_institution_name = "[system test] Updated Institution"
       updated_institution_domain = "updated.example.com"
       updated_notes = "Updated notes for #{accountable_type}"
 
-      fill_in "Account name", with: "Updated account name"
-      find("summary", text: "Additional details").click
-      fill_in "Institution name", with: updated_institution_name
-      fill_in "Institution domain", with: updated_institution_domain
-      fill_in "Notes", with: updated_notes
-      click_button "Update Account"
-      assert_selector "h2", text: "Updated account name"
+      update_account_details(
+        name: "Updated account name",
+        institution_name: updated_institution_name,
+        institution_domain: updated_institution_domain,
+        notes: updated_notes
+      )
 
       created_account.reload
       assert_equal updated_institution_name, created_account[:institution_name]
       assert_equal updated_institution_domain, created_account[:institution_domain]
       assert_equal updated_notes, created_account[:notes]
+    end
+
+    # Fill + submit the account edit dialog, retrying when a Turbo morph
+    # detaches nodes mid-interaction (Chrome: "Node with given id does not
+    # belong to the document"). Mirrors open_account_edit_dialog.
+    def update_account_details(name:, institution_name:, institution_domain:, notes:)
+      3.times do
+        begin
+          open_account_edit_dialog unless has_field?("Account name", wait: 0)
+
+          fill_in "Account name", with: name
+          unless has_field?("Institution name", wait: 0)
+            find("summary", text: "Additional details").click
+          end
+          fill_in "Institution name", with: institution_name
+          fill_in "Institution domain", with: institution_domain
+          fill_in "Notes", with: notes
+          click_button "Update Account"
+
+          return if has_selector?("h2", text: name, wait: 2)
+        rescue Selenium::WebDriver::Error::WebDriverError => e
+          raise unless e.message.match?(
+            /does not belong to the document|stale element reference/i,
+          )
+        end
+      end
+
+      assert_selector "h2", text: name
     end
 
     def humanized_accountable(accountable_type)

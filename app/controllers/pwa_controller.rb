@@ -9,7 +9,7 @@ class PwaController < ApplicationController
 
   def service_worker
     # Explicitly render JS template to avoid format negotiation issues
-    render "pwa/service-worker", content_type: "application/javascript"
+    render "pwa/service-worker", formats: [ :js ], content_type: "application/javascript"
   end
   # Renders app/views/pwa/service-worker.js with content type application/javascript
 end
