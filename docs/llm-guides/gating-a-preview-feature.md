@@ -151,12 +151,14 @@ For a family-scoped job, roll the per-user flag up to the family:
 scope :with_preview_features, -> { where(id: User.with_preview_features.select(:family_id)) }
 
 def preview_features_enabled?
-  users.any?(&:preview_features_enabled?)
+  users.with_preview_features.exists?
 end
 ```
 
 Filter the fan-out with the scope (one indexed query — `User.with_preview_features` is a jsonb containment match against the GIN index on `users.preferences`, not a load-and-iterate), and re-check with the predicate inside the per-family path, which is reachable directly from controllers and the console. Keep the same predicate name on both models so the GA-removal grep finds every call site. `GenerateInsightsJob` is the reference implementation.
 
 One opted-in member is enough to generate for the whole family — consistent with the per-user-visibility / family-scoped-data split described above.
+
+Note what the shared name costs: `preview_features_enabled?` means "I opted in" on `User` but "somebody in my household opted in" on `Family`. Only ever gate background work on the family form. Gating UI on it (`Current.family.preview_features_enabled?` reads naturally, which is the trap) would show the feature to someone who explicitly opted out because a family member opted in. For anything a person sees, use the `PreviewGateable` helper, which reads `Current.user`.
 
 The redirect target is `/`. If you want gated controllers to land somewhere else (a docs page, an opt-in nudge), override `require_preview_features!` in the controller, or write a thin custom `before_action` that calls `preview_features_enabled?` directly.

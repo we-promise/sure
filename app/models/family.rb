@@ -128,6 +128,11 @@ class Family < ApplicationRecord
   # EXISTS rather than `users.any?(&:preview_features_enabled?)`: the job asks
   # this once per family, and the block form would load and instantiate every
   # member just to answer a boolean.
+  #
+  # Never gate UI on this — visibility is per-user, and this answers "somebody
+  # in the household opted in", so a view using it would show the feature to a
+  # user who explicitly opted out. Use the PreviewGateable helper (Current.user)
+  # for anything a person sees.
   def preview_features_enabled?
     users.with_preview_features.exists?
   end
