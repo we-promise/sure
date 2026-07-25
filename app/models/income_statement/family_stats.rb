@@ -82,12 +82,23 @@ class IncomeStatement::FamilyStats
             #{exclude_tax_advantaged_sql}
             #{scope_to_account_ids_sql}
           GROUP BY period, #{IncomeStatement::ClassificationSql.classification(transactions_alias: "t")}
+        ),
+        -- A period where refunds exceed expenses sums negative under the
+        -- 'expense' classification; re-label it 'income' (and vice versa)
+        -- before aggregating, rather than ABS-ing the final median/avg and
+        -- silently reporting a refund-heavy period as positive expense.
+        corrected_totals AS (
+          SELECT
+            period,
+            #{IncomeStatement::ClassificationSql.reclassify_by_sign} as classification,
+            ABS(total) as total
+          FROM period_totals
         )
         SELECT
           classification,
-          ABS(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total)) as median,
-          ABS(AVG(total)) as avg
-        FROM period_totals
+          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total) as median,
+          AVG(total) as avg
+        FROM corrected_totals
         GROUP BY classification;
       SQL
     end
