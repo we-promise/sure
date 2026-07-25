@@ -1,0 +1,93 @@
+---
+en:
+  insights:
+    index:
+      title: Insights
+      subtitle: What's happening across your finances, refreshed nightly.
+      refresh: Check for new insights
+      empty:
+        title: No insights yet
+        description: Insights appear here once there's enough activity in your accounts. They refresh automatically every night.
+    refresh:
+      queued: We're generating fresh insights. Check back in a minute.
+      checking: Checking…
+    card:
+      dismiss: Dismiss
+      new: New
+      dismissed: Insight dismissed
+      undo: Undo
+    feed:
+      view_all: View all insights
+      header: Latest
+      header_new: New
+    types:
+      spending_anomaly: Spending
+      cash_flow_warning: Cash flow
+      net_worth_milestone: Net worth
+      subscription_audit: Subscriptions
+      savings_rate_change: Savings rate
+      idle_cash: Idle cash
+      budget_at_risk: Budget
+      budget_on_track: Budget
+    meta:
+      next_n_days:
+        one: Next day
+        other: Next %{count} days
+      last_n_days:
+        one: Last day
+        other: Last %{count} days
+      date_range: "%{from} to %{to}"
+    figures:
+      vs_previous: vs prior month
+      today: today
+      on_pace: on pace
+      of_budget: of budget
+      days_overdue:
+        one: "%{count} day overdue"
+        other: "%{count} days overdue"
+      idle_days:
+        one: idle %{count} day
+        other: idle %{count} days
+    actions:
+      spending_anomaly: View %{category} transactions
+      cash_flow_warning: Review recurring transactions
+      net_worth_milestone: View net worth report
+      subscription_audit: Review recurring transactions
+      savings_rate_change: View that month's transactions
+      idle_cash: Go to account
+      budget: View budget
+    titles:
+      spending_anomaly:
+        above: "%{category} spending is trending up"
+        below: "%{category} spending is trending down"
+      cash_flow_warning:
+        low: Your cash balance may run low
+        negative: Your cash balance may go negative
+      net_worth_milestone: "Net worth milestone: %{milestone}"
+      subscription_audit: "Is %{name} still active?"
+      savings_rate_change:
+        up: Your savings rate improved in %{month}
+        down: Your savings rate dropped in %{month}
+      idle_cash: Idle cash in %{account}
+      budget_at_risk:
+        one: One category needs attention in your budget
+        other: "%{count} categories need attention in your budget"
+      budget_on_track: Your budget is on track
+    templates:
+      spending_anomaly:
+        above: You're on pace to spend %{projected_spend} on %{category} this month, about %{deviation_pct}% more than your recent monthly average of %{baseline_spend}.
+        below: You're on pace to spend %{projected_spend} on %{category} this month, about %{deviation_pct}% less than your recent monthly average of %{baseline_spend}.
+      cash_flow_warning:
+        low: Based on your upcoming recurring transactions and typical spending, your cash balance could drop to %{projected_low} around %{projected_low_date}.
+        negative: Based on your upcoming recurring transactions and typical spending, your cash balance could fall to %{projected_low} around %{projected_low_date}.
+      net_worth_milestone: Your net worth crossed %{milestone} and now stands at %{net_worth}.
+      subscription_audit: "%{name} (%{amount}) hasn't appeared since it was expected on %{expected_on}. It may have been cancelled, or the charge may have moved."
+      savings_rate_change:
+        up: You saved %{current_rate}% of your income in %{month}, up %{change_pp} percentage points from %{previous_rate}% the month before.
+        down: You saved %{current_rate}% of your income in %{month}, down %{change_pp} percentage points from %{previous_rate}% the month before.
+        down_negative: "You spent more than you earned in %{month}: your savings rate fell to %{current_rate}%, from %{previous_rate}% the month before."
+      idle_cash: "%{account} holds %{balance} with no activity in the last %{idle_days} days."
+      budget_at_risk:
+        over: "%{categories} went over budget this month. You've used %{budget_spent_pct}% of your total budget so far."
+        near: "%{categories} are close to their limits this month. You've used %{budget_spent_pct}% of your total budget so far."
+      budget_on_track: You've spent %{spent} of your %{budgeted} budget (%{budget_spent_pct}%) and everything is within its limit.

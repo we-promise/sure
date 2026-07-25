@@ -11,6 +11,10 @@ class Family::Syncer
 
     # Schedule child syncs
     child_syncables.each do |syncable|
+      # Cooperative cancellation: stop fanning out child syncs once a cancel
+      # has been requested (fresh read — the flag is set from another process).
+      break if sync.cancel_requested?
+
       syncable.sync_later(parent_sync: sync, window_start_date: sync.window_start_date, window_end_date: sync.window_end_date)
     end
   end

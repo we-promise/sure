@@ -1,0 +1,164 @@
+---
+pl:
+  wise_items:
+    profile_types:
+      personal: Osobisty
+      business: Firmowy
+    entries:
+      default_name: Transakcja Wise
+      fee_name: Opłata Wise
+    activities:
+      jar_deposit: Przelew do Jara
+      jar_withdrawal: Wypłata z Jara
+      transfer_to_jar: "Przelew do %{jar}"
+      transfer_from_jar: "Przelew z %{jar}"
+      interest: Odsetki Wise
+      asset_fee: Opłata za aktywa Wise
+      default_name: Aktywność Wise
+    sync_status:
+      no_accounts: Nie znaleziono kont
+      all_synced:
+        few: "%{count} konta zsynchronizowane"
+        many: "%{count} kont zsynchronizowanych"
+        one: "%{count} konto zsynchronizowane"
+        other: "%{count} kont zsynchronizowanych"
+      partial_setup: "%{synced} zsynchronizowanych, %{pending} wymaga konfiguracji"
+    create:
+      no_profiles_found: Nie znaleziono profili Wise. Sprawdź swój token API.
+      invalid_token: Nieprawidłowy token API. Sprawdź i spróbuj ponownie.
+      connection_failed: Nie można połączyć z Wise. Spróbuj ponownie później.
+    destroy:
+      success: Połączenie Wise usunięte
+    update:
+      success: Połączenie Wise zaktualizowane
+    sync:
+      success: Synchronizacja rozpoczęta
+    syncer:
+      importing_accounts: Importowanie kont z Wise...
+      checking_account_configuration: Sprawdzanie konfiguracji konta...
+      accounts_need_setup:
+        few: "%{count} konta wymagają konfiguracji..."
+        many: "%{count} kont wymaga konfiguracji..."
+        one: "%{count} konto wymaga konfiguracji..."
+        other: "%{count} kont wymaga konfiguracji..."
+      processing_transactions: Przetwarzanie transakcji...
+      calculating_balances: Obliczanie sald...
+      credentials_invalid: Nieprawidłowy token API Wise lub niewystarczające uprawnienia
+      failed: Synchronizacja nie powiodła się. Spróbuj ponownie lub skontaktuj się z pomocą techniczną.
+      import_failed: Import Wise nie powiódł się.
+      accounts_failed:
+        few: "Nie udało się zaimportować %{count} salda."
+        many: "Nie udało się zaimportować %{count} sald."
+        one: "Nie udało się zaimportować %{count} salda."
+        other: "Nie udało się zaimportować %{count} sald."
+      transactions_failed:
+        few: "%{count} salda miały błędy importu transakcji."
+        many: "%{count} sald miało błędy importu transakcji."
+        one: "%{count} saldo miało błędy importu transakcji."
+        other: "%{count} sald miało błędy importu transakcji."
+      account_processing_failed:
+        few: "%{count} konta Wise nie powiodły się podczas przetwarzania."
+        many: "%{count} kont Wise nie powiodło się podczas przetwarzania."
+        one: "%{count} konto Wise nie powiodło się podczas przetwarzania."
+        other: "%{count} kont Wise nie powiodło się podczas przetwarzania."
+      account_sync_failed:
+        few: "Nie można zaplanować synchronizacji %{count} kont Wise."
+        many: "Nie można zaplanować synchronizacji %{count} kont Wise."
+        one: "Nie można zaplanować synchronizacji %{count} konta Wise."
+        other: "Nie można zaplanować synchronizacji %{count} kont Wise."
+    provider_panel:
+      setup_title: "Instrukcje konfiguracji:"
+      add_connection: Dodaj połączenie Wise
+      token_label: Token API
+      token_placeholder: Wklej swój osobisty token API Wise
+      keep_token_placeholder: Pozostaw puste, aby zachować bieżący token
+      connection_name_label: Nazwa połączenia
+      connection_name_placeholder: Wise Osobiste
+      connect: Połącz Wise
+      update_connection: Aktualizuj połączenie
+      setup_accounts: Konfiguruj konta
+      sync: Synchronizuj
+      disconnect: Rozłącz
+      disconnect_label: "Rozłącz %{name}"
+      disconnect_confirm: "Czy na pewno chcesz rozłączyć %{name}? Spowoduje to usunięcie wszystkich zsynchronizowanych danych kont."
+      accounts_link: Konta
+      configured_html: "Połączone i synchronizujące. Przejdź do zakładki %{accounts_link}, aby zarządzać kontami."
+      not_configured: Nieskonfigurowane
+      sandbox_note_html: "Użyj <strong>sandbox</strong> base URL (<code>https://api.sandbox.transferwise.tech</code>) do testowania. Ustaw <code>WISE_BASE_URL</code> w swoim środowisku."
+      encryption_warning:
+        title: Szyfrowanie bazy danych nie jest skonfigurowane
+        message: Skonfiguruj klucze szyfrowania Active Record przed dodaniem tokenów Wise w produkcji. Bez szyfrowania tokeny są przechowywane w postaci zwykłego tekstu.
+      instructions:
+        sign_in_html: "Odwiedź %{link} i zaloguj się na swoje konto"
+        open_tokens: "Przejdź do Ustawienia → Tokeny API"
+        create_token: "Utwórz nowy osobisty token API z dostępem tylko do odczytu"
+        copy_token_html: "Skopiuj token i wklej go poniżej. Sure używa go tylko do synchronizacji sald i transakcji."
+    provider_connection:
+      default_name: Wise
+      default_description: Połącz swoje wielowalutowe konto Wise
+      name: "Wise — %{name}"
+      description: "Połącz przez %{name}"
+    link_profiles:
+      session_expired: Sesja wygasła. Spróbuj połączyć ponownie.
+      no_profiles_selected: Wybierz co najmniej jeden profil.
+      already_connected: Wszystkie wybrane profile są już połączone.
+      success:
+        few: "Połączono %{count} profile Wise"
+        many: "Połączono %{count} profili Wise"
+        one: "Połączono %{count} profil Wise"
+        other: "Połączono %{count} profili Wise"
+    select_profiles:
+      session_expired: Sesja wygasła. Spróbuj połączyć ponownie.
+      title: Wybierz profile Wise
+      subtitle: Wybierz, które profile połączyć
+      description: Twoje konto Wise ma wiele profili. Wybierz te, które chcesz synchronizować z Sure.
+      unnamed_profile: "(Profil bez nazwy)"
+      already_connected_label: Już połączone
+      connect: Połącz wybrane profile
+      cancel: Anuluj
+    wise_item:
+      deletion_in_progress: trwa usuwanie...
+      syncing: Synchronizowanie...
+      error: Błąd synchronizacji
+      status: "Zsynchronizowano %{timestamp} temu"
+      status_never: Nigdy nie synchronizowano
+      status_with_summary: "Ostatnia synchronizacja %{timestamp} temu — %{summary}"
+      delete: Rozłącz
+      setup_needed: Nowe konta gotowe do konfiguracji
+      setup_description: "%{linked} z %{total} kont połączonych. Utwórz konta Sure dla swoich sald walutowych Wise."
+      setup_action: Konfiguruj konta
+      no_accounts_title: Brak połączonych kont
+      no_accounts_description: Uruchom synchronizację, aby odkryć salda Wise, a następnie połącz je z kontami Sure.
+    setup_accounts:
+      title: Skonfiguruj konta Wise
+      subtitle: Połącz swoje salda walutowe Wise
+      description: Utwórz konto Sure dla każdego salda walutowego Wise, które chcesz śledzić. Każda waluta staje się osobnym kontem.
+      no_accounts_to_setup: Wszystkie konta są skonfigurowane
+      all_accounts_linked: Wszystkie salda walutowe Wise zostały połączone z kontami Sure.
+      create_account: Utwórz konto
+      done: Gotowe
+    select_accounts:
+      title: Wybierz saldo Wise
+      description: Wybierz saldo walutowe Wise, które chcesz połączyć z kontem %{product_name}.
+      no_accounts_found: Wszystkie salda Wise są już połączone z kontami Sure.
+      no_connection: Nie znaleziono połączenia Wise. Najpierw połącz Wise w ustawieniach dostawcy.
+      link_account: Połącz saldo
+      cancel: Anuluj
+    select_existing_account:
+      title: "Połącz %{account_name} z Wise"
+      description: Wybierz saldo walutowe Wise do połączenia z tym kontem. Transakcje będą synchronizowane automatycznie.
+      no_accounts_found: Nie znaleziono niepołączonych sald Wise.
+      link_account: Połącz saldo
+      cancel: Anuluj
+    link_accounts:
+      not_found: Nie znaleziono salda Wise.
+      success: Połączono saldo Wise z kontem.
+      failed: Nie można połączyć salda Wise. Spróbuj ponownie.
+    link_existing_account:
+      not_found: Nie znaleziono konta lub salda Wise.
+      success: "Połączono %{account_name} z Wise"
+      failed: Nie można połączyć konta. Spróbuj ponownie.
+    complete_account_setup:
+      not_found: Nie znaleziono salda Wise.
+      success: Konto utworzone i połączone pomyślnie.
+      failed: Nie można utworzyć konta. Spróbuj ponownie.
