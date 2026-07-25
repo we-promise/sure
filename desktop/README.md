@@ -30,18 +30,11 @@ npm run tauri build -- --target universal-apple-darwin
 ```
 
 ## Publishing a release
-Everything happens in GitHub — no local git commands:
-
-> **Actions → Desktop Release → Run workflow → enter a version (e.g. `0.1.0`)**
-
-`.github/workflows/desktop-release.yml` then syncs the version into
-`desktop/package.json` + `desktop/src-tauri/tauri.conf.json`, builds the
-universal `.dmg` on a macOS runner, and creates the `desktop-v0.1.0` tag + a
-GitHub Release with the `.dmg` attached. It refuses to reuse an existing
-version, and marks pre-release versions (e.g. `0.1.0-beta.1`) as prereleases.
-
-Prefer git tags? Pushing `desktop-v0.1.0` triggers the same build (version
-derived from the tag).
+The desktop build runs automatically as part of the normal Sure `v*` release.
+The version comes from `.sure-version` and must match the release tag; it is
+stamped into `desktop/package.json` and `desktop/src-tauri/tauri.conf.json`
+only while building. The universal `.dmg` is attached to that same GitHub
+Release—there is no separate desktop action, tag, or version.
 
 ## Installing an unsigned build (end users)
 The published `.dmg` is **not code-signed**, so macOS Gatekeeper blocks the first
@@ -78,9 +71,10 @@ distributable, signed, notarized `.dmg`, add:
    `"hardenedRuntime": true`, and an `entitlements` plist if needed.
 3. Notarization after build:
    ```bash
-   xcrun notarytool submit src-tauri/target/universal-apple-darwin/release/bundle/dmg/Sure_0.1.0_universal.dmg \
+   VERSION="<release-version>"
+   xcrun notarytool submit "src-tauri/target/universal-apple-darwin/release/bundle/dmg/Sure_${VERSION}_universal.dmg" \
      --apple-id "<APPLE_ID>" --team-id "<TEAMID>" --password "<APP_SPECIFIC_PW>" --wait
-   xcrun stapler staple src-tauri/target/universal-apple-darwin/release/bundle/dmg/Sure_0.1.0_universal.dmg
+   xcrun stapler staple "src-tauri/target/universal-apple-darwin/release/bundle/dmg/Sure_${VERSION}_universal.dmg"
    ```
 These steps require an Apple Developer account and are intentionally left as a
 documented follow-up.
