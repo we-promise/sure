@@ -36,6 +36,7 @@ class BalanceSheet::AccountTotals
                     :accountable,
                     :plaid_account,
                     :simplefin_account,
+                    :syncs,
                     account_providers: :provider
                   )
         scope = scope.accessible_by(user) if user
