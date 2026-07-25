@@ -8,51 +8,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject_model = "gpt-4.1"
   end
 
-  test "decodes ChatGPT account ID from OAuth token claims" do
-    token = oauth_token_for("account-123")
-
-    assert_equal "account-123", Provider::Openai.oauth_account_id(token)
-  end
-
-  test "returns nil when OAuth token claims cannot be decoded" do
-    assert_nil Provider::Openai.oauth_account_id("not-a-jwt")
-  end
-
-  test "configures Codex subscription endpoint and headers for OAuth" do
-    provider = Provider::Openai.new(oauth_token_for("account-123"), oauth: true)
-    client = provider.send(:client)
-
-    assert provider.oauth?
-    refute provider.custom_provider?
-    assert provider.supports_responses_endpoint?
-    assert_equal Provider::Openai::CODEX_URI_BASE, client.uri_base
-    assert_equal "account-123", client.extra_headers["ChatGPT-Account-ID"]
-    assert_equal Provider::Openai::CODEX_ORIGINATOR, client.extra_headers["originator"]
-    assert_equal "OpenAI (Codex subscription)", provider.provider_name
-  end
-
-  test "uses explicit account ID for opaque OAuth tokens" do
-    provider = Provider::Openai.new("opaque-token", oauth: true, account_id: "account-456")
-
-    assert_equal "account-456", provider.send(:client).extra_headers["ChatGPT-Account-ID"]
-  end
-
-  test "requires an account ID for opaque OAuth tokens" do
-    error = assert_raises(Provider::Openai::Error) do
-      Provider::Openai.new("opaque-token", oauth: true)
-    end
-
-    assert_match(/ChatGPT account ID is required/, error.message)
-  end
-
-  test "uses Codex default model when OAuth is configured" do
-    ClimateControl.modify("OPENAI_OAUTH_TOKEN" => oauth_token_for("account-123"), "OPENAI_MODEL" => nil) do
-      Setting.stubs(:openai_model).returns(nil)
-
-      assert_equal Provider::Openai::CODEX_DEFAULT_MODEL, Provider::Openai.effective_model
-    end
-  end
-
   test "openai errors are automatically raised" do
     VCR.use_cassette("openai/chat/error") do
       response = @openai.chat_response("Test", model: "invalid-model-that-will-trigger-api-error")
@@ -549,14 +504,4 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       config.build_input(prompt: "hi", messages: [ { role: "user", content: "old" } ])
     end
   end
-
-  private
-
-    def oauth_token_for(account_id)
-      header = Base64.urlsafe_encode64({ alg: "none", typ: "JWT" }.to_json, padding: false)
-      payload = Base64.urlsafe_encode64({
-        "https://api.openai.com/auth" => { "chatgpt_account_id" => account_id }
-      }.to_json, padding: false)
-      "#{header}.#{payload}.signature"
-    end
 end

@@ -3,7 +3,7 @@ class Provider::Registry
 
   Error = Class.new(StandardError)
 
-  CONCEPTS = %i[exchange_rates securities llm]
+  CONCEPTS = %i[exchange_rates securities llm property_valuations]
 
   validates :concept, inclusion: { in: CONCEPTS }
 
@@ -77,18 +77,12 @@ class Provider::Registry
       end
 
       def openai
-        oauth_token = ENV["OPENAI_OAUTH_TOKEN"].presence || Setting.openai_oauth_token
-        access_token = oauth_token || ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
+        access_token = ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
 
         return nil unless access_token.present?
 
         uri_base = ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
         model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
-
-        if oauth_token.present?
-          account_id = ENV["OPENAI_ACCOUNT_ID"].presence || Setting.openai_oauth_account_id
-          return Provider::Openai.new(access_token, model: model, oauth: true, account_id: account_id)
-        end
 
         if uri_base.present? && model.blank?
           Rails.logger.error("Custom OpenAI provider configured without a model; please set OPENAI_MODEL or Setting.openai_model")
@@ -162,6 +156,22 @@ class Provider::Registry
 
         Provider::TinkoffInvest.new(api_key)
       end
+
+      def rentcast
+        api_key = ENV["RENTCAST_API_KEY"].presence || Setting.rentcast_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Rentcast.new(api_key)
+      end
+
+      def realie
+        api_key = ENV["REALIE_API_KEY"].presence || Setting.realie_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Realie.new(api_key)
+      end
   end
 
   def initialize(concept)
@@ -197,6 +207,8 @@ class Provider::Registry
         %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest]
       when :llm
         %i[openai anthropic]
+      when :property_valuations
+        %i[rentcast realie]
       else
         %i[plaid_us plaid_eu github openai anthropic]
       end

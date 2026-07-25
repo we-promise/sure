@@ -7,8 +7,6 @@ class Setting < RailsSettings::Base
   # Third-party API keys
   field :twelve_data_api_key, type: :string, default: ENV["TWELVE_DATA_API_KEY"]
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
-  field :openai_oauth_token, type: :string, default: ENV["OPENAI_OAUTH_TOKEN"]
-  field :openai_oauth_account_id, type: :string, default: ENV["OPENAI_ACCOUNT_ID"]
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
@@ -63,6 +61,10 @@ class Setting < RailsSettings::Base
   field :alpha_vantage_api_key, type: :string, default: ENV["ALPHA_VANTAGE_API_KEY"]
   field :tinkoff_invest_api_key, type: :string, default: ENV["TINKOFF_INVEST_API_KEY"]
 
+  # Property valuation (AVM) provider API keys
+  field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
+  field :realie_api_key, type: :string, default: ENV["REALIE_API_KEY"]
+
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
   # reads (decrypt) and writes (encrypt) while `super` delegates to the
@@ -77,8 +79,9 @@ class Setting < RailsSettings::Base
       eodhd_api_key
       alpha_vantage_api_key
       tinkoff_invest_api_key
+      rentcast_api_key
+      realie_api_key
       openai_access_token
-      openai_oauth_token
       anthropic_access_token
       external_assistant_token
     ].freeze

@@ -107,6 +107,34 @@ class IncomeStatement
     )
   end
 
+  # Income/expense totals for an arbitrary period, optionally scoped to a
+  # subset of accounts (e.g. a dashboard widget's account filter). Unlike
+  # `income_totals`/`expense_totals`, this isn't memoized per-period since
+  # callers (e.g. a monthly bar chart) typically query several distinct
+  # periods and account combinations in one request.
+  def totals_for(period, account_ids: nil)
+    scope = family.transactions.visible.excluding_pending.in_period(period)
+    scope = scope.where(entries: { account_id: account_ids }) if account_ids.present?
+
+    totals(transactions_scope: scope, date_range: period.date_range)
+  end
+
+  # Accounts actually reflected in totals/totals_for: visible, not excluded
+  # from reports, not tax-advantaged, and (when scoped to a user) included in
+  # that user's finances. Callers offering an account filter (e.g. a
+  # dashboard widget) should build their options from this, not a broader
+  # "accessible accounts" list, or selecting an ineligible account silently
+  # computes to zero instead of the totals it actually appears in elsewhere.
+  def eligible_accounts
+    @eligible_accounts ||= begin
+      scope = family.accounts.visible.included_in_reports
+      tax_advantaged_ids = family.tax_advantaged_account_ids
+      scope = scope.where.not(id: tax_advantaged_ids) if tax_advantaged_ids.present?
+      scope = scope.merge(Account.included_in_finances_for(user)) if user
+      scope
+    end
+  end
+
   def median_expense(interval: "month", category: nil)
     if category.present?
       category_stats(interval: interval).find { |stat| stat.classification == "expense" && stat.category_id == category.id }&.median || 0

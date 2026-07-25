@@ -48,22 +48,6 @@ The easiest way to get started with AI features in Sure is to use OpenAI:
 
 That's it! Sure will use OpenAI's with a default model (currently `gpt-4.1`) for all AI operations.
 
-## Alternative: Codex Subscription OAuth
-
-Sure can send Responses API inference through a ChatGPT-backed Codex subscription instead of billing an OpenAI Platform API key:
-
-```bash
-OPENAI_OAUTH_TOKEN=your-codex-oauth-access-token
-# Optional when the account ID cannot be read from the token:
-OPENAI_ACCOUNT_ID=your-chatgpt-account-id
-# Optional; defaults to the current Codex default:
-OPENAI_MODEL=gpt-5.6
-```
-
-When `OPENAI_OAUTH_TOKEN` is present, it takes precedence over `OPENAI_ACCESS_TOKEN`. Sure sends requests to the Codex Responses endpoint and adds the ChatGPT account header required by subscription authentication. This credential is only used for LLM inference; it is not treated as a general OpenAI Platform API key for hosted vector stores or other Platform APIs.
-
-OAuth access tokens expire. Sign in again with an official Codex client and replace the configured token when that happens. Store the token like a password and never commit it to an environment file.
-
 ## Local vs. Cloud Inference
 
 ### Cloud Inference (Recommended for Most Users)

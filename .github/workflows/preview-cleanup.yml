@@ -24,7 +24,12 @@ permissions:
 jobs:
   cleanup-on-close:
     name: Cleanup closed PR preview
-    if: github.event_name == 'pull_request' && (github.event.action == 'closed' || (github.event.action == 'unlabeled' && github.event.label.name == 'preview-cf'))
+    if: |
+      github.event_name == 'pull_request' &&
+      (
+        (github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'preview-cf')) ||
+        (github.event.action == 'unlabeled' && github.event.label.name == 'preview-cf')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -34,24 +39,48 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: "24"
-
-      - name: Install Wrangler
-        run: npm install -g wrangler
-
       - name: Delete preview Worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          set -euo pipefail
+
           WORKER_NAME="sure-preview-${{ github.event.pull_request.number }}"
           echo "Deleting Worker: $WORKER_NAME"
 
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "Missing Cloudflare credentials; refusing to mark preview cleanup as successful"
+            exit 1
+          fi
+
           # Delete the worker (this also stops any running containers)
-          wrangler delete --name "$WORKER_NAME" --force || echo "Worker may not exist"
+          response_file="$(mktemp)"
+          http_status="$(curl -sS -o "$response_file" -w "%{http_code}" -X DELETE \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME?force=true" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json")" || {
+              echo "Failed to delete preview Worker via Cloudflare API"
+              exit 1
+            }
+          response="$(cat "$response_file")"
+
+          if [ -z "$response" ] && [[ "$http_status" =~ ^2 ]]; then
+            echo "Deleted Worker: $WORKER_NAME"
+          elif [ -n "$response" ] && echo "$response" | jq -e '.success == true' >/dev/null; then
+            echo "Deleted Worker: $WORKER_NAME"
+          elif [ -n "$response" ] && echo "$response" | jq -e '[.errors[]?.code] | index(10007)' >/dev/null; then
+            echo "$response" | jq -c '.errors'
+            echo "Worker may not exist"
+          else
+            echo "Cloudflare API failed to delete preview Worker (HTTP $http_status)"
+            if [ -n "$response" ]; then
+              echo "$response" | jq -c '.errors // .' || printf '%s\n' "$response"
+            else
+              echo "No response body"
+            fi
+            exit 1
+          fi
 
       - name: Delete GitHub Deployment
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
