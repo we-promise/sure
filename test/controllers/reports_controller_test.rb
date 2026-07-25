@@ -1,4 +1,5 @@
 require "test_helper"
+require "csv"
 
 class ReportsControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
@@ -46,13 +47,14 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     get reports_path(period_type: :monthly)
     assert_response :ok
 
-    breakdown = controller.send(:build_transactions_breakdown)
-    expense_group = breakdown.find { |g| g[:type] == "expense" && g[:category_id] == category.id }
-    income_group  = breakdown.find { |g| g[:type] == "income"  && g[:category_id] == category.id }
-
-    assert expense_group.present?, "expected the category to appear in the expense breakdown"
-    assert_equal 150, expense_group[:total], "the $50 refund should net against the $200 expense, not add to it"
-    assert_nil income_group, "a refund should not create a separate income entry for this category"
+    # The category row is rendered once (grouped_data keys off [category_id,
+    # type], and a refund always classifies as "expense", so there's no
+    # separate income row to worry about here — the bug this guards against
+    # is the *amount* on this one row, not a duplicate row).
+    assert_select "tr[data-category='category-#{category.id}']", count: 1 do
+      assert_select "span", text: /\$150\.00/,
+        message: "the $50 refund should net against the $200 expense ($150), not add to it ($250)"
+    end
   end
 
   test "monthly export breakdown agrees with the on-screen breakdown for the same refund" do
@@ -60,14 +62,20 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: accounts(:depository), amount: 200, category: category, date: Date.current)
     create_transaction(account: accounts(:depository), amount: -50, refund: true, category: category, date: Date.current)
 
-    get reports_path(period_type: :monthly)
+    get export_transactions_reports_path(format: :csv, period_type: :monthly)
+    assert_response :ok
 
-    export_rows = controller.send(:build_monthly_breakdown_for_export)
-    row = export_rows.find { |r| r[:category] == category.name }
+    rows = CSV.parse(response.body)
+    expenses_section_start = rows.index { |r| r[0] == "EXPENSES" }
+    category_rows = rows.each_with_index.select { |r, _i| r[0] == category.name }
 
-    assert row.present?
-    assert_equal "expense", row[:type], "the export should classify the refund's category as expense, matching build_transactions_breakdown"
-    assert_equal 150, row[:total]
+    assert_equal 1, category_rows.size,
+      "expected #{category.name} to appear exactly once (as expense, not also as income)"
+    category_row, category_row_index = category_rows.first
+    assert expenses_section_start && category_row_index > expenses_section_start,
+      "the export should classify the refund's category as expense, matching the on-screen breakdown"
+    assert_equal "$150.00", category_row.last,
+      "the $50 refund should net against the $200 expense ($150), not add to it ($250)"
   end
 
   test "index with last 6 months period" do
