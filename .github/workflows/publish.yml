@@ -493,9 +493,7 @@ jobs:
       - name: Commit and push version bump
         env:
           SOURCE_BRANCH: ${{ steps.source_branch.outputs.branch }}
-          # The organization disallows GITHUB_TOKEN from creating pull requests,
-          # so prefer a dedicated token and fall back to the existing repository PAT.
-          GH_TOKEN: ${{ secrets.VERSION_BUMP_PR_TOKEN || secrets.GH_PAT || github.token }}
+          GH_TOKEN: ${{ github.token }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
@@ -580,7 +578,7 @@ jobs:
           if [[ $pr_create_status -ne 0 ]]; then
             echo "::error::Pushed ${BUMP_BRANCH}, but could not create the version bump PR: ${pr_create_output}"
             if grep -q "GitHub Actions is not permitted to create or approve pull requests" <<< "$pr_create_output"; then
-              echo "::notice::Add a VERSION_BUMP_PR_TOKEN or GH_PAT secret with contents, pull requests, and workflows permissions."
+              echo "::notice::Enable the organization setting that allows GitHub Actions to create and approve pull requests."
             fi
             exit 1
           fi

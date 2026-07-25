@@ -17,6 +17,7 @@ it:
       name_label: Nome
       unassigned: "(non assegnata)"
       parent_category_label: "Categoria genitore (opzionale)"
+      trigger_label: Scegli colore e icona
       color: Colore
       icon: Icona
       auto_adjust: adattamento automatico.

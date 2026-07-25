@@ -10,7 +10,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     @provider = mock
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(@provider)
 
-    @provider.stubs(:healthy?).returns(true)
+    @provider.stubs(:health_status).returns(:healthy)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(@provider)
     @provider.stubs(:usage).returns(provider_success_response(
       OpenStruct.new(
@@ -47,6 +47,80 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       get settings_hosting_url
       assert_response :success
+    end
+  end
+
+  test "shows Yahoo Finance rate limiting as a warning" do
+    @provider.stubs(:health_status).returns(:rate_limited)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "div[class~=?]", "bg-warning/10"
+        assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
+        assert_includes response.body, "Yahoo Finance rate limit reached."
+        assert_includes response.body, "No action is required."
+        assert_not_includes response.body, "firewall"
+      end
+    end
+  end
+
+  test "renders healthy unavailable and unknown Yahoo Finance states" do
+    @provider.stubs(:health_status).returns(:healthy, :unavailable, :unknown)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance is active and working."
+        assert_select "div[class~=?]", "bg-success"
+
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance is currently unavailable."
+        assert_includes response.body, "Could not verify Yahoo Finance."
+        assert_includes response.body, "Check your internet connection and try again later."
+        assert_not_includes response.body, "firewall"
+        assert_select "div[class~=?]", "bg-destructive"
+
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance status is being checked."
+        assert_not_includes response.body, "Could not verify Yahoo Finance."
+        assert_not_includes response.body, "Yahoo Finance rate limit reached."
+        assert_select "div[class~=?]", "bg-surface-inset"
+      end
+    end
+  end
+
+  test "renders Spanish Yahoo Finance health guidance" do
+    @provider.stubs(:health_status).returns(:rate_limited, :unavailable, :unknown)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Yahoo Finance está limitando temporalmente las solicitudes."
+        assert_includes response.body, "No es necesario realizar ninguna acción."
+
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Yahoo Finance no está disponible en este momento."
+        assert_includes response.body, "Comprueba tu conexión a internet"
+
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Se está comprobando el estado de Yahoo Finance."
+      end
+    end
+  end
+
+  test "falls back to English for untranslated Yahoo Finance health guidance" do
+    @provider.stubs(:health_status).returns(:rate_limited)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url(locale: :fr)
+
+        assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
+        assert_not_includes response.body, "translation missing"
+      end
     end
   end
 

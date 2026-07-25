@@ -57,7 +57,7 @@ class SnaptradeAccount::Processor
       total_balance = calculate_total_balance
       cash_balance = calculate_cash_balance
 
-      Rails.logger.info "SnaptradeAccount::Processor - Balance update: total=#{total_balance}, cash=#{cash_balance}"
+      Rails.logger.debug "SnaptradeAccount::Processor - Balance update: total=#{total_balance}, cash=#{cash_balance}"
 
       # Update the cached fields on the account
       account.assign_attributes(
@@ -81,16 +81,16 @@ class SnaptradeAccount::Processor
       # Calculate total from holdings + cash for accuracy
       # SnapTrade's current_balance can sometimes be stale or just the cash value
       holdings_value = calculate_holdings_value
-      cash_value = snaptrade_account.cash_balance || 0
+      cash_value = calculate_cash_balance
 
       calculated_total = holdings_value + cash_value
 
       # Use calculated total if we have holdings, otherwise trust API value
       if holdings_value > 0
-        Rails.logger.info "SnaptradeAccount::Processor - Using calculated total: holdings=#{holdings_value} + cash=#{cash_value} = #{calculated_total}"
+        Rails.logger.debug "SnaptradeAccount::Processor - Using calculated total: holdings=#{holdings_value} + cash=#{cash_value} = #{calculated_total}"
         calculated_total
       elsif snaptrade_account.current_balance.present?
-        Rails.logger.info "SnaptradeAccount::Processor - Using API total: #{snaptrade_account.current_balance}"
+        Rails.logger.debug "SnaptradeAccount::Processor - Using API total: #{snaptrade_account.current_balance}"
         snaptrade_account.current_balance
       else
         calculated_total
@@ -98,11 +98,54 @@ class SnaptradeAccount::Processor
     end
 
     def calculate_cash_balance
-      # Use SnapTrade's cash_balance directly
-      # Note: Can be negative for margin accounts
-      cash = snaptrade_account.cash_balance
-      Rails.logger.info "SnaptradeAccount::Processor - Cash balance from API: #{cash.inspect}"
-      cash || BigDecimal("0")
+      # Memoized: called for both the total and the cash figure, and the
+      # cash-equivalent exclusion should only be recorded once per sync.
+      @calculate_cash_balance ||= begin
+        # Note: Can be negative for margin accounts
+        cash = snaptrade_account.cash_balance
+        Rails.logger.debug "SnaptradeAccount::Processor - Cash balance from API: #{cash.inspect}"
+
+        if cash.nil?
+          BigDecimal("0")
+        else
+          # SnapTrade includes money market / sweep funds (e.g. Fidelity SPAXX) in
+          # the balances endpoint's `cash` figure while ALSO reporting them as
+          # positions with `cash_equivalent: true`. Those positions are imported as
+          # holdings, so their value must come out of cash here — otherwise the
+          # account total counts the same money twice. Subtract in the currency the
+          # stored cash is actually denominated in (upsert_balances! can fall back
+          # to a USD/first entry), not the account currency.
+          cash_currency = snaptrade_account.primary_cash_currency
+          cash_equivalent_value = snaptrade_account.cash_equivalent_position_value(cash_currency)
+
+          # No floor: negative cash is legitimate for margin accounts, and
+          # clamping would silently skew the calculated total. The before/after
+          # values in the debug entry let support distinguish real margin from
+          # a stale holdings snapshot over-subtracting.
+          adjusted_cash = cash - cash_equivalent_value
+
+          if cash_equivalent_value.nonzero?
+            DebugLogEntry.capture(
+              category: "provider_sync",
+              level: "info",
+              message: "Excluded cash-equivalent (money market) positions already counted in SnapTrade cash balance",
+              source: self.class.name,
+              provider_key: "snaptrade",
+              family: snaptrade_account.snaptrade_item.family,
+              account_provider: snaptrade_account.account_provider,
+              metadata: {
+                snaptrade_account_id: snaptrade_account.id,
+                currency: cash_currency,
+                cash_equivalent_value: cash_equivalent_value.to_s("F"),
+                cash_balance_before: cash.to_s("F"),
+                cash_balance_after: adjusted_cash.to_s("F")
+              }
+            )
+          end
+
+          adjusted_cash
+        end
+      end
     end
 
     def calculate_holdings_value
@@ -128,12 +171,5 @@ class SnaptradeAccount::Processor
         data = holding.respond_to?(:with_indifferent_access) ? holding.with_indifferent_access : {}
         extract_currency(data, extract_symbol_data(data), snaptrade_account.currency)
       end.uniq
-    end
-
-    def extract_symbol_data(data)
-      symbol_wrapper = data[:symbol].is_a?(Hash) ? data[:symbol].with_indifferent_access : {}
-      raw_symbol_data = symbol_wrapper[:symbol]
-
-      raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
     end
 end

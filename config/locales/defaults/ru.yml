@@ -7,8 +7,6 @@ ru:
         restrict_dependent_destroy:
           has_many: 'Невозможно удалить запись, так как существуют зависимости: %{record}'
           has_one: 'Невозможно удалить запись, так как существует зависимость: %{record}'
-  common:
-    close: Закрыть
   date:
     abbr_day_names:
     - Вс

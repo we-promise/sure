@@ -127,16 +127,15 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :snaptrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+  resources :snaptrade_items, only: [ :index, :show, :destroy ] do
     collection do
       get :preload_accounts
       get :select_accounts
-      post :link_accounts
       get :select_existing_account
       post :link_existing_account
       get :callback
-      get :oauth_connect
-      post :start_oauth_connect
+      get :oauth_authorize
+      get :oauth_callback
     end
 
     member do
@@ -145,10 +144,7 @@ Rails.application.routes.draw do
       get :setup_accounts
       post :complete_account_setup
       get :connections
-      post :start_oauth_device_flow
-      post :complete_oauth_device_flow
       delete :delete_connection
-      delete :delete_orphaned_user
     end
   end
 
@@ -299,6 +295,9 @@ Rails.application.routes.draw do
     resource :preferences, only: %i[show update]
     resource :appearance, only: %i[show update]
     resource :debug, only: :show
+    resource :background_jobs, controller: "background_jobs", only: :show do
+      post :cancel
+    end
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
       delete :disconnect_external_assistant, on: :collection

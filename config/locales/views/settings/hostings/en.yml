@@ -144,10 +144,14 @@ en:
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance provides free access to stock prices, exchange rates, and financial data without requiring an API key.
-        status_active: Yahoo Finance is active and working
-        status_inactive: Yahoo Finance connection failed
-        connection_failed: Unable to connect to Yahoo Finance
-        troubleshooting: Check your internet connection and firewall settings. Yahoo Finance may be temporarily unavailable.
+        status_healthy: Yahoo Finance is active and working.
+        status_rate_limited: Yahoo Finance is temporarily rate limiting requests.
+        rate_limited_title: Yahoo Finance rate limit reached.
+        rate_limited_message: No action is required. Sure will avoid additional health checks for 30 minutes. Price and exchange-rate operations continue independently.
+        status_unavailable: Yahoo Finance is currently unavailable.
+        unavailable_title: Could not verify Yahoo Finance.
+        unavailable_message: Yahoo Finance could not be reached or returned an unexpected response. Check your internet connection and try again later.
+        status_unknown: Yahoo Finance status is being checked.
       tiingo_settings:
         title: Tiingo
         description: Enter the API token provided by Tiingo. Free tier supports 50 unique symbols per hour with 30+ years of historical data.
