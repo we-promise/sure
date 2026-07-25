@@ -5,29 +5,30 @@
   color-scheme: light dark;
 
   /* Sure light palette */
-  --bg: #f7f7f7;            /* surface (gray-50) */
-  --container: #ffffff;     /* container */
-  --text: #0b0b0b;          /* primary */
-  --secondary: #737373;     /* gray-500 */
-  --subdued: #9e9e9e;       /* gray-400 (placeholder) */
-  --border: rgba(11, 11, 11, 0.12);
-  --focus-ring: rgba(11, 11, 11, 0.12);
-  --btn-bg: #171717;        /* inverse in light */
-  --btn-fg: #ffffff;
-  --error: #e5484d;
+  --bg: var(--color-surface);
+  --container: var(--color-container);
+  --text: var(--color-black);
+  --secondary: var(--color-gray-500);
+  --subdued: var(--color-gray-400);
+  --border: var(--color-tertiary);
+  --focus-ring: var(--color-focus-ring);
+  --btn-bg: var(--color-gray-800);
+  --btn-fg: var(--color-white);
+  --error: var(--color-destructive);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0b0b0b;          /* surface = black */
-    --container: #171717;   /* gray-900 */
-    --text: #f0f0f0;        /* primary */
-    --secondary: #9e9e9e;   /* gray-400 */
-    --subdued: #737373;     /* gray-500 */
-    --border: rgba(255, 255, 255, 0.1);
-    --focus-ring: rgba(255, 255, 255, 0.18);
-    --btn-bg: #ffffff;      /* inverse in dark */
-    --btn-fg: #0b0b0b;
+    --bg: var(--color-surface);
+    --container: var(--color-container);
+    --text: var(--color-gray-100);
+    --secondary: var(--color-gray-400);
+    --subdued: var(--color-gray-500);
+    --border: var(--color-alpha-white-200);
+    --focus-ring: var(--color-focus-ring);
+    --btn-bg: var(--color-white);
+    --btn-fg: var(--color-black);
+    --error: var(--color-destructive);
   }
 }
 
