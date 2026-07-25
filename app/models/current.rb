@@ -3,6 +3,7 @@ class Current < ActiveSupport::CurrentAttributes
 
   attribute :session
   attribute :accessible_accounts_cache, :finance_accounts_cache
+  attribute :latest_sync_by_syncable, :latest_completed_sync_by_syncable, :syncing_by_syncable
 
   delegate :family, to: :user, allow_nil: true
 
