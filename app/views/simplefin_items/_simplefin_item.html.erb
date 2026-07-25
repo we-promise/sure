@@ -1,6 +1,7 @@
 <%# locals: (simplefin_item:) %>
 
 <%= tag.div id: dom_id(simplefin_item) do %>
+  <% accounts = simplefin_item.accounts %>
   <%# Compute unlinked count early so it's available for both menu and bottom section %>
   <% unlinked_count = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
        @simplefin_unlinked_count_map[simplefin_item.id] || 0
@@ -40,7 +41,7 @@
                 <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
               <% end %>
             </div>
-            <% if simplefin_item.accounts.any? %>
+            <% if accounts.any? %>
               <p class="text-xs text-secondary">
                 <%= simplefin_item.institution_summary %>
               </p>
@@ -200,8 +201,8 @@
                      suggestions: suggestions %>
         <% end %>
 
-        <% if simplefin_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
+        <% if accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component
@@ -219,7 +220,7 @@
           institutions_count: simplefin_item.connected_institutions.size
         ) %>
 
-        <% if unlinked_count.to_i > 0 && simplefin_item.accounts.empty? %>
+        <% if unlinked_count.to_i > 0 && accounts.empty? %>
           <%# No accounts imported yet - show prominent setup prompt %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
@@ -232,7 +233,7 @@
               frame: :modal
             ) %>
           </div>
-        <% elsif simplefin_item.accounts.empty? %>
+        <% elsif accounts.empty? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
             <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
