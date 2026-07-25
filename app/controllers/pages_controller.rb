@@ -51,7 +51,7 @@ class PagesController < ApplicationController
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(net_totals)
-    @feed_insights = Current.family.insights.visible.ordered.limit(3)
+    @feed_insights = Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT)
 
     @money_flow_accounts = income_statement.eligible_accounts
     @money_flow_month = money_flow_month_param
