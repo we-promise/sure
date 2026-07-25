@@ -147,11 +147,12 @@ class Period
     end
   end
 
-  def initialize(start_date: nil, end_date: nil, key: nil, date_format: "%b %d, %Y")
+  # NOTE: dates are rendered through `I18n.l`, so there is no `date_format:`
+  # knob — the format follows the active locale, not the caller.
+  def initialize(start_date: nil, end_date: nil, key: nil)
     @key = key
     @start_date = start_date
     @end_date = end_date
-    @date_format = date_format
     validate!
   end
 
@@ -199,9 +200,9 @@ class Period
 
   def comparison_label
     if key
-      I18n.t("period.#{key}.comparison_label", default: key_metadata&.fetch(:comparison_label) || "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}")
+      I18n.t("period.#{key}.comparison_label", default: key_metadata&.fetch(:comparison_label) || custom_comparison_label)
     else
-      "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}"
+      custom_comparison_label
     end
   end
 
@@ -216,18 +217,39 @@ class Period
   def label_range
     return label_short if start_date.nil? || end_date.nil?
 
-    if start_date.year == end_date.year && end_date.year == Date.current.year
-      "#{I18n.l(start_date, format: :short)} – #{I18n.l(end_date, format: :short)}"
-    else
-      # Matches `comparison_label`'s format so the trigger and the range printed
-      # above the chart read as the same range.
-      "#{start_date.strftime(@date_format)} – #{end_date.strftime(@date_format)}"
-    end
+    # `:short_with_year` matches `comparison_label`'s format so the trigger and
+    # the range printed above the chart read as the same range.
+    format = within_current_year? ? :short : :short_with_year
+
+    I18n.t(
+      "period.range",
+      start_date: I18n.l(start_date, format: format),
+      end_date: I18n.l(end_date, format: format),
+      default: "%{start_date} – %{end_date}"
+    )
   end
 
   private
     def key_metadata
       @key_metadata ||= PERIODS[key]
+    end
+
+    # The year is dropped while the whole range sits inside the current year — it
+    # adds width without disambiguating anything.
+    def within_current_year?
+      start_date.year == end_date.year && end_date.year == Date.current.year
+    end
+
+    # Both the separator and the date order are translatable: `to` is a word, and
+    # locales disagree on where the day, month and year go. `I18n.l` resolves the
+    # month name against the active locale, which `strftime` cannot do.
+    def custom_comparison_label
+      I18n.t(
+        "period.custom.comparison_label",
+        start_date: I18n.l(start_date, format: :short_with_year),
+        end_date: I18n.l(end_date, format: :short_with_year),
+        default: "%{start_date} to %{end_date}"
+      )
     end
 
     def must_be_valid_date_range

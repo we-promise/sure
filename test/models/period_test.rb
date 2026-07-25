@@ -60,6 +60,35 @@ class PeriodTest < ActiveSupport::TestCase
     assert_equal "Dec 20, 2020 – Jan 05, 2021", period.label_range
   end
 
+  test "comparison_label spells out a custom range" do
+    period = Period.custom(start_date: Date.new(2020, 12, 20), end_date: Date.new(2021, 1, 5))
+
+    assert_equal "Dec 20, 2020 to Jan 05, 2021", period.comparison_label
+  end
+
+  # Both of these read the month name out of the locale rather than out of a
+  # strftime format string, so they would regress to English month abbreviations
+  # (and an English "to") the moment either one goes back to `strftime`.
+  test "label_range and comparison_label localize month names and date order" do
+    period = Period.custom(start_date: Date.new(2020, 12, 20), end_date: Date.new(2021, 1, 5))
+
+    I18n.with_locale(:fr) do
+      assert_equal "20 déc. 2020 – 5 jan. 2021", period.label_range
+      assert_equal "20 déc. 2020 au 5 jan. 2021", period.comparison_label
+    end
+  end
+
+  test "label_range localizes the year-less range too" do
+    period = Period.custom(
+      start_date: Date.new(Date.current.year, 6, 1),
+      end_date: Date.new(Date.current.year, 6, 15)
+    )
+
+    I18n.with_locale(:fr) do
+      assert_equal "1 juin – 15 juin", period.label_range
+    end
+  end
+
   test "all_time period can be created" do
     period = Period.from_key("all_time")
     assert_equal "all_time", period.key
