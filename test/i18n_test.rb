@@ -38,4 +38,54 @@ class I18nTest < ActiveSupport::TestCase
                     "Please run `i18n-tasks check-consistent-interpolations' to show them"
     assert_empty inconsistent_interpolations, error_message
   end
+
+  # YAML silently resolves duplicate keys by letting the last occurrence win,
+  # so a duplicated key shadows the earlier definition without any warning
+  # (see #1506 / #1502, where a stale `transactions.merge_duplicate` string
+  # shadowed — or was shadowed by — the `merge_duplicate.success/failure`
+  # mapping in several locales). Parse the raw YAML AST so duplicates can't
+  # sneak back in.
+  def test_no_duplicate_keys_within_locale_files
+    offenses = []
+
+    Dir[File.expand_path("../config/locales/**/*.yml", __dir__)].sort.each do |file|
+      Psych.parse_stream(File.read(file), filename: file).children.each do |doc|
+        offenses.concat(duplicate_key_offenses(doc.root, [], file))
+      end
+    end
+
+    assert_empty offenses,
+                 "Duplicate keys found in locale files (the last occurrence silently wins):\n" \
+                 "#{offenses.map { |offense| "  #{offense}" }.join("\n")}"
+  end
+
+  private
+    def duplicate_key_offenses(node, path, file)
+      offenses = []
+
+      case node
+      when Psych::Nodes::Mapping
+        first_definition_lines = {}
+
+        node.children.each_slice(2) do |key_node, value_node|
+          if key_node.is_a?(Psych::Nodes::Scalar)
+            key_path = path + [ key_node.value ]
+
+            if (first_line = first_definition_lines[key_node.value])
+              offenses << "#{file}:#{key_node.start_line + 1} duplicate key `#{key_path.join(".")}` (first defined on line #{first_line})"
+            else
+              first_definition_lines[key_node.value] = key_node.start_line + 1
+            end
+
+            offenses.concat(duplicate_key_offenses(value_node, key_path, file))
+          else
+            offenses.concat(duplicate_key_offenses(value_node, path, file))
+          end
+        end
+      when Psych::Nodes::Sequence
+        node.children.each { |child| offenses.concat(duplicate_key_offenses(child, path, file)) }
+      end
+
+      offenses
+    end
 end
