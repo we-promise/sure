@@ -4,6 +4,7 @@ import '../models/chat.dart';
 import '../models/message.dart';
 import '../services/chat_service.dart';
 import '../services/log_service.dart';
+import '../services/telemetry_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatService _chatService = ChatService();
@@ -29,6 +30,12 @@ class ChatProvider with ChangeNotifier {
   /// Requires 2 consecutive stable polls before declaring the response complete,
   /// to avoid prematurely stopping on a brief server-side generation pause.
   int _stablePollingCount = 0;
+
+  /// Sentry AI monitoring span (`gen_ai.invoke_agent`) covering one assistant
+  /// turn: from sending the user message until the assistant response is
+  /// complete (or fails / times out). Carries no message content — only the
+  /// agent name and a pseudonymous conversation id.
+  Object? _aiInvocationSpan;
 
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
@@ -139,6 +146,7 @@ class ChatProvider with ChangeNotifier {
           );
           _currentChat = chat.copyWith(messages: [userMessage]);
           _chats.insert(0, _currentChat!);
+          _startAiInvocation(chat.id);
           _startPolling(accessToken, chat.id);
         } else {
           _currentChat = chat;
@@ -161,6 +169,29 @@ class ChatProvider with ChangeNotifier {
       notifyListeners();
       return null;
     }
+  }
+
+  /// Opens the `gen_ai.invoke_agent` span for one assistant turn. Any span
+  /// left dangling from a previous turn is closed first.
+  void _startAiInvocation(String chatId) {
+    _finishAiInvocation(success: false);
+    _aiInvocationSpan = TelemetryService.instance.startSpan(
+      'gen_ai.invoke_agent',
+      'invoke_agent ${TelemetryService.aiAgentName}',
+      data: {
+        'gen_ai.operation.name': 'invoke_agent',
+        'gen_ai.agent.name': TelemetryService.aiAgentName,
+        'gen_ai.conversation.id': TelemetryService.conversationId(chatId),
+      },
+    );
+  }
+
+  void _finishAiInvocation({required bool success}) {
+    final span = _aiInvocationSpan;
+    _aiInvocationSpan = null;
+    if (span == null) return;
+
+    unawaited(TelemetryService.instance.finishSpan(span, success: success));
   }
 
   void _rollbackOptimisticMessage(String optimisticId, String chatId) {
@@ -204,6 +235,8 @@ class ChatProvider with ChangeNotifier {
     _isWaitingForResponse = true;
     notifyListeners();
 
+    _startAiInvocation(chatId);
+
     try {
       final result = await _chatService.sendMessage(
         accessToken: accessToken,
@@ -230,12 +263,14 @@ class ChatProvider with ChangeNotifier {
         return true;
       } else {
         // Roll back the optimistic message on failure.
+        _finishAiInvocation(success: false);
         _rollbackOptimisticMessage(optimisticId, chatId);
         _errorMessage = result['error'] ?? 'Failed to send message';
         return false;
       }
     } catch (e) {
       // Roll back the optimistic message on error.
+      _finishAiInvocation(success: false);
       _rollbackOptimisticMessage(optimisticId, chatId);
       _log.warning('ChatProvider', 'sendMessage failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
@@ -384,6 +419,9 @@ class ChatProvider with ChangeNotifier {
 
   /// Stop polling
   void _stopPolling() {
+    // Close any AI span still open when polling stops for reasons other than
+    // completion or failure (navigation away, explicit refetch, dispose).
+    _finishAiInvocation(success: true);
     _pollingTimer?.cancel();
     _pollingTimer = null;
     _pollingStartTime = null;
@@ -444,6 +482,7 @@ class ChatProvider with ChangeNotifier {
           if (!shouldUpdate) {
             _currentChat = updatedChat;
           }
+          _finishAiInvocation(success: false);
           _stopPolling();
           _errorMessage = updatedChat.error;
           notifyListeners();
@@ -470,6 +509,7 @@ class ChatProvider with ChangeNotifier {
             // stopping prematurely on a brief server-side generation pause.
             _stablePollingCount++;
             if (_stablePollingCount >= 2) {
+              _finishAiInvocation(success: true);
               _stopPolling();
               _lastAssistantContentLength = null;
               notifyListeners();
@@ -488,6 +528,7 @@ class ChatProvider with ChangeNotifier {
     // Evaluate timeout only after the attempt, and only when no progress was made.
     if (_pollingStartTime != null &&
         DateTime.now().difference(_pollingStartTime!) >= _pollingTimeout) {
+      _finishAiInvocation(success: false);
       _stopPolling();
       _errorMessage =
           'The assistant took too long to respond. Please try again.';

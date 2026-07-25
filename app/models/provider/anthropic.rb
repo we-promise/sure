@@ -82,14 +82,16 @@ class Provider::Anthropic < Provider
         input: { transactions: transactions, user_categories: user_categories }
       )
 
-      result = AutoCategorizer.new(
-        client,
-        model: effective_model,
-        transactions: transactions,
-        user_categories: user_categories,
-        langfuse_trace: trace,
-        family: family
-      ).auto_categorize
+      result = LlmInstrumentation.with_gen_ai_span(operation: "auto_categorize", model: effective_model, system: "anthropic") do
+        AutoCategorizer.new(
+          client,
+          model: effective_model,
+          transactions: transactions,
+          user_categories: user_categories,
+          langfuse_trace: trace,
+          family: family
+        ).auto_categorize
+      end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
@@ -108,14 +110,16 @@ class Provider::Anthropic < Provider
         input: { transactions: transactions, user_merchants: user_merchants }
       )
 
-      result = AutoMerchantDetector.new(
-        client,
-        model: effective_model,
-        transactions: transactions,
-        user_merchants: user_merchants,
-        langfuse_trace: trace,
-        family: family
-      ).auto_detect_merchants
+      result = LlmInstrumentation.with_gen_ai_span(operation: "auto_detect_merchants", model: effective_model, system: "anthropic") do
+        AutoMerchantDetector.new(
+          client,
+          model: effective_model,
+          transactions: transactions,
+          user_merchants: user_merchants,
+          langfuse_trace: trace,
+          family: family
+        ).auto_detect_merchants
+      end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
@@ -134,13 +138,15 @@ class Provider::Anthropic < Provider
         input: { merchants: merchants }
       )
 
-      result = ProviderMerchantEnhancer.new(
-        client,
-        model: effective_model,
-        merchants: merchants,
-        langfuse_trace: trace,
-        family: family
-      ).enhance_merchants
+      result = LlmInstrumentation.with_gen_ai_span(operation: "enhance_provider_merchants", model: effective_model, system: "anthropic") do
+        ProviderMerchantEnhancer.new(
+          client,
+          model: effective_model,
+          merchants: merchants,
+          langfuse_trace: trace,
+          family: family
+        ).enhance_merchants
+      end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
@@ -164,13 +170,15 @@ class Provider::Anthropic < Provider
         input: { pdf_size: pdf_content&.bytesize }
       )
 
-      result = PdfProcessor.new(
-        client,
-        model: effective_model,
-        pdf_content: pdf_content,
-        langfuse_trace: trace,
-        family: family
-      ).process
+      result = LlmInstrumentation.with_gen_ai_span(operation: "process_pdf", model: effective_model, system: "anthropic") do
+        PdfProcessor.new(
+          client,
+          model: effective_model,
+          pdf_content: pdf_content,
+          langfuse_trace: trace,
+          family: family
+        ).process
+      end
 
       upsert_langfuse_trace(trace: trace, output: result.to_h)
 
@@ -187,13 +195,15 @@ class Provider::Anthropic < Provider
         input: { pdf_size: pdf_content&.bytesize }
       )
 
-      result = BankStatementExtractor.new(
-        client: client,
-        pdf_content: pdf_content,
-        model: effective_model,
-        langfuse_trace: trace,
-        family: family
-      ).extract
+      result = LlmInstrumentation.with_gen_ai_span(operation: "extract_bank_statement", model: effective_model, system: "anthropic") do
+        BankStatementExtractor.new(
+          client: client,
+          pdf_content: pdf_content,
+          model: effective_model,
+          langfuse_trace: trace,
+          family: family
+        ).extract
+      end
 
       upsert_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })
 
@@ -236,13 +246,16 @@ class Provider::Anthropic < Provider
 
       partial_usage_recorded = false
 
-      begin
+      LlmInstrumentation.with_gen_ai_span(operation: "chat", model: model, system: "anthropic", conversation_id: session_id) do |span|
+        LlmInstrumentation.set_span_input(span, request_params[:messages], instructions: request_params[:system_])
+
         parsed, usage =
           if streamer.present?
             stream_chat_response(
               streamer: streamer,
               request_params: request_params,
               on_partial: ->(partial_usage) {
+                LlmInstrumentation.add_span_usage(span, partial_usage)
                 record_llm_usage(family: family, model: model, operation: "chat", usage: partial_usage)
                 partial_usage_recorded = true
               }
@@ -251,11 +264,15 @@ class Provider::Anthropic < Provider
             sync_chat_response(request_params: request_params)
           end
 
+        output_text = parsed.messages.map(&:output_text).join("\n")
+        LlmInstrumentation.add_span_usage(span, usage) unless partial_usage_recorded
+        LlmInstrumentation.set_span_output(span, output_text)
+
         log_langfuse_generation(
           name: "chat_response",
           model: model,
           input: request_params[:messages],
-          output: parsed.messages.map(&:output_text).join("\n"),
+          output: output_text,
           usage: usage,
           trace: trace
         )

@@ -6,6 +6,22 @@ module Provider::Anthropic::Concerns::UsageRecorder
     # Persists an LlmUsage row from an Anthropic Message#usage object.
     # Returns nil if no family is attached (e.g., system-initiated calls).
     def record_usage(model_name, raw_usage, operation:, metadata: {})
+      # Attach token usage to the enclosing Sentry gen_ai span (if any) even
+      # when no family is present — observability is independent of billing.
+      if raw_usage
+        span_usage = {
+          "input_tokens" => raw_usage.input_tokens,
+          "output_tokens" => raw_usage.output_tokens
+        }
+        if raw_usage.respond_to?(:cache_creation_input_tokens) && raw_usage.cache_creation_input_tokens
+          span_usage["cache_creation_input_tokens"] = raw_usage.cache_creation_input_tokens
+        end
+        if raw_usage.respond_to?(:cache_read_input_tokens) && raw_usage.cache_read_input_tokens
+          span_usage["cache_read_input_tokens"] = raw_usage.cache_read_input_tokens
+        end
+        LlmInstrumentation.add_current_span_usage(span_usage)
+      end
+
       return unless family && raw_usage
 
       input_tokens = raw_usage.input_tokens.to_i

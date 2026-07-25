@@ -120,17 +120,19 @@ class Provider::Openai < Provider
 
       batches = slice_for_context(transactions, fixed: user_categories)
 
-      result = batches.flat_map do |batch|
-        AutoCategorizer.new(
-          client,
-          model: effective_model,
-          transactions: batch,
-          user_categories: user_categories,
-          custom_provider: custom_provider?,
-          langfuse_trace: trace,
-          family: family,
-          json_mode: json_mode
-        ).auto_categorize
+      result = LlmInstrumentation.with_gen_ai_span(operation: "auto_categorize", model: effective_model, system: "openai") do
+        batches.flat_map do |batch|
+          AutoCategorizer.new(
+            client,
+            model: effective_model,
+            transactions: batch,
+            user_categories: user_categories,
+            custom_provider: custom_provider?,
+            langfuse_trace: trace,
+            family: family,
+            json_mode: json_mode
+          ).auto_categorize
+        end
       end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
@@ -150,17 +152,19 @@ class Provider::Openai < Provider
 
       batches = slice_for_context(transactions, fixed: user_merchants)
 
-      result = batches.flat_map do |batch|
-        AutoMerchantDetector.new(
-          client,
-          model: effective_model,
-          transactions: batch,
-          user_merchants: user_merchants,
-          custom_provider: custom_provider?,
-          langfuse_trace: trace,
-          family: family,
-          json_mode: json_mode
-        ).auto_detect_merchants
+      result = LlmInstrumentation.with_gen_ai_span(operation: "auto_detect_merchants", model: effective_model, system: "openai") do
+        batches.flat_map do |batch|
+          AutoMerchantDetector.new(
+            client,
+            model: effective_model,
+            transactions: batch,
+            user_merchants: user_merchants,
+            custom_provider: custom_provider?,
+            langfuse_trace: trace,
+            family: family,
+            json_mode: json_mode
+          ).auto_detect_merchants
+        end
       end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
@@ -180,16 +184,18 @@ class Provider::Openai < Provider
 
       batches = slice_for_context(merchants)
 
-      result = batches.flat_map do |batch|
-        ProviderMerchantEnhancer.new(
-          client,
-          model: effective_model,
-          merchants: batch,
-          custom_provider: custom_provider?,
-          langfuse_trace: trace,
-          family: family,
-          json_mode: json_mode
-        ).enhance_merchants
+      result = LlmInstrumentation.with_gen_ai_span(operation: "enhance_provider_merchants", model: effective_model, system: "openai") do
+        batches.flat_map do |batch|
+          ProviderMerchantEnhancer.new(
+            client,
+            model: effective_model,
+            merchants: batch,
+            custom_provider: custom_provider?,
+            langfuse_trace: trace,
+            family: family,
+            json_mode: json_mode
+          ).enhance_merchants
+        end
       end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
@@ -220,15 +226,17 @@ class Provider::Openai < Provider
         input: { pdf_size: pdf_content&.bytesize }
       )
 
-      result = PdfProcessor.new(
-        client,
-        model: effective_model,
-        pdf_content: pdf_content,
-        custom_provider: custom_provider?,
-        langfuse_trace: trace,
-        family: family,
-        max_response_tokens: max_response_tokens
-      ).process
+      result = LlmInstrumentation.with_gen_ai_span(operation: "process_pdf", model: effective_model, system: "openai") do
+        PdfProcessor.new(
+          client,
+          model: effective_model,
+          pdf_content: pdf_content,
+          custom_provider: custom_provider?,
+          langfuse_trace: trace,
+          family: family,
+          max_response_tokens: max_response_tokens
+        ).process
+      end
 
       upsert_langfuse_trace(trace: trace, output: result.to_h)
 
@@ -245,11 +253,13 @@ class Provider::Openai < Provider
         input: { pdf_size: pdf_content&.bytesize }
       )
 
-      result = BankStatementExtractor.new(
-        client: client,
-        pdf_content: pdf_content,
-        model: effective_model
-      ).extract
+      result = LlmInstrumentation.with_gen_ai_span(operation: "extract_bank_statement", model: effective_model, system: "openai") do
+        BankStatementExtractor.new(
+          client: client,
+          pdf_content: pdf_content,
+          model: effective_model
+        ).extract
+      end
 
       upsert_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })
 
@@ -365,7 +375,9 @@ class Provider::Openai < Provider
 
         input_payload = chat_config.build_input(prompt: prompt)
 
-        begin
+        LlmInstrumentation.with_gen_ai_span(operation: "chat", model: model, system: "openai", conversation_id: session_id) do |span|
+          LlmInstrumentation.set_span_input(span, prompt, instructions: instructions)
+
           raw_response = client.responses.create(parameters: {
             model: model,
             input: input_payload,
@@ -391,11 +403,14 @@ class Provider::Openai < Provider
             response = response_chunk.data
             usage = response_chunk.usage
             Rails.logger.debug("Stream response usage: #{usage.inspect}")
+            output_text = response.messages.map(&:output_text).join("\n")
+            LlmInstrumentation.add_span_usage(span, usage)
+            LlmInstrumentation.set_span_output(span, output_text)
             log_langfuse_generation(
               name: "chat_response",
               model: model,
               input: input_payload,
-              output: response.messages.map(&:output_text).join("\n"),
+              output: output_text,
               usage: usage,
               session_id: session_id,
               user_identifier: user_identifier
@@ -405,11 +420,14 @@ class Provider::Openai < Provider
           else
             parsed = ChatParser.new(raw_response).parsed
             Rails.logger.debug("Non-stream raw_response['usage']: #{raw_response['usage'].inspect}")
+            output_text = parsed.messages.map(&:output_text).join("\n")
+            LlmInstrumentation.add_span_usage(span, raw_response["usage"])
+            LlmInstrumentation.set_span_output(span, output_text)
             log_langfuse_generation(
               name: "chat_response",
               model: model,
               input: input_payload,
-              output: parsed.messages.map(&:output_text).join("\n"),
+              output: output_text,
               usage: raw_response["usage"],
               session_id: session_id,
               user_identifier: user_identifier
@@ -461,10 +479,15 @@ class Provider::Openai < Provider
         }
         params[:tools] = tools if tools.present?
 
-        begin
+        LlmInstrumentation.with_gen_ai_span(operation: "chat", model: model, system: "openai", conversation_id: session_id) do |span|
+          LlmInstrumentation.set_span_input(span, messages, instructions: instructions)
+
           raw_response = client.chat(parameters: params)
 
           parsed = GenericChatParser.new(raw_response).parsed
+
+          LlmInstrumentation.add_span_usage(span, raw_response["usage"])
+          LlmInstrumentation.set_span_output(span, parsed.messages.map(&:output_text).join("\n"))
 
           log_langfuse_generation(
             name: "chat_response",
@@ -493,18 +516,18 @@ class Provider::Openai < Provider
           end
 
           parsed
-        rescue => e
-          log_langfuse_generation(
-            name: "chat_response",
-            model: model,
-            input: messages,
-            error: e,
-            session_id: session_id,
-            user_identifier: user_identifier
-          )
-          record_llm_usage(family: family, model: model, operation: "chat", error: e)
-          raise
         end
+      rescue => e
+        log_langfuse_generation(
+          name: "chat_response",
+          model: model,
+          input: messages,
+          error: e,
+          session_id: session_id,
+          user_identifier: user_identifier
+        )
+        record_llm_usage(family: family, model: model, operation: "chat", error: e)
+        raise
       end
     end
 
