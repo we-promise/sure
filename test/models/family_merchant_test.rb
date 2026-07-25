@@ -36,4 +36,14 @@ class FamilyMerchantTest < ActiveSupport::TestCase
     merchant.update!(name: "Renamed Merchant")
     assert_equal "#123456", merchant.reload.color
   end
+
+  test "replaces invalid hex color with default sample" do
+    merchant = FamilyMerchant.create!(
+      family: @family,
+      name: "Invalid Color Merchant",
+      color: "invalid-color"
+    )
+
+    assert_includes FamilyMerchant::COLORS, merchant.color
+  end
 end
