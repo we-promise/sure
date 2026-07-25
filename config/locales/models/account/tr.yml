@@ -1,12 +1,25 @@
 ---
 tr:
+  account_order:
+    balance_asc:
+      label: Bakiye (Düşükten Yükseğe)
+      label_short: Bakiye ↑
+    balance_desc:
+      label: Bakiye (Yüksekten Düşüğe)
+      label_short: Bakiye ↓
+    name_asc:
+      label: Ad (A-Z)
+      label_short: Ad ↑
+    name_desc:
+      label: Ad (Z-A)
+      label_short: Ad ↓
   activerecord:
     attributes:
       account:
         balance: Bakiye
         currency: Para Birimi
-        family: Aile
-        family_id: Aile
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         name: Ad
         subtype: Alt Tür
     models:

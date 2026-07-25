@@ -1,0 +1,5 @@
+<%= turbo_stream.remove dom_id(@insight) %>
+
+<%= turbo_stream.append "notification-tray" do %>
+  <%= render "insights/undo_toast", insight: @insight %>
+<% end %>

@@ -28,6 +28,13 @@ class Rack::Attack
     request.ip if request.path.start_with?("/admin/")
   end
 
+  # The background jobs console lives under /settings (so its polling GET
+  # isn't throttled), but its mutation is destructive and super-admin only —
+  # rate limit it independently.
+  throttle("background_jobs_console/ip", limit: 30, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/settings/background_jobs/cancel"
+  end
+
   # Determine limits based on self-hosted mode
   self_hosted = Rails.application.config.app_mode.self_hosted?
 

@@ -1,0 +1,93 @@
+---
+tr:
+  kraken_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} hesabın kurulması gerekiyor"
+        other: "%{count} hesabın kurulması gerekiyor"
+      calculating_balances: Bakiyeler hesaplanıyor...
+      checking_configuration: Hesap yapılandırması kontrol ediliyor...
+      checking_credentials: Kimlik bilgileri kontrol ediliyor...
+      credentials_invalid: Geçersiz Kraken API kimlik bilgileri. Lütfen API anahtarınızı
+        ve gizli anahtarınızı kontrol edin.
+      importing_accounts: Kraken'den hesaplar içe aktarılıyor...
+      processing_accounts: Hesap verileri işleniyor...
+  kraken_items:
+    complete_account_setup:
+      no_accounts: İçe aktarılacak hesap yok
+      none_selected: Hesap seçilmedi
+      success:
+        one: "%{count} hesap içe aktarıldı"
+        other: "%{count} hesap içe aktarıldı"
+    create:
+      default_name: Kraken
+      success: Kraken'e başarıyla bağlanıldı. Borsa hesabınız senkronize ediliyor.
+    destroy:
+      success: Kraken bağlantısı silinmek üzere zamanlandı.
+    kraken_item:
+      delete: Sil
+      deletion_in_progress: Siliniyor...
+      import_accounts_menu: Hesabı İçe Aktar
+      no_accounts_message: Kraken borsa hesabınız senkronizasyondan sonra burada görünecek.
+      no_accounts_title: Hesap bulunamadı
+      provider_name: Kraken
+      reconnect: Kimlik bilgilerinin güncellenmesi gerekiyor
+      setup_action: Hesabı İçe Aktar
+      setup_description: Bu Kraken bağlantısını bir Kripto borsa hesabı olarak içe
+        aktarın.
+      setup_needed: Hesap içe aktarılmaya hazır
+      stale_rate_warning: "%{date} tarihi için kesin döviz kuru kullanılamadığından
+        bakiye yaklaşık olarak gösteriliyor. Sonraki senkronizasyonda güncellenecek."
+      status: 'Son senkronizasyon: %{timestamp} önce'
+      status_never: Hiç senkronize edilmedi
+      status_with_summary: 'Son senkronizasyon: %{timestamp} önce - %{summary}'
+      sync_status:
+        all_synced:
+          one: "%{count} hesap senkronize edildi"
+          other: "%{count} hesap senkronize edildi"
+        no_accounts: Hesap bulunamadı
+        partial_sync: "%{linked_count} senkronize edildi, %{unlinked_count} kurulmayı
+          bekliyor"
+      syncing: Senkronize ediliyor...
+    link_accounts:
+      select_connection: Hesapları bağlamadan önce bir Kraken bağlantısı seçin.
+    link_existing_account:
+      errors:
+        invalid_kraken_account: Geçersiz Kraken hesabı
+        kraken_account_already_linked: Bu Kraken hesabı zaten bağlı
+        only_manual: Yalnızca mevcut bir sağlayıcı bağlantısı olmayan manuel Kripto
+          borsa hesapları Kraken'a bağlanabilir
+      select_connection: Hesapları bağlamadan önce bir Kraken bağlantısı seçin.
+      success: Kraken hesabına başarıyla bağlandı
+    provider_connection:
+      default_description: Bir Kraken borsa hesabına bağlanın
+      default_name: Kraken
+      description: "%{name} hesabına bağlan"
+      name: Kraken - %{name}
+    select_accounts:
+      no_credentials_configured: Hesapları kurmadan önce Kraken API kimlik bilgilerinizi
+        ekleyin.
+      select_connection: Sağlayıcı Ayarları'nda bir Kraken bağlantısı seçin.
+    select_existing_account:
+      cancel: İptal
+      check_provider_health: Kraken API kimlik bilgilerinizin geçerli olduğunu kontrol
+        edin.
+      link: Bağla
+      no_accounts_found: Kraken hesabı bulunamadı.
+      title: Kraken Hesabını Bağla
+      wait_for_sync: Kraken senkronizasyonunun tamamlanmasını bekleyin.
+    setup_accounts:
+      accounts_count:
+        one: "%{count} hesap kullanılabilir"
+        other: "%{count} hesap kullanılabilir"
+      cancel: İptal
+      creating: İçe aktarılıyor...
+      import_selected: Seçilenleri İçe Aktar
+      instructions: Kraken, bu bağlantı için yalnızca varlıkları ve spot işlem gerçekleşmelerini
+        içeren tek bir birleşik Kripto borsa hesabını içe aktarır.
+      no_accounts: Tüm Kraken hesapları içe aktarıldı.
+      select_all: Tümünü seç
+      subtitle: İzlenecek borsa hesabını seçin
+      title: Kraken Hesabını İçe Aktar
+    update:
+      success: Kraken bağlantısı başarıyla güncellendi.

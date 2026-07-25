@@ -339,7 +339,7 @@ fr:
       split_tooltip: Cette transaction a été fractionnée en plusieurs entrées
     transfer_match:
       auto_matched: Correspondance automatique
-      auto_matched_short: A/M
+      auto_matched_short: C/A
       confirm_match: Confirmer la correspondance
       payment_confirmed: Le paiement est confirmé
       reject_match: Rejeter la correspondance

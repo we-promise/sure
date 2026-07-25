@@ -89,4 +89,35 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Amazon", entry.name
     assert_equal categories(:food_and_drink).id, entry.transaction.category_id
   end
+
+  test "skips category matcher when account.enable_category_matcher is false" do
+    @plaid_account.current_account.update!(enable_category_matcher: false)
+
+    plaid_transaction = {
+      "transaction_id" => "456",
+      "merchant_name" => "Amazon",
+      "amount" => 100,
+      "date" => Date.current,
+      "iso_currency_code" => "USD",
+      "personal_finance_category" => {
+        "detailed" => "Food"
+      },
+      "merchant_entity_id" => "456"
+    }
+
+    @category_matcher.expects(:match).never
+
+    processor = PlaidEntry::Processor.new(
+      plaid_transaction,
+      plaid_account: @plaid_account,
+      category_matcher: @category_matcher
+    )
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      processor.process
+    end
+
+    entry = Entry.order(created_at: :desc).first
+    assert_nil entry.transaction.category_id
+  end
 end

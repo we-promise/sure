@@ -54,6 +54,8 @@ class SettingsTest < ApplicationSystemTestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:github).returns(stub(fetch_latest_release_notes: nil))
     open_settings_from_sidebar
     assert_selector "li", text: "Self-Hosting"

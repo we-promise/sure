@@ -18,7 +18,7 @@ fr:
     overview:
       interest_rate: Taux d'intérêt
       monthly_payment: Paiement mensuel
-      not_applicable: N/A
+      not_applicable: N/D
       original_principal: Principal initial
       remaining_principal: Principal restant
       term: Durée
