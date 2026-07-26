@@ -57,10 +57,13 @@ class LocalizeTest < ActionDispatch::IntegrationTest
 
   test "falls back to default timezone and logs a warning when family timezone is unrecognized" do
     user = users(:family_admin)
-    # Simulates a stale/renamed IANA zone (e.g. the historical "Europe/Kiev" ->
-    # "Europe/Kyiv" rename) slipping past validation, e.g. via direct DB access
-    # or an old dump restored from before a tzdata rename.
-    user.family.update_column(:timezone, "Europe/Kiev")
+    # A deliberately nonexistent zone name, standing in for a stale/renamed IANA
+    # value slipping past validation (e.g. the historical "Europe/Kiev" ->
+    # "Europe/Kyiv" rename, or a migration that never ran). We can't use a real
+    # legacy alias like "Europe/Kiev" here: whether tzinfo still recognizes it
+    # depends on the host's installed tzdata version, which would make this
+    # test non-deterministic across machines/CI.
+    user.family.update_column(:timezone, "Invalid/Timezone")
     sign_in user
 
     assert_difference "DebugLogEntry.count", 1 do
@@ -71,7 +74,7 @@ class LocalizeTest < ActionDispatch::IntegrationTest
 
     entry = DebugLogEntry.order(:created_at).last
     assert_equal "warn", entry.level
-    assert_includes entry.message, "Europe/Kiev"
+    assert_includes entry.message, "Invalid/Timezone"
     assert_equal user.family, entry.family
   end
 
@@ -89,13 +92,14 @@ class LocalizeTest < ActionDispatch::IntegrationTest
 
   test "does not log again on a second request within the debounce window" do
     user = users(:family_admin)
-    user.family.update_column(:timezone, "Europe/Kiev")
+    user.family.update_column(:timezone, "Invalid/Timezone")
     sign_in user
 
     # The test environment's cache store is :null_store (config/environments/test.rb),
-    # which never actually caches anything -- every fetch is a miss. Swap in a
-    # real store for this test so the debounce logic (Rails.cache.fetch) is
-    # meaningfully exercised instead of trivially passing.
+    # which never actually caches anything -- every write is a no-op and every
+    # key looks nonexistent. Swap in a real store for this test so the
+    # debounce lease (Rails.cache.write unless_exist:) is meaningfully
+    # exercised instead of trivially passing.
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 

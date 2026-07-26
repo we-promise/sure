@@ -140,15 +140,20 @@ module Localize
 
     def log_invalid_timezone_once(family, requested)
       cache_key = [ "invalid_family_timezone", family.id, requested ]
-      Rails.cache.fetch(cache_key, expires_in: INVALID_TIMEZONE_LOG_INTERVAL) do
-        DebugLogEntry.capture(
-          category: "other",
-          level: "warn",
-          message: "Invalid family timezone #{requested.inspect}, falling back to #{Time.zone.name}",
-          source: "Localize#switch_timezone",
-          family: family
-        )
-        true
-      end
+
+      # `fetch` is read-then-write, not atomic -- two concurrent requests could
+      # both see a miss and both log. `write(unless_exist: true)` maps to
+      # Redis's atomic SET NX in production, so only one request ever wins the
+      # lease and logs.
+      lease_acquired = Rails.cache.write(cache_key, true, expires_in: INVALID_TIMEZONE_LOG_INTERVAL, unless_exist: true)
+      return unless lease_acquired
+
+      DebugLogEntry.capture(
+        category: "other",
+        level: "warn",
+        message: "Invalid family timezone #{requested.inspect}, falling back to #{Time.zone.name}",
+        source: "Localize#switch_timezone",
+        family: family
+      )
     end
 end
