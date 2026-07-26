@@ -22,7 +22,22 @@ class TransactionsController < ApplicationController
                        .includes(
                          { entry: :account },
                          :category, :merchant, :tags,
-                         :transfer_as_inflow, :transfer_as_outflow
+                         # Transfer#categorizable? / #payment? walk
+                         # transfer.inflow_transaction.entry.account (and outflow
+                         # for kind checks). Without these, each transfer row
+                         # N+1s transactions → entries → accounts during render.
+                         {
+                           transfer_as_inflow: {
+                             inflow_transaction: { entry: :account },
+                             outflow_transaction: { entry: :account }
+                           }
+                         },
+                         {
+                           transfer_as_outflow: {
+                             inflow_transaction: { entry: :account },
+                             outflow_transaction: { entry: :account }
+                           }
+                         }
                        )
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)

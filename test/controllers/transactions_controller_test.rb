@@ -722,6 +722,39 @@ end
     assert_nil created_entry.transaction.extra["exchange_rate"]
   end
 
+  test "index preloads transfer counterparty entry and account to avoid N+1" do
+    family = @user.family
+    from_account = family.accounts.visible.first
+    to_account = family.accounts.create!(
+      name: "Transfer Counterparty",
+      currency: family.currency,
+      balance: 0,
+      accountable: Depository.new
+    )
+
+    6.times do |i|
+      create_transfer(
+        from_account: from_account,
+        to_account: to_account,
+        amount: 25 + i,
+        date: Date.current - i.days
+      )
+    end
+
+    queries = capture_sql_queries do
+      get transactions_url
+    end
+
+    assert_response :success
+
+    # Transfer#categorizable? / #payment? walk
+    # transfer.inflow_transaction.entry.account. Without nested includes those
+    # become one lookup triad per transfer row during list render.
+    assert_empty queries.grep(/FROM "transactions" WHERE "transactions"\."id" =/)
+    assert_empty queries.grep(/FROM "entries" WHERE "entries"\."entryable_id" =/)
+    assert_empty queries.grep(/FROM "accounts" WHERE "accounts"\."id" =/)
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
