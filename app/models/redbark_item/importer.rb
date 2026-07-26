@@ -257,29 +257,35 @@ class RedbarkItem::Importer
       end
     end
 
-    # A pending row absent from the refetched window has settled (possibly
-    # under a new id) - keeping it would duplicate the posted transaction
+    # The snapshot is bounded to the current fetch window - durable history
+    # lives in entries (deduped by external_id), so older rows are dropped
+    # rather than accumulated forever. Rows without a parseable date are kept.
+    # A pending row absent from the refetch has settled (possibly under a new
+    # id) - keeping it would duplicate the posted transaction.
     def merge_transactions(existing, new_transactions, window_start: nil)
       new_keys = new_transactions.map { |t| transaction_key(t) }.to_set
 
       by_id = {}
       existing.each do |t|
-        next if stale_pending?(t, new_keys, window_start)
+        next unless within_window?(t, window_start)
+        next if stale_pending?(t, new_keys)
         by_id[transaction_key(t)] = t
       end
       new_transactions.each { |t| by_id[transaction_key(t)] = t }
       by_id.values
     end
 
-    def stale_pending?(transaction, new_keys, window_start)
+    def within_window?(transaction, window_start)
+      return true if window_start.nil?
+
       t = transaction.is_a?(Hash) ? transaction.with_indifferent_access : transaction
-      return false unless t[:status].to_s == "pending"
-      return false if new_keys.include?(transaction_key(t))
-
       date = Date.parse(t[:date].to_s) rescue nil
-      return true if date.nil? || window_start.nil?
+      date.nil? || date >= window_start
+    end
 
-      date >= window_start
+    def stale_pending?(transaction, new_keys)
+      t = transaction.is_a?(Hash) ? transaction.with_indifferent_access : transaction
+      t[:status].to_s == "pending" && !new_keys.include?(transaction_key(t))
     end
 
     def transaction_key(transaction)
