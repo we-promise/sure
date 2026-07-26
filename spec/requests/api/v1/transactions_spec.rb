@@ -172,7 +172,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               notes: { type: :string, description: 'Additional notes' },
               currency: { type: :string, description: 'Currency code (defaults to family currency)' },
               category_id: { type: :string, format: :uuid, description: 'Category ID. Must be the UUID of a category in your own family, as returned by GET /api/v1/categories' },
-              merchant_id: { type: :string, format: :uuid, description: 'Merchant ID. Must be the UUID of a merchant in your own family, as returned by GET /api/v1/merchants' },
+              merchant_id: { type: :string, format: :uuid, description: 'Merchant ID, as returned by GET /api/v1/merchants. May be a merchant owned by your family or a provider-synced merchant already linked to a transaction in one of your accounts' },
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
               external_id: { type: :string, description: 'Optional external idempotency key scoped to account and source' },
               source: { type: :string, description: 'Optional source namespace for external_id. Requires external_id and defaults to api when external_id is provided' },
@@ -314,7 +314,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               notes: { type: :string },
               currency: { type: :string, description: 'Currency code' },
               category_id: { type: :string, format: :uuid, description: 'Category ID. Must be the UUID of a category in your own family, as returned by GET /api/v1/categories' },
-              merchant_id: { type: :string, format: :uuid, description: 'Merchant ID. Must be the UUID of a merchant in your own family, as returned by GET /api/v1/merchants' },
+              merchant_id: { type: :string, format: :uuid, description: 'Merchant ID, as returned by GET /api/v1/merchants. May be a merchant owned by your family or a provider-synced merchant already linked to a transaction in one of your accounts' },
               nature: { type: :string, enum: %w[income expense inflow outflow] },
               tag_ids: {
                 type: :array,

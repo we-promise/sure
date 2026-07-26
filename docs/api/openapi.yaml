@@ -7358,8 +7358,9 @@ paths:
                     merchant_id:
                       type: string
                       format: uuid
-                      description: Merchant ID. Must be the UUID of a merchant in
-                        your own family, as returned by GET /api/v1/merchants
+                      description: Merchant ID, as returned by GET /api/v1/merchants.
+                        May be a merchant owned by your family or a provider-synced
+                        merchant already linked to a transaction in one of your accounts
                     nature:
                       type: string
                       enum:
@@ -7478,8 +7479,9 @@ paths:
                     merchant_id:
                       type: string
                       format: uuid
-                      description: Merchant ID. Must be the UUID of a merchant in
-                        your own family, as returned by GET /api/v1/merchants
+                      description: Merchant ID, as returned by GET /api/v1/merchants.
+                        May be a merchant owned by your family or a provider-synced
+                        merchant already linked to a transaction in one of your accounts
                     nature:
                       type: string
                       enum:
