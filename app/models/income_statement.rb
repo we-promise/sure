@@ -125,6 +125,78 @@ class IncomeStatement
   # dashboard widget) should build their options from this, not a broader
   # "accessible accounts" list, or selecting an ineligible account silently
   # computes to zero instead of the totals it actually appears in elsewhere.
+  # Returns income and expense totals grouped by month for a date range using
+  # a single SQL query, avoiding N+1 queries when building month-by-month data.
+  # Result: { Date (beginning of month) => { income: Numeric, expenses: Numeric } }
+  def monthly_totals_for_range(start_date:, end_date:)
+    scope = family.transactions.visible.excluding_pending
+                  .where(entries: { date: start_date..end_date })
+
+    tax_adv_ids = family.tax_advantaged_account_ids
+    acc_ids = included_account_ids
+    return {} if acc_ids&.empty?
+
+    excluded_kinds_sql = Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
+    tax_adv_clause = tax_adv_ids.present? ? "AND a.id NOT IN (:tax_advantaged_account_ids)" : ""
+    finance_clause = acc_ids.present? ? "AND a.id IN (:included_account_ids)" : ""
+
+    sql_template = <<~SQL
+      SELECT
+        DATE_TRUNC('month', ae.date) AS month,
+        CASE
+          WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense'
+          WHEN ae.amount < 0 THEN 'income'
+          ELSE 'expense'
+        END AS classification,
+        ABS(SUM(
+          CASE
+            WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1))
+            ELSE ae.amount * COALESCE(er.rate, 1)
+          END
+        )) AS total
+      FROM (#{scope.to_sql}) at
+      JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
+      JOIN accounts a ON a.id = ae.account_id
+      LEFT JOIN exchange_rates er ON (
+        er.date = ae.date AND
+        er.from_currency = ae.currency AND
+        er.to_currency = :target_currency
+      )
+      WHERE at.kind NOT IN (#{excluded_kinds_sql})
+        AND (
+          at.investment_activity_label IS NULL
+          OR at.investment_activity_label NOT IN ('Transfer', 'Sweep In', 'Sweep Out', 'Exchange')
+        )
+        AND ae.excluded = false
+        AND a.family_id = :family_id
+        AND a.status IN ('draft', 'active')
+        AND a.exclude_from_reports = false
+        #{tax_adv_clause}
+        #{finance_clause}
+      GROUP BY DATE_TRUNC('month', ae.date), classification
+    SQL
+
+    params = { target_currency: family.currency, family_id: family.id }
+    params[:tax_advantaged_account_ids] = tax_adv_ids if tax_adv_ids.present?
+    params[:included_account_ids] = acc_ids if acc_ids
+
+    sql = ActiveRecord::Base.sanitize_sql_array([ sql_template, params ])
+    rows = ActiveRecord::Base.connection.select_all(sql)
+
+    result = {}
+    rows.each do |row|
+      month = row["month"].to_date.beginning_of_month
+      result[month] ||= { income: 0, expenses: 0 }
+      if row["classification"] == "income"
+        result[month][:income] += row["total"].to_f
+      else
+        result[month][:expenses] += row["total"].to_f
+      end
+    end
+
+    result
+  end
+
   def eligible_accounts
     @eligible_accounts ||= begin
       scope = family.accounts.visible.included_in_reports

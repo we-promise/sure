@@ -322,28 +322,24 @@ class ReportsController < ApplicationController
     end
 
     def build_trends_data(income_statement:)
-      # Generate month-by-month data based on the current period filter
-      trends = []
+      # Fetch all monthly totals in a single query to avoid N+1
+      monthly_data = income_statement.monthly_totals_for_range(
+        start_date: @start_date.beginning_of_month,
+        end_date: @end_date.end_of_month
+      )
 
-      # Generate list of months within the period
+      trends = []
       current_month = @start_date.beginning_of_month
       end_of_period = @end_date.end_of_month
 
       while current_month <= end_of_period
-        month_start = current_month
-        month_end = current_month.end_of_month
-
-        # Ensure we don't go beyond the end date
-        month_end = @end_date if month_end > @end_date
-
-        period = Period.custom(start_date: month_start, end_date: month_end)
-
-        income = income_statement.income_totals(period: period).total
-        expenses = income_statement.expense_totals(period: period).total
+        data = monthly_data[current_month.to_date] || { income: 0, expenses: 0 }
+        income = data[:income]
+        expenses = data[:expenses]
 
         trends << {
-          month: month_start.strftime("%b %Y"),
-          is_current_month: (month_start.month == Date.current.month && month_start.year == Date.current.year),
+          month: current_month.strftime("%b %Y"),
+          is_current_month: (current_month.month == Date.current.month && current_month.year == Date.current.year),
           income: income,
           expenses: expenses,
           net: income - expenses
