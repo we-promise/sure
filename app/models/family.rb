@@ -467,8 +467,19 @@ class Family < ApplicationRecord
       id,
       key,
       data_invalidation_key,
-      accounts.maximum(:updated_at)
+      accounts_cache_version
     ].compact.join("_")
+  end
+
+  # Used for invalidating account related aggregation queries. Memoized like
+  # entries_cache_version: a dashboard render builds several cache keys, each
+  # of which would otherwise re-issue this same MAX(updated_at) lookup.
+  # Sync-driven invalidation is unaffected — that rides on
+  # data_invalidation_key, which is still read live.
+  def accounts_cache_version
+    return @accounts_cache_version if defined?(@accounts_cache_version)
+
+    @accounts_cache_version = accounts.maximum(:updated_at)
   end
 
   # Used for invalidating entry related aggregation queries

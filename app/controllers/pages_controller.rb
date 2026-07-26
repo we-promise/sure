@@ -453,6 +453,10 @@ class PagesController < ApplicationController
     def build_money_flow_data(income_statement, selected_month, account_ids)
       months = (MONEY_FLOW_CHART_MONTHS - 1).downto(0).map { |i| selected_month - i.months }
 
+      # One month-bucketed query for the whole span. Totalling each month
+      # separately cost an aggregate scan per bar.
+      totals_by_month = income_statement.totals_by_month(months, account_ids: account_ids)
+
       selected_period = nil
       selected_totals = nil
 
@@ -460,11 +464,10 @@ class PagesController < ApplicationController
         # Cap at today so an in-progress month (most commonly the current one)
         # doesn't report totals for its not-yet-arrived days.
         end_date = [ month_start.end_of_month, Date.current ].min
-        period = Period.custom(start_date: month_start, end_date: end_date)
-        totals = income_statement.totals_for(period, account_ids: account_ids)
+        totals = totals_by_month.fetch(month_start.beginning_of_month)
 
         if month_start == selected_month
-          selected_period = period
+          selected_period = Period.custom(start_date: month_start, end_date: end_date)
           selected_totals = totals
         end
 
