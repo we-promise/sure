@@ -161,6 +161,37 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Transfer", transfer_out.entryable.investment_activity_label
   end
 
+  test "normalizes bare TRANSFER from the provider sign" do
+    # Regression test for issue #2756. Unlike TRANSFER_IN/TRANSFER_OUT, a bare "TRANSFER"
+    # carries no direction in the type, so SnapTrade's sign is the only directional signal
+    # available and must be inverted into Sure's convention rather than passed through.
+    @snaptrade_account.update!(raw_activities_payload: [
+      build_cash_activity(
+        id: "transfer_generic_in",
+        type: "TRANSFER",
+        amount: 1320.75,
+        settlement_date: Date.current.to_s
+      ),
+      build_cash_activity(
+        id: "transfer_generic_out",
+        type: "TRANSFER",
+        amount: -500.00,
+        settlement_date: Date.current.to_s
+      )
+    ])
+
+    processor = SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account)
+    processor.process
+
+    inbound = @account.entries.find_by(external_id: "transfer_generic_in", source: "snaptrade")
+    outbound = @account.entries.find_by(external_id: "transfer_generic_out", source: "snaptrade")
+
+    assert_not_nil inbound
+    assert_not_nil outbound
+    assert_equal(-1320.75, inbound.amount.to_f, "money in must be stored negative on an asset account")
+    assert_equal 500.00, outbound.amount.to_f, "money out must be stored positive on an asset account"
+  end
+
   test "maps all known activity types correctly" do
     type_mappings = {
       "BUY" => "Buy",

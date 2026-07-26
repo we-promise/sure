@@ -66,7 +66,11 @@ class Provider::Simplefin
       query_params["end-date"] = end_timestamp.to_s
     end
 
-    query_params["pending"] = pending ? "1" : "0" unless pending.nil?
+    # Per the SimpleFIN protocol, pending transactions are excluded by default
+    # and only included when `pending=1` is present. Bridges presence-check the
+    # param, so sending `pending=0` behaves like `pending=1` — the only
+    # spec-compliant way to exclude pending is to omit the param entirely.
+    query_params["pending"] = "1" if pending
 
     accounts_url = "#{access_url}/accounts"
     accounts_url += "?#{URI.encode_www_form(query_params)}" unless query_params.empty?
