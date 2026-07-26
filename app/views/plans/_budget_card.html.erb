@@ -9,7 +9,14 @@
     <span class="text-xs text-subdued truncate">· <%= budget.name %></span>
 
     <% if budget.initialized? %>
-      <div class="ml-auto shrink-0">
+      <div class="ml-auto shrink-0 flex items-center gap-2">
+        <%= render DS::Link.new(
+          variant: "icon",
+          size: "sm",
+          icon: "square-pen",
+          href: edit_budget_path(budget),
+          aria: { label: t(".edit_budget") }
+        ) %>
         <% if budget.available_to_spend.negative? %>
           <%= render DS::Pill.new(label: t("reports.budget_performance.status.over"), tone: :error, marker: false, icon: "alert-circle") %>
         <% elsif budget.percent_of_budget_spent >= 90 %>

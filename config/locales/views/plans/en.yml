@@ -4,11 +4,10 @@ en:
     show:
       title: Plan
       subtitle: Decide where your money goes — what you spend, and what you save.
-      edit_budget: Edit budget
-      new_goal: New goal
       footnote: Budgets cap your spend; goals track what you're saving toward. They share a home, not a model.
     budget_card:
       title: This month
+      edit_budget: Edit budget
       of_total: of %{total}
       days_left:
         one: 1 day left
@@ -20,6 +19,7 @@ en:
       set_up: Set up this month's budget
     goals_card:
       title: Your goals
+      new_goal: New goal
       active_count:
         one: 1 active
         other: "%{count} active"

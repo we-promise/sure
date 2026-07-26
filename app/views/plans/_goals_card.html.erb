@@ -9,6 +9,18 @@
     <% if goals.any? %>
       <span class="text-xs text-subdued">· <%= t(".active_count", count: goals.size) %></span>
     <% end %>
+    <% if goals.any? && linkable_account_count > 0 %>
+      <div class="ml-auto shrink-0">
+        <%= render DS::Link.new(
+          text: t(".new_goal"),
+          variant: "outline",
+          size: "sm",
+          icon: "plus",
+          href: new_goal_path,
+          frame: :modal
+        ) %>
+      </div>
+    <% end %>
   </div>
 
   <% if goals.empty? %>
