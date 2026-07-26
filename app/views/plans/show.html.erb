@@ -14,9 +14,4 @@
     <%= render "plans/budget_card", budget: @budget, top_budget_categories: @top_budget_categories %>
     <%= render "plans/goals_card", goals: @goals, summary: @goals_summary, linkable_account_count: @linkable_account_count, family_has_goals: @family_has_goals %>
   </div>
-
-  <p class="flex items-center gap-1.5 text-xs text-subdued">
-    <%= icon("info", size: "xs") %>
-    <span><%= t(".footnote") %></span>
-  </p>
 </div>

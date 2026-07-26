@@ -4,7 +4,6 @@ en:
     show:
       title: Plan
       subtitle: Decide where your money goes — what you spend, and what you save.
-      footnote: Budgets cap your spend; goals track what you're saving toward. They share a home, not a model.
     budget_card:
       title: This month
       edit_budget: Edit budget

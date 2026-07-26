@@ -1,21 +1,26 @@
 <%# locals: (budget:, top_budget_categories:) %>
 
 <section class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
-  <div class="flex items-center gap-2 mb-4">
+  <div class="flex flex-wrap items-center gap-2 mb-4">
     <span class="w-7 h-7 rounded-lg bg-surface-inset text-secondary flex items-center justify-center shrink-0">
       <%= icon("layout-grid", size: "sm") %>
     </span>
-    <h2 class="text-sm font-medium text-primary"><%= t(".title") %></h2>
+    <h2 class="text-sm font-medium text-primary shrink-0"><%= t(".title") %></h2>
     <span class="text-xs text-subdued truncate">· <%= budget.name %></span>
 
     <% if budget.initialized? %>
       <div class="ml-auto shrink-0 flex items-center gap-2">
+        <%# Matches the existing edit-this-budget precedent on the budget
+            donut card (app/views/budgets/_budget_donut.html.erb): a
+            labeled secondary link with a trailing pencil, not a bare
+            icon button or an overflow menu. %>
         <%= render DS::Link.new(
-          variant: "icon",
+          text: t(".edit_budget"),
+          variant: "secondary",
           size: "sm",
-          icon: "square-pen",
-          href: edit_budget_path(budget),
-          aria: { label: t(".edit_budget") }
+          icon: "pencil",
+          icon_position: :right,
+          href: edit_budget_path(budget)
         ) %>
         <% if budget.available_to_spend.negative? %>
           <%= render DS::Pill.new(label: t("reports.budget_performance.status.over"), tone: :error, marker: false, icon: "alert-circle") %>

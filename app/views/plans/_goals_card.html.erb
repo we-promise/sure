@@ -1,19 +1,22 @@
 <%# locals: (goals:, summary:, linkable_account_count:, family_has_goals:) %>
 
 <section class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
-  <div class="flex items-center gap-2 mb-4">
+  <div class="flex flex-wrap items-center gap-2 mb-4">
     <span class="w-7 h-7 rounded-lg bg-surface-inset text-secondary flex items-center justify-center shrink-0">
       <%= icon("target", size: "sm") %>
     </span>
-    <h2 class="text-sm font-medium text-primary"><%= t(".title") %></h2>
+    <h2 class="text-sm font-medium text-primary shrink-0"><%= t(".title") %></h2>
     <% if goals.any? %>
       <span class="text-xs text-subdued">· <%= t(".active_count", count: goals.size) %></span>
     <% end %>
     <% if goals.any? && linkable_account_count > 0 %>
       <div class="ml-auto shrink-0">
+        <%# Same weight as the budget card's edit control (DS::Link,
+            secondary, sm) so the two cards' header actions read as one
+            family, not two different conventions. %>
         <%= render DS::Link.new(
           text: t(".new_goal"),
-          variant: "outline",
+          variant: "secondary",
           size: "sm",
           icon: "plus",
           href: new_goal_path,
