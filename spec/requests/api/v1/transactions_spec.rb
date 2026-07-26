@@ -171,12 +171,12 @@ RSpec.describe 'API V1 Transactions', type: :request do
               description: { type: :string, description: 'Alternative to name field' },
               notes: { type: :string, description: 'Additional notes' },
               currency: { type: :string, description: 'Currency code (defaults to family currency)' },
-              category_id: { type: :string, format: :uuid, description: 'Category ID' },
-              merchant_id: { type: :string, format: :uuid, description: 'Merchant ID' },
+              category_id: { type: :string, format: :uuid, description: 'Category ID. Must be the UUID of a category in your own family, as returned by GET /api/v1/categories' },
+              merchant_id: { type: :string, format: :uuid, description: 'Merchant ID. Must be the UUID of a merchant in your own family, as returned by GET /api/v1/merchants' },
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
               external_id: { type: :string, description: 'Optional external idempotency key scoped to account and source' },
               source: { type: :string, description: 'Optional source namespace for external_id. Requires external_id and defaults to api when external_id is provided' },
-              tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' }
+              tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs. Each must be the UUID of a tag in your own family' }
             },
             required: %w[account_id date amount name]
           }

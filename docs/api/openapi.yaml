@@ -7353,11 +7353,13 @@ paths:
                     category_id:
                       type: string
                       format: uuid
-                      description: Category ID
+                      description: Category ID. Must be the UUID of a category in
+                        your own family, as returned by GET /api/v1/categories
                     merchant_id:
                       type: string
                       format: uuid
-                      description: Merchant ID
+                      description: Merchant ID. Must be the UUID of a merchant in
+                        your own family, as returned by GET /api/v1/merchants
                     nature:
                       type: string
                       enum:
@@ -7379,7 +7381,8 @@ paths:
                       items:
                         type: string
                         format: uuid
-                      description: Array of tag IDs
+                      description: Array of tag IDs. Each must be the UUID of a tag
+                        in your own family
                   required:
                   - account_id
                   - date

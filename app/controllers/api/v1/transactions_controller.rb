@@ -96,6 +96,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return render_existing_idempotent_entry(existing_entry)
     end
 
+    return unless validate_family_associations
+
     @entry = account.entries.new(entry_params_for_create)
 
     if @entry.save
@@ -139,6 +141,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       render json: { error: "validation_failed", message: "Split parent amount, date, and type cannot be changed directly. Use the split editor." }, status: :unprocessable_entity
       return
     end
+
+    return unless validate_family_associations
 
     Entry.transaction do
       if @entry.update(entry_params_for_update)
@@ -316,6 +320,40 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def account_id_param
       params.dig(:transaction, :account_id).presence
+    end
+
+    # Category, merchant and tag references are assigned straight onto the
+    # record, so an unusable id has to be rejected here rather than reaching the
+    # database. A malformed UUID casts to NULL and the association is dropped
+    # while the request still reports success, an unknown UUID trips the foreign
+    # key and surfaces as a 500, and a UUID owned by another family is accepted
+    # outright. Returns false once a response has been rendered.
+    def validate_family_associations
+      family = current_resource_owner.family
+
+      category_id = transaction_params[:category_id]
+      if category_id.present? && !family_owns?(family.categories, category_id)
+        render_validation_error("Category not found or does not belong to your family")
+        return false
+      end
+
+      merchant_id = transaction_params[:merchant_id]
+      if merchant_id.present? && !family_owns?(family.merchants, merchant_id)
+        render_validation_error("Merchant not found or does not belong to your family")
+        return false
+      end
+
+      tag_ids = Array(transaction_params[:tag_ids]).reject(&:blank?).uniq
+      if tag_ids.any? && !tag_ids.all? { |id| family_owns?(family.tags, id) }
+        render_validation_error("One or more tags were not found or do not belong to your family")
+        return false
+      end
+
+      true
+    end
+
+    def family_owns?(scope, id)
+      valid_uuid?(id) && scope.exists?(id: id)
     end
 
     def entry_params_for_create

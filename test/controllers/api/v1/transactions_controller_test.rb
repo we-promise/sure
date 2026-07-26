@@ -601,6 +601,106 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  # Association scoping tests (issue #2781)
+  test "should create transaction with a category from the caller's family" do
+    category = categories(:food_and_drink)
+
+    post api_v1_transactions_url,
+         params: transaction_params_with(category_id: category.id),
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    assert_equal category.id, JSON.parse(response.body).dig("category", "id")
+  end
+
+  test "should reject create with malformed category_id instead of silently dropping it" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params_with(category_id: "18bsy6-"),
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "should reject create with unknown category_id instead of raising a server error" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params_with(category_id: SecureRandom.uuid),
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "should reject create with a category belonging to another family" do
+    foreign_category = families(:empty).categories.create!(name: "Foreign Category")
+
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params_with(category_id: foreign_category.id),
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "should reject create with a merchant belonging to another family" do
+    foreign_merchant = families(:empty).merchants.create!(name: "Foreign Merchant", type: "FamilyMerchant")
+
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params_with(merchant_id: foreign_merchant.id),
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "should reject create with malformed merchant_id" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params_with(merchant_id: "not-a-uuid"),
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "should reject create with a tag belonging to another family" do
+    foreign_tag = families(:empty).tags.create!(name: "Foreign Tag")
+
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params_with(tag_ids: [ foreign_tag.id ]),
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "should reject update with malformed category_id instead of silently ignoring it" do
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { category_id: "18bsy6-" } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "should reject update with a category belonging to another family" do
+    foreign_category = families(:empty).categories.create!(name: "Foreign Category")
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { category_id: foreign_category.id } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_not_equal foreign_category.id, @transaction.reload.category_id
+  end
+
   # UPDATE action tests
   test "should update transaction with valid parameters" do
     update_params = {
@@ -832,6 +932,19 @@ end
 
       ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
       queries
+    end
+
+    def transaction_params_with(overrides)
+      {
+        transaction: {
+          account_id: @account.id,
+          name: "Association Scoping Transaction",
+          amount: 25.00,
+          date: Date.current,
+          currency: "USD",
+          nature: "expense"
+        }.merge(overrides)
+      }
     end
 
     def create_transfer_between_accounts
