@@ -88,8 +88,33 @@ class Assistant::External < Assistant::Base
     end
 
     def build_conversation_messages
-      messages = chat.conversation_messages.where(status: "complete").ordered.map do |msg|
-        { role: msg.role, content: msg.content }
+      messages = []
+      chat.conversation_messages.where(status: "complete").ordered.includes(:tool_calls).each do |msg|
+        if msg.tool_calls.any?
+          messages << {
+            role: msg.role,
+            content: msg.content || "",
+            tool_calls: msg.tool_calls.map(&:to_tool_call)
+          }
+          msg.tool_calls.map(&:to_result).each do |fn_result|
+            output = fn_result[:output]
+            content = if output.nil?
+              ""
+            elsif output.is_a?(String)
+              output
+            else
+              output.to_json
+            end
+            messages << {
+              role: "tool",
+              tool_call_id: fn_result[:call_id],
+              name: fn_result[:name],
+              content: content
+            }
+          end
+        elsif msg.content.present?
+          messages << { role: msg.role, content: msg.content }
+        end
       end
       Assistant::HistoryTrimmer.new(messages, max_tokens: max_history_tokens).call
     end
