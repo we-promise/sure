@@ -16,6 +16,7 @@ class AccountsController < ApplicationController
     @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
+    @redbark_items = visible_provider_items(family.redbark_items.ordered.with_attached_logo.includes(:redbark_accounts))
     @akahu_items = visible_provider_items(family.akahu_items.ordered.with_attached_logo.includes(:akahu_accounts))
     @up_items = visible_provider_items(family.up_items.ordered.with_attached_logo.includes(:up_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
@@ -262,6 +263,7 @@ class AccountsController < ApplicationController
         @plaid_items,
         @simplefin_items,
         @lunchflow_items,
+        @redbark_items,
         @akahu_items,
         @up_items,
         @enable_banking_items,
@@ -428,6 +430,13 @@ class AccountsController < ApplicationController
       @sophtron_items.each do |item|
         latest_sync = item.latest_sync_record
         @sophtron_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Redbark sync stats
+      @redbark_sync_stats_map = {}
+      @redbark_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @redbark_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Mercury sync stats

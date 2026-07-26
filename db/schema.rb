@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1640,6 +1640,49 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
     t.check_constraint "destination_account_id IS NULL OR destination_account_id <> account_id", name: "chk_recurring_txns_transfer_distinct_accounts"
   end
 
+  create_table "redbark_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "redbark_item_id", null: false
+    t.string "name", null: false
+    t.string "redbark_account_id", null: false
+    t.string "connection_id"
+    t.string "account_number"
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.boolean "ignored", default: false, null: false
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.date "sync_start_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["redbark_item_id", "redbark_account_id"], name: "index_redbark_accounts_on_item_and_account_id", unique: true
+    t.index ["redbark_item_id"], name: "index_redbark_accounts_on_redbark_item_id"
+  end
+
+  create_table "redbark_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.text "api_key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_redbark_items_on_family_id"
+    t.index ["status"], name: "index_redbark_items_on_status"
+  end
+
   create_table "rejected_transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "inflow_transaction_id", null: false
     t.uuid "outflow_transaction_id", null: false
@@ -2370,6 +2413,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
   add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
   add_foreign_key "recurring_transactions", "families"
   add_foreign_key "recurring_transactions", "merchants"
+  add_foreign_key "redbark_accounts", "redbark_items"
+  add_foreign_key "redbark_items", "families"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
   add_foreign_key "rule_actions", "rules"

@@ -13,11 +13,14 @@
   <div class="bg-container-inset rounded-xl p-1 space-y-1">
     <div class="px-4 py-2 flex items-center justify-between uppercase text-xs font-medium text-secondary">
       <% new_count = insights.count(&:active?) %>
-      <% if new_count.positive? %>
-        <p><%= t("insights.feed.header_new") %><span class="text-subdued mx-1">&middot;</span><%= new_count %></p>
-      <% else %>
-        <p><%= t("insights.feed.header") %></p>
-      <% end %>
+      <div class="flex items-center gap-2">
+        <% if new_count.positive? %>
+          <p><%= t("insights.feed.header_new") %><span class="text-subdued mx-1">&middot;</span><%= new_count %></p>
+        <% else %>
+          <p><%= t("insights.feed.header") %></p>
+        <% end %>
+        <%= render DS::Pill.new(label: t("shared.preview")) %>
+      </div>
 
       <%= render DS::Link.new(
         text: t("insights.feed.view_all"),
