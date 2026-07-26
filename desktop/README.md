@@ -62,22 +62,22 @@ Registered scheme: `sure://{host}[:port]/{path}` → opens the app to that
 server/page. Example: `open "sure://localhost:3000/accounts"`. (Works from the
 bundled `.app`, not `tauri dev`.)
 
-## Code signing & notarization (required for distribution — NOT wired up)
-No Apple Developer credentials are needed to build/run locally. To ship a
-distributable, signed, notarized `.dmg`, add:
-1. An **Apple Developer ID Application** certificate in your login keychain.
-2. Tauri signing config in `src-tauri/tauri.conf.json` under `bundle.macOS`:
-   `"signingIdentity": "Developer ID Application: <NAME> (<TEAMID>)"`,
-   `"hardenedRuntime": true`, and an `entitlements` plist if needed.
-3. Notarization after build:
-   ```bash
-   VERSION="<release-version>"
-   xcrun notarytool submit "src-tauri/target/universal-apple-darwin/release/bundle/dmg/Sure_${VERSION}_universal.dmg" \
-     --apple-id "<APPLE_ID>" --team-id "<TEAMID>" --password "<APP_SPECIFIC_PW>" --wait
-   xcrun stapler staple "src-tauri/target/universal-apple-darwin/release/bundle/dmg/Sure_${VERSION}_universal.dmg"
-   ```
-These steps require an Apple Developer account and are intentionally left as a
-documented follow-up.
+## Code signing & notarization
+No Apple Developer credentials are needed to build/run locally. Release builds
+use GitHub Actions to sign with a Developer ID Application certificate and
+notarize the universal `.dmg` with Apple.
+
+Configure these GitHub secrets before publishing a tagged release:
+- `APPLE_CERTIFICATE`: base64-encoded `.p12` for the Developer ID Application certificate.
+- `APPLE_CERTIFICATE_PASSWORD`: password for that `.p12`.
+- `APPLE_SIGNING_IDENTITY`: certificate identity, e.g. `Developer ID Application: <NAME> (<TEAMID>)`.
+- `APPLE_ID`: Apple ID email.
+- `APPLE_PASSWORD`: app-specific password for that Apple ID.
+- `APPLE_TEAM_ID`: Apple developer team id.
+
+The release workflow imports the certificate into a temporary runner keychain,
+builds with Tauri's hardened runtime enabled, notarizes with Apple, staples the
+ticket, then uploads the signed `.dmg` as a release artifact.
 
 ## Not built yet (see spec §9)
 - Balance-with-sparkline glance widget (Tauri floating panel and/or a WidgetKit
