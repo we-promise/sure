@@ -236,7 +236,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - missing account_id' do
+      response '422', 'validation error - missing required fields, or category/merchant/tag is invalid, unknown, or not accessible to your family' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -252,13 +252,32 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - missing required fields' do
+      response '422', 'validation error - missing required fields, or category/merchant/tag is invalid, unknown, or not accessible to your family' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
           {
             transaction: {
               account_id: account.id
+            }
+          }
+        end
+
+        run_test!
+      end
+
+      response '422', 'validation error - missing required fields, or category/merchant/tag is invalid, unknown, or not accessible to your family' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            transaction: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              amount: 50.00,
+              name: 'Test purchase',
+              nature: 'expense',
+              category_id: SecureRandom.uuid
             }
           }
         end
