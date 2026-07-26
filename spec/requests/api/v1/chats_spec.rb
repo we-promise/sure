@@ -79,6 +79,10 @@ RSpec.describe 'API V1 Chats', type: :request do
       tags 'Chats'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
+      parameter name: :page, in: :query, type: :integer, required: false,
+                description: 'Page number (default: 1)'
+      parameter name: :per_page, in: :query, type: :integer, required: false,
+                description: 'Items per page (default: 20, max: 100)'
 
       response '200', 'chats listed' do
         schema '$ref' => '#/components/schemas/ChatCollection'
@@ -147,7 +151,12 @@ RSpec.describe 'API V1 Chats', type: :request do
     get 'Retrieve a chat' do
       tags 'Chats'
       security [ { apiKeyAuth: [] } ]
+      description 'Messages paginate newest-first: page 1 holds the most recent messages, ordered chronologically within the page.'
       produces 'application/json'
+      parameter name: :page, in: :query, type: :integer, required: false,
+                description: 'Page number (default: 1, newest messages first)'
+      parameter name: :per_page, in: :query, type: :integer, required: false,
+                description: 'Messages per page (default: 50, max: 100)'
 
       let(:id) { chat.id }
 

@@ -4273,6 +4273,19 @@ paths:
       - Chats
       security:
       - apiKeyAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 20, max: 100)'
+        schema:
+          type: integer
       responses:
         '200':
           description: chats listed
@@ -4338,6 +4351,21 @@ paths:
       - Chats
       security:
       - apiKeyAuth: []
+      description: 'Messages paginate newest-first: page 1 holds the most recent messages,
+        ordered chronologically within the page.'
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1, newest messages first)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Messages per page (default: 50, max: 100)'
+        schema:
+          type: integer
       responses:
         '200':
           description: chat retrieved

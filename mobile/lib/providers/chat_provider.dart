@@ -417,6 +417,14 @@ class ChatProvider with ChangeNotifier {
         }
 
         bool shouldUpdate = false;
+        // The server returned fewer messages than we hold locally. Without
+        // handling this, neither branch below ever sets shouldUpdate and
+        // polling spins until the timeout — the failure mode that hid the AI
+        // reply once pagination truncated the history. On a successful response
+        // the server is authoritative, so adopt its view and let the next poll
+        // compare against matching counts. Error responses are handled below
+        // and deliberately keep the local messages.
+        bool serverDiverged = false;
 
         // New messages added
         if (newMessageCount > oldMessageCount) {
@@ -434,14 +442,19 @@ class ChatProvider with ChangeNotifier {
               }
             }
           }
+        } else {
+          serverDiverged = true;
         }
 
-        if (shouldUpdate) {
+        final hasError =
+            updatedChat.error != null && updatedChat.error!.isNotEmpty;
+
+        if (shouldUpdate || (serverDiverged && !hasError)) {
           _currentChat = updatedChat;
           notifyListeners();
         }
 
-        if (updatedChat.error != null && updatedChat.error!.isNotEmpty) {
+        if (hasError) {
           if (!shouldUpdate) {
             // Preserve existing messages if the error response has fewer — prevents
             // a backend error from wiping out messages the user can already see.

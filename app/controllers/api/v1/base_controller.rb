@@ -231,12 +231,12 @@ class Api::V1::BaseController < ApplicationController
       page > 0 ? page : 1
     end
 
-    def safe_per_page_param
+    def safe_per_page_param(default = 25)
       per_page = params[:per_page].to_i
       case per_page
       when 1..100   then per_page
       when (101..)  then 100
-      else               25
+      else               default
       end
     end
 

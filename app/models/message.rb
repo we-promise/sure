@@ -16,6 +16,7 @@ class Message < ApplicationRecord
   after_destroy_commit -> { broadcast_remove_to chat }, if: :broadcast?
 
   scope :ordered, -> { order(created_at: :asc) }
+  scope :reverse_ordered, -> { order(created_at: :desc) }
 
   private
     def broadcast?

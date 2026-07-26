@@ -1,6 +1,20 @@
 class Assistant::External < Assistant::Base
   Config = Struct.new(:url, :token, :agent_id, :session_key, keyword_init: true)
 
+  # Hard ceiling on rows pulled out of the DB before token trimming. The token
+  # budget below is the real constraint — this only keeps the query bounded on
+  # chats with thousands of messages.
+  MAX_HISTORY_ROWS = 500
+
+  # Token budget for the conversation history sent to the external agent.
+  # Deliberately decoupled from the LLM_CONTEXT_WINDOW knobs used by
+  # Provider::Openai: those describe the model behind Setting.llm_provider,
+  # while the external assistant is a separate gateway that is usually a
+  # large-context agent. Override with EXTERNAL_ASSISTANT_MAX_HISTORY_TOKENS
+  # when pointing at a small-context endpoint.
+  DEFAULT_MAX_HISTORY_TOKENS = 100_000
+  MIN_MAX_HISTORY_TOKENS = 256
+
   class << self
     def for_chat(chat)
       new(chat)
@@ -88,15 +102,24 @@ class Assistant::External < Assistant::Base
     end
 
     def build_conversation_messages
-      messages = chat.conversation_messages.where(status: "complete").ordered.map do |msg|
-        { role: msg.role, content: msg.content }
-      end
-      Assistant::HistoryTrimmer.new(messages, max_tokens: max_history_tokens).call
+      messages = chat.conversation_messages
+        .where(status: "complete")
+        .ordered
+        .last(MAX_HISTORY_ROWS)
+        .map { |msg| { role: msg.role, content: msg.content } }
+
+      trimmed = Assistant::HistoryTrimmer.new(messages, max_tokens: max_history_tokens).call
+
+      # A single message bigger than the whole budget trims away to nothing.
+      # Send the most recent one regardless so the agent still receives the
+      # question instead of an empty conversation.
+      trimmed.presence || messages.last(1)
     end
 
     def max_history_tokens
       explicit = ENV["EXTERNAL_ASSISTANT_MAX_HISTORY_TOKENS"].presence&.to_i
-      return explicit if explicit&.positive?
-      100_000
+      return [ explicit, MIN_MAX_HISTORY_TOKENS ].max if explicit&.positive?
+
+      DEFAULT_MAX_HISTORY_TOKENS
     end
 end

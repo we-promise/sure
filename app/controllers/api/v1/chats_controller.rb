@@ -8,12 +8,27 @@ class Api::V1::ChatsController < Api::V1::BaseController
   before_action :set_chat, only: [ :show, :update, :destroy ]
 
   def index
-    @pagy, @chats = pagy(current_resource_owner.chats.ordered, limit: 20)
+    @pagy, @chats = pagy(
+      current_resource_owner.chats.ordered,
+      page: safe_page_param,
+      limit: safe_per_page_param(20)
+    )
   end
 
   def show
     return unless @chat
-    @pagy, @messages = pagy(@chat.messages.ordered, limit: 50)
+
+    # Messages paginate newest-first so page 1 always holds the most recent
+    # exchange. Clients that only ever fetch page 1 (the mobile app) would
+    # otherwise be pinned to the oldest page and stop seeing new replies once a
+    # chat outgrows a single page. Each page is reversed for rendering so it
+    # still reads oldest-to-newest.
+    @pagy, messages = pagy(
+      @chat.messages.reverse_ordered,
+      page: safe_page_param,
+      limit: safe_per_page_param(50)
+    )
+    @messages = messages.to_a.reverse
   end
 
   def create

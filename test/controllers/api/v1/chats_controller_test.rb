@@ -61,6 +61,37 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert response_body["messages"].is_a?(Array)
   end
 
+  # Pagy v9 silently ignores the v6 `items:` key, which shipped a null `per_page`
+  # and a 20-message page to clients. Assert the reported page size so the
+  # regression cannot come back unnoticed.
+  test "should report the configured page size in pagination" do
+    get "/api/v1/chats", headers: bearer_auth_header(@read_token)
+    assert_response :success
+    assert_equal 20, JSON.parse(response.body).dig("pagination", "per_page")
+
+    get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
+    assert_response :success
+    assert_equal 50, JSON.parse(response.body).dig("pagination", "per_page")
+  end
+
+  test "should return the newest messages on the first page, ordered chronologically" do
+    5.times do |i|
+      UserMessage.create!(
+        chat: @chat,
+        content: "msg #{i}",
+        ai_model: "test",
+        created_at: Time.current + i.minutes
+      )
+    end
+
+    get "/api/v1/chats/#{@chat.id}?per_page=2", headers: bearer_auth_header(@read_token)
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert_equal [ "msg 3", "msg 4" ], response_body["messages"].map { |m| m["content"] }
+    assert_equal 2, response_body.dig("pagination", "per_page")
+  end
+
   test "should create chat with write scope" do
     assert_difference "Chat.count" do
       post "/api/v1/chats",

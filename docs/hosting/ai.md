@@ -368,9 +368,17 @@ EXTERNAL_ASSISTANT_TOKEN=your-api-token
 EXTERNAL_ASSISTANT_AGENT_ID=main                 # Optional, defaults to "main"
 EXTERNAL_ASSISTANT_SESSION_KEY=agent:main:main   # Optional, for session persistence
 EXTERNAL_ASSISTANT_ALLOWED_EMAILS=user@example.com  # Optional, comma-separated allowlist
+EXTERNAL_ASSISTANT_MAX_HISTORY_TOKENS=100000     # Optional, conversation history token budget
 ```
 
 When environment variables are set, the corresponding UI fields are disabled (env takes precedence).
+
+**Conversation history budget:** each request sends the chat's completed messages
+to the agent, oldest messages dropped first until the history fits
+`EXTERNAL_ASSISTANT_MAX_HISTORY_TOKENS` (default `100000`, minimum `256`). This is
+separate from the `LLM_CONTEXT_WINDOW` knobs, which describe the model behind
+`LLM_PROVIDER` rather than the external agent. Lower it if your agent fronts a
+small-context model and rejects long conversations.
 
 ### MCP Callback Endpoint
 
