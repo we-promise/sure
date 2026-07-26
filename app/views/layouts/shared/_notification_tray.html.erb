@@ -1,0 +1,10 @@
+<%# Rendered in-flow at the top of each layout's own scrollable content
+    region (not as a body-level fixed overlay) so it sizes to that layout's
+    actual content width — no sidebar-width math — and pushes the page's own
+    header down instead of ever floating on top of it. %>
+<div id="notification-tray" class="w-full md:max-w-80 space-y-1 pt-3 pb-1">
+  <%= render_flash_notifications %>
+
+  <div id="sync-toast"></div>
+  <div id="cta"></div>
+</div>
