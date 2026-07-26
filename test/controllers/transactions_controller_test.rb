@@ -757,7 +757,7 @@ end
                       "Expected transfer outflow entry to render on the index"
     end
 
-    # Transfer#categorizable? / #payment? walk
+    # Transfer#categorizable? / #payment? walk to_account via
     # transfer.inflow_transaction.entry.account. Without nested includes those
     # become one lookup triad per transfer row during list render.
     normalized_queries = queries.map { |sql| normalize_sql_query(sql) }
