@@ -66,7 +66,7 @@
           <div class="flex items-center gap-2">
             <button
               type="button"
-              class="text-secondary hover:text-primary transition-colors p-0.5"
+              class="flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors"
               data-action="click->dashboard-section#toggle keydown->dashboard-section#handleToggleKeydown"
               data-dashboard-section-target="button"
               aria-label="<%= t("pages.dashboard.toggle_section") %>"
@@ -81,7 +81,7 @@
             <% if section[:key] == "cashflow_sankey" && section[:locals][:sankey_data][:links].present? %>
               <button
                 type="button"
-                class="text-secondary hover:text-primary transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 flex items-center justify-center w-5 h-5 ml-auto lg:ml-0"
+                class="flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ml-auto lg:ml-0"
                 data-action="click->cashflow-expand#open"
                 aria-label="<%= t("global.expand") %>">
                 <%= icon("maximize-2", size: "sm", class: "!w-3.5 !h-3.5") %>
@@ -96,7 +96,7 @@
                 data-dashboard-widget-size-section-key-value="<%= section[:key] %>"
                 data-action="keydown->dashboard-widget-size#stopKeydown">
                 <summary
-                  class="focus-ring list-none cursor-pointer text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100 [&::-webkit-details-marker]:hidden"
+                  class="focus-ring list-none cursor-pointer flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors opacity-0 group-hover:opacity-100 [&::-webkit-details-marker]:hidden"
                   aria-label="<%= t("pages.dashboard.widget_size.label") %>">
                   <%= icon("sliders-horizontal", size: "sm", class: "!w-3.5 !h-3.5") %>
                 </summary>
@@ -138,9 +138,14 @@
                 </div>
               </details>
             <% end %>
+            <%# A grab surface, not a button — clicking it does nothing. It keeps
+                cursor-grab and the colour shift, and deliberately skips the hover
+                background the other header controls use: a filled hover state
+                reads as "clickable" and would promise a click that never lands.
+                Still sized to the same 24px box so the icons stay aligned. %>
             <button
               type="button"
-              class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100 hidden lg:block"
+              class="cursor-grab active:cursor-grabbing hidden lg:flex items-center justify-center w-6 h-6 text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
               aria-label="<%= t("pages.dashboard.drag_to_reorder") %>">
               <%= icon("grip-vertical", size: "sm") %>
             </button>
