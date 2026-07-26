@@ -39,7 +39,7 @@
         <div class="flex flex-col gap-2 items-center">
           <div class="flex items-center gap-3">
             <div class="w-1 h-3 rounded-xl" style="background-color: <%= bc.category.color %>"></div>
-            <p class="text-sm text-secondary"><%= bc.category.name %></p>
+            <p class="text-sm text-secondary"><%= bc.category.display_name %></p>
           </div>
 
           <p data-donut-chart-target="amount" class="text-3xl font-medium privacy-sensitive whitespace-nowrap <%= bc.available_to_spend.negative? ? "text-destructive" : "text-primary" %>">

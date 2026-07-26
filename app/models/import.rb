@@ -2,6 +2,35 @@ class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
 
+  # A hard-killed worker (OOM, SIGKILL during deploy) loses its in-flight job
+  # permanently, wedging the record in importing/reverting with no UI recourse.
+  # After this idle window the job is presumed lost and the user may force the
+  # record into a retryable terminal status. Imports finish in minutes, so an
+  # hour of silence dwarfs any legitimate run.
+  PRESUMED_LOST_AFTER = 1.hour
+
+  # The automated counterpart to the manual escape hatch above: SyncCleanerJob
+  # reaps records stuck past this longer window (see Import.clean).
+  STUCK_AFTER = 6.hours
+
+  # User-facing (shown as the import's error in the UI), so resolved through
+  # i18n at call time rather than frozen at boot.
+  def self.lost_error_message
+    I18n.t(
+      "imports.errors.presumed_lost",
+      default: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
+    )
+  end
+
+  # User-facing (shown as the import's error in the UI). Resolved at reap
+  # time; the sweep runs from cron so this snapshots the default locale.
+  def self.interrupted_error_message
+    I18n.t(
+      "imports.errors.interrupted",
+      default: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."
+    )
+  end
+
   # Shared CSV upload/content limit for web and API imports, including preflight.
   MAX_CSV_SIZE = 10.megabytes
   MAX_PDF_SIZE = 25.megabytes
@@ -82,6 +111,71 @@ class Import < ApplicationRecord
   has_many :entries, dependent: :destroy
 
   class << self
+    # Reaps imports whose job died mid-flight. import! runs in a single DB
+    # transaction, so which side of its commit the worker died on is
+    # observable: no rows attached → the data rolled back, failing the record
+    # re-enables the "Try again" path; rows attached → the job died between
+    # the commit and the status write, so the truthful terminal state is
+    # complete (re-enabling retry there would double-import types without row
+    # dedup, e.g. TradeImport). Reverts that died the same way go to
+    # revert_failed so the revert can be retried. PdfImports are excluded
+    # (their statuses double as processing claims, see PdfImport.clean), and
+    # so are session-owned chunks — ImportSession.clean reconciles those
+    # within the session flow.
+    def clean
+      where(status: [ :importing, :reverting ])
+        .where.not(type: "PdfImport")
+        .where(import_session_id: nil)
+        .where("updated_at < ?", STUCK_AFTER.ago)
+        .includes(:family)
+        .find_each do |import|
+          reap_stuck!(import)
+        rescue => e
+          # One bad record must not abort the sweep for every other stuck
+          # import this hour.
+          Rails.logger.error("Import.clean failed for #{import.type} #{import.id}: #{e.class}: #{e.message}")
+          Sentry.capture_exception(e) { |scope| scope.set_tags(record_type: import.type, record_id: import.id) } if defined?(Sentry)
+        end
+    end
+
+    def reap_stuck!(import)
+      needs_sync = false
+      # Read before the lock: with_lock reloads the row and drops the
+      # association cache, which would turn the sweep's preload into an N+1.
+      family = import.family
+
+      # Same guard Sync#perform gained in #2680: between the sweep query
+      # and this row the owning job may have finished (or another sweep
+      # won), so re-check staleness under a row lock before mutating.
+      import.with_lock do
+        next unless import.reapable_since?(STUCK_AFTER.ago)
+
+        previous_status = import.status
+        if previous_status == "reverting"
+          import.update!(status: :revert_failed, error: interrupted_error_message)
+        elsif import.data_committed?
+          import.update!(status: :complete, error: nil)
+          needs_sync = true
+        else
+          import.update!(status: :failed, error: interrupted_error_message)
+        end
+
+        DebugLogEntry.capture(
+          category: "background_jobs",
+          level: "warn",
+          message: "Reaped #{import.type} stuck in #{previous_status} for over #{STUCK_AFTER.inspect} (→ #{import.status})",
+          source: name,
+          family: family,
+          metadata: { record_type: import.type, record_id: import.id, previous_status: previous_status, new_status: import.status }
+        )
+      end
+
+      # Outside the row-lock transaction: Rails doesn't defer enqueues to
+      # after-commit by default, so enqueuing inside the lock could hand
+      # Sidekiq a job before the status write is visible.
+      family.sync_later if needs_sync
+    end
+
     def parse_csv_str(csv_str, col_sep: ",")
       CSV.parse(
         (csv_str || "").strip,
@@ -147,7 +241,38 @@ class Import < ApplicationRecord
     ImportJob.perform_later(self)
   end
 
+  # Whether import! already committed rows for this import. Distinguishes a
+  # job that died mid-import (single transaction → rolled back, nothing
+  # attached) from one that died after the data landed but before the status
+  # write. Covers entry-producing imports and account-producing ones
+  # (AccountImport creates accounts, not entries).
+  def data_committed?
+    entries.exists? || accounts.exists?
+  end
+
+  # Reaper guard: still wedged in a job-owned status and untouched since the
+  # sweep's cutoff. Called under the record's row lock (fresh read).
+  def reapable_since?(cutoff)
+    %w[importing reverting].include?(status) && updated_at < cutoff
+  end
+
   def publish
+    # A redelivered or stray ImportJob must not re-import data that already
+    # committed (types without row dedup would double-apply), and must not
+    # race a revert that owns the record. A failed import is deliberately NOT
+    # blocked: its transaction rolled back, so a re-run is a safe retry.
+    if complete? || reverting? || revert_failed?
+      DebugLogEntry.capture(
+        category: "background_jobs",
+        level: "warn",
+        message: "Import publish skipped: job redelivered while record was #{status}",
+        source: self.class.name,
+        family: family,
+        metadata: { record_type: type, record_id: id, status: status }
+      )
+      return
+    end
+
     raise MaxRowCountExceededError if row_count_exceeded?
 
     import!
@@ -165,6 +290,29 @@ class Import < ApplicationRecord
     update! status: :reverting
 
     RevertImportJob.perform_later(self)
+  end
+
+  def presumed_lost?
+    (importing? || reverting?) && updated_at < PRESUMED_LOST_AFTER.ago
+  end
+
+  # Escape hatch for imports whose background job died mid-flight. Only
+  # allowed once the record has been idle past PRESUMED_LOST_AFTER, and the
+  # with_lock re-check means a job finishing between page render and button
+  # click wins. Every import! runs in a single DB transaction, so a lost job
+  # rolled its data back — failing the record is safe and re-enables the
+  # existing "Try again" (failed) / revert-retry (revert_failed) paths.
+  def force_fail!(error_message = self.class.lost_error_message)
+    with_lock do
+      return false unless presumed_lost?
+
+      update!(
+        status: reverting? ? :revert_failed : :failed,
+        error: error_message
+      )
+    end
+
+    true
   end
 
   def revert
@@ -383,6 +531,20 @@ class Import < ApplicationRecord
   end
 
   private
+    # Commit signal for import types whose records hang off the family rather
+    # than the import itself (Category/Merchant/Rule imports create no entries
+    # or accounts, so the base data_committed? can't see them). import! runs as
+    # a single find-or-create-by-name transaction, so once every named row has
+    # a matching family record the data committed — or every name already
+    # existed, leaving the family in the same end state. Either way the
+    # truthful terminal status is complete, not a retryable failed. Rows with
+    # blank names carry no stable key, so a file with only blank names yields
+    # no signal and stays retryable (the conservative side of the reaper).
+    def committed_by_named_records?(scope)
+      names = rows.pluck(:name).filter_map { |value| value.to_s.strip.presence }.uniq
+      names.any? && (names - scope.where(name: names).pluck(:name)).empty?
+    end
+
     def row_count_exceeded?
       rows_count > max_row_count
     end
@@ -459,6 +621,13 @@ class Import < ApplicationRecord
       @parsed_csv = self.class.parse_csv_str(csv_content, col_sep: col_sep)
     end
 
+    # Normalizes a raw CSV numeric string into a plain, parseable decimal string
+    # based on the import's configured +number_format+ (thousands delimiter and
+    # decimal separator). Returns "" when the value is blank, the format is
+    # unknown, or the result is not a valid number.
+    #
+    # @param value [String, nil] the raw cell value from the CSV
+    # @return [String] a normalized number like "1234.56", or "" if invalid
     def sanitize_number(value)
       return "" if value.nil?
 
@@ -470,7 +639,20 @@ class Import < ApplicationRecord
 
       # Handle French/Scandinavian format specially
       if format[:delimiter] == " "
-        sanitized = sanitized.gsub(/\s+/, "") # Remove all spaces first
+        # The thousands "space" can be an ASCII space, a non-breaking space
+        # (U+00A0) or a narrow no-break space (U+202F) depending on the locale
+        # or exporter. Ruby's \s does not match those Unicode spaces, so strip
+        # every kind of whitespace via the Unicode property.
+        sanitized = sanitized.gsub(/\p{Space}/, "")
+
+        # Strip currency symbols/codes only at the leading/trailing edges (e.g.
+        # "€1 234,56" or "1 234,56 kr"). Interior characters are deliberately
+        # left in place so a misconfigured US-style value like "1,234.56" keeps
+        # its period and is rejected by the numeric guard below, rather than
+        # being silently reinterpreted as 1.23456. Digits, the separator, and a
+        # minus sign are preserved so signed values and the guard still work.
+        edge_junk = /\A[^\d#{Regexp.escape(format[:separator])}\-]+|[^\d#{Regexp.escape(format[:separator])}\-]+\z/
+        sanitized = sanitized.gsub(edge_junk, "")
       else
         sanitized = sanitized.gsub(/[^\d#{Regexp.escape(format[:delimiter])}#{Regexp.escape(format[:separator])}\-]/, "")
 

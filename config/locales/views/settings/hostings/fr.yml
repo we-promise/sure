@@ -143,6 +143,7 @@ fr:
           alpha_vantage: Alpha Vantage
           binance_public: Binance
           eodhd: EODHD
+          frankfurter: Frankfurter
           mfapi: MFAPI.in
           moex_public: MOEX
           tiingo: Tiingo

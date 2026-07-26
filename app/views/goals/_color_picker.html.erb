@@ -14,18 +14,15 @@
       <% end %>
     </span>
 
-    <%# `body_class: nil` drops DS::Disclosure's default `mt-2` body wrapper:
-        the body here is an absolutely-positioned popover, so that wrapper's
-        normal-flow margin would otherwise push the form down ~8px on open. %>
     <%= render DS::Disclosure.new(
-          body_class: nil,
-          summary_class: "list-none cursor-pointer absolute -bottom-1 -right-1 flex justify-center items-center bg-surface-inset hover:bg-surface-inset-hover border-2 w-6 h-6 border-subdued rounded-full text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300",
+          variant: :bare,
+          summary_aria_label: t("goals.color_picker.trigger_label"),
+          summary_class: "list-none cursor-pointer absolute -bottom-1 -right-1 flex justify-center items-center bg-surface-inset hover:bg-surface-inset-hover border-2 w-6 h-6 border-subdued rounded-full text-secondary",
           data: {
             color_icon_picker_target: "details",
             action: "mousedown->color-icon-picker#handleOutsideClick"
-          }) do |disclosure| %>
-      <% disclosure.with_summary_content do %>
-        <span class="sr-only"><%= t("goals.color_picker.trigger_label") %></span>
+          }) do |d| %>
+      <% d.with_summary_content do %>
         <%= icon("pen", size: "xs") %>
       <% end %>
 
@@ -46,13 +43,13 @@
               <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-alpha-black-500" data-color-icon-picker-target="pickerBtn" style="background: conic-gradient(red,orange,yellow,lime,green,teal,cyan,blue,indigo,purple,magenta,pink,red)"></div>
             </label>
           </div>
-          <div class="flex gap-2 items-center hidden flex-col" data-color-icon-picker-target="paletteSection">
+          <div class="hidden flex-col gap-2" data-color-icon-picker-target="paletteSection">
             <div class="flex gap-2 items-center w-full">
               <div class="w-6 h-6 p-4 rounded-full cursor-pointer" style="background-color: <%= form.object.color %>" data-color-icon-picker-target="colorPreview"></div>
               <%= form.text_field :color, data: { color_icon_picker_target: "colorInput" }, inline: true, pattern: "^#[0-9A-Fa-f]{6}$" %>
               <%= icon "palette", size: "2xl", data: { action: "click->color-icon-picker#toggleSections" } %>
             </div>
-            <div data-color-icon-picker-target="validationMessage" class="hidden self-start flex gap-1 items-center text-xs text-destructive">
+            <div data-color-icon-picker-target="validationMessage" class="hidden self-start gap-1 items-center text-xs text-destructive">
               <span><%= t("goals.color_picker.poor_contrast") %></span>
               <button type="button" class="underline cursor-pointer" data-action="color-icon-picker#autoAdjust"><%= t("goals.color_picker.auto_adjust") %></button>
             </div>

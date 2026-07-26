@@ -38,64 +38,17 @@ Rails.application.config.middleware.use OmniAuth::Builder do
 
     case strategy
     when "openid_connect"
-      # Support per-provider credentials from config or fall back to global ENV vars
-      issuer = cfg[:issuer].presence || ENV["OIDC_ISSUER"].presence
-      client_id = cfg[:client_id].presence || ENV["OIDC_CLIENT_ID"].presence
-      client_secret = cfg[:client_secret].presence || ENV["OIDC_CLIENT_SECRET"].presence
-      redirect_uri = cfg[:redirect_uri].presence || ENV["OIDC_REDIRECT_URI"].presence
+      oidc_options = Oidc::ProviderOptionsBuilder.call(cfg)
 
-      # In test environment, use test values if nothing is configured
-      if Rails.env.test?
-        issuer ||= "https://test.example.com"
-        client_id ||= "test_client_id"
-        client_secret ||= "test_client_secret"
-        redirect_uri ||= "http://test.example.com/callback"
-      end
-
-      # Skip if required fields are missing (except in test)
-      unless issuer.present? && client_id.present? && client_secret.present? && redirect_uri.present?
+      unless oidc_options.present?
         Rails.logger.warn("[OmniAuth] Skipping OIDC provider '#{name}' - missing required configuration")
         next
       end
 
-      # Custom scopes: parse from settings if provided, otherwise use defaults
-      custom_scopes = cfg.dig(:settings, :scopes).presence
-      scopes = if custom_scopes.present?
-        custom_scopes.to_s.split(/\s+/).map(&:to_sym)
-      else
-        %i[openid email profile]
-      end
-
-      # Build provider options
-      oidc_options = {
-        name: name.to_sym,
-        scope: scopes,
-        response_type: :code,
-        issuer: issuer.to_s.strip,
-        discovery: true,
-        pkce: true,
-        client_options: {
-          identifier: client_id,
-          secret: client_secret,
-          redirect_uri: redirect_uri,
-          ssl: begin
-                 ssl_config = Rails.configuration.x.ssl
-                 ssl_opts = {}
-                 ssl_opts[:ca_file] = ssl_config.ca_file if ssl_config&.ca_file.present?
-                 ssl_opts[:verify] = false if ssl_config&.verify == false
-                 ssl_opts
-               end
-        }
-      }
-
-      # Add prompt parameter if configured
-      prompt = cfg.dig(:settings, :prompt).presence
-      oidc_options[:prompt] = prompt if prompt.present?
-
       provider :openid_connect, oidc_options
 
       Rails.configuration.x.auth.oidc_enabled = true
-      Rails.configuration.x.auth.sso_providers << cfg.merge(name: name, issuer: issuer)
+      Rails.configuration.x.auth.sso_providers << cfg.merge(name: name, issuer: oidc_options[:issuer])
 
     when "google_oauth2"
       client_id = cfg[:client_id].presence || ENV["GOOGLE_OAUTH_CLIENT_ID"].presence

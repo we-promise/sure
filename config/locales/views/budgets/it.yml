@@ -1,0 +1,98 @@
+---
+it:
+  budgets:
+    budget_donut:
+      spent: "Speso"
+      new_budget: "Nuovo budget"
+      of_budget: "di %{amount}"
+      unused: "Non utilizzato"
+    budget_header:
+      today: "Oggi"
+    budget_nav:
+      categories: Categorie
+      setup: Configurazione
+    over_allocation_warning:
+      over_allocated_message: "Hai superato l'allocazione del budget. Correggi le allocazioni."
+      fix_allocations: "Correggi allocazioni"
+    actuals_summary:
+      income: "Entrate"
+      expenses: "Spese"
+    budgeted_summary:
+      expected_income: "Entrate previste"
+      budgeted: "Pianificato"
+      earned: "%{amount} guadagnato"
+      over: "%{amount} in eccesso"
+      left: "%{amount} rimasto"
+      spent: "%{amount} speso"
+    edit:
+      setup_title: "Configura il tuo budget"
+      setup_description: "Inserisci le tue entrate mensili e le spese pianificate per configurare il budget."
+      budgeted_spending: "Spese pianificate"
+      expected_income: "Entrate previste"
+      autosuggest_title: "Suggerisci automaticamente entrate e spese"
+      autosuggest_description: "Si baserà sulla cronologia delle transazioni. L'AI può commettere errori, verifica prima di continuare."
+      continue: "Continua"
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories:
+        amount: Importo
+        edit: Modifica
+        title: Categorie
+      on_track_categories:
+        short_title: In regola
+        title: In regola
+      over_budget_categories:
+        short_title: Oltre il budget
+        title: Oltre il budget
+      filter:
+        all: Tutti
+        aria_label: Filtra categorie budget
+        on_track: In regola
+        over_budget: Oltre il budget
+      tabs:
+        actual: Effettivo
+        budgeted: Pianificato
+    copy_previous_prompt:
+      title: "Configura il tuo budget"
+      description: "Puoi copiare il budget da %{source_name} o ricominciare da zero."
+      copy_button: "Copia da %{source_name}"
+      fresh_button: "Ricomincia da zero"
+    copy_previous:
+      success: "Budget copiato da %{source_name}"
+      no_source: "Nessun budget precedente trovato da copiare"
+      already_initialized: "Questo budget è già stato configurato"
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: 'Budget superato di <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: da allocare
+      over_set: "> 100% impostato"
+      percent_set: "%{percent} impostato"
+    budget_category_form:
+      monthly_average: "%{amount}/mese medio"
+      shared_placeholder: Condiviso
+      shared_title: Lascia vuoto per condividere il budget del genitore
+    confirm_button:
+      confirm: "Conferma"
+    no_categories:
+      oops: "Ops!"
+      no_categories_message: "Non hai ancora creato o assegnato categorie di spesa alle tue transazioni."
+      use_defaults: "Usa predefiniti (consigliato)"
+      new_category: "Nuova categoria"
+    index:
+      title: "Modifica i tuoi budget per categoria"
+      description: "Regola i budget per categoria per impostare limiti di spesa. I fondi non allocati verranno automaticamente assegnati come non categorizzati."
+    show:
+      category: "Categoria"
+      overview: "Panoramica"
+      spending: "Spese %{date}"
+      status: "Stato"
+      overspent: "speso in eccesso"
+      left: "rimasto"
+      budgeted: "Pianificato"
+      monthly_average_spending: "Spesa media mensile"
+      monthly_median_spending: "Spesa mediana mensile"
+      recent_transactions: "Transazioni recenti"
+      view_all_transactions: "Vedi tutte le transazioni della categoria"
+      no_transactions: "Nessuna transazione trovata per questo periodo di budget."

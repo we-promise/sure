@@ -1,0 +1,150 @@
+---
+en:
+  wise_items:
+    profile_types:
+      personal: Personal
+      business: Business
+    entries:
+      default_name: Wise transaction
+      fee_name: Wise fee
+    activities:
+      jar_deposit: Transfer to Jar
+      jar_withdrawal: Transfer from Jar
+      transfer_to_jar: "Transfer to %{jar}"
+      transfer_from_jar: "Transfer from %{jar}"
+      interest: Wise interest
+      asset_fee: Wise Assets fee
+      default_name: Wise activity
+    sync_status:
+      no_accounts: No accounts found
+      all_synced:
+        one: "%{count} account synced"
+        other: "%{count} accounts synced"
+      partial_setup: "%{synced} synced, %{pending} need setup"
+    create:
+      no_profiles_found: No Wise profiles found. Please check your API token.
+      invalid_token: Invalid API token. Please check and try again.
+      connection_failed: Could not connect to Wise. Please try again later.
+    destroy:
+      success: Wise connection removed
+    update:
+      success: Wise connection updated
+    sync:
+      success: Sync started
+    syncer:
+      importing_accounts: Importing accounts from Wise...
+      checking_account_configuration: Checking account configuration...
+      accounts_need_setup:
+        one: "%{count} account needs setup..."
+        other: "%{count} accounts need setup..."
+      processing_transactions: Processing transactions...
+      calculating_balances: Calculating balances...
+      credentials_invalid: Invalid Wise API token or insufficient permissions
+      failed: Sync failed. Please try again or contact support.
+      import_failed: Wise import failed.
+      accounts_failed:
+        one: "%{count} balance failed to import."
+        other: "%{count} balances failed to import."
+      transactions_failed:
+        one: "%{count} balance had transaction import failures."
+        other: "%{count} balances had transaction import failures."
+      account_processing_failed:
+        one: "%{count} Wise account failed while processing."
+        other: "%{count} Wise accounts failed while processing."
+      account_sync_failed:
+        one: "%{count} Wise account sync could not be scheduled."
+        other: "%{count} Wise account syncs could not be scheduled."
+    provider_panel:
+      setup_title: "Setup instructions:"
+      add_connection: Add Wise connection
+      token_label: API token
+      token_placeholder: Paste your Wise personal API token
+      keep_token_placeholder: Leave blank to keep the current token
+      connection_name_label: Connection name
+      connection_name_placeholder: Wise Personal
+      connect: Connect Wise
+      update_connection: Update connection
+      setup_accounts: Set up accounts
+      sync: Sync
+      disconnect: Disconnect
+      disconnect_label: "Disconnect %{name}"
+      disconnect_confirm: "Are you sure you want to disconnect %{name}? This will remove all synced account data."
+      accounts_link: Accounts
+      configured_html: "Connected and syncing. Visit the %{accounts_link} tab to manage your accounts."
+      not_configured: Not configured
+      sandbox_note_html: "Use the <strong>sandbox</strong> base URL (<code>https://api.sandbox.transferwise.tech</code>) for testing. Set <code>WISE_BASE_URL</code> in your environment."
+      encryption_warning:
+        title: Database encryption is not configured
+        message: Configure Active Record encryption keys before adding Wise tokens in production. Without encryption, tokens are stored in plaintext.
+      instructions:
+        sign_in_html: "Visit %{link} and log in to your account"
+        open_tokens: "Go to Settings → API tokens"
+        create_token: "Create a new personal API token with read-only access"
+        copy_token_html: "Copy the token and paste it below. Sure uses it only to sync your balances and transactions."
+    provider_connection:
+      default_name: Wise
+      default_description: Connect your Wise multi-currency account
+      name: "Wise — %{name}"
+      description: "Connect using %{name}"
+    link_profiles:
+      session_expired: Session expired. Please try connecting again.
+      no_profiles_selected: Please select at least one profile.
+      already_connected: All selected profiles are already connected.
+      success:
+        one: "Successfully connected %{count} Wise profile"
+        other: "Successfully connected %{count} Wise profiles"
+    select_profiles:
+      session_expired: Session expired. Please try connecting again.
+      title: Select Wise Profiles
+      subtitle: Choose which profiles to connect
+      description: Your Wise account has multiple profiles. Select the ones you want to sync with Sure.
+      unnamed_profile: "(Unnamed profile)"
+      already_connected_label: Already connected
+      connect: Connect selected profiles
+      cancel: Cancel
+    wise_item:
+      deletion_in_progress: deletion in progress...
+      syncing: Syncing...
+      error: Sync error
+      status: "Synced %{timestamp} ago"
+      status_never: Never synced
+      status_with_summary: "Last synced %{timestamp} ago — %{summary}"
+      delete: Disconnect
+      setup_needed: New accounts ready to set up
+      setup_description: "%{linked} of %{total} accounts linked. Create Sure accounts for your Wise currency balances."
+      setup_action: Set Up Accounts
+      no_accounts_title: No accounts linked yet
+      no_accounts_description: Run a sync to discover your Wise balances, then link them to Sure accounts.
+    setup_accounts:
+      title: Set Up Wise Accounts
+      subtitle: Link your Wise currency balances
+      description: Create a Sure account for each Wise currency balance you want to track. Each currency becomes its own account.
+      no_accounts_to_setup: All accounts are set up
+      all_accounts_linked: All your Wise currency balances have been linked to Sure accounts.
+      create_account: Create Account
+      done: Done
+    select_accounts:
+      title: Select Wise Balance
+      description: Select the Wise currency balance you want to link to your %{product_name} account.
+      no_accounts_found: All Wise balances are already linked to Sure accounts.
+      no_connection: No Wise connection found. Please connect Wise in Provider Settings first.
+      link_account: Link balance
+      cancel: Cancel
+    select_existing_account:
+      title: "Link %{account_name} with Wise"
+      description: Select the Wise currency balance to link with this account. Transactions will be synced automatically.
+      no_accounts_found: No unlinked Wise balances found.
+      link_account: Link balance
+      cancel: Cancel
+    link_accounts:
+      not_found: Wise balance not found.
+      success: Successfully linked Wise balance to account.
+      failed: Failed to link Wise balance. Please try again.
+    link_existing_account:
+      not_found: Account or Wise balance not found.
+      success: "Successfully linked %{account_name} with Wise"
+      failed: Failed to link account. Please try again.
+    complete_account_setup:
+      not_found: Wise balance not found.
+      success: Account created and linked successfully.
+      failed: Failed to create account. Please try again.

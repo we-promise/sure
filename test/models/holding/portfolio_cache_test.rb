@@ -57,6 +57,33 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     assert_equal holding.price, cache.get_price(@security.id, holding.date).price
   end
 
+  test "excludes income trades with zero price from trade price sources" do
+    Security::Price.destroy_all
+
+    @account.entries.create!(
+      name: "Interest: TEST",
+      date: Date.current,
+      amount: -50,
+      currency: "USD",
+      entryable: Trade.new(
+        qty: 0,
+        security: @security,
+        price: 0,
+        currency: "USD",
+        investment_activity_label: "Interest"
+      )
+    )
+
+    cache = Holding::PortfolioCache.new(@account)
+
+    # Income trade price=0 should be excluded; with no DB price for today,
+    # get_price returns nil instead of 0.
+    assert_nil cache.get_price(@security.id, Date.current)
+
+    # The buy trade's price is still available on its own date.
+    assert_equal @trade.price, cache.get_price(@security.id, @trade.entry.date).price
+  end
+
   test "converts historical prices using the requested date exchange rate" do
     account = families(:empty).accounts.create!(
       name: "CHF Brokerage",

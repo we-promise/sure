@@ -1,0 +1,19 @@
+<%# locals: (insight:) %>
+
+<div id="<%= dom_id(insight, :undo) %>"
+     class="relative flex items-center gap-3 rounded-lg bg-container p-4 group w-full md:max-w-80 shadow-border-xs"
+     data-controller="element-removal">
+  <p class="text-primary text-sm font-medium grow"><%= t("insights.card.dismissed") %></p>
+
+  <%= render DS::Button.new(
+    text: t("insights.card.undo"),
+    variant: "ghost",
+    size: "sm",
+    href: undismiss_insight_path(insight),
+    method: :patch
+  ) %>
+
+  <%= icon "x",
+        class: "p-0.5 rounded-lg text-subdued hover:text-primary cursor-pointer shrink-0",
+        data: { action: "click->element-removal#remove" } %>
+</div>
