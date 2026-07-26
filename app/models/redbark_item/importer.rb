@@ -182,7 +182,7 @@ class RedbarkItem::Importer
 
           redbark_account.update!(
             current_balance: amount,
-            currency: parse_currency(balance_data[:currency]) || redbark_account.currency
+            currency: extract_currency(balance_data, fallback: redbark_account.currency)
           )
           stats["balances_updated"] = stats.fetch("balances_updated", 0) + 1
         end

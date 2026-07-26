@@ -111,7 +111,9 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
 
     result = RedbarkAccount::Transactions::Processor.new(@redbark_account).process
 
-    assert_equal 1, result[:failed]
+    assert result[:success]
+    assert_equal 1, result[:skipped]
+    assert_equal 0, result[:failed]
   end
 
   test "transactions processor returns empty result when no transactions" do

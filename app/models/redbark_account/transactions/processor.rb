@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "digest/md5"
+require "digest"
 
 class RedbarkAccount::Transactions::Processor
   include RedbarkAccount::DataHelpers
@@ -14,13 +14,14 @@ class RedbarkAccount::Transactions::Processor
   def process
     unless redbark_account.raw_transactions_payload.present?
       Rails.logger.info "RedbarkAccount::Transactions::Processor - No transactions in raw_transactions_payload for redbark_account #{redbark_account.id}"
-      return { success: true, total: 0, imported: 0, failed: 0, errors: [] }
+      return { success: true, total: 0, imported: 0, skipped: 0, failed: 0, errors: [] }
     end
 
     total_count = redbark_account.raw_transactions_payload.count
     Rails.logger.info "RedbarkAccount::Transactions::Processor - Processing #{total_count} transactions for redbark_account #{redbark_account.id}"
 
     imported_count = 0
+    skipped_count = 0
     failed_count = 0
     errors = []
 
@@ -31,10 +32,8 @@ class RedbarkAccount::Transactions::Processor
         result = process_transaction(transaction_data)
 
         if result.nil?
-          # Transaction was skipped (e.g., no linked account or blank external_id)
-          failed_count += 1
-          transaction_id = transaction_data.try(:[], :id) || transaction_data.try(:[], "id") || "unknown"
-          errors << { index: index, transaction_id: transaction_id, error: "Skipped" }
+          # Benign skip (no linked account, blank id, unparseable amount/date)
+          skipped_count += 1
         else
           imported_count += 1
         end
@@ -60,6 +59,7 @@ class RedbarkAccount::Transactions::Processor
       success: failed_count == 0,
       total: total_count,
       imported: imported_count,
+      skipped: skipped_count,
       failed: failed_count,
       errors: errors
     }
@@ -147,7 +147,7 @@ class RedbarkAccount::Transactions::Processor
       merchant_name = data[:merchantName].to_s.strip
       return nil if merchant_name.blank?
 
-      merchant_id = Digest::MD5.hexdigest(merchant_name.downcase)
+      merchant_id = Digest::SHA256.hexdigest(merchant_name.downcase)[0, 32]
 
       import_adapter.find_or_create_merchant(
         provider_merchant_id: "redbark_merchant_#{merchant_id}",

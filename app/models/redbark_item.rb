@@ -48,6 +48,15 @@ class RedbarkItem < ApplicationRecord
 
     RedbarkItem::Importer.new(self, redbark_provider: provider, sync: sync).import
   rescue => e
+    DebugLogEntry.capture(
+      category: "provider_sync",
+      level: "error",
+      message: "Redbark import failed",
+      source: self.class.name,
+      provider_key: "redbark",
+      family: family,
+      metadata: { redbark_item_id: id, error_class: e.class.name, error: e.message }
+    )
     Rails.logger.error "RedbarkItem #{id} - Failed to import data: #{e.message}"
     raise
   end
@@ -92,6 +101,15 @@ class RedbarkItem < ApplicationRecord
         )
         results << { account_id: account.id, success: true }
       rescue => e
+        DebugLogEntry.capture(
+          category: "provider_sync",
+          level: "error",
+          message: "Redbark account sync scheduling failed",
+          source: self.class.name,
+          provider_key: "redbark",
+          family: family,
+          metadata: { redbark_item_id: id, account_id: account.id, error_class: e.class.name, error: e.message }
+        )
         Rails.logger.error "RedbarkItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
         results << { account_id: account.id, success: false, error: e.message }
       end

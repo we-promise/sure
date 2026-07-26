@@ -67,7 +67,7 @@ class RedbarkAccount < ApplicationRecord
       connection_id: data[:connectionId]&.to_s,
       name: display_name,
       account_number: data[:accountNumber],
-      currency: parse_currency(data[:currency]) || parse_currency(currency) || "AUD",
+      currency: extract_currency(data, fallback: parse_currency(currency) || "AUD"),
       account_status: connection[:status],
       account_type: data[:type],
       provider: data[:provider],
