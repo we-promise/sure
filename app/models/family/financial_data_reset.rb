@@ -50,6 +50,7 @@ class Family::FinancialDataReset
     kraken_items
     questrade_items
     lunchflow_items
+    redbark_items
     mercury_items
     plaid_items
     simplefin_items
