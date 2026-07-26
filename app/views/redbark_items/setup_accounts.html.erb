@@ -1,0 +1,75 @@
+<% content_for :title, t(".title") %>
+
+<%= render DS::Dialog.new(disable_click_outside: true) do |dialog| %>
+  <% dialog.with_header(title: t(".title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "landmark", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-6">
+      <% if @api_error.present? %>
+        <%= render DS::Alert.new(
+              title: t(".fetch_failed"),
+              message: @api_error,
+              variant: :error
+            ) %>
+      <% end %>
+
+      <% if @unlinked_accounts.blank? %>
+        <div class="flex flex-col items-center justify-center py-6 space-y-3">
+          <% if @api_error.blank? %>
+            <%= icon "check-circle", size: "lg", class: "text-success" %>
+            <p class="text-primary text-center font-medium"><%= t(".all_accounts_linked") %></p>
+          <% end %>
+          <%= render DS::Link.new(text: t(".done"), variant: "primary", href: accounts_path, frame: "_top") %>
+        </div>
+      <% else %>
+        <%= form_with url: complete_account_setup_redbark_item_path(@redbark_item), method: :post, data: { turbo_frame: "_top" }, class: "space-y-6" do %>
+          <div class="bg-surface border border-primary p-4 rounded-lg">
+            <div class="flex items-start gap-3">
+              <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+              <p class="text-sm text-primary"><%= t(".choose_account_type") %></p>
+            </div>
+          </div>
+
+          <div class="space-y-4 max-h-96 overflow-y-auto">
+            <% @unlinked_accounts.each do |redbark_account| %>
+              <div class="border border-primary rounded-lg p-4">
+                <h4 class="font-medium text-primary"><%= redbark_account.name %></h4>
+                <p class="text-xs text-secondary mb-3">
+                  <%= [ redbark_account.account_type&.titleize, redbark_account.currency ].compact.join(" · ") %>
+                </p>
+
+                <label class="block text-sm text-secondary mb-1" for="account_type_<%= redbark_account.id %>">
+                  <%= t(".account_type_label") %>
+                </label>
+                <select id="account_type_<%= redbark_account.id %>"
+                        name="accounts[<%= redbark_account.id %>][account_type]"
+                        class="bg-container border border-primary rounded px-2 py-1 text-sm text-primary w-full">
+                  <option value="depository" selected><%= t(".account_types.depository") %></option>
+                  <option value="credit_card"><%= t(".account_types.credit_card") %></option>
+                  <option value="loan"><%= t(".account_types.loan") %></option>
+                  <option value="skip"><%= t(".account_types.skip") %></option>
+                </select>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="flex gap-3">
+            <%= render DS::Button.new(
+              text: t(".create_accounts"),
+              variant: "primary",
+              icon: "plus",
+              type: "submit",
+              class: "flex-1"
+            ) %>
+            <%= render DS::Link.new(text: t(".cancel"), variant: "secondary", href: accounts_path, frame: "_top") %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

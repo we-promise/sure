@@ -1,4 +1,5 @@
 class InsightsController < ApplicationController
+  before_action :require_preview_features!
   before_action :set_insight, only: %i[dismiss undismiss]
 
   def index

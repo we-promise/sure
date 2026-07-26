@@ -59,7 +59,7 @@ generate_insights:
   cron: "0 6 * * *" # daily at 6:00 AM UTC, after the nightly cleanup jobs
   class: "GenerateInsightsJob"
   queue: "scheduled"
-  description: "Generates proactive financial insights for all families"
+  description: "Generates proactive financial insights for families with preview features enabled"
 
 sweep_expired_goal_pledges:
   cron: "*/15 * * * *" # every 15 minutes
