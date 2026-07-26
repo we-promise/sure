@@ -10,6 +10,13 @@
 
     <% if budget.initialized? %>
       <div class="ml-auto shrink-0 flex items-center gap-2">
+        <% if budget.available_to_spend.negative? %>
+          <%= render DS::Pill.new(label: t("reports.budget_performance.status.over"), tone: :error, marker: false, icon: "alert-circle") %>
+        <% elsif budget.percent_of_budget_spent >= 90 %>
+          <%= render DS::Pill.new(label: t("reports.budget_performance.status.warning"), tone: :warning, marker: false, icon: "alert-triangle") %>
+        <% else %>
+          <%= render DS::Pill.new(label: t("reports.budget_performance.status.good"), tone: :success, marker: false, icon: "check-circle") %>
+        <% end %>
         <%# Matches the existing edit-this-budget precedent on the budget
             donut card (app/views/budgets/_budget_donut.html.erb): a
             labeled secondary link with a trailing pencil, not a bare
@@ -22,13 +29,6 @@
           icon_position: :right,
           href: edit_budget_path(budget)
         ) %>
-        <% if budget.available_to_spend.negative? %>
-          <%= render DS::Pill.new(label: t("reports.budget_performance.status.over"), tone: :error, marker: false, icon: "alert-circle") %>
-        <% elsif budget.percent_of_budget_spent >= 90 %>
-          <%= render DS::Pill.new(label: t("reports.budget_performance.status.warning"), tone: :warning, marker: false, icon: "alert-triangle") %>
-        <% else %>
-          <%= render DS::Pill.new(label: t("reports.budget_performance.status.good"), tone: :success, marker: false, icon: "check-circle") %>
-        <% end %>
       </div>
     <% end %>
   </div>
