@@ -778,17 +778,13 @@ end
       sql.to_s.squish.gsub(/[`"]/, "").downcase
     end
 
-    # Per-row lazy loads use `column = ?` or single-value `column IN (?)`.
-    # Batch preloads use multi-value `IN (?, ?, ...)` and must not match.
+    # Per-row lazy loads use `column = ?`. Do not treat `IN (...)` as lazy
+    # loads — ActiveRecord nested preloads also use single-value IN when only
+    # one associated record is needed (e.g. one counterparty account).
     def single_record_lookups(normalized_queries, table:, column:)
       pattern = /
         from\s+#{Regexp.escape(table)}\s+
-        where\s+#{Regexp.escape(table)}\.#{Regexp.escape(column)}\s*
-        (?:
-          =
-          |
-          in\s*\(\s*[^,)]+\s*\)
-        )
+        where\s+#{Regexp.escape(table)}\.#{Regexp.escape(column)}\s*=
       /x
 
       normalized_queries.grep(pattern)
