@@ -11,7 +11,7 @@ export default class extends Controller {
   }
 
   filter() {
-    const filterValue = this.inputTarget.value.toLowerCase();
+    const filterValue = this.normalize(this.inputTarget.value);
     const items = this.listTarget.querySelectorAll(".filterable-item");
     let noMatchFound = true;
 
@@ -20,7 +20,7 @@ export default class extends Controller {
     }
 
     items.forEach((item) => {
-      const text = item.getAttribute("data-filter-name").toLowerCase();
+      const text = this.normalize(item.getAttribute("data-filter-name"));
       const shouldDisplay = text.includes(filterValue);
       item.style.display = shouldDisplay ? "" : "none";
 
@@ -36,6 +36,14 @@ export default class extends Controller {
     this.highlightedIndex = -1;
     this.clearHighlights();
     this.updateAriaActiveDescendant();
+  }
+
+  // Case- and diacritic-insensitive: "prestecs" should match "Prèstecs".
+  // NFD splits each accented char into base char + combining mark, then
+  // \p{Diacritic} (Unicode property escape, needs the u flag) strips the
+  // marks, so both sides compare on bare base characters.
+  normalize(value) {
+    return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
   }
 
   handleKeydown(event) {
