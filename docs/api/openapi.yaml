@@ -7433,6 +7433,13 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '422':
+          description: validation error - category, merchant or tag is not in your
+            family
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
           content:
@@ -7466,9 +7473,13 @@ paths:
                     category_id:
                       type: string
                       format: uuid
+                      description: Category ID. Must be the UUID of a category in
+                        your own family, as returned by GET /api/v1/categories
                     merchant_id:
                       type: string
                       format: uuid
+                      description: Merchant ID. Must be the UUID of a merchant in
+                        your own family, as returned by GET /api/v1/merchants
                     nature:
                       type: string
                       enum:
@@ -7481,8 +7492,9 @@ paths:
                       items:
                         type: string
                         format: uuid
-                      description: Array of tag IDs to assign. Omit to preserve existing
-                        tags; use [] to clear all tags.
+                      description: Array of tag IDs to assign, each the UUID of a
+                        tag in your own family. Omit to preserve existing tags; use
+                        [] to clear all tags.
         required: true
     delete:
       summary: Delete a transaction

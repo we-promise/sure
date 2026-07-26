@@ -313,13 +313,13 @@ RSpec.describe 'API V1 Transactions', type: :request do
               description: { type: :string, description: 'Alternative to name field' },
               notes: { type: :string },
               currency: { type: :string, description: 'Currency code' },
-              category_id: { type: :string, format: :uuid },
-              merchant_id: { type: :string, format: :uuid },
+              category_id: { type: :string, format: :uuid, description: 'Category ID. Must be the UUID of a category in your own family, as returned by GET /api/v1/categories' },
+              merchant_id: { type: :string, format: :uuid, description: 'Merchant ID. Must be the UUID of a merchant in your own family, as returned by GET /api/v1/merchants' },
               nature: { type: :string, enum: %w[income expense inflow outflow] },
               tag_ids: {
                 type: :array,
                 items: { type: :string, format: :uuid },
-                description: 'Array of tag IDs to assign. Omit to preserve existing tags; use [] to clear all tags.'
+                description: 'Array of tag IDs to assign, each the UUID of a tag in your own family. Omit to preserve existing tags; use [] to clear all tags.'
               }
             }
           }
@@ -337,6 +337,20 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
       response '200', 'transaction updated' do
         schema '$ref' => '#/components/schemas/Transaction'
+
+        run_test!
+      end
+
+      response '422', 'validation error - category, merchant or tag is not in your family' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            transaction: {
+              category_id: SecureRandom.uuid
+            }
+          }
+        end
 
         run_test!
       end

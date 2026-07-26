@@ -338,13 +338,36 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       end
 
       merchant_id = transaction_params[:merchant_id]
-      if merchant_id.present? && !family_owns?(family.merchants, merchant_id)
+      if merchant_id.present? &&
+         !family_owns?(family.api_assignable_merchants_for(current_resource_owner), merchant_id)
         render_validation_error("Merchant not found or does not belong to your family")
         return false
       end
 
-      tag_ids = Array(transaction_params[:tag_ids]).reject(&:blank?).uniq
-      if tag_ids.any? && !tag_ids.all? { |id| family_owns?(family.tags, id) }
+      return false unless validate_tag_ids(family)
+
+      true
+    end
+
+    # tag_ids has to be checked against the raw request value: permit(tag_ids: [])
+    # drops anything that is not an array of scalars, so a string or object would
+    # arrive here as nil and then wipe the transaction's tags on update. Blank
+    # entries are kept out of the ownership check rather than rejected, because a
+    # form-encoded empty array arrives as [""] and that is how a caller clears tags.
+    def validate_tag_ids(family)
+      return true unless params[:transaction].is_a?(ActionController::Parameters)
+      return true unless params[:transaction].key?(:tag_ids)
+
+      raw_tag_ids = params[:transaction][:tag_ids]
+      return true if raw_tag_ids.nil?
+
+      unless raw_tag_ids.is_a?(Array) && raw_tag_ids.all? { |id| id.is_a?(String) }
+        render_validation_error("tag_ids must be an array of tag UUIDs")
+        return false
+      end
+
+      tag_ids = raw_tag_ids.reject(&:blank?).uniq
+      unless tag_ids.all? { |id| family_owns?(family.tags, id) }
         render_validation_error("One or more tags were not found or do not belong to your family")
         return false
       end

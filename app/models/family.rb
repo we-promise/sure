@@ -290,6 +290,23 @@ class Family < ApplicationRecord
     Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
   end
 
+  # Merchants the API lets a user see and assign: this family's own merchants,
+  # plus the provider merchants already attached to transactions in accounts the
+  # user can reach. Provider merchants have no family of their own, so they are
+  # reachable only through those transactions.
+  def api_assignable_merchants_for(user)
+    accessible_account_ids = accounts.accessible_by(user).select(:id)
+    provider_merchant_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accessible_account_ids })
+      .where.not(merchant_id: nil)
+      .select(:merchant_id)
+
+    Merchant
+      .where(id: merchants.select(:id))
+      .or(Merchant.where(id: provider_merchant_ids, type: "ProviderMerchant"))
+      .distinct
+  end
+
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
     AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end

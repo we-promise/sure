@@ -669,6 +669,48 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "should create transaction with a provider merchant surfaced by the merchants API" do
+    provider_merchant = ProviderMerchant.create!(name: "Plaid Coffee Co", source: "plaid")
+    @account.entries.create!(
+      name: "Existing coffee", date: Date.current, amount: 4.00, currency: "USD",
+      entryable: Transaction.new(merchant: provider_merchant)
+    )
+
+    get api_v1_merchants_url, headers: api_headers(@api_key)
+    assert_includes JSON.parse(response.body).map { |m| m["id"] }, provider_merchant.id,
+                    "merchants API should surface the provider merchant"
+
+    post api_v1_transactions_url,
+         params: transaction_params_with(merchant_id: provider_merchant.id),
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    assert_equal provider_merchant.id, JSON.parse(response.body).dig("merchant", "id")
+  end
+
+  test "should reject non-array tag_ids instead of clearing the transaction tags" do
+    @transaction.tags << @family.tags.first if @transaction.tags.empty?
+    tags_before = @transaction.reload.tags.map(&:id)
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: "not-an-array" } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal tags_before, @transaction.reload.tags.map(&:id)
+  end
+
+  test "should still allow clearing tags with an empty tag_ids array" do
+    @transaction.tags << @family.tags.first if @transaction.tags.empty?
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [] } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty @transaction.reload.tags
+  end
+
   test "should reject create with a tag belonging to another family" do
     foreign_tag = families(:empty).tags.create!(name: "Foreign Tag")
 
