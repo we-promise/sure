@@ -760,14 +760,38 @@ end
     # Transfer#categorizable? / #payment? walk
     # transfer.inflow_transaction.entry.account. Without nested includes those
     # become one lookup triad per transfer row during list render.
-    assert_empty queries.grep(/FROM "transactions" WHERE "transactions"\."id" =/)
-    assert_empty queries.grep(/FROM "entries" WHERE "entries"\."entryable_id" =/)
-    assert_empty queries.grep(/FROM "accounts" WHERE "accounts"\."id" =/)
+    normalized_queries = queries.map { |sql| normalize_sql_query(sql) }
+    assert_empty single_record_lookups(normalized_queries, table: "transactions", column: "id"),
+                 "Expected transfer counterparty transactions to be preloaded"
+    assert_empty single_record_lookups(normalized_queries, table: "entries", column: "entryable_id"),
+                 "Expected transfer counterparty entries to be preloaded"
+    assert_empty single_record_lookups(normalized_queries, table: "accounts", column: "id"),
+                 "Expected transfer counterparty accounts to be preloaded"
   end
 
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
+    end
+
+    def normalize_sql_query(sql)
+      sql.to_s.squish.gsub(/[`"]/, "").downcase
+    end
+
+    # Per-row lazy loads use `column = ?` or single-value `column IN (?)`.
+    # Batch preloads use multi-value `IN (?, ?, ...)` and must not match.
+    def single_record_lookups(normalized_queries, table:, column:)
+      pattern = /
+        from\s+#{Regexp.escape(table)}\s+
+        where\s+#{Regexp.escape(table)}\.#{Regexp.escape(column)}\s*
+        (?:
+          =
+          |
+          in\s*\(\s*[^,)]+\s*\)
+        )
+      /x
+
+      normalized_queries.grep(pattern)
     end
 
     def capture_sql_queries
