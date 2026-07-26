@@ -57,7 +57,7 @@
       <p class="mt-6 mb-1 text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".top_categories") %></p>
       <div class="flex-1">
         <% top_budget_categories.each_with_index do |budget_category, index| %>
-          <div class="flex items-center gap-3 py-2.5 <%= "border-b border-primary" unless index == top_budget_categories.size - 1 %>">
+          <div class="flex items-center gap-3 py-2.5 <%= "border-b border-divider" unless index == top_budget_categories.size - 1 %>">
             <div class="w-7 h-7 shrink-0 rounded-full flex items-center justify-center"
                  style="background-color: color-mix(in oklab, <%= budget_category.category.color %> 10%, transparent); color: <%= budget_category.category.color %>;">
               <% if budget_category.category.lucide_icon %>

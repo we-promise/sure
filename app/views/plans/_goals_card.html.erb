@@ -83,7 +83,7 @@
     <div class="flex-1">
       <% shown_goals = goals.first(5) %>
       <% shown_goals.each_with_index do |goal, index| %>
-        <%= link_to goal_path(goal), class: "flex items-center gap-3 py-2.5 group #{"border-b border-primary" unless index == shown_goals.size - 1}" do %>
+        <%= link_to goal_path(goal), class: "flex items-center gap-3 py-2.5 group #{"border-b border-divider" unless index == shown_goals.size - 1}" do %>
           <%= render Goals::AvatarComponent.new(goal: goal, size: "md") %>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">
