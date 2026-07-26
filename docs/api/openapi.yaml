@@ -5774,6 +5774,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: missing file or invalid CSV
           content:
@@ -5784,7 +5790,13 @@ paths:
         content:
           multipart/form-data:
             schema:
-              type: file
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
         required: true
         description: 'CSV file with columns: name* (required), color, website_url'
   "/api/v1/merchants/{id}":

@@ -31,6 +31,17 @@ RSpec.describe 'API V1 Merchants', type: :request do
     )
   end
 
+  let(:read_only_api_key) do
+    key = ApiKey.generate_secure_key
+    ApiKey.create!(
+      user: user,
+      name: 'API Read-Only Key',
+      key: key,
+      scopes: %w[read],
+      source: 'mobile'
+    )
+  end
+
   let(:'X-Api-Key') { api_key.plain_key }
 
   let!(:family_merchant) { family.merchants.create!(name: 'Coffee Shop') }
@@ -54,8 +65,15 @@ RSpec.describe 'API V1 Merchants', type: :request do
       consumes 'multipart/form-data'
       produces 'application/json'
 
-      parameter name: :file, in: :formData, type: :file, required: true,
-                description: 'CSV file with columns: name* (required), color, website_url'
+      parameter name: :file, in: :formData, required: true,
+                description: 'CSV file with columns: name* (required), color, website_url',
+                schema: {
+                  type: :object,
+                  required: [ 'file' ],
+                  properties: {
+                    file: { type: :string, format: :binary }
+                  }
+                }
 
       response '201', 'merchants imported' do
         schema '$ref' => '#/components/schemas/MerchantImportResult'
@@ -75,6 +93,13 @@ RSpec.describe 'API V1 Merchants', type: :request do
       response '401', 'unauthorized' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:'X-Api-Key') { nil }
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { read_only_api_key.plain_key }
+        let(:file) { nil }
         run_test!
       end
 
