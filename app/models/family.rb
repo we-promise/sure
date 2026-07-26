@@ -411,8 +411,11 @@ class Family < ApplicationRecord
   end
 
   def requires_securities_data_provider?
-    # If family has any trades, they need a provider for historical prices
-    trades.any?
+    # If family has any trades, they need a provider for historical prices.
+    # Memoized: dashboard layout (sidebar warning) can ask more than once.
+    return @requires_securities_data_provider if defined?(@requires_securities_data_provider)
+
+    @requires_securities_data_provider = trades.exists?
   end
 
   def requires_exchange_rates_data_provider?

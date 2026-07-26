@@ -73,13 +73,23 @@ class Holding::CalculatedAvgCosts
     end
 
     def holding_key(holding)
-      [ holding.account_id, holding.security_id, holding.date, holding.currency ]
+      [
+        holding.account_id.to_s,
+        holding.security_id.to_s,
+        holding.date.to_date,
+        holding.currency.to_s
+      ]
     end
 
+    # Normalize PG/driver types (UUID, date-as-string/Time) so the lookup
+    # key matches holding_key. A mismatch would silently preload nil and
+    # hide cost basis rather than falling back to per-holding queries.
     def holding_key_from_row(row)
-      as_of_date = row["as_of_date"]
-      as_of_date = as_of_date.to_date if as_of_date.is_a?(String)
-
-      [ row["account_id"], row["security_id"], as_of_date, row["holding_currency"] ]
+      [
+        row["account_id"].to_s,
+        row["security_id"].to_s,
+        row["as_of_date"].to_date,
+        row["holding_currency"].to_s
+      ]
     end
 end

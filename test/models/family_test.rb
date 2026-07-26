@@ -352,6 +352,17 @@ class FamilyTest < ActiveSupport::TestCase
     assert_not_includes Family.with_preview_features, family
   end
 
+  test "requires_securities_data_provider? memoizes the trades existence check" do
+    family = families(:dylan_family)
+
+    queries = capture_sql_queries do
+      2.times { family.requires_securities_data_provider? }
+      2.times { family.missing_data_provider? }
+    end
+
+    assert_equal 1, queries.grep(/FROM "trades"/).size
+  end
+
   private
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
