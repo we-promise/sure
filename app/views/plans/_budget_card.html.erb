@@ -18,16 +18,17 @@
       <% end %>
 
       <div class="ml-auto shrink-0">
-        <%# Matches the existing edit-this-budget precedent on the budget
-            donut card (app/views/budgets/_budget_donut.html.erb): a
-            labeled secondary link with a trailing pencil, not a bare
-            icon button or an overflow menu. %>
+        <%# The budget donut's trailing pencil (_budget_donut.html.erb) labels
+            the VALUE itself ("$12,850 ✎" — click the number to edit it).
+            This button's label is a static action ("Edit budget"), which
+            takes a leading icon everywhere else in the app: the categories
+            "Edit" on this same page (budgets/show.html.erb) and "Edit
+            split" (transactions/show.html.erb) both do. %>
         <%= render DS::Link.new(
           text: t(".edit_budget"),
           variant: "secondary",
           size: "sm",
           icon: "pencil",
-          icon_position: :right,
           href: edit_budget_path(budget)
         ) %>
       </div>
