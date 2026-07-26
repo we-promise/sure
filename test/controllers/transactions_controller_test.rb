@@ -732,7 +732,7 @@ end
       accountable: Depository.new
     )
 
-    6.times do |i|
+    transfers = 6.times.map do |i|
       create_transfer(
         from_account: from_account,
         to_account: to_account,
@@ -742,10 +742,20 @@ end
     end
 
     queries = capture_sql_queries do
-      get transactions_url
+      # per_page must fit all transfer legs + fixtures so assertions below
+      # actually exercise the transfer render path this preload protects.
+      get transactions_url(per_page: 50)
     end
 
     assert_response :success
+
+    # Index dedupes transfers to the outflow side; assert those rows rendered so
+    # the SQL assertions below actually exercise Transfer#to_account.
+    rendered_ids = rendered_entry_ids
+    transfers.each do |transfer|
+      assert_includes rendered_ids, transfer.outflow_transaction.entry.id.to_s,
+                      "Expected transfer outflow entry to render on the index"
+    end
 
     # Transfer#categorizable? / #payment? walk
     # transfer.inflow_transaction.entry.account. Without nested includes those
