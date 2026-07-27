@@ -139,10 +139,10 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       "matched funds_movement inflow must not appear in Uncategorized drilldown"
   end
 
-  test "show drilldown still lists loan_payment transfers (intentionally budget-tracked)" do
-    # loan_payment is NOT in BUDGET_EXCLUDED_KINDS. The drilldown should
-    # keep showing loan_payment transfers so the user can see what's
-    # under Uncategorized (or whichever category they manually set).
+  test "show drilldown excludes matched loan_payment transfers" do
+    # A persisted Transfer is more specific than its destination-derived kind:
+    # a loan-payment pair must not appear in the drilldown when the budget
+    # aggregate excludes it.
     create_transaction(
       date: @budget.start_date,
       account: accounts(:depository),
@@ -159,7 +159,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success
-    assert_includes @response.body, "MORTGAGE_REPRO_OUTFLOW",
-      "loan_payment outflow remains visible (kind is not BUDGET_EXCLUDED)"
+    refute_includes @response.body, "MORTGAGE_REPRO_OUTFLOW",
+      "matched loan_payment outflow must not appear in Uncategorized drilldown"
   end
 end

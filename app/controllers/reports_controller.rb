@@ -357,7 +357,7 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown
       # Base query: all transactions in the period
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude budget-excluded kinds and persisted transfer legs (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
@@ -365,6 +365,7 @@ class ReportsController < ApplicationController
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .without_matched_transfer
         .includes(entry: :account, category: :parent)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
@@ -679,7 +680,7 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown_for_export
       # Get flat transactions list (not grouped) for export
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude budget-excluded kinds and persisted transfer legs (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
@@ -687,6 +688,7 @@ class ReportsController < ApplicationController
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .without_matched_transfer
         .includes(entry: :account, category: [])
       transactions = exclude_tax_advantaged_accounts(transactions)
 
@@ -718,7 +720,7 @@ class ReportsController < ApplicationController
       end
 
       # Get all transactions in the period
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude budget-excluded kinds and persisted transfer legs (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
@@ -726,6 +728,7 @@ class ReportsController < ApplicationController
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .without_matched_transfer
         .includes(entry: :account, category: [])
       transactions = exclude_tax_advantaged_accounts(transactions)
 
