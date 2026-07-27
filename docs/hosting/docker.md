@@ -412,7 +412,7 @@ Revoke at the proxy. Deactivating a user in Sure queues `UserPurgeJob`, which de
 ### Troubleshooting
 
 Every rejected header is logged with a `[remote_user_header]` prefix and a reason, so a login that silently returns to the sign-in page is diagnosable from the application log:
-```
+```bash
 grep remote_user_header log/production.log
 ```
 Startup logs the config-level problems from the same prefix: an unparseable allowlist entry, an empty allowlist, a missing shared secret, `REMOTE_USER_HEADER_EMAIL` set on a non-self-hosted instance, and an invalid logout URL.

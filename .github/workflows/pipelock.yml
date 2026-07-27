@@ -29,6 +29,10 @@ jobs:
             compose.example.ai.yml
             config/locales/views/reports/
             docs/hosting/ai.md
+            # Self-hosting guide documents env snippets whose placeholders
+            # (REMOTE_USER_SHARED_SECRET, POSTGRES_PASSWORD) scan as secrets, and an
+            # inline pipelock:ignore would show up in the block readers copy. Excluded
+            # whole-file, so a real secret added here later won't be caught either
             docs/hosting/docker.md
             app/models/provider/binance.rb
             workers/preview/package-lock.json
