@@ -64,6 +64,7 @@ en:
     properties: Properties
     providers: Providers
     recurring_transactions: Recurring
+    redbark_items: Redbark
     registrations: Sign up
     reports: Reports
     rules: Rules
