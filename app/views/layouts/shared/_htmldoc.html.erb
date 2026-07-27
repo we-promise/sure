@@ -1,3 +1,4 @@
+<%# locals: (sidebar_aware: false) %>
 <!DOCTYPE html>
 
 <% theme = Current.user&.theme || "system" %>
@@ -13,7 +14,7 @@
     <%= yield :head %>
   </head>
 
-  <body class="h-[var(--app-height)] overflow-hidden antialiased">
+  <body class="h-[var(--app-height)] overflow-hidden antialiased"<% if sidebar_aware %> data-controller="notification-tray"<% end %>>
     <% if Rails.env.development? %>
       <button hidden data-controller="hotkey" data-hotkey="t t /" data-action="theme#toggle"></button>
     <% end %>
@@ -33,16 +34,16 @@
 
     <%= yield %>
 
-    <%# Layouts with a persistent sidebar (settings, application) render the
-        tray in-flow themselves — see notification_tray_inline — since a
-        fixed/viewport-centered overlay can't stay centered on their actual
-        (sidebar-narrowed) content pane. Every other layout is a single
-        centered column, where viewport-center already matches content-center,
-        so this default floating position is correct for them as-is. %>
-    <% unless content_for?(:notification_tray_inline) %>
-      <div class="fixed z-50 top-6 md:top-4 left-1/2 -translate-x-1/2 w-full md:w-80 px-4 md:px-0 mx-auto md:mx-0 md:right-auto pt-[env(safe-area-inset-top)]">
-        <%= render "layouts/shared/notification_tray" %>
-      </div>
-    <% end %>
+    <%# `left-1/2 -translate-x-1/2` centers on the viewport by default, correct
+        for every single-column layout. Layouts with a persistent sidebar
+        (settings, application) pass sidebar_aware: true, which wires up
+        notification_tray_controller.js to override `left` with the actual
+        content pane's center instead — see that controller for why a
+        ResizeObserver beats hand-rolled sidebar-width math, and for why it
+        also has to guard that inline style against turbo_refreshes_with's
+        morph reconciliation. %>
+    <div class="fixed z-50 top-6 md:top-4 left-1/2 -translate-x-1/2 w-full md:w-80 px-4 md:px-0 mx-auto md:mx-0 md:right-auto pt-[env(safe-area-inset-top)]"<% if sidebar_aware %> data-notification-tray-target="tray"<% end %>>
+      <%= render "layouts/shared/notification_tray" %>
+    </div>
   </body>
 </html>

@@ -30,7 +30,7 @@ class AccountsSyncUiTest < ApplicationSystemTestCase
     end
   end
 
-  test "cancelling a sync shows a flash notice that renders above the page header, not over it" do
+  test "cancelling a sync shows a flash notice, and the tray centers on the content pane" do
     Sync.create!(syncable: @user.family, status: :syncing)
 
     visit accounts_path
@@ -40,13 +40,17 @@ class AccountsSyncUiTest < ApplicationSystemTestCase
 
     assert_text I18n.t("syncs.cancel.cancelled")
 
-    # The notification tray now renders in-flow above the page header instead
-    # of as a viewport-fixed overlay — assert it actually pushes the header
-    # down rather than floating on top of it.
-    tray_rect = page.evaluate_script("document.querySelector('#notification-tray').getBoundingClientRect()")
-    header_rect = page.evaluate_script("document.querySelector('h1').getBoundingClientRect()")
+    # The tray is a fixed overlay, positioned by notification_tray_controller.js
+    # to center on <main> (the actual content pane next to the sidebar) rather
+    # than the full viewport — assert the two centers actually match, not just
+    # that the tray exists somewhere on screen.
+    tray_rect = page.evaluate_script("document.querySelector('[data-notification-tray-target=\"tray\"]').getBoundingClientRect()")
+    main_rect = page.evaluate_script("document.querySelector('#main').getBoundingClientRect()")
 
-    assert tray_rect["bottom"] <= header_rect["top"],
-      "expected the notification tray (bottom: #{tray_rect['bottom']}) to sit above the page header (top: #{header_rect['top']}), not overlap it"
+    tray_center = tray_rect["left"] + tray_rect["width"] / 2.0
+    main_center = main_rect["left"] + main_rect["width"] / 2.0
+
+    assert_in_delta main_center, tray_center, 1.0,
+      "expected the tray (center: #{tray_center}) to align with the content pane (center: #{main_center}), not drift to viewport-center"
   end
 end
