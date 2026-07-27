@@ -143,7 +143,7 @@ class Provider::Binance
 
       response = self.class.get(
         path,
-        base_url,
+        base_uri: base_url,
         query: "#{query_string}&signature=#{sign(query_string)}",
         headers: auth_headers
       )
