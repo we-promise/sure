@@ -652,8 +652,12 @@ class EnableBankingItem::Importer
           # succeeded, treat a validation error as "pagination exhausted" and keep
           # the partial result. A validation error on the very first page has no
           # prior data to fall back on and is a real failure, so it still propagates.
-          # (Issue #392)
-          raise if e.error_type != :validation_error || page_count == 1
+          # WRONG_TRANSACTIONS_PERIOD is excluded even mid-pagination: it means the
+          # date range itself is invalid (already retried once with a corrected
+          # date_from in Provider::EnableBanking#get_account_transactions), not that
+          # pagination is exhausted, so swallowing it here would silently drop the
+          # remaining pages instead of surfacing a retryable failure. (Issue #392)
+          raise if e.error_type != :validation_error || page_count == 1 || e.wrong_transactions_period?
           Rails.logger.warn "EnableBankingItem::Importer - Validation error mid-pagination for account #{enable_banking_account.uid} (status=#{transaction_status}), keeping #{all_transactions.count} transaction(s) from #{page_count - 1} page(s). #{e.message}"
           capture_pagination_truncation_debug_log(
             enable_banking_account,

@@ -233,6 +233,32 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     end
   end
 
+  # WRONG_TRANSACTIONS_PERIOD means the date range itself is invalid, not that
+  # pagination is exhausted (unlike the continuation-key mismatch above). It must
+  # still propagate mid-pagination instead of being swallowed as a truncated-but-
+  # successful result, otherwise the remaining pages are silently dropped.
+  test "fetch_paginated_transactions propagates a WRONG_TRANSACTIONS_PERIOD validation error mid-pagination" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    page1_tx = { transaction_id: "tx1" }
+    page1_response = { transactions: [ page1_tx ], continuation_key: "next-page-key" }
+    error = Provider::EnableBanking::EnableBankingError.new(
+      "Validation error from Enable Banking API: invalid transaction period",
+      :validation_error,
+      response_data: { error: "WRONG_TRANSACTIONS_PERIOD" }
+    )
+
+    @mock_provider.expects(:get_account_transactions).twice.returns(page1_response).then.raises(error)
+
+    assert_raises(Provider::EnableBanking::EnableBankingError) do
+      @importer.send(
+        :fetch_paginated_transactions,
+        enable_banking_account,
+        start_date: Date.today,
+        transaction_status: "BOOK"
+      )
+    end
+  end
+
   # Non-validation errors (e.g. rate limiting, network failures) mid-pagination are
   # real failures regardless of how many pages already succeeded, and must propagate
   # so the sync is retried rather than silently importing a truncated result.
