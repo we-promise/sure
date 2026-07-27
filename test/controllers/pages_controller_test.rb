@@ -125,7 +125,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       amount: -1_000,
       kind: "funds_movement"
     )
-    Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow, status: "confirmed")
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
 
     get root_path
 
