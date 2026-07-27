@@ -3,6 +3,11 @@ module Authentication
 
   REMOTE_HEADER_SSO_PROVIDER = "remote_user_header"
 
+  # How far back to look for a session belonging to the same header-authenticated
+  # client, and how many candidates to decrypt while matching on user agent.
+  REMOTE_HEADER_SESSION_REUSE_WINDOW = 12.hours
+  REMOTE_HEADER_SESSION_REUSE_CANDIDATES = 10
+
   included do
     before_action :set_request_details
     before_action :authenticate_user!
@@ -41,20 +46,31 @@ module Authentication
 
     def cookie_session_disagrees_with_header?(session)
       email = trusted_remote_user_email
-      email.present? && session.user.email != email
+      email.present? && session.user&.email != email
     end
 
     def create_session_by_remote_header
       return unless user_email = trusted_remote_user_email
 
       user, created = find_or_create_remote_header_user(user_email)
+      return unless user
+
       if created
         SsoAuditLog.log_jit_account_created!(
           user: user,
           provider: REMOTE_HEADER_SSO_PROVIDER,
           request: request
         )
+      elsif existing_session = reusable_remote_header_session_for(user)
+        # The proxy stamps the header on every request it forwards, so any
+        # cookieless client (curl, health checks, crawlers) would otherwise mint
+        # a Session and an SsoAuditLog row per request. Hand the same client its
+        # existing session back instead, and don't re-log a login it never made.
+        cookies.signed.permanent[:session_token] = { value: existing_session.id, httponly: true }
+        existing_session.touch
+        return existing_session
       end
+
       SsoAuditLog.log_login!(
         user: user,
         provider: REMOTE_HEADER_SSO_PROVIDER,
@@ -63,30 +79,75 @@ module Authentication
       create_session_for(user)
     end
 
+    # Most recent session that looks like the same client coming back. Keyed on
+    # the indexed ip_address_digest; user_agent is compared in Ruby because it's
+    # encrypted non-deterministically when ActiveRecord encryption is configured
+    # and so can't appear in a WHERE clause.
+    def reusable_remote_header_session_for(user)
+      digest = Session.ip_address_digest_for(Current.ip_address)
+      return nil if digest.blank?
+
+      user.sessions
+          .where(ip_address_digest: digest, active_impersonator_session_id: nil)
+          .where(updated_at: REMOTE_HEADER_SESSION_REUSE_WINDOW.ago..)
+          .order(updated_at: :desc)
+          .limit(REMOTE_HEADER_SESSION_REUSE_CANDIDATES)
+          .find { |candidate| candidate.user_agent == Current.user_agent }
+    end
+
     # Returns the email asserted by the upstream proxy, but only when the
     # request passes all configured trust gates: self-hosted mode, header
     # set, source IP in the trusted-proxies allowlist, shared-secret match
     # (if configured), and email shape is valid.
+    #
+    # Memoized: this runs from cookie_session_disagrees_with_header? and again
+    # from create_session_by_remote_header on every HTML request.
     def trusted_remote_user_email
+      return @trusted_remote_user_email if defined?(@trusted_remote_user_email)
+
+      @trusted_remote_user_email = computed_trusted_remote_user_email
+    end
+
+    def computed_trusted_remote_user_email
       return nil unless Rails.application.config.app_mode.self_hosted?
 
       header_name = Rails.application.config.remote_user_header_email
       return nil if header_name.blank?
+
+      # Check for the header before the gates so an ordinary unauthenticated
+      # request doesn't log a rejection for a header it never sent.
+      raw_email = request.headers[header_name]
+      return nil if raw_email.blank?
+
       return nil unless remote_user_proxy_trusted?
       return nil unless remote_user_secret_valid?
 
-      email = request.headers[header_name]&.strip&.downcase
+      email = raw_email.strip.downcase
       return nil if email.blank?
-      return nil unless URI::MailTo::EMAIL_REGEXP.match?(email)
+
+      unless URI::MailTo::EMAIL_REGEXP.match?(email)
+        return reject_remote_user_header("malformed email in #{header_name}", value: raw_email)
+      end
 
       email
     end
 
     def remote_user_proxy_trusted?
       trusted = Rails.application.config.remote_user_trusted_proxies
-      peer_ip = IPAddr.new(request.env["REMOTE_ADDR"])
-      trusted.any? { |range| range.include?(peer_ip) }
-    rescue IPAddr::Error
+      peer = request.env["REMOTE_ADDR"]
+      peer_ip = IPAddr.new(peer)
+      # IPAddr#include? never crosses address families, so an IPv4-mapped IPv6
+      # peer (::ffff:127.0.0.1 — routine for a dual-stack nginx or Docker
+      # front-end) matches neither an IPv4 nor an IPv6 range. Compare the
+      # native IPv4 form instead.
+      peer_ip = peer_ip.native if peer_ip.ipv4_mapped?
+
+      return true if trusted.any? { |range| range.include?(peer_ip) }
+
+      reject_remote_user_header("peer not in REMOTE_USER_TRUSTED_PROXIES", peer: peer)
+      false
+    rescue IPAddr::Error => e
+      reject_remote_user_header("unparseable REMOTE_ADDR (#{e.class})", peer: peer)
       false
     end
 
@@ -94,28 +155,113 @@ module Authentication
       expected = Rails.application.config.remote_user_shared_secret
       return true if expected.blank?
 
-      provided = request.headers[Rails.application.config.remote_user_shared_secret_header].to_s
-      ActiveSupport::SecurityUtils.secure_compare(expected, provided)
+      header_name = Rails.application.config.remote_user_shared_secret_header
+      provided = request.headers[header_name].to_s
+      return true if ActiveSupport::SecurityUtils.secure_compare(expected, provided)
+
+      reject_remote_user_header(
+        provided.blank? ? "#{header_name} missing" : "#{header_name} does not match REMOTE_USER_SHARED_SECRET"
+      )
+      false
     end
 
+    # Returns [ user, created ]. A nil user means the request fails closed to
+    # unauthenticated rather than raising out of the before_action.
     def find_or_create_remote_header_user(user_email)
       if user = User.find_by(email: user_email)
-        [ user, false ]
+        unless user.active?
+          reject_remote_user_header("account is deactivated", email: user_email)
+          return [ nil, false ]
+        end
+
+        return [ user, false ]
+      end
+
+      create_remote_header_user(user_email)
+    end
+
+    def create_remote_header_user(user_email)
+      # Mirrors OidcAccountsController#create_user: a pending invitation always
+      # wins, otherwise the instance's JIT policy decides.
+      invitation = Invitation.pending.find_by(email: user_email)
+      return [ nil, false ] unless remote_header_jit_allowed?(user_email, invitation)
+
+      # Leave password_digest nil so the user can't fall back to local
+      # password login or password reset; the proxy is the only path in.
+      user = User.new
+      user.email = user_email
+      user.skip_password_validation = true
+
+      if invitation
+        user.family_id = invitation.family_id
+        user.role = invitation.role
       else
-        # Leave password_digest nil so the user can't fall back to local
-        # password login or password reset; the proxy is the only path in.
-        user = User.new
-        user.email = user_email
-        user.skip_password_validation = true
         user.family = Family.new
         user.role = User.role_for_new_family_creator(fallback_role: :admin)
-        begin
-          user.save!
-          [ user, true ]
-        rescue ActiveRecord::RecordNotUnique
-          [ User.find_by!(email: user_email), false ]
-        end
       end
+
+      begin
+        ActiveRecord::Base.transaction do
+          user.save!
+          if invitation
+            invitation.update!(accepted_at: Time.current)
+            # Matches Invitation#accept_for: without this the invitee lands in
+            # the family but sees none of its accounts.
+            user.family.auto_share_existing_accounts_with(user)
+          end
+        end
+        [ user, true ]
+      rescue ActiveRecord::RecordNotUnique
+        # Concurrent first requests for the same header email; the other one won.
+        existing = User.find_by(email: user_email)
+        existing&.active? ? [ existing, false ] : [ nil, false ]
+      rescue ActiveRecord::RecordInvalid => e
+        # save! runs inside a before_action, so anything unrescued here 500s
+        # every request until the proxy config changes.
+        reject_remote_user_header("could not create user (#{e.record&.errors&.full_messages&.to_sentence})", email: user_email)
+        [ nil, false ]
+      end
+    end
+
+    def remote_header_jit_allowed?(user_email, invitation)
+      return true if invitation.present?
+
+      unless Rails.application.config.remote_user_allow_jit
+        reject_remote_user_header("REMOTE_USER_ALLOW_JIT is false and no account exists", email: user_email)
+        return false
+      end
+
+      if AuthConfig.jit_link_only?
+        reject_remote_user_header("AUTH_JIT_MODE is link_only and no account exists", email: user_email)
+        return false
+      end
+
+      unless AuthConfig.allowed_oidc_domain?(user_email)
+        reject_remote_user_header("domain not in ALLOWED_OIDC_DOMAINS", email: user_email)
+        return false
+      end
+
+      true
+    end
+
+    # Rejections are otherwise completely silent, which makes a misconfigured
+    # proxy indistinguishable from a broken login. Deliberately Rails.logger and
+    # not DebugLogEntry: this runs per request and any untrusted peer can
+    # trigger it, so it must not write to the database.
+    def reject_remote_user_header(reason, **details)
+      annotated = details.compact.map { |key, value| " #{key}=#{value.to_s.truncate(80).inspect}" }.join
+      Rails.logger.warn("[remote_user_header] ignoring header: #{reason}#{annotated}")
+      nil
+    end
+
+    # Proxy sign-out URL, when header auth is actually in play. Destroying the
+    # local session alone is a no-op here: the header is still on the next
+    # request, so the user is immediately signed back in.
+    def remote_user_header_logout_url
+      return nil unless Rails.application.config.app_mode.self_hosted?
+      return nil if Rails.application.config.remote_user_header_email.blank?
+
+      Rails.application.config.remote_user_logout_url
     end
 
     def find_session_by_cookie
