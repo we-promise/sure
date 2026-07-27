@@ -405,7 +405,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
       category: nil,
       kind: "funds_movement"
     )
-    Transfer.create!(outflow_transaction: investment_outflow, inflow_transaction: investment_inflow, status: "confirmed")
+    Transfer.create!(outflow_transaction: investment_outflow.entryable, inflow_transaction: investment_inflow.entryable, status: "confirmed")
 
     loan_outflow = create_transaction(
       account: @checking_account,
@@ -419,7 +419,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
       category: nil,
       kind: "funds_movement"
     )
-    Transfer.create!(outflow_transaction: loan_outflow, inflow_transaction: loan_inflow, status: "confirmed")
+    Transfer.create!(outflow_transaction: loan_outflow.entryable, inflow_transaction: loan_inflow.entryable, status: "confirmed")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
