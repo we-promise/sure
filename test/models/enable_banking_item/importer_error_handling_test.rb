@@ -128,9 +128,15 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
     @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(trade_republic_pdng_error)
 
-    result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
+    result = nil
+    assert_difference "DebugLogEntry.count", 1 do
+      result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
+    end
 
     assert result[:success]
+    debug_log = DebugLogEntry.last
+    assert_equal "provider_sync_error", debug_log.category
+    assert_equal "bad_request", debug_log.metadata["error_type"]
   end
 
   # Regression for #1805: ImaginV2 (and other Enable Banking connectors) reject PDNG with
@@ -182,19 +188,13 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
   test "fetch_paginated_transactions keeps partial results when a validation error interrupts a later page" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
     page1_tx = { transaction_id: "tx1" }
-    call_count = 0
+    page1_response = { transactions: [ page1_tx ], continuation_key: "next-page-key" }
+    error = Provider::EnableBanking::EnableBankingError.new(
+      "Validation error from Enable Banking API: transactionStatus in request is not the same as in continuationKey",
+      :validation_error
+    )
 
-    @mock_provider.define_singleton_method(:get_account_transactions) do |**args|
-      call_count += 1
-      if call_count == 1
-        { transactions: [ page1_tx ], continuation_key: "next-page-key" }
-      else
-        raise Provider::EnableBanking::EnableBankingError.new(
-          "Validation error from Enable Banking API: transactionStatus in request is not the same as in continuationKey",
-          :validation_error
-        )
-      end
-    end
+    @mock_provider.expects(:get_account_transactions).twice.returns(page1_response).then.raises(error)
 
     assert_difference "DebugLogEntry.count", 1 do
       result = @importer.send(
@@ -205,7 +205,6 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       )
 
       assert_equal [ page1_tx ], result
-      assert_equal 2, call_count
     end
 
     debug_log = DebugLogEntry.last
@@ -220,10 +219,9 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
   # is a real failure (not ASPSP pagination quirk) and must still propagate.
   test "fetch_paginated_transactions propagates a validation error on the very first page" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    error = Provider::EnableBanking::EnableBankingError.new("Bad request parameters", :validation_error)
 
-    @mock_provider.define_singleton_method(:get_account_transactions) do |**args|
-      raise Provider::EnableBanking::EnableBankingError.new("Bad request parameters", :validation_error)
-    end
+    @mock_provider.expects(:get_account_transactions).once.raises(error)
 
     assert_raises(Provider::EnableBanking::EnableBankingError) do
       @importer.send(
@@ -241,16 +239,10 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
   test "fetch_paginated_transactions propagates a non-validation error mid-pagination" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
     page1_tx = { transaction_id: "tx1" }
-    call_count = 0
+    page1_response = { transactions: [ page1_tx ], continuation_key: "next-page-key" }
+    error = Provider::EnableBanking::EnableBankingError.new("Rate limit exceeded. Please try again later.", :rate_limited)
 
-    @mock_provider.define_singleton_method(:get_account_transactions) do |**args|
-      call_count += 1
-      if call_count == 1
-        { transactions: [ page1_tx ], continuation_key: "next-page-key" }
-      else
-        raise Provider::EnableBanking::EnableBankingError.new("Rate limit exceeded. Please try again later.", :rate_limited)
-      end
-    end
+    @mock_provider.expects(:get_account_transactions).twice.returns(page1_response).then.raises(error)
 
     assert_raises(Provider::EnableBanking::EnableBankingError) do
       @importer.send(

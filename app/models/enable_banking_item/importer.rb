@@ -335,6 +335,29 @@ class EnableBankingItem::Importer
       )
     end
 
+    # Surfaces "ASPSP doesn't support PDNG" as a support-visible diagnostic, same
+    # rationale as capture_pagination_truncation_debug_log: this is a partial
+    # degradation (booked transactions still sync, pending transactions are
+    # silently skipped) that was previously only visible via Rails.logger.
+    def capture_pdng_unsupported_debug_log(enable_banking_account, error:)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "ASPSP does not support the PDNG transaction status; skipping pending transactions and continuing with booked transactions only",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          error_type: error.error_type.to_s,
+          provider_error: sanitized_provider_error(error)
+        }
+      )
+    end
+
     def sanitized_error_message(error)
       return error.message unless error.is_a?(Provider::EnableBanking::EnableBankingError)
 
@@ -423,6 +446,7 @@ class EnableBankingItem::Importer
           raise unless [ :validation_error, :bad_request ].include?(e.error_type)
           api_error = e.response_data.is_a?(Hash) ? (e.response_data[:error] || e.response_data["error"]) : nil
           Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{api_error || e.message}"
+          capture_pdng_unsupported_debug_log(enable_banking_account, error: e)
         end
       end
 
