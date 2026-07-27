@@ -35,7 +35,7 @@ class IncomeStatement::InvestmentContributionOutflows
           AND a.status IN ('draft', 'active')
           AND a.exclude_from_reports = false
           AND ae.date BETWEEN :start_date AND :end_date
-          AND NOT (#{Transaction.pending_providers_sql("t")})
+          #{Transaction.pending_providers_sql("t")}
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
       SQL
