@@ -43,6 +43,18 @@ class InsightTest < ActiveSupport::TestCase
     assert_includes Insight.visible, @insight
   end
 
+  # A stale/replayed undo (e.g. an old toast link clicked after the insight
+  # has since expired or resurrected) must not force a non-acknowledged
+  # insight back to :read — that would wrongly pull an :expired insight back
+  # into view.
+  test "unacknowledge! is a no-op on an insight that isn't acknowledged" do
+    @insight.update!(status: :expired)
+
+    @insight.unacknowledge!
+
+    assert @insight.reload.expired?
+  end
+
   test "duplicate dedup_key within a family is rejected" do
     assert_raises ActiveRecord::RecordInvalid do
       @insight.family.insights.create!(

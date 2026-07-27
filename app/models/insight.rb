@@ -59,8 +59,14 @@ class Insight < ApplicationRecord
   end
 
   # Undoes an acknowledgement without re-badging the insight as new — the user
-  # has obviously seen it, so it returns as read.
+  # has obviously seen it, so it returns as read. Guarded to only reverse an
+  # actual acknowledgement: a stale/replayed undo (e.g. an old toast link
+  # clicked after GenerateInsightsJob has since expired or resurrected this
+  # insight) would otherwise force it back to :read from whatever state it's
+  # really in, including bringing an :expired insight back into view.
   def unacknowledge!
+    return unless acknowledged?
+
     update!(status: :read, dismissed_at: nil, read_at: read_at || Time.current)
   end
 end
