@@ -134,9 +134,9 @@ class BinanceAccount::Processor
 
       loop do
         page = if market_type == :spot
-          provider.get_spot_trades(pair, limit: limit, from_id: from_id, startTime: start_time)
+          provider.get_spot_trades(pair, limit: limit, from_id: from_id, start_time: start_time)
         else
-          provider.get_futures_trades(pair, limit: limit, from_id: from_id, startTime: start_time)
+          provider.get_futures_trades(pair, limit: limit, from_id: from_id, start_time: start_time)
         end
         break if page.blank?
 
