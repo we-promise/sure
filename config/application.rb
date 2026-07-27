@@ -33,7 +33,10 @@ module Sure
     # Default to loopback only so a misconfigured deployment fails closed
     # at first login attempt rather than silently honoring the header from
     # any source. Set REMOTE_USER_TRUSTED_PROXIES to widen the allowlist.
-    parsed_trusted_proxies = (ENV["REMOTE_USER_TRUSTED_PROXIES"].presence || "127.0.0.0/8,::1/128")
+    # Only an *absent* variable takes that default: setting it to an empty
+    # value resolves to an empty allowlist, which is the documented way to
+    # switch the header off without unsetting REMOTE_USER_HEADER_EMAIL.
+    parsed_trusted_proxies = (ENV["REMOTE_USER_TRUSTED_PROXIES"] || "127.0.0.0/8,::1/128")
       .split(",")
       .map(&:strip)
       .reject(&:empty?)
