@@ -33,16 +33,33 @@ module Sure
     # Default to loopback only so a misconfigured deployment fails closed
     # at first login attempt rather than silently honoring the header from
     # any source. Set REMOTE_USER_TRUSTED_PROXIES to widen the allowlist.
-    config.remote_user_trusted_proxies = (ENV["REMOTE_USER_TRUSTED_PROXIES"].presence || "127.0.0.0/8,::1/128")
+    parsed_trusted_proxies = (ENV["REMOTE_USER_TRUSTED_PROXIES"].presence || "127.0.0.0/8,::1/128")
       .split(",")
       .map(&:strip)
       .reject(&:empty?)
-      .filter_map { |s| IPAddr.new(s) rescue nil }
+      .map { |entry| [ entry, (IPAddr.new(entry) rescue nil) ] }
+    config.remote_user_trusted_proxies = parsed_trusted_proxies.filter_map(&:last)
+    # Entries that don't parse are dropped rather than raising at boot, but a
+    # typo'd CIDR would otherwise silently shrink the allowlist. Keep the bad
+    # entries so config/initializers/remote_user_header.rb can warn about them.
+    config.remote_user_trusted_proxies_invalid = parsed_trusted_proxies.reject(&:last).map(&:first)
     # Optional shared-secret gate: when REMOTE_USER_SHARED_SECRET is set,
     # the proxy must echo it in the configured sibling header. Unset means
     # no shared-secret check (the IP allowlist remains the only gate).
     config.remote_user_shared_secret = ENV["REMOTE_USER_SHARED_SECRET"].presence
     config.remote_user_shared_secret_header = ENV.fetch("REMOTE_USER_SHARED_SECRET_HEADER", "X-Remote-User-Secret")
+    # When false, the header can only log in users that already exist. Pairs
+    # with AUTH_JIT_MODE=link_only; this knob is the one that also survives a
+    # deactivate + purge, since a purged user is indistinguishable from a new one.
+    config.remote_user_allow_jit = ENV.fetch("REMOTE_USER_ALLOW_JIT", "true") == "true"
+    # Optional proxy sign-out URL. Without it, logging out only clears the local
+    # session and the next navigation re-authenticates from the header.
+    config.remote_user_logout_url = ENV["REMOTE_USER_LOGOUT_URL"].presence
+    if config.remote_user_logout_url.present? &&
+       !config.remote_user_logout_url.match?(%r{\Ahttps?://}i)
+      config.remote_user_logout_url_invalid = config.remote_user_logout_url
+      config.remote_user_logout_url = nil
+    end
 
     # Self hosters can optionally set their own encryption keys if they want to use ActiveRecord encryption.
     if Rails.application.credentials.active_record_encryption.present?
