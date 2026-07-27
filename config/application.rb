@@ -58,6 +58,11 @@ module Sure
     # Optional proxy sign-out URL. Without it, logging out only clears the local
     # session and the next navigation re-authenticates from the header.
     config.remote_user_logout_url = ENV["REMOTE_USER_LOGOUT_URL"].presence
+    # Assign unconditionally. config/initializers/remote_user_header.rb reads
+    # this on every boot where the header is enabled, and
+    # Rails::Application::Configuration#method_missing raises NoMethodError for
+    # an attribute that was never assigned rather than returning nil.
+    config.remote_user_logout_url_invalid = nil
     if config.remote_user_logout_url.present? &&
        !config.remote_user_logout_url.match?(%r{\Ahttps?://}i)
       config.remote_user_logout_url_invalid = config.remote_user_logout_url
