@@ -885,6 +885,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
       SQL
       .order(date: :desc) # Prefer most recent pending transaction
 
@@ -936,6 +937,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
       SQL
 
     # If merchant_id is provided, prioritize matching by merchant
@@ -1010,6 +1012,7 @@ class Account::ProviderImportAdapter
         OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
         OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
+        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
       SQL
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
