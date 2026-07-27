@@ -220,7 +220,7 @@ class User < ApplicationRecord
   # local login; the only path back in is through the same external
   # auth that provisioned them.
   def sso_only?
-    password_digest.nil?
+    !has_local_password?
   end
 
   # Check if user has a local password set (can authenticate locally)
