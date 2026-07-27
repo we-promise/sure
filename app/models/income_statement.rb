@@ -119,6 +119,16 @@ class IncomeStatement
     totals(transactions_scope: scope, date_range: period.date_range)
   end
 
+  # Investment transfers are excluded from income/expense analytics, but the
+  # dashboard still surfaces their cash movement in its separate outflows view.
+  def matched_investment_contribution_outflow_total(period:)
+    InvestmentContributionOutflows.new(
+      family,
+      date_range: period.date_range,
+      included_account_ids: included_account_ids
+    ).call
+  end
+
   # Accounts actually reflected in totals/totals_for: visible, not excluded
   # from reports, not tax-advantaged, and (when scoped to a user) included in
   # that user's finances. Callers offering an account filter (e.g. a
