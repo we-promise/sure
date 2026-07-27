@@ -105,6 +105,39 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='sankey-chart']"
   end
 
+  test "dashboard shows matched investment contributions as a separate outflow" do
+    checking_account = @family.accounts.first
+    investment_account = @family.accounts.create!(
+      name: "Dashboard Brokerage",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Investment.new
+    )
+    outflow = create_transaction(
+      account: checking_account,
+      name: "Brokerage transfer",
+      amount: 1_000,
+      kind: "investment_contribution"
+    )
+    inflow = create_transaction(
+      account: investment_account,
+      name: "Brokerage transfer",
+      amount: -1_000,
+      kind: "funds_movement"
+    )
+    Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow, status: "confirmed")
+
+    get root_path
+
+    assert_response :ok
+    donut = css_select("[data-controller='donut-chart']").first
+    segments = JSON.parse(donut["data-donut-chart-segments-value"])
+    investment_segment = segments.find { |segment| segment["id"] == "investment_contributions" }
+
+    assert_equal Category.investment_contributions_name, investment_segment["name"]
+    assert_equal 1000.0, investment_segment["amount"]
+  end
+
   test "dashboard renders sankey chart zoom controls and stable node ids" do
     parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
     subcategory = @family.categories.create!(name: "Groceries", parent: parent_category, color: "#33FF57")
