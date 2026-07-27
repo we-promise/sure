@@ -382,6 +382,8 @@ class EnableBankingItem::Importer
         # (e.g. ImaginV2 returns WRONG_REQUEST_PARAMETERS; others mention "transactionStatus" verbatim),
         # so we treat every validation_error on PDNG as "ASPSP doesn't support pending" and continue with
         # the booked transactions only. (Issue #1805)
+        # Trade Republic rejects the same request with a 400 (:bad_request) instead of a
+        # 422 (:validation_error), so both error types are treated as "PDNG unsupported". (Issue #392)
         begin
           pending_transactions = fetch_paginated_transactions(
             enable_banking_account,
@@ -390,7 +392,7 @@ class EnableBankingItem::Importer
             psu_headers: enable_banking_item.build_psu_headers
           )
         rescue Provider::EnableBanking::EnableBankingError => e
-          raise unless e.error_type == :validation_error
+          raise unless [ :validation_error, :bad_request ].include?(e.error_type)
           api_error = e.response_data.is_a?(Hash) ? (e.response_data[:error] || e.response_data["error"]) : nil
           Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{api_error || e.message}"
         end
@@ -581,13 +583,28 @@ class EnableBankingItem::Importer
           raise PaginationTruncatedError, msg
         end
 
-        transactions_data = enable_banking_provider.get_account_transactions(
-          account_id: enable_banking_account.api_account_id,
-          date_from: start_date,
-          continuation_key: continuation_key,
-          transaction_status: transaction_status,
-          psu_headers: psu_headers
-        )
+        begin
+          transactions_data = enable_banking_provider.get_account_transactions(
+            account_id: enable_banking_account.api_account_id,
+            date_from: start_date,
+            continuation_key: continuation_key,
+            transaction_status: transaction_status,
+            psu_headers: psu_headers
+          )
+        rescue Provider::EnableBanking::EnableBankingError => e
+          # Some ASPSPs (e.g. Trade Republic via Enable Banking) issue a continuation_key
+          # that their own API then rejects on the next page as mismatched with
+          # transaction_status (422 WRONG_REQUEST_PARAMETERS: "transactionStatus in
+          # request is not the same as in continuationKey"). Failing outright would
+          # discard every page already fetched, so once at least one page has
+          # succeeded, treat a validation error as "pagination exhausted" and keep
+          # the partial result. A validation error on the very first page has no
+          # prior data to fall back on and is a real failure, so it still propagates.
+          # (Issue #392)
+          raise if e.error_type != :validation_error || page_count == 1
+          Rails.logger.warn "EnableBankingItem::Importer - Validation error mid-pagination for account #{enable_banking_account.uid} (status=#{transaction_status}), keeping #{all_transactions.count} transaction(s) from #{page_count - 1} page(s). #{e.message}"
+          break
+        end
 
         transactions = transactions_data[:transactions] || []
         all_transactions.concat(transactions)

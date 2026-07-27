@@ -112,6 +112,27 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     assert result[:success]
   end
 
+  # Regression for #392: Trade Republic (via Enable Banking) rejects the PDNG request
+  # with a plain 400 (:bad_request) instead of the 422 (:validation_error) other ASPSPs use.
+  test "fetch_and_store_transactions succeeds and skips pending when ASPSP rejects PDNG with a bad_request error" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    @importer.stubs(:determine_sync_start_date).returns(Date.today)
+    @importer.stubs(:include_pending?).returns(true)
+
+    trade_republic_pdng_error = Provider::EnableBanking::EnableBankingError.new(
+      "Bad request to Enable Banking API: {\"error\":\"WRONG_REQUEST_PARAMETERS\"}",
+      :bad_request,
+      response_data: { error: "WRONG_REQUEST_PARAMETERS" }
+    )
+
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(trade_republic_pdng_error)
+
+    result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
+
+    assert result[:success]
+  end
+
   # Regression for #1805: ImaginV2 (and other Enable Banking connectors) reject PDNG with
   # a generic WRONG_REQUEST_PARAMETERS body whose message does not mention "transactionStatus".
   # The sync must still succeed and import booked transactions.
@@ -150,6 +171,86 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
 
     assert_not result[:success]
+  end
+
+  # Regression for #392: Trade Republic (via Enable Banking) issues a continuation_key
+  # on page 1 that its own API then rejects on page 2 as mismatched with
+  # transaction_status (422 WRONG_REQUEST_PARAMETERS). Failing outright would discard
+  # the page already fetched, so once at least one page has succeeded, a validation
+  # error mid-pagination must be treated as "pagination exhausted" and keep the partial
+  # result instead of raising.
+  test "fetch_paginated_transactions keeps partial results when a validation error interrupts a later page" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    page1_tx = { transaction_id: "tx1" }
+    call_count = 0
+
+    @mock_provider.define_singleton_method(:get_account_transactions) do |**args|
+      call_count += 1
+      if call_count == 1
+        { transactions: [ page1_tx ], continuation_key: "next-page-key" }
+      else
+        raise Provider::EnableBanking::EnableBankingError.new(
+          "Validation error from Enable Banking API: transactionStatus in request is not the same as in continuationKey",
+          :validation_error
+        )
+      end
+    end
+
+    result = @importer.send(
+      :fetch_paginated_transactions,
+      enable_banking_account,
+      start_date: Date.today,
+      transaction_status: "BOOK"
+    )
+
+    assert_equal [ page1_tx ], result
+    assert_equal 2, call_count
+  end
+
+  # A validation error on the very first page has no prior page to fall back on, so it
+  # is a real failure (not ASPSP pagination quirk) and must still propagate.
+  test "fetch_paginated_transactions propagates a validation error on the very first page" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+
+    @mock_provider.define_singleton_method(:get_account_transactions) do |**args|
+      raise Provider::EnableBanking::EnableBankingError.new("Bad request parameters", :validation_error)
+    end
+
+    assert_raises(Provider::EnableBanking::EnableBankingError) do
+      @importer.send(
+        :fetch_paginated_transactions,
+        enable_banking_account,
+        start_date: Date.today,
+        transaction_status: "BOOK"
+      )
+    end
+  end
+
+  # Non-validation errors (e.g. rate limiting, network failures) mid-pagination are
+  # real failures regardless of how many pages already succeeded, and must propagate
+  # so the sync is retried rather than silently importing a truncated result.
+  test "fetch_paginated_transactions propagates a non-validation error mid-pagination" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    page1_tx = { transaction_id: "tx1" }
+    call_count = 0
+
+    @mock_provider.define_singleton_method(:get_account_transactions) do |**args|
+      call_count += 1
+      if call_count == 1
+        { transactions: [ page1_tx ], continuation_key: "next-page-key" }
+      else
+        raise Provider::EnableBanking::EnableBankingError.new("Rate limit exceeded. Please try again later.", :rate_limited)
+      end
+    end
+
+    assert_raises(Provider::EnableBanking::EnableBankingError) do
+      @importer.send(
+        :fetch_paginated_transactions,
+        enable_banking_account,
+        start_date: Date.today,
+        transaction_status: "BOOK"
+      )
+    end
   end
 
   test "fetch_and_update_balance does not flip whole connection on per-account unauthorized error" do
