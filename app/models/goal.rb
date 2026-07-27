@@ -80,6 +80,27 @@ class Goal < ApplicationRecord
 
   attr_writer :market_flows
 
+  # Family-wide map of each linked account's net inflow over the trailing
+  # 90 days (account_id => net Entry#amount sum) — the same aggregate #pace
+  # computes per goal. Injected alongside pooled_allocations/market_flows so
+  # sorting/rendering N goals (active_display_sort calls goal.status, which
+  # reaches #pace for any goal with a target_date) fires one grouped query
+  # instead of one Entry.sum per goal.
+  def self.pace_for(family)
+    account_ids = GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+    return {} if account_ids.empty?
+
+    Entry
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(account_id: account_ids, date: 90.days.ago.to_date..Date.current)
+      .where(excluded: false)
+      .merge(Transaction.excluding_pending)
+      .group(:account_id)
+      .sum(:amount)
+  end
+
+  attr_writer :pooled_pace
+
   # Goals loaded ready to render: association preloads for the card/row
   # partials plus the family-wide pooled-allocations + market-flows injection
   # so the per-goal backing math doesn't fire a query per row (N+1). Pass a
@@ -92,14 +113,17 @@ class Goal < ApplicationRecord
     goals
   end
 
-  # One family-wide earmark-pool + market-flows read shared across every
-  # goal in the list (see pooled_allocations_for / market_flows_for).
+  # One family-wide earmark-pool + market-flows + pace read shared across
+  # every goal in the list (see pooled_allocations_for / market_flows_for /
+  # pace_for).
   def self.inject_backing_math!(goals, family)
     pooled = pooled_allocations_for(family)
     flows = market_flows_for(family)
+    pace_map = pace_for(family)
     goals.each do |goal|
       goal.pooled_allocations = pooled
       goal.market_flows = flows
+      goal.pooled_pace = pace_map
     end
   end
 
@@ -270,13 +294,7 @@ class Goal < ApplicationRecord
     @pace = if linked_accounts.empty?
       0
     else
-      account_ids = linked_accounts.map(&:id)
-      net = Entry
-        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-        .where(account_id: account_ids, date: 90.days.ago.to_date..Date.current)
-        .where(excluded: false)
-        .merge(Transaction.excluding_pending)
-        .sum(:amount)
+      net = linked_accounts.sum { |account| pooled_pace.fetch(account.id, 0).to_d }
       (-net.to_d / 3).round(2)
     end
   end
@@ -616,6 +634,10 @@ class Goal < ApplicationRecord
 
     def market_flows
       @market_flows ||= self.class.market_flows_for(family)
+    end
+
+    def pooled_pace
+      @pooled_pace ||= self.class.pace_for(family)
     end
 
     # Cleared after every AASM transition. The state column drives the
