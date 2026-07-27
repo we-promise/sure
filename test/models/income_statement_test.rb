@@ -426,10 +426,10 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     assert_equal 5, totals.transactions_count
     assert_equal Money.new(1000, @family.currency), totals.income_money
-    assert_equal Money.new(1900, @family.currency), totals.expense_money
+    assert_equal Money.new(900, @family.currency), totals.expense_money
     assert_equal Money.new(1000, @family.currency), income_statement.matched_investment_contribution_outflow_total(period: Period.last_30_days)
-    assert_equal 1900, income_statement.median_expense(interval: "month")
-    assert_equal 1900, income_statement.avg_expense(interval: "month")
+    assert_equal 900, income_statement.median_expense(interval: "month")
+    assert_equal 900, income_statement.avg_expense(interval: "month")
     assert_equal 900, income_statement.median_expense(interval: "month", category: @groceries_category)
     assert_equal 900, income_statement.avg_expense(interval: "month", category: @groceries_category)
   end

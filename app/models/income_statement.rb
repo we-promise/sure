@@ -129,10 +129,6 @@ class IncomeStatement
     ).call
   end
 
-  def include_investment_contributions?
-    !user&.treat_investment_contributions_as_transfers?
-  end
-
   # Accounts actually reflected in totals/totals_for: visible, not excluded
   # from reports, not tax-advantaged, and (when scoped to a user) included in
   # that user's finances. Callers offering an account filter (e.g. a

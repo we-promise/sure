@@ -50,7 +50,8 @@ class PagesController < ApplicationController
     net_totals = income_statement.net_category_totals(period: @period)
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
-    @outflows_data = build_outflows_donut_data(net_totals)
+    investment_contributions_total = income_statement.matched_investment_contribution_outflow_total(period: @period)
+    @outflows_data = build_outflows_donut_data(net_totals, investment_contributions_total:)
     # Preview-gated: skip the query outright rather than loading rows the
     # section won't be built from.
     @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT) : Insight.none
@@ -414,9 +415,9 @@ class PagesController < ApplicationController
       end
     end
 
-    def build_outflows_donut_data(net_totals)
+    def build_outflows_donut_data(net_totals, investment_contributions_total: Money.new(0, net_totals.currency))
       currency_symbol = Money::Currency.new(net_totals.currency).symbol
-      total = net_totals.total_net_expense
+      total = net_totals.total_net_expense + investment_contributions_total.cents
 
       categories = net_totals.net_expense_categories
         .reject { |ct| ct.total.zero? }
@@ -433,6 +434,19 @@ class PagesController < ApplicationController
             clickable: !ct.category.other_investments?
           }
         end
+
+      if investment_contributions_total.positive?
+        categories << {
+          id: "investment_contributions",
+          name: Category.investment_contributions_name,
+          amount: investment_contributions_total.cents.to_f,
+          currency: net_totals.currency,
+          percentage: 0,
+          color: "var(--color-success)",
+          icon: "trending-up",
+          clickable: true
+        }
+      end
 
       categories.each do |category|
         category[:percentage] = total.zero? ? 0 : (category[:amount] / total * 100).round(1)

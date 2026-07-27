@@ -117,7 +117,6 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       account: checking_account,
       name: "Brokerage transfer",
       amount: 1_000,
-      category: @family.investment_contributions_category,
       kind: "investment_contribution"
     )
     inflow = create_transaction(
@@ -126,25 +125,17 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       amount: -1_000,
       kind: "funds_movement"
     )
-    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
+    Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow, status: "confirmed")
 
     get root_path
 
     assert_response :ok
     donut = css_select("[data-controller='donut-chart']").first
     segments = JSON.parse(donut["data-donut-chart-segments-value"])
-    investment_segment = segments.find { |segment| segment["name"] == Category.investment_contributions_name }
+    investment_segment = segments.find { |segment| segment["id"] == "investment_contributions" }
 
     assert_equal Category.investment_contributions_name, investment_segment["name"]
     assert_equal 1000.0, investment_segment["amount"]
-
-    sankey = css_select("[data-controller='sankey-chart']").first
-    sankey_data = JSON.parse(sankey["data-sankey-chart-data-value"])
-    contribution_node = sankey_data.fetch("nodes").find { |node| node["name"] == Category.investment_contributions_name }
-
-    assert_equal Category.investment_contributions_name, contribution_node["name"]
-    assert_equal 1000.0, contribution_node["value"]
-    assert_not sankey_data.fetch("nodes").any? { |node| node["id"] == "surplus_node" }
   end
 
   test "dashboard renders sankey chart zoom controls and stable node ids" do
