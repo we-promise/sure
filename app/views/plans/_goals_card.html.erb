@@ -1,6 +1,6 @@
 <%# locals: (goals:, summary:, linkable_account_count:, family_has_goals:) %>
 
-<section class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
+<%= render DS::Card.new do %>
   <div class="flex flex-wrap items-center gap-2 mb-4">
     <span class="w-7 h-7 rounded-lg bg-surface-inset text-secondary flex items-center justify-center shrink-0">
       <%= icon("target", size: "sm") %>
@@ -125,4 +125,4 @@
       class: "mt-5"
     ) %>
   <% end %>
-</section>
+<% end %>
