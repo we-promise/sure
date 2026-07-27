@@ -141,10 +141,9 @@ class Provider::Binance
       params = timestamp_params.merge(extra_params)
       query_string = URI.encode_www_form(params.sort)
 
-      full_url = "#{base_url}#{path}"
-
       response = self.class.get(
-        full_url,
+        path,
+        base_url,
         query: "#{query_string}&signature=#{sign(query_string)}",
         headers: auth_headers
       )
