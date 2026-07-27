@@ -74,6 +74,7 @@ class IncomeStatement::Totals
           er.to_currency = :target_currency
         )
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
+          AND #{Transaction.unmatched_transfer_sql("at")}
           AND ae.excluded = false
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
@@ -103,6 +104,7 @@ class IncomeStatement::Totals
           er.to_currency = :target_currency
         )
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
+          AND #{Transaction.unmatched_transfer_sql("at")}
           AND (
             at.investment_activity_label IS NULL
             OR at.investment_activity_label NOT IN ('Transfer', 'Sweep In', 'Sweep Out', 'Exchange')
