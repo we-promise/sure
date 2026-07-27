@@ -307,6 +307,34 @@ class EnableBankingItem::Importer
       )
     end
 
+    # Surfaces a pagination truncation as a support-visible diagnostic (rather than
+    # only a Rails log line) so the /settings/debug UI shows when a sync silently
+    # dropped pages beyond a validation error, in case the account ever has more
+    # transactions in the requested window than the ASPSP's broken pagination can
+    # actually deliver (currently harmless for narrow incremental sync windows, but
+    # a wider historical resync could otherwise lose data without any visible sign).
+    def capture_pagination_truncation_debug_log(enable_banking_account, transaction_status:, pages_kept:, transactions_kept:, error:)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Enable Banking transaction pagination truncated by a validation error mid-fetch; kept partial results instead of failing the sync",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          transaction_status: transaction_status,
+          pages_kept: pages_kept,
+          transactions_kept: transactions_kept,
+          error_type: error.error_type.to_s,
+          provider_error: sanitized_provider_error(error)
+        }
+      )
+    end
+
     def sanitized_error_message(error)
       return error.message unless error.is_a?(Provider::EnableBanking::EnableBankingError)
 
@@ -603,6 +631,13 @@ class EnableBankingItem::Importer
           # (Issue #392)
           raise if e.error_type != :validation_error || page_count == 1
           Rails.logger.warn "EnableBankingItem::Importer - Validation error mid-pagination for account #{enable_banking_account.uid} (status=#{transaction_status}), keeping #{all_transactions.count} transaction(s) from #{page_count - 1} page(s). #{e.message}"
+          capture_pagination_truncation_debug_log(
+            enable_banking_account,
+            transaction_status: transaction_status,
+            pages_kept: page_count - 1,
+            transactions_kept: all_transactions.count,
+            error: e
+          )
           break
         end
 

@@ -196,15 +196,24 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       end
     end
 
-    result = @importer.send(
-      :fetch_paginated_transactions,
-      enable_banking_account,
-      start_date: Date.today,
-      transaction_status: "BOOK"
-    )
+    assert_difference "DebugLogEntry.count", 1 do
+      result = @importer.send(
+        :fetch_paginated_transactions,
+        enable_banking_account,
+        start_date: Date.today,
+        transaction_status: "BOOK"
+      )
 
-    assert_equal [ page1_tx ], result
-    assert_equal 2, call_count
+      assert_equal [ page1_tx ], result
+      assert_equal 2, call_count
+    end
+
+    debug_log = DebugLogEntry.last
+    assert_equal "provider_sync_error", debug_log.category
+    assert_equal "warn", debug_log.level
+    assert_equal "enable_banking", debug_log.provider_key
+    assert_equal 1, debug_log.metadata["pages_kept"]
+    assert_equal 1, debug_log.metadata["transactions_kept"]
   end
 
   # A validation error on the very first page has no prior page to fall back on, so it
