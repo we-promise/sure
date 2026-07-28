@@ -163,10 +163,10 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test "dismiss is blocked for users without preview access" do
+  test "acknowledge is blocked for users without preview access" do
     disable_preview_features
 
-    patch dismiss_insight_url(@insight), as: :turbo_stream
+    patch acknowledge_insight_url(@insight), as: :turbo_stream
 
     assert_redirected_to root_path
     assert @insight.reload.active?
