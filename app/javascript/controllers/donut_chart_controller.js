@@ -194,6 +194,8 @@ export default class extends Controller {
     }
 
     const reducedOpacityColor = d3.color(color);
+    if (!reducedOpacityColor) return color;
+
     reducedOpacityColor.opacity = this.segmentOpacityValue;
     return reducedOpacityColor;
   };
