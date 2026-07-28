@@ -25,7 +25,7 @@ module Authentication
     def authenticate_user!
       cookie_session = find_session_by_cookie
 
-      if cookie_session && cookie_session_disagrees_with_header?(cookie_session)
+      if cookie_session && cookie_session_disagrees_with_resolved_header_user?(cookie_session)
         cookie_session.destroy
         cookies.delete(:session_token)
         cookie_session = nil
@@ -44,15 +44,13 @@ module Authentication
       end
     end
 
-    def cookie_session_disagrees_with_header?(session)
-      email = trusted_remote_user_email
-      email.present? && session.user&.email != email
+    def cookie_session_disagrees_with_resolved_header_user?(session)
+      user, = resolved_remote_header_user
+      user.present? && session.user != user
     end
 
     def create_session_by_remote_header
-      return unless user_email = trusted_remote_user_email
-
-      user, created = find_or_create_remote_header_user(user_email)
+      user, created = resolved_remote_header_user
       return unless user
 
       if created
@@ -79,18 +77,30 @@ module Authentication
       create_session_for(user)
     end
 
+    # Returns [ user, created ] for the header assertion, or [ nil, false ] when
+    # there isn't one or it can't be honored. Memoized because the cookie-vs-header
+    # check and the session build both need it, and resolving twice would mean a
+    # second lookup — or a second JIT creation attempt — on the same request.
+    def resolved_remote_header_user
+      return @resolved_remote_header_user if defined?(@resolved_remote_header_user)
+
+      user_email = trusted_remote_user_email
+      @resolved_remote_header_user = user_email ? find_or_create_remote_header_user(user_email) : [ nil, false ]
+    end
+
     # Most recent session that looks like the same client coming back. Keyed on
     # the indexed ip_address_digest; user_agent is compared in Ruby because it's
     # encrypted non-deterministically when ActiveRecord encryption is configured
-    # and so can't appear in a WHERE clause.
+    # and so can't appear in a WHERE clause. This must use Current.ip_address:
+    # Session stores request.ip, not the trusted proxy peer in REMOTE_ADDR.
     def reusable_remote_header_session_for(user)
       digest = Session.ip_address_digest_for(Current.ip_address)
       return nil if digest.blank?
 
       user.sessions
           .where(ip_address_digest: digest, active_impersonator_session_id: nil)
-          .where(updated_at: REMOTE_HEADER_SESSION_REUSE_WINDOW.ago..)
-          .order(updated_at: :desc)
+          .where(created_at: REMOTE_HEADER_SESSION_REUSE_WINDOW.ago..)
+          .order(created_at: :desc)
           .limit(REMOTE_HEADER_SESSION_REUSE_CANDIDATES)
           .find { |candidate| candidate.user_agent == Current.user_agent }
     end
@@ -100,8 +110,8 @@ module Authentication
     # set, source IP in the trusted-proxies allowlist, shared-secret match
     # (if configured), and email shape is valid.
     #
-    # Memoized: this runs from cookie_session_disagrees_with_header? and again
-    # from create_session_by_remote_header on every HTML request.
+    # Memoized independently from user resolution so callers that only need the
+    # trusted assertion don't perform a database lookup or JIT creation.
     def trusted_remote_user_email
       return @trusted_remote_user_email if defined?(@trusted_remote_user_email)
 
@@ -181,6 +191,11 @@ module Authentication
     end
 
     def create_remote_header_user(user_email)
+      unless User.exists?
+        reject_remote_user_header("first account must be created through registration", email: user_email)
+        return [ nil, false ]
+      end
+
       # Mirrors OidcAccountsController#create_user: a pending invitation always
       # wins, otherwise the instance's JIT policy decides.
       invitation = Invitation.pending.find_by(email: user_email)
@@ -197,6 +212,8 @@ module Authentication
         user.role = invitation.role
       else
         user.family = Family.new
+        # The first-account guard above keeps the normal registration bootstrap,
+        # so this always resolves to the fallback :admin role.
         user.role = User.role_for_new_family_creator(fallback_role: :admin)
       end
 
@@ -260,6 +277,7 @@ module Authentication
     def remote_user_header_logout_url
       return nil unless Rails.application.config.app_mode.self_hosted?
       return nil if Rails.application.config.remote_user_header_email.blank?
+      return nil if trusted_remote_user_email.blank?
 
       Rails.application.config.remote_user_logout_url
     end
