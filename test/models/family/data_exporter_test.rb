@@ -238,11 +238,14 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal merchant.color, row.merchant_color
       assert_equal "https://pizzapalace.com", row.merchant_website
 
-      assert_difference -> { @other_family.merchants.count }, 1 do
+      # The export carries every family merchant (incl. fixtures), so scope the
+      # count assertion to the merchant under test.
+      assert_difference -> { @other_family.merchants.where(name: "Pizza Palace").count }, 1 do
         import.send(:import!)
       end
 
       imported = @other_family.merchants.find_by!(name: "Pizza Palace")
+      assert_equal merchant.color, imported.color
       assert_equal "https://pizzapalace.com", imported.website_url
     end
   end
