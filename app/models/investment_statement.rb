@@ -251,7 +251,7 @@ class InvestmentStatement
     @investment_accounts ||= begin
       scope = family.accounts.visible.included_in_reports.where(accountable_type: %w[Investment Crypto])
       scope = scope.included_in_finances_for(user) if user
-      scope
+      scope.includes(:accountable, :account_providers, logo_attachment: :blob)
     end
   end
 
