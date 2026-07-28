@@ -136,6 +136,13 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal Category.investment_contributions_name, investment_segment["name"]
     assert_equal 1000.0, investment_segment["amount"]
+
+    sankey = css_select("[data-controller='sankey-chart']").first
+    sankey_data = JSON.parse(sankey["data-sankey-chart-data-value"])
+    contribution_node = sankey_data.fetch("nodes").find { |node| node["id"] == "investment_contributions_node" }
+
+    assert_equal Category.investment_contributions_name, contribution_node["name"]
+    assert_equal 1000.0, contribution_node["value"]
   end
 
   test "dashboard renders sankey chart zoom controls and stable node ids" do
