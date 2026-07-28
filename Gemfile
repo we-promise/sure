@@ -37,7 +37,7 @@ gem "sidekiq-cron"
 gem "sidekiq-unique-jobs"
 
 # Monitoring
-gem "vernier"
+gem "vernier", platforms: :mri
 gem "rack-mini-profiler"
 gem "sentry-ruby"
 gem "sentry-rails"
@@ -126,8 +126,8 @@ group :development do
   gem "web-console"
   gem "faker"
   gem "benchmark-ips"
-  gem "stackprof"
-  gem "derailed_benchmarks"
+  gem "stackprof", platforms: :mri
+  gem "derailed_benchmarks", platforms: :mri
   gem "foreman"
 end
 

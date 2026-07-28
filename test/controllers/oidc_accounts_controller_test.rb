@@ -180,6 +180,8 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal new_user_auth["last_name"], new_user.last_name
     assert_equal "admin", new_user.role  # Family creators should be admin
 
+    assert_equal "admin", new_user.membership_for(new_user.family).role
+
     # Verify OIDC identity was created
     oidc_identity = new_user.oidc_identities.first
     assert_not_nil oidc_identity
@@ -241,6 +243,25 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert Session.exists?(user_id: new_user.id)
   end
 
+  test "create_user from invitation accepts membership atomically without rehoming" do
+    invitation = invitations(:one)
+    invitation.update!(email: "oidc-invited@example.com", role: "guest")
+    session[:pending_oidc_auth] = new_user_auth.merge("email" => invitation.email)
+
+    assert_difference([ "User.count", "OidcIdentity.count" ], 1) do
+      assert_difference("FamilyMembership.count", 2) do
+        post :create_user
+      end
+    end
+
+    assert_redirected_to root_path
+    new_user = User.find_by!(email: invitation.email)
+    assert_not_equal invitation.family_id, new_user.family_id
+    assert_equal "guest", new_user.membership_for(invitation.family).role
+    assert invitation.reload.accepted_at.present?
+    assert_equal invitation.family_id, new_user.sessions.order(created_at: :desc).first.get_active_family_id
+  end
+
   test "should reject create_user when no pending auth" do
     post :create_user
 
@@ -289,7 +310,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     invitee = User.find_by(email: "invitee@example.com")
     assert_not_nil invitee
-    assert_equal family.id, invitee.family_id
+    assert invitee.family_memberships.exists?(family_id: family.id)
     assert_equal family.accounts.pluck(:id).sort,
       AccountShare.where(user: invitee).pluck(:account_id).sort
   end
@@ -308,7 +329,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_redirected_to root_path
 
     invitee = User.find_by(email: "invitee2@example.com")
-    assert_equal family.id, invitee.family_id
+    assert invitee.family_memberships.exists?(family_id: family.id)
     assert_equal 0, AccountShare.where(user: invitee).count
   end
 end

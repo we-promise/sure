@@ -29,6 +29,8 @@ class Family < ApplicationRecord
   SHARING_DEFAULTS = %w[shared private].freeze
 
   has_many :users, dependent: :destroy
+  has_many :family_memberships, dependent: :destroy, inverse_of: :family
+  has_many :members, through: :family_memberships, source: :user
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
 
@@ -216,9 +218,10 @@ class Family < ApplicationRecord
     # user_in_same_family / cannot_share_with_owner validations, so this
     # membership check is the ONLY thing preventing cross-family sharing.
     # Do not drop it when refactoring.
-    return unless user&.persisted? && user.family_id == id
+    return unless user&.persisted? && (user.family_id == id || FamilyMembership.exists?(family_id: id, user_id: user.id))
 
-    permission = user.guest? ? "read_only" : "read_write"
+    role_in_family = FamilyMembership.find_by(family_id: id, user_id: user.id)&.role || user.role
+    permission = role_in_family.to_s == "guest" ? "read_only" : "read_write"
     records = accounts.where.not(owner_id: user.id).pluck(:id).map do |account_id|
       { account_id: account_id, user_id: user.id, permission: permission,
         include_in_finances: true, created_at: Time.current, updated_at: Time.current }
