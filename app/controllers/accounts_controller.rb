@@ -77,6 +77,15 @@ class AccountsController < ApplicationController
     Entry::ActivityFeedPreloader.new(@entries).preload
     Transaction::ActivitySecurityPreloader.new(@entries).preload
 
+    # Avoid per-row `child_entries.exists?` from Entry#split_parent? during
+    # transaction row render (same pattern as TransactionsController#index).
+    entry_ids = @entries.map(&:id)
+    @split_parent_entry_ids = if entry_ids.any?
+      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+    else
+      Set.new
+    end
+
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end
 

@@ -31,7 +31,23 @@ class Entry::ActivityFeedPreloader
     def preload_entryable_associations
       ActiveRecord::Associations::Preloader.new(
         records: transactions,
-        associations: [ :merchant, :category, :transfer_as_inflow, :transfer_as_outflow ]
+        associations: [
+          :merchant,
+          :category,
+          # Transfer#categorizable? / #payment? walk to_account via
+          # inflow_transaction.entry.account. Flat transfer includes alone
+          # still N+1 that triad during activity-row render.
+          {
+            transfer_as_inflow: {
+              inflow_transaction: { entry: :account }
+            }
+          },
+          {
+            transfer_as_outflow: {
+              inflow_transaction: { entry: :account }
+            }
+          }
+        ]
       ).call
 
       ActiveRecord::Associations::Preloader.new(records: trades, associations: [ :security ]).call
