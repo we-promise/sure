@@ -38,6 +38,7 @@ When you arrive at the main dashboard, showing **No accounts yet**, you're all s
 > 
 > - [**Lunch Flow**](https://www.lunchflow.app/)
 > - [**Plaid**](/docs/hosting/plaid.md)
+> - [**Redbark**](/docs/hosting/redbark.md) (Australian banks)
 > - [**SimpleFIN**](https://beta-bridge.simplefin.org/)
 > - [**Enable Banking**](https://enablebanking.com/) (beta)
 > - [**CoinStats**](https://coinstats.app/) (beta)
