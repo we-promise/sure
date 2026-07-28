@@ -14,6 +14,14 @@ class Rack::Attack
     request.ip if request.post? && request.path == "/register"
   end
 
+  throttle("remote-user-header/email", limit: 30, period: 1.minute) do |request|
+    header_name = Rails.application.config.remote_user_header_email
+    if header_name.present?
+      env_name = "HTTP_#{header_name.upcase.tr("-", "_")}"
+      request.get_header(env_name)&.strip&.downcase.presence
+    end
+  end
+
   # Throttle unauthenticated WebAuthn ceremonies similarly to sign-in
   # endpoints; registration remains behind normal application authentication.
   # Covers both the MFA step-up and passwordless passkey sign-in.
