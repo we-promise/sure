@@ -56,6 +56,22 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes transfer_ids, one_time_entry.entryable.id
     assert_not_includes transfer_ids, standard_entry.entryable.id
 
+    investment_contribution_entry = create_transaction(
+      account: @checking_account,
+      amount: 700,
+      kind: "investment_contribution"
+    )
+    investment_contribution_results = Transaction::Search.new(
+      @family,
+      filters: { types: [ "transfer" ], kinds: [ "investment_contribution" ] }
+    ).transactions_scope
+
+    investment_contribution_ids = investment_contribution_results.pluck(:id)
+
+    assert_includes investment_contribution_ids, investment_contribution_entry.entryable.id
+    assert_not_includes investment_contribution_ids, transfer_entry.entryable.id
+    assert_not_includes investment_contribution_ids, payment_entry.entryable.id
+
     # Test expense type filter (excludes transfer kinds but includes one_time)
     expense_results = Transaction::Search.new(@family, filters: { types: [ "expense" ] }).transactions_scope
     expense_ids = expense_results.pluck(:id)
