@@ -209,10 +209,40 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
 
     debug_log = DebugLogEntry.last
     assert_equal "provider_sync_error", debug_log.category
-    assert_equal "warn", debug_log.level
+    assert_equal "error", debug_log.level
     assert_equal "enable_banking", debug_log.provider_key
     assert_equal 1, debug_log.metadata["pages_kept"]
     assert_equal 1, debug_log.metadata["transactions_kept"]
+  end
+
+  # Regression for we-promise/sure#2828 review feedback (jjmata): the PDNG-unsupported
+  # rescue in fetch_and_store_transactions already tolerates both :validation_error and
+  # :bad_request, but fetch_paginated_transactions is the shared method behind both the
+  # BOOK and PDNG fetches — without this, a :bad_request mid-PDNG-pagination would raise
+  # here, propagate past the PDNG-unsupported rescue's partial-keep logic, and discard
+  # the already-fetched PDNG page 1 entirely instead of keeping it like the BOOK path
+  # does. Trade Republic only 400s on PDNG page 1 today, so this is currently latent,
+  # but the two error types must stay symmetric for ASPSPs that don't.
+  test "fetch_paginated_transactions keeps partial results when a bad_request interrupts a later PDNG page" do
+    enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    page1_tx = { transaction_id: "tx1" }
+    page1_response = { transactions: [ page1_tx ], continuation_key: "next-page-key" }
+    error = Provider::EnableBanking::EnableBankingError.new(
+      "Bad request to Enable Banking API: {\"error\":\"WRONG_REQUEST_PARAMETERS\"}",
+      :bad_request,
+      response_data: { error: "WRONG_REQUEST_PARAMETERS" }
+    )
+
+    @mock_provider.expects(:get_account_transactions).twice.returns(page1_response).then.raises(error)
+
+    result = @importer.send(
+      :fetch_paginated_transactions,
+      enable_banking_account,
+      start_date: Date.today,
+      transaction_status: "PDNG"
+    )
+
+    assert_equal [ page1_tx ], result
   end
 
   # A validation error on the very first page has no prior page to fall back on, so it

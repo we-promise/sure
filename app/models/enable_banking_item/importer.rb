@@ -316,7 +316,7 @@ class EnableBankingItem::Importer
     def capture_pagination_truncation_debug_log(enable_banking_account, transaction_status:, pages_kept:, transactions_kept:, error:)
       DebugLogEntry.capture(
         category: "provider_sync_error",
-        level: "warn",
+        level: "error",
         message: "Enable Banking transaction pagination truncated by a validation error mid-fetch; kept partial results instead of failing the sync",
         source: self.class.name,
         provider_key: "enable_banking",
@@ -647,18 +647,25 @@ class EnableBankingItem::Importer
           # Some ASPSPs (e.g. Trade Republic via Enable Banking) issue a continuation_key
           # that their own API then rejects on the next page as mismatched with
           # transaction_status (422 WRONG_REQUEST_PARAMETERS: "transactionStatus in
-          # request is not the same as in continuationKey"). Failing outright would
-          # discard every page already fetched, so once at least one page has
-          # succeeded, treat a validation error as "pagination exhausted" and keep
-          # the partial result. A validation error on the very first page has no
-          # prior data to fall back on and is a real failure, so it still propagates.
+          # request is not the same as in continuationKey", surfaced as :validation_error;
+          # Trade Republic's PDNG fetch specifically surfaces the same underlying issue as
+          # a plain 400/:bad_request instead). Failing outright would discard every page
+          # already fetched, so once at least one page has succeeded, treat either error
+          # type as "pagination exhausted" and keep the partial result — symmetric with the
+          # PDNG-unsupported handling below, which already tolerates both types for the same
+          # reason. A validation error on the very first page has no prior data to fall back
+          # on and is a real failure, so it still propagates.
           # WRONG_TRANSACTIONS_PERIOD is excluded even mid-pagination: it means the
           # date range itself is invalid (already retried once with a corrected
           # date_from in Provider::EnableBanking#get_account_transactions), not that
           # pagination is exhausted, so swallowing it here would silently drop the
           # remaining pages instead of surfacing a retryable failure. (Issue #392)
-          raise if e.error_type != :validation_error || page_count == 1 || e.wrong_transactions_period?
-          Rails.logger.warn "EnableBankingItem::Importer - Validation error mid-pagination for account #{enable_banking_account.uid} (status=#{transaction_status}), keeping #{all_transactions.count} transaction(s) from #{page_count - 1} page(s). #{e.message}"
+          raise if ![ :validation_error, :bad_request ].include?(e.error_type) || page_count == 1 || e.wrong_transactions_period?
+          # error (not warn): this discards data for any ASPSP/scenario matching this
+          # error_type mid-pagination, not just the specific Trade Republic continuationKey
+          # mismatch this was written for — worth surfacing prominently in case a future
+          # ASPSP hits this path for a genuinely different reason.
+          Rails.logger.error "EnableBankingItem::Importer - Validation error mid-pagination for account #{enable_banking_account.uid} (status=#{transaction_status}), keeping #{all_transactions.count} transaction(s) from #{page_count - 1} page(s). #{e.message}"
           capture_pagination_truncation_debug_log(
             enable_banking_account,
             transaction_status: transaction_status,
