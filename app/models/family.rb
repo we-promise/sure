@@ -458,6 +458,18 @@ class Family < ApplicationRecord
     end
   end
 
+  # Income-statement aggregates depend on persisted transfer matches as well as
+  # entries. A match can be created or removed without changing either entry,
+  # so expose a separate version for cache keys that apply transfer-aware logic.
+  def transfers_cache_version
+    @transfers_cache_version ||= begin
+      ts = Transfer.joins(outflow_transaction: { entry: :account })
+                   .where(accounts: { family_id: id })
+                   .maximum(:updated_at)
+      ts.present? ? ts.to_i : 0
+    end
+  end
+
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
   end
