@@ -42,7 +42,7 @@
         ResizeObserver beats hand-rolled sidebar-width math, and for why it
         also has to guard that inline style against turbo_refreshes_with's
         morph reconciliation. %>
-    <div class="fixed z-50 top-6 md:top-4 left-1/2 -translate-x-1/2 w-full md:w-80 px-4 md:px-0 mx-auto md:mx-0 md:right-auto pt-[env(safe-area-inset-top)]"<% if sidebar_aware %> data-notification-tray-target="tray"<% end %>>
+    <div class="fixed z-50 top-6 md:top-4 left-1/2 -translate-x-1/2 w-full md:w-80 px-4 md:px-0 mx-auto md:mx-0 md:right-auto pt-[env(safe-area-inset-top)]"<% if sidebar_aware %> data-notification-tray-target="tray" data-action="turbo:before-morph-attribute->notification-tray#preserveStyle"<% end %>>
       <%= render "layouts/shared/notification_tray" %>
     </div>
   </body>
