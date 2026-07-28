@@ -31,6 +31,39 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame[src='#{statements_path}']"
   end
 
+  test "statements tab links escape turbo frame for full-page navigation" do
+    # Upload a statement to ensure table rows render
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      file: uploaded_file(
+        filename: "test.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 test content"
+      ),
+      account: @account
+    )
+
+
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+
+    # Inbox link escapes frame
+    assert_select "a[href='#{account_statements_path}'][data-turbo-frame='_top']"
+
+    # Statement filename link escapes frame
+    assert_select "a[data-turbo-frame='_top']", text: statement.filename
+
+    # Eye/view icon escapes frame and opens in new tab
+    assert_select "a[target='_blank'][data-turbo-frame='_top'][aria-label='#{I18n.t("account_statements.table.view")}']"
+
+    # Edit icon escapes frame
+    assert_select "a[href='#{account_statement_path(statement)}'][data-turbo-frame='_top'][aria-label='#{I18n.t("account_statements.table.edit")}']"
+
+    # Unlink button escapes frame
+    assert_select "form[action='#{unlink_account_statement_path(statement)}'][data-turbo-frame='_top'] button"
+  end
+
   test "statements tab shows coverage and upload for statement managers with account write access" do
     get account_url(@account, tab: "statements")
 
@@ -106,6 +139,14 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
   end
 
+  test "renders investment account with gains chart view" do
+    get account_url(accounts(:investment), chart_view: "gains")
+
+    assert_response :success
+    assert_select "option[value=gains][selected]"
+    assert_select "p", text: I18n.t("UI.account.chart.title.total_gains")
+  end
+
   test "activity pagination keeps activity tab when loaded from holdings tab" do
     investment = accounts(:investment)
 
@@ -171,7 +212,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
   test "syncing linked account triggers sync for all provider items" do
     plaid_account = plaid_accounts(:one)
-    plaid_item = plaid_account.plaid_item
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     # Reload to ensure the account has the provider association loaded

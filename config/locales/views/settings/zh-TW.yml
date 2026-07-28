@@ -43,6 +43,12 @@ zh-TW:
         theme_system: 系統設定
         theme_title: 主題
         timezone: 時區
+    appearances:
+      show:
+        modals_title: 模態視窗
+        modals_subtitle: 自訂模態視窗行為
+        disable_modal_click_outside_title: 點擊外部時保持模態視窗開啟
+        disable_modal_click_outside_description: 防止點擊外部時關閉模態視窗。有助於避免意外遺失未儲存的變更。
     profiles:
       destroy:
         cannot_remove_self: 您無法將自己從帳號中移除。

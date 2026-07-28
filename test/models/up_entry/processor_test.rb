@@ -113,4 +113,42 @@ class UpEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("-2500.0"), entry.amount
   end
+
+  test "marks internal transfers (transferAccount present) as funds_movement" do
+    entry = UpEntry::Processor.new(
+      {
+        id: "tx_transfer_1",
+        account_id: "acc_123",
+        status: "SETTLED",
+        description: "Transfer to 2Up Spending",
+        amount: { currencyCode: "AUD", value: "-500.00", valueInBaseUnits: -50000 },
+        settledAt: "2026-01-22T00:00:00+11:00",
+        createdAt: "2026-01-22T00:00:00+11:00",
+        transfer_account_id: "acc_other"
+      },
+      up_account: @up_account
+    ).process
+
+    transaction = entry.entryable
+    assert_equal "funds_movement", transaction.kind
+    assert_equal "acc_other", transaction.extra.dig("up", "transfer_account_id")
+  end
+
+  test "ordinary transactions (no transferAccount) keep the standard kind" do
+    entry = UpEntry::Processor.new(
+      {
+        id: "tx_standard_1",
+        account_id: "acc_123",
+        status: "SETTLED",
+        description: "Coffee Shop",
+        amount: { currencyCode: "AUD", value: "-4.50", valueInBaseUnits: -450 },
+        settledAt: "2026-01-22T00:00:00+11:00",
+        createdAt: "2026-01-22T00:00:00+11:00"
+      },
+      up_account: @up_account
+    ).process
+
+    assert_equal "standard", entry.entryable.kind
+    assert_nil entry.entryable.extra.dig("up", "transfer_account_id")
+  end
 end

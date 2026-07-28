@@ -15,6 +15,12 @@ class MerchantImport < Import
     end
   end
 
+  # Merchants hang off the family, not the import — see
+  # Import#committed_by_named_records?.
+  def data_committed?
+    committed_by_named_records?(family.merchants)
+  end
+
   def column_keys
     %i[name merchant_color merchant_website]
   end

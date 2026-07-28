@@ -1,0 +1,110 @@
+---
+tr:
+  insights:
+    actions:
+      budget: Bütçeyi görüntüle
+      cash_flow_warning: Yinelenen işlemleri incele
+      idle_cash: Hesaba git
+      net_worth_milestone: Net değer raporunu görüntüle
+      savings_rate_change: O ayın işlemlerini görüntüle
+      spending_anomaly: "%{category} işlemlerini görüntüle"
+      subscription_audit: Yinelenen işlemleri incele
+    card:
+      dismiss: Yoksay
+      dismissed: İçgörü yoksayıldı
+      new: Yeni
+      undo: Geri al
+    feed:
+      header: Son
+      header_new: Yeni
+      view_all: Tüm içgörüleri görüntüle
+    figures:
+      days_overdue:
+        one: "%{count} gün gecikti"
+        other: "%{count} gün gecikti"
+      idle_days:
+        one: "%{count} gündür hareketsiz"
+        other: "%{count} gündür hareketsiz"
+      of_budget: bütçenin
+      on_pace: bu tempoda
+      today: bugün
+      vs_previous: önceki aya göre
+    index:
+      empty:
+        description: Hesaplarınızda yeterli hareket olduğunda içgörüler burada görünür.
+          Her gece otomatik olarak yenilenirler.
+        title: Henüz içgörü yok
+      refresh: Yeni içgörüleri kontrol et
+      subtitle: Finansal durumunuzda neler oluyor, her gece yenilenir.
+      title: İçgörüler
+    meta:
+      date_range: "%{from} - %{to}"
+      last_n_days:
+        one: Son gün
+        other: Son %{count} gün
+      next_n_days:
+        one: Sonraki gün
+        other: Sonraki %{count} gün
+    refresh:
+      checking: Kontrol ediliyor…
+      queued: Yeni içgörüler oluşturuyoruz. Bir dakika sonra tekrar kontrol edin.
+    templates:
+      budget_at_risk:
+        near: "%{categories} bu ay limitlerine yaklaşıyor. Şu ana kadar toplam bütçenizin
+          %{budget_spent_pct}%'ini kullandınız."
+        over: "%{categories} bu ay bütçeyi aştı. Şu ana kadar toplam bütçenizin %{budget_spent_pct}%'ini
+          kullandınız."
+      budget_on_track: "%{budgeted} bütçenizin %{spent} kadarını harcadınız (%{budget_spent_pct}%)
+        ve her şey limitler dahilinde."
+      cash_flow_warning:
+        low: Yaklaşan yinelenen işlemleriniz ve tipik harcamalarınıza dayanarak, nakit
+          bakiyeniz %{projected_low_date} civarında %{projected_low} seviyesine düşebilir.
+        negative: Yaklaşan yinelenen işlemleriniz ve tipik harcamalarınıza dayanarak,
+          nakit bakiyeniz %{projected_low_date} civarında %{projected_low} seviyesine
+          kadar gerileyebilir.
+      idle_cash: "%{account} hesabında son %{idle_days} gündür herhangi bir hareket
+        olmadan %{balance} bulunuyor."
+      net_worth_milestone: Net değeriniz %{milestone} sınırını geçti ve şu anda %{net_worth}
+        seviyesinde.
+      savings_rate_change:
+        down: "%{month} ayında gelirinizin %{current_rate}%'ini biriktirdiniz, bu
+          önceki aydaki %{previous_rate}%'den %{change_pp} puan düşüş anlamına geliyor."
+        down_negative: "%{month} ayında kazandığınızdan daha fazla harcadınız: tasarruf
+          oranınız önceki aydaki %{previous_rate}%'den %{current_rate}%'e düştü."
+        up: "%{month} ayında gelirinizin %{current_rate}%'ini biriktirdiniz, bu önceki
+          aydaki %{previous_rate}%'den %{change_pp} puan artış anlamına geliyor."
+      spending_anomaly:
+        above: Bu ay %{category} kategorisinde %{projected_spend} harcama temposundasınız;
+          bu, son aylık ortalamanız olan %{baseline_spend}'den yaklaşık %{deviation_pct}%
+          daha fazla.
+        below: Bu ay %{category} kategorisinde %{projected_spend} harcama temposundasınız;
+          bu, son aylık ortalamanız olan %{baseline_spend}'den yaklaşık %{deviation_pct}%
+          daha az.
+      subscription_audit: "%{name} (%{amount}), %{expected_on} tarihinde beklenmesine
+        rağmen görünmedi. İptal edilmiş olabilir veya ödeme tarihi değişmiş olabilir."
+    titles:
+      budget_at_risk:
+        one: Bütçenizde bir kategori dikkat gerektiriyor
+        other: "%{count} kategori bütçenizde dikkat gerektiriyor"
+      budget_on_track: Bütçeniz yolunda
+      cash_flow_warning:
+        low: Nakit bakiyeniz azalabilir
+        negative: Nakit bakiyeniz eksiye düşebilir
+      idle_cash: "%{account} hesabında hareketsiz nakit"
+      net_worth_milestone: 'Net değer kilometre taşı: %{milestone}'
+      savings_rate_change:
+        down: Tasarruf oranınız %{month} ayında düştü
+        up: Tasarruf oranınız %{month} ayında iyileşti
+      spending_anomaly:
+        above: "%{category} harcamaları artış eğiliminde"
+        below: "%{category} harcamaları azalış eğiliminde"
+      subscription_audit: "%{name} hâlâ aktif mi?"
+    types:
+      budget_at_risk: Bütçe
+      budget_on_track: Bütçe
+      cash_flow_warning: Nakit akışı
+      idle_cash: Hareketsiz nakit
+      net_worth_milestone: Net değer
+      savings_rate_change: Tasarruf oranı
+      spending_anomaly: Harcama
+      subscription_audit: Abonelikler

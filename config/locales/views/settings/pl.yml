@@ -34,6 +34,10 @@ pl:
         theme_dark: Ciemny
         theme_light: Jasny
         theme_system: Systemowy
+        modals_title: Okna modalne
+        modals_subtitle: Dostosuj zachowanie okien modalnych
+        disable_modal_click_outside_title: Utrzymuj okna modalne otwarte po kliknięciu poza nimi
+        disable_modal_click_outside_description: Zapobiega zamykaniu okien modalnych po kliknięciu poza nimi. Przydatne, aby uniknąć przypadkowej utraty niezapisanych zmian.
         transactions_title: Transakcje
         transactions_subtitle: Dostosuj sposób wyświetlania transakcji
         dashboard_title: Pulpit

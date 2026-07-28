@@ -46,6 +46,12 @@ de:
         month_start_day: Budgetmonat beginnt am
         month_start_day_hint: Lege fest, wann dein Budgetmonat beginnt (z. B. Gehaltstag)
         month_start_day_warning: Deine Budgets und MTD-Berechnungen verwenden diesen benutzerdefinierten Starttag anstelle des 1. jedes Monats.
+    appearances:
+      show:
+        modals_title: Modale Fenster
+        modals_subtitle: Verhalten der modalen Fenster anpassen
+        disable_modal_click_outside_title: Modale Fenster bei Klick außerhalb geöffnet lassen
+        disable_modal_click_outside_description: Verhindert das Schließen modaler Fenster beim Klicken außerhalb. Nützlich, um ungespeicherte Änderungen nicht versehentlich zu verlieren.
     profiles:
       destroy:
         cannot_remove_self: Du kannst dich nicht selbst aus dem Konto entfernen.

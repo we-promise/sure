@@ -45,7 +45,13 @@ class Settings::HostingsController < ApplicationController
 
     if @show_yahoo_finance_settings
       @yahoo_finance_provider = Provider::Registry.get_provider(:yahoo_finance)
+      @yahoo_finance_health_status = @yahoo_finance_provider&.health_status || :unknown
     end
+
+    # Property valuation (AVM) providers — usage is shown against their tight
+    # monthly request caps when a key is configured
+    @rentcast_usage = Provider::Registry.get_provider(:rentcast)&.usage
+    @realie_usage = Provider::Registry.get_provider(:realie)&.usage
   end
 
   def update
@@ -115,6 +121,8 @@ class Settings::HostingsController < ApplicationController
     update_encrypted_setting(:eodhd_api_key)
     update_encrypted_setting(:alpha_vantage_api_key)
     update_encrypted_setting(:tinkoff_invest_api_key)
+    update_encrypted_setting(:rentcast_api_key)
+    update_encrypted_setting(:realie_api_key)
 
     if hosting_params.key?(:syncs_include_pending)
       Setting.syncs_include_pending = hosting_params[:syncs_include_pending] == "1"
@@ -143,13 +151,7 @@ class Settings::HostingsController < ApplicationController
       sync_auto_sync_scheduler!
     end
 
-    if hosting_params.key?(:openai_access_token)
-      token_param = hosting_params[:openai_access_token].to_s.strip
-      # Ignore blanks and redaction placeholders to prevent accidental overwrite
-      unless token_param.blank? || token_param == "********"
-        Setting.openai_access_token = token_param
-      end
-    end
+    update_encrypted_setting(:openai_access_token)
 
     # Validate OpenAI configuration before updating
     if hosting_params.key?(:openai_uri_base) || hosting_params.key?(:openai_model)
@@ -171,12 +173,7 @@ class Settings::HostingsController < ApplicationController
       Setting.openai_json_mode = hosting_params[:openai_json_mode].presence
     end
 
-    if hosting_params.key?(:anthropic_access_token)
-      token_param = hosting_params[:anthropic_access_token].to_s.strip
-      unless token_param.blank? || token_param == "********"
-        Setting.anthropic_access_token = token_param
-      end
-    end
+    update_encrypted_setting(:anthropic_access_token)
 
     if hosting_params.key?(:anthropic_base_url)
       raw_base_url = hosting_params[:anthropic_base_url].to_s.strip
@@ -233,12 +230,7 @@ class Settings::HostingsController < ApplicationController
       Setting.external_assistant_url = hosting_params[:external_assistant_url]
     end
 
-    if hosting_params.key?(:external_assistant_token)
-      token_param = hosting_params[:external_assistant_token].to_s.strip
-      unless token_param.blank? || token_param == "********"
-        Setting.external_assistant_token = token_param
-      end
-    end
+    update_encrypted_setting(:external_assistant_token)
 
     if hosting_params.key?(:external_assistant_agent_id)
       Setting.external_assistant_agent_id = hosting_params[:external_assistant_agent_id]
@@ -279,7 +271,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type
@@ -311,7 +303,13 @@ class Settings::HostingsController < ApplicationController
     def update_encrypted_setting(param_key)
       return unless hosting_params.key?(param_key)
       value = hosting_params[param_key].to_s.strip
-      Setting.public_send(:"#{param_key}=", value) unless value.blank? || value == "********"
+
+      # "********" is the masked placeholder rendered for an existing key; it
+      # means "leave the stored value untouched". A blank submission, however,
+      # is an explicit request to clear the key, so persist nil in that case.
+      return if value == "********"
+
+      Setting.public_send(:"#{param_key}=", value.presence)
     end
 
     def current_user_timezone

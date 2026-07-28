@@ -138,6 +138,47 @@ class Provider::UpTest < ActiveSupport::TestCase
     end
   end
 
+  test "flattens transaction relationships including transferAccount" do
+    response = FakeResponse.new(
+      code: 200,
+      message: "OK",
+      body: {
+        data: [
+          {
+            type: "transactions", id: "tx_xfer",
+            attributes: { status: "SETTLED", description: "Transfer to Savings" },
+            relationships: {
+              account: { data: { id: "acc_123" } },
+              category: { data: nil },
+              transferAccount: { data: { id: "acc_saver" } }
+            }
+          },
+          {
+            type: "transactions", id: "tx_plain",
+            attributes: { status: "SETTLED", description: "Coffee" },
+            relationships: {
+              account: { data: { id: "acc_123" } },
+              category: { data: { id: "restaurants-and-cafes" } },
+              transferAccount: { data: nil }
+            }
+          }
+        ],
+        links: { prev: nil, next: nil }
+      }.to_json
+    )
+
+    # The stub deliberately ignores the query: keyword: this test exercises only
+    # response flattening, not the request params (pagination/date filters), which
+    # are covered by the pagination tests above.
+    Provider::Up.stub(:get, ->(_url, headers:, query: nil) { response }) do
+      transactions = Provider::Up.new("up-access-token").get_account_transactions(account_id: "acc_123")
+
+      assert_equal "acc_saver", transactions.first[:transfer_account_id]
+      assert_equal "restaurants-and-cafes", transactions.second[:category_id]
+      assert_nil transactions.second[:transfer_account_id]
+    end
+  end
+
   test "raises typed errors for unauthorized responses" do
     response = FakeResponse.new(code: 401, message: "Unauthorized", body: "{}")
 

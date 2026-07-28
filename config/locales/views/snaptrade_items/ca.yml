@@ -5,28 +5,17 @@ ca:
       accounts_count:
         one: "%{count} compte"
         other: "%{count} comptes"
-      client_id_label: Client ID
-      client_id_placeholder: Introdueix el teu Client ID de SnapTrade
-      client_id_update_placeholder: Introdueix un nou Client ID per actualitzar
       connect_button: Connecta un broker
       connected_brokerages: 'Connectats:'
       connection_description: Connecta't al teu broker a través de SnapTrade (25+
         brokers admesos)
       connections_error: 'No s''han pogut carregar les connexions: %{message}'
-      consumer_key_label: Consumer Key
-      consumer_key_placeholder: Introdueix la teva Consumer Key de SnapTrade
-      consumer_key_update_placeholder: Introdueix un nou Consumer Key per actualitzar
       delete_connection: Elimina
       delete_connection_body: Això eliminarà permanentment la connexió de %{brokerage}
         de SnapTrade. Tots els comptes d'aquest broker quedaran sense enllaçar. Hauràs
         de reconnectar per sincronitzar aquests comptes de nou.
       delete_connection_confirm: Elimina la connexió
       delete_connection_title: Vols eliminar la connexió amb el broker?
-      delete_orphaned_user: Elimina
-      delete_orphaned_user_body: Això eliminarà permanentment aquest usuari orfe de
-        SnapTrade i totes les seves connexions de broker, alliberant places de connexió.
-      delete_orphaned_user_confirm: Elimina el registre
-      delete_orphaned_user_title: Vols eliminar el registre orfe?
       description: SnapTrade connecta amb més de 25 brokers importants (Fidelity,
         Vanguard, Schwab, Robinhood, etc.) i proporciona l'historial complet d'operacions
         amb etiquetes d'activitat i cost base.
@@ -41,28 +30,11 @@ ca:
         other: "%{count} necessiten configuració"
       no_connections: No s'han trobat connexions de broker.
       orphaned_connection: Connexió orfe (no sincronitzada localment)
-      orphaned_user: Registre orfe
-      orphaned_users_description: Aquests són registres d'usuari de SnapTrade anteriors
-        que ocupen places de connexió. Elimina'ls per alliberar places.
-      orphaned_users_title:
-        one: "%{count} registre orfe"
-        other: "%{count} registres orfes"
-      save_button: Desa la configuració
       setup_accounts_button: Configura comptes
-      setup_title: 'Instruccions de configuració:'
       status_connected:
         one: "%{count} compte de SnapTrade"
         other: "%{count} comptes de SnapTrade"
-      status_needs_registration: Credencials desades. Finalitza la configuració per
-        connectar un broker.
       status_ready: Llest per connectar brokers
-      step_1_html: Crea un compte a <a href="https://dashboard.snaptrade.com" target="_blank"
-        rel="noopener noreferrer" class="text-primary underline">dashboard.snaptrade.com</a>
-      step_2: Copia el teu Client ID i Consumer Key des del panell
-      step_3: Introdueix les teves credencials a continuació i fes clic a Desa
-      step_4: Ves a la pàgina de comptes i utilitza 'Connecta un altre broker' per
-        enllaçar els teus comptes d'inversió
-      update_button: Actualitza la configuració
   snaptrade_item:
     brokerage_summary:
       count:
@@ -108,8 +80,6 @@ ca:
         aquesta connexió i torna-la a crear.
     connections:
       unknown_brokerage: Broker desconegut
-    create:
-      success: SnapTrade s'ha configurat correctament.
     default_name: Connexió SnapTrade
     delete_connection:
       api_deletion_failed: No s'ha pogut eliminar la connexió de SnapTrade — falten
@@ -117,13 +87,8 @@ ca:
       failed: 'No s''ha pogut eliminar la connexió: %{message}'
       missing_authorization_id: Falta l'ID d'autorització
       success: La connexió s'ha eliminat correctament. S'ha alliberat una plaça.
-    delete_orphaned_user:
-      failed: No s'ha pogut eliminar el registre orfe.
-      success: El registre orfe s'ha eliminat correctament.
     destroy:
       success: S'ha programat la connexió SnapTrade per a la seva eliminació.
-    link_accounts:
-      use_setup_flow: Utilitza en el seu lloc el flux de configuració de comptes
     link_existing_account:
       failed: 'No s''ha pogut enllaçar el compte: %{message}'
       not_found: No s'ha trobat el compte.
@@ -205,5 +170,3 @@ ca:
       status: Darrera sincronització fa %{timestamp} - %{summary}
       status_never: Mai sincronitzat
       syncing: Sincronitzant...
-    update:
-      success: La configuració de SnapTrade s'ha actualitzat correctament.
