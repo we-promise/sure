@@ -333,7 +333,7 @@ class PagesController < ApplicationController
       end
 
       # Surplus/Deficit
-      net = (total_income - total_expense).round(2)
+      net = (total_income - total_expense - investment_contributions_total.amount).round(2)
       if net.positive?
         percentage = total_income.zero? ? 0 : (net / total_income * 100).round(1)
         idx = add_node.call("surplus_node", "Surplus", net, percentage, "var(--color-success)")

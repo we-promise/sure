@@ -145,6 +145,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal Category.investment_contributions_name, contribution_node["name"]
     assert_equal 1000.0, contribution_node["value"]
     assert_equal investment_segment.fetch("transactions_url"), contribution_node.fetch("transactions_url")
+    assert_not sankey_data.fetch("nodes").any? { |node| node["id"] == "surplus_node" }
   end
 
   test "dashboard renders sankey chart zoom controls and stable node ids" do
