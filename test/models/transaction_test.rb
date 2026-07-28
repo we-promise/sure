@@ -179,4 +179,44 @@ class TransactionTest < ActiveSupport::TestCase
 
     assert_equal securities(:msft), transaction.activity_security
   end
+
+  test "record_category_usage! touches the new category's last_used_at" do
+    transaction = transactions(:one)
+    category = categories(:income)
+    assert_nil category.last_used_at
+
+    transaction.update!(category: category)
+    transaction.record_category_usage!
+
+    assert_not_nil category.reload.last_used_at
+  end
+
+  test "record_category_usage! does nothing when category_id did not change" do
+    transaction = transactions(:one)
+    category = transaction.category
+    assert_nil category.last_used_at
+
+    transaction.reload
+    transaction.record_category_usage!
+
+    assert_nil category.reload.last_used_at
+  end
+
+  test "record_category_usage! does nothing when category is cleared" do
+    transaction = transactions(:one)
+
+    transaction.update!(category: nil)
+
+    assert_nothing_raised { transaction.record_category_usage! }
+  end
+
+  test "record_category_usage! is not invoked by rule-driven category enrichment" do
+    transaction = transactions(:one)
+    category = categories(:income)
+    assert_nil category.last_used_at
+
+    transaction.enrich_attribute(:category_id, category.id, source: "rule")
+
+    assert_nil category.reload.last_used_at
+  end
 end

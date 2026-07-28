@@ -9,9 +9,7 @@ class TransactionCategoriesController < ApplicationController
 
     transaction = @entry.transaction
 
-    if transaction.saved_change_to_category_id? && transaction.category.present?
-      transaction.category.touch(:last_used_at)
-    end
+    transaction.record_category_usage!
 
     if needs_rule_notification?(transaction)
       flash[:cta] = {

@@ -150,9 +150,9 @@ class Category < ApplicationRecord
     end
 
     # Categories a family has manually assigned recently — a shortcut above the
-    # alphabetical list, not a replacement for it. See TransactionCategoriesController#update
-    # for the one place last_used_at is touched (only on a real human pick, not
-    # rule/import auto-assignment).
+    # alphabetical list, not a replacement for it. See Transaction#record_category_usage!
+    # for where last_used_at is touched (only on a real human pick via one of the
+    # manual assignment controllers, not rule/import auto-assignment).
     def recently_used_for(family:, excluding: [], limit: 4)
       family.categories
             .recently_used

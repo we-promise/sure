@@ -24,7 +24,7 @@
           <div data-list-filter-target="recentSection">
             <p class="pl-2 pb-1 text-xs font-medium text-secondary uppercase tracking-wide"><%= t(".recent") %></p>
             <% @recent_categories.each do |category| %>
-              <%= render "category/dropdowns/row", category: category %>
+              <%= render "category/dropdowns/row", category: category, id_prefix: "recent_category_option" %>
             <% end %>
             <%= render "shared/ruler", classes: "my-2" %>
           </div>
