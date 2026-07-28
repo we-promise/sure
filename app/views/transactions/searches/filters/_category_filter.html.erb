@@ -11,7 +11,8 @@
       ) %>
   <div class="my-2" id="list" data-list-filter-target="list">
     <% family_categories.each do |category| %>
-      <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= category.display_name %>">
+      <% is_child = category.parent_id.present? %>
+      <div class="filterable-item flex items-center gap-2 p-2 <%= "pl-6" if is_child %>" data-filter-name="<%= category.display_name %>">
         <%= form.check_box :categories,
                            {
                              multiple: true,
@@ -21,6 +22,9 @@
                            category.name,
                            nil %>
         <%= form.label :categories, category.display_name, value: category.name, class: "text-sm text-primary cursor-pointer" do %>
+          <% if is_child %>
+            <%= icon("corner-down-right", size: "sm") %>
+          <% end %>
           <%= render partial: "categories/badge", locals: { category: category } %>
         <% end %>
       </div>
