@@ -10,18 +10,7 @@ module Api
         family = current_resource_owner.family
         user = current_resource_owner
 
-        family_merchant_ids = family.merchants.select(:id)
-        accessible_account_ids = family.accounts.accessible_by(user).select(:id)
-        provider_merchant_ids = Transaction.joins(:entry)
-          .where(entries: { account_id: accessible_account_ids })
-          .where.not(merchant_id: nil)
-          .select(:merchant_id)
-
-        @merchants = Merchant
-          .where(id: family_merchant_ids)
-          .or(Merchant.where(id: provider_merchant_ids, type: "ProviderMerchant"))
-          .distinct
-          .alphabetically
+        @merchants = family.api_assignable_merchants_for(user).alphabetically
 
         render json: @merchants.map { |m| merchant_json(m) }
       rescue StandardError => e
