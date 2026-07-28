@@ -11,7 +11,12 @@ export default class extends Controller {
   }
 
   filter() {
-    const filterValue = this.normalize(this.inputTarget.value);
+    // Only a genuinely empty query means "show everything". A non-empty
+    // query that normalizes away to "" (e.g. a lone combining mark) must
+    // still match nothing — "".includes("") is true, so without this split
+    // it would show every row instead of filtering.
+    const rawFilterValue = this.inputTarget.value;
+    const filterValue = this.normalize(rawFilterValue);
     const items = this.listTarget.querySelectorAll(".filterable-item");
     let noMatchFound = true;
 
@@ -21,7 +26,9 @@ export default class extends Controller {
 
     items.forEach((item) => {
       const text = this.normalize(item.getAttribute("data-filter-name"));
-      const shouldDisplay = text.includes(filterValue);
+      const shouldDisplay =
+        rawFilterValue.length === 0 ||
+        (filterValue.length > 0 && text.includes(filterValue));
       item.style.display = shouldDisplay ? "" : "none";
 
       if (shouldDisplay) {
@@ -47,7 +54,10 @@ export default class extends Controller {
   // those would normalize to "", and "".includes() matches everything,
   // silently showing every row instead of filtering.
   normalize(value) {
-    return value.normalize("NFD").replace(/\p{Mark}/gu, "").toLowerCase();
+    return value
+      .normalize("NFD")
+      .replace(/\p{Mark}/gu, "")
+      .toLowerCase();
   }
 
   handleKeydown(event) {
@@ -68,7 +78,10 @@ export default class extends Controller {
     if (items.length === 0) return;
 
     this.clearHighlights();
-    this.highlightedIndex = Math.min(this.highlightedIndex + 1, items.length - 1);
+    this.highlightedIndex = Math.min(
+      this.highlightedIndex + 1,
+      items.length - 1,
+    );
     this.highlightItem(items[this.highlightedIndex]);
     this.updateAriaActiveDescendant();
   }
@@ -98,7 +111,8 @@ export default class extends Controller {
 
   selectHighlighted() {
     const items = this.visibleItems;
-    if (this.highlightedIndex < 0 || this.highlightedIndex >= items.length) return;
+    if (this.highlightedIndex < 0 || this.highlightedIndex >= items.length)
+      return;
 
     const item = items[this.highlightedIndex];
     const form = item.querySelector("form");
@@ -118,8 +132,8 @@ export default class extends Controller {
   }
 
   get visibleItems() {
-    return Array.from(this.listTarget.querySelectorAll(".filterable-item")).filter(
-      (item) => item.style.display !== "none"
-    );
+    return Array.from(
+      this.listTarget.querySelectorAll(".filterable-item"),
+    ).filter((item) => item.style.display !== "none");
   }
 }
