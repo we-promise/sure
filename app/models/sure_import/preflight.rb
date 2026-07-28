@@ -25,7 +25,11 @@ class SureImport::Preflight
     "Valuation" => %w[account_id date amount],
     "Budget" => %w[id start_date end_date],
     "BudgetCategory" => %w[budget_id category_id],
-    "Rule" => %w[name]
+    # Rule#name is nullable (validated with allow_nil: true) and the exporter
+    # emits null names, so it must not be a required import field — requiring it
+    # aborts the whole import on a valid export. resource_type is defaulted by
+    # the importer, so Rule has no import-required fields.
+    "Rule" => %w[]
   }.freeze
 
   TAXONOMY_TYPES = { "Category" => :categories, "Tag" => :tags, "Merchant" => :merchants }.freeze
