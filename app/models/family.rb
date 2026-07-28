@@ -356,6 +356,21 @@ class Family < ApplicationRecord
     end
   end
 
+  # The category used to record the interest portion of automatically-split
+  # loan payments. Created on demand using the family's locale.
+  def loan_interest_category
+    I18n.with_locale(locale) do
+      categories.find_or_create_by!(name: Category.loan_interest_name) do |cat|
+        cat.color = "#be123c"
+        cat.lucide_icon = "percent"
+      end
+    end
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+    I18n.with_locale(locale) do
+      categories.find_by!(name: Category.loan_interest_name)
+    end
+  end
+
   # Returns account IDs for tax-advantaged accounts (401k, IRA, HSA, etc.)
   # Used to exclude these accounts from budget/cashflow calculations.
   # Tax-advantaged accounts are retirement savings, not daily expenses.

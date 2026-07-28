@@ -104,6 +104,12 @@ class Transfer < ApplicationRecord
 
   def destroy!
     Transfer.transaction do
+      # If this was an auto-split loan payment, capture the pieces to reverse
+      # (the checking-side split parent and the loan-side principal entry) so the
+      # original single payment is restored once the transfer is gone.
+      split_parent = loan_payment_split_parent
+      loan_entry = split_parent ? inflow_transaction&.entry : nil
+
       [ inflow_transaction, outflow_transaction ].each do |transaction|
         next if transaction.nil?
         next unless Transaction.exists?(transaction.id)
@@ -115,7 +121,22 @@ class Transfer < ApplicationRecord
         end
       end
       super
+
+      if split_parent
+        loan_entry&.destroy!
+        split_parent.unsplit!
+      end
     end
+  end
+
+  # When a linked loan payment was auto-split into principal + interest, the
+  # outflow (cash) side is a split child and the inflow side is the loan. Returns
+  # the split parent entry to reverse in that case, otherwise nil.
+  def loan_payment_split_parent
+    return nil unless outflow_transaction&.entry&.split_child?
+    return nil unless to_account&.loan?
+
+    outflow_transaction.entry.parent_entry
   end
 
   def confirm!

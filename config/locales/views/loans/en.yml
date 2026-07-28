@@ -13,6 +13,8 @@ en:
       none: None
       subtype_prompt: Select loan type
       subtype_none: None
+      auto_split_payments: Auto-split payments into principal & interest
+      auto_split_payments_description: When a payment is linked to this loan, only the principal reduces the balance and the interest is recorded as an expense. Requires an interest rate.
     new:
       title: Enter loan details
     overview:
@@ -35,3 +37,7 @@ en:
         type: Type
         unknown: Unknown
         edit_loan_details: "Edit loan details"
+        resplit_payments: "Recalculate past payments"
+        resplit_payments_confirm: "This will re-split payments already linked to this loan into principal and interest, correcting historical balances. Continue?"
+    resplit_payments:
+      success: "Past payments are being recalculated into principal and interest."
