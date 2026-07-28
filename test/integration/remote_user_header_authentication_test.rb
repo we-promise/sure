@@ -32,6 +32,15 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_url
   end
 
+  test "header authentication refuses to create the instance's first account" do
+    User.destroy_all
+
+    assert_no_difference -> { User.count } do
+      get root_url, headers: { HEADER_NAME => JIT_EMAIL }
+    end
+    assert_redirected_to new_registration_url
+  end
+
   test "JIT user has password_digest = nil and a created family" do
     get root_url, headers: { HEADER_NAME => JIT_EMAIL }
 
@@ -95,6 +104,19 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
     assert_equal 1, user.sessions.count, "cookieless clients must not mint a Session per request"
   end
 
+  test "cookieless session reuse expires based on session creation time" do
+    get root_url, headers: { HEADER_NAME => JIT_EMAIL }
+    user = User.find_by!(email: JIT_EMAIL)
+    original_session = user.sessions.sole
+    original_session.update_columns(created_at: 13.hours.ago, updated_at: Time.current)
+
+    reset!
+
+    assert_difference [ -> { SsoAuditLog.count }, -> { user.sessions.count } ], 1 do
+      get root_url, headers: { HEADER_NAME => JIT_EMAIL }
+    end
+  end
+
   test "cookie session for a different user is invalidated when the header asserts another identity" do
     user_a = users(:family_admin)
     sign_in(user_a)
@@ -105,6 +127,19 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
 
     refute Session.exists?(id: cookie_session.id), "cookie session should be destroyed when header asserts a different user"
     assert_not_nil User.find_by(email: JIT_EMAIL), "header-asserted user should be JIT'd"
+  end
+
+  test "cookie session is retained when the asserted header user cannot be established" do
+    Rails.application.config.stubs(:remote_user_allow_jit).returns(false)
+    user = users(:family_admin)
+    sign_in(user)
+    cookie_session = user.sessions.order(:created_at).last
+
+    get root_url, headers: { HEADER_NAME => JIT_EMAIL }
+
+    assert_response :success
+    assert Session.exists?(id: cookie_session.id)
+    assert_nil User.find_by(email: JIT_EMAIL)
   end
 
   test "IP allowlist: request from a non-allowlisted IP is ignored" do
@@ -137,7 +172,7 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
   end
 
   test "shared secret: when configured, request without the secret header is ignored" do
-    Rails.application.config.stubs(:remote_user_shared_secret).returns("s3cr3t")
+    Rails.application.config.stubs(:remote_user_shared_secret).returns("placeholder-not-a-real-secret")
     Rails.application.config.stubs(:remote_user_shared_secret_header).returns("X-Remote-User-Secret")
 
     assert_no_difference -> { User.count } do
@@ -147,26 +182,26 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
   end
 
   test "shared secret: when configured, mismatched secret is ignored" do
-    Rails.application.config.stubs(:remote_user_shared_secret).returns("s3cr3t")
+    Rails.application.config.stubs(:remote_user_shared_secret).returns("placeholder-not-a-real-secret")
     Rails.application.config.stubs(:remote_user_shared_secret_header).returns("X-Remote-User-Secret")
 
     assert_no_difference -> { User.count } do
       get root_url, headers: {
         HEADER_NAME => JIT_EMAIL,
-        "X-Remote-User-Secret" => "wrong"
+        "X-Remote-User-Secret" => "different-placeholder"
       }
     end
     assert_redirected_to new_session_url
   end
 
   test "shared secret: matching secret allows the request through" do
-    Rails.application.config.stubs(:remote_user_shared_secret).returns("s3cr3t")
+    Rails.application.config.stubs(:remote_user_shared_secret).returns("placeholder-not-a-real-secret")
     Rails.application.config.stubs(:remote_user_shared_secret_header).returns("X-Remote-User-Secret")
 
     assert_difference -> { User.count }, 1 do
       get root_url, headers: {
         HEADER_NAME => JIT_EMAIL,
-        "X-Remote-User-Secret" => "s3cr3t"
+        "X-Remote-User-Secret" => "placeholder-not-a-real-secret"
       }
     end
   end
@@ -342,9 +377,21 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
     session_record = user.sessions.order(:created_at).last
     assert_not_nil session_record
 
-    delete session_path(session_record)
+    delete session_path(session_record), headers: { HEADER_NAME => user.email }
 
     assert_redirected_to "https://auth.example.test/logout"
+    refute Session.exists?(id: session_record.id)
+  end
+
+  test "logout from a local session does not redirect to the proxy sign-out URL" do
+    Rails.application.config.stubs(:remote_user_logout_url).returns("https://auth.example.test/logout")
+    user = users(:family_admin)
+    sign_in(user)
+    session_record = user.sessions.order(:created_at).last
+
+    delete session_path(session_record)
+
+    assert_redirected_to new_session_path
     refute Session.exists?(id: session_record.id)
   end
 

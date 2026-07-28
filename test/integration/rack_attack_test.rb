@@ -15,6 +15,11 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     assert_includes throttles, "oauth/token", "OAuth token endpoint should have rate limiting"
   end
 
+  test "remote user header has rate limiting configured" do
+    throttles = Rack::Attack.throttles.keys
+    assert_includes throttles, "remote-user-header/email", "Remote user header should have rate limiting"
+  end
+
   test "api requests have rate limiting configured" do
     # Test that API rate limiting is configured
     throttles = Rack::Attack.throttles.keys
