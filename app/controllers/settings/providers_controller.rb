@@ -116,6 +116,39 @@ class Settings::ProvidersController < ApplicationController
       @panel_partial = panel[:partial]
       @panel_title   = panel[:title]
       load_provider_items(provider_key)
+
+      # Generate Pluggy Connect token for widget flow if credentials exist.
+      # Bind the token to the existing item's `pluggy_item_id` (UPDATE mode) when
+      # the family is already connected so the widget re-auths instead of
+      # creating a duplicate Pluggy rejects as ITEM_USER_ALREADY_EXISTS; fall back
+      # to a CREATE-mode token (avoid_duplicates) only when no item is connected
+      # yet. @connect_item carries the bound record so the panel can wire the
+      # is-update / item-id / record-id Stimulus values from it (mirrors
+      # prepare_show_context).
+      if provider_key == "pluggy"
+        @connect_item = PluggyItem.preferred_for_connect(Current.family)
+        # Hydrate before minting so the token binds UPDATE mode when Pluggy still
+        # holds an item for this `client_user_id` but the local `pluggy_item_id`
+        # is blank — otherwise the CREATE-mode token makes the widget POST /items
+        # and Pluggy rejects the duplicate as ITEM_USER_ALREADY_EXISTS.
+        @connect_item = hydrate_pluggy_item_id!(@connect_item)
+        if @connect_item&.credentials_configured?
+          # `avoid_duplicates:` is intentionally OMITTED: the SDK derives the flag
+          # from `item_id` presence (nil -> CREATE: false, present -> UPDATE:
+          # true). Hardcoding `true` here forced CREATE-mode tokens to send
+          # `avoidDuplicates: true`, so Pluggy's dup-check on the institution
+          # bank credentials matched the orphaned upstream item after a Docker
+          # `-v` wipe and 400'd with ITEM_USER_ALREADY_EXISTS. See
+          # Provider::Pluggy.connect_token derivation comment.
+          @connect_token = @connect_item.pluggy_provider.connect_token(
+            client_user_id: @connect_item.client_user_id,
+            webhook_url: @connect_item.webhook_url,
+            redirect_url: @connect_item.redirect_url,
+            item_id: @connect_item.pluggy_item_id.presence
+          )
+        end
+      end
+
       return render :connect_form
     end
 
@@ -151,6 +184,39 @@ class Settings::ProvidersController < ApplicationController
       return if Current.user.admin?
 
       redirect_to root_path, alert: t("settings.providers.not_authorized")
+    end
+
+    # Recover the upstream Pluggy item id for the connect-token-bound item when
+    # the local `pluggy_item_id` is blank but Pluggy's API already holds an item
+    # for this family's `client_user_id`. Without it the connect token is minted
+    # CREATE-mode and the Pluggy Connect widget POSTs /items — duplicating the
+    # existing item, which Pluggy rejects as 400 ITEM_USER_ALREADY_EXISTS. With
+    # the recovered id the token binds `itemId` (UPDATE mode) and the widget
+    # re-auths the existing connection instead. Mirrors
+    # PluggyItemsController#hydrate_pluggy_item_id! so both mint paths (show +
+    # connect_form) land the update-mode token. Swallows network/auth errors so
+    # a stale credential cannot break the providers render — the panel falls
+    # back to its existing behavior (hidden widget box, "credentials only").
+    def hydrate_pluggy_item_id!(item)
+      return item if item.blank? || item.pluggy_item_id.present?
+      return item unless item.credentials_configured?
+
+      discovered_id = Provider::Pluggy.latest_item_id(
+        client_id: item.client_id,
+        client_secret: item.client_secret,
+        client_user_id: item.client_user_id
+      )
+      return item if discovered_id.blank?
+
+      item.pluggy_item_id = discovered_id
+      item.save!(validate: false) if item.persisted? && item.changed?
+      item
+    rescue Provider::Pluggy::Error => e
+      Rails.logger.warn("Pluggy item auto-discovery failed for family #{Current.family&.id}: #{e.class} - #{e.message}")
+      item
+    rescue StandardError => e
+      Rails.logger.warn("Unexpected Pluggy item auto-discovery error for family #{Current.family&.id}: #{e.class} - #{e.message}")
+      item
     end
 
     # Reload provider configurations after settings update
@@ -198,7 +264,8 @@ class Settings::ProvidersController < ApplicationController
       { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
-      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" }
+      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" },
+      { key: "pluggy",         title: "Pluggy",          turbo_id: "pluggy",         partial: "pluggy_panel" }
     ].freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
@@ -221,7 +288,8 @@ class Settings::ProvidersController < ApplicationController
       "questrade"      => "QuestradeItem",
       "ibkr"           => "IbkrItem",
       "indexa_capital" => "IndexaCapitalItem",
-      "sophtron"       => "SophtronItem"
+      "sophtron"       => "SophtronItem",
+      "pluggy"         => "PluggyItem"
     }.freeze
 
     def load_provider_items(provider_key)
@@ -260,6 +328,8 @@ class Settings::ProvidersController < ApplicationController
         @sophtron_items = Current.family.sophtron_items.ordered
       when "questrade"
         @questrade_items = Current.family.questrade_items.active.ordered
+      when "pluggy"
+        @pluggy_items = Current.family.pluggy_items.ordered.includes(:syncs, :pluggy_accounts)
       end
     end
 
@@ -290,6 +360,34 @@ class Settings::ProvidersController < ApplicationController
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
+      # Partial select feeding the status row ("connected" / "credentials only")
+      # and provider-sync-health. Token minting moved to @connect_item below,
+      # which needs full record access (client_user_id, etc.).
+      @pluggy_items = Current.family.pluggy_items.where.not(client_id: [ nil, "" ]).ordered.select(:id, :pluggy_item_id, :client_id, :client_secret, :family_id)
+
+      # Mint a Pluggy Connect token bound to the family's CONNECTED item when one
+      # exists (UPDATE mode — re-auth/refresh), or the first credentialed item
+      # (CREATE mode — first connection). Binding the token to an existing
+      # `pluggy_item_id` is what flips the Connect widget into update mode;
+      # minting a create-mode token for a family that already has an item makes
+      # Pluggy reject the duplicate with ITEM_USER_ALREADY_EXISTS. @connect_item
+      # carries the same record so the panel can wire `is-update` / `item-id` /
+      # `record-id` Stimulus values from the exact item the token binds to.
+      @connect_item = PluggyItem.preferred_for_connect(Current.family)
+      # Hydrate before minting so the token binds UPDATE mode when Pluggy still
+      # holds an item for this `client_user_id` but the local `pluggy_item_id`
+      # is blank — otherwise the CREATE-mode token makes the widget POST /items
+      # and Pluggy rejects the duplicate as ITEM_USER_ALREADY_EXISTS. The auth
+      # failure path below (`rescue nil`) already hides the widget on stale creds.
+      @connect_item = hydrate_pluggy_item_id!(@connect_item)
+      if @connect_item&.credentials_configured?
+        @connect_token = @connect_item.pluggy_provider.connect_token(
+          client_user_id: @connect_item.client_user_id,
+          webhook_url: @connect_item.webhook_url,
+          redirect_url: @connect_item.redirect_url,
+          item_id: @connect_item.pluggy_item_id.presence
+        ) rescue nil
+      end
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
@@ -323,7 +421,8 @@ class Settings::ProvidersController < ApplicationController
         "questrade"      => @questrade_items,
         "ibkr"           => @ibkr_items,
         "indexa_capital" => @indexa_capital_items,
-        "sophtron"       => @sophtron_items
+        "sophtron"       => @sophtron_items,
+        "pluggy"         => @pluggy_items
       }
     end
 

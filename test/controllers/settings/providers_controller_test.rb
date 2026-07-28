@@ -42,6 +42,73 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "brex-providers-panel"
   end
 
+  test "shows configured Pluggy connections in bank sync settings" do
+    get settings_providers_url
+
+    assert_response :success
+    assert_includes response.body, "Pluggy"
+    # Pluggy panel renders the configured-status banner (not an item name, unlike
+    # the Brex/Sophtron panels). Asserting this string proves the panel partial
+    # rendered inside the connected-entries section — i.e. Pluggy registered as a
+    # connected family panel rather than an available ProviderCard.
+    assert_includes response.body, "Connected and ready to sync"
+    assert_includes response.body, "pluggy-providers-panel"
+  end
+
+  test "shows a connect CTA when Pluggy credentials are saved but no item is connected" do
+    family = families(:empty)
+    PluggyItem.create!(
+      family: family,
+      name: "Pluggy Connection",
+      client_id: "client-id",
+      client_secret: "client-secret"
+    )
+
+    sign_in users(:empty)
+
+    # `prepare_show_context` mints a real Pluggy connect_token to surface the
+    # widget-flow block on the providers page. Stub the external call (same seam
+    # as test/models/pluggy_item_test.rb) so the block renders without a live
+    # network round trip against these fake credentials.
+    Provider::Pluggy.stubs(:connect_token).returns("test-connect-token")
+
+    get settings_providers_url
+
+    assert_response :success
+    # When credentials exist but no item is connected, the widget flow is shown
+    assert_includes response.body, I18n.t("pluggy_items.panel.connect_widget_title")
+    assert_includes response.body, I18n.t("pluggy_items.panel.connect_widget_button")
+  end
+
+  test "connect_form mints a CREATE-mode token without hardcoding avoid_duplicates for a credentialed family with no connected item" do
+    # Regression guard for the ITEM_USER_ALREADY_EXISTS fix. connect_form must NOT
+    # pass `avoid_duplicates: true` to the SDK when there is no connected item
+    # (CREATE mode); the SDK derives `avoidDuplicates: false` from a blank
+    # `item_id` so a Pluggy-side orphan re-binds instead of 400-ing. mocha's
+    # strict kwarg match fails if the controller re-adds `avoid_duplicates: true`
+    # (extra kwarg) — staying green requires the controller to OMIT it.
+    family = families(:empty)
+    PluggyItem.create!(
+      family: family,
+      name: "Pluggy Connection",
+      client_id: "client-id",
+      client_secret: "client-secret"
+    )
+    sign_in users(:empty)
+
+    Provider::Pluggy.stubs(:latest_item_id).returns(nil)
+    Provider::Pluggy.expects(:connect_token).with(
+      client_id: "client-id", client_secret: "client-secret",
+      client_user_id: "pluggy_#{family.id}",
+      webhook_url: anything, redirect_url: anything,
+      item_id: nil
+    ).returns("create-token")
+
+    get connect_form_settings_providers_url(provider_key: "pluggy")
+
+    assert_response :success
+  end
+
   test "shows Brex as available when family has no Brex connections" do
     sign_in users(:empty)
 

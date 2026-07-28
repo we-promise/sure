@@ -150,6 +150,27 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_in_delta 120.0, amounts[2], 0.01  # 100 EUR * 1.2
   end
 
+  test "falls back to 1:1 conversion rate when exchange rate is missing for an entry" do
+    # Foreign-currency entry with NO custom rate and NO ExchangeRate row. Without
+    # the rescue in converted_entries (mirroring holdings_value_by_date), this
+    # raises Money::ConversionError and crashes the whole account balance sync.
+    _entry = @account.entries.create!(
+      date: Date.current,
+      name: "EUR Transaction no rate",
+      amount: 100,
+      currency: "EUR",
+      entryable: Transaction.new(
+        category: @family.categories.first,
+        extra: {}
+      )
+    )
+
+    converted_entry = Balance::SyncCache.new(@account).send(:converted_entries).first
+
+    assert_equal "USD", converted_entry.currency
+    assert_equal 100.0, converted_entry.amount  # 1:1 fallback, no crash
+  end
+
   # get_holdings_value
 
   test "returns 0 for date with no holdings" do

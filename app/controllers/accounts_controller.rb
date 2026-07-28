@@ -29,6 +29,7 @@ class AccountsController < ApplicationController
     @binance_items = visible_provider_items(family.binance_items.ordered.includes(:binance_accounts, :accounts, :syncs))
     @questrade_items = visible_provider_items(family.questrade_items.ordered.includes(:syncs, questrade_accounts: :account_provider))
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:syncs, :wise_accounts))
+    @pluggy_items = visible_provider_items(family.pluggy_items.ordered.includes(:syncs, :pluggy_accounts))
 
     # Build sync stats maps for all providers
     build_sync_stats_maps
@@ -458,6 +459,13 @@ class AccountsController < ApplicationController
       @wise_items.each do |item|
         latest_sync = item.syncs.ordered.first
         @wise_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Pluggy sync stats
+      @pluggy_sync_stats_map = {}
+      @pluggy_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @pluggy_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
     end
 end
