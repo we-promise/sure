@@ -19,6 +19,52 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # Regression: issue #2167. The Activity-tab "New" menu was blanket-gated on
+  # `unless account.crypto?`, so crypto-exchange accounts (which DO support
+  # manual trades via Account#supports_trades?) lost the "New activity" item.
+  # Selectors are scoped to the activity-menu container so the assertions pin
+  # the menu region, not just any link on the page.
+  # Coverage matrix: crypto-exchange shows it, crypto-wallet hides it,
+  # investment shows it, depository shows "New transaction".
+  test "show: crypto-exchange account exposes 'New activity' link" do
+    crypto = accounts(:crypto)
+    crypto.accountable.update!(subtype: "exchange")
+    assert crypto.supports_trades?, "exchange crypto must support trades"
+
+    get account_url(crypto)
+    assert_response :success
+    assert_select "[data-testid='activity-menu'] a[href='#{new_trade_path(account_id: crypto.id)}']"
+  end
+
+  test "show: crypto-wallet account hides 'New activity' link" do
+    crypto = accounts(:crypto)
+    crypto.accountable.update!(subtype: "wallet")
+    refute crypto.supports_trades?, "wallet crypto must not support trades"
+
+    get account_url(crypto)
+    assert_response :success
+    # Positive anchor: an unlinked crypto-wallet still gets "New balance",
+    # so the menu DID render. Without this anchor, the count: 0 below would
+    # pass for the wrong reason if the whole menu failed to render.
+    assert_select "[data-testid='activity-menu'] a[href='#{new_valuation_path(account_id: crypto.id)}']"
+    assert_select "[data-testid='activity-menu'] a[href='#{new_trade_path(account_id: crypto.id)}']", count: 0
+  end
+
+  test "show: investment account exposes 'New activity' link" do
+    investment = accounts(:investment)
+
+    get account_url(investment)
+    assert_response :success
+    assert_select "[data-testid='activity-menu'] a[href='#{new_trade_path(account_id: investment.id)}']"
+  end
+
+  test "show: depository exposes 'New transaction' link (not 'New activity')" do
+    get account_url(@account)
+    assert_response :success
+    assert_select "[data-testid='activity-menu'] a[href='#{new_transaction_path(account_id: @account.id)}']"
+    assert_select "[data-testid='activity-menu'] a[href='#{new_trade_path(account_id: @account.id)}']", count: 0
+  end
+
   test "show lazily loads statement tab data unless statements tab is active" do
     AccountStatement::Coverage.expects(:for_year).never
     AccountStatement.expects(:reconciliation_statuses_for).never
