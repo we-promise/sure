@@ -265,10 +265,16 @@ jobs:
     uses: ./.github/workflows/flutter-build.yml
     secrets: inherit
 
+  desktop:
+    name: Build macOS Desktop App
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/desktop-release.yml
+    secrets: inherit
+
   release:
     name: Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [merge, mobile, helm]
+    needs: [merge, mobile, desktop, helm]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -293,6 +299,12 @@ jobs:
         with:
           name: helm-chart-package
           path: ${{ runner.temp }}/helm-artifacts
+
+      - name: Download desktop DMG artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: desktop-release-dmg
+          path: ${{ runner.temp }}/desktop-artifacts
 
       - name: Prepare release assets
         env:
@@ -336,6 +348,12 @@ jobs:
           if compgen -G "${{ runner.temp }}/helm-artifacts/*.tgz" > /dev/null; then
             cp ${{ runner.temp }}/helm-artifacts/*.tgz "${{ runner.temp }}/release-assets/"
             echo "✓ Helm chart package prepared"
+          fi
+
+          # Copy the universal macOS desktop build.
+          if compgen -G "${{ runner.temp }}/desktop-artifacts/*.dmg" > /dev/null; then
+            cp ${{ runner.temp }}/desktop-artifacts/*.dmg "${{ runner.temp }}/release-assets/"
+            echo "✓ Desktop DMG prepared"
           fi
 
           echo "Release assets:"
