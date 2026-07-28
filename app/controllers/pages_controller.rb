@@ -49,8 +49,14 @@ class PagesController < ApplicationController
     expense_totals = income_statement.expense_totals(period: @period)
     net_totals = income_statement.net_category_totals(period: @period)
 
-    @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     investment_contributions_total = income_statement.matched_investment_contribution_outflow_total(period: @period)
+    @cashflow_sankey_data = build_cashflow_sankey_data(
+      net_totals,
+      income_totals,
+      expense_totals,
+      family_currency,
+      investment_contributions_total:
+    )
     @outflows_data = build_outflows_donut_data(net_totals, investment_contributions_total:)
     # Preview-gated: skip the query outright rather than loading rows the
     # section won't be built from.
@@ -241,7 +247,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency)
+    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, investment_contributions_total: Money.new(0, currency))
       nodes = []
       links = []
       node_indices = {}
@@ -285,6 +291,25 @@ class PagesController < ApplicationController
         cash_flow_idx: cash_flow_idx,
         flow_direction: :outbound
       )
+
+      if investment_contributions_total.positive?
+        contribution_value = investment_contributions_total.amount.to_f.round(2)
+        contribution_percentage = total_income.zero? ? 0 : (contribution_value / total_income * 100).round(1)
+        contribution_idx = add_node.call(
+          "investment_contributions_node",
+          Category.investment_contributions_name,
+          contribution_value,
+          contribution_percentage,
+          "var(--color-success)"
+        )
+        links << {
+          source: cash_flow_idx,
+          target: contribution_idx,
+          value: contribution_value,
+          color: "var(--color-success)",
+          percentage: contribution_percentage
+        }
+      end
 
       # Surplus/Deficit
       net = (total_income - total_expense).round(2)
