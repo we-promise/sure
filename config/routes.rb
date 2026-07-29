@@ -191,6 +191,7 @@ Rails.application.routes.draw do
       post :retry
     end
   end
+  resources :families, only: %i[new create]
 
   resources :family_exports, only: %i[new create index destroy] do
     member do

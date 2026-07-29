@@ -115,6 +115,7 @@ end %>
           <%= yield :sidebar %>
         <% else %>
           <div class="grow">
+            <%= render "families/sidebar_switcher", user: Current.user %>
             <%= render "accounts/account_sidebar_tabs", family: Current.family, active_tab: @account_group_tab %>
           </div>
 
