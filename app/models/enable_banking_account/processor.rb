@@ -140,6 +140,7 @@ class EnableBankingAccount::Processor
       end
     end
 
+    # Returns the amount only when it is positive, otherwise nil.
     def positive_amount(value)
       value if value&.positive?
     end

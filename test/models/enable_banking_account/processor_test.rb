@@ -71,21 +71,23 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "available credit mode uses manual limit when provider reports a zero limit" do
+  test "available credit mode uses manual limit when provider reports a non-positive limit" do
     cc_account = accounts(:credit_card)
     cc_account.accountable.update!(available_credit: 3000.00)
-
-    @enable_banking_account.update!(
-      current_balance: 2995.32,
-      credit_limit: 0,
-      treat_balance_as_available_credit: true
-    )
     relink_provider_to(cc_account)
 
-    EnableBankingAccount::Processor.new(@enable_banking_account).process
+    [ 0, -1 ].each do |provider_credit_limit|
+      @enable_banking_account.update!(
+        current_balance: 2995.32,
+        credit_limit: provider_credit_limit,
+        treat_balance_as_available_credit: true
+      )
 
-    assert_equal 4.68, cc_account.reload.cash_balance
-    assert_equal 3000.0, cc_account.accountable.reload.available_credit
+      EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+      assert_equal 4.68, cc_account.reload.cash_balance
+      assert_equal 3000.0, cc_account.accountable.reload.available_credit
+    end
   end
 
   test "when treat_balance_as_available_credit is true and card is overpaid, floors debt at zero" do
