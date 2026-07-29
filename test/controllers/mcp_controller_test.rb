@@ -230,7 +230,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       tools = body["result"]["tools"]
 
       assert_kind_of Array, tools
-      assert_equal Assistant.function_classes.size, tools.size
+      assert_equal Assistant.function_classes(@user).size, tools.size
 
       tool_names = tools.map { |t| t["name"] }
       assert_includes tool_names, "get_transactions"
@@ -249,7 +249,54 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/list omits preview tools for a user without preview features" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+
+      assert_includes tool_names, "get_transactions"
+      Assistant::PREVIEW_FUNCTION_CLASSES.each do |fn_class|
+        assert_not_includes tool_names, fn_class.name
+      end
+    end
+  end
+
+  test "tools/list includes preview tools for an opted-in user" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+
+      Assistant::PREVIEW_FUNCTION_CLASSES.each do |fn_class|
+        assert_includes tool_names, fn_class.name
+      end
+    end
+  end
+
   # -- tools/call --
+
+  test "tools/call rejects a preview tool for a user without preview features" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "list_account_statements", arguments: {} }, id: 42).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      assert_equal(-32602, body["error"]["code"])
+      assert_includes body["error"]["message"], "list_account_statements"
+    end
+  end
 
   test "tools/call returns error for unknown tool with request id preserved" do
     with_mcp_env do

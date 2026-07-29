@@ -6,6 +6,17 @@ module Assistant
     "external" => Assistant::External
   }.freeze
 
+  # Statement Vault + provenance tools, for users who opted into preview features
+  # in Settings -> Preferences. They back the patrimonial agent-harness workflow
+  # documented in docs/llm-guides/patrimonial-agent-harness.md.
+  PREVIEW_FUNCTION_CLASSES = [
+    Function::UploadAccountStatement,
+    Function::ListAccountStatements,
+    Function::GetAccountStatement,
+    Function::GetStatementCoverage,
+    Function::RecordValuation
+  ].freeze
+
   class << self
     def for_chat(chat)
       implementation_for(chat).for_chat(chat)
@@ -20,8 +31,12 @@ module Assistant
       REGISTRY.keys
     end
 
-    def function_classes
-      [
+    # The single registry behind both the builtin chat and the /mcp endpoint's
+    # tools/list — a function class added here is immediately callable by an
+    # external agent, so pass the user to keep preview tools out of the default
+    # surface.
+    def function_classes(user = nil)
+      classes = [
         Function::GetTransactions,
         Function::GetAccounts,
         Function::GetHoldings,
@@ -38,6 +53,9 @@ module Assistant
         Function::CreateCategory,
         Function::UpdateCategory
       ]
+
+      classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
+      classes
     end
 
     private
