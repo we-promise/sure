@@ -120,22 +120,28 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
   # The API exposes no `excluded` field, so a client cannot filter these out
   # itself — returning them would double-count against the payments they offset.
   test "should exclude system generated entries from index history" do
-    accrual = @account.entries.create!(
-      name: "Interest charged",
-      date: Date.current,
-      amount: 100,
-      currency: @account.currency,
-      excluded: true,
-      source: Loan::InterestAccrual::SOURCE,
-      external_id: Date.current.strftime("%Y-%m"),
-      entryable: Transaction.new(kind: "standard")
-    )
+    accrual = create_system_generated_entry
 
-    get api_v1_transactions_url, headers: api_headers(@api_key)
+    # Large per_page so this proves the entry was filtered, rather than merely
+    # falling off the default 25-item page.
+    get api_v1_transactions_url(per_page: 100), headers: api_headers(@api_key)
     assert_response :success
 
-    transaction_ids = JSON.parse(response.body)["transactions"].map { |t| t["id"] }
+    body = JSON.parse(response.body)
+    transaction_ids = body["transactions"].map { |t| t["id"] }
+
     assert_not_includes transaction_ids, accrual.entryable_id
+    assert_operator body["pagination"]["total_count"], :<=, 100,
+                    "result set must fit one page for this assertion to be meaningful"
+  end
+
+  # show/update/destroy share set_transaction, so scoping it keeps the contract
+  # consistent and stops a client mutating a generated entry by id.
+  test "should not expose system generated entries by id" do
+    accrual = create_system_generated_entry
+
+    get api_v1_transaction_url(accrual.entryable_id), headers: api_headers(@api_key)
+    assert_response :not_found
   end
 
   test "should filter disabled account transactions by account_id" do
@@ -915,6 +921,19 @@ end
 
     def create_disabled_account_transaction(name:, date: Date.current)
       create_account_transaction(status: "disabled", name: name, date: date)
+    end
+
+    def create_system_generated_entry
+      @account.entries.create!(
+        name: "Interest charged",
+        date: Date.current,
+        amount: 100,
+        currency: @account.currency,
+        excluded: true,
+        source: Loan::InterestAccrual::SOURCE,
+        external_id: Date.current.strftime("%Y-%m"),
+        entryable: Transaction.new(kind: "standard")
+      )
     end
 
     def create_account_transaction(status:, name:, date: Date.current)
