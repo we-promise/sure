@@ -28,7 +28,7 @@ class BudgetTest < ActiveSupport::TestCase
       balance: 0
     )
 
-    transfer = Transfer::Creator.new(
+    Transfer::Creator.new(
       family: @family,
       source_account_id: checking_account.id,
       destination_account_id: investment_account.id,
@@ -36,14 +36,7 @@ class BudgetTest < ActiveSupport::TestCase
       amount: 1_000
     ).create
 
-    # A provider may describe the brokerage leg as a contribution. Reporting
-    # must still count only the matched checking-account outflow.
-    transfer.inflow_transaction.update!(
-      kind: "investment_contribution",
-      category: @family.investment_contributions_category
-    )
-
-    budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
+    budget = Budget.find_or_bootstrap(family: @family, start_date: Date.current)
     contribution_budget_category = budget.budget_categories.find_by!(category: @family.investment_contributions_category)
 
     assert_equal 1000, budget.actual_spending

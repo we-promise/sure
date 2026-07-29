@@ -50,28 +50,7 @@ class PagesController < ApplicationController
     net_totals = income_statement.net_category_totals(period: @period)
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
-    investment_contributions_total = income_statement.matched_investment_contribution_outflow_total(period: @period)
-    investment_contributions_transactions_url = transactions_path(
-      q: {
-        types: [ "transfer" ],
-        kinds: [ "investment_contribution" ],
-        start_date: @period.date_range.first,
-        end_date: @period.date_range.last
-      }
-    )
-    @cashflow_sankey_data = build_cashflow_sankey_data(
-      net_totals,
-      income_totals,
-      expense_totals,
-      family_currency,
-      investment_contributions_total:,
-      investment_contributions_transactions_url:
-    )
-    @outflows_data = build_outflows_donut_data(
-      net_totals,
-      investment_contributions_total:,
-      investment_contributions_transactions_url:
-    )
+    @outflows_data = build_outflows_donut_data(net_totals)
     # Preview-gated: skip the query outright rather than loading rows the
     # section won't be built from.
     @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT) : Insight.none
@@ -261,20 +240,19 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, investment_contributions_total: Money.new(0, currency), investment_contributions_transactions_url: nil)
+    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency)
       nodes = []
       links = []
       node_indices = {}
 
-      add_node = ->(unique_key, display_name, value, percentage, color, transactions_url: nil) {
+      add_node = ->(unique_key, display_name, value, percentage, color) {
         node_indices[unique_key] ||= begin
           nodes << {
             id: unique_key,
             name: display_name,
             value: value.to_f.round(2),
             percentage: percentage.to_f.round(1),
-            color: color,
-            transactions_url: transactions_url
+            color: color
           }
           nodes.size - 1
         end
@@ -312,26 +290,6 @@ class PagesController < ApplicationController
         cash_flow_idx: cash_flow_idx,
         flow_direction: :outbound
       )
-
-      if investment_contributions_total.positive?
-        contribution_value = investment_contributions_total.amount.to_f.round(2)
-        contribution_percentage = total_income.zero? ? 0 : (contribution_value / total_income * 100).round(1)
-        contribution_idx = add_node.call(
-          "investment_contributions_node",
-          Category.investment_contributions_name,
-          contribution_value,
-          contribution_percentage,
-          "var(--color-success)",
-          transactions_url: investment_contributions_transactions_url
-        )
-        links << {
-          source: cash_flow_idx,
-          target: contribution_idx,
-          value: contribution_value,
-          color: "var(--color-success)",
-          percentage: contribution_percentage
-        }
-      end
 
       # Surplus/Deficit
       net = (total_income - total_expense).round(2)
@@ -456,9 +414,9 @@ class PagesController < ApplicationController
       end
     end
 
-    def build_outflows_donut_data(net_totals, investment_contributions_total: Money.new(0, net_totals.currency), investment_contributions_transactions_url: nil)
+    def build_outflows_donut_data(net_totals)
       currency_symbol = Money::Currency.new(net_totals.currency).symbol
-      total = net_totals.total_net_expense + investment_contributions_total.cents
+      total = net_totals.total_net_expense
 
       categories = net_totals.net_expense_categories
         .reject { |ct| ct.total.zero? }
@@ -475,20 +433,6 @@ class PagesController < ApplicationController
             clickable: !ct.category.other_investments?
           }
         end
-
-      if investment_contributions_total.positive?
-        categories << {
-          id: "investment_contributions",
-          name: Category.investment_contributions_name,
-          amount: investment_contributions_total.cents.to_f,
-          currency: net_totals.currency,
-          percentage: 0,
-          color: "var(--color-success)",
-          icon: "trending-up",
-          clickable: true,
-          transactions_url: investment_contributions_transactions_url
-        }
-      end
 
       categories.each do |category|
         category[:percentage] = total.zero? ? 0 : (category[:amount] / total * 100).round(1)
