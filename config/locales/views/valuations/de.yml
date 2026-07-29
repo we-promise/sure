@@ -29,3 +29,12 @@ de:
       overview: Übersicht
       settings: Einstellungen
       opening_balance: Eröffnungssaldo
+    confirm_create:
+      confirm: Bestätigen
+      title: Neuen Saldo bestätigen
+    confirm_update:
+      title: Saldo aktualisieren
+      update: Aktualisieren
+    confirmation_contents:
+      action_set: gesetzt
+      action_update: aktualisiert

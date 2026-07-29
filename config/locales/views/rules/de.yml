@@ -50,3 +50,7 @@ de:
         expense: Ausgabe
         transfer: Überweisung
         equal_to: Gleich
+  rule:
+    conditions:
+      condition:
+        value_placeholder: Wert eingeben

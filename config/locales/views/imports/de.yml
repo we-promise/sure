@@ -40,6 +40,20 @@ de:
         instructions: Wähle Weiter, um die CSV zu parsen und zum Bereinigungsschritt zu gelangen.
       mint_import:
         date_format_label: Datumsformat
+        account_optional: Konto (optional)
+        amount: Betrag
+        apply_configuration: Konfiguration übernehmen
+        category_optional: Kategorie (optional)
+        currency: Währung
+        date: Datum
+        format: Format
+        incomes_negative: Einnahmen sind negativ
+        incomes_positive: Einnahmen sind positiv
+        intro: Wir haben deinen Mint-Import vorkonfiguriert. Du kannst direkt zum nächsten Schritt gehen.
+        leave_empty: Leer lassen
+        name_optional: Name (optional)
+        select_format: Format wählen
+        tags_optional: Tags (optional)
       rule_import:
         description: Konfigurieren Sie den Regel-Import. Regeln werden basierend auf den CSV-Daten erstellt oder aktualisiert.
         process_button: Regeln verarbeiten

@@ -24,9 +24,11 @@ de:
       new:
         title: "SSO-Provider hinzufügen"
         description: "Neuen Single-Sign-On-Authentifizierungsprovider konfigurieren"
+        provider_configuration: Anbieter-Konfiguration
       edit:
         title: "SSO-Provider bearbeiten"
         description: "Konfiguration für %{label} aktualisieren"
+        provider_configuration: Anbieter-Konfiguration
       create:
         success: "SSO-Provider wurde erfolgreich erstellt."
       update:

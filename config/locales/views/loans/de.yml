@@ -10,6 +10,9 @@ de:
       rate_type: Zinssatztyp
       term_months: Laufzeit (Monate)
       term_months_placeholder: '360'
+      rate_type_adjustable: Anpassbar
+      rate_type_fixed: Fest
+      rate_type_variable: Variabel
     new:
       title: Kreditdetails eingeben
     overview:

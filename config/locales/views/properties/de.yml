@@ -3,6 +3,7 @@ de:
   properties:
     edit:
       edit: "%{account} bearbeiten"
+      title: Immobilie manuell erfassen
     form:
       address_line1: Straßenadresse
       address_line1_placeholder: Musterstraße 123
@@ -30,3 +31,7 @@ de:
       trend: Entwicklung
       unknown: Unbekannt
       year_built: Baujahr
+    form_tabs:
+      address: Adresse
+      overview: Übersicht
+      value: Wert
