@@ -89,7 +89,7 @@ class Transaction < ApplicationRecord
   # records represent an internal movement. Reporting must exclude both legs
   # even when their destination-specific kinds are budget-tracked.
   scope :without_matched_transfer, -> { where(unmatched_transfer_sql) }
-  scope :for_cash_flow_reporting, -> { where("(#{cash_flow_transfer_sql})") }
+  scope :for_cash_flow_reporting, -> { where(cash_flow_transfer_sql) }
 
   def self.unmatched_transfer_sql(transaction_alias = table_name)
     <<~SQL.squish
@@ -110,8 +110,8 @@ class Transaction < ApplicationRecord
   # transfer leg to avoid double counting.
   def self.cash_flow_transfer_sql(transaction_alias = table_name)
     <<~SQL.squish
-      #{transaction_alias}.kind = 'investment_contribution'
-      OR (#{unmatched_transfer_sql(transaction_alias)})
+      (#{transaction_alias}.kind = 'investment_contribution'
+      OR (#{unmatched_transfer_sql(transaction_alias)}))
     SQL
   end
 
