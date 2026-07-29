@@ -167,23 +167,28 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", JSON.parse(response.body)["error"]
   end
 
-  test "should not return a system generated entry via the idempotency lookup" do
+  # A generated entry occupies (account, "loan_interest_accrual", "2026-07").
+  # A client using the same external_id under its own source is a different key
+  # and must still succeed — the reserved namespace must not shadow it.
+  test "should allow a client external_id matching a generated entry's" do
     accrual = create_system_generated_entry
 
-    post api_v1_transactions_url,
-         params: {
-           transaction: {
-             account_id: @account.id,
-             date: Date.current.to_s,
-             amount: 100,
-             name: "Idempotent replay",
-             external_id: accrual.external_id
-           }
-         },
-         headers: api_headers(@api_key)
+    assert_difference "Entry.count", 1 do
+      post api_v1_transactions_url,
+           params: {
+             transaction: {
+               account_id: @account.id,
+               date: Date.current.to_s,
+               amount: 100,
+               name: "Client entry sharing an external_id",
+               source: "api",
+               external_id: accrual.external_id
+             }
+           },
+           headers: api_headers(@api_key)
+    end
 
-    # Must not echo back the generated entry; it either creates a new
-    # transaction or fails, but never resurfaces the accrual.
+    assert_response :created
     assert_not_equal accrual.entryable_id, JSON.parse(response.body)["id"]
   end
 
