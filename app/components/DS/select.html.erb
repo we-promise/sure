@@ -49,8 +49,7 @@
           role="listbox" tabindex="-1">
       <% items.each do |item| %>
         <% is_selected = item[:value] == selected_value %>
-        <% obj = item[:object] %>
-        <% is_child = obj&.respond_to?(:parent_id) && obj.parent_id.present? %>
+        <% is_child = child?(item) %>
 
         <%# Options use tabindex="-1" always — keyboard focus is managed
             programmatically so listbox items never appear in the Tab
