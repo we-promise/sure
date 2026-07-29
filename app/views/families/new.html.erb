@@ -1,30 +1,30 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: t(".title", default: "Create new ledger")) %>
+  <% dialog.with_header(title: t(".title")) %>
   
   <% dialog.with_body do %>
     <%= styled_form_with model: @family, url: families_path, data: { turbo: false } do |form| %>
       <div class="space-y-4">
         <%= form.text_field :name,
-          label: t(".name_label", default: "Ledger Name"),
-          placeholder: t(".name_placeholder", default: "e.g. My Business"),
+          label: t(".name_label"),
+          placeholder: t(".name_placeholder"),
           required: true,
           autofocus: true
         %>
 
         <%= form.select :currency,
           Money::Currency.as_options.map { |c| ["#{c.name} (#{c.iso_code})", c.iso_code] },
-          { label: t(".currency_label", default: "Base Currency"), selected: @family.currency }
+          { label: t(".currency_label"), selected: @family.currency }
         %>
       </div>
 
       <div class="mt-6 flex justify-end gap-3">
         <%= render DS::Button.new(
-          text: t("shared.cancel", default: "Cancel"),
+          text: t("shared.cancel"),
           variant: "secondary",
           data: { action: "dialog#close" }
         ) %>
         <%= render DS::Button.new(
-          text: t("shared.save", default: "Save"),
+          text: t("shared.save"),
           type: "submit"
         ) %>
       </div>

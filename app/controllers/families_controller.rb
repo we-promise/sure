@@ -20,7 +20,7 @@ class FamiliesController < ApplicationController
           role: User.role_for_new_family_creator
         )
         Current.session.set_active_family_id(@family.id)
-        redirect_to root_path, notice: t(".success", default: "Ledger created successfully.")
+        redirect_to root_path, notice: t(".success")
       else
         render :new, status: :unprocessable_entity
       end
