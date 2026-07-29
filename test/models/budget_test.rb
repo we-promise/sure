@@ -10,6 +10,39 @@ class BudgetTest < ActiveSupport::TestCase
     assert Budget.budget_date_valid?(two_years_ago, family: @family)
   end
 
+  test "includes matched investment contributions as budget expenses" do
+    checking_account = Account.create!(
+      family: @family,
+      accountable: Depository.new,
+      name: "Checking",
+      status: "active",
+      currency: "USD",
+      balance: 5_000
+    )
+    investment_account = Account.create!(
+      family: @family,
+      accountable: Investment.new,
+      name: "Brokerage",
+      status: "active",
+      currency: "USD",
+      balance: 0
+    )
+
+    Transfer::Creator.new(
+      family: @family,
+      source_account_id: checking_account.id,
+      destination_account_id: investment_account.id,
+      date: Date.current,
+      amount: 1_000
+    ).create
+
+    budget = Budget.find_or_bootstrap(family: @family, start_date: Date.current)
+    contribution_budget_category = budget.budget_categories.find_by!(category: @family.investment_contributions_category)
+
+    assert_equal 1000, budget.actual_spending
+    assert_equal 1000, budget.budget_category_actual_spending(contribution_budget_category)
+  end
+
   test "budget_date_valid? allows going back to earliest entry date if more than 2 years ago" do
     # Create an entry 3 years ago
     old_account = Account.create!(
