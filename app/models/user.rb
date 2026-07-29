@@ -405,6 +405,12 @@ class User < ApplicationRecord
     preferences&.dig("preview_features_enabled") == true
   end
 
+  # When enabled, investment contributions are treated as internal transfers
+  # and omitted from personal cash-flow and budget reporting.
+  def treat_investment_contributions_as_transfers?
+    preferences&.dig("treat_investment_contributions_as_transfers") == true
+  end
+
   def update_transactions_preferences(prefs)
     transaction do
       lock!
