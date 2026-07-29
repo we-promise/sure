@@ -7,13 +7,12 @@ class BudgetCategoriesController < ApplicationController
   end
 
   def show
-    # The aggregate `Budget#actual_spending` excludes both budget-excluded
-    # kinds and persisted Transfer legs via IncomeStatement. Apply the same
-    # policy here so a matched transfer cannot show in a category drilldown
-    # while being absent from its aggregate. See issues #1059 and #2742.
+    # Keep this drilldown aligned with Budget#actual_spending: ordinary matched
+    # transfers are excluded, while investment contributions remain visible as
+    # a dedicated cash-flow expense.
     @recent_transactions = @budget.transactions
                                   .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
-                                  .without_matched_transfer
+                                  .for_cash_flow_reporting
 
     if params[:id] == BudgetCategory.uncategorized.id
       @budget_category = @budget.uncategorized_budget_category
