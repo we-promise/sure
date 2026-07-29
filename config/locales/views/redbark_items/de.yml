@@ -6,7 +6,7 @@ de:
       creation_failed: 'Die Konten ließen sich nicht anlegen: %{error}'
       creation_failed_generic: Die Konten ließen sich nicht anlegen.
       no_accounts: Keine Konten einzurichten.
-      setup_failed: "%{count} Konto/Konten ließen sich nicht anlegen. Sonst wurde nichts geändert – behe das Problem und versuch es noch einmal."
+      setup_failed: "%{count} Konto/Konten ließen sich nicht anlegen. Sonst wurde nichts geändert – behebe das Problem und versuch es noch einmal."
       success: "%{count} Konto/Konten angelegt."
     create:
       success: Redbark-Verbindung erstellt
@@ -52,9 +52,9 @@ de:
       setup_instructions: 'So richtest du es ein:'
       status_configured_html: Eingerichtet und einsatzbereit. Im Reiter <a href="%{accounts_path}" class="link">Konten</a> verwaltest und richtest du Konten ein.
       status_not_configured: Nicht eingerichtet
-      step_1: Leg auf app.redbark.com unter „Settings" einen API-Key an
+      step_1: Leg auf app.redbark.com unter „Settings“ einen API-Key an
       step_2: Trag deinen API-Key unten ein und klick auf Speichern
-      step_3: Nach erfolgreicher Verbindung richtest du im Reiter „Konten" die neuen Konten ein
+      step_3: Nach erfolgreicher Verbindung richtest du im Reiter „Konten“ die neuen Konten ein
       update_button: Konfiguration aktualisieren
     redbark_item:
       accounts_need_setup: Konten müssen eingerichtet werden

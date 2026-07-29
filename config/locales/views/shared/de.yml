@@ -13,7 +13,7 @@ de:
       convert_tab: Mit FX-Kurs konvertieren
       destination_amount: Zielbetrag
       exchange_rate: Wechselkurs
-      exchange_rate_help: Wählen Sie, wie Sie den Betrag eingeben möchten.
+      exchange_rate_help: Wähl, wie du den Betrag eingeben willst.
     syncing_notice:
       syncing: Kontodaten werden synchronisiert...
     trend_change:

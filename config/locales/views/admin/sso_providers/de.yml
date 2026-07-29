@@ -5,11 +5,11 @@ de:
     sso_providers:
       index:
         title: "SSO-Provider"
-        description: "Single-Sign-On-Authentifizierungsprovider für Ihre Instanz verwalten"
+        description: Single-Sign-On-Authentifizierungsprovider für deine Instanz verwalten
         add_provider: "Provider hinzufügen"
         no_providers_title: "Keine SSO-Provider"
-        no_providers_message: "Fügen Sie Ihren ersten SSO-Provider hinzu."
-        note: "Änderungen an SSO-Providern erfordern einen Neustart des Servers. Alternativ aktivieren Sie das Feature AUTH_PROVIDERS_SOURCE=db, um Provider dynamisch aus der Datenbank zu laden."
+        no_providers_message: Füg deinen ersten SSO-Provider hinzu.
+        note: Änderungen an SSO-Providern erfordern einen Neustart des Servers. Alternativ aktivier das Feature AUTH_PROVIDERS_SOURCE=db, um Provider dynamisch aus der Datenbank zu laden.
         table:
           name: "Name"
           strategy: "Strategie"
@@ -19,7 +19,7 @@ de:
           enabled: "Aktiviert"
           disabled: "Deaktiviert"
         legacy_providers_title: "Umgebungskonfigurierte Provider"
-        legacy_providers_notice: "Diese Provider werden über Umgebungsvariablen oder YAML konfiguriert und können nicht über diese Oberfläche verwaltet werden. Zur Verwaltung hier migrieren Sie sie zu datenbankgestützten Providern (AUTH_PROVIDERS_SOURCE=db) und legen Sie sie in der Oberfläche neu an."
+        legacy_providers_notice: Diese Provider werden über Umgebungsvariablen oder YAML konfiguriert und können nicht über diese Oberfläche verwaltet werden. Zur Verwaltung hier migrier sie zu datenbankgestützten Providern (AUTH_PROVIDERS_SOURCE=db) und leg sie in der Oberfläche neu an.
         env_configured: "Env/YAML"
         configuration_mode: Konfigurationsmodus
         configured_providers: Eingerichtete Anbieter
@@ -48,12 +48,12 @@ de:
         success: "SSO-Provider wurde erfolgreich aktualisiert."
       destroy:
         success: "SSO-Provider wurde erfolgreich gelöscht."
-        confirm: "Möchten Sie diesen Provider wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+        confirm: Willst du diesen Provider wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
       toggle:
         success_enabled: "SSO-Provider wurde erfolgreich aktiviert."
         success_disabled: "SSO-Provider wurde erfolgreich deaktiviert."
-        confirm_enable: "Möchten Sie diesen Provider aktivieren?"
-        confirm_disable: "Möchten Sie diesen Provider deaktivieren?"
+        confirm_enable: Willst du diesen Provider aktivieren?
+        confirm_disable: Willst du diesen Provider deaktivieren?
       form:
         basic_information: "Grundinformationen"
         oauth_configuration: "OAuth/OIDC-Konfiguration"
@@ -75,7 +75,7 @@ de:
         issuer_help: "OIDC-Issuer-URL (validiert .well-known/openid-configuration)"
         client_id_label: "Client ID"
         client_id_placeholder: "your-client-id"
-        client_id_help: "OAuth-Client-ID Ihres Identitätsanbieters"
+        client_id_help: OAuth-Client-ID deines Identitätsanbieters
         client_secret_label: "Client Secret"
         client_secret_placeholder_new: "your-client-secret"
         client_secret_placeholder_existing: "••••••••••••••••"
@@ -117,7 +117,7 @@ de:
         test_connection: "Verbindung testen"
         saml_configuration: "SAML-Konfiguration"
         idp_metadata_url: "IdP-Metadaten-URL"
-        idp_metadata_url_help: "URL zu den SAML-Metadaten Ihres IdP. Andere SAML-Einstellungen werden dann automatisch gesetzt."
+        idp_metadata_url_help: URL zu den SAML-Metadaten deines IdP. Andere SAML-Einstellungen werden dann automatisch gesetzt.
         manual_saml_config: "Manuelle Konfiguration (ohne Metadaten-URL)"
         manual_saml_help: "Nur verwenden, wenn Ihr IdP keine Metadaten-URL bereitstellt."
         idp_sso_url: "IdP-SSO-URL"

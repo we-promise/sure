@@ -70,7 +70,7 @@ de:
       status_not_configured: Nicht eingerichtet
       step_1: Öffne dein Questrade-Dashboard und hol dir deine Zugangsdaten
       step_2: Trag die Zugangsdaten unten ein und klick auf Speichern
-      step_3: Nach erfolgreicher Verbindung richtest du im Reiter „Konten" die neuen Konten ein
+      step_3: Nach erfolgreicher Verbindung richtest du im Reiter „Konten“ die neuen Konten ein
       token_refresh_hint: Questrade-Tokens erneuern sich bei jedem Konto-Sync automatisch. Bleibt eine Verbindung länger als 7 Tage ungenutzt und wird ungültig, füg hier einen neuen Token ein, um sie ohne Trennung wiederzubeleben.
       update_button: Konfiguration aktualisieren
     preload_accounts:

@@ -9,7 +9,7 @@ de:
       heading:
         one: 1 neue Transaktion passt zu deiner Regel
         other: "%{count} neue Transaktionen passen zu deiner Regel"
-      intro: 'Diese Transaktionen passen zur Regel „%{rule}":'
+      intro: 'Diese Transaktionen passen zur Regel „%{rule}“:'
       name: Name
       subject:
         one: 1 neue Transaktion passt zu deiner Regel auf %{product_name}

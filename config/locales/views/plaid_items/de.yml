@@ -24,7 +24,7 @@ de:
       deletion_in_progress: "(wird gelöscht …)"
     select_existing_account:
       title: "%{account_name} mit Plaid verknüpfen"
-      description: Wählen Sie ein Plaid-Konto zur Verknüpfung mit Ihrem bestehenden Konto
+      description: Wähl ein Plaid-Konto zur Verknüpfung mit deinem bestehenden Konto
       cancel: Abbrechen
       link_account: Konto verknüpfen
       no_available_accounts: Keine Plaid-Konten zum Verknüpfen verfügbar. Verbinde zuerst ein neues Plaid-Konto.

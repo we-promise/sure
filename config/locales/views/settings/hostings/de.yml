@@ -70,7 +70,7 @@ de:
         env_configured_message: Deine Brand-Fetch-Client-ID ist über die Umgebungsvariable BRAND_FETCH_CLIENT_ID eingerichtet.
         setup_step_1_html: Öffne <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> und leg dir ein kostenloses Entwicklerkonto an.
         setup_step_2_html: Geh auf die Seite <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
-        setup_step_3: Klick auf das Auge-Symbol unter „Your Client ID", um die ID sichtbar zu machen, und füg sie unten ein.
+        setup_step_3: Klick auf das Auge-Symbol unter „Your Client ID“, um die ID sichtbar zu machen, und füg sie unten ein.
         show_details: "(Details anzeigen)"
       openai_settings:
         description: Gib dein Zugriffstoken ein und konfiguriere optional einen benutzerdefinierten, OpenAI-kompatiblen Anbieter.
@@ -176,12 +176,12 @@ de:
         confirm_disconnect:
           body: Damit werden die gespeicherte URL, der Token und die Agenten-ID entfernt und der integrierte Assistent aktiviert. Du kannst später mit neuen Zugangsdaten wieder verbinden.
           title: Externen Assistenten trennen?
-        description: Leg fest, wie der Chat-Assistent antwortet. „Integriert" nutzt deinen eingerichteten LLM-Anbieter direkt. „Extern" gibt an einen entfernten KI-Agenten ab, der über MCP auf die Finanzfunktionen von Sure zugreifen kann.
+        description: Leg fest, wie der Chat-Assistent antwortet. „Integriert“ nutzt deinen eingerichteten LLM-Anbieter direkt. „Extern“ gibt an einen entfernten KI-Agenten ab, der über MCP auf die Finanzfunktionen von Sure zugreifen kann.
         disconnect_button: Trennen
         disconnect_description: Entfernt die Verbindung zum externen Assistenten und schaltet zurück auf den integrierten.
         disconnect_title: Externe Verbindung
         env_configured_external: Über Umgebungsvariablen eingerichtet.
-        env_notice: Die Art des Assistenten ist über die Umgebungsvariable ASSISTANT_TYPE auf „%{type}" festgelegt.
+        env_notice: Die Art des Assistenten ist über die Umgebungsvariable ASSISTANT_TYPE auf „%{type}“ festgelegt.
         external_configured: Eingerichtet
         external_not_configured: Nicht eingerichtet. Trag unten URL und Token ein oder setz die Umgebungsvariablen EXTERNAL_ASSISTANT_URL und EXTERNAL_ASSISTANT_TOKEN.
         external_status: Endpunkt des externen Assistenten

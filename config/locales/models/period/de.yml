@@ -25,7 +25,7 @@ de:
       label: Letzte 10 Jahre
       label_short: 10J
     last_30_days:
-      comparison_label: vs. letzten 30 Tagen
+      comparison_label: vs. den letzten 30 Tagen
       label: Letzte 30 Tage
       label_short: 30T
     last_365_days:

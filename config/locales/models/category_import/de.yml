@@ -5,4 +5,4 @@ de:
       models:
         category_import:
           missing_columns: 'Es fehlen Pflichtspalten: %{columns}'
-          own_parent: Die Kategorie „%{name}" kann nicht ihre eigene Oberkategorie sein
+          own_parent: Die Kategorie „%{name}“ kann nicht ihre eigene Oberkategorie sein

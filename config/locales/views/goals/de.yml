@@ -139,9 +139,9 @@ de:
         aria_label: Ziele suchen
         clear_search: Suche zurücksetzen
         empty: Kein Ziel passt.
-        empty_with_both: Kein Ziel passt zu „%{query}" mit diesem Filter.
+        empty_with_both: Kein Ziel passt zu „%{query}“ mit diesem Filter.
         empty_with_filter: Kein Ziel passt zu diesem Filter.
-        empty_with_query: Kein Ziel passt zu „%{query}".
+        empty_with_query: Kein Ziel passt zu „%{query}“.
         placeholder: Ziele suchen …
         show_all: Alle anzeigen
       subtitle: Spar auf das, was dir wichtig ist.

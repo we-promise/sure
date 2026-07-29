@@ -4,7 +4,7 @@ de:
     users:
       index:
         title: "Benutzerverwaltung"
-        description: "Benutzerrollen für Ihre Instanz verwalten. Super-Admins haben Zugriff auf SSO-Provider und Benutzerverwaltung."
+        description: Benutzerrollen für deine Instanz verwalten. Super-Admins haben Zugriff auf SSO-Provider und Benutzerverwaltung.
         section_title: "Benutzer"
         you: "(Sie)"
         trial_ends_at: "Testversion endet"

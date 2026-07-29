@@ -19,7 +19,7 @@ de:
         one: "Konto mit leerem Namen kann nicht verknüpft werden"
         other: "%{count} Konten mit leeren Namen können nicht verknüpft werden"
       link_failed: "Konten konnten nicht verknüpft werden"
-      no_accounts_selected: "Bitte wählen Sie mindestens ein Konto aus"
+      no_accounts_selected: Wähl mindestens ein Konto aus
       no_api_token: "Mercury API-Token nicht gefunden. Bitte in den Anbieter-Einstellungen konfigurieren."
       partial_invalid: "Erfolgreich %{created_count} Konto/Konten verknüpft, %{already_linked_count} waren bereits verknüpft, %{invalid_count} Konto/Konten hatten ungültige Namen"
       partial_success: "Erfolgreich %{created_count} Konto/Konten verknüpft. %{already_linked_count} Konto/Konten waren bereits verknüpft: %{already_linked_names}"
@@ -35,7 +35,7 @@ de:
       no_accounts_description: "Diese Verbindung hat noch keine verknüpften Konten."
       no_accounts_title: "Keine Konten"
       setup_action: "Neue Konten einrichten"
-      setup_description: "%{linked} von %{total} Konten verknüpft. Wählen Sie Kontotypen für Ihre neu importierten Mercury-Konten."
+      setup_description: "%{linked} von %{total} Konten verknüpft. Wähl Kontotypen für deine neu importierten Mercury-Konten."
       setup_needed: "Neue Konten bereit zur Einrichtung"
       status: "Vor %{timestamp} synchronisiert"
       status_never: "Noch nie synchronisiert"
@@ -48,11 +48,11 @@ de:
       api_error: "API-Fehler: %{message}"
       cancel: "Abbrechen"
       configure_name_in_mercury: "Import nicht möglich – bitte Kontoname in Mercury konfigurieren"
-      description: "Wählen Sie die Konten aus, die Sie mit Ihrem %{product_name}-Konto verknüpfen möchten."
+      description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen möchten.
       link_accounts: "Ausgewählte Konten verknüpfen"
-      no_accounts_found: "Keine Konten gefunden. Bitte überprüfen Sie Ihre API-Token-Konfiguration."
+      no_accounts_found: Keine Konten gefunden. Bitte prüf deine API-Token-Konfiguration.
       no_api_token: "Mercury API-Token ist nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
-      no_credentials_configured: "Bitte konfigurieren Sie zuerst Ihren Mercury API-Token in den Anbieter-Einstellungen."
+      no_credentials_configured: Richte zuerst deinen Mercury API-Token in den Anbieter-Einstellungen.
       no_name_placeholder: "(Kein Name)"
       title: "Mercury-Konten auswählen"
       select_connection: Wähl in den Anbietereinstellungen eine Mercury-Verbindung.
@@ -62,12 +62,12 @@ de:
       api_error: "API-Fehler: %{message}"
       cancel: "Abbrechen"
       configure_name_in_mercury: "Import nicht möglich – bitte Kontoname in Mercury konfigurieren"
-      description: "Wählen Sie ein Mercury-Konto zur Verknüpfung mit diesem Konto. Transaktionen werden automatisch synchronisiert und dedupliziert."
+      description: Wähl ein Mercury-Konto zur Verknüpfung mit diesem Konto. Transaktionen werden automatisch synchronisiert und dedupliziert.
       link_account: "Konto verknüpfen"
       no_account_specified: "Kein Konto angegeben"
-      no_accounts_found: "Keine Mercury-Konten gefunden. Bitte überprüfen Sie Ihre API-Token-Konfiguration."
+      no_accounts_found: Keine Mercury-Konten gefunden. Bitte prüf deine API-Token-Konfiguration.
       no_api_token: "Mercury API-Token ist nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
-      no_credentials_configured: "Bitte konfigurieren Sie zuerst Ihren Mercury API-Token in den Anbieter-Einstellungen."
+      no_credentials_configured: Richte zuerst deinen Mercury API-Token in den Anbieter-Einstellungen.
       no_name_placeholder: "(Kein Name)"
       title: "%{account_name} mit Mercury verknüpfen"
       select_connection: Wähl in den Anbietereinstellungen eine Mercury-Verbindung.
@@ -83,11 +83,11 @@ de:
       select_connection: Wähl eine Mercury-Verbindung, bevor du Konten verknüpfst.
     setup_accounts:
       account_type_label: "Kontotyp:"
-      all_accounts_linked: "Alle Ihre Mercury-Konten sind bereits eingerichtet."
+      all_accounts_linked: Alle deine Mercury-Konten sind bereits eingerichtet.
       api_error: "API-Fehler: %{message}"
       fetch_failed: "Konten konnten nicht geladen werden"
       no_accounts_to_setup: "Keine Konten zum Einrichten"
-      no_api_token: "Mercury API-Token ist nicht konfiguriert. Bitte überprüfen Sie Ihre Verbindungseinstellungen."
+      no_api_token: Mercury API-Token ist nicht konfiguriert. Bitte prüf deine Verbindungseinstellungen.
       account_types:
         skip: "Dieses Konto überspringen"
         depository: "Giro- oder Sparkonto"
@@ -132,14 +132,14 @@ de:
           other: "Sonstiges Darlehen"
       balance: "Saldo"
       cancel: "Abbrechen"
-      choose_account_type: "Wählen Sie den passenden Kontotyp für jedes Mercury-Konto:"
+      choose_account_type: 'Wähl den passenden Kontotyp für jedes Mercury-Konto:'
       create_accounts: "Konten erstellen"
       creating_accounts: "Konten werden erstellt..."
       historical_data_range: "Zeitraum für Verlauf:"
-      subtitle: "Wählen Sie die passenden Kontotypen für Ihre importierten Konten"
-      sync_start_date_help: "Wählen Sie, wie weit die Transaktionshistorie synchronisiert werden soll. Maximal 3 Jahre Verlauf verfügbar."
+      subtitle: Wähl die passenden Kontotypen für deine importierten Konten
+      sync_start_date_help: Wähl, wie weit die Transaktionshistorie synchronisiert werden soll. Maximal 3 Jahre Verlauf verfügbar.
       sync_start_date_label: "Transaktionen synchronisieren ab:"
-      title: "Ihre Mercury-Konten einrichten"
+      title: deine Mercury-Konten einrichten
     complete_account_setup:
       all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten erstellt."
       creation_failed: "Konten konnten nicht erstellt werden: %{error}"
@@ -181,7 +181,7 @@ de:
       disconnect_confirm: "%{name} trennen?"
       instructions:
         copy_token_html: Kopier den <strong>vollständigen Token</strong> samt Präfix <code>secret-token:</code> und füg ihn unten als benannte Verbindung hinzu
-        create_token: Leg einen neuen API-Token mit „Read Only"-Zugriff an
+        create_token: Leg einen neuen API-Token mit „Read Only“-Zugriff an
         open_tokens: Geh zu Settings > Developer > API Tokens
         sign_in_html: Öffne %{link} und melde dich in dem Konto an, das du verbinden willst
         whitelist_ip_html: "<strong>Wichtig:</strong> Trag die IP-Adresse deines Servers in die Whitelist des Tokens ein"

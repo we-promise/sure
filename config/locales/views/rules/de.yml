@@ -57,11 +57,11 @@ de:
       ai_cost_with_estimate_html: 'Damit kategorisiert die KI %{count} Transaktion(en). Geschätzte Kosten: <span class="font-semibold">~$%{cost}</span>'
       apply_notice_html: Du wendest diese Regel gleich auf <span class="text-primary font-medium">%{count} %{resource}</span> an, die den Bedingungen entsprechen. Bestätige, wenn du fortfahren willst.
       confirm_changes: Änderungen bestätigen
-      cost_unavailable_model: Für das Modell „%{model}" gibt es keine Kostenschätzung.
+      cost_unavailable_model: Für das Modell „%{model}“ gibt es keine Kostenschätzung.
       cost_unavailable_no_provider: Keine Kostenschätzung möglich (kein LLM-Anbieter eingerichtet).
       cost_warning: Es können Kosten entstehen. Die aktuellen Preise findest du beim Modellanbieter.
       title: Änderungen bestätigen
-      title_with_name: Änderungen an „%{name}" bestätigen
+      title_with_name: Änderungen an „%{name}“ bestätigen
       view_usage_history: Nutzungsverlauf ansehen
     destroy:
       success: Regel gelöscht
