@@ -210,6 +210,31 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "SIMPLEFIN_INCLUDE_PENDING env var disabling pending takes precedence over a permissive Setting" do
+    # Mirror of the test above: this is the actual real-world guard scenario the PR
+    # fixes - a self-hoster sets SIMPLEFIN_INCLUDE_PENDING=0 while the Setting (UI
+    # toggle) still says "include pending". The env var must win and skip the row.
+    Setting.stubs(:syncs_include_pending).returns(true)
+    Rails.configuration.x.simplefin.stubs(:include_pending).returns(false)
+
+    tx = {
+      id: "tx_pending_env_disable_1",
+      amount: "-30.00",
+      currency: "USD",
+      payee: "Test Store",
+      description: "Auth hold",
+      posted: Date.current.to_s,
+      transacted_at: (Date.current - 1).to_s,
+      pending: true
+    }
+
+    with_env_overrides SIMPLEFIN_INCLUDE_PENDING: "0" do
+      assert_no_difference "@account.entries.count" do
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      end
+    end
+  end
+
   test "infers pending when posted is explicitly 0 and transacted_at present (no explicit pending flag)" do
     # Some SimpleFIN banks indicate pending by sending posted=0 + transacted_at, without pending flag
     t_epoch = (Date.current - 1).to_time.to_i
