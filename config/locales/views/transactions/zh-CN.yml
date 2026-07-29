@@ -45,6 +45,14 @@ zh-CN:
       submit: 添加交易
       tag_search_placeholder: 搜索或创建标签
       tags_label: 标签
+      payment_channel_label: 支付渠道
+      payment_channels:
+        wechat_pay: 微信支付
+        alipay: 支付宝
+        apple_pay: Apple Pay
+        paypal: PayPal
+        unionpay: 云闪付 / 银联
+        cash: 现金
       transfer: 转账
     create:
       created: 交易已创建
