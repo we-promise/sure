@@ -117,6 +117,27 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes transaction_ids, pending_deletion_transaction.id
   end
 
+  # The API exposes no `excluded` field, so a client cannot filter these out
+  # itself — returning them would double-count against the payments they offset.
+  test "should exclude system generated entries from index history" do
+    accrual = @account.entries.create!(
+      name: "Interest charged",
+      date: Date.current,
+      amount: 100,
+      currency: @account.currency,
+      excluded: true,
+      source: Loan::InterestAccrual::SOURCE,
+      external_id: Date.current.strftime("%Y-%m"),
+      entryable: Transaction.new(kind: "standard")
+    )
+
+    get api_v1_transactions_url, headers: api_headers(@api_key)
+    assert_response :success
+
+    transaction_ids = JSON.parse(response.body)["transactions"].map { |t| t["id"] }
+    assert_not_includes transaction_ids, accrual.entryable_id
+  end
+
   test "should filter disabled account transactions by account_id" do
     disabled_transaction = create_disabled_account_transaction(name: "Closed Account Filter")
     disabled_account = disabled_transaction.entry.account

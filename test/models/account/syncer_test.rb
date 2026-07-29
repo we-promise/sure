@@ -37,12 +37,16 @@ class Account::SyncerTest < ActiveSupport::TestCase
     Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
   end
 
+  # Ordering is the point: accruals must exist before balances are calculated,
+  # or the new entries land a sync too late. Asserted with a sequence rather than
+  # bare call counts so the test actually checks what its name claims.
   test "accrues loan interest before materializing balances" do
     account = accounts(:loan)
+    order = sequence("accrual precedes materialization")
 
     Account::MarketDataImporter.any_instance.expects(:import_all).once
-    Loan::InterestAccrual.any_instance.expects(:sync!).once.returns(false)
-    Balance::Materializer.any_instance.expects(:materialize_balances).once
+    Loan::InterestAccrual.any_instance.expects(:sync!).once.returns(false).in_sequence(order)
+    Balance::Materializer.any_instance.expects(:materialize_balances).once.in_sequence(order)
 
     Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
   end
