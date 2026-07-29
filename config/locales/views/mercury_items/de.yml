@@ -26,6 +26,7 @@ de:
       success:
         one: "Erfolgreich %{count} Konto verknüpft"
         other: "Erfolgreich %{count} Konten verknüpft"
+      select_connection: Wähl eine Mercury-Verbindung, bevor du Konten verknüpfst.
     mercury_item:
       accounts_need_setup: "Konten benötigen Einrichtung"
       delete: "Verbindung löschen"
@@ -54,6 +55,7 @@ de:
       no_credentials_configured: "Bitte konfigurieren Sie zuerst Ihren Mercury API-Token in den Anbieter-Einstellungen."
       no_name_placeholder: "(Kein Name)"
       title: "Mercury-Konten auswählen"
+      select_connection: Wähl in den Anbietereinstellungen eine Mercury-Verbindung.
     select_existing_account:
       account_already_linked: "Dieses Konto ist bereits mit einem Anbieter verknüpft"
       all_accounts_already_linked: "Alle Mercury-Konten sind bereits verknüpft"
@@ -68,6 +70,7 @@ de:
       no_credentials_configured: "Bitte konfigurieren Sie zuerst Ihren Mercury API-Token in den Anbieter-Einstellungen."
       no_name_placeholder: "(Kein Name)"
       title: "%{account_name} mit Mercury verknüpfen"
+      select_connection: Wähl in den Anbietereinstellungen eine Mercury-Verbindung.
     link_existing_account:
       account_already_linked: "Dieses Konto ist bereits mit einem Anbieter verknüpft"
       api_error: "API-Fehler: %{message}"
@@ -77,6 +80,7 @@ de:
       missing_parameters: "Erforderliche Parameter fehlen"
       no_api_token: "Mercury API-Token nicht gefunden. Bitte in den Anbieter-Einstellungen konfigurieren."
       success: "%{account_name} erfolgreich mit Mercury verknüpft"
+      select_connection: Wähl eine Mercury-Verbindung, bevor du Konten verknüpfst.
     setup_accounts:
       account_type_label: "Kontotyp:"
       all_accounts_linked: "Alle Ihre Mercury-Konten sind bereits eingerichtet."
@@ -145,3 +149,60 @@ de:
       success: "Synchronisation gestartet"
     update:
       success: "Mercury-Verbindung aktualisiert"
+    api_error:
+      check_provider_settings: Anbietereinstellungen prüfen
+      common_issues: 'Häufige Ursachen:'
+      expired_credentials_desc: Erzeug bei Mercury einen neuen API-Token
+      expired_credentials_label: Abgelaufene Zugangsdaten
+      insufficient_permissions_desc: Stell sicher, dass dein Token Lesezugriff hat
+      insufficient_permissions_label: Fehlende Berechtigungen
+      invalid_api_token_desc: Prüf deinen API-Token in den Anbietereinstellungen
+      invalid_api_token_label: Ungültiger API-Token
+      network_issue_desc: Prüf deine Internetverbindung
+      network_issue_label: Netzwerkproblem
+      service_down_desc: Die Mercury-API ist möglicherweise vorübergehend gestört
+      service_down_label: Dienst nicht erreichbar
+      title: Fehler bei der Mercury-Verbindung
+      unable_to_connect: Die Verbindung zu Mercury kam nicht zustande
+    mercury_item_selection_error_payload:
+      select_connection: Wähl eine Mercury-Verbindung, bevor du Konten lädst.
+    provider_connection:
+      default_description: Verbinde deine Bank über Mercury
+      default_name: Mercury
+      description: Über %{name} verbinden
+      name: Mercury – %{name}
+    provider_panel:
+      add_connection: Mercury-Verbindung hinzufügen
+      base_url_label: Basis-URL (optional)
+      base_url_placeholder: https://api.mercury.com/api/v1 (Standard)
+      connection_name_label: Name der Verbindung
+      connection_name_placeholder: Geschäftskonto
+      default_connection_name: Mercury-Verbindung
+      disconnect_confirm: "%{name} trennen?"
+      instructions:
+        copy_token_html: Kopier den <strong>vollständigen Token</strong> samt Präfix <code>secret-token:</code> und füg ihn unten als benannte Verbindung hinzu
+        create_token: Leg einen neuen API-Token mit „Read Only"-Zugriff an
+        open_tokens: Geh zu Settings > Developer > API Tokens
+        sign_in_html: Öffne %{link} und melde dich in dem Konto an, das du verbinden willst
+        whitelist_ip_html: "<strong>Wichtig:</strong> Trag die IP-Adresse deines Servers in die Whitelist des Tokens ein"
+      keep_token_placeholder: Leer lassen, um den bisherigen Token zu behalten
+      sandbox_note_html: Leg für jeden Mercury-Zugang bzw. API-Token eine eigene benannte Verbindung an. Zum Testen in der Sandbox nutzt du <code>https://api-sandbox.mercury.com/api/v1</code> als Basis-URL. Mercury verlangt eine IP-Freigabe – trag deine IP im Mercury-Dashboard ein.
+      setup_accounts: Konten einrichten
+      setup_title: 'So richtest du es ein:'
+      sync: Sync
+      token_label: Token
+      token_placeholder: Token hier einfügen
+      update_connection: Verbindung aktualisieren
+    render_mercury_item_selection_failure:
+      no_credentials_configured: Hinterleg zuerst deinen Mercury-API-Token in den Anbietereinstellungen.
+      select_connection: Wähl in den Anbietereinstellungen eine Mercury-Verbindung.
+    setup_required:
+      api_token_description: Bevor du Mercury-Konten verknüpfen kannst, musst du deinen Mercury-API-Token hinterlegen.
+      api_token_not_configured: API-Token nicht hinterlegt
+      go_to_provider_settings: Zu den Anbietereinstellungen
+      setup_step_1_html: Geh zu <strong>Einstellungen > Anbieter</strong>
+      setup_step_2_html: Such den Abschnitt <strong>Mercury</strong>
+      setup_step_3: Trag deinen Mercury-API-Token ein
+      setup_step_4: Komm hierher zurück, um deine Konten zu verknüpfen
+      setup_steps_title: 'So richtest du es ein:'
+      title: Mercury muss eingerichtet werden

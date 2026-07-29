@@ -3,6 +3,8 @@ de:
   defaults:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
+    common:
+      close: Schließen
   global:
     expand: "Aufklappen"
   activerecord:
@@ -48,6 +50,8 @@ de:
       default: "%d.%m.%Y"
       long: "%e. %B %Y"
       short: "%e. %b"
+      month_year: "%B %Y"
+      short_month_year: "%b %Y"
     month_names:
     -
     - Januar
@@ -154,6 +158,8 @@ de:
   helpers:
     select:
       prompt: Bitte wählen
+      default_label: Auswählen …
+      search_placeholder: Suchen
     submit:
       create: "%{model} erstellen"
       submit: "%{model} speichern"
@@ -229,3 +235,6 @@ de:
       long: "%A, %d. %B %Y, %H:%M Uhr"
       short: "%d. %b, %H:%M Uhr"
     pm: nachmittags
+  concerns:
+    self_hostable:
+      redis_configured: Redis ist jetzt richtig eingerichtet! Du kannst deine Sure-Installation nun einrichten.

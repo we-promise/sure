@@ -41,6 +41,15 @@ de:
       configure: Konfigurieren
       update_configuration: Neu konfigurieren
       default_name: CoinStats-Verbindung
+      exchange_label: Börse
+      exchange_select_blank: Börse wählen
+      link_exchange_description: Nutz einen API-Key mit Lesezugriff, damit CoinStats Guthaben und Transaktionen von Bitvavo, Binance und weiteren unterstützten Börsen abgleichen kann.
+      link_exchange_note: Wenn deine Börse den API-Key erst freischalten oder per E-Mail bestätigen lässt, erledige das, bevor du hier verknüpfst.
+      link_exchange_submit: Börse verknüpfen
+      link_exchange_title: Börsen-API verknüpfen
+      link_wallet_description: Verfolge über CoinStats eine selbst verwahrte Wallet oder eine einzelne On-Chain-Adresse.
+      link_wallet_submit: Krypto-Wallet verknüpfen
+      link_wallet_title: Wallet-Adresse verknüpfen
     coinstats_item:
       deletion_in_progress: Krypto-Wallet-Daten werden gelöscht…
       provider_name: CoinStats
@@ -59,3 +68,9 @@ de:
       delete: Löschen
       no_wallets_title: Keine Krypto-Wallets verbunden
       no_wallets_message: Derzeit sind keine Krypto-Wallets mit CoinStats verbunden.
+    link_exchange:
+      error: 'Die Börse ließ sich nicht verknüpfen: %{message}.'
+      failed: Die Börse ließ sich nicht verknüpfen.
+      invalid_exchange: Die gewählte Börse wird nicht mehr unterstützt.
+      missing_params: Börse und Zugangsdaten sind erforderlich.
+      success: Börse %{name} verknüpft.

@@ -20,6 +20,8 @@ de:
       submit_create: Konto erstellen
       account_creation_disabled: Die Kontoerstellung über Single Sign-On ist deaktiviert. Bitte kontaktieren Sie einen Administrator.
       cancel: Abbrechen
+      no_pending_oidc: Keine offene OIDC-Anmeldung gefunden
+      submit_accept_invitation: Einladung annehmen
     new_user:
       title: Konto vervollständigen
       heading: Konto erstellen
@@ -31,3 +33,10 @@ de:
       last_name_placeholder: Nachname eingeben
       submit: Konto erstellen
       cancel: Abbrechen
+      no_pending_oidc: Keine offene OIDC-Anmeldung gefunden
+    create_link:
+      no_pending_oidc: Keine offene OIDC-Anmeldung gefunden
+    create_user:
+      account_created: Willkommen! Dein Konto ist angelegt.
+      account_creation_disabled: Die Kontoerstellung über SSO ist deaktiviert. Wende dich an einen Administrator.
+      no_pending_oidc: Keine offene OIDC-Anmeldung gefunden

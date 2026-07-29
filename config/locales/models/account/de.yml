@@ -19,3 +19,16 @@ de:
       account/other_liability: Sonstige Verbindlichkeit
       account/property: Immobilie
       account/vehicle: Fahrzeug
+  account_order:
+    balance_asc:
+      label: Saldo (aufsteigend)
+      label_short: Saldo ↑
+    balance_desc:
+      label: Saldo (absteigend)
+      label_short: Saldo ↓
+    name_asc:
+      label: Name (A–Z)
+      label_short: Name ↑
+    name_desc:
+      label: Name (Z–A)
+      label_short: Name ↓

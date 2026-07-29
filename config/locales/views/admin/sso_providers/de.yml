@@ -21,6 +21,19 @@ de:
         legacy_providers_title: "Umgebungskonfigurierte Provider"
         legacy_providers_notice: "Diese Provider werden über Umgebungsvariablen oder YAML konfiguriert und können nicht über diese Oberfläche verwaltet werden. Zur Verwaltung hier migrieren Sie sie zu datenbankgestützten Providern (AUTH_PROVIDERS_SOURCE=db) und legen Sie sie in der Oberfläche neu an."
         env_configured: "Env/YAML"
+        configuration_mode: Konfigurationsmodus
+        configured_providers: Eingerichtete Anbieter
+        db_backed_providers: Anbieter aus der Datenbank
+        db_backed_providers_description: Anbieter aus der Datenbank laden statt aus der YAML-Konfiguration
+        db_backed_providers_help_html: Setz <code class="bg-surface px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code>, um Anbieter aus der Datenbank zu laden. Dann greifen Änderungen ohne Server-Neustart.
+        delete: Löschen
+        disable: Deaktivieren
+        disabled: Inaktiv
+        edit: Bearbeiten
+        enable: Aktivieren
+        enabled: Aktiv
+        page_title: SSO-Anbieter
+        restart_required: Die Änderungen greifen erst nach einem Neustart des Servers.
       new:
         title: "SSO-Provider hinzufügen"
         description: "Neuen Single-Sign-On-Authentifizierungsprovider konfigurieren"
@@ -74,7 +87,9 @@ de:
         copy_button: "Kopieren"
         cancel: "Abbrechen"
         submit: "Provider speichern"
-        errors_title: "%{count} Fehler verhinderte das Speichern dieses Providers:"
+        errors_title:
+          one: 'Ein Fehler verhindert das Speichern dieses Anbieters:'
+          other: "%{count} Fehler verhindern das Speichern dieses Anbieters:"
         provisioning_title: "Benutzer-Bereitstellung"
         default_role_label: "Standardrolle für neue Benutzer"
         default_role_help: "Rolle für per JIT-SSO bereitgestellte Benutzer. Standard: Mitglied."
@@ -115,3 +130,11 @@ de:
         name_id_persistent: "Persistent"
         name_id_transient: "Transient"
         name_id_unspecified: "Nicht angegeben"
+        create_provider: Anbieter anlegen
+        saml_sp_callback_url_help: Trag diese URL bei deinem IdP als Assertion Consumer Service URL ein
+        saml_sp_callback_url_label: SP-Callback-URL (ACS-URL)
+        strategy_github: GitHub
+        strategy_google_oauth2: Google OAuth2
+        strategy_openid_connect: OpenID Connect
+        strategy_saml: SAML 2.0
+        update_provider: Anbieter aktualisieren

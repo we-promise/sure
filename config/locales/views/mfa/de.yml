@@ -30,5 +30,12 @@ de:
       page_title: Zwei-Faktor-Authentifizierung überprüfen
       title: Zwei-Faktor-Authentifizierung
       verify_button: Überprüfen
+      or: oder
+      webauthn_button: Passkey oder Sicherheitsschlüssel nutzen
+      webauthn_unsupported: Dieser Browser unterstützt keine Passkeys oder Sicherheitsschlüssel.
     verify_code:
       invalid_code: Ungültiger Authentifizierungscode Bitte versuche es erneut
+    verify_webauthn:
+      invalid_credential: Dieser Passkey oder Sicherheitsschlüssel ließ sich nicht prüfen. Versuch es noch einmal.
+    webauthn_options:
+      unavailable: Für dieses Konto sind keine Passkeys oder Sicherheitsschlüssel hinterlegt.

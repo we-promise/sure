@@ -76,6 +76,8 @@ de:
       link_button: "Verknüpfen"
       linked_accounts: "Bereits verknüpft"
       linked_to: "Verknüpft mit:"
+      sync_start_date_help: Leer lassen für die gesamte verfügbare Historie
+      sync_start_date_label: 'Transaktionen importieren ab:'
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} Konto muss eingerichtet werden"
@@ -100,6 +102,13 @@ de:
         other: "%{count} weitere Konten können eingerichtet werden"
       no_accounts_title: "Keine Konten gefunden"
       no_accounts_description: "Verbinden Sie einen Broker, um Ihre Anlagekonten zu importieren."
+    oauth_authorize:
+      not_configured: SnapTrade OAuth ist nicht eingerichtet. Setz SNAPTRADE_OAUTH_CLIENT_ID und SNAPTRADE_OAUTH_CLIENT_SECRET, starte die App neu und versuch es dann noch einmal.
+    oauth_callback:
+      access_denied: Die SnapTrade-Freigabe wurde abgebrochen.
+      failed: Die SnapTrade-Freigabe ließ sich nicht abschließen. Versuch es noch einmal.
+      state_mismatch: Die SnapTrade-Freigabe hat eine Sicherheitsprüfung nicht bestanden. Versuch es noch einmal.
+      success: SnapTrade-Freigabe abgeschlossen.
 
   providers:
     snaptrade:
@@ -131,6 +140,15 @@ de:
       delete_connection_title: "Broker-Verbindung löschen?"
       delete_connection_body: "Die Verbindung zu %{brokerage} wird dauerhaft von SnapTrade entfernt. Alle Konten dieses Brokers werden getrennt. Zum erneuten Sync müssen Sie sich wieder verbinden."
       delete_connection_confirm: "Verbindung löschen"
+      manage_at_snaptrade: Verbindungen bei SnapTrade verwalten
+      oauth_connect_button: Mit SnapTrade verbinden
+      oauth_reauthorize_button: Erneut freigeben
+      oauth_setup_step_1_html: Registrier eine OAuth-App unter <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: Trag die Callback-URL dieser App (<code>%{callback_url}</code>) als zulässige Redirect-URI ein
+      oauth_setup_step_3: Setz SNAPTRADE_OAUTH_CLIENT_ID und SNAPTRADE_OAUTH_CLIENT_SECRET in deiner Umgebung und starte neu
+      oauth_status_authorized: Bei SnapTrade freigegeben.
+      oauth_status_ready: Gib Sure den Lesezugriff auf deine SnapTrade-Kontodaten frei.
+      oauth_title: SnapTrade OAuth
 
   snaptrade_item:
     sync_status:

@@ -11,6 +11,7 @@ de:
       existing_user_added: Der Benutzer wurde Ihrem Haushalt hinzugefügt.
       failure: Einladung konnte nicht gesendet werden.
       success: Einladung erfolgreich gesendet.
+      existing_user_has_family_data: Dieser Person gehört bereits ein Haushalt mit Konten. Sie muss diese Konten entfernen oder übertragen, bevor sie deinem beitreten kann.
     destroy:
       failure: Beim Entfernen der Einladung ist ein Problem aufgetreten.
       not_authorized: Du bist nicht berechtigt, Einladungen zu verwalten.
