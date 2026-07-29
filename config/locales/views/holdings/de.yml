@@ -47,7 +47,7 @@ de:
       return: Gesamtrendite
       weight: Gewichtung
     missing_price_tooltip:
-      description: Diese Investition enthält fehlende Werte, daher konnten Rendite und Wert nicht berechnet werden
+      description: Bei dieser Position fehlen Werte, deshalb ließen sich Rendite und Wert nicht berechnen
       missing_data: Fehlende Daten
     show:
       avg_cost_label: Durchschnittlicher Einstandspreis

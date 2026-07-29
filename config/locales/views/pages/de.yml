@@ -55,7 +55,7 @@ de:
         value: "Wert"
         weight: "Gewicht"
       investment_summary:
-        title: "Investitionen"
+        title: Investments
         total_return: "Gesamtrendite"
         holding: "Position"
         weight: "Gewicht"

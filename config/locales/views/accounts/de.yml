@@ -24,7 +24,7 @@ de:
     create:
       success: "%{type}-Konto erstellt"
     set_default:
-      depository_only: "Nur Bargeld- und Kreditkartenkonten können als Standard festgelegt werden."
+      depository_only: Nur Bank- und Kreditkartenkonten können als Standard festgelegt werden.
     destroy:
       success: "%{type}-Konto zur Löschung vorgemerkt"
       cannot_delete_linked: Ein verknüpftes Konto lässt sich nicht löschen. Trenn es zuerst.
@@ -133,8 +133,8 @@ de:
       new_account: Neues Konto
       new_account_group: "Neue %{account_group}"
     types:
-      depository: Bargeld
-      investment: Investition
+      depository: Bankkonto
+      investment: Investment
       crypto: Krypto
       property: Immobilie
       vehicle: Fahrzeug
