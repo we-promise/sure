@@ -32,7 +32,18 @@ class Account::Syncer
 
       Loan::InterestAccrual.new(account.loan).sync!
     rescue => e
-      Rails.logger.error("Error accruing loan interest for account #{account.id}: #{e.message}")
+      # Swallowed on purpose, so this needs to reach support rather than only the
+      # application log: the account keeps syncing and the user sees a loan that
+      # has quietly stopped accruing, with nothing surfaced in the UI.
+      DebugLogEntry.capture(
+        category: "loan_interest_accrual_error",
+        level: "error",
+        message: "Failed to accrue loan interest",
+        source: self.class.name,
+        account: account,
+        family: account.family,
+        metadata: { account_id: account.id, error_class: e.class.name, error: e.message }
+      )
       Sentry.capture_exception(e)
       false
     end

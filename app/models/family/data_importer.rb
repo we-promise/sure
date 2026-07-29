@@ -291,8 +291,21 @@ class Family::DataImporter
           accountable = accountable_class.new
           accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
 
-          # Copy any other accountable attributes
-          safe_accountable_attrs = %w[subtype locked_attributes]
+          # Copy any other accountable attributes.
+          #
+          # The accrual settings must survive a round-trip: generated interest
+          # entries are deliberately left out of the export (they are derived,
+          # and reimporting them would orphan them under a new source), so the
+          # restored loan can only rebuild them if it still knows it should.
+          # Without this the balance comes back understated.
+          # `interest_rate` is included because Loan validates its presence when
+          # accrual is on — restoring the toggle without it would fail the whole
+          # import. `rate_type` and `term_months` are still dropped; that gap
+          # predates accrual and is left alone deliberately.
+          safe_accountable_attrs = %w[
+            subtype locked_attributes
+            accrue_interest interest_rate interest_accrual_start_date interest_accrual_day
+          ]
           safe_accountable_attrs.each do |attr|
             if accountable.respond_to?("#{attr}=") && accountable_data[attr].present?
               accountable.send("#{attr}=", accountable_data[attr])

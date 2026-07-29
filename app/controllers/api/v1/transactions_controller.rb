@@ -14,8 +14,13 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       .accessible_by(current_resource_owner)
       .where.not(status: "pending_deletion")
       .select(:id)
+    # System-generated entries (e.g. loan interest accruals) are derived output
+    # that the web surfaces already hide. The API has no `excluded` field for a
+    # client to filter on, so returning them here would silently double-count
+    # against the payments they offset.
     transactions_query = family.transactions
       .joins(:entry).where(entries: { account_id: accessible_account_ids })
+      .merge(Entry.excluding_system_generated)
 
     # Apply filters
     transactions_query = apply_filters(transactions_query)
