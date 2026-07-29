@@ -135,7 +135,7 @@ class Category < ApplicationRecord
     # options can't render icons, so we use a unicode arrow prefix (regular
     # leading spaces collapse in <option> text).
     def self.select_options(categories)
-      for(categories).flat_map do |group|
+      self.for(categories).flat_map do |group|
         [ [ group.category.name, group.category.id ] ] +
           group.subcategories.map { |sub| [ "↳ #{sub.name}", sub.id ] }
       end
