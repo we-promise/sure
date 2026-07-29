@@ -1300,6 +1300,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
     t.decimal "initial_balance", precision: 19, scale: 4
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.boolean "accrue_interest", default: false, null: false
+    t.integer "interest_accrual_day"
+    t.date "interest_accrual_start_date"
+    t.check_constraint "interest_accrual_day IS NULL OR interest_accrual_day >= 1 AND interest_accrual_day <= 31", name: "loans_interest_accrual_day_check"
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

@@ -8,7 +8,8 @@ class Account::Syncer
   def perform_sync(sync)
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
-    materialize_balances(window_start_date: sync.window_start_date)
+    accruals_changed = accrue_loan_interest
+    materialize_balances(window_start_date: accruals_changed ? nil : sync.window_start_date)
     apply_provider_balance_overrides
   end
 
@@ -17,6 +18,25 @@ class Account::Syncer
   end
 
   private
+    # Posts this loan's monthly interest charges before balances are materialized,
+    # so a payment into the account reduces principal only. No-op unless the user
+    # opted the loan in.
+    #
+    # When anything changed we drop the incremental window and force a full
+    # recalculation: an accrual can be created or re-priced at a date earlier than
+    # the window, which would otherwise be seeded from a now-stale persisted
+    # balance. Failures are swallowed — an accrual problem should degrade the loan
+    # to its pre-existing behaviour, not fail the whole account sync.
+    def accrue_loan_interest
+      return false unless account.loan?
+
+      Loan::InterestAccrual.new(account.loan).sync!
+    rescue => e
+      Rails.logger.error("Error accruing loan interest for account #{account.id}: #{e.message}")
+      Sentry.capture_exception(e)
+      false
+    end
+
     def materialize_balances(window_start_date: nil)
       strategy = account.linked? ? :reverse : :forward
       Balance::Materializer.new(account, strategy: strategy, window_start_date: window_start_date).materialize_balances

@@ -34,6 +34,38 @@
                   Loan.subtype_options_for_select,
                   { label: true, prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
       </div>
+
+      <%# Accrual replays the ledger from origination, which only holds for manual
+          loans — a linked account is anchored to the balance its provider reports. %>
+      <% if account.unlinked? %>
+        <%= render "shared/ruler", classes: "my-4" %>
+
+        <div class="flex items-center justify-between gap-3 py-2">
+          <div class="space-y-1">
+            <p class="text-sm text-primary"><%= t("loans.form.accrue_interest_label") %></p>
+            <p class="text-secondary text-sm"><%= t("loans.form.accrue_interest_hint") %></p>
+          </div>
+          <%= loan_form.toggle :accrue_interest %>
+        </div>
+
+        <div>
+          <%= loan_form.date_field :interest_accrual_start_date,
+                                   label: t("loans.form.interest_accrual_start_date") %>
+        </div>
+
+        <div>
+          <%= loan_form.number_field :interest_accrual_day,
+                                   label: t("loans.form.interest_accrual_day"),
+                                   placeholder: t("loans.form.interest_accrual_day_placeholder"),
+                                   min: 1,
+                                   max: 31 %>
+        </div>
+
+        <%= render DS::Alert.new(
+              variant: :warning,
+              message: t("loans.form.accrue_interest_backfill_warning")
+            ) %>
+      <% end %>
     <% end %>
   </div>
 <% end %>

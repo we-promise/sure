@@ -16,6 +16,18 @@ en:
       rate_type_adjustable: Adjustable
       rate_type_fixed: Fixed
       rate_type_variable: Variable
+      accrue_interest_label: Track interest separately
+      accrue_interest_hint: Charge interest to this loan every month so payments
+        only pay down the principal. Requires an interest rate and a start date.
+      accrue_interest_backfill_warning: Interest will be charged for every month
+        from the start date to today, so enabling this on a loan with past
+        payments adds backdated entries and raises the balance to what you
+        actually still owe.
+      interest_accrual_start_date: Start charging interest from
+      interest_accrual_day: Interest charged on day of month
+      interest_accrual_day_placeholder: Defaults to the day of the start date
+    interest_accrual:
+      entry_name: Interest charged
     new:
       title: Enter loan details
     overview:
@@ -38,3 +50,7 @@ en:
         type: Type
         unknown: Unknown
         edit_loan_details: "Edit loan details"
+        interest_charged: Interest Charged
+        interest_accrual_hint: Interest is charged to this loan each month, so
+          payments show up as principal reductions only. Interest entries are
+          excluded from budgets — the payment itself is already counted.
