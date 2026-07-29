@@ -143,7 +143,9 @@ class BinanceAccount::Processor
         all_new.concat(page)
         break if page.size < limit
 
+        # Binance rejects fromId + startTime, after fromId driven pagination we reset startTime
         from_id = page.map { |t| t["id"].to_i }.max + 1
+        start_time = nil
       end
 
       all_new
