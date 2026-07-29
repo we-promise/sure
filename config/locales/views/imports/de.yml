@@ -62,9 +62,9 @@ de:
         select_format: Format wählen
         tags_optional: Tags (optional)
       rule_import:
-        description: Konfigurieren Sie den Regel-Import. Regeln werden basierend auf den CSV-Daten erstellt oder aktualisiert.
+        description: Richte den Regel-Import ein. Regeln werden anhand der CSV-Daten erstellt oder aktualisiert.
         process_button: Regeln verarbeiten
-        process_help: Klicken Sie unten, um Ihre CSV zu verarbeiten und Regelzeilen zu erzeugen.
+        process_help: Klick unten, um deine CSV zu verarbeiten und Regelzeilen zu erzeugen.
       show:
         description: Wähle die Spalten aus, die den jeweiligen Feldern in deiner CSV entsprechen.
         title: Import konfigurieren
@@ -263,7 +263,7 @@ de:
           failed: Fehlgeschlagen
         actions:
           revert: Zurücksetzen
-          confirm_revert: Dadurch werden importierte Transaktionen gelöscht, Sie können Ihre Daten aber jederzeit wieder einsehen und erneut importieren.
+          confirm_revert: Dadurch werden importierte Transaktionen gelöscht. Du kannst deine Daten aber jederzeit wieder einsehen und erneut importieren.
           delete: Löschen
           view: Anzeigen
           confirm_mark_failed: Dieser Import steht seit einer Weile still, sein Hintergrundjob wurde vermutlich unterbrochen. Als fehlgeschlagen markieren, damit du es erneut versuchen kannst? Es bleiben keine importierten Daten zurück.
@@ -307,22 +307,22 @@ de:
       tab_raw_data: Rohdaten
     create:
       file_too_large: Datei ist zu groß. Maximale Größe %{max_size} MB.
-      invalid_file_type: Ungültiger Dateityp. Bitte laden Sie eine CSV-Datei hoch.
+      invalid_file_type: Ungültiger Dateityp. Lad eine CSV-Datei hoch.
       csv_uploaded: CSV wurde erfolgreich hochgeladen.
       pdf_too_large: PDF ist zu groß. Maximale Größe %{max_size} MB.
-      pdf_processing: Ihre PDF wird verarbeitet. Sie erhalten eine E-Mail, wenn die Analyse abgeschlossen ist.
+      pdf_processing: Deine PDF wird verarbeitet. Du bekommst eine E-Mail, sobald die Analyse fertig ist.
       invalid_pdf: Die hochgeladene Datei ist keine gültige PDF.
       document_too_large: Dokument ist zu groß. Maximale Größe %{max_size} MB.
       invalid_document_file_type: Ungültiger Dokumenttyp für den aktiven Vektorspeicher.
       document_uploaded: Dokument wurde erfolgreich hochgeladen.
-      document_upload_failed: Das Dokument konnte nicht in den Vektorspeicher hochgeladen werden. Bitte versuchen Sie es erneut.
+      document_upload_failed: Das Dokument ließ sich nicht in den Vektorspeicher hochladen. Versuch es noch einmal.
       document_provider_not_configured: Kein Vektorspeicher für Dokument-Uploads konfiguriert.
       duplicate_pdf_unavailable: Diese PDF liegt bereits als Auszug vor, auf den du keinen Zugriff hast.
       invalid_ndjson_file_type: Ungültiger Dateityp oder ungültiges Format. Lad eine gültige .ndjson- oder .json-Exportdatei hoch.
       ndjson_uploaded: NDJSON-Datei hochgeladen.
     show:
-      finalize_upload: Bitte schließen Sie den Datei-Upload ab.
-      finalize_mappings: Bitte schließen Sie die Zuordnungen ab, bevor Sie fortfahren.
+      finalize_upload: Schließ den Datei-Upload ab.
+      finalize_mappings: Schließ die Zuordnungen ab, bevor du fortfährst.
     errors:
       custom_column_requires_inflow: "Bei benutzerdefinierten Spalten muss eine Einnahmen-Spalte ausgewählt werden."
       interrupted: Der Hintergrundprozess wurde unterbrochen, bevor das hier fertig war. Die importierten Daten wurden zurückgenommen, du kannst es gefahrlos erneut versuchen.
@@ -336,22 +336,22 @@ de:
       other: Sonstiges Dokument
       unknown: Unbekanntes Dokument
     pdf_import:
-      processing_title: Ihre PDF wird verarbeitet
-      processing_description: Wir analysieren Ihr Dokument mit KI. Das kann einen Moment dauern. Sie erhalten eine E-Mail, wenn die Analyse abgeschlossen ist.
+      processing_title: Deine PDF wird verarbeitet
+      processing_description: Wir analysieren dein Dokument mit KI. Das kann einen Moment dauern. Du bekommst eine E-Mail, sobald die Analyse fertig ist.
       check_status: Status prüfen
       back_to_dashboard: Zurück zur Übersicht
       failed_title: Verarbeitung fehlgeschlagen
-      failed_description: Ihre PDF konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut oder kontaktieren Sie den Support.
+      failed_description: Deine PDF ließ sich nicht verarbeiten. Versuch es noch einmal oder wende dich an den Support.
       try_again: Erneut versuchen
       delete_import: Import löschen
       complete_title: Dokument analysiert
-      complete_description: Wir haben Ihre PDF analysiert – hier ist das Ergebnis.
+      complete_description: Wir haben deine PDF analysiert – hier ist das Ergebnis.
       document_type_label: Dokumenttyp
       summary_label: Zusammenfassung
-      email_sent_notice: Sie haben eine E-Mail mit den nächsten Schritten erhalten.
+      email_sent_notice: Du hast eine E-Mail mit den nächsten Schritten bekommen.
       back_to_imports: Zurück zu Importen
       unknown_state_title: Unbekannter Status
-      unknown_state_description: Dieser Import befindet sich in einem unerwarteten Zustand. Bitte kehren Sie zu den Importen zurück.
+      unknown_state_description: Dieser Import ist in einem unerwarteten Zustand. Kehr zu den Importen zurück.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Verarbeitung fehlgeschlagen: %{error}"
       create_account: Konto anlegen

@@ -2,8 +2,8 @@ de:
   views:
     settings:
       payments:
-        renewal: "Ihr Beitrag wird fortgesetzt am %{date}."
-        cancellation: "Ihr Beitrag endet am %{date}."
+        renewal: Dein Beitrag wird am %{date} fortgesetzt.
+        cancellation: Dein Beitrag endet am %{date}.
   settings:
     ai_prompts:
       show:

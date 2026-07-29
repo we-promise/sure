@@ -17,7 +17,7 @@ de:
     reset_security:
       success: Wertpapier auf Provider-Wert zurückgesetzt.
     errors:
-      security_collision: "Umbildung nicht möglich: Sie haben bereits eine Position für %{ticker} am %{date}."
+      security_collision: 'Umbildung nicht möglich: Du hast bereits eine Position für %{ticker} am %{date}.'
     cost_basis_sources:
       manual: Vom Benutzer gesetzt
       calculated: Aus Trades
@@ -81,7 +81,7 @@ de:
       market_value_label: Marktwert
       unknown: Unbekannt
       cost_basis_locked_label: Einstandspreis ist gesperrt
-      cost_basis_locked_description: Ihr manuell gesetzter Einstandspreis wird durch Syncs nicht geändert.
+      cost_basis_locked_description: Dein manuell gesetzter Einstandspreis wird durch Syncs nicht geändert.
       unlock_cost_basis: Freigeben
       unlock_confirm_title: Einstandspreis freigeben?
       unlock_confirm_body: Der Einstandspreis kann dann durch Provider-Syncs oder Trade-Berechnungen aktualisiert werden.
