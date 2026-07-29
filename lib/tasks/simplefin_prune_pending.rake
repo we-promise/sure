@@ -9,7 +9,7 @@
 # including ones a user manually deleted. SimplefinEntry::Processor now skips pending rows
 # while pending is disabled, but the stale rows remain in the store. This task removes them.
 #
-# Pending detection mirrors SimplefinEntry::Processor#pending?:
+# Pending detection delegates to SimplefinEntry::Processor.pending?:
 #   - pending: true (explicit flag), OR
 #   - posted == 0 (epoch) AND transacted_at present (implicit pattern from some banks)
 #
@@ -82,19 +82,12 @@ namespace :sure do
         SimplefinAccount.all
       end
 
-      pending = ->(tx) do
-        t = tx.with_indifferent_access
-        next true if ActiveModel::Type::Boolean.new.cast(t[:pending])
-        t[:posted].present? && t[:posted].to_i.zero? &&
-          t[:transacted_at].present? && t[:transacted_at].to_i > 0
-      end
-
       total_accounts = 0
       total_removed = 0
 
       sfas.find_each do |sfa|
         txns = sfa.raw_transactions_payload.to_a
-        kept = txns.reject { |tx| pending.call(tx) }
+        kept = txns.reject { |tx| SimplefinEntry::Processor.pending?(tx) }
         removed = txns.size - kept.size
         next if removed.zero?
 

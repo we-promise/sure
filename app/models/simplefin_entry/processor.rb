@@ -10,6 +10,22 @@ class SimplefinEntry::Processor
     @shared_import_adapter = import_adapter
   end
 
+  # Pending detection: explicit flag OR inferred from posted=0 (epoch) + transacted_at.
+  # Public so callers like the prune_pending rake task share this definition instead of
+  # reimplementing it.
+  def self.pending?(simplefin_transaction)
+    data = simplefin_transaction.with_indifferent_access
+    return true if ActiveModel::Type::Boolean.new.cast(data[:pending])
+
+    posted_val = data[:posted]
+    transacted_val = data[:transacted_at]
+    # Compare against explicit zero representations (mirrors posted_date) rather than
+    # posted_val.to_i.zero?, which would also match non-numeric junk like "unavailable".
+    posted_is_epoch_zero = posted_val == 0 || posted_val == "0"
+    transacted_present = transacted_val.present? && transacted_val.to_i > 0
+    posted_is_epoch_zero && transacted_present
+  end
+
   def process
     # Skip pending transactions when pending inclusion is disabled. Without this guard
     # the SIMPLEFIN_INCLUDE_PENDING/syncs_include_pending setting only affects the API
@@ -43,17 +59,11 @@ class SimplefinEntry::Processor
       end
     end
 
-    # Pending detection: explicit flag OR inferred from posted=0 (epoch) + transacted_at.
-    # We only infer from posted=0, NOT from posted=nil/blank, because some providers omit
-    # posted dates even for settled transactions (which would cause false positives).
+    # We only infer pending from posted=0, NOT from posted=nil/blank, because some
+    # providers omit posted dates even for settled transactions (which would cause
+    # false positives).
     def pending?
-      return true if ActiveModel::Type::Boolean.new.cast(data[:pending])
-
-      posted_val = data[:posted]
-      transacted_val = data[:transacted_at]
-      posted_is_epoch_zero = posted_val.present? && posted_val.to_i.zero?
-      transacted_present = transacted_val.present? && transacted_val.to_i > 0
-      posted_is_epoch_zero && transacted_present
+      self.class.pending?(data)
     end
 
     def extra_metadata
