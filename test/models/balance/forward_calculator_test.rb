@@ -406,8 +406,9 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
       entries: [
         { type: "opening_anchor", date: 2.days.ago.to_date, balance: 20000 },
         # "Loan payment" of $2000, which reduces the principal
-        # TODO: We'll eventually need to calculate which portion of the txn was "interest" vs. "principal", but for now we'll just assume it's all principal
-        # since we don't have a first-class way to track interest payments yet.
+        # A payment is applied in full to the principal unless the loan opts into
+        # Loan::InterestAccrual, which posts the offsetting monthly interest
+        # charge so that only the remainder pays the principal down.
         { type: "transaction", date: 1.day.ago.to_date, amount: -2000 }
       ]
     )

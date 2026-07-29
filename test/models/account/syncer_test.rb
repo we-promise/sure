@@ -36,4 +36,62 @@ class Account::SyncerTest < ActiveSupport::TestCase
 
     Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
   end
+
+  test "accrues loan interest before materializing balances" do
+    account = accounts(:loan)
+
+    Account::MarketDataImporter.any_instance.expects(:import_all).once
+    Loan::InterestAccrual.any_instance.expects(:sync!).once.returns(false)
+    Balance::Materializer.any_instance.expects(:materialize_balances).once
+
+    Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
+  end
+
+  test "drops the incremental window when accruals changed" do
+    account = accounts(:loan)
+    window = 5.days.ago.to_date
+
+    Account::MarketDataImporter.any_instance.expects(:import_all).once
+    Loan::InterestAccrual.any_instance.expects(:sync!).once.returns(true)
+    Balance::Materializer.expects(:new)
+                         .with(account, has_entries(window_start_date: nil))
+                         .returns(stub(materialize_balances: nil))
+
+    Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: window))
+  end
+
+  test "keeps the incremental window when accruals did not change" do
+    account = accounts(:loan)
+    window = 5.days.ago.to_date
+
+    Account::MarketDataImporter.any_instance.expects(:import_all).once
+    Loan::InterestAccrual.any_instance.expects(:sync!).once.returns(false)
+    Balance::Materializer.expects(:new)
+                         .with(account, has_entries(window_start_date: window))
+                         .returns(stub(materialize_balances: nil))
+
+    Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: window))
+  end
+
+  test "an accrual failure degrades the loan rather than failing the sync" do
+    account = accounts(:loan)
+
+    Account::MarketDataImporter.any_instance.expects(:import_all).once
+    Loan::InterestAccrual.any_instance.expects(:sync!).raises(StandardError, "boom")
+    Balance::Materializer.any_instance.expects(:materialize_balances).once
+
+    assert_nothing_raised do
+      Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
+    end
+  end
+
+  test "skips accrual entirely for non-loan accounts" do
+    account = accounts(:depository)
+
+    Account::MarketDataImporter.any_instance.expects(:import_all).once
+    Loan::InterestAccrual.any_instance.expects(:sync!).never
+    Balance::Materializer.any_instance.expects(:materialize_balances).once
+
+    Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
+  end
 end

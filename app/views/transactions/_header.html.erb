@@ -11,7 +11,10 @@
       <% if entry.transaction.transfer? %>
         <%= icon "arrow-left-right", size: "sm", class: "text-secondary" %>
       <% end %>
-      <% if entry.linked? %>
+      <%# `linked?` is only `external_id.present?`, which is also true for
+          app-generated entries. Gate on a real provider so those don't render a
+          badge reading "Linked with " with an empty provider name. %>
+      <% if entry.linked? && entry.account.provider_name.present? %>
         <span title="<%= t("transactions.transaction.linked_with_provider", provider: entry.account.provider_name&.titleize) %>" class="text-secondary">
           <%= icon("refresh-ccw", size: "sm") %>
         </span>
