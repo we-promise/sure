@@ -209,9 +209,14 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
       family = current_resource_owner.family
+      # Same exclusion as #index, so the contract holds across the whole
+      # resource: a generated entry is a 404 here rather than something a client
+      # can fetch by id — and, since update/destroy share this lookup, not
+      # something the API can mutate (e.g. un-exclude) either.
       @transaction = family.transactions
         .joins(entry: :account)
         .merge(Account.accessible_by(current_resource_owner))
+        .merge(Entry.excluding_system_generated)
         .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
