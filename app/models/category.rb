@@ -125,8 +125,11 @@ class Category < ApplicationRecord
     def self.for(categories)
       categories_by_parent_id = categories.to_a.group_by(&:parent_id)
 
-      categories_by_parent_id[nil].to_a.map do |category|
-        new(category, categories_by_parent_id[category.id].to_a)
+      roots = categories_by_parent_id[nil].to_a.sort_by { |category| category.name.downcase }
+
+      roots.map do |category|
+        subcategories = categories_by_parent_id[category.id].to_a.sort_by { |sub| sub.name.downcase }
+        new(category, subcategories)
       end
     end
 

@@ -39,8 +39,14 @@ class Category::GroupTest < ActiveSupport::TestCase
     child_label, = options.find { |label, id| id == categories(:subcategory).id }
 
     assert_equal categories(:food_and_drink).name, parent_label
-    assert_not_equal categories(:subcategory).name, child_label
-    assert_includes child_label, categories(:subcategory).name
+    assert_equal "↳ #{categories(:subcategory).name}", child_label
+  end
+
+  test "select_options orders roots and subcategories alphabetically regardless of input order" do
+    reversed_options = Category::Group.select_options(@family.categories.to_a.reverse)
+    forward_options = Category::Group.select_options(@family.categories)
+
+    assert_equal forward_options, reversed_options
   end
 
   test "select_options returns [label, id] pairs usable directly by options_for_select / form.select" do
