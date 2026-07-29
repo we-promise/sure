@@ -204,6 +204,9 @@ en:
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.
+        investment_contributions:
+          title: Treat investment contributions as transfers
+          description: Hide contributions from your cash-flow charts and budgets while keeping the linked transfers.
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.

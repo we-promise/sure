@@ -1,8 +1,9 @@
 class IncomeStatement::FamilyStats
-  def initialize(family, interval: "month", account_ids: nil)
+  def initialize(family, interval: "month", account_ids: nil, include_investment_contributions: true)
     @family = family
     @interval = interval
     @account_ids = account_ids
+    @include_investment_contributions = include_investment_contributions
   end
 
   def call
@@ -59,6 +60,10 @@ class IncomeStatement::FamilyStats
       ActiveRecord::Base.sanitize_sql([ "AND a.id IN (?)", @account_ids ])
     end
 
+    def transfer_filter_sql(transaction_alias)
+      @include_investment_contributions ? Transaction.cash_flow_transfer_sql(transaction_alias) : Transaction.unmatched_transfer_sql(transaction_alias)
+    end
+
     def query_sql
       <<~SQL
         WITH period_totals AS (
@@ -76,7 +81,7 @@ class IncomeStatement::FamilyStats
           )
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
-            AND (#{Transaction.cash_flow_transfer_sql("t")})
+            AND (#{transfer_filter_sql("t")})
             AND ae.excluded = false
             AND a.exclude_from_reports = false
             #{pending_providers_sql}
