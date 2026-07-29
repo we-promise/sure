@@ -95,6 +95,20 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
+    # `source` is caller-supplied and otherwise unconstrained, so a client could
+    # write into a namespace the app owns. That cuts both ways: the entry would
+    # be readable through the idempotency lookup despite the API-wide exclusion,
+    # and the generating code would later destroy it as stale — silent data loss
+    # for the client. Reserved namespaces are refused outright.
+    if Entry::SYSTEM_GENERATED_SOURCES.include?(idempotency_source_param)
+      render json: {
+        error: "validation_failed",
+        message: "Source is reserved",
+        errors: [ "Source '#{idempotency_source_param}' is reserved for system-generated entries" ]
+      }, status: :unprocessable_entity
+      return
+    end
+
     account = family.accounts.writable_by(current_resource_owner).find(account_id_param)
 
     if idempotency_key_requested? && (existing_entry = existing_idempotent_entry(account))
@@ -405,11 +419,16 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       value.to_s.presence if value.is_a?(String) || value.is_a?(Numeric)
     end
 
+    # Scoped as well as gated at the boundary above: belt and braces, so this
+    # cannot resurface a generated entry even if a future caller path reaches
+    # here without passing that validation.
     def existing_idempotent_entry(account)
-      account.entries.find_by(
-        external_id: idempotency_external_id,
-        source: idempotency_source
-      )
+      account.entries
+             .merge(Entry.excluding_system_generated)
+             .find_by(
+               external_id: idempotency_external_id,
+               source: idempotency_source
+             )
     end
 
     def render_existing_idempotent_entry(entry)

@@ -144,6 +144,49 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  # `source` is caller-supplied, so without this a client could read a generated
+  # entry back through the idempotency lookup, or plant one that the generating
+  # code would later destroy as stale.
+  test "should reject a reserved source on create" do
+    assert_no_difference "Entry.count" do
+      post api_v1_transactions_url,
+           params: {
+             transaction: {
+               account_id: @account.id,
+               date: Date.current.to_s,
+               amount: 100,
+               name: "Squatting the accrual namespace",
+               source: Loan::InterestAccrual::SOURCE,
+               external_id: Date.current.strftime("%Y-%m")
+             }
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "should not return a system generated entry via the idempotency lookup" do
+    accrual = create_system_generated_entry
+
+    post api_v1_transactions_url,
+         params: {
+           transaction: {
+             account_id: @account.id,
+             date: Date.current.to_s,
+             amount: 100,
+             name: "Idempotent replay",
+             external_id: accrual.external_id
+           }
+         },
+         headers: api_headers(@api_key)
+
+    # Must not echo back the generated entry; it either creates a new
+    # transaction or fails, but never resurfaces the accrual.
+    assert_not_equal accrual.entryable_id, JSON.parse(response.body)["id"]
+  end
+
   test "should filter disabled account transactions by account_id" do
     disabled_transaction = create_disabled_account_transaction(name: "Closed Account Filter")
     disabled_account = disabled_transaction.entry.account
