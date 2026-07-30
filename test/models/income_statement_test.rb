@@ -474,10 +474,12 @@ class IncomeStatementTest < ActiveSupport::TestCase
     inflow = create_transaction(account: investment_account, amount: -1_000, kind: "funds_movement")
     Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "pending")
 
-    totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
     assert_equal Money.new(1_000, @family.currency), totals.income_money
     assert_equal Money.new(1_900, @family.currency), totals.expense_money
+    assert_equal Money.new(0, @family.currency), income_statement.matched_investment_contribution_outflow_total(period: Period.last_30_days)
   end
 
   # Tax-Advantaged Account Exclusion Tests
