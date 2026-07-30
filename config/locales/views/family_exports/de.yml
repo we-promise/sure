@@ -28,12 +28,12 @@ de:
         actions:
           delete: Löschen
           download: Herunterladen
-          confirm_mark_failed: Dieser Export steht seit einer Weile still, sein Hintergrundjob wurde vermutlich unterbrochen. Als fehlgeschlagen markieren? Du kannst sofort einen neuen starten.
+          confirm_mark_failed: Der Export steht still, sein Job wurde wohl unterbrochen. Als fehlgeschlagen markieren? Du kannst sofort einen neuen starten.
           mark_failed: Als fehlgeschlagen markieren
       empty: Noch keine Exporte vorhanden.
     cancel:
       cancelled: Export als fehlgeschlagen markiert. Du kannst sofort einen neuen starten.
-      not_cancellable: Dieser Export lässt sich gerade nicht als fehlgeschlagen markieren, sein Job läuft möglicherweise noch. Versuch es erneut, sobald er eine Stunde stillsteht.
+      not_cancellable: Der Export lässt sich gerade nicht als fehlgeschlagen markieren, sein Job läuft noch. Versuch es in einer Stunde erneut.
     new:
       accounts_and_balances: Alle Konten und Salden
       cancel: Abbrechen

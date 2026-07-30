@@ -132,7 +132,7 @@ de:
         success: Einstellungen aktualisiert
         invalid_onboarding_state: Ungültiger Onboarding-Status
         invalid_sync_time: Ungültiges Synchronisierungszeitformat. Bitte verwende das Format HH:MM (z. B. 02:30).
-        scheduler_sync_failed: Einstellungen gespeichert, aber die Synchronisierungsplanung konnte nicht aktualisiert werden. Bitte versuche es erneut oder prüfe die Server-Logs.
+        scheduler_sync_failed: Gespeichert, aber der Sync-Zeitplan ließ sich nicht aktualisieren. Versuch es erneut oder sieh in den Server-Logs nach.
         anthropic_model_required_for_base_url: Wenn du eine eigene Basis-URL setzt, musst du auch ein Anthropic-Modell angeben.
         invalid_anthropic_base_url: Die Anthropic-Basis-URL muss eine http(s)-Adresse sein.
         invalid_llm_budget: "%{field} muss eine ganze Zahl ≥ %{minimum} sein."
@@ -183,7 +183,7 @@ de:
         env_configured_external: Über Umgebungsvariablen eingerichtet.
         env_notice: Die Art des Assistenten ist über die Umgebungsvariable ASSISTANT_TYPE auf „%{type}“ festgelegt.
         external_configured: Eingerichtet
-        external_not_configured: Nicht eingerichtet. Trag unten URL und Token ein oder setz die Umgebungsvariablen EXTERNAL_ASSISTANT_URL und EXTERNAL_ASSISTANT_TOKEN.
+        external_not_configured: Nicht eingerichtet. Trag URL und Token unten ein oder setz EXTERNAL_ASSISTANT_URL und EXTERNAL_ASSISTANT_TOKEN.
         external_status: Endpunkt des externen Assistenten
         title: KI-Assistent
         token_help: Der Token deines externen Agenten. Er wird bei jeder Anfrage als Bearer-Token mitgeschickt.
@@ -238,7 +238,7 @@ de:
         title: RentCast
         usage: "%{used} von %{limit} Anfragen diesen Monat genutzt"
       sync_auto_sync_scheduler!:
-        scheduler_sync_failed: Einstellungen gespeichert, aber der Sync-Zeitplan ließ sich nicht aktualisieren. Versuch es noch einmal oder sieh in den Server-Logs nach.
+        scheduler_sync_failed: Gespeichert, aber der Sync-Zeitplan ließ sich nicht aktualisieren. Versuch es erneut oder sieh in den Server-Logs nach.
       tiingo_settings:
         description: Trag den API-Token von Tiingo ein. Der kostenlose Tarif erlaubt 50 verschiedene Symbole pro Stunde mit über 30 Jahren Historie.
         env_configured_message: Über die Umgebungsvariable TIINGO_API_KEY eingerichtet.

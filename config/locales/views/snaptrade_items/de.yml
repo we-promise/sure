@@ -103,7 +103,7 @@ de:
       no_accounts_title: "Keine Konten gefunden"
       no_accounts_description: Verbinde einen Broker, um deine Anlagekonten zu importieren.
     oauth_authorize:
-      not_configured: SnapTrade OAuth ist nicht eingerichtet. Setz SNAPTRADE_OAUTH_CLIENT_ID und SNAPTRADE_OAUTH_CLIENT_SECRET, starte die App neu und versuch es dann noch einmal.
+      not_configured: SnapTrade OAuth fehlt. Setz SNAPTRADE_OAUTH_CLIENT_ID und SNAPTRADE_OAUTH_CLIENT_SECRET und starte die App neu.
     oauth_callback:
       access_denied: Die SnapTrade-Freigabe wurde abgebrochen.
       failed: Die SnapTrade-Freigabe ließ sich nicht abschließen. Versuch es noch einmal.

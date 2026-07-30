@@ -64,7 +64,7 @@ de:
       check_country: Prüf deine Ländereinstellungen.
       credentials_required: Richte zuerst deine Enable-Banking-Zugangsdaten ein.
       description: Wähl die Bank, die du mit deinen Konten verbinden willst.
-      no_banks: Für diese Region/Land sind keine Banken verfügbar.
+      no_banks: Für diese Region oder dieses Land sind keine Banken verfügbar.
       title: Wähl deine Bank
       beta_label: Beta
       no_search_results: Keine Bank passt zu deiner Suche.

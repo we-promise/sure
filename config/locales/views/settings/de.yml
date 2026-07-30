@@ -109,7 +109,7 @@ de:
         member_removal_failed: Beim Entfernen des Mitglieds ist ein Problem aufgetreten.
         member_removed: Mitglied wurde erfolgreich entfernt.
         not_authorized: Du bist nicht berechtigt, Mitglieder zu entfernen.
-        member_owns_other_family_data: Diesem Mitglied gehören noch Konten in einem anderen Haushalt, deshalb lässt es sich nicht entfernen. Übertrage oder lösche diese Konten zuerst.
+        member_owns_other_family_data: Diesem Mitglied gehören Konten in einem anderen Haushalt. Übertrag oder lösch sie, dann lässt es sich entfernen.
       show:
         confirm_delete:
           body: Bist du sicher, dass du dein Konto dauerhaft löschen möchtest? Diese Aktion ist unwiderruflich.
@@ -505,7 +505,7 @@ de:
       cancel:
         cancelled: "%{type} als verloren markiert."
         cancelled_error: Von einem Admin als fehlgeschlagen markiert, der Hintergrundjob galt als verloren.
-        not_cancellable: Dieser Vorgang lässt sich gerade nicht ändern, sein Job steht möglicherweise noch in der Warteschlange oder läuft. Versuch es erneut, sobald er 30 Minuten stillsteht.
+        not_cancellable: Der Job läuft oder wartet noch. Versuch es erneut, sobald der Vorgang 30 Minuten stillsteht.
       operation:
         actions:
           mark_failed: Fehlgeschlagen markieren

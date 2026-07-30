@@ -266,7 +266,7 @@ de:
           confirm_revert: Dadurch werden importierte Transaktionen gelöscht. Du kannst deine Daten aber jederzeit wieder einsehen und erneut importieren.
           delete: Löschen
           view: Anzeigen
-          confirm_mark_failed: Dieser Import steht seit einer Weile still, sein Hintergrundjob wurde vermutlich unterbrochen. Als fehlgeschlagen markieren, damit du es erneut versuchen kannst? Es bleiben keine importierten Daten zurück.
+          confirm_mark_failed: Der Import steht still, sein Job wurde wohl unterbrochen. Als fehlgeschlagen markieren? Es bleiben keine Daten zurück.
           mark_failed: Als fehlgeschlagen markieren
         type_labels:
           account_import: Konto
@@ -386,7 +386,7 @@ de:
       template_applied: Vorlage übernommen.
     cancel:
       cancelled: Import als fehlgeschlagen markiert. Du kannst es auf der Import-Seite erneut versuchen.
-      not_cancellable: Dieser Import lässt sich gerade nicht als fehlgeschlagen markieren, sein Job läuft möglicherweise noch. Versuch es erneut, sobald er eine Stunde stillsteht.
+      not_cancellable: Der Import lässt sich gerade nicht als fehlgeschlagen markieren, sein Job läuft noch. Versuch es in einer Stunde erneut.
     column_labels:
       account: Konto
       amount: Betrag
