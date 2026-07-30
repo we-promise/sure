@@ -3,7 +3,7 @@ de:
   coinbase_items:
     create:
       default_name: Coinbase
-      success: Mit Coinbase verbunden! deine Konten werden synchronisiert.
+      success: Mit Coinbase verbunden! Deine Konten werden abgeglichen.
     update:
       success: Coinbase-Konfiguration wurde erfolgreich aktualisiert.
     destroy:
@@ -43,9 +43,9 @@ de:
       update_credentials: Zugangsdaten aktualisieren
       delete: Löschen
       no_accounts_title: Keine Konten gefunden
-      no_accounts_message: deine Coinbase-Wallets erscheinen hier nach dem Sync.
+      no_accounts_message: Deine Coinbase-Wallets erscheinen hier nach dem Sync.
       setup_needed: Wallets bereit zum Import
-      setup_description: Wähl die Coinbase-Wallets, die du verfolgen möchten.
+      setup_description: Wähl die Coinbase-Wallets, die du verfolgen willst.
       setup_action: Wallets importieren
       import_wallets_menu: Wallets importieren
       more_wallets_available:

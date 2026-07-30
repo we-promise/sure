@@ -11,7 +11,7 @@ de:
     setup_accounts:
       title: Binance-Konto importieren
       subtitle: Wähl die zu verfolgenden Portfolios
-      instructions: Wähl die Binance-Portfolios aus, die du importieren möchten. Es werden nur Portfolios mit Salden angezeigt.
+      instructions: Wähl die Binance-Portfolios aus, die du importieren willst. Es werden nur Portfolios mit Salden angezeigt.
       no_accounts: Alle Konten wurden bereits importiert.
       accounts_count:
         one: "%{count} Konto verfügbar"
@@ -45,7 +45,7 @@ de:
       no_accounts_title: Keine Konten gefunden
       no_accounts_message: Ihr Binance-Portfolio erscheint hier nach der Synchronisierung.
       setup_needed: Konto bereit zum Import
-      setup_description: Wähl die Binance-Portfolios, die du verfolgen möchten.
+      setup_description: Wähl die Binance-Portfolios, die du verfolgen willst.
       setup_action: Konto importieren
       import_accounts_menu: Konto importieren
       stale_rate_warning: "Der Saldo ist ein Näherungswert – der genaue Wechselkurs für %{date} war nicht verfügbar. Er wird bei der nächsten Synchronisierung aktualisiert."

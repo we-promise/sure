@@ -50,7 +50,7 @@ de:
       upload_description: Lad Kontoauszüge in den Posteingang hoch oder wähl ein Konto zur sofortigen Verknüpfung.
       upload_title: Kontoauszüge hochladen
     link:
-      no_account: Wähl ein Konto aus, bevor du diesen Kontoauszug verknüpfen.
+      no_account: Wähl ein Konto aus, bevor du diesen Kontoauszug verknüpfst.
       success: Kontoauszug mit %{account} verknüpft.
     period:
       unknown: Zeitraum unbekannt

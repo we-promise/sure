@@ -108,11 +108,11 @@ de:
       instructions:
         copy_token_html: Kopier das Token und füg es unten als benannte Verbindung hinzu. Sure speichert das Token nur zur Synchronisierung dieser Familie.
         create_token: 'Erstell ein API-Token mit diesen schreibgeschützten Scopes: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly'
-        open_tokens: Geh zu den Brex-Entwickler-/API-Token-Einstellungen für das Unternehmen, das du verbinden möchten
-        sign_in_html: Öffne %{link} und meld dich bei dem Konto an, das du verbinden möchten
+        open_tokens: Geh zu den Brex-Entwickler- und API-Token-Einstellungen des Unternehmens, das du verbinden willst
+        sign_in_html: Öffne %{link} und meld dich bei dem Konto an, das du verbinden willst
       keep_token_placeholder: Leer lassen, um das aktuelle Token beizubehalten
       not_configured: Nicht konfiguriert
-      sandbox_note_html: Verwende für jedes Brex-Unternehmen/API-Token, das du synchronisieren möchten, eine separate benannte Verbindung. Lassen Sie die Basis-URL für die Produktion leer. Staging ist auf von Brex genehmigte Tests beschränkt und funktioniert nicht mit Kunden-Tokens.
+      sandbox_note_html: Leg für jedes Brex-Unternehmen und jeden API-Token, den du abgleichen willst, eine eigene benannte Verbindung an. Lass die Basis-URL für die Produktion leer. Staging ist auf von Brex freigegebene Tests beschränkt und funktioniert nicht mit Kunden-Tokens.
       setup_accounts: Konten einrichten
       setup_title: "Einrichtungsanweisungen:"
       sync: Synchronisieren
@@ -129,7 +129,7 @@ de:
       api_error: "API-Fehler: %{message}"
       cancel: Abbrechen
       configure_name_in_brex: Import nicht möglich – bitte richte den Kontonamen in Brex
-      description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen möchten.
+      description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen willst.
       link_accounts: Ausgewählte Konten verknüpfen
       no_accounts_found: Keine Konten gefunden. Bitte prüf deine API-Token-Konfiguration.
       no_api_token: Brex-API-Token nicht gefunden. Bitte richte es in den Anbietereinstellungen.
@@ -155,7 +155,7 @@ de:
       title: "%{account_name} mit Brex verknüpfen"
       unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal.
     setup_required:
-      description: Bevor du Brex-Konten verknüpfen können, musst du dein Brex-API-Token konfigurieren.
+      description: Bevor du Brex-Konten verknüpfen kannst, musst du dein Brex-API-Token hinterlegen.
       heading: API-Token nicht konfiguriert
       settings_link: Zu den Anbietereinstellungen
       setup_steps: "Einrichtungsschritte:"
@@ -163,7 +163,7 @@ de:
         enter_token: Gib dein Brex-API-Token ein
         find_section_html: Such den Bereich <strong>Brex</strong>
         open_settings_html: Geh zu <strong>Einstellungen > Anbieter</strong>
-        return_to_link: Kehren Sie hierher zurück, um deine Konten zu verknüpfen
+        return_to_link: Komm hierher zurück, um deine Konten zu verknüpfen
       title: Brex-Einrichtung erforderlich
     subtype_select:
       placeholder:
@@ -236,7 +236,7 @@ de:
       creating_accounts: Konten werden erstellt...
       historical_data_range: "Historischer Datenbereich:"
       subtitle: Wähl die richtigen Kontotypen für deine importierten Konten
-      sync_start_date_help: Wähl aus, wie weit zurück Sie den Transaktionsverlauf synchronisieren möchten. Maximal 3 Jahre Verlauf verfügbar.
+      sync_start_date_help: Wähl aus, wie weit zurück du den Transaktionsverlauf abgleichen willst. Verfügbar sind maximal 3 Jahre.
       sync_start_date_label: "Transaktionen synchronisieren ab:"
       title: Richte deine Brex-Konten ein
     complete_account_setup:
@@ -266,7 +266,7 @@ de:
       calculating_balances: Salden werden berechnet...
       checking_account_configuration: Kontokonfiguration wird geprüft...
       credentials_invalid: Ungültiges Brex-API-Token oder ungültige Kontoberechtigungen
-      failed: Synchronisierung fehlgeschlagen. Versuch es noch einmal oder wenden Sie sich an den Support.
+      failed: Der Abgleich ist fehlgeschlagen. Versuch es noch einmal oder wende dich an den Support.
       import_failed: Brex-Import fehlgeschlagen.
       importing_accounts: Konten werden von Brex importiert...
       processing_transactions: Transaktionen werden verarbeitet...

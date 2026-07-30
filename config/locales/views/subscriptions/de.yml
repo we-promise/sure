@@ -10,8 +10,8 @@ de:
         sure: "Sure"
         today: "heute"
       redirect_to_stripe: Im nächsten Schritt wirst du zu Stripe weitergeleitet, das Kreditkarten für uns verwaltet.
-      trialing: deine Daten werden in %{days} Tagen gelöscht
-      trial_over: deine Testversion ist abgelaufen
+      trialing: Deine Daten werden in %{days} Tagen gelöscht
+      trial_over: Deine Testphase ist abgelaufen
       account_settings: Kontoeinstellungen
       already_contributing: Du unterstützt bereits. Danke!
       page_title: Upgrade

@@ -2,7 +2,7 @@
 de:
   chats:
     demo_banner_title: "Demo-Modus aktiv"
-    demo_banner_message: "Sie nutzen ein Open-Weight Qwen3-LLM mit Credits von Cloudflare Workers AI. Die Ergebnisse können variieren, da die Codebasis hauptsächlich mit `gpt-4.1` getestet wurde – Ihre Tokens werden jedoch nicht anderswo zum Training verwendet! 🤖"
+    demo_banner_message: "Du nutzt ein Open-Weight-Qwen3-LLM mit Credits von Cloudflare Workers AI. Die Ergebnisse können abweichen, weil die Codebasis vor allem mit `gpt-4.1` getestet wurde. Deine Tokens werden nirgends zum Training verwendet. 🤖"
     thinking: "Wird verarbeitet ..."
     ai_consent:
       available_description: Der KI-Chat beantwortet Finanzfragen und wertet deine Daten aus. Du musst die Funktion ausdrücklich einschalten, bevor du sie nutzen kannst.

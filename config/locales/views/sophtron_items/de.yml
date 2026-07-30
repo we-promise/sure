@@ -16,16 +16,16 @@ de:
     destroy:
       success: Sophtron-Verbindung entfernt
     update:
-      success: Sophtron-Verbindung erfolgreich aktualisiert! deine Konten werden erneut verbunden.
+      success: Sophtron-Verbindung aktualisiert! Deine Konten werden neu verbunden.
       errors:
         blank_user_id: Gib eine Sophtron-Benutzer-ID ein.
-        invalid_user_id: Ungültige Benutzer-ID. Bitte prüf, ob Sie die vollständige Benutzer-ID von Sophtron kopiert haben.
+        invalid_user_id: Ungültige Benutzer-ID. Prüf, ob du die vollständige Benutzer-ID von Sophtron kopiert hast.
         user_id_compromised: Die Benutzer-ID ist möglicherweise kompromittiert, abgelaufen oder bereits verwendet. Bitte erstell eine neue.
         blank_access_key: Gib einen Sophtron-Zugriffsschlüssel ein.
-        invalid_access_key: Ungültiger Zugriffsschlüssel. Bitte prüf, ob Sie den vollständigen Zugriffsschlüssel von Sophtron kopiert haben.
+        invalid_access_key: Ungültiger Zugriffsschlüssel. Prüf, ob du den vollständigen Zugriffsschlüssel von Sophtron kopiert hast.
         access_key_compromised: Der Zugriffsschlüssel ist möglicherweise kompromittiert, abgelaufen oder bereits verwendet. Bitte erstell einen neuen.
         update_failed: "Verbindung konnte nicht aktualisiert werden: %{message}"
-        unexpected: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal oder wenden Sie sich an den Support.
+        unexpected: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal oder wende dich an den Support.
     edit:
       user_id:
         label: "Sophtron-Benutzer-ID:"
@@ -131,7 +131,7 @@ de:
       unexpected_error: "Ein unerwarteter Fehler ist aufgetreten"
       cancel: Abbrechen
       configure_name_in_sophtron: Import nicht möglich – bitte richte den Kontonamen in Sophtron
-      description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen möchten.
+      description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen willst.
       link_accounts: Ausgewählte Konten verknüpfen
       no_accounts_found: Keine Konten gefunden. Bitte prüf deine API-Schlüssel-Konfiguration.
       no_access_key: Sophtron-Zugriffsschlüssel ist nicht konfiguriert. Bitte richte ihn in den Einstellungen.
@@ -199,7 +199,7 @@ de:
       creating_accounts: Konten werden erstellt...
       historical_data_range: "Historischer Datenbereich:"
       subtitle: Wähl die richtigen Kontotypen für deine importierten Konten
-      sync_start_date_help: Wähl aus, wie weit zurück Sie den Transaktionsverlauf synchronisieren möchten. Maximal 3 Jahre Verlauf verfügbar.
+      sync_start_date_help: Wähl aus, wie weit zurück du den Transaktionsverlauf abgleichen willst. Verfügbar sind maximal 3 Jahre.
       sync_start_date_label: "Transaktionen synchronisieren ab:"
       title: Richte deine Sophtron-Konten ein
     complete_account_setup:
@@ -227,15 +227,15 @@ de:
     sophtron_setup_required:
       title: Sophtron-Einrichtung erforderlich
       message: >
-        Um die Einrichtung Ihrer Sophtron-Verbindung abzuschließen, gehen Sie bitte zur Seite mit den Anbietereinstellungen und folgen Sie den Anweisungen, um Ihre Sophtron-Verbindung zu autorisieren und zu konfigurieren.
+        Öffne die Anbietereinstellungen und folge den Anweisungen dort, um deine Sophtron-Verbindung freizugeben und einzurichten.
       go_to_provider_settings: Zu den Anbietereinstellungen
       heading: "Benutzer-ID und Zugriffsschlüssel nicht konfiguriert"
-      description: Bevor du Sophtron-Konten verknüpfen können, musst du deine Sophtron-Benutzer-ID und deinen Zugriffsschlüssel konfigurieren.
+      description: Bevor du Sophtron-Konten verknüpfen kannst, musst du deine Sophtron-Benutzer-ID und deinen Zugriffsschlüssel hinterlegen.
       setup_steps_title: "Einrichtungsschritte:"
       step_1_html: Geh zu <strong>Einstellungen → Bank-Sync-Anbieter</strong>
       step_2_html: Such den Bereich <strong>Sophtron</strong>
       step_3_html: Gib deine Sophtron-Benutzer-ID und deinen Zugriffsschlüssel ein
-      step_4: Kehren Sie hierher zurück, um deine Konten zu verknüpfen
+      step_4: Komm hierher zurück, um deine Konten zu verknüpfen
     api_error:
       title: "Sophtron-Verbindungsfehler"
       unable_to_connect: "Verbindung zu Sophtron nicht möglich"

@@ -48,7 +48,7 @@ de:
       api_error: "API-Fehler: %{message}"
       cancel: "Abbrechen"
       configure_name_in_mercury: "Import nicht möglich – bitte Kontoname in Mercury konfigurieren"
-      description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen möchten.
+      description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen willst.
       link_accounts: "Ausgewählte Konten verknüpfen"
       no_accounts_found: Keine Konten gefunden. Bitte prüf deine API-Token-Konfiguration.
       no_api_token: "Mercury API-Token ist nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
@@ -139,7 +139,7 @@ de:
       subtitle: Wähl die passenden Kontotypen für deine importierten Konten
       sync_start_date_help: Wähl, wie weit die Transaktionshistorie synchronisiert werden soll. Maximal 3 Jahre Verlauf verfügbar.
       sync_start_date_label: "Transaktionen synchronisieren ab:"
-      title: deine Mercury-Konten einrichten
+      title: Deine Mercury-Konten einrichten
     complete_account_setup:
       all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten erstellt."
       creation_failed: "Konten konnten nicht erstellt werden: %{error}"

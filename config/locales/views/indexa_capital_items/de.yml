@@ -52,7 +52,7 @@ de:
           placeholder_update: "Neuen Benutzernamen zum Aktualisieren eingeben"
         document:
           label: "Dokument-ID"
-          description: deine IndexaCapital Dokument-/ID-Nummer
+          description: Deine Dokument- oder ID-Nummer bei IndexaCapital
           placeholder_new: "Dokument-ID hier einfügen"
           placeholder_update: "Neue Dokument-ID zum Aktualisieren eingeben"
         password:
@@ -122,7 +122,7 @@ de:
       api_error: "API-Fehler: %{message}"
       cancel: "Abbrechen"
       configure_name_in_provider: "Import nicht möglich – bitte Kontoname in IndexaCapital konfigurieren"
-      description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen möchten.
+      description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen willst.
       link_accounts: "Ausgewählte Konten verknüpfen"
       no_accounts_found: Keine Konten gefunden. Bitte prüf deine IndexaCapital-Zugangsdaten.
       no_api_key: "IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
@@ -174,7 +174,7 @@ de:
       creating: "Konten werden erstellt..."
       fetch_failed: "Konten konnten nicht geladen werden"
       import_selected: "Ausgewählte Konten importieren"
-      instructions: Wähl die Konten aus, die du von IndexaCapital importieren möchten. Du kannst mehrere Konten auswählen.
+      instructions: Wähl die Konten aus, die du von IndexaCapital importieren willst. Du kannst mehrere auswählen.
       no_accounts: "Keine unverknüpften Konten von dieser IndexaCapital-Verbindung gefunden."
       no_accounts_to_setup: "Keine Konten zum Einrichten"
       no_api_key: IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte prüf deine Verbindungseinstellungen.
@@ -233,7 +233,7 @@ de:
       subtitle: Wähl die passenden Kontotypen für deine importierten Konten
       sync_start_date_help: Wähl, wie weit die Transaktionshistorie synchronisiert werden soll.
       sync_start_date_label: "Transaktionen synchronisieren ab:"
-      title: deine IndexaCapital-Konten einrichten
+      title: Deine IndexaCapital-Konten einrichten
 
     complete_account_setup:
       all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten erstellt."

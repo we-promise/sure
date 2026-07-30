@@ -12,7 +12,7 @@ de:
       invalid_callback: Ungültige Callback-Parameter.
       item_not_found: Verbindung nicht gefunden.
       session_failed: Autorisierung konnte nicht abgeschlossen werden
-      success: Erfolgreich mit deiner Bank verbunden. deine Konten werden synchronisiert.
+      success: Mit deiner Bank verbunden. Deine Konten werden abgeglichen.
       unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal.
     complete_account_setup:
       all_skipped: Alle Konten wurden übersprungen. Du kannst sie später auf der Konten-Seite einrichten.
@@ -63,7 +63,7 @@ de:
       cancel: Abbrechen
       check_country: Prüf deine Ländereinstellungen.
       credentials_required: Richte zuerst deine Enable-Banking-Zugangsdaten.
-      description: Wähl die Bank, die du mit deinen Konten verbinden möchten.
+      description: Wähl die Bank, die du mit deinen Konten verbinden willst.
       no_banks: Für diese Region/Land sind keine Banken verfügbar.
       title: Wähl deine Bank
       beta_label: Beta

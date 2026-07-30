@@ -50,7 +50,7 @@ de:
       title: "SnapTrade-Konten einrichten"
       header: "SnapTrade-Konten einrichten"
       subtitle: Wähl die zu verknüpfenden Broker-Konten
-      syncing: deine Konten werden abgerufen...
+      syncing: Deine Konten werden abgerufen …
       loading: "Konten werden von SnapTrade geladen..."
       loading_hint: Klick auf Aktualisieren, um nach Konten zu suchen.
       refresh: "Aktualisieren"
@@ -61,7 +61,7 @@ de:
       info_history: "Bis zu 3 Jahre Buchungshistorie"
       free_tier_note: "SnapTrade Free Tier erlaubt 5 Broker-Verbindungen. Nutzung im SnapTrade-Dashboard prüfen."
       no_accounts_title: "Keine Konten gefunden"
-      no_accounts_message: Es wurden keine Broker-Konten gefunden. Das kann passieren, wenn du die Verbindung abgebrochen haben oder dein Broker nicht unterstützt wird.
+      no_accounts_message: Es wurden keine Broker-Konten gefunden. Das kommt vor, wenn du die Verbindung abgebrochen hast oder dein Broker nicht unterstützt wird.
       try_again: "Broker verbinden"
       back_to_settings: "Zurück zu Einstellungen"
       available_accounts: "Verfügbare Konten"
