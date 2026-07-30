@@ -117,7 +117,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     # appearing under whatever category they retained (or under
     # Uncategorized once the matcher cleared the category). Filter
     # them out so the drilldown matches the aggregate.
-    create_transaction(
+    outflow = create_transaction(
       date: @budget.start_date,
       account: accounts(:depository),
       amount: 500,
@@ -130,6 +130,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "BUG_1059_REPRO_INFLOW"
     )
     @family.auto_match_transfers!
+    Transfer.find_by!(outflow_transaction: outflow.entryable).confirm!
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success
@@ -140,10 +141,10 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show drilldown excludes matched loan_payment transfers" do
-    # A persisted Transfer is more specific than its destination-derived kind:
+    # A confirmed Transfer is more specific than its destination-derived kind:
     # a loan-payment pair must not appear in the drilldown when the budget
     # aggregate excludes it.
-    create_transaction(
+    outflow = create_transaction(
       date: @budget.start_date,
       account: accounts(:depository),
       amount: 500,
@@ -156,6 +157,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "MORTGAGE_REPRO_INFLOW"
     )
     @family.auto_match_transfers!
+    Transfer.find_by!(outflow_transaction: outflow.entryable).confirm!
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success

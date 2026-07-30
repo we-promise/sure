@@ -465,13 +465,18 @@ class IncomeStatementTest < ActiveSupport::TestCase
       balance: 0,
       accountable: Investment.new
     )
-    outflow = create_transaction(account: @checking_account, amount: 1_000, kind: "standard")
-    inflow = create_transaction(account: investment_account, amount: -1_000, kind: "standard")
+    outflow = create_transaction(
+      account: @checking_account,
+      amount: 1_000,
+      category: @family.investment_contributions_category,
+      kind: "investment_contribution"
+    )
+    inflow = create_transaction(account: investment_account, amount: -1_000, kind: "funds_movement")
     Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "pending")
 
     totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
 
-    assert_equal Money.new(2_000, @family.currency), totals.income_money
+    assert_equal Money.new(1_000, @family.currency), totals.income_money
     assert_equal Money.new(1_900, @family.currency), totals.expense_money
   end
 
