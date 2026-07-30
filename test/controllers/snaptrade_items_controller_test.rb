@@ -156,6 +156,32 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     Rails.configuration.x.snaptrade.oauth_client_secret = nil
   end
 
+  test "oauth_callback clears a reconnect warning after successful authorization" do
+    Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
+    Rails.configuration.x.snaptrade.oauth_client_secret = "client-secret"
+    @snaptrade_item.update!(status: :requires_update)
+
+    get oauth_authorize_snaptrade_items_url(item_id: @snaptrade_item.id)
+    oauth_session = session[:snaptrade_oauth]
+    Provider::Snaptrade.expects(:exchange_code).returns({ "access_token" => "at", "refresh_token" => "rt" })
+
+    get oauth_callback_snaptrade_items_url(code: "c0de", state: oauth_session["state"])
+
+    assert @snaptrade_item.reload.good?
+  ensure
+    Rails.configuration.x.snaptrade.oauth_client_id = nil
+    Rails.configuration.x.snaptrade.oauth_client_secret = nil
+  end
+
+  test "Reconnect starts OAuth authorization instead of adding a brokerage" do
+    @snaptrade_item.update!(status: :requires_update)
+
+    get accounts_url
+
+    assert_select "a[href='#{oauth_authorize_snaptrade_items_path(item_id: @snaptrade_item.id)}'][data-turbo-frame='_top']", text: /Reconnect/
+    assert_select "a[href='#{connect_snaptrade_item_path(@snaptrade_item)}']", text: /Reconnect/, count: 0
+  end
+
   test "select_accounts redirects unregistered users into connect flow" do
     sign_out
     sign_in @user = users(:empty)
