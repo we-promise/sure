@@ -40,4 +40,13 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_equal item.oauth_configured?, item.credentials_configured?
     assert item.credentials_configured?
   end
+
+  test "an unlinked account awaiting activities does not keep the item syncing" do
+    item = snaptrade_items(:configured_item)
+    account = snaptrade_accounts(:fidelity_401k)
+    account.update!(activities_fetch_pending: true)
+
+    assert_nil account.current_account
+    assert_not item.syncing?
+  end
 end

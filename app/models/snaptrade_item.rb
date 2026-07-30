@@ -193,9 +193,11 @@ class SnaptradeItem < ApplicationRecord
 
   # Override Syncable#syncing? to also show syncing state when activities are being
   # fetched in the background. This ensures the UI shows the spinner until all data
-  # is truly imported, not just when the main sync job completes.
+  # is truly imported, not just when the main sync job completes. Unlinked
+  # provider records are intentionally retained for relinking, so a stale fetch
+  # flag on one must not keep the whole connection in a syncing state.
   def syncing?
-    super || snaptrade_accounts.where(activities_fetch_pending: true).exists?
+    super || linked_snaptrade_accounts.where(activities_fetch_pending: true).exists?
   end
 
   # Get accounts linked via AccountProvider
