@@ -5,12 +5,9 @@
 /// `design/tokens/sure.tokens.json` because the type scale comes from Tailwind's
 /// built-in `text-*` ramp, not the canonical token file.
 ///
-/// Font sizes are in logical pixels; use them instead of raw `fontSize` literals
-/// so text stays on the scale. Each size has a paired line height
-/// ([xsLineHeight] … [xxlLineHeight]), also in logical pixels, matching the
-/// Tailwind `text-*` defaults. Flutter's `TextStyle.height` is a *multiplier*,
-/// so derive it as `lineHeight / fontSize` when an exact pairing is needed, e.g.
-/// `TextStyle(fontSize: SureTypography.sm, height: SureTypography.smLineHeight / SureTypography.sm)`.
+/// Values are font sizes in logical pixels; the comment on each records the
+/// Tailwind step and its paired line-height for reference. Use these instead of
+/// raw `fontSize` literals so text stays on the scale.
 class SureTypography {
   const SureTypography._();
 
@@ -31,22 +28,4 @@ class SureTypography {
 
   /// 24 / 32 — Tailwind `text-2xl`.
   static const double xxl = 24;
-
-  /// Line height (logical px) paired with [xs] — Tailwind `text-xs`.
-  static const double xsLineHeight = 16;
-
-  /// Line height (logical px) paired with [sm] — Tailwind `text-sm`.
-  static const double smLineHeight = 20;
-
-  /// Line height (logical px) paired with [base] — Tailwind `text-base`.
-  static const double baseLineHeight = 24;
-
-  /// Line height (logical px) paired with [lg] — Tailwind `text-lg`.
-  static const double lgLineHeight = 28;
-
-  /// Line height (logical px) paired with [xl] — Tailwind `text-xl`.
-  static const double xlLineHeight = 28;
-
-  /// Line height (logical px) paired with [xxl] — Tailwind `text-2xl`.
-  static const double xxlLineHeight = 32;
 }
