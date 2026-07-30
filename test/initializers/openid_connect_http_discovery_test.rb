@@ -25,6 +25,21 @@ class OpenIDConnectHttpDiscoveryTest < ActiveSupport::TestCase
     assert_equal "http://auth.example:9000/.well-known/openid-configuration", endpoint.to_s
   end
 
+  test "explicit non-default port is preserved per scheme" do
+    http_443 = Resource.new(URI.parse("http://auth.example:443")).endpoint
+    https_80 = Resource.new(URI.parse("https://auth.example:80")).endpoint
+
+    assert_equal "http://auth.example:443/.well-known/openid-configuration", http_443.to_s
+    assert_equal "https://auth.example:80/.well-known/openid-configuration", https_80.to_s
+  end
+
+  test "cache key distinguishes scheme on the same host" do
+    http = Resource.new(URI.parse("http://auth.example"))
+    https = Resource.new(URI.parse("https://auth.example"))
+
+    refute_equal http.send(:cache_key), https.send(:cache_key)
+  end
+
   test "issuer path prefix is preserved" do
     endpoint = Resource.new(URI.parse("http://auth.example/application/o/sure")).endpoint
 
