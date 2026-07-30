@@ -174,6 +174,25 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "default balance mode preserves remaining credit when provider limit is non-positive" do
+    cc_account = accounts(:credit_card)
+    cc_account.accountable.update!(available_credit: 3000.00)
+    relink_provider_to(cc_account)
+
+    [ 0, -1 ].each do |provider_credit_limit|
+      @enable_banking_account.update!(
+        current_balance: 100.00,
+        credit_limit: provider_credit_limit,
+        treat_balance_as_available_credit: false
+      )
+
+      EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+      assert_equal 100.0, cc_account.reload.cash_balance
+      assert_equal 3000.0, cc_account.accountable.reload.available_credit
+    end
+  end
+
   test "sets CC balance to absolute debt when both limit and stored available_credit are absent" do
     cc_account = accounts(:credit_card)
     cc_account.accountable.update!(available_credit: nil)

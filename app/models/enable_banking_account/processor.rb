@@ -103,8 +103,8 @@ class EnableBankingAccount::Processor
         # limit: the API-provided one, or a user-entered value when the API
         # omits it. Writing the limit back (never the reported balance) keeps
         # the field stable across syncs so a manual limit is never clobbered.
-        credit_limit = positive_amount(enable_banking_account.credit_limit) ||
-                       positive_amount(account.accountable&.available_credit)
+        credit_limit = positive_credit_limit(enable_banking_account.credit_limit) ||
+                       positive_credit_limit(account.accountable&.available_credit)
 
         unless account.accountable.present?
           capture_debug_log("CreditCard accountable missing for account", account)
@@ -128,11 +128,12 @@ class EnableBankingAccount::Processor
         end
       else
         # Default behavior: API returns outstanding debt
-        provider_credit_limit = positive_amount(enable_banking_account.credit_limit)
+        provider_credit_limit = positive_credit_limit(enable_banking_account.credit_limit)
         available_credit = if provider_credit_limit
           [ provider_credit_limit - reported_balance, 0 ].max
         else
-          # A missing or zero API limit must not erase user-entered metadata.
+          # In this mode available_credit is the actual remaining credit, not a
+          # limit, so zero is valid and must be preserved intentionally.
           account.accountable&.available_credit
         end
 
@@ -140,8 +141,9 @@ class EnableBankingAccount::Processor
       end
     end
 
-    # Returns the amount only when it is positive, otherwise nil.
-    def positive_amount(value)
+    # Credit limits must be positive. Non-positive provider or manual values
+    # mean that no usable limit is known.
+    def positive_credit_limit(value)
       value if value&.positive?
     end
 
