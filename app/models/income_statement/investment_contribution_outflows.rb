@@ -21,7 +21,7 @@ class IncomeStatement::InvestmentContributionOutflows
       <<~SQL
         SELECT COALESCE(SUM(ABS(ae.amount * COALESCE(er.rate, 1))), 0)
         FROM transactions t
-        JOIN transfers tr ON tr.outflow_transaction_id = t.id
+        JOIN transfers tr ON tr.outflow_transaction_id = t.id AND tr.status = 'confirmed'
         JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
         LEFT JOIN exchange_rates er ON (

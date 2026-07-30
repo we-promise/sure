@@ -1,4 +1,6 @@
 class IncomeStatement::Totals
+  include IncomeStatement::TransferFiltering
+
   def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil, include_investment_contributions: true)
     @family = family
     @transactions_scope = transactions_scope
@@ -166,14 +168,6 @@ class IncomeStatement::Totals
 
     def budget_excluded_kinds_sql
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
-    end
-
-    def transfer_filter_sql(transaction_alias)
-      if @include_investment_contributions
-        Transaction.cash_flow_transfer_sql(transaction_alias)
-      else
-        Transaction.unmatched_transfer_sql(transaction_alias)
-      end
     end
 
     def validate_date_range!

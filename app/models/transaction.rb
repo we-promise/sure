@@ -96,10 +96,12 @@ class Transaction < ApplicationRecord
       NOT EXISTS (
         SELECT 1 FROM transfers
         WHERE transfers.inflow_transaction_id = #{transaction_alias}.id
+          AND transfers.status = 'confirmed'
       )
       AND NOT EXISTS (
         SELECT 1 FROM transfers
         WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
+          AND transfers.status = 'confirmed'
       )
     SQL
   end
@@ -110,8 +112,13 @@ class Transaction < ApplicationRecord
   # transfer leg to avoid double counting.
   def self.cash_flow_transfer_sql(transaction_alias = table_name)
     <<~SQL.squish
-      #{transaction_alias}.kind = 'investment_contribution'
-      OR (#{unmatched_transfer_sql(transaction_alias)})
+      (EXISTS (
+        SELECT 1 FROM transfers
+        WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
+          AND #{transaction_alias}.kind = 'investment_contribution'
+          AND transfers.status = 'confirmed'
+      )
+      OR (#{unmatched_transfer_sql(transaction_alias)}))
     SQL
   end
 
