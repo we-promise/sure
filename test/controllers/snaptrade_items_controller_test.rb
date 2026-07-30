@@ -173,6 +173,21 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     Rails.configuration.x.snaptrade.oauth_client_secret = nil
   end
 
+  test "oauth_callback queues a sync even while activities are fetching" do
+    Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
+    Rails.configuration.x.snaptrade.oauth_client_secret = "client-secret"
+    get oauth_authorize_snaptrade_items_url(item_id: @snaptrade_item.id)
+    oauth_session = session[:snaptrade_oauth]
+    Provider::Snaptrade.expects(:exchange_code).returns({ "access_token" => "at", "refresh_token" => "rt" })
+    SnaptradeItem.any_instance.stubs(:syncing?).returns(true)
+    SnaptradeItem.any_instance.expects(:sync_later).once
+
+    get oauth_callback_snaptrade_items_url(code: "c0de", state: oauth_session["state"])
+  ensure
+    Rails.configuration.x.snaptrade.oauth_client_id = nil
+    Rails.configuration.x.snaptrade.oauth_client_secret = nil
+  end
+
   test "Reconnect starts OAuth authorization instead of adding a brokerage" do
     @snaptrade_item.update!(status: :requires_update)
 
