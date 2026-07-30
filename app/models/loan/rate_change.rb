@@ -11,7 +11,7 @@ class Loan::RateChange < ApplicationRecord
   validates :effective_date, presence: true
   validates :effective_date, uniqueness: { scope: :loan_id }
   validates :rate, presence: true,
-                   numericality: { greater_than_or_equal_to: 0 }
+                   numericality: { greater_than_or_equal_to: 0, allow_nil: true }
 
   # A rate change moves the derived balance just like editing the base rate does,
   # but it is a child row so it never touches the loan's own `saved_changes` —
