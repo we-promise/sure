@@ -33,6 +33,12 @@ class NetWorthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = SureColors.of(context).palette;
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
+    final maskedNetWorth = netWorthFormatted == null
+        ? '--'
+        : MoneyMasker.mask(netWorthFormatted!, hidden: hideAmounts);
+    String maskedFormat(String currency, double amount) =>
+        MoneyMasker.mask(formatAmount(currency, amount), hidden: hideAmounts);
 
     return Container(
       key: const ValueKey('netWorthCardChrome'),
@@ -127,6 +133,7 @@ class NetWorthCard extends StatelessWidget {
                       'Assets',
                       assetTotalsByCurrency,
                       palette.success,
+                      maskedFormat,
                     ),
                     formatAmount: maskedFormat,
                   ),
@@ -156,6 +163,7 @@ class NetWorthCard extends StatelessWidget {
                       'Liabilities',
                       liabilityTotalsByCurrency,
                       palette.destructive,
+                      maskedFormat,
                     ),
                     formatAmount: maskedFormat,
                   ),
