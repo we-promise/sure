@@ -34,7 +34,12 @@ export default class extends Controller {
     }
   }
 
+  // Seeded from Date.now() so a new row's index never collides with the small
+  // sequential indices Rails renders for existing rows, then incremented so two
+  // rows added within the same millisecond stay distinct (a bare Date.now()
+  // would give both the same index and Rails would merge them into one record).
   #uniqueKey() {
-    return Date.now();
+    this.nextIndex ??= Date.now();
+    return this.nextIndex++;
   }
 }
