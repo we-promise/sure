@@ -39,7 +39,7 @@ class SnaptradeAccount < ApplicationRecord
     when "DEPOSIT"
       "Depository"
     when "LOC"
-      raw_type.to_s.gsub(/[^a-z]/i, "").include?("card") ? "CreditCard" : "Loan"
+      raw_type.to_s.gsub(/[^a-z]/i, "").downcase.include?("card") ? "CreditCard" : "Loan"
     else
       # SnapTrade documents INVESTMENT and an unknown category as investment
       # accounts. The user may still select a more appropriate Sure type.
