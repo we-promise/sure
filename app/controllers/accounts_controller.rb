@@ -78,6 +78,9 @@ class AccountsController < ApplicationController
     )
     # Batches merchant/category/security + nested transfer counterpart associations
     # (covers #2643 counterpart UI and category-menu to_account walks).
+    # Intentionally scoped to the current page (@entries) — only this page is
+    # rendered, so a child entry whose split parent sits on another page
+    # deliberately won't resolve it.
     Entry::ActivityFeedPreloader.new(@entries).preload
     Transaction::ActivitySecurityPreloader.new(@entries).preload
 
