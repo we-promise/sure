@@ -31,10 +31,18 @@ class Loan < ApplicationRecord
   # Whether Loan::InterestAccrual should post monthly interest charges to this
   # account so that payments reduce principal only.
   #
-  # Deliberately not restricted to fixed-rate loans: each charge is derived from
-  # the balance outstanding on the accrual date and the rate configured at the
-  # time, so a variable or adjustable rate simply takes effect from the next
-  # accrual onward.
+  # Each charge is derived from the balance actually outstanding on the accrual
+  # date, so overpayments, missed payments and irregular schedules self-correct
+  # on the next accrual without any per-period schedule to maintain.
+  #
+  # Known limitation — rate changes are not effective-dated. There is a single
+  # `interest_rate` column and no rate history, so every sync reprices *all*
+  # historical periods with the currently configured rate. Editing the rate is
+  # therefore a whole-history correction (fixing a typo, say), not an ARM reset:
+  # for a genuine variable/adjustable-rate loan, past periods that the lender
+  # charged at the old rate get rewritten to the new one rather than staying put
+  # from the reset date forward. In practice this is a fixed-rate feature;
+  # supporting true ARMs would need a small effective-dated rate log.
   #
   # Linked accounts are excluded here rather than at the call sites: a linked
   # account is anchored to the principal its provider reports, so a replay from
