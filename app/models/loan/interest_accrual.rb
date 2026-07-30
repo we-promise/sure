@@ -24,8 +24,13 @@
 #
 # Interest is charged on the balance actually outstanding on the accrual date,
 # not on a schedule projected from origination. Overpayments, missed payments and
-# rate changes therefore self-correct on the next accrual, and the feature works
-# for variable and adjustable rates as well as fixed.
+# irregular schedules therefore self-correct on the next accrual.
+#
+# Rate changes are *not* effective-dated: the loan carries a single interest rate
+# and no rate history, so every sync reprices all historical periods with the
+# currently configured rate (see Loan#accrues_interest?). Editing the rate is a
+# whole-history correction, not a mid-life ARM reset — in practice this is a
+# fixed-rate feature.
 class Loan::InterestAccrual
   # Written to `entries.source`, which combined with `external_id` is covered by
   # a unique index — that is what makes regeneration idempotent.
@@ -64,6 +69,14 @@ class Loan::InterestAccrual
     # AccountableResource#create backdates it two years when the user doesn't
     # supply one. Charging from the anchor would invent years of debt the
     # borrower never incurred.
+    #
+    # Cost: this replays one iteration per day from the opening anchor to today
+    # on every sync — O(days since origination), ~11k iterations for a 30-year
+    # mortgage. Accepted as-is: it runs only for opted-in, unlinked loans (a small
+    # minority of accounts) and the per-iteration work is a couple of hash lookups
+    # and a multiply. If SyncAllJob cadence or loan-account volume grows enough to
+    # matter, replaying from the latest persisted accrual instead of the anchor is
+    # the obvious optimization.
     def desired_accruals
       monthly_rate = loan.monthly_interest_rate
       return [] if monthly_rate.nil? || !monthly_rate.positive?

@@ -124,6 +124,9 @@ class Loan::InterestAccrualTest < ActiveSupport::TestCase
     end
   end
 
+  # Documented limitation: the rate is not effective-dated, so a change reprices
+  # the whole history rather than taking effect only from the change date forward
+  # (see Loan#accrues_interest?). This pins that whole-history-correction contract.
   test "re-prices existing accruals when the interest rate changes" do
     travel_to TODAY do
       account = mortgage_with_payments

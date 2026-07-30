@@ -265,6 +265,26 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         run_test!
       end
+
+      response '422', 'validation error - reserved source' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            transaction: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              amount: 50.00,
+              name: 'Test purchase',
+              nature: 'expense',
+              external_id: 'docs-import-transaction-2',
+              source: 'loan_interest_accrual'
+            }
+          }
+        end
+
+        run_test!
+      end
     end
   end
 
