@@ -332,6 +332,61 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # A vault payload is richer than the other tools' output — nested account hashes,
+  # BigDecimal balances, dates, a `.compact`ed hash — so these exercise a real
+  # record all the way out through tools/call's JSON envelope, rather than
+  # trusting that the unit-tested return value serializes cleanly.
+  test "tools/call round-trips a real vault payload through list_account_statements" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    statement = AccountStatement.create_from_upload!(
+      family: @user.family,
+      account: accounts(:depository),
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", {
+        name: "list_account_statements",
+        arguments: {}
+      }).to_json, headers: mcp_headers(@token)
+
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_not result["isError"], "vault payload should not surface as a tool error"
+
+      inner = JSON.parse(result["content"][0]["text"])
+      assert inner["success"]
+
+      payload = inner["statements"].find { |s| s["id"] == statement.id }
+      assert_not_nil payload, "expected the created statement in the response"
+      assert_equal statement.content_sha256, payload["content_sha256"]
+      assert_equal accounts(:depository).id, payload.dig("account", "id")
+    end
+  end
+
+  test "tools/call round-trips an upload through upload_account_statement" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    content = "date,amount\n2024-02-01,7\n"
+
+    with_mcp_env do
+      assert_difference "AccountStatement.count", 1 do
+        post "/mcp", params: jsonrpc_request("tools/call", {
+          name: "upload_account_statement",
+          arguments: { filename: "uploaded.csv", content_base64: Base64.strict_encode64(content) }
+        }).to_json, headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_not result["isError"]
+
+      inner = JSON.parse(result["content"][0]["text"])
+      assert inner["success"]
+      assert_not inner["duplicate"]
+      assert_equal Digest::SHA256.hexdigest(content), inner.dig("statement", "content_sha256")
+    end
+  end
+
   test "tools/call wraps function errors as isError response" do
     with_mcp_env do
       # Force a function error by stubbing

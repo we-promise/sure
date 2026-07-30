@@ -62,6 +62,11 @@ class Assistant::Function::GetStatementCoverage < Assistant::Function
     account_id = params["account_id"].to_s
     return error("invalid_account_id", "account_id must be a UUID.") unless valid_uuid?(account_id)
 
+    # accessible_by, not writable_by, is deliberate: this reports which documents
+    # exist for an account and writes nothing. Someone with read access to an
+    # account is entitled to know which of its statements are on file. Do not
+    # "tighten" this to writable_by — that would hide gaps from the people who
+    # can see the figures those gaps sit behind.
     account = family.accounts.accessible_by(user).find_by(id: account_id)
     return error("account_not_found", "No accessible account found with that ID.") unless account
 
