@@ -80,8 +80,11 @@ class SnaptradeAccountTest < ActiveSupport::TestCase
     account.raw_payload = { "account_category" => "DEPOSIT" }
     assert_equal "Depository", account.suggested_account_type
 
-    account.raw_payload = { "account_category" => "LOC" }
+    account.raw_payload = { "account_category" => "LOC", "raw_type" => "line_of_credit" }
     assert_equal "Loan", account.suggested_account_type
+
+    account.raw_payload = { "account_category" => "LOC", "raw_type" => "CREDIT_CARD" }
+    assert_equal "CreditCard", account.suggested_account_type
 
     account.raw_payload = { "account_category" => "INVESTMENT" }
     assert_equal "Investment", account.suggested_account_type

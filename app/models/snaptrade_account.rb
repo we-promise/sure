@@ -36,7 +36,8 @@ class SnaptradeAccount < ApplicationRecord
     when "DEPOSIT"
       "Depository"
     when "LOC"
-      "Loan"
+      raw_type = raw_payload.to_h.with_indifferent_access[:raw_type].presence || account_type
+      raw_type.to_s.match?(/credit|card/i) ? "CreditCard" : "Loan"
     else
       # SnapTrade documents INVESTMENT and an unknown category as investment
       # accounts. The user may still select a more appropriate Sure type.
