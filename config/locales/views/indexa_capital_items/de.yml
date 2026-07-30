@@ -126,7 +126,7 @@ de:
       link_accounts: "Ausgewählte Konten verknüpfen"
       no_accounts_found: Keine Konten gefunden. Bitte prüf deine IndexaCapital-Zugangsdaten.
       no_api_key: "IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
-      no_credentials_configured: Richte zuerst deine IndexaCapital-Zugangsdaten in den Anbieter-Einstellungen.
+      no_credentials_configured: Richte zuerst deine IndexaCapital-Zugangsdaten in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
       title: "IndexaCapital-Konten auswählen"
 
@@ -148,7 +148,7 @@ de:
       no_accounts: "Keine unverknüpften IndexaCapital-Konten gefunden."
       no_accounts_found: Keine IndexaCapital-Konten gefunden. Bitte prüf deine Zugangsdaten.
       no_api_key: "IndexaCapital-Zugangsdaten sind nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
-      no_credentials_configured: Richte zuerst deine IndexaCapital-Zugangsdaten in den Anbieter-Einstellungen.
+      no_credentials_configured: Richte zuerst deine IndexaCapital-Zugangsdaten in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
       settings_link: "Zu den Anbieter-Einstellungen"
       subtitle: "IndexaCapital-Konto auswählen"
@@ -242,4 +242,4 @@ de:
       success: "Erfolgreich %{count} Konto/Konten erstellt."
 
     preload_accounts:
-      no_credentials_configured: Richte zuerst deine IndexaCapital-Zugangsdaten in den Anbieter-Einstellungen.
+      no_credentials_configured: Richte zuerst deine IndexaCapital-Zugangsdaten in den Anbietereinstellungen ein.

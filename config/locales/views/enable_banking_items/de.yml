@@ -2,10 +2,10 @@
 de:
   enable_banking_items:
     authorize:
-      authorization_failed: Autorisierung konnte nicht gestartet werden
+      authorization_failed: 'Die Freigabe ist fehlgeschlagen: %{message}'
       bank_required: Wähl eine Bank.
       invalid_redirect: Die erhaltene Autorisierungs-URL ist ungültig. Versuch es noch einmal.
-      redirect_uri_not_allowed: Weiterleitung nicht erlaubt. Richte %{callback_url} in den Enable-Banking-App-Einstellungen.
+      redirect_uri_not_allowed: Weiterleitung nicht erlaubt. Trag %{callback_url} in den Einstellungen deiner Enable-Banking-App ein.
       unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal.
     callback:
       authorization_error: Autorisierung fehlgeschlagen
@@ -62,7 +62,7 @@ de:
     select_bank:
       cancel: Abbrechen
       check_country: Prüf deine Ländereinstellungen.
-      credentials_required: Richte zuerst deine Enable-Banking-Zugangsdaten.
+      credentials_required: Richte zuerst deine Enable-Banking-Zugangsdaten ein.
       description: Wähl die Bank, die du mit deinen Konten verbinden willst.
       no_banks: Für diese Region/Land sind keine Banken verfügbar.
       title: Wähl deine Bank

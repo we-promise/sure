@@ -130,6 +130,7 @@ de:
       link_account: Konto verknüpfen
       no_accounts_found: "Keine SimpleFIN-Konten für diesen %{moniker} gefunden."
       wait_for_sync: Wenn du gerade verbunden oder synchronisiert hast, versuche es nach Abschluss der Synchronisierung erneut.
+      check_provider_health: Prüf unter Einstellungen → Anbieter, ob deine SimpleFIN-Verbindung in Ordnung ist.
       unlink_to_move: Um eine Verknüpfung zu verschieben, trenne sie zuerst im Aktionsmenü des Kontos.
       all_accounts_already_linked: Alle SimpleFIN-Konten scheinen bereits verknüpft zu sein.
       currently_linked_to: "Aktuell verknüpft mit: %{account_name}"

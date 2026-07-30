@@ -37,7 +37,7 @@ de:
           never_expires: Läuft nie ab
           permissions: Berechtigungen
           usage_instructions_title: Verwendung deines API-Schlüssels
-          usage_instructions: "Füge deinen API-Schlüssel im X-Api-Key-Header ein, wenn du Anfragen an die Sure-API sendest:"
+          usage_instructions: So nutzt du die %{product_name}-API
           regenerate_key: Neuen Schlüssel erstellen
           revoke_key: Schlüssel widerrufen
           revoke_confirmation: Bist du sicher, dass du diesen API-Schlüssel widerrufen möchtest? Diese Aktion kann nicht rückgängig gemacht werden und deaktiviert sofort alle Anwendungen, die diesen Schlüssel verwenden.

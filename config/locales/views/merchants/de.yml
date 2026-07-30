@@ -18,11 +18,11 @@ de:
       new: Neuer Händler
       merge: Händler zusammenführen
       title: Händler
-      family_title: Händler der Familie
+      family_title: Händler deiner %{moniker}
       family_empty: Noch keine Händler der Familie vorhanden
       provider_title: Anbieter-Händler
       provider_empty: Noch keine Anbieter-Händler mit dieser Familie verbunden
-      provider_read_only: Anbieter-Händler werden von deinen verbundenen Institutionen synchronisiert. Du kannst hier nicht bearbeitet werden.
+      provider_read_only: Anbieter-Händler werden von deinen verbundenen Instituten synchronisiert. Sie lassen sich hier nicht bearbeiten.
       provider_info: Diese Händler wurden automatisch von deinen Bankverbindungen oder der KI erkannt. Du kannst sie bearbeiten, um deine eigene Kopie zu erstellen, oder sie entfernen, um sie von deinen Transaktionen zu trennen.
       unlinked_title: Kürzlich getrennt
       unlinked_info: Diese Händler wurden kürzlich von deinen Transaktionen entfernt. Sie verschwinden nach 30 Tagen aus dieser Liste, sofern sie nicht erneut einer Transaktion zugewiesen werden.

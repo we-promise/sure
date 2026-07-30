@@ -21,5 +21,3 @@ de:
       locked_fields_label: "Gesperrte Felder:"
       unlock_button: Sync-Updates zulassen
       unlock_confirm: Soll der Sync diese Buchung aktualisieren dürfen? Deine Änderungen können beim nächsten Sync überschrieben werden.
-    selection_bar:
-      edit: Bearbeiten

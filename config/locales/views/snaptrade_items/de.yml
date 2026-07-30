@@ -138,7 +138,7 @@ de:
       no_connections: "Keine Broker-Verbindungen gefunden."
       delete_connection: "Löschen"
       delete_connection_title: "Broker-Verbindung löschen?"
-      delete_connection_body: Die Verbindung zu %{brokerage} wird dauerhaft von SnapTrade entfernt. Alle Konten dieses Brokers werden getrennt. Zum erneuten Sync musst du sich wieder verbinden.
+      delete_connection_body: Die Verbindung zu %{brokerage} wird dauerhaft von SnapTrade entfernt. Alle Konten dieses Brokers werden getrennt. Für einen neuen Abgleich musst du dich erneut verbinden.
       delete_connection_confirm: "Verbindung löschen"
       manage_at_snaptrade: Verbindungen bei SnapTrade verwalten
       oauth_connect_button: Mit SnapTrade verbinden

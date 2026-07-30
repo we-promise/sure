@@ -52,7 +52,7 @@ de:
       link_accounts: "Ausgewählte Konten verknüpfen"
       no_accounts_found: Keine Konten gefunden. Bitte prüf deine API-Token-Konfiguration.
       no_api_token: "Mercury API-Token ist nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
-      no_credentials_configured: Richte zuerst deinen Mercury API-Token in den Anbieter-Einstellungen.
+      no_credentials_configured: Richte zuerst deinen Mercury-API-Token in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
       title: "Mercury-Konten auswählen"
       select_connection: Wähl in den Anbietereinstellungen eine Mercury-Verbindung.
@@ -67,7 +67,7 @@ de:
       no_account_specified: "Kein Konto angegeben"
       no_accounts_found: Keine Mercury-Konten gefunden. Bitte prüf deine API-Token-Konfiguration.
       no_api_token: "Mercury API-Token ist nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
-      no_credentials_configured: Richte zuerst deinen Mercury API-Token in den Anbieter-Einstellungen.
+      no_credentials_configured: Richte zuerst deinen Mercury-API-Token in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
       title: "%{account_name} mit Mercury verknüpfen"
       select_connection: Wähl in den Anbietereinstellungen eine Mercury-Verbindung.

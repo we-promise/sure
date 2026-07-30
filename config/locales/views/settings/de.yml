@@ -140,7 +140,7 @@ de:
         group_title: Gruppenmitglieder
         household_form_input_placeholder: Haushaltsnamen eingeben
         household_form_label: Haushaltsname
-        household_subtitle: Lade Familienmitglieder, Partner oder andere Personen ein. Eingeladene können sich in deinen Haushalt einloggen und auf gemeinsame Konten zugreifen.
+        household_subtitle: Verwalte die Mitglieder deiner %{moniker}
         household_title: Haushalt
         invitation_link: Einladungslink
         invite_member: Mitglied hinzufügen
@@ -441,7 +441,7 @@ de:
         step_3: Geh danach zu den Konten, um deine synchronisierten Konten zu verknüpfen.
       status:
         err: Fehler
-        "false": Nicht eingerichtet
+        "off": Nicht eingerichtet
         ok: Verbunden
         warn: Aktion nötig
       sync_all: Alle syncen

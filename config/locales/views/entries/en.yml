@@ -21,5 +21,3 @@ en:
       locked_fields_label: "Locked fields:"
       unlock_button: Allow sync to update
       unlock_confirm: Allow sync to update this entry? Your changes may be overwritten on the next sync.
-    selection_bar:
-      edit: Edit

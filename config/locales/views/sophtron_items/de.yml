@@ -55,10 +55,10 @@ de:
       success:
         one: "%{count} Konto erfolgreich verknüpft"
         other: "%{count} Konten erfolgreich verknüpft"
-      no_credentials_configured: Richte zuerst deine Sophtron-API-Benutzer-ID und deinen Zugriffsschlüssel in den Anbietereinstellungen.
+      no_credentials_configured: Richte zuerst deine Sophtron-Benutzer-ID und deinen Zugriffsschlüssel in den Anbietereinstellungen ein.
       no_accounts_found: Keine Konten gefunden. Bitte prüf deine API-Schlüssel-Konfiguration.
-      no_access_key: Sophtron-Zugriffsschlüssel ist nicht konfiguriert. Bitte richte ihn in den Einstellungen.
-      no_user_id: Sophtron-Benutzer-ID ist nicht konfiguriert. Bitte richte sie in den Einstellungen.
+      no_access_key: Sophtron-Zugriffsschlüssel ist nicht hinterlegt. Trag ihn in den Einstellungen ein.
+      no_user_id: Sophtron-Benutzer-ID ist nicht hinterlegt. Trag sie in den Einstellungen ein.
       no_institution_connected: Verbinde zuerst ein Bankinstitut mit Sophtron.
     connect:
       cancel: Abbrechen
@@ -121,22 +121,22 @@ de:
       preload_accounts: Konten vorab laden
       api_error: "API-Verbindungsfehler"
       unexpected_error: "Ein unerwarteter Fehler ist aufgetreten"
-      no_credentials_configured: Richte zuerst deine Sophtron-API-Benutzer-ID und deinen Zugriffsschlüssel in den Anbietereinstellungen.
+      no_credentials_configured: Richte zuerst deine Sophtron-Benutzer-ID und deinen Zugriffsschlüssel in den Anbietereinstellungen ein.
       no_accounts_found: Keine Konten gefunden. Bitte prüf deine API-Schlüssel-Konfiguration.
-      no_access_key: Sophtron-Zugriffsschlüssel ist nicht konfiguriert. Bitte richte ihn in den Einstellungen.
-      no_user_id: Sophtron-Benutzer-ID ist nicht konfiguriert. Bitte richte sie in den Einstellungen.
+      no_access_key: Sophtron-Zugriffsschlüssel ist nicht hinterlegt. Trag ihn in den Einstellungen ein.
+      no_user_id: Sophtron-Benutzer-ID ist nicht hinterlegt. Trag sie in den Einstellungen ein.
     select_accounts:
       accounts_selected: Konten ausgewählt
       api_error: "API-Verbindungsfehler"
       unexpected_error: "Ein unerwarteter Fehler ist aufgetreten"
       cancel: Abbrechen
-      configure_name_in_sophtron: Import nicht möglich – bitte richte den Kontonamen in Sophtron
+      configure_name_in_sophtron: Import nicht möglich – hinterleg den Kontonamen in Sophtron
       description: Wähl die Konten aus, die du mit deinem %{product_name}-Konto verknüpfen willst.
       link_accounts: Ausgewählte Konten verknüpfen
       no_accounts_found: Keine Konten gefunden. Bitte prüf deine API-Schlüssel-Konfiguration.
-      no_access_key: Sophtron-Zugriffsschlüssel ist nicht konfiguriert. Bitte richte ihn in den Einstellungen.
-      no_user_id: Sophtron-Benutzer-ID ist nicht konfiguriert. Bitte richte sie in den Einstellungen.
-      no_credentials_configured: Richte zuerst deine Sophtron-API-Benutzer-ID und deinen Zugriffsschlüssel in den Anbietereinstellungen.
+      no_access_key: Sophtron-Zugriffsschlüssel ist nicht hinterlegt. Trag ihn in den Einstellungen ein.
+      no_user_id: Sophtron-Benutzer-ID ist nicht hinterlegt. Trag sie in den Einstellungen ein.
+      no_credentials_configured: Richte zuerst deine Sophtron-Benutzer-ID und deinen Zugriffsschlüssel in den Anbietereinstellungen ein.
       no_institution_connected: Verbinde zuerst ein Bankinstitut mit Sophtron.
       no_name_placeholder: "(Kein Name)"
       title: Sophtron-Konten auswählen
@@ -145,13 +145,13 @@ de:
       all_accounts_already_linked: Alle Sophtron-Konten sind bereits verknüpft
       api_error: "API-Verbindungsfehler"
       cancel: Abbrechen
-      configure_name_in_sophtron: Import nicht möglich – bitte richte den Kontonamen in Sophtron
+      configure_name_in_sophtron: Import nicht möglich – hinterleg den Kontonamen in Sophtron
       description: Wähl ein Sophtron-Konto aus, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch synchronisiert und dedupliziert.
       link_account: Konto verknüpfen
       no_account_specified: Kein Konto angegeben
       no_accounts_found: Keine Sophtron-Konten gefunden. Bitte prüf deine API-Schlüssel-Konfiguration.
-      no_access_key: Sophtron-Zugriffsschlüssel ist nicht konfiguriert. Bitte richte ihn in den Einstellungen.
-      no_user_id: Sophtron-Benutzer-ID ist nicht konfiguriert. Bitte richte sie in den Einstellungen.
+      no_access_key: Sophtron-Zugriffsschlüssel ist nicht hinterlegt. Trag ihn in den Einstellungen ein.
+      no_user_id: Sophtron-Benutzer-ID ist nicht hinterlegt. Trag sie in den Einstellungen ein.
       no_institution_connected: Verbinde zuerst ein Bankinstitut mit Sophtron.
       no_name_placeholder: "(Kein Name)"
       title: "%{account_name} mit Sophtron verknüpfen"

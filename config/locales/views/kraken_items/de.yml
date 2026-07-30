@@ -14,10 +14,10 @@ de:
     destroy:
       success: Kraken-Verbindung zur Löschung vorgemerkt.
     select_accounts:
-      select_connection: Wähl in den Anbietereinstellungen eine Kraken-Verbindung aus.
-      no_credentials_configured: Füg Kraken-API-Zugangsdaten hinzu, bevor du Konten einrichten.
+      select_connection: Wähl eine Kraken-Verbindung aus, bevor du Konten verknüpfst.
+      no_credentials_configured: Füg Kraken-API-Zugangsdaten hinzu, bevor du Konten einrichtest.
     link_accounts:
-      select_connection: Wähl eine Kraken-Verbindung aus, bevor du Konten verknüpfen.
+      select_connection: Wähl eine Kraken-Verbindung aus, bevor du Konten verknüpfst.
     select_existing_account:
       title: Kraken-Konto verknüpfen
       no_accounts_found: Keine Kraken-Konten gefunden.
@@ -27,7 +27,7 @@ de:
       cancel: Abbrechen
     link_existing_account:
       success: Erfolgreich mit Kraken-Konto verknüpft
-      select_connection: Wähl eine Kraken-Verbindung aus, bevor du Konten verknüpfen.
+      select_connection: Wähl eine Kraken-Verbindung aus, bevor du Konten verknüpfst.
       errors:
         only_manual: Nur manuelle Krypto-Börsenkonten ohne bestehende Anbieterverknüpfung können mit Kraken verknüpft werden
         invalid_kraken_account: Ungültiges Kraken-Konto
