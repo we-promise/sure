@@ -34,17 +34,19 @@ class Entry::ActivityFeedPreloader
         associations: [
           :merchant,
           :category,
-          # Transfer#categorizable? / #payment? walk to_account via
-          # inflow_transaction.entry.account. Flat transfer includes alone
-          # still N+1 that triad during activity-row render.
+          # Union of #2643 counterpart UI + category-menu N+1:
+          # - outflow rows: inflow_transaction (to_account) for counterpart + categorizable?
+          # - inflow rows: outflow_transaction (from_account) for counterpart, and
+          #   inflow_transaction (to_account) for Transfer#categorizable?/#payment?
           {
-            transfer_as_inflow: {
+            transfer_as_outflow: {
               inflow_transaction: { entry: :account }
             }
           },
           {
-            transfer_as_outflow: {
-              inflow_transaction: { entry: :account }
+            transfer_as_inflow: {
+              inflow_transaction: { entry: :account },
+              outflow_transaction: { entry: :account }
             }
           }
         ]

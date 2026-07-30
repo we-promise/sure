@@ -57,6 +57,7 @@ class AccountsController < ApplicationController
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
+    @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, status: [])
 
     if tab_panel_frame_request?
@@ -64,6 +65,7 @@ class AccountsController < ApplicationController
     end
 
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
+
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -74,6 +76,8 @@ class AccountsController < ApplicationController
       limit: safe_per_page,
       params: request.query_parameters.except("tab").merge("tab" => "activity")
     )
+    # Batches merchant/category/security + nested transfer counterpart associations
+    # (covers #2643 counterpart UI and category-menu to_account walks).
     Entry::ActivityFeedPreloader.new(@entries).preload
     Transaction::ActivitySecurityPreloader.new(@entries).preload
 
