@@ -49,4 +49,14 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_nil account.current_account
     assert_not item.syncing?
   end
+
+  test "sync_later_with_follow_up queues a follow-up after an active sync" do
+    item = snaptrade_items(:configured_item)
+    active_sync = item.syncs.create!
+    active_sync.start!
+
+    assert_enqueued_with job: SnaptradeFollowUpSyncJob do
+      item.sync_later_with_follow_up
+    end
+  end
 end

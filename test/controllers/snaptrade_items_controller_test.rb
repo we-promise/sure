@@ -179,10 +179,12 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     get oauth_authorize_snaptrade_items_url(item_id: @snaptrade_item.id)
     oauth_session = session[:snaptrade_oauth]
     Provider::Snaptrade.expects(:exchange_code).returns({ "access_token" => "at", "refresh_token" => "rt" })
-    SnaptradeItem.any_instance.stubs(:syncing?).returns(true)
-    SnaptradeItem.any_instance.expects(:sync_later).once
+    active_sync = @snaptrade_item.syncs.create!
+    active_sync.start!
 
-    get oauth_callback_snaptrade_items_url(code: "c0de", state: oauth_session["state"])
+    assert_enqueued_with job: SnaptradeFollowUpSyncJob do
+      get oauth_callback_snaptrade_items_url(code: "c0de", state: oauth_session["state"])
+    end
   ensure
     Rails.configuration.x.snaptrade.oauth_client_id = nil
     Rails.configuration.x.snaptrade.oauth_client_secret = nil
@@ -291,7 +293,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
 
     get setup_accounts_snaptrade_item_url(@snaptrade_item)
 
-    assert_select "select[name='account_types[#{account.id}]'] option[value='Depository'][selected]"
+    assert_select "input[name='account_types[#{account.id}]'][value='Depository']"
   end
 
   test "complete_account_setup uses the selected account type" do

@@ -54,7 +54,7 @@ class SnaptradeItemsController < ApplicationController
     snaptrade_item = Current.family.snaptrade_items.find_by(id: params[:item_id])
 
     if snaptrade_item
-      snaptrade_item.sync_later
+      snaptrade_item.sync_later_with_follow_up
 
       if params[:return_to].presence == "setup_accounts"
         redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: params[:accountable_type].presence), notice: t(".success")
@@ -243,7 +243,7 @@ class SnaptradeItemsController < ApplicationController
       code_verifier: oauth_session[:code_verifier]
     )
 
-    snaptrade_item.sync_later
+    snaptrade_item.sync_later_with_follow_up
 
     if oauth_session[:return_to] == "setup_accounts"
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: oauth_session[:accountable_type].presence), notice: t(".success")
@@ -322,7 +322,7 @@ class SnaptradeItemsController < ApplicationController
     end
 
     if snaptrade_item.oauth_configured?
-      snaptrade_item.sync_later
+      snaptrade_item.sync_later_with_follow_up
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item)
     else
       redirect_to oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id)
@@ -380,7 +380,7 @@ class SnaptradeItemsController < ApplicationController
         end
 
         # Trigger sync to process the linked account
-        snaptrade_item.sync_later
+        snaptrade_item.sync_later_with_follow_up
 
         redirect_to account_path(account), notice: t(".success", default: "Successfully linked to SnapTrade account.")
       rescue => e
