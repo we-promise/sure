@@ -343,7 +343,7 @@ Sure can be configured to trust a request header set by an upstream reverse prox
 
 For more information and examples, see https://doc.traefik.io/traefik/middlewares/http/forwardauth/ or similar documentation for your HTTP proxy and authentication software.
 
-Configure the Sure environment with the name of the header that carries the authenticated user's email and a shared secret that your proxy echoes on every request:
+Configure the Sure environment with the name of the header that carries the authenticated user's email. Only that one setting is required; the shared secret below is optional, but strongly recommended and treated as part of the baseline configuration here:
 ```txt
 REMOTE_USER_HEADER_EMAIL="Remote-Email"
 REMOTE_USER_SHARED_SECRET="<generate-with-openssl-rand-hex-32>"
@@ -355,7 +355,7 @@ REMOTE_USER_SHARED_SECRET="<generate-with-openssl-rand-hex-32>"
 # REMOTE_USER_LOGOUT_URL="https://auth.example.com/logout"
 ```
 
-Generate the secret with `openssl rand -hex 32` (or any equivalent CSPRNG output) and configure your reverse proxy to send the same value in `X-Remote-User-Secret` on every forwarded request.
+Generate the secret with `openssl rand -hex 32` (or any equivalent CSPRNG output) and configure your reverse proxy to send the same value on every forwarded request, in the header named by `REMOTE_USER_SHARED_SECRET_HEADER` — which defaults to `X-Remote-User-Secret`, so you only need to set it if your proxy can't use that name. The "Shared-secret header" section below covers what you give up by leaving the secret unset.
 
  !! NOTE!! this allows unchallenged (passwordless) login via simple HTTP headers. Only use this method if you have a proxy in front of Sure that is applying the authentication challenge, *AND THE SURE HTTP SERVER IS NOT ACCESSIBLE DIRECTLY*.
 
