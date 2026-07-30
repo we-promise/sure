@@ -32,16 +32,18 @@ class SnaptradeAccount < ApplicationRecord
   # Keep this derived from the raw API payload so existing records immediately
   # receive a sensible setup default without a data migration.
   def suggested_account_type
-    case raw_payload.to_h.with_indifferent_access[:account_category]
+    payload = raw_payload.to_h.with_indifferent_access
+    raw_type = payload[:raw_type].presence || account_type
+
+    case payload[:account_category]
     when "DEPOSIT"
       "Depository"
     when "LOC"
-      raw_type = raw_payload.to_h.with_indifferent_access[:raw_type].presence || account_type
       raw_type.to_s.match?(/credit|card/i) ? "CreditCard" : "Loan"
     else
       # SnapTrade documents INVESTMENT and an unknown category as investment
       # accounts. The user may still select a more appropriate Sure type.
-      "Investment"
+      raw_type.to_s.match?(/crypto|bitcoin|ethereum|digital.?asset/i) ? "Crypto" : "Investment"
     end
   end
 

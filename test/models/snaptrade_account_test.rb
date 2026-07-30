@@ -89,6 +89,9 @@ class SnaptradeAccountTest < ActiveSupport::TestCase
     account.raw_payload = { "account_category" => "INVESTMENT" }
     assert_equal "Investment", account.suggested_account_type
 
+    account.raw_payload = { "account_category" => "INVESTMENT", "raw_type" => "CRYPTOCURRENCY" }
+    assert_equal "Crypto", account.suggested_account_type
+
     account.raw_payload = {}
     assert_equal "Investment", account.suggested_account_type
   end
