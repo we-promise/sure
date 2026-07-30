@@ -1,4 +1,6 @@
 class IncomeStatement::CategoryStats
+  include IncomeStatement::TransferFiltering
+
   def initialize(family, interval: "month", account_ids: nil, include_investment_contributions: true)
     @family = family
     @interval = interval
@@ -59,10 +61,6 @@ class IncomeStatement::CategoryStats
     def scope_to_account_ids_sql
       return "" if @account_ids.nil?
       ActiveRecord::Base.sanitize_sql([ "AND a.id IN (?)", @account_ids ])
-    end
-
-    def transfer_filter_sql(transaction_alias)
-      @include_investment_contributions ? Transaction.cash_flow_transfer_sql(transaction_alias) : Transaction.unmatched_transfer_sql(transaction_alias)
     end
 
     def query_sql

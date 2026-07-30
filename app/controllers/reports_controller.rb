@@ -365,8 +365,8 @@ class ReportsController < ApplicationController
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
-        .without_matched_transfer
         .includes(entry: :account, category: :parent)
+      transactions = apply_cash_flow_transfer_filter(transactions)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
       # Apply filters (includes finance account scoping)
@@ -626,6 +626,14 @@ class ReportsController < ApplicationController
       scope
     end
 
+    def apply_cash_flow_transfer_filter(scope)
+      if Current.user&.treat_investment_contributions_as_transfers?
+        scope.without_matched_transfer
+      else
+        scope.for_cash_flow_reporting
+      end
+    end
+
     def exclude_tax_advantaged_accounts(scope)
       tax_advantaged_account_ids = Current.family.tax_advantaged_account_ids
       return scope if tax_advantaged_account_ids.blank?
@@ -688,8 +696,8 @@ class ReportsController < ApplicationController
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
-        .without_matched_transfer
         .includes(entry: :account, category: [])
+      transactions = apply_cash_flow_transfer_filter(transactions)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
       transactions = apply_transaction_filters(transactions)
@@ -728,8 +736,8 @@ class ReportsController < ApplicationController
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
-        .without_matched_transfer
         .includes(entry: :account, category: [])
+      transactions = apply_cash_flow_transfer_filter(transactions)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
       transactions = apply_transaction_filters(transactions)

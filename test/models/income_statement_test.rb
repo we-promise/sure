@@ -458,6 +458,23 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 4, totals.transactions_count
   end
 
+  test "does not treat a pending transfer as matched for reporting" do
+    investment_account = @family.accounts.create!(
+      name: "Pending Brokerage",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Investment.new
+    )
+    outflow = create_transaction(account: @checking_account, amount: 1_000, kind: "standard")
+    inflow = create_transaction(account: investment_account, amount: -1_000, kind: "standard")
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "pending")
+
+    totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(2_000, @family.currency), totals.income_money
+    assert_equal Money.new(1_900, @family.currency), totals.expense_money
+  end
+
   # Tax-Advantaged Account Exclusion Tests
   test "excludes transactions from tax-advantaged Roth IRA accounts" do
     # Create a Roth IRA (tax-exempt) investment account

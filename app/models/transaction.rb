@@ -96,10 +96,12 @@ class Transaction < ApplicationRecord
       NOT EXISTS (
         SELECT 1 FROM transfers
         WHERE transfers.inflow_transaction_id = #{transaction_alias}.id
+          AND transfers.status = 'confirmed'
       )
       AND NOT EXISTS (
         SELECT 1 FROM transfers
         WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
+          AND transfers.status = 'confirmed'
       )
     SQL
   end
@@ -114,6 +116,7 @@ class Transaction < ApplicationRecord
         SELECT 1 FROM transfers
         WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
           AND #{transaction_alias}.kind = 'investment_contribution'
+          AND transfers.status = 'confirmed'
       )
       OR (#{unmatched_transfer_sql(transaction_alias)}))
     SQL
