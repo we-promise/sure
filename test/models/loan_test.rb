@@ -1,6 +1,8 @@
 require "test_helper"
 
 class LoanTest < ActiveSupport::TestCase
+  include AccrualLoanHelper
+
   test "rejects invalid subtype" do
     loan = Loan.new(subtype: "invalid")
 
@@ -95,12 +97,22 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal 12, loan.interest_rate_on(Date.new(2027, 6, 1))
   end
 
+  # Two new rate changes sharing a date in one save both pass Loan::RateChange's
+  # own uniqueness check (nothing persisted to conflict with) and would hit the
+  # DB unique index as an unrescued RecordNotUnique. The loan-level check catches
+  # it as a validation error instead.
+  test "rejects two rate changes with the same effective date in one save" do
+    loan = accrual_loan
+    loan.rate_changes.build(effective_date: Date.new(2026, 6, 1), rate: 9)
+    loan.rate_changes.build(effective_date: Date.new(2026, 6, 1), rate: 10)
+
+    assert_not loan.valid?
+    assert_includes loan.errors[:base], "Rate change effective dates must be unique"
+  end
+
   # A rate change moves the derived balance but is a child row, so it never
   # touches the loan's own saved_changes — Loan::RateChange must trigger the sync
   # itself (via resync_loan_account, wired to both save and destroy commits).
-  # Only the destroy path is asserted here: transactional tests don't fire the
-  # save-commit callbacks for freshly created/updated child records, but the
-  # destroy path exercises the same resync method.
   test "resyncs the account when a rate change is removed" do
     loan = accrual_loan
     rate_change = loan.rate_changes.create!(effective_date: Date.new(2026, 6, 1), rate: 9)
@@ -109,25 +121,18 @@ class LoanTest < ActiveSupport::TestCase
     rate_change.destroy!
   end
 
+  # The save-commit callback doesn't fire for freshly created/updated records in
+  # transactional tests, so assert the callback body directly to cover the
+  # add/edit resync path (the removed test above covers the wiring end-to-end).
+  test "a saved rate change asks its loan to resync" do
+    loan = accrual_loan
+    rate_change = loan.rate_changes.create!(effective_date: Date.new(2026, 6, 1), rate: 9)
+
+    rate_change.loan.expects(:resync_for_accrual!).once
+    rate_change.send(:resync_loan_account)
+  end
+
   test "the system-generated source list covers the accrual source" do
     assert_includes Entry::SYSTEM_GENERATED_SOURCES, Loan::InterestAccrual::SOURCE
   end
-
-  private
-    def accrual_loan(**overrides)
-      attributes = {
-        accrue_interest: true,
-        interest_rate: 6,
-        interest_accrual_start_date: Date.new(2026, 1, 1),
-        rate_type: "fixed"
-      }.merge(overrides)
-
-      Account.create!(
-        family: families(:dylan_family),
-        name: "Accrual Mortgage",
-        balance: 200_000,
-        currency: "USD",
-        accountable: Loan.new(**attributes)
-      ).loan
-    end
 end

@@ -20,6 +20,12 @@ class Loan < ApplicationRecord
             numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 31 },
             allow_nil: true
   validates :interest_rate, :interest_accrual_start_date, presence: true, if: :accrue_interest?
+  # Loan::RateChange has a per-loan uniqueness validation, but that only catches
+  # collisions against already-persisted rows. Two *new* rate changes sharing a
+  # date in one nested-attributes save both pass it and then hit the DB unique
+  # index, which surfaces as an unrescued RecordNotUnique (500). Catch that here,
+  # where the whole in-memory set is visible.
+  validate :rate_change_dates_are_distinct
 
   # Re-accrue whenever an input to the schedule changes. Nothing else triggers a
   # sync on this path — AccountableResource#update only syncs when the account
@@ -142,5 +148,12 @@ class Loan < ApplicationRecord
       return unless saved_changes.keys.intersect?(ACCRUAL_INPUTS)
 
       resync_for_accrual!
+    end
+
+    def rate_change_dates_are_distinct
+      dates = rate_changes.reject(&:marked_for_destruction?).filter_map(&:effective_date)
+      return if dates.size == dates.uniq.size
+
+      errors.add(:base, "Rate change effective dates must be unique")
     end
 end
