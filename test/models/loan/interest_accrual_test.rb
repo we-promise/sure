@@ -124,9 +124,9 @@ class Loan::InterestAccrualTest < ActiveSupport::TestCase
     end
   end
 
-  # Documented limitation: the rate is not effective-dated, so a change reprices
-  # the whole history rather than taking effect only from the change date forward
-  # (see Loan#accrues_interest?). This pins that whole-history-correction contract.
+  # Editing the *base* interest_rate reprices the whole history — the correct
+  # behavior for correcting a mis-entered origination rate. Mid-life ARM resets
+  # use effective-dated rate_changes instead (see the effective-date test below).
   test "re-prices existing accruals when the interest rate changes" do
     travel_to TODAY do
       account = mortgage_with_payments
@@ -143,6 +143,27 @@ class Loan::InterestAccrualTest < ActiveSupport::TestCase
       assert_equal [
         [ Date.new(2026, 2, 1), 2_000.00 ],
         [ Date.new(2026, 3, 1), 2_008.00 ]
+      ], accruals_for(account)
+    end
+  end
+
+  test "applies a rate change from its effective date forward, not retroactively" do
+    travel_to TODAY do
+      account = mortgage_with_payments
+      Loan::InterestAccrual.new(account.loan).sync!
+
+      # An ARM reset to 12% (1%/month) effective on the March accrual date.
+      account.loan.rate_changes.create!(effective_date: Date.new(2026, 3, 1), rate: 12)
+
+      assert_no_difference "Entry.count" do
+        assert Loan::InterestAccrual.new(account.loan).sync!
+      end
+
+      # February keeps the 6% the lender charged then (200,000 * 0.005 = 1,000);
+      # only March, on the effective date, uses 12% (199,800 * 0.01 = 1,998).
+      assert_equal [
+        [ Date.new(2026, 2, 1), 1_000.00 ],
+        [ Date.new(2026, 3, 1), 1_998.00 ]
       ], accruals_for(account)
     end
   end
