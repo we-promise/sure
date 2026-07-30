@@ -137,6 +137,17 @@ class Category < ApplicationRecord
   end
 
   class << self
+    def ids_with_transactions(family:, category_ids:)
+      category_ids = Array(category_ids).compact
+      return {} if category_ids.empty?
+
+      family.transactions
+            .where(category_id: category_ids)
+            .distinct
+            .pluck(:category_id)
+            .index_with(true)
+    end
+
     def suggested_icon(name)
       name_down = name.to_s.downcase
 
@@ -284,9 +295,7 @@ class Category < ApplicationRecord
   end
 
   def inherit_color_from_parent
-    if subcategory?
-      self.color = parent.color
-    end
+    self.color = parent.color if subcategory? && parent
   end
 
   def replace_and_destroy!(replacement)
@@ -297,15 +306,22 @@ class Category < ApplicationRecord
   end
 
   def parent?
-    subcategories.any?
+    if association(:subcategories).loaded?
+      subcategories.any?
+    else
+      subcategories.exists?
+    end
   end
 
   def subcategory?
-    parent.present?
+    parent_id.present? && parent.present?
   end
 
   def name_with_parent
-    subcategory? ? "#{parent.name} > #{name}" : name
+    return name unless subcategory?
+
+    parent_name = parent&.name
+    parent_name.present? ? "#{parent_name} > #{name}" : name
   end
 
   def display_name
@@ -333,7 +349,7 @@ class Category < ApplicationRecord
 
   private
     def category_level_limit
-      if (subcategory? && parent.subcategory?) || (parent? && subcategory?)
+      if (subcategory? && parent&.subcategory?) || (parent? && subcategory?)
         errors.add(:parent, "can't have more than 2 levels of subcategories")
       end
     end

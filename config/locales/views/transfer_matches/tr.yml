@@ -1,0 +1,25 @@
+---
+tr:
+  transfer_matches:
+    create:
+      success: Transfer oluşturuldu
+    matching_fields:
+      create_new_transaction: Yeni işlem oluştur
+      match_existing_recommended: Mevcut işlemle eşleştir (önerilen)
+      matching_method: Eşleştirme yöntemi
+      matching_transaction: Eşleştirme işlemi
+      no_matching_transactions: Diğer hesaplarınızdan eşleştirilecek işlem bulunamadı.
+        Lütfen bir hesap seçin, sizin için yeni bir giriş işlemi oluşturalım.
+      select_method: İşlemlerinizi eşleştirmek için bir yöntem seçin.
+      target_account: Hedef hesap
+    new:
+      create_transfer_match: Transfer eşleşmesi oluştur
+      from_account: Kaynak hesap
+      from_account_named: 'Kaynak hesap: %{name}'
+      header:
+        subtitle: Karşılık gelen işlemi başka bir hesapla eşleştirin veya yoksa oluşturun.
+        title: Transfer veya ödeme eşleştir
+      inflow_transaction: Giriş işlemi
+      outflow_transaction: Çıkış işlemi
+      to_account: Hedef hesap
+      to_account_named: 'Hedef hesap: %{name}'

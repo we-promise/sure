@@ -1,0 +1,105 @@
+---
+tr:
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: Bütçe <span class="text-red-500 privacy-sensitive">%{amount}</span>
+        kadar aşıldı
+      left_to_allocate: tahsis edilmeyi bekliyor
+      over_set: "> %100 ayarlandı"
+      percent_set: "%{percent} ayarlandı"
+    budget_category_form:
+      monthly_average: "%{amount}/ay ort."
+      shared_placeholder: Paylaşılan
+      shared_title: Üst kategorinin bütçesini paylaşmak için boş bırakın
+    confirm_button:
+      confirm: Onayla
+    index:
+      description: Harcama limitlerini belirlemek için kategori bütçelerini ayarlayın.
+        Tahsis edilmeyen tutarlar otomatik olarak kategorisiz olarak atanacaktır.
+      title: Kategori bütçelerinizi düzenleyin
+    no_categories:
+      new_category: Yeni kategori
+      no_categories_message: Henüz işlemlerinize herhangi bir gider kategorisi oluşturmadınız
+        veya atamadınız.
+      oops: Hata!
+      use_defaults: Varsayılanları kullan (önerilir)
+    show:
+      budgeted: Bütçelenen
+      category: Kategori
+      left: kaldı
+      monthly_average_spending: Aylık ortalama harcama
+      monthly_median_spending: Aylık medyan harcama
+      no_transactions: Bu bütçe dönemi için işlem bulunamadı.
+      overspent: aşıldı
+      overview: Genel Bakış
+      recent_transactions: Son İşlemler
+      spending: "%{date} harcaması"
+      status: Durum
+      view_all_transactions: Tüm kategori işlemlerini görüntüle
+  budgets:
+    actuals_summary:
+      expenses: Giderler
+      income: Gelir
+    budget_donut:
+      new_budget: Yeni bütçe
+      of_budget: "%{amount} üzerinden"
+      spent: Harcanan
+      unused: Kullanılmayan
+    budget_header:
+      today: Bugün
+    budget_nav:
+      categories: Kategoriler
+      setup: Kurulum
+    budgeted_summary:
+      budgeted: Bütçelenen
+      earned: "%{amount} kazanıldı"
+      expected_income: Beklenen gelir
+      left: "%{amount} kaldı"
+      over: "%{amount} aşıldı"
+      spent: "%{amount} harcandı"
+    copy_previous:
+      already_initialized: Bu bütçe zaten kuruldu
+      no_source: Kopyalanacak önceki bütçe bulunamadı
+      success: Bütçe %{source_name} kaynağından kopyalandı
+    copy_previous_prompt:
+      copy_button: "%{source_name} kaynağından kopyala"
+      description: Bütçenizi %{source_name} kaynağından kopyalayabilir veya sıfırdan
+        başlayabilirsiniz.
+      fresh_button: Sıfırdan başla
+      title: Bütçenizi kurun
+    edit:
+      autosuggest_description: Bu, işlem geçmişinize dayanacaktır. Yapay zeka hata
+        yapabilir, devam etmeden önce doğrulayın.
+      autosuggest_title: Gelir ve harcama bütçesini otomatik öner
+      budgeted_spending: Bütçelenen harcama
+      continue: Devam et
+      expected_income: Beklenen gelir
+      setup_description: Bütçenizi kurmak için aşağıya aylık kazancınızı ve planlanan
+        harcamanızı girin.
+      setup_title: Bütçenizi kurun
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    over_allocation_warning:
+      fix_allocations: Tahsisleri düzelt
+      over_allocated_message: Bütçenizi fazla tahsis ettiniz. Lütfen tahsislerinizi
+        düzeltin.
+    show:
+      categories:
+        amount: Tutar
+        edit: Düzenle
+        title: Kategoriler
+      filter:
+        all: Tümü
+        aria_label: Bütçe kategorilerini filtrele
+        on_track: Yolunda
+        over_budget: Bütçe Aşıldı
+      on_track_categories:
+        short_title: Yolunda
+        title: Yolunda
+      over_budget_categories:
+        short_title: Bütçe Aşıldı
+        title: Bütçe Aşıldı
+      tabs:
+        actual: Gerçekleşen
+        budgeted: Bütçelenen

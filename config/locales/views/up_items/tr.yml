@@ -1,0 +1,118 @@
+---
+tr:
+  family:
+    up:
+      create_up_item:
+        default_name: Up Bağlantısı
+  providers:
+    up:
+      description: Kişisel erişim token'ı aracılığıyla Avustralya Up banka hesaplarınızı
+        bağlayın
+      name: Up
+  up_account:
+    fallback: Up hesabı
+  up_item:
+    errors:
+      account_processing_failed: Up hesabı eşitlenemedi
+      account_sync_schedule_failed: Up hesap eşitlemesi zamanlanamadı
+      sync_failed: Up bağlantısı eşitlenemedi
+      transactions_failed: Up işlemleri getirilemedi
+    institution_summary:
+      count:
+        one: 1 kurum
+        other: "%{count} kurum"
+      none: Bağlı kurum yok
+      one: 1 kurum
+    sync_status:
+      all_synced:
+        one: 1 hesap eşitlendi
+        other: "%{count} hesap eşitlendi"
+      no_accounts: Hesap bulunamadı
+      partial: "%{linked} eşitlendi, %{unlinked} kurulum gerektiriyor"
+  up_items:
+    complete_account_setup:
+      all_skipped: Hiçbir Up hesabı oluşturulmadı.
+      creation_failed: Up hesapları oluşturulamadı.
+      no_accounts: Hiçbir Up hesabı seçilmedi.
+      success:
+        one: 1 Up hesabı oluşturuldu.
+        other: "%{count} Up hesabı oluşturuldu."
+    create:
+      success: Up bağlantısı kaydedildi.
+    destroy:
+      success: Up bağlantısı silinmek üzere zamanlandı.
+      unlink_failed: Up bağlantısı kesilemedi
+    link_accounts:
+      link_failed: Hiçbir hesap bağlanmadı.
+      no_accounts_selected: En az bir hesap seçin.
+      no_credentials_configured: Önce Up'ı sağlayıcı ayarlarında yapılandırın.
+      success:
+        one: 1 Up hesabı bağlandı.
+        other: "%{count} Up hesabı bağlandı."
+      unsupported_account_type: Up bu hesap türünü desteklemiyor.
+    link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      no_account_selected: Bağlanacak bir Up hesabı seçin.
+      success: Up hesabı %{account_name} ile bağlandı.
+      up_account_already_linked: Bu Up hesabı zaten bağlı.
+    provider_panel:
+      access_token_label: Kişisel Erişim Token'ı
+      access_token_placeholder: Up kişisel erişim token'ınızı yapıştırın
+      add_connection: Up bağlantısı ekle
+      connection_name_label: Bağlantı adı
+      connection_name_placeholder: Ana Up
+      default_connection_name: Up Bağlantısı
+      disconnect: Bağlantıyı kes
+      disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?"
+      keep_access_token_placeholder: Mevcut token'ı korumak için boş bırakın
+      setup_accounts: Hesapları kur
+      sync: Eşitle
+      syncing: Eşitleniyor...
+      update_connection: Bağlantıyı güncelle
+    select_accounts:
+      cancel: İptal
+      description: Eklenecek Up hesaplarını seçin.
+      link_accounts: Hesapları bağla
+      no_accounts_found: Bağlantısız Up hesabı bulunamadı.
+      no_credentials_configured: Önce Up'ı sağlayıcı ayarlarında yapılandırın.
+      title: Up hesaplarını bağla
+    select_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      cancel: İptal
+      description: Bu hesaba bağlamak için bağlantısız bir Up hesabı seçin.
+      link_account: Hesabı bağla
+      no_accounts_found: Bağlantısız Up hesabı bulunamadı.
+      no_credentials_configured: Önce Up'ı sağlayıcı ayarlarında yapılandırın.
+      title: Up hesabını %{account_name} ile bağla
+    setup_accounts:
+      account_type_label: Hesap türü
+      account_types:
+        depository: Nakit
+        loan: Kredi
+        skip: Atla
+      all_accounts_linked: Tüm Up hesapları zaten bağlı.
+      api_error: Up hesapları getirilemedi.
+      cancel: İptal
+      choose_account_type: Bir hesap türü seçin
+      choose_account_type_description: Takip etmek istemediğiniz hesapları atlayın.
+      create_accounts: Hesapları oluştur
+      fetch_failed: Hesaplar getirilemedi
+      no_accounts_to_setup: Kurulacak hesap yok
+      no_credentials: Önce Up kimlik bilgilerini yapılandırın.
+      subtitle: Her Up hesabının Sure'da nasıl görüneceğini seçin.
+      title: Up Hesaplarını Bağla
+    up_item:
+      delete: Sil
+      deletion_in_progress: Silme işlemi devam ediyor
+      error: Hata
+      no_accounts_description: Up hesaplarını getirin ve hangilerini bağlayacağınızı
+        seçin.
+      no_accounts_title: Henüz hesap içe aktarılmadı
+      setup_action: Hesapları kur
+      setup_description: "%{total} hesaptan %{linked} tanesi bağlandı."
+      setup_needed: Hesap kurulumu gerekiyor
+      status_never: Hiç eşitlenmedi
+      status_with_summary: "%{timestamp} önce eşitlendi · %{summary}"
+      syncing: Eşitleniyor
+    update:
+      success: Up bağlantısı güncellendi.

@@ -1,0 +1,365 @@
+---
+tr:
+  sophtron_items:
+    api_error:
+      bad_credentials: 'Banka kimlik bilgileri: Kullanıcı adı ve şifrenin doğru olduğunu
+        kontrol edin'
+      check_provider_settings: Sağlayıcı Ayarlarını Kontrol Et
+      common_issues_title: 'Yaygın Sorunlar:'
+      expired_credentials: 'Süresi Dolmuş Kimlik Bilgileri: Sophtron''dan yeni bir
+        Kullanıcı Kimliği ve Erişim Anahtarı oluşturun'
+      incorrect_user_id: 'Hatalı Kullanıcı Kimliği: Sağlayıcı Ayarları''nda Kullanıcı
+        Kimliğinizi doğrulayın'
+      institution_timeout: 'Kurum zaman aşımı: Banka giriş sayfası zamanında tamamlanmadı'
+      institution_unable_to_connect: Kuruma bağlanılamıyor
+      invalid_access_key: 'Geçersiz Erişim Anahtarı: Sağlayıcı Ayarları''nda Erişim
+        Anahtarınızı kontrol edin'
+      network_issue: 'Ağ Sorunu: İnternet bağlantınızı kontrol edin'
+      service_down: 'Hizmet Kapalı: Sophtron API geçici olarak kullanılamıyor olabilir'
+      title: Sophtron Bağlantı Hatası
+      try_again: Yeniden bağlanmayı deneyin
+      unable_to_connect: Sophtron'a bağlanılamıyor
+      unsupported_mfa: 'MFA desteği: Sophtron bu kurumun mevcut doğrulama akışını
+        desteklemiyor olabilir'
+      verification_code: 'Doğrulama kodu: Son kodun süresi dolmadan önce girildiğinden
+        emin olun'
+    complete_account_setup:
+      all_skipped: Tüm hesaplar atlandı. Hiçbir hesap oluşturulmadı.
+      api_error: API bağlantı hatası
+      creation_failed: Hesaplar oluşturulamadı
+      no_accounts: Kurulacak hesap yok.
+      success: "%{count} hesap başarıyla oluşturuldu."
+      unexpected_error: Beklenmeyen bir hata oluştu
+    connect:
+      cancel: İptal
+      captcha: Captcha
+      connect: Bağlan
+      institution_search_label: Kurum
+      institution_search_placeholder: Banka adına göre arayın
+      no_institutions: Eşleşen kurum bulunamadı.
+      password: Şifre
+      search: Ara
+      search_too_short: Aramak için en az iki karakter girin.
+      title: Sophtron Kurumuna Bağlan
+      username: Kullanıcı adı
+    connect_institution:
+      api_error: 'Sophtron bağlantısı başarısız oldu: %{message}'
+      missing_parameters: Bir kurum seçin ve banka giriş kimlik bilgilerinizi girin.
+    connection_status:
+      api_error: 'API bağlantı hatası: %{message}'
+      attempt: "%{max} denemeden %{attempt}. deneme"
+      check_again: Tekrar kontrol et
+      failed: Sophtron bu kurum bağlantısını tamamlayamadı.
+      failed_timeout: Kurum girişini tamamlarken Sophtron zaman aşımına uğradı.
+      timeout: Sophtron beklenen sürede bağlantıyı tamamlayamadı. Tekrar kontrol edebilir
+        veya daha sonra yeniden bağlanmayı deneyebilirsiniz.
+      title: Sophtron'a Bağlanıyor
+      waiting: Sophtron kurumunuza bağlanmaya devam ediyor.
+    create:
+      success: Sophtron bağlantısı başarıyla oluşturuldu
+    defaults:
+      name: Sophtron Bağlantısı
+    destroy:
+      success: Sophtron bağlantısı kaldırıldı
+    edit:
+      access_key:
+        help_text: Erişim Anahtarı, harflerle ve rakamlarla başlayan uzun bir dize
+          olmalıdır
+        label: 'Sophtron Erişim Anahtarı:'
+        placeholder: Sophtron Erişim Anahtarınızı buraya yapıştırın...
+      user_id:
+        help_text: Kullanıcı Kimliği, harflerle ve rakamlarla başlayan uzun bir dize
+          olmalıdır
+        label: 'Sophtron Kullanıcı Kimliği:'
+        placeholder: Sophtron Kullanıcı Kimliğinizi buraya yapıştırın...
+    index:
+      title: Sophtron Bağlantıları
+    link_accounts:
+      all_already_linked:
+        one: Seçilen hesap (%{names}) zaten bağlı
+        other: 'Seçilen %{count} hesabın tümü zaten bağlı: %{names}'
+      api_error: API bağlantı hatası
+      invalid_account_names:
+        one: Boş adlı hesap bağlanamaz
+        other: "%{count} boş adlı hesap bağlanamaz"
+      link_failed: Hesaplar bağlanamadı
+      no_access_key: Sophtron Erişim Anahtarı yapılandırılmamış. Lütfen Ayarlar'dan
+        yapılandırın.
+      no_accounts_found: Hesap bulunamadı. Lütfen API anahtarı yapılandırmanızı kontrol
+        edin.
+      no_accounts_selected: Lütfen en az bir hesap seçin
+      no_credentials_configured: Lütfen önce Sağlayıcı Ayarları'nda Sophtron API Kullanıcı
+        Kimliğinizi ve Erişim Anahtarınızı yapılandırın.
+      no_institution_connected: Lütfen önce Sophtron ile bir banka kurumu bağlayın.
+      no_user_id: Sophtron Kullanıcı Kimliği yapılandırılmamış. Lütfen Ayarlar'dan
+        yapılandırın.
+      partial_invalid: "%{created_count} hesap başarıyla bağlandı, %{already_linked_count}
+        zaten bağlıydı, %{invalid_count} hesabın adı geçersizdi"
+      partial_success: "%{created_count} hesap başarıyla bağlandı. %{already_linked_count}
+        hesap zaten bağlıydı: %{already_linked_names}"
+      success:
+        one: "%{count} hesap başarıyla bağlandı"
+        other: "%{count} hesap başarıyla bağlandı"
+    link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      api_error: API bağlantı hatası
+      invalid_account_name: Boş adlı hesap bağlanamaz
+      missing_parameters: Gerekli parametreler eksik
+      no_institution_connected: Lütfen önce Sophtron ile bir banka kurumu bağlayın.
+      sophtron_account_already_linked: Bu Sophtron hesabı zaten başka bir hesaba bağlı
+      sophtron_account_not_found: Sophtron hesabı bulunamadı
+      success: "%{account_name} Sophtron ile başarıyla bağlandı"
+      unexpected_error: Beklenmeyen bir hata oluştu
+    loading:
+      loading_message: Sophtron hesapları yükleniyor...
+      loading_title: Yükleniyor
+    manual_sync_complete:
+      close: Kapat
+      description: Hesap bakiyeleri arka planda güncellenmeye devam edecek.
+      message: Sophtron doğrulamasından sonra işlemler indirildi.
+      title: Sophtron Senkronizasyonu Başladı
+    mfa:
+      captcha: Captcha metni
+      captcha_alt: Sophtron captcha
+      phone_confirmed: Telefonla onayladım
+      submit: Gönder
+      title: Sophtron Doğrulama
+      token: Doğrulama kodu
+    new:
+      access_key: Erişim Anahtarı
+      access_key_placeholder: Sophtron Erişim Anahtarınızı yapıştırın
+      cancel: İptal
+      connect: Bağlan
+      title: Sophtron'a Bağlan
+      user_id: Kullanıcı Kimliği
+      user_id_placeholder: Sophtron Kullanıcı Kimliğinizi yapıştırın
+    preload_accounts:
+      api_error: API bağlantı hatası
+      no_access_key: Sophtron Erişim Anahtarı yapılandırılmamış. Lütfen Ayarlar'dan
+        yapılandırın.
+      no_accounts_found: Hesap bulunamadı. Lütfen API anahtarı yapılandırmanızı kontrol
+        edin.
+      no_credentials_configured: Lütfen önce Sağlayıcı Ayarları'nda Sophtron API Kullanıcı
+        Kimliğinizi ve Erişim Anahtarınızı yapılandırın.
+      no_user_id: Sophtron Kullanıcı Kimliği yapılandırılmamış. Lütfen Ayarlar'dan
+        yapılandırın.
+      preload_accounts: hesapları önceden yükle
+      unexpected_error: Beklenmeyen bir hata oluştu
+    redirect_after_account_link:
+      all_already_linked:
+        one: Seçilen hesap zaten bağlı
+        other: Seçilen %{count} hesabın tümü zaten bağlı
+      invalid_account_names:
+        one: Boş adlı %{count} hesap bağlanamaz
+        other: Boş adlı %{count} hesap bağlanamaz
+      link_failed: Hesaplar bağlanamadı
+      partial_invalid: "%{created_count} hesap bağlandı. %{already_linked_count} zaten
+        bağlıydı, %{invalid_count} hesabın adı geçersizdi."
+      partial_success: "%{created_count} hesap bağlandı. %{already_linked_count} hesap
+        zaten bağlıydı."
+      success:
+        one: "%{count} hesap başarıyla bağlandı."
+        other: "%{count} hesap başarıyla bağlandı."
+    render_connection_timeout:
+      timeout: Bağlantı zaman aşımına uğradı. Lütfen tekrar deneyin.
+    select_accounts:
+      accounts_selected: hesap seçildi
+      api_error: API bağlantı hatası
+      cancel: İptal
+      configure_name_in_sophtron: İçe aktarılamıyor - lütfen Sophtron'da hesap adını
+        yapılandırın
+      description: "%{product_name} hesabınıza bağlamak istediğiniz hesapları seçin."
+      link_accounts: Seçilen hesapları bağla
+      no_access_key: Sophtron Erişim Anahtarı yapılandırılmamış. Lütfen Ayarlar'dan
+        yapılandırın.
+      no_accounts_found: Hesap bulunamadı. Lütfen API anahtarı yapılandırmanızı kontrol
+        edin.
+      no_credentials_configured: Lütfen önce Sağlayıcı Ayarları'nda Sophtron API Kullanıcı
+        Kimliğinizi ve Erişim Anahtarınızı yapılandırın.
+      no_institution_connected: Lütfen önce Sophtron ile bir banka kurumu bağlayın.
+      no_name_placeholder: "(İsim yok)"
+      no_user_id: Sophtron Kullanıcı Kimliği yapılandırılmamış. Lütfen Ayarlar'dan
+        yapılandırın.
+      title: Sophtron Hesaplarını Seç
+      unexpected_error: Beklenmeyen bir hata oluştu
+    select_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      all_accounts_already_linked: Tüm Sophtron hesapları zaten bağlı
+      api_error: API bağlantı hatası
+      cancel: İptal
+      configure_name_in_sophtron: İçe aktarılamıyor - lütfen Sophtron'da hesap adını
+        yapılandırın
+      description: Bu hesapla bağlanacak bir Sophtron hesabı seçin. İşlemler otomatik
+        olarak senkronize edilecek ve tekrarlar kaldırılacaktır.
+      link_account: Hesabı bağla
+      no_access_key: Sophtron Erişim Anahtarı yapılandırılmamış. Lütfen Ayarlar'dan
+        yapılandırın.
+      no_account_specified: Hesap belirtilmedi
+      no_accounts_found: Sophtron hesabı bulunamadı. Lütfen API anahtarı yapılandırmanızı
+        kontrol edin.
+      no_institution_connected: Lütfen önce Sophtron ile bir banka kurumu bağlayın.
+      no_name_placeholder: "(İsim yok)"
+      no_user_id: Sophtron Kullanıcı Kimliği yapılandırılmamış. Lütfen Ayarlar'dan
+        yapılandırın.
+      title: "%{account_name} hesabını Sophtron ile bağla"
+      unexpected_error: Beklenmeyen bir hata oluştu
+    select_option: "%{type} Seç"
+    setup_accounts:
+      account_type_label: 'Hesap Türü:'
+      account_types:
+        credit_card: Kredi Kartı
+        depository: Vadesiz veya Vadeli Hesap
+        investment: Yatırım Hesabı
+        loan: Kredi veya İpotek
+        other_asset: Diğer Varlık
+        skip: Bu hesabı atla
+      all_accounts_linked: Tüm Sophtron hesaplarınız zaten kuruldu.
+      api_error: API bağlantı hatası
+      balance: Bakiye
+      cancel: İptal
+      choose_account_type: 'Her Sophtron hesabı için doğru hesap türünü seçin:'
+      create_accounts: Hesapları Oluştur
+      creating_accounts: Hesaplar Oluşturuluyor...
+      fetch_failed: Hesaplar Alınamadı
+      historical_data_range: 'Geçmiş Veri Aralığı:'
+      no_access_key: Sophtron Erişim Anahtarı yapılandırılmamış. Lütfen bağlantı ayarlarınızı
+        kontrol edin.
+      no_accounts_to_setup: Kurulacak Hesap Yok
+      no_institution_connected: Sophtron kurumu henüz bağlı değil.
+      no_user_id: Sophtron Kullanıcı Kimliği yapılandırılmamış. Lütfen bağlantı ayarlarınızı
+        kontrol edin.
+      subtitle: İçe aktarılan hesaplarınız için doğru hesap türlerini seçin
+      subtype_labels:
+        credit_card: ''
+        depository: 'Hesap Alt Türü:'
+        investment: 'Yatırım Türü:'
+        loan: 'Kredi Türü:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredi kartları otomatik olarak kredi kartı hesabı olarak kurulacaktır.
+        other_asset: Diğer Varlıklar için ek seçenek gerekmez.
+      sync_start_date_help: İşlem geçmişini ne kadar geriye götürerek senkronize etmek
+        istediğinizi seçin. En fazla 3 yıllık geçmiş mevcuttur.
+      sync_start_date_label: 'Şu tarihten itibaren işlemleri senkronize et:'
+      title: Sophtron Hesaplarınızı Kurun
+      unexpected_error: Beklenmeyen bir hata oluştu
+    sophtron_entry:
+      processor:
+        unknown_transaction: Bilinmeyen işlem
+    sophtron_item:
+      accounts_need_setup: Hesapların kurulumu gerekiyor
+      automatic_sync: Otomatik senkronizasyon kullan
+      automatic_sync_for: "%{institution} için otomatik senkronizasyon kullan"
+      delete: Bağlantıyı sil
+      deletion_in_progress: silme işlemi devam ediyor...
+      error: Hata
+      manual_sync: Manuel senkronizasyon
+      manual_sync_action: Manuel senkronizasyon gerektir
+      manual_sync_action_for: "%{institution} için manuel senkronizasyon gerektir"
+      no_accounts_description: Bu bağlantının henüz bağlı hesabı yok.
+      no_accounts_title: Hesap yok
+      setup_action: Yeni Hesapları Kur
+      setup_description: "%{total} hesaptan %{linked} tanesi bağlı. Yeni içe aktarılan
+        Sophtron hesaplarınız için hesap türlerini seçin."
+      setup_needed: Kurulmaya hazır yeni hesaplar
+      status: "%{timestamp} önce senkronize edildi"
+      status_never: Hiç senkronize edilmedi
+      status_with_summary: Son senkronizasyon %{timestamp} önce • %{summary}
+      sync_now: Şimdi senkronize et
+      syncing: Senkronize ediliyor...
+      total: Toplam
+      unlinked: Bağlı değil
+    sophtron_panel:
+      field_descriptions:
+        access_key_html: "<strong>Erişim Anahtarı:</strong> Sophtron Erişim Anahtarı
+          kimlik bilginiz"
+        base_url_html: "<strong>Temel URL:</strong> Sophtron API uç nokta URL'si,
+          genellikle https://api.sophtron.com/api"
+        user_id_html: "<strong>Kullanıcı Kimliği:</strong> Sophtron Kullanıcı Kimliği
+          kimlik bilginiz"
+      field_descriptions_title: 'Alan açıklamaları:'
+      fields:
+        access_key:
+          label: Erişim Anahtarı
+          placeholder_edit: "••••••••"
+          placeholder_new: Sophtron Erişim Anahtarınızı yapıştırın
+        base_url:
+          label: Temel URL
+          placeholder: https://api.sophtron.com/api
+        user_id:
+          label: Kullanıcı Kimliği
+          placeholder_edit: "••••••••"
+          placeholder_new: Sophtron Kullanıcı Kimliğinizi yapıştırın
+      save: Yapılandırmayı Kaydet
+      setup_instructions:
+        step_1_html: API kimlik bilgilerinizi almak için <a href="%{url}" target="_blank"
+          rel="noopener noreferrer" class="link">Sophtron</a>'u ziyaret edin
+        step_2: Kullanıcı Kimliğinizi ve Erişim Anahtarınızı Sophtron hesap ayarlarınızdan
+          kopyalayın
+        step_3: Kimlik bilgilerini aşağıya yapıştırın ve Kaydet'e tıklayın; Sure,
+          Sophtron Müşteri Kimliğinizi otomatik olarak oluşturacak veya yeniden kullanacaktır
+      setup_instructions_title: 'Kurulum talimatları:'
+      update: Yapılandırmayı Güncelle
+    sophtron_setup_required:
+      description: Sophtron hesaplarını bağlayabilmeniz için önce Sophtron Kullanıcı
+        Kimliğinizi ve Erişim Anahtarınızı yapılandırmanız gerekir.
+      go_to_provider_settings: Sağlayıcı Ayarlarına Git
+      heading: Kullanıcı Kimliği ve Erişim Anahtarı Yapılandırılmamış
+      message: 'Sophtron bağlantınızın kurulumunu tamamlamak için lütfen Sağlayıcı
+        Ayarları sayfasına gidin ve Sophtron bağlantınızı yetkilendirmek ve yapılandırmak
+        için talimatları izleyin.
+
+        '
+      setup_steps_title: 'Kurulum Adımları:'
+      step_1_html: "<strong>Ayarlar → Banka Senkronizasyon Sağlayıcıları</strong>'na
+        gidin"
+      step_2_html: "<strong>Sophtron</strong> bölümünü bulun"
+      step_3_html: Sophtron Kullanıcı Kimliğinizi ve Erişim Anahtarınızı girin
+      step_4: Hesaplarınızı bağlamak için buraya geri dönün
+      title: Sophtron Kurulumu Gerekli
+    start_manual_sync:
+      already_running: Bir senkronizasyon zaten devam ediyor.
+      api_error: 'API hatası: %{message}'
+      no_linked_accounts: Senkronize edilecek bağlı hesap yok.
+    start_manual_sync_for_account:
+      failed: Hesap senkronize edilemedi
+    submit_mfa:
+      api_error: 'Doğrulama başarısız oldu: %{message}'
+      invalid_security_answers: Güvenlik cevapları eksik veya çok uzun.
+      unknown_challenge: Bilinmeyen Sophtron doğrulama adımı.
+    subtype: alt tür
+    sync:
+      already_running: Sophtron manuel senkronizasyonu zaten devam ediyor.
+      api_error: 'Sophtron manuel senkronizasyonu başarısız oldu: %{message}'
+      failed: Sophtron manuel senkronizasyonu başarısız oldu
+      no_linked_accounts: Bu Sophtron kurumunun senkronize edilecek bağlı hesabı yok.
+      processing_failed: Sophtron manuel senkronizasyonu yenilenen işlemleri işleyemedi.
+      success: Senkronizasyon başladı
+    syncer:
+      accounts_need_setup: "%{count} hesabın kurulumu gerekiyor"
+      calculating_balances: Bağlı hesaplar için bakiyeler hesaplanıyor...
+      checking_account_configuration: Hesap yapılandırması kontrol ediliyor...
+      importing_accounts: Hesaplar Sophtron'dan içe aktarılıyor...
+      manual_sync_required: Bu kurum için manuel Sophtron senkronizasyonu gereklidir;
+        bu hesaplar otomatik senkronizasyon sırasında atlanıyor.
+      processing_transactions: Bağlı hesaplar için işlemler işleniyor...
+    toggle_manual_sync:
+      success_disabled: Sophtron kurumu otomatik olarak senkronize olacak.
+      success_enabled: Sophtron kurumu artık manuel senkronizasyon gerektiriyor.
+    type: tür
+    update:
+      errors:
+        access_key_compromised: Erişim Anahtarı ele geçirilmiş, süresi dolmuş veya
+          zaten kullanılmış olabilir. Lütfen yeni bir tane oluşturun.
+        blank_access_key: Lütfen bir Sophtron Erişim Anahtarı girin.
+        blank_user_id: Lütfen bir Sophtron Kullanıcı Kimliği girin.
+        invalid_access_key: Geçersiz Erişim Anahtarı. Sophtron'dan tam Erişim Anahtarını
+          kopyaladığınızdan emin olun.
+        invalid_user_id: Geçersiz Kullanıcı Kimliği. Sophtron'dan tam Kullanıcı Kimliğini
+          kopyaladığınızdan emin olun.
+        unexpected: Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin veya destek
+          ekibiyle iletişime geçin.
+        update_failed: 'Bağlantı güncellenemedi: %{message}'
+        user_id_compromised: Kullanıcı Kimliği ele geçirilmiş, süresi dolmuş veya
+          zaten kullanılmış olabilir. Lütfen yeni bir tane oluşturun.
+      success: Sophtron bağlantısı başarıyla güncellendi! Hesaplarınız yeniden bağlanıyor.

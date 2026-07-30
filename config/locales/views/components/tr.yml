@@ -1,0 +1,167 @@
+---
+tr:
+  UI:
+    account:
+      activity_date:
+        balance_tooltip: Tüm işlemler ve düzeltmelerden sonraki gün sonu bakiyesi
+        no_balance_data: Bu tarih için bakiye verisi yok
+      activity_feed:
+        toggle_selection_checkboxes: Seçimi değiştir
+      balance_reconciliation:
+        labels:
+          adjustments: Düzeltmeler
+          buys: Alımlar
+          change_in_brokerage_cash: Aracı kurum nakdindeki değişim
+          change_in_holdings_market: Varlıklardaki değişim (piyasa fiyatı hareketi)
+          change_in_holdings_trades: Varlıklardaki değişim (alım/satım)
+          charges: Harcamalar
+          end_balance: Bitiş bakiyesi
+          end_principal: Bitiş anaparası
+          end_value: Bitiş değeri
+          final_balance: Nihai bakiye
+          final_principal: Nihai anapara
+          final_value: Nihai değer
+          market_changes: Piyasa değişimleri
+          net_cash_flow: Net nakit akışı
+          net_principal_change: Net anapara değişimi
+          net_value_change: Net değer değişimi
+          payments: Ödemeler
+          sells: Satışlar
+          start_balance: Başlangıç bakiyesi
+          start_principal: Başlangıç anaparası
+          start_value: Başlangıç değeri
+        tooltips:
+          adjustments: Manuel uzlaştırmalar veya diğer düzeltmeler
+          adjustments_asset: Manuel değer düzeltmeleri veya değerlemeler
+          buys: Gün içindeki kripto alımları
+          change_in_brokerage_cash: Yatırma, çekme ve işlemlerden kaynaklanan net
+            nakit değişimi
+          change_in_holdings_market: Piyasa fiyatı hareketlerinden kaynaklanan varlık
+            değeri değişimi
+          change_in_holdings_trades: Menkul kıymet alım satımının varlıklar üzerindeki
+            etkisi
+          charges: Gün içinde yapılan yeni harcamalar
+          end_balance: Tüm işlemlerden sonra hesaplanan bakiye
+          end_balance_investment: Tüm hareketlerden sonra hesaplanan bakiye
+          end_principal: Tüm işlemlerden sonra hesaplanan anapara
+          end_value: Tüm değişikliklerden sonra hesaplanan değer
+          final_balance: Günün nihai hesap bakiyesi
+          final_balance_credit: Günün nihai borç bakiyesi
+          final_balance_crypto: Günün nihai kripto varlık değeri
+          final_balance_investment: Günün nihai portföy değeri
+          final_principal: Günün nihai anapara bakiyesi
+          final_value: Günün nihai varlık değeri
+          market_changes: Piyasa fiyatı hareketlerinden kaynaklanan değer değişimleri
+          net_cash_flow: Gün içindeki tüm işlemlerden kaynaklanan net bakiye değişimi
+          net_principal_change: Gün içindeki anapara ödemeleri ve yeni borçlanmalar
+          net_value_change: İyileştirmeler ve amortisman dahil tüm değer değişimleri
+          payments: Gün içinde karta yapılan ödemeler
+          sells: Gün içindeki kripto satışları
+          start_balance: Bu günün başındaki hesap bakiyesi
+          start_balance_credit: Bu günün başındaki borç bakiyesi
+          start_balance_crypto: Bu günün başındaki kripto varlık değeri
+          start_balance_investment: Bu günün başındaki toplam portföy değeri
+          start_principal: Bu günün başındaki anapara bakiyesi
+          start_value: Bu günün başındaki varlık değeri
+      chart:
+        no_data_available: Veri bulunmuyor
+        title:
+          balance: Bakiye
+          cash_value: Nakit değeri
+          debt_balance: Borç bakiyesi
+          estimated_property_value: Tahmini mülk değeri
+          estimated_vehicle_value: Tahmini araç değeri
+          holdings_value: Varlık değeri
+          remaining_principal_balance: Kalan anapara bakiyesi
+          total_account_value: Toplam hesap değeri
+        views:
+          cash: Nakit
+          holdings: Varlıklar
+          total_value: Toplam değer
+        vs_available_history: mevcut geçmişe göre
+    period_picker:
+      aria_label: 'Zaman aralığı: %{period}'
+  ds:
+    alert:
+      variants:
+        destructive: Hata
+        error: Hata
+        info: Bilgi
+        success: Başarılı
+        warning: Uyarı
+    dialog:
+      close: Kapat
+    link:
+      opens_in_new_tab: "(yeni sekmede açılır)"
+    pill:
+      aria_label: "%{label}"
+      default_label: Önizleme
+    popover:
+      avatar_default_label: Menüyü aç
+    tooltip:
+      trigger_label: Daha fazla bilgi
+  provider_sync_summary:
+    accounts:
+      institutions: 'Kurumlar: %{count}'
+      linked: 'Bağlı: %{count}'
+      title: Hesaplar
+      total: 'Toplam: %{count}'
+      unlinked: 'Bağlı değil: %{count}'
+    health:
+      data_warnings: 'Veri uyarıları: %{count}'
+      duplicate_suggestions:
+        one: "%{count} olası yinelenen işlem incelenmeli"
+        other: "%{count} olası yinelenen işlem incelenmeli"
+      errors: 'Hatalar: %{count}'
+      notices: 'Bildirimler: %{count}'
+      pending_reconciled:
+        one: "%{count} yinelenen bekleyen işlem uzlaştırıldı"
+        other: "%{count} yinelenen bekleyen işlem uzlaştırıldı"
+      rate_limited: "%{time_ago} önce hız sınırlamasına takıldı"
+      recently: yakın zamanda
+      stale_pending:
+        one: "%{count} eski bekleyen işlem (bütçelerden hariç tutuldu)"
+        other: "%{count} eski bekleyen işlem (bütçelerden hariç tutuldu)"
+      stale_pending_count:
+        one: "%{count} işlem"
+        other: "%{count} işlem"
+      stale_unmatched:
+        one: "%{count} bekleyen işlem manuel inceleme gerektiriyor"
+        other: "%{count} bekleyen işlem manuel inceleme gerektiriyor"
+      stale_unmatched_count:
+        one: "%{count} işlem"
+        other: "%{count} işlem"
+      title: Sağlık
+      view_data_quality: Veri kalitesi ayrıntılarını görüntüle
+      view_duplicate_suggestions: Önerilen yinelenenleri görüntüle
+      view_error_details: Hata ayrıntılarını görüntüle
+      view_reconciled: Uzlaştırılan işlemleri görüntüle
+      view_stale_pending: Etkilenen hesapları görüntüle
+      view_stale_unmatched: İncelenmesi gereken işlemleri görüntüle
+    holdings:
+      found: 'Bulunan: %{count}'
+      processed: 'İşlenen: %{count}'
+      title: Varlıklar
+    last_sync: 'Son eşitleme: %{time_ago} önce'
+    skip_reasons:
+      excluded: Hariç tutuldu
+      import_locked: CSV içe aktarma
+      protected: Korumalı
+      user_modified: Kullanıcı tarafından değiştirildi
+    title: Eşitleme özeti
+    trades:
+      fetching: Aracı kurumdan işlemler alınıyor...
+      imported: 'İçe aktarılan: %{count}'
+      skipped: 'Atlanan: %{count}'
+      title: Alım Satımlar
+    transactions:
+      fetching: Aracı kurumdan alınıyor...
+      imported: 'İçe aktarılan: %{count}'
+      protected:
+        one: "%{count} kayıt korundu (üzerine yazılmadı)"
+        other: "%{count} kayıt korundu (üzerine yazılmadı)"
+      seen: 'Görülen: %{count}'
+      skipped: 'Atlanan: %{count}'
+      title: İşlemler
+      updated: 'Güncellenen: %{count}'
+      view_protected: Korunan kayıtları görüntüle
