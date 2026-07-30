@@ -54,6 +54,22 @@ class Transaction < ApplicationRecord
     end
   end
 
+  # Accessors for payment_channel stored in extra jsonb field
+  PAYMENT_CHANNELS = %w[wechat_pay alipay apple_pay paypal unionpay cash].freeze
+
+  def payment_channel
+    extra&.dig("payment_channel")
+  end
+
+  def payment_channel=(value)
+    clean_value = value.presence
+    if clean_value.blank?
+      self.extra = (extra || {}).except("payment_channel")
+    else
+      self.extra = (extra || {}).merge("payment_channel" => clean_value)
+    end
+  end
+
   validate :exchange_rate_must_be_valid
 
   private
@@ -125,6 +141,8 @@ class Transaction < ApplicationRecord
   scope :channel_payment, -> { where("transactions.extra ->> 'channel_payment' = 'true'") }
 
   scope :channel_refund, -> { where("transactions.extra ->> 'channel_kind' = 'refund'") }
+
+  scope :by_payment_channel, ->(channel) { where("transactions.extra ->> 'payment_channel' = ?", channel) }
 
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.

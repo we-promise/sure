@@ -39,6 +39,14 @@ zh-CN:
       funding_account_label: 资金来源
       funding_account_help: 选择资金账户后，系统会自动在该账户生成一条配对交易，当前渠道交易将不计入余额。
       funding_account_refund_label: 退款到账账户
+      payment_channel_label: 支付渠道
+      payment_channels:
+        wechat_pay: 微信支付
+        alipay: 支付宝
+        apple_pay: Apple Pay
+        paypal: PayPal
+        unionpay: 银联
+        cash: 现金
       income: 收入
       merchant_label: 商户
       none: （无）

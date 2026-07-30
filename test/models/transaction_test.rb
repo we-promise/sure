@@ -100,6 +100,31 @@ class TransactionTest < ActiveSupport::TestCase
     assert transaction.extra["exchange_rate_invalid"]
   end
 
+  test "payment_channel getter and setter store in extra" do
+    transaction = Transaction.new
+    assert_nil transaction.payment_channel
+
+    transaction.payment_channel = "wechat_pay"
+    assert_equal "wechat_pay", transaction.payment_channel
+    assert_equal "wechat_pay", transaction.extra["payment_channel"]
+
+    transaction.payment_channel = ""
+    assert_nil transaction.payment_channel
+    assert_nil transaction.extra&.dig("payment_channel")
+  end
+
+  test "by_payment_channel scope filters transactions by channel" do
+    t1 = transactions(:one)
+    t1.update!(payment_channel: "wechat_pay")
+
+    t2 = transactions(:two)
+    t2.update!(payment_channel: "alipay")
+
+    results = Transaction.by_payment_channel("wechat_pay")
+    assert_includes results, t1
+    assert_not_includes results, t2
+  end
+
   test "exchange_rate setter rejects non-finite input" do
     transaction = Transaction.new
     transaction.exchange_rate = "Infinity"

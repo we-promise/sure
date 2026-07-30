@@ -39,6 +39,14 @@ en:
       funding_account_label: Funding source
       funding_account_help: After you choose a funding account, the system automatically creates a matching transaction in that account, and this channel transaction is excluded from its balance.
       funding_account_refund_label: Refund destination account
+      payment_channel_label: Payment Channel
+      payment_channels:
+        wechat_pay: WeChat Pay
+        alipay: Alipay
+        apple_pay: Apple Pay
+        paypal: PayPal
+        unionpay: UnionPay
+        cash: Cash
       income: Income
       merchant_label: Merchant
       none: (none)
