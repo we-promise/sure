@@ -187,7 +187,10 @@ class Transaction::Search
     def apply_kind_filter(query, kinds)
       return query unless kinds.present?
 
-      query.where(kind: kinds)
+      valid_kinds = kinds & Transaction.kinds.keys
+      return query.none if valid_kinds.empty?
+
+      query.where(kind: valid_kinds)
     end
 
     def apply_merchant_filter(query, merchants)

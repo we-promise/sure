@@ -140,10 +140,9 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       "matched funds_movement inflow must not appear in Uncategorized drilldown"
   end
 
-  test "show drilldown excludes matched loan_payment transfers" do
-    # A confirmed Transfer is more specific than its destination-derived kind:
-    # a loan-payment pair must not appear in the drilldown when the budget
-    # aggregate excludes it.
+  test "show drilldown includes matched loan_payment transfers" do
+    # Loan payments are real cash outflows, so their confirmed transfer match
+    # must not hide them from the budget aggregate or its drilldown.
     outflow = create_transaction(
       date: @budget.start_date,
       account: accounts(:depository),
@@ -161,7 +160,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success
-    refute_includes @response.body, "MORTGAGE_REPRO_OUTFLOW",
-      "matched loan_payment outflow must not appear in Uncategorized drilldown"
+    assert_includes @response.body, "MORTGAGE_REPRO_OUTFLOW",
+      "matched loan_payment outflow must appear in Uncategorized drilldown"
   end
 end
