@@ -14,6 +14,13 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "index renders kraken items" do
+    kraken_item = kraken_items(:one)
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(kraken_item)}"
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success
