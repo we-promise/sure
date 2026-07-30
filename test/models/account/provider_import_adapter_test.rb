@@ -86,6 +86,47 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
                  "a repayment on a Loan account must stay loan_payment, not the provider's funds_movement"
   end
 
+  test "does not overwrite a matched brokerage inflow with a contribution kind" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    category = investment_account.family.investment_contributions_category
+    brokerage_entry = adapter.import_transaction(
+      external_id: "brokerage_contribution_1",
+      amount: -1750,
+      currency: "USD",
+      date: Date.current,
+      name: "Electronic Funds Transfer Received (Cash)",
+      source: "plaid",
+      investment_activity_label: "Contribution"
+    )
+    checking_entry = accounts(:depository).entries.create!(
+      entryable: Transaction.new(kind: "investment_contribution", category: category),
+      amount: 1750,
+      currency: "USD",
+      date: Date.current,
+      name: "Brokerage withdrawal"
+    )
+    Transfer.create!(
+      outflow_transaction: checking_entry.transaction,
+      inflow_transaction: brokerage_entry.transaction,
+      amount: 1750,
+      status: "confirmed"
+    )
+    brokerage_entry.transaction.update!(kind: "funds_movement")
+
+    adapter.import_transaction(
+      external_id: "brokerage_contribution_1",
+      amount: -1750,
+      currency: "USD",
+      date: Date.current,
+      name: "Electronic Funds Transfer Received (Cash)",
+      source: "plaid",
+      investment_activity_label: "Contribution"
+    )
+
+    assert_equal "funds_movement", brokerage_entry.transaction.reload.kind
+  end
+
   test "updates existing transaction instead of creating duplicate" do
     # Create initial transaction
     entry = @adapter.import_transaction(

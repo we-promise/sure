@@ -110,7 +110,11 @@ class Transaction < ApplicationRecord
   # transfer leg to avoid double counting.
   def self.cash_flow_transfer_sql(transaction_alias = table_name)
     <<~SQL.squish
-      (#{transaction_alias}.kind = 'investment_contribution'
+      (EXISTS (
+        SELECT 1 FROM transfers
+        WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
+          AND #{transaction_alias}.kind = 'investment_contribution'
+      )
       OR (#{unmatched_transfer_sql(transaction_alias)}))
     SQL
   end

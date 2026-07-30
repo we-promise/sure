@@ -215,19 +215,25 @@ class Account::ProviderImportAdapter
       # repayment imported onto a linked Loan/CreditCard account must stay
       # loan_payment/cc_payment (a budgeted expense) rather than being reclassified, so
       # the account-type branches below win over the provider hint.
+      # A matched transfer's classification is set from the relationship by
+      # transfer matching. Provider activity labels describe the brokerage leg
+      # too, so applying them here would turn both legs into contributions.
+      matched_transfer = entry.entryable.is_a?(Transaction) && entry.transaction.transfer.present?
       auto_kind = nil
       auto_category = nil
-      if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
-        auto_kind = "funds_movement"
-      elsif detected_label == "Contribution"
-        auto_kind = "investment_contribution"
-        auto_category = account.family.investment_contributions_category
-      elsif account.accountable_type == "Loan" && amount.negative?
-        auto_kind = "loan_payment"
-      elsif account.accountable_type == "CreditCard" && amount.negative?
-        auto_kind = "cc_payment"
+      unless matched_transfer
+        if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
+          auto_kind = "funds_movement"
+        elsif detected_label == "Contribution"
+          auto_kind = "investment_contribution"
+          auto_category = account.family.investment_contributions_category
+        elsif account.accountable_type == "Loan" && amount.negative?
+          auto_kind = "loan_payment"
+        elsif account.accountable_type == "CreditCard" && amount.negative?
+          auto_kind = "cc_payment"
+        end
+        auto_kind ||= kind.presence
       end
-      auto_kind ||= kind.presence
 
       # Set investment activity label, kind, and category if detected
       if entry.entryable.is_a?(Transaction)
