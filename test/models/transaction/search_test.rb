@@ -109,6 +109,20 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes non_transfer_ids, payment_entry.entryable.id
   end
 
+  test "search ignores invalid transaction kinds" do
+    transaction = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { kinds: [ "standard", "invalid" ] }).transactions_scope
+    invalid_results = Transaction::Search.new(@family, filters: { kinds: [ "invalid" ] }).transactions_scope
+
+    assert_equal [ transaction.entryable.id ], results.pluck(:id)
+    assert_empty invalid_results
+  end
+
   test "search category filter handles uncategorized transactions correctly with kind filtering" do
     # Create uncategorized transactions of different kinds
     uncategorized_standard = create_transaction(

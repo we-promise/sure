@@ -627,11 +627,9 @@ class ReportsController < ApplicationController
     end
 
     def apply_cash_flow_transfer_filter(scope)
-      if Current.user&.treat_investment_contributions_as_transfers?
-        scope.without_matched_transfer
-      else
-        scope.for_cash_flow_reporting
-      end
+      scope.for_cash_flow_reporting(
+        include_investment_contributions: !Current.user&.treat_investment_contributions_as_transfers?
+      )
     end
 
     def exclude_tax_advantaged_accounts(scope)

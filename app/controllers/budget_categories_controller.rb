@@ -10,9 +10,10 @@ class BudgetCategoriesController < ApplicationController
     # Keep this drilldown aligned with Budget#actual_spending: ordinary matched
     # transfers are excluded, while investment contributions remain visible as
     # a dedicated cash-flow expense.
-    @recent_transactions = @budget.transactions
-                                  .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
-                                  .for_cash_flow_reporting
+    @recent_transactions = @budget.transactions.where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
+    @recent_transactions = @recent_transactions.for_cash_flow_reporting(
+      include_investment_contributions: !@budget.current_user&.treat_investment_contributions_as_transfers?
+    )
 
     if params[:id] == BudgetCategory.uncategorized.id
       @budget_category = @budget.uncategorized_budget_category
