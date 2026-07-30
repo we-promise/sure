@@ -1291,6 +1291,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
     t.check_constraint "cache_read_tokens IS NULL OR cache_read_tokens >= 0", name: "chk_llm_usages_cache_read_tokens_non_negative"
   end
 
+  create_table "loan_rate_changes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "loan_id", null: false
+    t.date "effective_date", null: false
+    t.decimal "rate", precision: 10, scale: 3, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["loan_id", "effective_date"], name: "index_loan_rate_changes_on_loan_id_and_effective_date", unique: true
+    t.check_constraint "rate >= 0::numeric", name: "loan_rate_changes_rate_non_negative"
+  end
+
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -2480,6 +2490,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
   add_foreign_key "kraken_accounts", "kraken_items"
   add_foreign_key "kraken_items", "families"
   add_foreign_key "llm_usages", "families"
+  add_foreign_key "loan_rate_changes", "loans"
   add_foreign_key "lunchflow_accounts", "lunchflow_items"
   add_foreign_key "lunchflow_items", "families"
   add_foreign_key "merchants", "families"

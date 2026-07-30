@@ -26,6 +26,14 @@ en:
       interest_accrual_start_date: Start charging interest from
       interest_accrual_day: Interest charged on day of month
       interest_accrual_day_placeholder: Defaults to the day of the start date
+      rate_changes_label: Rate changes
+      rate_changes_hint: For variable or adjustable-rate loans, add each rate
+        reset. Interest before a change keeps the earlier rate; only months on or
+        after the effective date use the new one.
+      rate_change_effective_date: Effective from
+      rate_change_rate: New rate
+      add_rate_change: Add rate change
+      remove_rate_change: Remove rate change
     interest_accrual:
       entry_name: Interest charged
     new:

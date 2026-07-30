@@ -11,6 +11,10 @@ class Loan < ApplicationRecord
     "other" => { short: "Other Loan", long: "Other Loan" }
   }.freeze
 
+  has_many :rate_changes, -> { order(:effective_date) },
+           class_name: "Loan::RateChange", dependent: :destroy, inverse_of: :loan
+  accepts_nested_attributes_for :rate_changes, allow_destroy: true, reject_if: :all_blank
+
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
   validates :interest_accrual_day,
             numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 31 },
@@ -35,14 +39,13 @@ class Loan < ApplicationRecord
   # date, so overpayments, missed payments and irregular schedules self-correct
   # on the next accrual without any per-period schedule to maintain.
   #
-  # Known limitation — rate changes are not effective-dated. There is a single
-  # `interest_rate` column and no rate history, so every sync reprices *all*
-  # historical periods with the currently configured rate. Editing the rate is
-  # therefore a whole-history correction (fixing a typo, say), not an ARM reset:
-  # for a genuine variable/adjustable-rate loan, past periods that the lender
-  # charged at the old rate get rewritten to the new one rather than staying put
-  # from the reset date forward. In practice this is a fixed-rate feature;
-  # supporting true ARMs would need a small effective-dated rate log.
+  # Variable and adjustable rates are supported through effective-dated
+  # `rate_changes`: the base `interest_rate` applies from origination and each
+  # change resets the rate from its `effective_date` forward, so an ARM reset
+  # reprices only periods on or after the reset — the earlier periods keep the
+  # rate the lender actually charged (see #interest_rate_on). Editing the base
+  # `interest_rate` itself still reprices the whole history, which is the correct
+  # behavior for correcting a mis-entered origination rate.
   #
   # Linked accounts are excluded here rather than at the call sites: a linked
   # account is anchored to the principal its provider reports, so a replay from
@@ -58,6 +61,23 @@ class Loan < ApplicationRecord
     return nil if interest_rate.blank?
 
     interest_rate.to_d / 100 / 12
+  end
+
+  # The annual interest rate (percent) in effect on the given date: the most
+  # recent effective-dated change on or before it, falling back to the base
+  # `interest_rate` for dates before the first change.
+  def interest_rate_on(date)
+    applicable = rate_changes.select { |rc| rc.effective_date.present? && rc.effective_date <= date }
+    applicable.max_by(&:effective_date)&.rate || interest_rate
+  end
+
+  # The monthly rate to charge on the given date, honoring rate changes. Nil when
+  # no rate is configured.
+  def monthly_interest_rate_on(date)
+    rate = interest_rate_on(date)
+    return nil if rate.blank?
+
+    rate.to_d / 100 / 12
   end
 
   def accrued_interest_entries
@@ -104,14 +124,23 @@ class Loan < ApplicationRecord
     end
   end
 
+  # Enqueue a sync so Loan::InterestAccrual reconciles the generated entries.
+  # Public because Loan::RateChange calls it on commit — a rate change alters the
+  # derived balance but is a child row, so it never appears in the loan's own
+  # `saved_changes` and would otherwise never trigger a resync.
+  #
+  # Deliberately not `account&.sync_later`. Reading the has_one here caches a nil
+  # association whenever a Loan is saved before its Account exists — the
+  # `Account.create!(accountable: Loan.create!(...))` pattern — leaving every
+  # later call that needs `account` to see nil on the same instance.
+  def resync_for_accrual!
+    Account.find_by(accountable_type: "Loan", accountable_id: id)&.sync_later
+  end
+
   private
     def resync_account_for_accrual_changes
       return unless saved_changes.keys.intersect?(ACCRUAL_INPUTS)
 
-      # Deliberately not `account&.sync_later`. Reading the has_one here caches a
-      # nil association whenever a Loan is saved before its Account exists — the
-      # `Account.create!(accountable: Loan.create!(...))` pattern — leaving every
-      # later call that needs `account` to see nil on the same instance.
-      Account.find_by(accountable_type: "Loan", accountable_id: id)&.sync_later
+      resync_for_accrual!
     end
 end

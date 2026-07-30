@@ -26,11 +26,12 @@
 # not on a schedule projected from origination. Overpayments, missed payments and
 # irregular schedules therefore self-correct on the next accrual.
 #
-# Rate changes are *not* effective-dated: the loan carries a single interest rate
-# and no rate history, so every sync reprices all historical periods with the
-# currently configured rate (see Loan#accrues_interest?). Editing the rate is a
-# whole-history correction, not a mid-life ARM reset — in practice this is a
-# fixed-rate feature.
+# Each period is priced at the rate in effect on its accrual date
+# (Loan#monthly_interest_rate_on), so a variable/adjustable-rate loan with
+# effective-dated `rate_changes` charges each period the rate the lender actually
+# applied then — a rate reset moves only periods on or after its effective date.
+# Editing the base `interest_rate` still reprices the whole history, which is the
+# right behavior for correcting a mis-entered origination rate.
 class Loan::InterestAccrual
   # Written to `entries.source`, which combined with `external_id` is covered by
   # a unique index — that is what makes regeneration idempotent.
@@ -78,8 +79,11 @@ class Loan::InterestAccrual
     # matter, replaying from the latest persisted accrual instead of the anchor is
     # the obvious optimization.
     def desired_accruals
-      monthly_rate = loan.monthly_interest_rate
-      return [] if monthly_rate.nil? || !monthly_rate.positive?
+      # Gate on the base rate — accrues_interest? already requires it present and
+      # positive. Per-period rates (which may differ under rate changes) are
+      # resolved inside the loop via loan.monthly_interest_rate_on(date).
+      base_rate = loan.monthly_interest_rate
+      return [] if base_rate.nil? || !base_rate.positive?
 
       replay_start = account.opening_anchor_date
       end_date = Date.current
@@ -101,11 +105,15 @@ class Loan::InterestAccrual
         # Charged before the day's own movements so that a payment landing on the
         # accrual date is applied to the balance *after* interest, not before.
         if chargeable_on?(date) && balance.positive?
-          interest = (balance * monthly_rate).round(2)
+          monthly_rate = loan.monthly_interest_rate_on(date)
 
-          if interest.positive?
-            accruals << { date: date, amount: interest }
-            balance += interest
+          if monthly_rate&.positive?
+            interest = (balance * monthly_rate).round(2)
+
+            if interest.positive?
+              accruals << { date: date, amount: interest }
+              balance += interest
+            end
           end
         end
 

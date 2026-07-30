@@ -84,6 +84,31 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal 0.005.to_d, Loan.new(interest_rate: 6).monthly_interest_rate
   end
 
+  test "resolves the interest rate effective on a given date" do
+    loan = accrual_loan # base rate 6
+    loan.rate_changes.create!(effective_date: Date.new(2026, 6, 1), rate: 9)
+    loan.rate_changes.create!(effective_date: Date.new(2027, 1, 1), rate: 12)
+
+    assert_equal 6, loan.interest_rate_on(Date.new(2026, 5, 31)) # before any change -> base
+    assert_equal 9, loan.interest_rate_on(Date.new(2026, 6, 1))  # on the effective date
+    assert_equal 9, loan.interest_rate_on(Date.new(2026, 12, 31))
+    assert_equal 12, loan.interest_rate_on(Date.new(2027, 6, 1))
+  end
+
+  # A rate change moves the derived balance but is a child row, so it never
+  # touches the loan's own saved_changes — Loan::RateChange must trigger the sync
+  # itself (via resync_loan_account, wired to both save and destroy commits).
+  # Only the destroy path is asserted here: transactional tests don't fire the
+  # save-commit callbacks for freshly created/updated child records, but the
+  # destroy path exercises the same resync method.
+  test "resyncs the account when a rate change is removed" do
+    loan = accrual_loan
+    rate_change = loan.rate_changes.create!(effective_date: Date.new(2026, 6, 1), rate: 9)
+
+    Account.any_instance.expects(:sync_later).once
+    rate_change.destroy!
+  end
+
   test "the system-generated source list covers the accrual source" do
     assert_includes Entry::SYSTEM_GENERATED_SOURCES, Loan::InterestAccrual::SOURCE
   end

@@ -61,6 +61,36 @@
                                    max: 31 %>
         </div>
 
+        <div class="space-y-2" data-controller="loan--rate-changes">
+          <div class="space-y-1">
+            <p class="text-sm text-primary"><%= t("loans.form.rate_changes_label") %></p>
+            <p class="text-secondary text-sm"><%= t("loans.form.rate_changes_hint") %></p>
+          </div>
+
+          <div class="space-y-2" data-loan--rate-changes-target="list">
+            <%= loan_form.fields_for :rate_changes do |rate_change_form| %>
+              <%= render "loans/rate_change_fields", f: rate_change_form %>
+            <% end %>
+          </div>
+
+          <%# Template cloned by the Stimulus controller for each new row. The
+              child_index placeholder is swapped for a unique key so Rails builds
+              a distinct nested record per added row. %>
+          <template data-loan--rate-changes-target="template">
+            <%= loan_form.fields_for :rate_changes, Loan::RateChange.new, child_index: "IDX_PLACEHOLDER" do |rate_change_form| %>
+              <%= render "loans/rate_change_fields", f: rate_change_form %>
+            <% end %>
+          </template>
+
+          <%= render DS::Button.new(
+                text: t("loans.form.add_rate_change"),
+                icon: "plus",
+                variant: "ghost",
+                type: "button",
+                data: { action: "loan--rate-changes#add" }
+              ) %>
+        </div>
+
         <%= render DS::Alert.new(
               variant: :warning,
               message: t("loans.form.accrue_interest_backfill_warning")
