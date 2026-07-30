@@ -490,7 +490,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
   end
 
-test "show preloads transfer counterparties and split parents to avoid activity N+1" do
+  test "show preloads transfer counterparties and split parents to avoid activity N+1" do
     family = @user.family
     to_account = family.accounts.create!(
       name: "Transfer Counterparty",
