@@ -244,6 +244,29 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match accounts(:crypto).name, response.body
   end
 
+  test "setup_accounts preselects types from SnapTrade account categories" do
+    account = snaptrade_accounts(:fidelity_401k)
+    account.update!(raw_payload: { "account_category" => "DEPOSIT" })
+
+    get setup_accounts_snaptrade_item_url(@snaptrade_item)
+
+    assert_select "select[name='account_types[#{account.id}]'] option[value='Depository'][selected]"
+  end
+
+  test "complete_account_setup uses the selected account type" do
+    account = snaptrade_accounts(:fidelity_401k)
+    @snaptrade_item.stubs(:sync_later)
+
+    assert_difference "Account.where(accountable_type: 'Depository').count", 1 do
+      post complete_account_setup_snaptrade_item_url(@snaptrade_item), params: {
+        account_ids: [ account.id ],
+        account_types: { account.id => "Depository" }
+      }
+    end
+
+    assert_equal "Depository", account.reload.current_account.accountable_type
+  end
+
   test "select_existing_account prefers registered active item over pending one" do
     pending_item = @user.family.snaptrade_items.create!(
       name: "Pending Registration",

@@ -140,6 +140,13 @@
                     </label>
                   </div>
                   <div class="mt-3 pl-7" onclick="event.stopPropagation();">
+                    <label for="account_type_<%= snaptrade_account.id %>" class="block text-xs text-secondary mb-1">
+                      <%= t("snaptrade_items.setup_accounts.account_type_label") %>
+                    </label>
+                    <%= select_tag "account_types[#{snaptrade_account.id}]",
+                                   options_for_select(@account_type_options, snaptrade_account.suggested_account_type),
+                                   id: "account_type_#{snaptrade_account.id}",
+                                   class: "bg-container border border-primary rounded px-2 py-1 text-sm text-primary w-full" %>
                     <label for="sync_start_<%= snaptrade_account.id %>" class="block text-xs text-secondary mb-1">
                       <%= t("snaptrade_items.setup_accounts.sync_start_date_label", default: "Import transactions from:") %>
                     </label>
