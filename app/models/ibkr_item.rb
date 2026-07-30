@@ -81,7 +81,7 @@ class IbkrItem < ApplicationRecord
   end
 
   def accounts
-    ibkr_accounts.includes(account_provider: :account).filter_map(&:current_account).uniq
+    @accounts ||= ibkr_accounts.includes(account_provider: :account).filter_map(&:current_account).uniq
   end
 
   def linked_ibkr_accounts
