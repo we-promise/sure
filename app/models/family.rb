@@ -4,7 +4,9 @@ class Family < ApplicationRecord
   include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
   include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
+  include Trading212Connectable
   include QuestradeConnectable
+  include RedbarkConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -114,6 +116,27 @@ class Family < ApplicationRecord
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
   has_many :insights, dependent: :destroy
+
+  # Families with at least one opted-in member. Lets a job filter in one
+  # indexed query rather than loading every family and asking each in Ruby.
+  scope :with_preview_features, -> { where(id: User.with_preview_features.select(:family_id)) }
+
+  # Family-level rollup of the per-user preview flag, for callers that run
+  # without a Current.user (the nightly insights job). Preview access is a
+  # personal preference but the data it produces is family-scoped, so one
+  # opted-in member is enough to generate for the family.
+  #
+  # EXISTS rather than `users.any?(&:preview_features_enabled?)`: the job asks
+  # this once per family, and the block form would load and instantiate every
+  # member just to answer a boolean.
+  #
+  # Never gate UI on this — visibility is per-user, and this answers "somebody
+  # in the household opted in", so a view using it would show the feature to a
+  # user who explicitly opted out. Use the PreviewGateable helper (Current.user)
+  # for anything a person sees.
+  def preview_features_enabled?
+    users.with_preview_features.exists?
+  end
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }

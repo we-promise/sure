@@ -38,6 +38,31 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
   end
+  
+  test "show avoids N+1 transfer queries across paginated entries" do
+    queries = capture_sql_queries { get account_url(@account) }
+    assert_response :success
+
+    # Per-row transfer lookups (N+1 pattern) hit transfers with a single id
+    # Preloading batches them into IN(...) — assert no single-id lookups remain
+    per_row_transfer = queries.count { |q|
+      q.match?(/FROM "transfers".*WHERE.*"(inflow|outflow)_transaction_id"/) &&
+        !q.include?(" IN (")
+    }
+    assert_equal 0, per_row_transfer, "N+1 per-row transfer queries detected (#{per_row_transfer})"
+  end
+
+  test "show avoids N+1 split-parent queries across paginated entries" do
+    queries = capture_sql_queries { get account_url(@account) }
+    assert_response :success
+
+    # Per-row child-entry existence checks (N+1) hit entries with a single parent_entry_id
+    # @split_parent_entry_ids preloads this in one batch IN query
+    per_row_split = queries.count { |q|
+      q.match?(/FROM "entries".*WHERE.*"parent_entry_id"/) && !q.include?(" IN (")
+    }
+    assert_equal 0, per_row_split, "N+1 per-row split-parent queries detected (#{per_row_split})"
+  end
 
   test "show lazily loads statement tab data unless statements tab is active" do
     AccountStatement::Coverage.expects(:for_year).never
@@ -157,6 +182,14 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
+  end
+
+  test "renders investment account with gains chart view" do
+    get account_url(accounts(:investment), chart_view: "gains")
+
+    assert_response :success
+    assert_select "option[value=gains][selected]"
+    assert_select "p", text: I18n.t("UI.account.chart.title.total_gains")
   end
 
   test "activity pagination keeps activity tab when loaded from holdings tab" do
