@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:sure_mobile/providers/privacy_provider.dart';
 import 'package:sure_mobile/theme/sure_theme.dart';
 import 'package:sure_mobile/theme/sure_tokens.dart';
 import 'package:sure_mobile/widgets/net_worth_card.dart';
@@ -7,18 +9,21 @@ import 'package:sure_mobile/widgets/net_worth_card.dart';
 void main() {
   Future<void> pump(WidgetTester tester, {Brightness brightness = Brightness.light}) {
     return tester.pumpWidget(
-      MaterialApp(
-        theme:
-            brightness == Brightness.light ? SureTheme.light : SureTheme.dark,
-        home: Scaffold(
-          body: NetWorthCard(
-            assetTotalsByCurrency: const {'USD': 125000.0},
-            liabilityTotalsByCurrency: const {'USD': 32000.0},
-            currentFilter: AccountFilter.all,
-            onFilterChanged: (_) {},
-            formatAmount: (currency, amount) =>
-                '\$${amount.toStringAsFixed(0)} $currency',
-            netWorthFormatted: '\$93,000',
+      ChangeNotifierProvider<PrivacyProvider>(
+        create: (_) => PrivacyProvider(initialHidden: false),
+        child: MaterialApp(
+          theme:
+              brightness == Brightness.light ? SureTheme.light : SureTheme.dark,
+          home: Scaffold(
+            body: NetWorthCard(
+              assetTotalsByCurrency: const {'USD': 125000.0},
+              liabilityTotalsByCurrency: const {'USD': 32000.0},
+              currentFilter: AccountFilter.all,
+              onFilterChanged: (_) {},
+              formatAmount: (currency, amount) =>
+                  '\$${amount.toStringAsFixed(0)} $currency',
+              netWorthFormatted: '\$93,000',
+            ),
           ),
         ),
       ),
