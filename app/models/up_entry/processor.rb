@@ -166,9 +166,15 @@ class UpEntry::Processor
       value = data[:settledAt].presence || data[:createdAt].presence
       case value
       when String
-        Time.parse(value).to_date
+        if value.include?("T") || value.include?(":")
+          Time.parse(value).in_time_zone(account&.family&.timezone).to_date
+        else
+          Date.parse(value)
+        end
+      when Integer, Float
+        Time.at(value).in_time_zone(account&.family&.timezone).to_date
       when Time, DateTime
-        value.to_date
+        value.in_time_zone(account&.family&.timezone).to_date
       when Date
         value
       else
