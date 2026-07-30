@@ -1,23 +1,6 @@
 <%= content_for :page_title, t(".accounts") %>
 <%= content_for :page_actions do %>
-  <%= icon(
-        "refresh-cw",
-        as_button: true,
-        size: "sm",
-        href: sync_all_accounts_path,
-        disabled: Current.family.syncing?,
-        frame: :_top
-      ) %>
-  <% if (family_sync = Current.family.syncs.visible.first) %>
-    <%= button_to cancel_sync_path(family_sync),
-                  method: :post,
-                  class: "flex items-center gap-1 text-sm text-secondary hover:text-primary",
-                  aria: { label: t(".cancel_sync") },
-                  data: { turbo_frame: :_top } do %>
-      <%= icon "circle-x", class: "w-4 h-4" %>
-      <span><%= t(".cancel_sync") %></span>
-    <% end %>
-  <% end %>
+  <%= render "accounts/sync_controls", family: Current.family %>
   <%= render DS::Link.new(
     text: t(".new_account"),
     href: new_account_path(return_to: accounts_path),
