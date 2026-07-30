@@ -27,7 +27,7 @@
           <% family_name = family.name.presence || t("families.default_name") %>
           
           <%= button_to current_session_path, method: :put, params: { current_session: { active_family_id: family.id } }, class: "w-full text-left focus-ring rounded-lg" do %>
-            <div class="flex items-center gap-2 px-2 py-2 rounded-lg <%= is_active ? 'bg-container-inset-hover' : 'hover:bg-surface-hover' %>" title="<%= family_name %>">
+            <div class="flex items-center gap-2 px-2 py-2 rounded-lg <%= is_active ? 'bg-container-inset-hover' : 'hover:bg-surface-hover' %>">
               <div class="w-6 h-6 rounded bg-primary text-inverse flex items-center justify-center text-xs font-semibold shrink-0">
                 <%= family_name.first.upcase %>
               </div>
