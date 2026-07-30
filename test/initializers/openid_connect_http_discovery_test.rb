@@ -33,11 +33,14 @@ class OpenIDConnectHttpDiscoveryTest < ActiveSupport::TestCase
     assert_equal "https://auth.example:80/.well-known/openid-configuration", https_80.to_s
   end
 
-  test "cache key distinguishes scheme on the same host" do
-    http = Resource.new(URI.parse("http://auth.example"))
-    https = Resource.new(URI.parse("https://auth.example"))
+  test "cache key varies by scheme, port, and path on the same host" do
+    baseline = cache_key_for("http://auth.example")
+    other_scheme = cache_key_for("https://auth.example")
+    other_port = cache_key_for("http://auth.example:9000")
+    other_path = cache_key_for("http://auth.example/application/o/sure")
 
-    refute_equal http.send(:cache_key), https.send(:cache_key)
+    keys = [ baseline, other_scheme, other_port, other_path ]
+    assert_equal keys.length, keys.uniq.length, "each of scheme/port/path must produce a distinct cache key"
   end
 
   test "issuer path prefix is preserved" do
@@ -45,4 +48,9 @@ class OpenIDConnectHttpDiscoveryTest < ActiveSupport::TestCase
 
     assert_equal "http://auth.example/application/o/sure/.well-known/openid-configuration", endpoint.to_s
   end
+
+  private
+    def cache_key_for(issuer)
+      Resource.new(URI.parse(issuer)).send(:cache_key)
+    end
 end
