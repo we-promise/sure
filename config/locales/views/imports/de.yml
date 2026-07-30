@@ -118,7 +118,7 @@ de:
         select_value: Wert wählen
         set: Setze
         tags_label: Tags
-        treat_as_html: „<span class=“font-medium">%{value}</span>" behandeln als
+        treat_as_html: '„<span class="font-medium">%{value}</span>“ behandeln als'
       account_import:
         apply_configuration: Konfiguration übernehmen
         balance: Saldo
