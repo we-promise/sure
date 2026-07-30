@@ -38,7 +38,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
   end
-  
+
   test "show avoids N+1 transfer queries across paginated entries" do
     queries = capture_sql_queries { get account_url(@account) }
     assert_response :success
