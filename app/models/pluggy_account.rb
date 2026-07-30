@@ -26,6 +26,23 @@ class PluggyAccount < ApplicationRecord
     account
   end
 
+  # Default account-type option for the "Set up your Pluggy accounts" wizard.
+  # Maps Pluggy's raw `account_type` (e.g. "credit_card", "depository",
+  # "investment", "loan", "real_estate", "mortgage") to one of the option
+  # strings PluggyItemsController#complete_account_setup reads and
+  # infer_accountable_type understands — depository / credit_card / loan /
+  # investment / other_asset — so each wizard row's <select> pre-selects a
+  # sane value. Tolerant substring match so unknown upstream types still get a
+  # default instead of blocking setup.
+  def suggested_setup_account_type
+    s = account_type.to_s.downcase
+    return "credit_card" if s.include?("credit")
+    return "loan"        if s.include?("loan") || s.include?("mortgage")
+    return "investment"  if s.include?("invest")
+    return "other_asset" if s.include?("real_estate") || s.include?("property") || s.include?("asset")
+    "depository"
+  end
+
   # Idempotently create or update AccountProvider link
   # CRITICAL: After creation, reload association to avoid stale nil
   def ensure_account_provider!(linked_account)

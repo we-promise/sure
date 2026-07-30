@@ -43,9 +43,49 @@ class PluggyAccount::ProcessorTest < ActiveSupport::TestCase
     @pluggy_account.stubs(:raw_activities_payload).returns([])
     @pluggy_account.stubs(:current_balance).returns(5000.0)
 
+    # Investment path re-anchors balance from holdings after import, so the
+    # holdings relation must respond on the strict Account mock.
+    stub_holdings_relation(sum: 5000.0)
+
     PluggyAccount::Investments::HoldingsProcessor.any_instance.expects(:process).once
 
     result = PluggyAccount::Processor.new(@pluggy_account).process
+    assert result[:holdings]
+  end
+
+  # Regression: "investimento continua zerado". A Pluggy investment container —
+  # especially the synthesized one the Importer builds when /accounts exposes no
+  # investment-type row — reports balance 0, so the balance Pluggy exposes must
+  # NOT anchor the linked Investment Account. The account's value comes from the
+  # holdings just imported for Date.current; the processor must re-derive +
+  # re-anchor from those, mirroring Coinbase's holdings-value fallback. Before
+  # the fix the processor anchored to current_balance (0) first and never
+  # re-anchored → account.balance = 0 and the holdings chart stayed flat.
+  test "process anchors investment balance to holdings sum, not the container's zero balance" do
+    @pluggy_account.stubs(:account_type).returns("investment")
+    @pluggy_account.stubs(:raw_payload).returns("type" => "investment")
+    @pluggy_account.stubs(:raw_holdings_payload).returns([ { "code" => "PETR4" } ])
+    @pluggy_account.stubs(:raw_activities_payload).returns([])
+    @pluggy_account.stubs(:current_balance).returns(0) # synthesized container
+    @pluggy_account.stubs(:currency).returns("BRL")
+
+    stub_holdings_relation(sum: 5000.0)
+
+    PluggyAccount::Investments::HoldingsProcessor.any_instance.stubs(:process)
+
+    # The synthetic investment container reports balance 0; the fix re-anchors the
+    # linked Account from holdings just imported (sum 5000), with no brokerage
+    # cash. `expects(...).with(...).once` verifies the EXACT call reached @account
+    # (and pins balance-from-holdings vs the 0 container) without relying on a
+    # block-capture stub, which Mocha 2.7.1 doesn't reliably delegate for kwargs.
+    @account.expects(:assign_attributes).with(
+      balance: 5000,
+      cash_balance: 0,
+      currency: "BRL"
+    ).once
+
+    result = PluggyAccount::Processor.new(@pluggy_account).process
+
     assert result[:holdings]
   end
 
@@ -69,4 +109,15 @@ class PluggyAccount::ProcessorTest < ActiveSupport::TestCase
       PluggyAccount::Processor.new(@pluggy_account).process
     end
   end
+
+  private
+
+    # Stubs the chain `account.holdings.where(date: Date.current).sum(:amount)`
+    # on the strict Account mock so the investment balance re-anchor can run.
+    def stub_holdings_relation(sum:)
+      holdings_relation = stub("HoldingsRelation")
+      holdings_relation.stubs(:where).with(date: Date.current).returns(holdings_relation)
+      holdings_relation.stubs(:sum).with(:amount).returns(sum)
+      @account.stubs(:holdings).returns(holdings_relation)
+    end
 end

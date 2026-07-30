@@ -25,6 +25,7 @@ en:
         importing_data: "Importing account data..."
         checking_setup: "Checking account configuration..."
         needs_setup: "%{count} accounts need setup..."
+        auto_setup: "Auto-configuring accounts..."
       success: "Sync started"
       missing_item_id: "Complete Pluggy Connect first. No connection item was found for this provider."
 
@@ -129,6 +130,7 @@ en:
     select_accounts:
       accounts_selected: "accounts selected"
       api_error: "API error: %{message}"
+      balance_pending: "Will be processed after sync"
       cancel: "Cancel"
       configure_name_in_provider: "Cannot import - please configure account name in Pluggy"
       description: "Select the accounts you want to link to your %{product_name} account."
@@ -146,6 +148,7 @@ en:
       all_accounts_already_linked: "All Pluggy accounts are already linked"
       api_error: "API error: %{message}"
       balance_label: "Balance:"
+      balance_pending: "Will be processed after sync"
       cancel: "Cancel"
       cancel_button: "Cancel"
       configure_name_in_provider: "Cannot import - please configure account name in Pluggy"
@@ -179,6 +182,7 @@ en:
     # Setup accounts wizard
     setup_accounts:
       account_type_label: "Account Type:"
+      types_detected_automatically: "Account types are detected automatically from your Pluggy connection."
       accounts_count:
         one: "%{count} account available"
         other: "%{count} accounts available"
@@ -197,6 +201,7 @@ en:
         depository: "Checking or Savings Account"
         credit_card: "Credit Card"
         loan: "Loan or Mortgage"
+        investment: "Investment Account"
         other_asset: "Other Asset"
       subtype_labels:
         depository: "Account Subtype:"
@@ -219,6 +224,7 @@ en:
           auto: "Auto Loan"
           other: "Other Loan"
       balance: "Balance"
+      balance_pending: "Will be processed after sync"
       cancel: "Cancel"
       choose_account_type: "Choose the correct account type for each Pluggy account:"
       create_accounts: "Create Accounts"

@@ -41,10 +41,16 @@
                 <% if pluggy_account.name.blank? %>
                   <p class="text-sm text-warning"><%= t(".configure_name_in_provider") %></p>
                 <% else %>
-                  <p class="text-sm text-secondary">
-                    <%= t("pluggy_items.select_existing_account.balance_label") %>
-                    <%= number_to_currency(pluggy_account.current_balance || 0, unit: Money::Currency.new(pluggy_account.currency || "USD").symbol) %>
-                  </p>
+                  <% if pluggy_account.activities_fetch_pending? %>
+                    <p class="text-sm italic text-secondary">
+                      <%= t(".balance_pending") %>
+                    </p>
+                  <% else %>
+                    <p class="text-sm text-secondary">
+                      <%= t("pluggy_items.select_existing_account.balance_label") %>
+                      <%= number_to_currency(pluggy_account.current_balance || 0, unit: Money::Currency.new(pluggy_account.currency || "USD").symbol) %>
+                    </p>
+                  <% end %>
                 <% end %>
               </div>
             </label>

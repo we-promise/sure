@@ -48,36 +48,12 @@
     is_new_record = !pluggy_item.persisted?
   %>
 
-  <% if @connect_token.present? %>
-    <!-- Pluggy Connect Widget Flow -->
-    <div class="space-y-4">
-      <div class="p-4 bg-primary/5 rounded-lg border border-primary/20">
-        <h3 class="text-sm font-medium text-primary mb-2"><%= t("pluggy_items.panel.connect_widget_title", default: "Connect via Pluggy Widget") %></h3>
-        <p class="text-sm text-secondary mb-4"><%= t("pluggy_items.panel.connect_widget_description", default: "Click below to open Pluggy Connect and link your accounts.") %></p>
-        <div
-          data-controller="pluggy"
-          data-pluggy-connect-token-value="<%= @connect_token %>"
-          data-pluggy-is-update-value="<%= @connect_item&.pluggy_item_id.present? %>"
-          data-pluggy-item-id-value="<%= @connect_item&.pluggy_item_id || "" %>"
-          data-pluggy-record-id-value="<%= @connect_item&.id || "" %>">
-          <button type="button"
-                  data-action="click->pluggy#open"
-                  class="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary">
-            <%= icon("link", class: "w-4 h-4 mr-2") %>
-            <%= t("pluggy_items.panel.connect_widget_button", default: "Open Pluggy Connect") %>
-          </button>
-          <p class="text-xs text-secondary mt-2"><%= t("pluggy_items.panel.connect_widget_note", default: "A new window will open for authentication.") %></p>
-        </div>
-      </div>
-    </div>
-  <% end %>
-
   <%# Credential form — always visible, mirroring the Questrade "re-arm token"
       panel. Previously this lived in the `else` of `@connect_token.present?`,
       which hid the "Update Configuration" form once credentials were saved
       (prepare_show_context always mints a connect token for a credentialed
       family), leaving no way to change client_id/client_secret. Now the widget
-      box above is the connect/re-auth trigger and this form is the
+      box below is the connect/re-auth trigger and this form is the
       credential-update affordance — both rendering together. PATCHes the
       existing credentialed PluggyItem (is_new_record=false) via
       pluggy_item_path, which PluggyItemsController#update supports. %>
@@ -101,6 +77,30 @@
     <div class="flex justify-end">
       <%= form.submit is_new_record ? t("pluggy_items.panel.save_button") : t("pluggy_items.panel.update_button"),
                       class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary" %>
+    </div>
+  <% end %>
+
+  <% if @connect_token.present? %>
+    <!-- Pluggy Connect Widget Flow -->
+    <div class="space-y-4">
+      <div class="p-4 bg-primary/5 rounded-lg border border-primary">
+        <h3 class="text-sm font-medium text-primary mb-2"><%= t("pluggy_items.panel.connect_widget_title", default: "Connect via Pluggy Widget") %></h3>
+        <p class="text-sm text-secondary mb-4"><%= t("pluggy_items.panel.connect_widget_description", default: "Click below to open Pluggy Connect and link your accounts.") %></p>
+        <div
+          data-controller="pluggy"
+          data-pluggy-connect-token-value="<%= @connect_token %>"
+          data-pluggy-is-update-value="<%= @connect_item&.pluggy_item_id.present? %>"
+          data-pluggy-item-id-value="<%= @connect_item&.pluggy_item_id || "" %>"
+          data-pluggy-record-id-value="<%= @connect_item&.id || "" %>">
+          <button type="button"
+                  data-action="click->pluggy#open"
+                  class="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary">
+            <%= icon("link", class: "w-4 h-4 mr-2") %>
+            <%= t("pluggy_items.panel.connect_widget_button", default: "Open Pluggy Connect") %>
+          </button>
+          <p class="text-xs text-secondary mt-2"><%= t("pluggy_items.panel.connect_widget_note", default: "A new window will open for authentication.") %></p>
+        </div>
+      </div>
     </div>
   <% end %>
 

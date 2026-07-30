@@ -17,8 +17,17 @@ class PluggyAccount::Processor
   def process
     return unless account.present?
 
-    upsert_balance
-    investment? ? process_investments : process_banking
+    # Banking accounts anchor to Pluggy's reported balance first, then process
+    # transactions. Investment accounts do the OPPOSITE: their value comes from
+    # holdings, and the balance Pluggy exposes on the (often synthesized)
+    # investment container is 0 — so anchoring first would zero the account +
+    # the reverse-balance chart. Import holdings first, then re-derive + re-anchor.
+    if investment?
+      process_investments
+    else
+      upsert_balance
+      process_banking
+    end
   rescue Provider::Pluggy::AuthenticationError
     raise
   rescue => e
@@ -65,7 +74,27 @@ class PluggyAccount::Processor
 
     def process_investments
       PluggyAccount::Investments::HoldingsProcessor.new(pluggy_account).process
+      upsert_investment_balance
       account.broadcast_sync_complete
       { holdings: true }
+    end
+
+    # Investment accounts derive value from holdings, not the balance Pluggy reports
+    # on the investment container: synthesized containers report 0, and even real
+    # ones don't reliably expose a total that matches holdings. Holdings were just
+    # imported above for Date.current, so sum them and re-anchor — mirrors
+    # Coinbase's holdings-value fallback. cash_balance is 0 (the value is invested,
+    # none is brokerage cash); re-anchoring keeps the event-sourced ledger + the
+    # reverse balance calc in sync so the holdings chart stops reading 0.
+    def upsert_investment_balance
+      balance = account.holdings.where(date: Date.current).sum(:amount)
+
+      account.assign_attributes(
+        balance: balance,
+        cash_balance: 0,
+        currency: pluggy_account.currency || account.currency
+      )
+      account.save!
+      account.set_current_balance(balance)
     end
 end

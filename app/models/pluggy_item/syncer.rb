@@ -19,6 +19,16 @@ class PluggyItem::Syncer
     # Phase 2: Collect setup statistics
     finalize_setup_counts(sync)
 
+    # Phase 2.5: First-sync auto-setup — auto-create Accounts (with inferred
+    # accountable types) for unlinked PluggyAccounts on the very first successful
+    # sync, so the user can skip the manual setup wizard. Guarded by
+    # has_completed_initial_setup? so it runs only while nothing is linked yet;
+    # once accounts exist (linked here or manually), every later sync — including
+    # new bank accounts the provider reports later — falls through to the wizard.
+    # Phase 3 re-queries linked_pluggy_accounts, so accounts linked here flow into
+    # process_accounts / schedule_account_syncs in the same sync cycle.
+    perform_first_sync_auto_setup(sync) unless pluggy_item.has_completed_initial_setup?
+
     # Phase 3: Process data for linked accounts
     linked_pluggy_accounts = pluggy_item.linked_pluggy_accounts.includes(account_provider: :account)
     if linked_pluggy_accounts.any?
@@ -79,5 +89,10 @@ class PluggyItem::Syncer
 
       # Collect setup stats
       collect_setup_stats(sync, provider_accounts: pluggy_item.pluggy_accounts)
+    end
+
+    def perform_first_sync_auto_setup(sync)
+      sync.update!(status_text: I18n.t("pluggy_items.sync.status.auto_setup")) if sync.respond_to?(:status_text)
+      PluggyItem::AutoSetup.new(pluggy_item).call
     end
 end

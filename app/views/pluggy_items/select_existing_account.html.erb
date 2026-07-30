@@ -36,10 +36,16 @@
             <div class="flex items-center justify-between">
               <div>
                 <h4 class="font-medium text-primary"><%= pluggy_account.name %></h4>
-                <p class="text-sm text-secondary">
-                  <%= t(".balance_label") %>
-                  <%= number_to_currency(pluggy_account.current_balance || 0, unit: Money::Currency.new(pluggy_account.currency || "USD").symbol) %>
-                </p>
+                <% if pluggy_account.activities_fetch_pending? %>
+                  <p class="text-sm italic text-secondary">
+                    <%= t(".balance_pending") %>
+                  </p>
+                <% else %>
+                  <p class="text-sm text-secondary">
+                    <%= t(".balance_label") %>
+                    <%= number_to_currency(pluggy_account.current_balance || 0, unit: Money::Currency.new(pluggy_account.currency || "USD").symbol) %>
+                  </p>
+                <% end %>
               </div>
               <%= render DS::Button.new(
                 text: t(".link_button"),
