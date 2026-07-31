@@ -20,6 +20,7 @@ zh-CN:
       region_placeholder: 加利福尼亚州
       year_built: 建造年份
       year_built_placeholder: '2000'
+      subtype_prompt: 选择房产类型
     new:
       title: 手动输入房产
       next: 下一步
@@ -35,6 +36,7 @@ zh-CN:
       country_label: 国家
       country_placeholder: 美国
       save: 保存
+      postal_code_label: 邮政编码
     balances:
       title: 手动输入房产
       market_value_label: 估算市值

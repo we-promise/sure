@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/account.dart';
+import '../providers/privacy_provider.dart';
+import '../theme/sure_colors.dart';
+import '../theme/sure_tokens.dart';
+import '../utils/money_masker.dart';
+import 'money_text.dart';
+import 'sure_card.dart';
+import 'sure_icon.dart';
 
 class AccountCard extends StatelessWidget {
   final Account account;
@@ -13,38 +21,38 @@ class AccountCard extends StatelessWidget {
     this.onSwipe,
   });
 
-  IconData _getAccountIcon() {
+  String _getAccountIconName() {
     switch (account.accountType) {
       case 'depository':
-        return Icons.account_balance;
+        return SureIcons.landmark;
       case 'credit_card':
-        return Icons.credit_card;
+        return SureIcons.creditCard;
       case 'investment':
-        return Icons.trending_up;
+        return SureIcons.trendingUp;
       case 'loan':
-        return Icons.receipt_long;
+        return SureIcons.receipt;
       case 'property':
-        return Icons.home;
+        return SureIcons.house;
       case 'vehicle':
-        return Icons.directions_car;
+        return SureIcons.car;
       case 'crypto':
-        return Icons.currency_bitcoin;
+        return SureIcons.bitcoin;
       case 'other_asset':
-        return Icons.category;
+        return SureIcons.shapes;
       case 'other_liability':
-        return Icons.payment;
+        return SureIcons.handCoins;
       default:
-        return Icons.account_balance_wallet;
+        return SureIcons.wallet;
     }
   }
 
   Color _getAccountColor(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     if (account.isAsset) {
-      return Colors.green;
+      return SureColors.of(context).palette.success;
     } else if (account.isLiability) {
-      return Colors.red;
+      return SureColors.of(context).palette.destructive;
     }
     return colorScheme.primary;
   }
@@ -53,79 +61,78 @@ class AccountCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final accountColor = _getAccountColor(context);
+    final hideAmounts = context.watch<PrivacyProvider>().hidden;
 
-    final cardContent = Card(
+    final cardContent = SureCard(
       margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
+      onTap: onTap,
+      child: Row(
+        children: [
+          // Account icon
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: accountColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: SureIcon(
+              _getAccountIconName(),
+              color: accountColor,
+              size: SureIconSize.lg,
+            ),
+          ),
+          const SizedBox(width: 16),
+
+          // Account info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  account.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: SureTokens.weightMedium,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  account.displayAccountType,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Balance
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Account icon
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: accountColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  _getAccountIcon(),
-                  color: accountColor,
-                  size: 24,
+              Text(
+                MoneyMasker.mask(account.balance, hidden: hideAmounts),
+                style: SureMoney.tabular(
+                  Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: SureTokens.weightMedium,
+                    color: account.isLiability
+                        ? SureColors.of(context).palette.destructive
+                        : null,
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
-
-              // Account info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      account.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      account.displayAccountType,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 4),
+              Text(
+                account.currency,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
-              ),
-
-              // Balance
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    account.balance,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: account.isLiability ? Colors.red : null,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    account.currency,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
 
@@ -145,12 +152,16 @@ class AccountCard extends StatelessWidget {
           padding: const EdgeInsets.only(right: 20),
           decoration: BoxDecoration(
             color: Colors.blue,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(SureTokens.radiusLg),
           ),
           child: const Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.receipt_long, color: Colors.white, size: 28),
+              SureIcon(
+                SureIcons.receipt,
+                color: Colors.white,
+                size: SureIconSize.xl,
+              ),
               SizedBox(height: 4),
               Text(
                 'Transactions',

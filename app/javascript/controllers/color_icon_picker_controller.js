@@ -152,10 +152,10 @@ export default class extends Controller {
         "Poor contrast, choose darker color or auto-adjust.",
       );
 
-      this.validationMessageTarget.classList.remove("hidden");
+      this.showFlex(this.validationMessageTarget);
     } else {
       this.colorInputTarget.setCustomValidity("");
-      this.validationMessageTarget.classList.add("hidden");
+      this.hideFlex(this.validationMessageTarget);
     }
   }
 
@@ -226,7 +226,7 @@ export default class extends Controller {
   showPaletteSection() {
     this.initPicker();
     this.colorsSectionTarget.classList.add("hidden");
-    this.paletteSectionTarget.classList.remove("hidden");
+    this.showFlex(this.paletteSectionTarget);
     this.pickerSectionTarget.classList.remove("hidden");
     this.updatePopupPosition();
     this.picker.show();
@@ -234,7 +234,7 @@ export default class extends Controller {
 
   showColorsSection() {
     this.colorsSectionTarget.classList.remove("hidden");
-    this.paletteSectionTarget.classList.add("hidden");
+    this.hideFlex(this.paletteSectionTarget);
     this.pickerSectionTarget.classList.add("hidden");
     this.updatePopupPosition()
     if (this.picker) {
@@ -255,6 +255,16 @@ export default class extends Controller {
       this.detailsTarget.open = false;
     }
   };
+
+  showFlex(element) {
+    element.classList.remove("hidden");
+    element.classList.add("flex");
+  }
+
+  hideFlex(element) {
+    element.classList.add("hidden");
+    element.classList.remove("flex");
+  }
 
   updatePopupPosition() {
     const popup = this.popupTarget;

@@ -39,6 +39,17 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal expected_total_expense, expense_totals.category_totals.find { |ct| ct.category.id == @food_category.id }.total
   end
 
+  test "orphaned categories still count as root category totals" do
+    orphan_category = @family.categories.create! name: "Orphaned Category"
+    orphan_category.update_column(:parent_id, SecureRandom.uuid)
+    create_transaction(account: @checking_account, amount: 123, category: orphan_category)
+
+    expense_totals = IncomeStatement.new(@family).expense_totals(period: Period.last_30_days)
+
+    assert_equal 200 + 300 + 400 + 123, expense_totals.total
+    assert_equal 123, expense_totals.category_totals.find { |ct| ct.category.id == orphan_category.id }.total
+  end
+
   test "memoizes expense and income period totals across repeated calculations" do
     income_statement = IncomeStatement.new(@family)
     period = Period.last_30_days
@@ -63,6 +74,30 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     assert_equal expected_total_income, income_totals.total
     assert_equal expected_total_income, income_totals.category_totals.find { |ct| ct.category.id == @income_category.id }.total
+  end
+
+  test "totals_for scopes totals to a period and optional account ids" do
+    income_statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    all_totals = income_statement.totals_for(period)
+    assert_equal Money.new(1000, @family.currency), all_totals.income_money
+    assert_equal Money.new(200 + 300 + 400, @family.currency), all_totals.expense_money
+
+    checking_only_totals = income_statement.totals_for(period, account_ids: [ @checking_account.id ])
+    assert_equal Money.new(1000, @family.currency), checking_only_totals.income_money
+    assert_equal Money.new(200, @family.currency), checking_only_totals.expense_money
+  end
+
+  test "eligible_accounts excludes accounts not reflected in totals" do
+    tax_advantaged_account = @family.accounts.create! name: "401k", currency: @family.currency, balance: 10000, accountable: Investment.new(subtype: "401k")
+    excluded_account = @family.accounts.create! name: "Excluded", currency: @family.currency, balance: 0, exclude_from_reports: true, accountable: Depository.new
+
+    eligible_ids = IncomeStatement.new(@family).eligible_accounts.pluck(:id)
+
+    assert_includes eligible_ids, @checking_account.id
+    assert_not_includes eligible_ids, tax_advantaged_account.id
+    assert_not_includes eligible_ids, excluded_account.id
   end
 
   test "calculates median expense" do
@@ -170,8 +205,8 @@ class IncomeStatementTest < ActiveSupport::TestCase
   # NOTE: These tests now pass because kind filtering is working after the refactoring!
   test "excludes regular transfers from income statement calculations" do
     # Create a regular transfer between accounts
-    _outflow_transaction = create_transaction(account: @checking_account, amount: 500, kind: "funds_movement")
-    _inflow_transaction = create_transaction(account: @credit_card_account, amount: -500, kind: "funds_movement")
+    create_transaction(account: @checking_account, amount: 500, kind: "funds_movement")
+    create_transaction(account: @credit_card_account, amount: -500, kind: "funds_movement")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
@@ -184,7 +219,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
   test "includes loan payments as expenses in income statement" do
     # Create a loan payment transaction
-    _loan_payment = create_transaction(account: @checking_account, amount: 1000, category: nil, kind: "loan_payment")
+    create_transaction(account: @checking_account, amount: 1000, category: nil, kind: "loan_payment")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
@@ -197,7 +232,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
   test "excludes one-time transactions from income statement calculations" do
     # Create a one-time transaction
-    _one_time_transaction = create_transaction(account: @checking_account, amount: 250, category: @groceries_category, kind: "one_time")
+    create_transaction(account: @checking_account, amount: 250, category: @groceries_category, kind: "one_time")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
@@ -210,7 +245,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
   test "excludes payment transactions from income statement calculations" do
     # Create a payment transaction (credit card payment)
-    _payment_transaction = create_transaction(account: @checking_account, amount: 300, category: nil, kind: "cc_payment")
+    create_transaction(account: @checking_account, amount: 300, category: nil, kind: "cc_payment")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
@@ -304,7 +339,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
   test "includes investment_contribution transactions as expenses in income statement" do
     # Create a transfer to investment account (marked as investment_contribution)
-    _investment_contribution = create_transaction(
+    create_transaction(
       account: @checking_account,
       amount: 1000,
       category: nil,
@@ -334,7 +369,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     # Provider-imported contribution shows as inflow (negative amount) to the investment account
     # kind is investment_contribution, which should be treated as expense regardless of sign
-    _provider_contribution = create_transaction(
+    create_transaction(
       account: investment_account,
       amount: -500, # Negative = inflow to account
       category: nil,
@@ -544,6 +579,46 @@ class IncomeStatementTest < ActiveSupport::TestCase
     refute_includes tax_advantaged_ids, @checking_account.id
   end
 
+  # Exclude-from-reports tests
+  test "excludes transactions from accounts with exclude_from_reports set" do
+    excluded_account = @family.accounts.create!(
+      name: "Excluded Checking",
+      currency: @family.currency,
+      balance: 3000,
+      accountable: Depository.new,
+      exclude_from_reports: true
+    )
+
+    create_transaction(account: excluded_account, amount: 500, category: @groceries_category)
+    create_transaction(account: excluded_account, amount: -300, category: @income_category)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal 4, totals.transactions_count
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(900, @family.currency), totals.expense_money
+  end
+
+  test "includes transactions from accounts without exclude_from_reports" do
+    included_account = @family.accounts.create!(
+      name: "Included Checking",
+      currency: @family.currency,
+      balance: 3000,
+      accountable: Depository.new,
+      exclude_from_reports: false
+    )
+
+    create_transaction(account: included_account, amount: 100, category: @groceries_category)
+
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal 5, totals.transactions_count
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(1000, @family.currency), totals.expense_money
+  end
+
   # net_category_totals tests
   test "net_category_totals nets expense and refund in the same category" do
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
@@ -652,5 +727,23 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 0, totals.transactions_count
     assert_equal Money.new(0, "USD"), totals.income_money
     assert_equal Money.new(0, "USD"), totals.expense_money
+  end
+
+  test "reuses totals_query for income and expense in the same period" do
+    income_statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    totals_query_calls = 0
+    income_statement.singleton_class.prepend(Module.new do
+      define_method(:totals_query) do |**kwargs|
+        totals_query_calls += 1
+        super(**kwargs)
+      end
+    end)
+
+    income_statement.income_totals(period: period)
+    income_statement.expense_totals(period: period)
+
+    assert_equal 1, totals_query_calls
   end
 end

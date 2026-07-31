@@ -1,0 +1,389 @@
+---
+ru:
+  transactions:
+    activity_labels:
+      buy: Покупка
+      contribution: Вклад
+      dividend: Дивиденды
+      exchange: Обмен
+      fee: Комиссия
+      interest: Проценты
+      other: Другое
+      reinvestment: Реинвестирование
+      sell: Продажа
+      sweep_in: Ввод
+      sweep_out: Вывод
+      transfer: Перевод
+      withdrawal: Снятие
+    attachments:
+      attachment_deleted: Вложение успешно удалено
+      browse_to_add: Просмотреть для добавления файлов
+      cannot_exceed: Не может превышать %{count} вложений на операцию
+      delete_failed: Не удалось удалить вложение. Пожалуйста, попробуйте снова или
+        свяжитесь с поддержкой.
+      failed_delete: 'Не удалось удалить вложение: %{error}'
+      failed_upload: 'Не удалось загрузить вложение: %{error}'
+      files:
+        few: Файлы (%{count})
+        many: Файлы (%{count})
+        one: Файл (%{count})
+        other: Файлы (%{count})
+      max_reached: Достигнут максимальный лимит файлов (%{count}/%{max}). Удалите
+        существующий файл, чтобы загрузить другой.
+      no_attachments: Пока нет вложений
+      no_files_selected: Файлы для загрузки не выбраны
+      select_up_to: Выберите до %{count} файлов (изображения или PDF, макс. %{size}МБ
+        каждый) • %{used} из %{count} использовано
+      upload: Загрузить
+      upload_failed: Не удалось загрузить вложение. Пожалуйста, попробуйте снова или
+        свяжитесь с поддержкой.
+      uploaded_many: "%{count} вложений успешно загружено"
+      uploaded_one: Вложение успешно загружено
+    bulk_updates:
+      new:
+        cancel: Отмена
+        category_label: Категория
+        category_prompt: Выберите категорию
+        date_label: Дата
+        header_title: Редактировать операции
+        merchant_label: Продавец
+        merchant_prompt: Выберите продавца
+        name_label: Название
+        name_placeholder: Введите название, которое будет применено к выбранным операциям
+        none: "(нет)"
+        notes_label: Заметки
+        notes_placeholder: Введите заметку, которая будет применена к выбранным операциям
+        overview: Обзор
+        save: Сохранить
+        tags_label: Теги
+        transactions_section: Операции
+    categorizes:
+      create:
+        categorized:
+          few: "%{count} операции категоризированы"
+          many: "%{count} операций категоризировано"
+          one: 1 операция категоризирована
+          other: "%{count} операции категоризированы"
+        rule_creation_failed: Операции категоризированы, но правило не удалось создать
+          (возможно, оно уже существует).
+      entry_row:
+        assign_category_select: Назначить категорию для %{name}
+        include_checkbox: Включить %{name}
+      show:
+        all_done: Все операции категоризированы
+        assign_category: Назначить категорию
+        assign_category_prompt: "→ назначить"
+        col_amount: Сумма
+        col_category: Категория
+        col_date: Дата
+        col_transaction: Операция
+        create_rule_label: Создать правило категоризации
+        exit: Выход
+        filter_placeholder: Поиск категорий...
+        no_categories: Нет подходящих категорий
+        remaining:
+          few: Осталось %{count} операции без категории
+          many: Осталось %{count} операций без категории
+          one: Осталась %{count} операция без категории
+          other: Осталось %{count} операции без категории
+        rule_description_prefix: Будущие %{type} операции с именем, содержащим
+        rule_description_suffix: также должны получить эту категорию.
+        skip: Пропустить
+        transaction_count:
+          few: "%{count} операции"
+          many: "%{count} операций"
+          one: 1 операция
+          other: "%{count} операции"
+        transactions_hint: Снимите галочку, чтобы исключить операцию, или назначьте
+          ей другую категорию прямо в её строке.
+        type_expense: Расход
+        type_income: Доход
+    convert_to_trade:
+      account_label: 'Счёт:'
+      amount_label: 'Сумма:'
+      cancel: Отмена
+      conversion_note: 'Преобразовано из операции: %{original_name} (%{original_date})'
+      date_label: 'Дата:'
+      description: Преобразуйте эту операцию в торговлю с деталями безопасности
+      errors:
+        already_converted: Эта операция уже была преобразована или исключена
+        conversion_failed: 'Не удалось преобразовать операцию: %{error}'
+        enter_qty_or_price: Пожалуйста, введите либо количество, либо цену за акцию.
+          Остальное будет рассчитано из суммы операции.
+        enter_ticker: Пожалуйста, введите символ тикера
+        invalid_qty_or_price: Неверное количество или цена. Пожалуйста, введите допустимые
+          положительные значения.
+        not_investment_account: Только операции на инвестиционных счетах могут быть
+          преобразованы в сделки
+        security_not_found: Выбранная ценная бумага больше не существует. Пожалуйста,
+          выберите другую.
+        select_security: Пожалуйста, выберите или введите ценную бумагу
+        unexpected_error: 'Неожиданная ошибка при преобразовании: %{error}'
+      exchange_hint: Оставьте пустым для автоматического определения
+      exchange_label: Биржа (необязательно)
+      exchange_placeholder: XNAS
+      price_hint: Цена за акцию (%{currency})
+      price_label: Цена за акцию
+      price_mismatch_message: Ваша цена (%{entered_price}/акция) значительно отличается
+        от текущей рыночной цены %{ticker} (%{market_price}). Если это кажется неправильным,
+        возможно, вы выбрали неверную ценную бумагу — попробуйте использовать "Введите
+        пользовательский тикер", чтобы указать правильную.
+      price_mismatch_title: Цена может не совпадать
+      price_placeholder: например, 52.15
+      qty_or_price_hint: Введите хотя бы количество ИЛИ цену. Остальное будет рассчитано
+        из суммы операции (%{amount}).
+      quantity_hint: Количество проданных акций
+      quantity_label: Количество (Акции)
+      quantity_placeholder: например, 20
+      security_custom: "+ Введите пользовательский тикер"
+      security_label: Ценная бумага
+      security_not_listed_hint: Не видите свою ценную бумагу? Выберите "Введите пользовательский
+        тикер" внизу списка.
+      security_prompt: Выберите ценную бумагу...
+      submit: Преобразовать в торговлю
+      success: Операция преобразована в торговлю
+      ticker_hint: Введите символ тикера акции/ETF (например, AAPL, MSFT)
+      ticker_placeholder: AAPL
+      ticker_search_hint: Поиск по символу тикера или названию компании, или введите
+        пользовательский тикер
+      ticker_search_placeholder: Поиск тикера...
+      title: Преобразовать в торговлю ценными бумагами
+      trade_type_hint: Покупка или продажа акций ценной бумаги
+      trade_type_label: Тип сделки
+    create:
+      created: Операция создана
+    dismiss_duplicate:
+      failure: Не удалось отклонить предложение о дубликате
+      success: Оставлено как отдельные операции
+    form:
+      account: Счёт
+      account_prompt: Выберите счёт
+      amount: Сумма
+      category: Категория
+      category_label: Категория
+      category_prompt: Выберите категорию
+      create_tag: Создать
+      date: Дата
+      description: Описание
+      description_placeholder: Опишите операцию
+      details: Детали
+      expense: Расход
+      income: Доход
+      merchant_label: Продавец
+      none: "(нет)"
+      note_label: Заметки
+      note_placeholder: Введите заметку
+      submit: Добавить операцию
+      tag_search_placeholder: Найти или создать тег
+      tags_label: Теги
+      transfer: Перевод
+    header:
+      edit_categories: Редактировать категории
+      edit_imports: Редактировать импорты
+      edit_merchants: Редактировать продавцов
+      edit_tags: Редактировать теги
+      import: Импорт
+    index:
+      categorize_button:
+        few: Категоризировать (%{count})
+        many: Категоризировать (%{count})
+        one: Категоризировать (%{count})
+        other: Категоризировать (%{count})
+      edit_categories: Редактировать категории
+      edit_imports: Редактировать импорты
+      edit_merchants: Редактировать продавцов
+      edit_rules: Редактировать правила
+      edit_tags: Редактировать теги
+      import: Импорт
+      new_rule: Новое правило
+      new_transaction: Новая операция
+      title: Операции
+      transaction: операция
+      transactions: операции
+    keep_both: Нет, оставить обе
+    list:
+      drag_drop_subtitle: Загрузите операции напрямую
+      drag_drop_title: Перетащите CSV для импорта
+      transaction: операция
+      transactions: операции
+    mark_recurring: Отметить как повторяющуюся
+    mark_recurring_subtitle: Отслеживайте это как повторяющуюся операцию. Разница
+      в сумме автоматически рассчитывается на основе последних 6 месяцев аналогичных
+      операций.
+    mark_recurring_title: Повторяющаяся операция
+    merge_duplicate:
+      failure: Не удалось объединить операции
+      success: Операции успешно объединены
+    new:
+      new_transaction: Новая операция
+    pending_duplicate_merge:
+      confirm_title: Объединить с проведенной операцией (%{posted_amount})
+      possible_duplicate: Дубликат?
+      possible_duplicate_short: Дубль?
+      reject_title: Оставить как отдельные операции
+      review_recommended: Проверка
+      review_recommended_short: Пров
+    potential_duplicate_description: Эта ожидающая операция может быть такой же, как
+      и проведенная ниже. Если это так, объедините их, чтобы избежать двойного учета.
+    potential_duplicate_title: Обнаружен возможный дубликат
+    search:
+      filters:
+        account: Счёт
+        amount: Сумма
+        category: Категория
+        date: Дата
+        merchant: Продавец
+        status: Статус
+        tag: Тег
+        type: Тип
+    searches:
+      filters:
+        account_filter:
+          filter_accounts: Фильтр по счетам
+        amount_filter:
+          equal_to: Равно
+          greater_than: Больше чем
+          less_than: Меньше чем
+          placeholder: '0'
+        badge:
+          confirmed: Подтверждено
+          expense: Расход
+          income: Доход
+          on_or_after: не ранее %{date}
+          on_or_before: не позднее %{date}
+          pending: В ожидании
+          transfer: Перевод
+        category_filter:
+          filter_category: Фильтр по категориям
+        date_filter:
+          end_date: Дата окончания
+          start_date: Дата начала
+        merchant_filter:
+          filter_merchants: Фильтр по продавцам
+        status_filter:
+          confirmed: Подтверждено
+          pending: В ожидании
+        tag_filter:
+          filter_tags: Фильтр по тегам
+        type_filter:
+          expense: Расход
+          income: Доход
+          transfer: Перевод
+      form:
+        filter: Фильтр
+        search_placeholder: Поиск операций ...
+        toggle_selection_checkboxes: Переключить все флажки
+      menu:
+        account_filter: Счёт
+        amount_filter: Сумма
+        apply: Применить
+        cancel: Отмена
+        category_filter: Категория
+        clear_filters: Очистить фильтры
+        date_filter: Дата
+        merchant_filter: Продавец
+        status_filter: Статус
+        tag_filter: Тег
+        type_filter: Тип
+      search:
+        equal_to: равно
+        greater_than: больше чем
+        less_than: меньше чем
+    selection_bar:
+      duplicate: Дублировать
+      edit: Редактировать
+      selected: выбрано
+    show:
+      account_label: Счёт
+      activity_type: Тип активности
+      activity_type_description: Тип инвестиционной активности (Покупка, Продажа,
+        Дивиденды и т.д.). Автоматически определяется или устанавливается вручную.
+      additional_details: Дополнительные детали
+      amount: Сумма
+      attachments: Вложения
+      category_label: Категория
+      convert: Преобразовать
+      convert_to_trade_button: Преобразовать в торговлю
+      convert_to_trade_description: Преобразуйте эту операцию в покупку или продажу
+        с деталями безопасности для отслеживания портфеля.
+      convert_to_trade_title: Преобразовать в торговлю ценными бумагами
+      date_label: Дата
+      delete: Удалить
+      delete_subtitle: Это навсегда удалит операцию, повлияет на ваши исторические
+        балансы и не может быть отменено.
+      delete_title: Удалить операцию
+      description: Описание
+      details: Детали
+      exclude: Исключить
+      exclude_description: Исключенные операции будут удалены из расчетов бюджета
+        и отчетов.
+      keep_both: Нет, оставить обе
+      loan_payment: Платеж по кредиту
+      mark_recurring: Отметить как повторяющуюся
+      mark_recurring_subtitle: Отслеживайте это как повторяющуюся операцию. Разница
+        в сумме автоматически рассчитывается на основе последних 6 месяцев аналогичных
+        операций.
+      mark_recurring_title: Повторяющаяся операция
+      memo: Заметка
+      merchant_label: Продавец
+      merge_duplicate: Да, объединить их
+      name_label: Название
+      nature: Тип
+      none: "(нет)"
+      note_label: Заметки
+      note_placeholder: Введите заметку
+      one_time_description: Одноразовые операции будут исключены из некоторых расчетов
+        бюджета и отчетов, чтобы помочь вам увидеть, что действительно важно.
+      one_time_title: Одноразовая %{type}
+      open_matcher: Открыть сопоставитель
+      overview: Обзор
+      payee: Получатель
+      pending_duplicate_merger_button: Открыть объединение
+      pending_duplicate_merger_description: Вручную объедините эту ожидающую операцию
+        с ее проведенной версией.
+      pending_duplicate_merger_title: Дубликат проведенной операции?
+      potential_duplicate_description: Эта ожидающая операция может быть такой же,
+        как и проведенная ниже. Если это так, объедините их, чтобы избежать двойного
+        учета.
+      potential_duplicate_title: Обнаружен возможный дубликат
+      provider_extras: Дополнения провайдера
+      settings: Настройки
+      tab_transactions: Операции
+      tab_upcoming: Предстоящие
+      tags_label: Теги
+      transfer: Перевод
+      transfer_matcher_description: Свяжите эту операцию с ее аналогом на другом счете.
+      transfer_or_debt_payment: Перевод или платеж по долгу?
+      uncategorized: "(без категории)"
+    split_parent_row:
+      split_label: Разделить
+    summary:
+      expenses: Расходы
+      income: Доход
+      inflow: Поступления
+      outflow: Отток
+      total_transactions: Всего операций
+    toggle_recurring_section: Переключить предстоящие повторяющиеся операции
+    transaction:
+      activity_type_tooltip: Тип инвестиционной активности
+      linked_with_provider: Связано с %{provider}
+      pending: В ожидании
+      pending_tooltip: Операция в ожидании — может измениться при проведении
+      possible_duplicate: Дубликат?
+      potential_duplicate_tooltip: Это может быть дубликат другой операции
+      review_recommended: Рекомендуется проверка
+      review_recommended_tooltip: Большая разница в сумме — рекомендуется проверить,
+        не является ли это дубликатом
+      split: Разделить
+      split_child_tooltip: Часть разделенной операции
+      split_tooltip: Эта операция была разделена на несколько записей
+    transfer_match:
+      auto_matched: Автоматически сопоставлено
+      auto_matched_short: А/С
+      confirm_match: Подтвердить сопоставление
+      payment_confirmed: Платеж подтвержден
+      reject_match: Отклонить сопоставление
+      transfer_confirmed: Перевод подтвержден
+    unknown_name: Неизвестная операция
+    update:
+      updated: Операция обновлена

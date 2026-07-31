@@ -1,0 +1,32 @@
+---
+it:
+  layouts:
+    application:
+      privacy_mode: Attiva/disattiva modalità privacy
+      resize_left_sidebar: Ridimensiona la barra laterale dei conti
+      resize_right_sidebar: Ridimensiona la barra laterale dell'assistente
+      skip_to_main: Vai al contenuto principale
+      nav:
+        assistant: Assistente
+        budgets: Budget
+        home: Home
+        reports: Rapporti
+        goals: Obiettivi
+        transactions: Transazioni
+    auth:
+      existing_account: Hai già un account?
+      no_account: Nuovo su %{product_name}?
+      sign_in: Accedi
+      sign_up: Crea account
+    shared:
+      footer:
+        privacy_policy: Informativa sulla privacy
+        terms_of_service: Termini di servizio
+      confirm_dialog:
+        are_you_sure: Sei sicuro?
+        cannot_be_undone: Questa azione non può essere annullata.
+        confirm: Conferma
+    trial:
+      open_demo: Apri demo
+      data_deleted_in_days: Dati eliminati tra %{days} giorni
+      contribute: Contribuisci

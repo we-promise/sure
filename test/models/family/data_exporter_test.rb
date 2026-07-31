@@ -381,9 +381,12 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       assert rule_lines.any?
 
-      rule_data = JSON.parse(rule_lines.first)
+      rule_data = rule_lines.map { |line| JSON.parse(line) }.find { |rule| rule["data"]["name"] == "Test Rule" }
+
+      assert_not_nil rule_data
       assert_equal "Rule", rule_data["type"]
       assert_equal 1, rule_data["version"]
+      assert_equal @rule.id, rule_data["data"]["id"]
       assert rule_data["data"].key?("name")
       assert rule_data["data"].key?("resource_type")
       assert rule_data["data"].key?("active")
@@ -705,15 +708,23 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       currency: "USD"
     )
 
-    split_parent_outflow = create_transaction_entry(@account, amount: 60, date: Date.parse("2024-01-25"), name: "Split transfer parent")
-    split_parent_outflow.split!([
-      { name: "Split transfer child", amount: 60, category_id: @category.id }
+    split_parent_outflow = create_transaction_entry(@account, amount: 104, date: Date.parse("2024-01-25"), name: "Split transfer parent")
+    split_children = split_parent_outflow.split!([
+      { name: "Split transfer child", amount: 100, category_id: @category.id },
+      { name: "Split fee child", amount: 4, category_id: @category.id }
     ])
-    transfer_inflow = create_transaction_entry(destination_account, amount: -60, date: Date.parse("2024-01-25"), name: "Split transfer inflow")
-    transfer = Transfer.create!(
+    parent_transfer_inflow = create_transaction_entry(destination_account, amount: -104, date: Date.parse("2024-01-25"), name: "Split parent transfer inflow")
+    parent_transfer = Transfer.create!(
       outflow_transaction: split_parent_outflow.entryable,
-      inflow_transaction: transfer_inflow.entryable,
+      inflow_transaction: parent_transfer_inflow.entryable,
       status: "confirmed"
+    )
+    child_transfer_inflow = create_transaction_entry(destination_account, amount: -100, date: Date.parse("2024-01-25"), name: "Split child transfer inflow")
+    child_transfer = Transfer.create!(
+      outflow_transaction: split_children.first.entryable,
+      inflow_transaction: child_transfer_inflow.entryable,
+      status: "confirmed",
+      notes: "Transfer uses split child"
     )
 
     zip_data = @exporter.generate_export
@@ -728,8 +739,20 @@ class Family::DataExporterTest < ActiveSupport::TestCase
         .select { |record| record["type"] == "Transfer" }
         .map { |record| record.dig("data", "id") }
 
-      assert_not_includes transaction_ids, split_parent_outflow.entryable.id
-      assert_not_includes transfer_ids, transfer.id
+      assert_includes transaction_ids, split_parent_outflow.entryable.id
+      split_parent_data = ndjson_records.find do |record|
+        record["type"] == "Transaction" && record.dig("data", "id") == split_parent_outflow.entryable.id
+      end
+      assert_equal 2, split_parent_data.dig("data", "split_lines").count
+      assert_equal [ "Split transfer child", "Split fee child" ], split_parent_data.dig("data", "split_lines").map { |line| line["name"] }
+      refute_includes transaction_ids, split_children.first.entryable.id
+      refute_includes transaction_ids, split_children.second.entryable.id
+      assert_not_includes transfer_ids, parent_transfer.id
+
+      child_transfer_data = ndjson_records.find { |record| record["type"] == "Transfer" && record.dig("data", "id") == child_transfer.id }
+      assert child_transfer_data
+      assert_equal split_children.first.entryable.id, child_transfer_data.dig("data", "outflow_transaction_id")
+      assert_equal child_transfer_inflow.entryable.id, child_transfer_data.dig("data", "inflow_transaction_id")
     end
   end
 

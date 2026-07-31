@@ -39,9 +39,12 @@ class Provider::EnableBanking
   # @param psu_type [String] "personal" or "business"
   # @param maximum_consent_validity [Integer, nil] Max consent duration in seconds from ASPSP (nil = use 90 days)
   # @param language [String, nil] Two-letter language code (e.g. "fr", "en")
+  # @param auth_method [String, nil] Name of a specific authentication method to use (from the ASPSP's
+  #   auth_methods list). Required to drive DECOUPLED/EMBEDDED banks that expose several methods; when nil
+  #   Enable Banking falls back to the ASPSP's default method.
   # @return [Hash] Contains :url and :authorization_id
   def start_authorization(aspsp_name:, aspsp_country:, redirect_url:, state: nil,
-                          psu_type: "personal", maximum_consent_validity: nil, language: nil)
+                          psu_type: "personal", maximum_consent_validity: nil, language: nil, auth_method: nil)
     max_seconds = maximum_consent_validity ? [ maximum_consent_validity, 1 ].max : 90.days.to_i
     valid_until = [ Time.current + max_seconds.seconds, Time.current + 90.days ].min
 
@@ -60,6 +63,7 @@ class Provider::EnableBanking
       psu_type: psu_type
     }
     body[:language] = language if language.present?
+    body[:auth_method] = auth_method if auth_method.present?
     body = body.compact
 
     response = self.class.post(
@@ -243,7 +247,8 @@ class Provider::EnableBanking
       when 204
         {}
       when 400
-        raise EnableBankingError.new("Bad request to Enable Banking API: #{response.body}", :bad_request)
+        response_data = parse_error_response_body(response)
+        raise EnableBankingError.new("Bad request to Enable Banking API: #{response.body}", :bad_request, response_data: response_data)
       when 401
         raise EnableBankingError.new("Invalid credentials or expired JWT", :unauthorized)
       when 403
@@ -258,8 +263,17 @@ class Provider::EnableBanking
       when 429
         raise EnableBankingError.new("Rate limit exceeded. Please try again later.", :rate_limited)
       else
-        raise EnableBankingError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
+        response_data = parse_error_response_body(response)
+        raise EnableBankingError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed, response_data: response_data)
       end
+    end
+
+    def parse_error_response_body(response)
+      return {} if response.body.blank?
+
+      JSON.parse(response.body, symbolize_names: true)
+    rescue JSON::ParserError
+      { raw_body: response.body.to_s }
     end
 
     def parse_response_body(response)

@@ -1,0 +1,6 @@
+---
+de:
+  messages:
+    chat_form:
+      placeholder: "Fragen Sie irgendetwas ..."
+      disclaimer: "KI-Antworten dienen nur zur Information. Keine Finanzberatung!"

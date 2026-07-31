@@ -2,7 +2,7 @@
 <%# Local variables: groups, total, type (:income or :expense), amount_sort_params, current_sort_by, current_sort_direction %>
 
 <%
-  color_class = type == :income ? "text-success" : "text-destructive"
+  color_class = type == :income ? "text-success" : "text-primary"
   icon_name = type == :income ? "trending-up" : "trending-down"
   title_key = type == :income ? "reports.transactions_breakdown.table.income" : "reports.transactions_breakdown.table.expense"
 %>

@@ -8,7 +8,7 @@ class Api::V1::ChatsController < Api::V1::BaseController
   before_action :set_chat, only: [ :show, :update, :destroy ]
 
   def index
-    @pagy, @chats = pagy(Current.user.chats.ordered, items: 20)
+    @pagy, @chats = pagy(current_resource_owner.chats.ordered, items: 20)
   end
 
   def show
@@ -17,7 +17,7 @@ class Api::V1::ChatsController < Api::V1::BaseController
   end
 
   def create
-    @chat = Current.user.chats.build(title: chat_params[:title])
+    @chat = current_resource_owner.chats.build(title: chat_params[:title])
 
     if @chat.save
       if chat_params[:message].present?
@@ -74,7 +74,7 @@ class Api::V1::ChatsController < Api::V1::BaseController
     end
 
     def set_chat
-      @chat = Current.user.chats.find(params[:id])
+      @chat = current_resource_owner.chats.find(params[:id])
     rescue ActiveRecord::RecordNotFound
       render json: { error: "Chat not found" }, status: :not_found
     end

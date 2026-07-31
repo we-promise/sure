@@ -260,29 +260,15 @@ class RecurringTransaction < ApplicationRecord
 
   # Find matching transactions for this recurring pattern
   def matching_transactions
-    # For manual recurring with amount variance, match within range
-    # For automatic recurring, match exact amount
-    base = account.present? ? account.entries : family.entries
+    # Recurring transfers can't be matched by single-account name/amount —
+    # future occurrences carry arbitrary names — so match the Transfer pair.
+    return transfer_matching_transactions if transfer?
 
-    entries = if manual? && has_amount_variance?
-      base
-        .where(entryable_type: "Transaction")
-        .where(currency: currency)
-        .where("entries.amount BETWEEN ? AND ?", expected_amount_min, expected_amount_max)
-        .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-               [ expected_day_of_month - 2, 1 ].max,
-               [ expected_day_of_month + 2, 31 ].min)
-        .order(date: :desc)
-    else
-      base
-        .where(entryable_type: "Transaction")
-        .where(currency: currency)
-        .where("entries.amount = ?", amount)
-        .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-               [ expected_day_of_month - 2, 1 ].max,
-               [ expected_day_of_month + 2, 31 ].min)
-        .order(date: :desc)
-    end
+    # Amount/cadence-scoped Transaction entries on this account (or family).
+    base = account.present? ? account.entries : family.entries
+    entries = day_of_month_scope(
+      amount_window_scope(base.where(entryable_type: "Transaction").where(currency: currency))
+    ).order(date: :desc)
 
     # Filter by merchant or name
     if merchant_id.present?
@@ -401,6 +387,47 @@ class RecurringTransaction < ApplicationRecord
   end
 
   private
+    # Issue #1590: a recurring transfer's future occurrences rarely share the
+    # seed's name (user free-text, importer wording, the auto-matcher's
+    # "Transfer to ..."), so name-based matching returns [] and the Cleaner
+    # would wrongly inactivate a still-active transfer. Match the Transfer
+    # *pair* instead — an outflow on the source account paired with an inflow
+    # on the destination account, within the usual amount/cadence window — and
+    # return the outflow entries (the occurrence-date carrier, consistent with
+    # create_from_transfer).
+    def transfer_matching_transactions
+      return Entry.none unless account && destination_account
+
+      outflow_entries = day_of_month_scope(
+        amount_window_scope(account.entries.where(entryable_type: "Transaction").where(currency: currency))
+      ).order(date: :desc)
+
+      paired_outflow_transaction_ids = Transfer
+        .where(outflow_transaction_id: outflow_entries.select(:entryable_id))
+        .where(inflow_transaction_id:
+          destination_account.entries.where(entryable_type: "Transaction").select(:entryable_id))
+        .pluck(:outflow_transaction_id)
+
+      outflow_entries.where(entryable_id: paired_outflow_transaction_ids)
+    end
+
+    # Transaction entries whose amount fits the pattern: exact, or within the
+    # configured variance band for manual recurring rows.
+    def amount_window_scope(relation)
+      if manual? && has_amount_variance?
+        relation.where("entries.amount BETWEEN ? AND ?", expected_amount_min, expected_amount_max)
+      else
+        relation.where("entries.amount = ?", amount)
+      end
+    end
+
+    # Entries whose day-of-month lands within ±2 days of the expected day.
+    def day_of_month_scope(relation)
+      relation.where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
+                     [ expected_day_of_month - 2, 1 ].max,
+                     [ expected_day_of_month + 2, 31 ].min)
+    end
+
     def monetizable_currency
       currency
     end

@@ -50,6 +50,12 @@ es:
         preview:
           title: Habilitar funciones experimentales
           description: Activa las funciones en desarrollo etiquetadas como experimentales o canary.
+    appearances:
+      show:
+        modals_title: Modales
+        modals_subtitle: Personalizar el comportamiento de los modales
+        disable_modal_click_outside_title: Mantener modales abiertos al hacer clic fuera
+        disable_modal_click_outside_description: Evita que los modales se cierren al hacer clic fuera. Útil para evitar perder cambios no guardados accidentalmente.
     profiles:
       destroy:
         cannot_remove_self: No puedes eliminarte a ti mismo de la cuenta.

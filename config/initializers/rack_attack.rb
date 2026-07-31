@@ -10,6 +10,10 @@ class Rack::Attack
     request.ip if request.path == "/oauth/token"
   end
 
+  throttle("oauth/register", limit: 10, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/register"
+  end
+
   # Throttle unauthenticated WebAuthn MFA ceremonies similarly to sign-in
   # endpoints; registration remains behind normal application authentication.
   throttle("mfa/webauthn", limit: 10, period: 1.minute) do |request|
@@ -24,6 +28,13 @@ class Rack::Attack
     request.ip if request.path.start_with?("/admin/")
   end
 
+  # The background jobs console lives under /settings (so its polling GET
+  # isn't throttled), but its mutation is destructive and super-admin only —
+  # rate limit it independently.
+  throttle("background_jobs_console/ip", limit: 30, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/settings/background_jobs/cancel"
+  end
+
   # Determine limits based on self-hosted mode
   self_hosted = Rails.application.config.app_mode.self_hosted?
 
@@ -33,7 +44,7 @@ class Rack::Attack
       # Extract access token from Authorization header
       auth_header = request.get_header("HTTP_AUTHORIZATION")
       if auth_header&.start_with?("Bearer ")
-        token = auth_header.split(" ").last
+        token = auth_header.delete_prefix("Bearer ").strip # pipelock:ignore
         "api_token:#{Digest::SHA256.hexdigest(token)}"
       else
         # Fall back to IP-based limiting for unauthenticated requests

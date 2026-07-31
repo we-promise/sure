@@ -1,0 +1,101 @@
+<%# locals: (wise_item:) %>
+
+<%= tag.div id: dom_id(wise_item) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <div class="flex items-center justify-center h-8 w-8 bg-container-inset rounded-full">
+            <p class="text-primary text-xs font-bold">WI</p>
+          </div>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p wise_item.name, class: "font-medium text-primary" %>
+              <span class="text-xs px-1.5 py-0.5 rounded bg-surface-inset text-secondary">
+                <%= t("wise_items.profile_types.#{wise_item.profile_type}") %>
+              </span>
+              <% if wise_item.scheduled_for_deletion? %>
+                <%= tag.p t(".deletion_in_progress"), class: "text-destructive text-sm animate-pulse" %>
+              <% end %>
+            </div>
+            <% if wise_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif wise_item.sync_error.present? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= render DS::Tooltip.new(text: wise_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+                <%= tag.span t(".error"), class: "text-destructive" %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if wise_item.last_synced_at %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(wise_item.last_synced_at), summary: wise_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete"),
+                icon: "trash-2",
+                href: wise_item_path(wise_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(wise_item.name, high_severity: true)
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless wise_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if wise_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: wise_item.accounts %>
+        <% end %>
+
+        <% unlinked = wise_item.unlinked_accounts_count %>
+        <% total = wise_item.total_accounts_count %>
+        <% linked = wise_item.linked_accounts_count %>
+
+        <% if unlinked > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: linked, total: total) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_wise_item_path(wise_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif wise_item.accounts.empty? && total == 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_wise_item_path(wise_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

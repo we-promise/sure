@@ -3,6 +3,8 @@
 class KrakenItem::Importer
   MAX_TRADE_PAGES = 200
   TRADE_PAGE_SIZE = 50
+  MAX_LEDGER_PAGES = 200
+  LEDGER_PAGE_SIZE = 50
 
   attr_reader :kraken_item, :kraken_provider
 
@@ -19,12 +21,14 @@ class KrakenItem::Importer
     balances = kraken_provider.get_extended_balance || {}
     assets = parse_assets(balances, asset_metadata)
     trades = fetch_trades
+    ledgers = fetch_ledgers
 
     total_usd = assets.sum { |asset| asset[:amount_usd].to_d }.round(2)
     kraken_account = upsert_kraken_account(
       assets: assets,
       balances: balances,
       trades: trades,
+      ledgers: ledgers,
       asset_metadata: asset_metadata,
       pair_metadata: pair_metadata,
       api_key_info: api_key_info,
@@ -39,7 +43,7 @@ class KrakenItem::Importer
       "imported_at" => Time.current.iso8601
     })
 
-    { success: true, account_id: kraken_account.id, assets_imported: assets.size, trades_imported: trades.size, total_usd: total_usd }
+    { success: true, account_id: kraken_account.id, assets_imported: assets.size, trades_imported: trades.size, ledgers_imported: ledgers.size, total_usd: total_usd }
   rescue Provider::Kraken::PermissionError => e
     kraken_item.update!(status: :requires_update)
     raise e
@@ -141,7 +145,51 @@ class KrakenItem::Importer
       all_trades
     end
 
-    def upsert_kraken_account(assets:, balances:, trades:, asset_metadata:, pair_metadata:, api_key_info:, total_usd:)
+    def fetch_ledgers
+      start_time = kraken_item.sync_start_date&.to_i
+      offset = 0
+      all_ledgers = {}
+
+      MAX_LEDGER_PAGES.times do
+        result = kraken_provider.get_ledgers(start: start_time, offset: offset)
+        ledgers = result.to_h.fetch("ledger", {})
+        duplicate_ids = all_ledgers.keys & ledgers.keys
+        if duplicate_ids.any?
+          DebugLogEntry.capture(
+            category: "provider_sync_error",
+            level: "warn",
+            message: "#{duplicate_ids.size} duplicate ledger ids from Kraken ignored",
+            source: self.class.name,
+            provider_key: "kraken",
+            family: kraken_item.family,
+            metadata: { kraken_item_id: kraken_item.id, duplicate_ids: duplicate_ids }
+          )
+        end
+        all_ledgers.merge!(ledgers.except(*duplicate_ids))
+
+        count = result.to_h["count"].to_i
+        break if ledgers.size < LEDGER_PAGE_SIZE
+
+        offset += ledgers.size
+        break if count.positive? && offset >= count
+      end
+
+      all_ledgers
+    rescue Provider::Kraken::PermissionError => e
+      # Key may not have Query Ledger Entries permission; degrade gracefully.
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Ledgers permission denied; skipping ledger import: #{e.message}",
+        source: self.class.name,
+        provider_key: "kraken",
+        family: kraken_item.family,
+        metadata: { kraken_item_id: kraken_item.id }
+      )
+      {}
+    end
+
+    def upsert_kraken_account(assets:, balances:, trades:, ledgers:, asset_metadata:, pair_metadata:, api_key_info:, total_usd:)
       kraken_item.kraken_accounts.find_or_initialize_by(account_id: "combined").tap do |account|
         account.assign_attributes(
           name: kraken_item.institution_name.presence || "Kraken",
@@ -159,6 +207,7 @@ class KrakenItem::Importer
           },
           raw_transactions_payload: {
             "trades" => trades,
+            "ledgers" => ledgers,
             "fetched_at" => Time.current.iso8601
           },
           extra: account.extra.to_h.deep_merge(price_metadata(assets))

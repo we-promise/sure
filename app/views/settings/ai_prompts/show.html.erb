@@ -40,7 +40,7 @@
                 <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
               </summary>
               <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
-              <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
+              <div class="mt-2 px-3 py-2 bg-surface border border-primary rounded-lg">
                 <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:instructions] %></pre>
               </div>
             </details>
@@ -68,7 +68,7 @@
                 <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
               </summary>
               <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
-              <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
+              <div class="mt-2 px-3 py-2 bg-surface border border-primary rounded-lg">
                 <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_categorizer]&.instructions || Provider::Openai::AutoCategorizer.new(nil).instructions %></pre>
               </div>
             </details>
@@ -96,7 +96,7 @@
                 <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
               </summary>
               <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
-              <div class="mt-2 px-3 py-2 bg-surface-default border border-primary rounded-lg">
+              <div class="mt-2 px-3 py-2 bg-surface border border-primary rounded-lg">
                 <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_merchant]&.instructions || Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions %></pre>
               </div>
             </details>

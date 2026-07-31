@@ -48,6 +48,7 @@ en:
         title: Over Budget
       filter:
         all: All
+        aria_label: Filter budget categories
         on_track: On Track
         over_budget: Over Budget
       tabs:

@@ -1,0 +1,235 @@
+---
+tr:
+  providers:
+    snaptrade:
+      accounts_count:
+        one: "%{count} hesap"
+        other: "%{count} hesap"
+      client_id_label: İstemci Kimliği
+      client_id_placeholder: SnapTrade İstemci Kimliğinizi girin
+      client_id_update_placeholder: Güncellemek için yeni İstemci Kimliği girin
+      connect_button: Aracı Bağla
+      connected_brokerages: 'Bağlı:'
+      connection_description: SnapTrade aracılığıyla aracınıza bağlanın (25+ aracı
+        desteklenir)
+      connections_error: 'Bağlantılar yüklenemedi: %{message}'
+      consumer_key_label: Tüketici Anahtarı
+      consumer_key_placeholder: SnapTrade Tüketici Anahtarınızı girin
+      consumer_key_update_placeholder: Güncellemek için yeni Tüketici Anahtarı girin
+      delete_connection: Sil
+      delete_connection_body: Bu işlem %{brokerage} bağlantısını SnapTrade'den kalıcı
+        olarak kaldırır. Bu aracıdaki tüm hesapların bağı koparılır. Bu hesapları
+        tekrar senkronize etmek için yeniden bağlamanız gerekir.
+      delete_connection_confirm: Bağlantıyı Sil
+      delete_connection_title: Aracı Bağlantısı Silinsin mi?
+      delete_orphaned_user: Sil
+      delete_orphaned_user_body: Bu işlem yetim SnapTrade kullanıcısını ve tüm aracı
+        bağlantılarını kalıcı olarak siler ve bağlantı yuvalarını boşaltır.
+      delete_orphaned_user_confirm: Kaydı Sil
+      delete_orphaned_user_title: Yetim Kayıt Silinsin mi?
+      description: SnapTrade, 25+ büyük aracıya (Fidelity, Vanguard, Schwab, Robinhood
+        vb.) bağlanır ve etiketli işlem etiketleri ve maliyet temeli içeren tam işlem
+        geçmişi sağlar.
+      free_tier_warning: SnapTrade'ın ücretsiz katmanı 20 aracı bağlantısını kapsar.
+      legacy_credentials_description: SnapTrade hesabınız OAuth'u etkinleştirmediyse
+        İstemci Kimliği ve Tüketici Anahtarı kurulumunu kullanın.
+      legacy_credentials_title: Eski API kimlik bilgilerini kullan
+      loading_connections: Bağlantılar yükleniyor...
+      manage_connections: Bağlantıları Yönet
+      name: SnapTrade
+      needs_linking: bağlanmayı bekliyor
+      needs_setup:
+        one: "%{count} kurulmayı bekliyor"
+        other: "%{count} kurulmayı bekliyor"
+      no_connections: Aracı bağlantısı bulunamadı.
+      oauth_connect_button: SnapTrade ile bağlan
+      oauth_reauthorize_button: Yeniden yetkilendir
+      oauth_status_authorized: SnapTrade ile yetkilendirildi.
+      oauth_status_ready: Sure'i SnapTrade için yetkilendirmek üzere bir cihaz kodu
+        kullanın.
+      oauth_title: SnapTrade OAuth
+      orphaned_connection: Yetim bağlantı (yerel olarak senkronize edilmedi)
+      orphaned_user: Yetim Kayıt
+      orphaned_users_description: Bunlar bağlantı yuvalarınızı kullanan önceki SnapTrade
+        kullanıcı kayıtlarıdır. Yuvaları boşaltmak için bunları silin.
+      orphaned_users_title:
+        one: "%{count} yetim kayıt"
+        other: "%{count} yetim kayıt"
+      save_button: Yapılandırmayı Kaydet
+      setup_accounts_button: Hesapları Kur
+      setup_title: 'Kurulum talimatları:'
+      status_connected:
+        one: SnapTrade'den %{count} hesap
+        other: SnapTrade'den %{count} hesap
+      status_needs_registration: Kimlik bilgileri kaydedildi. Bir aracı bağlamak için
+        kurulumu tamamlayın.
+      status_ready: Aracı bağlamaya hazır
+      step_1_html: <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener
+        noreferrer" class="text-primary underline">dashboard.snaptrade.com</a> adresinde
+        bir hesap oluşturun
+      step_2: İstemci Kimliği ve Tüketici Anahtarınızı panodan kopyalayın
+      step_3: Kimlik bilgilerinizi aşağıya girin ve Kaydet'e tıklayın
+      step_4: Hesaplar sayfasına gidin ve yatırım hesaplarınızı bağlamak için 'Başka
+        bir aracı bağla'yı kullanın
+      update_button: Yapılandırmayı Güncelle
+  snaptrade_item:
+    brokerage_summary:
+      count:
+        one: "%{count} aracı"
+        other: "%{count} aracı"
+      none: Bağlı aracı yok
+    institution_summary:
+      count:
+        one: "%{count} kurum"
+        other: "%{count} kurum"
+      none: Bağlı kurum yok
+    sync_status:
+      no_accounts: Hesap bulunamadı
+      synced:
+        one: "%{count} hesap senkronize edildi"
+        other: "%{count} hesap senkronize edildi"
+      synced_with_setup: "%{linked} senkronize edildi, %{unlinked} kurulmayı bekliyor"
+    syncer:
+      activities_fetching_async: İşlemler arka planda getiriliyor. Yeni aracı bağlantılarında
+        bu işlem bir dakikaya kadar sürebilir.
+      calculating: Bakiyeler hesaplanıyor...
+      checking_config: Hesap yapılandırması kontrol ediliyor...
+      discovering: Hesaplar keşfediliyor...
+      importing: SnapTrade'den hesaplar içe aktarılıyor...
+      needs_setup: "%{count} hesabın kurulması gerekiyor..."
+      processing: Varlıklar ve işlemler işleniyor...
+  snaptrade_items:
+    callback:
+      no_item: SnapTrade yapılandırması bulunamadı.
+      success: Aracı bağlandı! Lütfen bağlanacak hesapları seçin.
+    complete_account_setup:
+      link_failed: 'Hesaplar bağlanamadı: %{errors}'
+      no_accounts: Bağlanmak için hesap seçilmedi.
+      partial_success:
+        one: "%{count} hesap bağlandı. %{failed_count} hesap bağlanamadı."
+        other: "%{count} hesap bağlandı. %{failed_count} hesap bağlanamadı."
+      success:
+        one: "%{count} hesap başarıyla bağlandı."
+        other: "%{count} hesap başarıyla bağlandı."
+    complete_oauth_device_flow:
+      failed: SnapTrade OAuth cihaz yetkilendirmesi tamamlanamadı. Lütfen tekrar deneyin.
+      setup_incomplete: SnapTrade yetkilendirmesi tamamlandı, ancak hesaplar senkronize
+        edilemeden önce API kimlik bilgileri gereklidir.
+      success: SnapTrade yetkilendirmesi tamamlandı.
+    connect:
+      connection_failed: 'SnapTrade''e bağlanılamadı: %{message}'
+      decryption_failed: SnapTrade kimlik bilgileri okunamıyor. Lütfen bu bağlantıyı
+        silin ve yeniden oluşturun.
+    connections:
+      unknown_brokerage: Bilinmeyen Aracı
+    create:
+      success: SnapTrade başarıyla yapılandırıldı.
+    default_name: SnapTrade Bağlantısı
+    delete_connection:
+      api_deletion_failed: SnapTrade'den bağlantı silinemedi - kimlik bilgileri eksik.
+        Bağlantı SnapTrade hesabınızda hâlâ var olabilir.
+      failed: 'Bağlantı silinemedi: %{message}'
+      missing_authorization_id: Yetkilendirme kimliği eksik
+      success: Bağlantı başarıyla silindi. Bir yuval boşaltıldı.
+    delete_orphaned_user:
+      failed: Yetim kayıt silinemedi.
+      success: Yetim kayıt başarıyla silindi.
+    destroy:
+      success: SnapTrade bağlantısı silinmek üzere zamanlandı.
+    link_accounts:
+      use_setup_flow: Bunun yerine hesap kurulum akışını kullanın
+    link_existing_account:
+      failed: 'Hesap bağlanamadı: %{message}'
+      not_found: Hesap bulunamadı.
+      success: SnapTrade hesabına başarıyla bağlandı.
+    oauth_device_flow:
+      cancel_button: İptal
+      code_label: Cihaz kodu
+      complete_button: SnapTrade'i yetkilendirdim
+      instructions: SnapTrade'i açın ve bu cihaz kodunu onaylayın, ardından yetkilendirmeyi
+        tamamlamak için buraya dönün.
+      missing_client_id: SnapTrade OAuth istemci kimliği yapılandırılmamış. .env.local
+        dosyasına SNAPTRADE_OAUTH_CLIENT_ID ekleyin, uygulamayı yeniden başlatın ve
+        tekrar deneyin.
+      open_snaptrade: SnapTrade'i aç
+      start_button: Yetkilendirmeyi başlat
+      subtitle: Sure'i SnapTrade için yetkilendir
+      title: SnapTrade'e Bağlan
+    preload_accounts:
+      not_configured: SnapTrade yapılandırılmamış.
+    select_accounts:
+      not_configured: SnapTrade yapılandırılmamış.
+    select_existing_account:
+      balance_label: 'Bakiye:'
+      cancel_button: İptal
+      connect_hint: Önce bir aracı bağlamanız gerekebilir.
+      header: Mevcut Hesabı Bağla
+      link_button: Bağla
+      linking_to: 'Hesaba bağlanıyor:'
+      no_accounts: Bağlı olmayan SnapTrade hesabı yok.
+      not_found: Hesap veya SnapTrade yapılandırması bulunamadı.
+      settings_link: Sağlayıcı Ayarlarına Git
+      subtitle: Bağlanacak bir SnapTrade hesabı seçin
+      title: SnapTrade Hesabına Bağla
+    setup_accounts:
+      account_number: 'Hesap:'
+      available_accounts: Kullanılabilir Hesaplar
+      back_to_settings: Ayarlara Dön
+      balance_label: 'Bakiye:'
+      cancel_button: İptal
+      create_button: Seçili Hesapları Oluştur
+      creating: Hesaplar Oluşturuluyor...
+      done_button: Tamam
+      free_tier_note: SnapTrade ücretsiz katmanı 20 aracı bağlantısına izin verir.
+      header: SnapTrade Hesaplarınızı Kurun
+      info_activities: İşlem etiketleriyle işlem geçmişi (Al, Sat, Temettü vb.)
+      info_cost_basis: Pozisyon başına maliyet temeli (mevcut olduğunda)
+      info_history: 3 yıla kadar işlem geçmişi
+      info_holdings: Güncel fiyat ve miktarlarla varlıklar
+      info_title: SnapTrade Yatırım Verileri
+      link_button: Bağla
+      linked_accounts: Zaten Bağlı
+      linked_to: 'Bağlı:'
+      loading: SnapTrade'den hesaplar getiriliyor...
+      loading_hint: Hesapları kontrol etmek için Yenile'ye tıklayın.
+      no_accounts_message: Aracı hesabı bulunamadı. Bu, bağlantıyı iptal etmiş olmanız
+        veya aracınızın desteklenmemesi durumunda oluşabilir.
+      no_accounts_title: Hesap Bulunamadı
+      or_link_existing: 'Veya yeni hesap oluşturmak yerine mevcut bir hesaba bağlayın:'
+      refresh: Yenile
+      select_account: Bir hesap seçin...
+      subtitle: Hangi aracı hesaplarının bağlanacağını seçin
+      sync_start_date_help: Tüm kullanılabilir geçmiş için boş bırakın
+      sync_start_date_label: 'İşlemleri şu tarihten içe aktar:'
+      syncing: Hesaplarınız getiriliyor...
+      title: SnapTrade Hesaplarını Kur
+      try_again: Aracı Bağla
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} hesabın kurulması gerekiyor"
+        other: "%{count} hesabın kurulması gerekiyor"
+      add_another_brokerage: Başka bir aracı bağla
+      connect_brokerage: Aracı Bağla
+      delete: Sil
+      deletion_in_progress: Siliniyor...
+      error: Senkronizasyon hatası
+      manage_connections: Bağlantıları Yönet
+      more_accounts_available:
+        one: "%{count} hesap daha kurulmaya hazır"
+        other: "%{count} hesap daha kurulmaya hazır"
+      no_accounts_description: Yatırım hesaplarınızı içe aktarmak için bir aracı bağlayın.
+      no_accounts_title: Hesap keşfedilmedi
+      reconnect: Yeniden bağlan
+      requires_update: Bağlantının güncellenmesi gerekiyor
+      setup_accounts_menu: Hesapları Kur
+      setup_action: Hesapları Kur
+      setup_description: SnapTrade'den bazı hesapların Sure hesaplarıyla bağlanması
+        gerekiyor.
+      setup_needed: Hesapların kurulması gerekiyor
+      status: 'Son senkronizasyon: %{timestamp} önce - %{summary}'
+      status_never: Hiç senkronize edilmedi
+      syncing: Senkronize ediliyor...
+    start_oauth_device_flow:
+      failed: SnapTrade OAuth cihaz yetkilendirmesi başlatılamadı. Lütfen tekrar deneyin.
+    update:
+      success: SnapTrade yapılandırması başarıyla güncellendi.

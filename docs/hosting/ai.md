@@ -216,6 +216,13 @@ OPENAI_URI_BASE=http://localhost:11434/v1
 # Model you pulled
 OPENAI_MODEL=llama3.1:13b
 
+# Raise this for large-context local models so auto-categorize and merchant detection
+# have enough prompt budget for categories + schemas before transaction rows are added.
+LLM_CONTEXT_WINDOW=8192
+
+# Slow local models often need a longer HTTP timeout once the prompt budget issue is fixed.
+OPENAI_REQUEST_TIMEOUT=180
+
 # Optional: enable debug logging in the AI chat
 AI_DEBUG_MODE=true 
 ```
@@ -224,6 +231,8 @@ AI_DEBUG_MODE=true
 - You **must** set `OPENAI_MODEL` - the system cannot default to `gpt-4.1` as that model won't exist in Ollama
 - The `OPENAI_ACCESS_TOKEN` can be any non-empty value (Ollama ignores it)
 - If you don't set a model, chats will fail with a validation error
+- Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
+- If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits
 
 ### Docker Compose Example
 
@@ -234,6 +243,8 @@ services:
       - OPENAI_ACCESS_TOKEN=ollama-local
       - OPENAI_URI_BASE=http://ollama:11434/v1
       - OPENAI_MODEL=llama3.1:13b
+      - LLM_CONTEXT_WINDOW=8192
+      - OPENAI_REQUEST_TIMEOUT=180
       - AI_DEBUG_MODE=true # Optional: enable debug logging in the AI chat
     depends_on:
       - ollama
@@ -447,6 +458,8 @@ When [Pipelock](https://github.com/luckyPipewrench/pipelock) is enabled (`pipelo
 - **Inbound** (agent -> Sure /mcp): routed through Pipelock's MCP reverse proxy (port 8889)
 
 Pipelock scans for prompt injection, DLP violations, and tool poisoning. The external agent does not need Pipelock installed. Sure's Pipelock handles both directions.
+
+If you need audit evidence, configure Pipelock's flight recorder as described in [Pipelock signed action receipts](pipelock.md#signed-action-receipts). `pipelock.enabled=true` gives scanning; receipts require mounted evidence storage plus a receipt-signing key.
 
 **`NO_PROXY` behavior (Helm/Kubernetes only):** The Helm chart's env template sets `NO_PROXY` to include `.svc.cluster.local` and other internal domains. This means in-cluster agent URLs (like `http://agent.namespace.svc.cluster.local:18789`) bypass the forward proxy and go directly. If your agent is in-cluster, its traffic won't be forward-proxy scanned (but MCP callbacks from the agent are still scanned by the reverse proxy). Docker Compose deployments use a different `NO_PROXY` set; check your compose file for the exact values.
 
@@ -1022,6 +1035,34 @@ ollama list  # See what's installed
 ollama pull model-name  # Install a model
 ```
 
+### "Fixed prompt tokens exceed context budget"
+
+**Symptom:** Auto-categorization or merchant detection fails immediately with an error like:
+
+```text
+Fixed prompt tokens (2108) exceed context budget (1280)
+```
+
+**Cause:** Sure computes the usable prompt budget as:
+
+```text
+context_window - max_response_tokens - system_prompt_reserve
+```
+
+The defaults are conservative:
+- `LLM_CONTEXT_WINDOW=2048`
+- `LLM_MAX_RESPONSE_TOKENS=512`
+- `LLM_SYSTEM_PROMPT_RESERVE=256`
+
+That leaves `1280` input tokens. On local or custom models, the fixed prompt can already exceed that budget once you include Sure's instructions, category taxonomy, and schema payloads.
+
+**Fix:**
+```bash
+LLM_CONTEXT_WINDOW=8192
+```
+
+Then restart both `web` and `worker` so the new env var is loaded. If you are using Docker Compose, make sure your compose file forwards `LLM_CONTEXT_WINDOW` into the containers.
+
 ### Slow Responses
 
 **Symptom:** Long wait times for AI responses
@@ -1036,6 +1077,7 @@ ollama pull model-name  # Install a model
 - Try a smaller model
 - Ensure you're using GPU, not CPU
 - Check for thermal throttling
+- If you see `Net::ReadTimeout` after fixing the context budget, raise `OPENAI_REQUEST_TIMEOUT` (for example `180`)
 
 ### No Provider Available
 
@@ -1078,9 +1120,9 @@ ollama pull model-name  # Install a model
    kubectl logs deploy/sure-worker -c sidekiq --tail=50 | grep -i "external\|assistant\|error"
    ```
 
-4. **If using Pipelock:** Check pipelock sidecar logs. A crashed pipelock can block outbound requests:
+4. **If using Pipelock:** Check the Pipelock deployment logs. A crashed Pipelock proxy can block outbound requests:
    ```bash
-   kubectl logs deploy/sure-worker -c pipelock --tail=20
+   kubectl logs deploy/sure-pipelock --tail=20
    ```
 
 ### High Costs

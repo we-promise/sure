@@ -7,14 +7,10 @@ es:
       success: Transferencia eliminada
     form:
       amount: Importe
-      calculate_rate_tab: Calcular tasa
-      convert_tab: Convertir con tasa
       date: Fecha
       destination_amount: Importe de destino
       destination_amount_display: "Importe de destino: %{amount}"
-      exchange_rate: Tasa de cambio
       exchange_rate_display: "Tasa de cambio: %{rate}"
-      exchange_rate_help: Elige cómo introducir el importe de la transferencia.
       expense: Gasto
       from: Desde
       income: Ingreso
@@ -34,5 +30,7 @@ es:
       note_placeholder: Añade una nota a esta transferencia
       overview: Resumen
       settings: Configuración
+      total: Total
+      transfer_amount: Importe de la transferencia
     update:
       success: Transferencia actualizada

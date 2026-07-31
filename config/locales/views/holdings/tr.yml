@@ -3,11 +3,32 @@ tr:
   holdings:
     cash:
       brokerage_cash: Aracı kurum nakiti
+    cost_basis_cell:
+      cancel: İptal
+      or_per_share_label: 'Veya hisse başına girin:'
+      overwrite_confirm_body: Bu işlem, mevcut %{current} maliyet bazını değiştirecektir.
+      overwrite_confirm_title: Maliyet bazının üzerine yazılsın mı?
+      per_share: hisse başına
+      save: Kaydet
+      set: Ayarla
+      set_cost_basis_header: "%{ticker} için maliyet bazını ayarla (%{qty} hisse)"
+      total_cost_basis_label: Toplam maliyet bazı
+      unknown: "--"
+    cost_basis_sources:
+      calculated: İşlemlerden
+      manual: Kullanıcı tarafından ayarlandı
+      provider: Sağlayıcıdan
     destroy:
+      cannot_delete: Bu varlığı silemezsiniz
       success: Holding silindi
+    errors:
+      security_collision: 'Yeniden eşlenemedi: %{ticker} için zaten %{date} tarihinde
+        bir varlığınız var.'
     holding:
+      no_cost_basis: Maliyet bazı yok
       per_share: Hisse başına
       shares: "%{qty} adet hisse"
+      unknown: "--"
     index:
       average_cost: Ortalama maliyet
       holdings: Varlıklar
@@ -19,17 +40,76 @@ tr:
     missing_price_tooltip:
       description: Bu yatırımda eksik veriler var ve getirisi veya değeri hesaplanamadı.
       missing_data: Eksik veri
+    remap_security:
+      security_not_found: Seçilen menkul kıymet bulunamadı.
+      success: Menkul kıymet başarıyla güncellendi.
+    reset_security:
+      success: Menkul kıymet sağlayıcı değerine sıfırlandı.
     show:
       avg_cost_label: Ortalama Maliyet
+      book_value_label: Defter Değeri
+      cancel: İptal
+      cost_basis_locked_description: Manuel olarak ayarladığınız maliyet bazı senkronizasyonlarla
+        değiştirilmeyecektir.
+      cost_basis_locked_label: Maliyet bazı kilitli
       current_market_price_label: Güncel Piyasa Fiyatı
       delete: Sil
-      delete_subtitle: Bu işlem, bu varlığı ve bu hesaptaki ilişkili tüm işlemlerinizi silecektir. Bu işlem geri alınamaz.
+      delete_subtitle: Bu işlem, bu varlığı ve bu hesaptaki ilişkili tüm işlemlerinizi
+        silecektir. Bu işlem geri alınamaz.
       delete_title: Varlığı sil
+      edit_security: Menkul kıymeti düzenle
       history: Geçmiş
+      last_price_update: Son fiyat güncellemesi
+      market_data_label: Piyasa verisi
+      market_data_sync_button: Yenile
+      market_value_label: Piyasa Değeri
+      never: Hiç
+      no_security_provider: Menkul kıymet sağlayıcısı yapılandırılmamış. Menkul kıymet
+        aranamıyor.
+      no_trade_history: Bu varlık için işlem geçmişi mevcut değil.
+      originally: önceden %{ticker} idi
       overview: Genel Bakış
       portfolio_weight_label: Portföy Ağırlığı
+      provider_disabled_warning: Fiyat güncellemeleri duraklatıldı — %{provider} sağlayıcısı
+        devre dışı. Aşağıdan başka bir sağlayıcıya geçin veya Ayarlar'dan yeniden
+        etkinleştirin.
+      provider_sent: 'Sağlayıcı gönderdi: %{ticker}'
+      remap_security: Kaydet
+      reset_confirm_body: Bu işlem, menkul kıymeti %{current} değerinden %{original}
+        değerine geri döndürecek ve ilişkili tüm işlemleri taşıyacaktır.
+      reset_confirm_title: Menkul kıymet sağlayıcı değerine sıfırlansın mı?
+      reset_to_provider: Sağlayıcı değerine sıfırla
+      search_security: Menkul kıymet ara
+      search_security_placeholder: Sembol veya isimle arayın
+      security_label: Menkul Kıymet
+      security_remapped_label: Menkul kıymet yeniden eşlendi
       settings: Ayarlar
+      shares_label: Hisseler
+      switch_provider_button: Değiştir
+      switch_provider_description: "%{provider} devre dışı. Bu menkul kıymeti başka
+        bir etkin sağlayıcıdan arayın."
+      switch_provider_label: Sağlayıcıyı değiştir
+      syncing: Senkronize ediliyor...
       ticker_label: Sembol
-      trade_history_entry: "%{qty} adet %{security} %{price} fiyatından"
       total_return_label: Toplam Getiri
+      trade_history_entry: "%{qty} adet %{security} %{price} fiyatından"
+      truncated_history_warning: Fiyat geçmişi yalnızca %{date} tarihinden itibaren
+        mevcuttur. Bu tarihten öncesi için seçilen sağlayıcıdan veri bulunmamaktadır
+        — bu, varlığın işlem tarihinizden sonra listelenmesi veya sağlayıcının mevcut
+        planında sınırlı bir geçmiş veri aralığı sunması durumunda oluşabilir.
       unknown: Bilinmiyor
+      unlock_confirm_body: Bu işlem, maliyet bazının sağlayıcı senkronizasyonları
+        veya işlem hesaplamaları tarafından güncellenmesine izin verecektir.
+      unlock_confirm_title: Maliyet bazının kilidi açılsın mı?
+      unlock_cost_basis: Kilidi Aç
+    sync_prices:
+      provider_error: Güncel fiyatlar alınamadı. Lütfen birkaç dakika sonra tekrar
+        deneyin.
+      success: Piyasa verileri başarıyla senkronize edildi.
+      unavailable: Çevrimdışı menkul kıymetler için piyasa verisi senkronizasyonu
+        kullanılamaz.
+    unlock_cost_basis:
+      success: Maliyet bazının kilidi açıldı. Bir sonraki senkronizasyonda güncellenebilir.
+    update:
+      error: Geçersiz maliyet bazı değeri.
+      success: Maliyet bazı kaydedildi.

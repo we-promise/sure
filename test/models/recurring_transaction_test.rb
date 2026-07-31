@@ -998,12 +998,9 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_not RecurringTransaction.exists?(rt.id)
   end
 
-  test "Cleaner skips recurring transfers so they aren't mistakenly marked inactive" do
-    # `matching_transactions` is single-account name/amount-based and never
-    # matches a Transfer pair, so without the skip the recurring transfer
-    # would flip to inactive at the 6-month threshold even when the user
-    # is still doing the transfer monthly. Issue #1590 tracks the proper
-    # pair-detection fix.
+  test "Cleaner keeps a recurring transfer active when its pair still occurs (issue #1590)" do
+    # The seed name rarely matches future occurrences, so pair detection (not
+    # name matching) is what keeps a live transfer active past the threshold.
     rt = @family.recurring_transactions.create!(
       account: @account, destination_account: accounts(:credit_card),
       name: "Transfer to CC", amount: 250, currency: "USD",
@@ -1012,10 +1009,59 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       next_expected_date: 5.days.from_now.to_date,
       manual: true
     )
-    assert rt.should_be_inactive?, "guard sanity: row would be marked inactive without the skip"
+    assert rt.should_be_inactive?, "guard sanity: stale last_occurrence_date"
+
+    # A fresh transfer pair this cycle, carrying a *different* free-text name.
+    date = 1.month.ago.beginning_of_month + 4.days # day-of-month 5
+    outflow = @account.entries.create!(
+      date: date, amount: 250, currency: "USD", name: "rent transfer",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    inflow = accounts(:credit_card).entries.create!(
+      date: date, amount: -250, currency: "USD", name: "rent transfer",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
 
     RecurringTransaction.cleanup_stale_for(@family)
     assert_equal "active", rt.reload.status
+  end
+
+  test "Cleaner retires a recurring transfer whose pair has stopped" do
+    # No matching Transfer pair → genuinely stale → should be retired. This is
+    # the correctness the pair-detection (vs the old blanket skip) buys us.
+    rt = @family.recurring_transactions.create!(
+      account: @account, destination_account: accounts(:credit_card),
+      name: "Transfer to CC", amount: 250, currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 7.months.ago.to_date,
+      next_expected_date: 5.days.from_now.to_date,
+      manual: true
+    )
+
+    RecurringTransaction.cleanup_stale_for(@family)
+    assert_equal "inactive", rt.reload.status
+  end
+
+  test "matching_transactions finds the transfer pair regardless of occurrence name" do
+    rt = @family.recurring_transactions.create!(
+      account: @account, destination_account: accounts(:credit_card),
+      name: "Transfer to CC", amount: 250, currency: "USD",
+      expected_day_of_month: 5, last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date, manual: true
+    )
+    date = Date.current.beginning_of_month + 4.days # day-of-month 5
+    outflow = @account.entries.create!(
+      date: date, amount: 250, currency: "USD", name: "an importer's wording",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    inflow = accounts(:credit_card).entries.create!(
+      date: date, amount: -250, currency: "USD", name: "an importer's wording",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+
+    assert_includes rt.matching_transactions.map(&:id), outflow.id
   end
 
   test "Identifier#update_manual_recurring_transactions skips recurring transfers" do

@@ -13,6 +13,10 @@ zh-CN:
               must_have_opposite_amounts: 转账交易的金额必须互为相反数
               must_have_single_currency: 转账必须使用单一货币
               outflow_cannot_be_in_multiple_transfers: 出账交易不能参与多次转账
+          different_accounts: 必须来自不同账户
+          same_family: 必须来自同一家庭
+          opposite_amounts: 金额必须方向相反
+          within_days: 必须在 %{count} 天内
   transfer:
     name: 转账至 %{to_account}
     payment_name: 付款至 %{to_account}

@@ -1,0 +1,24 @@
+---
+nl:
+  transfer_matches:
+    create:
+      success: Overboeking aangemaakt
+    new:
+      header:
+        title: Overboeking of betaling koppelen
+        subtitle: Koppel de bijbehorende transactie in een ander account of maak er een aan als die niet bestaat.
+      from_account: Vanaf account
+      from_account_named: "Vanaf account: %{name}"
+      to_account: Naar account
+      to_account_named: "Naar account: %{name}"
+      outflow_transaction: Uitgaande transactie
+      inflow_transaction: Inkomende transactie
+      create_transfer_match: Overboekingskoppeling aanmaken
+    matching_fields:
+      select_method: Selecteer een methode om uw transacties te koppelen.
+      match_existing_recommended: Bestaande transactie koppelen (aanbevolen)
+      create_new_transaction: Nieuwe transactie aanmaken
+      matching_method: Koppelmethode
+      matching_transaction: Te koppelen transactie
+      target_account: Doelaccount
+      no_matching_transactions: We konden geen transacties vinden om te koppelen vanuit uw andere accounts. Selecteer een account en wij maken een nieuwe inkomende transactie voor u aan.

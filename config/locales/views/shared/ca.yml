@@ -29,6 +29,9 @@ ca:
     money_field:
       label: Import
     require_admin: Només els administradors poden fer aquesta acció
+    sync_toast:
+      message: Hi ha dades noves disponibles
+      refresh: Actualitza
     syncing_notice:
       syncing: S'estan sincronitzant les dades dels comptes...
     transaction_tabs:

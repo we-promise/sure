@@ -48,10 +48,14 @@ class DS::Dialog < DesignSystemComponent
   }.freeze
   VALID_HEADING_LEVELS = (1..6).freeze
 
-  def initialize(variant: "modal", auto_open: true, reload_on_close: false, width: "md", frame: nil, disable_frame: false, content_class: nil, disable_click_outside: false, responsive: false, scrollable: true, heading_level: 2, **opts)
+  class_attribute :defaults_provider, default: nil
+
+  def initialize(variant: "modal", auto_open: true, reload_on_close: false, width: "md", frame: nil, disable_frame: false, content_class: nil, disable_click_outside: nil, responsive: false, scrollable: true, heading_level: 2, **opts)
     unless heading_level.is_a?(Integer) && VALID_HEADING_LEVELS.cover?(heading_level)
       raise ArgumentError, "heading_level must be an Integer between 1 and 6, got: #{heading_level.inspect}"
     end
+
+    defaults = self.class.defaults_provider&.call || {}
 
     @variant = variant.to_sym
     @auto_open = auto_open
@@ -60,7 +64,7 @@ class DS::Dialog < DesignSystemComponent
     @frame = frame
     @disable_frame = disable_frame
     @content_class = content_class
-    @disable_click_outside = disable_click_outside
+    @disable_click_outside = disable_click_outside.nil? ? defaults.fetch(:disable_click_outside, false) : disable_click_outside
     @responsive = responsive
     @scrollable = scrollable
     @heading_level = heading_level
@@ -142,6 +146,7 @@ class DS::Dialog < DesignSystemComponent
     classes = responsive? ? "ml-auto hidden lg:flex" : "ml-auto"
     render DS::Button.new(
       variant: "icon",
+      size: :sm,
       class: classes,
       icon: "x",
       title: I18n.t("ds.dialog.close"),

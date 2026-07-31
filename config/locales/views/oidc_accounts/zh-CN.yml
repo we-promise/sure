@@ -20,6 +20,8 @@ zh-CN:
       submit_create: 创建账户
       account_creation_disabled: 通过单点登录创建账户已禁用。请联系管理员。
       cancel: 取消
+      no_pending_oidc: 未找到待处理的 OIDC 认证。
+      submit_accept_invitation: 接受邀请
     new_user:
       title: 完善您的账户
       heading: 创建您的账户
@@ -31,3 +33,10 @@ zh-CN:
       last_name_placeholder: 请输入您的姓
       submit: 创建账户
       cancel: 取消
+      no_pending_oidc: 未找到待处理的 OIDC 认证。
+    create_link:
+      no_pending_oidc: 未找到待处理的 OIDC 认证。
+    create_user:
+      no_pending_oidc: 未找到待处理的 OIDC 认证。
+      account_creation_disabled: SSO 账户创建已禁用。请联系管理员。
+      account_created: 欢迎！你的账户已创建。

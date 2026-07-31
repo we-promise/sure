@@ -8,13 +8,15 @@ PREVIEW_WORKFLOW_PATH = File.join(ROOT, ".github/workflows/preview-deploy.yml")
 PR_WORKFLOW_PATH = File.join(ROOT, ".github/workflows/pr.yml")
 LOCKFILE_PATH = File.join(ROOT, "workers/preview/package-lock.json")
 RESOLVER_PATH = File.join(ROOT, "workers/preview/deploy/resolve_preview_request.cjs")
+CONFIG_RENDERER_PATH = File.join(ROOT, "workers/preview/deploy/render_preview_config.cjs")
+REDACTION_HELPER_PATH = File.join(ROOT, "workers/preview/deploy/redact_preview_log.sh")
 PREVIEW_WORKER_PATH = File.join(ROOT, "workers/preview/src/index.ts")
 PREVIEW_DOCKERFILE_PATH = File.join(ROOT, "Dockerfile.preview")
 PINNED_ACTION = /\A[^@\s]+@[a-f0-9]{40}\z/
 EXPECTED_ACTION_PINS = {
   "actions/checkout" => "93cb6efe18208431cddfb8368fd83d5badbf9bfd", # v5
   "actions/download-artifact" => "018cc2cf5baa6db3ef3c5f8a56943fffe632ef53", # v6
-  "actions/github-script" => "f28e40c7f34bde8b3046d885e986cb6290c5673b", # v7
+  "actions/github-script" => "ed597411d8f924073f98dfc5c65a23a2325f34cd", # v8
   "actions/setup-node" => "48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e", # v6
   "actions/upload-artifact" => "b7c566a772e6b6bfb58ed0dc250532a479d7789f" # v6
 }.freeze
@@ -51,14 +53,22 @@ EXPECTED_COMMENT_PERMISSIONS = {
 }.freeze
 EXPECTED_DEPLOY_SECRET_ENV = %w[CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN CLOUDFLARE_WORKERS_SUBDOMAIN].freeze
 EXPECTED_PUSH_SECRET_ENV = %w[CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN].freeze
+EXPECTED_DIAGNOSTICS_PATH = "${{ runner.temp }}/preview-diagnostics"
+EXPECTED_FAILURE_DIAGNOSTICS_PATH = "${{ runner.temp }}/preview-failure-diagnostics"
+EXPECTED_CLEANUP_METADATA_PATH = "${{ runner.temp }}/preview-cleanup-metadata/wrangler.toml"
 REQUIRED_PREPARE_LINES = [
   'cp trusted/workers/preview/package.json "$preview_dir/package.json"',
   'cp trusted/workers/preview/package-lock.json "$preview_dir/package-lock.json"',
   'cp trusted/workers/preview/tsconfig.json "$preview_dir/tsconfig.json"',
   'cp trusted/workers/preview/wrangler.toml "$preview_dir/wrangler.toml"',
   'cp -R trusted/workers/preview/src "$preview_dir/src"',
+  'mkdir -p "$preview_dir/deploy"',
+  'cp trusted/workers/preview/deploy/redact_preview_log.sh "$preview_dir/deploy/redact_preview_log.sh"',
+  'cp trusted/workers/preview/deploy/render_preview_config.cjs "$preview_dir/deploy/render_preview_config.cjs"',
+  'chmod 0755 "$preview_dir/deploy/redact_preview_log.sh"',
   'diagnostics_nonce="$(openssl rand -hex 32)"',
   'sed -i "s/\${PREVIEW_DIAGNOSTICS_NONCE}/${diagnostics_nonce}/g" "$preview_dir/src/index.ts"',
+  'cp "$preview_dir/wrangler.toml" "$preview_dir/wrangler.source.toml"',
   "Preview diagnostics nonce placeholder was not replaced",
   "npm ci --ignore-scripts --no-audit --no-fund"
 ].freeze
@@ -154,6 +164,8 @@ preview_workflow = YAML.safe_load_file(PREVIEW_WORKFLOW_PATH, aliases: true)
 pr_workflow = YAML.safe_load_file(PR_WORKFLOW_PATH, aliases: true)
 lockfile = JSON.parse(File.read(LOCKFILE_PATH))
 resolver_script = File.read(RESOLVER_PATH)
+config_renderer_script = File.read(CONFIG_RENDERER_PATH)
+redaction_helper_script = File.read(REDACTION_HELPER_PATH)
 preview_worker_script = File.read(PREVIEW_WORKER_PATH)
 preview_dockerfile = File.read(PREVIEW_DOCKERFILE_PATH)
 
@@ -195,6 +207,10 @@ deploy = step!(deploy_steps, "Deploy to Cloudflare Containers")
 warm_preview = step!(deploy_steps, "Warm preview container")
 collect_diagnostics = step!(deploy_steps, "Collect preview diagnostics")
 upload_diagnostics = step!(deploy_steps, "Upload preview diagnostics")
+collect_failure_diagnostics = step!(deploy_steps, "Collect preview failure diagnostics")
+upload_failure_diagnostics = step!(deploy_steps, "Upload preview failure diagnostics")
+prepare_cleanup_metadata = step!(deploy_steps, "Prepare cleanup metadata")
+store_cleanup_metadata = step!(deploy_steps, "Store cleanup metadata")
 update_deployment_status = step!(deployment_status_steps, "Update Deployment Status")
 comment_on_pr = step!(preview_comment_steps, "Comment on PR")
 
@@ -215,6 +231,7 @@ comment_on_pr = step!(preview_comment_steps, "Comment on PR")
   [ "preview gate head output", gate_job.dig("outputs", "head_sha"), "${{ steps.preview.outputs.head_sha }}" ],
   [ "preview gate fork output", gate_job.dig("outputs", "is_fork"), "${{ steps.preview.outputs.is_fork }}" ],
   [ "preview gate PR output", gate_job.dig("outputs", "pr_number"), "${{ steps.preview.outputs.pr_number }}" ],
+  [ "preview gate resolution source output", gate_job.dig("outputs", "resolution_source"), "${{ steps.preview.outputs.resolution_source }}" ],
   [ "preview image needs", image_job.fetch("needs"), "ci" ],
   [ "preview image permissions", image_job.fetch("permissions"), EXPECTED_IMAGE_PERMISSIONS ],
   [ "preview image timeout", image_job.fetch("timeout-minutes"), 30 ],
@@ -240,6 +257,7 @@ comment_on_pr = step!(preview_comment_steps, "Comment on PR")
   [ "deploy HEAD_SHA env", deploy_job.dig("env", "HEAD_SHA"), "${{ needs.preview-gate.outputs.head_sha }}" ],
   [ "deploy IS_FORK env", deploy_job.dig("env", "IS_FORK"), "${{ needs.preview-gate.outputs.is_fork }}" ],
   [ "deploy PR_NUMBER env", deploy_job.dig("env", "PR_NUMBER"), "${{ needs.preview-gate.outputs.pr_number }}" ],
+  [ "deploy RESOLUTION_SOURCE env", deploy_job.dig("env", "RESOLUTION_SOURCE"), "${{ needs.preview-gate.outputs.resolution_source }}" ],
   [ "deployment status needs", deployment_status_job.fetch("needs"), [ "preview-gate", "deployment_record", "deploy-preview" ] ],
   [ "deployment status permissions", deployment_status_job.fetch("permissions"), EXPECTED_DEPLOYMENT_PERMISSIONS ],
   [ "deployment status timeout", deployment_status_job.fetch("timeout-minutes"), 5 ],
@@ -269,8 +287,18 @@ comment_on_pr = step!(preview_comment_steps, "Comment on PR")
   [ "fork deployment record guard", create_deployment.fetch("if"), "env.IS_FORK == 'false'" ],
   [ "diagnostics upload if", upload_diagnostics.fetch("if"), "always() && steps.deploy.outputs.preview_url != ''" ],
   [ "diagnostics upload name", upload_diagnostics.dig("with", "name"), "preview-diagnostics-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}" ],
-  [ "diagnostics upload path", upload_diagnostics.dig("with", "path"), "${{ runner.temp }}/preview-diagnostics.json" ],
+  [ "diagnostics upload path", upload_diagnostics.dig("with", "path"), EXPECTED_DIAGNOSTICS_PATH ],
   [ "diagnostics upload retention", upload_diagnostics.dig("with", "retention-days"), 3 ],
+  [ "failure diagnostics collect if", collect_failure_diagnostics.fetch("if"), "failure()" ],
+  [ "failure diagnostics upload if", upload_failure_diagnostics.fetch("if"), "failure()" ],
+  [ "failure diagnostics upload name", upload_failure_diagnostics.dig("with", "name"), "preview-failure-diagnostics-pr-${{ env.PR_NUMBER }}-${{ env.HEAD_SHA }}" ],
+  [ "failure diagnostics upload path", upload_failure_diagnostics.dig("with", "path"), EXPECTED_FAILURE_DIAGNOSTICS_PATH ],
+  [ "failure diagnostics upload retention", upload_failure_diagnostics.dig("with", "retention-days"), 3 ],
+  [ "cleanup metadata prepare if", prepare_cleanup_metadata.fetch("if"), "success()" ],
+  [ "cleanup metadata upload if", store_cleanup_metadata.fetch("if"), "success()" ],
+  [ "cleanup metadata upload name", store_cleanup_metadata.dig("with", "name"), "preview-cleanup-pr-${{ env.PR_NUMBER }}" ],
+  [ "cleanup metadata upload path", store_cleanup_metadata.dig("with", "path"), EXPECTED_CLEANUP_METADATA_PATH ],
+  [ "cleanup metadata upload retention", store_cleanup_metadata.dig("with", "retention-days"), 2 ],
   [ "Wrangler binary", wrangler.dig("bin", "wrangler"), "bin/wrangler.js" ]
 ].each { |label, actual, expected| assert(actual == expected, "#{label}: expected #{actual.inspect} to equal #{expected.inspect}") }
 
@@ -298,7 +326,28 @@ assert(gate_trusted_checkout.dig("with", "sparse-checkout").to_s.include?("worke
 assert(trusted_checkout.dig("with", "sparse-checkout").to_s.include?("workers/preview"), "trusted checkout must include preview tooling")
 assert(deploy_step_names.compact.uniq == deploy_step_names.compact, "workflow step names must stay unique for security checks")
 assert([ gate_trusted_checkout, resolve_preview ].map { |step| gate_steps.index(step) }.each_cons(2).all? { |left, right| left < right }, "gate workflow steps must checkout trusted resolver before use")
-assert([ trusted_checkout, download_artifact, verify_checksum, prepare, load_image, push_image, configure_image, deploy, warm_preview, collect_diagnostics, upload_diagnostics ].map { |step| deploy_steps.index(step) }.each_cons(2).all? { |left, right| left < right }, "deploy workflow steps must preserve safe cross-run artifact deploy order")
+required_deploy_order = [
+  trusted_checkout,
+  download_artifact,
+  verify_checksum,
+  prepare,
+  load_image,
+  push_image,
+  configure_image,
+  deploy,
+  warm_preview,
+  collect_diagnostics,
+  upload_diagnostics,
+  collect_failure_diagnostics,
+  upload_failure_diagnostics,
+  prepare_cleanup_metadata,
+  store_cleanup_metadata
+]
+assert(
+  required_deploy_order.map { |step| deploy_steps.index(step) }
+    .each_cons(2).all? { |left, right| left < right },
+  "deploy workflow steps must preserve safe cross-run artifact deploy order"
+)
 assert(deploy_steps.none? { |step| step["name"] == "Checkout PR code" }, "privileged deploy job must not checkout PR code")
 assert(env_hash(deploy_job).keys.none? { |name| name.start_with?("CLOUDFLARE_") }, "Cloudflare secrets must not be job-wide")
 assert(env_hash(gate_job).keys.none? { |name| name.start_with?("CLOUDFLARE_") }, "preview gate must not receive Cloudflare secrets")
@@ -344,6 +393,9 @@ assert_run_includes(
   "workflowRun.pull_requests?.[0]",
   "github.rest.repos.listPullRequestsAssociatedWithCommit",
   "parsePreviewArtifactName",
+  "artifactPullRequestNumbers.length === 1",
+  "conflicts with workflow_run PR",
+  "conflicts with commit-associated PRs",
   "pullRequest.head.sha !== headSha",
   "is stale for PR",
   "preview-cf",
@@ -352,8 +404,41 @@ assert_run_includes(
   "!item.expired",
   "core.setOutput(\"artifact_name\", artifactName)",
   "core.setOutput(\"is_fork\", String(isFork))",
+  "core.setOutput(\"resolution_source\", selected.source)",
   "core.setOutput(\"should_deploy\", \"true\")"
 ].each { |needle| assert(resolver_script.include?(needle), "preview resolver must include #{needle.inspect}") }
+
+artifact_resolution_index = resolver_script.index("artifactPullRequestNumbers.length === 1")
+workflow_run_fallback_index = resolver_script.index("if (workflowRunPullRequestNumber)")
+assert(artifact_resolution_index, "preview resolver must inspect exact preview artifacts")
+assert(workflow_run_fallback_index, "preview resolver must retain workflow_run PR fallback")
+assert(
+  artifact_resolution_index < workflow_run_fallback_index,
+  "preview resolver must prefer exact preview artifacts before workflow_run PR metadata"
+)
+assert(File.executable?(REDACTION_HELPER_PATH), "preview log redaction helper must be executable")
+[
+  "registry\\.cloudflare\\.com/[^/]+/",
+  "Authorization|Proxy-Authorization",
+  "X-Auth-Key|X-Auth-Email|X-Api-Key|Api-Key",
+  "api_key|access_token|refresh_token|auth_token|key|private_key",
+  "CLOUDFLARE_ACCOUNT_ID=",
+  "CLOUDFLARE_API_TOKEN|API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|AUTH_TOKEN|PRIVATE_KEY",
+  "<redacted-token>",
+  "<redacted-account>"
+].each { |needle| assert(redaction_helper_script.include?(needle), "preview log redaction helper must include #{needle.inspect}") }
+
+[
+  "REGISTRY_IMAGE_REF_PATTERN",
+  "REGISTRY_IMAGE_REF_SCAN_PATTERN",
+  "function validateRegistryImageRef",
+  "function renderPreviewConfig",
+  "function findRegistryImageRef",
+  "Expected wrangler.toml source to contain exactly one image entry",
+  "Cloudflare registry image reference does not match this preview artifact",
+  "Cloudflare registry image reference account does not match this workflow",
+  "module.exports"
+].each { |needle| assert(config_renderer_script.include?(needle), "preview config renderer must include #{needle.inspect}") }
 
 prepare_run = assert_run_includes(prepare, *REQUIRED_PREPARE_LINES)
 assert(!prepare_run.include?("npm install"), "prepare step must not use npm install")
@@ -371,24 +456,40 @@ assert_run_includes(load_image, 'gzip -dc "$image_archive" | docker load', 'dock
 push_image_run = assert_run_includes(
   push_image,
   "./node_modules/.bin/wrangler containers push",
-  "registry\\.cloudflare\\.com/",
+  "registry.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/${image_tag}",
   "image_ref=",
+  'source_config="$RUNNER_TEMP/sure-preview-worker/wrangler.source.toml"',
   'config_path="$RUNNER_TEMP/sure-preview-worker/wrangler.toml"',
-  'LOCAL_IMAGE_TAG="$image_tag" node - "$config_path"',
-  "Expected local preview image tag for wrangler containers push",
-  "Expected wrangler.toml to contain an image entry to rewrite before push"
+  'temporary_image_ref="registry.cloudflare.com/${CLOUDFLARE_ACCOUNT_ID}/${image_tag}"',
+  'PREVIEW_IMAGE_REF="$temporary_image_ref" node ./deploy/render_preview_config.cjs render "$source_config" "$config_path"',
+  'cp "$config_path" "$RUNNER_TEMP/wrangler-push.toml"',
+  'image_ref="$(node ./deploy/render_preview_config.cjs find "$clean_log")"'
 )
-push_rewrite_index = push_image_run.index('LOCAL_IMAGE_TAG="$image_tag" node - "$config_path"')
+push_rewrite_index = push_image_run.index('PREVIEW_IMAGE_REF="$temporary_image_ref" node ./deploy/render_preview_config.cjs render "$source_config" "$config_path"')
 push_command_index = push_image_run.index("./node_modules/.bin/wrangler containers push")
 assert(
   push_rewrite_index < push_command_index,
-  "push step must rewrite wrangler.toml to the loaded local image tag before wrangler validates it"
+  "push step must rewrite wrangler.toml to a registry-shaped image ref before wrangler validates it"
 )
-assert_run_includes(configure_image, "imageRef.startsWith('registry.cloudflare.com/')", 'const original = fs.readFileSync', 'const updated = original.replace(/image = "[^"]+"/', "updated === original", "Expected wrangler.toml to contain an image entry to rewrite", "JSON.stringify(imageRef)")
+assert(push_image_run.index('wrangler.source.toml') < push_rewrite_index, "push step must render from the preserved trusted source config")
+assert(!push_image_run.include?("LOCAL_IMAGE_TAG"), "push step must not write a local Docker tag into wrangler.toml")
+assert(!push_image_run.include?("Expected local preview image tag"), "push step must not accept local Docker tags as wrangler config image refs")
+assert_run_includes(push_image, 'tee "$push_log" | ./deploy/redact_preview_log.sh', "push_status=${PIPESTATUS[0]}")
+configure_image_run = assert_run_includes(
+  configure_image,
+  'source_config="$RUNNER_TEMP/sure-preview-worker/wrangler.source.toml"',
+  'PREVIEW_IMAGE_REF="$IMAGE_REF" node "$RUNNER_TEMP/sure-preview-worker/deploy/render_preview_config.cjs" render "$source_config" "$config_path"',
+  'cp "$config_path" "$RUNNER_TEMP/wrangler-final.toml"',
+  "preserved trusted source template",
+  'redact_preview_log.sh" < "$config_path"'
+)
+assert(!configure_image_run.include?('const updated = original.replace(/image = "[^"]+"/'), "final image configuration must use the tested renderer instead of inline regex replacement")
 assert_run_includes(create_deployment, "github.rest.repos.createDeployment", "ref: headSha", "preview-pr-${prNumber}")
-assert_run_includes(deploy, 'cd "$RUNNER_TEMP/sure-preview-worker"', "deploy_once()", "./node_modules/.bin/wrangler deploy --config wrangler.toml", '--var "PR_NUMBER:${PR_NUMBER}"', "associated with a different durable object namespace", 'if ! ./node_modules/.bin/wrangler delete --name "sure-preview-${PR_NUMBER}" --force', "Preview Worker delete failed", "retrying once")
+assert_run_includes(deploy, 'cd "$RUNNER_TEMP/sure-preview-worker"', "deploy_once()", "./node_modules/.bin/wrangler deploy --config wrangler.toml", '--var "PR_NUMBER:${PR_NUMBER}"', 'tee "$deploy_log" | ./deploy/redact_preview_log.sh', "deploy_status=${PIPESTATUS[0]}", "associated with a different durable object namespace", 'if ! ./node_modules/.bin/wrangler delete --name "sure-preview-${PR_NUMBER}" --force', "Preview Worker delete failed", "retrying once")
 assert_run_includes(warm_preview, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15")
-assert_run_includes(collect_diagnostics, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15", "seq 1 40", "preview-diagnostics.json", "jq -e '.previewReady == true or .previewFailed == true'", "jq -e '.previewFailed == true'", "Preview diagnostics from _container_status reported previewFailed=true", "jq -e '.previewReady == true'", "Preview diagnostics from _container_status did not reach previewReady=true", ".timings.previewReadyAt != null and .timings.secondsToPreviewReady != null", "Preview diagnostics are missing readiness timing fields", "exit 1")
+assert_run_includes(collect_diagnostics, "$PREVIEW_URL/_container_status", "--connect-timeout 5", "--max-time 15", "seq 1 100", "preview-diagnostics", "preview-diagnostics.json", "latest-metrics.json", "metrics-polls.log", "summary.md", '! jq -e . "$diagnostics_file"', 'raw_snippet="$(head -c 2048 "$diagnostics_file")"', 'latest_metrics_snapshot="$(head -c 2048 "$latest_metrics_file")"', "rawSnippet", "latestMetrics", "jq -e '.previewReady == true or .previewFailed == true'", "jq -e '.previewFailed == true'", "Preview diagnostics from _container_status reported previewFailed=true", "jq -e '.previewReady == true'", "Preview diagnostics from _container_status did not reach previewReady=true", ".timings.previewReadyAt != null and .timings.secondsToPreviewReady != null", "Preview diagnostics are missing readiness timing fields", "exit 1")
+assert_run_includes(collect_failure_diagnostics, "preview-failure-diagnostics", "preview-request.json", "preview-image-manifest.json", "wrangler-source.toml", "wrangler-push.toml", "wrangler-final.toml", "wrangler.toml", "wrangler-containers-push.log", "wrangler-deploy.log", "redaction_helper=", 'sanitize_copy "$RUNNER_TEMP/sure-preview-worker/wrangler.source.toml"', 'sanitize_copy "$RUNNER_TEMP/wrangler-push.toml"', 'sanitize_copy "$RUNNER_TEMP/wrangler-final.toml"', "wrangler-deploy.clean.log", "resolutionSource")
+assert_run_includes(prepare_cleanup_metadata, "preview-cleanup-metadata", "redact_preview_log.sh", "$RUNNER_TEMP/sure-preview-worker/wrangler.toml", "$metadata_dir/wrangler.toml")
 assert_run_includes(update_deployment_status, "github.rest.repos.createDeploymentStatus", "process.env.DEPLOY_RESULT === 'success'", "deployment_id: Number(process.env.DEPLOYMENT_ID)")
 assert_run_includes(comment_on_pr, "github.rest.issues.listComments", "github.rest.issues.updateComment", "github.rest.issues.createComment", "Preview Deployment Ready")
 

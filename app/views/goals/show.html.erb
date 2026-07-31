@@ -65,6 +65,9 @@
         <% if @goal.may_unarchive? %>
           <% menu.with_item(variant: "button", text: t(".unarchive"), icon: "archive-restore", href: unarchive_goal_path(@goal), method: :patch) %>
         <% end %>
+        <% if @goal.may_reopen? %>
+          <% menu.with_item(variant: "button", text: t(".reopen"), icon: "rotate-ccw", href: reopen_goal_path(@goal), method: :patch) %>
+        <% end %>
         <% if @goal.archived? %>
           <% menu.with_item(
                variant: "button",
@@ -121,6 +124,9 @@
     <div class="rounded-xl p-5 flex flex-col items-center justify-center text-center">
       <%= render Goals::ProgressRingComponent.new(goal: @goal, size: 180) %>
       <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format(precision: 0) %></p>
+      <% if @goal.contributions_basis? %>
+        <p class="text-xs text-secondary tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.market_value", amount: @goal.market_value_money.format(precision: 0)) %></p>
+      <% end %>
       <% unless @goal.completed? %>
         <p class="text-xs text-subdued tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.to_go", amount: @goal.remaining_amount_money.format(precision: 0)) %></p>
       <% end %>
@@ -224,14 +230,15 @@
             <% end %>
           </div>
         </div>
-        <div class="flex-1 min-h-[200px]"
+        <div class="flex-1 min-h-[200px] privacy-sensitive"
              data-controller="goal-projection-chart"
              data-goal-projection-chart-data-value="<%= @goal.projection_payload.to_json %>"
              data-goal-projection-chart-aria-label-value="<%= t("goals.show.projection.aria_label", name: @goal.name) %>"
              data-goal-projection-chart-aria-description-value="<%= strip_tags(@goal.projection_summary) %>"
              data-goal-projection-chart-today-label-value="<%= t("goals.show.projection.today_marker") %>"
              data-goal-projection-chart-projected-template-value="<%= t("goals.show.projection.tooltip_projected", amount: "{amount}") %>"
-             data-goal-projection-chart-saved-template-value="<%= t("goals.show.projection.tooltip_saved", amount: "{amount}") %>"></div>
+             data-goal-projection-chart-saved-template-value="<%= t("goals.show.projection.tooltip_saved", amount: "{amount}") %>"
+             data-goal-projection-chart-target-relation-template-value="<%= t("goals.show.projection.tooltip_target_relation", percent: "{percent}", target: "{target}") %>"></div>
         <% if @goal.target_date.nil? %>
           <div class="mt-3 flex items-center gap-2 text-xs text-secondary">
             <span class="text-subdued"><%= icon("calendar-plus", size: "sm") %></span>

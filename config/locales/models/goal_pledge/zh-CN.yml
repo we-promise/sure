@@ -1,0 +1,20 @@
+---
+zh-CN:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: 金额
+        currency: 货币
+        account: 账户
+        kind: 类型
+        status: 状态
+        expires_at: 过期时间
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: 请选择该目标的一个关联账户。
+            currency:
+              must_match_goal: 承诺货币必须与目标货币一致。
+          duplicate_open_pledge: 此账户已有相同金额的未完成承诺。记录新的承诺前，请先取消或延长现有承诺。
