@@ -40,12 +40,18 @@ Make sure you are in the directory you just created and run the following comman
 ```bash
 # Download the sample compose.yml file from the GitHub repository
 curl -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+
+# (Optional) If you plan to use the automated database backups feature:
+mkdir -p bin
+curl -o bin/db-backup.sh https://raw.githubusercontent.com/we-promise/sure/main/bin/db-backup.sh
+chmod +x bin/db-backup.sh
 ```
 
 This command will do the following:
 
 1. Fetch the sample docker compose file from our public Github repository
 2. Creates a file in your current directory called `compose.yml` with the contents of the example file
+3. (Optionally) Fetches the backup script and makes it executable.
 
 At this point, the only file in your current working directory should be `compose.yml`.
 
