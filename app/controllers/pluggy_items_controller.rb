@@ -4,6 +4,12 @@ class PluggyItemsController < ApplicationController
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_pluggy_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  # All provider mutations (create/update/sync/link/setup) are admin-only —
+  # mirrors RedbarkItemsController. Read/list views (index/show/new/edit) stay
+  # open so a non-admin family member can still view the providers panel. The
+  # existing controller tests sign in `users(:family_admin)`, which satisfies
+  # `require_admin!` (Current.user.admin?).
+  before_action :require_admin!, only: [ :create, :update, :destroy, :sync, :setup_accounts, :complete_account_setup, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account ]
 
   def index
     @pluggy_items = Current.family.pluggy_items.ordered
@@ -86,6 +92,13 @@ class PluggyItemsController < ApplicationController
 
   def update
     attrs = pluggy_item_params
+
+    # `client_secret` is rendered as a `password_field` (blank value, no DOM
+    # leak of the decrypted secret — see _pluggy_panel). Leaving the field
+    # blank on an edit means "keep the existing secret", not "clear it" — drop
+    # the blank param so the update doesn't wipe the stored credential and
+    # silently break `credentials_configured?`.
+    attrs.delete(:client_secret) if attrs[:client_secret].blank?
 
     # Credential-first path: if we still don't have an item id, try to discover
     # an existing Pluggy item for this family before persisting the update.

@@ -199,6 +199,26 @@ class Provider::PluggyTest < ActiveSupport::TestCase
     assert_equal %w[t1 t2], txns.map { |t| t[:id] }
   end
 
+  # Pluggy `next` may be an absolute URL ("https://api.pluggy.ai/v2/transactions?after=...")
+  # rather than a bare cursor token. normalize_transactions_cursor must extract the
+  # `after` token so the cursor loop advances instead of echoing the full URL back as
+  # `after` (which would spin forever if Pluggy keeps returning the same URL).
+  test "normalize_transactions_cursor extracts after token from absolute URLs and query strings" do
+    # bare token passes through unchanged
+    assert_equal "cursor1", Provider::Pluggy.send(:normalize_transactions_cursor, "cursor1")
+    # query-string form
+    assert_equal "tok", Provider::Pluggy.send(:normalize_transactions_cursor, "?accountId=x&after=tok")
+    # absolute-URL form — the regression case (previously returned the whole URL)
+    assert_equal "tok", Provider::Pluggy.send(:normalize_transactions_cursor, "https://api.pluggy.ai/v2/transactions?accountId=x&after=tok")
+    # cursor key as fallback
+    assert_equal "c2", Provider::Pluggy.send(:normalize_transactions_cursor, "?cursor=c2")
+    # blank next terminates the loop
+    assert_nil Provider::Pluggy.send(:normalize_transactions_cursor, nil)
+    assert_nil Provider::Pluggy.send(:normalize_transactions_cursor, "")
+    # URL with no after/cursor → nil (loop terminates rather than looping on a useless cursor)
+    assert_nil Provider::Pluggy.send(:normalize_transactions_cursor, "https://api.pluggy.ai/v2/transactions?accountId=x")
+  end
+
   # Task 6: investments + investment transactions (page loop via shared paged).
   # Stubs indifferent-access so nested hashes are symbol-accessible (real contract).
   test "get_investments loops pages item-scoped" do

@@ -166,13 +166,14 @@ class Provider::Pluggy
     end
 
     def latest_item_id(client_id:, client_secret:, client_user_id: nil)
-      # First try with the specific clientUserId (for family-scoped items)
+      # Only ever query items scoped to this family's clientUserId. list_items
+      # already drops the clientUserId filter when client_user_id is blank, so
+      # legacy/demo items (no client_user_id) are still discovered. We must NOT
+      # fall back to an unscoped query when client_user_id IS present: that could
+      # match another family's Pluggy item (same client_id, different
+      # clientUserId) and cross-link families via the auto-hydrated
+      # pluggy_item_id (see hydrate_pluggy_item_id!).
       items = list_items(client_id:, client_secret:, client_user_id:)
-      if items.blank? && client_user_id.present?
-        # Fallback: if no items found with clientUserId filter, try without it
-        # This handles demo items or items created outside the family context
-        items = list_items(client_id:, client_secret:, client_user_id: nil)
-      end
       return nil if items.blank?
 
       latest = items.max_by do |item|
@@ -257,20 +258,33 @@ class Provider::Pluggy
 
     private
 
-      # Pluggy may return `next` either as a raw cursor token or as a query-like
-      # string (e.g. "?accountId=...&after=..."). Normalize both to the token.
+      # Pluggy may return `next` as a bare cursor token, a "?after=..." query
+      # string, OR an absolute URL ending in "?after=...". Extract the cursor
+      # token in all cases so we never echo a full URL back as the `after`
+      # parameter — that would re-query with a meaningless cursor and, if Pluggy
+      # keeps returning the same absolute URL, spin the cursor loop forever.
       def normalize_transactions_cursor(next_value)
         return nil if next_value.blank?
 
         str = next_value.to_s
-        return str unless str.start_with?("?")
 
-        query = CGI.parse(str.delete_prefix("?"))
-        query["after"]&.first || query["cursor"]&.first
+        query_string =
+          if str.start_with?("?")
+            str.delete_prefix("?")
+          elsif str.include?("?")
+            str.split("?", 2).last
+          else
+            # bare token — no query to parse
+            return str
+          end
+
+        query = CGI.parse(query_string)
+        cursor = query["after"]&.first || query["cursor"]&.first
+        cursor.presence
       end
 
       def cache_fingerprint(client_id, client_secret)
-        Digest::MD5.hexdigest("#{client_id}:#{client_secret}")
+        Digest::SHA256.hexdigest("#{client_id}:#{client_secret}")
       end
   end
 end

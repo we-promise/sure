@@ -40,7 +40,7 @@ class Provider::PluggyAdapter < Provider::Base
 
   # Build a Pluggy provider instance with family-specific credentials
   # @param family [Family] The family to get credentials for (required)
-  # @return [Provider::Pluggy, nil] Returns nil if credentials are not configured
+  # @return [PluggyItem::Provider, nil] Returns nil if credentials are not configured
   def self.build_provider(family: nil)
     return nil unless family.present?
 
@@ -48,11 +48,7 @@ class Provider::PluggyAdapter < Provider::Base
     pluggy_item = family.pluggy_items.where.not(client_id: nil).first
     return nil unless pluggy_item&.credentials_configured?
 
-    # TODO: Implement provider initialization
-    # Provider::Pluggy.new(
-    #   pluggy_item.client_id
-    # )
-    raise NotImplementedError, "Implement Provider::Pluggy.new in #{__FILE__}"
+    PluggyItem::Provider.new(pluggy_item)
   end
 
   def sync_path
