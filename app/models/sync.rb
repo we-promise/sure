@@ -17,7 +17,9 @@ class Sync < ApplicationRecord
 
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
   scope :incomplete, -> { where("syncs.status IN (?)", %w[pending syncing]) }
-  scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago) }
+  # Cancel-requested syncs are excluded so spinners clear immediately and
+  # sync_later stops piggybacking new requests onto a dying sync.
+  scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago).where(cancel_requested_at: nil) }
 
   after_commit :update_family_sync_timestamp, on: [ :create, :update ]
 
@@ -71,6 +73,57 @@ class Sync < ApplicationRecord
       query
     end
 
+    def for_syncables(syncables)
+      syncables = Array(syncables).compact
+      return none if syncables.empty?
+
+      scope = none
+      syncables.group_by { |record| record.class.base_class.name }.each do |type, records|
+        ids = records.map(&:id)
+        scope = scope.or(where(syncable_type: type, syncable_id: ids))
+      end
+      scope
+    end
+
+    def latest_by_syncable(syncables)
+      keyed_syncables = syncable_keys(syncables)
+      return {} if keyed_syncables.empty?
+
+      latest = for_syncables(syncables)
+        .select("DISTINCT ON (syncable_type, syncable_id) syncs.*")
+        .order("syncable_type, syncable_id, created_at DESC, id DESC")
+        .includes(:children)
+        .index_by { |sync| [ sync.syncable_type, sync.syncable_id ] }
+
+      keyed_syncables.index_with { |key| latest[key] }
+    end
+
+    def latest_completed_by_syncable(syncables)
+      keyed_syncables = syncable_keys(syncables)
+      return {} if keyed_syncables.empty?
+
+      latest = for_syncables(syncables)
+        .completed
+        .select("DISTINCT ON (syncable_type, syncable_id) syncs.*")
+        .order("syncable_type, syncable_id, created_at DESC, id DESC")
+        .index_by { |sync| [ sync.syncable_type, sync.syncable_id ] }
+
+      keyed_syncables.index_with { |key| latest[key] }
+    end
+
+    def syncing_by_syncable(syncables)
+      keyed_syncables = syncable_keys(syncables)
+      return {} if keyed_syncables.empty?
+
+      syncing_keys = for_syncables(syncables)
+        .visible
+        .distinct
+        .pluck(:syncable_type, :syncable_id)
+        .to_set
+
+      keyed_syncables.index_with { |key| syncing_keys.include?(key) }
+    end
+
     # True iff the family has any pending/syncing Sync — across its own row,
     # its accounts, and every Syncable provider `*_items` association. Built
     # on `for_family` so new provider integrations are picked up automatically
@@ -80,6 +133,11 @@ class Sync < ApplicationRecord
     end
 
     private
+      def syncable_keys(syncables)
+        Array(syncables).compact.uniq { |record| [ record.class.base_class.name, record.id ] }
+          .map { |record| [ record.class.base_class.name, record.id ] }
+      end
+
       def account_syncable_ids(family, resource_owner)
         (resource_owner ? resource_owner.accessible_accounts : family.accounts)
           .where(family_id: family.id)
@@ -98,6 +156,11 @@ class Sync < ApplicationRecord
 
   def in_progress?
     pending? || syncing?
+  end
+
+  # Mirrors the `visible` scope for in-memory checks on preloaded syncs.
+  def visible?
+    in_progress? && created_at > VISIBLE_FOR.ago
   end
 
   def terminal?
@@ -157,16 +220,64 @@ class Sync < ApplicationRecord
     end
   end
 
+  # Requests cooperative cancellation of this sync tree. Only this sync
+  # carries the flag: pending descendants are marked stale immediately (their
+  # queued jobs no-op via the may_start? guard), while descendants whose jobs
+  # are already running finish their work honestly — finalization then
+  # resolves this sync to stale instead of completed. Returns false when the
+  # sync is already terminal.
+  def request_cancel!
+    result = with_lock do
+      if pending?
+        # Job hasn't started — safe to resolve immediately; the queued job
+        # will no-op via the may_start? guard.
+        update!(cancel_requested_at: Time.current)
+        mark_stale!
+        :cancelled_before_start
+      elsif syncing?
+        update!(cancel_requested_at: Time.current)
+        :cancel_requested
+      end
+    end
+    return false if result.nil?
+
+    # Both paths cascade: a pending sync resolved above went terminal without
+    # its job ever running, so nothing else will ever call
+    # finalize_if_all_children_finalized for it — without this, a parent
+    # waiting on the cancelled child stays syncing until the 24h sweep.
+    # finalize_if_all_children_finalized re-reads under lock!, so it safely
+    # no-ops on this sync's own branch when already terminal.
+    cancel_pending_descendants!
+    finalize_if_all_children_finalized
+
+    true
+  end
+
+  # Fresh DB read — cancellation is requested from the web process while this
+  # sync's job holds a stale in-memory copy of the record.
+  def cancel_requested?
+    self.class.where(id: id).pick(:cancel_requested_at).present?
+  end
+
   # Finalizes the current sync AND parent (if it exists)
   def finalize_if_all_children_finalized
     Sync.transaction do
       lock!
 
+      # Eagerly load children once so that all_children_finalized? and
+      # has_failed_children? can filter in-memory without additional DB queries.
+      children.load
+
       # If this is the "parent" and there are still children running, don't finalize.
       return unless all_children_finalized?
 
       if syncing?
-        if has_failed_children?
+        if cancel_requested_at?
+          # User asked for cancellation while work was in flight. Whatever
+          # children completed keep their data; the tree resolves to stale
+          # (which also skips post-sync below).
+          mark_stale!
+        elsif has_failed_children?
           fail!
         else
           complete!
@@ -207,17 +318,25 @@ class Sync < ApplicationRecord
     )
   end
 
+  protected
+    def cancel_pending_descendants!
+      children.incomplete.find_each do |child|
+        child.with_lock { child.mark_stale! if child.pending? }
+        child.cancel_pending_descendants!
+      end
+    end
+
   private
     def log_status_change
       Rails.logger.info("changing from #{aasm.from_state} to #{aasm.to_state} (event: #{aasm.current_event})")
     end
 
     def has_failed_children?
-      children.failed.any?
+      children.any?(&:failed?)
     end
 
     def all_children_finalized?
-      children.incomplete.empty?
+      children.none? { |child| child.pending? || child.syncing? }
     end
 
     def perform_post_sync

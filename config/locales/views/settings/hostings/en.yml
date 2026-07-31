@@ -21,6 +21,7 @@ en:
         general: General Settings
         ai_assistant: AI Assistant
         financial_data_providers: Financial Data Providers
+        property_valuation_providers: Property Valuation Providers
         sync_settings: Sync Settings
         invites: Invite Codes
         title: Self-Hosting
@@ -144,10 +145,28 @@ en:
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance provides free access to stock prices, exchange rates, and financial data without requiring an API key.
-        status_active: Yahoo Finance is active and working
-        status_inactive: Yahoo Finance connection failed
-        connection_failed: Unable to connect to Yahoo Finance
-        troubleshooting: Check your internet connection and firewall settings. Yahoo Finance may be temporarily unavailable.
+        status_healthy: Yahoo Finance is active and working.
+        status_rate_limited: Yahoo Finance is temporarily rate limiting requests.
+        rate_limited_title: Yahoo Finance rate limit reached.
+        rate_limited_message: No action is required. Sure will avoid additional health checks for 30 minutes. Price and exchange-rate operations continue independently.
+        status_unavailable: Yahoo Finance is currently unavailable.
+        unavailable_title: Could not verify Yahoo Finance.
+        unavailable_message: Yahoo Finance could not be reached or returned an unexpected response. Check your internet connection and try again later.
+        status_unknown: Yahoo Finance status is being checked.
+      rentcast_settings:
+        title: RentCast
+        description: Enter your RentCast API key to look up US property details and value estimates when adding a property. The free tier is limited to 50 API requests per month, shared between property lookups and daily valuation refreshes. On a paid plan, raise the cap with the RENTCAST_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the RENTCAST_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your RentCast API key here
+        usage: "%{used} of %{limit} monthly requests used"
+      realie_settings:
+        title: Realie
+        description: Enter your Realie API key to look up US property details and value estimates when adding a property. The free tier is limited to 25 API requests per month, shared between property lookups and daily valuation refreshes. On a paid plan, raise the cap with the REALIE_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the REALIE_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your Realie API key here
+        usage: "%{used} of %{limit} monthly requests used"
       tiingo_settings:
         title: Tiingo
         description: Enter the API token provided by Tiingo. Free tier supports 50 unique symbols per hour with 30+ years of historical data.

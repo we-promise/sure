@@ -8,46 +8,46 @@ fr:
     current_month:
       comparison_label: vs. début du mois
       label: Mois en cours
-      label_short: MTD
+      label_short: MC
     current_week:
       comparison_label: vs. début de la semaine
       label: Semaine en cours
-      label_short: WTD
+      label_short: SC
     current_year:
       comparison_label: vs. début de l'année
       label: Année en cours
-      label_short: YTD
+      label_short: AC
     custom:
       label: Période personnalisée
       label_short: Personnalisé
     last_10_years:
       comparison_label: vs il y a 10 ans
       label: 10 dernières années
-      label_short: 10Y
+      label_short: 10A
     last_30_days:
       comparison_label: vs. 30 derniers jours
       label: 30 derniers jours
-      label_short: 30D
+      label_short: 30J
     last_365_days:
       comparison_label: contre il y a 1 an
       label: 365 derniers jours
-      label_short: 365D
+      label_short: 365J
     last_5_years:
       comparison_label: vs il y a 5 ans
       label: 5 dernières années
-      label_short: 5Y
+      label_short: 5A
     last_7_days:
       comparison_label: vs. dernière semaine
       label: 7 derniers jours
-      label_short: 7D
+      label_short: 7J
     last_90_days:
       comparison_label: vs. dernier trimestre
       label: 90 derniers jours
-      label_short: 90D
+      label_short: 90J
     last_day:
       comparison_label: vs hier
       label: Dernier jour
-      label_short: 1D
+      label_short: 1J
     last_month:
       comparison_label: vs. mois dernier
       label: Le mois dernier

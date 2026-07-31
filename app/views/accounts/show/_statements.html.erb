@@ -19,6 +19,7 @@
                           aria: { label: t("account_statements.account_tab.year_label") } %>
         <% end %>
         <%= link_to account_statements_path,
+                    data: { turbo_frame: "_top" },
                     class: "inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-hover" do %>
           <%= icon("inbox", size: "sm") %>
           <%= t("account_statements.account_tab.open_inbox") %>
@@ -75,7 +76,11 @@
             <% statements.each do |statement| %>
               <tr id="<%= dom_id(statement) %>" class="border-b border-subdued hover:bg-surface-hover">
                 <td class="px-3 py-3">
-                  <%= link_to account_statement_path(statement), class: "flex items-center gap-2 min-w-0 text-sm font-medium text-primary hover:underline" do %>
+                  <% file_attached = statement.original_file.attached? %>
+                  <%= link_to file_attached ? rails_blob_path(statement.original_file, disposition: "inline") : account_statement_path(statement),
+                      target: (file_attached ? "_blank" : nil),
+                      data: { turbo_frame: "_top" },
+                      class: "flex items-center gap-2 min-w-0 text-sm font-medium text-primary hover:underline" do %>
                     <%= icon(account_statement_file_icon(statement), size: "sm") %>
                     <span class="truncate"><%= statement.filename %></span>
                   <% end %>
@@ -94,10 +99,25 @@
                 </td>
                 <td class="px-3 py-3">
                   <div class="flex items-center justify-end gap-3">
-                    <%= link_to account_statement_path(statement), aria: { label: t("account_statements.table.view") } do %>
-                      <%= icon("eye", class: "w-5 h-5 text-primary") %>
+                    <%# View: open the actual file inline (PDF) or download (CSV/XLSX) %>
+                    <% if file_attached %>
+                      <%= link_to rails_blob_path(statement.original_file, disposition: "inline"),
+                                  target: "_blank",
+                                  data: { turbo_frame: "_top" },
+                                  aria: { label: t("account_statements.table.view") } do %>
+                        <%= icon("eye", class: "w-5 h-5 text-primary") %>
+                      <% end %>
                     <% end %>
-                    <% if statement.original_file.attached? %>
+
+                    <%# Edit: go to statement details/edit page %>
+                    <%= link_to account_statement_path(statement),
+                                data: { turbo_frame: "_top" },
+                                aria: { label: t("account_statements.table.edit") } do %>
+                      <%= icon("pencil", class: "w-5 h-5 text-primary") %>
+                    <% end %>
+
+                    <%# Download %>
+                    <% if file_attached %>
                       <%= link_to rails_blob_path(statement.original_file, disposition: "attachment"), aria: { label: t("account_statements.table.download") } do %>
                         <%= icon("download", class: "w-5 h-5 text-primary") %>
                       <% end %>
@@ -106,6 +126,7 @@
                       <%= button_to unlink_account_statement_path(statement),
                                     method: :patch,
                                     class: "flex items-center",
+                                    form: { data: { turbo_frame: "_top" } },
                                     aria: { label: t("account_statements.table.unlink") } do %>
                         <%= icon("unlink", class: "w-5 h-5 text-secondary") %>
                       <% end %>

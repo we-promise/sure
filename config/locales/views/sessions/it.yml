@@ -1,0 +1,35 @@
+---
+it:
+  sessions:
+    create:
+      invalid_credentials: Email o password non validi.
+      local_login_disabled: L'accesso con password locale è disabilitato. Utilizza il single sign-on.
+    destroy:
+      logout_successful: Hai effettuato la disconnessione con successo.
+    post_logout:
+      logout_successful: Hai effettuato la disconnessione con successo.
+    openid_connect:
+      account_linked: "Account collegato con successo a %{provider}"
+      failed: Impossibile autenticarsi tramite OpenID Connect.
+    failure:
+      failed: Impossibile autenticarsi.
+      sso_provider_unavailable: "Il provider SSO non è attualmente disponibile. Riprova più tardi o contatta un amministratore."
+      sso_invalid_response: "Risposta non valida ricevuta dal provider SSO. Riprova."
+      sso_failed: "Autenticazione single sign-on non riuscita. Riprova."
+    mobile_sso_start:
+      redirecting_html: "Reindirizzamento all'accesso... <a href=\"%{url}\">Clicca qui</a> se non vieni reindirizzato."
+    new:
+      email: Indirizzo email
+      email_placeholder: tu@esempio.com
+      forgot_password: Hai dimenticato la password?
+      password: Password
+      submit: Accedi
+      title: Sure
+      password_placeholder: Inserisci la tua password
+      openid_connect: Accedi con OpenID Connect
+      oidc: Accedi con OpenID Connect
+      google_auth_connect: Accedi con Google
+      local_login_admin_only: L'accesso locale è riservato agli amministratori.
+      no_auth_methods_enabled: Nessun metodo di autenticazione è attualmente abilitato. Contatta un amministratore.
+      demo_banner_title: "Modalità demo attiva"
+      demo_banner_message: "Questo è un ambiente dimostrativo. Le credenziali di accesso sono state precompilate per tua comodità. Non inserire informazioni reali o sensibili."

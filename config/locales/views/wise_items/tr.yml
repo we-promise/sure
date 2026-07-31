@@ -1,0 +1,163 @@
+---
+tr:
+  wise_items:
+    activities:
+      asset_fee: Wise Assets ücreti
+      default_name: Wise etkinliği
+      interest: Wise faizi
+      jar_deposit: Jar'a transfer
+      jar_withdrawal: Jar'dan transfer
+      transfer_from_jar: "%{jar} kaynağından transfer"
+      transfer_to_jar: "%{jar} hedefine transfer"
+    complete_account_setup:
+      failed: Hesap oluşturulamadı. Lütfen tekrar deneyin.
+      not_found: Wise bakiyesi bulunamadı.
+      success: Hesap başarıyla oluşturuldu ve bağlandı.
+    create:
+      connection_failed: Wise'a bağlanılamadı. Lütfen daha sonra tekrar deneyin.
+      invalid_token: Geçersiz API token'ı. Lütfen kontrol edip tekrar deneyin.
+      no_profiles_found: Wise profili bulunamadı. Lütfen API token'ınızı kontrol edin.
+    destroy:
+      success: Wise bağlantısı kaldırıldı
+    entries:
+      default_name: Wise işlemi
+      fee_name: Wise ücreti
+    link_accounts:
+      failed: Wise bakiyesi bağlanamadı. Lütfen tekrar deneyin.
+      not_found: Wise bakiyesi bulunamadı.
+      success: Wise bakiyesi hesaba başarıyla bağlandı.
+    link_existing_account:
+      failed: Hesap bağlanamadı. Lütfen tekrar deneyin.
+      not_found: Hesap veya Wise bakiyesi bulunamadı.
+      success: "%{account_name} Wise ile başarıyla bağlandı"
+    link_profiles:
+      already_connected: Seçilen tüm profiller zaten bağlı.
+      no_profiles_selected: Lütfen en az bir profil seçin.
+      session_expired: Oturum süresi doldu. Lütfen tekrar bağlanmayı deneyin.
+      success:
+        one: "%{count} Wise profili başarıyla bağlandı"
+        other: "%{count} Wise profili başarıyla bağlandı"
+    profile_types:
+      business: İşletme
+      personal: Bireysel
+    provider_connection:
+      default_description: Çoklu para birimli Wise hesabınızı bağlayın
+      default_name: Wise
+      description: "%{name} kullanarak bağlan"
+      name: Wise — %{name}
+    provider_panel:
+      accounts_link: Hesaplar
+      add_connection: Wise bağlantısı ekle
+      configured_html: Bağlandı ve eşitleniyor. Hesaplarınızı yönetmek için %{accounts_link}
+        sekmesini ziyaret edin.
+      connect: Wise'ı Bağla
+      connection_name_label: Bağlantı adı
+      connection_name_placeholder: Wise Bireysel
+      disconnect: Bağlantıyı kes
+      disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?
+        Bu, tüm eşitlenmiş hesap verilerini kaldıracaktır."
+      disconnect_label: "%{name} bağlantısını kes"
+      encryption_warning:
+        message: Üretimde Wise token'ları eklemeden önce Active Record şifreleme anahtarlarını
+          yapılandırın. Şifreleme olmadan, token'lar düz metin olarak saklanır.
+        title: Veritabanı şifrelemesi yapılandırılmamış
+      instructions:
+        copy_token_html: Token'ı kopyalayın ve aşağıya yapıştırın. Sure bunu yalnızca
+          bakiyelerinizi ve işlemlerinizi eşitlemek için kullanır.
+        create_token: Salt okunur erişimle yeni bir kişisel API token'ı oluşturun
+        open_tokens: Ayarlar → API token'ları bölümüne gidin
+        sign_in_html: "%{link} adresini ziyaret edin ve hesabınıza giriş yapın"
+      keep_token_placeholder: Mevcut token'ı korumak için boş bırakın
+      not_configured: Yapılandırılmamış
+      sandbox_note_html: Test için <strong>sandbox</strong> temel URL'sini (<code>https://api.sandbox.transferwise.tech</code>)
+        kullanın. Ortamınızda <code>WISE_BASE_URL</code> değerini ayarlayın.
+      setup_accounts: Hesapları kur
+      setup_title: 'Kurulum talimatları:'
+      sync: Eşitle
+      token_label: API token'ı
+      token_placeholder: Wise kişisel API token'ınızı yapıştırın
+      update_connection: Bağlantıyı güncelle
+    select_accounts:
+      cancel: İptal
+      description: "%{product_name} hesabınıza bağlamak istediğiniz Wise para birimi
+        bakiyesini seçin."
+      link_account: Bakiyeyi bağla
+      no_accounts_found: Tüm Wise bakiyeleri zaten Sure hesaplarına bağlı.
+      no_connection: Wise bağlantısı bulunamadı. Lütfen önce Sağlayıcı Ayarlarında
+        Wise'ı bağlayın.
+      title: Wise Bakiyesini Seç
+    select_existing_account:
+      cancel: İptal
+      description: Bu hesapla bağlamak için Wise para birimi bakiyesini seçin. İşlemler
+        otomatik olarak eşitlenecektir.
+      link_account: Bakiyeyi bağla
+      no_accounts_found: Bağlantısız Wise bakiyesi bulunamadı.
+      title: "%{account_name} hesabını Wise ile bağla"
+    select_profiles:
+      already_connected_label: Zaten bağlı
+      cancel: İptal
+      connect: Seçilen profilleri bağla
+      description: Wise hesabınızın birden fazla profili var. Sure ile eşitlemek istediklerinizi
+        seçin.
+      session_expired: Oturum süresi doldu. Lütfen tekrar bağlanmayı deneyin.
+      subtitle: Hangi profillerin bağlanacağını seçin
+      title: Wise Profillerini Seç
+      unnamed_profile: "(Adsız profil)"
+    setup_accounts:
+      all_accounts_linked: Tüm Wise para birimi bakiyeleriniz Sure hesaplarına bağlandı.
+      create_account: Hesap Oluştur
+      description: Takip etmek istediğiniz her Wise para birimi bakiyesi için bir
+        Sure hesabı oluşturun. Her para birimi kendi hesabı olur.
+      done: Bitti
+      no_accounts_to_setup: Tüm hesaplar kuruldu
+      subtitle: Wise para birimi bakiyelerinizi bağlayın
+      title: Wise Hesaplarını Kur
+    sync:
+      success: Eşitleme başlatıldı
+    sync_status:
+      all_synced:
+        one: "%{count} hesap eşitlendi"
+        other: "%{count} hesap eşitlendi"
+      no_accounts: Hesap bulunamadı
+      partial_setup: "%{synced} eşitlendi, %{pending} kurulum gerektiriyor"
+    syncer:
+      account_processing_failed:
+        one: "%{count} Wise hesabı işlenirken başarısız oldu."
+        other: "%{count} Wise hesabı işlenirken başarısız oldu."
+      account_sync_failed:
+        one: "%{count} Wise hesap eşitlemesi zamanlanamadı."
+        other: "%{count} Wise hesap eşitlemesi zamanlanamadı."
+      accounts_failed:
+        one: "%{count} bakiye içe aktarılamadı."
+        other: "%{count} bakiye içe aktarılamadı."
+      accounts_need_setup:
+        one: "%{count} hesap kurulum gerektiriyor..."
+        other: "%{count} hesap kurulum gerektiriyor..."
+      calculating_balances: Bakiyeler hesaplanıyor...
+      checking_account_configuration: Hesap yapılandırması kontrol ediliyor...
+      credentials_invalid: Geçersiz Wise API token'ı veya yetersiz izinler
+      failed: Eşitleme başarısız oldu. Lütfen tekrar deneyin veya destek ile iletişime
+        geçin.
+      import_failed: Wise içe aktarma başarısız oldu.
+      importing_accounts: Wise'dan hesaplar içe aktarılıyor...
+      processing_transactions: İşlemler işleniyor...
+      transactions_failed:
+        one: "%{count} bakiyede işlem içe aktarma hataları oluştu."
+        other: "%{count} bakiyede işlem içe aktarma hataları oluştu."
+    update:
+      success: Wise bağlantısı güncellendi
+    wise_item:
+      delete: Bağlantıyı kes
+      deletion_in_progress: silme işlemi devam ediyor...
+      error: Eşitleme hatası
+      no_accounts_description: Wise bakiyelerinizi keşfetmek için bir eşitleme çalıştırın,
+        ardından bunları Sure hesaplarına bağlayın.
+      no_accounts_title: Henüz bağlı hesap yok
+      setup_action: Hesapları Kur
+      setup_description: "%{total} hesaptan %{linked} tanesi bağlandı. Wise para birimi
+        bakiyeleriniz için Sure hesapları oluşturun."
+      setup_needed: Kurulmaya hazır yeni hesaplar var
+      status: "%{timestamp} önce eşitlendi"
+      status_never: Hiç eşitlenmedi
+      status_with_summary: Son eşitleme %{timestamp} önce — %{summary}
+      syncing: Eşitleniyor...

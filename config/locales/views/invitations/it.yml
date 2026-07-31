@@ -1,0 +1,28 @@
+---
+it:
+  invitations:
+    accept_choice:
+      create_account: Crea nuovo account
+      joined_household: Hai aderito alla famiglia.
+      message: "%{inviter} ti ha invitato a unirti come %{role}."
+      sign_in_existing: Ho già un account
+      title: Unisciti a %{family}
+    create:
+      existing_user_added: L'utente è stato aggiunto alla tua famiglia.
+      existing_user_has_family_data: Quell'utente possiede già una famiglia con conti. Deve rimuovere o trasferire quei conti prima di unirsi alla tua.
+      failure: Impossibile inviare l'invito
+      success: Invito inviato con successo
+    destroy:
+      failure: Si è verificato un problema nella rimozione dell'invito.
+      not_authorized: Non sei autorizzato a gestire gli inviti.
+      success: Invito rimosso con successo.
+    new:
+      email_label: Indirizzo email
+      email_placeholder: Inserisci indirizzo email
+      role_admin: Amministratore
+      role_guest: Ospite
+      role_label: Ruolo
+      role_member: Membro
+      submit: Invia invito
+      subtitle: Invia un invito per unirsi al tuo account %{moniker} su %{product_name}
+      title: Invita qualcuno

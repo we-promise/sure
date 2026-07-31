@@ -21,6 +21,21 @@ class Family::SyncCompleteEvent
       partial: "shared/notifications/sync_toast"
     )
 
+    # The accounts page's own sync toolbar (refresh icon + "Cancel sync") is
+    # plain server-rendered HTML from whatever request last loaded the page,
+    # so without this it stays stuck showing "still syncing" — disabled icon,
+    # "Cancel sync" visible — indefinitely after the sync actually finishes,
+    # even while the toast above says otherwise. Replace it in the same
+    # broadcast so the two agree. Visitors not on the accounts page simply
+    # don't have #accounts-sync-controls in their DOM, so this no-ops for
+    # them, same as the sync-toast replace above.
+    family.broadcast_replace_to(
+      family,
+      target: "accounts-sync-controls",
+      partial: "accounts/sync_controls",
+      locals: { family: family }
+    )
+
     # Schedule recurring transaction pattern identification (debounced to run after all syncs complete)
     begin
       RecurringTransaction.identify_patterns_for(family)

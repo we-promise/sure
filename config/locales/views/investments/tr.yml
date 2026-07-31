@@ -10,8 +10,181 @@ tr:
       title: Hesap bakiyesini girin
     show:
       chart_title: Toplam değer
+    subtypes:
+      401k:
+        long: 401(k)
+        short: 401(k)
+      403b:
+        long: 403(b)
+        short: 403(b)
+      457b:
+        long: 457(b)
+        short: 457(b)
+      529_plan:
+        long: 529 Eğitim Tasarruf Planı
+        short: 529 Plan
+      angel:
+        long: Melek Yatırımı
+        short: Melek Yatırımı
+      apy:
+        long: Atal Pension Yojana
+        short: APY
+      brokerage:
+        long: Aracılık Hesabı
+        short: Aracılık
+      corporate_bond:
+        long: Kurumsal Tahvil
+        short: Kurumsal Tahvil
+      fd:
+        long: Vadeli Mevduat
+        short: FD
+      g_sec:
+        long: Devlet Tahvilleri (G-Sec)
+        short: G-Sec
+      gold:
+        long: Altın (fiziksel veya dijital)
+        short: Altın
+      gold_etf:
+        long: Altın ETF
+        short: Altın ETF
+      gold_mf:
+        long: Altın Yatırım Fonu
+        short: Altın Fonu
+      hsa:
+        long: Sağlık Tasarruf Hesabı
+        short: HSA
+      indian_equity:
+        long: Hint Hisse Senedi
+        short: Hint Hisse Senedi
+      indian_etf:
+        long: Hint ETF
+        short: Hint ETF
+      indian_stocks:
+        long: Hint Hisseleri (Demat)
+        short: Hint Hisseleri
+      infrastructure_bond:
+        long: Altyapı Tahvili
+        short: Altyapı Tahvili
+      ira:
+        long: Geleneksel IRA
+        short: IRA
+      isa:
+        long: Bireysel Tasarruf Hesabı
+        short: ISA
+      kvp:
+        long: Kisan Vikas Patra
+        short: KVP
+      life_insurance:
+        long: Hayat Sigortası
+        short: Hayat Sigortası
+      lira:
+        long: Kilitli Emeklilik Hesabı
+        short: LIRA
+      lisa:
+        long: Ömür Boyu ISA
+        short: LISA
+      mutual_fund:
+        long: Yatırım Fonu
+        short: Yatırım Fonu
+      nps:
+        long: Ulusal Emeklilik Sistemi
+        short: NPS
+      nsc:
+        long: Ulusal Tasarruf Sertifikası
+        short: NSC
+      other:
+        long: Diğer Yatırım
+        short: Diğer
+      pea:
+        long: Plan d'Épargne en Actions
+        short: PEA
+      pension:
+        long: Emeklilik
+        short: Emeklilik
+      pillar_3a:
+        long: Özel Emeklilik (3a Sütunu)
+        short: Pillar 3a
+      pomis:
+        long: Posta Aylık Gelir Planı
+        short: POMIS
+      ppf:
+        long: Kamu İhtiyat Fonu
+        short: PPF
+      rd:
+        long: Birikimli Mevduat
+        short: RD
+      resp:
+        long: Kayıtlı Eğitim Tasarruf Planı
+        short: RESP
+      retirement:
+        long: Emeklilik Hesabı
+        short: Emeklilik
+      riester:
+        long: Riester-Rente
+        short: Riester
+      roth_401k:
+        long: Roth 401(k)
+        short: Roth 401(k)
+      roth_ira:
+        long: Roth IRA
+        short: Roth IRA
+      rrif:
+        long: Kayıtlı Emeklilik Gelir Fonu
+        short: RRIF
+      rrsp:
+        long: Kayıtlı Emeklilik Tasarruf Planı
+        short: RRSP
+      scss:
+        long: Yaşlı Vatandaşlar Tasarruf Planı
+        short: SCSS
+      sdl:
+        long: Eyalet Kalkınma Kredileri (SDL)
+        short: SDL
+      sep_ira:
+        long: SEP IRA
+        short: SEP IRA
+      sgb:
+        long: Egemen Altın Tahvili
+        short: SGB
+      simple_ira:
+        long: SIMPLE IRA
+        short: SIMPLE IRA
+      sipp:
+        long: Kendi Kendine Yönetilen Kişisel Emeklilik
+        short: SIPP
+      smsf:
+        long: Kendi Kendine Yönetilen Emeklilik Fonu
+        short: SMSF
+      ssy:
+        long: Sukanya Samriddhi Yojana
+        short: SSY
+      super:
+        long: Emeklilik Fonu (Avustralya)
+        short: Emeklilik
+      tax_free_bond:
+        long: Vergiden Muaf Tahvil
+        short: Vergiden Muaf Tahvil
+      tfsa:
+        long: Vergiden Muaf Tasarruf Hesabı
+        short: TFSA
+      trust:
+        long: Güven Fonu
+        short: Güven Fonu
+      tsp:
+        long: Tasarruf Planı
+        short: TSP
+      ugma:
+        long: UGMA Vesayet Hesabı
+        short: UGMA
+      utma:
+        long: UTMA Vesayet Hesabı
+        short: UTMA
+      workplace_pension_uk:
+        long: İşyeri Emeklilik Planı
+        short: Emeklilik
     value_tooltip:
       cash: Nakit
       holdings: Varlıklar
       total: Portföy bakiyesi
-      total_value_tooltip: Toplam portföy bakiyesi, aracı kurum nakiti (işlem için kullanılabilir) ve varlıklarınızın güncel piyasa değerinin toplamıdır.
+      total_value_tooltip: Toplam portföy bakiyesi, aracı kurum nakiti (işlem için
+        kullanılabilir) ve varlıklarınızın güncel piyasa değerinin toplamıdır.

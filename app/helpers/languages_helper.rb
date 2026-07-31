@@ -159,6 +159,7 @@ module LanguagesHelper
     "fr",   # French
     "de",   # German
     "es",   # Spanish
+    "it",   # Italian
     "tr",   # Turkish
     "nb",   # Norwegian Bokmål
     "ca",   # Catalan

@@ -1,0 +1,7 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        plaid_account:
+          no_balance: "Konto Plaid musi mieć saldo bieżące lub dostępne"
