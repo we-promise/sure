@@ -38,7 +38,7 @@ class GenerateInsightsJob < ApplicationJob
       return unless family.preview_features_enabled?
 
       with_advisory_lock(family_id) do
-        I18n.with_locale(family.locale) do
+        I18n.with_locale(locale_for(family)) do
           result = Insight::GeneratorRegistry.new(family).generate_all
           upsert_insights(family, result.insights)
           expire_stale_insights(family, result)
@@ -50,7 +50,7 @@ class GenerateInsightsJob < ApplicationJob
       # refresh) always gets its list and button restored. Still scoped to the
       # family's locale — the partial renders Insight#display_title/display_body
       # live, and a Sidekiq thread carries no per-request locale of its own.
-      I18n.with_locale(family.locale) do
+      I18n.with_locale(locale_for(family)) do
         broadcast_feed(family)
       end
     end
@@ -197,6 +197,14 @@ class GenerateInsightsJob < ApplicationJob
           ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", lock_key ])
         )
       end
+    end
+
+    # family.locale is validated non-null on every normal save, but this job
+    # also runs for rows reachable outside that path (raw SQL, imports), so
+    # I18n.with_locale falls back to the app default rather than silently
+    # riding whatever locale happens to be ambient on the Sidekiq thread.
+    def locale_for(family)
+      family.locale.presence || I18n.default_locale
     end
 
     def advisory_lock_key(family_id)
