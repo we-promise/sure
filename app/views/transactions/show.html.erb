@@ -98,7 +98,7 @@
     <% dialog.with_section(title: t(".details")) do %>
       <div class="space-y-2">
         <% if @entry.transaction.extra&.dig("channel_payment") %>
-          <% linked_account = Current.family.accounts.find_by(id: @entry.transaction.extra["funding_account_id"]) %>
+          <% linked_account = Current.user.accessible_accounts.find_by(id: @entry.transaction.extra["funding_account_id"]) %>
           <% linked_child = @entry.transaction.channel_child_records.first %>
           <div class="mx-3 rounded-lg border border-secondary p-3 text-sm">
             <div class="font-medium text-primary"><%= t(".channel_payment_label") %></div>
