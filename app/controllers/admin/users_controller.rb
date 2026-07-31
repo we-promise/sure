@@ -2,7 +2,7 @@
 
 module Admin
   class UsersController < Admin::BaseController
-    before_action :set_user, only: %i[update]
+    before_action :set_user, only: %i[update destroy]
 
     def index
       authorize User
@@ -39,6 +39,9 @@ module Admin
         .where(family_id: family_ids)
         .group_by(&:family_id)
 
+      @families = Family.order(:name, :created_at)
+      @unused_families = Family.left_joins(:users).where(users: { id: nil }).order(:name, :created_at)
+
       @trials_expiring_in_7_days = Subscription
         .where(status: :trialing)
         .where(trial_ends_at: Time.current..7.days.from_now)
@@ -48,27 +51,77 @@ module Admin
     def update
       authorize @user
 
-      if @user.update(user_params)
+      if membership_change_requested?
+        target_family = target_family_for_update
+
+        if target_family.nil?
+          redirect_to admin_users_path, alert: t(".family_required")
+          return
+        end
+
+        @user.transfer_to_family!(target_family, role: user_params[:role])
+        Rails.logger.info(
+          "[Admin::Users] Family changed - " \
+          "by_user_id=#{Current.user.id} " \
+          "target_user_id=#{@user.id} " \
+          "new_family_id=#{@user.family_id} " \
+          "new_role=#{@user.role}"
+        )
+      elsif @user.update(role: user_params[:role])
         Rails.logger.info(
           "[Admin::Users] Role changed - " \
           "by_user_id=#{Current.user.id} " \
           "target_user_id=#{@user.id} " \
           "new_role=#{@user.role}"
         )
-        redirect_to admin_users_path, notice: t(".success")
       else
         redirect_to admin_users_path, alert: t(".failure")
+        return
       end
+
+      redirect_to admin_users_path, notice: t(".success")
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to admin_users_path, alert: e.record.errors.full_messages.to_sentence
+    end
+
+    def destroy
+      authorize @user
+
+      @user.purge
+      redirect_to admin_users_path, notice: t(".destroy_success")
     end
 
     private
+
+      helper_method :family_label_for
 
       def set_user
         @user = User.find(params[:id])
       end
 
       def user_params
-        params.require(:user).permit(:role)
+        params.require(:user).permit(:role, :family_id, :new_family_name, :new_family_moniker)
+      end
+
+      def membership_change_requested?
+        user_params[:new_family_name].present? || (user_params[:family_id].present? && user_params[:family_id] != @user.family_id)
+      end
+
+      def target_family_for_update
+        if user_params[:new_family_name].present?
+          Family.create!(
+            name: user_params[:new_family_name].strip,
+            moniker: user_params[:new_family_moniker].presence || "Family"
+          )
+        elsif user_params[:family_id].present?
+          Family.find(user_params[:family_id])
+        end
+      end
+
+      def family_label_for(family)
+        return "" if family.nil?
+
+        family.name.presence || "#{family.moniker_label} (#{family.id.to_s.first(8)})"
       end
 
       def apply_trial_filter(scope)

@@ -34,6 +34,14 @@ class UserPolicyTest < ActiveSupport::TestCase
     assert_not UserPolicy.new(@super_admin, @super_admin).update?
   end
 
+  test "super admin can delete another user" do
+    assert UserPolicy.new(@super_admin, @regular_user).destroy?
+  end
+
+  test "super admin cannot delete themselves" do
+    assert_not UserPolicy.new(@super_admin, @super_admin).destroy?
+  end
+
   test "regular user cannot update anyone" do
     assert_not UserPolicy.new(@regular_user, @other_user).update?
   end

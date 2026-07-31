@@ -89,7 +89,7 @@
                     <th class="px-4 py-2 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.user") %></th>
                     <th class="px-4 py-2 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.last_login") %></th>
                     <th class="px-4 py-2 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.session_count") %></th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.role") %></th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.actions") %></th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
@@ -116,18 +116,61 @@
                         <% if user.id == Current.user.id %>
                           <span class="text-sm text-secondary"><%= t(".you") %></span>
                         <% else %>
-                          <%= form_with model: [:admin, user], method: :patch, class: "flex items-center justify-end gap-2", data: { controller: "auto-submit-form" } do |form| %>
-                            <%= form.select :role,
-                                options_for_select([
-                                  [t(".roles.guest"), "guest"],
-                                  [t(".roles.member"), "member"],
-                                  [t(".roles.admin"), "admin"],
-                                  [t(".roles.super_admin"), "super_admin"]
-                                ], user.role),
-                                {},
-                                class: "text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1",
-                                data: { auto_submit_form_target: "auto" } %>
-                          <% end %>
+                          <div class="space-y-3 min-w-[22rem]">
+                            <%= form_with model: [:admin, user], method: :patch, class: "space-y-3 text-left" do |form| %>
+                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <%= form.label :role, t(".table.role"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                  <%= form.select :role,
+                                      options_for_select([
+                                        [t(".roles.guest"), "guest"],
+                                        [t(".roles.member"), "member"],
+                                        [t(".roles.admin"), "admin"],
+                                        [t(".roles.super_admin"), "super_admin"]
+                                      ], user.role),
+                                      {},
+                                      class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-2" %>
+                                </div>
+
+                                <div>
+                                  <%= form.label :family_id, t(".table.family"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                  <%= form.select :family_id,
+                                      options_for_select([[t(".table.keep_current_family"), ""]] + @families.map { |family| [family_label_for(family), family.id] }, user.family_id),
+                                      {},
+                                      class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-2" %>
+                                </div>
+                              </div>
+
+                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <%= form.label :new_family_name, t(".table.new_family_name"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                  <%= form.text_field :new_family_name,
+                                      placeholder: t(".table.new_family_name_placeholder"),
+                                      class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-2" %>
+                                </div>
+
+                                <div>
+                                  <%= form.label :new_family_moniker, t(".table.new_family_moniker"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                  <%= form.select :new_family_moniker,
+                                      options_for_select([[t(".family_monikers.family"), "Family"], [t(".family_monikers.group"), "Group"]], "Family"),
+                                      {},
+                                      class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-2" %>
+                                </div>
+                              </div>
+
+                              <div class="flex items-center justify-end gap-2">
+                                <%= render DS::Button.new(variant: :primary, size: :sm, type: "submit", text: t(".actions.update")) %>
+                              </div>
+                            <% end %>
+
+                            <%= form_with url: admin_user_path(user), method: :delete, class: "flex justify-end" do %>
+                              <button type="submit"
+                                      data-turbo-confirm="<%= t(".delete_confirm") %>"
+                                      class="text-sm text-destructive border border-destructive rounded-lg px-3 py-2 hover:bg-destructive/10 transition-colors">
+                                <%= t(".actions.delete_user") %>
+                              </button>
+                            <% end %>
+                          </div>
                         <% end %>
                       </td>
                     </tr>
@@ -181,6 +224,35 @@
       <div class="bg-container-inset rounded-lg p-8 text-center">
         <%= icon "users", class: "w-12 h-12 mx-auto text-secondary mb-3" %>
         <p class="text-secondary"><%= t(".no_users") %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <div>
+    <h2 class="text-lg font-semibold text-primary mb-3"><%= t(".unused_families.title") %></h2>
+
+    <% if @unused_families.any? %>
+      <div class="space-y-2">
+        <% @unused_families.each do |family| %>
+          <div class="bg-container-inset rounded-lg p-3 flex items-center justify-between gap-3">
+            <div>
+              <p class="font-medium text-primary"><%= family.name.presence || t(".unnamed_family") %></p>
+              <p class="text-xs text-secondary"><%= t(".unused_families.family_id", id: family.id.to_s.first(8)) %></p>
+            </div>
+
+            <%= form_with url: admin_family_path(family), method: :delete do %>
+              <button type="submit"
+                      data-turbo-confirm="<%= t(".unused_families.delete_confirm") %>"
+                      class="text-sm text-destructive border border-destructive rounded-lg px-3 py-2 hover:bg-destructive/10 transition-colors">
+                <%= t(".unused_families.delete") %>
+              </button>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-container-inset rounded-lg p-4 text-sm text-secondary">
+        <%= t(".unused_families.empty") %>
       </div>
     <% end %>
   </div>
