@@ -12,6 +12,11 @@ class UserPolicy < ApplicationPolicy
     user.id != record.id
   end
 
+  def destroy?
+    return false unless user&.super_admin?
+    user.id != record.id
+  end
+
   class Scope < ApplicationPolicy::Scope
     def resolve
       if user&.super_admin?

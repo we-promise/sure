@@ -1,0 +1,7 @@
+---
+en:
+  admin:
+    families:
+      destroy:
+        success: "Unused family/group deleted successfully."
+        family_has_users: "Cannot delete a family/group that still has users."

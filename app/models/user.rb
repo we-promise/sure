@@ -246,6 +246,19 @@ class User < ApplicationRecord
     UserPurgeJob.perform_later(self)
   end
 
+  def transfer_to_family!(new_family, role: role)
+    transaction do
+      account_ids = owned_accounts.pluck(:id)
+
+      Account.where(id: account_ids).update_all(family_id: new_family.id) if account_ids.any?
+      AccountShare.where(account_id: account_ids).delete_all if account_ids.any?
+      account_shares.delete_all
+
+      update!(family: new_family, role: role)
+      new_family.auto_share_existing_accounts_with(self)
+    end
+  end
+
   def purge
     if last_user_in_family?
       family.destroy

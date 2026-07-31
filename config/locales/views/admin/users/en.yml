@@ -4,7 +4,7 @@ en:
     users:
       index:
         title: "User Management"
-        description: "Manage user roles for your instance. Super admins can access SSO provider settings and user management."
+        description: "Manage user roles, family/group membership, and account removal for your instance. Super admins can access SSO provider settings and user management."
         section_title: "Families / Groups"
         you: "(You)"
         trial_ends_at: "Trial ends"
@@ -32,6 +32,19 @@ en:
           session_count: "Session count"
           never: "Never"
           role: "Role"
+          family: "Family / Group"
+          keep_current_family: "Keep current family/group"
+          new_family_name: "New family/group name"
+          new_family_name_placeholder: "Enter a name to create a new family/group"
+          new_family_moniker: "New family/group type"
+          actions: "Actions"
+        family_monikers:
+          family: "Family"
+          group: "Group"
+        actions:
+          update: "Update user"
+          delete_user: "Delete user"
+        delete_confirm: "Are you sure you want to delete this user? This action cannot be undone."
         role_descriptions_title: "Role Descriptions"
         roles:
           guest: "Guest"
@@ -48,6 +61,15 @@ en:
           expires: "Expires %{date}"
           delete: "Delete"
           delete_all: "Delete All"
+        unused_families:
+          title: "Unused families / groups"
+          family_id: "Family ID: %{id}"
+          delete: "Delete unused family"
+          delete_confirm: "Are you sure you want to delete this unused family/group? This action cannot be undone."
+          empty: "No unused families/groups found."
       update:
-        success: "User role updated successfully."
+        success: "User updated successfully."
         failure: "Failed to update user role."
+        family_required: "Select an existing family/group or enter a name for a new one."
+      destroy:
+        destroy_success: "User deleted successfully."
