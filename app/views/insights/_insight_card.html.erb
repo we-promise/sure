@@ -11,7 +11,7 @@
 
       <div class="flex items-start justify-between gap-3">
         <h3 class="text-sm font-medium text-primary inline-flex items-center gap-2 min-w-0">
-          <%= insight.title %>
+          <%= insight_privacy_text(insight.title) %>
           <% if unread %>
             <%# A dot, not a labelled chip. Visiting this page marks every insight
                 read in one go, so at first paint the badge is on *every* row and
@@ -32,7 +32,7 @@
         <% end %>
       </div>
 
-      <p class="text-sm text-secondary"><%= insight.body %></p>
+      <p class="text-sm text-secondary"><%= insight_privacy_text(insight.body) %></p>
     </div>
   </div>
 
