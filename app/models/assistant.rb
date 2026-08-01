@@ -51,7 +51,8 @@ module Assistant
         Function::UpdateTag,
         Function::GetCategories,
         Function::CreateCategory,
-        Function::UpdateCategory
+        Function::UpdateCategory,
+        Function::UpdateTransaction
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
