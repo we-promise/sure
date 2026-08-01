@@ -143,8 +143,8 @@ already 80% of the value.
 
 3. **Reconcile-or-abort.** Wherever an official total exists (a tax-form summary box, a
    balance-sheet subtotal, a report's grand total), the parser cross-checks the sum of its parsed
-   parts against it — to the cent, within a tiny tolerance — or **aborts with context** (which
-   file, which field). No malformed period ever passes silently.
+   parts against it — within the configured tolerance — or **aborts with context** (which file,
+   which field). No malformed period ever passes silently.
 
 4. **One grain, chosen to survive future questions.** The atomic row of the values table is
    `account × month × asset-class`. Fine enough that any scenario or aggregation is a `GROUP BY`,
@@ -689,6 +689,8 @@ most copied pattern in the codebase:
 """Parse {SOURCE} → rows for {sheet}. Reconcile-or-abort against {official total}.
 Idempotent; runs in the recurring pipeline. Reads from the VAULT, never from staging."""
 
+import json
+
 def parse_period(doc_path):
     text = read(doc_path)                       # pdftotext / openpyxl / glyph-decoded stream
     parts = extract_subtotals(text)             # the labelled line items we care about
@@ -711,7 +713,12 @@ def main(write):    # --write persists; default = diagnostic (parse + check, wri
         if write:
             merge_write(period_dir(doc) / "values.csv", rows)
             merge_write(period_dir(doc) / "_control.csv", [ctrl])
-        print(f"{doc.name}: OK")                # diagnostic line the golden tests grep
+        print(json.dumps({
+            "document": doc.name,
+            "status": "ok",
+            "failed_reconciliations": 0,
+            "subtotals": ctrl["subtotals"],
+        }, sort_keys=True))                     # diagnostic JSONL the golden tests grep
 ```
 
 The control flow, drawn out — note the two exits (loud abort vs byte-stable write) and the
@@ -1266,9 +1273,9 @@ Three complementary layers, all runnable with `python -m unittest discover -s te
 
 3. **Extractor re-parse tests** (`TestExtractors`, skipped automatically unless the sources and
    PDF tooling are present on the machine). These re-run each extractor in diagnostic mode and
-   assert its reconciliation output lines (`"OK: N"`, `"failed reconciliations: 0"`,
-   `"subtotal X == Y"`). They protect the *parsers* against silent regressions when a refactor
-   changes extraction logic.
+   assert its reconciliation JSONL output: one object per document with `document`, `status`,
+   `failed_reconciliations` and `subtotals` fields. They protect the *parsers* against silent
+   regressions when a refactor changes extraction logic.
 
 Why the split works: the DataLayer tests run anywhere (CI, a fresh clone, no secrets) and pin the
 *output*; the Extractor tests run where the sources live and pin the *process*. An agent
