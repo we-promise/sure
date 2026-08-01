@@ -35,7 +35,7 @@ class CreateOnchainWalletItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.integer :decimals, default: 18, null: false
 
       t.string :currency, default: "USD", null: false
-      t.decimal :quantity, precision: 32, scale: 18, default: 0, null: false
+      t.decimal :quantity, precision: 36, scale: 18, default: 0, null: false
       t.decimal :current_balance, precision: 19, scale: 4, default: 0, null: false
 
       t.jsonb :institution_metadata
