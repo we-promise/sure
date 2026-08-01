@@ -1,6 +1,6 @@
 > [!NOTE]
 > **This document specifies a system that lives outside Sure.** Sure does not
-> implement the pipeline, the numbered deltas, the fiscal layer or the Excel
+> implement the pipeline, the numbered deltas, the tax layer or the Excel
 > generators described here, and there is no plan to. It is kept in this
 > repository because it is the spec an external agent harness implements when it
 > uses Sure as its system of record — having it in-repo means an agent with a
@@ -13,15 +13,19 @@
 > The document is reproduced verbatim as supplied. It contains no real names,
 > institutions, positions, amounts or identifiers.
 
----
+<!--
+  @author        diegomarino
+  @license       MIT © 2026 diegomarino
+  @last-updated  2026-07-29
+-->
 
-# Blueprint: a provenance-first patrimonial + fiscal modelling system
+# Blueprint: a provenance-first wealth + tax modelling system
 
 > **What this is.** A reusable design document — a "meta-prompt" — for an autonomous agent (or a
 > developer) who wants to replicate a system we built: an auditable model of a family's wealth and
 > tax position, compiled *entirely* from primary-source documents (bank statements, tax returns,
-> company balance sheets, capital accounts, emails) into two deliverables — a **patrimonial Excel**
-> and a **fiscal audit Excel + divergences report** — where *every single number is traceable back
+> company balance sheets, capital accounts, emails) into two deliverables — a **wealth Excel**
+> and a **tax audit Excel + divergences report** — where *every single number is traceable back
 > to the document it came from*.
 >
 > **What this is NOT.** It contains no real names, banks, positions, amounts, account numbers, tax
@@ -49,7 +53,7 @@
 - [9. The extractor pattern (parsers)](#9-the-extractor-pattern-parsers)
 - [10. The numbered-delta compiler](#10-the-numbered-delta-compiler)
 - [11. The Excel generators](#11-the-excel-generators)
-- [12. The fiscal layer](#12-the-fiscal-layer)
+- [12. The tax layer](#12-the-tax-layer)
 - [13. Estimation & gap policy](#13-estimation--gap-policy)
 - [14. Testing & validation](#14-testing--validation)
 - [15. The recurring build & the monthly runbook](#15-the-recurring-build--the-monthly-runbook)
@@ -65,12 +69,14 @@
 ## 0. The one-paragraph domain (anonymized)
 
 We model the net worth of **three first-class holders** — two individuals (`{OWNER_A}`,
-`{OWNER_B}`) and one holding company (`{ENTITY_C}`). Their wealth sits in: managed bank/broker
+`{OWNER_B}`) and one holding company (`{ENTITY_C}`) — an entirely
+ordinary private-wealth configuration (a couple, a family holding company, one account each
+at a private bank, a broker and a robo-advisor). Their wealth sits in: managed bank/broker
 portfolios (`{BROKER}`, `{PRIVATE_BANK}`, a `{ROBO_ADVISOR}` with a separate custodian), a Lombard
 credit line collateralized by those portfolios, real estate, and a long tail of **off-bank direct
-holdings** (venture funds, startup equity, operating companies) valued at cost / fiscal value
-rather than market. On top of the patrimonial model sits a **fiscal layer**: the value of each
-direct investment at 31 December of each year, under *fiscal* valuation criteria, used to
+holdings** (venture funds, startup equity, operating companies) valued at cost / tax value
+rather than market. On top of the wealth model sits a **tax layer**: the value of each
+direct investment at 31 December of each year, under *tax* valuation criteria, used to
 reconstruct and cross-check the annual wealth-tax return (`{WEALTH_TAX_FORM}`). None of that domain
 detail matters to replicate the *system* — swap it for any portfolio of heterogeneous,
 document-backed assets (an art collection, a real-estate book, a corporate treasury).
@@ -88,28 +94,32 @@ The entire system is deliberately low-tech. Replicate the *shape*, not the brand
 | Formula verification | headless LibreOffice recalc script | proves **zero formula errors** before shipping |
 | Schema validation | `jsonschema` (draft-07) | one contract per table, enforced pre-compile |
 | PDF text extraction | `pdftotext` (poppler) + a custom glyph decoder for pathological PDFs (§9.2) | covers ~all statements |
-| Email forensics | a read-only IMAP CLI | reconstructs facts that exist only in correspondence (§9.3) |
+| Email forensics | Himalaya (recommended), a read-only IMAP CLI; credentials live only in its own config (§9.3) | reconstructs facts that exist only in correspondence |
 | Storage | CSV + JSON/JSONL, plain text, in git | `git diff` *is* the changelog (§5.3) |
-| Orchestration | two plain Python scripts (`build_all`, `fiscal_runner`) | no framework; order is explicit |
+| Orchestration | two plain Python scripts (`build_all`, `tax_runner`) | no framework; order is explicit |
 
 Orders of magnitude that this design comfortably handles (so you can tell whether you are in the
 same regime — if you are 100× bigger, revisit §5.3):
 
-- ~40 accounts in the registry, 3 holders, ~30 off-bank positions.
-- ~40 monthly periods, ~400 value rows, ~750 workbook formulas.
-- ~1,200 documents in the vault, indexed by sha256.
-- ~130 fiscal valuation rows across 7 tax years.
+- A few dozen accounts in the registry, a handful of holders, a few dozen off-bank positions.
+- Dozens of monthly periods, hundreds of value rows, under a thousand workbook formulas.
+- Low thousands of documents in the vault, indexed by sha256.
+- Low hundreds of tax valuation rows across several tax years.
 - Full rebuild from sources: seconds to low minutes. Test suite: ~100 tests, under a minute.
 
 CLI surface of the finished system (the *entire* operational interface):
 
 ```
-python src/tools/build_all.py            # regenerate EVERYTHING from sources → patrimonial .xlsx
+python src/tools/build_all.py            # regenerate EVERYTHING from sources → wealth .xlsx
 python src/runner.py --check             # fast gate: validate catalogs + data, write nothing
 python src/runner.py                     # validate, then compile the workbook
 python src/tools/extract_{source}.py     # one extractor: diagnostic (parse+check, no write)
 python src/tools/extract_{source}.py --write   # …and persist to the data layer
-python src/tools/fiscal_runner.py        # fiscal pipeline → audit .xlsx + divergences.md
+python src/tools/tax_runner.py           # tax pipeline → audit .xlsx + divergences.md
+python src/tools/tax_crosscheck.py       # 31-Dec wealth ↔ tax cross-check (§12)
+python src/tools/vault_doctor.py         # re-hash vault vs index: missing/unindexed/changed
+python src/tools/intel_ops.py seed       # skeleton dossiers for every cataloged position (§9.5)
+python src/tools/intel_ops.py delta …    # apply a DOSSIER DELTAS block, append-only (§9.5)
 python src/tools/vault_ops_cli.py plan …       # vault mutation → dry-run CSV manifest
 python src/tools/vault_ops_cli.py --apply …    # execute a human-approved manifest
 python -m unittest discover -s tests     # golden + schema + (where sources exist) re-parse tests
@@ -144,7 +154,7 @@ already 80% of the value.
    no colors, pure numbers, enum-constrained columns, named tables, zero formula errors. Totals
    and cross-tabs live only in dedicated View sheets, computed by formula.
 
-6. **One value, one criterion.** (Fiscal layer.) The same position at the same date may
+6. **One value, one criterion.** (Tax layer.) The same position at the same date may
    legitimately have *several* values under different valuation criteria (theoretical book value
    vs earnings capitalization; nominal vs NAV; with/without equity kickers). Store them as
    **separate rows**, exactly one flagged `applicable=true`, the rest as documented alternatives.
@@ -180,38 +190,46 @@ Spanish-language names — a translation table is in §21 in case you ever read 
 │   ├── accounts.json            #   account registry (the master data every series row points at)
 │   ├── entities.json            #   entity/counterparty registry (holders, issuers, aliases)
 │   ├── parameters.json          #   constants: FX table, credit params, migration dates, off-bank costs
-│   ├── positions.json           #   fiscal: static identity of each direct holding
-│   ├── positions_intel.json     #   agent-facing dossiers — working state, not a true catalog (§17)
+│   ├── positions.json           #   tax: static identity of each direct holding
 │   └── sources.json             #   provenance registry: one entry per source document
-├── data/                        # LAYER 2: patrimonial time series, one directory per period
+├── data/                        # LAYER 2: wealth time series, one directory per period
 │   └── YYYY-MM/
 │       ├── values.csv           #   account × date × asset-class → value
 │       ├── flows.csv            #   dated flows (internal transfers vs external in/out)
 │       ├── costs.csv            #   fees/costs (explicit vs estimated)
 │       ├── debt.csv             #   debt (Lombard drawn, limit, interest, collateral)
 │       └── _control.csv         #   per-account official report total → reconcile-or-abort input
-├── fiscal_data/                 # LAYER 2 (fiscal): JSONL series
+├── tax_data/                 # LAYER 2 (tax): JSONL series
 │   ├── valuations.jsonl         #   position × date × criterion → value + full provenance
-│   ├── events.jsonl             #   fiscally-relevant events (sales, calls, filings…)
-│   └── documents.jsonl          #   LAYER 3 index: every vault document by sha256
+│   └── events.jsonl             #   tax-relevant events (sales, calls, filings…)
+├── state/                       # operational state: versioned, machine/agent-written, append-only
+│   ├── documents.jsonl          #   LAYER 3 index: every vault document by sha256 (§8.2)
+│   ├── positions_intel.json     #   agent-facing per-position intel dossiers (§17)
+│   ├── triage_log.jsonl         #   every inbox triage decision (§8.4)
+│   ├── review_queue.jsonl       #   documents awaiting a human decision (§8.4)
+│   └── sweeps/                  #   consolidated email-sweep reports (§9.4)
 ├── schemas/                     # JSON Schemas — the contract for every catalog & CSV/JSONL
 │   ├── *.schema.json
-│   └── fiscal/*.schema.json
+│   └── tax/*.schema.json
 ├── src/
 │   ├── NNN_*.py                 # numbered build deltas, immutable once consolidated (§10)
 │   ├── runner.py                # validates everything, then compiles the workbook
 │   ├── lib/                     # shared library: schema_cols, csv_out, naming, vault_ops, errors…
-│   └── tools/                   # extractors (source → data layer) + orchestrators + fiscal tools
+│   └── tools/                   # extractors (source → data layer) + orchestrators + tax tools
 ├── tests/                       # golden tests + schema validation + extractor re-parse tests
 ├── docs/                        # design docs, source map, runbooks, decision log (this file)
 └── {vault}/                     # the document vault — SOURCES, git-ignored (§8)
     └── {inbox}/                 # staging inbox for un-triaged documents, git-ignored
 ```
 
-**Golden rule of the layout:** `src/`, `catalogs/`, `schemas/`, `data/`, `fiscal_data/`, `tests/`,
-`docs/` are versioned and carry *no secrets* (they carry structure, surrogate IDs and derived
-numbers — acceptable for a private repo; redact IDs if the repo is ever shared). The raw source
-documents (`{vault}/`, `{inbox}/`) are git-ignored and never committed.
+**Golden rule of the layout:** everything except the raw sources is versioned — `src/`,
+`catalogs/`, `schemas/`, `data/`, `tax_data/`, `state/`, `tests/`, `docs/`. The versioned tree
+carries **no credentials and no source documents**, but it *does* carry real derived figures,
+names and citations — which is why **the repo must be private, always**: there is no acceptable
+public variant of this tree. Sharing anything means extracting and redacting a copy (as was done
+for this document), never opening the repo. The raw source documents (`{vault}/`, `{inbox}/`) are
+git-ignored and never committed; credentials live outside the repo entirely (e.g. in the mail
+client's own config, §9.3).
 
 > ⚠️ **`.gitignore` gotcha we learned the hard way:** ignore data/source directories **without a
 > trailing slash** (`inbox/*` plus a tracked `!inbox/.gitkeep`), and **never `git add -A` when a
@@ -237,8 +255,8 @@ flowchart TD
     subgraph DL["Layers 0-2 — data layer: versioned, plain text"]
         direction LR
         C["catalogs/*.json<br/>static master data"]
-        V["data/YYYY-MM/*.csv<br/>patrimonial series"]
-        F["fiscal_data/*.jsonl<br/>fiscal series"]
+        V["data/YYYY-MM/*.csv<br/>wealth series"]
+        F["tax_data/*.jsonl<br/>tax series"]
     end
     DL --> RUN{"runner: schema +<br/>referential + reconciliation<br/>all valid?"}
     RUN -->|no| ABORT[["Abort with context<br/>(file + field)"]]
@@ -247,8 +265,8 @@ flowchart TD
 
     subgraph ART["Compiled artifacts (back-ends)"]
         direction LR
-        A1["{Patrimonial}.xlsx<br/>data sheets + View sheets"]
-        A2["{Fiscal audit}.xlsx<br/>+ divergences.md"]
+        A1["{Wealth}.xlsx<br/>data sheets + View sheets"]
+        A2["{Tax audit}.xlsx<br/>+ divergences.md"]
     end
     ART -->|"headless recalc → 0 formula errors"| DONE([Deliverables])
 ```
@@ -257,16 +275,16 @@ The layer numbering used throughout this document:
 
 - **Layer 0** — registries of *who exists*: entities, aliases, canonical tokens.
 - **Layer 1** — registries of *what exists*: accounts, positions, parameters, source documents.
-- **Layer 2** — *time series*: patrimonial CSVs per month, fiscal JSONL per year-end.
+- **Layer 2** — *time series*: wealth CSVs per month, tax JSONL per year-end.
 - **Layer 3** — the *documents themselves*: the vault plus its sha256 index.
 
 Two orchestrators drive it:
 
-- `src/tools/build_all.py` — the recurring patrimonial pipeline: runs the extractors in dependency
-  order (§15), then the runner, then a best-effort headless recalc. One command regenerates
+- `src/tools/build_all.py` — the recurring wealth pipeline: runs the extractors in dependency
+  order (§15), then the runner, then the headless recalc gate (§11). One command regenerates
   *everything*.
-- `src/tools/fiscal_runner.py` — the fiscal pipeline: parses tax returns + balance sheets, builds
-  the fiscal data layer, cross-checks against the official tax-form summary box, compiles the
+- `src/tools/tax_runner.py` — the tax pipeline: parses tax returns + balance sheets, builds
+  the tax data layer, cross-checks against the official tax-form summary box, compiles the
   audit Excel and the divergences report.
 
 ---
@@ -306,7 +324,7 @@ schema-checked. Design choices worth copying:
   the same separation as everywhere else.
 
 - **Entity registry** (`entities.json`): every counterparty with its canonical `TOKEN` (the same
-  token the vault naming grammar uses, §8.1) plus known aliases. **Fiscal position registry**
+  token the vault naming grammar uses, §8.1) plus known aliases. **Tax position registry**
   (`positions.json`): see §12.
 
 ### 5.2 Time series (CSV) — machine-written, per period
@@ -349,14 +367,33 @@ Two supporting library rules make plain text safe:
 - **One centralized schema-column module** (`lib/schema_cols.py`): the single source of truth for
   column order, imported by the CSV writer, the workbook deltas, and the schemas' test.
 
+### 5.4 Human-sourced values (real estate, off-bank costs, FX)
+
+Some values have no parseable document feed: a real-estate valuation, an off-bank position's
+acquisition cost, the month-end FX fixing. They still obey the machine-written rule — a human
+never edits a CSV. The pattern:
+
+- The human curates the value **in `parameters.json`**, as data with its own provenance: value,
+  date, and a `source` citation (the deed, the appraisal, the central-bank fixing page). A
+  parameter without a citation is invalid — same rule as any row.
+- The extractor (`extract_offbank` for costs and real estate; the FX-consuming views for rates)
+  **reads the parameter and emits or converts the rows**, so the series stays machine-written and
+  byte-stable, and the runner validates the result like any other data.
+- **If an agent finds one of these parameters empty or missing** (a new position with no cost, a
+  month-end with no fixing for a currency in play), it never invents or interpolates a value for
+  it. It records the gap as `PENDING`, adds the question to the working-memory doc's open
+  questions (§17), and asks the owner. The answer becomes a dated decision-log entry plus a cited
+  parameter — the next build picks it up. "Ask, don't invent" (§17) applies to parameters exactly
+  as it applies to sources.
+
 ---
 
 ## 6. Data dictionary (full column specs)
 
-This is the complete contract of the patrimonial series. Types are the post-parse types; every
+This is the complete contract of the wealth series. Types are the post-parse types; every
 file also validates against its JSON Schema (§7).
 
-### 6.1 `values.csv` — the heart of the patrimonial layer
+### 6.1 `values.csv` — the heart of the wealth layer
 
 | Column | Type | Semantics |
 |---|---|---|
@@ -364,7 +401,7 @@ file also validates against its JSON Schema (§7).
 | `date` | ISO date | end-of-month of the directory's period |
 | `asset_class` | enum | e.g. `fixed_income`, `equity`, `cash`, `venture_funds`, `startups`, `companies`, `real_estate` |
 | `currency` | enum (`EUR`,`USD`,…) | native currency of the value |
-| `value` | number | market value (banked) or cost/fiscal value (off-bank), in native currency |
+| `value` | number | market value (banked) or cost/tax value (off-bank), in native currency |
 | `last_valuation_date` | ISO date or null | for off-bank rows: when the underlying was last actually valued |
 | `source` | string, non-empty | citation in the fixed grammar of §13.4: optional `estimated: ` prefix + citation + optional `(grade: A\|B\|C)` suffix |
 
@@ -373,7 +410,7 @@ Grain: **one row per `account_id × date × asset_class`** — the runner reject
 The asset-class enum splits into two halves with **different valuation semantics** — keep them
 distinguishable forever: *banked* classes (`fixed_income`, `equity`, `cash`) are market-valued
 monthly; *off-bank* classes (`venture_funds`, `startups`, `companies`, `real_estate`) are at
-cost/fiscal value with heterogeneous `last_valuation_date`s. The Consolidated View reports the two
+cost/tax value with heterogeneous `last_valuation_date`s. The Consolidated View reports the two
 gross subtotals separately (§11) precisely because averaging them would be a category error.
 
 ### 6.2 `flows.csv`
@@ -428,7 +465,7 @@ gross subtotals separately (§11) precisely because averaging them would be a ca
 | `official_total` | number | the grand total **printed on the source report** for this account & month |
 | `source` | string | the report it came from |
 
-### 6.6 Fiscal tables (JSONL — one JSON object per line)
+### 6.6 Tax tables (JSONL — one JSON object per line)
 
 **`valuations.jsonl`** — `position × date × criterion → value + provenance`:
 
@@ -436,7 +473,7 @@ gross subtotals separately (§11) precisely because averaging them would be a ca
 |---|---|---|
 | `position_id` | string, FK → positions.json | |
 | `holder` | string | |
-| `ref_date` | string `^\d{4}-12-31$` | fiscal reference date: 31 December |
+| `ref_date` | string `^\d{4}-12-31$` | tax reference date: 31 December |
 | `criterion` | enum | `declared`, `theoretical_book`, `earnings_capitalization`, `nav`, `cost`, `liquidation_value`, `listed_average`, `cadastral`, `nominal`, `market` |
 | `native_value`, `currency` | number, enum | value in native currency |
 | `fx`, `fx_source_id` | number, FK | rate used and its own provenance (e.g. central-bank fixing) |
@@ -448,13 +485,13 @@ gross subtotals separately (§11) precisely because averaging them would be a ca
 | `declared` | boolean | whether this value appeared on a filed tax return |
 | `legal_max` | boolean | whether a legal "greater-of" rule selects this row |
 
-**`events.jsonl`** — fiscally-relevant events that *explain deltas* between two year-end
+**`events.jsonl`** — tax-relevant events that *explain deltas* between two year-end
 valuations: `position_id`, `date`, `event_type` (enum: `subscription`, `capital_call`, `sale`,
 `redemption`, `conversion`, `write_off`, `insolvency`, `dissolution`, `tax_filing`, …), `amount`,
-`description`, `source_id`. The fiscal runner can warn when a valuation jump has no event
+`description`, `source_id`. The tax runner can warn when a valuation jump has no event
 justifying it.
 
-**`documents.jsonl`** — the vault index (§8.2): `sha256`, `path` (canonical filename), `token`,
+**`state/documents.jsonl`** — the vault index (§8.2), stored with the operational state: `sha256`, `path` (canonical filename), `token`,
 `doc_date`, `title`, `ext`, `size`, `indexed_at`.
 
 ---
@@ -510,6 +547,13 @@ python src/runner.py            # the three passes, then compile the workbook
 
 `--check` is the fast gate. The full run differs only by writing the `.xlsx`.
 
+**Schema evolution vs closed periods.** New columns are **optional by default** — closed periods
+keep validating untouched, forever. If a column must become required, that is a **backfill
+process**, never an edit: re-run the extractors over the affected periods (byte-stable, so the
+diff shows exactly the added column and nothing else), update the goldens with a justification,
+and record the change as a dated decision-log entry. This is the sanctioned exception to period
+immutability that §2.7 already allows — a correction with ceremony, not a silent edit.
+
 ---
 
 ## 8. The document vault (Layer 3)
@@ -549,7 +593,7 @@ the staging inbox**.
 
 ### 8.2 Hash index
 
-`documents.jsonl` indexes every vault document **by sha256**. This gives you: free dedup (same
+`state/documents.jsonl` indexes every vault document **by sha256**. This gives you: free dedup (same
 content = same hash regardless of name), tamper detection (a source that changes content is a
 visible re-index event), and stable `source_id → file` resolution that survives renames. The index
 is versioned; the documents are not.
@@ -591,7 +635,7 @@ ingest yourself requires explicit human sign-off.
 motor ingests the keepers into the vault (updating the hash index); the rest are discarded with a
 logged reason. Documents the triage cannot classify go to a review queue for a human decision —
 they do not linger unclassified in the inbox. The recurring pipeline is **forbidden** from reading
-the inbox — principle #8. (One deliberate exception: the fiscal *consolidator* reads the inbox,
+the inbox — principle #8. (One deliberate exception: the tax *consolidator* reads the inbox,
 because ingesting is its job.)
 
 **How triage classifies** (at ~1,000+ documents this cannot be pure manual judgement):
@@ -612,6 +656,26 @@ spirit — enough fields to reconstruct every decision):
 Purging the inbox is **sha-safe by construction**: a staged file may be deleted only if its sha256
 already exists in the vault index, or its discard reason is logged. Never bulk-delete an inbox on
 faith.
+
+### 8.5 Vault doctor: integrity, backup & encryption
+
+The vault is git-ignored, so nothing in git protects it. Three complementary defences:
+
+- **`vault_doctor.py`** — a read-only integrity check, run at every monthly close (§15.2) and
+  before any large vault operation. It re-hashes the vault on disk and diffs it against
+  `state/documents.jsonl`, ignoring OS junk (`.DS_Store`, `._*`, `Thumbs.db`, `.Spotlight-V100`),
+  and reports three lists: **missing** (indexed but absent on disk — a file disappeared),
+  **unindexed** (on disk but not in the index — a file bypassed the single-writer motor), and
+  **changed** (same canonical path, different sha256 — content altered after indexing). A clean
+  doctor is part of the batch-close ritual; any non-empty list is triaged like an abort —
+  explained and fixed through the manifest loop, never shrugged off.
+- **Backup.** The vault is the irreplaceable half of the system (the repo can be regenerated from
+  it, not vice versa). Back it up with an encrypted, deduplicating snapshot tool (e.g. restic or
+  borg) to at least one destination outside the machine, refreshed at every batch close — the
+  same cadence as the git bundle.
+- **Encryption at rest.** The vault holds statements and tax IDs in the clear; keep it (and its
+  backups) on an encrypted volume (FileVault / LUKS / an encrypted NAS share), with the backup
+  repository's key stored outside both the repo and the vault.
 
 ---
 
@@ -681,8 +745,8 @@ Properties every extractor must have:
   mutating the data layer.
 - **Reconcile-or-abort against the source's own total.** If the source prints a grand total, use
   it. If it prints only a section subtotal (e.g. a balance-sheet section), check against *that*.
-  Some sources allow a **double reconciliation** (e.g. `cash + securities = savings` and
-  `savings − credit = integrated position`) — use both; each equation is a free tripwire.
+  Some sources allow a **double reconciliation** (e.g. `cash + securities = section total` and
+  `section total − credit drawn = net position`) — use both; each equation is a free tripwire.
 - **Centralized CSV writing** (`lib/csv_out.py`) for byte-stable output (§5.3).
 - **Reads from the vault**, resolving the vault root via env var → parameter file → sibling dir.
 - **Fails loud with context** on any layout change: a `safe_parse(field_name, file)` helper wraps
@@ -697,12 +761,12 @@ reconciliation or a golden test caught it. Keep this list; it is the accumulated
 | Gotcha | What happens | Defence |
 |---|---|---|
 | **Column drift** | A report silently adds a "Cost" column, so the *valuation* becomes the penultimate number on the line, not the first/last. | Never index a fixed column; locate by header, take the value *relative to* an anchor, and reconcile. |
-| **Newest-first columns** | A balance sheet lists years `2024│2023│2022│2021` left-to-right; `nums[-1]` grabs the *oldest*. We shipped three-year-old values for months before this was caught. | Locate the target column by its **year header**, then verify against the section subtotal, or abort. |
+| **Newest-first columns** | A balance sheet lists years `{Y}│{Y-1}│{Y-2}│{Y-3}` left-to-right; `nums[-1]` grabs the *oldest*. We shipped three-year-old values for months before this was caught. | Locate the target column by its **year header**, then verify against the section subtotal, or abort. |
 | **Leap-year month-end** | Naive end-of-month arithmetic breaks in February of a leap year. | Use a calendar function for month-end, always. |
 | **Duplicated lines** | Some reports print the cash line twice; re-summing leaf lines double-counts. | Prefer the labelled subtotal over re-summing leaves. |
 | **Unmapped-glyph PDFs** | PDFs with subset Identity-H CID fonts and **no ToUnicode table** extract as mojibake. | A dedicated glyph decoder maps CIDs → Unicode (§9.2). |
 | **Currency masquerade** | A source system with a single currency field stores USD holdings; summed as base currency they are simply wrong. | Store native + `currency`; convert only in views; never sum a mixed column blind. |
-| **"Shares" vs "called capital"** | "75,000" turned out to be 75,000 *currency units of called capital*, not 75,000 shares. | Read the unit, not just the number. |
+| **"Shares" vs "called capital"** | A figure "{N}" turned out to be {N} *currency units of called capital*, not {N} shares. | Read the unit, not just the number. |
 | **Proxy staleness** | A value proxied from a weaker source silently ages into a stale prior-year figure. | Re-derive from the primary source; grade reliability; never freeze the proxy (principle #8). |
 | **Mis-dated transcriptions** | A hand-kept spreadsheet booked two months' interest under the wrong months (total right, distribution wrong). | Re-derive per-month figures from the statement's own settlement lines, then diff against the transcription. |
 | **Nominal ≠ NAV** | A fund position declared at "number of units × 1.00" (nominal) when the capital account showed a NAV well above 1. | For fund positions, always look for the capital account; store both criteria as rows (§12). |
@@ -721,10 +785,14 @@ can drift.
 ### 9.3 Reconstructing facts from correspondence (email forensics)
 
 Some facts (a redemption, a conversion, a year-end value never formally certified) exist only in
-email. A read-only IMAP CLI sweep reconstructs them. Hard-won rules:
+email. A read-only IMAP CLI sweep reconstructs them (recommended client: **Himalaya** —
+scriptable, provider-agnostic). Hard-won rules:
 
 - **Read-only, always.** Preview mode only (never set the "seen" flag); never delete/move/flag/
   send; the only permitted write is downloading an attachment.
+- **Credentials live only in the mail client's own config** (e.g. `~/.config/himalaya/`) — never
+  in the repo, the vault, or an env file inside the tree. Prefer OAuth or an app password scoped
+  read-only where the provider supports it; rotating a credential must never touch the repo.
 - **Never scope to a thematic folder.** Users barely file mail; folder filters produce *false
   negatives*. Sweep the catch-all ("All Mail" / the general boxes), then filter locally.
 - **Non-ASCII characters break IMAP SEARCH** on many servers. Search with ASCII word *roots* only
@@ -743,7 +811,7 @@ email. A read-only IMAP CLI sweep reconstructs them. Hard-won rules:
 - **Fan-out pattern:** verify the toolchain once, then run **one subagent per position in
   parallel**, each with a strict output contract — the full playbook, including the prompt
   template, is §9.4.
-- **Keep a per-position intel dossier** (§17): before sweeping, read it (validated search terms,
+- **Keep a per-position intel dossier** (§9.5, §17): before sweeping, read it (validated search terms,
   known gaps, last-sweep cursor); after sweeping, update it. This turns each sweep into
   compounding intel instead of repeated rediscovery.
 
@@ -759,7 +827,7 @@ every clause below encodes a failure we actually hit.
    already seen mail about). An empty canary means the toolchain is broken — wrong flag order,
    auth failure, encoding issue — **not** that the mailbox is empty. Without a canary, a broken
    toolchain and an empty mailbox are indistinguishable, and you will record false "not on
-   record" verdicts with fiscal consequences.
+   record" verdicts with tax consequences.
 3. Confirm the CLI's flag-before-query ordering and that output parses as expected.
 
 Only after all three pass do subagents launch. Subagents receive the verified environment as
@@ -770,7 +838,7 @@ from the position's dossier and the catalogs):
 
 ```
 You are sweeping email for facts about {POSITION} ({legal name}, tax ID {TAX_ID}).
-Fiscal context: we need its value at 31 December of {YEARS}, with a backing document.
+Tax context: we need its value at 31 December of {YEARS}, with a backing document.
 "Not on record" is a valid and necessary answer — never fill a gap with a guess.
 
 ENVIRONMENT (already verified — do not re-verify, do not deviate):
@@ -781,6 +849,7 @@ ENVIRONMENT (already verified — do not re-verify, do not deviate):
 
 SCOPE (from the dossier at {dossier_path} — read it first):
 - validated search terms (ASCII roots): {search_terms}
+- aliases (issuers rarely write under the legal name): {aliases}
 - issuer/advisor domains: {domains}; known contacts: {contacts}
 - only mail after {last_sweep_cursor} unless a gap explicitly predates it
 - open gaps you are trying to close: {gaps}
@@ -827,12 +896,104 @@ Negative space is what makes a "not on record" verdict *citable* later ("we sear
      document = one source entry; the vault entry supersedes any provisional email entry.
    Then the valuation/event row cites the `source_id`. An email-backed fact that never becomes a
    cited row has not been captured — it has been read.
-3. Every **dossier delta** is applied to `positions_intel.json`.
+3. Every **dossier delta** is applied to `state/positions_intel.json` via `intel_ops delta`
+   (§9.5) — dated, append-only, never a hand edit.
 4. The cursor (`last_sweep`) advances **only after** the facts and attachments are archived — a
    cursor advanced on a sweep whose output was lost silently hides that mail from every future
    sweep.
 5. Conflicts between subagent reports (two positions citing the same mail differently) are
    resolved by re-reading the mail, not by preferring either report.
+
+### 9.5 The intel file: shape, generation, and the capture loop
+
+§9.4 consumes the dossiers and §17 states the discipline; this section makes the artifact itself
+concrete, because "keep an intel dossier" fails in practice unless three things are specified:
+the exact shape, the moment intel gets captured, and how a dossier turns into queries.
+
+**Shape.** `state/positions_intel.json` is one object keyed by position token. Deliberately not
+schema-enforced (§17), but every dossier carries the same keys — present from day one, empty
+until earned:
+
+```json
+{
+  "{POSITION}": {
+    "aliases": ["{legal name}", "{trade name}", "{administrator's name}"],
+    "domains": ["{issuer.example}", "{advisor.example}"],
+    "contacts": ["{name} — {role}, last seen {YYYY-MM}"],
+    "search_terms": ["{ascii-root-1}", "{ascii-root-2}"],
+    "expected_documents": ["capital account (quarterly)", "annual accounts (~{N} days after close)"],
+    "gaps": ["value at 31 Dec {YYYY} — no backing document"],
+    "findings": [
+      {"date": "{YYYY-MM-DD}", "text": "the mail titled Q1 is actually the Q2 report",
+       "anchor": "email:{message-id}"},
+      {"date": "{YYYY-MM-DD}", "text": "searched {term} over {window}: nothing relevant",
+       "anchor": "sweep:SWEEP_{YYYY-MM-DD}_{scope}.md"}
+    ],
+    "last_doc_date": "{YYYY-MM-DD}",
+    "last_sweep": "{YYYY-MM-DD}",
+    "priority": "normal"
+  }
+}
+```
+
+Two field notes. `aliases` exists because issuers rarely write under the legal name — the fund's
+marketing name and the administrator's name are what appear in senders and subjects, and a
+dossier without aliases produces false "not on record" verdicts. And **negative results are
+first-class findings**, anchored to the sweep report that proves them: "we looked, on this date,
+with these queries, and found nothing" is precisely what lets a future session not look again.
+
+**Generation and mutation go through one tool** — `intel_ops.py`, the dossiers' single-writer
+motor (§8.3's pattern applied to intel):
+
+- `intel_ops seed` — creates a skeleton dossier for **every** token in `positions.json` (all
+  keys present, values empty), pre-filling `aliases` from the catalog's legal names and
+  `expected_documents` from the source families already registered in `sources.json`.
+  Merge-only: it never overwrites an existing dossier or key. Run it as soon as `positions.json`
+  exists (Phase 1) and again after cataloging any new position.
+- `intel_ops delta` — applies a DOSSIER DELTAS block (section 5 of §9.4's output contract) as an
+  append-only mutation: stamps the date, keeps the anchor, supersedes rather than rewrites, and
+  advances `last_sweep` only when the block confirms the archive step completed (§9.4, step 4).
+  Neither humans nor agents edit the JSON by hand — a hand edit is invisible to the audit trail.
+
+**The capture prompt.** Sweeps are not the only intel source — most intel surfaces mid-task,
+while parsing a statement or asking the owner a question, and it evaporates at session end
+unless capture is a standing instruction. Embed this block in the working-memory doc (§17) so
+every session inherits it:
+
+```
+INTEL CAPTURE (standing instruction — every session, not only sweeps)
+
+While working, whenever you learn something durable about a position, note it for its
+dossier. The single test: "would knowing this save time in a future session?"
+It usually looks like one of:
+- a validated or failed search term, sender, domain or alias
+- a document-family fact ("capital accounts arrive ~{N} days after quarter end")
+- a trap ("the mail titled Q1 is actually the Q2 report")
+- a negative result, with the exact query and window that produced it
+- a gap opened or closed; a lifecycle change ("terminated {date}, tax history complete")
+
+At batch close, emit ONE consolidated DOSSIER DELTAS block (the format of §9.4's output
+contract, section 5): per position, dated entries, each anchored to a Message-ID,
+source_id or sweep report where possible. Do not edit state/positions_intel.json
+directly — deltas are applied via `intel_ops delta` during the close ritual, after the
+facts they cite are archived. If the session produced nothing durable, say so
+explicitly: "no dossier deltas".
+```
+
+**From dossier to queries** — what the §9.4 subagent mechanically derives from its SCOPE block:
+
+1. Base terms = `search_terms` ∪ the ASCII roots of every `aliases` entry.
+2. Query set = every base term, plus `from:{domain}` for each `domains` entry, plus each
+   `contacts` name — crossed with the date windows.
+3. Windows = `last_sweep` → today for routine coverage, **plus one historical window per open
+   gap** that predates the cursor: a gap is permission to look back; the cursor bounds routine
+   re-sweeping, never gap-closing.
+4. Canary first (§9.4, step 0), then the set — every query logged verbatim, because the
+   NEGATIVE SPACE section is the query set's execution proof.
+
+The loop this closes: seed → sweep → deltas → tighter queries → cheaper sweep. The dossier is
+the one file in the system whose value is measured in *saved future effort* — its upkeep is part
+of the definition of done for any session that touched a position.
 
 ---
 
@@ -879,7 +1040,7 @@ Two design rules make the Excel trustworthy and diff-stable:
 The two views:
 
 - **Consolidated View:** a month × asset-class matrix with — *gross banked* (market-valued liquid
-  classes), *gross off-bank* (cost/fiscal-valued illiquid classes, mixed valuation dates), gross
+  classes), *gross off-bank* (cost/tax-valued illiquid classes, mixed valuation dates), gross
   total, the Lombard debt (`SUMIFS` over the debt sheet), and `Net = Gross − Debt`, plus a line
   chart. The banked/off-bank split matters because the two halves have different valuation
   semantics and you must never blur them (§6.1).
@@ -910,8 +1071,11 @@ The two views:
   build time, where it belongs, not in the spreadsheet).
 
 After compiling, **recalc headlessly** (spreadsheet apps evaluate formulas on open; a headless
-recalc proves **zero formula errors** before you ship). The orchestrator locates the recalc script
-best-effort and runs it; a lock-file check warns if the workbook is currently open in an editor.
+recalc proves **zero formula errors** before you ship). The recalc is a **hard gate by default**:
+if the recalc script or LibreOffice is unavailable, `build_all` fails rather than skipping — a
+workbook that was never recalculated cannot claim the definition of done. A `--no-recalc` flag
+exists for development iterations only, and its output is explicitly not shippable. A lock-file
+check warns if the workbook is currently open in an editor.
 
 > A consciously *rejected* refactor, preserved as an example of writing down roads not taken:
 > converting the text dates in the data sheets to real spreadsheet dates. It would touch every
@@ -921,12 +1085,12 @@ best-effort and runs it; a lock-file check warns if the workbook is currently op
 
 ---
 
-## 12. The fiscal layer
+## 12. The tax layer
 
-A second data layer, at year-end (31 December) and *fiscal* valuation criteria, keyed by the same
+A second data layer, at year-end (31 December) and *tax* valuation criteria, keyed by the same
 `position_id` as the off-bank holdings. It does not replace the monthly banked values — it is an
 orthogonal view of the same world. Stored as JSONL because the rows are wider and more
-heterogeneous than the patrimonial CSVs.
+heterogeneous than the wealth CSVs.
 
 Three catalogs/tables (full field specs in §6.6):
 
@@ -935,13 +1099,13 @@ Three catalogs/tables (full field specs in §6.6):
   currency, flags (`listed`, `foreign_reporting_obligation`, `audited`), the tax-form section, the
   accounting sub-account (for the holding company's investees), the provider account/user, and
   lifecycle state (`alive` / `insolvency` / `liquidation` / `struck_off` / `sold` / `redeemed`)
-  with a date. Lifecycle matters fiscally: an insolvent-but-not-liquidated company may still have
+  with a date. Lifecycle matters for tax: an insolvent-but-not-liquidated company may still have
   to be declared at its last value.
 
 - **`sources.json`** — the **provenance backbone**. One entry per source document. It is a JSON
   **object keyed by `source_id`** — a short, stable, human-readable slug assigned when the entry
-  is created, convention `{TOKEN}-{DOCTYPE}-{PERIOD}` (e.g. `{POSITION}-CAPACC-2025Q4` for that
-  position's Q4-2025 capital account). Every valuation's and event's `source_id` is that key;
+  is created, convention `{TOKEN}-{DOCTYPE}-{PERIOD}` (e.g. `{POSITION}-CAPACC-{YYYY}Q4` for that
+  position's Q4 capital account of year {YYYY}). Every valuation's and event's `source_id` is that key;
   a slug never changes once anything cites it:
 
   ```json
@@ -973,17 +1137,17 @@ Three catalogs/tables (full field specs in §6.6):
     capitalization" gets *two* rows for the same date; the greater one carries
     `applicable=true, legal_max=true`. The comparison is explicit and auditable, not a hidden
     `max()` in code.
-  - A fund declared at nominal (units × 1.00) whose capital account shows a NAV of 1.18 gets both
+  - A fund declared at nominal (units × 1.00) whose capital account shows a NAV well above par gets both
     rows — `nominal` with `declared=true, applicable=true` (what was filed) and `nav` with
     `applicable=false` (what it was worth). The JOIN of *declared* vs *worth* **surfaces
     under-declarations automatically**; each becomes a numbered item in the divergences report.
 
-The **fiscal runner** (`fiscal_runner.py`):
+The **tax runner** (`tax_runner.py`):
 
 1. Parses each filed tax return from the vault, classifying line items into form sections by
    *shape* (a line with tax-ID/ISIN + ownership % is an "identified securities" item; a bare
    description + value is a residual "other assets" item) — because PDF extraction scrambles
-   section headers, and one filing may even be in a different co-official language.
+   section headers, and one filing may even be in a different language than the rest.
 2. **Reconciles the residual section against the form's own summary box**, and applies a **hard
    floor on parsed item count** (if a return yields fewer than N items, the parse is presumed
    broken and the run aborts — this guards against a silently-empty parse passing as "nothing
@@ -1008,6 +1172,15 @@ The **fiscal runner** (`fiscal_runner.py`):
    where nothing is on record) and the **Markdown divergences report**: every judgement call,
    numbered, phrased as a question the accountant can answer (declare/not, criterion A/B,
    amend/not).
+
+A companion tool, **`tax_crosscheck.py`**, closes the loop between the two layers: for every
+`(position, holder)` with an `applicable=true` valuation at a 31 December, it looks up the same
+position's off-bank row in `data/{YYYY}-12/values.csv` and compares. Cost basis and tax value
+legitimately differ — the check does not demand equality; it demands **explanation**: a divergence
+with no `events.jsonl` entry and no differing-criterion rationale becomes a numbered warning in
+the divergences report. It also checks lifecycle coherence both ways: a terminated position must
+stop appearing in the wealth series, and a live one must not silently vanish from it. Run it
+at every tax build and at the December close (§15.2).
 
 The audit artifacts are *inventories with traceability*, explicitly **not** tax filings. Keeping
 that framing honest is what lets you show them to a professional advisor as input rather than as a
@@ -1035,15 +1208,15 @@ Principle #2 forbids inventing data; real life still has gaps. The policy that r
    - **B** — derived with a document (e.g. a value computed from a filed return's cadastral
      figure, or extrapolated one month from a dated statement).
    - **C** — proxy or assumption (a hand-kept spreadsheet, a placeholder awaiting appraisal).
-   Record the grade in the row — fiscal layer: the `reliability` field; patrimonial layer: inside
+   Record the grade in the row — tax layer: the `reliability` field; wealth layer: inside
    the `source` string, which follows **one fixed grammar** so the tests can parse it:
 
    ```
    source := ["estimated: "] citation [" (grade: " ("A"|"B"|"C") ")"]
    ```
 
-   e.g. `estimated: linear interpolation over 2024-08 / 2024-12 / 2025-11 anchors (grade: C)`, or
-   `{PRIVATE_BANK} integrated statement 2026-03-31, category subtotals (grade: A)`. The golden
+   e.g. `estimated: linear interpolation over {YYYY-MM} / {YYYY-MM} / {YYYY-MM} anchors (grade: C)`, or
+   `{PRIVATE_BANK} monthly statement {YYYY-MM-DD}, category subtotals (grade: A)`. The golden
    marker test regex-parses exactly this grammar — free-styling the field breaks the build, by
    design.
    **Every C is a standing TODO** to be upgraded by re-deriving from a primary source — and when
@@ -1118,8 +1291,8 @@ flowchart LR
     --> EF["extract_flows<br/>flows + costs + debt<br/>(reads _control for the migration transfer)"]
     EF --> EO["extract_offbank<br/>off-bank values<br/>(MERGES into shared values.csv)"]
     EO --> EP["extract_{private_bank}<br/>post-migration values + real Lombard<br/>(MERGE, NOT overwrite)"]
-    EP --> RUN["runner<br/>3 validation passes + compile<br/>→ {Patrimonial}.xlsx"]
-    RUN --> RC(["headless recalc (best-effort)<br/>verify 0 formula errors"])
+    EP --> RUN["runner<br/>3 validation passes + compile<br/>→ {Wealth}.xlsx"]
+    RUN --> RC(["headless recalc — hard gate (§11)<br/>verify 0 formula errors"])
 ```
 
 Why each edge exists — encode this reasoning as comments in the orchestrator:
@@ -1135,20 +1308,31 @@ Why each edge exists — encode this reasoning as comments in the orchestrator:
 
 ### 15.2 The monthly runbook (day-2 operations)
 
-When a new month's statements arrive:
+When a new month's statements arrive (typically a few days into the following month, once the
+last provider has published):
 
 1. Drop the documents into `{inbox}/`.
 2. Triage → `vault_ops` dry-run manifest → human OK → `--apply` (ingest into
    `Accounts/{ACCOUNT_ID}/{year}/` with canonical names; index updates).
-3. Run the relevant extractor in **diagnostic mode** (no `--write`): read the reconciliation
+3. **Update the FX table** in `parameters.json` with the month-end official fixing for every
+   non-base currency in play — one entry per (currency, date), citing the central-bank fixing as
+   its source (§5.4). Skip only if no foreign-currency row exists for the month.
+4. Run the relevant extractor in **diagnostic mode** (no `--write`): read the reconciliation
    lines. Any abort → fix the parser or flag the source anomaly; never patch the output.
-4. Re-run with `--write`, then `runner.py --check`.
-5. Run the test suite. The golden row/month counts *will* move — update them **with a one-line
+5. Re-run with `--write`, then `runner.py --check`.
+6. Run the test suite. The golden row/month counts *will* move — update them **with a one-line
    justification** in the golden comment block.
-6. `build_all.py` → recalc → confirm zero formula errors.
-7. Commit: data layer + golden update + (if the parser changed) the parser, in one commit whose
-   message states the period and the reconciliation result.
-8. Update the working-memory doc (§17): new counts, anything learned, anything now `PENDING`.
+7. `build_all.py` → recalc → confirm zero formula errors (hard gate, §11).
+8. `vault_doctor.py` (§8.5): missing / unindexed / changed must all be empty, or each finding is
+   triaged and explained.
+9. **December close only:** once the year-end tax rows exist, run `tax_crosscheck.py`
+   (§12) and triage its warnings into the divergences report.
+10. Commit: data layer + golden update + (if the parser changed) the parser, in one commit whose
+    message states the period and the reconciliation result.
+11. **Refresh backups:** the git bundle (§3) and the vault snapshot (§8.5).
+12. Update the working-memory doc (§17): new counts, anything learned, anything now `PENDING`,
+    and any open questions for the owner (§5.4); apply the session's DOSSIER DELTAS via
+    `intel_ops delta` (§9.5).
 
 ---
 
@@ -1156,24 +1340,24 @@ When a new month's statements arrive:
 
 A concrete trace of the whole machine on one new statement (names are placeholders):
 
-1. **Arrival.** `statement_march.pdf` (from `{PRIVATE_BANK}`, for `{OWNER_A}`) lands in
+1. **Arrival.** `statement_{month}.pdf` (from `{PRIVATE_BANK}`, for `{OWNER_A}`) lands in
    `{inbox}/`.
 2. **Ingest.** Triage classifies it → `vault_ops` plan emits one manifest row:
-   `copy_to_vault, {inbox}/statement_march.pdf, Accounts/{PRIVATE_BANK}-{OWNER_A}/2026/
-   {PRIVATE_BANK}-{OWNER_A}_2026-03-31_Monthly integrated statement.pdf, {sha256}, monthly ingest`.
-   Human OKs; `--apply` copies it and appends to `documents.jsonl`.
+   `copy_to_vault, {inbox}/statement_{month}.pdf, Accounts/{PRIVATE_BANK}-{OWNER_A}/{YYYY}/
+   {PRIVATE_BANK}-{OWNER_A}_{YYYY-MM-DD}_Monthly statement.pdf, {sha256}, monthly ingest`.
+   Human OKs; `--apply` copies it and appends to `state/documents.jsonl`.
 3. **Parse (diagnostic).** `extract_{private_bank}.py` finds the new file via `rglob`, decodes it
    (glyph decoder, §9.2), pulls the labelled subtotals: securities, cash, credit drawn. It checks
-   the double reconciliation — `cash + securities = savings total` and `savings − credit =
-   integrated position` — to the cent, and prints `2026-03 {PRIVATE_BANK}-{OWNER_A}: OK`.
-4. **Write.** With `--write`, it **merges** into `data/2026-03/`: its rows in `values.csv`
+   the double reconciliation — `cash + securities = section total` and `section total − credit drawn =
+   net position` — to the cent, and prints `{YYYY-MM} {PRIVATE_BANK}-{OWNER_A}: OK`.
+4. **Write.** With `--write`, it **merges** into `data/{YYYY-MM}/`: its rows in `values.csv`
    (asset-class split per the report's category subtotals), its `debt.csv` row (drawn balance,
    interest from the credit settlement line, collateral = this epoch's pledged accounts), and its
    `_control.csv` line (the report's own printed total).
 5. **Validate.** `runner.py --check`: schema pass, referential pass (account exists, is tracked,
    classes in enum, no duplicate grain), reconciliation pass against `_control.csv`. Exit 0.
 6. **Test.** Golden row count moves +3 → update `GOLDEN` with
-   `# +2026-03 {PRIVATE_BANK}-{OWNER_A}: +2 value rows, +1 debt row (monthly statement)`.
+   `# +{YYYY-MM} {PRIVATE_BANK}-{OWNER_A}: +2 value rows, +1 debt row (monthly statement)`.
 7. **Build.** `build_all.py` regenerates everything; delta `002` reloads the CSVs; the views pick
    up the month via their `SUMIFS`; headless recalc reports 0 formula errors.
 8. **Close.** One commit; working-memory doc updated with the new counts. The `.xlsx` ships. Every
@@ -1197,16 +1381,20 @@ part of the design as the schemas:
   (the human owner decides valuation criteria and scope; the agent proposes), and why. Include
   **rejected options** (§11's rejected refactor) — a documented road-not-taken prevents
   re-litigation.
-- **Ask, don't invent.** When a source is ambiguous (is "75,000" shares or currency?), the agent
+- **Ask, don't invent.** When a source is ambiguous (is "{N}" shares or currency units?), the agent
   asks the owner and records the answer as a dated decision. An invented assumption in this domain
   is a future wrong tax filing.
-- **Per-position intel dossiers** (`positions_intel.json`) — agent-facing, not consumed by code.
-  It lives in `catalogs/` for discoverability, but it is the one file there that is **not a real
-  catalog**: it changes with every sweep, is append-only in spirit, and is deliberately **not
-  schema-enforced** — operationally it belongs with `state/`, not with `accounts.json`, and the
-  runner's schema pass skips it. Per position: `domains` (issuer/advisor email domains), `contacts`, `search_terms` (**validated
-  ASCII roots** — §9.3), `gaps`, `expected_documents`, `findings[]` (dated free-text learnings),
-  `last_doc_date`, `last_sweep` (the cursor), `priority` (`normal` / `closed` = don't sweep).
+- **Per-position intel dossiers** (`state/positions_intel.json`) — agent-facing, not consumed
+  by code. Intel is **always stored and always versioned**: it is expensive to acquire and it
+  compounds across sessions, so it lives in `state/` with the other operational records,
+  append-only in spirit and deliberately **not schema-enforced** (the runner's schema pass skips
+  `state/` entirely). Per position: `aliases` (legal / trade / administrator names — issuers
+  rarely write under the legal name), `domains` (issuer/advisor email domains), `contacts`,
+  `search_terms` (**validated ASCII roots** — §9.3), `gaps`, `expected_documents`, `findings[]`
+  (dated, anchored learnings — negative results included), `last_doc_date`, `last_sweep` (the
+  cursor), `priority` (`normal` / `closed` = don't sweep). The concrete file shape, the
+  `intel_ops` single-writer tool, the standing capture prompt and the dossier→query derivation
+  are in **§9.5**.
   Discipline: read the dossier *before* sweeping; *after* sweeping,
   leave it better than found — append any finding whose answer to "would knowing this save time
   next session?" is yes (e.g. "the email titled Q1 is actually the Q2 report", "that share link
@@ -1214,19 +1402,20 @@ part of the design as the schemas:
   archiving** what was found.
 
   **Bootstrapping the intel layer** (how the dossiers come to exist at all):
-  1. **Structure first.** Create *skeleton* dossiers for **every** position in one pass — all
-     keys present, values empty. Discoverability beats completeness: an agent cannot update a
+  1. **Structure first.** Create *skeleton* dossiers for **every** position in one pass
+     (`intel_ops seed`, §9.5) — all keys present, values empty. Discoverability beats completeness: an agent cannot update a
      dossier it doesn't know should exist, and an all-positions index makes "which positions have
      no intel yet" a trivial query instead of an unknown unknown.
   2. **Populate opportunistically.** Every sweep, every parsed document, every conversation with
      the owner leaves its residue in the dossier as a dated, append-only `findings[]` entry —
      filtered by the single test above (would this save time next session?), anchored to a
-     Message-ID or `source_id` whenever possible. Never rewrite old findings; supersede them.
+     Message-ID or `source_id` whenever possible. Never rewrite old findings; supersede them. The
+     standing capture prompt (§9.5) turns this step from an aspiration into a session obligation.
   3. **Harvest deliberately when it pays.** When a position accumulates open gaps, run a
      dedicated harvest pass (a full §9.4 sweep scoped to that position, no cursor limit) rather
      than letting five future sessions each rediscover a slice. One planned harvest is cheaper
      than N interrupted rediscoveries.
-  4. **Mark closure.** When a position's lifecycle ends and its fiscal history is complete, set
+  4. **Mark closure.** When a position's lifecycle ends and its tax history is complete, set
      `priority: closed` — an explicit "do not sweep" is intel too; it prevents every future
      session from re-checking a settled question.
 - **A source map** (`docs/source_map.md`): which document family backs which datum, what each
@@ -1237,6 +1426,12 @@ part of the design as the schemas:
   verbatim quotes, negative-space report (what was searched and not found), confidence.
 - **External actions are the human's.** The agent never sends email, never signs, never files
   anything with an authority, and mutates the vault only through the manifest+OK loop (§8.3).
+- **One writing session at a time.** Any writer (an extractor with `--write`, `vault_ops
+  --apply`, the runner's compile) takes a repo-level advisory lock (`state/.lock` — git-ignored:
+  session id, pid, timestamp) and releases it at batch close. A stale lock older than a plausible
+  session is reported, never silently stolen. Read-only operations (`--check`, diagnostic mode,
+  the doctor) need no lock. Two concurrent writing sessions on the same repo are an error to
+  stop, not a merge problem to solve.
 - **Definition of done, always the same:** goldens green · `--check` exits 0 · recalc shows zero
   formula errors · byte-stable re-run (empty diff) · working-memory doc synced.
 
@@ -1336,7 +1531,7 @@ with justifications; known sheet overlaps (interest in both flows and debt) docu
 
 **Phase 4 — Off-bank / illiquid holdings.**
 *Do:* parse from tax return / balance sheet / capital account; natural key
-`(position_id, holder)`; cost/fiscal valuation with `last_valuation_date`; **merge** into shared
+`(position_id, holder)`; cost/tax valuation with `last_valuation_date`; **merge** into shared
 period files.
 *Accept when:* the anchor snapshot's gross total matches the golden to the cent, and the newest-
 first-columns defence (locate by year header + verify section subtotal) is tested.
@@ -1352,14 +1547,16 @@ sums from the CSVs.
 *Do:* upgrade the Phase-1 stub into the full vault: directory shape by function/owner; sha256
 index; single-writer motor with dry-run manifest; staging inbox with triage mechanism, triage log
 and review queue (§8.4); re-point every extractor at the canonical layout (env → parameter →
-sibling resolution); sha-safe inbox purge rule.
+sibling resolution); sha-safe inbox purge rule; the vault doctor plus the
+backup and encryption-at-rest setup (§8.5).
 *Accept when:* all extractors read only from the vault; the index covers every document; a full
-rebuild from the vault is byte-identical to the pre-vault build.
+rebuild from the vault is byte-identical to the pre-vault build; the doctor runs clean.
 
-**Phase 7 — The fiscal layer.**
+**Phase 7 — The tax layer.**
 *Do:* `positions.json`, `sources.json`, `valuations.jsonl`, `events.jsonl` + their schemas; the
 tax-return parser (classification by shape, summary-box reconciliation, hard floor on item count);
-the missing-year reconstruction; the audit Excel + divergences report.
+the missing-year reconstruction; the audit Excel + divergences report; the
+wealth↔tax cross-check (§12).
 *Accept when:* every filed return reconciles against its own summary box; exactly one
 `applicable=true` per (position, holder, year); every valuation resolves to a source **or is an
 explicit `PENDING`** — facts that only correspondence can back may legitimately stay `PENDING`
@@ -1367,8 +1564,10 @@ until Phase 8's email forensics closes them (do not block Phase 7 on evidence Ph
 the divergences report lists every judgement call as an answerable question.
 
 **Phase 8 — Forensics + intel + agent memory.**
-*Do:* read-only email sweeps per §9.3 with subagent fan-out and output contracts; populate the
-intel dossiers; establish the working-memory doc, decision log, and batch-close ritual (§17).
+*Do:* read-only email sweeps per §9.3 with subagent fan-out and output contracts; seed the
+intel skeletons if Phase 1 didn't (`intel_ops seed`) and populate them through sweep deltas and
+the standing capture prompt (§9.5); establish the working-memory doc, decision log, and
+batch-close ritual (§17).
 *Accept when:* each swept position has a dossier with validated search terms and a cursor, and
 every reconstructed fact carries a citation or an explicit "not on record".
 
@@ -1386,7 +1585,7 @@ everything · closed periods untouched · working memory synced against the file
 | `{BROKER}`, `{PRIVATE_BANK}`, `{ROBO_ADVISOR}` | the managed-portfolio providers |
 | `{POSITION}` | a direct/off-bank holding (fund, startup, operating company) |
 | `{WEALTH_TAX_FORM}` | the annual wealth-tax return being reconstructed |
-| `{Patrimonial}.xlsx`, `{Fiscal audit}.xlsx` | the two compiled deliverables |
+| `{Wealth}.xlsx`, `{Tax audit}.xlsx` | the two compiled deliverables |
 | `{vault}`, `{inbox}` | the canonical document store and its staging inbox |
 | **reconcile-or-abort** | the balance check of parsed parts against an official total, aborting on mismatch |
 | **golden test** | a pinned constant (row count, snapshot total) that may only change with a written justification |
@@ -1398,7 +1597,7 @@ If you ever read them, this maps the vocabulary (a replica should just use the E
 
 | Original (Spanish) | This document (English) |
 |---|---|
-| `catalogos/`, `datos/`, `datos_fiscal/` | `catalogs/`, `data/`, `fiscal_data/` |
+| `catalogos/`, `datos/`, `datos_fiscal/` | `catalogs/`, `data/`, `tax_data/` |
 | `valores`, `flujos`, `costes`, `deuda` | `values`, `flows`, `costs`, `debt` |
 | `dimensiones` (registro de cuentas) | `accounts` (account registry) |
 | `entidades`, `parametros`, `posiciones`, `fuentes` | `entities`, `parameters`, `positions`, `sources` |
