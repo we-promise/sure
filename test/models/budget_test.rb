@@ -43,6 +43,51 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 1000, budget.budget_category_actual_spending(contribution_budget_category)
   end
 
+  test "excludes pending matched investment contributions when treated as transfers" do
+    checking_account = Account.create!(
+      family: @family,
+      accountable: Depository.new,
+      name: "Checking",
+      status: "active",
+      currency: "USD",
+      balance: 5_000
+    )
+    investment_account = Account.create!(
+      family: @family,
+      accountable: Investment.new,
+      name: "Brokerage",
+      status: "active",
+      currency: "USD",
+      balance: 0
+    )
+    outflow = Transaction.create!(
+      kind: "investment_contribution",
+      category: @family.investment_contributions_category,
+      entry: checking_account.entries.build(
+        amount: 1_000,
+        currency: "USD",
+        date: Date.current,
+        name: "Recent brokerage contribution"
+      )
+    )
+    inflow = Transaction.create!(
+      kind: "funds_movement",
+      entry: investment_account.entries.build(
+        amount: -1_000,
+        currency: "USD",
+        date: Date.current,
+        name: "Recent brokerage contribution"
+      )
+    )
+    Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow, status: "pending")
+
+    @family.update!(treat_investment_contributions_as_transfers: true)
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
+    contribution_budget_category = budget.budget_categories.find_by!(category: @family.investment_contributions_category)
+
+    assert_equal 0, budget.budget_category_actual_spending(contribution_budget_category)
+  end
+
   test "budget_date_valid? allows going back to earliest entry date if more than 2 years ago" do
     # Create an entry 3 years ago
     old_account = Account.create!(
