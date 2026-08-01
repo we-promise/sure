@@ -34,6 +34,7 @@ class TransactionAttachmentsController < ApplicationController
         attachment_proxy = @transaction.attachments.attach(attachments)
 
         if @transaction.valid?
+          @transaction.attachments.reload
           count = new_count
           message = count == 1 ? t("transactions.attachments.uploaded_one") : t("transactions.attachments.uploaded_many", count: count)
           respond_to do |format|
