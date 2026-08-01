@@ -27,12 +27,16 @@ class Assistant::Function::ListAccountStatements < Assistant::Function
         uploaded documents use `search_family_files`; to fetch one statement's
         reconciliation figures and a download link use `get_account_statement`.
 
+        There is no cursor or offset. `has_more: true` means the result was
+        truncated — raise `limit` (up to #{MAX_LIMIT}) or narrow the filters to see
+        the rest; paging forward is not possible.
+
         Example:
 
         ```
         list_account_statements({
           review_status: "unmatched",
-          period_start_on_or_after: "2026-01-01"
+          overlapping_from: "2026-01-01"
         })
         ```
       INSTRUCTIONS
@@ -57,15 +61,15 @@ class Assistant::Function::ListAccountStatements < Assistant::Function
         },
         content_sha256: {
           type: "string",
-          description: "Look up a specific document by the SHA-256 of its contents. Use this to check whether a file is already archived."
+          description: "Look up a specific document by the SHA-256 of its contents (hex; case-insensitive). Use this to check whether a file is already archived."
         },
-        period_start_on_or_after: {
+        overlapping_from: {
           type: "string",
-          description: "ISO 8601 date (YYYY-MM-DD). Only statements whose period ends on or after this date."
+          description: "ISO 8601 date (YYYY-MM-DD). Only statements whose period overlaps this date or later, i.e. whose period ENDS on or after it."
         },
-        period_end_on_or_before: {
+        overlapping_until: {
           type: "string",
-          description: "ISO 8601 date (YYYY-MM-DD). Only statements whose period starts on or before this date."
+          description: "ISO 8601 date (YYYY-MM-DD). Only statements whose period overlaps this date or earlier, i.e. whose period STARTS on or before it."
         },
         limit: {
           type: "integer",
@@ -95,18 +99,24 @@ class Assistant::Function::ListAccountStatements < Assistant::Function
       scope = scope.where(review_status: status)
     end
 
-    scope = scope.where(content_sha256: params["content_sha256"].to_s.strip) if params["content_sha256"].present?
+    # Downcased because the column is constrained to lowercase hex
+    # (chk_account_statements_content_sha256), so uppercase input would not merely
+    # be unlikely to match — it could never match, and the agent would read the
+    # empty result as "not archived" and upload a duplicate.
+    if params["content_sha256"].present?
+      scope = scope.where(content_sha256: params["content_sha256"].to_s.strip.downcase)
+    end
 
-    if params["period_start_on_or_after"].present?
-      date = parse_date(params["period_start_on_or_after"])
-      return error("invalid_date", "period_start_on_or_after must be an ISO 8601 date (YYYY-MM-DD).") unless date
+    if params["overlapping_from"].present?
+      date = parse_date(params["overlapping_from"])
+      return error("invalid_date", "overlapping_from must be an ISO 8601 date (YYYY-MM-DD).") unless date
 
       scope = scope.where("period_end_on >= ?", date)
     end
 
-    if params["period_end_on_or_before"].present?
-      date = parse_date(params["period_end_on_or_before"])
-      return error("invalid_date", "period_end_on_or_before must be an ISO 8601 date (YYYY-MM-DD).") unless date
+    if params["overlapping_until"].present?
+      date = parse_date(params["overlapping_until"])
+      return error("invalid_date", "overlapping_until must be an ISO 8601 date (YYYY-MM-DD).") unless date
 
       scope = scope.where("period_start_on <= ?", date)
     end

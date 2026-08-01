@@ -18,7 +18,13 @@ module Provenance
     MIN_TEXT_LENGTH = 3
     MAX_LENGTH = 500
 
-    FORMAT = /\A(?<estimated>estimated:\s)?(?<text>.+?)(?:\s\(grade:\s(?<grade>[ABC])\))?\z/
+    # Spacing around the grade is tolerated (\s? before the paren, \s* after the
+    # colon) so the suffix is recognised wherever GRADE_SUFFIX recognises it. The
+    # two patterns must stay in sync: if FORMAT is the stricter of the pair, a
+    # citation like "Doc (grade:A)" passes the suffix pre-check and then fails to
+    # match here, folding the grade into the citation text and yielding an
+    # ungraded source — silently losing the reliability the caller supplied.
+    FORMAT = /\A(?<estimated>estimated:\s)?(?<text>.+?)(?:\s?\(grade:\s*(?<grade>[ABC])\))?\z/
     # Matched separately so "(grade: D)" fails loudly instead of folding into the
     # citation text and passing as an ungraded — but plausible-looking — source.
     GRADE_SUFFIX = /\(grade:\s*(?<grade>[^)]*)\)\s*\z/

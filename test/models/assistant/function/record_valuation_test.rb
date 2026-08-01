@@ -33,6 +33,38 @@ class Assistant::Function::RecordValuationTest < ActiveSupport::TestCase
     assert result[:replaced_existing]
   end
 
+  test "preserves a human note when replacing a valuation" do
+    first = @function.call(params)
+    Entry.find(first[:entry_id]).update!(notes: "Appraiser said the roof needs work")
+
+    result = @function.call(params(amount: 2000))
+
+    notes = Entry.find(result[:entry_id]).notes
+    assert_includes notes, "Appraiser said the roof needs work"
+    assert_includes notes, @source
+  end
+
+  test "re-recording with the same citation does not stack it" do
+    @function.call(params)
+    @function.call(params(amount: 2000))
+    result = @function.call(params(amount: 3000))
+
+    notes = Entry.find(result[:entry_id]).notes
+    assert_equal @source, notes
+  end
+
+  test "appends a changed citation so the provenance trail survives" do
+    first = @function.call(params)
+    revised = "Revised appraisal 2024-07-15 (grade: A)"
+
+    result = @function.call(params(source: revised))
+
+    notes = Entry.find(result[:entry_id]).notes
+    assert_includes notes, @source
+    assert_includes notes, revised
+    assert_equal first[:entry_id], result[:entry_id]
+  end
+
   test "rejects a citation that does not follow the grammar" do
     result = @function.call(params(source: "estimated: pulled from a spreadsheet"))
 

@@ -42,6 +42,25 @@ class Assistant::Function::ListAccountStatementsTest < ActiveSupport::TestCase
     assert_equal statement.id, result[:statements].first[:id]
   end
 
+  test "finds a statement by uppercase sha256" do
+    statement = create_statement(account: @account, content: "date,amount\n2024-01-01,1\n")
+
+    result = @function.call("content_sha256" => statement.content_sha256.upcase)
+
+    assert_equal 1, result[:returned]
+    assert_equal statement.id, result[:statements].first[:id]
+  end
+
+  test "filters by overlapping period window" do
+    statement = create_statement(account: @account, content: "date,amount\n2024-01-01,1\n")
+    statement.update!(period_start_on: Date.new(2024, 3, 1), period_end_on: Date.new(2024, 3, 31))
+
+    assert_equal 1, @function.call("overlapping_from" => "2024-03-15")[:returned]
+    assert_equal 1, @function.call("overlapping_until" => "2024-03-15")[:returned]
+    assert_equal 0, @function.call("overlapping_from" => "2024-04-01")[:returned]
+    assert_equal 0, @function.call("overlapping_until" => "2024-02-01")[:returned]
+  end
+
   test "rejects an invalid review status" do
     result = @function.call("review_status" => "whatever")
 
@@ -50,7 +69,7 @@ class Assistant::Function::ListAccountStatementsTest < ActiveSupport::TestCase
   end
 
   test "rejects an invalid date filter" do
-    result = @function.call("period_start_on_or_after" => "last tuesday")
+    result = @function.call("overlapping_from" => "last tuesday")
 
     assert_not result[:success]
     assert_equal "invalid_date", result[:error]

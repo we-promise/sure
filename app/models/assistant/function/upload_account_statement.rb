@@ -138,14 +138,18 @@ class Assistant::Function::UploadAccountStatement < Assistant::Function
       end
     end
 
-    # Whitespace is stripped first because agents routinely wrap long base64
-    # across lines, but decoding stays strict after that: Base64.decode64 quietly
-    # discards characters it doesn't understand, which would archive corrupted
-    # bytes under a hash that looks perfectly legitimate.
+    # Whitespace is stripped because agents routinely wrap long base64 across
+    # lines, and the urlsafe alphabet is translated to the standard one because
+    # they sometimes emit it. Decoding stays strict after that: Base64.decode64
+    # quietly discards characters it doesn't understand, which would archive
+    # corrupted bytes under a hash that looks perfectly legitimate.
     def decode_content(value)
       return nil if value.blank?
 
-      Base64.strict_decode64(value.to_s.gsub(/\s+/, ""))
+      normalized = value.to_s.gsub(/\s+/, "").tr("-_", "+/")
+      normalized += "=" * ((4 - normalized.length % 4) % 4)
+
+      Base64.strict_decode64(normalized)
     rescue ArgumentError
       nil
     end

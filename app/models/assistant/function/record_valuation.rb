@@ -34,7 +34,9 @@ class Assistant::Function::RecordValuation < Assistant::Function
         this function — ask the user for the source. A value with no provenance
         is worse than a missing value, because it looks authoritative.
 
-        Recording a valuation on a date that already has one replaces it.
+        Recording a valuation on a date that already has one replaces it. The
+        citation is stored in the entry's notes; any note a person wrote there is
+        preserved and the new citation appended below it.
 
         Example:
 
@@ -90,6 +92,12 @@ class Assistant::Function::RecordValuation < Assistant::Function
     account_id = params["account_id"].to_s
     return error("invalid_account_id", "account_id must be a UUID.") unless valid_uuid?(account_id)
 
+    # Unlike the Statement Vault tools, this one deliberately does NOT check
+    # AccountStatement.statement_manager?. That role governs the document archive;
+    # writing a value to an account is governed by the account ACL, and
+    # writable_by is the same scope the human-facing api/v1/valuations endpoint
+    # uses. Do not "tighten" this by adding the vault role — the two permissions
+    # answer different questions.
     account = family.accounts.writable_by(user).find_by(id: account_id)
     return error("account_not_found", "No account found with that ID that this user can write to.") unless account
 
@@ -109,7 +117,7 @@ class Assistant::Function::RecordValuation < Assistant::Function
       end
 
       entry = account.entries.valuations.find_by!(date: date)
-      entry.update!(notes: citation.to_s)
+      entry.update!(notes: merged_notes(entry.notes, citation))
     end
 
     unless entry
@@ -137,6 +145,24 @@ class Assistant::Function::RecordValuation < Assistant::Function
   end
 
   private
+    # Re-recording a date replaces the valuation, and the citation lives in the
+    # entry's notes — where a human may also have written something. Nothing is
+    # ever removed: the note is kept and the citation appended, because we cannot
+    # tell a tool-written line from a human one (almost any prose is a valid
+    # ungraded citation) and guessing wrong would destroy the only copy.
+    #
+    # Re-recording with the same citation is a no-op, so the common case does not
+    # grow the note. A genuinely different citation is appended, which is the
+    # right outcome for a provenance trail: it records that the cited basis for
+    # this date changed.
+    def merged_notes(existing, citation)
+      existing = existing.to_s.strip
+      return citation.to_s if existing.blank?
+      return existing if existing.lines.any? { |line| line.strip == citation.to_s }
+
+      [ existing, citation.to_s ].join("\n\n")
+    end
+
     def parse_date(value)
       return nil if value.blank?
 

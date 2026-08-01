@@ -126,7 +126,7 @@ permissions enforced in the web UI.
 |------|-------------|
 | `upload_account_statement` | Store a statement document (PDF/CSV/XLSX) in the Statement Vault; deduplicates by SHA-256 |
 | `list_account_statements` | List vault documents with their SHA-256, period, linked account and review status |
-| `get_account_statement` | One statement's details, its reconciliation checks against the ledger, and a short-lived download URL |
+| `get_account_statement` | One statement's details, a short-lived download URL, and its reconciliation checks against the ledger — present only once someone has entered the statement's opening/closing balances in the web UI, since nothing extracts them from the document |
 | `get_statement_coverage` | Month-by-month statement coverage for an account: covered, missing, mismatched, ambiguous |
 | `record_valuation` | Record an account's value on a date, with a required source citation |
 

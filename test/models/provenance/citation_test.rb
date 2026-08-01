@@ -26,6 +26,26 @@ class Provenance::CitationTest < ActiveSupport::TestCase
     assert_not citation.estimated?
   end
 
+  # The suffix pre-check and the FORMAT pattern must agree on spacing, or a
+  # citation whose grade the pre-check accepts gets parsed as ungraded and the
+  # caller's reliability is silently dropped.
+  test "accepts a grade suffix whatever the spacing after the colon" do
+    [ "Doc (grade:A)", "Doc (grade: A)", "Doc (grade:  A)" ].each do |raw|
+      citation = Provenance::Citation.parse!(raw)
+
+      assert_equal "A", citation.grade, "expected #{raw.inspect} to parse as grade A"
+      assert_equal "Doc", citation.text
+    end
+  end
+
+  test "rejects an unknown grade regardless of spacing" do
+    [ "Doc (grade:D)", "Doc (grade:  D)" ].each do |raw|
+      assert_raises(Provenance::Citation::InvalidError, "expected #{raw.inspect} to be rejected") do
+        Provenance::Citation.parse!(raw)
+      end
+    end
+  end
+
   test "rejects a blank citation" do
     assert_raises(Provenance::Citation::InvalidError) { Provenance::Citation.parse!("   ") }
     assert_raises(Provenance::Citation::InvalidError) { Provenance::Citation.parse!(nil) }
