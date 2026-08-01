@@ -62,8 +62,13 @@
                   }
                 ) %>
 
+            <%# `-m-1 p-1`: an overflow-y scroll container also clips on x, so
+                the selected pill's 4px ring (ring-2 + ring-offset-2) was cut
+                flat against the container edges. The padding gives the ring
+                room inside the clip box; the negative margin cancels it so
+                nothing shifts. %>
             <div data-list-filter-target="list" data-categorize-target="list"
-                 class="flex flex-wrap gap-2 lg:max-h-[24rem] lg:overflow-y-auto scrollbar">
+                 class="flex flex-wrap gap-2 -m-1 p-1 lg:max-h-[24rem] lg:overflow-y-auto scrollbar">
               <p class="hidden text-sm text-secondary w-full py-2" data-list-filter-target="emptyMessage">
                 <%= t(".no_categories") %>
               </p>
