@@ -436,14 +436,26 @@ jobs:
           BRANCHES=$(git branch -r --contains ${{ github.sha }} | grep -v HEAD | sed 's/origin\///' | xargs)
           echo "Branches containing commit: $BRANCHES"
 
-          # Prefer non-main branches (release branches) over main
+          # Prefer the matching release branch over main. Do not select arbitrary
+          # feature or PR branches that happen to contain the tagged commit.
           SOURCE_BRANCH="main"
+          RELEASE_BRANCH="$(echo "${{ github.ref_name }}" | sed -E 's/^v([0-9]+)\.([0-9]+)\..*/v\1.\2-release-branch/')"
+
           for branch in $BRANCHES; do
-            if [ "$branch" != "main" ] && [ "$branch" != "master" ]; then
+            if [ "$branch" = "$RELEASE_BRANCH" ]; then
               SOURCE_BRANCH="$branch"
               break
             fi
           done
+
+          if [ "$SOURCE_BRANCH" = "main" ]; then
+            for branch in $BRANCHES; do
+              if [[ "$branch" =~ ^v[0-9]+\.[0-9]+-release-branch$ ]]; then
+                SOURCE_BRANCH="$branch"
+                break
+              fi
+            done
+          fi
 
           echo "Selected source branch: $SOURCE_BRANCH"
           echo "branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
