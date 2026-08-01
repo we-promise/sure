@@ -393,6 +393,57 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert OnchainWalletAccount.exists?(chain: "ethereum", wallet_address: new_address, asset_kind: "erc20", token_contract: dai_contract)
   end
 
+  test "update ethereum wallet drops selected existing tokens absent from new address" do
+    item = @family.onchain_wallet_items.create!(name: "On-chain Wallets", etherscan_api_key: "key")
+    old_address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+    new_address = "0x1111111111111111111111111111111111111111"
+    usdc_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    dai_contract = "0x6b175474e89094c44da98b954eedeac495271d0f"
+
+    item.onchain_wallet_accounts.create!(
+      chain: "ethereum", wallet_address: old_address, asset_kind: "native",
+      symbol: "ETH", name: "Ethereum", currency: "USD", quantity: 1, current_balance: 100
+    )
+    usdc_account = item.onchain_wallet_accounts.create!(
+      chain: "ethereum", wallet_address: old_address, asset_kind: "erc20",
+      token_contract: usdc_contract, symbol: "USDC", name: "USD Coin", currency: "USD",
+      quantity: 50, current_balance: 50
+    )
+
+    Provider::Blockscout.any_instance.stubs(:valid_address?).returns(true)
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    # New address has DAI only — no USDC transfers — so a checked USDC row must not
+    # be rewritten onto the new wallet with the old quantity/balance.
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
+      erc20_transfer(address: new_address, contract: dai_contract, symbol: "DAI", name: "Dai", decimals: "18", value: "5000000000000000000")
+    ])
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+    OnchainWalletItem.any_instance.stubs(:process_accounts).returns([])
+
+    patch update_wallet_onchain_wallet_item_path(item),
+          params: {
+            source: "account_modal",
+            chain: "ethereum",
+            old_wallet_address: old_address,
+            wallet_address: new_address,
+            reviewed_tokens: "1",
+            selected_existing_token_contracts: [ usdc_contract ],
+            selected_token_contracts: [ dai_contract ]
+          },
+          as: :turbo_stream,
+          headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_not OnchainWalletAccount.exists?(usdc_account.id),
+               "USDC absent from new address must be removed, not moved with stale holdings"
+    assert_not OnchainWalletAccount.exists?(
+      chain: "ethereum", wallet_address: new_address, asset_kind: "erc20", token_contract: usdc_contract
+    )
+    assert OnchainWalletAccount.exists?(chain: "ethereum", wallet_address: new_address, asset_kind: "native", symbol: "ETH")
+    assert OnchainWalletAccount.exists?(chain: "ethereum", wallet_address: new_address, asset_kind: "erc20", token_contract: dai_contract)
+  end
+
   test "destroy wallet disconnects all assets for an address" do
     item = @family.onchain_wallet_items.create!(name: "On-chain Wallets")
     address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"

@@ -152,9 +152,22 @@ class OnchainWalletItemsController < ApplicationController
     selected_existing = Array(params[:selected_existing_token_contracts]).map { |contract| contract.to_s.downcase }
     selected_new = Array(params[:selected_token_contracts]).map { |contract| contract.to_s.downcase }
 
+    # For EVM address changes: drop existing ERC20 rows the user unchecked, and
+    # also drop selected ones the new address does not actually hold. Otherwise
+    # update_all would move stale quantity/balance/payload onto the new wallet
+    # and import_evm_wallet would never overwrite them (no transfers → no upsert).
+    selected_existing_to_keep = selected_existing
+    if evm
+      preview = importer.preview_evm_wallet(chain, new_address)
+      present_contracts = preview[:token_holdings].map { |holding| holding[:contract].to_s.downcase }.to_set
+      selected_existing_to_keep = selected_existing.select { |contract| present_contracts.include?(contract) }
+    end
+
     OnchainWalletAccount.transaction do
       if evm
-        to_remove = existing_for_old.where(asset_kind: "erc20").reject { |wallet_account| selected_existing.include?(wallet_account.token_contract.to_s.downcase) }
+        to_remove = existing_for_old.where(asset_kind: "erc20").reject { |wallet_account|
+          selected_existing_to_keep.include?(wallet_account.token_contract.to_s.downcase)
+        }
         remove_wallet_accounts!(to_remove) if to_remove.any?
       end
 
@@ -167,7 +180,7 @@ class OnchainWalletItemsController < ApplicationController
       importer.import_evm_wallet!(
         chain: chain,
         address: new_address,
-        selected_token_contracts: (selected_existing + selected_new).uniq
+        selected_token_contracts: (selected_existing_to_keep + selected_new).uniq
       )
     else
       importer.import_wallet!(chain: chain, address: new_address)
