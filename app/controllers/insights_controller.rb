@@ -1,6 +1,6 @@
 class InsightsController < ApplicationController
   before_action :require_preview_features!
-  before_action :set_insight, only: %i[dismiss undismiss]
+  before_action :set_insight, only: %i[acknowledge unacknowledge]
 
   def index
     load_feed
@@ -15,8 +15,9 @@ class InsightsController < ApplicationController
     end
   end
 
-  def dismiss
-    @insight.dismiss!
+  def acknowledge
+    @insight.acknowledge!
+    load_widget_feed
 
     respond_to do |format|
       format.turbo_stream
@@ -24,9 +25,10 @@ class InsightsController < ApplicationController
     end
   end
 
-  def undismiss
-    @insight.undismiss!
+  def unacknowledge
+    @insight.unacknowledge!
     load_feed
+    load_widget_feed
 
     respond_to do |format|
       format.turbo_stream
@@ -53,6 +55,13 @@ class InsightsController < ApplicationController
     def load_feed
       @insights = Current.family.insights.visible.ordered.to_a
       @unread_ids = @insights.select(&:active?).map(&:id).to_set
+    end
+
+    # Acknowledging is reachable from the dashboard widget as well as this page,
+    # so the response re-renders the widget's top three. Removing a row there
+    # should promote the next insight into the freed slot, not leave a gap.
+    def load_widget_feed
+      @feed_insights = Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT).to_a
     end
 
     # Turbo sends X-Sec-Purpose (the fetch spec forbids setting Sec-Purpose

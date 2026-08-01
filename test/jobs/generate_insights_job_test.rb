@@ -121,24 +121,24 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert insight.read?
   end
 
-  test "dismissed insight stays dismissed when numbers are unchanged" do
+  test "acknowledged insight stays acknowledged when numbers are unchanged" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
     insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
-    insight.dismiss!
+    insight.acknowledge!
 
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
-    assert insight.reload.dismissed?
+    assert insight.reload.acknowledged?
   end
 
-  test "dismissed insight reactivates when numbers change materially" do
+  test "acknowledged insight reactivates when numbers change materially" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
     insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
-    insight.dismiss!
+    insight.acknowledge!
 
     stub_generated([ generated_insight(balance: 9000.0) ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
@@ -169,14 +169,14 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert insight.reload.active?
   end
 
-  test "does not touch dismissed insights when their condition clears" do
+  test "does not touch acknowledged insights when their condition clears" do
     insight = insights(:cash_flow_warning)
-    insight.dismiss!
+    insight.acknowledge!
     stub_generated([], succeeded_types: [ "cash_flow_warning" ])
 
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
-    assert insight.reload.dismissed?
+    assert insight.reload.acknowledged?
   end
 
   test "expired insight reactivates without a body rewrite when the condition returns unchanged" do

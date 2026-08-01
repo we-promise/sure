@@ -307,6 +307,57 @@ class EnableBankingItem::Importer
       )
     end
 
+    # Surfaces a pagination truncation as a support-visible diagnostic (rather than
+    # only a Rails log line) so the /settings/debug UI shows when a sync silently
+    # dropped pages beyond a validation error, in case the account ever has more
+    # transactions in the requested window than the ASPSP's broken pagination can
+    # actually deliver (currently harmless for narrow incremental sync windows, but
+    # a wider historical resync could otherwise lose data without any visible sign).
+    def capture_pagination_truncation_debug_log(enable_banking_account, transaction_status:, pages_kept:, transactions_kept:, error:)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Enable Banking transaction pagination truncated by a validation error mid-fetch; kept partial results instead of failing the sync",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          transaction_status: transaction_status,
+          pages_kept: pages_kept,
+          transactions_kept: transactions_kept,
+          error_type: error.error_type.to_s,
+          provider_error: sanitized_provider_error(error)
+        }
+      )
+    end
+
+    # Surfaces "ASPSP doesn't support PDNG" as a support-visible diagnostic, same
+    # rationale as capture_pagination_truncation_debug_log: this is a partial
+    # degradation (booked transactions still sync, pending transactions are
+    # silently skipped) that was previously only visible via Rails.logger.
+    def capture_pdng_unsupported_debug_log(enable_banking_account, error:)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "ASPSP does not support the PDNG transaction status; skipping pending transactions and continuing with booked transactions only",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          error_type: error.error_type.to_s,
+          provider_error: sanitized_provider_error(error)
+        }
+      )
+    end
+
     def sanitized_error_message(error)
       return error.message unless error.is_a?(Provider::EnableBanking::EnableBankingError)
 
@@ -382,6 +433,8 @@ class EnableBankingItem::Importer
         # (e.g. ImaginV2 returns WRONG_REQUEST_PARAMETERS; others mention "transactionStatus" verbatim),
         # so we treat every validation_error on PDNG as "ASPSP doesn't support pending" and continue with
         # the booked transactions only. (Issue #1805)
+        # Trade Republic rejects the same request with a 400 (:bad_request) instead of a
+        # 422 (:validation_error), so both error types are treated as "PDNG unsupported". (Issue #392)
         begin
           pending_transactions = fetch_paginated_transactions(
             enable_banking_account,
@@ -390,9 +443,10 @@ class EnableBankingItem::Importer
             psu_headers: enable_banking_item.build_psu_headers
           )
         rescue Provider::EnableBanking::EnableBankingError => e
-          raise unless e.error_type == :validation_error
+          raise unless [ :validation_error, :bad_request ].include?(e.error_type)
           api_error = e.response_data.is_a?(Hash) ? (e.response_data[:error] || e.response_data["error"]) : nil
           Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{api_error || e.message}"
+          capture_pdng_unsupported_debug_log(enable_banking_account, error: e)
         end
       end
 
@@ -581,13 +635,46 @@ class EnableBankingItem::Importer
           raise PaginationTruncatedError, msg
         end
 
-        transactions_data = enable_banking_provider.get_account_transactions(
-          account_id: enable_banking_account.api_account_id,
-          date_from: start_date,
-          continuation_key: continuation_key,
-          transaction_status: transaction_status,
-          psu_headers: psu_headers
-        )
+        begin
+          transactions_data = enable_banking_provider.get_account_transactions(
+            account_id: enable_banking_account.api_account_id,
+            date_from: start_date,
+            continuation_key: continuation_key,
+            transaction_status: transaction_status,
+            psu_headers: psu_headers
+          )
+        rescue Provider::EnableBanking::EnableBankingError => e
+          # Some ASPSPs (e.g. Trade Republic via Enable Banking) issue a continuation_key
+          # that their own API then rejects on the next page as mismatched with
+          # transaction_status (422 WRONG_REQUEST_PARAMETERS: "transactionStatus in
+          # request is not the same as in continuationKey", surfaced as :validation_error;
+          # Trade Republic's PDNG fetch specifically surfaces the same underlying issue as
+          # a plain 400/:bad_request instead). Failing outright would discard every page
+          # already fetched, so once at least one page has succeeded, treat either error
+          # type as "pagination exhausted" and keep the partial result — symmetric with the
+          # PDNG-unsupported handling below, which already tolerates both types for the same
+          # reason. A validation error on the very first page has no prior data to fall back
+          # on and is a real failure, so it still propagates.
+          # WRONG_TRANSACTIONS_PERIOD is excluded even mid-pagination: it means the
+          # date range itself is invalid (already retried once with a corrected
+          # date_from in Provider::EnableBanking#get_account_transactions), not that
+          # pagination is exhausted, so swallowing it here would silently drop the
+          # remaining pages instead of surfacing a retryable failure. (Issue #392)
+          raise if ![ :validation_error, :bad_request ].include?(e.error_type) || page_count == 1 || e.wrong_transactions_period?
+          # error (not warn): this discards data for any ASPSP/scenario matching this
+          # error_type mid-pagination, not just the specific Trade Republic continuationKey
+          # mismatch this was written for — worth surfacing prominently in case a future
+          # ASPSP hits this path for a genuinely different reason.
+          Rails.logger.error "EnableBankingItem::Importer - Validation error mid-pagination for account #{enable_banking_account.uid} (status=#{transaction_status}), keeping #{all_transactions.count} transaction(s) from #{page_count - 1} page(s). #{e.message}"
+          capture_pagination_truncation_debug_log(
+            enable_banking_account,
+            transaction_status: transaction_status,
+            pages_kept: page_count - 1,
+            transactions_kept: all_transactions.count,
+            error: e
+          )
+          break
+        end
 
         transactions = transactions_data[:transactions] || []
         all_transactions.concat(transactions)
