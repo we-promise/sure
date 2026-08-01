@@ -34,6 +34,14 @@
                   Loan.subtype_options_for_select,
                   { label: true, prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
       </div>
+
+      <div class="flex items-center justify-between gap-2 pt-2">
+        <div>
+          <p class="text-sm text-primary"><%= t("loans.form.auto_split_payments") %></p>
+          <p class="text-xs text-secondary"><%= t("loans.form.auto_split_payments_description") %></p>
+        </div>
+        <%= loan_form.toggle :auto_split_payments %>
+      </div>
     <% end %>
   </div>
 <% end %>

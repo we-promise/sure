@@ -52,3 +52,13 @@
     frame: :modal
   ) %>
 </div>
+
+<% if account.loan.splits_payments? %>
+  <div class="flex justify-center pb-8">
+    <%= button_to t(".resplit_payments"),
+          resplit_payments_loan_path(account),
+          method: :post,
+          class: "text-sm text-secondary underline",
+          data: { turbo_confirm: t(".resplit_payments_confirm") } %>
+  </div>
+<% end %>

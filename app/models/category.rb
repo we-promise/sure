@@ -93,6 +93,7 @@ class Category < ApplicationRecord
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
   OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
   INVESTMENT_CONTRIBUTIONS_NAME_KEY = "models.category.investment_contributions"
+  LOAN_INTEREST_NAME_KEY = "models.category.loan_interest"
   DEFAULT_CATEGORY_TRANSLATION_KEYS = %w[
     income
     food_and_drink
@@ -226,6 +227,11 @@ class Category < ApplicationRecord
       I18n.t(INVESTMENT_CONTRIBUTIONS_NAME_KEY)
     end
 
+    # Helper to get the localized name for the loan interest category
+    def loan_interest_name
+      I18n.t(LOAN_INTEREST_NAME_KEY)
+    end
+
     # Returns all possible investment contributions names across all supported locales
     # Used to detect investment contributions category regardless of locale
     def all_investment_contributions_names
@@ -289,7 +295,8 @@ class Category < ApplicationRecord
           [ I18n.t("models.category.defaults.services"),              "#7c3aed", "briefcase" ],
           [ I18n.t("models.category.defaults.fees"),                  "#6b7280", "receipt" ],
           [ I18n.t("models.category.defaults.savings_and_investments"), "#059669", "piggy-bank" ],
-          [ investment_contributions_name,                       "#0d9488", "trending-up" ]
+          [ investment_contributions_name,                       "#0d9488", "trending-up" ],
+          [ loan_interest_name,                                  "#be123c", "percent" ]
         ]
       end
   end

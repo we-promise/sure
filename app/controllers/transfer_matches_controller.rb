@@ -12,6 +12,16 @@ class TransferMatchesController < ApplicationController
     target_account = resolve_target_account
     return unless require_account_permission!(target_account, redirect_path: transactions_path)
 
+    # Loans with automatic payment splitting enabled record the interest portion
+    # as an expense and only apply the principal against the loan balance.
+    splitter = loan_payment_splitter(target_account)
+    if splitter&.applicable?
+      @transfer = splitter.split!
+      @transfer&.sync_account_later
+      redirect_back_or_to transactions_path, notice: t(".success")
+      return
+    end
+
     @transfer = build_transfer
     Transfer.transaction do
       @transfer.save!
@@ -42,6 +52,16 @@ class TransferMatchesController < ApplicationController
 
     def transfer_match_params
       params.require(:transfer_match).permit(:method, :matched_entry_id, :target_account_id)
+    end
+
+    # Returns a PaymentSplitter for the "link to a new loan entry" case, or nil
+    # when splitting doesn't apply (only the "new" method creates the loan-side
+    # entry; matching an existing transaction is left untouched).
+    def loan_payment_splitter(target_account)
+      return nil unless transfer_match_params[:method] == "new"
+      return nil unless target_account.loan?
+
+      Loan::PaymentSplitter.new(payment_entry: @entry, loan_account: target_account)
     end
 
     def resolve_target_account
