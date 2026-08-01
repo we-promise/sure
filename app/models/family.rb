@@ -151,6 +151,13 @@ class Family < ApplicationRecord
     normalize_currency_code(currency) || "USD"
   end
 
+  # Investment contributions can be treated as internal transfers in shared
+  # reporting. This is a family setting because dashboards, reports, and
+  # budgets all summarize family data.
+  def treat_investment_contributions_as_transfers?
+    treat_investment_contributions_as_transfers
+  end
+
   def custom_enabled_currencies?
     enabled_currencies.present?
   end

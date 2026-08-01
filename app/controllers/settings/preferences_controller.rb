@@ -11,7 +11,8 @@ class Settings::PreferencesController < ApplicationController
   # UsersController#update flow (which expects a full user form payload).
   def update
     @user = Current.user
-    user_params = params.permit(user: [ :preview_features_enabled, :treat_investment_contributions_as_transfers ]).fetch(:user, {})
+    user_params = params.permit(user: [ :preview_features_enabled ]).fetch(:user, {})
+    family_params = params.permit(family: [ :treat_investment_contributions_as_transfers ]).fetch(:family, {})
 
     @user.transaction do
       @user.lock!
@@ -20,11 +21,13 @@ class Settings::PreferencesController < ApplicationController
         updated_prefs["preview_features_enabled"] =
           ActiveModel::Type::Boolean.new.cast(user_params[:preview_features_enabled])
       end
-      if user_params.key?(:treat_investment_contributions_as_transfers)
-        updated_prefs["treat_investment_contributions_as_transfers"] =
-          ActiveModel::Type::Boolean.new.cast(user_params[:treat_investment_contributions_as_transfers])
-      end
       @user.update!(preferences: updated_prefs)
+      if family_params.key?(:treat_investment_contributions_as_transfers)
+        @user.family.update!(
+          treat_investment_contributions_as_transfers:
+            ActiveModel::Type::Boolean.new.cast(family_params[:treat_investment_contributions_as_transfers])
+        )
+      end
     end
     redirect_to settings_preferences_path
   end
