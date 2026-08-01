@@ -92,22 +92,23 @@ class Provider::Blockscout
   def get_erc20_transfers(address, **)
     validate_address!(address)
     path = "/api/v2/addresses/#{ERB::Util.url_encode(address)}/token-transfers?type=ERC-20"
-    paginate(path).filter_map do |t|
-      token = t["token"] || {}
-      contract = (token["address_hash"] || token["address"]).to_s
+    paginate(path).filter_map do |transfer|
+      # Blockscout payload key is "token"; not an auth credential.
+      token_info = transfer["token"] || {} # pipelock:ignore
+      contract = (token_info["address_hash"] || token_info["address"]).to_s
       next if contract.blank?
 
-      total = t["total"] || {}
+      total = transfer["total"] || {}
       {
-        "hash"            => t["transaction_hash"],
-        "from"            => t.dig("from", "hash"),
-        "to"              => t.dig("to", "hash"),
+        "hash"            => transfer["transaction_hash"],
+        "from"            => transfer.dig("from", "hash"),
+        "to"              => transfer.dig("to", "hash"),
         "contractAddress" => contract,
-        "tokenSymbol"     => token["symbol"],
-        "tokenName"       => token["name"],
-        "tokenDecimal"    => (total["decimals"] || token["decimals"]).to_s,
+        "tokenSymbol"     => token_info["symbol"],
+        "tokenName"       => token_info["name"],
+        "tokenDecimal"    => (total["decimals"] || token_info["decimals"]).to_s,
         "value"           => total["value"].to_s,
-        "timeStamp"       => to_unix(t["timestamp"])
+        "timeStamp"       => to_unix(transfer["timestamp"])
       }
     end
   end
