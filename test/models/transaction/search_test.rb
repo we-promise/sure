@@ -309,6 +309,13 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_includes result_ids, standard_expense.entryable.id
   end
 
+  test "invalid kind filter returns an empty relation" do
+    result = Transaction::Search.new(@family, filters: { kinds: [ "not_a_transaction_kind" ] }).transactions_scope
+
+    assert_respond_to result, :reverse_chronological
+    assert_empty result
+  end
+
   test "family-based API requires family parameter" do
     assert_raises(NoMethodError) do
       search = Transaction::Search.new({ types: [ "expense" ] })

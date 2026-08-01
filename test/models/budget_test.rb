@@ -88,6 +88,34 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 0, budget.budget_category_actual_spending(contribution_budget_category)
   end
 
+  test "excludes unpaired investment contributions when treated as transfers" do
+    checking_account = Account.create!(
+      family: @family,
+      accountable: Depository.new,
+      name: "Checking",
+      status: "active",
+      currency: "USD",
+      balance: 5_000
+    )
+    contribution = Transaction.create!(
+      kind: "investment_contribution",
+      category: @family.investment_contributions_category,
+      entry: checking_account.entries.build(
+        amount: 1_000,
+        currency: "USD",
+        date: Date.current,
+        name: "Unpaired brokerage contribution"
+      )
+    )
+
+    @family.update!(treat_investment_contributions_as_transfers: true)
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
+    contribution_budget_category = budget.budget_categories.find_by!(category: @family.investment_contributions_category)
+
+    assert_nil contribution.transfer
+    assert_equal 0, budget.budget_category_actual_spending(contribution_budget_category)
+  end
+
   test "budget_date_valid? allows going back to earliest entry date if more than 2 years ago" do
     # Create an entry 3 years ago
     old_account = Account.create!(
