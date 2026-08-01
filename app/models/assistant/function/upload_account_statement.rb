@@ -118,10 +118,12 @@ class Assistant::Function::UploadAccountStatement < Assistant::Function
     error("validation_failed", e.record.errors.full_messages.join("; "))
   rescue => e
     # The shared upload path can raise from content sniffing, storage or a
-    # validation hook. Those would otherwise surface to the agent as a raw
-    # exception string; give it something it can act on instead.
+    # validation hook. The agent gets a fixed message, never the exception text:
+    # a storage failure can carry bucket names, object keys, paths or request
+    # details, and this response crosses out to an external client. Diagnostics
+    # stay in the server log.
     Rails.logger.error("[UploadAccountStatement] #{e.class}: #{e.message}")
-    error("upload_failed", "The statement could not be stored: #{e.message.truncate(200)}")
+    error("upload_failed", "The statement could not be stored due to an unexpected error. It has been logged for the administrator.")
   end
 
   private
