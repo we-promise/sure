@@ -207,7 +207,9 @@ Rails.application.routes.draw do
   get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
-  use_doorkeeper
+  use_doorkeeper do |mapping|
+    mapping.controllers authorizations: "oauth/authorizations"
+  end
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
     get :verify

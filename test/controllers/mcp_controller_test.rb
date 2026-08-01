@@ -70,7 +70,6 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       client_id: app.uid,
       redirect_uri: app.redirect_uri,
       response_type: "code",
-      scope: "read_write",
       code_challenge: challenge,
       code_challenge_method: "S256"
     }
