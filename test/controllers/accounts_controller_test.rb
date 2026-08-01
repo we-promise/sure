@@ -424,7 +424,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     )
     account = Account.create_from_onchain_wallet_account(wallet_account)
     account.update!(owner: other_user)
-    account.share_with!(@user, permission: "full_control")
+    account.share_with!(@user, permission: "read_write")
     wallet_account.ensure_account_provider!(account)
 
     patch toggle_active_account_url(account)
