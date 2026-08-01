@@ -3,7 +3,7 @@ en:
   onchain_wallet_items:
     wallet_modal:
       title: Link On-chain Wallet
-      subtitle: Track a Bitcoin, Ethereum, Solana, or supported EVM wallet by address.
+      subtitle: Track a Bitcoin, Ethereum, Solana, Bittensor, or supported EVM wallet by address.
       ethereum_credentials_title: Ethereum data source needs attention
       ethereum_credentials_prefix: "Review it in "
       bank_sync_settings: Provider settings

@@ -166,6 +166,23 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 80.0, usdt.quantity.to_f
   end
 
+  test "import_wallet! with bittensor creates native TAO account from free balance" do
+    address = "5FTbV11nyHgQLjsgLAQHvpNEoVSdeFuLajwYiZt1Lf7dK4Ds"
+
+    provider = Provider::BittensorRpc.new
+    provider.stubs(:get_native_balance).with(address).returns("47156172")
+    provider.stubs(:get_transactions).with(address).returns([])
+    @item.stubs(:bittensor_provider).returns(provider)
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    OnchainWalletItem::Importer.new(@item).import_wallet!(chain: "bittensor", address: address)
+
+    tao = @item.onchain_wallet_accounts.find_by(chain: "bittensor", asset_kind: "native")
+    assert_equal "TAO", tao.symbol
+    assert_equal "Bittensor", tao.name
+    assert_in_delta 0.047156172, tao.quantity.to_f, 1e-9
+  end
+
   test "re-importing unchanged on-chain state reports no changed accounts (idempotent)" do
     address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
     @item.onchain_wallet_accounts.create!(

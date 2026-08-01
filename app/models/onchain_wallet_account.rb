@@ -5,7 +5,7 @@ class OnchainWalletAccount < ApplicationRecord
 
   # EVM-family chains share the same address format and (keyless) Blockscout reader.
   EVM_CHAINS = %w[ethereum polygon arbitrum optimism base gnosis].freeze
-  CHAINS = (%w[bitcoin] + EVM_CHAINS + %w[solana]).freeze
+  CHAINS = (%w[bitcoin] + EVM_CHAINS + %w[solana bittensor]).freeze
   ASSET_KINDS = %w[native erc20 spl].freeze
 
   def self.evm_chain?(chain)
@@ -14,13 +14,17 @@ class OnchainWalletAccount < ApplicationRecord
 
   # Detects the address family from its format. EVM addresses are shared across
   # all EVM chains, so they return :evm (the caller picks the specific chain).
-  # @return [Symbol, nil] :bitcoin | :evm | :solana | nil (unrecognized)
+  # Bittensor SS58 (prefix 42, typically 48 chars starting with "5") is checked
+  # before Solana's looser base58 pattern to avoid collisions.
+  # @return [Symbol, nil] :bitcoin | :evm | :bittensor | :solana | nil (unrecognized)
   def self.detect_chain_type(address)
     a = address.to_s.strip
     return nil if a.blank?
     return :bitcoin if a.match?(/\A(bc1|tb1)[023456789acdefghjklmnpqrstuvwxyz]{6,87}\z/i)
     return :evm     if a.match?(/\A0x[0-9a-fA-F]{40}\z/)
     return :bitcoin if a.match?(/\A[13][a-km-zA-HJ-NP-Z1-9]{24,33}\z/)
+    return :bittensor if a.match?(Provider::BittensorRpc::ADDRESS_PATTERN) &&
+      Provider::BittensorRpc::SubstrateCodec.valid_ss58?(a)
     return :solana  if a.match?(/\A[1-9A-HJ-NP-Za-km-z]{32,44}\z/)
 
     nil

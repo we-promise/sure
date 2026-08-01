@@ -89,7 +89,7 @@ class OnchainWalletItemsController < ApplicationController
     item.schedule_account_syncs
 
     render_success_response("Wallet linked.")
-  rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, Provider::Blockscout::Error, Provider::SolanaRpc::Error, ArgumentError => e
+  rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, Provider::Blockscout::Error, Provider::SolanaRpc::Error, Provider::BittensorRpc::Error, ArgumentError => e
     render_error_response(e.message)
   rescue StandardError => e
     Rails.logger.error("On-chain wallet link failed: #{e.class} - #{e.message}")
@@ -176,7 +176,7 @@ class OnchainWalletItemsController < ApplicationController
     @onchain_wallet_item.schedule_account_syncs
 
     render_success_response("Wallet address updated.")
-  rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, Provider::Blockscout::Error, Provider::SolanaRpc::Error, ArgumentError => e
+  rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, Provider::Blockscout::Error, Provider::SolanaRpc::Error, Provider::BittensorRpc::Error, ArgumentError => e
     render_edit_error(chain, old_address, new_address, e.message)
   rescue StandardError => e
     Rails.logger.error("On-chain wallet update failed: #{e.class} - #{e.message}")
@@ -224,6 +224,7 @@ class OnchainWalletItemsController < ApplicationController
     def resolve_auto_chain(address)
       case OnchainWalletAccount.detect_chain_type(address)
       when :bitcoin then "bitcoin"
+      when :bittensor then "bittensor"
       when :solana  then "solana"
       when :evm
         OnchainWalletAccount::EVM_CHAINS.find { |c| Provider::Blockscout.new(chain: c).has_activity?(address) } || "ethereum"
@@ -244,6 +245,8 @@ class OnchainWalletItemsController < ApplicationController
         raise error_class, "Invalid EVM wallet address" unless provider.valid_address?(address)
       elsif chain == "solana"
         raise Provider::SolanaRpc::InvalidAddressError, "Invalid Solana address" unless item.solana_provider.valid_address?(address)
+      elsif chain == "bittensor"
+        raise Provider::BittensorRpc::InvalidAddressError, "Invalid Bittensor address" unless item.bittensor_provider.valid_address?(address)
       end
     end
 

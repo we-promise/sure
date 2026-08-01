@@ -80,6 +80,7 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
   test "detect_chain_type recognizes address formats" do
     assert_equal :bitcoin, OnchainWalletAccount.detect_chain_type("bc1qsg9af88zfjz4cy5255pvvg0hj7gamquua7kmgx")
     assert_equal :evm, OnchainWalletAccount.detect_chain_type("0xf5c6b8e6eb92e560a33f6fd6d86a1c734d2d7840")
+    assert_equal :bittensor, OnchainWalletAccount.detect_chain_type("5FTbV11nyHgQLjsgLAQHvpNEoVSdeFuLajwYiZt1Lf7dK4Ds")
     assert_equal :solana, OnchainWalletAccount.detect_chain_type("EnQtaNYKgnbSaZ1ekZYXVbYnau2ZCNda3NzbbnWCna7B")
     assert_nil OnchainWalletAccount.detect_chain_type("not-a-wallet!!")
   end

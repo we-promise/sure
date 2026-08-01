@@ -4,6 +4,7 @@ class OnchainWalletItem::Importer
   SATS_PER_BTC = 100_000_000.to_d
   WEI_PER_ETH = 1_000_000_000_000_000_000.to_d
   LAMPORTS_PER_SOL = 1_000_000_000.to_d
+  RAO_PER_TAO = 1_000_000_000.to_d
 
   # Native coin metadata per EVM chain. All EVM natives use 18 decimals, so the
   # WEI_PER_ETH divisor applies across chains. Pricing flows through Sure's
@@ -50,6 +51,8 @@ class OnchainWalletItem::Importer
         snapshots[address] = import_evm_wallet(chain, address)
       elsif chain == "solana"
         snapshots[address] = import_solana_wallet(address)
+      elsif chain == "bittensor"
+        snapshots[address] = import_bittensor_wallet(address)
       end
       imported += 1
     end
@@ -75,6 +78,8 @@ class OnchainWalletItem::Importer
       import_evm_wallet(chain, address)
     elsif chain == "solana"
       import_solana_wallet(address)
+    elsif chain == "bittensor"
+      import_bittensor_wallet(address)
     else
       raise ArgumentError, "Unsupported chain"
     end
@@ -396,6 +401,38 @@ class OnchainWalletItem::Importer
       {
         "sol_quantity" => sol_quantity.to_s,
         "tokens_imported_count" => token_balances.count { |t| t[:ui_amount].positive? },
+        "transactions_count" => transactions.size
+      }
+    end
+
+    # Imports native free/liquid TAO from a keyless Bittensor Substrate RPC.
+    # Staked / α balances are intentionally out of scope for v1.
+    def import_bittensor_wallet(address)
+      provider = onchain_wallet_item.bittensor_provider
+      rao = provider.get_native_balance(address).to_d
+      tao_quantity = rao / RAO_PER_TAO
+      transactions = provider.get_transactions(address)
+
+      if tao_quantity.zero? && transactions.blank?
+        raise Provider::BittensorRpc::InvalidAddressError, "No free TAO balance found for this address."
+      end
+
+      tao_account = upsert_wallet_account(
+        chain: "bittensor",
+        wallet_address: address,
+        asset_kind: "native",
+        token_contract: nil,
+        symbol: "TAO",
+        name: "Bittensor",
+        decimals: 9,
+        quantity: tao_quantity,
+        raw_payload: { "rao" => rao.to_s },
+        raw_transactions_payload: { "transactions" => transactions, "fetched_at" => Time.current.iso8601 }
+      )
+      ensure_sure_account!(tao_account)
+
+      {
+        "tao_quantity" => tao_quantity.to_s,
         "transactions_count" => transactions.size
       }
     end

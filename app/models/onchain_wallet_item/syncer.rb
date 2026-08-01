@@ -38,7 +38,8 @@ class OnchainWalletItem::Syncer
 
     collect_transaction_stats(sync, account_ids: linked.map { |wallet_account| wallet_account.current_account&.id }.compact, source: "onchain_wallet")
   rescue Provider::Etherscan::AuthenticationError, Provider::Etherscan::RateLimitError,
-         Provider::Blockscout::RateLimitError, Provider::SolanaRpc::RateLimitError => e
+         Provider::Blockscout::RateLimitError, Provider::SolanaRpc::RateLimitError,
+         Provider::BittensorRpc::RateLimitError => e
     onchain_wallet_item.update!(status: :requires_update)
     mark_failed(sync, e.message)
     raise

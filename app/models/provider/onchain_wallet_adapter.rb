@@ -16,7 +16,7 @@ class Provider::OnchainWalletAdapter < Provider::Base
     [ {
       key: "onchain_wallet",
       name: "On-chain Wallets",
-      description: "Connect Bitcoin and Ethereum wallet addresses",
+      description: "Connect Bitcoin, Ethereum, Solana, and Bittensor wallet addresses",
       can_connect: true,
       new_account_path: ->(_accountable_type, _return_to) {
         Rails.application.routes.url_helpers.new_wallet_onchain_wallet_items_path

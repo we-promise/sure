@@ -29,4 +29,9 @@ module OnchainWalletItem::Provided
   def solana_provider
     Provider::SolanaRpc.new
   end
+
+  # Keyless Bittensor provider (public Finney Substrate RPC).
+  def bittensor_provider
+    Provider::BittensorRpc.new
+  end
 end

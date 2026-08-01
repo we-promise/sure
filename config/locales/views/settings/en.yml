@@ -488,7 +488,7 @@ en:
       onchain_wallet_panel:
         default_connection_name: On-chain Wallets
         step1: Choose the Ethereum data source. Blockscout works without an API key.
-        step2: Add Bitcoin, Ethereum, Solana, or supported EVM wallet addresses.
+        step2: Add Bitcoin, Ethereum, Solana, Bittensor, or supported EVM wallet addresses.
         step3: Sure imports balances, token holdings, and read-only transaction references.
         read_only_title: Read-only wallet sync
         read_only_body: Wallet addresses and explorer API keys cannot move funds. Blockscout powers supported EVM chains without keys; Etherscan is optional for Ethereum only.
