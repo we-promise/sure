@@ -426,6 +426,8 @@ jobs:
     steps:
       - name: Determine source branch for tag
         id: source_branch
+        env:
+          TAG_NAME: ${{ github.ref_name }}
         run: |
           # Fetch all branches to find which one contains this tag's commit
           git init --quiet
@@ -439,7 +441,7 @@ jobs:
           # Prefer the matching release branch over main. Do not select arbitrary
           # feature or PR branches that happen to contain the tagged commit.
           SOURCE_BRANCH="main"
-          RELEASE_BRANCH="$(echo "${{ github.ref_name }}" | sed -E 's/^v([0-9]+)\.([0-9]+)\..*/v\1.\2-release-branch/')"
+          RELEASE_BRANCH="$(printf '%s\n' "$TAG_NAME" | sed -E 's/^v([0-9]+)\.([0-9]+)\..*/v\1.\2-release-branch/')"
 
           for branch in $BRANCHES; do
             if [ "$branch" = "$RELEASE_BRANCH" ]; then
