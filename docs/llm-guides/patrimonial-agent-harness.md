@@ -1,11 +1,11 @@
-# Patrimonial history with an external agent harness
+# Wealth history with an external agent harness
 
-How to run a provenance-first patrimonial model — one where every number walks
+How to run a provenance-first wealth model — one where every number walks
 back to the document it came from — on top of Sure, without putting that model
 inside Sure.
 
 The model itself is specified by
-[the patrimonial blueprint](patrimonial-blueprint.md). This guide is the seam:
+[the wealth + tax blueprint](patrimonial-blueprint.md). This guide is the seam:
 which half owns what, which MCP tool serves which layer of the blueprint, and
 which invariants Sure cannot enforce for you.
 
@@ -16,15 +16,15 @@ here, and the agent's job against Sure is to keep them clean, complete and
 cited.
 
 **The harness** is your own repository, driven by an agent (OpenClaw, Claude
-Code, anything that speaks MCP). It holds the patrimonial memory: the position
-catalog, the fiscal criteria, the numbered-delta compiler, the golden tests and
+Code, anything that speaks MCP). It holds the wealth + tax memory: the position
+catalog, the tax criteria, the numbered-delta compiler, the golden tests and
 the compiled workbook. It reads and writes Sure over `/mcp`.
 
 ```text
    your repo (the harness)                         Sure
    ───────────────────────                         ────
    catalogs/ positions, criteria, FX    ──MCP──►   accounts, entries, valuations
-   fiscal_data/*.jsonl                             Statement Vault (documents + sha256)
+   tax_data/*.jsonl                                Statement Vault (documents + sha256)
    data/YYYY-MM/*.csv  (snapshot)       ◄─MCP───   coverage + reconciliation checks
    src/NNN_*.py  → workbook.xlsx
    tests/  goldens
@@ -41,22 +41,28 @@ for.
 |---|---|---|
 | L0/L1 entities, holders | Sure, partially | `Family`, `User`, `accounts.owner_id`. Holders that are not Sure users — a holding company, a trust — have no home here; keep them in the harness's entity registry. |
 | L1 account registry | **Sure** | `Account` + its `accountable`. Off-bank positions model well as `OtherAsset` or `Property` accounts. |
-| L1 positions, parameters, FX table, fiscal criteria | **Harness** | — |
-| L2 patrimonial series | **Sure** is authoritative | `Entry` / `Valuation`, `Holding`. The harness snapshots it into `data/YYYY-MM/*.csv` so `git diff` and the goldens have something to bite on. |
-| L2 fiscal series — criterion, `applicable`, `declared`, `legal_max` | **Harness only** | Sure has one value per account per date. "One value, one criterion" (§2 principle 6) has no representation here and should not be forced into one. |
+| L1 positions, parameters, FX table, tax criteria | **Harness** | — |
+| L2 wealth series | **Sure** is authoritative | `Entry` / `Valuation`, `Holding`. The harness snapshots it into `data/YYYY-MM/*.csv` so `git diff` and the goldens have something to bite on. |
+| L2 tax series — criterion, `applicable`, `declared`, `legal_max` | **Harness only** | Sure has one value per account per date. "One value, one criterion" (§2 principle 6) has no representation here and should not be forced into one. |
 | L3 vault — account statements | **Sure** | The **Statement Vault**: original bytes in storage, SHA-256 dedup, period detection, account matching, review queue. |
 | L3 vault — tax returns, annual accounts, capital accounts, contracts, minutes, email | **Harness** | The Statement Vault is statement-shaped and accepts PDF/CSV/XLSX only. Keep other primary sources in the harness's own git-ignored vault. |
-| `_control.csv` / reconcile-or-abort | **Sure** | `get_account_statement` returns reconciliation checks against the ledger. |
+| `_control.csv` / reconcile-or-abort | **Split** | Sure's `get_account_statement` reports *ledger-agreement* checks (statement balances vs the ledger, tolerance 0.01, report-only). The blueprint's *parse-integrity* check (parts vs the document's own printed total) and the **abort** have no counterpart in Sure — keep both in the harness extractor. |
 | Gap map / `PENDING` policy | **Sure** | `get_statement_coverage` reports covered / missing / mismatched / ambiguous per month. |
 | Numbered deltas, goldens, workbook, divergences report | **Harness only** | — |
 
-### Two invariants Sure cannot give you
+### Three invariants Sure cannot give you
 
 - **Closed periods are immutable** (§2 principle 7). A Postgres row is mutable
   and keeps no history you can diff. Immutability lives in the harness snapshot
   and its commits.
 - **Golden tests** (§14). Same reason: pin row counts and snapshot totals in the
   harness, against the snapshot, not against a live query.
+- **Reconcile-or-abort as a hard gate** (§2 principle 3, §7 pass 3). Sure's
+  `get_account_statement` reports *statement-vs-ledger* agreement and never
+  aborts; it does **not** check the blueprint's *parse-integrity* invariant
+  (parsed parts summing to the document's own printed total), and its tolerance
+  is a fixed 0.01, not the blueprint's 1.00-per-account-period gate. Both that
+  check and the abort belong to the harness extractor. See the vocabulary map.
 
 Treat Sure as a source you re-derive from, not as the archive of what you
 already derived.
@@ -72,7 +78,7 @@ Vault is closed to guests, over MCP exactly as in the UI.
 |---|---|
 | `upload_account_statement` | Ingest a statement (PDF/CSV/XLSX, ≤25 MB, base64). Returns the SHA-256. Re-uploading identical bytes returns the existing record with `duplicate: true` — dedup is free and idempotent, so a re-run is safe. |
 | `list_account_statements` | The vault index and the review queue. Filter by account, period, `review_status`, or `content_sha256` to check whether a document is already archived. |
-| `get_account_statement` | One document: identity, the balances read off it, the reconciliation checks against the ledger, and a 15-minute download URL. |
+| `get_account_statement` | One document: identity, the balances **recorded for it** (user-entered in Settings → Statement Vault, not auto-extracted — blank until filled), the reconciliation checks against the ledger *when balances exist*, and a 15-minute download URL. |
 | `get_statement_coverage` | The month-by-month gap map for an account: `covered`, `missing`, `mismatched`, `ambiguous`, `duplicate`, `not_expected`. |
 | `record_valuation` | Write a value for a date, with a mandatory citation. |
 | `search_family_files` | Semantic search inside uploaded documents (needs a vector store configured). Complements the vault: identity from `list_account_statements`, contents from here. |
@@ -126,8 +132,8 @@ Reading the blueprint against this codebase:
 | dry-run manifest + human OK (§8.3) | the link/reject step in Settings → Statement Vault |
 | sha256 index (§8.2) | `account_statements.content_sha256`, unique per family |
 | `TOKEN_YYYY-MM-DD_Title.ext` (§8.1) | not enforced; the SHA-256 is the stable identifier, and filenames are free text |
-| `_control.csv` official total | `opening_balance` / `closing_balance` read off the statement |
-| reconcile-or-abort (§7 pass 3) | `reconciliation_checks`, tolerance 0.01, reported as `matched` / `mismatched` |
+| `_control.csv` official total | `opening_balance` / `closing_balance` — **user-entered** fields (Settings → Statement Vault), not auto-extracted on upload; blank until a human fills them, so reconciliation is `unavailable` over MCP until then |
+| reconcile-or-abort (§7 pass 3) | **no direct equivalent** — `reconciliation_checks` gives statement-vs-ledger agreement (tolerance 0.01, report-only, `matched` / `mismatched`); it does not sum parsed parts against the document's printed total, and never aborts. Parse-integrity + abort stay harness-side |
 | gap policy `PENDING` (§13) | coverage status `missing` |
 | reliability grade (§13.4) | the `(grade: A\|B\|C)` suffix on `record_valuation`'s `source` |
 
@@ -141,9 +147,15 @@ Blueprint §15.2, rewritten:
 2. **Hand off the match.** Report each unmatched statement and its suggested
    account to the user; they confirm in Settings → Statement Vault. Do not
    proceed as if the link exists.
-3. **Reconcile.** `get_account_statement` on each new statement. A `mismatched`
-   check means the ledger and the document disagree — stop and report it. Never
-   adjust the figure to make it agree.
+3. **Reconcile.** `get_account_statement` on each new statement. Reconciliation
+   only runs once the statement's `opening_balance` / `closing_balance` are
+   filled — these are user-entered in Settings → Statement Vault, not
+   auto-extracted, so an agent-only pipeline gets `reconciliation_status:
+   "unavailable"` here until a human enters them. When a check does run, a
+   `mismatched` result means the ledger and the document disagree — stop and
+   report it. Never adjust the figure to make it agree. (This is
+   statement-vs-ledger agreement; the blueprint's parts-vs-printed-total
+   parse-integrity check and its abort are the harness extractor's job.)
 4. **Close the gaps.** `get_statement_coverage` per account for the year. Every
    `missing` month is either a document to go find or an explicit `PENDING` in
    the harness — never a silently interpolated number.
@@ -175,7 +187,7 @@ already done:
 - **Phase 5 (views)** — unchanged, harness-side.
 - **Phase 6 (the vault)** — **already built** for account statements. Do not
   rebuild it. Build only the vault for non-statement sources.
-- **Phase 7 (fiscal layer)** — entirely harness-side. Sure has no criterion
+- **Phase 7 (the tax layer)** — entirely harness-side. Sure has no criterion
   dimension and should not grow one.
 - **Phase 8 (forensics, intel, agent memory)** — entirely harness-side. Email
   sweeps never touch Sure; facts they establish enter as an
@@ -201,7 +213,7 @@ Worth knowing before you promise the user something:
 
 ## See also
 
-- [The patrimonial blueprint](patrimonial-blueprint.md) — the full spec.
+- [The wealth + tax blueprint](patrimonial-blueprint.md) — the full spec.
 - [MCP Server for External AI Assistants](../hosting/mcp.md) — endpoint,
   authentication, tool list.
 - [External AI Assistant configuration](../hosting/ai.md#openclaw-gateway-example)
