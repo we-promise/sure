@@ -127,6 +127,43 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "funds_movement", brokerage_entry.transaction.reload.kind
   end
 
+  test "persists an investment contribution when transfer matching is unavailable" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+
+    entry = adapter.import_transaction(
+      external_id: "orphaned_brokerage_contribution_1",
+      amount: -850,
+      currency: "USD",
+      date: Date.current,
+      name: "Electronic Funds Transfer Received (Cash)",
+      source: "plaid",
+      investment_activity_label: "Contribution"
+    )
+
+    assert_nil entry.transaction.reload.transfer
+    assert_equal "investment_contribution", entry.transaction.kind
+    assert_equal investment_account.family.investment_contributions_category,
+                 entry.transaction.category
+
+    # A later sync must repair an already-imported standard transaction too;
+    # this is the path used when the provider activity arrives before matching.
+    entry.transaction.update!(kind: "standard", category: nil)
+    adapter.import_transaction(
+      external_id: "orphaned_brokerage_contribution_1",
+      amount: -850,
+      currency: "USD",
+      date: Date.current,
+      name: "Electronic Funds Transfer Received (Cash)",
+      source: "plaid"
+    )
+
+    entry.transaction.reload
+    assert_equal "investment_contribution", entry.transaction.kind
+    assert_equal investment_account.family.investment_contributions_category,
+                 entry.transaction.category
+  end
+
   test "updates existing transaction instead of creating duplicate" do
     # Create initial transaction
     entry = @adapter.import_transaction(
