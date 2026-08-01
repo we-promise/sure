@@ -115,6 +115,21 @@ class Transaction < ApplicationRecord
   def self.cash_flow_transfer_sql(transaction_alias = table_name, include_investment_contributions: true)
     cash_flow_kinds = [ "loan_payment" ]
     cash_flow_kinds.unshift("investment_contribution") if include_investment_contributions
+    unmatched_sql = unmatched_transfer_sql(transaction_alias)
+
+    # Pending matches are excluded only when investment contributions are
+    # configured as transfers. Other pending transactions remain unmatched
+    # until their transfer is confirmed.
+    unless include_investment_contributions
+      unmatched_sql = <<~SQL.squish
+        (#{unmatched_sql}
+        AND NOT EXISTS (
+          SELECT 1 FROM transfers
+          WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
+            AND #{transaction_alias}.kind = 'investment_contribution'
+        ))
+      SQL
+    end
 
     <<~SQL.squish
       (EXISTS (
@@ -123,7 +138,7 @@ class Transaction < ApplicationRecord
           AND #{transaction_alias}.kind IN (#{cash_flow_kinds.map { |kind| "'#{kind}'" }.join(", ")})
           AND transfers.status = 'confirmed'
         )
-      OR (#{unmatched_transfer_sql(transaction_alias)}))
+      OR (#{unmatched_sql}))
     SQL
   end
 
