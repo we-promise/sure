@@ -11,9 +11,11 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "turbo-frame#modal"
-    assert_select "select[name='chain'] option[value='bitcoin']", text: "Bitcoin"
-    assert_select "select[name='chain'] option[value='ethereum']", text: "Ethereum"
-    assert_select "input[name='wallet_address']"
+    assert_select "input[type=hidden][name='chain'][value='auto']"
+    assert_select "[role=option][data-value='bitcoin']", text: /Bitcoin/
+    assert_select "[role=option][data-value='ethereum']", text: /Ethereum/
+    assert_select "[role=option][data-value='bittensor']", text: /Bittensor/
+    assert_select "input[name='wallet_address'].form-field__input"
   end
 
   test "new wallet renders the link form" do
