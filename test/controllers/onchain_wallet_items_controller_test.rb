@@ -478,23 +478,16 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
   test "auto-detect skips timed-out EVM chains and continues in CHAINS order" do
     address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
     controller = OnchainWalletItemsController.new
+    sequence = sequence("evm auto-detect probes")
 
     ethereum = mock("blockscout_ethereum")
-    ethereum.stubs(:has_activity?).raises(Net::ReadTimeout)
+    ethereum.expects(:has_activity?).with(address).raises(Net::ReadTimeout).in_sequence(sequence)
 
     polygon = mock("blockscout_polygon")
-    polygon.stubs(:has_activity?).returns(true)
+    polygon.expects(:has_activity?).with(address).returns(true).in_sequence(sequence)
 
-    inactive = mock("blockscout_inactive")
-    inactive.stubs(:has_activity?).returns(false)
-
-    Provider::Blockscout.stubs(:new).with(chain: "ethereum").returns(ethereum)
-    Provider::Blockscout.stubs(:new).with(chain: "polygon").returns(polygon)
-    OnchainWalletAccount::EVM_CHAINS.each do |chain|
-      next if chain.in?(%w[ethereum polygon])
-
-      Provider::Blockscout.stubs(:new).with(chain: chain).returns(inactive)
-    end
+    Provider::Blockscout.expects(:new).with(chain: "ethereum").returns(ethereum)
+    Provider::Blockscout.expects(:new).with(chain: "polygon").returns(polygon)
 
     assert_equal "polygon", controller.send(:resolve_auto_chain, address)
   end
@@ -503,7 +496,11 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
     controller = OnchainWalletItemsController.new
 
-    Provider::Blockscout.any_instance.stubs(:has_activity?).raises(Net::OpenTimeout)
+    OnchainWalletAccount::EVM_CHAINS.each do |chain|
+      provider = mock("blockscout_#{chain}")
+      provider.expects(:has_activity?).with(address).raises(Net::OpenTimeout)
+      Provider::Blockscout.expects(:new).with(chain: chain).returns(provider)
+    end
 
     assert_equal "ethereum", controller.send(:resolve_auto_chain, address)
   end
