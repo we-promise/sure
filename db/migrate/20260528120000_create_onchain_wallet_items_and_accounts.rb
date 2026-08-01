@@ -57,5 +57,9 @@ class CreateOnchainWalletItemsAndAccounts < ActiveRecord::Migration[7.2]
               unique: true,
               where: "asset_kind = 'erc20'",
               name: "index_onchain_wallet_accounts_unique_token"
+
+    add_check_constraint :onchain_wallet_accounts,
+                         "(asset_kind = 'native' AND token_contract IS NULL) OR (asset_kind <> 'native' AND token_contract IS NOT NULL)",
+                         name: "chk_onchain_wallet_accounts_token_contract_by_asset_kind"
   end
 end
