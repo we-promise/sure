@@ -70,13 +70,39 @@ class InsightsHelperTest < ActionView::TestCase
   end
 
   test "meta line labels a forward-looking window as next N days" do
-    insight = build_insight(
-      "cash_flow_warning",
-      period_start: Date.current,
-      period_end: Date.current + 30
-    )
+    travel_to Date.new(2026, 8, 1) do
+      insight = build_insight(
+        "cash_flow_warning",
+        period_start: Date.current,
+        period_end: Date.current + 30
+      )
 
-    assert_equal "Cash flow · Next 30 days", insight_meta_line(insight)
+      assert_equal "Cash flow · Next 30 days", insight_meta_line(insight)
+    end
+  end
+
+  test "meta line labels a backward-looking rolling window as last N days" do
+    travel_to Date.new(2026, 8, 31) do
+      insight = build_insight(
+        "net_worth_milestone",
+        period_start: Date.current - 30,
+        period_end: Date.current
+      )
+
+      assert_equal "Net worth · Last 30 days", insight_meta_line(insight)
+    end
+  end
+
+  test "meta line keeps monthly insight periods labeled as the month on boundaries" do
+    travel_to Date.new(2026, 8, 1) do
+      insight = build_insight(
+        "budget_at_risk",
+        period_start: Date.current.beginning_of_month,
+        period_end: Date.current.end_of_month
+      )
+
+      assert_equal "Budget · August", insight_meta_line(insight)
+    end
   end
 
   test "meta line falls back to the subject when there is no period" do
@@ -91,6 +117,28 @@ class InsightsHelperTest < ActionView::TestCase
 
     assert_equal "$28,400.00", insight_key_figure(with_facts).first
     assert_nil insight_key_figure(without_facts)
+  end
+
+  # The two budget cards share `budget_spent_pct` in facts but not a subject:
+  # at-risk is about how many categories are in trouble, on-track is about
+  # overall consumption. Showing consumption on the at-risk card put a
+  # reassuring figure next to a warning headline.
+  test "budget at risk leads with the flagged count, not overall consumption" do
+    insight = build_insight("budget_at_risk", facts: { "count" => 2, "budget_spent_pct" => 14 })
+
+    figure, caption = insight_key_figure(insight)
+
+    assert_equal "2", figure
+    assert_equal "need attention", caption
+  end
+
+  test "budget on track still leads with overall consumption" do
+    insight = build_insight("budget_on_track", facts: { "budget_spent_pct" => 62 })
+
+    figure, caption = insight_key_figure(insight)
+
+    assert_equal "62%", figure
+    assert_equal "of budget", caption
   end
 
   test "action link resolves the stored subject and disappears when it cannot" do

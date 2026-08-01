@@ -2,11 +2,10 @@ class GoalsController < ApplicationController
   before_action :require_preview_features!
   before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive reopen]
 
-  FUNDABLE_TYPES = %w[Depository Investment].freeze
+  FUNDABLE_TYPES = Goal::FUNDABLE_ACCOUNT_TYPES
   rescue_from ActiveRecord::RecordNotFound, with: :goal_not_found
 
   STATE_FILTERS = %w[all active paused completed archived].freeze
-  ACTIVE_STATUS_RANK = { behind: 0, on_track: 1, no_target_date: 2 }.freeze
 
   def index
     state_counts = Current.family.goals.group(:state).count
@@ -14,12 +13,10 @@ class GoalsController < ApplicationController
       h[state] = state == "all" ? state_counts.values.sum : (state_counts[state] || 0)
     end
 
-    all_goals = Current.family.goals
-                       .alphabetically
-                       .includes(:open_pledges, :goal_accounts, linked_accounts: :account_providers)
-                       .to_a
-    @active_goals = all_goals.reject { |g| %w[completed archived].include?(g.state) }
-                             .sort_by { |g| [ g.paused? ? 3 : ACTIVE_STATUS_RANK.fetch(g.status, 4), g.name.downcase ] }
+    # Preloads + the family-wide backing-math injection (N+1 guard) live in
+    # Goal.prepared_for, shared with the Plan hub's active_prepared_for.
+    all_goals = Goal.prepared_for(Current.family)
+    @active_goals = Goal.active_display_sort(all_goals.reject { |g| %w[completed archived].include?(g.state) })
     @completed_goals = all_goals.select { |g| g.state == "completed" }.sort_by { |g| g.name.downcase }
     @archived_goals = all_goals.select { |g| g.state == "archived" }
     # Completed goals join the chip-filterable grid below the active ones
@@ -28,29 +25,16 @@ class GoalsController < ApplicationController
     # entirely (rendered with filterable: false).
     @grid_goals = @active_goals + @completed_goals
 
-    # One family-wide earmark-pool + market-flows query injected into every
-    # rendered goal so the backing math doesn't fire a query per card (N+1).
-    pooled = Goal.pooled_allocations_for(Current.family)
-    flows = Goal.market_flows_for(Current.family)
-    (@grid_goals + @archived_goals).each do |goal|
-      goal.pooled_allocations = pooled
-      goal.market_flows = flows
-    end
-
     @linkable_account_count = Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible.count
     @kpi = kpi_payload(@active_goals)
     @any_pending_pledge = @active_goals.any? { |g| g.open_pledges.any? }
     @show_search = @grid_goals.size > 6
-    @breadcrumbs = [
-      [ t("breadcrumbs.home"), root_path ],
-      [ t("goals.index.title"), nil ]
-    ]
+    @breadcrumbs = plan_breadcrumb_prefix + [ [ t("goals.index.title"), nil ] ]
   end
 
   def show
     @open_pledges = @goal.open_pledges.reverse_chronological.to_a
-    @breadcrumbs = [
-      [ t("breadcrumbs.home"), root_path ],
+    @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ @goal.name, nil ]
     ]
@@ -62,8 +46,7 @@ class GoalsController < ApplicationController
       currency: Current.family.primary_currency_code
     )
     @linkable_accounts = linkable_accounts_for_new
-    @breadcrumbs = [
-      [ t("breadcrumbs.home"), root_path ],
+    @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ t("goals.new.heading"), nil ]
     ]
@@ -257,11 +240,18 @@ class GoalsController < ApplicationController
       else :flat
       end
 
+      # behind_pace? excludes paused goals — pausing stops the pace clock,
+      # so a paused-but-behind goal belongs in the paused count (below),
+      # not in "N behind" or the "needs this month" sum. Keeps this tile
+      # consistent with the Plan hub's summary (Goal.summary_for).
       needs = active_goals
-        .select { |g| g.status == :behind }
+        .select(&:behind_pace?)
         .sum { |g| g.monthly_target_amount.to_d }
-      behind = active_goals.count { |g| g.status == :behind }
-      on_track = active_goals.count { |g| g.status == :on_track }
+      behind = active_goals.count(&:behind_pace?)
+      # Paused goals are excluded from the on-track numerator for the same
+      # reason they're excluded from tracked_total below — otherwise the
+      # "X of Y" fraction could exceed its own denominator.
+      on_track = active_goals.count { |g| !g.paused? && g.status == :on_track }
       reached = active_goals.count { |g| g.status == :reached }
       no_date = active_goals.count { |g| g.status == :no_target_date }
       paused = active_goals.count(&:paused?)
