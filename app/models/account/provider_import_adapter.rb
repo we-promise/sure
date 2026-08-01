@@ -203,7 +203,11 @@ class Account::ProviderImportAdapter
       end
 
       # Auto-detect investment activity labels for investment accounts
-      detected_label = investment_activity_label
+      # Reuse a previously persisted investment activity label when a later
+      # provider sync omits it. This keeps an unmatched contribution from
+      # silently reverting to standard while still allowing matched transfers
+      # to be classified from their relationship below.
+      detected_label = investment_activity_label.presence || entry.transaction.investment_activity_label
       if account.investment? && detected_label.nil? && entry.entryable.is_a?(Transaction)
         detected_label = detect_activity_label(name, amount)
       end
@@ -218,6 +222,9 @@ class Account::ProviderImportAdapter
       # A matched transfer's classification is set from the relationship by
       # transfer matching. Provider activity labels describe the brokerage leg
       # too, so applying them here would turn both legs into contributions.
+      # When matching is delayed (or no counterpart exists), the investment
+      # account's explicit Contribution activity label remains sufficient to
+      # classify that leg and give reporting a durable persisted kind.
       matched_transfer = entry.entryable.is_a?(Transaction) && entry.transaction.transfer.present?
       auto_kind = nil
       auto_category = nil
