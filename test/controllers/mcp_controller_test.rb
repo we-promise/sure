@@ -386,6 +386,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_not inner["duplicate"]
       assert_equal Digest::SHA256.hexdigest(content), inner.dig("statement", "content_sha256")
     end
+  end
 
   test "tools/call executes update_transaction" do
     with_mcp_env do
