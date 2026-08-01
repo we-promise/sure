@@ -108,8 +108,3 @@ en:
       delete: Delete
       no_wallets_title: No wallets connected
       no_wallets_message: On-chain wallets will appear here after linking them from the Crypto account flow.
-      sync_status:
-        no_accounts: No wallets found
-        all_synced:
-          one: "%{count} wallet synced"
-          other: "%{count} wallets synced"
