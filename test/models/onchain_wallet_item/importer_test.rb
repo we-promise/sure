@@ -244,6 +244,147 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     assert_match(/price feed down/, entry.message)
   end
 
+  test "import_wallet! prices bitcoin balance from resolved crypto price" do
+    address = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080"
+    address_payload = {
+      "chain_stats" => { "funded_txo_sum" => 200_000_000, "spent_txo_sum" => 0 },
+      "mempool_stats" => { "funded_txo_sum" => 0, "spent_txo_sum" => 0 }
+    }
+
+    security = Security.create!(
+      ticker: "CRYPTO:BTC",
+      exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC,
+      price_provider: "binance_public"
+    )
+    security.prices.create!(date: Date.current, price: 50_000, currency: "USD")
+
+    provider = Provider::MempoolSpace.new
+    provider.expects(:get_address).with(address).returns(address_payload)
+    provider.expects(:get_address_txs).with(address).returns([])
+    provider.expects(:get_mempool_txs).with(address).returns([])
+    @item.expects(:mempool_space_provider).returns(provider)
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).with("BTC", "BTC").returns(security)
+
+    OnchainWalletItem::Importer.new(@item).import_wallet!(chain: "bitcoin", address: address)
+
+    wallet_account = @item.onchain_wallet_accounts.find_by!(chain: "bitcoin", wallet_address: address)
+    assert_equal 2.to_d, wallet_account.quantity
+    assert_equal 100_000.to_d, wallet_account.current_balance
+  end
+
+  test "import_wallet! leaves bitcoin balance at zero when price lookup fails" do
+    address = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080"
+    address_payload = {
+      "chain_stats" => { "funded_txo_sum" => 200_000_000, "spent_txo_sum" => 0 },
+      "mempool_stats" => { "funded_txo_sum" => 0, "spent_txo_sum" => 0 }
+    }
+
+    provider = Provider::MempoolSpace.new
+    provider.expects(:get_address).with(address).returns(address_payload)
+    provider.expects(:get_address_txs).with(address).returns([])
+    provider.expects(:get_mempool_txs).with(address).returns([])
+    @item.expects(:mempool_space_provider).returns(provider)
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).raises(StandardError.new("provider down"))
+
+    OnchainWalletItem::Importer.new(@item).import_wallet!(chain: "bitcoin", address: address)
+
+    wallet_account = @item.onchain_wallet_accounts.find_by!(chain: "bitcoin", wallet_address: address)
+    assert_equal 2.to_d, wallet_account.quantity
+    assert_equal 0.to_d, wallet_account.current_balance
+  end
+
+  test "ethereum wallet import persists only selected token contracts" do
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+    selected_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    skipped_contract = "0x1111111111111111111111111111111111111111"
+
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
+      erc20_transfer(address: address, contract: selected_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
+      erc20_transfer(address: address, contract: skipped_contract, symbol: "SCAM", name: "Visit scam.example", decimals: "18", value: "1000000000000000000000")
+    ])
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    OnchainWalletItem::Importer.new(@item).import_ethereum_wallet!(
+      address: address,
+      selected_token_contracts: [ selected_contract ]
+    )
+
+    assert @item.onchain_wallet_accounts.exists?(chain: "ethereum", wallet_address: address, asset_kind: "native", symbol: "ETH")
+    assert @item.onchain_wallet_accounts.exists?(chain: "ethereum", wallet_address: address, asset_kind: "erc20", token_contract: selected_contract)
+    assert_not @item.onchain_wallet_accounts.exists?(chain: "ethereum", wallet_address: address, asset_kind: "erc20", token_contract: skipped_contract)
+  end
+
+  test "ethereum sync updates tracked token to zero when balance is fully spent" do
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+    tracked_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+
+    @item.onchain_wallet_accounts.create!(
+      chain: "ethereum",
+      wallet_address: address,
+      asset_kind: "erc20",
+      token_contract: tracked_contract,
+      symbol: "USDC",
+      name: "USD Coin",
+      currency: "USD",
+      quantity: 5.0,
+      current_balance: 5.0
+    )
+
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("1000000000000000000")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
+      erc20_transfer(address: address, contract: tracked_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
+      {
+        "contractAddress" => tracked_contract,
+        "tokenSymbol" => "USDC",
+        "tokenName" => "USD Coin",
+        "tokenDecimal" => "6",
+        "value" => "5000000",
+        "from" => address,
+        "to" => "0x1111111111111111111111111111111111111111",
+        "hash" => "#{tracked_contract}-out-hash"
+      }
+    ])
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    OnchainWalletItem::Importer.new(@item).import_wallet!(chain: "ethereum", address: address)
+
+    account = @item.onchain_wallet_accounts.find_by(token_contract: tracked_contract)
+    assert account, "Tracked token account should still exist"
+    assert_equal 0.to_d, account.quantity
+    assert_equal 0.to_d, account.current_balance
+  end
+
+  test "ethereum provider sync does not import newly discovered token contracts" do
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+    existing_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    new_contract = "0x1111111111111111111111111111111111111111"
+    @item.onchain_wallet_accounts.create!(
+      chain: "ethereum",
+      wallet_address: address,
+      asset_kind: "erc20",
+      token_contract: existing_contract,
+      symbol: "USDC",
+      name: "USD Coin",
+      currency: "USD"
+    )
+
+    Provider::Blockscout.any_instance.stubs(:get_native_balance).returns("0")
+    Provider::Blockscout.any_instance.stubs(:get_normal_transactions).returns([])
+    Provider::Blockscout.any_instance.stubs(:get_erc20_transfers).returns([
+      erc20_transfer(address: address, contract: existing_contract, symbol: "USDC", name: "USD Coin", decimals: "6", value: "5000000"),
+      erc20_transfer(address: address, contract: new_contract, symbol: "SCAM", name: "Visit scam.example", decimals: "18", value: "1000000000000000000000")
+    ])
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+
+    OnchainWalletItem::Importer.new(@item).import_wallet!(chain: "ethereum", address: address)
+
+    assert @item.onchain_wallet_accounts.exists?(token_contract: existing_contract)
+    assert_not @item.onchain_wallet_accounts.exists?(token_contract: new_contract)
+  end
+
   test "import creates wallet accounts for all linked wallets" do
     address = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080"
     @item.onchain_wallet_accounts.create!(
@@ -276,4 +417,18 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     assert result[:success]
     assert_equal 1, result[:wallets_imported]
   end
+
+  private
+    def erc20_transfer(address:, contract:, symbol:, name:, decimals:, value:)
+      {
+        "contractAddress" => contract,
+        "tokenSymbol" => symbol,
+        "tokenName" => name,
+        "tokenDecimal" => decimals,
+        "value" => value,
+        "from" => "0x0000000000000000000000000000000000000000",
+        "to" => address,
+        "hash" => "#{contract}-hash"
+      }
+    end
 end
