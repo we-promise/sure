@@ -117,17 +117,14 @@ class Transaction < ApplicationRecord
     cash_flow_kinds.unshift("investment_contribution") if include_investment_contributions
     unmatched_sql = unmatched_transfer_sql(transaction_alias)
 
-    # Pending matches are excluded only when investment contributions are
-    # configured as transfers. Other pending transactions remain unmatched
-    # until their transfer is confirmed.
+    # Investment contributions are excluded by kind when configured as
+    # transfers, even when provider data has not produced a persisted
+    # Transfer row yet. Other pending transactions remain unmatched until
+    # their transfer is confirmed.
     unless include_investment_contributions
       unmatched_sql = <<~SQL.squish
         (#{unmatched_sql}
-        AND NOT EXISTS (
-          SELECT 1 FROM transfers
-          WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
-            AND #{transaction_alias}.kind = 'investment_contribution'
-        ))
+        AND #{transaction_alias}.kind <> 'investment_contribution')
       SQL
     end
 
