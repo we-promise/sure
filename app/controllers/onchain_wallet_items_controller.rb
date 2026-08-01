@@ -12,11 +12,11 @@ class OnchainWalletItemsController < ApplicationController
 
   def create
     item = Current.family.onchain_wallet_items.build(onchain_wallet_item_params)
-    item.name = item.name.presence || "On-chain Wallets"
+    item.name = item.name.presence || t("onchain_wallet_items.onchain_wallet_item.fallback_name")
 
     if item.save
       item.set_onchain_institution_defaults!
-      render_success_response("On-chain Wallets connection saved.")
+      render_success_response(t(".success"))
     else
       render_error_response(item.errors.full_messages.join(", "))
     end
@@ -27,7 +27,7 @@ class OnchainWalletItemsController < ApplicationController
     attrs.delete(:etherscan_api_key) if attrs[:etherscan_api_key].blank?
 
     if @onchain_wallet_item.update(attrs)
-      render_success_response("On-chain Wallets connection updated.")
+      render_success_response(t(".success"))
     else
       render_error_response(@onchain_wallet_item.errors.full_messages.join(", "))
     end
@@ -35,7 +35,7 @@ class OnchainWalletItemsController < ApplicationController
 
   def destroy
     @onchain_wallet_item.destroy_later
-    redirect_to settings_providers_path, notice: "Scheduled On-chain Wallets connection for deletion.", status: :see_other
+    redirect_to settings_providers_path, notice: t(".success"), status: :see_other
   end
 
   def manage
@@ -43,23 +43,23 @@ class OnchainWalletItemsController < ApplicationController
 
   def sync
     @onchain_wallet_item.sync_later unless @onchain_wallet_item.syncing?
-    redirect_back_or_to settings_providers_path, notice: "On-chain Wallets sync started.", status: :see_other
+    redirect_back_or_to settings_providers_path, notice: t(".success"), status: :see_other
   end
 
   def link_wallet
     chain = params[:chain].to_s
     address = params[:wallet_address].to_s.strip
 
-    return render_error_response("Wallet address is required.") if address.blank?
+    return render_error_response(t(".address_required")) if address.blank?
 
     # "auto" (or blank) → detect the chain from the address format; for EVM
     # addresses, pick the first supported chain the address is active on.
     if chain.blank? || chain == "auto"
       chain = resolve_auto_chain(address)
-      return render_error_response("Could not detect the blockchain from this address.") if chain.blank?
+      return render_error_response(t(".chain_undetected")) if chain.blank?
     end
 
-    return render_error_response("Choose a supported blockchain.") unless chain.in?(OnchainWalletAccount::CHAINS)
+    return render_error_response(t(".unsupported_chain")) unless chain.in?(OnchainWalletAccount::CHAINS)
 
     # EVM chains are read keyless via Blockscout, so no API key gate is needed.
     item = Current.family.onchain_wallet_items.active.first
@@ -88,12 +88,12 @@ class OnchainWalletItemsController < ApplicationController
     item.process_accounts
     item.schedule_account_syncs
 
-    render_success_response("Wallet linked.")
+    render_success_response(t(".success"))
   rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, Provider::Blockscout::Error, Provider::SolanaRpc::Error, Provider::BittensorRpc::Error, ArgumentError => e
     render_error_response(e.message)
   rescue StandardError => e
     Rails.logger.error("On-chain wallet link failed: #{e.class} - #{e.message}")
-    render_error_response("Could not link wallet. #{e.message}")
+    render_error_response(t(".link_failed", message: e.message))
   end
 
   def edit_wallet
@@ -102,7 +102,7 @@ class OnchainWalletItemsController < ApplicationController
     @wallet_accounts = @onchain_wallet_item.onchain_wallet_accounts.where(chain: @chain, wallet_address: @old_address).order(:asset_kind, :symbol)
 
     if @wallet_accounts.empty?
-      redirect_back_or_to(accounts_path, alert: "Wallet address not found.", status: :see_other)
+      redirect_back_or_to(accounts_path, alert: t(".not_found"), status: :see_other)
     end
   end
 
@@ -112,14 +112,14 @@ class OnchainWalletItemsController < ApplicationController
     new_address = params[:wallet_address].to_s.strip
     new_address = new_address.downcase if OnchainWalletAccount.evm_chain?(chain)
 
-    return render_edit_error(chain, old_address, new_address, "Wallet address is required.") if new_address.blank?
-    return render_edit_error(chain, old_address, new_address, "New address is the same as the current address.") if new_address == old_address
+    return render_edit_error(chain, old_address, new_address, t(".address_required")) if new_address.blank?
+    return render_edit_error(chain, old_address, new_address, t(".same_address")) if new_address == old_address
 
     existing_for_old = @onchain_wallet_item.onchain_wallet_accounts.where(chain: chain, wallet_address: old_address)
-    return render_edit_error(chain, old_address, new_address, "Wallet address not found.") if existing_for_old.none?
+    return render_edit_error(chain, old_address, new_address, t(".not_found")) if existing_for_old.none?
 
     if @onchain_wallet_item.onchain_wallet_accounts.where(chain: chain, wallet_address: new_address).exists?
-      return render_edit_error(chain, old_address, new_address, "That address is already linked to this provider.")
+      return render_edit_error(chain, old_address, new_address, t(".already_linked"))
     end
 
     validate_wallet_address!(@onchain_wallet_item, chain, new_address)
@@ -188,19 +188,19 @@ class OnchainWalletItemsController < ApplicationController
     @onchain_wallet_item.process_accounts
     @onchain_wallet_item.schedule_account_syncs
 
-    render_success_response("Wallet address updated.")
+    render_success_response(t(".success"))
   rescue Provider::MempoolSpace::Error, Provider::Etherscan::Error, Provider::Blockscout::Error, Provider::SolanaRpc::Error, Provider::BittensorRpc::Error, ArgumentError => e
     render_edit_error(chain, old_address, new_address, e.message)
   rescue StandardError => e
     Rails.logger.error("On-chain wallet update failed: #{e.class} - #{e.message}")
-    render_edit_error(chain, old_address, new_address, "Could not update wallet. #{e.message}")
+    render_edit_error(chain, old_address, new_address, t(".update_failed", message: e.message))
   end
 
   def destroy_account
     wallet_account = @onchain_wallet_item.onchain_wallet_accounts.find(params[:account_id])
     remove_wallet_accounts!([ wallet_account ])
 
-    redirect_back_or_to accounts_path, notice: "Wallet asset disconnected.", status: :see_other
+    redirect_back_or_to accounts_path, notice: t(".success"), status: :see_other
   end
 
   def destroy_wallet
@@ -208,11 +208,11 @@ class OnchainWalletItemsController < ApplicationController
       chain: params[:chain].to_s.downcase,
       wallet_address: normalized_wallet_address(params[:chain], params[:wallet_address])
     )
-    return redirect_back_or_to(accounts_path, alert: "Wallet address not found.", status: :see_other) if wallet_accounts.empty?
+    return redirect_back_or_to(accounts_path, alert: t(".not_found"), status: :see_other) if wallet_accounts.empty?
 
     remove_wallet_accounts!(wallet_accounts)
 
-    redirect_back_or_to accounts_path, notice: "Wallet disconnected.", status: :see_other
+    redirect_back_or_to accounts_path, notice: t(".success"), status: :see_other
   end
 
   private
@@ -246,7 +246,7 @@ class OnchainWalletItemsController < ApplicationController
 
     def validate_wallet_address!(item, chain, address)
       if chain == "bitcoin"
-        raise Provider::MempoolSpace::InvalidAddressError, "Invalid Bitcoin address" unless item.mempool_space_provider.valid_address?(address)
+        raise Provider::MempoolSpace::InvalidAddressError, t("onchain_wallet_items.errors.invalid_bitcoin_address") unless item.mempool_space_provider.valid_address?(address)
       elsif OnchainWalletAccount.evm_chain?(chain)
         provider = item.evm_provider(chain)
         error_class =
@@ -255,11 +255,11 @@ class OnchainWalletItemsController < ApplicationController
           else
             Provider::Blockscout::InvalidAddressError
           end
-        raise error_class, "Invalid EVM wallet address" unless provider.valid_address?(address)
+        raise error_class, t("onchain_wallet_items.errors.invalid_evm_address") unless provider.valid_address?(address)
       elsif chain == "solana"
-        raise Provider::SolanaRpc::InvalidAddressError, "Invalid Solana address" unless item.solana_provider.valid_address?(address)
+        raise Provider::SolanaRpc::InvalidAddressError, t("onchain_wallet_items.errors.invalid_solana_address") unless item.solana_provider.valid_address?(address)
       elsif chain == "bittensor"
-        raise Provider::BittensorRpc::InvalidAddressError, "Invalid Bittensor address" unless item.bittensor_provider.valid_address?(address)
+        raise Provider::BittensorRpc::InvalidAddressError, t("onchain_wallet_items.errors.invalid_bittensor_address") unless item.bittensor_provider.valid_address?(address)
       end
     end
 

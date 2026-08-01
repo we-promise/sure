@@ -1,6 +1,39 @@
 ---
 en:
   onchain_wallet_items:
+    create:
+      success: On-chain Wallets connection saved.
+    update:
+      success: On-chain Wallets connection updated.
+    destroy:
+      success: Scheduled On-chain Wallets connection for deletion.
+    sync:
+      success: On-chain Wallets sync started.
+    link_wallet:
+      success: Wallet linked.
+      address_required: Wallet address is required.
+      chain_undetected: Could not detect the blockchain from this address.
+      unsupported_chain: Choose a supported blockchain.
+      link_failed: "Could not link wallet. %{message}"
+    edit_wallet:
+      not_found: Wallet address not found.
+    update_wallet:
+      success: Wallet address updated.
+      address_required: Wallet address is required.
+      same_address: New address is the same as the current address.
+      not_found: Wallet address not found.
+      already_linked: That address is already linked to this provider.
+      update_failed: "Could not update wallet. %{message}"
+    destroy_account:
+      success: Wallet asset disconnected.
+    destroy_wallet:
+      success: Wallet disconnected.
+      not_found: Wallet address not found.
+    errors:
+      invalid_bitcoin_address: Invalid Bitcoin address
+      invalid_evm_address: Invalid EVM wallet address
+      invalid_solana_address: Invalid Solana address
+      invalid_bittensor_address: Invalid Bittensor address
     wallet_modal:
       title: Link On-chain Wallet
       subtitle: Track a Bitcoin, Ethereum, Solana, Bittensor, or supported EVM wallet by address.
