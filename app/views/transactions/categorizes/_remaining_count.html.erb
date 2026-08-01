@@ -1,7 +1,9 @@
-<%# Single source for the header count — the initial render and every Turbo
-    stream replacement go through this partial so the typography can't fork. %>
+<%# Single source for the backlog count — the initial render and every Turbo
+    stream replacement go through this partial so the typography can't fork.
+    Subdued: it shares the eyebrow line with the group-progress readout, which
+    is the primary signal; this one is ambient context that ticks down. %>
 <%= turbo_frame_tag "categorize_remaining" do %>
-  <p class="text-xs font-medium uppercase tracking-wide text-secondary">
+  <p class="text-xs font-medium uppercase tracking-wide text-subdued">
     <%= t("transactions.categorizes.show.remaining", count: total_uncategorized) %>
   </p>
 <% end %>

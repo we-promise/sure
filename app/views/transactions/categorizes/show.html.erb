@@ -8,14 +8,17 @@
 
   <%# Group identity leads the page. The step controls live in the action bar
       at the bottom, next to the primary action they belong with. %>
-  <div class="space-y-1">
-    <div class="flex items-center gap-2 flex-wrap">
-      <%= render partial: "transactions/categorizes/remaining_count",
-                 locals: { total_uncategorized: @total_uncategorized } %>
-      <span class="text-xs text-subdued">&middot;</span>
-      <p class="text-xs font-medium uppercase tracking-wide text-secondary">
+  <div class="space-y-1.5">
+    <%# Step position leads (it's the wizard's own progress signal); the
+        global backlog count follows, one contrast tier down. Same size and
+        case so the line reads as one eyebrow, hierarchy carried by color. %>
+    <div class="flex items-center gap-2 flex-wrap text-xs font-medium uppercase tracking-wide">
+      <p class="text-secondary">
         <%= t(".group_progress", current: @position + 1, total: @total_groups) %>
       </p>
+      <span class="text-subdued">&middot;</span>
+      <%= render partial: "transactions/categorizes/remaining_count",
+                 locals: { total_uncategorized: @total_uncategorized } %>
     </div>
     <div class="flex items-center gap-3">
       <%= render partial: "transactions/categorizes/group_title",
@@ -109,15 +112,20 @@
                    value="<%= @group.grouping_key %>"
                    data-categorize-target="groupingKeyHidden">
 
-            <label for="categorize_rule_filter" class="block text-xs text-secondary mb-1">
-              <%= t(".rule_description_prefix", type: t(".type_#{@group.transaction_type}").downcase) %>
-            </label>
-            <input type="text" id="categorize_rule_filter"
-                   value="<%= @group.grouping_key %>"
-                   autocomplete="off"
-                   class="form-field__input border border-secondary rounded-lg px-3 py-2 text-base sm:text-sm"
-                   data-categorize-target="filterInput"
-                   data-action="input->categorize#previewRule keydown.enter->categorize#confirmFilterEdit">
+            <%# The canonical .form-field structure: the wrapper carries the
+                border and the always-on focus-within halo, the input stays
+                chromeless — same contract as StyledFormBuilder fields. %>
+            <div class="form-field">
+              <label for="categorize_rule_filter" class="form-field__label">
+                <%= t(".rule_description_prefix", type: t(".type_#{@group.transaction_type}").downcase) %>
+              </label>
+              <input type="text" id="categorize_rule_filter"
+                     value="<%= @group.grouping_key %>"
+                     autocomplete="off"
+                     class="form-field__input text-base sm:text-sm"
+                     data-categorize-target="filterInput"
+                     data-action="input->categorize#previewRule keydown.enter->categorize#confirmFilterEdit">
+            </div>
             <p class="text-xs text-secondary mt-2"><%= t(".rule_description_suffix") %></p>
           </div>
         </div>
