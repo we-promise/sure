@@ -132,7 +132,7 @@ permissions enforced in the web UI.
 
 They exist for agents that maintain a document-backed record of a family's
 wealth over time. See
-[Patrimonial history with an external agent harness](../llm-guides/patrimonial-agent-harness.md).
+[Wealth history with an external agent harness](../llm-guides/wealth-agent-harness.md).
 
 ## Example Requests
 

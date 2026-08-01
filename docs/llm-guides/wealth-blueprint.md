@@ -8,7 +8,7 @@
 >
 > For how the two halves fit together — which layer Sure owns, which MCP tools
 > serve which section, and what the harness must own itself — read
-> [the patrimonial agent harness guide](patrimonial-agent-harness.md) first.
+> [the wealth agent harness guide](wealth-agent-harness.md) first.
 >
 > The document is reproduced verbatim as supplied. It contains no real names,
 > institutions, positions, amounts or identifiers.
