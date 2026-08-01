@@ -70,9 +70,7 @@ class InsightsHelperTest < ActionView::TestCase
   end
 
   test "meta line labels a forward-looking window as next N days" do
-    # Pin mid-month so Date.current..Date.current+30 is never a calendar month
-    # (e.g. Aug 1..Aug 31), which would prefer the month-name label instead.
-    travel_to Date.new(2026, 8, 15) do
+    travel_to Date.new(2026, 8, 1) do
       insight = build_insight(
         "cash_flow_warning",
         period_start: Date.current,
@@ -80,6 +78,30 @@ class InsightsHelperTest < ActionView::TestCase
       )
 
       assert_equal "Cash flow · Next 30 days", insight_meta_line(insight)
+    end
+  end
+
+  test "meta line labels a backward-looking rolling window as last N days" do
+    travel_to Date.new(2026, 8, 31) do
+      insight = build_insight(
+        "net_worth_milestone",
+        period_start: Date.current - 30,
+        period_end: Date.current
+      )
+
+      assert_equal "Net worth · Last 30 days", insight_meta_line(insight)
+    end
+  end
+
+  test "meta line keeps monthly insight periods labeled as the month on boundaries" do
+    travel_to Date.new(2026, 8, 1) do
+      insight = build_insight(
+        "budget_at_risk",
+        period_start: Date.current.beginning_of_month,
+        period_end: Date.current.end_of_month
+      )
+
+      assert_equal "Budget · August", insight_meta_line(insight)
     end
   end
 
