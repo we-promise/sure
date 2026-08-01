@@ -98,12 +98,10 @@ class Transaction < ApplicationRecord
       NOT EXISTS (
         SELECT 1 FROM transfers
         WHERE transfers.inflow_transaction_id = #{transaction_alias}.id
-          AND transfers.status = 'confirmed'
       )
       AND NOT EXISTS (
         SELECT 1 FROM transfers
         WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
-          AND transfers.status = 'confirmed'
       )
     SQL
   end
@@ -119,8 +117,8 @@ class Transaction < ApplicationRecord
 
     # Investment contributions are excluded by kind when configured as
     # transfers, even when provider data has not produced a persisted
-    # Transfer row yet. Other pending transactions remain unmatched until
-    # their transfer is confirmed.
+    # Transfer row yet. Any persisted transfer is authoritative, including
+    # pending auto-matches, so reporting agrees with the transfer UI.
     unless include_investment_contributions
       unmatched_sql = <<~SQL.squish
         (#{unmatched_sql}
@@ -133,7 +131,6 @@ class Transaction < ApplicationRecord
         SELECT 1 FROM transfers
         WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
           AND #{transaction_alias}.kind IN (#{cash_flow_kinds.map { |kind| "'#{kind}'" }.join(", ")})
-          AND transfers.status = 'confirmed'
         )
       OR (#{unmatched_sql}))
     SQL

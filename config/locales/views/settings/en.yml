@@ -186,6 +186,8 @@ en:
         additional_currencies_label: Additional currencies
         no_additional_currencies: None selected
         currencies_more: "+%{count} more"
+        reporting_title: "%{moniker} Reporting"
+        reporting_subtitle: "Control how investment contributions appear in your %{moniker} reports and budgets"
         manage_currencies: Manage currencies
         manage_currencies_subtitle: Deselect the currencies you never use, or reduce the list down to just a few.
         select_all_currencies: Select all

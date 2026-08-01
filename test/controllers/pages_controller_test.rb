@@ -138,6 +138,12 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal Category.investment_contributions_name, investment_segment["name"]
     assert_equal 1000.0, investment_segment["amount"]
     assert_includes investment_segment["transactions_url"], "q%5Bkinds%5D%5B%5D=investment_contribution"
+    assert_equal segments.sort_by { |segment| -segment.fetch("amount") }, segments
+    donut_total = segments.sum { |segment| segment.fetch("amount") }
+    segments.each do |segment|
+      expected_percentage = (segment.fetch("amount") / donut_total * 100).round(1)
+      assert_equal expected_percentage, segment.fetch("percentage")
+    end
 
     sankey = css_select("[data-controller='sankey-chart']").first
     sankey_data = JSON.parse(sankey["data-sankey-chart-data-value"])

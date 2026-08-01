@@ -14,6 +14,10 @@ class Settings::PreferencesController < ApplicationController
     user_params = params.permit(user: [ :preview_features_enabled ]).fetch(:user, {})
     family_params = params.permit(family: [ :treat_investment_contributions_as_transfers ]).fetch(:family, {})
 
+    if family_params.key?(:treat_investment_contributions_as_transfers) && !@user.admin?
+      raise ActiveRecord::RecordNotFound
+    end
+
     @user.transaction do
       @user.lock!
       updated_prefs = (@user.preferences || {}).deep_dup

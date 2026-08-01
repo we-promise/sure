@@ -37,23 +37,6 @@
   </div>
 <% end %>
 
-<%= settings_section do %>
-  <%= form_with url: settings_preferences_path, method: :patch,
-        data: { controller: "auto-submit-form" } do |f| %>
-    <label for="family_treat_investment_contributions_as_transfers" class="flex cursor-pointer items-center gap-4 justify-between">
-      <div class="text-sm space-y-1">
-        <p class="text-primary font-medium"><%= t(".investment_contributions.title") %></p>
-        <p class="text-secondary"><%= t(".investment_contributions.description") %></p>
-      </div>
-      <%= render DS::Toggle.new(
-            id: "family_treat_investment_contributions_as_transfers",
-            name: "family[treat_investment_contributions_as_transfers]",
-            checked: @user.family.treat_investment_contributions_as_transfers?,
-            data: { auto_submit_form_target: "auto" }
-      ) %>
-    </label>
-  <% end %>
-<% end %>
 <% if Current.user.admin? %>
   <%= settings_section title: t(".currencies_title", moniker: family_moniker), subtitle: t(".currencies_subtitle", moniker: family_moniker_downcase) do %>
     <% selected_count_translations = t(".selected_currencies_count") %>
@@ -199,6 +182,23 @@
         <% end %>
       <% end %>
     </div>
+  <% end %>
+  <%= settings_section title: t(".reporting_title", moniker: family_moniker), subtitle: t(".reporting_subtitle", moniker: family_moniker_downcase) do %>
+    <%= form_with url: settings_preferences_path, method: :patch,
+          data: { controller: "auto-submit-form" } do |f| %>
+      <label for="family_treat_investment_contributions_as_transfers" class="flex cursor-pointer items-center gap-4 justify-between">
+        <div class="text-sm space-y-1">
+          <p class="text-primary font-medium"><%= t(".investment_contributions.title") %></p>
+          <p class="text-secondary"><%= t(".investment_contributions.description") %></p>
+        </div>
+        <%= render DS::Toggle.new(
+              id: "family_treat_investment_contributions_as_transfers",
+              name: "family[treat_investment_contributions_as_transfers]",
+              checked: @user.family.treat_investment_contributions_as_transfers?,
+              data: { auto_submit_form_target: "auto" }
+        ) %>
+      </label>
+    <% end %>
   <% end %>
   <%= settings_section title: t(".sharing_title", moniker: family_moniker), subtitle: t(".sharing_subtitle", moniker: family_moniker_downcase) do %>
     <div>
