@@ -53,11 +53,12 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
 
   test "update toggles investment contributions as transfers" do
     user = users(:family_admin)
-    assert_not user.treat_investment_contributions_as_transfers?
+    assert_not user.family.treat_investment_contributions_as_transfers?
 
-    patch settings_preferences_url, params: { user: { treat_investment_contributions_as_transfers: "1" } }
+    patch settings_preferences_url, params: { family: { treat_investment_contributions_as_transfers: "1" } }
 
     assert_redirected_to settings_preferences_url
-    assert user.reload.treat_investment_contributions_as_transfers?
+    assert user.family.reload.treat_investment_contributions_as_transfers?
+    assert users(:family_member).family.reload.treat_investment_contributions_as_transfers?
   end
 end

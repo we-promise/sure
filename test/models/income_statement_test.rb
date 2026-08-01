@@ -433,7 +433,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 900, income_statement.avg_expense(interval: "month", category: @groceries_category)
   end
 
-  test "can treat matched investment contributions as transfers for a user" do
+  test "can treat matched investment contributions as transfers for a family" do
     investment_account = @family.accounts.create!(
       name: "Brokerage",
       currency: @family.currency,
@@ -452,7 +452,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     loan_inflow = create_transaction(account: @loan_account, amount: -500, kind: "funds_movement")
     Transfer.create!(outflow_transaction: loan_outflow.entryable, inflow_transaction: loan_inflow.entryable, status: "confirmed")
     user = users(:empty)
-    user.update!(preferences: (user.preferences || {}).merge("treat_investment_contributions_as_transfers" => true))
+    @family.update!(treat_investment_contributions_as_transfers: true)
 
     totals = IncomeStatement.new(@family, user: user).totals(date_range: Period.last_30_days.date_range)
 

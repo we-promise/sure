@@ -12,7 +12,7 @@ class BudgetCategoriesController < ApplicationController
     # a dedicated cash-flow expense.
     @recent_transactions = @budget.transactions.where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
     @recent_transactions = @recent_transactions.for_cash_flow_reporting(
-      include_investment_contributions: !@budget.current_user&.treat_investment_contributions_as_transfers?
+      include_investment_contributions: !@budget.family.treat_investment_contributions_as_transfers?
     )
 
     if params[:id] == BudgetCategory.uncategorized.id

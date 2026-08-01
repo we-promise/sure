@@ -628,7 +628,7 @@ class ReportsController < ApplicationController
 
     def apply_cash_flow_transfer_filter(scope)
       scope.for_cash_flow_reporting(
-        include_investment_contributions: !Current.user&.treat_investment_contributions_as_transfers?
+        include_investment_contributions: !Current.user&.family&.treat_investment_contributions_as_transfers?
       )
     end
 
