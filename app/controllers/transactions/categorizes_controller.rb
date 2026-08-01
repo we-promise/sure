@@ -6,17 +6,27 @@ class Transactions::CategorizesController < ApplicationController
       [ t("breadcrumbs.categorize"), nil ]
     ]
     @position = [ params[:position].to_i, 0 ].max
-    groups = Transaction::Grouper.strategy.call(
+    # The grouper materializes every group per request anyway (it groups in
+    # Ruby), so fetching them all costs the same as limit: 1 and gives the
+    # denominator the header needs.
+    all_groups = Transaction::Grouper.strategy.call(
       Current.accessible_entries,
-      limit: 1,
-      offset: @position
+      limit: 10_000
     )
 
-    if groups.empty?
+    if all_groups.empty?
+      # Only claim completion when it's true.
       redirect_to transactions_path, notice: t(".all_done") and return
     end
 
-    @group      = groups.first
+    if @position >= all_groups.size
+      # Ran off the end by skipping — wrap back to the first group instead of
+      # bouncing to /transactions with a false "all done".
+      redirect_to transactions_categorize_path and return
+    end
+
+    @group        = all_groups[@position]
+    @total_groups = all_groups.size
     @categories = Current.family.categories.alphabetically
     @total_uncategorized = uncategorized_count
   end

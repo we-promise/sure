@@ -1,20 +1,31 @@
 <%= turbo_frame_tag "categorize_entry_#{entry.id}" do %>
   <input type="hidden" name="all_entry_ids[]" value="<%= entry.id %>">
-  <div class="grid grid-cols-[1rem_1fr_5rem_6rem_6.5rem] gap-3 items-center px-5 py-3 bg-container hover:bg-container-hover">
+  <%# App entry-row idiom: name over date, signed amount right-aligned on the
+      name's line (ml-auto), per-row select dropping to its own line below sm. %>
+  <label class="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 px-4 py-2.5 bg-container hover:bg-container-hover cursor-pointer">
     <input type="checkbox" name="entry_ids[]" value="<%= entry.id %>"
            checked class="checkbox checkbox--light shrink-0"
            aria-label="<%= t("transactions.categorizes.entry_row.include_checkbox", name: entry.name) %>"
-           data-action="change->categorize#uncheckRule">
-    <span class="min-w-0 font-medium text-primary truncate"><%= entry.name %></span>
-    <span class="text-secondary whitespace-nowrap"><%= format_date(entry.date) %></span>
-    <span class="privacy-sensitive font-medium text-right whitespace-nowrap <%= entry.amount.negative? ? "text-green-600" : "text-primary" %>">
-      <%= format_money(entry.amount_money.abs) %>
+           data-action="change->categorize#entrySelectionChanged">
+
+    <div class="min-w-0 grow">
+      <p class="text-sm font-medium text-primary truncate"><%= entry.name %></p>
+      <p class="text-xs text-secondary"><%= format_date(entry.date) %></p>
+    </div>
+
+    <span class="privacy-sensitive ml-auto sm:ml-0 text-sm font-medium whitespace-nowrap shrink-0 <%= entry.amount.negative? ? "text-success" : "text-primary" %>">
+      <%= format_money(-entry.amount_money) %>
     </span>
-    <%= select_tag "category_id",
+
+    <%# Named `row_category_id`, not `category_id`: it posts out-of-band via
+        categorize#assignEntry, so sharing the bulk field's name meant one
+        duplicate value per row riding along on every bulk submit.
+        text-base below sm prevents the iOS focus-zoom (see DS::SearchInput). %>
+    <%= select_tag "row_category_id",
           options_for_select(Category::Group.select_options(categories)),
           prompt: t("transactions.categorizes.show.assign_category_prompt"),
           aria: { label: t("transactions.categorizes.entry_row.assign_category_select", name: entry.name) },
-          class: "w-full text-xs border border-primary rounded-lg px-1.5 py-0.5 bg-container text-secondary",
+          class: "order-last sm:order-none basis-full sm:basis-auto shrink-0 sm:w-32 text-base sm:text-xs pointer-coarse:min-h-11 border border-primary rounded-lg px-2 py-1.5 sm:py-1 bg-container text-secondary",
           data: { entry_id: entry.id, action: "change->categorize#assignEntry" } %>
-  </div>
+  </label>
 <% end %>

@@ -1,27 +1,23 @@
 <%# Wizard step: categorize one group of uncategorized transactions %>
-<div class="w-full space-y-6 pb-12"
+<div class="w-full space-y-6 pb-24"
      data-controller="categorize"
      data-categorize-assign-entry-url-value="<%= assign_entry_transactions_categorize_path %>"
      data-categorize-preview-rule-url-value="<%= preview_rule_transactions_categorize_path %>"
      data-categorize-position-value="<%= @position %>"
      data-categorize-transaction-type-value="<%= @group.transaction_type %>">
-  <%# Top bar: remaining count + skip %>
-  <div class="flex items-center justify-between">
-    <%= turbo_frame_tag "categorize_remaining" do %>
-      <span class="text-sm text-secondary">
-        <%= t(".remaining", count: @total_uncategorized) %>
-      </span>
-    <% end %>
-    <%= link_to transactions_categorize_path(position: @position + 1),
-          class: "flex items-center gap-1.5 text-sm font-medium text-secondary hover:text-primary" do %>
-      <%= t(".skip") %>
-      <%= icon("arrow-right", size: "sm") %>
-    <% end %>
-  </div>
 
-  <%# Group identity — above columns %>
-  <div>
-    <div class="flex items-center gap-3 mb-1">
+  <%# Group identity leads the page. The step controls live in the action bar
+      at the bottom, next to the primary action they belong with. %>
+  <div class="space-y-1">
+    <div class="flex items-center gap-2 flex-wrap">
+      <%= render partial: "transactions/categorizes/remaining_count",
+                 locals: { total_uncategorized: @total_uncategorized } %>
+      <span class="text-xs text-subdued">&middot;</span>
+      <p class="text-xs font-medium uppercase tracking-wide text-secondary">
+        <%= t(".group_progress", current: @position + 1, total: @total_groups) %>
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
       <%= render partial: "transactions/categorizes/group_title",
                  locals: { display_name: @group.display_name, color: @group.merchant&.color || "#737373", transaction_type: @group.transaction_type } %>
     </div>
@@ -39,107 +35,133 @@
     <%= form.hidden_field :position, value: @position %>
     <%= form.hidden_field :transaction_type, value: @group.transaction_type %>
 
-    <div class="grid grid-cols-[3fr_2fr] gap-4 items-start w-full">
-      <%# Left column (60%): rule creation + transaction list %>
-      <div class="space-y-4">
-        <%# Rule creation %>
+    <%# The chosen category. Pills set this; the action bar submits it. Only
+        one field named `category_id` exists in the form — the per-row selects
+        post out-of-band under their own name. %>
+    <input type="hidden" name="category_id" value="" data-categorize-target="selectedCategoryId">
+
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-4 items-start w-full">
+      <%# Category picker. First in source so mobile shows the primary input
+          before the confirmation list — the action bar says "pick a category",
+          so the categories must be on screen when it does. %>
+      <div class="min-w-0 order-first lg:order-none lg:col-start-2">
+        <div class="bg-container shadow-border-xs rounded-xl p-4 space-y-3">
+          <p class="text-sm font-medium text-secondary"><%= t(".assign_category") %></p>
+
+          <div data-controller="list-filter" class="space-y-3">
+            <%= render DS::SearchInput.new(
+                  placeholder: t(".filter_placeholder"),
+                  autofocus: true,
+                  data: {
+                    list_filter_target: "input",
+                    categorize_target: "filter",
+                    action: "input->list-filter#filter"
+                  }
+                ) %>
+
+            <div data-list-filter-target="list" data-categorize-target="list"
+                 class="flex flex-wrap gap-2 lg:max-h-[24rem] lg:overflow-y-auto scrollbar">
+              <p class="hidden text-sm text-secondary w-full py-2" data-list-filter-target="emptyMessage">
+                <%= t(".no_categories") %>
+              </p>
+              <% Category::Group.for(@categories).each do |group| %>
+                <% [ group.category, *group.subcategories ].each do |category| %>
+                  <%# The canonical category badge, wrapped in a stateful button.
+                      Selection renders as an inverse ring — the pills' tints all
+                      carry identity, so the selected state uses the one hue none
+                      of them can: the theme's inverse. %>
+                  <button type="button"
+                          value="<%= category.id %>"
+                          class="filterable-item flex items-center gap-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity focus-ring pointer-coarse:min-h-11 aria-pressed:ring-2 aria-pressed:ring-inverse aria-pressed:ring-offset-2 aria-pressed:ring-offset-container"
+                          aria-pressed="false"
+                          data-categorize-target="categoryPill"
+                          data-action="click->categorize#selectCategory"
+                          data-category-name="<%= category.display_name %>"
+                          data-filter-name="<%= category.display_name %>">
+                    <% if category.parent_id.present? %>
+                      <%= icon("corner-down-right", size: "sm") %>
+                    <% end %>
+                    <%= render partial: "categories/badge", locals: { category: category } %>
+                  </button>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <%# Rule creation + transaction list %>
+      <div class="space-y-4 min-w-0 lg:col-start-1 lg:row-start-1">
         <div class="bg-container shadow-border-xs rounded-xl p-4 space-y-3">
           <label class="flex items-center gap-2.5 cursor-pointer">
             <input type="checkbox" name="create_rule" value="1"
-                   <%= "checked" if @group.entries.size > 1 %>
+                   <%= "checked" if @group.entries.size > 1 && @group.merchant.nil? %>
                    class="checkbox checkbox--light"
                    data-categorize-target="createRuleCheckbox"
                    data-action="change->categorize#toggleRuleDetails">
             <span class="text-sm font-medium text-primary"><%= t(".create_rule_label") %></span>
           </label>
 
-          <div data-categorize-target="ruleDetails" class="<%= "opacity-40" unless @group.entries.size > 1 %>">
+          <%# A labelled field, not an editable phrase. Editing re-runs the
+              match and replaces the list below, so it reads as a control. %>
+          <div data-categorize-target="ruleDetails" class="<%= "opacity-50" unless @group.entries.size > 1 && @group.merchant.nil? %>">
             <input type="hidden" name="grouping_key"
                    value="<%= @group.grouping_key %>"
                    data-categorize-target="groupingKeyHidden">
 
-            <p class="text-sm text-secondary leading-relaxed">
+            <label for="categorize_rule_filter" class="block text-xs text-secondary mb-1">
               <%= t(".rule_description_prefix", type: t(".type_#{@group.transaction_type}").downcase) %>
-              <span class="inline-flex items-center gap-1 align-middle">
-                <span class="font-medium text-primary" data-categorize-target="filterDisplay">"<%= @group.grouping_key %>"</span>
-                <button type="button"
-                        class="text-secondary hover:text-primary transition-colors"
-                        data-action="click->categorize#startFilterEdit"
-                        data-categorize-target="filterEditTrigger">
-                  <%= icon("pencil", size: "sm") %>
-                </button>
-                <span class="hidden items-center gap-1" data-categorize-target="filterEditArea">
-                  <input type="text" value="<%= @group.grouping_key %>"
-                         autocomplete="off"
-                         class="text-sm border border-primary rounded-lg px-2 py-0.5 bg-container focus:outline-none focus:ring-1 focus:ring-offset-0 w-36 shadow-md"
-                         data-categorize-target="filterInput"
-                         data-action="keydown.enter->categorize#confirmFilterEdit keydown.escape->categorize#cancelFilterEdit">
-                  <button type="button"
-                          class="flex items-center justify-center w-6 h-6 rounded-md button-bg-primary text-inverse hover:opacity-80 transition-opacity shrink-0"
-                          data-action="click->categorize#confirmFilterEdit">
-                    <%= icon("check", size: "sm") %>
-                  </button>
-                </span>
-              </span>
-              <%= t(".rule_description_suffix") %>
-            </p>
+            </label>
+            <input type="text" id="categorize_rule_filter"
+                   value="<%= @group.grouping_key %>"
+                   autocomplete="off"
+                   class="form-field__input border border-secondary rounded-lg px-3 py-2 text-base sm:text-sm"
+                   data-categorize-target="filterInput"
+                   data-action="input->categorize#previewRule keydown.enter->categorize#confirmFilterEdit">
+            <p class="text-xs text-secondary mt-2"><%= t(".rule_description_suffix") %></p>
           </div>
         </div>
 
-        <%# Transaction list %>
-        <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-3">
-          <p class="text-xs text-secondary"><%= t(".transactions_hint") %></p>
+        <%# Transaction list — the inset-well idiom, uppercase header inside
+            the well (entries/_entry_group), no wrapping card. %>
+        <div class="bg-container-inset rounded-xl p-1 space-y-1">
+          <div class="px-4 py-2 text-xs font-medium uppercase tracking-wide text-secondary">
+            <%= t(".transactions_header") %>
+          </div>
           <%= render partial: "transactions/categorizes/transaction_list",
                      locals: { entries: @group.entries, categories: @categories } %>
         </div>
       </div>
-
-      <%# Right column (40%): category picker %>
-      <div>
-        <div class="bg-container shadow-border-xs rounded-xl p-4 space-y-3">
-          <p class="text-sm font-medium text-secondary"><%= t(".assign_category") %></p>
-
-          <div data-controller="list-filter" class="space-y-3">
-            <%# Search field %>
-            <div class="relative flex items-center bg-container border border-primary rounded-lg">
-              <%= icon("search", class: "absolute left-3 text-secondary") %>
-              <input type="text"
-                     placeholder="<%= t(".filter_placeholder") %>"
-                     autocomplete="off"
-                     autofocus
-                     class="w-full pl-9 pr-3 py-2 text-sm bg-transparent border-none rounded-lg focus:outline-none focus:ring-0 placeholder:text-secondary"
-                     data-list-filter-target="input"
-                     data-categorize-target="filter"
-                     data-action="input->list-filter#filter">
-            </div>
-
-            <%# Category pills — submit the form directly %>
-            <div data-list-filter-target="list" data-categorize-target="list"
-                 data-action="click->categorize#clearFilter"
-                 class="flex flex-wrap gap-2">
-              <p class="hidden text-sm text-secondary w-full py-2" data-list-filter-target="emptyMessage">
-                <%= t(".no_categories") %>
-              </p>
-              <% @categories.each do |category| %>
-                <button type="submit"
-                        name="category_id"
-                        value="<%= category.id %>"
-                        class="filterable-item flex items-center gap-1 text-sm font-medium rounded-full px-2.5 py-1 border cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-1"
-                        style="background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
-                               border-color: color-mix(in oklab, <%= category.color %> 20%, transparent);
-                               color: <%= category.color %>;"
-                        data-filter-name="<%= category.display_name %>">
-                  <% if category.lucide_icon.present? %>
-                    <%= icon(category.lucide_icon, size: "sm", color: "current") %>
-                  <% end %>
-                  <%= category.display_name %>
-                </button>
-              <% end %>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
+    <%# Action bar — the app's floating bulk-bar idiom (_selection_bar):
+        fixed above the mobile tab bar, centered pill on desktop. Skip is a
+        step control, so it lives beside the primary action. %>
+    <div class="fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 rounded-xl bg-surface-inset border-secondary shadow-border-xs px-3 py-2 md:w-[560px] w-[92%]">
+      <%= render DS::Link.new(
+            text: t(".skip"),
+            href: transactions_categorize_path(position: @position + 1),
+            variant: "ghost",
+            icon: "arrow-right",
+            icon_position: :right
+          ) %>
+
+      <div class="flex items-center gap-3 min-w-0">
+        <p class="text-xs text-secondary truncate"
+           data-categorize-target="selectionSummary"
+           data-rule-notice="<%= t(".rule_will_apply") %>"></p>
+        <button type="submit"
+                disabled
+                class="font-medium whitespace-nowrap focus-ring inline-flex items-center gap-1 rounded-lg justify-center px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400 disabled:cursor-not-allowed max-w-72"
+                data-categorize-target="applyButton">
+          <%= icon("check", size: "sm", color: "white") %>
+          <span class="min-w-0 truncate"
+                data-categorize-target="applyLabel"
+                data-default="<%= t(".apply_default") %>"
+                data-template-one="<%= t(".apply_one", category: "%{category}") %>"
+                data-template-other="<%= t(".apply_other", category: "%{category}", count: "%{count}") %>"><%= t(".apply_default") %></span>
+        </button>
+      </div>
+    </div>
   <% end %>
 </div>

@@ -199,7 +199,7 @@ en:
           other: "%{count} transactions"
         transactions_hint: "Uncheck to exclude a transaction, or assign it a different category directly in its row."
         assign_category: "Assign a category"
-        assign_category_prompt: "→ assign"
+        assign_category_prompt: "Assign…"
         filter_placeholder: "Search categories..."
         col_transaction: "Transaction"
         col_date: "Date"
@@ -212,6 +212,12 @@ en:
         rule_description_suffix: "should also get this category."
         no_categories: "No matching categories"
         all_done: "All transactions are categorized"
+        apply_default: "Pick a category"
+        apply_one: "Apply %{category} to 1 transaction"
+        apply_other: "Apply %{category} to %{count} transactions"
+        rule_will_apply: "A rule will be created too."
+        group_progress: "Group %{current} of %{total}"
+        transactions_header: "Transactions"
       create:
         categorized:
           one: "1 transaction categorized"

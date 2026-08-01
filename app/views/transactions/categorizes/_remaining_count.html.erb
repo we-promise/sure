@@ -1,5 +1,7 @@
+<%# Single source for the header count — the initial render and every Turbo
+    stream replacement go through this partial so the typography can't fork. %>
 <%= turbo_frame_tag "categorize_remaining" do %>
-  <span class="text-sm text-secondary">
+  <p class="text-xs font-medium uppercase tracking-wide text-secondary">
     <%= t("transactions.categorizes.show.remaining", count: total_uncategorized) %>
-  </span>
+  </p>
 <% end %>
