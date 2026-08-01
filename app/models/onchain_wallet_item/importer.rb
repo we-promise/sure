@@ -463,8 +463,10 @@ class OnchainWalletItem::Importer
     end
 
     def bitcoin_transaction_amount(tx, address)
-      incoming = Array(tx["vout"]).sum { |out| out["scriptpubkey_address"].to_s == address ? out["value"].to_d : 0.to_d }
-      outgoing = Array(tx["vin"]).sum { |input| input.dig("prevout", "scriptpubkey_address").to_s == address ? input.dig("prevout", "value").to_d : 0.to_d }
+      # Bech32 is case-insensitive; mempool.space returns lowercase scriptpubkey_address.
+      normalized = address.to_s.downcase
+      incoming = Array(tx["vout"]).sum { |out| out["scriptpubkey_address"].to_s.downcase == normalized ? out["value"].to_d : 0.to_d }
+      outgoing = Array(tx["vin"]).sum { |input| input.dig("prevout", "scriptpubkey_address").to_s.downcase == normalized ? input.dig("prevout", "value").to_d : 0.to_d }
       (incoming - outgoing) / SATS_PER_BTC
     end
 

@@ -44,6 +44,20 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "bitcoin_transaction_amount matches uppercase bech32 against lowercase mempool addresses" do
+    lowercase = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080"
+    uppercase = lowercase.upcase
+    tx = {
+      "vout" => [ { "scriptpubkey_address" => lowercase, "value" => 200_000_000 } ],
+      "vin" => [ { "prevout" => { "scriptpubkey_address" => lowercase, "value" => 50_000_000 } } ]
+    }
+
+    importer = OnchainWalletItem::Importer.new(@item)
+    amount = importer.send(:bitcoin_transaction_amount, tx, uppercase)
+
+    assert_equal 1.5, amount
+  end
+
   test "import_wallet! with bitcoin raises when no balance or transactions found" do
     address = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080"
     address_payload = {
