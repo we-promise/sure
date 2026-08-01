@@ -21,6 +21,7 @@ en:
         general: General Settings
         ai_assistant: AI Assistant
         financial_data_providers: Financial Data Providers
+        property_valuation_providers: Property Valuation Providers
         sync_settings: Sync Settings
         invites: Invite Codes
         title: Self-Hosting
@@ -152,6 +153,20 @@ en:
         unavailable_title: Could not verify Yahoo Finance.
         unavailable_message: Yahoo Finance could not be reached or returned an unexpected response. Check your internet connection and try again later.
         status_unknown: Yahoo Finance status is being checked.
+      rentcast_settings:
+        title: RentCast
+        description: Enter your RentCast API key to look up US property details and value estimates when adding a property. The free tier is limited to 50 API requests per month, shared between property lookups and daily valuation refreshes. On a paid plan, raise the cap with the RENTCAST_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the RENTCAST_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your RentCast API key here
+        usage: "%{used} of %{limit} monthly requests used"
+      realie_settings:
+        title: Realie
+        description: Enter your Realie API key to look up US property details and value estimates when adding a property. The free tier is limited to 25 API requests per month, shared between property lookups and daily valuation refreshes. On a paid plan, raise the cap with the REALIE_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the REALIE_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your Realie API key here
+        usage: "%{used} of %{limit} monthly requests used"
       tiingo_settings:
         title: Tiingo
         description: Enter the API token provided by Tiingo. Free tier supports 50 unique symbols per hour with 30+ years of historical data.

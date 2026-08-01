@@ -208,7 +208,7 @@ class Budget < ApplicationRecord
     # Continuous gray segment for empty budgets
     return [ { color: "var(--budget-unallocated-fill)", amount: 1, id: unused_segment_id } ] unless allocations_valid?
 
-    segments = budget_categories.reject(&:subcategory?).map do |bc|
+    segments = donut_budget_categories.map do |bc|
       { color: bc.category.color, amount: budget_category_actual_spending(bc), id: bc.id }
     end
 
@@ -217,6 +217,17 @@ class Budget < ApplicationRecord
     end
 
     segments
+  end
+
+  def donut_budget_categories
+    categories = budget_categories.reject(&:subcategory?).to_a
+    uncategorized = uncategorized_budget_category
+
+    if budget_category_actual_spending(uncategorized).positive?
+      categories << uncategorized
+    end
+
+    categories
   end
 
   # =============================================================================
