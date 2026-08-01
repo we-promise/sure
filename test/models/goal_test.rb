@@ -454,4 +454,29 @@ class GoalTest < ActiveSupport::TestCase
     # net contributed = 10,000 − 2,000 = 8,000; earmark 1,000 ≤ 8,000 → 1,000.
     assert_equal BigDecimal("1000"), goal.current_balance.to_d
   end
+
+  test "behind_pace? excludes paused goals even when their raw status is behind" do
+    goal = goals(:vacation_italy)
+    goal.stubs(:status).returns(:behind)
+
+    assert goal.behind_pace?
+
+    goal.update!(state: "paused")
+
+    assert goal.paused?
+    assert_not goal.behind_pace?
+  end
+
+  test "summary_for counts behind goals via behind_pace? and sums one currency" do
+    behind = goals(:vacation_italy)
+    behind.stubs(:status).returns(:behind)
+    paused_behind = goals(:emergency_fund)
+    paused_behind.update!(state: "paused")
+    paused_behind.stubs(:status).returns(:behind)
+
+    summary = Goal.summary_for([ behind, paused_behind ], currency: "USD")
+
+    assert_equal 1, summary[:behind_count]
+    assert_kind_of Money, summary[:saved_money]
+  end
 end
