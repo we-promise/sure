@@ -475,6 +475,39 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Wallet disconnected.", flash[:notice]
   end
 
+  test "auto-detect skips timed-out EVM chains and continues in CHAINS order" do
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+    controller = OnchainWalletItemsController.new
+
+    ethereum = mock("blockscout_ethereum")
+    ethereum.stubs(:has_activity?).raises(Net::ReadTimeout)
+
+    polygon = mock("blockscout_polygon")
+    polygon.stubs(:has_activity?).returns(true)
+
+    inactive = mock("blockscout_inactive")
+    inactive.stubs(:has_activity?).returns(false)
+
+    Provider::Blockscout.stubs(:new).with(chain: "ethereum").returns(ethereum)
+    Provider::Blockscout.stubs(:new).with(chain: "polygon").returns(polygon)
+    OnchainWalletAccount::EVM_CHAINS.each do |chain|
+      next if chain.in?(%w[ethereum polygon])
+
+      Provider::Blockscout.stubs(:new).with(chain: chain).returns(inactive)
+    end
+
+    assert_equal "polygon", controller.send(:resolve_auto_chain, address)
+  end
+
+  test "auto-detect falls back to ethereum when every EVM probe times out" do
+    address = "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+    controller = OnchainWalletItemsController.new
+
+    Provider::Blockscout.any_instance.stubs(:has_activity?).raises(Net::OpenTimeout)
+
+    assert_equal "ethereum", controller.send(:resolve_auto_chain, address)
+  end
+
   private
     def erc20_transfer(address:, contract:, symbol:, name:, decimals:, value:)
       {

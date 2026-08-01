@@ -3,6 +3,10 @@
 class OnchainWalletItemsController < ApplicationController
   include StreamExtensions
 
+  # Cap each Blockscout probe during EVM auto-detect so one unavailable chain
+  # cannot stall wallet linking for the full HTTParty timeout.
+  EVM_AUTO_DETECT_TIMEOUT = 3
+
   before_action :require_admin!
   before_action :set_onchain_wallet_item, only: %i[update destroy manage sync destroy_wallet destroy_account edit_wallet update_wallet]
 
@@ -240,8 +244,19 @@ class OnchainWalletItemsController < ApplicationController
       when :bittensor then "bittensor"
       when :solana  then "solana"
       when :evm
-        OnchainWalletAccount::EVM_CHAINS.find { |c| Provider::Blockscout.new(chain: c).has_activity?(address) } || "ethereum"
+        OnchainWalletAccount::EVM_CHAINS.find { |chain| evm_chain_has_activity?(chain, address) } || "ethereum"
       end
+    end
+
+    # Runs each chain's activity check independently. Timeouts and transport
+    # errors count as "no activity" so detection continues in CHAINS order.
+    def evm_chain_has_activity?(chain, address)
+      Timeout.timeout(EVM_AUTO_DETECT_TIMEOUT) do
+        Provider::Blockscout.new(chain: chain).has_activity?(address)
+      end
+    rescue Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, SocketError,
+           Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Errno::ETIMEDOUT
+      false
     end
 
     def validate_wallet_address!(item, chain, address)
