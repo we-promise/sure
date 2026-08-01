@@ -14,6 +14,25 @@ class OnchainWalletItemTest < ActiveSupport::TestCase
     assert_equal "good", item.status
   end
 
+  test "onchain_wallet_item! reuses the active item and sets institution defaults" do
+    item = @family.onchain_wallet_item!
+
+    assert_equal "On-chain Wallets", item.name
+    assert_equal "On-chain Wallets", item.institution_name
+    assert_equal item, @family.onchain_wallet_item!
+  end
+
+  test "onchain_wallet_item! retries when create races on the active unique index" do
+    existing = OnchainWalletItem.create!(family: @family, name: "On-chain Wallets")
+    relation = @family.onchain_wallet_items.active
+    relation.stubs(:first_or_create!).raises(ActiveRecord::RecordNotUnique)
+
+    item = @family.onchain_wallet_item!
+
+    assert_equal existing, item
+    assert_equal "On-chain Wallets", item.institution_name
+  end
+
   test "strips etherscan api key whitespace" do
     item = OnchainWalletItem.create!(family: @family, name: "Wallets", etherscan_api_key: " key \n")
 

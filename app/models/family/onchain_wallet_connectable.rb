@@ -12,7 +12,11 @@ module Family::OnchainWalletConnectable
   end
 
   def onchain_wallet_item!
-    onchain_wallet_items.active.first_or_create!(name: "On-chain Wallets").tap do |item|
+    begin
+      onchain_wallet_items.active.first_or_create!(name: "On-chain Wallets")
+    rescue ActiveRecord::RecordNotUnique
+      onchain_wallet_items.active.first!
+    end.tap do |item|
       item.set_onchain_institution_defaults! if item.institution_name.blank?
     end
   end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_01_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1521,6 +1521,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_onchain_wallet_items_on_family_id"
+    t.index ["family_id"], name: "index_onchain_wallet_items_on_family_id_active", unique: true, where: "(scheduled_for_deletion = false)"
     t.index ["status"], name: "index_onchain_wallet_items_on_status"
   end
 
