@@ -1,10 +1,6 @@
 require "test_helper"
 
 class Assistant::Function::GetAccountStatementTest < ActiveSupport::TestCase
-  include ActiveSupport::Testing::TimeHelpers
-
-  DOWNLOAD_TTL_OVERSHOOT = Assistant::Function::GetAccountStatement::DOWNLOAD_URL_TTL + 1.minute
-
   setup do
     @user = users(:family_admin)
     @account = accounts(:depository)
@@ -69,24 +65,6 @@ class Assistant::Function::GetAccountStatementTest < ActiveSupport::TestCase
     assert_nil result[:statement][:reconciliation_note]
   end
 
-  test "download url carries an expiring signed id" do
-    statement = create_statement(account: @account)
-
-    Rails.application.config.action_mailer.stubs(:default_url_options).returns({ host: "example.com" })
-    url = @function.call("statement_id" => statement.id).dig(:statement, :download_url)
-
-    assert_not_nil url, "expected a download URL when a host is configured"
-    signed_id = url[%r{/blobs/redirect/([^/]+)/}, 1]
-    assert_not_nil signed_id, "expected a signed id in #{url}"
-
-    assert_equal statement.original_file.blob,
-                 ActiveStorage::Blob.find_signed(signed_id)
-
-    travel DOWNLOAD_TTL_OVERSHOOT do
-      assert_nil ActiveStorage::Blob.find_signed(signed_id),
-                 "signed id must expire — the tool description promises 15 minutes"
-    end
-  end
 
   test "returns not_found for an unknown id" do
     result = @function.call("statement_id" => SecureRandom.uuid)

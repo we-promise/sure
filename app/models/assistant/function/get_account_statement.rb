@@ -3,8 +3,6 @@
 class Assistant::Function::GetAccountStatement < Assistant::Function
   include Assistant::Function::StatementVaultSupport
 
-  DOWNLOAD_URL_TTL = 15.minutes
-
   class << self
     def name
       "get_account_statement"
@@ -37,8 +35,11 @@ class Assistant::Function::GetAccountStatement < Assistant::Function
         here verifies that the document's own line items sum to its printed total.
         That parse-integrity check belongs to whatever extracted the figures.
 
-        Also returns a short-lived download URL (valid #{DOWNLOAD_URL_TTL.inspect})
-        for the original file when one is attached.
+        This does NOT return the document's bytes and cannot give you a link that
+        works for you: Sure serves stored files only to a signed-in browser
+        session, which an MCP client does not have. To read a document, either
+        search its contents with `search_family_files`, or point the user at
+        Settings -> Statement Vault to open it themselves.
 
         Example:
 
@@ -84,8 +85,7 @@ class Assistant::Function::GetAccountStatement < Assistant::Function
         reconciliation_checks: checks,
         # Spelled out in the payload, not just the tool description: an agent
         # reading only the JSON must not read an empty check list as agreement.
-        reconciliation_note: unavailable_note(status),
-        download_url: download_url(statement)
+        reconciliation_note: unavailable_note(status)
       ).compact
     }
   end
@@ -110,21 +110,5 @@ class Assistant::Function::GetAccountStatement < Assistant::Function
           status: check[:status]
         }
       end
-    end
-
-    # Chat and MCP clients render outside the request that produced the record, so
-    # the URL has to be absolute. Falls back to nil when no host is configured
-    # (e.g. a self-hosted worker with no APP_DOMAIN) rather than handing back a
-    # relative path an external agent cannot resolve.
-    def download_url(statement)
-      return nil unless statement.original_file.attached?
-
-      host_opts = Rails.application.config.action_mailer.default_url_options || {}
-      return nil if host_opts[:host].blank?
-
-      Rails.application.routes.url_helpers.rails_blob_url(
-        statement.original_file,
-        host_opts.merge(disposition: "attachment", expires_in: DOWNLOAD_URL_TTL)
-      )
     end
 end

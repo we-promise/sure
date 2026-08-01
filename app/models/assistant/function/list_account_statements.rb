@@ -82,7 +82,16 @@ class Assistant::Function::ListAccountStatements < Assistant::Function
   def call(params = {})
     return not_a_statement_manager unless statement_manager?
 
-    scope = family.account_statements.includes(:account, :suggested_account).ordered
+    # Visibility is filtered in SQL, not after the fact. Post-filtering a page
+    # would both underfill it and — because there is no cursor — make a statement
+    # permanently unreachable whenever enough newer rows the caller cannot see sit
+    # in front of it. Mirrors AccountStatement#viewable_by? for a statement
+    # manager: unlinked statements are visible, linked ones follow the account.
+    scope = family.account_statements
+      .where(account_id: nil)
+      .or(family.account_statements.where(account_id: user.accessible_accounts.select(:id)))
+      .includes(:account, :suggested_account)
+      .ordered
 
     if params["account_id"].present?
       return error("invalid_account_id", "account_id must be a UUID.") unless valid_uuid?(params["account_id"])
@@ -122,12 +131,11 @@ class Assistant::Function::ListAccountStatements < Assistant::Function
     end
 
     limit = (params["limit"] || DEFAULT_LIMIT).to_i.clamp(1, MAX_LIMIT)
-    # A statement with no account is visible to any statement manager; a linked
-    # one follows the account's sharing rules, so filter after the query. Counting
-    # before that filter would report statements this user may not know exist, so
-    # the page is over-fetched by one and reported as has_more instead.
+    # Over-fetch by one to report has_more without a second count query. The rows
+    # are already visibility-scoped, so the page is never underfilled and the
+    # count discloses nothing the caller cannot see.
     rows = scope.limit(limit + 1).to_a
-    statements = rows.first(limit).select { |statement| statement.viewable_by?(user) }
+    statements = rows.first(limit)
 
     {
       success: true,

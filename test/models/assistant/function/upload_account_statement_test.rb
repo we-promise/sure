@@ -88,6 +88,41 @@ class Assistant::Function::UploadAccountStatementTest < ActiveSupport::TestCase
     assert_equal "invalid_content", result[:error]
   end
 
+  test "accepts base64 wrapped across lines" do
+    wrapped = Base64.strict_encode64(@content).scan(/.{1,8}/).join("\n")
+
+    result = @function.call("filename" => "statement.csv", "content_base64" => wrapped)
+
+    assert result[:success]
+    assert_equal Digest::SHA256.hexdigest(@content), result[:statement][:content_sha256]
+  end
+
+  test "accepts urlsafe base64 without padding" do
+    encoded = Base64.urlsafe_encode64(@content, padding: false)
+
+    result = @function.call("filename" => "statement.csv", "content_base64" => encoded)
+
+    assert result[:success]
+    assert_equal Digest::SHA256.hexdigest(@content), result[:statement][:content_sha256]
+  end
+
+  test "rejects content that decodes to zero bytes" do
+    result = @function.call("filename" => "statement.csv", "content_base64" => Base64.strict_encode64(""))
+
+    assert_not result[:success]
+    assert_equal "invalid_content", result[:error]
+  end
+
+  test "reports an unexpected storage failure as a tool error" do
+    AccountStatement.stubs(:create_from_prepared_upload!).raises(StandardError, "storage exploded")
+
+    result = @function.call(params(filename: "statement.csv"))
+
+    assert_not result[:success]
+    assert_equal "upload_failed", result[:error]
+    assert_match(/storage exploded/, result[:message])
+  end
+
   test "rejects an unknown account_id rather than silently uploading unlinked" do
     result = @function.call(params(filename: "statement.csv", account_id: SecureRandom.uuid))
 

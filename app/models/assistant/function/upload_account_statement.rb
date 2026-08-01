@@ -22,7 +22,8 @@ class Assistant::Function::UploadAccountStatement < Assistant::Function
         link the statement to that account — linking is a human decision made in
         Settings -> Statement Vault. Report the suggestion; don't claim the link.
 
-        Provide the file as base64 in `content_base64`. Maximum size is 25 MB.
+        Provide the file as base64 in `content_base64`. Maximum size is
+        #{AccountStatement::MAX_FILE_SIZE / 1.megabyte} MB.
 
         Example:
 
@@ -115,6 +116,12 @@ class Assistant::Function::UploadAccountStatement < Assistant::Function
     )
   rescue ActiveRecord::RecordInvalid => e
     error("validation_failed", e.record.errors.full_messages.join("; "))
+  rescue => e
+    # The shared upload path can raise from content sniffing, storage or a
+    # validation hook. Those would otherwise surface to the agent as a raw
+    # exception string; give it something it can act on instead.
+    Rails.logger.error("[UploadAccountStatement] #{e.class}: #{e.message}")
+    error("upload_failed", "The statement could not be stored: #{e.message.truncate(200)}")
   end
 
   private

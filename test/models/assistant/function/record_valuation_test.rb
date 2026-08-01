@@ -80,6 +80,20 @@ class Assistant::Function::RecordValuationTest < ActiveSupport::TestCase
     assert_equal "invalid_source_citation", result[:error]
   end
 
+  test "reports a failed reconciliation and creates no entry" do
+    failure = OpenStruct.new(success?: false, error_message: "Balance is invalid")
+    Account.any_instance.stubs(:create_reconciliation).returns(failure)
+
+    result = nil
+    assert_no_difference "@account.entries.valuations.count" do
+      result = @function.call(params)
+    end
+
+    assert_not result[:success]
+    assert_equal "valuation_failed", result[:error]
+    assert_equal "Balance is invalid", result[:message]
+  end
+
   test "rejects an unparseable date" do
     result = @function.call(params(date: "June 30th"))
 

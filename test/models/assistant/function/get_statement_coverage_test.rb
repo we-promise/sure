@@ -32,6 +32,25 @@ class Assistant::Function::GetStatementCoverageTest < ActiveSupport::TestCase
     assert_equal "missing", february[:status]
   end
 
+  # "covered" means a document exists, not that it agrees with the ledger — an
+  # unreconciled statement still counts as covered, so the month has to carry its
+  # own reconciliation status or the agent cannot tell the two apart.
+  test "a covered month reports unavailable reconciliation when no balances are entered" do
+    january = Date.current.prev_year.beginning_of_year
+    statement = AccountStatement.create_from_upload!(
+      family: @user.family,
+      account: @account,
+      file: uploaded_file(filename: "unreconciled.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    statement.update!(period_start_on: january, period_end_on: january.end_of_month)
+
+    result = @function.call("account_id" => @account.id, "year" => january.year)
+    covered = result[:months].find { |m| m[:month] == january.strftime("%Y-%m") }
+
+    assert_equal "covered", covered[:status]
+    assert_equal "unavailable", covered[:reconciliation_status]
+  end
+
   test "rejects a non-uuid account id" do
     result = @function.call("account_id" => "nope")
 

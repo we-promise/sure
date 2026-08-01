@@ -15,12 +15,21 @@ class Assistant::Function::GetStatementCoverage < Assistant::Function
 
         Each month comes back with one status:
 
-        - `covered` — a linked statement covers the month and reconciles
+        - `covered` — a linked statement covers the month. This means a DOCUMENT
+          EXISTS, not that it agrees with the ledger: most statements have no
+          balances entered, so there is nothing to reconcile and they still count
+          as covered. Check `reconciliation_status` on the month before saying a
+          month is verified.
         - `mismatched` — a statement covers it, but its balances disagree with the ledger
         - `missing` — no statement on record; the month's figures have no document behind them
         - `ambiguous` — a statement was suggested for this account but nobody has confirmed the link
         - `duplicate` — two or more linked statements overlap the same month
         - `not_expected` — outside the account's expected statement range
+
+        Each covered month also carries `reconciliation_status`: `matched` when
+        every statement in it reconciles against the ledger, `mismatched` when one
+        disagrees, and `unavailable` when nobody has entered the balances — which
+        is the common case.
 
         Use it before asserting anything about a period: "no statement on record"
         is a legitimate and necessary answer, and is very different from "the
@@ -87,8 +96,22 @@ class Assistant::Function::GetStatementCoverage < Assistant::Function
       {
         month: month.date.strftime("%Y-%m"),
         status: month.status,
+        # A month is "covered" on document presence alone — an unreconciled
+        # statement is not mismatched, so it lands in `covered`. Without this
+        # field an agent cannot tell "the ledger agrees" from "nobody checked".
+        reconciliation_status: reconciliation_status_for(month),
         statement_ids: month.statements.map(&:id),
         unconfirmed_statement_ids: month.ambiguous_statements.map(&:id)
       }.compact_blank
+    end
+
+    def reconciliation_status_for(month)
+      return nil if month.statements.empty?
+
+      statuses = month.statements.map(&:reconciliation_status).uniq
+      return "mismatched" if statuses.include?("mismatched")
+      return "unavailable" if statuses.include?("unavailable")
+
+      "matched"
     end
 end
