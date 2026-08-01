@@ -97,7 +97,7 @@ class OnchainWalletItemsController < ApplicationController
     render_error_response(e.message)
   rescue StandardError => e
     Rails.logger.error("On-chain wallet link failed: #{e.class} - #{e.message}")
-    render_error_response(t(".link_failed", message: e.message))
+    render_error_response(t(".link_failed"))
   end
 
   def edit_wallet
@@ -197,7 +197,7 @@ class OnchainWalletItemsController < ApplicationController
     render_edit_error(chain, old_address, new_address, e.message)
   rescue StandardError => e
     Rails.logger.error("On-chain wallet update failed: #{e.class} - #{e.message}")
-    render_edit_error(chain, old_address, new_address, t(".update_failed", message: e.message))
+    render_edit_error(chain, old_address, new_address, t(".update_failed"))
   end
 
   def destroy_account

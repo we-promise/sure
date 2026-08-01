@@ -14,7 +14,7 @@ en:
       address_required: Wallet address is required.
       chain_undetected: Could not detect the blockchain from this address.
       unsupported_chain: Choose a supported blockchain.
-      link_failed: "Could not link wallet. %{message}"
+      link_failed: Could not link wallet. Please try again.
     edit_wallet:
       not_found: Wallet address not found.
     update_wallet:
@@ -23,7 +23,7 @@ en:
       same_address: New address is the same as the current address.
       not_found: Wallet address not found.
       already_linked: That address is already linked to this provider.
-      update_failed: "Could not update wallet. %{message}"
+      update_failed: Could not update wallet. Please try again.
     destroy_account:
       success: Wallet asset disconnected.
     destroy_wallet:
