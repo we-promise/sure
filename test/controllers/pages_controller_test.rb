@@ -62,12 +62,12 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     )
 
     income_statement.expects(:build_period_total)
-      .with(classification: "expense", period: kind_of(Period))
+      .with(classification: "expense", period: kind_of(Period), for_budget: false)
       .once
       .returns(fake_expense_period_total)
 
     income_statement.expects(:build_period_total)
-      .with(classification: "income", period: kind_of(Period))
+      .with(classification: "income", period: kind_of(Period), for_budget: false)
       .once
       .returns(fake_income_period_total)
 
