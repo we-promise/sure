@@ -414,7 +414,7 @@ GEM
     minitest (5.27.0)
     mocha (2.7.1)
       ruby2_keywords (>= 0.0.5)
-    msgpack (1.8.0)
+    msgpack (1.8.2)
     multi_json (1.20.1)
     multi_xml (0.9.1)
       bigdecimal (>= 3.1, < 5)
