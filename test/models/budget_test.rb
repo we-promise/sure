@@ -508,7 +508,7 @@ class BudgetTest < ActiveSupport::TestCase
     assert spending >= 75, "Uncategorized actual spending should include the $75 transaction, got #{spending}"
   end
 
-test "sync_budget_categories resets loaded association to prevent category N+1" do
+  test "sync_budget_categories resets loaded association to prevent category N+1" do
     budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
 
     # Force-load the association, then create a category to trigger sync updates.
@@ -520,12 +520,16 @@ test "sync_budget_categories resets loaded association to prevent category N+1" 
     assert_not budget.association(:budget_categories).loaded?
   end
 
-  test "uncategorized_budget_category is associated to budget" do
+  test "uncategorized_budget_category is associated to budget without polluting association" do
     budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
     budget.update!(budgeted_spending: 100, currency: @family.currency)
+    budget.budget_categories.load
+    count_before = budget.budget_categories.size
 
     uncategorized = budget.uncategorized_budget_category
-    assert_equal budget, uncategorized.budget
+    assert_same budget, uncategorized.budget
+    assert_equal count_before, budget.budget_categories.size
+    refute_includes budget.budget_categories, uncategorized
   end
 
   test "allocated_spending treats nil budgeted_spending as zero" do

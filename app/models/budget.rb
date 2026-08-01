@@ -115,7 +115,9 @@ class Budget < ApplicationRecord
 
   def uncategorized_budget_category
     budget_categories.uncategorized.tap do |bc|
-      bc.budget = self
+      # Prefer same Budget instance for N+1 avoidance, without inverse_of appending
+      # this synthetic row into the in-memory budget_categories collection.
+      assign_budget_without_inverse!(bc)
       bc.budgeted_spending = [ available_to_allocate, 0 ].max
       bc.currency = family.currency
     end
@@ -247,7 +249,9 @@ class Budget < ApplicationRecord
   end
 
   def donut_budget_categories
-    categories = budget_categories.reject(&:subcategory?).to_a
+    # Only persisted rows — the synthetic uncategorized category is appended below
+    # when it has spending, and must not leak in via a loaded association target.
+    categories = budget_categories.select(&:persisted?).reject(&:subcategory?).to_a
     uncategorized = uncategorized_budget_category
 
     if budget_category_actual_spending(uncategorized).positive?
@@ -348,6 +352,13 @@ class Budget < ApplicationRecord
   end
 
   private
+    def assign_budget_without_inverse!(budget_category)
+      budget_category.budget_id = id
+      budget_association = budget_category.association(:budget)
+      budget_association.target = self
+      budget_association.loaded!
+    end
+
     def budget_categories_by_parent_category_id
       @budget_categories_by_parent_category_id ||= begin
         if association(:budget_categories).loaded?
