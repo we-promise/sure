@@ -17,6 +17,7 @@ class CreateOnchainWalletItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.jsonb :raw_payload
 
       t.text :etherscan_api_key
+      t.string :ethereum_data_provider, default: "blockscout", null: false
 
       t.timestamps
     end
@@ -42,6 +43,7 @@ class CreateOnchainWalletItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.jsonb :raw_payload
       t.jsonb :raw_transactions_payload
       t.jsonb :extra, default: {}, null: false
+      t.string :content_hash
 
       t.timestamps
     end
@@ -57,5 +59,10 @@ class CreateOnchainWalletItemsAndAccounts < ActiveRecord::Migration[7.2]
               unique: true,
               where: "asset_kind = 'erc20'",
               name: "index_onchain_wallet_accounts_unique_token"
+    add_index :onchain_wallet_accounts,
+              [ :onchain_wallet_item_id, :chain, :wallet_address, :asset_kind, :token_contract, :symbol ],
+              unique: true,
+              where: "asset_kind = 'spl'",
+              name: "index_onchain_wallet_accounts_unique_spl"
   end
 end
