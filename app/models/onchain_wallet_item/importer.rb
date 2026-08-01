@@ -247,7 +247,9 @@ class OnchainWalletItem::Importer
       # heavy on-chain fields — and crucially, don't mark the account changed, so
       # the syncer won't re-process/re-materialize it (no value-graph churn).
       if account.persisted? && account.content_hash == signature
-        account.update_column(:current_balance, current_balance) if account.current_balance != current_balance
+        if !current_balance.nil? && account.current_balance != current_balance
+          account.update_column(:current_balance, current_balance)
+        end
         return account
       end
 
@@ -256,12 +258,14 @@ class OnchainWalletItem::Importer
         decimals: attrs[:decimals],
         quantity: attrs[:quantity],
         currency: onchain_wallet_item.family.currency,
-        current_balance: current_balance,
         raw_payload: attrs[:raw_payload],
         raw_transactions_payload: attrs[:raw_transactions_payload],
         institution_metadata: institution_metadata(attrs),
         content_hash: signature
       )
+      # Keep the previous priced balance when the market quote/FX rate is unknown
+      # rather than overwriting with zero.
+      account.current_balance = current_balance unless current_balance.nil?
       account.save!
       @changed_account_ids << account.id
       account
@@ -291,23 +295,38 @@ class OnchainWalletItem::Importer
       account
     end
 
+    # Returns a family-currency balance estimate, 0 when quantity is zero, or nil
+    # when price/FX data is unavailable (unknown — callers must not treat as $0).
     def estimate_current_balance(symbol, quantity)
       return 0 if quantity.to_d.zero?
 
       security = OnchainWalletAccount::SecurityResolver.resolve(symbol, symbol)
       price = security&.current_price
-      return 0 unless price
+      return nil unless price
 
       amount = price.amount.to_d * quantity.to_d
       if price.currency.iso_code == onchain_wallet_item.family.currency
         amount.round(2)
       else
         rate = ExchangeRate.find_or_fetch_rate(from: price.currency.iso_code, to: onchain_wallet_item.family.currency, date: Date.current)
-        rate ? (amount * rate.rate.to_d).round(2) : 0
+        rate ? (amount * rate.rate.to_d).round(2) : nil
       end
     rescue StandardError => e
-      Rails.logger.warn "OnchainWalletItem::Importer - could not price #{symbol}: #{e.message}"
-      0
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "OnchainWalletItem::Importer - could not price #{symbol}: #{e.message}",
+        source: "OnchainWalletItem::Importer",
+        family: onchain_wallet_item.family,
+        provider_key: "onchain_wallet",
+        metadata: {
+          symbol: symbol,
+          quantity: quantity.to_s,
+          error_class: e.class.name,
+          error: e.message
+        }
+      )
+      nil
     end
 
     def token_holdings_from_transfers(transfers, address)

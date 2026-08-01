@@ -200,10 +200,34 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     first = OnchainWalletItem::Importer.new(@item)
     first.import_evm_wallet!(chain: "ethereum", address: address, selected_token_contracts: [])
     assert_equal 1, first.changed_account_ids.size
+    wallet_account = @item.onchain_wallet_accounts.find_by!(chain: "ethereum", wallet_address: address, asset_kind: "native")
+    assert_equal BigDecimal("1000"), wallet_account.current_balance,
+                 "unavailable pricing must not wipe a previously stored balance"
 
     second = OnchainWalletItem::Importer.new(@item)
     second.import_evm_wallet!(chain: "ethereum", address: address, selected_token_contracts: [])
     assert_empty second.changed_account_ids, "unchanged on-chain state should not be re-written"
+    assert_equal BigDecimal("1000"), wallet_account.reload.current_balance
+  end
+
+  test "estimate_current_balance returns nil and captures debug log when pricing raises" do
+    security = mock("security")
+    security.stubs(:current_price).raises(StandardError.new("price feed down"))
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(security)
+
+    importer = OnchainWalletItem::Importer.new(@item)
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      assert_nil importer.send(:estimate_current_balance, "ETH", 1)
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "provider_sync", entry.category
+    assert_equal "warn", entry.level
+    assert_equal "onchain_wallet", entry.provider_key
+    assert_equal @family, entry.family
+    assert_equal "ETH", entry.metadata["symbol"]
+    assert_match(/price feed down/, entry.message)
   end
 
   test "import creates wallet accounts for all linked wallets" do

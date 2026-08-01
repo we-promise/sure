@@ -70,6 +70,19 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 0, @account.cash_balance
   end
 
+  test "skips account balance rewrite when current_balance estimate is unknown" do
+    OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
+    @account.update!(cash_balance: 0, currency: @family.currency)
+    Account::CurrentBalanceManager.new(@account).set_current_balance(42_000)
+    @wallet_account.stubs(:current_balance).returns(nil)
+
+    Account::CurrentBalanceManager.any_instance.expects(:set_current_balance).never
+
+    OnchainWalletAccount::Processor.new(@wallet_account).process
+
+    assert_equal BigDecimal("42000"), @account.reload.balance
+  end
+
   test "rolls back account balance fields when current anchor update fails" do
     OnchainWalletAccount::SecurityResolver.stubs(:resolve).returns(nil)
     @account.update!(cash_balance: 123, currency: "EUR")

@@ -49,7 +49,10 @@ class OnchainWalletAccount::Processor
     end
 
     def process_account_balance
-      balance = onchain_wallet_account.current_balance || 0
+      # nil means pricing was unavailable — keep the Sure account's existing
+      # balance rather than materializing an unknown estimate as zero.
+      balance = onchain_wallet_account.current_balance
+      return if balance.nil?
 
       Account.transaction do
         account.update!(
