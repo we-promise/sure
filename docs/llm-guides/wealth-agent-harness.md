@@ -5,7 +5,7 @@ back to the document it came from — on top of Sure, without putting that model
 inside Sure.
 
 The model itself is specified by
-[the wealth + tax blueprint](patrimonial-blueprint.md). This guide is the seam:
+[the wealth + tax blueprint](wealth-blueprint.md). This guide is the seam:
 which half owns what, which MCP tool serves which layer of the blueprint, and
 which invariants Sure cannot enforce for you.
 
@@ -213,7 +213,7 @@ Worth knowing before you promise the user something:
 
 ## See also
 
-- [The wealth + tax blueprint](patrimonial-blueprint.md) — the full spec.
+- [The wealth + tax blueprint](wealth-blueprint.md) — the full spec.
 - [MCP Server for External AI Assistants](../hosting/mcp.md) — endpoint,
   authentication, tool list.
 - [External AI Assistant configuration](../hosting/ai.md#openclaw-gateway-example)

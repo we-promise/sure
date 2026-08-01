@@ -461,8 +461,8 @@ the model and the compiler — rather than a feature inside Sure. Sure exposes a
 set of preview MCP tools for it (the Statement Vault, coverage gaps, and
 valuations that require a source citation).
 
-See [Patrimonial history with an external agent harness](../llm-guides/patrimonial-agent-harness.md)
-for which side owns what, and [the blueprint](../llm-guides/patrimonial-blueprint.md)
+See [Wealth history with an external agent harness](../llm-guides/wealth-agent-harness.md)
+for which side owns what, and [the blueprint](../llm-guides/wealth-blueprint.md)
 it implements.
 
 ### Security with Pipelock

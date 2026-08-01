@@ -7,8 +7,8 @@ module Assistant
   }.freeze
 
   # Statement Vault + provenance tools, for users who opted into preview features
-  # in Settings -> Preferences. They back the patrimonial agent-harness workflow
-  # documented in docs/llm-guides/patrimonial-agent-harness.md.
+  # in Settings -> Preferences. They back the wealth agent-harness workflow
+  # documented in docs/llm-guides/wealth-agent-harness.md.
   PREVIEW_FUNCTION_CLASSES = [
     Function::UploadAccountStatement,
     Function::ListAccountStatements,
