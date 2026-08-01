@@ -3,6 +3,7 @@
 class Api::V1::HoldingsController < Api::V1::BaseController
   include Pagy::Backend
 
+  before_action -> { require_module!(:investments) }
   before_action :ensure_read_scope
   before_action :set_holding, only: [ :show ]
 

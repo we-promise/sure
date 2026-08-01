@@ -8,6 +8,7 @@ de:
         assistant: Assistent
         budgets: Budgets
         home: Startseite
+        intro: Einführung
         reports: Berichte
         transactions: Transaktionen
     auth:

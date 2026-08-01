@@ -8,6 +8,7 @@ hu:
         assistant: Asszisztens
         budgets: Költségvetések
         home: Kezdőlap
+        intro: Bemutató
         reports: Jelentések
         transactions: Tranzakciók
     auth:

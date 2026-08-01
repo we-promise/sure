@@ -8,6 +8,7 @@ es:
         assistant: Asistente
         budgets: Presupuestos
         home: Inicio
+        intro: Introducción
         reports: Informes
         transactions: Transacciones
     auth:

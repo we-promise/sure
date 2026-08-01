@@ -5,8 +5,10 @@
        <% end %>>
     <% unless params[:classification] == "liability" %>
       <%= render "account_type", accountable: Depository.new %>
-      <%= render "account_type", accountable: Investment.new %>
-      <%= render "account_type", accountable: Crypto.new %>
+      <% if module_enabled?(:investments) %>
+        <%= render "account_type", accountable: Investment.new %>
+        <%= render "account_type", accountable: Crypto.new %>
+      <% end %>
       <%= render "account_type", accountable: Property.new %>
       <%= render "account_type", accountable: Vehicle.new %>
     <% end %>

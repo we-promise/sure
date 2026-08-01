@@ -235,8 +235,26 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "vs_test123", family.reload.vector_store_id
   end
 
-  # auto_share_existing_accounts_with -----------------------------------------
+  test "module_enabled? defaults to true and toggles via disabled_modules" do
+    family = families(:dylan_family)
 
+    assert family.module_enabled?(:investments)
+    assert family.module_enabled?("investments")
+
+    family.update!(disabled_modules: [ "investments" ])
+    assert_not family.module_enabled?(:investments)
+    assert_not family.module_enabled?("investments")
+
+    family.update!(disabled_modules: [])
+    assert family.module_enabled?(:investments)
+  end
+
+  test "module_enabled? returns true for unknown modules (default-enabled)" do
+    family = families(:dylan_family)
+    assert family.module_enabled?(:nonexistent_module)
+  end
+  
+  # auto_share_existing_accounts_with -----------------------------------------
   test "auto_share_existing_accounts_with shares existing family accounts read_write when sharing is default" do
     family = families(:dylan_family)
     family.update!(default_account_sharing: "shared")
