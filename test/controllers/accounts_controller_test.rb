@@ -615,7 +615,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       )
       account = Account.create_from_onchain_wallet_account(wallet_account)
       account.update!(owner: owner)
-      account.share_with!(shared_with, permission: permission)
+      # create_and_sync may already auto-share with family members; upsert permission.
+      account.account_shares.find_or_initialize_by(user: shared_with).update!(permission: permission)
       wallet_account.ensure_account_provider!(account)
       account
     end
