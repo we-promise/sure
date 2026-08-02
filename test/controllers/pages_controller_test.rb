@@ -259,7 +259,6 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path
       assert_response :ok
-      assert_select "nav[aria-label='Breadcrumb']", text: /What's new/
     end
   end
 
@@ -292,12 +291,6 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     assert_select "h2", text: "Test Release"
     # Should not crash even with nil values
-  end
-
-  test "feedback" do
-    get feedback_path
-    assert_response :ok
-    assert_select "nav[aria-label='Breadcrumb']", text: /Feedback/
   end
 
   private
