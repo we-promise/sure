@@ -6,7 +6,9 @@
       <%= icon("layout-grid", size: "sm") %>
     </span>
     <h2 class="text-sm font-medium text-primary shrink-0"><%= t(".title") %></h2>
-    <span class="text-xs text-subdued truncate">· <%= budget.name %></span>
+    <span class="text-xs text-subdued truncate">
+      · <%= budget.name %><% if budget.family.personal_budgets? && budget.user.present? %> (<%= budget.user.first_name %>)<% end %>
+    </span>
 
     <% if budget.initialized? %>
       <% if budget.available_to_spend.negative? %>
