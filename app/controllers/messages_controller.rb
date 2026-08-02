@@ -15,6 +15,8 @@ class MessagesController < ApplicationController
     else
       redirect_to chat_path(@chat), alert: @message.errors.full_messages.to_sentence
     end
+  rescue ActiveRecord::InvalidForeignKey
+    redirect_to chats_path, alert: "This chat is no longer available."
   end
 
   # Called by the chat watchdog when an assistant "Thinking…" bubble has waited
