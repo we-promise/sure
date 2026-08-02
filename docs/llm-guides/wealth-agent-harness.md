@@ -44,7 +44,7 @@ for.
 | L1 positions, parameters, FX table, tax criteria | **Harness** | — |
 | L2 wealth series | **Sure** is authoritative | `Entry` / `Valuation`, `Holding`. The harness snapshots it into `data/YYYY-MM/*.csv` so `git diff` and the goldens have something to bite on. |
 | L2 tax series — criterion, `applicable`, `declared`, `legal_max` | **Harness only** | Sure has one value per account per date. "One value, one criterion" (§2 principle 6) has no representation here and should not be forced into one. |
-| L3 vault — account statements | **Sure** | The **Statement Vault**: original bytes in storage, SHA-256 dedup, period detection, account matching, review queue. |
+| L3 vault — account statements | **Split** | Sure's **Statement Vault** is the shared archive: original bytes in storage, SHA-256 dedup, period detection, account matching, review queue. But it never hands bytes back over MCP, so the harness must keep its own copy of any statement it intends to extract from. See "The harness keeps the parseable master" below. |
 | L3 vault — tax returns, annual accounts, capital accounts, contracts, minutes, email | **Harness** | The Statement Vault is statement-shaped and accepts PDF/CSV/XLSX only. Keep other primary sources in the harness's own git-ignored vault. |
 | `_control.csv` / reconcile-or-abort | **Split** | Sure's `get_account_statement` reports *ledger-agreement* checks (statement balances vs the ledger, tolerance 0.01, report-only). The blueprint's *parse-integrity* check (parts vs the document's own printed total) and the **abort** have no counterpart in Sure — keep both in the harness extractor. |
 | Gap map / `PENDING` policy | **Sure** | `get_statement_coverage` reports covered / missing / mismatched / ambiguous per month. |
@@ -67,6 +67,57 @@ for.
 Treat Sure as a source you re-derive from, not as the archive of what you
 already derived.
 
+## The harness keeps the parseable master
+
+**Sure never returns a document's bytes over MCP, by design.** Stored files are
+served only to a signed-in browser session (Active Storage authorization checks
+`viewable_by?(Current.user)`), and an MCP client holds a bearer token, not a
+session. Nor is there a text fallback: statements archived through
+`upload_account_statement` do not enter the vector store, so
+`search_family_files` cannot see them either. To an agent, a statement in Sure is
+metadata — identity, period, account, coverage, ledger reconciliation — and
+nothing more.
+
+That matters because the blueprint needs the bytes for three things, all of them
+operating on bank and broker statements: the §9 extractors, the §7 pass-3
+parse-integrity check, and the §9.2 glyph decoder. Everything else the blueprint
+parses — tax returns, capital accounts, annual accounts — the harness already
+holds locally, per the ownership table.
+
+**So parse first, publish second.** The extractor runs on the harness's own copy,
+where the bytes are; Sure receives the archived copy afterwards:
+
+1. The document lands in the **harness's** inbox.
+2. The harness's `vault_ops` ingests it into the harness vault — canonical name,
+   SHA-256, manifest, human OK (§8.1–8.3).
+3. **The extractor parses it there**, with the whole file: labelled subtotals,
+   glyph decoding where needed, reconcile-or-abort against the printed total.
+4. The harness publishes a copy to Sure with `upload_account_statement`.
+5. The harness records values with `record_valuation`, citing that SHA-256.
+6. Sure supplies what the harness cannot: ledger reconciliation, the coverage
+   map, the review and linking UI, and the household's shared archive.
+
+This ordering *restores* §2 principle 8 rather than bending it. The principle
+says the recurring pipeline reads exclusively from the canonical store — and
+treating Sure as canonical would force a re-fetch the architecture never
+sanctioned. The harness vault is canonical; Sure is where you publish.
+
+**The SHA-256 is the join key, and it removes the need to move bytes at all.**
+Both sides hash the same file independently, so
+`list_account_statements(content_sha256: …)` *verifies* that Sure holds the
+identical document. That is §8.2's "same content = same hash regardless of name"
+applied across a system boundary.
+
+Two consequences worth stating plainly rather than discovering later:
+
+- A statement someone uploads straight into Sure's web UI, which the harness
+  never saw, can be **known but not parsed**. You get its period, account,
+  coverage and ledger reconciliation; you cannot extract from it. Per §13 any
+  value derived from it is reliability C, or stays `PENDING`, until a copy
+  reaches the harness inbox.
+- **Neither vault backs up the other.** Sure cannot rebuild the harness's data
+  layer, and the harness cannot rebuild Sure's archive.
+
 ## The tools
 
 These are preview features. Enable them per user in **Settings → Preferences**;
@@ -78,7 +129,7 @@ Vault is closed to guests, over MCP exactly as in the UI.
 |---|---|
 | `upload_account_statement` | Ingest a statement (PDF/CSV/XLSX, ≤25 MB, base64). Returns the SHA-256. Re-uploading identical bytes returns the existing record with `duplicate: true` — dedup is free and idempotent, so a re-run is safe. |
 | `list_account_statements` | The vault index and the review queue. Filter by account, period, `review_status`, or `content_sha256` to check whether a document is already archived. |
-| `get_account_statement` | One document: identity, the balances **recorded for it** (user-entered in Settings → Statement Vault, not auto-extracted — blank until filled), the reconciliation checks against the ledger *when balances exist*, and a 15-minute download URL. |
+| `get_account_statement` | One document: identity, the balances **recorded for it** (user-entered in Settings → Statement Vault, not auto-extracted — blank until filled), and the reconciliation checks against the ledger *when balances exist*. Returns no bytes and no link — see "The harness keeps the parseable master". |
 | `get_statement_coverage` | The month-by-month gap map for an account: `covered`, `missing`, `mismatched`, `ambiguous`, `duplicate`, `not_expected`. |
 | `record_valuation` | Write a value for a date, with a mandatory citation. |
 | `search_family_files` | Semantic search inside uploaded documents (needs a vector store configured). Complements the vault: identity from `list_account_statements`, contents from here. |
@@ -141,9 +192,14 @@ Reading the blueprint against this codebase:
 
 Blueprint §15.2, rewritten:
 
-1. **Ingest.** `upload_account_statement` for each new document. A `duplicate:
-   true` response means it was already archived — that is a normal outcome, not
-   an error.
+1. **Ingest and extract, harness-side first.** New documents land in the
+   harness's inbox, go through its own `vault_ops` (canonical name, SHA-256,
+   manifest, human OK), and are parsed *there* — reconcile-or-abort against the
+   printed total, while the bytes are still in reach. Only then publish each one
+   to Sure with `upload_account_statement`. A `duplicate: true` response means it
+   was already archived: a normal outcome, not an error, and confirmation that
+   both sides hold the same file. Publishing before extracting strands you —
+   Sure will not hand the bytes back.
 2. **Hand off the match.** Report each unmatched statement and its suggested
    account to the user; they confirm in Settings → Statement Vault. Do not
    proceed as if the link exists.
@@ -185,8 +241,11 @@ already done:
   `pull_from_sure` step writing the snapshot. Write extractors only for source
   families Sure does not handle.
 - **Phase 5 (views)** — unchanged, harness-side.
-- **Phase 6 (the vault)** — **already built** for account statements. Do not
-  rebuild it. Build only the vault for non-statement sources.
+- **Phase 6 (the vault)** — **partly already built**. Sure gives you archival,
+  SHA-256 dedup, the review queue and the coverage map for account statements,
+  so don't rebuild those. You still need a harness-side vault for every document
+  the extractors read — statements included, since Sure won't return their bytes
+  — plus the non-statement sources it was never going to hold.
 - **Phase 7 (the tax layer)** — entirely harness-side. Sure has no criterion
   dimension and should not grow one.
 - **Phase 8 (forensics, intel, agent memory)** — entirely harness-side. Email

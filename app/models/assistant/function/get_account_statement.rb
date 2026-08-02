@@ -35,11 +35,16 @@ class Assistant::Function::GetAccountStatement < Assistant::Function
         here verifies that the document's own line items sum to its printed total.
         That parse-integrity check belongs to whatever extracted the figures.
 
-        This does NOT return the document's bytes and cannot give you a link that
-        works for you: Sure serves stored files only to a signed-in browser
-        session, which an MCP client does not have. To read a document, either
-        search its contents with `search_family_files`, or point the user at
-        Settings -> Statement Vault to open it themselves.
+        This returns no bytes and no link, and there is no way around it: Sure
+        serves stored files only to a signed-in browser session, which you do not
+        have. `search_family_files` is not a fallback either — statements
+        archived through `upload_account_statement` never enter the document
+        search index, so it cannot see them.
+
+        A statement here is metadata to you: identity, period, account, and
+        reconciliation. If you need to read one, keep your own copy of the file
+        when you archive it, or ask the user to open it in
+        Settings -> Statement Vault.
 
         Example:
 

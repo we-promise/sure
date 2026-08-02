@@ -110,7 +110,7 @@ The MCP endpoint exposes these financial tools:
 | `get_balance_sheet` | Current financial position (assets, liabilities, net worth) |
 | `get_income_statement` | Income and expenses over a period |
 | `import_bank_statement` | Import bank statement data |
-| `search_family_files` | Search uploaded documents in the vault |
+| `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
 
 These are the same tools used by Sure's builtin AI assistant.
 
