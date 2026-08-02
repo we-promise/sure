@@ -155,6 +155,7 @@ class Budget < ApplicationRecord
 
   def copy_from!(source_budget)
     raise ArgumentError, "source budget must belong to the same family" unless source_budget.family_id == family_id
+    raise ArgumentError, "source budget must belong to the same user" unless source_budget.user_id == user_id
     raise ArgumentError, "source budget must precede target budget" unless source_budget.start_date < start_date
 
     Budget.transaction do

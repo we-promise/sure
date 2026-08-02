@@ -71,4 +71,31 @@ class PersonalBudgetTest < ActiveSupport::TestCase
     assert_nil source
     assert_nil user2_current.budgeted_spending
   end
+
+  test "copy_from! rejects a source budget owned by another user" do
+    @family.update!(personal_budgets: true)
+
+    past_date = 1.month.ago.beginning_of_month
+
+    user1_past = Budget.find_or_bootstrap(@family, start_date: past_date, user: @user1)
+    user1_past.update!(budgeted_spending: 9999, expected_income: 9999)
+
+    user2_current = Budget.find_or_bootstrap(@family, start_date: @date, user: @user2)
+
+    assert_raises(ArgumentError) { user2_current.copy_from!(user1_past) }
+  end
+
+  test "deleting a user cascades through their personal budget and budget categories" do
+    @family.update!(personal_budgets: true)
+    category = @family.categories.create!(name: "Groceries", color: "#6172F3")
+
+    budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1)
+    budget.update!(budgeted_spending: 500, expected_income: 1000)
+    budget_category = budget.budget_categories.find_by!(category_id: category.id)
+
+    assert_nothing_raised { @user1.destroy! }
+
+    assert_nil Budget.find_by(id: budget.id)
+    assert_nil BudgetCategory.find_by(id: budget_category.id)
+  end
 end
