@@ -28,6 +28,16 @@
             (1..28).map { |day| [localized_ordinal(day), day] },
             { label: t(".month_start_day"), hint: t(".month_start_day_hint") },
             { data: { auto_submit_form_target: "auto" } } %>
+        <% if Current.user.admin? %>
+          <div class="flex items-center justify-between">
+            <div class="space-y-1">
+              <p class="text-sm"><%= t(".personal_budgets") %></p>
+              <p class="text-secondary text-sm"><%= t(".personal_budgets_hint") %></p>
+            </div>
+            <%= family_form.toggle :personal_budgets,
+                data: { auto_submit_form_target: "auto" } %>
+          </div>
+        <% end %>
         <% if @user.family.uses_custom_month_start? %>
           <%= render DS::Alert.new(message: t(".month_start_day_warning"), variant: :warning) %>
         <% end %>

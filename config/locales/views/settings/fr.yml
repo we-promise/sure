@@ -160,6 +160,8 @@ fr:
         no_additional_currencies: Aucune sélectionnée
         no_matching_currencies: Aucune devise trouvée
         page_title: Préférences
+        personal_budgets: Budgets personnels
+        personal_budgets_hint: Activer les budgets individuels pour chaque membre de la famille.
         preview:
           description: Activez les fonctionnalités en cours étiquetées Aperçu ou Canary.
           title: Activer les fonctionnalités d'aperçu
