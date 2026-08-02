@@ -56,6 +56,7 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     patch settings_preferences_url, params: { user: { preview_features_enabled: "1" } }
 
     assert_redirected_to settings_preferences_url
+    assert_nil flash[:notice]
     assert user.reload.preview_features_enabled?
   end
 
@@ -67,6 +68,7 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     patch settings_preferences_url, params: { user: { preview_features_enabled: "0" } }
 
     assert_redirected_to settings_preferences_url
+    assert_nil flash[:notice]
     assert_not user.reload.preview_features_enabled?
   end
 
@@ -77,6 +79,7 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     patch settings_preferences_url, params: { family: { treat_investment_contributions_as_transfers: "1" } }
 
     assert_redirected_to settings_preferences_url
+    assert_equal I18n.t("settings.preferences.show.investment_contributions.updated"), flash[:notice]
     assert user.family.reload.treat_investment_contributions_as_transfers?
     assert users(:family_member).family.reload.treat_investment_contributions_as_transfers?
   end

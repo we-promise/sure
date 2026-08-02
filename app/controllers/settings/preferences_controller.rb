@@ -33,6 +33,8 @@ class Settings::PreferencesController < ApplicationController
         )
       end
     end
-    redirect_to settings_preferences_path
+    redirect_to settings_preferences_path,
+      notice: family_params.key?(:treat_investment_contributions_as_transfers) ?
+        t(".investment_contributions.updated") : nil
   end
 end
