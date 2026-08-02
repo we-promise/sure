@@ -89,4 +89,28 @@ class PluggyItem::SyncerTest < ActiveSupport::TestCase
     @pluggy_item.reload
     assert_equal "good", @pluggy_item.status
   end
+
+  # Discovery moved off the request path (PluggyItemsController#create) into the
+  # sync job: when an item is created with credentials but no upstream id, the
+  # Syncer's first act in perform_sync is hydrate_item_id! so the /items lookup
+  # runs here, not on the request thread. Mirrors the no-id leg of create — the
+  # item arrives blank, the sync discovers the id, import proceeds with it set.
+  test "discovers a blank pluggy_item_id from the provider API at the start of the sync" do
+    fresh = PluggyItem.create!(
+      family: families(:dylan_family),
+      name: "No-id Pluggy",
+      client_id: "test_client",
+      client_secret: "test_secret",
+      status: :requires_update
+    )
+    PluggyItem.any_instance.stubs(:import_latest_pluggy_data)
+    Provider::Pluggy.stubs(:latest_item_id).returns("discovered-item")
+
+    sync = fresh.syncs.create!
+    sync.perform
+
+    fresh.reload
+    assert_equal "discovered-item", fresh.pluggy_item_id
+    assert_equal "good", fresh.status
+  end
 end

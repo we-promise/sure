@@ -55,7 +55,17 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "pluggy-providers-panel"
   end
 
-  test "shows a connect CTA when Pluggy credentials are saved but no item is connected" do
+  test "GET /settings/providers renders the Connect drawer link and never mints a Pluggy connect_token on the read" do
+    # #6 regression guard: prepare_show_context used to eagerly hydrate the item
+    # id AND mint a real Pluggy connect_token on every GET render (a synchronous
+    # network round-trip plus a save! on a read request, with auth failures
+    # swallowed by `rescue nil`). The token now mints lazily in the
+    # `connect_form` action (the Connect drawer, loaded via a Turbo frame when
+    # the user opens it), so a plain GET must NOT touch the live Pluggy API.
+    # The `expects(...).never` locks are the real guards: a nil-stub alone
+    # would let a regressed eager mint silently no-op, so `assert_response
+    # :success` would still hold — the .never expectations fail the moment
+    # anyone re-adds an upstream call on the read path.
     family = families(:empty)
     PluggyItem.create!(
       family: family,
@@ -66,18 +76,22 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     sign_in users(:empty)
 
-    # `prepare_show_context` mints a real Pluggy connect_token to surface the
-    # widget-flow block on the providers page. Stub the external call (same seam
-    # as test/models/pluggy_item_test.rb) so the block renders without a live
-    # network round trip against these fake credentials.
-    Provider::Pluggy.stubs(:connect_token).returns("test-connect-token")
+    Provider::Pluggy.expects(:connect_token).never
+    Provider::Pluggy.expects(:latest_item_id).never
 
     get settings_providers_url
 
     assert_response :success
-    # When credentials exist but no item is connected, the widget flow is shown
-    assert_includes response.body, I18n.t("pluggy_items.panel.connect_widget_title")
-    assert_includes response.body, I18n.t("pluggy_items.panel.connect_widget_button")
+    # Credentials configured but no item connected -> the "credentials only"
+    # status banner (the elsif branch in _pluggy_panel), not a widget block.
+    assert_includes response.body, I18n.t("pluggy_items.panel.status_credentials_only")
+    # The widget launcher block is gated by `@connect_token.present?`, which is
+    # blank on a plain GET post-#6, so the live-widget markers are ABSENT — the
+    # panel falls back to the Connect drawer link (which mints a fresh token via
+    # connect_form when the user opens it).
+    refute_includes response.body, I18n.t("pluggy_items.panel.connect_widget_title")
+    refute_includes response.body, I18n.t("pluggy_items.panel.connect_widget_button")
+    assert_includes response.body, connect_form_settings_providers_path(provider_key: "pluggy")
   end
 
   test "connect_form mints a CREATE-mode token without hardcoding avoid_duplicates for a credentialed family with no connected item" do

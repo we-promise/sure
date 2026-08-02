@@ -42,11 +42,21 @@ class PluggyItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil item.pluggy_item_id
   end
 
-  test "credential flow auto-discovers item id and enqueues sync" do
-    Provider::Pluggy.stubs(:latest_item_id).returns("auto-discovered-item")
+  # #4: the /items lookup moved off the create request into the sync job
+  # (PluggyItem::Syncer#perform_sync hydrates the id when the sync runs). A
+  # credential-only POST (no pluggy_item_id) takes the auto-connect branch
+  # (should_auto_connect?), redirects to the Connect drawer, and leaves
+  # pluggy_item_id blank for the Syncer to discover later — even when Pluggy
+  # WOULD return an id if asked. The `expects(:latest_item_id).never` guard is
+  # the real #4 lock: it fails if anyone re-adds an eager hydrate on `create`,
+  # which the nil-stub in `setup` alone would NOT catch (a regressed eager
+  # hydrate with a nil stub is a silent no-op, so `assert_no_enqueued_jobs`
+  # would still pass).
+  test "credential flow does not eagerly call the Pluggy API on create even when an item id is discoverable" do
+    Provider::Pluggy.expects(:latest_item_id).never
 
     assert_difference -> { PluggyItem.count }, 1 do
-      assert_enqueued_with(job: SyncJob) do
+      assert_no_enqueued_jobs only: SyncJob do
         post pluggy_items_url, params: {
           pluggy_item: {
             name: "Pluggy Connection",
@@ -57,8 +67,11 @@ class PluggyItemsControllerTest < ActionDispatch::IntegrationTest
       end
     end
 
+    assert_redirected_to connect_form_settings_providers_path(provider_key: "pluggy")
+
     item = PluggyItem.order(created_at: :desc).first
-    assert_equal "auto-discovered-item", item.pluggy_item_id
+    assert item.credentials_configured?
+    assert_nil item.pluggy_item_id
   end
 
   test "widget item_id flow stores the returned itemId verbatim with no token exchange and enqueues the sync" do

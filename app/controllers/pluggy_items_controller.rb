@@ -43,8 +43,6 @@ class PluggyItemsController < ApplicationController
       end
     end
 
-    PluggyItem.hydrate_item_id!(@pluggy_item)
-
     if @pluggy_item.save
       if should_auto_connect?(@pluggy_item)
         redirect_to connect_form_settings_providers_path(provider_key: "pluggy"),
@@ -58,8 +56,12 @@ class PluggyItemsController < ApplicationController
       # Plaid there is no public_token exchange — the widget's returned
       # `itemId` is stored verbatim on `pluggy_item_id` and is usable directly
       # with the developer credentials (see PluggyItem::Provider#item_id), so
-      # we kick off the sync immediately.
-      @pluggy_item.sync_later if @pluggy_item.pluggy_item_id.present? && !@pluggy_item.syncing?
+      # we kick off the sync immediately. The upstream item id is no longer
+      # eagerly hydrated on this request (moved into PluggyItem::Syncer#perform_sync),
+      # so enqueue the sync on credentials alone — the Syncer discovers the id
+      # when the job runs. The widget-path POST still supplies `pluggy_item_id`
+      # via params, which the Syncer's hydrate step treats as a no-op.
+      @pluggy_item.sync_later if @pluggy_item.credentials_configured? && !@pluggy_item.syncing?
 
       if turbo_frame_request?
         flash.now[:notice] = t(".success", default: "Successfully configured Pluggy.")

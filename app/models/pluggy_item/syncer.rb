@@ -12,6 +12,16 @@ class PluggyItem::Syncer
   def perform_sync(sync)
     Rails.logger.info "PluggyItem::Syncer - Starting sync for item #{pluggy_item.id}"
 
+    # Discover the upstream Pluggy item id for this family's credentials if it
+    # is not already known. This /items lookup was previously done synchronously
+    # on the create request (see PluggyItemsController#create), which blocked
+    # the request thread for up to the Pluggy HTTP timeout. Moved here so
+    # discovery runs inside the sync job. hydrate_item_id! is a no-op when the
+    # item is already hydrated, blank, or uncredentialed, and it rescues
+    # Provider::Pluggy::Error / StandardError itself — a discovery failure
+    # degrades to a blank id and the import phase surfaces the real error.
+    PluggyItem.hydrate_item_id!(pluggy_item)
+
     # Phase 1: Import data from provider API
     sync.update!(status_text: I18n.t("pluggy_items.sync.status.importing")) if sync.respond_to?(:status_text)
     pluggy_item.import_latest_pluggy_data(sync: sync)

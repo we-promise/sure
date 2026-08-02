@@ -349,29 +349,17 @@ class Settings::ProvidersController < ApplicationController
       # which needs full record access (client_user_id, etc.).
       @pluggy_items = Current.family.pluggy_items.where.not(client_id: [ nil, "" ]).ordered.select(:id, :pluggy_item_id, :client_id, :client_secret, :family_id)
 
-      # Mint a Pluggy Connect token bound to the family's CONNECTED item when one
-      # exists (UPDATE mode — re-auth/refresh), or the first credentialed item
-      # (CREATE mode — first connection). Binding the token to an existing
-      # `pluggy_item_id` is what flips the Connect widget into update mode;
-      # minting a create-mode token for a family that already has an item makes
-      # Pluggy reject the duplicate with ITEM_USER_ALREADY_EXISTS. @connect_item
-      # carries the same record so the panel can wire `is-update` / `item-id` /
-      # `record-id` Stimulus values from the exact item the token binds to.
+      # The Pluggy Connect token is NO LONGER minted eagerly on this GET. Doing
+      # so hit the live Pluggy API (hydrate_item_id! + connect_token) on every
+      # /settings/providers render — a synchronous network round-trip and a DB
+      # write (save! on hydrate) on a read request, which also silently swallowed
+      # auth failures via `rescue nil`. The token is now minted lazily in the
+      # `connect_form` action (the Connect drawer, loaded via a Turbo frame when
+      # the user opens it). Here we only do a DB-only lookup so the panel can
+      # render the launcher; it falls back to the drawer link when `@connect_token`
+      # is blank (see _pluggy_panel.html.erb). @connect_item stays DB-only — no
+      # upstream Pluggy call, no DB write on GET render.
       @connect_item = PluggyItem.preferred_for_connect(Current.family)
-      # Hydrate before minting so the token binds UPDATE mode when Pluggy still
-      # holds an item for this `client_user_id` but the local `pluggy_item_id`
-      # is blank — otherwise the CREATE-mode token makes the widget POST /items
-      # and Pluggy rejects the duplicate as ITEM_USER_ALREADY_EXISTS. The auth
-      # failure path below (`rescue nil`) already hides the widget on stale creds.
-      @connect_item = PluggyItem.hydrate_item_id!(@connect_item)
-      if @connect_item&.credentials_configured?
-        @connect_token = @connect_item.pluggy_provider.connect_token(
-          client_user_id: @connect_item.client_user_id,
-          webhook_url: @connect_item.webhook_url,
-          redirect_url: @connect_item.redirect_url,
-          item_id: @connect_item.pluggy_item_id.presence
-        ) rescue nil
-      end
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
