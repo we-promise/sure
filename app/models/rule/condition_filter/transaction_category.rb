@@ -4,7 +4,7 @@ class Rule::ConditionFilter::TransactionCategory < Rule::ConditionFilter
   end
 
   def options
-    Category::Group.select_options(family.categories)
+    Category::Group.select_options(family.categories, indent: false)
   end
 
   def prepare(scope)

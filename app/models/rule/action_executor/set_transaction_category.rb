@@ -4,7 +4,7 @@ class Rule::ActionExecutor::SetTransactionCategory < Rule::ActionExecutor
   end
 
   def options
-    Category::Group.select_options(family.categories)
+    Category::Group.select_options(family.categories, indent: false)
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)

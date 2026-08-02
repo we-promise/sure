@@ -16,4 +16,14 @@ class Rule::ActionExecutor::SetTransactionCategoryTest < ActiveSupport::TestCase
     assert_not_nil child_index
     assert_equal parent_index + 1, child_index
   end
+
+  test "options does not indent subcategory labels, so value_display doesn't show the arrow" do
+    action = Rule::Action.new(
+      rule: @rule,
+      action_type: "set_transaction_category",
+      value: categories(:subcategory).id
+    )
+
+    assert_equal categories(:subcategory).name, action.value_display
+  end
 end

@@ -98,11 +98,7 @@ class SplitsController < ApplicationController
       params.require(:split).permit(splits: [ :name, :amount, :category_id, :excluded ])
     end
 
-    # Flattens categories into parent-then-children order for the splits
-    # category select partial, which only renders the list (no grouping logic).
     def grouped_categories
-      Category::Group.for(Current.family.categories).flat_map do |group|
-        [ group.category, *group.subcategories ]
-      end
+      Current.family.categories.alphabetically_by_hierarchy
     end
 end
