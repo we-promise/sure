@@ -25,7 +25,7 @@ module Api
         end
 
         # Validate password
-        password_errors = validate_password(params[:user][:password])
+        password_errors = validate_password(params.require(:user)[:password])
         if password_errors.any?
           render json: { errors: password_errors }, status: :unprocessable_entity
           return
