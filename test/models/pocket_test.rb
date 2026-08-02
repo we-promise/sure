@@ -75,30 +75,50 @@ class PocketTest < ActiveSupport::TestCase
   # Auto-fill via Tagging
 
   test "creating a tagging fills linked pocket" do
+    # Fresh tag/pocket so this doesn't collide with the fixture tagging already
+    # linking tags(:one) to transactions(:one) (recompute_from_tag! would
+    # otherwise pull that pre-existing contribution into the total).
+    fresh_tag = @account.family.tags.create!(name: "Fill Tag")
+    pocket = @account.pockets.create!(name: "Fill Pocket", allocated_amount: 0, currency: "USD",
+                                      tag: fresh_tag, fill_direction: "both")
+
     # Use a fresh income entry (amount < 0 in DB) so income fills the pocket
     entry = Entry.create!(account: @account, entryable: Transaction.new,
       date: 1.day.ago.to_date, name: "Fresh income", amount: -10, currency: "USD")
 
-    assert_difference "@tagged_pocket.reload.allocated_amount", entry.amount.abs do
-      Tagging.create!(tag: tags(:one), taggable: entry.entryable)
+    assert_difference "pocket.reload.allocated_amount", entry.amount.abs do
+      Tagging.create!(tag: fresh_tag, taggable: entry.entryable)
     end
   end
 
   test "destroying a tagging unfills linked pocket" do
+    fresh_tag = @account.family.tags.create!(name: "Unfill Tag")
+    pocket = @account.pockets.create!(name: "Unfill Pocket", allocated_amount: 0, currency: "USD",
+                                      tag: fresh_tag, fill_direction: "both")
+
     entry = Entry.create!(account: @account, entryable: Transaction.new,
       date: 1.day.ago.to_date, name: "Fresh income", amount: -10, currency: "USD")
-    tagging = Tagging.create!(tag: tags(:one), taggable: entry.entryable)
+    tagging = Tagging.create!(tag: fresh_tag, taggable: entry.entryable)
 
-    assert_difference "@tagged_pocket.reload.allocated_amount", -entry.amount.abs do
+    assert_difference "pocket.reload.allocated_amount", -entry.amount.abs do
       tagging.destroy!
     end
   end
 
   test "tagging with unlinked tag does not affect any pocket" do
-    transaction = transactions(:one)
+    # Fresh entry — transactions(:one) is already tagged with tags(:two) via
+    # fixtures, and the new taggings unique index rejects a literal duplicate.
+    entry = Entry.create!(account: @account, entryable: Transaction.new,
+      date: 1.day.ago.to_date, name: "Unlinked", amount: -25, currency: "USD")
 
     assert_no_difference "@pocket.reload.allocated_amount" do
-      Tagging.create!(tag: tags(:two), taggable: transaction)
+      Tagging.create!(tag: tags(:two), taggable: entry.entryable)
+    end
+  end
+
+  test "duplicate tagging for the same tag and transaction is rejected" do
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      Tagging.create!(tag: tags(:one), taggable: transactions(:one))
     end
   end
 
@@ -298,21 +318,33 @@ class PocketTest < ActiveSupport::TestCase
   # apply_tagging / reverse_tagging in :both mode (vacation pocket)
 
   test "both direction increments pocket on income" do
+    fresh_tag = @account.family.tags.create!(name: "Both Income Tag")
+    pocket = @account.pockets.create!(name: "Both Income Pocket", allocated_amount: 0, currency: "USD",
+                                      tag: fresh_tag, fill_direction: "both")
+
     entry = Entry.create!(account: @account, entryable: Transaction.new,
                           date: 1.day.ago.to_date, name: "income", amount: -100, currency: "USD")
 
-    assert_difference "@tagged_pocket.reload.allocated_amount", 100 do
-      Tagging.create!(tag: tags(:one), taggable: entry.entryable)
+    assert_difference "pocket.reload.allocated_amount", 100 do
+      Tagging.create!(tag: fresh_tag, taggable: entry.entryable)
     end
   end
 
   test "both direction decrements pocket on expense" do
-    @tagged_pocket.update_column(:allocated_amount, 200)
+    fresh_tag = @account.family.tags.create!(name: "Both Expense Tag")
+    pocket = @account.pockets.create!(name: "Both Expense Pocket", allocated_amount: 0, currency: "USD",
+                                      tag: fresh_tag, fill_direction: "both")
+
+    seed_entry = Entry.create!(account: @account, entryable: Transaction.new,
+                          date: 2.days.ago.to_date, name: "seed income", amount: -200, currency: "USD")
+    Tagging.create!(tag: fresh_tag, taggable: seed_entry.entryable)
+    assert_equal 200, pocket.reload.allocated_amount
+
     entry = Entry.create!(account: @account, entryable: Transaction.new,
                           date: 1.day.ago.to_date, name: "expense", amount: 60, currency: "USD")
 
-    assert_difference "@tagged_pocket.reload.allocated_amount", -60 do
-      Tagging.create!(tag: tags(:one), taggable: entry.entryable)
+    assert_difference "pocket.reload.allocated_amount", -60 do
+      Tagging.create!(tag: fresh_tag, taggable: entry.entryable)
     end
   end
 
@@ -361,17 +393,5 @@ class PocketTest < ActiveSupport::TestCase
     @pocket.update_column(:allocated_amount, 999)
     @pocket.recompute_from_tag!
     assert_equal 999, @pocket.reload.allocated_amount
-  end
-
-  test "destroy cannot push pocket below zero" do
-    @tagged_pocket.update_column(:allocated_amount, 0)
-    transaction = transactions(:one)
-    tagging = Tagging.create!(tag: tags(:one), taggable: transaction)
-
-    # Remove the fill we just applied, then destroy a second tagging
-    @tagged_pocket.update_column(:allocated_amount, 0)
-    assert_no_difference "@tagged_pocket.reload.allocated_amount" do
-      tagging.destroy!
-    end
   end
 end

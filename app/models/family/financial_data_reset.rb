@@ -30,6 +30,7 @@ class Family::FinancialDataReset
     budgets
     budget_categories
     categories
+    pockets
     tags
     taggings
     merchants

@@ -19,6 +19,8 @@ class Entry < ApplicationRecord
   # In Rails 7.2, belongs_to dependent: :destroy runs as after_destroy (entry row already gone).
   # Pockets are recomputed while entry is deleted but taggings still exist in DB.
   after_destroy :recompute_pockets_for_transaction
+  after_update :recompute_pockets_after_update,
+    if: -> { transaction? && (saved_change_to_amount? || saved_change_to_currency? || saved_change_to_account_id?) }
 
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
@@ -539,13 +541,29 @@ class Entry < ApplicationRecord
 
     def recompute_pockets_for_transaction
       return unless transaction?
+      return if entryable.nil?
 
-      if entryable.nil?
-        return
+      recompute_account_pockets_for_taggings(account)
+    end
+
+    # Also recomputes the previous account's pockets when account_id changed,
+    # since #recompute_pockets_for_transaction only looks at the (new) current account.
+    def recompute_pockets_after_update
+      return unless transaction?
+      return if entryable.nil?
+
+      if saved_change_to_account_id?
+        previous_account_id = attribute_before_last_save(:account_id)
+        previous_account = Account.find_by(id: previous_account_id)
+        recompute_account_pockets_for_taggings(previous_account) if previous_account
       end
 
+      recompute_account_pockets_for_taggings(account)
+    end
+
+    def recompute_account_pockets_for_taggings(target_account)
       entryable.taggings.each do |tagging|
-        pocket = account.pockets.find_by(tag_id: tagging.tag_id)
+        pocket = target_account.pockets.find_by(tag_id: tagging.tag_id)
         pocket&.recompute_from_tag!
       end
     end

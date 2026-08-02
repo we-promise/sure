@@ -19,6 +19,15 @@ class Tag < ApplicationRecord
       raise ActiveRecord::RecordInvalid, "Replacement tag cannot be the same as the tag being destroyed" if replacement == self
 
       if replacement
+        # A taggable may already carry both tags (self and replacement). Moving
+        # self's tagging onto replacement in that case would collide with the
+        # existing (replacement, taggable) row under the taggings unique index,
+        # so drop the now-redundant one instead of reassigning it.
+        colliding_taggable_keys = replacement.taggings.pluck(:taggable_type, :taggable_id).to_set
+        taggings.find_each do |tagging|
+          tagging.destroy! if colliding_taggable_keys.include?([ tagging.taggable_type, tagging.taggable_id ])
+        end
+
         taggings.update_all tag_id: replacement.id
         replacement.pockets.find_each(&:recompute_from_tag!)
       end
