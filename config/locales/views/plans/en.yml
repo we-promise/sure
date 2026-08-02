@@ -1,0 +1,36 @@
+---
+en:
+  plans:
+    show:
+      title: Plan
+      subtitle: Decide where your money goes — what you spend, and what you save.
+    budget_card:
+      title: This month
+      edit_budget: Edit budget
+      of_total: of %{total}
+      days_left:
+        one: 1 day left
+        other: "%{count} days left"
+      percent_used: "%{percent}% used"
+      top_categories: Top categories
+      view_budget: View full budget
+      empty_body: Set a monthly spending target and per-category limits to see how this month is tracking.
+      set_up: Set up this month's budget
+    goals_card:
+      title: Your goals
+      new_goal: New goal
+      active_count:
+        one: 1 active
+        other: "%{count} active"
+      of_targets: of %{total} across goals
+      behind_count:
+        one: 1 behind pace
+        other: "%{count} behind pace"
+      pending_count:
+        one: 1 pending pledge
+        other: "%{count} pending pledges"
+      all_on_pace: Everything on pace
+      active_goals: Active goals
+      pending_marker: pending
+      runway: "%{months} mo runway · %{pace}/mo"
+      all_goals: All goals

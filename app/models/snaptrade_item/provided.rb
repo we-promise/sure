@@ -46,7 +46,7 @@ module SnaptradeItem::Provided
 
     # Best-effort token revocation when the item is destroyed.
     def revoke_oauth_tokens
-      token = oauth_refresh_token.presence || oauth_access_token
+      token = oauth_refresh_token.presence || oauth_access_token # pipelock:ignore Credential in URL
       return if token.blank?
 
       Provider::Snaptrade.revoke_token(token: token)
