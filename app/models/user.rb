@@ -206,6 +206,7 @@ class User < ApplicationRecord
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
+  after_update_commit :end_all_sessions, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
     update active: false, email: deactivated_email
@@ -219,6 +220,17 @@ class User < ApplicationRecord
 
   def purge_later
     UserPurgeJob.perform_later(self)
+  end
+
+  # Immediately invalidates every existing web session so a deactivated user
+  # is signed out everywhere, not just blocked from signing in again. This is
+  # a defense-in-depth measure alongside the active-user checks in
+  # Authentication#find_session_by_cookie/#create_session_for — those still
+  # apply if a session somehow survives this (e.g. `active` flipped via
+  # update_column, which skips callbacks entirely).
+  def end_all_sessions
+    destroyed = sessions.destroy_all
+    Rails.logger.warn("[AUTH] Destroyed #{destroyed.size} session(s) for deactivated user_id=#{id}") if destroyed.any?
   end
 
   def purge

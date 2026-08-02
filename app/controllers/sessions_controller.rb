@@ -72,8 +72,14 @@ class SessionsController < ApplicationController
       else
         log_super_admin_override_login(user)
         @session = create_session_for(user)
-        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
-        redirect_to root_path
+
+        if @session
+          flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+          redirect_to root_path
+        else
+          flash.now[:alert] = t(".account_deactivated")
+          render :new, status: :unprocessable_entity
+        end
       end
     else
       flash.now[:alert] = t(".invalid_credentials")
@@ -211,8 +217,13 @@ class SessionsController < ApplicationController
       redirect_to verify_mfa_path
     else
       @session = create_session_for(user)
-      flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
-      redirect_to root_path
+
+      if @session
+        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+        redirect_to root_path
+      else
+        redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+      end
     end
   end
 
@@ -266,8 +277,13 @@ class SessionsController < ApplicationController
         redirect_to verify_mfa_path
       else
         @session = create_session_for(user)
-        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
-        redirect_to root_path
+
+        if @session
+          flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+          redirect_to root_path
+        else
+          redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+        end
       end
     else
       # Mobile SSO with no linked identity - cache pending auth and redirect
@@ -341,6 +357,13 @@ class SessionsController < ApplicationController
 
   private
     def handle_mobile_sso_callback(user)
+      unless user.active?
+        Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
+        session.delete(:mobile_sso)
+        mobile_sso_redirect(error: "account_deactivated", message: "This account has been deactivated")
+        return
+      end
+
       device_info = session.delete(:mobile_sso)
 
       unless device_info.present?

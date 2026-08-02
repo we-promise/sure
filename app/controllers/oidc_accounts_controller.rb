@@ -34,6 +34,11 @@ class OidcAccountsController < ApplicationController
     user = User.authenticate_by(email: params[:email], password: params[:password])
 
     if user
+      unless user.active?
+        redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+        return
+      end
+
       # Create the OIDC identity link
       oidc_identity = OidcIdentity.create_from_omniauth(
         build_auth_hash(@pending_auth),
@@ -54,6 +59,8 @@ class OidcAccountsController < ApplicationController
         session[:mfa_user_id] = user.id
         redirect_to verify_mfa_path
       else
+        # user.active? was already verified above, so create_session_for
+        # cannot return nil here.
         @session = create_session_for(user)
         notice = if accept_pending_invitation_for(user)
           t("invitations.accept_choice.joined_household")

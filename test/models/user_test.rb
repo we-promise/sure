@@ -756,4 +756,32 @@ class UserTest < ActiveSupport::TestCase
     assert_not Family.exists?(family.id)
     assert_not ActiveStorage::Attachment.exists?(export_attachment_id)
   end
+
+  # Deactivation: immediate session invalidation
+  test "deactivating a user destroys all of their sessions immediately" do
+    user = users(:family_member)
+    user.sessions.create!
+    user.sessions.create!
+    assert_equal 2, user.sessions.count
+
+    user.deactivate
+
+    assert_equal 0, user.sessions.count
+  end
+
+  test "deactivating a user with no sessions does not raise" do
+    user = users(:family_member)
+    assert_equal 0, user.sessions.count
+
+    assert_nothing_raised { user.deactivate }
+  end
+
+  test "updating unrelated attributes does not destroy sessions" do
+    user = users(:family_member)
+    user.sessions.create!
+
+    user.update!(first_name: "Updated")
+
+    assert_equal 1, user.sessions.count
+  end
 end

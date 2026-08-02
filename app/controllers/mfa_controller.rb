@@ -31,8 +31,11 @@ class MfaController < ApplicationController
     @user = User.find_by(id: session[:mfa_user_id])
 
     if @user&.verify_otp?(params[:code])
-      complete_mfa_sign_in(@user)
-      redirect_to root_path
+      if complete_mfa_sign_in(@user)
+        redirect_to root_path
+      else
+        redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+      end
     else
       flash.now[:alert] = t(".invalid_code")
       render :verify, status: :unprocessable_entity
@@ -86,9 +89,11 @@ class MfaController < ApplicationController
         last_used_at: Time.current
       )
     end
-    complete_mfa_sign_in(@user)
-
-    render json: { redirect_url: root_path }
+    if complete_mfa_sign_in(@user)
+      render json: { redirect_url: root_path }
+    else
+      render json: { error: t("sessions.create.account_deactivated") }, status: :unauthorized
+    end
   rescue WebAuthn::Error, ActionController::BadRequest, ActionController::ParameterMissing
     render json: { error: t(".invalid_credential") }, status: :unprocessable_entity
   end
@@ -110,9 +115,13 @@ class MfaController < ApplicationController
       end
     end
 
+    # Returns the created Session, or nil if the user was deactivated after
+    # starting MFA verification but before completing it — callers branch on
+    # that to redirect/respond appropriately instead of assuming success.
     def complete_mfa_sign_in(user)
       session.delete(:mfa_user_id)
       @session = create_session_for(user)
-      flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+      flash[:notice] = t("invitations.accept_choice.joined_household") if @session && accept_pending_invitation_for(user)
+      @session
     end
 end

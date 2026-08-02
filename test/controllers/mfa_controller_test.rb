@@ -99,6 +99,24 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert Session.exists?(user_id: @user.id)
   end
 
+  test "verify_code rejects a user deactivated after starting MFA verification" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+
+    # Simulate deactivation happening after the password step but before the
+    # MFA code is submitted (e.g. an admin locks the account mid-login).
+    @user.update_column(:active, false)
+
+    post verify_mfa_path, params: { code: totp.now }
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
+  end
+
   test "verify_code authenticates with valid backup code" do
     @user.setup_mfa!
     backup_code = @user.enable_mfa!.first

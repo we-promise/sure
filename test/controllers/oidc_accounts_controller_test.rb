@@ -61,6 +61,23 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal "Invalid email or password", flash[:alert]
   end
 
+  test "should reject linking for a deactivated user even with correct password" do
+    session[:pending_oidc_auth] = pending_auth
+    @user.update_column(:active, false)
+
+    assert_no_difference "OidcIdentity.count" do
+      post :create_link,
+        params: {
+          email: @user.email,
+          password: user_password_test
+        }
+    end
+
+    assert_redirected_to new_session_path
+    assert_equal "This account has been deactivated. Please contact an administrator.", flash[:alert]
+    assert_not Session.exists?(user_id: @user.id)
+  end
+
   test "should redirect to MFA when user has MFA enabled" do
     @user.setup_mfa!
     @user.enable_mfa!
