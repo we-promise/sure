@@ -18,7 +18,13 @@
         <% else %>
           <p class="text-secondary"><%= t(".no_credentials_configured") %></p>
         <% end %>
-        <%= link_to t("pluggy_items.select_existing_account.settings_link"), settings_providers_path, class: "btn btn--primary btn--sm mt-4" %>
+        <%= render DS::Link.new(
+            text: t("pluggy_items.select_existing_account.settings_link"),
+            href: settings_providers_path,
+            variant: "primary",
+            size: "sm",
+            class: "mt-4"
+          ) %>
       </div>
     <% else %>
       <%= form_with url: link_accounts_pluggy_items_path,

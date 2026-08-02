@@ -10,7 +10,7 @@ class PluggyItem::ImporterTest < ActiveSupport::TestCase
 
   test "import fetches item, accounts, transactions, investments and upserts accounts" do
     @provider.expects(:get_item).returns(
-      "connector" => { "name" => "Nubank", "website_url" => "https://nubank.com.br" }
+      "connector" => { "name" => "Example Bank", "website_url" => "https://bank.example" }
     )
     @provider.expects(:get_accounts).returns([
       { "id" => "acc-1", "name" => "Conta Corrente", "type" => "checking",
@@ -38,8 +38,8 @@ class PluggyItem::ImporterTest < ActiveSupport::TestCase
     end
 
     @pluggy_item.reload
-    assert_equal "Nubank", @pluggy_item.institution_name
-    assert_equal "https://nubank.com.br", @pluggy_item.institution_domain
+    assert_equal "Example Bank", @pluggy_item.institution_name
+    assert_equal "bank.example", @pluggy_item.institution_domain
   end
 
   test "import flips status to requires_update on AuthenticationError" do
@@ -52,6 +52,46 @@ class PluggyItem::ImporterTest < ActiveSupport::TestCase
     end
 
     assert_equal "requires_update", @pluggy_item.reload.status
+  end
+
+  test "import isolates a per-account failure and continues importing the rest" do
+    # Fix #5: one bad account must not abort the whole item import. The failing
+    # account is recorded in result[:errors] + DebugLogEntry.capture (so /settings/debug
+    # surfaces it), then the loop continues to the remaining accounts. Mirrors the
+    # EnableBanking/Lunchflow importer isolation pattern.
+    @provider.expects(:get_item).returns("connector" => { "name" => "Nubank" })
+    @provider.expects(:get_accounts).returns([
+      { "id" => "acc-bad", "name" => "Quebrada", "type" => "checking",
+        "currencyCode" => "BRL", "balance" => 0.0, "status" => "ACTIVE" },
+      { "id" => "acc-good", "name" => "Boa", "type" => "checking",
+        "currencyCode" => "BRL", "balance" => 999.0, "status" => "ACTIVE" }
+    ])
+    @provider.expects(:get_investments).returns([])
+    # acc-bad blows up mid-import (transactions fetch); acc-good succeeds.
+    @provider.expects(:get_account_transactions).with(account_id: "acc-bad").raises(StandardError.new("upstream 500"))
+    @provider.expects(:get_account_transactions).with(account_id: "acc-good").returns([])
+
+    # Only the surviving account reaches Processor#process — acc-bad is rescued first.
+    PluggyAccount::Processor.any_instance.expects(:process).once
+
+    # Block matcher (not hash_including): a Regexp value never == a String, so
+    # hash_including(message: /acc-bad/) can't match. Matches the yahoo_finance
+    # precedent (test/models/provider/yahoo_finance_test.rb:267).
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:category] == "provider_sync_error" &&
+        attributes[:level] == "warn" &&
+        attributes[:provider_key] == "pluggy" &&
+        attributes[:message].to_s.include?("acc-bad")
+    end
+
+    assert_difference "PluggyAccount.count", 2 do
+      result = PluggyItem::Importer.new(@pluggy_item, pluggy_provider: @provider).import
+      assert_equal 2, result[:accounts]
+      assert_equal 1, result[:processed].size
+      assert_equal 1, result[:errors].size
+      assert_equal "acc-bad", result[:errors].first[:account_id]
+      assert_equal "StandardError", result[:errors].first[:error_class]
+    end
   end
 
   test "synthesizes an investment PluggyAccount when /accounts has no investment-type account" do

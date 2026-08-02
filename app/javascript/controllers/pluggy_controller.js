@@ -167,16 +167,30 @@ export default class extends Controller {
       // NOT the Pluggy upstream item id (itemIdValue, which authorizes
       // config.updateItem). Using itemIdValue here would 404 the sync after a
       // successful re-auth.
+      // `meta[name="csrf-token"]?.content` (optional chaining) — the bare
+      // `[name="csrf-token"]` selector throws a TypeError if the meta tag is
+      // absent (a layout without csrf_meta_tags, or a Turbo-stream render
+      // context), which kills this success callback synchronously before
+      // fetch fires. Matches the safe form used across most other controllers.
       fetch(`/pluggy_items/${this.recordIdValue}/sync`, {
         method: "POST",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          "X-CSRF-Token": document.querySelector('[name="csrf-token"]').content,
+          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content,
         },
-      }).then(() => {
-        // Refresh the page to show the updated status.
-        window.location.href = "/accounts";
+      }).then((response) => {
+        // Only navigate on a successful enqueue — #sync returns 422 with a
+        // JSON error when the item has no pluggy_item_id, and jumping to
+        // /accounts on that would mask a failed re-auth as a success.
+        if (response.ok) {
+          // Refresh the page to show the updated status.
+          window.location.href = "/accounts";
+        } else {
+          this.showError(new Error(`Sync request failed (${response.status})`));
+        }
+      }).catch((error) => {
+        this.showError(error);
       });
       return;
     }
@@ -187,7 +201,7 @@ export default class extends Controller {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-Token": document.querySelector('[name="csrf-token"]').content,
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content,
       },
       body: JSON.stringify({
         pluggy_item: {
@@ -197,7 +211,14 @@ export default class extends Controller {
     }).then((response) => {
       if (response.redirected) {
         window.location.href = response.url;
+      } else if (!response.ok) {
+        // A non-redirect error (e.g. 422 validation) means the connection
+        // record wasn't saved — surface it instead of leaving the user on a
+        // stale page with no feedback that the widget success went nowhere.
+        this.showError(new Error(`Save request failed (${response.status})`));
       }
+    }).catch((error) => {
+      this.showError(error);
     });
   };
 

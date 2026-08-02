@@ -8,14 +8,18 @@ class PluggyItem::Importer
   end
 
   def import
-    result = { accounts: 0, transactions: 0, investments: 0, processed: [] }
+    result = { accounts: 0, transactions: 0, investments: 0, processed: [], errors: [] }
 
-    # Institution metadata from the item's connector
+    # Institution metadata from the item's connector. Normalize the connector's
+    # website_url to a bare hostname so the cached institution_domain column
+    # matches the bare-hostname contract PluggyAdapter#institution_domain derives
+    # off metadata (DRY: same URI.parse + www strip), rather than the importer
+    # caching the full URL while the adapter returns a bare host.
     item = @pluggy_provider.get_item
     connector = item["connector"] || {}
     @pluggy_item.update!(
       institution_name: connector["name"],
-      institution_domain: connector["website_url"]
+      institution_domain: normalize_institution_domain(connector["website_url"])
     )
 
     # Item-scoped fetches (Pluggy investments are item-scoped, not account-scoped)
@@ -33,26 +37,48 @@ class PluggyItem::Importer
     investment_container_upserted = false
 
     accounts_data.each do |acc|
-      pluggy_account = PluggyAccount.upsert_from_pluggy!(acc, pluggy_item: @pluggy_item)
+      begin
+        pluggy_account = PluggyAccount.upsert_from_pluggy!(acc, pluggy_item: @pluggy_item)
 
-      transactions = @pluggy_provider.get_account_transactions(account_id: acc["id"])
-      pluggy_account.upsert_pluggy_transactions_snapshot!(transactions)
-      result[:transactions] += transactions.size
+        transactions = @pluggy_provider.get_account_transactions(account_id: acc["id"])
+        pluggy_account.upsert_pluggy_transactions_snapshot!(transactions)
+        result[:transactions] += transactions.size
 
-      if investment_account?(acc)
-        # Pluggy exposes investments at the item level; attach them to the
-        # investment-typed container account so HoldingsProcessor can read them.
-        # Activities (investment transactions) are snapshotted but Trades import is
-        # explicitly OUT OF SCOPE for this PR (phase 2); leave activities_fetch_pending
-        # true so the generated syncing? override flags the item as still fetching.
-        pluggy_account.upsert_pluggy_holdings_snapshot!(investments_data)
-        pluggy_account.upsert_pluggy_activities_snapshot!(activities_data)
-        pluggy_account.update!(activities_fetch_pending: true)
-        investment_container_upserted = true
+        if investment_account?(acc)
+          # Pluggy exposes investments at the item level; attach them to the
+          # investment-typed container account so HoldingsProcessor can read them.
+          # Activities (investment transactions) are snapshotted but Trades import is
+          # explicitly OUT OF SCOPE for this PR (phase 2); leave activities_fetch_pending
+          # true so the generated syncing? override flags the item as still fetching.
+          pluggy_account.upsert_pluggy_holdings_snapshot!(investments_data)
+          pluggy_account.upsert_pluggy_activities_snapshot!(activities_data)
+          pluggy_account.update!(activities_fetch_pending: true)
+          investment_container_upserted = true
+        end
+
+        PluggyAccount::Processor.new(pluggy_account).process
+        result[:processed] << pluggy_account.id
+      rescue Provider::Pluggy::AuthenticationError
+        # Auth failure is item-wide, not account-scoped: re-raise so the top-level
+        # rescue marks the item requires_update and captures once, instead of once
+        # per account plus a partial import that reads as success to support.
+        raise
+      rescue => e
+        # Isolate per-account failures so one bad account can't abort the whole
+        # item import: record it, surface via DebugLogEntry for /settings/debug,
+        # and continue. Mirrors EnableBanking/Lunchflow importer isolation.
+        result[:errors] << { account_id: acc["id"], error_class: e.class.name, error: e.message }
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "warn",
+          message: "Pluggy import failed for account #{acc['id']}; skipping and continuing with remaining accounts",
+          source: self.class.name,
+          provider_key: "pluggy",
+          family: @pluggy_item.family,
+          account_provider: pluggy_account&.account_provider,
+          metadata: { account_id: acc["id"], pluggy_account_id: pluggy_account&.id, error_class: e.class.name, error: e.message }
+        )
       end
-
-      PluggyAccount::Processor.new(pluggy_account).process
-      result[:processed] << pluggy_account.id
     end
 
     # Pluggy frequently returns investments at the ITEM level even when /accounts
@@ -70,8 +96,17 @@ class PluggyItem::Importer
     end
 
     result
-  rescue Provider::Pluggy::AuthenticationError
+  rescue Provider::Pluggy::AuthenticationError => e
     @pluggy_item.update!(status: :requires_update)
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "Pluggy authentication failed for item #{@pluggy_item.id}; marking requires_update",
+      source: self.class.name,
+      provider_key: "pluggy",
+      family: @pluggy_item.family,
+      metadata: { pluggy_item_id: @pluggy_item.id, error_class: e.class.name, error: e.message }
+    )
     raise
   end
 
@@ -99,5 +134,18 @@ class PluggyItem::Importer
       pluggy_account.upsert_pluggy_activities_snapshot!(activities_data)
       pluggy_account.update!(activities_fetch_pending: true)
       pluggy_account
+    end
+
+    # Derive a bare hostname from the connector's website_url (e.g.
+    # "https://bank.example" → "bank.example"), mirroring
+    # PluggyAdapter#institution_domain so the importer-side cache and the
+    # adapter-side derivation agree on the bare-hostname contract. Blank/invalid
+    # URLs fall back to nil rather than persisting a malformed value.
+    def normalize_institution_domain(url)
+      return nil if url.blank?
+      URI.parse(url).host&.gsub(/^www\./, "")
+    rescue URI::InvalidURIError
+      Rails.logger.warn("Invalid institution URL for PluggyItem #{@pluggy_item.id}: #{url}")
+      nil
     end
 end

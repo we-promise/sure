@@ -199,6 +199,39 @@ class Provider::PluggyTest < ActiveSupport::TestCase
     assert_equal %w[t1 t2], txns.map { |t| t[:id] }
   end
 
+  # A stale or mis-normalized cursor that keeps returning the same `next` token
+  # would otherwise spin the loop forever accumulating the same page. The
+  # seen_cursors guard stops it: Set#add? returns nil for a duplicate, so the
+  # loop breaks after the second fetch instead of looping a third time.
+  test "get_account_transactions stops when the cursor repeats instead of advancing" do
+    page = { "results" => [ { "id" => "t1" } ], "next" => "cursor1" }.with_indifferent_access
+    Provider::Pluggy.stubs(:page_transactions).returns(page)
+    txns = Provider::Pluggy.get_account_transactions(account_id: "ac", client_id: "c", client_secret: "s")
+    assert_equal %w[t1 t1], txns.map { |t| t[:id] }
+  end
+
+  # Defensive cap: even if cursors never repeat and never go blank, the loop
+  # must bound memory. MAX_TRANSACTION_PAGES is temporarily lowered to 3 (manual
+  # const swap — this project's mocha/minitest load does not expose stub_const)
+  # and only 3 pages are stubbed: a 4th call (cap regression) raises a mocha
+  # expectation error, failing this test, so the cap stays enforced.
+  test "get_account_transactions caps pagination at MAX_TRANSACTION_PAGES to bound memory" do
+    original = Provider::Pluggy.const_get(:MAX_TRANSACTION_PAGES)
+    begin
+      Provider::Pluggy.send(:remove_const, :MAX_TRANSACTION_PAGES)
+      Provider::Pluggy.const_set(:MAX_TRANSACTION_PAGES, 3)
+      p1 = { "results" => [ { "id" => "t1" } ], "next" => "c1" }.with_indifferent_access
+      p2 = { "results" => [ { "id" => "t2" } ], "next" => "c2" }.with_indifferent_access
+      p3 = { "results" => [ { "id" => "t3" } ], "next" => "c3" }.with_indifferent_access
+      Provider::Pluggy.stubs(:page_transactions).returns(p1, p2, p3)
+      txns = Provider::Pluggy.get_account_transactions(account_id: "ac", client_id: "c", client_secret: "s")
+      assert_equal %w[t1 t2 t3], txns.map { |t| t[:id] }
+    ensure
+      Provider::Pluggy.send(:remove_const, :MAX_TRANSACTION_PAGES) rescue NameError # rubocop:disable Style/RescueModifier
+      Provider::Pluggy.const_set(:MAX_TRANSACTION_PAGES, original)
+    end
+  end
+
   # Pluggy `next` may be an absolute URL ("https://api.pluggy.ai/v2/transactions?after=...")
   # rather than a bare cursor token. normalize_transactions_cursor must extract the
   # `after` token so the cursor loop advances instead of echoing the full URL back as

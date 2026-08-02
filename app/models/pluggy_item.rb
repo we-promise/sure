@@ -49,6 +49,41 @@ class PluggyItem < ApplicationRecord
       family.pluggy_items.where.not(client_id: [ nil, "" ]).ordered.first
   end
 
+  # Hydrate the upstream Pluggy item id by asking the Pluggy API for the
+  # latest item this family's credentials have already connected. Single
+  # source of truth shared by PluggyItemsController and
+  # Settings::ProvidersController (previously two near-identical copies
+  # that had drifted). Rescues Provider::Pluggy::Error and unexpected
+  # errors so a request-thread caller never crashes the render; returns
+  # the item unchanged on failure or when no upstream item is found.
+  def self.hydrate_item_id!(item)
+    return item if item.blank? || item.pluggy_item_id.present?
+    return item unless item.credentials_configured?
+
+    # Resolve from the top-level Provider namespace: this class is defined as
+    # `class PluggyItem` (nested form), so a bare `Provider` would resolve to
+    # the inner `PluggyItem::Provider` (a real class) and shadow the top-level
+    # `Provider::Pluggy`, raising NameError. The sibling PluggyItem::* files
+    # are defined via the `::` form (`class PluggyItem::Importer`), so bare
+    # `Provider` falls through to top-level there — but not here.
+    discovered_id = ::Provider::Pluggy.latest_item_id(
+      client_id: item.client_id,
+      client_secret: item.client_secret,
+      client_user_id: item.client_user_id
+    )
+    return item if discovered_id.blank?
+
+    item.pluggy_item_id = discovered_id
+    item.save!(validate: false) if item.persisted? && item.changed?
+    item
+  rescue ::Provider::Pluggy::Error => e
+    Rails.logger.warn("Pluggy item auto-discovery failed for family #{Current.family&.id}: #{e.class} - #{e.message}")
+    item
+  rescue StandardError => e
+    Rails.logger.warn("Unexpected Pluggy item auto-discovery error for family #{Current.family&.id}: #{e.class} - #{e.message}")
+    item
+  end
+
   def syncer
     PluggyItem::Syncer.new(self)
   end
@@ -61,13 +96,17 @@ class PluggyItem < ApplicationRecord
 
   # Import data from provider API
   def import_latest_pluggy_data(sync: nil)
-    provider = pluggy_provider
-    unless provider
-      Rails.logger.error "PluggyItem #{id} - Cannot import: provider is not configured"
+    # `pluggy_provider` (below) unconditionally returns a Provider instance, so a
+    # `nil`-guard on it was dead code. Gate on the credential state instead —
+    # matches the settings/providers_controller.rb connect-token path, which also
+    # checks `credentials_configured?` before touching the provider. Fails fast
+    # with a clear message instead of letting the API call fail downstream.
+    unless credentials_configured?
+      Rails.logger.error "PluggyItem #{id} - Cannot import: provider credentials not configured"
       raise StandardError, I18n.t("pluggy_items.errors.provider_not_configured")
     end
 
-    PluggyItem::Importer.new(self, pluggy_provider: provider, sync: sync).import
+    PluggyItem::Importer.new(self, pluggy_provider: pluggy_provider, sync: sync).import
   rescue => e
     Rails.logger.error "PluggyItem #{id} - Failed to import data: #{e.message}"
     raise

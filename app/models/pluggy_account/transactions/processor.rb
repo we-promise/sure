@@ -106,7 +106,10 @@ class PluggyAccount::Transactions::Processor
       # Build provider-specific metadata for transaction.extra
       extra = build_extra_metadata(data)
 
-      Rails.logger.info "PluggyAccount::Transactions::Processor - Importing transaction: id=#{external_id} amount=#{amount} date=#{date}"
+      # debug (not info): this fires per-transaction on every sync, so info-level
+      # would flood the log, and amount is financial PII — keep the trace at debug
+      # and log only the external_id + date identifiers, not the amount.
+      Rails.logger.debug "PluggyAccount::Transactions::Processor - Importing transaction: id=#{external_id} date=#{date}"
 
       # Use ProviderImportAdapter for proper deduplication via external_id + source
       import_adapter.import_transaction(

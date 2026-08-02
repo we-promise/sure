@@ -87,7 +87,15 @@ class PluggyAccount::Processor
     # none is brokerage cash); re-anchoring keeps the event-sourced ledger + the
     # reverse balance calc in sync so the holdings chart stops reading 0.
     def upsert_investment_balance
-      balance = account.holdings.where(date: Date.current).sum(:amount)
+      # Scope to THIS provider's holdings only (account_provider_id). An Account
+      # can carry holdings from multiple providers (or manual entries) when a
+      # Pluggy link is added to an account that already had holdings; summing all
+      # of them would double-count the non-Pluggy value into the balance. Mirrors
+      # HoldingsProcessor's own account_provider_id scoping at l61.
+      provider_id = pluggy_account.account_provider&.id
+      holdings_scope = account.holdings.where(date: Date.current)
+      holdings_scope = holdings_scope.where(account_provider_id: provider_id) if provider_id
+      balance = holdings_scope.sum(:amount)
 
       account.assign_attributes(
         balance: balance,

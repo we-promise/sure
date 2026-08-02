@@ -21,6 +21,12 @@ class Provider::Pluggy
   DEFAULT_BASE_URL = "https://api.pluggy.ai"
   API_KEY_TTL = 7_200 # 2 hours; Pluggy /auth returns no expiresIn
   PAGE_SIZE = 500
+  # Upper bound on cursor-paginated transaction fetches. Normal Pluggy `next`
+  # cursors advance per page and terminate with null, but a stale or
+  # mis-normalized cursor could otherwise spin unbounded — capped here and
+  # deduped via `seen_cursors` in get_account_transactions so a degenerate
+  # response can't accumulate results into memory indefinitely.
+  MAX_TRANSACTION_PAGES = 200
 
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
@@ -172,7 +178,7 @@ class Provider::Pluggy
       # fall back to an unscoped query when client_user_id IS present: that could
       # match another family's Pluggy item (same client_id, different
       # clientUserId) and cross-link families via the auto-hydrated
-      # pluggy_item_id (see hydrate_pluggy_item_id!).
+      # pluggy_item_id (see PluggyItem.hydrate_item_id!).
       items = list_items(client_id:, client_secret:, client_user_id:)
       return nil if items.blank?
 
@@ -216,11 +222,15 @@ class Provider::Pluggy
     def get_account_transactions(account_id:, client_id:, client_secret:, date_from: nil, date_to: nil)
       results = []
       after = nil
-      loop do
+      seen_cursors = Set.new
+      MAX_TRANSACTION_PAGES.times do
         page = page_transactions(account_id:, after:, client_id:, client_secret:, date_from:, date_to:)
         results += (page[:results] || page["results"] || [])
         after = normalize_transactions_cursor(page[:next] || page["next"])
         break if after.blank?
+        # Stops a degenerate "same cursor forever" response spinning unbounded:
+        # Set#add? returns nil when the value was already present.
+        break unless seen_cursors.add?(after)
       end
       results
     end

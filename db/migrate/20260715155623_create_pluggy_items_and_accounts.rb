@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreatePluggyItemsAndAccounts < ActiveRecord::Migration[8.1]
+class CreatePluggyItemsAndAccounts < ActiveRecord::Migration[7.2]
   def change
     # Create provider items table (stores per-family connection credentials)
     create_table :pluggy_items, id: :uuid do |t|
@@ -62,6 +62,20 @@ class CreatePluggyItemsAndAccounts < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :pluggy_accounts, :pluggy_account_id, unique: true
+    # Scoped composite-unique index (per PluggyItem), not globally unique: the
+    # same upstream Pluggy account id can legitimately recur across items when a
+    # family re-connects or links the same bank account to a second PluggyItem,
+    # and `PluggyAccount.upsert_from_pluggy!` does a single-column
+    # find_or_initialize_by(pluggy_account_id:) that the global unique
+    # constraint turns into a hard failure on those reconnections. The
+    # non-unique single-column index preserves that lookup path; the composite
+    # unique index enforces per-item uniqueness instead of global. NULLs are
+    # distinct under PostgreSQL unique indexes, so unlinked rows (null
+    # pluggy_account_id) coexist without collision. Mirrors the redbark /
+    # questrade / ibkr / trading212 composite-unique account-id index pattern.
+    add_index :pluggy_accounts, :pluggy_account_id
+    add_index :pluggy_accounts, [ :pluggy_item_id, :pluggy_account_id ],
+              unique: true,
+              name: "index_pluggy_accounts_on_item_and_account_id"
   end
 end

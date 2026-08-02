@@ -63,9 +63,14 @@ class PluggyItem::AutoSetup
       return if pluggy_account.account_provider.present?
 
       accountable_name = ACCOUNTABLE_CLASS_NAMES.fetch(pluggy_account.suggested_setup_account_type, "Depository")
+      # Pluggy reports CreditCard/Loan balances as positive numbers; Sure stores
+      # liabilities as negative (see PluggyAccount::Processor#upsert_balance). Mirror
+      # that here so an auto-created card/loan doesn't show up as a positive asset.
+      balance = pluggy_account.current_balance || 0
+      balance = -balance if accountable_name.in?(%w[CreditCard Loan])
       account = pluggy_item.family.accounts.create!(
         name: pluggy_account.name,
-        balance: pluggy_account.current_balance || 0,
+        balance: balance,
         currency: pluggy_account.currency || "USD",
         accountable: accountable_name.constantize.new
       )

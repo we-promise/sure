@@ -89,6 +89,38 @@ class PluggyAccount::ProcessorTest < ActiveSupport::TestCase
     assert result[:holdings]
   end
 
+  # Regression: provider-scope the investment-balance holdings sum. An Account can
+  # carry holdings from multiple providers (or manual entries) when a Pluggy link is
+  # added to an account that already had holdings; summing ALL of them for the date
+  # would double-count the non-Pluggy value into the balance. The fix scopes the sum
+  # to THIS provider's holdings (account_provider_id), mirroring HoldingsProcessor's
+  # own provider scoping at l61. Here the unscoped sum (8000) would book another
+  # provider's 3000 into this Pluggy account's balance; the fixed, provider-scoped
+  # sum is 5000 — `expects(...).with(balance: 5000)` fails under the old unscoped path.
+  test "process scopes investment balance to this provider's holdings only" do
+    @pluggy_account.stubs(:account_type).returns("investment")
+    @pluggy_account.stubs(:raw_payload).returns("type" => "investment")
+    @pluggy_account.stubs(:raw_holdings_payload).returns([ { "code" => "PETR4" } ])
+    @pluggy_account.stubs(:raw_activities_payload).returns([])
+    @pluggy_account.stubs(:current_balance).returns(0)
+    @pluggy_account.stubs(:currency).returns("BRL")
+    @pluggy_account.stubs(:account_provider).returns(OpenStruct.new(id: 42))
+
+    stub_provider_scoped_holdings_relation(provider_scoped_sum: 5000, unscoped_sum: 8000)
+
+    PluggyAccount::Investments::HoldingsProcessor.any_instance.stubs(:process)
+
+    @account.expects(:assign_attributes).with(
+      balance: 5000,
+      cash_balance: 0,
+      currency: "BRL"
+    ).once
+
+    result = PluggyAccount::Processor.new(@pluggy_account).process
+
+    assert result[:holdings]
+  end
+
   test "process returns nil when no linked account" do
     @pluggy_account.stubs(:current_account).returns(nil)
 
@@ -118,6 +150,24 @@ class PluggyAccount::ProcessorTest < ActiveSupport::TestCase
       holdings_relation = stub("HoldingsRelation")
       holdings_relation.stubs(:where).with(date: Date.current).returns(holdings_relation)
       holdings_relation.stubs(:sum).with(:amount).returns(sum)
+      @account.stubs(:holdings).returns(holdings_relation)
+    end
+
+    # Two-level holdings chain for the provider-scoped balance path:
+    # `account.holdings.where(date: Date.current)` → date_scoped, then
+    # `date_scoped.where(account_provider_id: <id>)` → provider_scoped, then
+    # `.sum(:amount)`. The UNscoped sum on date_scoped returns `unscoped_sum` so a
+    # regression that drops the provider scope would book `unscoped_sum` (8000) into
+    # the balance — the test's `expects(balance: provider_scoped_sum)` then fails,
+    # which is the regression signal.
+    def stub_provider_scoped_holdings_relation(provider_scoped_sum:, unscoped_sum:)
+      date_scoped = stub("DateScopedHoldings")
+      provider_scoped = stub("ProviderScopedHoldings")
+      date_scoped.stubs(:where).with(account_provider_id: 42).returns(provider_scoped)
+      date_scoped.stubs(:sum).with(:amount).returns(unscoped_sum)
+      provider_scoped.stubs(:sum).with(:amount).returns(provider_scoped_sum)
+      holdings_relation = stub("HoldingsRelation")
+      holdings_relation.stubs(:where).with(date: Date.current).returns(date_scoped)
       @account.stubs(:holdings).returns(holdings_relation)
     end
 end

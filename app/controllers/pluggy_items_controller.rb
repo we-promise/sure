@@ -43,7 +43,7 @@ class PluggyItemsController < ApplicationController
       end
     end
 
-    hydrate_pluggy_item_id!(@pluggy_item)
+    PluggyItem.hydrate_item_id!(@pluggy_item)
 
     if @pluggy_item.save
       if should_auto_connect?(@pluggy_item)
@@ -105,7 +105,7 @@ class PluggyItemsController < ApplicationController
     if @pluggy_item.pluggy_item_id.blank?
       hydrated_item = @pluggy_item.dup
       hydrated_item.assign_attributes(attrs)
-      hydrate_pluggy_item_id!(hydrated_item)
+      PluggyItem.hydrate_item_id!(hydrated_item)
       attrs[:pluggy_item_id] = hydrated_item.pluggy_item_id if hydrated_item.pluggy_item_id.present?
     end
 
@@ -202,7 +202,7 @@ class PluggyItemsController < ApplicationController
       return
     end
 
-    hydrate_pluggy_item_id!(pluggy_item)
+    PluggyItem.hydrate_item_id!(pluggy_item)
 
     unless pluggy_item.pluggy_item_id.present?
       redirect_to settings_providers_path,
@@ -401,10 +401,10 @@ class PluggyItemsController < ApplicationController
       # token; combined with the hardcoded `avoidDuplicates: true` below, Pluggy
       # rejects it with ITEM_USER_ALREADY_EXISTS whenever an item already exists
       # for the family's `clientUserId`. Mirrors the connect_form path in
-      # Settings::ProvidersController (which already calls #hydrate_pluggy_item_id!).
+      # Settings::ProvidersController (which also hydrates via PluggyItem.hydrate_item_id!).
       # When creds are invalid the hydrate rescue returns the item unchanged and
       # connect_token raises into the outer rescue — same end state as before.
-      item = hydrate_pluggy_item_id!(item)
+      item = PluggyItem.hydrate_item_id!(item)
 
       token = item.pluggy_provider.connect_token(
         client_user_id: item.client_user_id,
@@ -415,27 +415,6 @@ class PluggyItemsController < ApplicationController
       [ token, item ]
     rescue StandardError
       [ nil, nil ]
-    end
-
-    def hydrate_pluggy_item_id!(item)
-      return item if item.blank? || item.pluggy_item_id.present?
-      return item unless item.credentials_configured?
-
-      discovered_id = Provider::Pluggy.latest_item_id(
-        client_id: item.client_id,
-        client_secret: item.client_secret,
-        client_user_id: item.client_user_id
-      )
-
-      item.pluggy_item_id = discovered_id if discovered_id.present?
-      item.save!(validate: false) if item.persisted? && item.changed?
-      item
-    rescue Provider::Pluggy::Error => e
-      Rails.logger.warn("Pluggy item auto-discovery failed for family #{Current.family&.id}: #{e.class} - #{e.message}")
-      item
-    rescue StandardError => e
-      Rails.logger.warn("Unexpected Pluggy item auto-discovery error for family #{Current.family&.id}: #{e.class} - #{e.message}")
-      item
     end
 
     def preferred_pluggy_item

@@ -43,9 +43,20 @@ class Balance::SyncCache
         custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 
         # Use Money#exchange_to with custom rate if available, standard lookup
-        # otherwise. Rescue a missing historical rate the same way
-        # holdings_value_by_date does (1:1 fallback) so a single foreign-currency
-        # entry without a rate can't crash the entire account balance sync.
+        # otherwise. On a missing historical rate, DROP the entry from the
+        # cache (not retain+relabel). The downstream flow/derivation in
+        # Balance::BaseCalculator sums entry.amount across the day with no
+        # currency awareness (see #flows_for_date's `sum(&:amount)`), so:
+        #   - keeping the source-currency nominal and relabeling it to
+        #     account.currency would silently treat a 100 EUR entry as
+        #     100 #{account.currency} in the balance series (currency laundering),
+        #   - keeping the entry in its source currency would mix currencies
+        #     in the naive sum.
+        # Dropping is the honest failure mode: that day's balance omits the
+        # unconvertible foreign entry rather than booking a fabricated value,
+        # and the logged warn surfaces it for support — while preserving the
+        # resilience policy (a single bad entry can't crash the whole sync),
+        # mirroring holdings_value_by_date's non-crashing rescue.
         converted_entry.amount =
           begin
             converted_entry.amount_money.exchange_to(
@@ -54,11 +65,15 @@ class Balance::SyncCache
               custom_rate: custom_rate
             ).amount
           rescue Money::ConversionError
-            converted_entry.amount
+            Rails.logger.warn(
+              "Balance::SyncCache - dropped entry #{e.id} on account #{account.id}: " \
+              "no FX rate to convert to #{account.currency} on #{e.date}"
+            )
+            next nil
           end
 
         converted_entry.currency = account.currency
         converted_entry
-      end
+      end.compact
     end
 end

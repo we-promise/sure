@@ -37,6 +37,15 @@ class PluggyItem::AutoSetupTest < ActiveSupport::TestCase
     assert_equal "Investment",  invest_pa.reload.account.accountable_type
     assert_equal "Depository",  unknown_pa.reload.account.accountable_type
 
+    # Liabilities (CreditCard/Loan) are stored NEGATIVE on Sure's Account even
+    # though Pluggy reports them as positive balances — auto-setup must mirror
+    # PluggyAccount::Processor#upsert_balance's sign flip so a freshly-created
+    # card/loan isn't booked as a positive asset. Assets stay positive.
+    assert_equal(-1_000,    bank_pa.reload.account.balance)
+    assert_equal(-250_000,  loan_pa.reload.account.balance)
+    assert_equal(50_000,     invest_pa.reload.account.balance)
+    assert_equal(100,        unknown_pa.reload.account.balance)
+
     # Once linked, has_completed_initial_setup? is true → the syncer guard skips
     # auto-setup on every subsequent sync.
     assert_predicate @pluggy_item.reload, :has_completed_initial_setup?

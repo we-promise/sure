@@ -1,4 +1,4 @@
-class AddPluggyInvestmentColumns < ActiveRecord::Migration[8.1]
+class AddPluggyInvestmentColumns < ActiveRecord::Migration[7.2]
   def change
     add_column :pluggy_accounts, :raw_holdings_payload, :jsonb, null: false, default: []
     add_column :pluggy_accounts, :raw_activities_payload, :jsonb, null: false, default: []

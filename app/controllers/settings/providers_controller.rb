@@ -131,7 +131,7 @@ class Settings::ProvidersController < ApplicationController
         # holds an item for this `client_user_id` but the local `pluggy_item_id`
         # is blank — otherwise the CREATE-mode token makes the widget POST /items
         # and Pluggy rejects the duplicate as ITEM_USER_ALREADY_EXISTS.
-        @connect_item = hydrate_pluggy_item_id!(@connect_item)
+        @connect_item = PluggyItem.hydrate_item_id!(@connect_item)
         if @connect_item&.credentials_configured?
           # `avoid_duplicates:` is intentionally OMITTED: the SDK derives the flag
           # from `item_id` presence (nil -> CREATE: false, present -> UPDATE:
@@ -186,38 +186,12 @@ class Settings::ProvidersController < ApplicationController
       redirect_to root_path, alert: t("settings.providers.not_authorized")
     end
 
-    # Recover the upstream Pluggy item id for the connect-token-bound item when
-    # the local `pluggy_item_id` is blank but Pluggy's API already holds an item
-    # for this family's `client_user_id`. Without it the connect token is minted
-    # CREATE-mode and the Pluggy Connect widget POSTs /items — duplicating the
-    # existing item, which Pluggy rejects as 400 ITEM_USER_ALREADY_EXISTS. With
-    # the recovered id the token binds `itemId` (UPDATE mode) and the widget
-    # re-auths the existing connection instead. Mirrors
-    # PluggyItemsController#hydrate_pluggy_item_id! so both mint paths (show +
-    # connect_form) land the update-mode token. Swallows network/auth errors so
-    # a stale credential cannot break the providers render — the panel falls
-    # back to its existing behavior (hidden widget box, "credentials only").
-    def hydrate_pluggy_item_id!(item)
-      return item if item.blank? || item.pluggy_item_id.present?
-      return item unless item.credentials_configured?
-
-      discovered_id = Provider::Pluggy.latest_item_id(
-        client_id: item.client_id,
-        client_secret: item.client_secret,
-        client_user_id: item.client_user_id
-      )
-      return item if discovered_id.blank?
-
-      item.pluggy_item_id = discovered_id
-      item.save!(validate: false) if item.persisted? && item.changed?
-      item
-    rescue Provider::Pluggy::Error => e
-      Rails.logger.warn("Pluggy item auto-discovery failed for family #{Current.family&.id}: #{e.class} - #{e.message}")
-      item
-    rescue StandardError => e
-      Rails.logger.warn("Unexpected Pluggy item auto-discovery error for family #{Current.family&.id}: #{e.class} - #{e.message}")
-      item
-    end
+    # Hydration of the upstream Pluggy item id is centralized on the model —
+    # see `PluggyItem.hydrate_item_id!` (app/models/pluggy_item.rb). Both this
+    # controller's mint paths (show + connect_form) and PluggyItemsController
+    # delegate to it, so the connect token binds UPDATE mode whenever Pluggy
+    # still holds an item for the family's `client_user_id` (prevents the
+    # ITEM_USER_ALREADY_EXISTS duplicate-create rejection).
 
     # Reload provider configurations after settings update
     def reload_provider_configs(updated_fields)
@@ -389,7 +363,7 @@ class Settings::ProvidersController < ApplicationController
       # is blank — otherwise the CREATE-mode token makes the widget POST /items
       # and Pluggy rejects the duplicate as ITEM_USER_ALREADY_EXISTS. The auth
       # failure path below (`rescue nil`) already hides the widget on stale creds.
-      @connect_item = hydrate_pluggy_item_id!(@connect_item)
+      @connect_item = PluggyItem.hydrate_item_id!(@connect_item)
       if @connect_item&.credentials_configured?
         @connect_token = @connect_item.pluggy_provider.connect_token(
           client_user_id: @connect_item.client_user_id,

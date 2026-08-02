@@ -150,10 +150,16 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_in_delta 120.0, amounts[2], 0.01  # 100 EUR * 1.2
   end
 
-  test "falls back to 1:1 conversion rate when exchange rate is missing for an entry" do
-    # Foreign-currency entry with NO custom rate and NO ExchangeRate row. Without
-    # the rescue in converted_entries (mirroring holdings_value_by_date), this
-    # raises Money::ConversionError and crashes the whole account balance sync.
+  # Regression (CodeRabbit, app/models/balance/sync_cache.rb converted_entries):
+  # a foreign entry with no historical rate must NOT be retained at its
+  # source-currency nominal and relabeled as account.currency — that silently
+  # treated €100 as $100 USD in the balance series. The fix DROPS the
+  # unconvertible entry from the cache (the downstream #flows_for_date sums
+  # entry.amount with no currency awareness, so keeping it — relabeled or not —
+  # would contaminate the sum) and surfaces a logged warn, while still not
+  # crashing the sync. Pre-fix this test asserted the buggy
+  # `currency: "USD", amount: 100.0` relabel+retain.
+  test "drops an entry whose exchange rate is missing instead of relabeling its nominal as account currency" do
     _entry = @account.entries.create!(
       date: Date.current,
       name: "EUR Transaction no rate",
@@ -165,10 +171,51 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
       )
     )
 
-    converted_entry = Balance::SyncCache.new(@account).send(:converted_entries).first
+    Rails.logger.expects(:warn).with(regexp_matches(/Balance::SyncCache - dropped entry/)).once
 
+    converted_entries = Balance::SyncCache.new(@account).send(:converted_entries)
+
+    assert_empty converted_entries # dropped, not relabeled €100 → $100 USD
+  end
+
+  # Pins both halves of the fix against a regression: of two same-day entries,
+  # the convertible one is kept (in account currency, true converted amount) and
+  # the rateless one is dropped — so neither a relabel-and-retain nor a
+  # mixed-currency sum can sneak back in. Pre-fix this returned 2 entries both
+  # in USD (€100 relabeled as $100 + €/GBP entries laundered), so length == 2
+  # and the €100 nominal was laundered into the balance; the fixed path returns
+  # length 1.
+  test "keeps convertible entries and drops rateless ones in the same day" do
+    ExchangeRate.create!(
+      from_currency: "EUR",
+      to_currency: "USD",
+      date: Date.current,
+      rate: 1.2
+    )
+
+    _eur_with_rate = @account.entries.create!(
+      date: Date.current,
+      name: "EUR Transaction with rate",
+      amount: 100,
+      currency: "EUR",
+      entryable: Transaction.new(category: @family.categories.first, extra: {})
+    )
+    _gbp_no_rate = @account.entries.create!(
+      date: Date.current,
+      name: "GBP Transaction no rate",
+      amount: 50,
+      currency: "GBP",
+      entryable: Transaction.new(category: @family.categories.first, extra: {})
+    )
+
+    Rails.logger.expects(:warn).with(regexp_matches(/dropped entry/)).once
+
+    converted_entries = Balance::SyncCache.new(@account).send(:converted_entries)
+
+    assert_equal 1, converted_entries.length
+    converted_entry = converted_entries.first
     assert_equal "USD", converted_entry.currency
-    assert_equal 100.0, converted_entry.amount  # 1:1 fallback, no crash
+    assert_in_delta 120.0, converted_entry.amount, 0.01 # €100 * 1.2, convertible kept
   end
 
   # get_holdings_value
