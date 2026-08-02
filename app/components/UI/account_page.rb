@@ -52,6 +52,8 @@ class UI::AccountPage < ApplicationComponent
       [ :activity ]
     end
 
+    base_tabs += [ :pockets ] if account.depository?
+
     base_tabs + [ :statements ]
   end
 
@@ -79,6 +81,8 @@ class UI::AccountPage < ApplicationComponent
     when :holdings, :overview
       # Accountable is responsible for implementing the partial in the correct folder
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
+    when :pockets
+      render "accounts/pockets/index", account: account
     when :statements
       render_statement_tab
     end

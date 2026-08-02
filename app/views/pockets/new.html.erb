@@ -1,0 +1,10 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) %>
+  <% dialog.with_body do %>
+    <%= render "form",
+      pocket: @pocket,
+      account: @account,
+      url: account_pockets_path(@account),
+      available_tags: @available_tags %>
+  <% end %>
+<% end %>

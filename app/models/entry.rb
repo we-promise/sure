@@ -15,6 +15,11 @@ class Entry < ApplicationRecord
 
   has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
 
+  # Must be registered before delegated_type so it fires before Transaction is destroyed.
+  # In Rails 7.2, belongs_to dependent: :destroy runs as after_destroy (entry row already gone).
+  # Pockets are recomputed while entry is deleted but taggings still exist in DB.
+  after_destroy :recompute_pockets_for_transaction
+
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
 
@@ -530,5 +535,18 @@ class Entry < ApplicationRecord
       return if destroyed_by_association || unsplitting
 
       throw :abort
+    end
+
+    def recompute_pockets_for_transaction
+      return unless transaction?
+
+      if entryable.nil?
+        return
+      end
+
+      entryable.taggings.each do |tagging|
+        pocket = account.pockets.find_by(tag_id: tagging.tag_id)
+        pocket&.recompute_from_tag!
+      end
     end
 end
