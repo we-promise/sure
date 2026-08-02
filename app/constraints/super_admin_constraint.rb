@@ -15,7 +15,10 @@ class SuperAdminConstraint
     cookie_value = request.cookie_jar.signed[:session_token]
     return false if cookie_value.blank?
 
-    Session.find_by(id: cookie_value)&.user&.super_admin? || false
+    user = Session.find_by(id: cookie_value)&.user
+    return false unless user&.active?
+
+    user.super_admin?
   rescue => e
     Rails.logger.warn("SuperAdminConstraint rejected request: #{e.class}: #{e.message}")
     false

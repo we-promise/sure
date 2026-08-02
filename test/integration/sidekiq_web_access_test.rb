@@ -31,6 +31,16 @@ class SidekiqWebAccessTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "deactivated super admin gets 404" do
+    super_admin = users(:sure_support_staff)
+    sign_in super_admin
+    super_admin.update_column(:active, false)
+
+    get "/sidekiq"
+
+    assert_response :not_found
+  end
+
   test "garbage session cookie fails closed" do
     cookies[:session_token] = "not-a-signed-cookie"
 

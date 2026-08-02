@@ -51,6 +51,26 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "in_progress", impersonator_session.reload.status
   end
 
+  test "impersonation ends automatically when the impersonated user is deactivated mid-session" do
+    sign_in super_admin = users(:sure_support_staff)
+    impersonated = users(:family_member)
+
+    impersonator_session = impersonation_sessions(:in_progress)
+    super_admin_session = super_admin.sessions.order(created_at: :desc).first
+
+    post join_impersonation_sessions_path, params: { impersonation_session_id: impersonator_session.id }
+    assert_equal impersonator_session, super_admin_session.reload.active_impersonator_session
+
+    impersonated.update_column(:active, false)
+
+    # The admin's own session is still valid — they should land on root, not
+    # get logged out — but the impersonation link itself must be gone.
+    get root_path
+    assert_response :success
+    assert_nil super_admin_session.reload.active_impersonator_session
+    assert Session.exists?(id: super_admin_session.id), "the admin's own session must survive"
+  end
+
   test "super admin can complete an impersonation session" do
     sign_in super_admin = users(:sure_support_staff)
 
