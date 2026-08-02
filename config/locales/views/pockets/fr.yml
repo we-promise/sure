@@ -5,6 +5,7 @@ fr:
       new: "Nouvelle enveloppe"
       total_allocated: "Alloué"
       free_balance: "Solde libre"
+      free_label: "Libre"
       empty: "Aucune enveloppe. Créez-en une pour commencer à allouer des fonds."
       overflow_warning: "Les enveloppes allouées dépassent le solde actuel du compte."
     new:
@@ -37,12 +38,12 @@ fr:
         outflows: "Dépenses uniquement"
         both: "Toutes les transactions"
     create:
-      success: "Enveloppe créé."
+      success: "Enveloppe créée."
     update:
-      success: "Enveloppe mis à jour."
+      success: "Enveloppe mise à jour."
     destroy:
       confirm: "Supprimer l'enveloppe \"%{name}\" ?"
-      success: "Enveloppe supprimé."
+      success: "Enveloppe supprimée."
   accounts:
     show:
       tabs:

@@ -43,23 +43,27 @@ class Pocket < ApplicationRecord
     update_column(:allocated_amount, tagged_transaction_total(tag_id))
   end
 
-  # increment!/decrement! are intentional here: they skip AR callbacks and validations
-  # (including total_pockets_within_account_balance) to avoid re-triggering the Tagging
-  # callbacks that called these methods. This means allocated_amount can temporarily exceed
-  # the account balance under concurrent tagging — pockets_overflow? surfaces that to the user.
-  # The DB check constraint (chk_pockets_allocated_amount_non_negative) remains the hard floor.
+  # Full recompute (via recompute_from_tag!) rather than an incremental adjust_by:
+  # incrementally adding/subtracting per-tagging deltas can diverge from the aggregate
+  # for fill_direction "both" (each step clamps at 0, whereas the aggregate only floors
+  # the net total at 0 — order of tagging/untagging can then produce different results).
+  # recompute_from_tag! uses update_column, same as increment!/decrement! did, so it
+  # still skips AR callbacks/validations and avoids re-triggering the Tagging callbacks
+  # that called these methods.
   def apply_tagging(tagging)
     delta = tagging_transaction_delta(tagging)
     return unless delta
 
-    adjust_by(delta)
+    recompute_from_tag!
   end
 
+  # Must run after the Tagging row is actually deleted (see Tagging#unfill_linked_pocket,
+  # registered as after_destroy) so the aggregate query in recompute_from_tag! excludes it.
   def reverse_tagging(tagging)
     delta = tagging_transaction_delta(tagging)
     return unless delta
 
-    adjust_by(-delta)
+    recompute_from_tag!
   end
 
   private
@@ -120,14 +124,6 @@ class Pocket < ApplicationRecord
       when "inflows"  then amount < 0 ? amount.abs : nil  # income only, always positive
       when "outflows" then amount > 0 ? amount : nil      # expense only, always positive
       else -amount  # income (neg in DB) → positive delta; expense (pos in DB) → negative delta
-      end
-    end
-
-    def adjust_by(delta)
-      if delta >= 0
-        increment!(:allocated_amount, delta)
-      else
-        decrement!(:allocated_amount, [ delta.abs, allocated_amount ].min)
       end
     end
 

@@ -3,7 +3,7 @@ class Tagging < ApplicationRecord
   belongs_to :taggable, polymorphic: true
 
   after_create :fill_linked_pocket
-  before_destroy :unfill_linked_pocket
+  after_destroy :unfill_linked_pocket
 
   private
 
