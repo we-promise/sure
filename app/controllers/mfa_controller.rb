@@ -76,6 +76,7 @@ class MfaController < ApplicationController
     # bumped below) — a deactivated user shouldn't be able to spend a
     # WebAuthn assertion on a login that was always going to be rejected.
     unless @user.active?
+      session.delete(:mfa_user_id)
       return render json: { error: t("sessions.create.account_deactivated") }, status: :unauthorized
     end
 

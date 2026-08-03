@@ -384,13 +384,21 @@ class User < ApplicationRecord
   # Doorkeeper tokens and API keys stay valid on the wire — currently
   # harmless only because Api::V1::BaseController/McpController re-check
   # active? on every request, but that's a second, independent safeguard,
-  # not a substitute for actually revoking the credentials.
+  # not a substitute for actually revoking the credentials. Also revokes
+  # unexchanged OAuth authorization grants — /oauth/token doesn't go
+  # through the cookie authenticator, so a still-valid grant issued right
+  # before deactivation could otherwise be exchanged for a fresh token
+  # afterward.
   def revoke_all_access_tokens
     tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    grants_revoked = Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
     keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
 
-    if tokens_revoked > 0 || keys_revoked > 0
-      Rails.logger.warn("[AUTH] Revoked #{tokens_revoked} access token(s) and #{keys_revoked} API key(s) for deactivated user_id=#{id}")
+    if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
+      Rails.logger.warn(
+        "[AUTH] Revoked #{tokens_revoked} access token(s), #{grants_revoked} authorization grant(s), " \
+        "and #{keys_revoked} API key(s) for deactivated user_id=#{id}"
+      )
     end
   end
 
