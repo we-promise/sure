@@ -82,10 +82,13 @@ class Provider::Binance
 
   # Signed trade history for a single symbol, e.g. "BTCUSDT".
   # Pass from_id to fetch only trades with id >= from_id (for incremental sync).
-  def get_spot_trades(symbol, limit: 1000, from_id: nil, start_time: nil)
+  # Pass start_time/end_time (epoch ms) to fetch a bounded window instead; Binance
+  # rejects from_id combined with start_time/end_time, so callers use one or the other.
+  def get_spot_trades(symbol, limit: 1000, from_id: nil, start_time: nil, end_time: nil)
     params = { "symbol" => symbol, "limit" => limit.to_s }
     params["fromId"] = from_id.to_s if from_id
     params["startTime"] = start_time.to_s if start_time
+    params["endTime"] = end_time.to_s if end_time
     signed_get("/api/v3/myTrades", extra_params: params)
   end
 
@@ -95,10 +98,11 @@ class Provider::Binance
   end
 
   # Futures trade history for a single symbol
-  def get_futures_trades(symbol, limit: 1000, from_id: nil, start_time: nil)
+  def get_futures_trades(symbol, limit: 1000, from_id: nil, start_time: nil, end_time: nil)
     params = { "symbol" => symbol, "limit" => limit.to_s }
     params["fromId"] = from_id.to_s if from_id
     params["startTime"] = start_time.to_s if start_time
+    params["endTime"] = end_time.to_s if end_time
     signed_get("/fapi/v1/userTrades", extra_params: params, base_url: FUTURES_BASE_URL)
   end
 
