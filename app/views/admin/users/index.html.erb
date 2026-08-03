@@ -169,13 +169,16 @@
                               </div>
                             <% end %>
 
-                            <%= form_with url: admin_user_path(user), method: :delete, class: "flex justify-end" do %>
-                              <button type="submit"
-                                      data-turbo-confirm="<%= t(".delete_confirm") %>"
-                                      class="text-sm text-destructive border border-destructive rounded-lg px-3 py-2 hover:bg-destructive/10 transition-colors">
-                                <%= t(".actions.delete_user") %>
-                              </button>
-                            <% end %>
+                            <div class="flex justify-end">
+                              <%= render DS::Button.new(
+                                variant: :outline_destructive,
+                                size: :sm,
+                                href: admin_user_path(user),
+                                method: :delete,
+                                confirm: users.one? ? t(".delete_confirm_last_user") : t(".delete_confirm"),
+                                text: t(".actions.delete_user")
+                              ) %>
+                            </div>
                           </div>
                         <% end %>
                       </td>
@@ -206,7 +209,7 @@
                             <%= render DS::Button.new(
                                   text: t(".invitations.delete"),
                                   type: "submit",
-                                  variant: :outline_destructive,
+                                  variant: :destructive,
                                   size: :sm,
                                   data: {
                                     admin_invitation_delete_target: "button",
@@ -250,13 +253,14 @@
               <p class="text-xs text-secondary"><%= t(".unused_families.family_id", id: family.id.to_s.first(8)) %></p>
             </div>
 
-            <%= form_with url: admin_family_path(family), method: :delete do %>
-              <button type="submit"
-                      data-turbo-confirm="<%= t(".unused_families.delete_confirm") %>"
-                      class="text-sm text-destructive border border-destructive rounded-lg px-3 py-2 hover:bg-destructive/10 transition-colors">
-                <%= t(".unused_families.delete") %>
-              </button>
-            <% end %>
+            <%= render DS::Button.new(
+              variant: :outline_destructive,
+              size: :sm,
+              href: admin_family_path(family),
+              method: :delete,
+              confirm: t(".unused_families.delete_confirm"),
+              text: t(".unused_families.delete")
+            ) %>
           </div>
         <% end %>
       </div>

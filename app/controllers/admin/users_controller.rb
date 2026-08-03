@@ -52,14 +52,23 @@ module Admin
       authorize @user
 
       if membership_change_requested?
-        target_family = target_family_for_update
+        target_family = nil
+
+        ActiveRecord::Base.transaction do
+          target_family = target_family_for_update
+
+          if target_family.nil?
+            raise ActiveRecord::Rollback
+          end
+
+          @user.transfer_to_family!(target_family, role: user_params[:role])
+        end
 
         if target_family.nil?
           redirect_to admin_users_path, alert: t(".family_required")
           return
         end
 
-        @user.transfer_to_family!(target_family, role: user_params[:role])
         Rails.logger.info(
           "[Admin::Users] Family changed - " \
           "by_user_id=#{Current.user.id} " \
@@ -82,13 +91,18 @@ module Admin
       redirect_to admin_users_path, notice: t(".success")
     rescue ActiveRecord::RecordInvalid => e
       redirect_to admin_users_path, alert: e.record.errors.full_messages.to_sentence
+    rescue ActiveRecord::RecordNotFound
+      redirect_to admin_users_path, alert: t(".failure")
     end
 
     def destroy
       authorize @user
 
-      @user.purge
-      redirect_to admin_users_path, notice: t(".destroy_success")
+      if @user.purge
+        redirect_to admin_users_path, notice: t(".destroy_success")
+      else
+        redirect_to admin_users_path, alert: t(".destroy_failure")
+      end
     end
 
     private
@@ -104,13 +118,16 @@ module Admin
       end
 
       def membership_change_requested?
-        user_params[:new_family_name].present? || (user_params[:family_id].present? && user_params[:family_id] != @user.family_id)
+        new_family_name = user_params[:new_family_name].to_s.strip
+        new_family_name.present? || (user_params[:family_id].present? && user_params[:family_id] != @user.family_id)
       end
 
       def target_family_for_update
-        if user_params[:new_family_name].present?
+        new_family_name = user_params[:new_family_name].to_s.strip
+
+        if new_family_name.present?
           Family.create!(
-            name: user_params[:new_family_name].strip,
+            name: new_family_name,
             moniker: user_params[:new_family_moniker].presence || "Family"
           )
         elsif user_params[:family_id].present?
