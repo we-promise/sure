@@ -23,19 +23,35 @@ if [ -z "$POSTGRES_DB" ] || [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD"
   exit 1
 fi
 
+case "${POSTGRES_HOST}${POSTGRES_PORT}${POSTGRES_DB}${POSTGRES_USER}${POSTGRES_PASSWORD}" in
+  *"
+"*)
+    echo "Error: Database connection parameters must not contain newlines."
+    exit 1
+    ;;
+esac
+
+if [ "$BACKUP_OVERWRITE" != "true" ] && [ -n "$BACKUP_KEEP_DAYS" ]; then
+  if ! [ "$BACKUP_KEEP_DAYS" -gt 0 ] 2>/dev/null; then
+    echo "Error: BACKUP_KEEP_DAYS must be a positive integer (got: ${BACKUP_KEEP_DAYS})."
+    exit 1
+  fi
+fi
+
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
 
 if [ "$BACKUP_OVERWRITE" = "true" ]; then
   FILENAME="backup_latest.sql.gz"
 else
-  FILENAME="backup_${TIMESTAMP}.sql.gz"
+  FILENAME="backup_${TIMESTAMP}_$$.sql.gz"
 fi
 
-TEMP_FILE="/tmp/${FILENAME}"
-PGPASS_FILE="/tmp/.pgpass_${TIMESTAMP}_$$"
+TMP_DIR=$(umask 077 && mktemp -d)
+TEMP_FILE="${TMP_DIR}/${FILENAME}"
+PGPASS_FILE="${TMP_DIR}/.pgpass"
 
-# POSIX trap handler to guarantee cleanup of temporary files on exit or termination signal
-trap 'rm -f "${TEMP_FILE}" "${PGPASS_FILE}"' EXIT INT TERM
+# POSIX trap handler to guarantee cleanup of temporary workspace on exit or termination signal
+trap 'rm -rf "${TMP_DIR}"' EXIT INT TERM
 
 # Securely generate .pgpass file with strict permissions (0600) and escaped fields
 PG_HOST_ESC=$(printf '%s' "${POSTGRES_HOST}" | sed -e 's/\\/\\\\/g' -e 's/:/\\:/g')
@@ -60,15 +76,11 @@ echo "Uploading ${TEMP_FILE} to ${DEST_PATH}/${FILENAME} via rclone..."
 rclone copy "${TEMP_FILE}" "${DEST_PATH}"
 
 if [ "$BACKUP_OVERWRITE" != "true" ] && [ -n "$BACKUP_KEEP_DAYS" ]; then
-  if ! [ "$BACKUP_KEEP_DAYS" -gt 0 ] 2>/dev/null; then
-    echo "Error: BACKUP_KEEP_DAYS must be a positive integer (got: ${BACKUP_KEEP_DAYS})."
-    exit 1
-  fi
   echo "Pruning remote backups older than ${BACKUP_KEEP_DAYS} days in ${DEST_PATH}..."
   rclone delete "${DEST_PATH}" --min-age "${BACKUP_KEEP_DAYS}d" --include "backup_*.sql.gz"
 fi
 
 echo "Cleaning up..."
-rm -f "${TEMP_FILE}" "${PGPASS_FILE}"
+rm -rf "${TMP_DIR}"
 
 echo "Backup complete!"
