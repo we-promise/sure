@@ -215,6 +215,10 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     # The credential must not be consumed by a rejected login attempt.
     assert_nil stored_credential.reload.last_used_at
     assert_equal 0, stored_credential.sign_count
+    # The pending MFA state must not survive the rejection either — otherwise
+    # a later reactivation could let the user finish MFA without redoing the
+    # first factor.
+    assert_nil session[:mfa_user_id]
   end
 
   test "verify_webauthn authenticates with configured relying party id" do
