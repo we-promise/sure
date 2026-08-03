@@ -12,14 +12,16 @@ en:
       queued: We're generating fresh insights. Check back in a minute.
       checking: Checking…
     card:
-      dismiss: Dismiss
+      acknowledge: Got it
+      acknowledge_title: Hide this until the numbers change
       new: New
-      dismissed: Insight dismissed
+      acknowledged: Got it — hidden until this changes
       undo: Undo
     feed:
       view_all: View all insights
       header: Latest
       header_new: New
+      acknowledge_aria: "Got it: %{title}"
     types:
       spending_anomaly: Spending
       cash_flow_warning: Cash flow
@@ -42,6 +44,7 @@ en:
       today: today
       on_pace: on pace
       of_budget: of budget
+      need_attention: need attention
       days_overdue:
         one: "%{count} day overdue"
         other: "%{count} days overdue"

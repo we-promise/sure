@@ -377,6 +377,9 @@ Rails.application.routes.draw do
     get :picker, on: :collection
   end
 
+  # Hub page fronting budgets + goals under a single "Plan" nav entry.
+  resource :plan, only: :show
+
   resources :budgets, only: %i[index show edit update], param: :month_year do
     post :copy_previous, on: :member
     get :picker, on: :collection
@@ -503,8 +506,8 @@ Rails.application.routes.draw do
     end
 
     member do
-      patch :dismiss
-      patch :undismiss
+      patch :acknowledge
+      patch :unacknowledge
     end
   end
 

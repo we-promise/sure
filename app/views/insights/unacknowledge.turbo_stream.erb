@@ -1,0 +1,11 @@
+<%= turbo_stream.remove dom_id(@insight, :undo) %>
+
+<%= turbo_stream.replace "insights-list" do %>
+  <%= render "insights/list", insights: @insights, unread_ids: @unread_ids %>
+<% end %>
+
+<%# Undo can be pressed from the dashboard, where the toast is the only part of
+    this flow on screen — so the well needs restoring there too. %>
+<%= turbo_stream.replace "insights-feed" do %>
+  <%= render "pages/dashboard/insights_feed", insights: @feed_insights %>
+<% end %>
