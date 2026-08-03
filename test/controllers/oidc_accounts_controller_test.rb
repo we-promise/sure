@@ -77,7 +77,8 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal "Invalid email or password", flash[:alert]
   end
 
-  test "should reject linking an identity to an inactive user" do
+  test "should reject linking for a deactivated user even with correct password" do
+    @user.sessions.destroy_all # @user (family_admin) has a pre-existing fixture session
     @user.update_column(:active, false)
     session[:pending_oidc_auth] = pending_auth
 

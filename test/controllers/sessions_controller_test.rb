@@ -90,6 +90,36 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid email or password.", flash[:alert]
   end
 
+  test "rejects fresh login for a deactivated user even with correct password" do
+    # @user (family_admin) has a pre-existing fixture session (sessions.yml),
+    # unrelated to this login attempt — clear it so the later assertion
+    # actually proves no *new* session was created.
+    @user.sessions.destroy_all
+
+    # update_column bypasses the deactivation business rules (e.g. an admin
+    # can't self-deactivate while other family members exist) since we're
+    # testing the auth-layer guard, not User#deactivate itself.
+    @user.update_column(:active, false)
+
+    post sessions_url, params: { email: @user.email, password: user_password_test }
+
+    assert_response :unprocessable_entity
+    assert_equal "This account has been deactivated. Please contact an administrator.", flash[:alert]
+    assert_not Session.exists?(user_id: @user.id)
+  end
+
+  test "an existing session stops working once the user is deactivated" do
+    @user.sessions.destroy_all # Clean up the fixture session so the count below is exact
+    sign_in @user
+    assert Session.exists?(user_id: @user.id)
+
+    @user.update_column(:active, false)
+
+    get root_url
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id), "stale session should be destroyed, not just skipped"
+  end
+
   test "redirects when local login is disabled" do
     AuthConfig.stubs(:local_login_enabled?).returns(false)
     AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
@@ -219,6 +249,24 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
     assert_not Session.exists?(user_id: @user.id)
     assert_equal "removed_identity", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
+  end
+
+  test "rejects OIDC login for a deactivated user" do
+    oidc_identity = oidc_identities(:bob_google)
+    @user.sessions.destroy_all # Clear the fixture session so the later assertion is exact
+    @user.update_column(:active, false)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    get "/auth/openid_connect/callback"
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
   end
 
   test "redirects to MFA when user has MFA and uses OIDC" do
@@ -553,6 +601,37 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     first_token.reload
     assert first_token.revoked_at.present?, "Expected first token to be revoked"
+  end
+
+  test "mobile SSO refuses to issue a token for a deactivated user" do
+    oidc_identity = oidc_identities(:bob_google)
+    @user.update_column(:active, false)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-010",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    assert_no_difference [ "Doorkeeper::AccessToken.count", "MobileDevice.count" ] do
+      get "/auth/openid_connect/callback"
+    end
+
+    redirect_url = @response.redirect_url
+    params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
+    assert_equal "account_deactivated", params["error"]
+    assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
   end
 
   test "mobile SSO redirects MFA user with error" do
