@@ -82,8 +82,11 @@
                         placeholder: is_new_record ? t("pluggy_items.panel.fields.client_secret.placeholder_new") : t("pluggy_items.panel.fields.client_secret.placeholder_update") %>
 
     <div class="flex justify-end">
-      <%= form.submit is_new_record ? t("pluggy_items.panel.save_button") : t("pluggy_items.panel.update_button"),
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary" %>
+      <%= render DS::Button.new(
+        text: is_new_record ? t("pluggy_items.panel.save_button") : t("pluggy_items.panel.update_button"),
+        variant: "primary",
+        type: "submit"
+      ) %>
     </div>
   <% end %>
 
@@ -91,21 +94,22 @@
     <!-- Pluggy Connect Widget Flow -->
     <div class="space-y-4">
       <div class="p-4 bg-primary/5 rounded-lg border border-primary">
-        <h3 class="text-sm font-medium text-primary mb-2"><%= t("pluggy_items.panel.connect_widget_title", default: "Connect via Pluggy Widget") %></h3>
-        <p class="text-sm text-secondary mb-4"><%= t("pluggy_items.panel.connect_widget_description", default: "Click below to open Pluggy Connect and link your accounts.") %></p>
+        <h3 class="text-sm font-medium text-primary mb-2"><%= t("pluggy_items.panel.connect_widget_title") %></h3>
+        <p class="text-sm text-secondary mb-4"><%= t("pluggy_items.panel.connect_widget_description") %></p>
         <div
           data-controller="pluggy"
           data-pluggy-connect-token-value="<%= @connect_token %>"
           data-pluggy-is-update-value="<%= @connect_item&.pluggy_item_id.present? %>"
           data-pluggy-item-id-value="<%= @connect_item&.pluggy_item_id || "" %>"
           data-pluggy-record-id-value="<%= @connect_item&.id || "" %>">
-          <button type="button"
-                  data-action="click->pluggy#open"
-                  class="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary">
-            <%= icon("link", class: "w-4 h-4 mr-2") %>
-            <%= t("pluggy_items.panel.connect_widget_button", default: "Open Pluggy Connect") %>
-          </button>
-          <p class="text-xs text-secondary mt-2"><%= t("pluggy_items.panel.connect_widget_note", default: "A new window will open for authentication.") %></p>
+          <%= render DS::Button.new(
+            text: t("pluggy_items.panel.connect_widget_button"),
+            icon: "link",
+            variant: "primary",
+            type: "button",
+            data: { action: "click->pluggy#open" }
+          ) %>
+          <p class="text-xs text-secondary mt-2"><%= t("pluggy_items.panel.connect_widget_note") %></p>
         </div>
       </div>
     </div>

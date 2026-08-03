@@ -87,7 +87,6 @@ class PluggyAccount::Transactions::Processor
 
       data = transaction_data.with_indifferent_access
 
-      # TODO: Customize based on your provider's transaction format
       # Extract transaction fields from the provider's API response
       external_id = (data[:id] || data[:transaction_id]).to_s
       return nil if external_id.blank?
@@ -96,7 +95,6 @@ class PluggyAccount::Transactions::Processor
       amount = parse_transaction_amount(data)
       return nil if amount.nil?
 
-      # TODO: Customize date field names based on your provider
       date = parse_date(data[:date] || data[:transaction_date] || data[:posted_at])
       return nil if date.nil?
 
