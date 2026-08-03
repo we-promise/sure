@@ -51,9 +51,9 @@ This command will do the following:
 
 1. Fetch the sample docker compose file from our public Github repository
 2. Creates a file in your current directory called `compose.yml` with the contents of the example file
-3. (Optionally) Fetches the backup script and makes it executable.
+3. (Optionally) Fetches the backup script to `bin/db-backup.sh` and makes it executable.
 
-At this point, you should have `compose.yml` in your directory (and optionally a `bin` folder if you downloaded the backup script).
+At this point, you should have `compose.yml` in your directory (and optionally `bin/db-backup.sh` generated alongside `compose.yml` when using backups).
 
 ### Step 3 (optional): Configure your environment
 
@@ -69,7 +69,7 @@ In order to configure the app, you will need to create a file called `.env`, whi
 To do this, you should get our .env.example as a starting point:
 
 ```bash
-curl -o .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
+curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 ```
 
 #### Generate the app secret key

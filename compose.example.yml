@@ -139,6 +139,7 @@ services:
       - BACKUP_OVERWRITE
       - BACKUP_KEEP_DAYS
       - BACKUP_DESTINATION
+      - INSTANCE_ID
       # Rclone Provider Config
       # By default we map the S3 variables. If you use a different provider (e.g., gdrive), 
       # replace these with the equivalent variables you added to your .env file.
