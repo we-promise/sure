@@ -446,8 +446,8 @@ class ChatProvider with ChangeNotifier {
         if (updatedChat.error != null && updatedChat.error!.isNotEmpty) {
           // Preserve locally cached messages if the error response has fewer —
           // the server may omit the message list on error payloads.
-          if (updatedChat.messages.length < (_currentChat?.messages.length ?? 0)) {
-            _currentChat = updatedChat.copyWith(messages: _currentChat!.messages);
+          if (updatedChat.messages.length < oldMessages.length) {
+            _currentChat = updatedChat.copyWith(messages: oldMessages);
           } else if (!shouldUpdate) {
             _currentChat = updatedChat;
           }
