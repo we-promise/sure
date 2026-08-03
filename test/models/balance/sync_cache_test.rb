@@ -85,6 +85,37 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal 150.0, converted_entry.amount
   end
 
+  test "excludes pending transactions while retaining posted transactions and non-transaction entries" do
+    pending = @account.entries.create!(
+      date: Date.current,
+      name: "Pending Transaction",
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new(extra: { "plaid" => { "pending" => true } })
+    )
+    posted = @account.entries.create!(
+      date: Date.current,
+      name: "Posted Transaction",
+      amount: 200,
+      currency: "USD",
+      entryable: Transaction.new(extra: { "plaid" => { "pending" => false } })
+    )
+    security = Security.create!(ticker: "KEPT", name: "Kept Trade")
+    trade = @account.entries.create!(
+      date: Date.current,
+      name: "Trade",
+      amount: 300,
+      currency: "USD",
+      entryable: Trade.new(security: security, qty: 1, price: 300, currency: "USD")
+    )
+
+    entry_ids = Balance::SyncCache.new(@account).send(:converted_entries).map(&:id)
+
+    assert_not_includes entry_ids, pending.id
+    assert_includes entry_ids, posted.id
+    assert_includes entry_ids, trade.id
+  end
+
   test "converts multiple entries with correct rates" do
     # Create exchange rates
     ExchangeRate.create!(

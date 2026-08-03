@@ -66,6 +66,26 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "pending transactions do not affect materialized balances" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -200 },
+        { type: "transaction", date: 1.day.ago.to_date, amount: -500 }
+      ]
+    )
+    account.entries.find_by!(date: 1.day.ago.to_date).entryable.update!(
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_equal 1200, calculated.last.end_balance
+    assert_equal 200, calculated.sum(&:cash_inflows)
+    assert_not_includes calculated.map(&:date), 1.day.ago.to_date
+  end
+
   test "reconciliation valuation sets absolute balance before applying subsequent transactions" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
