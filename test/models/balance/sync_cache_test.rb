@@ -109,11 +109,11 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
       entryable: Trade.new(security: security, qty: 1, price: 300, currency: "USD")
     )
 
-    entry_ids = Balance::SyncCache.new(@account).send(:converted_entries).map(&:id)
+    entry_names = Balance::SyncCache.new(@account).send(:converted_entries).map(&:name)
 
-    assert_not_includes entry_ids, pending.id
-    assert_includes entry_ids, posted.id
-    assert_includes entry_ids, trade.id
+    assert_not_includes entry_names, pending.name
+    assert_includes entry_names, posted.name
+    assert_includes entry_names, trade.name
   end
 
   test "converts multiple entries with correct rates" do

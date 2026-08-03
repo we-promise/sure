@@ -81,7 +81,7 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
 
     calculated = Balance::ForwardCalculator.new(account).calculate
 
-    assert_equal 1200, calculated.last.end_balance
+    assert_equal 1200, calculated.last.balance
     assert_equal 200, calculated.sum(&:cash_inflows)
     assert_not_includes calculated.map(&:date), 1.day.ago.to_date
   end
