@@ -64,7 +64,10 @@ module Holding::Gapfillable
         security_snapshots = snapshots[[ account_id, security_id ]]
         return nil if security_snapshots.blank?
 
-        snapshot = security_snapshots.reverse.find { |snapshot_date, _| snapshot_date <= date } || security_snapshots.first
+        first_later_snapshot_index = security_snapshots.bsearch_index { |snapshot_date, _| snapshot_date > date }
+        snapshot = security_snapshots[
+          [ (first_later_snapshot_index || security_snapshots.length) - 1, 0 ].max
+        ]
         snapshot.last
       end
   end
