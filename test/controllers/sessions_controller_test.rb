@@ -603,6 +603,44 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert first_token.revoked_at.present?, "Expected first token to be revoked"
   end
 
+  test "mobile SSO rejects a user deactivated between the initial check and token issuance" do
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-011",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    # Simulate deactivation landing after openid_connect's initial active?
+    # check but before handle_mobile_sso_callback actually mints a token —
+    # SsoAuditLog.log_login! runs in that window in the real flow, so hook
+    # the deactivation there.
+    SsoAuditLog.stubs(:log_login!).with do |**kwargs|
+      kwargs[:user].update_column(:active, false)
+      true
+    end
+
+    assert_no_difference [ "Doorkeeper::AccessToken.count", "MobileDevice.count" ] do
+      get "/auth/openid_connect/callback"
+    end
+
+    redirect_url = @response.redirect_url
+    params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
+    assert_equal "account_deactivated", params["error"]
+  end
+
   test "mobile SSO refuses to issue a token for a deactivated user" do
     oidc_identity = oidc_identities(:bob_google)
     @user.update_column(:active, false)
