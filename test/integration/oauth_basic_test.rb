@@ -16,6 +16,26 @@ class OauthBasicTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
   end
 
+  test "oauth authorization endpoint rejects a deactivated user's existing session" do
+    oauth_app = Doorkeeper::Application.create!(
+      name: "Test API Client",
+      redirect_uri: "https://client.example.com/callback",
+      scopes: "read"
+    )
+    user = users(:family_admin)
+    sign_in user
+    session_record = user.sessions.order(created_at: :desc).first
+
+    # update_column bypasses callbacks, matching the exact scenario this
+    # check exists to defend against (a stale session outliving deactivation).
+    user.update_column(:active, false)
+
+    get "/oauth/authorize?client_id=#{oauth_app.uid}&redirect_uri=#{CGI.escape(oauth_app.redirect_uri)}&response_type=code&scope=read"
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(id: session_record.id), "stale session should be destroyed, not just skipped"
+  end
+
   test "oauth token endpoint exists and handles requests" do
     post "/oauth/token", params: {
       grant_type: "authorization_code",
