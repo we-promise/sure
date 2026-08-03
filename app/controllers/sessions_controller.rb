@@ -376,8 +376,17 @@ class SessionsController < ApplicationController
 
   private
     def handle_mobile_sso_callback(user)
-      # user.active? is already verified by the caller (openid_connect)
-      # before this is invoked, so no need to re-check here.
+      # openid_connect already checked user.active? before dispatching here,
+      # but record_authentication!/sync_user_attributes!/audit logging run in
+      # between — reload right before actually minting a token to narrow that
+      # window, same reasoning as Authentication#create_session_for.
+      unless user.reload.active?
+        Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
+        session.delete(:mobile_sso)
+        mobile_sso_redirect(error: "account_deactivated", message: "This account has been deactivated")
+        return
+      end
+
       device_info = session.delete(:mobile_sso)
 
       unless device_info.present?
