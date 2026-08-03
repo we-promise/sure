@@ -121,7 +121,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '401', 'invalid credentials or MFA required' do
+      response '401', 'invalid credentials, MFA required, or account deactivated' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
@@ -204,7 +204,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '401', 'invalid refresh token' do
+      response '401', 'invalid or revoked refresh token, or account deactivated' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
@@ -260,7 +260,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '401', 'invalid credentials or expired linking code' do
+      response '401', 'invalid credentials, expired linking code, or account deactivated' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
           { '$ref' => '#/components/schemas/MfaRequiredResponse' }
