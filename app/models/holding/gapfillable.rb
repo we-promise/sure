@@ -54,7 +54,7 @@ module Holding::Gapfillable
         Holding
           .where(account_id: account_ids, security_id: security_ids)
           .where.not(account_provider_id: nil)
-          .order(:date)
+          .order(:date, :created_at, :id)
           .pluck(:account_id, :security_id, :date, :cash_equivalent)
           .group_by { |account_id, security_id, _date, _cash_equivalent| [ account_id, security_id ] }
           .transform_values { |snapshots| snapshots.map { |_, _, date, cash_equivalent| [ date, cash_equivalent ] } }
