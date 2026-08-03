@@ -144,7 +144,8 @@ class SnaptradeAccount::HoldingsProcessor
         price: price,
         account_provider_id: @snaptrade_account.account_provider&.id,
         source: "snaptrade",
-        delete_future_holdings: false
+        delete_future_holdings: false,
+        cash_equivalent: data[:cash_equivalent] == true
       )
 
       # Store cost basis if available

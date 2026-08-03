@@ -391,10 +391,13 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name
   # @param account_provider_id [String, nil] The AccountProvider ID that owns this holding (optional)
   # @param delete_future_holdings [Boolean] Whether to delete holdings after this date (default: false)
+  # @param cash_equivalent [Boolean] Whether this position should be charted as cash (default: false)
   # @return [Holding] The created or updated holding
-  def import_holding(security:, quantity:, amount:, currency:, date:, price: nil, cost_basis: nil, external_id: nil, source:, account_provider_id: nil, delete_future_holdings: false)
+  def import_holding(security:, quantity:, amount:, currency:, date:, price: nil, cost_basis: nil, external_id: nil, source:, account_provider_id: nil, delete_future_holdings: false, cash_equivalent: false)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
+
+    cash_equivalent = cash_equivalent ? true : false
 
     Account.transaction do
       # Two strategies for finding/creating holdings:
@@ -498,7 +501,8 @@ class Account::ProviderImportAdapter
         price: price,
         amount: amount,
         account_provider_id: account_provider_id,
-        external_id: external_id
+        external_id: external_id,
+        cash_equivalent: cash_equivalent
       }
 
       # Only update security if not locked by user
@@ -545,7 +549,8 @@ class Account::ProviderImportAdapter
             updates = {
               qty: quantity,
               price: price,
-              amount: amount
+              amount: amount,
+              cash_equivalent: cash_equivalent
             }
 
             # Reconcile cost_basis to respect priority hierarchy

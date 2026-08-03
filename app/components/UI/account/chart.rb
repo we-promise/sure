@@ -12,7 +12,19 @@ class UI::Account::Chart < ApplicationComponent
   end
 
   def holdings_value_money
-    account.balance_money - account.cash_balance_money
+    total = account.current_holdings.includes(:security).reject { |h| h.cash_equivalent? || h.security.cash? }.sum do |h|
+      begin
+        Money.new(h.amount, h.currency).exchange_to(account.currency, date: h.date).amount
+      rescue Money::ConversionError
+        h.amount
+      end
+    end
+
+    Money.new(total, account.currency)
+  end
+
+  def cash_balance_money
+    account.balance_money - holdings_value_money
   end
 
   # Money value shown as the main indicator for the selected chart view.
@@ -23,7 +35,7 @@ class UI::Account::Chart < ApplicationComponent
     when "holdings_balance"
       holdings_value_money
     when "cash_balance"
-      account.cash_balance_money
+      cash_balance_money
     when "gains"
       gains_money
     end

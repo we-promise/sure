@@ -261,7 +261,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         currency: "USD",
         date: holding_date,
         price: 150.00,
-        source: "plaid"
+        source: "plaid",
+        cash_equivalent: true
       )
 
       assert_equal security.id, holding.security_id
@@ -269,6 +270,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_equal 1575.00, holding.amount
       assert_equal 150.00, holding.price
       assert_equal holding_date, holding.date
+      assert holding.cash_equivalent?
     end
   end
 
