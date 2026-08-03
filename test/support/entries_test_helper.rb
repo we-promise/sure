@@ -59,7 +59,8 @@ module EntriesTestHelper
     transfer = Transfer.create!(
       outflow_transaction: outflow_transaction,
       inflow_transaction: inflow_transaction,
-      amount: amount.abs
+      amount: amount.abs,
+      status: "confirmed"
     )
 
     from_account.entries.create!(

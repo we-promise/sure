@@ -8,6 +8,13 @@ module Transaction::Transferable
     # We keep track of rejected transfers to avoid auto-matching them again
     has_one :rejected_transfer_as_inflow, class_name: "RejectedTransfer", foreign_key: "inflow_transaction_id", dependent: :destroy
     has_one :rejected_transfer_as_outflow, class_name: "RejectedTransfer", foreign_key: "outflow_transaction_id", dependent: :destroy
+
+    scope :reporting_transfers, -> { where(Transfer.confirmed_transaction_sql(table_name)) }
+    scope :excluding_reporting_transfers, -> { where.not(Transfer.confirmed_transaction_sql(table_name)) }
+  end
+
+  def reporting_transfer?
+    transfer_as_inflow&.confirmed? || transfer_as_outflow&.confirmed? || false
   end
 
   def transfer

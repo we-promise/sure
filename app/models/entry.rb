@@ -89,14 +89,14 @@ class Entry < ApplicationRecord
     joins(:account).where(accounts: { family_id: family.id })
   end
 
-  # Uncategorized, non-transfer transaction entries on draft or active accounts.
+  # Uncategorized transaction entries that are not part of a confirmed Transfer.
   # Caller is responsible for scoping to accessible entries before applying this scope.
   scope :uncategorized_transactions, -> {
     joins(:account)
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where(accounts: { status: %w[draft active] })
       .where(transactions: { category_id: nil })
-      .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      .where.not(Transfer.confirmed_transaction_sql("transactions"))
       .where(entries: { excluded: false })
   }
 

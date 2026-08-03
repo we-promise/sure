@@ -458,6 +458,17 @@ class Family < ApplicationRecord
     end
   end
 
+  # Transfer-aware reporting caches must change for creates, updates, and
+  # deletes. COUNT prevents deleting an older (non-MAX) row from leaving the
+  # version stale.
+  def transfers_cache_version
+    @transfers_cache_version ||= begin
+      scope = Transfer.joins(outflow_transaction: { entry: :account })
+                      .where(accounts: { family_id: id })
+      "#{scope.maximum(:updated_at)&.to_i || 0}-#{scope.count}"
+    end
+  end
+
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
   end

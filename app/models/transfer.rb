@@ -1,4 +1,25 @@
 class Transfer < ApplicationRecord
+  # Reporting treats a confirmed persisted Transfer as the sole authority for
+  # whether a transaction is an internal transfer. Transaction#kind remains a
+  # provider/UI classification hint and may be overwritten during re-sync.
+  def self.confirmed_transaction_sql(transaction_alias = "transactions")
+    unless transaction_alias.match?(/\A[a-zA-Z_][a-zA-Z0-9_]*\z/)
+      raise ArgumentError, "invalid transaction table alias"
+    end
+
+    <<~SQL.squish
+      EXISTS (
+        SELECT 1
+        FROM transfers reporting_transfers
+        WHERE reporting_transfers.status = 'confirmed'
+          AND (
+            reporting_transfers.inflow_transaction_id = #{transaction_alias}.id
+            OR reporting_transfers.outflow_transaction_id = #{transaction_alias}.id
+          )
+      )
+    SQL
+  end
+
   belongs_to :inflow_transaction, class_name: "Transaction"
   belongs_to :outflow_transaction, class_name: "Transaction"
 

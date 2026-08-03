@@ -1,6 +1,7 @@
 require "test_helper"
 
 class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
+  include EntriesTestHelper
   def setup
     @family = families(:dylan_family)
     @identifier = RecurringTransaction::Identifier.new(@family)
@@ -464,6 +465,24 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
   test "days_cluster_together returns false for widely spread days" do
     days = [ 1, 15, 30 ]
     assert_not @identifier.send(:days_cluster_together?, days)
+  end
+
+  test "confirmed transfers are excluded even after their kinds change" do
+    source = @family.accounts.first
+    destination = @family.accounts.where.not(id: source.id).first
+
+    [ 0, 1, 2 ].each do |months_ago|
+      transfer = create_transfer(
+        from_account: source,
+        to_account: destination,
+        amount: 75,
+        date: months_ago.months.ago.beginning_of_month + 4.days
+      )
+      transfer.inflow_transaction.update!(kind: "standard")
+      transfer.outflow_transaction.update!(kind: "standard")
+    end
+
+    assert_equal 0, @identifier.identify_recurring_patterns
   end
 
   private

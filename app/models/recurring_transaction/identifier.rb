@@ -10,8 +10,8 @@ class RecurringTransaction
     def identify_recurring_patterns
       three_months_ago = 3.months.ago.to_date
 
-      # Skip transfer-kind transactions: they're one half of a Transfer pair, so grouping them
-      # under their single account would produce incoherent recurring "patterns" that don't
+      # Skip confirmed Transfer legs: grouping either half under its single account
+      # would produce incoherent recurring "patterns" that don't
       # represent the underlying account-pair flow. Recurring transfers are tracked on a
       # different shape (RecurringTransaction with destination_account_id). Filtering at the
       # SQL level avoids loading and discarding transfer entries for a busy family.
@@ -19,7 +19,7 @@ class RecurringTransaction
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
         .where(entryable_type: "Transaction")
         .where("entries.date >= ?", three_months_ago)
-        .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
+        .where.not(Transfer.confirmed_transaction_sql("transactions"))
         .includes(:entryable)
         .to_a
 

@@ -76,8 +76,10 @@ class Transaction < ApplicationRecord
     investment_contribution: "investment_contribution" # Transfer to investment/crypto account, treated as an expense in budgets
   }
 
-  # All kinds where money moves between accounts (transfer? returns true).
-  # Used for search filters, rule conditions, and UI display.
+  # Provider/UI hints for money movement (Transaction#transfer? remains a kind
+  # predicate for presentation and import workflows). Reporting, search totals,
+  # rule transaction types, and recurring detection use confirmed Transfer rows
+  # through Transfer.confirmed_transaction_sql instead.
   TRANSFER_KINDS = %w[funds_movement cc_payment loan_payment investment_contribution].freeze
 
   # Kinds excluded from budget/income-statement analytics.

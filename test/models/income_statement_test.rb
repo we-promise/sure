@@ -385,6 +385,34 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(1400, @family.currency), totals.expense_money # 900 + 500 (abs of -500)
   end
 
+  test "provider re-sync cannot double count a confirmed transfer" do
+    investment_account = @family.accounts.create!(
+      name: "Brokerage",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Investment.new
+    )
+    transfer = create_transfer(
+      from_account: @checking_account,
+      to_account: investment_account,
+      amount: 500
+    )
+
+    before_sync = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
+    # Providers may rewrite either hint on a subsequent sync. The confirmed
+    # Transfer remains authoritative for reporting classification.
+    transfer.inflow_transaction.update!(kind: "investment_contribution")
+    transfer.outflow_transaction.update!(kind: "standard")
+
+    after_sync = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal before_sync, after_sync
+    assert_equal 4, after_sync.transactions_count
+    assert_equal Money.new(1000, @family.currency), after_sync.income_money
+    assert_equal Money.new(900, @family.currency), after_sync.expense_money
+  end
+
   # Tax-Advantaged Account Exclusion Tests
   test "excludes transactions from tax-advantaged Roth IRA accounts" do
     # Create a Roth IRA (tax-exempt) investment account

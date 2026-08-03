@@ -7,6 +7,7 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     @family = families(:empty)
     @transaction_rule = rules(:one)
     @account = @family.accounts.create!(name: "Rule test", balance: 1000, currency: "USD", accountable: Depository.new)
+    @transfer_account = @family.accounts.create!(name: "Transfer target", balance: 0, currency: "USD", accountable: Depository.new)
 
     @grocery_category = @family.categories.create!(name: "Grocery")
     @whole_foods_merchant = @family.merchants.create!(name: "Whole Foods", type: "FamilyMerchant")
@@ -372,13 +373,7 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     scope = @rule_scope
 
     # Create a transfer transaction
-    transfer_entry = create_transaction(
-      date: Date.current,
-      account: @account,
-      amount: 500,
-      name: "Transfer to savings"
-    )
-    transfer_entry.transaction.update!(kind: "funds_movement")
+    transfer_entry = create_transfer(from_account: @account, to_account: @transfer_account, amount: 500).outflow_transaction.entry
 
     condition = Rule::Condition.new(
       rule: @transaction_rule,
@@ -399,13 +394,7 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     scope = @rule_scope
 
     # Create a transfer with positive amount (would look like expense)
-    transfer_entry = create_transaction(
-      date: Date.current,
-      account: @account,
-      amount: 500,
-      name: "Transfer to savings"
-    )
-    transfer_entry.transaction.update!(kind: "funds_movement")
+    transfer_entry = create_transfer(from_account: @account, to_account: @transfer_account, amount: 500).outflow_transaction.entry
 
     condition = Rule::Condition.new(
       rule: @transaction_rule,
@@ -425,13 +414,7 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     scope = @rule_scope
 
     # Create a transfer inflow (negative amount)
-    transfer_entry = create_transaction(
-      date: Date.current,
-      account: @account,
-      amount: -500,
-      name: "Transfer from savings"
-    )
-    transfer_entry.transaction.update!(kind: "funds_movement")
+    transfer_entry = create_transfer(from_account: @transfer_account, to_account: @account, amount: 500).inflow_transaction.entry
 
     condition = Rule::Condition.new(
       rule: @transaction_rule,
@@ -447,7 +430,7 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_not filtered.map(&:id).include?(transfer_entry.transaction.id)
   end
 
-  test "transaction_type transfer includes investment_contribution" do
+  test "transaction_type transfer ignores an unconfirmed kind hint" do
     scope = @rule_scope
 
     # Create investment contribution with negative amount (inflow from provider)
@@ -469,24 +452,22 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     scope = condition.prepare(scope)
     filtered = condition.apply(scope)
 
-    # investment_contribution is a transfer kind
-    assert filtered.map(&:id).include?(contribution_entry.transaction.id)
+    assert_not_includes filtered.map(&:id), contribution_entry.transaction.id
 
-    # Should NOT match expense filter
-    expense_condition = Rule::Condition.new(
+    income_condition = Rule::Condition.new(
       rule: @transaction_rule,
       condition_type: "transaction_type",
       operator: "=",
-      value: "expense"
+      value: "income"
     )
 
-    expense_scope = expense_condition.prepare(@rule_scope)
-    expense_filtered = expense_condition.apply(expense_scope)
+    income_scope = income_condition.prepare(@rule_scope)
+    income_filtered = income_condition.apply(income_scope)
 
-    assert_not expense_filtered.map(&:id).include?(contribution_entry.transaction.id)
+    assert_includes income_filtered.map(&:id), contribution_entry.transaction.id
   end
 
-  test "transaction_type income excludes investment_contribution" do
+  test "transaction_type income excludes confirmed transfer after kind changes" do
     scope = @rule_scope
 
     # Create investment contribution with negative amount
@@ -497,6 +478,13 @@ class Rule::ConditionTest < ActiveSupport::TestCase
       name: "401k contribution"
     )
     contribution_entry.transaction.update!(kind: "investment_contribution")
+    counterpart = create_transaction(date: Date.current, account: @transfer_account, amount: 1000, name: "Contribution source")
+    Transfer.create!(
+      inflow_transaction: contribution_entry.transaction,
+      outflow_transaction: counterpart.transaction,
+      status: "confirmed",
+      amount: 1000
+    )
 
     condition = Rule::Condition.new(
       rule: @transaction_rule,

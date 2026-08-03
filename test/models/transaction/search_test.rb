@@ -13,7 +13,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     @family.accounts.each { |account| account.entries.delete_all }
   end
 
-  test "search filters by transaction types using kind enum" do
+  test "search does not treat kind hints as persisted transfers" do
     # Create different types of transactions using the helper method
     standard_entry = create_transaction(
       account: @checking_account,
@@ -50,9 +50,9 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     transfer_results = Transaction::Search.new(@family, filters: { types: [ "transfer" ] }).transactions_scope
     transfer_ids = transfer_results.pluck(:id)
 
-    assert_includes transfer_ids, transfer_entry.entryable.id
-    assert_includes transfer_ids, payment_entry.entryable.id
-    assert_includes transfer_ids, loan_payment_entry.entryable.id
+    assert_not_includes transfer_ids, transfer_entry.entryable.id
+    assert_not_includes transfer_ids, payment_entry.entryable.id
+    assert_not_includes transfer_ids, loan_payment_entry.entryable.id
     assert_not_includes transfer_ids, one_time_entry.entryable.id
     assert_not_includes transfer_ids, standard_entry.entryable.id
 
@@ -62,8 +62,8 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     assert_includes expense_ids, standard_entry.entryable.id
     assert_includes expense_ids, one_time_entry.entryable.id
-    assert_not_includes expense_ids, loan_payment_entry.entryable.id
-    assert_not_includes expense_ids, transfer_entry.entryable.id
+    assert_includes expense_ids, loan_payment_entry.entryable.id
+    assert_includes expense_ids, transfer_entry.entryable.id
     assert_not_includes expense_ids, payment_entry.entryable.id
 
     # Test income type filter
@@ -77,6 +77,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     income_ids = income_results.pluck(:id)
 
     assert_includes income_ids, income_entry.entryable.id
+    assert_includes income_ids, payment_entry.entryable.id
     assert_not_includes income_ids, standard_entry.entryable.id
     assert_not_includes income_ids, loan_payment_entry.entryable.id
     assert_not_includes income_ids, transfer_entry.entryable.id
@@ -88,9 +89,9 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_includes non_transfer_ids, standard_entry.entryable.id
     assert_includes non_transfer_ids, income_entry.entryable.id
     assert_includes non_transfer_ids, one_time_entry.entryable.id
-    assert_not_includes non_transfer_ids, loan_payment_entry.entryable.id
-    assert_not_includes non_transfer_ids, transfer_entry.entryable.id
-    assert_not_includes non_transfer_ids, payment_entry.entryable.id
+    assert_includes non_transfer_ids, loan_payment_entry.entryable.id
+    assert_includes non_transfer_ids, transfer_entry.entryable.id
+    assert_includes non_transfer_ids, payment_entry.entryable.id
   end
 
   test "search category filter handles uncategorized transactions correctly with kind filtering" do
@@ -120,9 +121,8 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     # Should include standard uncategorized transactions
     assert_includes uncategorized_ids, uncategorized_standard.entryable.id
 
-    # Should exclude all transfer kinds (TRANSFER_KINDS) even if uncategorized
-    assert_not_includes uncategorized_ids, uncategorized_transfer.entryable.id
-    assert_not_includes uncategorized_ids, uncategorized_loan_payment.entryable.id
+    assert_includes uncategorized_ids, uncategorized_transfer.entryable.id
+    assert_includes uncategorized_ids, uncategorized_loan_payment.entryable.id
   end
 
   test "filtering for only Uncategorized returns only uncategorized transactions" do
@@ -230,16 +230,15 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     # Should include expense transactions
     assert_includes result_ids, transaction1.entryable.id
-    # Should exclude transfer transactions
-    assert_not_includes result_ids, transaction2.entryable.id
+    assert_includes result_ids, transaction2.entryable.id
 
     # Test that the relation builds from family.transactions correctly
-    assert_equal @family.transactions.joins(entry: :account).where(
-      "entries.amount >= 0 AND NOT (transactions.kind IN (?))", Transaction::TRANSFER_KINDS
-    ).count, results.count
+    assert_equal @family.transactions.joins(entry: :account)
+                        .where("entries.amount >= 0")
+                        .excluding_reporting_transfers.count, results.count
   end
 
-  test "transfer filter includes investment_contribution transactions" do
+  test "transfer filter ignores unpersisted transfer kinds" do
     investment_contribution = create_transaction(
       account: @checking_account,
       amount: 500,
@@ -255,11 +254,11 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     search = Transaction::Search.new(@family, filters: { types: [ "transfer" ] })
     result_ids = search.transactions_scope.pluck(:id)
 
-    assert_includes result_ids, investment_contribution.entryable.id
-    assert_includes result_ids, funds_movement.entryable.id
+    assert_not_includes result_ids, investment_contribution.entryable.id
+    assert_not_includes result_ids, funds_movement.entryable.id
   end
 
-  test "expense filter excludes investment_contribution transactions" do
+  test "expense filter includes unpersisted investment contribution kind" do
     investment_contribution = create_transaction(
       account: @checking_account,
       amount: 500,
@@ -275,7 +274,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     search = Transaction::Search.new(@family, filters: { types: [ "expense" ] })
     result_ids = search.transactions_scope.pluck(:id)
 
-    assert_not_includes result_ids, investment_contribution.entryable.id
+    assert_includes result_ids, investment_contribution.entryable.id
     assert_includes result_ids, standard_expense.entryable.id
   end
 
@@ -669,5 +668,27 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     assert_includes confirmed_ids, confirmed.entryable.id
     assert_not_includes pending_ids, confirmed.entryable.id
+  end
+
+  test "confirmed transfer remains classified after provider kind re-sync" do
+    transfer = create_transfer(
+      from_account: @checking_account,
+      to_account: @credit_card_account,
+      amount: 250
+    )
+    search = Transaction::Search.new(@family)
+
+    transfer.inflow_transaction.update!(kind: "investment_contribution")
+    transfer.outflow_transaction.update!(kind: "standard")
+
+    transfer_ids = Transaction::Search.new(@family, filters: { types: [ "transfer" ] }).transactions_scope.pluck(:id)
+    totals = search.totals
+
+    assert_includes transfer_ids, transfer.inflow_transaction_id
+    assert_includes transfer_ids, transfer.outflow_transaction_id
+    assert_equal Money.new(250, @family.currency), totals.transfer_inflow_money
+    assert_equal Money.new(250, @family.currency), totals.transfer_outflow_money
+    assert_equal Money.new(0, @family.currency), totals.income_money
+    assert_equal Money.new(0, @family.currency), totals.expense_money
   end
 end

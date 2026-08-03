@@ -2,9 +2,26 @@ require "test_helper"
 
 class FamilyTest < ActiveSupport::TestCase
   include SyncableInterfaceTest
+  include EntriesTestHelper
 
   def setup
     @syncable = families(:dylan_family)
+  end
+
+  test "transfers cache version changes when a non-latest transfer is deleted" do
+    family = families(:empty)
+    source = family.accounts.create!(name: "Source", balance: 0, currency: "USD", accountable: Depository.new)
+    destination = family.accounts.create!(name: "Destination", balance: 0, currency: "USD", accountable: Depository.new)
+    older = create_transfer(from_account: source, to_account: destination, amount: 10, date: 2.days.ago.to_date)
+    latest = create_transfer(from_account: source, to_account: destination, amount: 20, date: 1.day.ago.to_date)
+    older.update_column(:updated_at, 2.days.ago)
+    latest.update_column(:updated_at, 1.day.ago)
+    family.reload
+    version_before_delete = family.transfers_cache_version
+
+    older.destroy!
+
+    assert_not_equal version_before_delete, family.reload.transfers_cache_version
   end
 
   test "investment_contributions_category creates category when missing" do
