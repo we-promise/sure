@@ -24,6 +24,20 @@ class ImpersonationSessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+  test "cannot join an impersonation session targeting an already-deactivated user" do
+    sign_in super_admin = users(:sure_support_staff)
+    impersonated = users(:family_member)
+    impersonated.update_column(:active, false)
+
+    impersonator_session = impersonation_sessions(:in_progress)
+    super_admin_session = super_admin.sessions.order(created_at: :desc).first
+
+    post join_impersonation_sessions_path, params: { impersonation_session_id: impersonator_session.id }
+
+    assert_response :not_found
+    assert_nil super_admin_session.reload.active_impersonator_session
+  end
+
   test "super admin can join and leave an in progress impersonation session" do
     sign_in super_admin = users(:sure_support_staff)
 

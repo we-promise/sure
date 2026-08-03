@@ -237,6 +237,7 @@ class User < ApplicationRecord
   before_destroy :ensure_not_last_super_admin_on_destroy
 
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
+  after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
     return true unless active?
@@ -376,6 +377,21 @@ class User < ApplicationRecord
     end
 
     provider.public_send(item_association.name) if item_association
+  end
+
+  # Revokes mobile/third-party API access alongside the web-session
+  # invalidation above. Without this, a deactivated user's existing
+  # Doorkeeper tokens and API keys stay valid on the wire — currently
+  # harmless only because Api::V1::BaseController/McpController re-check
+  # active? on every request, but that's a second, independent safeguard,
+  # not a substitute for actually revoking the credentials.
+  def revoke_all_access_tokens
+    tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
+
+    if tokens_revoked > 0 || keys_revoked > 0
+      Rails.logger.warn("[AUTH] Revoked #{tokens_revoked} access token(s) and #{keys_revoked} API key(s) for deactivated user_id=#{id}")
+    end
   end
 
   def purge
