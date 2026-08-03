@@ -85,6 +85,17 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_nil @account.suggested_subtype
   end
 
+  test "validates sync start date against Enable Banking history limits" do
+    @account.sync_start_date = Date.current + 1.day
+    assert_not @account.valid?
+
+    @account.sync_start_date = EnableBankingItem.minimum_sync_start_date - 1.day
+    assert_not @account.valid?
+
+    @account.sync_start_date = EnableBankingItem.minimum_sync_start_date
+    assert @account.valid?
+  end
+
   test "is case insensitive for account type mapping" do
     @account.update!(account_type: "svgs")
     assert_equal "Depository", @account.suggested_account_type

@@ -749,6 +749,11 @@ class EnableBankingItem::Importer
     end
 
     def determine_sync_start_date(enable_banking_account)
+      # An account-level date is set when a user links this provider account to
+      # an existing manual account. It must win even when raw transactions are
+      # already cached so choosing an earlier date actually widens the re-fetch.
+      return enable_banking_account.sync_start_date if enable_banking_account.sync_start_date.present?
+
       has_stored_transactions = enable_banking_account.raw_transactions_payload.to_a.any?
 
       # Use user-configured sync_start_date if set, otherwise default

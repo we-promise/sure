@@ -11,6 +11,17 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     )
   end
 
+  test "validates sync start date against the provider history limit" do
+    @item.sync_start_date = Date.current + 1.day
+    assert_not @item.valid?
+
+    @item.sync_start_date = EnableBankingItem.minimum_sync_start_date - 1.day
+    assert_not @item.valid?
+
+    @item.sync_start_date = EnableBankingItem.minimum_sync_start_date
+    assert @item.valid?
+  end
+
   test "select_auth_method prefers REDIRECT over DECOUPLED and EMBEDDED" do
     aspsp = {
       auth_methods: [

@@ -21,6 +21,7 @@ en:
       unexpected_error: An unexpected error occurred. Please try again.
     complete_account_setup:
       all_skipped: All accounts were skipped. You can set them up later on the accounts page.
+      invalid_sync_start_date: Choose a sync start date within the last 2 years.
       no_accounts: No accounts available to set up.
       success: Successfully created %{count} accounts!
     create:
@@ -38,6 +39,7 @@ en:
       errors:
         only_manual: Only manual accounts can be linked
         invalid_enable_banking_account: Invalid Enable Banking account selected
+        invalid_sync_start_date: Choose a sync start date within the last 2 years.
     enable_banking_item:
       deletion_in_progress: Deletion in progress
       provider_name: Enable Banking
@@ -60,6 +62,8 @@ en:
       try_after_sync: If you just connected or synced, try again after the sync completes.
       unlink_to_move: To link a different account, first unlink it from the account's actions menu.
       balance: Balance
+      sync_start_date_label: Start syncing transactions from
+      sync_start_date_help: Choose up to 2 years of transaction history to import. Existing manual transactions will be kept.
       link: Link
       cancel: Cancel
     setup_accounts:
