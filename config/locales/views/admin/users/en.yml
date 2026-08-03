@@ -45,6 +45,7 @@ en:
           update: "Update user"
           delete_user: "Delete user"
         delete_confirm: "Are you sure you want to delete this user? This action cannot be undone."
+        delete_confirm_last_user: "Are you sure you want to delete this user? This is the last user in their family/group, so deleting them will also delete the entire family/group and all associated data. This action cannot be undone."
         role_descriptions_title: "Role Descriptions"
         roles:
           guest: "Guest"
@@ -69,7 +70,8 @@ en:
           empty: "No unused families/groups found."
       update:
         success: "User updated successfully."
-        failure: "Failed to update user role."
+        failure: "Failed to update user details (role or family/group membership)."
         family_required: "Select an existing family/group or enter a name for a new one."
       destroy:
         destroy_success: "User deleted successfully."
+        destroy_failure: "User could not be deleted."

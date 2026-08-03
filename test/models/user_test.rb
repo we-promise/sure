@@ -627,6 +627,21 @@ class UserTest < ActiveSupport::TestCase
     assert_nil @user.default_account_for_transactions
   end
 
+  test "transfer_to_family! clears a shared default account" do
+    user = users(:family_member)
+    user.update!(role: "admin", default_account: accounts(:depository))
+
+    new_family = Family.create!(name: "Transferred Family")
+
+    user.transfer_to_family!(new_family, role: "admin")
+
+    user.reload
+
+    assert_equal new_family, user.family
+    assert_nil user.default_account_id
+    assert_nil user.default_account_for_transactions
+  end
+
   # SSO-only user security tests
   test "sso_only? returns true for user with OIDC identity and no password" do
     sso_user = users(:sso_only)
