@@ -19,7 +19,7 @@ class ChatProvider with ChangeNotifier {
   DateTime? _pollingStartTime;
   bool _isPollingRequestInFlight = false;
 
-  static const _pollingTimeout = Duration(seconds: 20);
+  static const _pollingTimeout = Duration(seconds: 60);
 
   /// Content length of the last assistant message from the previous poll.
   /// Used to detect when the LLM has finished writing (no growth between polls).
@@ -437,11 +437,18 @@ class ChatProvider with ChangeNotifier {
 
         if (shouldUpdate) {
           _currentChat = updatedChat;
+          // Reset the timeout clock whenever new content arrives so slow
+          // models get a fresh window rather than timing out mid-generation.
+          _pollingStartTime = DateTime.now();
           notifyListeners();
         }
 
         if (updatedChat.error != null && updatedChat.error!.isNotEmpty) {
-          if (!shouldUpdate) {
+          // Preserve locally cached messages if the error response has fewer —
+          // the server may omit the message list on error payloads.
+          if (updatedChat.messages.length < (_currentChat?.messages.length ?? 0)) {
+            _currentChat = updatedChat.copyWith(messages: _currentChat!.messages);
+          } else if (!shouldUpdate) {
             _currentChat = updatedChat;
           }
           _stopPolling();
