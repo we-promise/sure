@@ -948,7 +948,7 @@ class UserTest < ActiveSupport::TestCase
 
   test "deactivating a user revokes their API keys and Doorkeeper access tokens" do
     user = users(:family_member)
-    api_key = ApiKey.create!(
+    api_key = ApiKey.create!( # pipelock:ignore
       user: user,
       name: "Test Key",
       display_key: "test_revoke_key_#{SecureRandom.hex(8)}",
