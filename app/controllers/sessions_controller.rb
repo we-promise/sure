@@ -242,6 +242,25 @@ class SessionsController < ApplicationController
     if oidc_identity
       # Existing OIDC identity found - authenticate the user
       user = oidc_identity.user
+
+      # Check before recording authentication/audit success — a deactivated
+      # user's credentials being valid shouldn't show up in the audit trail
+      # as a successful login when access is actually being denied.
+      unless user.active?
+        Rails.logger.warn("[AUTH] Rejected OIDC login for deactivated user_id=#{user.id}")
+
+        if session[:mobile_sso].present?
+          session.delete(:mobile_sso)
+          mobile_sso_redirect(error: "account_deactivated", message: "This account has been deactivated")
+        elsif session[:desktop_sso].present?
+          session.delete(:desktop_sso)
+          redirect_to "sure://sso/callback?error=account_deactivated", allow_other_host: true
+        else
+          redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+        end
+        return
+      end
+
       oidc_identity.record_authentication!
       oidc_identity.sync_user_attributes!(auth)
 
@@ -357,13 +376,8 @@ class SessionsController < ApplicationController
 
   private
     def handle_mobile_sso_callback(user)
-      unless user.active?
-        Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
-        session.delete(:mobile_sso)
-        mobile_sso_redirect(error: "account_deactivated", message: "This account has been deactivated")
-        return
-      end
-
+      # user.active? is already verified by the caller (openid_connect)
+      # before this is invoked, so no need to re-check here.
       device_info = session.delete(:mobile_sso)
 
       unless device_info.present?

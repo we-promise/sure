@@ -63,6 +63,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
   test "should reject linking for a deactivated user even with correct password" do
     session[:pending_oidc_auth] = pending_auth
+    @user.sessions.destroy_all # @user (family_admin) has a pre-existing fixture session
     @user.update_column(:active, false)
 
     assert_no_difference "OidcIdentity.count" do

@@ -54,6 +54,11 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "rejects fresh login for a deactivated user even with correct password" do
+    # @user (family_admin) has a pre-existing fixture session (sessions.yml),
+    # unrelated to this login attempt — clear it so the later assertion
+    # actually proves no *new* session was created.
+    @user.sessions.destroy_all
+
     # update_column bypasses the deactivation business rules (e.g. an admin
     # can't self-deactivate while other family members exist) since we're
     # testing the auth-layer guard, not User#deactivate itself.
@@ -67,6 +72,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "an existing session stops working once the user is deactivated" do
+    @user.sessions.destroy_all # Clean up the fixture session so the count below is exact
     sign_in @user
     assert Session.exists?(user_id: @user.id)
 
@@ -189,6 +195,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
   test "rejects OIDC login for a deactivated user" do
     oidc_identity = oidc_identities(:bob_google)
+    @user.sessions.destroy_all # Clear the fixture session so the later assertion is exact
     @user.update_column(:active, false)
 
     setup_omniauth_mock(
@@ -559,13 +566,14 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       device_type: "android"
     }
 
-    assert_no_difference "Doorkeeper::AccessToken.count" do
+    assert_no_difference [ "Doorkeeper::AccessToken.count", "MobileDevice.count" ] do
       get "/auth/openid_connect/callback"
     end
 
     redirect_url = @response.redirect_url
     params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
     assert_equal "account_deactivated", params["error"]
+    assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
   end
 
   test "mobile SSO redirects MFA user with error" do

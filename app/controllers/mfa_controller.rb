@@ -30,7 +30,13 @@ class MfaController < ApplicationController
   def verify_code
     @user = User.find_by(id: session[:mfa_user_id])
 
-    if @user&.verify_otp?(params[:code])
+    # Check before verify_otp? — a backup code is single-use and gets consumed
+    # by verification, so a deactivated user shouldn't be able to burn one on
+    # a login attempt that was always going to be rejected.
+    if @user && !@user.active?
+      session.delete(:mfa_user_id)
+      redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+    elsif @user&.verify_otp?(params[:code])
       if complete_mfa_sign_in(@user)
         redirect_to root_path
       else
@@ -64,6 +70,13 @@ class MfaController < ApplicationController
 
     unless @user&.webauthn_enabled? && challenge.present?
       return render json: { error: t(".invalid_credential") }, status: :unprocessable_entity
+    end
+
+    # Check before verifying/consuming the credential (sign_count gets
+    # bumped below) — a deactivated user shouldn't be able to spend a
+    # WebAuthn assertion on a login that was always going to be rejected.
+    unless @user.active?
+      return render json: { error: t("sessions.create.account_deactivated") }, status: :unauthorized
     end
 
     credential = WebAuthn::Credential.from_get(

@@ -54,8 +54,13 @@ module Authentication
     # desktop/mobile exchange) so a deactivated account can't get a fresh
     # session through any of them. Returns nil instead of raising so each
     # caller can redirect with its own context-appropriate messaging.
+    #
+    # Reloads the user right before checking, rather than trusting whatever
+    # was loaded earlier in the request (e.g. at the password/OTP step) —
+    # narrows the window where a concurrent deactivation could otherwise slip
+    # through on a stale in-memory `active` value.
     def create_session_for(user)
-      unless user.active?
+      unless user.reload.active?
         Rails.logger.warn("[AUTH] Rejected session creation for deactivated user_id=#{user.id}")
         return nil
       end

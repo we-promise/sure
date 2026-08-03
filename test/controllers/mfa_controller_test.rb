@@ -179,6 +179,38 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_operator stored_credential.sign_count, :>, 0
   end
 
+  test "verify_webauthn rejects a user deactivated after MFA verification started" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    client = register_webauthn_credential
+    stored_credential = @user.webauthn_credentials.first
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    post webauthn_options_mfa_path, as: :json
+    assert_response :success
+
+    options = JSON.parse(response.body)
+    assertion = client.get(
+      challenge: options.fetch("challenge"),
+      rp_id: "www.example.com",
+      allow_credentials: [ stored_credential.credential_id ]
+    )
+
+    # Simulate deactivation happening after the challenge was issued but
+    # before the assertion is submitted.
+    @user.update_column(:active, false)
+
+    post verify_webauthn_mfa_path, params: { credential: assertion }, as: :json
+
+    assert_response :unauthorized
+    assert_equal "This account has been deactivated. Please contact an administrator.", JSON.parse(response.body)["error"]
+    assert_not Session.exists?(user_id: @user.id)
+    # The credential must not be consumed by a rejected login attempt.
+    assert_nil stored_credential.reload.last_used_at
+    assert_equal 0, stored_credential.sign_count
+  end
+
   test "verify_webauthn authenticates with configured relying party id" do
     with_webauthn_config(rp_id: "example.test", allowed_origins: [ "https://app.example.test" ]) do
       @user.setup_mfa!
