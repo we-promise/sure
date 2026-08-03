@@ -37,7 +37,8 @@ module Assistant
         Function::GetCategories,
         Function::CreateCategory,
         Function::UpdateCategory,
-        Function::UpdateTransaction
+        Function::UpdateTransaction,
+        Function::UpdateBudget
       ]
     end
 
