@@ -73,6 +73,11 @@ module Api
         user = User.find_by(email: params[:email])
 
         if user&.authenticate(params[:password])
+          unless user.active?
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          end
+
           # Check MFA if enabled
           if user.otp_required?
             unless params[:otp_code].present? && user.verify_otp?(params[:otp_code])
@@ -155,6 +160,11 @@ module Api
 
         unless user
           render json: { error: "Invalid email or password" }, status: :unauthorized
+          return
+        end
+
+        unless user.active?
+          render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
           return
         end
 
@@ -288,6 +298,12 @@ module Api
           return
         end
 
+        user = User.find_by(id: access_token.resource_owner_id)
+        unless user&.active?
+          render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+          return
+        end
+
         # Create new access token
         new_token = Doorkeeper::AccessToken.create!(
           application: access_token.application,
@@ -302,7 +318,6 @@ module Api
         access_token.revoke
 
         # Update device last seen
-        user = User.find(access_token.resource_owner_id)
         device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
         device&.update_last_seen!
 
