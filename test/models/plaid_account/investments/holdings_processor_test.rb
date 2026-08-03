@@ -82,7 +82,11 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
 
     PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
 
-    assert Holding.where(account: @plaid_account.current_account).first.cash_equivalent?
+    account = @plaid_account.current_account
+    assert_equal 1, account.holdings.count
+
+    holding = account.holdings.find_by!(security: securities(:aapl), qty: 4000)
+    assert holding.cash_equivalent?
   end
 
   # Plaid does not delete future holdings because it doesn't support holdings deletion
