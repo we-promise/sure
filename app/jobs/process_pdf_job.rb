@@ -1,16 +1,17 @@
 class ProcessPdfJob < ApplicationJob
   queue_as :medium_priority
 
-  def perform(pdf_import)
+  def perform(pdf_import, user = nil)
     return unless pdf_import.is_a?(PdfImport)
     return reset_processing_claim(pdf_import) unless pdf_import.pdf_uploaded?
     return if pdf_import.status == "complete"
     return reset_processing_claim(pdf_import) if pdf_import.ai_processed? && (!pdf_import.statement_with_transactions? || pdf_import.rows_count > 0)
 
+    user = nil unless user&.family_id == pdf_import.family_id
     pdf_import.update!(status: :importing)
 
     begin
-      process_result = pdf_import.process_with_ai
+      process_result = pdf_import.process_with_ai(user: user)
       document_type = resolve_document_type(pdf_import, process_result)
       upload_to_vector_store(pdf_import, document_type: document_type)
 
@@ -19,12 +20,6 @@ class ProcessPdfJob < ApplicationJob
       if pdf_import.reconciliation_matched?
         Rails.logger.info("ProcessPdfJob: Reconciliation matched for import #{pdf_import.id}, skipping transaction extraction")
       elsif statement_with_transactions?(document_type)
-        if pdf_import.reconciliation_reportable? && pdf_import.account.nil?
-          recon_account = pdf_import.reconciliation_account
-          pdf_import.update!(account: recon_account) if recon_account
-          Rails.logger.info("ProcessPdfJob: Auto-assigned account #{recon_account&.name} from reconciliation for import #{pdf_import.id}")
-        end
-
         Rails.logger.info("ProcessPdfJob: Extracting transactions for #{document_type} import #{pdf_import.id}")
         pdf_import.extract_transactions
         Rails.logger.info("ProcessPdfJob: Extracted #{pdf_import.extracted_transactions.size} transactions")
@@ -34,8 +29,7 @@ class ProcessPdfJob < ApplicationJob
         Rails.logger.info("ProcessPdfJob: Generated #{pdf_import.rows_count} import rows")
       end
 
-      # Find the user who created this import (first admin or any user in the family)
-      user = pdf_import.family.users.find_by(role: :admin) || pdf_import.family.users.first
+      user ||= pdf_import.family.users.find_by(role: :admin) || pdf_import.family.users.first
 
       if user
         pdf_import.send_next_steps_email(user)

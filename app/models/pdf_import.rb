@@ -146,11 +146,11 @@ class PdfImport < Import
     ai_summary.present?
   end
 
-  def process_with_ai_later
+  def process_with_ai_later(user: Current.user)
     return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing) }
 
     begin
-      ProcessPdfJob.perform_later(self)
+      ProcessPdfJob.perform_later(self, user)
       true
     rescue StandardError => e
       Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name} - #{e.message}")
@@ -159,7 +159,7 @@ class PdfImport < Import
     end
   end
 
-  def process_with_ai
+  def process_with_ai(user: nil)
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # process_pdf (PR #1985).
     provider = Provider::Registry.preferred_llm_provider
@@ -168,7 +168,8 @@ class PdfImport < Import
 
     response = provider.process_pdf(
       pdf_content: pdf_file_content,
-      family: family
+      family: family,
+      user: user
     )
 
     unless response.success?
