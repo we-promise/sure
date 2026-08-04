@@ -72,6 +72,98 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_equal 2, filtered.count
   end
 
+  test "applies not equal operator for select condition and includes nulls" do
+    scope = @rule_scope
+
+    # Only transaction1 and transaction4 have a merchant (@whole_foods_merchant)
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_merchant",
+      operator: "!=",
+      value: @whole_foods_merchant.id
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # "not equal" includes the 3 transactions with no merchant (NULL) too
+    assert_equal 3, filtered.count
+    assert filtered.all? { |t| t.merchant_id != @whole_foods_merchant.id }
+  end
+
+  test "applies is_not_null operator for select condition" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_merchant",
+      operator: "is_not_null",
+      value: nil
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 2, filtered.count
+    assert filtered.all? { |t| t.merchant_id.present? }
+  end
+
+  test "applies not equal operator for number condition" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_amount",
+      operator: "!=",
+      value: "100"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # transaction1 has absolute amount 100, the other 4 differ
+    assert_equal 4, filtered.count
+    assert filtered.all? { |t| t.entry.amount.abs != 100 }
+  end
+
+  test "applies not_like operator for text condition and includes nulls" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_name",
+      operator: "not_like",
+      value: "transaction1"
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # Excludes only transaction1, keeps the other 4
+    assert_equal 4, filtered.count
+    assert filtered.none? { |t| t.entry.name.include?("transaction1") }
+  end
+
+  test "not_like operator keeps rows with NULL field value (OR IS NULL branch)" do
+    # entries.notes is nullable, so we can verify the OR IS NULL guard in not_like
+    noted_entry = @account.entries.first
+    noted_entry.update!(notes: "business trip")
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_notes",
+      operator: "not_like",
+      value: "business trip"
+    )
+
+    scope = condition.prepare(@rule_scope)
+    filtered = condition.apply(scope)
+
+    # The entry with matching notes is excluded; the 4 entries with NULL notes are kept
+    assert_equal 4, filtered.count
+    assert filtered.none? { |t| t.id == noted_entry.transaction.id }
+  end
+
   test "applies compound and condition" do
     scope = @rule_scope
 
