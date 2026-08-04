@@ -288,6 +288,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_includes tool_names, "get_holdings"
       assert_includes tool_names, "get_balance_sheet"
       assert_includes tool_names, "get_income_statement"
+      assert_includes tool_names, "create_transaction"
       assert_includes tool_names, "update_transaction"
       assert_includes tool_names, "update_budget"
 
@@ -485,6 +486,36 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       budget.reload
       assert_equal 6200, budget.budgeted_spending
       assert_equal 8800, budget.expected_income
+    end
+  end
+
+  test "tools/call executes create_transaction" do
+    with_mcp_env do
+      account = @user.family.accounts.visible.writable_by(@user).first!
+      external_id = "mcp-controller-#{SecureRandom.uuid}"
+
+      assert_difference "account.entries.count", 1 do
+        post "/mcp", params: jsonrpc_request("tools/call", {
+          name: "create_transaction",
+          arguments: {
+            account_id: account.id,
+            amount: 25,
+            date: Date.current.iso8601,
+            name: "Created through MCP",
+            nature: "expense",
+            external_id: external_id
+          }
+        }).to_json, headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      result = body["result"]
+      inner = JSON.parse(result["content"][0]["text"])
+
+      assert_equal true, inner["success"]
+      assert_equal true, inner["created"]
+      assert account.entries.exists?(source: "mcp", external_id: external_id)
     end
   end
 
