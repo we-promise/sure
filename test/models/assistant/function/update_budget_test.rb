@@ -109,6 +109,52 @@ class Assistant::Function::UpdateBudgetTest < ActiveSupport::TestCase
     assert_equal original, @budget.reload.budgeted_spending
   end
 
+  test "does not leave a bootstrapped budget behind when a later entry is invalid" do
+    target = Date.current.beginning_of_month << 2
+    assert_nil @family.budgets.find_by(start_date: target)
+
+    result = @function.call(
+      "month" => target.strftime("%Y-%m"),
+      "budgeted_spending" => 1000,
+      "categories" => [ { "category" => "No Such Category", "amount" => 10 } ]
+    )
+
+    assert_equal false, result[:success]
+    assert_nil @family.budgets.find_by(start_date: target)
+  end
+
+  test "applies explicit parent amounts after subcategory updates regardless of order" do
+    @budget.sync_budget_categories
+    subcategory = categories(:subcategory)
+    parent = subcategory.parent
+
+    result = @function.call(
+      "categories" => [
+        { "category" => parent.id, "amount" => 1000 },
+        { "category" => subcategory.id, "amount" => 300 }
+      ]
+    )
+
+    assert_equal true, result[:success]
+
+    sub_bc = @budget.budget_categories.find_by(category_id: subcategory.id)
+    parent_bc = @budget.budget_categories.find_by(category_id: parent.id)
+    assert_equal 300, sub_bc.reload.budgeted_spending
+    assert_equal 1000, parent_bc.reload.budgeted_spending
+  end
+
+  test "explains that Uncategorized cannot be set directly" do
+    @budget.sync_budget_categories
+
+    result = @function.call(
+      "categories" => [ { "category" => "Uncategorized", "amount" => 50 } ]
+    )
+
+    assert_equal false, result[:success]
+    assert_equal "invalid_params", result[:error]
+    assert_match(/cannot be set directly/i, result[:message])
+  end
+
   test "rejects unknown category names" do
     result = @function.call(
       "categories" => [ { "category" => "No Such Category", "amount" => 10 } ]
@@ -124,6 +170,20 @@ class Assistant::Function::UpdateBudgetTest < ActiveSupport::TestCase
 
     assert_equal false, result[:success]
     assert_equal "invalid_params", result[:error]
+  end
+
+  test "rejects non-finite amounts" do
+    @budget.sync_budget_categories
+
+    [ Float::NAN, Float::INFINITY ].each do |value|
+      result = @function.call("budgeted_spending" => value)
+      assert_equal false, result[:success]
+      assert_equal "invalid_params", result[:error]
+
+      result = @function.call("categories" => [ { "category" => "Food & Drink", "amount" => value } ])
+      assert_equal false, result[:success]
+      assert_equal "invalid_params", result[:error]
+    end
   end
 
   test "rejects malformed months" do
