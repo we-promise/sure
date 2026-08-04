@@ -13,27 +13,52 @@ Sure includes an AI assistant that can help users understand their financial dat
 
 ## Architecture: Two AI Pipelines
 
-Sure has **two separate AI systems** that operate independently. Understanding this is important because they have different configuration requirements.
+Sure has **two AI systems**. They differ in how they call the model, but they resolve their provider the same way — so a single set of LLM credentials serves both.
 
 ### 1. Chat Assistant (conversational)
 
 The interactive chat where users ask questions about their finances. Routes through one of two backends:
 
-- **Builtin** (default): Uses the OpenAI-compatible provider configured via `OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`. Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
+- **Builtin** (default): Uses the configured LLM provider — OpenAI-compatible (`OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`) or native Anthropic (`ANTHROPIC_ACCESS_TOKEN` / `ANTHROPIC_MODEL`). Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
 - **External**: Delegates the entire conversation to a remote AI agent. The agent calls back to Sure via MCP to access financial data. Set `ASSISTANT_TYPE=external` as a global override, or configure each family's assistant type in Settings.
 
 ### 2. Auto-Categorization and Merchant Detection (background)
 
-Background jobs that classify transactions and detect merchants. These **always** use the OpenAI-compatible provider (`OPENAI_ACCESS_TOKEN`), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
+Background jobs that classify transactions and detect merchants. They rely on structured function calling with JSON schemas, not conversational chat, but they resolve their provider through the same `LLM_PROVIDER` / `Setting.llm_provider` selection the builtin chat uses, falling back to whichever provider actually has credentials.
 
 ### What this means in practice
 
 | Setting | Chat assistant | Auto-categorization |
 |---------|---------------|---------------------|
-| `ASSISTANT_TYPE=builtin` (default) | Uses OpenAI provider | Uses OpenAI provider |
-| `ASSISTANT_TYPE=external` | Uses external agent | Still uses OpenAI provider |
+| `ASSISTANT_TYPE=builtin` (default) | Configured LLM provider | Configured LLM provider |
+| `ASSISTANT_TYPE=external` | External agent | Configured LLM provider |
 
-If you use an external agent for chat, you still need `OPENAI_ACCESS_TOKEN` set for auto-categorization and merchant detection to work. The two systems are fully independent.
+Only the **chat** half can be delegated to an external agent. Auto-categorization and merchant detection always run against a directly configured LLM provider, so if you use an external agent for chat you still need LLM credentials for those background jobs — but they can be Anthropic credentials, OpenAI credentials, or anything OpenAI-compatible. `OPENAI_ACCESS_TOKEN` specifically is not required.
+
+## Choosing a provider
+
+Sure ships two first-class provider integrations:
+
+| Provider | Credentials | Model | Base URL override |
+|----------|-------------|-------|-------------------|
+| OpenAI-compatible | `OPENAI_ACCESS_TOKEN` | `OPENAI_MODEL` | `OPENAI_URI_BASE` |
+| Anthropic (native) | `ANTHROPIC_ACCESS_TOKEN` (or `ANTHROPIC_API_KEY`) | `ANTHROPIC_MODEL` | `ANTHROPIC_BASE_URL` |
+
+`LLM_PROVIDER` selects which to prefer — `openai` (default) or `anthropic`. It is a *preference*, not a hard pin: if the preferred provider has no credentials, Sure falls back to the other one, and if neither is configured AI features stay disabled.
+
+Every one of these environment variables has a Settings-UI equivalent, so a self-hoster can configure providers without redeploying. The environment variable wins when both are set.
+
+```bash
+# Anthropic-only deployment
+LLM_PROVIDER=anthropic
+ANTHROPIC_ACCESS_TOKEN=sk-ant-...
+ANTHROPIC_MODEL=claude-sonnet-4-5
+```
+
+The OpenAI-compatible path is what Ollama, OpenRouter, and other gateways use — see [Local LLM Setup (Ollama)](#local-llm-setup-ollama) below. The Anthropic path talks to the Anthropic API directly rather than through an OpenAI-shaped shim.
+
+> [!IMPORTANT]
+> When you point `OPENAI_URI_BASE` at a non-OpenAI gateway you **must** also set `OPENAI_MODEL`. Sure cannot guess a default model for a custom endpoint and will disable the provider (with an error in the logs) if the model is blank.
 
 ## Quickstart: OpenAI Token
 
@@ -147,17 +172,31 @@ OPENAI_MODEL=google/gemini-2.0-flash-exp
 - `google/gemini-2.5-flash` - Fast and capable
 - `google/gemini-2.5-pro` - High quality, good for complex queries
 
+### Anthropic Claude (native)
+
+Sure talks to the Anthropic API directly — you do not need to route Claude through an OpenAI-compatible gateway:
+
+```bash
+LLM_PROVIDER=anthropic
+ANTHROPIC_ACCESS_TOKEN=sk-ant-...
+ANTHROPIC_MODEL=claude-sonnet-4-5
+```
+
+`ANTHROPIC_API_KEY` is accepted as an alias for `ANTHROPIC_ACCESS_TOKEN`. Set `ANTHROPIC_BASE_URL` to point at a proxy or gateway that speaks the Anthropic API.
+
+**Recommended Claude models:**
+- `claude-sonnet-4-5` - Excellent reasoning, good with financial data
+- `claude-haiku-4-5` - Fast and cost-effective
+
 ### Anthropic Claude (via OpenRouter)
+
+Claude is also reachable through the OpenAI-compatible path if you already run everything through OpenRouter:
 
 ```bash
 OPENAI_ACCESS_TOKEN=your-openrouter-api-key
 OPENAI_URI_BASE=https://openrouter.ai/api/v1
-OPENAI_MODEL=anthropic/claude-3.5-sonnet
+OPENAI_MODEL=anthropic/claude-sonnet-4.5
 ```
-
-**Recommended Claude models:**
-- `anthropic/claude-sonnet-4.5` - Excellent reasoning, good with financial data
-- `anthropic/claude-haiku-4.5` - Fast and cost-effective
 
 ### Other Providers
 
@@ -319,9 +358,13 @@ For self-hosted deployments, you can configure AI settings through the web inter
 1. Go to **Settings** → **Self-Hosting**
 2. Scroll to the **AI Provider** section
 3. Configure:
+   - **LLM Provider** - Which provider to prefer (`openai` or `anthropic`)
    - **OpenAI Access Token** - Your API key
    - **OpenAI URI Base** - Custom endpoint (leave blank for OpenAI)
    - **OpenAI Model** - Model name (required for custom endpoints)
+   - **Anthropic Access Token** - Your Anthropic API key
+   - **Anthropic Model** - Claude model name
+   - **Anthropic Base URL** - Custom Anthropic-compatible endpoint (leave blank for Anthropic)
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
 
@@ -1007,20 +1050,15 @@ If you process 10,000 messages/month:
 
 ### Hybrid Approach
 
-You can mix providers:
+> [!WARNING]
+> **Not currently supported.** Sure uses a single LLM provider for every operation — chat, auto-categorization, merchant detection, and PDF processing all resolve through the same `LLM_PROVIDER` selection. There is no per-feature provider or per-feature model setting. Any `CATEGORIZATION_PROVIDER` / `CHAT_PROVIDER` style variables you may find in older notes are not read by the application and will be silently ignored.
 
-```python
-# Example: Use local for categorization, cloud for chat
-# Categorization (high volume, lower complexity)
-CATEGORIZATION_PROVIDER=ollama
-CATEGORIZATION_MODEL=gemma2:7b
+If you want cheap local inference for the high-volume background jobs and a stronger cloud model for chat, the options available today are:
 
-# Chat (lower volume, higher complexity)
-CHAT_PROVIDER=openai
-CHAT_MODEL=gpt-4.1
-```
+- **Delegate only chat.** Set `ASSISTANT_TYPE=external` to route conversations to a remote agent while auto-categorization and merchant detection keep using your locally configured provider. This is the closest supported equivalent to a hybrid split.
+- **Front both with a gateway.** Point `OPENAI_URI_BASE` at OpenRouter, LiteLLM, or a similar router and let it decide where individual requests land.
 
-**Note:** Sure currently uses a single provider for all operations, but this could be customized.
+Otherwise, pick the single provider that best balances your chat quality needs against your categorization volume.
 
 ## Troubleshooting
 
