@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pipelock.flightRecorder`: structured Helm values for rendering `flight_recorder.enabled`, `require_receipts`, `redact`, `dir`, and `signing_key_path`.
 - `pipelock.extraVolumes` and `pipelock.extraVolumeMounts`: mount receipt evidence storage and receipt-signing keys without duplicating the Pipelock deployment template.
 
+### Fixed
+- `pipelock-configmap.yaml` defaulted `mcp_tool_policy.enabled` to `true` when `pipelock.mcpToolPolicy` was absent or explicitly nulled, contradicting the `enabled: false` default in `values.yaml` and reintroducing the startup rejection fixed in 0.7.1. The `asserts.tpl` guard was gated on the same key-presence check, so it did not catch the case. Both now key off the effective value and default to disabled.
+
 ## [0.7.1] - 2026-05-31]
 
 ### Changed

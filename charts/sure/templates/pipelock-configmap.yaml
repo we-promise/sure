@@ -37,7 +37,11 @@
 {{- $wsIdleTimeout = int (.Values.pipelock.websocketProxy.idleTimeoutSeconds | default 300) -}}
 {{- $wsOriginPolicy = .Values.pipelock.websocketProxy.originPolicy | default "rewrite" -}}
 {{- end -}}
-{{- $mcpPolicyEnabled := true -}}
+{{/*
+Default to disabled: pipelock rejects an enabled mcp_tool_policy that has no
+rules, so an absent or nulled-out mcpToolPolicy must not render enabled=true.
+*/}}
+{{- $mcpPolicyEnabled := false -}}
 {{- $mcpPolicyAction := "warn" -}}
 {{- if .Values.pipelock.mcpToolPolicy -}}
 {{- if hasKey .Values.pipelock.mcpToolPolicy "enabled" -}}
