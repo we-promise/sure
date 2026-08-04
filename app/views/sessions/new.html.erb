@@ -43,8 +43,25 @@
     <%= form.submit t(".submit") %>
   <% end %>
 
+  <% unless AuthConfig.local_login_enabled? %>
+    <p class="mt-2 text-xs text-secondary text-center">
+      <%= t(".local_login_admin_only") %>
+    </p>
+  <% end %>
+
+  <% if AuthConfig.password_features_enabled? %>
+    <div class="mt-6 text-center">
+      <%= link_to t(".forgot_password"), new_password_reset_path, class: "font-medium text-sm text-primary hover:underline transition" %>
+    </div>
+  <% end %>
+
+  <%#
+    Sits with the SSO buttons rather than under the password fields: it is an
+    alternative to the credential form, not part of it, and the four outline
+    buttons read as one group.
+  %>
   <% if passkey_login_enabled %>
-    <div class="mt-4 space-y-3"
+    <div class="mt-6 space-y-3"
          data-controller="webauthn-authentication"
          data-webauthn-authentication-conditional-value="true"
          data-webauthn-authentication-options-url-value="<%= passkey_session_options_path %>"
@@ -62,18 +79,6 @@
             data: { action: "webauthn-authentication#authenticate" }
           ) %>
       <p class="text-sm text-destructive" role="alert" aria-live="assertive" aria-atomic="true" aria-hidden="true" hidden data-webauthn-authentication-target="error"></p>
-    </div>
-  <% end %>
-
-  <% unless AuthConfig.local_login_enabled? %>
-    <p class="mt-2 text-xs text-secondary text-center">
-      <%= t(".local_login_admin_only") %>
-    </p>
-  <% end %>
-
-  <% if AuthConfig.password_features_enabled? %>
-    <div class="mt-6 text-center">
-      <%= link_to t(".forgot_password"), new_password_reset_path, class: "font-medium text-sm text-primary hover:underline transition" %>
     </div>
   <% end %>
 <% end %>
