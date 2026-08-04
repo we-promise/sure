@@ -13,7 +13,7 @@ class Api::V1::ChatsController < Api::V1::BaseController
 
   def show
     return unless @chat
-    @messages = @chat.messages.ordered
+    @messages = @chat.messages.ordered.last(Assistant::External::MAX_CONVERSATION_MESSAGES)
   end
 
   def create

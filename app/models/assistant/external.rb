@@ -1,10 +1,11 @@
 class Assistant::External < Assistant::Base
   Config = Struct.new(:url, :token, :agent_id, :session_key, keyword_init: true)
-  # Soft ceiling on how many completed messages are forwarded to the external
-  # agent. Defaults to 200 (≈100 turns) to avoid hitting request-size limits on
-  # most providers. Override with EXTERNAL_ASSISTANT_MAX_MESSAGES if needed.
-  # The external service is responsible for final context-window management.
-  MAX_CONVERSATION_MESSAGES = ENV.fetch("EXTERNAL_ASSISTANT_MAX_MESSAGES", "200").to_i
+  # Ceiling on completed messages forwarded to the external agent and returned
+  # by the chat show API. Defaults to 200 (≈100 turns). Override with
+  # EXTERNAL_ASSISTANT_MAX_MESSAGES. Must be a positive integer.
+  MAX_CONVERSATION_MESSAGES = Integer(
+    ENV.fetch("EXTERNAL_ASSISTANT_MAX_MESSAGES", "200")
+  ).tap { |n| raise ArgumentError, "EXTERNAL_ASSISTANT_MAX_MESSAGES must be a positive integer" if n < 1 }
 
   class << self
     def for_chat(chat)

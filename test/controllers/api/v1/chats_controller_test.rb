@@ -52,6 +52,14 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert response_body["pagination"].present?
   end
 
+  test "index pagination per_page reflects configured limit" do
+    get "/api/v1/chats", headers: bearer_auth_header(@read_token)
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert_equal 20, response_body["pagination"]["per_page"]
+  end
+
   test "should show chat with messages" do
     get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
     assert_response :success
@@ -59,6 +67,20 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     response_body = JSON.parse(response.body)
     assert_equal @chat.id, response_body["id"]
     assert response_body["messages"].is_a?(Array)
+  end
+
+  test "show returns all messages when count exceeds default pagy page size" do
+    21.times do |i|
+      role_class = i.even? ? UserMessage : AssistantMessage
+      role_class.create!(chat: @chat, content: "msg #{i}", ai_model: "test")
+    end
+
+    get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert response_body["messages"].length > 20,
+      "Expected more than 20 messages but got #{response_body['messages'].length}"
   end
 
   test "should create chat with write scope" do
