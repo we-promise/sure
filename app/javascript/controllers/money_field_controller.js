@@ -20,32 +20,35 @@ export default class extends Controller {
 
   updateAmount(currency) {
     const requestId = ++this.requestSequence;
-    new CurrenciesService().get(currency).then((currencyData) => {
-      if (requestId !== this.requestSequence) return;
+    new CurrenciesService()
+      .get(currency)
+      .then((currencyData) => {
+        if (requestId !== this.requestSequence) return;
 
-      this.amountTarget.step =
-        this.hasStepValue &&
-        this.stepValue !== "" &&
-        (this.stepValue === "any" || Number.isFinite(Number(this.stepValue)))
-          ? this.stepValue
-          : currencyData.step;
+        this.amountTarget.step =
+          this.hasStepValue &&
+          this.stepValue !== "" &&
+          (this.stepValue === "any" || Number.isFinite(Number(this.stepValue)))
+            ? this.stepValue
+            : currencyData.step;
 
-      const rawValue = this.amountTarget.value.trim();
-      if (rawValue !== "") {
-        const parsedAmount = parseLocaleFloat(rawValue);
-        if (Number.isFinite(parsedAmount)) {
-          const precision =
-            this.hasPrecisionValue && Number.isInteger(this.precisionValue)
-              ? this.precisionValue
-              : currencyData.default_precision;
-          this.amountTarget.value = parsedAmount.toFixed(precision);
+        const rawValue = this.amountTarget.value.trim();
+        if (rawValue !== "") {
+          const parsedAmount = parseLocaleFloat(rawValue);
+          if (Number.isFinite(parsedAmount)) {
+            const precision =
+              this.hasPrecisionValue && Number.isInteger(this.precisionValue)
+                ? this.precisionValue
+                : currencyData.default_precision;
+            this.amountTarget.value = parsedAmount.toFixed(precision);
+          }
         }
-      }
 
-      this.symbolTarget.innerText = currencyData.symbol;
-    }).catch(() => {
-      // Catch prevents Unhandled Promise Rejection for network failures.
-      // Silently ignored as they are unactionable by the user.
-    });
+        this.symbolTarget.innerText = currencyData.symbol;
+      })
+      .catch(() => {
+        // Catch prevents Unhandled Promise Rejection for network failures.
+        // Silently ignored as they are unactionable by the user.
+      });
   }
 }

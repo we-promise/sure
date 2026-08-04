@@ -30,7 +30,7 @@ export default class extends Controller {
 
     return new Promise((resolve, reject) => {
       let plaidScript = document.querySelector(
-        'script[src*="link-initialize.js"]'
+        'script[src*="link-initialize.js"]',
       );
 
       // Reject if the CDN request stalls without firing load or error
@@ -47,22 +47,31 @@ export default class extends Controller {
 
       if (!plaidScript) {
         plaidScript = document.createElement("script");
-        plaidScript.src = "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
+        plaidScript.src =
+          "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
         plaidScript.async = true;
         plaidScript.dataset.plaidState = "loading";
         document.head.appendChild(plaidScript);
       }
 
-      plaidScript.addEventListener("load", () => {
-        window.clearTimeout(timeoutId);
-        plaidScript.dataset.plaidState = "loaded";
-        resolve();
-      }, { once: true });
-      plaidScript.addEventListener("error", () => {
-        window.clearTimeout(timeoutId);
-        plaidScript.dataset.plaidState = "error";
-        reject(new Error("Failed to load Plaid script"));
-      }, { once: true });
+      plaidScript.addEventListener(
+        "load",
+        () => {
+          window.clearTimeout(timeoutId);
+          plaidScript.dataset.plaidState = "loaded";
+          resolve();
+        },
+        { once: true },
+      );
+      plaidScript.addEventListener(
+        "error",
+        () => {
+          window.clearTimeout(timeoutId);
+          plaidScript.dataset.plaidState = "error";
+          reject(new Error("Failed to load Plaid script"));
+        },
+        { once: true },
+      );
 
       // Re-check after attaching listeners in case the script loaded between
       // the initial typeof check and listener attachment (avoids a permanently
@@ -152,7 +161,7 @@ export default class extends Controller {
       console.error(
         "Plaid Link exited with error",
         err.error_code,
-        err.display_message || err.error_message
+        err.display_message || err.error_message,
       );
     }
   };

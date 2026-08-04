@@ -5,7 +5,9 @@ export default class extends Controller {
   static values = { filter: { type: String, default: "all" } };
 
   connect() {
-    const filterParam = new URLSearchParams(window.location.search).get("filter");
+    const filterParam = new URLSearchParams(window.location.search).get(
+      "filter",
+    );
 
     if (this.#isValidFilter(filterParam) && filterParam !== this.filterValue) {
       this.filterValue = filterParam;

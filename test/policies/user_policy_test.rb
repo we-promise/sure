@@ -30,8 +30,8 @@ class UserPolicyTest < ActiveSupport::TestCase
     assert UserPolicy.new(@super_admin, @regular_user).update?
   end
 
-  test "super admin cannot update themselves" do
-    assert_not UserPolicy.new(@super_admin, @super_admin).update?
+  test "super admin can update themselves" do
+    assert UserPolicy.new(@super_admin, @super_admin).update?
   end
 
   test "super admin can delete another user" do

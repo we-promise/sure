@@ -10,7 +10,7 @@ export default class extends Controller {
     "clearBtn",
     "uploadText",
     "changeText",
-    "cameraIcon"
+    "cameraIcon",
   ];
 
   clearFileInput() {
@@ -25,7 +25,6 @@ export default class extends Controller {
     this.changeTextTarget.setAttribute("aria-hidden", "true");
     this.uploadTextTarget.setAttribute("aria-hidden", "false");
     this.cameraIconTarget.classList.remove("!hidden");
-
   }
 
   showFileInputPreview(event) {

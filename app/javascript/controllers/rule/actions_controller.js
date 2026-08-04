@@ -7,13 +7,13 @@ export default class extends Controller {
     "destroyField",
     "actionValue",
     "selectTemplate",
-    "textTemplate"
+    "textTemplate",
   ];
 
   remove(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (e.params.destroy) {
       this.destroyFieldTarget.value = true;
       this.element.classList.add("hidden");

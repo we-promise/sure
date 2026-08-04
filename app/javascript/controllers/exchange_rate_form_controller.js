@@ -8,12 +8,12 @@ export default class extends Controller {
     "exchangeRateContainer",
     "exchangeRateField",
     "convertDestinationDisplay",
-    "calculateRateDisplay"
+    "calculateRateDisplay",
   ];
 
   static values = {
     exchangeRateUrl: String,
-    accountCurrencies: Object
+    accountCurrencies: Object,
   };
 
   connect() {
@@ -108,7 +108,11 @@ export default class extends Controller {
   }
 
   calculateConvertDestination() {
-    if (!this.hasAmountTarget || !this.hasExchangeRateFieldTarget || !this.hasConvertDestinationDisplayTarget) {
+    if (
+      !this.hasAmountTarget ||
+      !this.hasExchangeRateFieldTarget ||
+      !this.hasConvertDestinationDisplayTarget
+    ) {
       return;
     }
 
@@ -117,7 +121,10 @@ export default class extends Controller {
 
     if (amount && rate && rate !== 0) {
       const destAmount = (amount * rate).toFixed(2);
-      this.convertDestinationDisplayTarget.textContent = this.destinationCurrency ? `${destAmount} ${this.destinationCurrency}` : destAmount;
+      this.convertDestinationDisplayTarget.textContent = this
+        .destinationCurrency
+        ? `${destAmount} ${this.destinationCurrency}`
+        : destAmount;
     } else {
       this.convertDestinationDisplayTarget.textContent = "-";
     }
@@ -132,7 +139,12 @@ export default class extends Controller {
   }
 
   calculateRateFromAmounts() {
-    if (!this.hasAmountTarget || !this.hasDestinationAmountTarget || !this.hasCalculateRateDisplayTarget || !this.hasExchangeRateFieldTarget) {
+    if (
+      !this.hasAmountTarget ||
+      !this.hasDestinationAmountTarget ||
+      !this.hasCalculateRateDisplayTarget ||
+      !this.hasExchangeRateFieldTarget
+    ) {
       return;
     }
 
@@ -264,7 +276,10 @@ export default class extends Controller {
       return false;
     }
 
-    return data.error === "Exchange rate not found" || data.error === "Exchange rate unavailable";
+    return (
+      data.error === "Exchange rate not found" ||
+      data.error === "Exchange rate unavailable"
+    );
   }
 
   hideExchangeRateField() {

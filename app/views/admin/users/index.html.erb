@@ -107,7 +107,13 @@
                             <span class="text-sm font-medium text-primary"><%= user.initials %></span>
                           </div>
                           <div>
-                            <p class="font-medium text-primary"><%= user.display_name %></p>
+                            <div class="flex items-center gap-2">
+                              <p class="font-medium text-primary"><%= user.display_name %></p>
+                              <% if user.id == Current.user.id %>
+                                <span class="text-xs font-medium text-secondary"><%= t(".you") %></span>
+                              <% end %>
+                              <%= render DS::Pill.new(label: t(".roles.#{user.role}", default: user.role.humanize), tone: user.super_admin? ? :success : :neutral) %>
+                            </div>
                             <p class="text-sm text-secondary"><%= user.email %></p>
                           </div>
                         </div>
@@ -118,68 +124,108 @@
                       <td class="px-4 py-3 text-sm text-primary text-right whitespace-nowrap">
                         <%= number_with_delimiter(@sessions_count_by_user[user.id] || 0) %>
                       </td>
-                      <td class="px-4 py-3 text-right">
-                        <% if user.id == Current.user.id %>
-                          <span class="text-sm text-secondary"><%= t(".you") %></span>
-                        <% else %>
-                          <div class="space-y-3 min-w-[22rem]">
-                            <%= form_with model: [:admin, user], method: :patch, class: "space-y-3 text-left" do |form| %>
-                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <%= render DS::Popover.new(variant: :icon, icon: "ellipsis-vertical", placement: "bottom-end", aria_label: t(".actions.manage_user", default: "Manage user")) do |popover| %>
+                          <% popover.with_custom_content do %>
+                            <% is_last_super_admin = user.super_admin? && User.where(role: :super_admin).where.not(id: user.id).none? %>
+                            <div class="p-4 w-80 space-y-4 text-left whitespace-normal">
+                              <div class="border-b border-primary pb-2">
+                                <p class="font-medium text-sm text-primary"><%= user.display_name %></p>
+                                <p class="text-xs text-secondary"><%= user.email %></p>
+                              </div>
+
+                              <%= form_with model: [:admin, user], method: :patch, class: "space-y-3" do |form| %>
                                 <div>
                                   <%= form.label :role, t(".table.role"), class: "block text-xs font-medium text-secondary mb-1" %>
-                                  <%= form.select :role,
-                                      options_for_select([
-                                        [t(".roles.guest"), "guest"],
-                                        [t(".roles.member"), "member"],
-                                        [t(".roles.admin"), "admin"],
-                                        [t(".roles.super_admin"), "super_admin"]
-                                      ], user.role),
-                                      {},
-                                      class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-2" %>
+                                  <% if is_last_super_admin %>
+                                    <%= form.select :role,
+                                        options_for_select([[t(".roles.super_admin"), "super_admin"]], "super_admin"),
+                                        {},
+                                        disabled: true,
+                                        class: "w-full text-sm rounded-lg border border-primary bg-container-inset text-secondary px-2 py-1.5 cursor-not-allowed" %>
+                                    <%= form.hidden_field :role, value: "super_admin" %>
+                                    <p class="text-xs text-warning mt-1 leading-normal"><%= t(".actions.last_super_admin_role_locked") %></p>
+                                  <% else %>
+                                    <%= form.select :role,
+                                        options_for_select([
+                                          [t(".roles.guest"), "guest"],
+                                          [t(".roles.member"), "member"],
+                                          [t(".roles.admin"), "admin"],
+                                          [t(".roles.super_admin"), "super_admin"]
+                                        ], user.role),
+                                        {},
+                                        class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1.5" %>
+                                  <% end %>
                                 </div>
 
-                                <div>
-                                  <%= form.label :family_id, t(".table.family"), class: "block text-xs font-medium text-secondary mb-1" %>
-                                  <%= form.select :family_id,
-                                      options_for_select([[t(".table.keep_current_family"), ""]] + @families.map { |family| [family_label_for(family), family.id] }, user.family_id),
-                                      {},
-                                      class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-2" %>
+                                <div data-controller="admin-user-family-select" class="space-y-3">
+                                  <div>
+                                    <%= form.label :family_id, t(".table.family"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                    <%= form.select :family_id,
+                                        options_for_select([
+                                          [t(".table.keep_current_family"), ""],
+                                          [t(".table.create_new_family_option"), "new"]
+                                        ] + @families.map { |family| [family_label_for(family), family.id] }, user.family_id),
+                                        {},
+                                        class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1.5",
+                                        data: {
+                                          admin_user_family_select_target: "select",
+                                          action: "change->admin-user-family-select#toggle"
+                                        } %>
+                                  </div>
+
+                                  <div data-admin-user-family-select-target="newFamilyFields" class="hidden border-t border-primary pt-3 space-y-3">
+                                    <div>
+                                      <%= form.label :new_family_name, t(".table.new_family_name"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                      <%= form.text_field :new_family_name,
+                                          placeholder: t(".table.new_family_name_placeholder"),
+                                          class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1.5",
+                                          data: { admin_user_family_select_target: "nameInput" } %>
+                                    </div>
+
+                                    <div>
+                                      <%= form.label :new_family_moniker, t(".table.new_family_moniker"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                      <%= form.select :new_family_moniker,
+                                          options_for_select([[t(".family_monikers.family"), "Family"], [t(".family_monikers.group"), "Group"]], "Family"),
+                                          {},
+                                          class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1.5" %>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
 
-                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                  <%= form.label :new_family_name, t(".table.new_family_name"), class: "block text-xs font-medium text-secondary mb-1" %>
-                                  <%= form.text_field :new_family_name,
-                                      placeholder: t(".table.new_family_name_placeholder"),
-                                      class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-2" %>
+                                <% if user.id == Current.user.id %>
+                                  <div class="bg-warning/10 border border-warning/20 rounded-lg p-2.5 text-xs text-warning whitespace-normal break-words leading-normal">
+                                    <p class="font-medium"><%= t(".actions.self_edit_warning") %></p>
+                                  </div>
+                                <% end %>
+
+                                <div class="pt-1">
+                                  <%= render DS::Button.new(
+                                    variant: :primary,
+                                    size: :sm,
+                                    type: "submit",
+                                    confirm: (user.id == Current.user.id ? t(".actions.self_update_confirm") : nil),
+                                    text: t(".actions.update"),
+                                    class: "w-full justify-center"
+                                  ) %>
                                 </div>
+                              <% end %>
 
-                                <div>
-                                  <%= form.label :new_family_moniker, t(".table.new_family_moniker"), class: "block text-xs font-medium text-secondary mb-1" %>
-                                  <%= form.select :new_family_moniker,
-                                      options_for_select([[t(".family_monikers.family"), "Family"], [t(".family_monikers.group"), "Group"]], "Family"),
-                                      {},
-                                      class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-2" %>
+                              <% unless user.id == Current.user.id %>
+                                <div class="border-t border-primary pt-3">
+                                  <%= render DS::Button.new(
+                                    variant: :outline_destructive,
+                                    size: :sm,
+                                    href: admin_user_path(user),
+                                    method: :delete,
+                                    confirm: users.one? ? t(".delete_confirm_last_user") : t(".delete_confirm"),
+                                    text: t(".actions.delete_user"),
+                                    class: "w-full justify-center"
+                                  ) %>
                                 </div>
-                              </div>
-
-                              <div class="flex items-center justify-end gap-2">
-                                <%= render DS::Button.new(variant: :primary, size: :sm, type: "submit", text: t(".actions.update")) %>
-                              </div>
-                            <% end %>
-
-                            <div class="flex justify-end">
-                              <%= render DS::Button.new(
-                                variant: :outline_destructive,
-                                size: :sm,
-                                href: admin_user_path(user),
-                                method: :delete,
-                                confirm: users.one? ? t(".delete_confirm_last_user") : t(".delete_confirm"),
-                                text: t(".actions.delete_user")
-                              ) %>
+                              <% end %>
                             </div>
-                          </div>
+                          <% end %>
                         <% end %>
                       </td>
                     </tr>

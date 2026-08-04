@@ -21,12 +21,22 @@ export default class extends Controller {
     "submitButton",
   ];
 
-  static INVALID_INPUT_CLASSES = ["ring-2", "ring-destructive", "border-destructive"];
+  static INVALID_INPUT_CLASSES = [
+    "ring-2",
+    "ring-destructive",
+    "border-destructive",
+  ];
 
   static values = {
     currency: { type: String, default: "USD" },
-    suggestedWithDate: { type: String, default: "Save {monthly}/mo across {accounts} to hit it on time." },
-    suggestedNoDate: { type: String, default: "Set a target date to project a finish line." },
+    suggestedWithDate: {
+      type: String,
+      default: "Save {monthly}/mo across {accounts} to hit it on time.",
+    },
+    suggestedNoDate: {
+      type: String,
+      default: "Set a target date to project a finish line.",
+    },
     // Only the create form must pick an account. On edit the checkboxes are
     // populated from visible accounts only, so a goal backed by a now-hidden
     // account renders none — and the controller preserves existing links when
@@ -48,14 +58,19 @@ export default class extends Controller {
 
   nameChanged() {
     if (this.hasNameInputTarget) {
-      this.clearFieldError(this.nameInputTarget, this.hasNameErrorTarget ? this.nameErrorTarget : null);
+      this.clearFieldError(
+        this.nameInputTarget,
+        this.hasNameErrorTarget ? this.nameErrorTarget : null,
+      );
     }
     this.refreshSubmitState();
     if (!this.hasAvatarPreviewTarget || !this.hasNameInputTarget) return;
 
     // If the user has explicitly picked an icon, leave it alone. Name
     // changes shouldn't undo an explicit choice.
-    const iconPicked = this.element.querySelector('input[name="goal[icon]"]:checked');
+    const iconPicked = this.element.querySelector(
+      'input[name="goal[icon]"]:checked',
+    );
     if (iconPicked) return;
 
     const name = this.nameInputTarget.value.trim();
@@ -70,14 +85,20 @@ export default class extends Controller {
 
   amountChanged() {
     if (this.hasAmountInputTarget) {
-      this.clearFieldError(this.amountInputTarget, this.hasAmountErrorTarget ? this.amountErrorTarget : null);
+      this.clearFieldError(
+        this.amountInputTarget,
+        this.hasAmountErrorTarget ? this.amountErrorTarget : null,
+      );
     }
     this.refreshSubmitState();
   }
 
   linkedAccountChanged() {
     this.updateSuggested();
-    if (this.linkedAccountCheckboxTargets.some((cb) => cb.checked) && this.hasAccountsErrorTarget) {
+    if (
+      this.linkedAccountCheckboxTargets.some((cb) => cb.checked) &&
+      this.hasAccountsErrorTarget
+    ) {
       this.accountsErrorTarget.classList.add("hidden");
     }
     this.refreshSubmitState();
@@ -88,10 +109,18 @@ export default class extends Controller {
   // presence, target_amount > 0, must_have_at_least_one_linked_account) so the
   // button only enables when a submit would actually succeed.
   isValid() {
-    const name = this.hasNameInputTarget ? this.nameInputTarget.value.trim() : "";
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
-    const accountOk = !this.requireAccountValue || this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
-    return name.length > 0 && Number.isFinite(amount) && amount > 0 && accountOk;
+    const name = this.hasNameInputTarget
+      ? this.nameInputTarget.value.trim()
+      : "";
+    const amount = this.hasAmountInputTarget
+      ? Number.parseFloat(this.amountInputTarget.value)
+      : Number.NaN;
+    const accountOk =
+      !this.requireAccountValue ||
+      this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
+    return (
+      name.length > 0 && Number.isFinite(amount) && amount > 0 && accountOk
+    );
   }
 
   // `aria-disabled` instead of the `disabled` attribute: a truly disabled
@@ -102,7 +131,10 @@ export default class extends Controller {
   // validateOnSubmit, which surfaces the errors and moves focus.
   refreshSubmitState() {
     if (this.hasSubmitButtonTarget) {
-      this.submitButtonTarget.setAttribute("aria-disabled", String(!this.isValid()));
+      this.submitButtonTarget.setAttribute(
+        "aria-disabled",
+        String(!this.isValid()),
+      );
     }
   }
 
@@ -115,16 +147,28 @@ export default class extends Controller {
 
     event.preventDefault();
 
-    const nameEmpty = !(this.hasNameInputTarget && this.nameInputTarget.value.trim().length > 0);
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
+    const nameEmpty = !(
+      this.hasNameInputTarget && this.nameInputTarget.value.trim().length > 0
+    );
+    const amount = this.hasAmountInputTarget
+      ? Number.parseFloat(this.amountInputTarget.value)
+      : Number.NaN;
     const amountInvalid = !(Number.isFinite(amount) && amount > 0);
-    const noAccount = this.requireAccountValue && !this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
+    const noAccount =
+      this.requireAccountValue &&
+      !this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
 
     if (nameEmpty) {
-      this.showFieldError(this.nameInputTarget, this.hasNameErrorTarget ? this.nameErrorTarget : null);
+      this.showFieldError(
+        this.nameInputTarget,
+        this.hasNameErrorTarget ? this.nameErrorTarget : null,
+      );
     }
     if (amountInvalid) {
-      this.showFieldError(this.amountInputTarget, this.hasAmountErrorTarget ? this.amountErrorTarget : null);
+      this.showFieldError(
+        this.amountInputTarget,
+        this.hasAmountErrorTarget ? this.amountErrorTarget : null,
+      );
     }
     if (noAccount && this.hasAccountsErrorTarget) {
       this.accountsErrorTarget.classList.remove("hidden");
@@ -150,9 +194,15 @@ export default class extends Controller {
   updateSuggested() {
     if (!this.hasSuggestedTarget) return;
 
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
-    const dateValue = this.hasDateInputTarget ? this.dateInputTarget.value : null;
-    const checkedCount = this.linkedAccountCheckboxTargets.filter((cb) => cb.checked).length;
+    const amount = this.hasAmountInputTarget
+      ? Number.parseFloat(this.amountInputTarget.value)
+      : Number.NaN;
+    const dateValue = this.hasDateInputTarget
+      ? this.dateInputTarget.value
+      : null;
+    const checkedCount = this.linkedAccountCheckboxTargets.filter(
+      (cb) => cb.checked,
+    ).length;
 
     const amountValid = Number.isFinite(amount) && amount > 0;
     if (!amountValid || checkedCount === 0) {
@@ -188,7 +238,8 @@ export default class extends Controller {
   }
 
   clearFieldError(input, errorEl) {
-    if (input) input.classList.remove(...this.constructor.INVALID_INPUT_CLASSES);
+    if (input)
+      input.classList.remove(...this.constructor.INVALID_INPUT_CLASSES);
     if (errorEl) errorEl.classList.add("hidden");
   }
 

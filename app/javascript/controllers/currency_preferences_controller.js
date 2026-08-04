@@ -36,7 +36,9 @@ export default class extends Controller {
   updateSelectedCount() {
     if (!this.hasSelectedCountTarget) return;
 
-    const selectedCount = this.checkboxTargets.filter((checkbox) => checkbox.checked).length;
+    const selectedCount = this.checkboxTargets.filter(
+      (checkbox) => checkbox.checked,
+    ).length;
     const pluralRules = new Intl.PluralRules(this.localeValue || undefined);
     const pluralCategory = pluralRules.select(selectedCount);
     const labelTemplate =
