@@ -53,7 +53,8 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index pagination per_page reflects configured limit" do
-    get "/api/v1/chats", headers: bearer_auth_header(@read_token)
+    api_key = create_read_api_key # pipelock:ignore
+    get "/api/v1/chats", headers: api_headers(api_key)
     assert_response :success
 
     response_body = JSON.parse(response.body)
@@ -70,12 +71,13 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show returns all messages when count exceeds default pagy page size" do
+    api_key = create_read_api_key # pipelock:ignore
     21.times do |i|
       role_class = i.even? ? UserMessage : AssistantMessage
       role_class.create!(chat: @chat, content: "msg #{i}", ai_model: "test")
     end
 
-    get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
+    get "/api/v1/chats/#{@chat.id}", headers: api_headers(api_key)
     assert_response :success
 
     response_body = JSON.parse(response.body)
@@ -213,5 +215,13 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
 
     def bearer_auth_header(token)
       { "Authorization" => "Bearer #{token.token}" }
+    end
+
+    def create_read_api_key
+      plain_key = ApiKey.generate_secure_key
+      api_key = @user.api_keys.build(name: "Test Read Key", scopes: [ "read" ])
+      api_key.key = plain_key
+      api_key.save!
+      api_key
     end
 end
