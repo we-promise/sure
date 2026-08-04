@@ -13,14 +13,15 @@ This is useful when:
 
 ## Prerequisites
 
-To enable the MCP endpoint, you need to set two environment variables:
+For legacy bearer-token authentication, set these two environment variables:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `MCP_API_TOKEN` | Bearer token for authentication | `your-secret-token-here` |
 | `MCP_USER_EMAIL` | Email of the Sure user whose data the assistant can access | `user@example.com` |
 
-Both variables are **required**. The endpoint will not activate if either is missing.
+Both variables are required for the legacy token flow. OAuth clients using the
+MCP discovery and dynamic registration endpoints do not need these variables.
 
 ### Generating a secure token
 
@@ -82,7 +83,14 @@ POST /mcp
 
 ### Authentication
 
-All requests must include the `MCP_API_TOKEN` as a Bearer token:
+MCP supports OAuth authorization-code flow for clients such as Claude Code.
+Clients should discover the protected-resource metadata, register dynamically,
+request the advertised `read_write` scope, and send the resulting access token
+as a Bearer token. Dynamically registered clients are assigned this scope so
+their tokens can authenticate to MCP.
+
+For self-hosted deployments or clients without OAuth support, requests may use
+the legacy `MCP_API_TOKEN` as a Bearer token:
 
 ```
 Authorization: Bearer <MCP_API_TOKEN>
