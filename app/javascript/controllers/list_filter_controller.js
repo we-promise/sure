@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 
 // Basic functionality to filter a list based on a provided text attribute.
 export default class extends Controller {
-  static targets = ["input", "list", "emptyMessage"];
+  static targets = ["input", "list", "emptyMessage", "recentSection"];
 
   connect() {
     this.inputTarget.focus();
@@ -19,6 +19,19 @@ export default class extends Controller {
     const filterValue = this.normalize(rawFilterValue);
     const items = this.listTarget.querySelectorAll(".filterable-item");
     let noMatchFound = true;
+
+    // "Recent" is a pre-search shortcut only — once the user is actively
+    // searching, show canonical filtered results, not a duplicate row. Its
+    // items are hidden outright (not text-matched) so the now-ancestor-hidden
+    // section can't leave a row with display:"" that arrow-key nav would
+    // still treat as visible.
+    const recentItems = this.hasRecentSectionTarget
+      ? new Set(this.recentSectionTarget.querySelectorAll(".filterable-item"))
+      : new Set();
+
+    if (this.hasRecentSectionTarget) {
+      this.recentSectionTarget.classList.toggle("hidden", filterValue.length > 0);
+    }
 
     if (this.hasEmptyMessageTarget) {
       this.emptyMessageTarget.classList.add("hidden");
