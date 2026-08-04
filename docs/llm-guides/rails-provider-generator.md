@@ -9,7 +9,13 @@ integrations with either **global** or **per-family** scope credentials.
 3. [Provider:Family Generator](#providerfamily-generator)
 4. [Provider:Global Generator](#providerglobal-generator)
 5. [Comparison Table](#comparison-table)
-6. [Examples](#examples)
+6. [What Gets Generated (Detailed)](#what-gets-generated-detailed)
+7. [Customization](#customization)
+8. [Examples](#examples)
+9. [Tips & Best Practices](#tips--best-practices)
+10. [Troubleshooting](#troubleshooting)
+11. [Advanced: Creating a Provider SDK](#advanced-creating-a-provider-sdk)
+12. [Summary](#summary)
 
 ---
 
@@ -63,8 +69,22 @@ rails g provider:global plaid \
 ### Usage
 
 ```bash
-rails g provider:family <PROVIDER_NAME> field:type[:secret][:default=value] ...
+rails g provider:family <PROVIDER_NAME> field:type[:secret][:default=value] ... [--type=banking|investment]
 ```
+
+### Choosing a provider type
+
+> [!IMPORTANT]
+> `--type` changes the generated database schema, models, and jobs. It defaults to
+> **`investment`**, so a bank connector generated without the flag comes out with
+> holdings/activities plumbing and *no* transactions payload column. Pass
+> `--type=banking` for anything that syncs transactions.
+
+| | `--type=banking` | `--type=investment` (default) |
+|---|---|---|
+| Accounts table adds | `raw_transactions_payload` | `<name>_authorization_id`, `cash_balance`, `raw_holdings_payload`, `raw_activities_payload`, `last_holdings_sync`, `last_activities_sync`, `activities_fetch_pending` |
+| Extra index | — | `<name>_authorization_id` |
+| Sync flow | Fetch and process transactions | Fetch and process holdings plus activities |
 
 ### Example: Adding a MyBank Provider
 
@@ -72,8 +92,19 @@ rails g provider:family <PROVIDER_NAME> field:type[:secret][:default=value] ...
 rails g provider:family my_bank \
   api_key:text:secret \
   base_url:string:default=https://api.mybank.com \
-  refresh_token:text:secret
+  refresh_token:text:secret \
+  --type=banking
 ```
+
+### Other options
+
+| Flag | Effect |
+|---|---|
+| `--skip-migration` | Do not generate the migration |
+| `--skip-routes` | Do not add routes |
+| `--skip-view` | Do not generate the settings panel view |
+| `--skip-controller` | Do not generate the controller |
+| `--skip-adapter` | Do not generate the adapter |
 
 ### What Gets Generated
 
@@ -197,7 +228,6 @@ class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :my_bank_items, :family_id
     add_index :my_bank_items, :status
 
     # Create provider accounts table (stores individual account data from provider)
@@ -206,7 +236,8 @@ class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[7.2]
 
       # Account identification
       t.string :name
-      t.string :account_id
+      t.string :my_bank_account_id
+      t.string :account_number
 
       # Account details
       t.string :currency
@@ -218,16 +249,25 @@ class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[7.2]
       # Metadata and raw data
       t.jsonb :institution_metadata
       t.jsonb :raw_payload
-      t.jsonb :raw_transactions_payload
+      t.jsonb :raw_transactions_payload   # --type=banking only
+
+      # Sync settings
+      t.date :sync_start_date
 
       t.timestamps
     end
 
-    add_index :my_bank_accounts, :account_id
-    add_index :my_bank_accounts, :my_bank_item_id
+    add_index :my_bank_accounts, :my_bank_account_id, unique: true
   end
 end
 ```
+
+Notes on the generated migration:
+
+- `t.references :family` already creates an index, so no separate `add_index :my_bank_items, :family_id` is emitted.
+- The account identifier column is namespaced (`my_bank_account_id`, not `account_id`) and its index is **unique**.
+- `sync_start_date` is a `datetime` on the items table but a `date` on the accounts table. This inconsistency is inherited across the existing providers; consumers coerce with `sync_start_date&.to_date` where it matters.
+- With `--type=investment` the accounts table instead gains `my_bank_authorization_id`, `cash_balance`, `raw_holdings_payload`, `raw_activities_payload`, `last_holdings_sync`, `last_activities_sync`, and `activities_fetch_pending`, plus an index on `my_bank_authorization_id` — and does **not** get `raw_transactions_payload`.
 
 ### 2. Models
 
@@ -237,13 +277,14 @@ The item model stores per-family connection credentials:
 
 ```ruby
 class MyBankItem < ApplicationRecord
-  include Syncable, Provided
+  include Syncable, Provided, Unlinking, Encryptable
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Encryption for secret fields
-  if Rails.application.credentials.active_record_encryption.present?
-    encrypts :api_key, :refresh_token, deterministic: true
+  if encryption_ready?
+    encrypts :api_key, deterministic: true
+    encrypts :refresh_token, deterministic: true
   end
 
   validates :name, presence: true
@@ -251,7 +292,7 @@ class MyBankItem < ApplicationRecord
   validates :refresh_token, presence: true, on: :create
 
   belongs_to :family
-  has_one_attached :logo
+  has_one_attached :logo, dependent: :purge_later
   has_many :my_bank_accounts, dependent: :destroy
   has_many :accounts, through: :my_bank_accounts
 
@@ -626,7 +667,7 @@ Add custom validations, helper methods, and business logic in `app/models/my_ban
 
 ```ruby
 class MyBankItem < ApplicationRecord
-  include Syncable, Provided
+  include Syncable, Provided, Unlinking, Encryptable
 
   belongs_to :family
 
@@ -754,16 +795,32 @@ provider = Provider::MyBankAdapter.build_provider(family: family)
 
 ### 3. Use Proper Encryption
 
-Always check that encryption is set up:
+Gate `encrypts` on the shared `Encryptable` concern rather than hand-rolling the check:
 
 ```ruby
 # In your model
-if Rails.application.credentials.active_record_encryption.present?
-  encrypts :api_key, :refresh_token, deterministic: true
-else
-  Rails.logger.warn "ActiveRecord encryption not configured for #{self.name}"
+class MyBankItem < ApplicationRecord
+  include Syncable, Provided, Unlinking, Encryptable
+
+  if encryption_ready?
+    encrypts :client_id, deterministic: true   # queryable
+    encrypts :refresh_token                    # pure secret
+  end
 end
 ```
+
+`Encryptable.encryption_ready?` delegates to `ActiveRecordEncryptionConfig.explicitly_configured?`, which accepts **either** Rails credentials **or** the three `ACTIVE_RECORD_ENCRYPTION_*` environment variables. Checking `Rails.application.credentials.active_record_encryption` alone silently skips encryption on env-var-only deployments — which is exactly how the Docker and Kubernetes setups in this guide are configured.
+
+#### Deterministic or not?
+
+`deterministic: true` produces the same ciphertext for the same plaintext, which is what makes a column queryable — and also what makes it weaker.
+
+| Use | Option |
+|---|---|
+| A value you look records up by (client ID, consumer key, account identifier) | `deterministic: true` |
+| A pure secret you only ever read back (refresh token, user secret, API secret) | omit the option |
+
+`SnaptradeItem` is the worked example: `client_id` and `consumer_key` are deterministic, while `snaptrade_user_secret`, `oauth_access_token`, and `oauth_refresh_token` are not. The generator emits `deterministic: true` for every field you flag `:secret`, so review that list after scaffolding and drop the option where it isn't needed.
 
 ### 4. Implement Proper Error Handling
 
