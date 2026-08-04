@@ -21,14 +21,15 @@ The Users API allows external applications to manage user account data within Su
 
 ## Authentication requirements
 
-All user endpoints require an OAuth2 access token or API key that grants the `read_write` scope.
+All user endpoints require an OAuth2 access token or API key. In addition, both reset endpoints require the authenticated user to be a **family admin**; a non-admin receives `403 forbidden`.
 
 ## Available endpoints
 
-| Endpoint | Scope | Description |
-| --- | --- | --- |
-| `DELETE /api/v1/users/reset` | `read_write` | Reset account data while preserving the user account. |
-| `DELETE /api/v1/users/me` | `read_write` | Permanently delete the user account. |
+| Endpoint | Scope | Admin | Description |
+| --- | --- | --- | --- |
+| `GET /api/v1/users/reset/status` | `read` | Yes | Check the progress of an in-flight or completed reset. |
+| `DELETE /api/v1/users/reset` | `read_write` | Yes | Reset account data while preserving the user account. |
+| `DELETE /api/v1/users/me` | `read_write` | No | Permanently delete the user account. |
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components (errors), and security definitions.
 
@@ -46,9 +47,36 @@ No request body required.
 
 ```json
 {
-  "message": "Account reset has been initiated"
+  "message": "Account reset has been initiated",
+  "status": "queued",
+  "job_id": "uuid",
+  "family_id": "uuid",
+  "status_url": "/api/v1/users/reset/status"
 }
 ```
+
+If the background job cannot be queued the endpoint returns `500` with the error code `reset_enqueue_failed`.
+
+## Reset status
+
+`GET /api/v1/users/reset/status`
+
+Because the reset runs asynchronously, poll this endpoint to observe progress. It reports the remaining record counts for each resettable model; the reset is finished once they all reach zero.
+
+```json
+{
+  "status": "data_remaining",
+  "family_id": "uuid",
+  "reset_complete": false,
+  "counts": {
+    "accounts": 3,
+    "transactions": 128,
+    "plaid_items": 1
+  }
+}
+```
+
+`status` is `complete` when `reset_complete` is `true`, and `data_remaining` otherwise.
 
 ### Use cases
 

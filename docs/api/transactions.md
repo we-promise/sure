@@ -8,7 +8,7 @@ The Transactions API allows external applications to manage financial transactio
 - Regenerate the OpenAPI document with:
 
   ```sh
-  SWAGGER_DRY_RUN=0 bundle exec rspec spec/requests --format Rswag::Specs::SwaggerFormatter
+  RAILS_ENV=test bundle exec rake rswag:specs:swaggerize
   ```
 
   The task compiles the request specs and writes the result to [`docs/api/openapi.yaml`](openapi.yaml).
@@ -29,9 +29,9 @@ All transaction endpoints require an OAuth2 access token or API key that grants 
 | --- | --- | --- |
 | `GET /api/v1/transactions` | `read` | List transactions with filtering and pagination. |
 | `GET /api/v1/transactions/{id}` | `read` | Retrieve a single transaction with full details. |
-| `POST /api/v1/transactions` | `write` | Create a new transaction. |
-| `PATCH /api/v1/transactions/{id}` | `write` | Update an existing transaction. |
-| `DELETE /api/v1/transactions/{id}` | `write` | Permanently delete a transaction. |
+| `POST /api/v1/transactions` | `read_write` | Create a new transaction. |
+| `PATCH /api/v1/transactions/{id}` | `read_write` | Update an existing transaction. |
+| `DELETE /api/v1/transactions/{id}` | `read_write` | Permanently delete a transaction. |
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components (pagination, errors, accounts, categories, merchants, tags), and security definitions.
 
@@ -66,9 +66,13 @@ A transaction response includes:
   "id": "uuid",
   "date": "2024-01-15",
   "amount": "$75.50",
+  "amount_cents": 7550,
+  "signed_amount_cents": -7550,
   "currency": "USD",
   "name": "Grocery shopping",
   "notes": "Weekly groceries",
+  "external_id": null,
+  "source": null,
   "classification": "expense",
   "account": {
     "id": "uuid",
@@ -78,7 +82,6 @@ A transaction response includes:
   "category": {
     "id": "uuid",
     "name": "Groceries",
-    "classification": "expense",
     "color": "#4CAF50",
     "icon": "shopping-cart"
   },
@@ -99,14 +102,28 @@ A transaction response includes:
 }
 ```
 
+### Amount fields
+
+`amount` is a localized, currency-formatted **string** and follows an accounting sign convention (expenses positive, income negative). For programmatic use prefer the integer minor-unit fields:
+
+| Field | Description |
+| --- | --- |
+| `amount_cents` | Absolute value in minor units, using the currency's own conversion factor (100 for USD/EUR, 1 for JPY, 1000 for KWD). Always positive. |
+| `signed_amount_cents` | Same magnitude, signed so that **income is positive and expenses are negative** — the opposite convention to `amount`. |
+
+`external_id` and `source` echo the idempotency key a transaction was created with, and are `null` for transactions created without one.
+
 ## Creating transactions
 
 When creating a transaction, the `nature` field determines how the amount is stored:
 
 | Nature | Behaviour |
 | --- | --- |
-| `income` / `inflow` | Amount is stored as negative (credit) |
-| `expense` / `outflow` | Amount is stored as positive (debit) |
+| `income` / `inflow` | The absolute amount is stored as negative (credit) |
+| `expense` / `outflow` | The absolute amount is stored as positive (debit) |
+| omitted or unrecognised | The `amount` is stored exactly as provided, sign included |
+
+Note that `nature` has **no default**. If you omit it, the sign of `amount` is preserved as sent rather than coerced — so send either a `nature` or an already-signed `amount`, not an unsigned amount alone.
 
 Example request body:
 
@@ -124,6 +141,38 @@ Example request body:
   }
 }
 ```
+
+### Idempotent creates
+
+To make retries safe, send an `external_id` in the create body. Sure stores it on the entry together with a `source` and treats the pair as an idempotency key scoped to the account:
+
+```json
+{
+  "transaction": {
+    "account_id": "uuid",
+    "date": "2024-01-15",
+    "amount": 75.50,
+    "name": "Grocery shopping",
+    "nature": "expense",
+    "external_id": "ledger-row-40817",
+    "source": "my-importer"
+  }
+}
+```
+
+- `source` is optional and defaults to `"api"`.
+- A first request returns `201 Created`.
+- A replay with the same `external_id` + `source` for the same account returns **`200 OK`** with the originally created transaction, and does not create a duplicate. Use the status code to distinguish a create from a replay.
+- If the stored `external_id` belongs to a non-transaction entry (a trade or valuation), the request returns `422 Unprocessable Entity`.
+
+## Split transactions
+
+Transactions that participate in a split are restricted through this API — use the split editor in the web UI instead. Both cases return `422 Unprocessable Entity`:
+
+| Attempt | Result |
+| --- | --- |
+| `PATCH` or `DELETE` on a split **child** | Rejected. Children cannot be edited or deleted individually. |
+| `PATCH` on a split **parent** changing `amount`, `date`, or `nature` | Rejected. Other fields (name, notes, category, merchant, tags) can still be updated. |
 
 ## Transfer transactions
 

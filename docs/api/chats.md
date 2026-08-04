@@ -29,11 +29,11 @@ All chat endpoints require an OAuth2 access token or API key that grants the app
 | --- | --- | --- |
 | `GET /api/v1/chats` | `read` | List chats for the authenticated user with pagination metadata. |
 | `GET /api/v1/chats/{id}` | `read` | Retrieve a chat, including ordered messages and optional pagination. |
-| `POST /api/v1/chats` | `write` | Create a chat and optionally seed it with an initial user message. |
-| `PATCH /api/v1/chats/{id}` | `write` | Update a chat title. |
-| `DELETE /api/v1/chats/{id}` | `write` | Permanently delete a chat. |
-| `POST /api/v1/chats/{chat_id}/messages` | `write` | Append a user message to a chat. |
-| `POST /api/v1/chats/{chat_id}/messages/retry` | `write` | Retry the last assistant response in a chat. |
+| `POST /api/v1/chats` | `read_write` | Create a chat and optionally seed it with an initial user message. |
+| `PATCH /api/v1/chats/{id}` | `read_write` | Update a chat title. |
+| `DELETE /api/v1/chats/{id}` | `read_write` | Permanently delete a chat. |
+| `POST /api/v1/chats/{chat_id}/messages` | `read_write` | Append a user message to a chat. |
+| `POST /api/v1/chats/{chat_id}/messages/retry` | `read_write` | Retry the last assistant response in a chat. |
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components (pagination, errors, messages, tool calls), and security definitions.
 
@@ -41,7 +41,7 @@ Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schem
 
 - Chat creation and message submission queue AI processing jobs asynchronously; the API responds immediately with the user message payload.
 - Poll `GET /api/v1/chats/{id}` to detect new assistant messages (`type: "assistant_message"`).
-- Supported models today: `gpt-4` (default), `gpt-4-turbo`, and `gpt-3.5-turbo`.
+- The model is not selectable per request. It is determined by the instance's configured LLM provider and model — see [AI provider configuration](../hosting/ai.md).
 - Assistant responses may include structured tool calls (`tool_calls`) that reference financial data fetches and their results.
 
 ## Error responses

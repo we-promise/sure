@@ -8,7 +8,7 @@ The Merchants API allows external applications to retrieve and bulk-import merch
 - Regenerate the OpenAPI document with:
 
   ```sh
-  SWAGGER_DRY_RUN=0 bundle exec rspec spec/requests --format Rswag::Specs::SwaggerFormatter
+  RAILS_ENV=test bundle exec rake rswag:specs:swaggerize
   ```
 
   The task compiles the request specs and writes the result to [`docs/api/openapi.yaml`](openapi.yaml).
@@ -24,7 +24,7 @@ The Merchants API allows external applications to retrieve and bulk-import merch
 | Endpoint | Required scope |
 | --- | --- |
 | `GET` endpoints | `read` |
-| `POST /api/v1/merchants` (CSV import) | `write` |
+| `POST /api/v1/merchants` (CSV import) | `read_write` |
 
 ## Available endpoints
 
@@ -32,7 +32,7 @@ The Merchants API allows external applications to retrieve and bulk-import merch
 | --- | --- | --- |
 | `GET /api/v1/merchants` | `read` | List all merchants available to the family. |
 | `GET /api/v1/merchants/{id}` | `read` | Retrieve a single merchant by ID. |
-| `POST /api/v1/merchants` | `write` | Bulk-import merchants from a CSV file. |
+| `POST /api/v1/merchants` | `read_write` | Bulk-import merchants from a CSV file. |
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components, and security definitions.
 
@@ -173,7 +173,7 @@ Bookstore,,
 | HTTP status | `error` value | Cause |
 | --- | --- | --- |
 | `401` | `unauthorized` | Missing or invalid API key. |
-| `403` | `forbidden` | API key lacks the `write` scope. |
+| `403` | `forbidden` | API key lacks the `read_write` scope. |
 | `422` | `missing_file` | No `file` parameter supplied. |
 | `422` | `file_too_large` | File exceeds 10 MB. |
 | `422` | `invalid_file_type` | File is not a recognised CSV MIME type. |

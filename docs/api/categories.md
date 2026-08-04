@@ -1,6 +1,6 @@
 # Categories API Documentation
 
-The Categories API allows external applications to retrieve financial categories within Sure. Categories are used to classify transactions and can be organized in a hierarchical structure with parent categories and subcategories. The OpenAPI description is generated directly from executable request specs, ensuring it always reflects the behaviour of the running Rails application.
+The Categories API allows external applications to retrieve and create financial categories within Sure. Categories are used to classify transactions and can be organized in a hierarchical structure with parent categories and subcategories. The OpenAPI description is generated directly from executable request specs, ensuring it always reflects the behaviour of the running Rails application.
 
 ## Generated OpenAPI specification
 
@@ -8,7 +8,7 @@ The Categories API allows external applications to retrieve financial categories
 - Regenerate the OpenAPI document with:
 
   ```sh
-  SWAGGER_DRY_RUN=0 bundle exec rspec spec/requests --format Rswag::Specs::SwaggerFormatter
+  RAILS_ENV=test bundle exec rake rswag:specs:swaggerize
   ```
 
   The task compiles the request specs and writes the result to [`docs/api/openapi.yaml`](openapi.yaml).
@@ -21,7 +21,7 @@ The Categories API allows external applications to retrieve financial categories
 
 ## Authentication requirements
 
-All category endpoints require an OAuth2 access token or API key that grants the `read` scope.
+All category endpoints require an OAuth2 access token or API key. Read endpoints accept the `read` scope; creating a category requires the `read_write` scope.
 
 ## Available endpoints
 
@@ -29,6 +29,9 @@ All category endpoints require an OAuth2 access token or API key that grants the
 | --- | --- | --- |
 | `GET /api/v1/categories` | `read` | List categories with filtering and pagination. |
 | `GET /api/v1/categories/{id}` | `read` | Retrieve a single category with full details. |
+| `POST /api/v1/categories` | `read_write` | Create a new category. |
+
+There are no update or delete endpoints. Categories can only be edited or removed through the web UI.
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components (pagination, errors), and security definitions.
 
@@ -40,7 +43,6 @@ The `GET /api/v1/categories` endpoint supports the following query parameters fo
 | --- | --- | --- |
 | `page` | integer | Page number (default: 1) |
 | `per_page` | integer | Items per page (default: 25, max: 100) |
-| `classification` | string | Filter by classification: `income` or `expense` |
 | `roots_only` | boolean | Return only root categories (categories without a parent) |
 | `parent_id` | uuid | Filter subcategories by parent category ID |
 
@@ -52,7 +54,6 @@ A category response includes:
 {
   "id": "uuid",
   "name": "Food & Drink",
-  "classification": "expense",
   "color": "#f97316",
   "icon": "utensils",
   "parent": null,
@@ -75,7 +76,6 @@ Example subcategory response:
 {
   "id": "uuid",
   "name": "Restaurants",
-  "classification": "expense",
   "color": "#f97316",
   "icon": "utensils",
   "parent": {
@@ -88,24 +88,33 @@ Example subcategory response:
 }
 ```
 
-## Classification types
+## Creating categories
 
-Categories are classified into two types:
+`POST /api/v1/categories` accepts the following attributes under a `category` key:
 
-| Classification | Description |
-| --- | --- |
-| `income` | Categories for income transactions (salary, investments, etc.) |
-| `expense` | Categories for expense transactions (food, utilities, etc.) |
+| Attribute | Type | Description |
+| --- | --- | --- |
+| `name` | string | **Required.** Category name. |
+| `color` | string | Hex colour, e.g. `#f97316`. |
+| `icon` | string | Lucide icon name. Stored as `lucide_icon`; when omitted, an icon is suggested from the name. |
+| `parent_id` | uuid | Parent category, to create a subcategory. Must belong to your family. |
 
-Subcategories inherit the classification of their parent category.
+Example request body:
+
+```json
+{
+  "category": {
+    "name": "Restaurants",
+    "color": "#f97316",
+    "icon": "utensils",
+    "parent_id": "<parent-category-uuid>"
+  }
+}
+```
+
+A successful request returns `201 Created` with the same object shape described above. A `parent_id` that does not belong to your family returns `422 Unprocessable Entity`.
 
 ## Filtering examples
-
-### Get all expense categories
-
-```
-GET /api/v1/categories?classification=expense
-```
 
 ### Get only root categories (no subcategories)
 
@@ -122,7 +131,7 @@ GET /api/v1/categories?parent_id=<parent-category-uuid>
 ### Combine filters with pagination
 
 ```
-GET /api/v1/categories?classification=expense&roots_only=true&page=1&per_page=10
+GET /api/v1/categories?roots_only=true&page=1&per_page=10
 ```
 
 ## Error responses
@@ -136,4 +145,4 @@ Errors conform to the shared `ErrorResponse` schema in the OpenAPI document:
 }
 ```
 
-Common error codes include `unauthorized`, `not_found`, and `internal_server_error`.
+Common error codes include `unauthorized`, `insufficient_scope`, `not_found`, `unprocessable_entity`, and `internal_server_error`.

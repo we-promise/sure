@@ -113,20 +113,27 @@ flutter run -d chrome
 
 ## API Integration
 
-This app integrates with the Sure Finances Rails API:
+This app integrates with the Sure Finances Rails API. That API is a single, shared contract — the
+canonical reference is [`docs/api/`](../docs/api/) and the generated
+[`openapi.yaml`](../docs/api/openapi.yaml). The endpoints below are just the subset this app calls;
+where the two disagree, `docs/api/` wins.
 
 ### Authentication
 - `POST /api/v1/auth/login` - User authentication
 - `POST /api/v1/auth/signup` - User registration
 - `POST /api/v1/auth/refresh` - Token refresh
+- `POST /api/v1/auth/sso_exchange` - Exchange an SSO session for API tokens
+- `POST /api/v1/auth/sso_link` - Link an SSO identity to an existing account
+- `POST /api/v1/auth/sso_create_account` - Create an account from an SSO identity
+- `PATCH /api/v1/auth/enable_ai` - Opt the user into AI features
 
 ### Accounts
 - `GET /api/v1/accounts` - Fetch user accounts
 
 ### Transactions
-- `GET /api/v1/transactions` - Get all transactions (optionally filter by `account_id` query parameter)
+- `GET /api/v1/transactions` - Get all transactions. Supports 15 filter parameters (`account_id`, `category_ids[]`, `start_date`, `min_amount`, `search`, …) — see [`docs/api/transactions.md`](../docs/api/transactions.md)
 - `POST /api/v1/transactions` - Create a new transaction
-- `PUT /api/v1/transactions/:id` - Update an existing transaction
+- `PATCH /api/v1/transactions/:id` - Update an existing transaction
 - `DELETE /api/v1/transactions/:id` - Delete a transaction
 
 #### Transaction POST Request Format
@@ -137,11 +144,15 @@ This app integrates with the Sure Finances Rails API:
     "name": "test",  // required
     "date": "2025-07-15",  // required
     "amount": 100,  // optional, defaults to 0
-    "currency": "AUD",  // optional, defaults to your profile currency
-    "nature": "expense"  // optional, defaults to "expense", other option is "income"
+    "currency": "AUD",  // optional, defaults to your family's currency
+    "nature": "expense"  // optional, "expense" or "income" — see note below
   }
 }
 ```
+
+`nature` has **no default**. When present it forces the sign of `amount` (`expense`/`outflow` stores
+it positive, `income`/`inflow` stores it negative). When omitted, `amount` is stored exactly as sent,
+sign included — so send either a `nature` or an already-signed `amount`.
 
 ## CI/CD
 

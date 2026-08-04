@@ -8,7 +8,7 @@ The Tags API allows external applications to manage tags within Sure. Tags provi
 - Regenerate the OpenAPI document with:
 
   ```sh
-  SWAGGER_DRY_RUN=0 bundle exec rspec spec/requests --format Rswag::Specs::SwaggerFormatter
+  RAILS_ENV=test bundle exec rake rswag:specs:swaggerize
   ```
 
   The task compiles the request specs and writes the result to [`docs/api/openapi.yaml`](openapi.yaml).
@@ -24,7 +24,7 @@ The Tags API allows external applications to manage tags within Sure. Tags provi
 | Operation | Scope Required |
 | --- | --- |
 | List/View tags | `read` |
-| Create/Update/Delete tags | `write` |
+| Create/Update/Delete tags | `read_write` |
 
 ## Available endpoints
 
@@ -32,9 +32,9 @@ The Tags API allows external applications to manage tags within Sure. Tags provi
 | --- | --- | --- |
 | `GET /api/v1/tags` | `read` | List all tags belonging to the family. |
 | `GET /api/v1/tags/{id}` | `read` | Retrieve a single tag by ID. |
-| `POST /api/v1/tags` | `write` | Create a new tag. |
-| `PATCH /api/v1/tags/{id}` | `write` | Update an existing tag. |
-| `DELETE /api/v1/tags/{id}` | `write` | Permanently delete a tag. |
+| `POST /api/v1/tags` | `read_write` | Create a new tag. |
+| `PATCH /api/v1/tags/{id}` | `read_write` | Update an existing tag. |
+| `DELETE /api/v1/tags/{id}` | `read_write` | Permanently delete a tag. |
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components, and security definitions.
 
