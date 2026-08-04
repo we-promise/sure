@@ -49,17 +49,30 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
     assert_equal "Created through MCP", entry.notes
   end
 
-  test "returns the existing transaction when the idempotency key is retried" do
+  test "returns the existing transaction when the same payload is retried" do
     params = required_params("external_id" => "retry-key")
     first_result = @function.call(params)
 
     assert_no_difference "@account.entries.count" do
-      second_result = @function.call(params.merge("name" => "Changed on retry"))
+      second_result = @function.call(params)
 
       assert second_result[:success]
       assert_equal false, second_result[:created]
       assert_equal first_result.dig(:transaction, :id), second_result.dig(:transaction, :id)
-      assert_equal "Test transaction", second_result.dig(:transaction, :name)
+    end
+  end
+
+  test "rejects an idempotency key reused with a different payload" do
+    params = required_params("external_id" => "conflict-key")
+    first_result = @function.call(params)
+
+    assert_no_difference "@account.entries.count" do
+      second_result = @function.call(params.merge("amount" => 26))
+
+      assert first_result[:success]
+      assert_equal false, second_result[:success]
+      assert_equal "idempotency_conflict", second_result[:error]
+      assert_equal 25, @account.entries.find_by!(source: "mcp", external_id: "conflict-key").amount
     end
   end
 

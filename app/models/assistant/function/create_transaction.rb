@@ -1,3 +1,5 @@
+require "digest"
+
 class Assistant::Function::CreateTransaction < Assistant::Function
   class << self
     def name
@@ -79,8 +81,10 @@ class Assistant::Function::CreateTransaction < Assistant::Function
     account = family.accounts.visible.writable_by(user).find_by(id: params["account_id"])
     return error("account_not_found", "Writable account with id '#{params["account_id"]}' not found.") unless account
 
+    fingerprint = fingerprint_for(account, attrs, params)
+
     existing_entry = account.entries.find_by(source: "mcp", external_id: attrs[:external_id])
-    return existing_response(existing_entry) if existing_entry
+    return existing_response(existing_entry, fingerprint) if existing_entry
 
     entry = account.entries.new(
       name: attrs[:name],
@@ -93,7 +97,8 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       entryable: Transaction.new(
         category: attrs[:category],
         merchant: attrs[:merchant],
-        tags: attrs[:tags]
+        tags: attrs[:tags],
+        extra: { "mcp" => { "idempotency_fingerprint" => fingerprint } }
       )
     )
 
@@ -108,7 +113,7 @@ class Assistant::Function::CreateTransaction < Assistant::Function
     end
   rescue ActiveRecord::RecordNotUnique
     existing_entry = account&.entries&.find_by(source: "mcp", external_id: attrs[:external_id])
-    existing_entry ? existing_response(existing_entry) : raise
+    existing_entry ? existing_response(existing_entry, fingerprint) : raise
   end
 
   private
@@ -159,10 +164,56 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       error("invalid_parameters", "amount must be numeric and date must use YYYY-MM-DD format.")
     end
 
-    def existing_response(entry)
+    def existing_response(entry, fingerprint)
       return error("idempotency_conflict", "external_id already belongs to a non-transaction entry.") unless entry.entryable.is_a?(Transaction)
 
+      stored_fingerprint = entry.transaction.extra&.dig("mcp", "idempotency_fingerprint") || fingerprint_for_entry(entry)
+      unless ActiveSupport::SecurityUtils.secure_compare(stored_fingerprint, fingerprint)
+        return error("idempotency_conflict", "external_id was already used with different transaction parameters.")
+      end
+
       success_response(entry, created: false)
+    end
+
+    def fingerprint_for(account, attrs, params)
+      fingerprint_payload(
+        account_id: account.id,
+        name: attrs[:name],
+        amount: attrs[:amount],
+        date: attrs[:date],
+        category_id: attrs[:category]&.id,
+        merchant_id: attrs[:merchant]&.id,
+        tag_ids: attrs[:tags].map(&:id),
+        notes: params["notes"]
+      )
+    end
+
+    def fingerprint_for_entry(entry)
+      transaction = entry.transaction
+      fingerprint_payload(
+        account_id: entry.account_id,
+        name: entry.name,
+        amount: entry.amount,
+        date: entry.date,
+        category_id: transaction.category_id,
+        merchant_id: transaction.merchant_id,
+        tag_ids: transaction.tag_ids,
+        notes: entry.notes
+      )
+    end
+
+    def fingerprint_payload(account_id:, name:, amount:, date:, category_id:, merchant_id:, tag_ids:, notes:)
+      payload = {
+        account_id: account_id.to_s,
+        name: name,
+        amount: amount.to_d.to_s("F"),
+        date: date.iso8601,
+        category_id: category_id&.to_s,
+        merchant_id: merchant_id&.to_s,
+        tag_ids: tag_ids.map(&:to_s).sort,
+        notes: notes
+      }
+      Digest::SHA256.hexdigest(JSON.generate(payload))
     end
 
     def success_response(entry, created:)
