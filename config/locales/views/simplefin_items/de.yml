@@ -86,7 +86,7 @@ de:
       all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten erstellt."
       no_accounts: "Keine Konten zum Einrichten."
       success:
-        one: "Ein SimpleFIN-Konto erfolgreich erstellt! Deine Transaktionen und Positionen werden im Hintergrund importiert."
+        one: "%{count} SimpleFIN-Konto erfolgreich erstellt! Deine Transaktionen und Positionen werden im Hintergrund importiert."
         other: "%{count} SimpleFIN-Konten erfolgreich erstellt! Deine Transaktionen und Positionen werden im Hintergrund importiert."
       stale_accounts_processed: "Veraltete Konten: %{deleted} gelöscht, %{moved} verschoben."
       stale_accounts_errors:

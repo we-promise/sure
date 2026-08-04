@@ -24,5 +24,5 @@ de:
       role_label: Rolle
       role_member: Mitglied
       submit: Einladung senden
-      subtitle: Lad jemanden in deine %{moniker} ein
+      subtitle: Lad jemanden in dein %{moniker}-Konto auf %{product_name} ein
       title: Jemanden einladen

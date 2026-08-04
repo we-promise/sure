@@ -14,6 +14,8 @@ de:
       valuations: Wert
       value: Wert
     new:
+      amount: Betrag
+      submit: Kontostand hinzufügen
       title: Neuer Kontostand
     show:
       amount: Betrag
@@ -38,8 +40,8 @@ de:
       title: Saldo aktualisieren
       update: Aktualisieren
     confirmation_contents:
-      action_set: 'Neu:'
-      action_update: 'Geändert:'
+      action_set: gesetzt
+      action_update: aktualisiert
       account_balance: Kontostand
       asset_value: Vermögenswert
       balance: Saldo
@@ -53,7 +55,7 @@ de:
       "on": am
       property_value: Immobilienwert
       recalculate_notice: Alle späteren Transaktionen und Salden werden auf Basis dieser %{change_or_update} neu berechnet.
-      this_will: Damit wird der Kontowert zum
+      this_will: Damit wird der Kontowert %{action_verb} am
       to: auf
       to_colon: 'auf:'
       total_account_value: Gesamtwert des Kontos

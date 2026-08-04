@@ -94,11 +94,13 @@ de:
         heading: Archiviert
       chips:
         all: Alle
+        aria: Ziele nach Status filtern
         behind: Hinter Plan
         completed: Erreicht
         no_target_date: Offen
         on_track: Im Plan
         paused: Pausiert
+      chips_aria: Ziele nach Status filtern
       empty_filtered: Kein Ziel passt.
       goals_section:
         heading: Ziele
@@ -152,6 +154,9 @@ de:
     pause:
       invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht pausieren.
       success: Ziel pausiert.
+    perform_transition!:
+      invalid_transition: Ziel kann nicht in diesen Status wechseln.
+      success: Ziel aktualisiert.
     reopen:
       invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht wieder öffnen.
       success: Ziel wieder geöffnet.

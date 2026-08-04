@@ -84,6 +84,7 @@ de:
       description: Wähl das Wise-Währungsguthaben, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch abgeglichen.
       link_account: Guthaben verknüpfen
       no_accounts_found: Keine unverknüpften Wise-Guthaben gefunden.
+      not_found: Wise-Guthaben nicht gefunden.
       title: "%{account_name} mit Wise verknüpfen"
     select_profiles:
       already_connected_label: Bereits verbunden

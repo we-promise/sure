@@ -110,6 +110,7 @@ de:
       creating_accounts: Konten werden angelegt …
       header_subtitle: Wähl die passende Kontoart für deine importierten Konten
       historical_data_range: 'Zeitraum der Historie:'
+      psd2_savings_notice: 'Hinweis: Einige regulierte französische Sparkonten (Livret A, PEL, LEP, LDDS) sind über Open Banking (PSD2) nur eingeschränkt oder gar nicht verfügbar. Wenn ein Sparkonto fehlt, kannst du es manuell hinzufügen.'
       sync_start_date_help: Wähl, wie weit zurück die Transaktionshistorie geholt werden soll. Verfügbar sind maximal 2 Jahre.
       sync_start_date_label: 'Transaktionen synchronisieren ab:'
       title: Enable-Banking-Konten einrichten

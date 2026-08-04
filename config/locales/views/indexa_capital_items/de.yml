@@ -42,12 +42,12 @@ de:
       fields:
         api_token:
           label: "API-Token"
-          description: "Ihr schreibgeschützter API-Token aus dem IndexaCapital Dashboard"
+          description: "Dein schreibgeschützter API-Token aus dem IndexaCapital Dashboard"
           placeholder_new: "API-Token hier einfügen"
           placeholder_update: "Neuen API-Token zum Aktualisieren eingeben"
         username:
           label: "Benutzername"
-          description: "Ihr IndexaCapital Benutzername/E-Mail"
+          description: "Dein IndexaCapital Benutzername/E-Mail"
           placeholder_new: "Benutzername hier einfügen"
           placeholder_update: "Neuen Benutzernamen zum Aktualisieren eingeben"
         document:
@@ -57,7 +57,7 @@ de:
           placeholder_update: "Neue Dokument-ID zum Aktualisieren eingeben"
         password:
           label: "Passwort"
-          description: "Ihr IndexaCapital Passwort"
+          description: "Dein IndexaCapital Passwort"
           placeholder_new: "Passwort hier einfügen"
           placeholder_update: "Neues Passwort zum Aktualisieren eingeben"
 

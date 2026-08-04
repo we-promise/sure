@@ -17,6 +17,7 @@ de:
         one: "%{count} Konto verfügbar"
         other: "%{count} Konten verfügbar"
       select_all: Alle auswählen
+      historical_import: Verlaufsimport
       import_selected: Ausgewählte importieren
       cancel: Abbrechen
       creating: Importiere...

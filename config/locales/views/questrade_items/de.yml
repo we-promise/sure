@@ -49,7 +49,11 @@ de:
       loading_message: Questrade-Konten werden geladen …
       loading_title: Wird geladen
     panel:
+      disconnect: Trennen
+      disconnect_confirm: Diese Questrade-Verbindung wirklich trennen? Dadurch werden alle synchronisierten Kontodaten entfernt.
+      eyebrow: Questrade
       field_descriptions: 'Erläuterung der Felder:'
+      help_text: Sure nutzt diese Zugangsdaten nur, um deine Questrade-Konten, Bestände und Aktivitäten zu synchronisieren.
       fields:
         api_server:
           description: Dein Questrade-API-Server
@@ -68,6 +72,13 @@ de:
       setup_instructions: 'So richtest du es ein:'
       status_configured_html: Eingerichtet und einsatzbereit. Im Reiter <a href="%{accounts_path}" class="link">Konten</a> verwaltest und richtest du Konten ein.
       status_not_configured: Nicht eingerichtet
+      steps:
+        s1_html: Öffne dein <strong>Questrade-Dashboard</strong>.
+        s2: Erstelle oder kopiere deine API-Zugangsdaten.
+        s3_html: Füge den <strong>Refresh Token</strong> und den API-Server unten ein.
+        s4: Speichere die Verbindung.
+        s5: Starte einen Sync, um Konten zu finden.
+        s6: Richte die gefundenen Konten im Konten-Reiter ein.
       step_1: Öffne dein Questrade-Dashboard und hol dir deine Zugangsdaten
       step_2: Trag die Zugangsdaten unten ein und klick auf Speichern
       step_3: Nach erfolgreicher Verbindung richtest du im Reiter „Konten“ die neuen Konten ein
@@ -115,15 +126,21 @@ de:
       all_accounts_already_linked: Alle Questrade-Konten sind bereits verknüpft
       api_error: 'API-Fehler: %{message}'
       balance_label: 'Saldo:'
+      buttons:
+        cancel: Abbrechen
+        link: Verknüpfen
       cancel: Abbrechen
       cancel_button: Abbrechen
       configure_name_in_provider: Import nicht möglich – hinterleg den Kontonamen in Questrade
       connect_hint: Verbinde ein Questrade-Konto, um den automatischen Abgleich zu nutzen.
       description: Wähl ein Questrade-Konto, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch abgeglichen und Dubletten entfernt.
+      dialog_title: Mit einem Questrade-Konto verknüpfen
       header: Mit Questrade verknüpfen
       link_account: Konto verknüpfen
       link_button: Dieses Konto verknüpfen
+      linking_label: Verknüpft wird
       linking_to: 'Wird verknüpft mit:'
+      none_available: Keine unverknüpften Questrade-Konten verfügbar.
       no_account_specified: Kein Konto angegeben
       no_accounts: Keine unverknüpften Questrade-Konten gefunden.
       no_accounts_found: Keine Questrade-Konten gefunden. Prüf die Konfiguration deines API-Keys.
@@ -132,9 +149,11 @@ de:
       no_name_placeholder: "(kein Name)"
       settings_link: Zu den Anbietereinstellungen
       subtitle: Ein Questrade-Konto wählen
+      page_title: Questrade-Konto verknüpfen
       title: "%{account_name} mit Questrade verknüpfen"
     setup_accounts:
       account_type_label: 'Kontoart:'
+      all_linked: Alle Questrade-Konten sind bereits eingerichtet.
       account_types:
         credit_card: Kreditkarte
         crypto: Krypto-Konto
@@ -149,6 +168,10 @@ de:
       all_accounts_linked: Alle deine Questrade-Konten sind bereits eingerichtet.
       api_error: 'API-Fehler: %{message}'
       balance: Saldo
+      buttons:
+        cancel: Abbrechen
+        create: Konten anlegen
+        done: Fertig
       cancel: Abbrechen
       choose_account_type: 'Wähl für jedes Questrade-Konto die passende Kontoart:'
       create_accounts: Konten anlegen
@@ -156,6 +179,8 @@ de:
       creating_accounts: Konten werden angelegt …
       fetch_failed: Konten ließen sich nicht abrufen
       historical_data_range: 'Zeitraum der Historie:'
+      dialog_title: Deine Questrade-Konten einrichten
+      import_as: Importieren als
       import_selected: Gewählte Konten importieren
       instructions: Wähl die Konten, die du aus Questrade importieren willst. Du kannst mehrere auswählen.
       no_accounts: Aus dieser Questrade-Verbindung gibt es keine unverknüpften Konten.
@@ -163,6 +188,7 @@ de:
       no_api_key: Der Questrade-API-Key ist nicht eingerichtet. Prüf deine Verbindungseinstellungen.
       select_all: Alle auswählen
       subtitle: Wähl die passende Kontoart für deine importierten Konten
+      page_title: Questrade-Konten einrichten
       subtype_labels:
         credit_card: ''
         crypto: ''
@@ -203,6 +229,10 @@ de:
       sync_start_date_help: Wähl, wie weit zurück die Transaktionshistorie geholt werden soll.
       sync_start_date_label: 'Transaktionen synchronisieren ab:'
       title: Questrade-Konten einrichten
+      types:
+        depository: Giro- oder Sparkonto
+        investment: Investmentkonto
+        skip: Überspringen
     setup_required:
       go_to_provider_settings: Zu den Anbietereinstellungen
       not_configured_description: Leg deine Questrade-Verbindung in den Anbietereinstellungen an und komm dann hierher zurück, um Konten zu verknüpfen.

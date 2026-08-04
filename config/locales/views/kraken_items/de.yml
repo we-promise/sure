@@ -8,7 +8,7 @@ de:
       description: "Mit %{name} verknüpfen"
     create:
       default_name: Kraken
-      success: Erfolgreich mit Kraken verbunden. Ihr Börsenkonto wird synchronisiert.
+      success: Erfolgreich mit Kraken verbunden. Dein Börsenkonto wird synchronisiert.
     update:
       success: Kraken-Verbindung erfolgreich aktualisiert.
     destroy:
@@ -66,7 +66,7 @@ de:
       status_never: Noch nie synchronisiert
       delete: Löschen
       no_accounts_title: Keine Konten gefunden
-      no_accounts_message: Ihr Kraken-Börsenkonto erscheint hier nach der Synchronisierung.
+      no_accounts_message: Dein Kraken-Börsenkonto erscheint hier nach der Synchronisierung.
       setup_needed: Konto bereit zum Import
       setup_description: Importier diese Kraken-Verbindung als Krypto-Börsenkonto.
       setup_action: Konto importieren

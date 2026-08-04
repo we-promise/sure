@@ -23,7 +23,7 @@ de:
     payments:
       show:
         page_title: Zahlung
-        subscription_subtitle: Aktualisiere dein Abonnement und deine Zahlungsdetails
+        subscription_subtitle: Aktualisiere deine Kreditkartendaten
         subscription_title: Abonnement verwalten
         choose_level: Stufe wählen
         contributions_note: Beiträge zu %{product_name} erscheinen hier.
@@ -177,6 +177,10 @@ de:
         encryption_warning:
           generate: 'Einen Satz erzeugst du mit: bin/rails db:encryption:init'
           intro: 'Sensible Daten wie API-Keys, Anbieter-Tokens, MFA-Geheimnisse und personenbezogene Angaben liegen unverschlüsselt auf der Platte. Setze diese Schlüssel in deinen Umgebungsvariablen oder Rails-Credentials, um die Verschlüsselung einzuschalten:'
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
           title: Verschlüsselungsschlüssel fehlen
     settings_nav:
       accounts_label: Konten

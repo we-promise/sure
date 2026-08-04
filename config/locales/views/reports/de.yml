@@ -2,6 +2,7 @@
 de:
   reports:
     index:
+      period_aria: Berichtszeitraum
       title: Berichte
       subtitle: Umfassende Einblicke in deine finanzielle Situation
       export: CSV exportieren

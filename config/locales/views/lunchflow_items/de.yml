@@ -20,6 +20,7 @@ de:
         other: "%{count} Konten mit leerem Namen können nicht verknüpft werden"
       link_failed: Konten konnten nicht verknüpft werden
       no_accounts_selected: Bitte wähle mindestens ein Konto aus
+      no_api_key: Der Lunch-Flow-API-Key ist nicht eingerichtet. Richte ihn in den Einstellungen ein.
       partial_invalid: "%{created_count} Konto/Konten verknüpft, %{already_linked_count} waren bereits verknüpft, %{invalid_count} hatten ungültige Namen"
       partial_success: "%{created_count} Konto/Konten erfolgreich verknüpft. %{already_linked_count} Konto/Konten waren bereits verknüpft: %{already_linked_names}"
       success:
@@ -50,6 +51,7 @@ de:
       link_accounts: Ausgewählte Konten verknüpfen
       no_accounts_found: Keine Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
       no_api_key: Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
+      no_credentials_configured: Richte zuerst deine Lunch-Flow-Zugangsdaten in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
       title: Lunch‑Flow-Konten auswählen
     select_existing_account:
@@ -63,6 +65,7 @@ de:
       no_account_specified: Kein Konto angegeben
       no_accounts_found: Keine Lunch‑Flow-Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
       no_api_key: Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
+      no_credentials_configured: Richte zuerst deine Lunch-Flow-Zugangsdaten in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
       title: "%{account_name} mit Lunch‑Flow verknüpfen"
     link_existing_account:
@@ -72,6 +75,7 @@ de:
       lunchflow_account_already_linked: Dieses Lunch‑Flow-Konto ist bereits mit einem anderen Konto verknüpft
       lunchflow_account_not_found: Lunch‑Flow-Konto nicht gefunden
       missing_parameters: Erforderliche Parameter fehlen
+      no_api_key: Der Lunch-Flow-API-Key ist nicht eingerichtet. Richte ihn in den Anbietereinstellungen ein.
       success: "%{account_name} erfolgreich mit Lunch‑Flow verknüpft"
     setup_accounts:
       account_type_label: "Kontotyp:"
