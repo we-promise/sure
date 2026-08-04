@@ -47,7 +47,8 @@ export default class extends Controller {
     const newTotal = this.currentBalanceValue + amount;
     const target = this.targetAmountValue;
     const reached = newTotal >= target && target > 0;
-    const percent = target > 0 ? Math.min(100, Math.round((newTotal / target) * 100)) : 0;
+    const percent =
+      target > 0 ? Math.min(100, Math.round((newTotal / target) * 100)) : 0;
 
     let text;
     if (reached) {

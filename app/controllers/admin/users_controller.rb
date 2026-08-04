@@ -51,6 +51,11 @@ module Admin
     def update
       authorize @user
 
+      if demoting_last_super_admin?
+        redirect_to admin_users_path, alert: t(".last_super_admin_error")
+        return
+      end
+
       if membership_change_requested?
         target_family = nil
 
@@ -84,7 +89,7 @@ module Admin
           "new_role=#{@user.role}"
         )
       else
-        redirect_to admin_users_path, alert: t(".failure")
+        redirect_to admin_users_path, alert: @user.errors.full_messages.to_sentence.presence || t(".failure")
         return
       end
 
@@ -119,7 +124,7 @@ module Admin
 
       def membership_change_requested?
         new_family_name = user_params[:new_family_name].to_s.strip
-        new_family_name.present? || (user_params[:family_id].present? && user_params[:family_id] != @user.family_id)
+        new_family_name.present? || (user_params[:family_id].present? && user_params[:family_id] != "new" && user_params[:family_id] != @user.family_id)
       end
 
       def target_family_for_update
@@ -130,7 +135,7 @@ module Admin
             name: new_family_name,
             moniker: user_params[:new_family_moniker].presence || "Family"
           )
-        elsif user_params[:family_id].present?
+        elsif user_params[:family_id].present? && user_params[:family_id] != "new"
           Family.find(user_params[:family_id])
         end
       end
@@ -139,6 +144,13 @@ module Admin
         return "" if family.nil?
 
         family.name.presence || "#{family.moniker_label} (#{family.id.to_s.first(8)})"
+      end
+
+      def demoting_last_super_admin?
+        user_params[:role].present? &&
+          @user.super_admin? &&
+          user_params[:role] != "super_admin" &&
+          User.where(role: :super_admin).where.not(id: @user.id).none?
       end
 
       def apply_trial_filter(scope)

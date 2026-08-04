@@ -223,4 +223,35 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_users_url
     assert_equal I18n.t("admin.users.destroy.destroy_failure"), flash[:alert]
   end
+
+  test "update allows super admin to change their own family" do
+    current_admin = users(:sure_support_staff)
+    new_family = Family.create!(name: "Self Move Family")
+
+    patch admin_user_url(current_admin), params: {
+      user: {
+        role: "super_admin",
+        family_id: new_family.id
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal new_family, current_admin.reload.family
+  end
+
+  test "update prevents demoting the last super admin in the system" do
+    User.where(role: :super_admin).where.not(id: users(:sure_support_staff).id).update_all(role: :member)
+    current_admin = users(:sure_support_staff)
+
+    patch admin_user_url(current_admin), params: {
+      user: {
+        role: "member",
+        family_id: current_admin.family_id
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_match(/cannot demote the last super admin/i, flash[:alert])
+    assert_equal "super_admin", current_admin.reload.role
+  end
 end

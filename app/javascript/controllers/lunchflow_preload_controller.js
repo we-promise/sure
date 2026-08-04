@@ -22,7 +22,7 @@ export default class extends Controller {
       // Fetch accounts in background to populate cache
       const url = new URL(
         "/lunchflow_items/preload_accounts",
-        window.location.origin
+        window.location.origin,
       );
       if (this.hasAccountableTypeValue) {
         url.searchParams.append("accountable_type", this.accountableTypeValue);
@@ -62,7 +62,11 @@ export default class extends Controller {
         if (this.hasLinkTarget) {
           this.linkTarget.style.display = "none";
         }
-      } else if (data.has_accounts === null || data.error === "api_error" || data.error === "unexpected_error") {
+      } else if (
+        data.has_accounts === null ||
+        data.error === "api_error" ||
+        data.error === "unexpected_error"
+      ) {
         // API error (bad credentials, network issue, etc) - keep link visible, user will see error when clicked
         if (this.hasLinkTarget) {
           this.hideLoading();

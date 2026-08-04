@@ -5,11 +5,15 @@ export default class extends ExchangeRateFormController {
   static targets = [
     ...ExchangeRateFormController.targets,
     "fromAccount",
-    "toAccount"
+    "toAccount",
   ];
 
   hasRequiredExchangeRateTargets() {
-    if (!this.hasFromAccountTarget || !this.hasToAccountTarget || !this.hasDateTarget) {
+    if (
+      !this.hasFromAccountTarget ||
+      !this.hasToAccountTarget ||
+      !this.hasDateTarget
+    ) {
       return false;
     }
 
@@ -39,7 +43,7 @@ export default class extends ExchangeRateFormController {
     return {
       fromCurrency,
       toCurrency,
-      date
+      date,
     };
   }
 
@@ -50,10 +54,15 @@ export default class extends ExchangeRateFormController {
 
     const currentFromAccountId = this.fromAccountTarget.value;
     const currentToAccountId = this.toAccountTarget.value;
-    const currentFromCurrency = this.accountCurrenciesValue[currentFromAccountId];
+    const currentFromCurrency =
+      this.accountCurrenciesValue[currentFromAccountId];
     const currentToCurrency = this.accountCurrenciesValue[currentToAccountId];
     const currentDate = this.dateTarget.value;
 
-    return fromCurrency === currentFromCurrency && toCurrency === currentToCurrency && date === currentDate;
+    return (
+      fromCurrency === currentFromCurrency &&
+      toCurrency === currentToCurrency &&
+      date === currentDate
+    );
   }
 }

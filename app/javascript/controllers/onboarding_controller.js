@@ -2,13 +2,13 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="onboarding"
 export default class extends Controller {
-  static targets = ["nameField", "monikerRadio"]
+  static targets = ["nameField", "monikerRadio"];
   static values = {
     householdNameLabel: String,
     householdNamePlaceholder: String,
     groupNameLabel: String,
-    groupNamePlaceholder: String
-  }
+    groupNamePlaceholder: String,
+  };
 
   connect() {
     this.updateNameFieldForCurrentMoniker();
@@ -35,13 +35,19 @@ export default class extends Controller {
       return;
     }
 
-    const selectedMonikerRadio = event?.target?.dataset?.onboardingMoniker ? event.target : this.monikerRadioTargets.find((radio) => radio.checked);
+    const selectedMonikerRadio = event?.target?.dataset?.onboardingMoniker
+      ? event.target
+      : this.monikerRadioTargets.find((radio) => radio.checked);
     const selectedMoniker = selectedMonikerRadio?.dataset?.onboardingMoniker;
     const isGroup = selectedMoniker === "Group";
 
-    this.nameFieldTarget.placeholder = isGroup ? this.groupNamePlaceholderValue : this.householdNamePlaceholderValue;
+    this.nameFieldTarget.placeholder = isGroup
+      ? this.groupNamePlaceholderValue
+      : this.householdNamePlaceholderValue;
 
-    const label = this.nameFieldTarget.closest(".form-field")?.querySelector(".form-field__label");
+    const label = this.nameFieldTarget
+      .closest(".form-field")
+      ?.querySelector(".form-field__label");
     if (!label) {
       return;
     }

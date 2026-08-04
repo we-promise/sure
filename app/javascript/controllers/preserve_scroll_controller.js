@@ -1,4 +1,4 @@
-import { Controller } from "@hotwired/stimulus"
+import { Controller } from "@hotwired/stimulus";
 
 /*
   https://dev.to/konnorrogers/maintain-scroll-position-in-turbo-without-data-turbo-permanent-2b1i
@@ -7,38 +7,40 @@ import { Controller } from "@hotwired/stimulus"
   only requirement is that the element has an id
  */
 export default class extends Controller {
-  static scrollPositions = {}
+  static scrollPositions = {};
 
   connect() {
-    this.preserveScrollBound = this.preserveScroll.bind(this)
-    this.restoreScrollBound = this.restoreScroll.bind(this)
+    this.preserveScrollBound = this.preserveScroll.bind(this);
+    this.restoreScrollBound = this.restoreScroll.bind(this);
 
-    window.addEventListener("turbo:before-cache", this.preserveScrollBound)
-    window.addEventListener("turbo:before-render", this.restoreScrollBound)
-    window.addEventListener("turbo:render", this.restoreScrollBound)
+    window.addEventListener("turbo:before-cache", this.preserveScrollBound);
+    window.addEventListener("turbo:before-render", this.restoreScrollBound);
+    window.addEventListener("turbo:render", this.restoreScrollBound);
   }
 
   disconnect() {
-    window.removeEventListener("turbo:before-cache", this.preserveScrollBound)
-    window.removeEventListener("turbo:before-render", this.restoreScrollBound)
-    window.removeEventListener("turbo:render", this.restoreScrollBound)
+    window.removeEventListener("turbo:before-cache", this.preserveScrollBound);
+    window.removeEventListener("turbo:before-render", this.restoreScrollBound);
+    window.removeEventListener("turbo:render", this.restoreScrollBound);
   }
 
   preserveScroll() {
-    if (!this.element.id) return
+    if (!this.element.id) return;
 
     this.constructor.scrollPositions[this.element.id] = {
       top: this.element.scrollTop,
-      left: this.element.scrollLeft
-    }
+      left: this.element.scrollLeft,
+    };
   }
 
   restoreScroll(event) {
-    if (!this.element.id) return
+    if (!this.element.id) return;
 
     if (this.constructor.scrollPositions[this.element.id]) {
-      this.element.scrollTop = this.constructor.scrollPositions[this.element.id].top
-      this.element.scrollLeft = this.constructor.scrollPositions[this.element.id].left
+      this.element.scrollTop =
+        this.constructor.scrollPositions[this.element.id].top;
+      this.element.scrollLeft =
+        this.constructor.scrollPositions[this.element.id].left;
     }
   }
 }

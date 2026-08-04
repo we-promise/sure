@@ -62,7 +62,10 @@ export default class extends Controller {
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
     const series = ["income", "expense"];
-    const seriesColor = { expense: "var(--color-gray-400)", income: "var(--color-success)" };
+    const seriesColor = {
+      expense: "var(--color-gray-400)",
+      income: "var(--color-success)",
+    };
 
     const x0 = d3
       .scaleBand()
@@ -70,10 +73,17 @@ export default class extends Controller {
       .range([0, innerWidth])
       .padding(0.3);
 
-    const x1 = d3.scaleBand().domain(series).range([0, x0.bandwidth()]).padding(0.15);
+    const x1 = d3
+      .scaleBand()
+      .domain(series)
+      .range([0, x0.bandwidth()])
+      .padding(0.15);
 
     const maxValue = d3.max(data, (d) => Math.max(d.income, d.expense)) || 1;
-    const y = d3.scaleLinear().domain([0, maxValue * 1.1]).range([innerHeight, 0]);
+    const y = d3
+      .scaleLinear()
+      .domain([0, maxValue * 1.1])
+      .range([innerHeight, 0]);
     // Floor tiny-but-nonzero bars (e.g. an in-progress month) at 2px so they stay visible.
     const barHeight = (v) => (v > 0 ? Math.max(2, innerHeight - y(v)) : 0);
 
@@ -126,15 +136,21 @@ export default class extends Controller {
       .call(d3.axisBottom(x0).tickSize(0))
       .call((g) => g.select(".domain").remove())
       .selectAll("text")
-      .attr("class", (_d, i) => (data[i].highlighted ? "text-primary fill-current" : "text-secondary fill-current"))
+      .attr("class", (_d, i) =>
+        data[i].highlighted
+          ? "text-primary fill-current"
+          : "text-secondary fill-current",
+      )
       .style("font-size", "12px")
       .style("font-weight", (_d, i) => (data[i].highlighted ? 600 : 500));
   }
 
   _tooltipTemplate(month, key) {
-    const label = key === "income" ? this.incomeLabelValue : this.expenseLabelValue;
+    const label =
+      key === "income" ? this.incomeLabelValue : this.expenseLabelValue;
     // Match the bar/legend palette — expenses render gray, not destructive red.
-    const color = key === "income" ? "var(--color-success)" : "var(--color-gray-400)";
+    const color =
+      key === "income" ? "var(--color-success)" : "var(--color-gray-400)";
 
     return `
       <div class="text-xs text-secondary mb-1">${month.label}</div>

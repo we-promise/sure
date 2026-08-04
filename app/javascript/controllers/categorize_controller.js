@@ -12,7 +12,12 @@ export default class extends Controller {
     "filter",
     "ruleDetails",
   ];
-  static values = { assignEntryUrl: String, position: Number, previewRuleUrl: String, transactionType: String };
+  static values = {
+    assignEntryUrl: String,
+    position: Number,
+    previewRuleUrl: String,
+    transactionType: String,
+  };
 
   connect() {
     this.boundSelectFirst = this.selectFirst.bind(this);
@@ -32,12 +37,13 @@ export default class extends Controller {
     if (tag === "BUTTON" || tag === "A") return;
 
     // Don't intercept Enter when the user is confirming an inline filter edit
-    if (this.hasFilterInputTarget && event.target === this.filterInputTarget) return;
+    if (this.hasFilterInputTarget && event.target === this.filterInputTarget)
+      return;
 
     event.preventDefault();
 
     const visible = Array.from(
-      this.listTarget.querySelectorAll(".filterable-item")
+      this.listTarget.querySelectorAll(".filterable-item"),
     ).filter((el) => el.style.display !== "none");
 
     if (visible.length !== 1) return;
@@ -117,11 +123,15 @@ export default class extends Controller {
       fetch(url.toString(), {
         credentials: "same-origin",
         headers: {
-          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content,
+          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')
+            ?.content,
           Accept: "text/vnd.turbo-stream.html",
         },
       })
-        .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.text(); })
+        .then((r) => {
+          if (!r.ok) throw new Error(r.statusText);
+          return r.text();
+        })
         .then((html) => Turbo.renderStreamMessage(html))
         .catch((err) => console.error("Rule preview failed:", err));
     }, 300);
@@ -142,20 +152,26 @@ export default class extends Controller {
 
     // all_entry_ids[] hidden inputs live inside each Turbo Frame —
     // automatically stay in sync as frames are removed
-    this.element.querySelectorAll("input[name='all_entry_ids[]']").forEach((input) => {
-      body.append("all_entry_ids[]", input.value);
-    });
+    this.element
+      .querySelectorAll("input[name='all_entry_ids[]']")
+      .forEach((input) => {
+        body.append("all_entry_ids[]", input.value);
+      });
 
     fetch(this.assignEntryUrlValue, {
       method: "PATCH",
       credentials: "same-origin",
       headers: {
-        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content,
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')
+          ?.content,
         Accept: "text/vnd.turbo-stream.html",
       },
       body,
     })
-      .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.text(); })
+      .then((r) => {
+        if (!r.ok) throw new Error(r.statusText);
+        return r.text();
+      })
       .then((html) => Turbo.renderStreamMessage(html))
       .catch((err) => {
         console.error("Entry assignment failed:", err);

@@ -205,6 +205,7 @@ class User < ApplicationRecord
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
+  validate :cannot_demote_last_super_admin, if: -> { role_changed? && role_was == "super_admin" && role != "super_admin" }
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
@@ -214,6 +215,12 @@ class User < ApplicationRecord
   def can_deactivate
     if admin? && family.users.count > 1
       errors.add(:base, :cannot_deactivate_admin_with_other_users)
+    end
+  end
+
+  def cannot_demote_last_super_admin
+    if User.where(role: :super_admin).where.not(id: id).none?
+      errors.add(:role, :cannot_demote_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error", default: "cannot demote the last super admin in the system"))
     end
   end
 

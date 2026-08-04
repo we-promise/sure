@@ -28,7 +28,7 @@ export default class extends Controller {
   remove(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Find the parent rules controller before removing the condition
     const rulesEl = this.element.closest('[data-controller~="rules"]');
 
@@ -41,8 +41,12 @@ export default class extends Controller {
 
     // Update the prefixes of all conditions from the parent rules controller
     if (rulesEl) {
-      const rulesController = this.application.getControllerForElementAndIdentifier(rulesEl, "rules");
-      if (rulesController && typeof rulesController.updateConditionPrefixes === "function") {
+      const rulesController =
+        this.application.getControllerForElementAndIdentifier(rulesEl, "rules");
+      if (
+        rulesController &&
+        typeof rulesController.updateConditionPrefixes === "function"
+      ) {
         rulesController.updateConditionPrefixes();
       }
     }
