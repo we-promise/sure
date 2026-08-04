@@ -226,8 +226,8 @@ OPENAI_REQUEST_TIMEOUT=180
 # How long the chat waits before giving up and showing a "no response" error.
 # Responses from custom providers are not streamed, so nothing appears until the
 # whole reply is generated — this must cover the full generation, not just the
-# first token. Keep it at or below OPENAI_REQUEST_TIMEOUT.
-AI_RESPONSE_TIMEOUT=180
+# first token. Keep it above OPENAI_REQUEST_TIMEOUT (see below).
+AI_RESPONSE_TIMEOUT=400
 
 # Optional: enable debug logging in the AI chat
 AI_DEBUG_MODE=true 
@@ -239,7 +239,7 @@ AI_DEBUG_MODE=true
 - If you don't set a model, chats will fail with a validation error
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
 - If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits
-- Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT`; `OPENAI_REQUEST_TIMEOUT` alone will not help
+- Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT`; `OPENAI_REQUEST_TIMEOUT` alone will not help. Keep `AI_RESPONSE_TIMEOUT` the larger of the two — it covers the whole turn, while `OPENAI_REQUEST_TIMEOUT` bounds each call to the model separately
 
 ### Docker Compose Example
 
@@ -1105,18 +1105,18 @@ Then restart both `web` and `worker` so the new env var is loaded. If you are us
 
 **Symptom:** The chat shows "Thinking…" for a while, then an error saying the assistant is not available — but the model does produce a reply and LLM Usage shows tokens were generated.
 
-**Cause:** Two separate limits, both of which must cover your model's full generation time:
+**Cause:** Two separate limits, measured over different spans:
 
-- `OPENAI_REQUEST_TIMEOUT` (default `60`) — how long Sure waits on the HTTP request to the model.
-- `AI_RESPONSE_TIMEOUT` (default `90`) — how long the chat UI waits before declaring the response undelivered.
+- `OPENAI_REQUEST_TIMEOUT` (default `60`) — applies to **each HTTP call** to the model, on its own.
+- `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it.
 
-Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. The clock has to cover the whole generation, not just the time to the first token. If tool calls are involved, it covers two round trips to the model plus the tool execution in between.
+Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated — the budget has to cover the full generation, not just the time to the first token. A tool-using turn spends it twice over: one call to decide the tool, the tool execution, then a second call to write the answer.
 
-**Fix:** Raise both, with `OPENAI_REQUEST_TIMEOUT` at or above `AI_RESPONSE_TIMEOUT`:
+**Fix:** Raise both, keeping `AI_RESPONSE_TIMEOUT` the **larger** of the two. It has to fit two `OPENAI_REQUEST_TIMEOUT`-bounded calls plus tool execution and queue wait, and if it is the smaller one you get a generic "no response" instead of the specific timeout error — while the job keeps running and burning tokens after the chat has given up.
 
 ```bash
 OPENAI_REQUEST_TIMEOUT=300
-AI_RESPONSE_TIMEOUT=300
+AI_RESPONSE_TIMEOUT=660
 ```
 
 `AI_RESPONSE_TIMEOUT` can also be set at **Settings → Self-Hosting → OpenAI → Chat Response Timeout**, which takes effect without a restart. The environment variable wins if both are set. The minimum accepted value is `30`.

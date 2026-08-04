@@ -144,7 +144,7 @@ en:
         ai_response_timeout_heading: Chat Response Timeout
         ai_response_timeout_description: How long the chat waits for the assistant before showing a "no response" error. Raise this if you run a local model on slow hardware — responses from OpenAI-compatible providers are not streamed, so nothing appears until the whole reply is generated.
         ai_response_timeout_label: Response Timeout in Seconds (Optional)
-        ai_response_timeout_help: "Default: 90. Raise to 300+ for slow local models. Also raise OPENAI_REQUEST_TIMEOUT to at least this value, or the request to the model will be cut short first."
+        ai_response_timeout_help: "Default: 90. Raise to 300+ for slow local models. Keep it above OPENAI_REQUEST_TIMEOUT — this covers the whole turn including queue time, while that limit applies to each call to the model separately."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

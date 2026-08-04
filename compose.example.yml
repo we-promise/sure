@@ -63,7 +63,9 @@ x-rails-env: &rails_env
   LLM_CONTEXT_WINDOW: ${LLM_CONTEXT_WINDOW:-}
   OPENAI_REQUEST_TIMEOUT: ${OPENAI_REQUEST_TIMEOUT:-60}
   # Seconds the chat waits for an assistant response before showing a "no response"
-  # error. Raise for slow local models, and keep OPENAI_REQUEST_TIMEOUT at or above it.
+  # error. Deliberately above OPENAI_REQUEST_TIMEOUT: that limit applies per HTTP
+  # call, while this one covers the whole turn including queue time, so keeping it
+  # higher lets the specific timeout error surface instead of a generic one.
   AI_RESPONSE_TIMEOUT: ${AI_RESPONSE_TIMEOUT:-90}
 
 services:
