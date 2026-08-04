@@ -11,7 +11,19 @@ export default class extends WebauthnController {
     verifyUrl: String,
     unsupportedMessage: String,
     errorFallback: String,
+    // Opt in to browser autofill ("conditional mediation"): passkeys are
+    // offered from the username field instead of behind a button click. Only
+    // passwordless sign-in enables this; the MFA step-up does not.
+    conditional: Boolean,
   };
+
+  connect() {
+    if (this.conditionalValue) this.startConditionalMediation();
+  }
+
+  disconnect() {
+    this.abortConditionalMediation();
+  }
 
   async authenticate(event) {
     event.preventDefault();
@@ -21,6 +33,12 @@ export default class extends WebauthnController {
       this.showError(this.unsupportedMessageValue);
       return;
     }
+
+    // A pending conditional request holds the challenge minted on connect.
+    // Fetching options below replaces it server-side, so the stale request has
+    // to go first or its assertion would verify against a challenge that no
+    // longer exists.
+    this.abortConditionalMediation();
 
     try {
       const options = await this.fetchOptions();
@@ -32,6 +50,33 @@ export default class extends WebauthnController {
     } catch (error) {
       this.showError(error.message);
     }
+  }
+
+  async startConditionalMediation() {
+    const available =
+      await window.PublicKeyCredential?.isConditionalMediationAvailable?.();
+    if (!available) return;
+
+    this.abortController = new AbortController();
+
+    try {
+      const options = await this.fetchOptions();
+      const credential = await navigator.credentials.get({
+        publicKey: prepareCredentialRequestOptions(options),
+        mediation: "conditional",
+        signal: this.abortController.signal,
+      });
+
+      await this.verifyCredential(serializePublicKeyCredential(credential));
+    } catch (_error) {
+      // Aborted, dismissed, or the user signed in another way. This runs
+      // without a user gesture, so failures stay silent.
+    }
+  }
+
+  abortConditionalMediation() {
+    this.abortController?.abort();
+    this.abortController = null;
   }
 
   async fetchOptions() {

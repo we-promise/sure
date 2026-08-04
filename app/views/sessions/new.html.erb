@@ -16,12 +16,20 @@
   </div>
 <% end %>
 
+<% passkey_login_enabled = AuthConfig.passkey_login_enabled? %>
+
 <% if AuthConfig.local_login_form_visible? %>
   <%= styled_form_with url: sessions_path, class: "space-y-4", data: { turbo: false } do |form| %>
+    <%#
+      The "webauthn" autocomplete token is what lets browsers offer a saved
+      passkey from this field's autofill menu (conditional mediation). It is
+      only added when passwordless sign-in is enabled, so the menu never
+      advertises a path the server would reject.
+    %>
     <%= form.email_field :email,
                          label: t(".email"),
                          autofocus: false,
-                         autocomplete: "email",
+                         autocomplete: passkey_login_enabled ? "username webauthn" : "email",
                          required: "required",
                          placeholder: t(".email_placeholder"),
                          value: @email %>
@@ -33,6 +41,28 @@
                             value: @password %>
 
     <%= form.submit t(".submit") %>
+  <% end %>
+
+  <% if passkey_login_enabled %>
+    <div class="mt-4 space-y-3"
+         data-controller="webauthn-authentication"
+         data-webauthn-authentication-conditional-value="true"
+         data-webauthn-authentication-options-url-value="<%= passkey_session_options_path %>"
+         data-webauthn-authentication-verify-url-value="<%= passkey_session_path %>"
+         data-webauthn-authentication-unsupported-message-value="<%= t(".passkey_unsupported") %>"
+         data-webauthn-authentication-error-fallback-value="<%= t("passkey_sessions.invalid_credential") %>">
+      <%= render DS::Button.new(
+            text: t(".passkey_button"),
+            variant: :outline,
+            size: :md,
+            full_width: true,
+            icon: "fingerprint",
+            type: "button",
+            class: "gap-2",
+            data: { action: "webauthn-authentication#authenticate" }
+          ) %>
+      <p class="text-sm text-destructive" role="alert" aria-live="assertive" aria-atomic="true" aria-hidden="true" hidden data-webauthn-authentication-target="error"></p>
+    </div>
   <% end %>
 
   <% unless AuthConfig.local_login_enabled? %>
