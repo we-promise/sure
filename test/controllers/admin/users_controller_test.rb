@@ -277,4 +277,221 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/cannot demote the last super admin/i, flash[:alert])
     assert_equal "super_admin", current_admin.reload.role
   end
+
+  test "update can set a new password for a local user" do
+    target = users(:family_member)
+    assert target.has_local_password?, "Precondition: target must have a local password"
+
+    new_password = "Secure1!pass"
+    patch admin_user_url(target), params: {
+      user: {
+        role: target.role,
+        password: new_password
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.success_password"), flash[:notice]
+    target.reload
+    assert target.authenticate(new_password), "User should authenticate with the new password"
+  end
+
+  test "update shows descriptive notification for role change only" do
+    target = users(:family_member)
+
+    patch admin_user_url(target), params: {
+      user: {
+        role: "admin",
+        password: ""
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.success_role"), flash[:notice]
+  end
+
+  test "update shows descriptive notification for role and password change" do
+    target = users(:family_member)
+    assert target.has_local_password?, "Precondition: target must have a local password"
+
+    patch admin_user_url(target), params: {
+      user: {
+        role: "admin",
+        password: "Secure1!pass"
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.success_role_and_password"), flash[:notice]
+    target.reload
+    assert_equal "admin", target.role
+    assert target.authenticate("Secure1!pass")
+  end
+
+  test "update shows descriptive notification for family change" do
+    target = users(:family_member)
+    destination_family = Family.create!(name: "Notify Family")
+
+    patch admin_user_url(target), params: {
+      user: {
+        role: target.role,
+        family_id: destination_family.id
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.success_family"), flash[:notice]
+  end
+
+  test "update with blank password leaves existing password unchanged" do
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: {
+        role: target.role,
+        password: ""
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal old_digest, target.reload.password_digest, "Password digest should not change when blank password is submitted"
+  end
+
+  test "update with short password shows too short error" do
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "Aa1!xy" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_match(/at least 8 characters/i, flash[:alert])
+    assert_equal old_digest, target.reload.password_digest
+  end
+
+  test "update with password missing uppercase or lowercase shows case error" do
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "alllower1!" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_match(/uppercase and lowercase/i, flash[:alert])
+    assert_equal old_digest, target.reload.password_digest
+  end
+
+  test "update with password missing number shows number error" do
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "NoNumber!!" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_match(/at least one number/i, flash[:alert])
+    assert_equal old_digest, target.reload.password_digest
+  end
+
+  test "update with password missing special character shows special char error" do
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "NoSpecial1a" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_match(/special character/i, flash[:alert])
+    assert_equal old_digest, target.reload.password_digest
+  end
+
+  test "update with password failing multiple criteria shows all errors" do
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "short" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_match(/at least 8 characters/i, flash[:alert])
+    assert_match(/uppercase and lowercase/i, flash[:alert])
+    assert_match(/at least one number/i, flash[:alert])
+    assert_match(/special character/i, flash[:alert])
+    assert_equal old_digest, target.reload.password_digest
+  end
+
+  test "update ignores password param for SSO-only users" do
+    solo_family = Family.create!(name: "SSO Ignore Family")
+    sso_user = User.create!(
+      family: solo_family,
+      email: "sso-ignore-#{SecureRandom.hex(4)}@example.com",
+      first_name: "SSO",
+      last_name: "Ignore",
+      skip_password_validation: true,
+      role: :member
+    )
+    OidcIdentity.create!(user: sso_user, provider: "google", uid: "ignore-#{SecureRandom.hex(4)}")
+    assert sso_user.sso_only?, "Precondition: user must be SSO-only"
+    assert_nil sso_user.password_digest
+
+    patch admin_user_url(sso_user), params: {
+      user: {
+        role: sso_user.role,
+        password: "attempt_to_set_password"
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_nil sso_user.reload.password_digest, "SSO-only user should not gain a local password"
+  end
+
+  test "update blocks simultaneous family and password change" do
+    target = users(:family_member)
+    assert target.has_local_password?, "Precondition: target must have a local password"
+    original_family = target.family
+    destination_family = Family.create!(name: "Conflict Family")
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: {
+        role: target.role,
+        family_id: destination_family.id,
+        password: "Secure1!pass"
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.password_and_family_conflict"), flash[:alert]
+    target.reload
+    assert_equal original_family, target.family, "Family should not change when conflict is detected"
+    assert_equal old_digest, target.password_digest, "Password should not change when conflict is detected"
+  end
+
+  test "index shows set password field for local users but not for SSO-only users" do
+    local_user = users(:family_member)
+    assert local_user.has_local_password?, "Precondition: local_user must have a local password"
+
+    solo_family = Family.create!(name: "SSO Only Family")
+    sso_user = User.create!(
+      family: solo_family,
+      email: "sso-only-pwd-test-#{SecureRandom.hex(4)}@example.com",
+      first_name: "SSO",
+      last_name: "Only",
+      skip_password_validation: true,
+      role: :member
+    )
+    OidcIdentity.create!(user: sso_user, provider: "google", uid: "pwd-test-#{SecureRandom.hex(4)}")
+    assert sso_user.sso_only?, "Precondition: sso_user must be SSO-only"
+
+    get admin_users_url
+    assert_response :success
+
+    assert_match(/Set new password/, response.body, "Should show set password field for local users")
+  end
 end

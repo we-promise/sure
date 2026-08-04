@@ -56,6 +56,19 @@ module Admin
         return
       end
 
+      if membership_change_requested? && password_change_requested?
+        redirect_to admin_users_path, alert: t(".password_and_family_conflict")
+        return
+      end
+
+      if password_change_requested?
+        errors = validate_password_criteria(user_params[:password])
+        if errors.any?
+          redirect_to admin_users_path, alert: errors.join(" ")
+          return
+        end
+      end
+
       if membership_change_requested?
         target_family = nil
 
@@ -81,19 +94,31 @@ module Admin
           "new_family_id=#{@user.family_id} " \
           "new_role=#{@user.role}"
         )
-      elsif @user.update(role: user_params[:role])
+
+        redirect_to admin_users_path, notice: t(".success_family")
+      elsif @user.update(user_update_attributes)
+        changes = []
+        changes << :role if @user.saved_change_to_role?
+        changes << :password if @user.saved_change_to_password_digest?
+
+        success_key = case changes
+                      when [:role, :password] then ".success_role_and_password"
+                      when [:password]        then ".success_password"
+                      else                         ".success_role"
+                      end
+
         Rails.logger.info(
-          "[Admin::Users] Role changed - " \
+          "[Admin::Users] User details changed (#{changes.join(', ')}) - " \
           "by_user_id=#{Current.user.id} " \
           "target_user_id=#{@user.id} " \
           "new_role=#{@user.role}"
         )
+
+        redirect_to admin_users_path, notice: t(success_key)
       else
         redirect_to admin_users_path, alert: @user.errors.full_messages.to_sentence.presence || t(".failure")
         return
       end
-
-      redirect_to admin_users_path, notice: t(".success")
     rescue ActiveRecord::RecordInvalid => e
       redirect_to admin_users_path, alert: e.record.errors.full_messages.to_sentence
     rescue ActiveRecord::RecordNotFound
@@ -119,7 +144,29 @@ module Admin
       end
 
       def user_params
-        params.require(:user).permit(:role, :family_id, :new_family_name, :new_family_moniker)
+        params.require(:user).permit(:role, :family_id, :new_family_name, :new_family_moniker, :password)
+      end
+
+      def user_update_attributes
+        attrs = {}
+        attrs[:role] = user_params[:role] if user_params[:role].present?
+        if user_params[:password].present? && @user.has_local_password?
+          attrs[:password] = user_params[:password]
+        end
+        attrs
+      end
+
+      def password_change_requested?
+        user_params[:password].present? && @user.has_local_password?
+      end
+
+      def validate_password_criteria(password)
+        errors = []
+        errors << t(".password_too_short") if password.length < 8
+        errors << t(".password_missing_case") unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
+        errors << t(".password_missing_number") unless password.match?(/\d/)
+        errors << t(".password_missing_special") unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
+        errors
       end
 
       def membership_change_requested?
