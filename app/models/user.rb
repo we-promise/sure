@@ -217,7 +217,7 @@ class User < ApplicationRecord
   # SSO-only users have OIDC identities but no local password.
   # They cannot use password reset or local login.
   def sso_only?
-    password_digest.nil? && oidc_identities.exists?
+    password_digest.nil? && oidc_identities.any?
   end
 
   # Check if user has a local password set (can authenticate locally)
