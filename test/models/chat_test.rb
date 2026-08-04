@@ -200,48 +200,59 @@ class ChatTest < ActiveSupport::TestCase
     end
   end
 
-  test "response_timeout falls back to the default when unconfigured" do
-    Setting.stubs(:ai_response_timeout).returns(nil)
+  # `Chat.response_timeout` reads ENV ahead of Setting, so every assertion about
+  # the Setting, the default or the floor has to clear AI_RESPONSE_TIMEOUT first —
+  # otherwise an environment that happens to define it silently decides the result.
+  def with_setting_timeout(value)
+    Setting.stubs(:ai_response_timeout).returns(value)
+    with_env_overrides("AI_RESPONSE_TIMEOUT" => nil) { yield }
+  end
 
-    assert_equal Chat::DEFAULT_RESPONSE_TIMEOUT, Chat.response_timeout
+  test "response_timeout falls back to the default when unconfigured" do
+    with_setting_timeout(nil) do
+      assert_equal Chat::DEFAULT_RESPONSE_TIMEOUT, Chat.response_timeout
+    end
   end
 
   test "response_timeout prefers ENV over Setting" do
+    with_setting_timeout(120) do
+      assert_equal 120.seconds, Chat.response_timeout
+    end
+
     Setting.stubs(:ai_response_timeout).returns(120)
-
-    assert_equal 120.seconds, Chat.response_timeout
-
     with_env_overrides("AI_RESPONSE_TIMEOUT" => "300") do
       assert_equal 300.seconds, Chat.response_timeout
     end
   end
 
   test "response_timeout ignores non-positive values and enforces a floor" do
-    Setting.stubs(:ai_response_timeout).returns(0)
-    assert_equal Chat::DEFAULT_RESPONSE_TIMEOUT, Chat.response_timeout
+    with_setting_timeout(0) do
+      assert_equal Chat::DEFAULT_RESPONSE_TIMEOUT, Chat.response_timeout
+    end
 
-    Setting.stubs(:ai_response_timeout).returns(5)
-    assert_equal Chat::MIN_RESPONSE_TIMEOUT, Chat.response_timeout
+    with_setting_timeout(5) do
+      assert_equal Chat::MIN_RESPONSE_TIMEOUT, Chat.response_timeout
+    end
   end
 
-  # The client reports at `response_timeout` and `report_timeout` answers 200
-  # either way, so a server floor at or above the client value would let clock
-  # skew strand a pending bubble that never gets re-reported.
+  # An early report is refused by the server, and `report_timeout` answers 409 so
+  # the watchdog retries. The grace window keeps those retries rare for a client
+  # whose clock is modestly ahead.
   test "undelivered_response_timeout stays below the client timeout" do
-    Setting.stubs(:ai_response_timeout).returns(300)
-
-    assert_equal 290.seconds, Chat.undelivered_response_timeout
-    assert Chat.undelivered_response_timeout < Chat.response_timeout
+    with_setting_timeout(300) do
+      assert_equal 290.seconds, Chat.undelivered_response_timeout
+      assert Chat.undelivered_response_timeout < Chat.response_timeout
+    end
   end
 
   test "handle_undelivered_response! respects a raised timeout" do
-    Setting.stubs(:ai_response_timeout).returns(600)
-
     chat = chats(:two)
     pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
 
-    assert_no_difference [ "DebugLogEntry.count", "Message.count" ] do
-      assert_not chat.handle_undelivered_response!(pending)
+    with_setting_timeout(600) do
+      assert_no_difference [ "DebugLogEntry.count", "Message.count" ] do
+        assert_not chat.handle_undelivered_response!(pending)
+      end
     end
 
     assert pending.reload.pending?
