@@ -1,4 +1,4 @@
-<%# locals: (budget:, previous_budget:, next_budget:, latest_budget:) %>
+<%# locals: (budget:) %>
 
 <div class="flex items-center gap-1 mb-4">
   <div class="flex items-center gap-2">
@@ -29,20 +29,24 @@
 
   <%= render DS::Popover.new(variant: "button") do |popover| %>
     <% popover.with_button class: "flex items-center gap-1 hover:bg-surface-hover cursor-pointer rounded-md p-2"  do %>
-      <span class="text-primary font-medium text-lg lg:text-base"><%= @budget.name %></span>
+      <span class="text-primary font-medium text-lg lg:text-base"><%= budget.period_name %></span>
       <%= icon("chevron-down") %>
     <% end %>
 
     <% popover.with_custom_content do %>
-      <%= render "budgets/picker", family: Current.family, year: budget.start_date.year %>
+      <%= render "budgets/picker", family: Current.family, year: budget.start_date.year, plan: budget.budget_plan %>
     <% end %>
+  <% end %>
+
+  <% if Current.family.budget_plans.many? %>
+    <%= render "budgets/plan_switcher", budget: budget %>
   <% end %>
 
   <div class="ml-auto">
     <%= render DS::Link.new(
         text: t(".today"),
         variant: "outline",
-        href: budget_path(Budget.date_to_param(Date.current)),
+        href: budget_path(Budget.param_for(budget.budget_plan, Date.current)),
     ) %>
   </div>
 </div>

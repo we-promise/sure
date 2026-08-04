@@ -35,6 +35,14 @@ en:
     name:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
+      plan_custom_range: "%{plan} · %{start} - %{end_date}"
+      plan_month_year: "%{plan} · %{month}"
+    picker:
+      new_plan: "New budget"
+    plan_switcher:
+      aria_label: "Budget: %{plan}"
+      edit_plan: "Edit budget"
+      new_plan: "New budget"
     show:
       categories:
         amount: Amount

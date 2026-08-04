@@ -368,7 +368,7 @@ class Demo::Generator
 
       spend_per_cat = txns.group("categories.id").sum("entries.amount")
 
-      budget = family.budgets.where(start_date: current_month).first_or_initialize
+      budget = family.budgets.where(budget_plan: family.default_budget_plan, start_date: current_month).first_or_initialize
       budget.update!(
         end_date: current_month.end_of_month,
         currency: "USD",

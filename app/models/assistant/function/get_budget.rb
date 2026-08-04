@@ -23,6 +23,8 @@ class Assistant::Function::GetBudget < Assistant::Function
         - `month` (optional): "YYYY-MM" or "MMM-YYYY". Defaults to the current month.
         - `prior_months` (optional): integer 0..#{MAX_PRIOR_MONTHS}. Number of months
           preceding the target month to include for trend comparison. Default 0.
+        - `budget` (optional): which budget to read when the family keeps more than
+          one (name or slug — see list_budgets). Defaults to the primary budget.
 
         Example (current month only):
 
@@ -55,12 +57,17 @@ class Assistant::Function::GetBudget < Assistant::Function
           description: "Number of months before the target month to also return for trend comparison.",
           minimum: 0,
           maximum: MAX_PRIOR_MONTHS
+        },
+        budget: {
+          type: "string",
+          description: "Which budget to read when the family keeps more than one (name or slug — see list_budgets). Defaults to the primary budget."
         }
       }
     )
   end
 
   def call(params = {})
+    plan = find_budget_plan!(params["budget"])
     target_start = resolve_month_start(params["month"])
     prior = [ params["prior_months"].to_i, 0 ].max
     prior = [ prior, MAX_PRIOR_MONTHS ].min
@@ -70,11 +77,12 @@ class Assistant::Function::GetBudget < Assistant::Function
 
     months = month_starts.filter_map do |start_date|
       next unless Budget.budget_date_valid?(start_date, family: family)
-      build_month_payload(start_date, bootstrap: start_date == target_start)
+      build_month_payload(start_date, plan: plan, bootstrap: start_date == target_start)
     end
 
     result = {
       currency: family.currency,
+      budget: { name: plan.name, slug: plan.slug, is_default: plan.is_default },
       months: months
     }
     unavailable = requested - months.length
@@ -83,12 +91,12 @@ class Assistant::Function::GetBudget < Assistant::Function
   end
 
   private
-    def build_month_payload(start_date, bootstrap:)
+    def build_month_payload(start_date, plan:, bootstrap:)
       budget = if bootstrap
-        Budget.find_or_bootstrap(family, start_date: start_date, user: user)
+        Budget.find_or_bootstrap(family, start_date: start_date, user: user, plan: plan)
       else
         budget_start, budget_end = Budget.period_for(start_date, family: family)
-        family.budgets.find_by(start_date: budget_start, end_date: budget_end)
+        plan.budgets.find_by(start_date: budget_start, end_date: budget_end)
       end
       return nil unless budget
 

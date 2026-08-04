@@ -523,4 +523,155 @@ class BudgetTest < ActiveSupport::TestCase
       assert_equal 0, budget.days_remaining
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Budget plans (multiple budgets per month)
+  # ---------------------------------------------------------------------------
+
+  test "creating a budget without a plan attaches it to the family's default plan" do
+    budget = Budget.create!(
+      family: @family,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month,
+      currency: "USD"
+    )
+
+    assert_equal @family.default_budget_plan, budget.budget_plan
+  end
+
+  test "two plans can hold budgets for the same month but one plan cannot" do
+    plan_a = @family.default_budget_plan
+    plan_b = @family.budget_plans.create!(name: "Test")
+
+    Budget.create!(family: @family, budget_plan: plan_a, start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month, currency: "USD")
+    sibling = Budget.create!(family: @family, budget_plan: plan_b, start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month, currency: "USD")
+    assert sibling.persisted?
+
+    duplicate = Budget.new(family: @family, budget_plan: plan_b, start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month, currency: "USD")
+    assert_not duplicate.valid?
+    assert duplicate.errors[:start_date].any?
+  end
+
+  test "find_or_bootstrap with a plan returns that plan's budget" do
+    plan = @family.budget_plans.create!(name: "Test")
+
+    default_budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
+    plan_budget = Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan)
+
+    assert_not_equal default_budget.id, plan_budget.id
+    assert_equal plan.id, plan_budget.budget_plan_id
+    assert_equal plan_budget.id, Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan).id
+  end
+
+  test "find_or_bootstrap rejects a plan from another family" do
+    other_plan = families(:dylan_family).budget_plans.create!(name: "Foreign")
+
+    assert_raises ArgumentError do
+      Budget.find_or_bootstrap(@family, start_date: Date.current, plan: other_plan)
+    end
+  end
+
+  test "to_param is the bare month slug for the default plan and plan-qualified otherwise" do
+    default_budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
+    assert_equal Budget.date_to_param(Date.current), default_budget.to_param
+
+    plan = @family.budget_plans.create!(name: "Joint Accounts")
+    plan_budget = Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan)
+    assert_equal "joint-accounts-#{Budget.date_to_param(Date.current)}", plan_budget.to_param
+  end
+
+  test "resolve_param round-trips both param shapes including multi-dash slugs" do
+    plan = @family.budget_plans.create!(name: "Side Hustle Fund")
+    date = Date.current.beginning_of_month
+
+    resolved_plan, resolved_date = Budget.resolve_param(Budget.date_to_param(date), family: @family)
+    assert resolved_plan.is_default?
+    assert_equal date, resolved_date
+
+    resolved_plan, resolved_date = Budget.resolve_param("side-hustle-fund-#{Budget.date_to_param(date)}", family: @family)
+    assert_equal plan, resolved_plan
+    assert_equal date, resolved_date
+  end
+
+  test "resolve_param raises RecordNotFound for malformed params and unknown slugs" do
+    assert_raises ActiveRecord::RecordNotFound do
+      Budget.resolve_param("not-a-real-param", family: @family)
+    end
+
+    assert_raises ActiveRecord::RecordNotFound do
+      Budget.resolve_param("ghost-#{Budget.date_to_param(Date.current)}", family: @family)
+    end
+  end
+
+  test "previous and next budget params carry the plan slug" do
+    plan = @family.budget_plans.create!(name: "Test")
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan)
+
+    assert_equal "test-#{Budget.date_to_param(Date.current - 1.month)}", budget.previous_budget_param
+    assert_equal "test-#{Budget.date_to_param(Date.current + 1.month)}", budget.next_budget_param
+  end
+
+  test "most_recent_initialized_budget stays within the budget's plan" do
+    plan = @family.budget_plans.create!(name: "Test")
+
+    Budget.create!(
+      family: @family,
+      start_date: 1.month.ago.beginning_of_month.to_date,
+      end_date: 1.month.ago.end_of_month.to_date,
+      budgeted_spending: 1000,
+      currency: "USD"
+    )
+
+    plan_budget = Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan)
+    assert_nil plan_budget.most_recent_initialized_budget
+
+    default_budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
+    assert_not_nil default_budget.most_recent_initialized_budget
+  end
+
+  test "copy_from! rejects a source budget from another plan" do
+    plan = @family.budget_plans.create!(name: "Test")
+
+    source = Budget.create!(
+      family: @family,
+      start_date: 1.month.ago.beginning_of_month.to_date,
+      end_date: 1.month.ago.end_of_month.to_date,
+      budgeted_spending: 1000,
+      currency: "USD"
+    )
+    target = Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan)
+
+    assert_raises ArgumentError do
+      target.copy_from!(source)
+    end
+  end
+
+  test "a plan scoped to accounts only counts those accounts' transactions" do
+    scoped_account = Account.create!(family: @family, accountable: Depository.new, name: "Scoped", status: "active", currency: "USD", balance: 1000)
+    other_account = Account.create!(family: @family, accountable: Depository.new, name: "Unscoped", status: "active", currency: "USD", balance: 1000)
+
+    category = Category.create!(name: "Food", family: @family, color: "#e74c3c")
+
+    [ scoped_account, other_account ].each do |account|
+      Entry.create!(
+        account: account,
+        entryable: Transaction.create!(category: category),
+        date: Date.current,
+        name: "Spend from #{account.name}",
+        amount: 100,
+        currency: "USD"
+      )
+    end
+
+    plan = @family.budget_plans.create!(name: "Scoped")
+    plan.budget_plan_accounts.create!(account: scoped_account)
+
+    scoped_budget = Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan)
+    default_budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
+
+    assert_equal 100, scoped_budget.actual_spending
+    assert_equal 200, default_budget.actual_spending
+    assert_equal 1, scoped_budget.transactions.count
+    assert_equal 2, default_budget.transactions.count
+  end
 end

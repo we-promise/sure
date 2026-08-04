@@ -20,6 +20,8 @@ class Assistant::Function::UpdateBudget < Assistant::Function
 
         Parameters:
         - `month` (optional): "YYYY-MM" or "MMM-YYYY". Defaults to the current month.
+        - `budget` (optional): which budget to update when the family keeps more than
+          one (name or slug — see list_budgets). Defaults to the primary budget.
         - `budgeted_spending` (optional): total planned spending for the month.
         - `expected_income` (optional): expected income for the month.
         - `categories` (optional): array of { category: <name or id>, amount: <number> }.
@@ -52,6 +54,10 @@ class Assistant::Function::UpdateBudget < Assistant::Function
         month: {
           type: "string",
           description: "Target month in YYYY-MM or MMM-YYYY format. Defaults to the current month."
+        },
+        budget: {
+          type: "string",
+          description: "Which budget to update when the family keeps more than one (name or slug — see list_budgets). Defaults to the primary budget."
         },
         budgeted_spending: {
           type: "number",
@@ -93,6 +99,7 @@ class Assistant::Function::UpdateBudget < Assistant::Function
       return error("no_changes", "Provide at least one of budgeted_spending, expected_income, or categories.")
     end
 
+    plan = find_budget_plan!(params["budget"])
     start_date = resolve_month_start(params["month"])
     unless Budget.budget_date_valid?(start_date, family: family)
       return error("invalid_month", "No budget exists (or can be created) for that month — it is outside the valid budget range.")
@@ -107,7 +114,7 @@ class Assistant::Function::UpdateBudget < Assistant::Function
     # Bootstrap and all writes share one transaction so a bad entry can't
     # leave a newly created (or half-updated) budget behind.
     Budget.transaction do
-      budget = Budget.find_or_bootstrap(family, start_date: start_date, user: user)
+      budget = Budget.find_or_bootstrap(family, start_date: start_date, user: user, plan: plan)
 
       budget.update!(attrs) if attrs.any?
 
@@ -136,7 +143,7 @@ class Assistant::Function::UpdateBudget < Assistant::Function
         available_to_allocate: format_money(budget.available_to_allocate)
       },
       updated_categories: updated,
-      message: "Budget for #{budget.start_date.strftime('%B %Y')} updated."
+      message: "#{budget.budget_plan.is_default? ? 'Budget' : "#{budget.budget_plan.name} budget"} for #{budget.start_date.strftime('%B %Y')} updated."
     }
   rescue Assistant::Error => e
     error("invalid_params", e.message)

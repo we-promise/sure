@@ -50,6 +50,10 @@ class Family < ApplicationRecord
 
   has_many :budgets, dependent: :destroy
   has_many :budget_categories, through: :budgets
+  # Declared after :budgets so budgets destroy first and the plans' own
+  # dependent budgets are already gone.
+  has_many :budget_plans, dependent: :destroy
+  has_many :budget_plan_accounts, through: :budget_plans
 
   has_many :goals, dependent: :destroy
 
@@ -312,6 +316,16 @@ class Family < ApplicationRecord
 
   def income_statement(user: Current.user)
     IncomeStatement.new(self, user: user)
+  end
+
+  # The plan behind bare month params ("aug-2026") and every budget created
+  # before plans existed. Lazily created so families without budgets don't
+  # carry an empty plan row.
+  def default_budget_plan
+    budget_plans.find_or_create_by!(is_default: true) { |plan| plan.name = "Primary" }
+  rescue ActiveRecord::RecordNotUnique
+    # Concurrent bootstrap lost the partial-unique-index race; the winner's row exists.
+    budget_plans.find_by!(is_default: true)
   end
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.

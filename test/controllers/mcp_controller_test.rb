@@ -290,6 +290,9 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_includes tool_names, "get_income_statement"
       assert_includes tool_names, "update_transaction"
       assert_includes tool_names, "update_budget"
+      assert_includes tool_names, "list_budgets"
+      assert_includes tool_names, "create_budget"
+      assert_includes tool_names, "delete_budget"
 
       # Each tool has required fields
       tools.each do |tool|
@@ -485,6 +488,41 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       budget.reload
       assert_equal 6200, budget.budgeted_spending
       assert_equal 8800, budget.expected_income
+    end
+  end
+
+  test "tools/call runs the create/update/delete budget lifecycle" do
+    with_mcp_env do
+      family = users(:family_admin).family
+
+      post "/mcp", params: jsonrpc_request("tools/call", {
+        name: "create_budget",
+        arguments: { name: "Joint", accounts: [ accounts(:depository).name ] }
+      }).to_json, headers: mcp_headers(@token)
+
+      inner = JSON.parse(JSON.parse(response.body)["result"]["content"][0]["text"])
+      assert_equal true, inner["success"]
+      assert_equal "joint", inner["slug"]
+
+      post "/mcp", params: jsonrpc_request("tools/call", {
+        name: "update_budget",
+        arguments: { budget: "joint", budgeted_spending: 900 }
+      }).to_json, headers: mcp_headers(@token)
+
+      inner = JSON.parse(JSON.parse(response.body)["result"]["content"][0]["text"])
+      assert_equal true, inner["success"]
+      plan = family.budget_plans.find_by!(slug: "joint")
+      assert_equal 900, plan.budgets.sole.budgeted_spending
+      assert_equal 5000, budgets(:one).reload.budgeted_spending
+
+      post "/mcp", params: jsonrpc_request("tools/call", {
+        name: "delete_budget",
+        arguments: { budget: "joint" }
+      }).to_json, headers: mcp_headers(@token)
+
+      inner = JSON.parse(JSON.parse(response.body)["result"]["content"][0]["text"])
+      assert_equal true, inner["success"]
+      assert_not family.budget_plans.exists?(slug: "joint")
     end
   end
 

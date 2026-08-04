@@ -29,6 +29,8 @@ class Family::FinancialDataReset
     rule_runs
     budgets
     budget_categories
+    budget_plans
+    budget_plan_accounts
     categories
     tags
     taggings
@@ -153,6 +155,10 @@ class Family::FinancialDataReset
       scope(:recurring_transactions).destroy_all
       scope(:rules).destroy_all
       scope(:budgets).destroy_all
+      # Plans go after their budgets (budgets FK-reference plans). delete_all
+      # bypasses the default plan's destroy guard — a full reset removes it too.
+      scope(:budget_plan_accounts).delete_all
+      scope(:budget_plans).delete_all
       scope(:categories).destroy_all
       scope(:tags).destroy_all
       scope(:merchants).destroy_all
@@ -252,6 +258,7 @@ class Family::FinancialDataReset
         rule_ids = rule_scope.select(:id)
         budget_scope = Budget.where(family_id: family.id)
         budget_ids = budget_scope.select(:id)
+        budget_plan_scope = BudgetPlan.where(family_id: family.id)
         transaction_scope = Transaction.joins(:entry).where(entries: { account_id: account_ids })
         transaction_ids = transaction_scope.select(:id)
         tag_scope = Tag.where(family_id: family.id)
@@ -284,6 +291,8 @@ class Family::FinancialDataReset
           rule_runs: RuleRun.where(rule_id: rule_ids),
           budgets: budget_scope,
           budget_categories: BudgetCategory.where(budget_id: budget_ids),
+          budget_plans: budget_plan_scope,
+          budget_plan_accounts: BudgetPlanAccount.where(budget_plan_id: budget_plan_scope.select(:id)),
           categories: Category.where(family_id: family.id),
           tags: tag_scope,
           taggings: Tagging.where(tag_id: tag_scope.select(:id)),

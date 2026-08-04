@@ -746,4 +746,45 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     assert_equal 1, totals_query_calls
   end
+
+  test "account_ids scopes totals to the given accounts" do
+    income_statement = IncomeStatement.new(@family, account_ids: [ @credit_card_account.id ])
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(0, @family.currency), totals.income_money
+    assert_equal Money.new(300 + 400, @family.currency), totals.expense_money
+  end
+
+  test "account_ids intersects with the user's finance accounts" do
+    user = users(:empty)
+    # The credit card belongs to another member (unowned accounts count as
+    # everyone's), so it drops out of user's finance accounts.
+    @credit_card_account.update!(owner: users(:sure_support_staff))
+
+    # User's finances exclude the credit card; explicit scope asks for both.
+    income_statement = IncomeStatement.new(@family, user: user, account_ids: [ @checking_account.id, @credit_card_account.id ])
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(200, @family.currency), totals.expense_money
+  end
+
+  test "disjoint account_ids and user accounts yield zero totals" do
+    user = users(:empty)
+    @credit_card_account.update!(owner: users(:sure_support_staff))
+
+    income_statement = IncomeStatement.new(@family, user: user, account_ids: [ @credit_card_account.id ])
+    totals = income_statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(0, @family.currency), totals.income_money
+    assert_equal Money.new(0, @family.currency), totals.expense_money
+  end
+
+  test "nil account_ids preserves the unscoped totals" do
+    scoped = IncomeStatement.new(@family, account_ids: nil)
+    unscoped = IncomeStatement.new(@family)
+
+    assert_equal unscoped.totals(date_range: Period.last_30_days.date_range),
+                 scoped.totals(date_range: Period.last_30_days.date_range)
+  end
 end

@@ -1,0 +1,31 @@
+<%# locals: (budget:) %>
+
+<% plans = Current.family.budget_plans.default_first %>
+
+<%= render DS::Menu.new(variant: :button, placement: "bottom-start") do |menu| %>
+  <% menu.with_button(
+       type: "button",
+       class: "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0",
+       aria: { label: t(".aria_label", plan: budget.budget_plan.name) }
+     ) do %>
+    <span class="whitespace-nowrap"><%= budget.budget_plan.name %></span>
+    <%= icon("chevron-down", size: "sm") %>
+  <% end %>
+
+  <% plans.each do |plan| %>
+    <% menu.with_item(
+         variant: :link,
+         text: plan.name,
+         href: budget_path(Budget.param_for(plan, budget.start_date)),
+         selected: plan.id == budget.budget_plan_id
+       ) %>
+  <% end %>
+
+  <% menu.with_item(variant: :divider) %>
+  <% menu.with_item(variant: :link, icon: "pencil", text: t(".edit_plan"),
+                    href: edit_budget_plan_path(budget.budget_plan),
+                    frame: :modal) %>
+  <% menu.with_item(variant: :link, icon: "plus", text: t(".new_plan"),
+                    href: new_budget_plan_path,
+                    frame: :modal) %>
+<% end %>

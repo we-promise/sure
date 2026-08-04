@@ -18,6 +18,8 @@ class SureImport < Import
     "Trade" => :trades,
     "Holding" => :holdings,
     "Valuation" => :valuations,
+    "BudgetPlan" => :budget_plans,
+    "BudgetPlanAccount" => :budget_plan_accounts,
     "Budget" => :budgets,
     "BudgetCategory" => :budget_categories,
     "Rule" => :rules
@@ -335,6 +337,8 @@ class SureImport < Import
         trades: family.entries.where(entryable_type: "Trade").count,
         holdings: family.holdings.count,
         valuations: family.entries.where(entryable_type: "Valuation").count,
+        budget_plans: family.budget_plans.count,
+        budget_plan_accounts: family.budget_plan_accounts.count,
         budgets: family.budgets.count,
         budget_categories: family.budget_categories.count,
         rules: family.rules.count

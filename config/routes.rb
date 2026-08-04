@@ -389,6 +389,8 @@ Rails.application.routes.draw do
     resources :budget_categories, only: %i[index show update]
   end
 
+  resources :budget_plans, only: %i[new create edit update destroy]
+
   resources :goals do
     member do
       patch :pause
@@ -614,6 +616,7 @@ Rails.application.routes.draw do
       resources :balances, only: [ :index, :show ]
       resources :budgets, only: [ :index, :show ]
       resources :budget_categories, only: [ :index, :show ]
+      resources :budget_plans, only: [ :index, :show, :create, :update, :destroy ]
       resources :categories, only: [ :index, :show, :create ]
       resources :merchants, only: [ :index, :show, :create ]
       resources :rules, only: [ :index, :show ]

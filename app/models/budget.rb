@@ -2,15 +2,21 @@ class Budget < ApplicationRecord
   include Monetizable
 
   PARAM_DATE_FORMAT = "%b-%Y"
+  # Optional plan-slug prefix ahead of the strict month token, so
+  # "aug-2026" (default plan) and "joint-aug-2026" both parse unambiguously.
+  PARAM_FORMAT = /\A(?:(?<plan>.+)-)?(?<month>[a-z]{3}-\d{4})\z/
 
   attr_accessor :current_user
 
   belongs_to :family
+  belongs_to :budget_plan
 
   has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
 
   validates :start_date, :end_date, presence: true
-  validates :start_date, :end_date, uniqueness: { scope: :family_id }
+  validates :start_date, uniqueness: { scope: :budget_plan_id }
+
+  before_validation :ensure_budget_plan, on: :create
 
   monetize :budgeted_spending, :expected_income, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
@@ -30,6 +36,28 @@ class Budget < ApplicationRecord
       end
     end
 
+    # Month param, prefixed with the plan slug for non-default plans:
+    # param_for(default_plan, aug) => "aug-2026"; param_for(joint, aug) => "joint-aug-2026".
+    def param_for(plan, date)
+      month = date_to_param(date)
+      plan.nil? || plan.is_default? ? month : "#{plan.slug}-#{month}"
+    end
+
+    # Inverse of param_for: "joint-aug-2026" => [joint plan, 2026-08-01].
+    # Raises RecordNotFound for malformed params or unknown plan slugs.
+    def resolve_param(param, family:)
+      match = PARAM_FORMAT.match(param.to_s.downcase)
+      raise ActiveRecord::RecordNotFound unless match
+
+      plan = if match[:plan].present?
+        family.budget_plans.find_by!(slug: match[:plan])
+      else
+        family.default_budget_plan
+      end
+
+      [ plan, param_to_date(match[:month], family: family) ]
+    end
+
     def budget_date_valid?(date, family:)
       budget_start, _ = period_for(date, family: family)
       budget_start >= oldest_valid_budget_date(family) &&
@@ -44,14 +72,18 @@ class Budget < ApplicationRecord
       end
     end
 
-    def find_or_bootstrap(family, start_date:, user: nil)
+    def find_or_bootstrap(family, start_date:, user: nil, plan: nil)
       return nil unless budget_date_valid?(start_date, family: family)
+
+      plan ||= family.default_budget_plan
+      raise ArgumentError, "plan must belong to the same family" unless plan.family_id == family.id
 
       Budget.transaction do
         budget_start, budget_end = period_for(start_date, family: family)
 
         budget = Budget.find_or_create_by!(
           family: family,
+          budget_plan: plan,
           start_date: budget_start,
           end_date: budget_end
         ) do |b|
@@ -86,7 +118,7 @@ class Budget < ApplicationRecord
   end
 
   def to_param
-    self.class.date_to_param(start_date)
+    self.class.param_for(budget_plan, start_date)
   end
 
   def sync_budget_categories
@@ -122,10 +154,30 @@ class Budget < ApplicationRecord
     if current_user
       scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).included_in_reports.select(:id) })
     end
+    if budget_plan&.scoped?
+      scope = scope.joins(:entry).where(entries: { account_id: budget_plan.account_ids })
+    end
     scope
   end
 
   def name
+    if budget_plan.is_default?
+      period_name
+    elsif family.uses_custom_month_start?
+      I18n.t(
+        "budgets.name.plan_custom_range",
+        plan: budget_plan.name,
+        start: I18n.l(start_date, format: :short),
+        end_date: I18n.l(end_date, format: :long)
+      )
+    else
+      I18n.t("budgets.name.plan_month_year", plan: budget_plan.name, month: I18n.l(start_date, format: :month_year))
+    end
+  end
+
+  # The period alone, without the plan prefix — for surfaces that show the
+  # plan name separately (e.g. the header's month button next to the switcher).
+  def period_name
     if family.uses_custom_month_start?
       I18n.t(
         "budgets.name.custom_range",
@@ -142,7 +194,7 @@ class Budget < ApplicationRecord
   end
 
   def most_recent_initialized_budget
-    family.budgets
+    budget_plan.budgets
       .includes(:budget_categories)
       .where("start_date < ?", start_date)
       .where.not(budgeted_spending: nil)
@@ -151,7 +203,7 @@ class Budget < ApplicationRecord
   end
 
   def copy_from!(source_budget)
-    raise ArgumentError, "source budget must belong to the same family" unless source_budget.family_id == family_id
+    raise ArgumentError, "source budget must belong to the same budget plan" unless source_budget.budget_plan_id == budget_plan_id
     raise ArgumentError, "source budget must precede target budget" unless source_budget.start_date < start_date
 
     Budget.transaction do
@@ -211,14 +263,14 @@ class Budget < ApplicationRecord
     previous_date = start_date - 1.month
     return nil unless self.class.budget_date_valid?(previous_date, family: family)
 
-    self.class.date_to_param(previous_date)
+    self.class.param_for(budget_plan, previous_date)
   end
 
   def next_budget_param
     next_date = start_date + 1.month
     return nil unless self.class.budget_date_valid?(next_date, family: family)
 
-    self.class.date_to_param(next_date)
+    self.class.param_for(budget_plan, next_date)
   end
 
   def to_donut_segments_json
@@ -316,11 +368,11 @@ class Budget < ApplicationRecord
   # Income: How much user earned relative to what they expected to earn
   # =============================================================================
   def estimated_income
-    family.income_statement.median_income(interval: "month")
+    income_statement.median_income(interval: "month")
   end
 
   def actual_income
-    family.income_statement.income_totals(period: self.period).total
+    income_statement.income_totals(period: self.period).total
   end
 
   def actual_income_percent
@@ -340,8 +392,12 @@ class Budget < ApplicationRecord
   end
 
   private
+    def ensure_budget_plan
+      self.budget_plan ||= family&.default_budget_plan
+    end
+
     def income_statement
-      @income_statement ||= family.income_statement(user: current_user)
+      @income_statement ||= IncomeStatement.new(family, user: current_user, account_ids: budget_plan&.scoped_account_ids)
     end
 
     def net_totals

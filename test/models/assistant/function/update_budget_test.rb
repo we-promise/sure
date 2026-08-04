@@ -208,4 +208,27 @@ class Assistant::Function::UpdateBudgetTest < ActiveSupport::TestCase
     assert_equal false, result[:success]
     assert_equal "no_changes", result[:error]
   end
+
+  test "updates a named budget without touching the primary budget" do
+    plan = budget_plans(:dylan_personal)
+    primary_before = budgets(:one).budgeted_spending
+
+    result = @function.call({ "budget" => "Personal", "budgeted_spending" => 750 })
+
+    assert result[:success]
+    assert_equal "personal-#{Budget.date_to_param(Date.current)}", result[:month]
+    assert_match "Personal budget", result[:message]
+
+    plan_budget = plan.budgets.find_by!(start_date: Date.current.beginning_of_month)
+    assert_equal 750, plan_budget.budgeted_spending
+    assert_equal primary_before, budgets(:one).reload.budgeted_spending
+  end
+
+  test "rejects an unknown budget with a helpful error" do
+    result = @function.call({ "budget" => "Ghost", "budgeted_spending" => 100 })
+
+    assert_equal false, result[:success]
+    assert_equal "invalid_params", result[:error]
+    assert_match "Ghost", result[:message]
+  end
 end

@@ -64,4 +64,14 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("plans.budget_card.empty_body"), response.body
     assert_select "a[href=?]", edit_budget_path(Budget.date_to_param(Date.current))
   end
+
+  test "budget card links to the other plans' current-month budgets" do
+    plan = budget_plans(:dylan_personal)
+
+    get plan_url
+
+    assert_response :success
+    assert_match I18n.t("plans.budget_card.other_plans"), response.body
+    assert_select "a[href=?]", budget_path("#{plan.slug}-#{Budget.date_to_param(Date.current)}")
+  end
 end
