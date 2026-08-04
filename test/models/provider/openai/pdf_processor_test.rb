@@ -3,6 +3,7 @@ require "test_helper"
 class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
+    @user = users(:family_member)
     @account = accounts(:depository)
   end
 
@@ -13,6 +14,7 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       model: "gpt-4.1",
       pdf_content: "fake-pdf",
       family: @family,
+      user: @user,
       max_response_tokens: 4096
     )
 
@@ -91,6 +93,7 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       model: "gpt-4.1",
       pdf_content: "fake-pdf",
       family: @family,
+      user: @user,
       max_response_tokens: 4096
     )
 
@@ -127,5 +130,32 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
 
     assert_equal old_date.iso8601, result["balance_record_date"]
     assert_equal 111.0, result["balance_as_of_end_date"]
+  end
+
+  test "does not expose reconciliation tools without an initiating user" do
+    processor = Provider::Openai::PdfProcessor.new(
+      stub("openai_client"),
+      model: "gpt-4.1",
+      pdf_content: "fake-pdf",
+      family: @family,
+      max_response_tokens: 4096
+    )
+
+    assert_empty processor.send(:reconciliation_tools)
+  end
+
+  test "ignores account ids the initiating user cannot access" do
+    processor = Provider::Openai::PdfProcessor.new(
+      stub("openai_client"),
+      model: "gpt-4.1",
+      pdf_content: "fake-pdf",
+      family: @family,
+      user: @user,
+      max_response_tokens: 4096
+    )
+
+    args = processor.send(:normalize_get_transactions_args, { "account_id" => accounts(:other_asset).id })
+
+    assert_nil args["accounts"]
   end
 end

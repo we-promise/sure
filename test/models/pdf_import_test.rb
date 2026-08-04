@@ -88,9 +88,10 @@ class PdfImportTest < ActiveSupport::TestCase
 
   test "process_with_ai_later enqueues ProcessPdfJob" do
     import = PdfImport.create_from_statement!(statement: create_pdf_statement)
+    user = users(:family_member)
 
-    assert_enqueued_with job: ProcessPdfJob, args: [ import ] do
-      assert import.process_with_ai_later
+    assert_enqueued_with job: ProcessPdfJob, args: [ import, user ] do
+      assert import.process_with_ai_later(user: user)
     end
 
     assert_equal "importing", import.reload.status

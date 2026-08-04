@@ -1,15 +1,16 @@
 class Provider::Openai::PdfProcessor
   include Provider::Openai::Concerns::UsageRecorder
 
-  attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens
+  attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :user, :max_response_tokens
 
-  def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil, max_response_tokens:)
+  def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil, user: nil, max_response_tokens:)
     @client = client
     @model = model
     @pdf_content = pdf_content
     @custom_provider = custom_provider
     @langfuse_trace = langfuse_trace
     @family = family
+    @user = user
     @max_response_tokens = max_response_tokens
   end
 
@@ -288,7 +289,7 @@ class Provider::Openai::PdfProcessor
     end
 
     def reconciliation_tools
-      return [] unless family.present?
+      return [] unless family.present? && tool_user.present?
 
       get_accounts_tool = Assistant::Function::GetAccounts.new(tool_user)
       get_transactions_tool = Assistant::Function::GetTransactions.new(tool_user)
@@ -335,7 +336,9 @@ class Provider::Openai::PdfProcessor
     end
 
     def tool_user
-      @tool_user ||= family.users.find_by(role: "admin") || family.users.first
+      return @tool_user if defined?(@tool_user)
+
+      @tool_user = user if user&.family_id == family&.id
     end
 
     def normalize_get_transactions_args(args)
@@ -344,7 +347,7 @@ class Provider::Openai::PdfProcessor
       normalized["page"] ||= 1
 
       if normalized["account_id"].present? && normalized["accounts"].blank?
-        account = family.accounts.find_by(id: normalized["account_id"])
+        account = tool_user.accessible_accounts.find_by(id: normalized["account_id"])
         normalized["accounts"] = [ account.name ] if account.present?
       end
 
@@ -356,7 +359,7 @@ class Provider::Openai::PdfProcessor
       end_date = normalized_args["end_date"]
       return result unless account_name.present? && end_date.present?
 
-      account = family.accounts.find_by(name: account_name)
+      account = tool_user.accessible_accounts.find_by(name: account_name)
       return result unless account
 
       parsed_end_date = Date.iso8601(end_date.to_s)

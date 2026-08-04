@@ -25,7 +25,7 @@ module Provider::LlmConcept
     false
   end
 
-  def process_pdf(pdf_content:, family: nil)
+  def process_pdf(pdf_content:, family: nil, user: nil)
     raise NotImplementedError, "Provider does not support PDF processing"
   end
 

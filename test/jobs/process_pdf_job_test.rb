@@ -70,7 +70,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     pdf_content = attach_pdf!(@import)
     process_result = Struct.new(:document_type).new("financial_document")
 
-    @import.expects(:process_with_ai).once.returns(process_result)
+    @import.expects(:process_with_ai).with(user: nil).once.returns(process_result)
     @import.stubs(:send_next_steps_email)
     @import.expects(:extract_transactions).never
 
@@ -90,7 +90,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     pdf_content = attach_pdf!(@import)
     process_result = Struct.new(:document_type).new("bank_statement")
 
-    @import.expects(:process_with_ai).once.returns(process_result)
+    @import.expects(:process_with_ai).with(user: nil).once.returns(process_result)
     @import.expects(:extract_transactions).once do
       @import.update!(
         extracted_data: {
@@ -117,6 +117,69 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     ProcessPdfJob.perform_now(@import)
 
     assert_equal "complete", @import.reload.status
+  end
+
+  test "passes the initiating user to PDF processing" do
+    pdf_content = attach_pdf!(@import)
+    user = users(:family_member)
+    process_result = Struct.new(:document_type).new("financial_document")
+
+    @import.expects(:process_with_ai).with(user: user).once.returns(process_result)
+    @import.stubs(:send_next_steps_email)
+
+    @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
+      assert_equal pdf_content, file_content
+      assert_equal "sample_bank_statement.pdf", filename
+      assert_equal({ "type" => "financial_document" }, metadata)
+      true
+    end.returns(family_documents(:tax_return))
+
+    ProcessPdfJob.perform_now(@import, user)
+
+    assert_equal "complete", @import.reload.status
+  end
+
+  test "does not auto-assign account from reconciliation output" do
+    pdf_content = attach_pdf!(@import)
+    process_result = Struct.new(:document_type).new("bank_statement")
+
+    @import.update!(
+      extracted_data: {
+        "reconciliation" => {
+          "performed" => true,
+          "account_id" => accounts(:depository).id,
+          "balance_match" => false,
+          "statement_transaction_count" => 1
+        }
+      }
+    )
+    @import.expects(:process_with_ai).with(user: nil).once.returns(process_result)
+    @import.expects(:extract_transactions).once do
+      @import.update!(
+        extracted_data: @import.extracted_data.deep_merge(
+          "transactions" => [
+            {
+              "date" => "2024-01-01",
+              "amount" => "10.00",
+              "name" => "Coffee Shop"
+            }
+          ]
+        )
+      )
+    end
+    @import.expects(:sync_mappings).once
+    @import.stubs(:send_next_steps_email)
+
+    @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
+      assert_equal pdf_content, file_content
+      assert_equal "sample_bank_statement.pdf", filename
+      assert_equal({ "type" => "bank_statement" }, metadata)
+      true
+    end.returns(family_documents(:tax_return))
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert_nil @import.reload.account
   end
 
   private
