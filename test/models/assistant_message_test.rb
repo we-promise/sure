@@ -17,6 +17,36 @@ class AssistantMessageTest < ActiveSupport::TestCase
     assert_equal "assistant_message_#{message.id}", streams.last["target"]
   end
 
+  test "append_text! streams into a pending bubble" do
+    message = AssistantMessage.create!(chat: @chat, content: "", ai_model: "gpt-4.1", status: :pending)
+
+    assert message.append_text!("Hello")
+    assert_equal "Hello", message.reload.content
+    assert message.complete?
+  end
+
+  # The watchdog runs in the web process; a slow job holds its own copy of the
+  # message and must not resurrect a bubble the user was already told failed.
+  test "append_text! refuses to resurrect a bubble the watchdog already cleared" do
+    message = AssistantMessage.create!(chat: @chat, content: "", ai_model: "gpt-4.1", status: :pending)
+    job_copy = AssistantMessage.find(message.id)
+
+    message.destroy!
+
+    assert_not job_copy.append_text!("late response")
+    assert_not Message.exists?(job_copy.id)
+  end
+
+  test "append_text! refuses to resurrect a bubble the watchdog demoted to failed" do
+    message = AssistantMessage.create!(chat: @chat, content: "", ai_model: "gpt-4.1", status: :pending)
+    job_copy = AssistantMessage.find(message.id)
+
+    message.update_columns(status: "failed")
+
+    assert_not job_copy.append_text!("late response")
+    assert_equal "failed", message.reload.status
+  end
+
   test "broadcasts remove after destroy so a failed turn's bubble is cleared" do
     message = AssistantMessage.create!(chat: @chat, content: "Hello from assistant", ai_model: "gpt-4.1")
     message.destroy!

@@ -62,6 +62,9 @@ x-rails-env: &rails_env
   OPENAI_URI_BASE: ${OPENAI_URI_BASE:-}
   LLM_CONTEXT_WINDOW: ${LLM_CONTEXT_WINDOW:-}
   OPENAI_REQUEST_TIMEOUT: ${OPENAI_REQUEST_TIMEOUT:-60}
+  # Seconds the chat waits for an assistant response before showing a "no response"
+  # error. Raise for slow local models, and keep OPENAI_REQUEST_TIMEOUT at or above it.
+  AI_RESPONSE_TIMEOUT: ${AI_RESPONSE_TIMEOUT:-90}
 
 services:
   web:
