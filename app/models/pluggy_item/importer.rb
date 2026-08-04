@@ -45,15 +45,29 @@ class PluggyItem::Importer
         result[:transactions] += transactions.size
 
         if investment_account?(acc)
-          # Pluggy exposes investments at the item level; attach them to the
-          # investment-typed container account so HoldingsProcessor can read them.
-          # Activities (investment transactions) are snapshotted but Trades import is
-          # explicitly OUT OF SCOPE for this PR (phase 2); leave activities_fetch_pending
-          # true so the generated syncing? override flags the item as still fetching.
-          pluggy_account.upsert_pluggy_holdings_snapshot!(investments_data)
-          pluggy_account.upsert_pluggy_activities_snapshot!(activities_data)
-          pluggy_account.update!(activities_fetch_pending: true)
-          investment_container_upserted = true
+          # Pluggy investments are ITEM-scoped (one /investments array for the whole
+          # item), so they attach to exactly ONE investment-typed container — not to
+          # every investment-type account /accounts happens to return. The old loop
+          # snapshotted the full item holdings onto EACH investment-type PluggyAccount;
+          # HoldingsProcessor (l61) then re-imported the same rows under each account's
+          # own account_provider_id, and once AutoSetup / the setup wizard linked them,
+          # Processor#upsert_investment_balance summed the FULL item value per linked
+          # account → the family's investment balance multi-counted by the number of
+          # investment-type accounts. Use the FIRST investment-type account as the
+          # sole container; any further investment-type accounts keep their banking
+          # transactions + processing above but carry no holdings (balance 0 — a
+          # known empty-container state, not a silent over-report). The container flag
+          # already gates the synthesis path at l92, so "real container present → no
+          # synthetic" keeps working. Activities (investment transactions) are
+          # snapshotted on the container only; Trades import stays OUT OF SCOPE
+          # (phase 2), so activities_fetch_pending stays true on it to flag the item
+          # as still fetching.
+          unless investment_container_upserted
+            pluggy_account.upsert_pluggy_holdings_snapshot!(investments_data)
+            pluggy_account.upsert_pluggy_activities_snapshot!(activities_data)
+            pluggy_account.update!(activities_fetch_pending: true)
+            investment_container_upserted = true
+          end
         end
 
         PluggyAccount::Processor.new(pluggy_account).process

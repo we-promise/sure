@@ -135,4 +135,69 @@ class PluggyItem::ImporterTest < ActiveSupport::TestCase
     # link as an Investment account (after which HoldingsProcessor imports them).
     assert_includes @pluggy_item.unlinked_pluggy_accounts, synthetic
   end
+
+  # Regression for the CodeRabbit Major (investment double-count): Pluggy investments
+  # are item-scoped (one /investments array for the whole item), so the importer must
+  # attach the holdings/activities snapshot to exactly ONE investment-typed container —
+  # not to every investment-type account /accounts returns. The old loop snapshotted
+  # the full item holdings onto EACH investment-type PluggyAccount; HoldingsProcessor
+  # (l61) then wrote them under each account's own account_provider_id, and once
+  # AutoSetup / the setup wizard linked them all, Processor#upsert_investment_balance
+  # summed the FULL item value per linked account → family investment balance
+  # over-reported by the number of investment-type accounts. Now only the FIRST
+  # investment-type account carries the snapshot; later investment-type accounts keep
+  # their banking transactions + processing but carry no holdings (balance 0, no
+  # over-report).
+  test "attaches the item holdings snapshot to ONE investment container — not to every investment-type account" do
+    @provider.expects(:get_item).returns("connector" => { "name" => "Broker" })
+    @provider.expects(:get_accounts).returns([
+      { "id" => "inv-a", "name" => "Ações Alpha", "type" => "investment",
+        "currencyCode" => "BRL", "balance" => 0.0, "status" => "ACTIVE" },
+      { "id" => "inv-b", "name" => "Ações Beta", "type" => "investment",
+        "currencyCode" => "BRL", "balance" => 0.0, "status" => "ACTIVE" },
+      { "id" => "chk-1", "name" => "Corrente", "type" => "checking",
+        "currencyCode" => "BRL", "balance" => 500.0, "status" => "ACTIVE" }
+    ])
+    @provider.expects(:get_investments).returns([
+      { "id" => "inv-1", "code" => "PETR4", "quantity" => 100, "price" => 35.0, "currencyCode" => "BRL" },
+      { "id" => "inv-2", "code" => "VALE3", "quantity" => 50, "price" => 60.0, "currencyCode" => "BRL" }
+    ])
+    @provider.expects(:get_investment_transactions).with(investment_id: "inv-1").returns([])
+    @provider.expects(:get_investment_transactions).with(investment_id: "inv-2").returns([])
+    @provider.expects(:get_account_transactions).with(account_id: "inv-a").returns([])
+    @provider.expects(:get_account_transactions).with(account_id: "inv-b").returns([])
+    @provider.expects(:get_account_transactions).with(account_id: "chk-1").returns([])
+
+    PluggyAccount::Processor.any_instance.stubs(:process).returns(true)
+
+    # 3 real /accounts rows; NO synthetic container — the first investment-type
+    # account (inv-a) became the container so synthesis is suppressed.
+    assert_difference "PluggyAccount.count", 3 do
+      PluggyItem::Importer.new(@pluggy_item, pluggy_provider: @provider).import
+    end
+
+    inv_a = @pluggy_item.pluggy_accounts.find_by(pluggy_account_id: "inv-a")
+    inv_b = @pluggy_item.pluggy_accounts.find_by(pluggy_account_id: "inv-b")
+
+    # The FIRST investment-type account is the container: full item holdings snapshot
+    # + activities-pending flag set on it.
+    assert_equal 2, inv_a.raw_holdings_payload.size,
+                 "first investment-type account should carry the full item holdings snapshot"
+    assert inv_a.activities_fetch_pending,
+           "first investment-type account is the container and flags activities pending"
+
+    # The SECOND investment-type account must NOT carry the holdings snapshot —
+    # otherwise HoldingsProcessor re-imports the same rows under a second
+    # account_provider_id and the family balance double-counts the item value.
+    assert_empty inv_b.raw_holdings_payload,
+                "second investment-type account must not duplicate the item holdings snapshot"
+    assert_not inv_b.activities_fetch_pending,
+               "second investment-type account must not be marked the activities container"
+
+    # No synthetic container created: the real investment container (inv-a) already
+    # suppressed synthesis (investment_container_upserted stayed true after the loop).
+    assert_nil @pluggy_item.pluggy_accounts.find_by(
+      pluggy_account_id: "synthetic-investment-#{@pluggy_item.id}"
+    ), "real investment container present — synthesis must not have fired"
+  end
 end
