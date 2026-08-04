@@ -118,9 +118,29 @@ The MCP endpoint exposes these financial tools:
 | `get_balance_sheet` | Current financial position (assets, liabilities, net worth) |
 | `get_income_statement` | Income and expenses over a period |
 | `import_bank_statement` | Import bank statement data |
-| `search_family_files` | Search uploaded documents in the vault |
+| `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
 
 These are the same tools used by Sure's builtin AI assistant.
+
+### Preview Tools
+
+These additional tools appear only when the MCP user has opted into preview
+features (Settings → Preferences). Until then they are absent from `tools/list`,
+and calling one by name returns an "Unknown tool" error. The Statement Vault
+tools additionally require the user to be an admin or member, matching the
+permissions enforced in the web UI.
+
+| Tool | Description |
+|------|-------------|
+| `upload_account_statement` | Store a statement document (PDF/CSV/XLSX) in the Statement Vault; deduplicates by SHA-256 |
+| `list_account_statements` | List vault documents with their SHA-256, period, linked account and review status |
+| `get_account_statement` | One statement's details and its reconciliation checks against the ledger — present only once someone has entered the statement's opening/closing balances in the web UI, since nothing extracts them from the document. Does not return the file: stored documents are served only to a signed-in browser session |
+| `get_statement_coverage` | Month-by-month statement coverage for an account: `covered`, `missing`, `mismatched`, `ambiguous`, `duplicate`, `not_expected`, each with a reconciliation status |
+| `record_valuation` | Record an account's value on a date, with a required source citation |
+
+They exist for agents that maintain a document-backed record of a family's
+wealth over time. See
+[Wealth history with an external agent harness](../llm-guides/wealth-agent-harness.md).
 
 ## Example Requests
 
