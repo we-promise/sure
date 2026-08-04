@@ -258,6 +258,14 @@
   }
 }
 
+@utility bg-subdued {
+  @apply bg-gray-400;
+
+  @variant theme-dark {
+    @apply bg-gray-400;
+  }
+}
+
 @utility bg-overlay {
   background-color: --alpha(var(--color-gray-100) / 50%);
 
