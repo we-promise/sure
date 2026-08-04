@@ -408,7 +408,7 @@ class PluggyItemsController < ApplicationController
       # connect_token raises into the outer rescue — same end state as before.
       item = PluggyItem.hydrate_item_id!(item)
 
-      token = item.pluggy_provider.connect_token(
+      token = item.pluggy_provider.connect_token( # pipelock:ignore Credential in URL — runtime-minted Pluggy connect token, not a literal secret
         client_user_id: item.client_user_id,
         webhook_url: item.webhook_url,
         redirect_url: item.redirect_url,

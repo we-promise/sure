@@ -109,17 +109,16 @@ export default class extends Controller {
     // bound as `data-action="click->pluggy#open"` (see _pluggy_panel). The
     // `= this._connectionToken` default only applies when called with NO arg,
     // so a click would otherwise make `connectionToken` a PointerEvent and the
-    // stale-token guard below (`connectionToken !== this._connectionToken`)
-    // would abort EVERY click — the "Open Pluggy Connect does nothing"
-    // symptom. Coerce a non-numeric arg (the click event) back to the current
-    // token so the guard only aborts genuine mid-open reconnects, not clicks.
-    if (typeof connectionToken !== "number") {
-      connectionToken = this._connectionToken;
-    }
+    // stale-token guard below (`token !== this._connectionToken`) would abort
+    // EVERY click — the "Open Pluggy Connect does nothing" symptom. Coerce a
+    // non-numeric arg (the click event) back to the current token so the guard
+    // only aborts genuine mid-open reconnects, not clicks. Resolve into a local
+    // rather than reassigning the parameter (biome noParameterAssign).
+    const token = typeof connectionToken === "number" ? connectionToken : this._connectionToken;
 
     try {
       await this.waitForPluggy();
-      if (connectionToken !== this._connectionToken) {
+      if (token !== this._connectionToken) {
         return;
       }
 

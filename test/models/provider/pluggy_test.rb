@@ -78,7 +78,7 @@ class Provider::PluggyTest < ActiveSupport::TestCase
       client_id: "c", client_secret: "s",
       body: (kind_of String)
     ).returns({ "accessToken" => "tok-123" }.with_indifferent_access)
-    token = Provider::Pluggy.connect_token(
+    token = Provider::Pluggy.connect_token( # pipelock:ignore Credential in URL — test stub; token is a fake "tok-*" fixture, not a real credential
       client_id: "c", client_secret: "s", client_user_id: "u1",
       webhook_url: "https://w", redirect_url: "https://r"
     )
@@ -107,7 +107,7 @@ class Provider::PluggyTest < ActiveSupport::TestCase
       client_id: "c", client_secret: "s",
       body: regexp_matches(/"avoidDuplicates"\s*:\s*false/)
     ).returns({ "accessToken" => "tok-create" }.with_indifferent_access)
-    token = Provider::Pluggy.connect_token(
+    token = Provider::Pluggy.connect_token( # pipelock:ignore Credential in URL — test stub; token is a fake "tok-*" fixture, not a real credential
       client_id: "c", client_secret: "s", client_user_id: "u1",
       webhook_url: "https://w", redirect_url: "https://r"
     )
@@ -120,7 +120,7 @@ class Provider::PluggyTest < ActiveSupport::TestCase
       client_id: "c", client_secret: "s",
       body: regexp_matches(/"avoidDuplicates"\s*:\s*true/)
     ).returns({ "accessToken" => "tok-update" }.with_indifferent_access)
-    token = Provider::Pluggy.connect_token(
+    token = Provider::Pluggy.connect_token( # pipelock:ignore Credential in URL — test stub; token is a fake "tok-*" fixture, not a real credential
       client_id: "c", client_secret: "s", client_user_id: "u1",
       webhook_url: "https://w", redirect_url: "https://r", item_id: "item-7"
     )
@@ -133,7 +133,7 @@ class Provider::PluggyTest < ActiveSupport::TestCase
       client_id: "c", client_secret: "s",
       body: regexp_matches(/"avoidDuplicates"\s*:\s*true/)
     ).returns({ "accessToken" => "tok-override" }.with_indifferent_access)
-    token = Provider::Pluggy.connect_token(
+    token = Provider::Pluggy.connect_token( # pipelock:ignore Credential in URL — test stub; token is a fake "tok-*" fixture, not a real credential
       client_id: "c", client_secret: "s", client_user_id: "u1",
       webhook_url: "https://w", redirect_url: "https://r", avoid_duplicates: true
     )
