@@ -1,0 +1,24 @@
+<%# locals: (f:) %>
+
+<div class="flex items-end gap-2" data-rate-change-row data-persisted="<%= f.object.persisted? %>">
+  <%= f.date_field :effective_date,
+                   label: t("loans.form.rate_change_effective_date"),
+                   container_class: "flex-1" %>
+
+  <%= f.number_field :rate,
+                     label: t("loans.form.rate_change_rate"),
+                     placeholder: t("loans.form.interest_rate_placeholder"),
+                     min: 0,
+                     step: 0.005,
+                     container_class: "flex-1" %>
+
+  <%= f.hidden_field :_destroy %>
+
+  <div class="pb-1">
+    <%= icon("trash-2",
+             as_button: true,
+             size: "sm",
+             data: { action: "loan--rate-changes#remove" },
+             aria: { label: t("loans.form.remove_rate_change") }) %>
+  </div>
+</div>

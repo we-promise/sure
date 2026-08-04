@@ -79,6 +79,20 @@ class Entry < ApplicationRecord
     SQL
   }
 
+  # Sources written by the app itself rather than by a user, an import, or a
+  # data provider. These entries are derived output: they exist to make a
+  # balance correct, and are re-asserted from scratch on every sync.
+  #
+  # `excluded` alone is not enough to keep them out of the way — it is honored by
+  # IncomeStatement and the account activity tab, but not by the family-wide
+  # transactions page, the rules engine, or CSV export. Anything that presents
+  # entries as the user's own transactions should apply this scope.
+  SYSTEM_GENERATED_SOURCES = %w[loan_interest_accrual].freeze
+
+  scope :excluding_system_generated, -> {
+    where("entries.source IS NULL OR entries.source NOT IN (?)", SYSTEM_GENERATED_SOURCES)
+  }
+
   # Find stale pending transactions (pending for more than X days with no matching posted version)
   scope :stale_pending, ->(days: 8) {
     pending.where("entries.date < ?", days.days.ago.to_date)

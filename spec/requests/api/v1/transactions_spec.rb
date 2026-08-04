@@ -236,6 +236,30 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
+      # rswag collapses same-status responses into the last one, so the
+      # reserved-source example is documented first — this keeps the more general
+      # "missing required fields" case as the 422 that swaggerize emits, while
+      # still exercising the reserved-source branch here.
+      response '422', 'validation error - reserved source' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            transaction: {
+              account_id: account.id,
+              date: Date.current.to_s,
+              amount: 50.00,
+              name: 'Test purchase',
+              nature: 'expense',
+              external_id: 'docs-import-transaction-2',
+              source: 'loan_interest_accrual'
+            }
+          }
+        end
+
+        run_test!
+      end
+
       response '422', 'validation error - missing account_id' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_30_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1267,6 +1267,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
     t.check_constraint "cache_read_tokens IS NULL OR cache_read_tokens >= 0", name: "chk_llm_usages_cache_read_tokens_non_negative"
   end
 
+  create_table "loan_rate_changes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "loan_id", null: false
+    t.date "effective_date", null: false
+    t.decimal "rate", precision: 10, scale: 3, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["loan_id", "effective_date"], name: "index_loan_rate_changes_on_loan_id_and_effective_date", unique: true
+    t.check_constraint "rate >= 0::numeric", name: "loan_rate_changes_rate_non_negative"
+  end
+
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -1276,6 +1286,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
     t.decimal "initial_balance", precision: 19, scale: 4
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.boolean "accrue_interest", default: false, null: false
+    t.integer "interest_accrual_day"
+    t.date "interest_accrual_start_date"
+    t.check_constraint "interest_accrual_day IS NULL OR interest_accrual_day >= 1 AND interest_accrual_day <= 31", name: "loans_interest_accrual_day_check"
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2393,6 +2407,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
   add_foreign_key "kraken_accounts", "kraken_items"
   add_foreign_key "kraken_items", "families"
   add_foreign_key "llm_usages", "families"
+  add_foreign_key "loan_rate_changes", "loans"
   add_foreign_key "lunchflow_accounts", "lunchflow_items"
   add_foreign_key "lunchflow_items", "families"
   add_foreign_key "merchants", "families"
