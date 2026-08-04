@@ -90,6 +90,42 @@ class PluggyItem::SyncerTest < ActiveSupport::TestCase
     assert_equal "good", @pluggy_item.status
   end
 
+  # Regression for the P2 setup-state bug (Codex review): finalize_setup_counts
+  # must run AFTER perform_first_sync_auto_setup. The old order finalized the
+  # setup counts (and the pending_account_setup flag) from the pre-auto-setup
+  # UNLINKED count and never revisited it, so a first sync that auto-linked
+  # everything still advertised "needs setup" (stale true). Now Phase 2
+  # (auto-setup) runs before Phase 2.5 (finalize), so pending_account_setup
+  # reflects the post-auto-setup linked state.
+  test "first sync with auto-setup clears pending_account_setup instead of leaving it stale" do
+    # One unlinked provider account exists on the item before the sync, so
+    # has_completed_initial_setup? is false (auto-setup runs) and the finalize
+    # counts move 1 unlinked → 0.
+    @pluggy_item.pluggy_accounts.create!(
+      pluggy_account_id: "pa-unlinked",
+      name: "Checking", currency: "BRL", account_type: "BANK"
+    )
+
+    PluggyItem.any_instance.stubs(:import_latest_pluggy_data)
+    # After auto-setup links the account, Phase 3/4 run process_accounts +
+    # schedule_account_syncs, which hit the provider — stub so the test stays
+    # offline. collect_transaction_stats is also stubbed for the same reason.
+    PluggyItem.any_instance.stubs(:process_accounts)
+    PluggyItem.any_instance.stubs(:schedule_account_syncs)
+    PluggyItem::Syncer.any_instance.stubs(:collect_transaction_stats)
+
+    sync = @pluggy_item.syncs.create!
+    sync.perform
+
+    @pluggy_item.reload
+    # AutoSetup linked the provider account during the sync; the flag must now
+    # reflect 0 unlinked — not the stale pre-auto-setup count of 1.
+    assert_not @pluggy_item.pending_account_setup,
+               "pending_account_setup should be false after auto-setup linked the account"
+    # And the link actually happened (AutoSetup#create_account_for wired it).
+    assert_equal 1, @pluggy_item.linked_accounts_count
+  end
+
   # Discovery moved off the request path (PluggyItemsController#create) into the
   # sync job: when an item is created with credentials but no upstream id, the
   # Syncer's first act in perform_sync is hydrate_item_id! so the /items lookup

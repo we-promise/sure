@@ -1556,8 +1556,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_25_000000) do
     t.jsonb "raw_transactions_payload"
     t.date "sync_start_date"
     t.datetime "updated_at", null: false
-    t.index ["pluggy_account_id"], name: "index_pluggy_accounts_on_pluggy_account_id", unique: true
+    t.index ["pluggy_account_id"], name: "index_pluggy_accounts_on_pluggy_account_id"
     t.index ["pluggy_item_id"], name: "index_pluggy_accounts_on_pluggy_item_id"
+    t.index ["pluggy_item_id", "pluggy_account_id"], name: "index_pluggy_accounts_on_item_and_account_id", unique: true
   end
 
   create_table "pluggy_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

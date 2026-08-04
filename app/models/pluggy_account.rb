@@ -61,11 +61,22 @@ class PluggyAccount < ApplicationRecord
   # link the parent item, then delegate field mapping to the instance method.
   # Bridges the plan's class-form contract (used by PluggyItem::Importer) with
   # the repo's instance-mapper idiom (cf. Wise/IBKR/Indexa/Questrade/Snaptrade).
+  #
+  # The find is scoped to THIS pluggy_item's accounts. An unscoped
+  # `find_or_initialize_by(pluggy_account_id:)` is global across every PluggyItem
+  # in the DB, so on a reconnect (the same upstream account linked to a second
+  # PluggyItem) it would resolve to the OTHER item's row and the
+  # `account.pluggy_item = pluggy_item` assignment below would silently re-parent
+  # it — stealing another connection's account. Scoping to the association makes
+  # the lookup per-item; the composite-unique index on
+  # [pluggy_item_id, pluggy_account_id] (see the migration) enforces this at the
+  # DB level. The `account.pluggy_item = pluggy_item` write is now always a
+  # no-op for found rows and the setter for initialized ones.
   def self.upsert_from_pluggy!(account_data, pluggy_item:)
     data = new.send(:sdk_object_to_hash, account_data).with_indifferent_access
     account_id = (data[:id] || data[:account_id])&.to_s
 
-    find_or_initialize_by(pluggy_account_id: account_id).tap do |account|
+    pluggy_item.pluggy_accounts.find_or_initialize_by(pluggy_account_id: account_id).tap do |account|
       account.pluggy_item = pluggy_item
       account.upsert_from_pluggy!(account_data)
     end

@@ -26,10 +26,7 @@ class PluggyItem::Syncer
     sync.update!(status_text: I18n.t("pluggy_items.sync.status.importing")) if sync.respond_to?(:status_text)
     pluggy_item.import_latest_pluggy_data(sync: sync)
 
-    # Phase 2: Collect setup statistics
-    finalize_setup_counts(sync)
-
-    # Phase 2.5: First-sync auto-setup — auto-create Accounts (with inferred
+    # Phase 2: First-sync auto-setup — auto-create Accounts (with inferred
     # accountable types) for unlinked PluggyAccounts on the very first successful
     # sync, so the user can skip the manual setup wizard. Guarded by
     # has_completed_initial_setup? so it runs only while nothing is linked yet;
@@ -38,6 +35,11 @@ class PluggyItem::Syncer
     # Phase 3 re-queries linked_pluggy_accounts, so accounts linked here flow into
     # process_accounts / schedule_account_syncs in the same sync cycle.
     perform_first_sync_auto_setup(sync) unless pluggy_item.has_completed_initial_setup?
+
+    # Phase 2.5: Collect setup statistics. Runs AFTER auto-setup so
+    # pending_account_setup reflects accounts auto-linked above; running it before
+    # left the flag stale (true) because AutoSetup#call does not re-finalize it.
+    finalize_setup_counts(sync)
 
     # Phase 3: Process data for linked accounts
     linked_pluggy_accounts = pluggy_item.linked_pluggy_accounts.includes(account_provider: :account)
