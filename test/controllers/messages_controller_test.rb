@@ -46,7 +46,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   # has elapsed. The response must not be 2xx: the watchdog stops retrying a URL
   # once it sees one, so an OK here would leave the bubble spinning forever.
   test "report_timeout declines retryably when the message is still too young" do
-    Setting.stubs(:ai_response_timeout).returns(600)
+    Chat.stubs(:undelivered_response_timeout).returns(10.minutes)
 
     pending = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
 
@@ -65,11 +65,11 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
 
     pending = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
 
-    Setting.stubs(:ai_response_timeout).returns(600)
+    Chat.stubs(:undelivered_response_timeout).returns(10.minutes)
     post report_timeout_chat_message_url(@chat, pending)
     assert_response :conflict
 
-    Setting.stubs(:ai_response_timeout).returns(60)
+    Chat.stubs(:undelivered_response_timeout).returns(1.minute)
     post report_timeout_chat_message_url(@chat, pending)
     assert_response :ok
     assert_not Message.exists?(pending.id)
