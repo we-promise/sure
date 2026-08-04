@@ -45,6 +45,19 @@ class AssistantMessageTest < ActiveSupport::TestCase
 
     assert_not job_copy.append_text!("late response")
     assert_equal "failed", message.reload.status
+    assert_equal "", message.content
+  end
+
+  # Only the first append claims the row, so a streaming response does not pay
+  # for the conditional UPDATE on every chunk.
+  test "append_text! claims the pending row once, then appends in place" do
+    message = AssistantMessage.create!(chat: @chat, content: "", ai_model: "gpt-4.1", status: :pending)
+
+    assert message.append_text!("Hello")
+    assert message.append_text!(" world")
+
+    assert_equal "Hello world", message.reload.content
+    assert message.complete?
   end
 
   test "broadcasts remove after destroy so a failed turn's bubble is cleared" do
