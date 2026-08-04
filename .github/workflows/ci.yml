@@ -83,6 +83,63 @@ jobs:
       - name: Lint/Format js code
         run: npm run lint
 
+  openapi_drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      PLAID_CLIENT_ID: foo
+      PLAID_SECRET: bar
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432 # pipelock:ignore
+      REDIS_URL: redis://localhost:6379
+      RAILS_ENV: test
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y curl libvips postgresql-client libpq-dev
+
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@97ecb7b512899eb71ab1bf2310a624c6f1589ac6 # v1.308.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: DB setup
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Regenerate OpenAPI document
+        run: bundle exec rake rswag:specs:swaggerize
+
+      - name: Fail if docs/api/openapi.yaml is out of date
+        run: |
+          if ! git diff --exit-code -- docs/api/openapi.yaml; then
+            echo "::error file=docs/api/openapi.yaml::openapi.yaml is out of date with spec/requests/api/. Run 'RAILS_ENV=test bundle exec rake rswag:specs:swaggerize' and commit the result."
+            exit 1
+          fi
+
   test_unit:
     runs-on: ubuntu-latest
     timeout-minutes: 10

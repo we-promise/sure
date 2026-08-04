@@ -25,8 +25,7 @@ Mutual exclusivity and configuration guards
 {{/*
 Pipelock 2.x rejects an enabled mcp_tool_policy with no rules; surface this
 at helm template time instead of waiting for the container to crash-loop.
-*/}}
-{{/*
+
 Gate on the effective value, not on key presence: an absent `enabled` key
 defaults to false in pipelock-configmap.yaml, so `$mtp.enabled` alone is the
 same condition the ConfigMap renders.
