@@ -42,6 +42,18 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert @chat.reload.error.present?
   end
 
+  test "report_timeout leaves a pending message alone when the timeout is raised" do
+    Setting.stubs(:ai_response_timeout).returns(600)
+
+    pending = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+
+    post report_timeout_chat_message_url(@chat, pending)
+
+    assert_response :ok
+    assert pending.reload.pending?
+    assert_nil @chat.reload.error
+  end
+
   test "report_timeout cannot touch another user's chat" do
     other_chat = users(:family_member).chats.first
     pending = other_chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending)

@@ -199,4 +199,51 @@ class ChatTest < ActiveSupport::TestCase
       assert_not chat.handle_undelivered_response!(complete)
     end
   end
+
+  test "response_timeout falls back to the default when unconfigured" do
+    Setting.stubs(:ai_response_timeout).returns(nil)
+
+    assert_equal Chat::DEFAULT_RESPONSE_TIMEOUT, Chat.response_timeout
+  end
+
+  test "response_timeout prefers ENV over Setting" do
+    Setting.stubs(:ai_response_timeout).returns(120)
+
+    assert_equal 120.seconds, Chat.response_timeout
+
+    with_env_overrides("AI_RESPONSE_TIMEOUT" => "300") do
+      assert_equal 300.seconds, Chat.response_timeout
+    end
+  end
+
+  test "response_timeout ignores non-positive values and enforces a floor" do
+    Setting.stubs(:ai_response_timeout).returns(0)
+    assert_equal Chat::DEFAULT_RESPONSE_TIMEOUT, Chat.response_timeout
+
+    Setting.stubs(:ai_response_timeout).returns(5)
+    assert_equal Chat::MIN_RESPONSE_TIMEOUT, Chat.response_timeout
+  end
+
+  # The client reports at `response_timeout` and `report_timeout` answers 200
+  # either way, so a server floor at or above the client value would let clock
+  # skew strand a pending bubble that never gets re-reported.
+  test "undelivered_response_timeout stays below the client timeout" do
+    Setting.stubs(:ai_response_timeout).returns(300)
+
+    assert_equal 290.seconds, Chat.undelivered_response_timeout
+    assert Chat.undelivered_response_timeout < Chat.response_timeout
+  end
+
+  test "handle_undelivered_response! respects a raised timeout" do
+    Setting.stubs(:ai_response_timeout).returns(600)
+
+    chat = chats(:two)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+
+    assert_no_difference [ "DebugLogEntry.count", "Message.count" ] do
+      assert_not chat.handle_undelivered_response!(pending)
+    end
+
+    assert pending.reload.pending?
+  end
 end
