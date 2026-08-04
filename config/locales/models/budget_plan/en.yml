@@ -3,8 +3,16 @@ en:
   activerecord:
     errors:
       models:
+        budget:
+          attributes:
+            budget_plan:
+              must_belong_to_family: must belong to the same family
         budget_plan:
           attributes:
             accounts:
               must_belong_to_family: must belong to the same family
           cannot_destroy_default: The default budget can't be deleted
+        budget_plan_account:
+          attributes:
+            account:
+              must_belong_to_family: must belong to the same family

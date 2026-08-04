@@ -27,6 +27,15 @@ class BudgetPlan < ApplicationRecord
     scoped? ? account_ids : nil
   end
 
+  # Account-name payload shared by the assistant budget tools. "all_accounts"
+  # means the plan tracks every account in the family; pass user: to hide
+  # accounts that aren't shared with that member.
+  def scoped_account_names(user: nil)
+    return "all_accounts" unless scoped?
+
+    (user ? accounts.accessible_by(user) : accounts).map(&:name).sort
+  end
+
   private
     def generate_slug
       base = name.to_s.parameterize

@@ -17,6 +17,7 @@ class Budget < ApplicationRecord
   validates :start_date, uniqueness: { scope: :budget_plan_id }
 
   before_validation :ensure_budget_plan, on: :create
+  validate :budget_plan_must_match_family
 
   monetize :budgeted_spending, :expected_income, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
@@ -56,6 +57,10 @@ class Budget < ApplicationRecord
       end
 
       [ plan, param_to_date(match[:month], family: family) ]
+    rescue Date::Error
+      # A well-shaped but impossible month token ("abc-2026") is a bad URL,
+      # not a server error.
+      raise ActiveRecord::RecordNotFound
     end
 
     def budget_date_valid?(date, family:)
@@ -394,6 +399,13 @@ class Budget < ApplicationRecord
   private
     def ensure_budget_plan
       self.budget_plan ||= family&.default_budget_plan
+    end
+
+    def budget_plan_must_match_family
+      return if budget_plan.nil? || family.nil?
+      return if budget_plan.family_id == family_id
+
+      errors.add(:budget_plan, :must_belong_to_family)
     end
 
     def income_statement

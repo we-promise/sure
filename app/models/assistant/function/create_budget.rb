@@ -71,7 +71,7 @@ class Assistant::Function::CreateBudget < Assistant::Function
       success: true,
       name: plan.name,
       slug: plan.slug,
-      accounts: plan.scoped? ? plan.accounts.order(:name).pluck(:name) : "all_accounts",
+      accounts: plan.scoped_account_names(user: user),
       message: "Budget '#{plan.name}' created. Use budget: \"#{plan.slug}\" with get_budget or update_budget to work with it."
     }
   rescue ActiveRecord::RecordInvalid => e
@@ -79,9 +79,10 @@ class Assistant::Function::CreateBudget < Assistant::Function
   end
 
   private
-    # Resolves account references (uuid or exact name) through the family —
-    # raw ids are never trusted. Returns an Array of accounts on success or
-    # an error payload Hash on failure.
+    # Resolves account references (uuid or exact name) through the user's
+    # accessible accounts — raw ids are never trusted, and another member's
+    # private accounts are never linkable. Returns an Array of accounts on
+    # success or an error payload Hash on failure.
     def resolve_accounts(refs)
       return [] if refs.empty?
 
@@ -91,10 +92,10 @@ class Assistant::Function::CreateBudget < Assistant::Function
 
       refs.each do |ref|
         if valid_uuid?(ref)
-          account = family.accounts.visible.find_by(id: ref)
+          account = user.accessible_accounts.visible.find_by(id: ref)
           account ? accounts << account : unknown << ref
         else
-          matches = family.accounts.visible.where(name: ref).to_a
+          matches = user.accessible_accounts.visible.where(name: ref).to_a
           case matches.size
           when 0 then unknown << ref
           when 1 then accounts << matches.first

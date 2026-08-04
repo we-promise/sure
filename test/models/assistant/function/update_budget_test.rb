@@ -23,6 +23,7 @@ class Assistant::Function::UpdateBudgetTest < ActiveSupport::TestCase
   test "params_schema declares month totals and categories as optional" do
     schema = @function.params_schema
     assert schema[:properties].key?(:month)
+    assert schema[:properties].key?(:budget)
     assert schema[:properties].key?(:budgeted_spending)
     assert schema[:properties].key?(:expected_income)
     assert schema[:properties].key?(:categories)

@@ -72,23 +72,30 @@ module Api
           params.require(:budget_plan).permit(:name, account_ids: [])
         end
 
+        def accessible_account_ids
+          @accessible_account_ids ||= current_resource_owner.accessible_accounts.pluck(:id).to_set
+        end
+
         # Replaces the plan's scoped accounts when the account_ids key is
         # present ([] clears the scope back to all-accounts); leaves the
         # scope untouched when the key is omitted. Ids are re-scoped through
-        # the family; unknown ids are a 422, not silently dropped.
+        # the resource owner's accessible accounts; unknown or inaccessible
+        # ids are a 422, not silently dropped. Links to accounts the owner
+        # can't see are preserved — their absence from the submitted set is
+        # not an intentional removal (mirrors the web controller's sync).
         def assign_accounts(plan)
           return true unless budget_plan_params.key?(:account_ids)
 
           ids = Array(budget_plan_params[:account_ids]).reject(&:blank?).uniq
-          accounts = family.accounts.where(id: ids)
-          missing = ids - accounts.pluck(:id)
+          missing = ids.reject { |id| accessible_account_ids.include?(id) }
 
           if missing.any?
             render json: { error: "Unknown account ids: #{missing.join(', ')}" }, status: :unprocessable_entity
             return false
           end
 
-          plan.account_ids = accounts.map(&:id)
+          preserved = plan.account_ids.reject { |id| accessible_account_ids.include?(id) }
+          plan.account_ids = preserved + ids
           true
         end
 
@@ -98,8 +105,9 @@ module Api
             name: plan.name,
             slug: plan.slug,
             is_default: plan.is_default,
-            # [] means the plan tracks all of the family's accounts.
-            account_ids: plan.budget_plan_accounts.map(&:account_id),
+            # [] means the plan tracks all of the family's accounts. Only
+            # accounts visible to the API key's owner are listed.
+            account_ids: plan.budget_plan_accounts.map(&:account_id).select { |id| accessible_account_ids.include?(id) },
             created_at: plan.created_at,
             updated_at: plan.updated_at
           }

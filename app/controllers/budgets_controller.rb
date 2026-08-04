@@ -44,7 +44,7 @@ class BudgetsController < ApplicationController
 
     render partial: "budgets/picker", locals: {
       family: Current.family,
-      year: params[:year].to_i || Date.current.year,
+      year: params[:year].to_i.nonzero? || Date.current.year,
       plan: plan
     }
   end

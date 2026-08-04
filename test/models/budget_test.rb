@@ -603,6 +603,32 @@ class BudgetTest < ActiveSupport::TestCase
     end
   end
 
+  test "resolve_param raises RecordNotFound for well-shaped but impossible month tokens" do
+    plan = @family.budget_plans.create!(name: "Real")
+
+    assert_raises ActiveRecord::RecordNotFound do
+      Budget.resolve_param("abc-2026", family: @family)
+    end
+
+    assert_raises ActiveRecord::RecordNotFound do
+      Budget.resolve_param("real-abc-2026", family: @family)
+    end
+  end
+
+  test "rejects direct creation against another family's plan" do
+    foreign_plan = budget_plans(:dylan_default)
+
+    budget = @family.budgets.build(
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month,
+      currency: "USD",
+      budget_plan: foreign_plan
+    )
+
+    assert_not budget.valid?
+    assert budget.errors[:budget_plan].any?
+  end
+
   test "previous and next budget params carry the plan slug" do
     plan = @family.budget_plans.create!(name: "Test")
     budget = Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan)

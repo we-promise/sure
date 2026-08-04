@@ -1,11 +1,11 @@
 <%# locals: (budget:) %>
 
-<% plans = Current.family.budget_plans.default_first %>
+<% plans = budget_plan_switcher_plans %>
 
 <%= render DS::Menu.new(variant: :button, placement: "bottom-start") do |menu| %>
   <% menu.with_button(
        type: "button",
-       class: "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0",
+       class: "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover",
        aria: { label: t(".aria_label", plan: budget.budget_plan.name) }
      ) do %>
     <span class="whitespace-nowrap"><%= budget.budget_plan.name %></span>

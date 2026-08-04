@@ -24,7 +24,7 @@
     <div class="bg-container-inset rounded-lg p-1">
       <% grouped = selectable_accounts.group_by(&:accountable_type) %>
       <% grouped.each_with_index do |(type, accounts), group_idx| %>
-        <div class="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-secondary"><%= type.titleize %></div>
+        <div class="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-secondary"><%= Accountable.from_type(type)&.display_name || type.titleize %></div>
         <div class="bg-container rounded-md <%= "mb-1" if group_idx < grouped.size - 1 %>">
           <% accounts.each_with_index do |account, idx| %>
             <label class="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover cursor-pointer <%= "border-t border-subdued" if idx > 0 %>">

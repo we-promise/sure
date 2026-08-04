@@ -115,7 +115,7 @@
         <%= render DS::Link.new(
           text: plan.name,
           variant: "ghost",
-          href: budget_path(Budget.param_for(plan, Date.current)),
+          href: budget_path(Budget.param_for(plan, budget.start_date)),
           icon: "chevron-right",
           icon_position: :right,
           full_width: true

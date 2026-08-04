@@ -42,7 +42,9 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
     get budget_url("#{plan.slug}-#{Budget.date_to_param(Date.current)}")
 
     assert_response :success
-    assert_match plan.name, response.body
+    # The switcher marks only the resolved plan as the active menu selection,
+    # so a default-plan fallback can't satisfy this.
+    assert_select "[aria-checked='true']", text: /#{Regexp.escape(plan.name)}/
   end
 
   test "show 404s for an unknown plan slug" do

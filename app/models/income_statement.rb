@@ -135,6 +135,9 @@ class IncomeStatement
       tax_advantaged_ids = family.tax_advantaged_account_ids
       scope = scope.where.not(id: tax_advantaged_ids) if tax_advantaged_ids.present?
       scope = scope.merge(Account.included_in_finances_for(user)) if user
+      # Keep the offered accounts consistent with the totals: an explicit
+      # scope (e.g. a budget plan's linked accounts) excludes everything else.
+      scope = scope.where(id: @scoped_account_ids) if @scoped_account_ids
       scope
     end
   end

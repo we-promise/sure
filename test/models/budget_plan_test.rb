@@ -113,4 +113,19 @@ class BudgetPlanTest < ActiveSupport::TestCase
     assert_equal plan, family.default_budget_plan
     assert_equal 1, family.budget_plans.count
   end
+  test "budget plan account rejects direct creation with another family's account" do
+    foreign_account = Account.create!(
+      family: families(:empty),
+      accountable: Depository.new,
+      name: "Foreign",
+      status: "active",
+      currency: "USD",
+      balance: 0
+    )
+
+    budget_plan_account = BudgetPlanAccount.new(budget_plan: budget_plans(:dylan_default), account: foreign_account)
+
+    assert_not budget_plan_account.valid?
+    assert budget_plan_account.errors[:account].any?
+  end
 end

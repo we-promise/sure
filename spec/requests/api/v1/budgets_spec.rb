@@ -27,7 +27,7 @@ RSpec.describe 'API V1 Budgets', type: :request do
       name: 'API Docs Key',
       key: key,
       display_key: key,
-      scopes: %w[read],
+      scopes: %w[read_write],
       source: 'web'
     )
   end

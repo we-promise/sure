@@ -90,4 +90,20 @@ class Assistant::Function::CreateBudgetTest < ActiveSupport::TestCase
     assert result[:success]
     assert_equal "dup-2", result[:slug]
   end
+  test "cannot scope a budget to an account that isn't shared with the caller" do
+    private_account = users(:family_admin).family.accounts.create!(
+      accountable: Depository.new,
+      name: "Admin Private",
+      status: "active",
+      currency: "USD",
+      balance: 0,
+      owner: users(:family_admin)
+    )
+    function = Assistant::Function::CreateBudget.new(users(:family_member))
+
+    result = function.call("name" => "Sneaky", "accounts" => [ private_account.name ])
+
+    assert_equal false, result[:success]
+    assert_equal "unknown_accounts", result[:error]
+  end
 end

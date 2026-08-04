@@ -1015,6 +1015,18 @@ class Family::DataImporter
       end
     end
 
+    # The first legacy budget implicitly creates the family default plan,
+    # which must show up in the summary (and the import readback) like any
+    # other created plan.
+    def fallback_budget_plan_id
+      @fallback_budget_plan_id ||= begin
+        existed = @family.budget_plans.exists?(is_default: true)
+        plan = @family.default_budget_plan
+        increment_summary("BudgetPlan", :created) unless existed
+        plan.id
+      end
+    end
+
     def import_budgets(records)
       records.each do |record|
         data = record["data"]
@@ -1033,7 +1045,7 @@ class Family::DataImporter
         end
 
         budget.assign_attributes(
-          budget_plan_id: budget_plan_id || @family.default_budget_plan.id,
+          budget_plan_id: budget_plan_id || fallback_budget_plan_id,
           start_date: Date.parse(data["start_date"].to_s),
           end_date: Date.parse(data["end_date"].to_s),
           budgeted_spending: data["budgeted_spending"]&.to_d,

@@ -151,7 +151,7 @@ class SureImport < Import
       update!(summary: result[:summary]) if has_attribute?(:summary)
     end
 
-    record_readback_verification!(before_counts:)
+    record_readback_verification!(before_counts:, import_summary: result[:summary])
     result
   rescue => error
     record_failed_readback_verification!(before_counts:, error:)
@@ -273,9 +273,9 @@ class SureImport < Import
       )
     end
 
-    def record_readback_verification!(before_counts:)
+    def record_readback_verification!(before_counts:, import_summary: nil)
       update_columns(
-        readback_verification: build_readback_verification(before_counts:, status_for_mismatch: "mismatch"),
+        readback_verification: build_readback_verification(before_counts:, status_for_mismatch: "mismatch", import_summary:),
         updated_at: Time.current
       )
     end
@@ -294,12 +294,21 @@ class SureImport < Import
       Rails.logger.warn("Failed to record Sure import readback verification for import #{id}: #{verification_error.message}")
     end
 
-    def build_readback_verification(before_counts:, status_for_mismatch:)
+    def build_readback_verification(before_counts:, status_for_mismatch:, import_summary: nil)
       after_counts = readback_count_snapshot
       actual_delta_counts = delta_counts(before_counts, after_counts)
       expected_counts = normalized_expected_record_counts
       checked_counts = (actual_delta_counts.keys | expected_counts.keys).index_with do |key|
         expected_counts.fetch(key, 0).to_i
+      end
+
+      # Budget-plan NDJSON lines legitimately diverge from the DB delta: an
+      # imported default plan remaps onto the family's existing default, and
+      # a legacy budget-only export creates one implicitly. The importer's
+      # created-count is the true expected delta for this type — comparing
+      # it to the observed delta still catches lost writes.
+      if import_summary && (plan_summary = import_summary.deep_stringify_keys["budget_plans"])
+        checked_counts["budget_plans"] = plan_summary.fetch("created", 0).to_i
       end
       mismatches = checked_counts.each_with_object({}) do |(key, expected_count), result|
         actual_count = actual_delta_counts.fetch(key, 0)

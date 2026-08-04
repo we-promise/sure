@@ -21,12 +21,12 @@ class Assistant::Function::ListBudgets < Assistant::Function
 
   def call(params = {})
     {
-      budgets: family.budget_plans.default_first.includes(:accounts).map do |plan|
+      budgets: family.budget_plans.default_first.map do |plan|
         {
           name: plan.name,
           slug: plan.slug,
           is_default: plan.is_default,
-          accounts: plan.scoped? ? plan.accounts.order(:name).pluck(:name) : "all_accounts",
+          accounts: plan.scoped_account_names(user: user),
           initialized_months: plan.budgets.where.not(budgeted_spending: nil).count
         }
       end

@@ -29,4 +29,21 @@ class Assistant::Function::ListBudgetsTest < ActiveSupport::TestCase
     assert_equal [ accounts(:depository).name ], personal[:accounts]
     assert_equal 1, personal[:initialized_months]
   end
+  test "hides linked accounts that aren't shared with the caller" do
+    private_account = @family.accounts.create!(
+      accountable: Depository.new,
+      name: "Admin Private",
+      status: "active",
+      currency: "USD",
+      balance: 0,
+      owner: users(:family_admin)
+    )
+    plan = budget_plans(:dylan_personal)
+    plan.budget_plan_accounts.create!(account: private_account)
+
+    result = Assistant::Function::ListBudgets.new(users(:family_member)).call({})
+    personal = result[:budgets].find { |b| b[:slug] == plan.slug }
+
+    assert_equal [], personal[:accounts]
+  end
 end

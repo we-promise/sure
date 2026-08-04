@@ -7,22 +7,22 @@ class Api::V1::BudgetPlansControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
     @family = @user.family
 
-    @oauth_app = Doorkeeper::Application.create!(
-      name: "Test App",
-      redirect_uri: "https://example.com/callback",
-      scopes: "read read_write"
+    @user.api_keys.active.destroy_all
+
+    @read_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read Key",
+      scopes: [ "read" ],
+      source: "web",
+      display_key: "test_read_#{SecureRandom.hex(8)}"
     )
 
-    @read_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read"
-    )
-
-    @read_write_token = Doorkeeper::AccessToken.create!(
-      application: @oauth_app,
-      resource_owner_id: @user.id,
-      scopes: "read_write"
+    @read_write_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_rw_#{SecureRandom.hex(8)}"
     )
   end
 
@@ -159,10 +159,10 @@ class Api::V1::BudgetPlansControllerTest < ActionDispatch::IntegrationTest
   private
 
     def read_headers
-      { "Authorization" => "Bearer #{@read_token.token}" }
+      { "X-Api-Key" => @read_key.plain_key }
     end
 
     def read_write_headers
-      { "Authorization" => "Bearer #{@read_write_token.token}" }
+      { "X-Api-Key" => @read_write_key.plain_key }
     end
 end

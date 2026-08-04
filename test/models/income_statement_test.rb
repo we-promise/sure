@@ -787,4 +787,10 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal unscoped.totals(date_range: Period.last_30_days.date_range),
                  scoped.totals(date_range: Period.last_30_days.date_range)
   end
+  test "eligible_accounts honors an explicit account scope" do
+    scoped = IncomeStatement.new(@family, account_ids: [ @checking_account.id ])
+
+    assert_equal [ @checking_account.id ], scoped.eligible_accounts.pluck(:id)
+    assert_includes IncomeStatement.new(@family).eligible_accounts.pluck(:id), @credit_card_account.id
+  end
 end

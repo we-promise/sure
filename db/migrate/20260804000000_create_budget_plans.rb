@@ -50,10 +50,8 @@ class CreateBudgetPlans < ActiveRecord::Migration[7.2]
   end
 
   def down
-    add_index :budgets, [ :family_id, :start_date, :end_date ], unique: true,
-              name: "index_budgets_on_family_id_and_start_date_and_end_date"
-    remove_column :budgets, :budget_plan_id
-    drop_table :budget_plan_accounts
-    drop_table :budget_plans
+    # Sibling plans can hold budgets for the same family and period, which the
+    # former (family_id, start_date, end_date) unique index cannot represent.
+    raise ActiveRecord::IrreversibleMigration
   end
 end

@@ -501,6 +501,14 @@ class Account < ApplicationRecord
     end
   end
 
+  # Budget plans whose scope is exactly this account. Deleting the account
+  # would empty their account list, silently flipping them from "track one
+  # account" to "track every account" (see BudgetPlan#scoped?).
+  def solely_scoped_budget_plans
+    BudgetPlan.where(id: budget_plan_accounts.select(:budget_plan_id))
+      .where.not(id: BudgetPlanAccount.where.not(account_id: id).select(:budget_plan_id))
+  end
+
   def destroy_later
     transaction do
       mark_for_deletion!
