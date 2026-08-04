@@ -204,6 +204,16 @@
                                   </div>
                                 </div>
 
+                                <% if user.has_local_password? %>
+                                  <div>
+                                    <%= form.label :password, t(".table.set_password"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                    <%= form.password_field :password,
+                                        placeholder: t(".table.password_placeholder"),
+                                        autocomplete: "new-password",
+                                        class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1.5" %>
+                                  </div>
+                                <% end %>
+
                                 <% if user.id == Current.user.id %>
                                   <div class="bg-warning/10 border border-warning/20 rounded-lg p-2.5 text-xs text-warning whitespace-normal break-words leading-normal">
                                     <p class="font-medium"><%= t(".actions.self_edit_warning") %></p>

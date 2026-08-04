@@ -38,6 +38,8 @@ en:
           new_family_name: "New family/group name"
           new_family_name_placeholder: "Enter a name to create a new family/group"
           new_family_moniker: "New family/group type"
+          set_password: "Set new password"
+          password_placeholder: "Leave blank to keep current"
           actions: "Actions"
         family_monikers:
           family: "Family"
@@ -78,9 +80,17 @@ en:
           delete_confirm: "Are you sure you want to delete this unused family/group? This action cannot be undone."
           empty: "No unused families/groups found."
       update:
-        success: "User updated successfully."
+        success_role: "User role updated successfully."
+        success_password: "User password updated successfully."
+        success_role_and_password: "User role and password updated successfully."
+        success_family: "User family/group membership updated successfully."
         failure: "Failed to update user details (role or family/group membership)."
         family_required: "Select an existing family/group or enter a name for a new one."
+        password_and_family_conflict: "Password and family/group membership cannot be updated at the same time."
+        password_too_short: "Password must be at least 8 characters long."
+        password_missing_case: "Password must include both uppercase and lowercase letters."
+        password_missing_number: "Password must include at least one number."
+        password_missing_special: "Password must include at least one special character."
         last_super_admin_error: "Cannot demote the last super admin in the system."
       destroy:
         destroy_success: "User deleted successfully."
