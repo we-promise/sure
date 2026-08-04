@@ -61,6 +61,24 @@ module Assistant
       classes
     end
 
+    def mcp_function_classes(user = nil)
+      function_classes(user) + [
+        Function::GetTransfers,
+        Function::GetGoals,
+        Function::CreateAccount,
+        Function::UpdateAccount,
+        Function::DeleteAccount,
+        Function::DeleteTransaction,
+        Function::CreateTransfer,
+        Function::UpdateTransfer,
+        Function::DeleteTransfer,
+        Function::UpdateGoal,
+        Function::DeleteGoal,
+        Function::DeleteTag,
+        Function::DeleteCategory
+      ]
+    end
+
     private
 
       def implementation_for(chat)

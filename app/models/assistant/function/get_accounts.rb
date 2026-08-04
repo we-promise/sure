@@ -12,9 +12,14 @@ class Assistant::Function::GetAccounts < Assistant::Function
   def call(params = {})
     {
       as_of_date: Date.current,
-      accounts: user.accessible_accounts.includes(:balances, :account_providers).map do |account|
+      accounts: user.accessible_accounts.visible.includes(:balances, :account_providers).map do |account|
+        permission = account.permission_for(user)
+
         {
+          id: account.id,
           name: account.name,
+          permission: permission.to_s,
+          writable: permission.in?([ :owner, :full_control ]),
           balance: account.balance,
           currency: account.currency,
           balance_formatted: account.balance_money.format,

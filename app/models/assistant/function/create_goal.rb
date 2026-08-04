@@ -17,11 +17,10 @@ class Assistant::Function::CreateGoal < Assistant::Function
         of their accounts will fund it. Only call once they've confirmed.
 
         Constraints:
-        - The goal must link to at least one of the user's Depository
-          accounts (checking, savings, HSA, CD, money-market).
+        - The goal must link to at least one accessible Depository or Investment
+          account. Prefer linked_account_ids from get_accounts.
         - All linked accounts must share the same currency.
-        - Use account names exactly as listed in the user's Depository
-          accounts.
+        - linked_account_names remains available for backwards compatibility.
 
         On success returns the new goal's URL so you can point the user to
         it. On a soft failure (e.g. account name doesn't match), the
@@ -36,7 +35,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
 
   def params_schema
     build_schema(
-      required: %w[name target_amount linked_account_names],
+      required: %w[name target_amount],
       properties: {
         name: {
           type: "string",
@@ -55,6 +54,11 @@ class Assistant::Function::CreateGoal < Assistant::Function
           items: { type: "string" },
           description: "Names of the user's Depository accounts to link. Must contain at least one. Use names exactly as they appear in the available accounts list. The goal's balance is the balance of these accounts."
         },
+        linked_account_ids: {
+          type: "array",
+          items: { type: "string" },
+          description: "Preferred full list of accessible Depository or Investment account ids from get_accounts."
+        },
         notes: {
           type: "string",
           description: "Optional freeform notes."
@@ -67,6 +71,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
     name = params["name"].to_s.strip
     target_amount = parse_decimal(params["target_amount"])
     target_date = parse_date(params["target_date"])
+    linked_account_ids = Array(params["linked_account_ids"]).map(&:to_s).reject(&:blank?).uniq
     linked_account_names = Array(params["linked_account_names"]).map { |n| n.to_s.strip }.reject(&:blank?)
     notes = params["notes"].to_s.strip
 
@@ -74,7 +79,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
 
     return error("target_amount_invalid", "Target amount must be greater than zero.") unless target_amount && target_amount > 0
 
-    if linked_account_names.empty?
+    if linked_account_ids.empty? && linked_account_names.empty?
       return error(
         "no_linked_accounts",
         "Please specify at least one Depository account to link to this goal.",
@@ -82,32 +87,28 @@ class Assistant::Function::CreateGoal < Assistant::Function
       )
     end
 
-    available = family.accounts.where(accountable_type: "Depository").visible.where(name: linked_account_names)
-    missing = linked_account_names - available.pluck(:name).uniq
-    if missing.any?
-      return error(
-        "unknown_accounts",
-        "Some account names didn't match the user's Depository accounts.",
-        unknown_names: missing,
-        available_accounts: depository_account_payload
-      )
-    end
+    accessible = user.accessible_accounts.where(accountable_type: Goal::FUNDABLE_ACCOUNT_TYPES).visible
+    if linked_account_ids.any?
+      matched_by_id = accessible.where(id: linked_account_ids).index_by { |account| account.id.to_s }
+      missing_ids = linked_account_ids - matched_by_id.keys
+      return error("unknown_accounts", "Some account ids are unavailable.", unknown_ids: missing_ids, available_accounts: depository_account_payload) if missing_ids.any?
 
-    # Multiple accounts can share a name. Block silent over-linking by
-    # surfacing the ambiguity so the assistant re-asks with disambiguated
-    # input rather than attaching every same-named account to the goal.
-    grouped = available.group_by(&:name)
-    ambiguous_names = grouped.select { |_, accts| accts.size > 1 }.keys
-    if ambiguous_names.any?
-      return error(
-        "ambiguous_accounts",
-        "Multiple accounts share a name. Ask the user which one to use.",
-        ambiguous_names: ambiguous_names,
-        available_accounts: depository_account_payload
-      )
-    end
+      matched = linked_account_ids.map { |id| matched_by_id.fetch(id) }
+    else
+      available = accessible.where(name: linked_account_names)
+      missing = linked_account_names - available.pluck(:name).uniq
+      if missing.any?
+        return error("unknown_accounts", "Some account names didn't match the user's accounts.", unknown_names: missing, available_accounts: depository_account_payload)
+      end
 
-    matched = linked_account_names.map { |name| grouped[name].first }
+      grouped = available.group_by(&:name)
+      ambiguous_names = grouped.select { |_, accounts| accounts.size > 1 }.keys
+      if ambiguous_names.any?
+        return error("ambiguous_accounts", "Multiple accounts share a name. Use account ids instead.", ambiguous_names: ambiguous_names, available_accounts: depository_account_payload)
+      end
+
+      matched = linked_account_names.map { |account_name| grouped.fetch(account_name).first }
+    end
 
     currencies = matched.map(&:currency).uniq
     if currencies.size > 1
@@ -140,6 +141,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
       target_date: goal.target_date&.iso8601,
       url: absolute_url_for(goal),
       linked_account_names: matched.map(&:name),
+      linked_account_ids: matched.map(&:id),
       message: "Created goal '#{goal.name}' (target #{goal.target_amount_money.format}). View it at #{absolute_url_for(goal)}."
     }
   rescue ActiveRecord::RecordInvalid => e
@@ -175,7 +177,9 @@ class Assistant::Function::CreateGoal < Assistant::Function
     end
 
     def depository_account_payload
-      family.accounts.where(accountable_type: "Depository").visible.pluck(:name, :currency).map { |n, c| { name: n, currency: c } }
+      user.accessible_accounts.where(accountable_type: Goal::FUNDABLE_ACCOUNT_TYPES).visible.pluck(:id, :name, :currency).map do |id, name, currency|
+        { id: id, name: name, currency: currency }
+      end
     end
 
     def error(key, message, extras = {})

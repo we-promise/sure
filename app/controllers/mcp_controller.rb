@@ -70,7 +70,7 @@ class McpController < ApplicationController
     end
 
     def handle_tools_list
-      tools = Assistant.function_classes(mcp_user).map do |fn_class|
+      tools = Assistant.mcp_function_classes(mcp_user).map do |fn_class|
         fn_instance = fn_class.new(mcp_user)
         {
           name: fn_instance.name,
@@ -89,7 +89,7 @@ class McpController < ApplicationController
       # Scoped to the authenticated user so a tool hidden from tools/list is not
       # callable by guessing its name — a non-preview caller gets the same
       # "Unknown tool" response as for a name that does not exist.
-      fn_class = Assistant.function_classes(mcp_user).find { |fc| fc.name == name }
+      fn_class = Assistant.mcp_function_classes(mcp_user).find { |fc| fc.name == name }
 
       unless fn_class
         render_jsonrpc_error(request_id, -32602, "Unknown tool: #{name}")

@@ -7,6 +7,25 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     @function = Assistant::Function::UpdateTransaction.new(@user)
   end
 
+  test "updates amount date and nature on a standard transaction" do
+    target_date = Date.current - 7.days
+
+    result = @function.call(
+      "id" => @transaction.id,
+      "amount" => 42.5,
+      "date" => target_date.iso8601,
+      "nature" => "income"
+    )
+
+    assert_equal true, result[:success]
+
+    entry = @transaction.reload.entry
+    assert_equal(-42.5, entry.amount)
+    assert_equal target_date, entry.date
+    assert_equal "income", result.dig(:transaction, :nature)
+    assert_equal 42.5, result.dig(:transaction, :amount)
+  end
+
   test "updates category notes and tags" do
     category = categories(:subcategory)
     tag = tags(:one)

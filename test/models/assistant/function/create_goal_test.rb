@@ -15,7 +15,8 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
     assert_equal "object", definition[:params_schema][:type]
     assert_includes definition[:params_schema][:required], "name"
     assert_includes definition[:params_schema][:required], "target_amount"
-    assert_includes definition[:params_schema][:required], "linked_account_names"
+    assert definition[:params_schema][:properties].key?(:linked_account_ids)
+    assert definition[:params_schema][:properties].key?(:linked_account_names)
   end
 
   test "creates a goal with linked accounts" do

@@ -91,6 +91,7 @@ class Assistant::Function::GetBudget < Assistant::Function
         family.budgets.find_by(start_date: budget_start, end_date: budget_end)
       end
       return nil unless budget
+      budget.current_user = user
 
       groups = BudgetCategory::Group.for(budget.budget_categories)
 
@@ -134,6 +135,7 @@ class Assistant::Function::GetBudget < Assistant::Function
 
     def serialize_category(bc, include_daily_suggestion:)
       payload = {
+        category_id: bc.category_id,
         name: bc.name,
         budgeted: format_money(bc.display_budgeted_spending),
         actual: format_money(bc.actual_spending),
