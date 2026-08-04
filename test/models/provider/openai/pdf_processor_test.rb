@@ -12,7 +12,8 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       client,
       model: "gpt-4.1",
       pdf_content: "fake-pdf",
-      family: @family
+      family: @family,
+      max_response_tokens: 4096
     )
 
     processor.stubs(:extract_text_from_pdf).returns("Statement text")
@@ -89,7 +90,8 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       stub("openai_client"),
       model: "gpt-4.1",
       pdf_content: "fake-pdf",
-      family: @family
+      family: @family,
+      max_response_tokens: 4096
     )
 
     old_date = 20.days.ago.to_date
