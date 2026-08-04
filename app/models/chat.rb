@@ -143,11 +143,11 @@ class Chat < ApplicationRecord
   # normal cloud-model latency and kill healthy responses.
   MIN_RESPONSE_TIMEOUT = 30.seconds
 
-  # How far *below* the client timeout the server's own floor sits. The client
-  # reports at `response_timeout`; the server must already consider the message
-  # old enough by then, or clock skew and request latency would make it refuse a
-  # legitimate report — and since `report_timeout` answers 200 either way, the
-  # client would mark it reported and never retry, stranding the bubble forever.
+  # How far *below* the client timeout the server's own floor sits, so a client
+  # whose clock runs modestly ahead is not refused on its first report. This is
+  # only an optimisation to keep retries rare: correctness for arbitrary skew
+  # comes from `MessagesController#report_timeout` answering non-OK when it
+  # declines, which leaves the watchdog free to try again on its next tick.
   SERVER_TIMEOUT_GRACE = 10.seconds
 
   class << self
