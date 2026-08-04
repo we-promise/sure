@@ -56,7 +56,10 @@ export default class extends Controller {
     if (items.length === 0) return;
 
     this.clearHighlights();
-    this.highlightedIndex = Math.min(this.highlightedIndex + 1, items.length - 1);
+    this.highlightedIndex = Math.min(
+      this.highlightedIndex + 1,
+      items.length - 1,
+    );
     this.highlightItem(items[this.highlightedIndex]);
     this.updateAriaActiveDescendant();
   }
@@ -86,7 +89,8 @@ export default class extends Controller {
 
   selectHighlighted() {
     const items = this.visibleItems;
-    if (this.highlightedIndex < 0 || this.highlightedIndex >= items.length) return;
+    if (this.highlightedIndex < 0 || this.highlightedIndex >= items.length)
+      return;
 
     const item = items[this.highlightedIndex];
     const form = item.querySelector("form");
@@ -106,8 +110,8 @@ export default class extends Controller {
   }
 
   get visibleItems() {
-    return Array.from(this.listTarget.querySelectorAll(".filterable-item")).filter(
-      (item) => item.style.display !== "none"
-    );
+    return Array.from(
+      this.listTarget.querySelectorAll(".filterable-item"),
+    ).filter((item) => item.style.display !== "none");
   }
 }

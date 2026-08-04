@@ -627,6 +627,21 @@ class UserTest < ActiveSupport::TestCase
     assert_nil @user.default_account_for_transactions
   end
 
+  test "transfer_to_family! clears a shared default account" do
+    user = users(:family_member)
+    user.update!(role: "admin", default_account: accounts(:depository))
+
+    new_family = Family.create!(name: "Transferred Family")
+
+    user.transfer_to_family!(new_family, role: "admin")
+
+    user.reload
+
+    assert_equal new_family, user.family
+    assert_nil user.default_account_id
+    assert_nil user.default_account_for_transactions
+  end
+
   # SSO-only user security tests
   test "sso_only? returns true for user with OIDC identity and no password" do
     sso_user = users(:sso_only)
@@ -755,5 +770,25 @@ class UserTest < ActiveSupport::TestCase
 
     assert_not Family.exists?(family.id)
     assert_not ActiveStorage::Attachment.exists?(export_attachment_id)
+  end
+
+  test "cannot demote the last super admin in the system" do
+    User.where(role: :super_admin).update_all(role: :member)
+    solo_super_admin = users(:sure_support_staff)
+    solo_super_admin.update!(role: :super_admin)
+
+    solo_super_admin.role = :member
+    assert_not solo_super_admin.valid?
+    assert_includes solo_super_admin.errors[:role], "Cannot demote the last super admin in the system."
+  end
+
+  test "can demote super admin if another super admin exists" do
+    admin1 = users(:family_admin)
+    admin1.update!(role: :super_admin)
+
+    admin2 = users(:sure_support_staff)
+    admin2.update!(role: :super_admin)
+
+    assert admin1.update(role: :member)
   end
 end

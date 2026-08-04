@@ -106,7 +106,8 @@ export default class extends Controller {
   #showAmountTypeInflowValueTargets() {
     // Called when amount_type_identifier_value changes
     // Updates the displayed identifier value in the UI text and shows/hides the inflow value dropdown
-    const identifierValueSelect = this.amountTypeValueTarget.querySelector("select");
+    const identifierValueSelect =
+      this.amountTypeValueTarget.querySelector("select");
     const selectedValue = identifierValueSelect.value;
 
     if (!selectedValue) {
@@ -120,7 +121,8 @@ export default class extends Controller {
     this.amountTypeInflowValueTarget.classList.add("flex");
 
     // Update the displayed identifier value in the text
-    const identifierSpan = this.amountTypeInflowValueTarget.querySelector("span.font-medium");
+    const identifierSpan =
+      this.amountTypeInflowValueTarget.querySelector("span.font-medium");
     if (identifierSpan) {
       identifierSpan.textContent = selectedValue;
     }

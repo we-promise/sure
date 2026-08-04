@@ -62,13 +62,13 @@ export default class extends Controller {
     conditions.forEach((condition) => {
       // Only process visible conditions, this prevents conditions that are marked for removal and hidden
       // from being added to the index. This is important when editing a rule.
-      if (!condition.classList.contains('hidden')) {
-        const prefixEl = condition.querySelector('[data-condition-prefix]');
+      if (!condition.classList.contains("hidden")) {
+        const prefixEl = condition.querySelector("[data-condition-prefix]");
         if (prefixEl) {
           if (conditionIndex === 0) {
-            prefixEl.classList.add('hidden');
+            prefixEl.classList.add("hidden");
           } else {
-            prefixEl.classList.remove('hidden');
+            prefixEl.classList.remove("hidden");
           }
           conditionIndex++;
         }

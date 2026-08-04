@@ -1,21 +1,21 @@
-import { Controller } from "@hotwired/stimulus"
+import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["input"]
+  static targets = ["input"];
 
   onSelect(event) {
-    this.inputTarget.value = event.detail.value
+    this.inputTarget.value = event.detail.value;
 
-    const inputEvent = new Event("input", { bubbles: true })
-    this.inputTarget.dispatchEvent(inputEvent)
+    const inputEvent = new Event("input", { bubbles: true });
+    this.inputTarget.dispatchEvent(inputEvent);
 
-    const changeEvent = new Event("change", { bubbles: true })
-    this.inputTarget.dispatchEvent(changeEvent)
+    const changeEvent = new Event("change", { bubbles: true });
+    this.inputTarget.dispatchEvent(changeEvent);
 
-    const form = this.element.closest("form")
-    const controllers = (form?.dataset.controller || "").split(/\s+/)
+    const form = this.element.closest("form");
+    const controllers = (form?.dataset.controller || "").split(/\s+/);
     if (form && controllers.includes("auto-submit-form")) {
-      form.requestSubmit()
+      form.requestSubmit();
     }
   }
 }

@@ -112,7 +112,8 @@ export default class extends Controller {
     this.pendingResponseTargets.forEach((el) => {
       const url = el.dataset.pendingResponseTimeoutUrl;
       // Skip if already reported (succeeded) or a report is in flight.
-      if (!url || this.reportedUrls.has(url) || this.inFlightUrls.has(url)) return;
+      if (!url || this.reportedUrls.has(url) || this.inFlightUrls.has(url))
+        return;
 
       const createdAt = Date.parse(el.dataset.pendingResponseCreatedAt);
       if (Number.isNaN(createdAt)) return;

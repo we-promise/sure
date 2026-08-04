@@ -25,7 +25,8 @@ export default class extends Controller {
       const kindTokens = (card.dataset.providerKind ?? "").split(/\s+/);
       const haystack = `${name} ${region} ${kindTokens.join(" ")}`;
       const matchesQuery = !query || haystack.includes(query);
-      const matchesKind = activeKind === "all" || kindTokens.includes(activeKind);
+      const matchesKind =
+        activeKind === "all" || kindTokens.includes(activeKind);
       const visible = matchesQuery && matchesKind;
       card.classList.toggle("hidden", !visible);
       if (visible) visibleCount++;

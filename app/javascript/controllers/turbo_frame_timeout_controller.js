@@ -1,26 +1,29 @@
-import { Controller } from "@hotwired/stimulus"
+import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="turbo-frame-timeout"
 export default class extends Controller {
-  static values = { timeout: { type: Number, default: 10000 } }
+  static values = { timeout: { type: Number, default: 10000 } };
 
   connect() {
     this.timeoutId = setTimeout(() => {
-      this.handleTimeout()
-    }, this.timeoutValue)
+      this.handleTimeout();
+    }, this.timeoutValue);
 
     // Listen for successful frame loads to clear timeout
-    this.element.addEventListener("turbo:frame-load", this.clearTimeout.bind(this))
+    this.element.addEventListener(
+      "turbo:frame-load",
+      this.clearTimeout.bind(this),
+    );
   }
 
   disconnect() {
-    this.clearTimeout()
+    this.clearTimeout();
   }
 
   clearTimeout() {
     if (this.timeoutId) {
-      clearTimeout(this.timeoutId)
-      this.timeoutId = null
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
     }
   }
 
@@ -37,6 +40,6 @@ export default class extends Controller {
         </div>
         <p class="font-mono text-right text-xs text-warning">Timeout</p>
       </div>
-    `
+    `;
   }
-} 
+}

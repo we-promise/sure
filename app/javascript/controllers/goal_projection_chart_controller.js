@@ -23,7 +23,10 @@ export default class extends Controller {
     todayLabel: { type: String, default: "Today" },
     projectedTemplate: { type: String, default: "Projected: {amount}" },
     savedTemplate: { type: String, default: "Saved: {amount}" },
-    targetRelationTemplate: { type: String, default: "{percent}% of {target} target" },
+    targetRelationTemplate: {
+      type: String,
+      default: "{percent}% of {target} target",
+    },
   };
 
   connect() {
@@ -43,7 +46,8 @@ export default class extends Controller {
     // until theme_controller broadcasts a theme:change event upstream.
     if (typeof MutationObserver !== "undefined") {
       this._themeObserver = new MutationObserver((mutations) => {
-        if (mutations.some((m) => m.attributeName === "data-theme")) this._draw();
+        if (mutations.some((m) => m.attributeName === "data-theme"))
+          this._draw();
       });
       this._themeObserver.observe(document.documentElement, {
         attributes: true,
@@ -81,16 +85,24 @@ export default class extends Controller {
     const height = root.clientHeight || 240;
     if (width <= 0 || height <= 0) return;
 
-    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const isDark =
+      document.documentElement.getAttribute("data-theme") === "dark";
     const textPrimary = isDark ? "#ffffff" : "#171717";
     const textSecondary = isDark ? "#cfcfcf" : "#737373";
-    const borderSubdued = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.10)";
+    const borderSubdued = isDark
+      ? "rgba(255,255,255,0.15)"
+      : "rgba(0,0,0,0.10)";
     const containerBg = isDark ? "#0a0a0a" : "#ffffff";
 
     // Reserve gutter for y-axis labels when there's room. Mobile (< 320)
     // keeps the tighter left margin and skips the y-axis entirely.
     const yAxisVisible = width - 16 - 24 >= 320;
-    const margin = { top: 28, right: 24, bottom: 28, left: yAxisVisible ? 44 : 16 };
+    const margin = {
+      top: 28,
+      right: 24,
+      bottom: 28,
+      left: yAxisVisible ? 44 : 16,
+    };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -100,7 +112,7 @@ export default class extends Controller {
     // local-midnight.
     const parseLocalDate = (s) => {
       if (!s) return null;
-      const [ y, m, d ] = s.split("-").map(Number);
+      const [y, m, d] = s.split("-").map(Number);
       return new Date(y, m - 1, d);
     };
     const start = parseLocalDate(data.start_date);
@@ -139,7 +151,11 @@ export default class extends Controller {
     savedSeries.push({ date: today, value: currentAmount });
 
     const projectionEnd = target
-      ? Math.max(currentAmount, currentAmount + avgMonthly * Math.max(0, this._monthsBetween(today, target)))
+      ? Math.max(
+          currentAmount,
+          currentAmount +
+            avgMonthly * Math.max(0, this._monthsBetween(today, target)),
+        )
       : currentAmount;
     const projectionSeries = target
       ? [
@@ -149,20 +165,35 @@ export default class extends Controller {
       : [];
 
     const requiredMonthly = data.required_monthly || 0;
-    const requiredEnd = target && requiredMonthly > 0
-      ? currentAmount + requiredMonthly * Math.max(0, this._monthsBetween(today, target))
-      : currentAmount;
-    const requiredSeries = target && requiredMonthly > 0 && requiredEnd > currentAmount
-      ? [
-          { date: today, value: currentAmount },
-          { date: target, value: requiredEnd },
-        ]
-      : [];
+    const requiredEnd =
+      target && requiredMonthly > 0
+        ? currentAmount +
+          requiredMonthly * Math.max(0, this._monthsBetween(today, target))
+        : currentAmount;
+    const requiredSeries =
+      target && requiredMonthly > 0 && requiredEnd > currentAmount
+        ? [
+            { date: today, value: currentAmount },
+            { date: target, value: requiredEnd },
+          ]
+        : [];
 
-    const yMax = Math.max(targetAmount * 1.05, projectionEnd, requiredEnd, currentAmount, 1);
+    const yMax = Math.max(
+      targetAmount * 1.05,
+      projectionEnd,
+      requiredEnd,
+      currentAmount,
+      1,
+    );
 
-    const x = d3.scaleTime().domain([start, endDate]).range([margin.left, margin.left + innerWidth]);
-    const y = d3.scaleLinear().domain([0, yMax]).range([margin.top + innerHeight, margin.top]);
+    const x = d3
+      .scaleTime()
+      .domain([start, endDate])
+      .range([margin.left, margin.left + innerWidth]);
+    const y = d3
+      .scaleLinear()
+      .domain([0, yMax])
+      .range([margin.top + innerHeight, margin.top]);
 
     const svg = d3
       .select(root)
@@ -175,23 +206,40 @@ export default class extends Controller {
     // that fights with our own crosshair tooltip. aria-label gives the same
     // SR accessible name without the tooltip side-effect.
     const descId = `chart-desc-${this._id()}`;
-    svg.attr("role", "img").attr("aria-label", this.ariaLabelValue || "Goal projection");
-    svg.append("desc").attr("id", descId).text(this.ariaDescriptionValue || "");
+    svg
+      .attr("role", "img")
+      .attr("aria-label", this.ariaLabelValue || "Goal projection");
+    svg
+      .append("desc")
+      .attr("id", descId)
+      .text(this.ariaDescriptionValue || "");
     svg.attr("aria-describedby", descId);
 
     const defs = svg.append("defs");
     const gradient = defs
       .append("linearGradient")
       .attr("id", `saved-fill-${this._id()}`)
-      .attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
-    gradient.append("stop").attr("offset", "0%").attr("stop-color", textPrimary).attr("stop-opacity", 0.22);
-    gradient.append("stop").attr("offset", "100%").attr("stop-color", textPrimary).attr("stop-opacity", 0);
+      .attr("x1", 0)
+      .attr("y1", 0)
+      .attr("x2", 0)
+      .attr("y2", 1);
+    gradient
+      .append("stop")
+      .attr("offset", "0%")
+      .attr("stop-color", textPrimary)
+      .attr("stop-opacity", 0.22);
+    gradient
+      .append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", textPrimary)
+      .attr("stop-opacity", 0);
 
     const COLLISION_PX = 18;
     const targetY = targetAmount > 0 ? y(targetAmount) : null;
     const yTicks = yAxisVisible ? y.ticks(3) : [];
     const targetCollidesWithTick =
-      targetY !== null && yTicks.some((tv) => Math.abs(y(tv) - targetY) < COLLISION_PX);
+      targetY !== null &&
+      yTicks.some((tv) => Math.abs(y(tv) - targetY) < COLLISION_PX);
 
     if (yAxisVisible) {
       yTicks.forEach((tickValue) => {
@@ -205,7 +253,8 @@ export default class extends Controller {
           .attr("stroke-width", 1);
         // Skip the y-axis label when its row is close to the target line.
         // The target's own label will take over that y-slot below.
-        if (targetY !== null && Math.abs(y(tickValue) - targetY) < COLLISION_PX) return;
+        if (targetY !== null && Math.abs(y(tickValue) - targetY) < COLLISION_PX)
+          return;
         svg
           .append("text")
           .attr("x", margin.left - 6)
@@ -301,7 +350,9 @@ export default class extends Controller {
 
     if (projectionSeries.length) {
       const willHit = projectionEnd >= targetAmount;
-      const projColor = willHit ? "var(--color-green-600)" : "var(--color-yellow-600)";
+      const projColor = willHit
+        ? "var(--color-green-600)"
+        : "var(--color-yellow-600)";
       svg
         .append("path")
         .datum(projectionSeries)
@@ -326,7 +377,8 @@ export default class extends Controller {
       // already conveys "you'll hit the target". duplicating "$2.4K"
       // beside "Target · $2,400" adds noise.
       const projDotY = y(projectionEnd);
-      const collidesWithTargetLabel = targetAmount > 0 && Math.abs(projDotY - y(targetAmount)) < 18;
+      const collidesWithTargetLabel =
+        targetAmount > 0 && Math.abs(projDotY - y(targetAmount)) < 18;
 
       if (innerWidth >= 320 && !(willHit && collidesWithTargetLabel)) {
         // Server-rendered labels: projection_end_label is the full-format
@@ -334,7 +386,9 @@ export default class extends Controller {
         // is the "$X short" string when we fall short.
         const labelText = willHit
           ? data.projection_end_label
-          : (data.projection_shortfall_label ? `${data.projection_shortfall_label} short` : "");
+          : data.projection_shortfall_label
+            ? `${data.projection_shortfall_label} short`
+            : "";
         if (labelText) {
           svg
             .append("text")
@@ -433,7 +487,12 @@ export default class extends Controller {
     const hoverProjDot = svg
       .append("circle")
       .attr("r", 4)
-      .attr("fill", projectionSeries.length && projectionEnd >= targetAmount ? "var(--color-green-600)" : "var(--color-yellow-600)")
+      .attr(
+        "fill",
+        projectionSeries.length && projectionEnd >= targetAmount
+          ? "var(--color-green-600)"
+          : "var(--color-yellow-600)",
+      )
       .attr("stroke", containerBg)
       .attr("stroke-width", 2)
       .attr("pointer-events", "none")
@@ -444,7 +503,8 @@ export default class extends Controller {
     // miss positions set via CSS (the inline style is empty), so we'd
     // clobber a stylesheet `position: fixed/sticky/absolute` with our
     // own `relative`. Read the computed style instead.
-    if (getComputedStyle(root).position === "static") root.style.position = "relative";
+    if (getComputedStyle(root).position === "static")
+      root.style.position = "relative";
     // Shared visual contract (utils/chart_tooltip) — this used to be a
     // hand-copied class string that drifted from the other charts the moment
     // the contract changed.
@@ -497,7 +557,8 @@ export default class extends Controller {
       const xVal = x.invert(xPos);
       if (!savedSeries.length) return;
 
-      const future = xVal.getTime() > todayTs && projectionSeries.length && targetTs;
+      const future =
+        xVal.getTime() > todayTs && projectionSeries.length && targetTs;
 
       // Date the crosshair + the active dot snaps to. Past = nearest saved
       // contribution (sparse, monthly-ish). Future = weekly steps along the
@@ -513,7 +574,13 @@ export default class extends Controller {
         const i = bisectDate(savedSeries, xVal);
         const a = savedSeries[Math.max(0, i - 1)];
         const b = savedSeries[Math.min(savedSeries.length - 1, i)];
-        hoverDate = !a ? b.date : !b ? a.date : (xVal - a.date < b.date - xVal ? a.date : b.date);
+        hoverDate = !a
+          ? b.date
+          : !b
+            ? a.date
+            : xVal - a.date < b.date - xVal
+              ? a.date
+              : b.date;
       }
 
       const hoverX = x(hoverDate);
@@ -525,19 +592,34 @@ export default class extends Controller {
         // Projection segment: interpolate along the dashed line; saved dot
         // stays hidden (no saved value in the future).
         const tFrac = (hoverDate.getTime() - todayTs) / (targetTs - todayTs);
-        const projValue = currentAmount + tFrac * (projectionEnd - currentAmount);
-        hoverProjDot.attr("cx", hoverX).attr("cy", y(projValue)).style("display", null);
+        const projValue =
+          currentAmount + tFrac * (projectionEnd - currentAmount);
+        hoverProjDot
+          .attr("cx", hoverX)
+          .attr("cy", y(projValue))
+          .style("display", null);
         hoverSavedDot.style("display", "none");
-        tooltipValue.textContent = this.projectedTemplateValue.replace("{amount}", this._fmtMoney(projValue, data.currency));
+        tooltipValue.textContent = this.projectedTemplateValue.replace(
+          "{amount}",
+          this._fmtMoney(projValue, data.currency),
+        );
         setRelation(projValue);
       } else {
         // Saved segment: hoverDate is already snapped to nearest savedSeries
         // entry above, so reuse that entry directly instead of running
         // bisectDate a second time.
-        const savedPoint = savedSeries.find((p) => p.date.getTime() === hoverDate.getTime()) || savedSeries[savedSeries.length - 1];
-        hoverSavedDot.attr("cx", x(savedPoint.date)).attr("cy", y(savedPoint.value)).style("display", null);
+        const savedPoint =
+          savedSeries.find((p) => p.date.getTime() === hoverDate.getTime()) ||
+          savedSeries[savedSeries.length - 1];
+        hoverSavedDot
+          .attr("cx", x(savedPoint.date))
+          .attr("cy", y(savedPoint.value))
+          .style("display", null);
         hoverProjDot.style("display", "none");
-        tooltipValue.textContent = this.savedTemplateValue.replace("{amount}", this._fmtMoney(savedPoint.value, data.currency));
+        tooltipValue.textContent = this.savedTemplateValue.replace(
+          "{amount}",
+          this._fmtMoney(savedPoint.value, data.currency),
+        );
         setRelation(savedPoint.value);
       }
 
