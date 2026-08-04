@@ -107,6 +107,17 @@
                                 <span class="text-xs font-medium text-secondary"><%= t(".you") %></span>
                               <% end %>
                               <%= render DS::Pill.new(label: t(".roles.#{user.role}", default: user.role.humanize), tone: user.super_admin? ? :success : :neutral) %>
+                              <% if user.oidc_identities.any? %>
+                                <% sso_providers = user.oidc_identities.map { |i| (i.provider_config&.dig(:label) || i.provider_config&.dig("label")).presence || i.provider.titleize }.uniq.join(", ") %>
+                                <% provider_tooltip = t(".auth_types.sso_provider_tooltip", providers: sso_providers, default: "SSO Provider: #{sso_providers}") %>
+                                <% if user.sso_only? %>
+                                  <%= render DS::Pill.new(label: t(".auth_types.sso", default: "SSO"), tone: :info, title: provider_tooltip) %>
+                                <% else %>
+                                  <%= render DS::Pill.new(label: t(".auth_types.local_and_sso", default: "Local + SSO"), tone: :info, title: provider_tooltip) %>
+                                <% end %>
+                              <% else %>
+                                <%= render DS::Pill.new(label: t(".auth_types.local", default: "Local"), tone: :neutral) %>
+                              <% end %>
                             </div>
                             <p class="text-sm text-secondary"><%= user.email %></p>
                           </div>

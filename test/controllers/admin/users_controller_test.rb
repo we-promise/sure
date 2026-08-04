@@ -47,6 +47,29 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/No subscription/, response.body, "Page should show 'No subscription' for families without one")
   end
 
+  test "index renders auth type pills for local and sso users" do
+    solo_family = Family.create!(name: "SSO Test Family")
+    sso_user = User.create!(
+      family: solo_family,
+      email: "unique-sso-user-#{SecureRandom.hex(4)}@example.com",
+      first_name: "SSO",
+      last_name: "User",
+      skip_password_validation: true,
+      role: :member
+    )
+    OidcIdentity.create!(
+      user: sso_user,
+      provider: "google",
+      uid: "google-12345"
+    )
+
+    get admin_users_url
+    assert_response :success
+    assert_match(/SSO/, response.body)
+    assert_match(/SSO Provider: /, response.body)
+    assert_match(/Local/, response.body)
+  end
+
   test "index exposes delete and family controls for super admins" do
     Family.create!(name: "Unused Family")
 

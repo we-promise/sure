@@ -56,6 +56,11 @@ en:
           member: "Member"
           admin: "Admin"
           super_admin: "Super Admin"
+        auth_types:
+          sso: "SSO"
+          local: "Local"
+          local_and_sso: "Local + SSO"
+          sso_provider_tooltip: "SSO Provider: %{providers}"
         role_descriptions:
           guest: "Assistant-first experience with intentionally restricted permissions for intro workflows."
           member: "Basic user access. Can manage their own accounts, transactions, and settings."
