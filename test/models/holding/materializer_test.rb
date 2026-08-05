@@ -319,6 +319,13 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
       cost_basis: BigDecimal("100.00"), cost_basis_source: "provider"
     )
 
+    # Native USD market prices make calculated rows USD while the provider snapshot is EUR.
+    [ snap_date, Date.current ].each do |date|
+      Security::Price.find_or_initialize_by(security: @aapl, date: date, currency: "USD").update!(
+        price: date == Date.current ? 220 : 210
+      )
+    end
+
     Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
 
     today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
@@ -342,6 +349,12 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
       account_provider: account_provider,
       cost_basis: BigDecimal("100.00"), cost_basis_source: "provider"
     )
+
+    [ snap_date, Date.current ].each do |date|
+      Security::Price.find_or_initialize_by(security: @aapl, date: date, currency: "USD").update!(
+        price: date == Date.current ? 220 : 210
+      )
+    end
 
     assert_nothing_raised do
       Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings

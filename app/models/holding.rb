@@ -285,7 +285,7 @@ class Holding < ApplicationRecord
             exchange_rates.date = entries.date AND
             exchange_rates.from_currency = trades.currency AND
             exchange_rates.to_currency = ?
-          )", account.currency
+          )", currency
         ]))
         .where(security_id: security.id)
         .where("trades.qty > 0 AND entries.date <= ?", date)

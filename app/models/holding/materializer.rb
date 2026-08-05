@@ -12,6 +12,7 @@ class Holding::Materializer
 
     Rails.logger.info("Persisting #{@holdings.size} holdings")
     persist_holdings
+    cleanup_stale_calculated_currencies
 
     if strategy == :forward && security_ids.nil?
       purge_stale_holdings
@@ -180,6 +181,25 @@ class Holding::Materializer
       Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings on latest provider snapshot date") if deleted_count > 0
     end
 
+    # Calculated holdings preserve native price currency. After rematerialization,
+    # delete non-provider rows for the same security/date that still use an older
+    # currency (orphaned from prior account-currency normalization).
+    def cleanup_stale_calculated_currencies
+      return if @holdings.empty?
+
+      deleted_count = 0
+
+      @holdings.group_by { |holding| [ holding.security_id, holding.date ] }.each do |(security_id, date), rows|
+        keep_currencies = rows.map(&:currency).uniq
+        deleted_count += account.holdings
+          .where(account_provider_id: nil, security_id: security_id, date: date)
+          .where.not(currency: keep_currencies)
+          .delete_all
+      end
+
+      Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings with outdated currencies") if deleted_count > 0
+    end
+
     def holding_key(holding)
       [ holding.account_id || account.id, holding.security_id, holding.date, holding.currency ]
     end
@@ -190,10 +210,9 @@ class Holding::Materializer
     # reports keep showing trend data.
     #
     # Provider and calculated rows can be denominated in different currencies
-    # (e.g., IBKR reports USD holdings while the reverse calculator converts to
-    # the account's base currency). When they differ, the cost_basis is converted
-    # at the snapshot date — the same convention ReverseCalculator uses for trade
-    # prices — so the result is consistent with trade-derived cost_basis values.
+    # (e.g., IBKR reports EUR holdings while calculated rows use USD market prices).
+    # When they differ, the cost_basis is converted at the snapshot date so the
+    # result is consistent with trade-derived cost_basis values.
     def carry_forward_provider_cost_basis(holding)
       snapshots = provider_cost_basis_snapshots[holding.security_id]
       return nil if snapshots.blank?

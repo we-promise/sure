@@ -514,6 +514,29 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal %w[CHF EUR], account.current_holdings.pluck(:currency).sort
   end
 
+  test "current_holdings includes manual holdings in native currencies" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Manual CAD Brokerage",
+      balance: 1000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    usd_holding = account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 5,
+      price: 100,
+      amount: 500,
+      currency: "USD"
+    )
+
+    assert_equal [ usd_holding.id ], account.current_holdings.pluck(:id)
+    assert_equal %w[USD], account.current_holdings.pluck(:currency)
+  end
+
   test "on account destroyed cascade transfer destroyed" do
     outflow_account = @family.accounts.create!({
       owner: @admin,

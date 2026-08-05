@@ -37,19 +37,13 @@ class Holding::PortfolioCache
     price = price_with_priority.price
     return nil unless price
 
-    price_money = Money.new(price.price, price.currency)
-
-    begin
-      converted_amount = price_money.exchange_to(account.currency, date: date).amount
-    rescue Money::ConversionError
-      converted_amount = price.price
-    end
-
+    # Preserve the native price currency. Account/family views convert when aggregating
+    # so manual calculated holdings stay consistent with provider snapshots.
     Security::Price.new(
       security_id: security_id,
       date: price.date,
-      price: converted_amount,
-      currency: account.currency
+      price: price.price,
+      currency: price.currency
     )
   end
 
