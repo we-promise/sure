@@ -4,8 +4,9 @@
   show_border = local_assigns.fetch(:show_border, false)
   row_start_date = local_assigns[:start_date]
   row_end_date = local_assigns[:end_date]
-  # Synthetic "Other Investments" is not a real category filter target (same as dashboard).
-  clickable = item[:category_id] != :other_investments && row_start_date.present? && row_end_date.present?
+  # /transactions only lists Transaction rows. Skip trade-only buckets (e.g. Other
+  # Investments) so the destination is not empty relative to the report row.
+  clickable = item[:has_transactions] && row_start_date.present? && row_end_date.present?
 %>
 
 <tr data-category="category-<%= item[:category_id] %>" class="text-secondary text-sm <%= show_border ? "table-divider" : "" %>">
