@@ -89,7 +89,10 @@ class TransfersController < ApplicationController
 
   def update_tags
     outflow_account = @transfer.outflow_transaction.entry.account
-    return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
+    inflow_account = @transfer.inflow_transaction.entry.account
+
+    return unless require_account_permission!(outflow_account, :annotate, redirect_path: transactions_url)
+    return unless require_account_permission!(inflow_account, :annotate, redirect_path: transactions_url)
 
     resolved_ids = Current.family.tags.where(id: Array(params[:tag_ids]).reject(&:blank?)).pluck(:id)
 

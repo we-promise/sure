@@ -345,6 +345,22 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_empty transfer.inflow_transaction.reload.tag_ids
   end
 
+  test "update tags requires annotate permission on both transfer sides" do
+    # family_member: full_control on depository (outflow), read_only on credit_card (inflow)
+    sign_in users(:family_member)
+    transfer = transfers(:one)
+    tag = tags(:one)
+    original_outflow_tags = transfer.outflow_transaction.tag_ids
+    original_inflow_tags = transfer.inflow_transaction.tag_ids
+
+    patch tags_transfer_url(transfer), params: { tag_ids: [ tag.id ] }, as: :json
+
+    assert_response :forbidden
+    assert_equal I18n.t("accounts.not_authorized"), JSON.parse(response.body)["error"]
+    assert_equal original_outflow_tags, transfer.outflow_transaction.reload.tag_ids
+    assert_equal original_inflow_tags, transfer.inflow_transaction.reload.tag_ids
+  end
+
   test "can add notes to transfer" do
     transfer = transfers(:one)
     assert_nil transfer.notes
