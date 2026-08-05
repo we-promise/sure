@@ -35,6 +35,12 @@
 
     <%= f.number_field :amount, label: t(".source_amount"), required: true, min: 0, placeholder: "100", step: 0.00000001, data: { transfer_form_target: "amount", action: "input->transfer-form#onSourceAmountChange" } %>
 
+    <%= render DS::TagSelect.new(
+          form: f,
+          tags: @tags,
+          selected_ids: Array(f.object.tag_ids)
+        ) %>
+
     <% convert_input = capture do %>
       <%= f.number_field :exchange_rate,
         label: t("shared.exchange_rate_tabs.exchange_rate"),
