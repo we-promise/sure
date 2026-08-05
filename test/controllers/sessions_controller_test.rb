@@ -653,6 +653,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     redirect_url = @response.redirect_url
     params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
     assert_equal "account_deactivated", params["error"]
+    assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
   end
 
   test "mobile SSO refuses to issue a token for a deactivated user" do

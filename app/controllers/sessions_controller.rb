@@ -278,7 +278,7 @@ class SessionsController < ApplicationController
 
         if session[:mobile_sso].present?
           session.delete(:mobile_sso)
-          mobile_sso_redirect(error: "account_deactivated", message: "This account has been deactivated")
+          mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
         elsif session[:desktop_sso].present?
           session.delete(:desktop_sso)
           redirect_to "sure://sso/callback?error=account_deactivated", allow_other_host: true
@@ -425,7 +425,7 @@ class SessionsController < ApplicationController
       unless user.reload.active?
         Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
         session.delete(:mobile_sso)
-        mobile_sso_redirect(error: "account_deactivated", message: "This account has been deactivated")
+        mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
         return
       end
 
