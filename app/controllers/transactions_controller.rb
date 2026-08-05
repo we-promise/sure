@@ -20,11 +20,26 @@ class TransactionsController < ApplicationController
     base_scope = @search.transactions_scope
                        .reverse_chronological
                        .includes(
-                          { entry: :account },
-                          :category, :merchant, :tags,
-                          transfer_as_outflow: { inflow_transaction: { entry: :account } },
-                          transfer_as_inflow: { outflow_transaction: { entry: :account } }
-                        )
+                         { entry: :account },
+                         :category, :merchant, :tags,
+                         # Union of #2643 counterpart UI + Skylight category-menu N+1:
+                         # - outflow rows need inflow_transaction (to_account) for both
+                         #   counterpart display and Transfer#categorizable?/#payment?
+                         # - inflow rows need outflow_transaction (from_account) for
+                         #   counterpart display, and inflow_transaction (to_account)
+                         #   for the category menu on the same row
+                         {
+                           transfer_as_outflow: {
+                             inflow_transaction: { entry: :account }
+                           }
+                         },
+                         {
+                           transfer_as_inflow: {
+                             inflow_transaction: { entry: :account },
+                             outflow_transaction: { entry: :account }
+                           }
+                         }
+                       )
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
@@ -124,6 +139,7 @@ class TransactionsController < ApplicationController
   def update
     if @entry.update(permitted_entry_params)
       transaction = @entry.transaction
+      transaction.record_category_usage!
 
       if needs_rule_notification?(transaction)
         flash[:cta] = {
