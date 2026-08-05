@@ -161,6 +161,20 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil Session.find_by(id: session_record.id)
   end
 
+  test "rejects a deactivated MFA-enabled user before starting the MFA challenge" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    @user.update_column(:active, false)
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+
+    assert_response :unprocessable_entity
+    assert_equal "This account has been deactivated. Please contact an administrator.", flash[:alert]
+    assert_nil session[:mfa_user_id]
+    assert_not Session.exists?(user_id: @user.id)
+  end
+
   test "redirects to MFA verification when MFA enabled" do
     @user.setup_mfa!
     @user.enable_mfa!
@@ -883,6 +897,37 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
     end
     assert_redirected_to new_session_path
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "desktop SSO exchange rejects a deactivated MFA-enabled user before starting the MFA challenge" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    @user.setup_mfa!
+    @user.enable_mfa!
+
+    verifier = SecureRandom.hex(32)
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+    oidc_identity = oidc_identities(:bob_google)
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+    setup_omniauth_mock(provider: oidc_identity.provider, uid: oidc_identity.uid, email: @user.email, name: "Bob Dylan")
+
+    get "/auth/desktop/openid_connect", params: { code_challenge: challenge }
+    get "/auth/openid_connect/callback"
+    code = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)["code"]
+
+    @user.update_column(:active, false)
+
+    post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
+
+    assert_redirected_to new_session_path
+    assert_nil session[:mfa_user_id]
+    assert_not Session.exists?(user_id: @user.id)
   ensure
     Rails.cache = original_cache
   end
