@@ -63,20 +63,42 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@nvda.security, account: @account, qty: 5, price: 128.00, date: 1.day.ago.to_date, currency: "CAD")
     create_trade(@nvda.security, account: @account, qty: 30, price: 124.00, date: Date.current, currency: "CAD")
 
-    # compute expected: sum(price * qty * rate) / sum(qty)
-    amzn_total_usd = BigDecimal("10") * BigDecimal("212.00") * BigDecimal("1") +
-                     BigDecimal("15") * BigDecimal("216.00") * BigDecimal("1")
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 1)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 1)
+
+    amzn_total_usd = BigDecimal("10") * BigDecimal("212.00") + BigDecimal("15") * BigDecimal("216.00")
     amzn_qty = BigDecimal("10") + BigDecimal("15")
-    expected_amzn_usd = amzn_total_usd / amzn_qty
+    expected_amzn = amzn_total_usd / amzn_qty
 
-    nvda_total_usd = BigDecimal("5") * BigDecimal("128.00") * BigDecimal("1") +
-                     BigDecimal("30") * BigDecimal("124.00") * BigDecimal("1")
+    nvda_total_usd = BigDecimal("5") * BigDecimal("128.00") + BigDecimal("30") * BigDecimal("124.00")
     nvda_qty = BigDecimal("5") + BigDecimal("30")
-    expected_nvda_usd = nvda_total_usd / nvda_qty
+    expected_nvda = nvda_total_usd / nvda_qty
 
-    ExchangeRate.stubs(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1))
-    assert_equal Money.new(expected_amzn_usd, "CAD").exchange_to("USD"), @amzn.avg_cost
-    assert_equal Money.new(expected_nvda_usd, "CAD").exchange_to("USD"), @nvda.avg_cost
+    assert_equal Money.new(expected_amzn, "USD"), @amzn.avg_cost
+    assert_equal Money.new(expected_nvda, "USD"), @nvda.avg_cost
+  end
+
+  test "avg_cost returns nil when cross-currency exchange rate is missing" do
+    cad_account = families(:empty).accounts.create!(
+      name: "CAD Brokerage Avg Cost",
+      balance: 10000,
+      cash_balance: 0,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "USDCADFX", name: "Missing USD to CAD")
+    holding = cad_account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 10,
+      price: 100,
+      amount: 1000,
+      currency: "CAD"
+    )
+    create_trade(security, account: cad_account, qty: 10, price: 100.00, date: Date.current, currency: "USD")
+
+    # No USD→CAD rate exists for the trade date
+    assert_nil holding.avg_cost
   end
 
   test "calculates total return trend" do

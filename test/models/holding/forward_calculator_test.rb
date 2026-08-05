@@ -47,6 +47,30 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_in_delta BigDecimal("100"), today.cost_basis, BigDecimal("0.01")
   end
 
+  test "cost basis is nil when buy currency cannot be converted to holding currency" do
+    account = families(:empty).accounts.create!(
+      name: "CAD Brokerage Missing FX",
+      balance: 10000,
+      cash_balance: 10000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "MSFX", name: "Missing FX Lot")
+    trade_date = 2.days.ago.to_date
+
+    # Holding prices are USD, but the buy is CAD and no CAD→USD rate exists.
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+    Security::Price.create!(security: security, date: Date.current, price: 110, currency: "USD")
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 135, currency: "CAD")
+
+    holdings = Holding::ForwardCalculator.new(account).calculate
+    today = holdings.find { |holding| holding.date == Date.current && holding.security_id == security.id }
+
+    assert_not_nil today
+    assert_equal "USD", today.currency
+    assert_nil today.cost_basis
+  end
+
   test "holding generation respects user timezone and last generated date is current user date" do
     # Simulate user in EST timezone
     Time.use_zone("America/New_York") do
