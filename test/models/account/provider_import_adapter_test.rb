@@ -351,9 +351,12 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       }
     )
 
+    entry.reload
+    trade = entry.entryable.reload
+
     assert_equal Date.new(2026, 8, 4), entry.date
-    assert_equal "2026-08-04", entry.entryable.extra.dig("example_broker", "trade_date")
-    assert_equal "2026-08-08", entry.entryable.extra.dig("example_broker", "settlement_date")
+    assert_equal "2026-08-04", trade.extra.dig("example_broker", "trade_date")
+    assert_equal "2026-08-08", trade.extra.dig("example_broker", "settlement_date")
   end
 
   test "raises error when security is missing for trade import" do
