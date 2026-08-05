@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 
 // Basic functionality to filter a list based on a provided text attribute.
 export default class extends Controller {
-  static targets = ["input", "list", "emptyMessage"];
+  static targets = ["input", "list", "emptyMessage", "addItem", "addText"];
 
   connect() {
     this.inputTarget.focus();
@@ -32,6 +32,8 @@ export default class extends Controller {
     if (noMatchFound && this.hasEmptyMessageTarget) {
       this.emptyMessageTarget.classList.remove("hidden");
     }
+
+    this.updateAddCategory(filterValue, noMatchFound);
 
     this.highlightedIndex = -1;
     this.clearHighlights();
@@ -109,5 +111,27 @@ export default class extends Controller {
     return Array.from(this.listTarget.querySelectorAll(".filterable-item")).filter(
       (item) => item.style.display !== "none"
     );
+  }
+
+  updateAddCategory(filterValue, noMatchFound) {
+    if (!this.hasAddItemTarget) return;
+
+    const categoryName = filterValue.trim();
+    const shouldShow = noMatchFound && categoryName.length > 0;
+    this.addItemTarget.classList.toggle("hidden", !shouldShow);
+
+    if (this.hasAddTextTarget) {
+      this.addTextTarget.textContent = categoryName;
+    }
+
+    if (shouldShow) {
+      const url = new URL(this.addItemTarget.dataset.listFilterAddUrl, window.location.origin);
+      url.searchParams.set("name", categoryName);
+      this.addItemTarget.href = url.toString();
+    }
+
+    if (this.hasEmptyMessageTarget) {
+      this.emptyMessageTarget.classList.toggle("hidden", !noMatchFound || shouldShow);
+    }
   }
 }

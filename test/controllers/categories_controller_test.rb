@@ -55,6 +55,14 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new pre-fills the category name from the selector" do
+    get new_category_url, params: { name: "Coffee Shops", transaction_id: @transaction.id }
+
+    assert_response :success
+    assert_select "input[name='category[name]'][value='Coffee Shops']", count: 1
+    assert_select "input[name='transaction_id'][value='#{@transaction.id}']", count: 1
+  end
+
   test "create" do
     color = Category::COLORS.sample
 

@@ -17,6 +17,17 @@
         </div>
       </div>
       <div data-list-filter-target="list" role="listbox" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
+        <%= link_to new_category_path(transaction_id: @transaction.id, grouped: params[:grouped]),
+                    class: "hidden flex items-center gap-2 text-sm font-medium rounded-lg px-2 py-1.5 hover:bg-container-inset-hover",
+                    role: "option",
+                    data: {
+                      list_filter_target: "addItem",
+                      list_filter_add_url: new_category_path(transaction_id: @transaction.id, grouped: params[:grouped]),
+                      turbo_frame: :modal
+                    } do %>
+          <%= icon("plus", size: "sm") %>
+          <span><%= t(".add_category_prefix") %> <span data-list-filter-target="addText"></span> <%= t(".add_category_suffix") %></span>
+        <% end %>
         <div class="pb-2 pl-4 mr-2 text-secondary hidden" data-list-filter-target="emptyMessage">
           <%= t(".no_categories") %>
         </div>

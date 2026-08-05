@@ -15,7 +15,10 @@ class CategoriesController < ApplicationController
   end
 
   def new
-    @category = Current.family.categories.new color: Category::COLORS.sample
+    @category = Current.family.categories.new(
+      color: Category::COLORS.sample,
+      name: params[:name].to_s.presence
+    )
     set_categories
   end
 
