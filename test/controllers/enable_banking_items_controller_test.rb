@@ -41,6 +41,12 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "select existing account shows provider-bounded sync start date" do
+    @item.enable_banking_accounts.create!(
+      name: "Current account",
+      uid: "select-date-test",
+      currency: "EUR"
+    )
+
     get select_existing_account_enable_banking_items_url, params: { account_id: accounts(:depository).id }
 
     assert_response :success

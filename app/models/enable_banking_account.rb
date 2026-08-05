@@ -26,6 +26,7 @@ class EnableBankingAccount < ApplicationRecord
 
   def sync_start_date_within_provider_range
     return if sync_start_date.blank?
+    return if persisted? && !will_save_change_to_sync_start_date?
 
     unless sync_start_date.between?(EnableBankingItem.minimum_sync_start_date, Date.current)
       errors.add(:sync_start_date, :inclusion)
