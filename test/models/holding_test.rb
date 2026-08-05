@@ -63,14 +63,18 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@nvda.security, account: @account, qty: 5, price: 128.00, date: 1.day.ago.to_date, currency: "CAD")
     create_trade(@nvda.security, account: @account, qty: 30, price: 124.00, date: Date.current, currency: "CAD")
 
-    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 1)
-    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 1)
+    rate_yesterday = BigDecimal("0.75")
+    rate_today = BigDecimal("0.80")
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: rate_yesterday)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: rate_today)
 
-    amzn_total_usd = BigDecimal("10") * BigDecimal("212.00") + BigDecimal("15") * BigDecimal("216.00")
+    amzn_total_usd = BigDecimal("10") * BigDecimal("212.00") * rate_yesterday +
+                     BigDecimal("15") * BigDecimal("216.00") * rate_today
     amzn_qty = BigDecimal("10") + BigDecimal("15")
     expected_amzn = amzn_total_usd / amzn_qty
 
-    nvda_total_usd = BigDecimal("5") * BigDecimal("128.00") + BigDecimal("30") * BigDecimal("124.00")
+    nvda_total_usd = BigDecimal("5") * BigDecimal("128.00") * rate_yesterday +
+                     BigDecimal("30") * BigDecimal("124.00") * rate_today
     nvda_qty = BigDecimal("5") + BigDecimal("30")
     expected_nvda = nvda_total_usd / nvda_qty
 
