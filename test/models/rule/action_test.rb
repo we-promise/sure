@@ -332,6 +332,24 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal 500, outflow.reload.entry.amount
   end
 
+  test "invert_transaction_amount skips transfer fees so reported fees keep their sign" do
+    stub_account_sync
+    other_account = @family.accounts.create!(name: "Fee target", balance: 1000, currency: "USD", accountable: Depository.new)
+    outflow = create_transaction(date: Date.current, account: @account, amount: 500, name: "Fee transfer out").transaction
+    inflow = create_transaction(date: Date.current, account: other_account, amount: -500, name: "Fee transfer in").transaction
+    fee = create_transaction(date: Date.current, account: @account, amount: 5, name: "Transfer fee").transaction
+    transfer = Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+    transfer.fee_transactions << fee
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "invert_transaction_amount")
+
+    # A fee hangs off transfer_id, not either leg association, and is an
+    # ordinary standard-kind row, so nothing else would filter it out.
+    assert_equal 0, action.apply(Transaction.where(id: fee.id))
+    assert_equal 5, fee.reload.entry.amount
+    assert_equal 5, transfer.reload.derived_source_fee_amount
+  end
+
   test "invert_transaction_amount skips split children so the split still sums to its parent" do
     stub_account_sync
     parent_entry = create_transaction(date: Date.current, account: @account, amount: 300, name: "Split parent")

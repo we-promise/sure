@@ -18,7 +18,7 @@ class Rule::ActionExecutor::InvertTransactionAmount < Rule::ActionExecutor
   end
 
   private
-    # Flipping a sign is only self-contained for a standalone transaction. Two
+    # Flipping a sign is only self-contained for a standalone transaction. Three
     # shapes carry a cross-record sum invariant that nothing re-checks when an
     # Entry amount changes, so inverting one leaves persistent corruption:
     #
@@ -27,15 +27,23 @@ class Rule::ActionExecutor::InvertTransactionAmount < Rule::ActionExecutor
     #   written, so the row survives in an invalid state. It cannot self-heal,
     #   because auto transfer matching only considers transactions that are not
     #   already attached to a transfer.
+    # - Transfer fees. These hang off the transfer through transfer_id rather
+    #   than either leg association, and they are ordinary standard-kind rows,
+    #   so nothing else filters them out. Transfer#derived_source_fee_amount
+    #   sums them by account, so flipping one turns a reported fee negative and
+    #   moves the account balance. No validation covers fees, so the transfer
+    #   still reports itself as valid.
     # - Split children. Entry#split! enforces sum(children) == parent.amount
     #   only at split time, and the excluded parent means balances derive from
     #   the children, so flipping one child silently moves the account balance.
     #
-    # Both are skipped rather than corrected. They are reported as blocked in
-    # the rule run counts, which is the same treatment a locked amount gets.
+    # All three are skipped rather than corrected. They are reported as blocked
+    # in the rule run counts, the same treatment a locked amount gets.
     def invertible_scope(transaction_scope)
       transaction_scope
         .with_entry
+        .preload(entry: :account)
+        .where(transactions: { transfer_id: nil })
         .where(entries: { parent_entry_id: nil })
         .where.missing(:transfer_as_inflow, :transfer_as_outflow)
     end
