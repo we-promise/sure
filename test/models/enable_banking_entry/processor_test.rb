@@ -266,7 +266,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, eb_extra["pending"]
   end
 
-  test "does not add enable_banking extra key when no extra data present" do
+  test "stores booking_date provenance when no other enable_banking extras present" do
     tx = {
       entry_reference: "ref_noextra",
       transaction_id: nil,
@@ -278,7 +278,9 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
     EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_noextra")
-    assert_nil entry.transaction&.extra&.dig("enable_banking")
+    eb_extra = entry.transaction&.extra&.dig("enable_banking")
+
+    assert_equal({ "booking_date" => Date.current.to_s }, eb_extra)
   end
 
   def build_processor(data)

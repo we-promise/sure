@@ -75,7 +75,7 @@ class BrexAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     assert_equal 1, result[:failed]
     assert_empty result[:skipped_transactions]
     assert_equal "tx_failure", result[:errors].first[:transaction_id]
-    assert_match(/Unable to parse transaction date/, result[:errors].first[:error])
+    assert_match(/Invalid date format/, result[:errors].first[:error])
   end
 
   private
