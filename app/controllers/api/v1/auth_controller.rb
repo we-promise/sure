@@ -95,6 +95,15 @@ module Api
             return
           end
 
+          # Reload right before minting — narrows the window where a
+          # concurrent deactivation between the check above and this point
+          # could otherwise still get a token issued, same reasoning as
+          # Authentication#create_session_for.
+          unless user.reload.active?
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          end
+
           # Create device and OAuth token
           begin
             device = MobileDevice.upsert_device!(user, device_params)
@@ -424,7 +433,16 @@ module Api
           Rails.cache.delete("mobile_sso_link:#{linking_code}")
         end
 
+        # Shared by sso_link (existing user, needs the active? re-check) and
+        # sso_create_account (brand-new user, always active — the reload is
+        # a harmless no-op there). Reload right before minting, same
+        # reasoning as Authentication#create_session_for.
         def issue_mobile_tokens(user, device_info)
+          unless user.reload.active?
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          end
+
           device_info = device_info.symbolize_keys if device_info.respond_to?(:symbolize_keys)
           device = MobileDevice.upsert_device!(user, device_info)
           token_response = device.issue_token!
