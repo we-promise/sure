@@ -907,6 +907,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     @user.setup_mfa!
     @user.enable_mfa!
+    @user.sessions.destroy_all # Clear the fixture session so the later assertion is exact
 
     verifier = SecureRandom.hex(32)
     challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
