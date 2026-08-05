@@ -223,11 +223,16 @@ LLM_CONTEXT_WINDOW=8192
 # Slow local models often need a longer HTTP timeout once the prompt budget issue is fixed.
 OPENAI_REQUEST_TIMEOUT=180
 
-# How long the chat waits before giving up and showing a "no response" error.
-# Responses from custom providers are not streamed, so nothing appears until the
-# whole reply is generated — this must cover the full generation, not just the
-# first token. Keep it above OPENAI_REQUEST_TIMEOUT (see below).
-AI_RESPONSE_TIMEOUT=400
+# Chained tool calls per turn. Each iteration is another call to the model, so
+# lowering this is the cheapest way to keep a turn inside the timeout below.
+ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2
+
+# Whole-turn budget before the chat gives up and shows a "no response" error.
+# Responses from custom providers are not streamed and tool-call rounds display
+# nothing, so this must cover every call the turn makes — up to
+# 1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS of them — not just the first token.
+# Keep it above OPENAI_REQUEST_TIMEOUT (see below).
+AI_RESPONSE_TIMEOUT=600
 
 # Optional: enable debug logging in the AI chat
 AI_DEBUG_MODE=true 
@@ -239,7 +244,7 @@ AI_DEBUG_MODE=true
 - If you don't set a model, chats will fail with a validation error
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
 - If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits
-- Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT`; `OPENAI_REQUEST_TIMEOUT` alone will not help. Keep `AI_RESPONSE_TIMEOUT` the larger of the two — it covers the whole turn, while `OPENAI_REQUEST_TIMEOUT` bounds each call to the model separately
+- Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. Keep `AI_RESPONSE_TIMEOUT` the largest of the three — it covers the whole turn, while `OPENAI_REQUEST_TIMEOUT` bounds each call to the model separately
 
 ### Docker Compose Example
 
@@ -1105,19 +1110,27 @@ Then restart both `web` and `worker` so the new env var is loaded. If you are us
 
 **Symptom:** The chat shows "Thinking…" for a while, then an error saying the assistant is not available — but the model does produce a reply and LLM Usage shows tokens were generated.
 
-**Cause:** Two separate limits, measured over different spans:
+**Cause:** Three settings interact here, measured over different spans:
 
 - `OPENAI_REQUEST_TIMEOUT` (default `60`) — applies to **each HTTP call** to the model, on its own.
+- `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` (default `5`) — how many chained tool calls one turn may make. A turn costs up to `1 + this` model calls.
 - `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it.
 
-Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated — the budget has to cover the full generation, not just the time to the first token. A tool-using turn spends it twice over: one call to decide the tool, the tool execution, then a second call to write the answer.
+Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. Worse, the assistant only shows text once a response actually contains some — a tool-call-only response produces nothing to display — so a turn that chains several tool calls sits on "Thinking…" through all of them. At the defaults the worst case is six sequential model calls plus five tool executions.
 
-**Fix:** Raise both, keeping `AI_RESPONSE_TIMEOUT` the **larger** of the two. It has to fit two `OPENAI_REQUEST_TIMEOUT`-bounded calls plus tool execution and queue wait, and if it is the smaller one you get a generic "no response" instead of the specific timeout error — while the job keeps running and burning tokens after the chat has given up.
+**Fix:** you have two levers, and the cheaper one is usually the tool-call cap.
+
+Lowering the cap shrinks the worst case directly. With `ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2` a turn costs at most three model calls instead of six, so the timeout you need is halved. The trade-off is that genuinely long tool chains fail earlier, with a clear "exceeded the tool-call limit" error rather than a timeout.
 
 ```bash
 OPENAI_REQUEST_TIMEOUT=300
-AI_RESPONSE_TIMEOUT=660
+ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2
+AI_RESPONSE_TIMEOUT=1000
 ```
+
+If you would rather keep the full five iterations, size `AI_RESPONSE_TIMEOUT` for `6 × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait instead.
+
+Keep `AI_RESPONSE_TIMEOUT` the **largest** of these in every case. If it is smaller than the per-call limit you get a generic "no response" instead of the specific timeout error, and the job keeps running and burning tokens after the chat has given up.
 
 `AI_RESPONSE_TIMEOUT` can also be set at **Settings → Self-Hosting → OpenAI → Chat Response Timeout**, which takes effect without a restart. The environment variable wins if both are set. The minimum accepted value is `30`.
 
