@@ -62,4 +62,13 @@ class Provider::BankEntryDateTest < ActiveSupport::TestCase
       provenance
     )
   end
+
+  test "family_today uses family timezone near UTC midnight" do
+    family = OpenStruct.new(timezone: "America/Los_Angeles")
+
+    travel_to Time.utc(2026, 8, 5, 2, 0, 0) do
+      assert_equal Date.new(2026, 8, 5), Time.now.utc.to_date
+      assert_equal Date.new(2026, 8, 4), Provider::BankEntryDate.family_today(family)
+    end
+  end
 end

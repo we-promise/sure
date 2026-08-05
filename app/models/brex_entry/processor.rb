@@ -145,7 +145,7 @@ class BrexEntry::Processor
       selected = Provider::BankEntryDate.select([
         [ "posted_at_date", parse_provider_date(data[:posted_at_date]) ],
         [ "initiated_at_date", parse_provider_date(data[:initiated_at_date]) ]
-      ])
+      ], as_of: Provider::BankEntryDate.family_today(account&.family))
 
       return selected if selected
 

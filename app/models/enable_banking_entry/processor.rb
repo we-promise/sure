@@ -266,7 +266,7 @@ class EnableBankingEntry::Processor
         [ "booking_date", parse_provider_date(data[:booking_date]) ],
         [ "value_date", parse_provider_date(data[:value_date]) ],
         [ "transaction_date", parse_provider_date(data[:transaction_date]) ]
-      ])
+      ], as_of: Provider::BankEntryDate.family_today(account&.family))
 
       return selected if selected
 

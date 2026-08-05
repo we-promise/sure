@@ -179,7 +179,10 @@ class SimplefinEntry::Processor
         [ [ "posted", posted_date ], [ "transacted_at", transacted_date ] ]
       end
 
-      selected = Provider::BankEntryDate.select(candidates)
+      selected = Provider::BankEntryDate.select(
+        candidates,
+        as_of: Provider::BankEntryDate.family_today(account&.family)
+      )
       return selected if selected
 
       Rails.logger.error("SimpleFin transaction missing posted/transacted date: #{data.inspect}")

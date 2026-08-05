@@ -108,7 +108,10 @@ class <%= class_name %>Account::Transactions::Processor
         [ "date", parse_date(data[:date], family: account&.family) ]
       ]
       # TODO: Reorder candidates to match your provider's preferred display date
-      date = Provider::BankEntryDate.select(date_candidates)
+      date = Provider::BankEntryDate.select(
+        date_candidates,
+        as_of: Provider::BankEntryDate.family_today(account&.family)
+      )
       return nil if date.nil?
 
       name = data[:name] || data[:description] || data[:merchant_name] || "Transaction"

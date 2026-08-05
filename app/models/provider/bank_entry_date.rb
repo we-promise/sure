@@ -8,9 +8,15 @@
 #
 # Preference order is caller-defined. Among present Date values, the first that
 # is on or before `as_of` wins. If every candidate is in the future, clamp to
-# `as_of` so activity/budgets/transfer matching stay current. Investment
-# processors should not use this helper blindly (future settlement can be valid).
+# `as_of` so activity/budgets/transfer matching stay current. Pass
+# `as_of: family_today(family)` so "future" is judged in the family's timezone,
+# not the server/UTC calendar date. Investment processors should not use this
+# helper blindly (future settlement can be valid).
 class Provider::BankEntryDate
+  def self.family_today(family = nil)
+    Time.current.in_time_zone(family&.timezone).to_date
+  end
+
   def self.select(candidates, as_of: Date.current)
     dates = Array(candidates).filter_map do |candidate|
       date = candidate.is_a?(Array) ? candidate.last : candidate

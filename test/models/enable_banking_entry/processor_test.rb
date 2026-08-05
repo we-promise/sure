@@ -475,6 +475,31 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "uses family-local as_of near UTC midnight when booking_date is tomorrow locally" do
+    # 2026-08-05 02:00 UTC == 2026-08-04 19:00 PDT — UTC Date.current is Aug 5,
+    # but family-local "today" is still Aug 4, so booking_date Aug 5 is future.
+    @family.update!(timezone: "America/Los_Angeles")
+
+    travel_to Time.utc(2026, 8, 5, 2, 0, 0) do
+      tx = {
+        transaction_id: "tz_as_of_future_booking",
+        booking_date: "2026-08-05",
+        value_date: "2026-08-04",
+        transaction_date: "2026-08-03",
+        transaction_amount: { amount: "25.00", currency: "EUR" },
+        creditor: { name: "Near Midnight Shop" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+
+      result = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+
+      assert_not_nil result
+      assert_equal Date.new(2026, 8, 4), result.date
+      assert_equal "2026-08-05", result.entryable.extra.dig("enable_banking", "booking_date")
+    end
+  end
+
   test "content-based external_id still fingerprints raw provider booking_date" do
     tx = {
       transaction_id: nil,
