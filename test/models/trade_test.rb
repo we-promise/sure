@@ -136,4 +136,34 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal Money.new(520, "CAD"), trend.previous
     assert_equal Money.new(80, "CAD"), trend.value
   end
+
+  test "realized_gain_loss returns nil when holding cost basis cannot be converted" do
+    account = families(:empty).accounts.create!(
+      name: "CAD Brokerage Missing FX",
+      balance: 10000,
+      cash_balance: 10000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "RGNLFX", name: "Realized Gain Missing FX", exchange_operating_mic: "XNAS")
+    buy_date = 5.days.ago.to_date
+    sell_date = Date.current
+
+    create_trade(security, account: account, qty: 10, date: buy_date, price: 100, currency: "USD")
+    sell_entry = create_trade(security, account: account, qty: -4, date: sell_date, price: 150, currency: "CAD")
+
+    account.holdings.create!(
+      security: security,
+      date: sell_date,
+      qty: 6,
+      price: 150,
+      amount: 900,
+      currency: "USD",
+      cost_basis: 100,
+      cost_basis_source: "calculated"
+    )
+
+    # No USD→CAD rate for the sell date — exchange_to raises Money::ConversionError
+    assert_nil sell_entry.trade.realized_gain_loss
+  end
 end
