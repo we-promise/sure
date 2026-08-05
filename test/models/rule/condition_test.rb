@@ -56,6 +56,24 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_equal 3, filtered.count
   end
 
+  test "applies transaction_amount not equal operator using absolute values" do
+    scope = @rule_scope
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_amount",
+      operator: "!=",
+      value: "100"
+    )
+
+    scope = condition.prepare(scope)
+
+    filtered = condition.apply(scope)
+    # Absolute amounts: 100, 200, 50, 10, 1000 — exclude 100
+    assert_equal 4, filtered.count
+    assert_not filtered.any? { |txn| txn.entry.amount.abs == 100 }
+  end
+
   test "applies transaction_merchant condition" do
     scope = @rule_scope
 
