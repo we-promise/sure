@@ -57,6 +57,19 @@ de:
       net_worth_chart:
         data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar.
         title: Nettovermögen
+      money_flow:
+        title: "Einnahmen / Ausgaben"
+        date_range: "%{start_date} bis %{end_date}"
+        month_picker_aria_label: "Monat auswählen"
+        filter_accounts: "Konten filtern (%{count})"
+        filter_accounts_all: "Alle Konten"
+        period_scope_hint: "Zeigt die hier ausgewählten Monate – unabhängig vom oben ausgewählten Zeitraum des Dashboards."
+        search_accounts: "Konten durchsuchen"
+        apply: "Anwenden"
+        balance: "Transaktionssaldo"
+        chart_span: "Letzte %{count} Monate"
+        income: "Einnahmen"
+        expenses: "Ausgaben"
       no_account_empty_state:
         new_account: Neues Konto
         no_account_subtitle: Da noch keine Konten hinzugefügt wurden, gibt es keine Daten anzuzeigen. Füge dein erstes Konto hinzu, um Dashboard-Daten zu sehen.
