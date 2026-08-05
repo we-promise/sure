@@ -587,6 +587,7 @@ class Family::DataImporter
           merchant_id: new_merchant_id,
           kind: data["kind"] || "standard"
         )
+        transaction.restore_amount_inversion_state(data["amount_inversion_state"]) if data.key?("amount_inversion_state")
 
         entry ||= Entry.new(entryable: transaction)
         entry.assign_attributes(
@@ -652,7 +653,8 @@ class Family::DataImporter
           excluded: boolean_import_value(row, "excluded", default: false),
           tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
-          kind: row["kind"]
+          kind: row["kind"],
+          amount_inversion_state: row["amount_inversion_state"]
         }
       end
     end
@@ -675,6 +677,9 @@ class Family::DataImporter
           merchant_id: row[:merchant_id_provided] ? row[:merchant_id] : transaction.merchant_id,
           kind: row[:kind].presence || transaction.kind
         )
+        if row[:amount_inversion_state].present? && transaction.restore_amount_inversion_state(row[:amount_inversion_state])
+          transaction.save!
+        end
         child_entry.update!(notes: row[:notes]) if row[:notes].present?
 
         tag_ids = row[:tag_ids_provided] ? row[:tag_ids] : fallback_tag_ids
