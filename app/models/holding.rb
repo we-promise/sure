@@ -276,8 +276,10 @@ class Holding < ApplicationRecord
     end
 
     # Calculates weighted average cost from buy trades.
-    # Returns nil if no trades exist (cost basis is unknown).
+    # Returns nil if no trades exist or a cross-currency lot is missing an exchange rate.
     def calculate_avg_cost
+      holding_currency = currency
+
       trades = account.trades
         .with_entry
         .joins(ActiveRecord::Base.sanitize_sql_array([
@@ -285,20 +287,26 @@ class Holding < ApplicationRecord
             exchange_rates.date = entries.date AND
             exchange_rates.from_currency = trades.currency AND
             exchange_rates.to_currency = ?
-          )", currency
+          )", holding_currency
         ]))
         .where(security_id: security.id)
         .where("trades.qty > 0 AND entries.date <= ?", date)
 
-      total_cost, total_qty = trades.pick(
-        Arel.sql("SUM(trades.price * trades.qty * COALESCE(exchange_rates.rate, 1))"),
-        Arel.sql("SUM(trades.qty)")
+      total_cost, total_qty, missing_fx_count = trades.pick(
+        Arel.sql(ActiveRecord::Base.sanitize_sql_array([
+          "SUM(trades.price * trades.qty * CASE WHEN trades.currency = ? THEN 1 ELSE exchange_rates.rate END)",
+          holding_currency
+        ])),
+        Arel.sql("SUM(trades.qty)"),
+        Arel.sql(ActiveRecord::Base.sanitize_sql_array([
+          "COUNT(*) FILTER (WHERE trades.currency <> ? AND exchange_rates.rate IS NULL)",
+          holding_currency
+        ]))
       )
 
-      # Return nil when no trades exist - cost basis is genuinely unknown
-      # Previously this fell back to current market price, which was misleading
+      return nil if missing_fx_count.to_i > 0
       return nil unless total_qty && total_qty > 0
 
-      Money.new(total_cost / total_qty, currency)
+      Money.new(total_cost / total_qty, holding_currency)
     end
 end

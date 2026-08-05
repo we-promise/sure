@@ -95,6 +95,7 @@ class Holding::ForwardCalculator
     end
 
     # Returns the current cost basis for a security in the holding currency, or nil if no buys recorded
+    # or a cross-currency buy cannot be converted.
     def cost_basis_for(security_id, currency)
       buys = @cost_basis_tracker[security_id]
       return nil if buys.empty?
@@ -102,10 +103,20 @@ class Holding::ForwardCalculator
       total_qty = buys.sum { |buy| buy[:qty] }
       return nil if total_qty.zero?
 
-      total_cost = buys.sum do |buy|
-        Money.new(buy[:price], buy[:currency]).exchange_to(currency, date: buy[:date]).amount * buy[:qty]
-      rescue Money::ConversionError
-        buy[:price] * buy[:qty]
+      total_cost = BigDecimal("0")
+
+      buys.each do |buy|
+        if buy[:currency] == currency
+          total_cost += buy[:price] * buy[:qty]
+        else
+          begin
+            converted_price = Money.new(buy[:price], buy[:currency]).exchange_to(currency, date: buy[:date]).amount
+          rescue Money::ConversionError
+            return nil
+          end
+
+          total_cost += converted_price * buy[:qty]
+        end
       end
 
       total_cost / total_qty
