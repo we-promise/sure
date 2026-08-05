@@ -4,7 +4,7 @@ class Rule::ActionExecutor::InvertTransactionAmount < Rule::ActionExecutor
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
-    scope = transaction_scope.with_entry
+    scope = invertible_scope(transaction_scope)
     unless ignore_attribute_locks
       scope = scope.where.not(Arel.sql("entries.locked_attributes ? 'amount'"))
     end
@@ -18,6 +18,28 @@ class Rule::ActionExecutor::InvertTransactionAmount < Rule::ActionExecutor
   end
 
   private
+    # Flipping a sign is only self-contained for a standalone transaction. Two
+    # shapes carry a cross-record sum invariant that nothing re-checks when an
+    # Entry amount changes, so inverting one leaves persistent corruption:
+    #
+    # - Transfer legs. Transfer validates that its legs have opposite signs and
+    #   sum to zero, but no callback re-validates the transfer when an entry is
+    #   written, so the row survives in an invalid state. It cannot self-heal,
+    #   because auto transfer matching only considers transactions that are not
+    #   already attached to a transfer.
+    # - Split children. Entry#split! enforces sum(children) == parent.amount
+    #   only at split time, and the excluded parent means balances derive from
+    #   the children, so flipping one child silently moves the account balance.
+    #
+    # Both are skipped rather than corrected. They are reported as blocked in
+    # the rule run counts, which is the same treatment a locked amount gets.
+    def invertible_scope(transaction_scope)
+      transaction_scope
+        .with_entry
+        .where(entries: { parent_entry_id: nil })
+        .where.missing(:transfer_as_inflow, :transfer_as_outflow)
+    end
+
     def invert_amount_once(transaction, ignore_attribute_locks:)
       entry = transaction.entry
 
@@ -53,8 +75,9 @@ class Rule::ActionExecutor::InvertTransactionAmount < Rule::ActionExecutor
     def schedule_account_recalculations(entries)
       entries.group_by(&:account_id).each_value do |account_entries|
         earliest_date = account_entries.filter_map(&:date).min
-        # Account sync rematerializes persisted balances; its post-sync hook
-        # also reruns transfer matching against the corrected direction.
+        # Account sync rematerializes persisted balances. Its post-sync hook
+        # also reruns transfer matching, which can now pair a corrected
+        # transaction that previously had the wrong sign to match against.
         account_entries.first.account.sync_later(window_start_date: earliest_date)
       end
     end

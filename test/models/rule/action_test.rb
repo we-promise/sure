@@ -17,6 +17,12 @@ class Rule::ActionTest < ActiveSupport::TestCase
     @txn3 = create_transaction(date: 1.day.ago.to_date, account: @account, amount: 50, name: "Rule test transaction3").transaction
 
     @rule_scope = @account.transactions
+  end
+
+  # The inversion action schedules a balance resync per affected account. Stub
+  # it only where it is incidental, so the surrounding tests keep exercising
+  # their own real sync behavior.
+  def stub_account_sync
     Account.any_instance.stubs(:sync_later)
   end
 
@@ -222,6 +228,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
   end
 
   test "invert_transaction_amount swaps deposits and withdrawals once" do
+    stub_account_sync
     action = Rule::Action.new(
       rule: @transaction_rule,
       action_type: "invert_transaction_amount"
@@ -238,6 +245,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
   end
 
   test "invert_transaction_amount corrects an amount restored by provider sync" do
+    stub_account_sync
     action = Rule::Action.new(
       rule: @transaction_rule,
       action_type: "invert_transaction_amount"
@@ -259,6 +267,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
   end
 
   test "invert_transaction_amount preserves provider metadata" do
+    stub_account_sync
     @txn2.update!(extra: { "simplefin" => { "pending" => true } })
     action = Rule::Action.new(
       rule: @transaction_rule,
@@ -283,6 +292,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
   end
 
   test "overlapping invert actions share transaction state instead of cancelling each other" do
+    stub_account_sync
     other_rule = Rule.create!(
       family: @family,
       resource_type: "transaction",
@@ -303,7 +313,59 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal 200, @txn2.reload.entry.amount
   end
 
+  test "invert_transaction_amount skips transfer legs so the transfer keeps opposite amounts" do
+    stub_account_sync
+    other_account = @family.accounts.create!(name: "Transfer target", balance: 1000, currency: "USD", accountable: Depository.new)
+    outflow = create_transaction(date: Date.current, account: @account, amount: 500, name: "Transfer out").transaction
+    inflow = create_transaction(date: Date.current, account: other_account, amount: -500, name: "Transfer in").transaction
+    transfer = Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "invert_transaction_amount")
+
+    assert_equal 0, action.apply(Transaction.where(id: [ inflow.id, outflow.id ]))
+    assert_equal 500, outflow.reload.entry.amount
+    assert_equal(-500, inflow.reload.entry.amount)
+    assert transfer.reload.valid?, "transfer must remain valid: #{transfer.errors.full_messages.inspect}"
+
+    # An explicit re-apply must not be an escape hatch around the invariant.
+    assert_equal 0, action.apply(Transaction.where(id: [ inflow.id, outflow.id ]), ignore_attribute_locks: true)
+    assert_equal 500, outflow.reload.entry.amount
+  end
+
+  test "invert_transaction_amount skips split children so the split still sums to its parent" do
+    stub_account_sync
+    parent_entry = create_transaction(date: Date.current, account: @account, amount: 300, name: "Split parent")
+    parent_entry.split!([
+      { amount: 100, name: "Split child A" },
+      { amount: 200, name: "Split child B" }
+    ])
+    child_ids = parent_entry.reload.child_entries.map(&:entryable_id)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "invert_transaction_amount")
+
+    assert_equal 0, action.apply(Transaction.where(id: child_ids))
+
+    children = parent_entry.reload.child_entries
+    assert_equal [ 100, 200 ], children.map(&:amount).map(&:to_i).sort
+    assert_equal parent_entry.amount, children.sum(&:amount)
+  end
+
+  test "invert_transaction_amount still corrects a standalone transaction alongside skipped ones" do
+    stub_account_sync
+    other_account = @family.accounts.create!(name: "Transfer target 2", balance: 1000, currency: "USD", accountable: Depository.new)
+    outflow = create_transaction(date: Date.current, account: @account, amount: 500, name: "Transfer out").transaction
+    inflow = create_transaction(date: Date.current, account: other_account, amount: -500, name: "Transfer in").transaction
+    Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "invert_transaction_amount")
+
+    assert_equal 1, action.apply(Transaction.where(id: [ @txn2.id, inflow.id, outflow.id ]))
+    assert_equal 200, @txn2.reload.entry.amount
+    assert_equal 500, outflow.reload.entry.amount
+  end
+
   test "invert_transaction_amount respects amount locks unless explicitly reapplied" do
+    stub_account_sync
     @txn1.entry.lock_attr!(:amount)
     action = Rule::Action.new(
       rule: @transaction_rule,
