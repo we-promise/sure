@@ -59,15 +59,21 @@ class OidcAccountsController < ApplicationController
         session[:mfa_user_id] = user.id
         redirect_to verify_mfa_path
       else
-        # user.active? was already verified above, so create_session_for
-        # cannot return nil here.
+        # user.active? was checked above, but create_session_for reloads and
+        # re-checks it right before minting (see its comment) — never assume
+        # that earlier check makes a nil return here impossible.
         @session = create_session_for(user)
-        notice = if accept_pending_invitation_for(user)
-          t("invitations.accept_choice.joined_household")
+
+        if @session
+          notice = if accept_pending_invitation_for(user)
+            t("invitations.accept_choice.joined_household")
+          else
+            t("sessions.openid_connect.account_linked", provider: @pending_auth["provider"])
+          end
+          redirect_to root_path, notice: notice
         else
-          t("sessions.openid_connect.account_linked", provider: @pending_auth["provider"])
+          redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
         end
-        redirect_to root_path, notice: notice
       end
     else
       @email = params[:email]

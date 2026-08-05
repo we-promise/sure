@@ -65,8 +65,22 @@ class MobileDevice < ApplicationRecord
 
   # Issues a fresh Doorkeeper access token for this device, revoking any
   # previous tokens. Returns a hash with token details ready for an API
-  # response or deep-link callback.
+  # response or deep-link callback, or nil if the device's user is inactive.
+  #
+  # This is the single choke point every mobile-token-issuing path funnels
+  # through, so the active? check lives here rather than at each call site.
+  # Callers may *additionally* check active? earlier for fast, friendly
+  # rejection (skip an MFA/device-validation round trip, avoid a pointless
+  # MobileDevice upsert) — but that's a UX optimization only. This check is
+  # the actual authorization boundary and must never be assumed redundant
+  # by a caller, however "obviously" already-checked the user seems: an
+  # earlier PR incident (see git history) had create_session_for gain this
+  # same reload-before-mint check after a caller had already stripped its
+  # own nil-handling on the assumption an earlier check made nil impossible.
+  # Every caller of issue_token! MUST handle a nil return, unconditionally.
   def issue_token!
+    return nil unless user.reload.active?
+
     revoke_all_tokens!
 
     access_token = Doorkeeper::AccessToken.create!(

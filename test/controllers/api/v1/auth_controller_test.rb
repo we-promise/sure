@@ -386,6 +386,31 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
   end
 
+  test "should not login a user deactivated between device upsert and token issuance" do
+    user = users(:family_admin)
+    # Pre-create the real device so the stub below can return it as-is —
+    # this isolates the test to the gap between upsert_device! and
+    # issue_token!, not the earlier device-creation step.
+    device = MobileDevice.upsert_device!(user, @device_info)
+
+    MobileDevice.stubs(:upsert_device!).with do |*_args|
+      user.update_column(:active, false)
+      true
+    end.returns(device)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: user_password_test,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+  end
+
   test "should not login with invalid password" do
     user = users(:family_admin)
 

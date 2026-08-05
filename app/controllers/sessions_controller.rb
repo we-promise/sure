@@ -415,6 +415,14 @@ class SessionsController < ApplicationController
       device = MobileDevice.upsert_device!(user, device_info.symbolize_keys)
       token_response = device.issue_token!
 
+      # issue_token! itself is the authoritative active? gate (see its
+      # comment) — nil means a deactivation landed after the check above.
+      unless token_response
+        Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
+        mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
+        return
+      end
+
       # Store tokens behind a one-time authorization code instead of passing in URL
       authorization_code = SecureRandom.urlsafe_base64(32)
       Rails.cache.write(

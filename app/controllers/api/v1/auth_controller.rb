@@ -114,6 +114,13 @@ module Api
             return
           end
 
+          # issue_token! itself is the authoritative active? gate (see its
+          # comment) — nil means a deactivation landed after the check above.
+          unless token_response
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          end
+
           render json: token_response.merge(user: mobile_user_payload(user))
         else
           render json: { error: "Invalid email or password" }, status: :unauthorized
@@ -446,6 +453,13 @@ module Api
           device_info = device_info.symbolize_keys if device_info.respond_to?(:symbolize_keys)
           device = MobileDevice.upsert_device!(user, device_info)
           token_response = device.issue_token!
+
+          # issue_token! itself is the authoritative active? gate (see its
+          # comment) — nil means a deactivation landed after the check above.
+          unless token_response
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          end
 
           render json: token_response.merge(user: mobile_user_payload(user))
         rescue ActiveRecord::RecordInvalid => e
