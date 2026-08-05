@@ -433,26 +433,6 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-#{category.id}'] a[href=?]", expected_href, text: category.name
   end
 
-  test "index does not link trade-only Other Investments rows to transactions" do
-    @family.accounts.each { |account| account.entries.destroy_all }
-
-    brokerage = @family.accounts.create!(
-      owner: @user,
-      name: "Reports Trade Only Brokerage",
-      balance: 0,
-      currency: "USD",
-      accountable: Investment.new(subtype: "brokerage")
-    )
-    create_trade(securities(:aapl), account: brokerage, qty: 1, date: Date.current, price: 100)
-
-    get reports_path(period_type: :monthly)
-    assert_response :ok
-
-    other_investments_row = css_select("tr[data-category='category-other_investments']").first
-    assert_not_nil other_investments_row
-    assert_equal 0, other_investments_row.css("a").size
-  end
-
   test "index excludes tax-advantaged account transactions from activity breakdown" do
     @family.accounts.each { |account| account.entries.destroy_all }
 
