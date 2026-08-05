@@ -332,10 +332,13 @@ For self-hosted deployments, you can configure AI settings through the web inter
 
 1. Go to **Settings** → **Self-Hosting**
 2. Scroll to the **AI Provider** section
-3. Configure:
-   - **OpenAI Access Token** - Your API key
-   - **OpenAI URI Base** - Custom endpoint (leave blank for OpenAI)
-   - **OpenAI Model** - Model name (required for custom endpoints)
+3. Configure the provider:
+   - **Access Token** - Your API key
+   - **API Base URL** - Custom endpoint (leave blank for OpenAI)
+   - **Model** - Model name (required for custom endpoints)
+   - **JSON Mode** - Structured-output format; `Auto` suits most models
+4. Optionally tune **Token Budget** — Context Window, Max Response Tokens and Max Items Per Batch. The defaults are conservative so small-context local models work out of the box; raise them for cloud or large-context models.
+5. Optionally set **Chat Response Timeout** — how long the chat waits for a whole turn before showing a "no response" error (default 90s). Raise it for slow local models; see [Chat Errors While the Model Is Still Generating](#chat-errors-while-the-model-is-still-generating).
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
 
@@ -1122,7 +1125,7 @@ Responses from custom OpenAI-compatible providers are **not streamed**, so nothi
 
 **Fix:** size `AI_RESPONSE_TIMEOUT` as a **sum**, not simply as a number larger than the per-call limit:
 
-```
+```text
 AI_RESPONSE_TIMEOUT ≥ (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT
                       + tool execution + queue wait
 ```
