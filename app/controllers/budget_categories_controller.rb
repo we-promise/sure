@@ -21,7 +21,7 @@ class BudgetCategoriesController < ApplicationController
       @budget_category = @budget.uncategorized_budget_category
       @recent_transactions = @recent_transactions.where(transactions: { category_id: nil })
     else
-      @budget_category = Current.family.budget_categories.find(params[:id])
+      @budget_category = @budget.budget_categories.find(params[:id])
       @recent_transactions = @recent_transactions.joins("LEFT JOIN categories ON categories.id = transactions.category_id")
                                                  .where("categories.id = ? OR categories.parent_id = ?", @budget_category.category.id, @budget_category.category.id)
     end
@@ -30,7 +30,7 @@ class BudgetCategoriesController < ApplicationController
   end
 
   def update
-    @budget_category = Current.family.budget_categories.find(params[:id])
+    @budget_category = @budget.budget_categories.find(params[:id])
     @budget_category.update_budgeted_spending!(budgeted_spending_param)
 
     respond_to do |format|

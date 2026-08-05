@@ -139,6 +139,24 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       "matched funds_movement inflow must not appear in Uncategorized drilldown"
   end
 
+  test "show and update do not leak another member's personal budget category" do
+    @family.update!(personal_budgets: true)
+
+    other_member_budget = Budget.find_or_bootstrap(@family, start_date: @budget.start_date, user: users(:family_member))
+    other_budget_category = other_member_budget.budget_categories.find_by!(category: @parent_category)
+    other_budget_category.update!(budgeted_spending: 999)
+
+    get budget_budget_category_path(@budget, other_budget_category)
+    assert_response :not_found
+
+    patch budget_budget_category_path(@budget, other_budget_category),
+          params: { budget_category: { budgeted_spending: 1 } },
+          as: :turbo_stream
+    assert_response :not_found
+
+    assert_equal 999.0, other_budget_category.reload.budgeted_spending.to_f
+  end
+
   test "show drilldown still lists loan_payment transfers (intentionally budget-tracked)" do
     # loan_payment is NOT in BUDGET_EXCLUDED_KINDS. The drilldown should
     # keep showing loan_payment transfers so the user can see what's

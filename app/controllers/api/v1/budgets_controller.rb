@@ -42,6 +42,8 @@ class Api::V1::BudgetsController < Api::V1::BaseController
     end
 
     def budgets_scope
-      current_resource_owner.family.budgets.includes(budget_categories: :category)
+      current_resource_owner.family.budgets
+        .where(user_id: [ nil, current_resource_owner.id ])
+        .includes(budget_categories: :category)
     end
 end
