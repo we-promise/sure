@@ -207,10 +207,22 @@ class Holding::Materializer
           date: date
         )
 
-        deletable_ids.concat(stale_rows.map(&:id) - preserve_ids)
+        # Delete calculated orphans via the canonical scope. Successfully migrated
+        # manual/locked rows are also removed; failed migrations stay in preserve_ids.
+        calculated_ids = account.holdings
+          .calculated
+          .where(security_id: security_id, date: date)
+          .where.not(currency: keep_currencies)
+          .pluck(:id)
+
+        migrated_manual_ids = stale_rows
+          .select { |holding| holding.cost_basis_locked? || holding.cost_basis_source == "manual" }
+          .map(&:id) - preserve_ids
+
+        deletable_ids.concat(calculated_ids + migrated_manual_ids)
       end
 
-      deleted_count = deletable_ids.any? ? account.holdings.where(id: deletable_ids).delete_all : 0
+      deleted_count = deletable_ids.any? ? account.holdings.where(id: deletable_ids.uniq).delete_all : 0
 
       Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings with outdated currencies") if deleted_count > 0
     end
