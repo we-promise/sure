@@ -105,10 +105,20 @@ class Holding::ReverseCalculator
       total_qty = applicable.sum { |buy| buy[:qty] }
       return nil if total_qty.zero?
 
-      total_cost = applicable.sum do |buy|
-        Money.new(buy[:price], buy[:currency]).exchange_to(currency, date: buy[:date]).amount * buy[:qty]
-      rescue Money::ConversionError
-        buy[:price] * buy[:qty]
+      total_cost = BigDecimal("0")
+
+      applicable.each do |buy|
+        if buy[:currency] == currency
+          total_cost += buy[:price] * buy[:qty]
+        else
+          begin
+            converted_price = Money.new(buy[:price], buy[:currency]).exchange_to(currency, date: buy[:date]).amount
+          rescue Money::ConversionError
+            return nil
+          end
+
+          total_cost += converted_price * buy[:qty]
+        end
       end
 
       total_cost / total_qty
