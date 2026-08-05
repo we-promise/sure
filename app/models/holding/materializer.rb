@@ -184,6 +184,8 @@ class Holding::Materializer
     # Calculated holdings preserve native price currency. After rematerialization,
     # delete non-provider rows for the same security/date that still use an older
     # currency (orphaned from prior account-currency normalization).
+    # Locked/manual cost-basis rows are migrated onto the kept currency first so
+    # user-entered basis is not lost with the stale account-currency row.
     def cleanup_stale_calculated_currencies
       return if @holdings.empty?
 
@@ -191,13 +193,66 @@ class Holding::Materializer
 
       @holdings.group_by { |holding| [ holding.security_id, holding.date ] }.each do |(security_id, date), rows|
         keep_currencies = rows.map(&:currency).uniq
-        deleted_count += account.holdings
+        stale_rows = account.holdings
           .where(account_provider_id: nil, security_id: security_id, date: date)
           .where.not(currency: keep_currencies)
-          .delete_all
+          .to_a
+
+        next if stale_rows.empty?
+
+        preserve_ids = migrate_manual_cost_basis_from_stale_rows(
+          stale_rows: stale_rows,
+          target_currency: keep_currencies.first,
+          security_id: security_id,
+          date: date
+        )
+
+        deletable_ids = stale_rows.map(&:id) - preserve_ids
+        deleted_count += account.holdings.where(id: deletable_ids).delete_all if deletable_ids.any?
       end
 
       Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings with outdated currencies") if deleted_count > 0
+    end
+
+    # Moves locked/manual cost basis from an orphaned account-currency row onto the
+    # newly materialized native-currency row. Returns stale row IDs that must be kept
+    # when migration is not possible (missing target or FX conversion failure).
+    def migrate_manual_cost_basis_from_stale_rows(stale_rows:, target_currency:, security_id:, date:)
+      manual_rows = stale_rows.select { |holding| holding.cost_basis_locked? || holding.cost_basis_source == "manual" }
+      return [] if manual_rows.empty?
+
+      source = manual_rows.max_by { |holding| [ holding.cost_basis_locked? ? 1 : 0, holding.updated_at || Time.at(0) ] }
+      return manual_rows.map(&:id) unless source.cost_basis.present?
+
+      target = account.holdings.find_by(
+        account_provider_id: nil,
+        security_id: security_id,
+        date: date,
+        currency: target_currency
+      )
+      return manual_rows.map(&:id) unless target
+
+      # Native-currency row already has a user-locked basis — keep it and drop stale copies.
+      return [] if target.cost_basis_locked?
+
+      converted = convert_cost_basis_amount(source.cost_basis, from: source.currency, to: target.currency, date: date)
+      return manual_rows.map(&:id) if converted.nil?
+
+      target.update!(
+        cost_basis: converted,
+        cost_basis_source: "manual",
+        cost_basis_locked: true
+      )
+
+      []
+    end
+
+    def convert_cost_basis_amount(amount, from:, to:, date:)
+      return amount if from == to
+
+      Money.new(amount, from).exchange_to(to, date: date).amount
+    rescue Money::ConversionError
+      nil
     end
 
     def holding_key(holding)
