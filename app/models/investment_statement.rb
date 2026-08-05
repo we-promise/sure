@@ -80,34 +80,39 @@ class InvestmentStatement
       .includes(:security, :account)
   end
 
-  # Top holdings by family-currency value
+  # Top investments rolled up by security across accounts, ranked by
+  # family-currency value. Weight is % of total portfolio (including cash).
   def top_holdings(limit: 5)
-    current_holdings
-      .to_a
-      .sort_by { |h| -convert_to_family_currency(h.amount, h.currency) }
-      .first(limit)
-  end
-
-  # Portfolio allocation by security. Weights and amounts are computed in the
-  # family's currency so cross-currency holdings compare correctly.
-  def allocation
-    converted = current_holdings.to_a.map do |holding|
-      [ holding, convert_to_family_currency(holding.amount, holding.currency) ]
-    end
-
-    total = converted.sum { |_, value| value }
+    total = portfolio_value
     return [] if total.zero?
 
-    converted
-      .sort_by { |_, value| -value }
-      .map do |holding, value|
+    holdings_rolled_up_by_security
+      .first(limit)
+      .map do |security, value, trend|
         HoldingAllocation.new(
-          security: holding.security,
+          security: security,
           amount: Money.new(value, family.currency),
           weight: (value / total * 100).round(2),
-          trend: holding.trend
+          trend: trend
         )
       end
+  end
+
+  # Portfolio allocation by security (rolled up across accounts). Weights are
+  # relative to total holdings value (excludes cash) so they sum to ~100%.
+  def allocation
+    rolled_up = holdings_rolled_up_by_security
+    total = rolled_up.sum { |_, value, _| value }
+    return [] if total.zero?
+
+    rolled_up.map do |security, value, trend|
+      HoldingAllocation.new(
+        security: security,
+        amount: Money.new(value, family.currency),
+        weight: (value / total * 100).round(2),
+        trend: trend
+      )
+    end
   end
 
   # Unrealized gains across all holdings, summed in family currency
@@ -297,7 +302,48 @@ class InvestmentStatement
       end
     end
 
-    HoldingAllocation = Data.define(:security, :amount, :weight, :trend)
+    HoldingAllocation = Data.define(:security, :amount, :weight, :trend) do
+      def ticker = security.ticker
+      def name = security.name.presence || ticker
+      def amount_money = amount
+    end
+
+    # Groups current holdings by security, summing family-currency value and
+    # combining cost-basis trends. Returns [[security, value, trend], ...]
+    # sorted by value descending.
+    def holdings_rolled_up_by_security
+      current_holdings
+        .to_a
+        .group_by(&:security_id)
+        .filter_map do |_security_id, holdings|
+          security = holdings.first.security
+          value = holdings.sum { |h| convert_to_family_currency(h.amount, h.currency) }
+          next if value.zero?
+
+          [ security, value, combined_holding_trend(holdings) ]
+        end
+        .sort_by { |_, value, _| -value }
+    end
+
+    def combined_holding_trend(holdings)
+      currents = []
+      previouses = []
+
+      holdings.each do |holding|
+        trend = holding.trend
+        next unless trend
+
+        currents << convert_to_family_currency(trend.current, holding.currency)
+        previouses << convert_to_family_currency(trend.previous, holding.currency)
+      end
+
+      return nil if currents.empty?
+
+      Trend.new(
+        current: Money.new(currents.sum, family.currency),
+        previous: Money.new(previouses.sum, family.currency)
+      )
+    end
 
     def investment_account_ids
       @investment_account_ids ||= investment_accounts.pluck(:id)

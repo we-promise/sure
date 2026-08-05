@@ -87,6 +87,81 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal %w[ASML AAPL], top.map(&:ticker)
   end
 
+  test "top_holdings rolls up the same security across accounts" do
+    ira = create_investment_account(balance: 5000, cash_balance: 0, currency: "USD")
+    taxable = create_investment_account(balance: 3000, cash_balance: 0, currency: "USD")
+    other = create_investment_account(balance: 2000, cash_balance: 0, currency: "USD")
+
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    msft = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    Holding.create!(
+      account: ira, security: aapl, date: Date.current,
+      qty: 10, price: 200, amount: 2000, currency: "USD"
+    )
+    Holding.create!(
+      account: taxable, security: aapl, date: Date.current,
+      qty: 15, price: 200, amount: 3000, currency: "USD"
+    )
+    Holding.create!(
+      account: other, security: msft, date: Date.current,
+      qty: 10, price: 200, amount: 2000, currency: "USD"
+    )
+
+    top = @statement.top_holdings(limit: 5)
+
+    assert_equal %w[AAPL MSFT], top.map(&:ticker)
+    assert_equal 1, top.count { |row| row.ticker == "AAPL" }
+    assert_equal Money.new(5000, "USD"), top.first.amount_money
+    # Portfolio total = 5000 + 3000 + 2000 = 10000; AAPL = 50%, MSFT = 20%
+    assert_in_delta 50.0, top.first.weight, 0.01
+    assert_in_delta 20.0, top.second.weight, 0.01
+  end
+
+  test "top_holdings weight is percent of total portfolio including cash" do
+    account = create_investment_account(balance: 10_000, cash_balance: 4000, currency: "USD")
+    security = Security.create!(ticker: "VOO", name: "Vanguard S&P 500")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 30, price: 200, amount: 6000, currency: "USD"
+    )
+
+    top = @statement.top_holdings(limit: 1)
+
+    assert_equal 1, top.size
+    # 6000 / 10000 portfolio = 60% (not 100% of holdings)
+    assert_in_delta 60.0, top.first.weight, 0.01
+  end
+
+  test "allocation rolls up duplicate securities and weights sum to 100%" do
+    ira = create_investment_account(balance: 3000, currency: "USD")
+    taxable = create_investment_account(balance: 2000, currency: "USD")
+
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    msft = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    Holding.create!(
+      account: ira, security: aapl, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD"
+    )
+    Holding.create!(
+      account: taxable, security: aapl, date: Date.current,
+      qty: 5, price: 100, amount: 500, currency: "USD"
+    )
+    Holding.create!(
+      account: ira, security: msft, date: Date.current,
+      qty: 20, price: 100, amount: 2000, currency: "USD"
+    )
+
+    allocation = @statement.allocation
+
+    assert_equal 2, allocation.size
+    assert_equal %w[MSFT AAPL], allocation.map(&:ticker)
+    assert_equal Money.new(1500, "USD"), allocation.find { |a| a.ticker == "AAPL" }.amount
+    assert_in_delta 100.0, allocation.sum(&:weight), 0.01
+  end
+
   test "allocation weights sum to 100% with mixed currencies" do
     usd_account = create_investment_account(balance: 2100, currency: "USD")
     eur_account = create_investment_account(balance: 2000, currency: "EUR")
