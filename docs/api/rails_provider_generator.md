@@ -607,7 +607,7 @@ Generated bank `Transactions::Processor` classes use `Provider::BankEntryDate` t
 2. Choose `entries.date` from the first non-future candidate in preference order (clamp to today if every candidate is future)
 3. Store raw provider dates under `transaction.extra["<provider>"]` for provenance
 
-Reorder the candidate list to match your provider’s preferred display date. Do **not** apply this banking clamp to investment activity processors — prefer `trade_date` for display and leave future `settlement_date` values unclamped (store both when available).
+Reorder the candidate list to match your provider’s preferred display date. Do **not** apply this banking clamp to investment activity processors — prefer `trade_date` for display and leave future `settlement_date` values unclamped. Pass raw `trade_date` / `settlement_date` via `extra:` on both `import_trade` and `import_transaction` so provenance survives while `entries.date` stays the selected display date.
 
 ### 1. Customize the Adapter
 

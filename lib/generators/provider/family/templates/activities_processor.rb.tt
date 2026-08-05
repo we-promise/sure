@@ -141,6 +141,13 @@ class <%= class_name %>Account::ActivitiesProcessor
 
       currency = extract_currency(data, fallback: account.currency)
       description = data[:description] || "#{activity_type} #{ticker}"
+      date_provenance = {
+        "<%= file_name %>" => Provider::BankEntryDate.provenance([
+          [ :trade_date, data[:trade_date] ],
+          [ :settlement_date, data[:settlement_date] ],
+          [ :date, data[:date] ]
+        ])
+      }
 
       Rails.logger.info "<%= class_name %>Account::ActivitiesProcessor - Importing trade: #{ticker} qty=#{quantity} price=#{price} date=#{activity_date}"
 
@@ -154,7 +161,8 @@ class <%= class_name %>Account::ActivitiesProcessor
         date: activity_date,
         name: description,
         source: "<%= file_name %>",
-        activity_label: label_from_type(activity_type)
+        activity_label: label_from_type(activity_type),
+        extra: date_provenance
       )
       @trades_count += 1 if result
     end
@@ -182,6 +190,13 @@ class <%= class_name %>Account::ActivitiesProcessor
       amount = normalize_cash_amount(amount, activity_type)
 
       currency = extract_currency(data, fallback: account.currency)
+      date_provenance = {
+        "<%= file_name %>" => Provider::BankEntryDate.provenance([
+          [ :trade_date, data[:trade_date] ],
+          [ :settlement_date, data[:settlement_date] ],
+          [ :date, data[:date] ]
+        ])
+      }
 
       Rails.logger.info "<%= class_name %>Account::ActivitiesProcessor - Importing cash activity: type=#{activity_type} amount=#{amount} date=#{activity_date}"
 
@@ -192,7 +207,8 @@ class <%= class_name %>Account::ActivitiesProcessor
         date: activity_date,
         name: description,
         source: "<%= file_name %>",
-        investment_activity_label: label_from_type(activity_type)
+        investment_activity_label: label_from_type(activity_type),
+        extra: date_provenance
       )
       @transactions_count += 1 if result
     end
