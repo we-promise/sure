@@ -36,7 +36,32 @@ class BudgetPlan < ApplicationRecord
     (user ? accounts.accessible_by(user) : accounts).map(&:name).sort
   end
 
+  # generate_slug checks existing slugs before the INSERT, so two concurrent
+  # saves of the same name can both pass the check and collide on the unique
+  # index. Rescue the race like Family#default_budget_plan: the winner's row
+  # is visible by then, so one regeneration picks the next free suffix.
+  def save(**options, &block)
+    with_slug_collision_retry { super(**options, &block) }
+  end
+
+  def save!(**options, &block)
+    with_slug_collision_retry { super(**options, &block) }
+  end
+
   private
+    def with_slug_collision_retry
+      retried = false
+      begin
+        yield
+      rescue ActiveRecord::RecordNotUnique => e
+        raise if retried || !e.message.include?("index_budget_plans_on_family_id_and_slug")
+
+        retried = true
+        generate_slug
+        retry
+      end
+    end
+
     def generate_slug
       base = name.to_s.parameterize
       base = "plan" if base.blank?

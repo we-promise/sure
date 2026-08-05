@@ -21,7 +21,7 @@ class Assistant::Function::ListBudgets < Assistant::Function
 
   def call(params = {})
     {
-      budgets: family.budget_plans.default_first.map do |plan|
+      budgets: family.budget_plans.default_first.includes(:budget_plan_accounts).map do |plan|
         {
           name: plan.name,
           slug: plan.slug,

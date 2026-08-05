@@ -44,6 +44,17 @@ class BudgetPlanTest < ActiveSupport::TestCase
     assert_equal "household", plan.slug
   end
 
+  test "save retries with a fresh slug after losing the unique-index race" do
+    @family.budget_plans.create!(name: "Joint")
+
+    # Simulate the race: the loser computed "joint" before the winner's row
+    # was visible, so neither the existence check nor the uniqueness
+    # validation caught it and the INSERT hits the unique index.
+    loser = @family.budget_plans.new(name: "Joint", slug: "joint")
+    assert loser.save(validate: false)
+    assert_equal "joint-2", loser.slug
+  end
+
   test "cannot destroy the default plan" do
     plan = budget_plans(:dylan_default)
     assert_not plan.destroy
