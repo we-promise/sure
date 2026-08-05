@@ -420,6 +420,19 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-#{subcategory_games.id}']", text: /^Games/
   end
 
+  test "index links income and expense categories to filtered transactions" do
+    start_date = Date.current.beginning_of_month
+    end_date = Date.current.end_of_month
+    category = @family.categories.create!(name: "Reports Clickable Groceries", color: "#ABCDEF")
+    create_transaction(account: @family.accounts.first, name: "Groceries", amount: 42, category: category, date: Date.current)
+
+    get reports_path(period_type: :monthly, start_date: start_date, end_date: end_date)
+    assert_response :ok
+
+    expected_href = transactions_path(q: { categories: [ category.name ], start_date: start_date, end_date: end_date })
+    assert_select "tr[data-category='category-#{category.id}'] a[href=?]", expected_href, text: category.name
+  end
+
   test "index excludes tax-advantaged account transactions from activity breakdown" do
     @family.accounts.each { |account| account.entries.destroy_all }
 
@@ -456,6 +469,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/#{Regexp.escape(Category.other_investments.name)}/, other_investments_row.text)
     assert_match(/#{Regexp.escape(I18n.t("reports.transactions_breakdown.table.entries", count: 1))}/, other_investments_row.text)
     assert_match(/\$100\.00/, other_investments_row.text)
+    assert_equal 0, other_investments_row.css("a").size
   end
 
   test "monthly period navigation shows previous month link" do

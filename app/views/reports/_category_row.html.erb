@@ -2,6 +2,10 @@
   percentage = total.zero? ? 0 : (item[:total].to_f / total * 100).round(1)
   is_sub = level == :subcategory
   show_border = local_assigns.fetch(:show_border, false)
+  row_start_date = local_assigns[:start_date]
+  row_end_date = local_assigns[:end_date]
+  # Synthetic "Other Investments" is not a real category filter target (same as dashboard).
+  clickable = item[:category_id] != :other_investments && row_start_date.present? && row_end_date.present?
 %>
 
 <tr data-category="category-<%= item[:category_id] %>" class="text-secondary text-sm <%= show_border ? "table-divider" : "" %>">
@@ -30,9 +34,16 @@
           rounded: true
         ) %>
       <% end %>
-      <span class="font-medium text-primary">
-        <%= item[:category_name] %>
-      </span>
+      <% if clickable %>
+        <%= link_to item[:category_name],
+              transactions_path(q: { categories: [ item[:category_name] ], start_date: row_start_date, end_date: row_end_date }),
+              class: "font-medium text-primary hover:underline",
+              data: { turbo_frame: "_top", turbo_prefetch: false } %>
+      <% else %>
+        <span class="font-medium text-primary">
+          <%= item[:category_name] %>
+        </span>
+      <% end %>
       <span class="text-xs text-subdued whitespace-nowrap">
         (<%= t("reports.transactions_breakdown.table.entries", count: item[:count]) %>)
       </span>
