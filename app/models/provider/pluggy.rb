@@ -144,7 +144,7 @@ class Provider::Pluggy
       body[:options][:webhookUrl] = webhook_url if webhook_url.present?
       body[:itemId] = item_id if item_id
       data = send_with_auth(:post, "/connect_token", client_id:, client_secret:, body: body.to_json)
-      token = data[:accessToken] || data["accessToken"] # pipelock:ignore Credential in URL — runtime-minted connect token read from the API response, not a literal secret
+      token = data[:accessToken] || data["accessToken"] # pipelock:ignore Credential in URL
       raise Error.new("Pluggy connect_token returned no accessToken", :fetch_failed) if token.blank?
       token
     end
