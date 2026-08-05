@@ -320,6 +320,11 @@ module Api
           return
         end
 
+        # This mints directly (rotating an existing token, not via
+        # MobileDevice#issue_token!) with the same not-lock-protected
+        # check-then-act shape as that method — see its comment for why
+        # this residual race is a deliberately accepted risk, not an
+        # oversight.
         # Create new access token
         new_token = Doorkeeper::AccessToken.create!(
           application: access_token.application,

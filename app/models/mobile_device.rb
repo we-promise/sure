@@ -78,6 +78,17 @@ class MobileDevice < ApplicationRecord
   # same reload-before-mint check after a caller had already stripped its
   # own nil-handling on the assumption an earlier check made nil impossible.
   # Every caller of issue_token! MUST handle a nil return, unconditionally.
+  #
+  # Known accepted residual risk: this check-then-act isn't lock-protected
+  # against User#deactivate, so a deactivation committing in the instant
+  # between this reload and revoke_all_tokens!/AccessToken.create! below
+  # could theoretically still mint a token. Closing that fully would need
+  # row-level locking (`user.with_lock`) shared with the deactivation path,
+  # for every session/token-minting entry point in the app, not just this
+  # one. Deliberately not pursued: the window requires an admin's
+  # deactivation and this exact request to be mid-flight at the same
+  # instant, not a practical attack surface, unlike the permanently-open
+  # window this PR (#2240) actually fixes.
   def issue_token!
     return nil unless user.reload.active?
 
