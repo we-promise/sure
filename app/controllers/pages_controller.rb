@@ -424,7 +424,7 @@ class PagesController < ApplicationController
         .sort_by { |ct| -ct.total }
         .map do |ct|
           {
-            id: ct.category.id,
+            id: dashboard_category_id(ct.category),
             name: ct.category.name,
             amount: ct.total.to_f.round(2),
             currency: ct.currency,
@@ -455,6 +455,19 @@ class PagesController < ApplicationController
       filters[:kinds] = [ "investment_contribution" ] if Category.all_investment_contributions_names.include?(category.name)
 
       transactions_path(q: filters)
+    end
+
+    def dashboard_category_id(category)
+      return category.id if category.persisted?
+
+      case
+      when category.uncategorized?
+        "uncategorized"
+      when category.other_investments?
+        "other_investments"
+      else
+        "synthetic_#{category.name.parameterize}"
+      end
     end
 
     def money_flow_month_param

@@ -155,6 +155,25 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_not sankey_data.fetch("nodes").any? { |node| node["id"] == "surplus_node" }
   end
 
+  test "dashboard gives uncategorized outflow a stable synthetic segment id" do
+    create_transaction(
+      account: @family.accounts.first,
+      name: "Uncategorized dashboard expense",
+      amount: 125,
+      category: nil
+    )
+
+    get root_path
+
+    assert_response :ok
+    donut = css_select("[data-controller='donut-chart']").first
+    segments = JSON.parse(donut["data-donut-chart-segments-value"])
+    uncategorized_segment = segments.find { |segment| segment["name"] == Category.uncategorized_name }
+
+    assert_equal "uncategorized", uncategorized_segment.fetch("id")
+    assert_select "#segment_uncategorized", count: 1
+  end
+
   test "dashboard renders sankey chart zoom controls and stable node ids" do
     parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
     subcategory = @family.categories.create!(name: "Groceries", parent: parent_category, color: "#33FF57")
