@@ -66,7 +66,8 @@
                       </div>
                       <p class="mt-1.5 text-sm leading-6 text-secondary"><%= item.description %></p>
                       <% if item.issue_url %>
-                        <%= link_to "GitHub issue for #{item.title}", item.issue_url, class: "mt-2 inline-flex text-sm text-secondary underline focus-ring rounded", target: "_blank", rel: "noopener", aria: { label: "View GitHub issue for #{item.title}" } %>
+                        <% issue_link_text = t("pages.roadmap.issue_link", title: item.title) %>
+                        <%= link_to issue_link_text, item.issue_url, class: "mt-2 inline-flex text-sm text-secondary underline focus-ring rounded", target: "_blank", rel: "noopener", aria: { label: issue_link_text } %>
                       <% end %>
                     </article>
                   <% end %>

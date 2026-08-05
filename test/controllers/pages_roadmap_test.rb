@@ -33,6 +33,6 @@ class PagesRoadmapTest < ActionDispatch::IntegrationTest
     get roadmap_path
 
     assert_response :ok
-    assert_select "a[href='https://github.com/we-promise/sure/issues/42'][aria-label='View GitHub issue for Linked item']", text: "GitHub issue for Linked item"
+    assert_select "a[href='https://github.com/we-promise/sure/issues/42'][aria-label='GitHub issue for Linked item']", text: "GitHub issue for Linked item"
   end
 end

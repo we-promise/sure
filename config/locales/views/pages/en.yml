@@ -56,6 +56,7 @@ en:
         heading: Roadmap status
         description: Our priorities are guided by real-world use and community feedback.
         note: Timelines can change as we learn. Follow the project to stay up to date.
+      issue_link: GitHub issue for %{title}
     dashboard:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
