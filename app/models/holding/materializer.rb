@@ -189,7 +189,7 @@ class Holding::Materializer
     def cleanup_stale_calculated_currencies
       return if @holdings.empty?
 
-      deleted_count = 0
+      deletable_ids = []
 
       @holdings.group_by { |holding| [ holding.security_id, holding.date ] }.each do |(security_id, date), rows|
         keep_currencies = rows.map(&:currency).uniq
@@ -207,9 +207,10 @@ class Holding::Materializer
           date: date
         )
 
-        deletable_ids = stale_rows.map(&:id) - preserve_ids
-        deleted_count += account.holdings.where(id: deletable_ids).delete_all if deletable_ids.any?
+        deletable_ids.concat(stale_rows.map(&:id) - preserve_ids)
       end
+
+      deleted_count = deletable_ids.any? ? account.holdings.where(id: deletable_ids).delete_all : 0
 
       Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings with outdated currencies") if deleted_count > 0
     end
