@@ -96,22 +96,27 @@ module Api
             return
           end
 
-          # Reload right before minting — narrows the window where a
-          # concurrent deactivation between the check above and this point
-          # could otherwise still get a token issued, same reasoning as
-          # Authentication#create_session_for.
+          # Fast-path re-check to skip a pointless device upsert for a user
+          # already known to be inactive — issue_token! re-checks active? under
+          # lock immediately before minting (see its comment) and is the actual
+          # authorization boundary, not this check.
           unless user.reload.active?
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return
           end
 
-          # Create device and OAuth token
           begin
             device = MobileDevice.upsert_device!(user, device_params)
-            token_response = device.issue_token!
           rescue ActiveRecord::RecordInvalid => e
             Rails.logger.error("[Auth] Device registration failed: #{e.message}")
             render json: { error: "Failed to register device" }, status: :unprocessable_entity
+            return
+          end
+
+          begin
+            token_response = device.issue_token!
+          rescue ActiveRecord::RecordInvalid
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return
           end
 
@@ -462,13 +467,23 @@ module Api
           end
 
           device_info = device_info.symbolize_keys if device_info.respond_to?(:symbolize_keys)
-          device = MobileDevice.upsert_device!(user, device_info)
-          token_response = device.issue_token!
+
+          begin
+            device = MobileDevice.upsert_device!(user, device_info)
+          rescue ActiveRecord::RecordInvalid => e
+            Rails.logger.error("[Auth] Device registration failed: #{e.message}")
+            render json: { error: "Failed to register device" }, status: :unprocessable_entity
+            return
+          end
+
+          begin
+            token_response = device.issue_token!
+          rescue ActiveRecord::RecordInvalid
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          end
 
           render json: token_response.merge(user: mobile_user_payload(user))
-        rescue ActiveRecord::RecordInvalid => e
-          Rails.logger.error("[Auth] Device registration failed: #{e.message}")
-          render json: { error: "Failed to register device" }, status: :unprocessable_entity
         end
 
         def ensure_write_scope

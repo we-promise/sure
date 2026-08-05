@@ -66,6 +66,15 @@ class MobileDevice < ApplicationRecord
   # Issues a fresh Doorkeeper access token for this device, revoking any
   # previous tokens. Returns a hash with token details ready for an API
   # response or deep-link callback.
+  #
+  # This is the single choke point every mobile-token-issuing path funnels
+  # through, so the active? check lives here (under lock, immediately before
+  # minting) rather than at each call site. Callers may *additionally* check
+  # active? earlier for fast, friendly rejection (skip an MFA/device-validation
+  # round trip, avoid a pointless MobileDevice upsert) — but that's a UX
+  # optimization only. This check is the actual authorization boundary and
+  # must never be assumed redundant by a caller, however "obviously"
+  # already-checked the user seems.
   def issue_token!
     user.with_lock do
       unless user.active?

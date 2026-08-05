@@ -436,8 +436,21 @@ class SessionsController < ApplicationController
         return
       end
 
-      device = MobileDevice.upsert_device!(user, device_info.symbolize_keys)
-      token_response = device.issue_token!
+      begin
+        device = MobileDevice.upsert_device!(user, device_info.symbolize_keys)
+      rescue ActiveRecord::RecordInvalid => e
+        Rails.logger.warn("[Mobile SSO] Device save failed: #{e.record.errors.full_messages.join(', ')}")
+        mobile_sso_redirect(error: "device_error", message: "Unable to register device")
+        return
+      end
+
+      begin
+        token_response = device.issue_token!
+      rescue ActiveRecord::RecordInvalid
+        Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
+        mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
+        return
+      end
 
       # Store tokens behind a one-time authorization code instead of passing in URL
       authorization_code = SecureRandom.urlsafe_base64(32)
@@ -455,9 +468,6 @@ class SessionsController < ApplicationController
       )
 
       mobile_sso_redirect(code: authorization_code)
-    rescue ActiveRecord::RecordInvalid => e
-      Rails.logger.warn("[Mobile SSO] Device save failed: #{e.record.errors.full_messages.join(', ')}")
-      mobile_sso_redirect(error: "device_error", message: "Unable to register device")
     end
 
     def handle_desktop_sso_callback(user)
