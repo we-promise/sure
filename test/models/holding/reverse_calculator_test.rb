@@ -288,8 +288,8 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
       calc
     end
 
-    def cost_basis_for(calc, security, date)
-      calc.send(:cost_basis_for, security.id, date)
+    def cost_basis_for(calc, security, date, currency = @account.currency)
+      calc.send(:cost_basis_for, security.id, date, currency)
     end
 
     def load_today_portfolio

@@ -74,51 +74,43 @@ class Holding::ReverseCalculator
           price: price.price,
           currency: price.currency,
           amount: qty * price.price,
-          cost_basis: cost_basis_for(security_id, date)
+          cost_basis: cost_basis_for(security_id, date, price.currency)
         )
       end.compact
     end
 
     def precompute_cost_basis
-      @cost_basis_snapshots = Hash.new { |h, k| h[k] = [] }
-      tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+      @cost_basis_buys = Hash.new { |h, k| h[k] = [] }
 
       portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
         trade = trade_entry.entryable
         next unless trade.qty > 0
 
-        security_id = trade.security_id
-        trade_price = Money.new(trade.price, trade.currency)
-        begin
-          converted_price = trade_price.exchange_to(account.currency).amount
-        rescue Money::ConversionError
-          converted_price = trade.price
-        end
-
-        tracker[security_id][:total_cost] += converted_price * trade.qty
-        tracker[security_id][:total_qty] += trade.qty
-
-        @cost_basis_snapshots[security_id] << [
-          trade_entry.date,
-          tracker[security_id][:total_cost] / tracker[security_id][:total_qty]
-        ]
+        @cost_basis_buys[trade.security_id] << {
+          date: trade_entry.date,
+          qty: trade.qty,
+          price: trade.price,
+          currency: trade.currency
+        }
       end
     end
 
-    def cost_basis_for(security_id, date)
-      snapshots = @cost_basis_snapshots[security_id]
-      return nil if snapshots.empty?
+    def cost_basis_for(security_id, date, currency)
+      buys = @cost_basis_buys[security_id]
+      return nil if buys.blank?
 
-      lo, hi, result = 0, snapshots.size - 1, nil
-      while lo <= hi
-        mid = (lo + hi) / 2
-        if snapshots[mid][0] <= date
-          result = snapshots[mid][1]
-          lo = mid + 1
-        else
-          hi = mid - 1
-        end
+      applicable = buys.select { |buy| buy[:date] <= date }
+      return nil if applicable.empty?
+
+      total_qty = applicable.sum { |buy| buy[:qty] }
+      return nil if total_qty.zero?
+
+      total_cost = applicable.sum do |buy|
+        Money.new(buy[:price], buy[:currency]).exchange_to(currency, date: buy[:date]).amount * buy[:qty]
+      rescue Money::ConversionError
+        buy[:price] * buy[:qty]
       end
-      result
+
+      total_cost / total_qty
     end
 end
