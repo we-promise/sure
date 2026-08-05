@@ -60,14 +60,14 @@ class TransfersController < ApplicationController
   rescue Money::ConversionError
     @transfer ||= Transfer.new
     @transfer.tag_ids = transfer_params[:tag_ids]
-    @transfer.errors.add(:base, "Exchange rate unavailable for selected currencies and date")
+    @transfer.errors.add(:base, t(".exchange_rate_unavailable"))
     set_accounts
     @tags = Current.family.tags.alphabetically
     render :new, status: :unprocessable_entity
   rescue ArgumentError
     @transfer ||= Transfer.new
     @transfer.tag_ids = transfer_params[:tag_ids]
-    @transfer.errors.add(:date, "is invalid")
+    @transfer.errors.add(:date, t(".date_invalid"))
     set_accounts
     @tags = Current.family.tags.alphabetically
     render :new, status: :unprocessable_entity
