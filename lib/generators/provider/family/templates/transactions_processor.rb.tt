@@ -95,8 +95,20 @@ class <%= class_name %>Account::Transactions::Processor
       amount = parse_transaction_amount(data)
       return nil if amount.nil?
 
-      # TODO: Customize date field names based on your provider
-      date = parse_date(data[:date] || data[:transaction_date] || data[:posted_at], family: account&.family)
+      # Parse provider date candidates separately. Store all raw dates in
+      # transaction.extra for provenance; choose entries.date from the best
+      # non-future bank date (do not blindly use a future booking/posted date).
+      # See Provider::BankEntryDate and issue #2907.
+      date_candidates = [
+        [ "transaction_date", parse_date(data[:transaction_date], family: account&.family) ],
+        [ "authorized_date", parse_date(data[:authorized_date], family: account&.family) ],
+        [ "initiated_at", parse_date(data[:initiated_at], family: account&.family) ],
+        [ "posted_at", parse_date(data[:posted_at] || data[:posted_date], family: account&.family) ],
+        [ "booking_date", parse_date(data[:booking_date], family: account&.family) ],
+        [ "date", parse_date(data[:date], family: account&.family) ]
+      ]
+      # TODO: Reorder candidates to match your provider's preferred display date
+      date = Provider::BankEntryDate.select(date_candidates)
       return nil if date.nil?
 
       name = data[:name] || data[:description] || data[:merchant_name] || "Transaction"
@@ -141,7 +153,16 @@ class <%= class_name %>Account::Transactions::Processor
           "pending" => data[:pending] || data[:is_pending],
           "merchant" => data[:merchant] || data[:merchant_name],
           "category" => data[:category]
-        }.compact
+        }.compact.merge(
+          Provider::BankEntryDate.provenance([
+            [ :transaction_date, data[:transaction_date] ],
+            [ :authorized_date, data[:authorized_date] ],
+            [ :initiated_at, data[:initiated_at] ],
+            [ :posted_at, data[:posted_at] || data[:posted_date] ],
+            [ :booking_date, data[:booking_date] ],
+            [ :date, data[:date] ]
+          ])
+        )
       }
     end
 end

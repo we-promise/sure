@@ -129,10 +129,13 @@ class <%= class_name %>Account::ActivitiesProcessor
         return
       end
 
-      # Get the activity date
-      # TODO: Customize date field names
-      activity_date = parse_date(data[:settlement_date], family: account&.family) ||
-                      parse_date(data[:trade_date], family: account&.family) ||
+      # Activity dates: prefer trade_date for display when available; preserve
+      # settlement_date as provenance. Do NOT clamp future settlement dates —
+      # investment settlement in the future can be legitimate (#2907).
+      trade_date = parse_date(data[:trade_date], family: account&.family)
+      settlement_date = parse_date(data[:settlement_date], family: account&.family)
+      activity_date = trade_date ||
+                      settlement_date ||
                       parse_date(data[:date], family: account&.family) ||
                       Date.current
 
@@ -163,10 +166,11 @@ class <%= class_name %>Account::ActivitiesProcessor
       return if amount.nil?
       # Note: Zero-amount transactions (splits, free shares) are allowed
 
-      # Get the activity date
-      # TODO: Customize date field names
-      activity_date = parse_date(data[:settlement_date], family: account&.family) ||
-                      parse_date(data[:trade_date], family: account&.family) ||
+      # Prefer trade_date for display; keep settlement_date unclamped (#2907).
+      trade_date = parse_date(data[:trade_date], family: account&.family)
+      settlement_date = parse_date(data[:settlement_date], family: account&.family)
+      activity_date = trade_date ||
+                      settlement_date ||
                       parse_date(data[:date], family: account&.family) ||
                       Date.current
 

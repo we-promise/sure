@@ -451,4 +451,44 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not_nil result
     assert_equal Date.new(2025, 7, 15), result.date
   end
+
+  test "uses non-future value_date when booking_date is in the future" do
+    travel_to Date.new(2026, 8, 5) do
+      tx = {
+        transaction_id: "future_booking_1",
+        booking_date: "2026-08-08",
+        value_date: "2026-08-04",
+        transaction_date: "2026-08-03",
+        transaction_amount: { amount: "25.00", currency: "EUR" },
+        creditor: { name: "Future Booked Shop" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+
+      result = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+
+      assert_not_nil result
+      assert_equal Date.new(2026, 8, 4), result.date
+      assert_equal "2026-08-08", result.entryable.extra.dig("enable_banking", "booking_date")
+      assert_equal "2026-08-04", result.entryable.extra.dig("enable_banking", "value_date")
+      assert_equal "2026-08-03", result.entryable.extra.dig("enable_banking", "transaction_date")
+    end
+  end
+
+  test "content-based external_id still fingerprints raw provider booking_date" do
+    tx = {
+      transaction_id: nil,
+      entry_reference: nil,
+      booking_date: "2026-08-08",
+      value_date: "2026-08-04",
+      transaction_amount: { amount: "11.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Fingerprint Shop" },
+      remittance_information: [ "idempotent" ]
+    }
+
+    expected = EnableBankingEntry::Processor.compute_external_id(tx)
+    assert_equal expected, EnableBankingEntry::Processor.compute_external_id(tx.merge(value_date: "2026-08-01"))
+    refute_equal expected, EnableBankingEntry::Processor.compute_external_id(tx.merge(booking_date: "2026-08-09"))
+  end
 end

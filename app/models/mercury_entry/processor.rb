@@ -119,6 +119,10 @@ class MercuryEntry::Processor
       meta = { "pending" => pending? }
       meta["kind"]           = data[:kind] if data[:kind].present?
       meta["counterparty_id"] = data[:counterpartyId] if data[:counterpartyId].present?
+      meta.merge!(Provider::BankEntryDate.provenance([
+        [ :postedAt, data[:postedAt] ],
+        [ :createdAt, data[:createdAt] ]
+      ]))
       { "mercury" => meta }
     end
 
@@ -153,8 +157,21 @@ class MercuryEntry::Processor
     end
 
     def date
-      # Mercury provides createdAt and postedAt - use postedAt if available, otherwise createdAt
-      date_value = data[:postedAt].presence || data[:createdAt].presence
+      # Prefer postedAt, fall back to createdAt — but avoid a future postedAt as
+      # entries.date when createdAt (or clamping) yields a non-future date (#2907).
+      selected = Provider::BankEntryDate.select([
+        [ "postedAt", parse_provider_date(data[:postedAt]) ],
+        [ "createdAt", parse_provider_date(data[:createdAt]) ]
+      ])
+
+      return selected if selected
+
+      Rails.logger.error("Mercury transaction has invalid date value: #{[ data[:postedAt], data[:createdAt] ].inspect}")
+      raise ArgumentError, "Invalid date format: #{[ data[:postedAt], data[:createdAt] ].inspect}"
+    end
+
+    def parse_provider_date(date_value)
+      return nil if date_value.blank?
 
       case date_value
       when String
@@ -170,11 +187,10 @@ class MercuryEntry::Processor
       when Date
         date_value
       else
-        Rails.logger.error("Mercury transaction has invalid date value: #{date_value.inspect}")
-        raise ArgumentError, "Invalid date format: #{date_value.inspect}"
+        nil
       end
     rescue ArgumentError, TypeError => e
       Rails.logger.error("Failed to parse Mercury transaction date '#{date_value}': #{e.message}")
-      raise ArgumentError, "Unable to parse transaction date: #{date_value.inspect}"
+      nil
     end
 end
