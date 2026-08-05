@@ -86,14 +86,16 @@ class InvestmentStatement
     total = portfolio_value
     return [] if total.zero?
 
+    # Rank/limit on value first; only then compute cost-basis trends for the
+    # rows that will be rendered (avoids avg_cost/trade lookups for the rest).
     holdings_rolled_up_by_security
       .first(limit)
-      .map do |security, value, trend|
+      .map do |security, value, holdings|
         HoldingAllocation.new(
           security: security,
           amount: Money.new(value, family.currency),
           weight: (value / total * 100).round(2),
-          trend: trend
+          trend: combined_holding_trend(holdings)
         )
       end
   end
@@ -105,12 +107,12 @@ class InvestmentStatement
     total = rolled_up.sum { |_, value, _| value }
     return [] if total.zero?
 
-    rolled_up.map do |security, value, trend|
+    rolled_up.map do |security, value, holdings|
       HoldingAllocation.new(
         security: security,
         amount: Money.new(value, family.currency),
         weight: (value / total * 100).round(2),
-        trend: trend
+        trend: combined_holding_trend(holdings)
       )
     end
   end
@@ -308,9 +310,10 @@ class InvestmentStatement
       def amount_money = amount
     end
 
-    # Groups current holdings by security, summing family-currency value and
-    # combining cost-basis trends. Returns [[security, value, trend], ...]
-    # sorted by value descending.
+    # Groups current holdings by security and sums family-currency value.
+    # Returns [[security, value, holdings], ...] sorted by value descending.
+    # Callers that need return trends should call combined_holding_trend only
+    # for rows they will render (e.g. after top_holdings applies its limit).
     def holdings_rolled_up_by_security
       current_holdings
         .to_a
@@ -320,7 +323,7 @@ class InvestmentStatement
           value = holdings.sum { |h| convert_to_family_currency(h.amount, h.currency) }
           next if value.zero?
 
-          [ security, value, combined_holding_trend(holdings) ]
+          [ security, value, holdings ]
         end
         .sort_by { |_, value, _| -value }
     end

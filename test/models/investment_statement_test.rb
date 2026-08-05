@@ -134,6 +134,32 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 60.0, top.first.weight, 0.01
   end
 
+  test "top_holdings computes trends only for the selected limit" do
+    large = create_investment_account(balance: 5000, cash_balance: 0)
+    small = create_investment_account(balance: 1000, cash_balance: 0)
+
+    top_security = Security.create!(ticker: "TOP1", name: "Top One")
+    skipped_security = Security.create!(ticker: "SKIP", name: "Skipped")
+
+    Holding.create!(
+      account: large, security: top_security, date: Date.current,
+      qty: 50, price: 100, amount: 5000, currency: "USD",
+      cost_basis: 90, cost_basis_locked: true
+    )
+    Holding.create!(
+      account: small, security: skipped_security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD",
+      cost_basis: 90, cost_basis_locked: true
+    )
+
+    # Only the one holding in the selected top security should ask for a trend
+    Holding.any_instance.expects(:trend).once.returns(nil)
+
+    top = @statement.top_holdings(limit: 1)
+
+    assert_equal %w[TOP1], top.map(&:ticker)
+  end
+
   test "allocation rolls up duplicate securities and weights sum to 100%" do
     ira = create_investment_account(balance: 3000, currency: "USD")
     taxable = create_investment_account(balance: 2000, currency: "USD")
