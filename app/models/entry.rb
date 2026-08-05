@@ -458,53 +458,87 @@ class Entry < ApplicationRecord
     # @param bulk_update_params [Hash] The parameters to update
     # @param update_tags [Boolean] Whether to update tags (default: false)
     def bulk_update!(bulk_update_params, update_tags: false)
-      bulk_attributes = {
+      entry_attrs = {
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
-        name: bulk_update_params[:name],
-        entryable_attributes: {
-          category_id: bulk_update_params[:category_id],
-          merchant_id: bulk_update_params[:merchant_id]
-        }.compact_blank
+        name: bulk_update_params[:name]
+      }.compact_blank
+
+      transaction_attrs = {
+        category_id: bulk_update_params[:category_id],
+        merchant_id: bulk_update_params[:merchant_id]
       }.compact_blank
 
       tag_ids = Array.wrap(bulk_update_params[:tag_ids]).reject(&:blank?)
-      has_updates = bulk_attributes.present? || update_tags
+      has_updates = entry_attrs.present? || transaction_attrs.present? || update_tags
 
       return 0 unless has_updates
 
       transaction do
-        all.each do |entry|
-          changed = false
+        now = Time.current
 
-          # Update standard attributes
-          if bulk_attributes.present?
-            attrs = bulk_attributes.dup
-            attrs.delete(:date) if entry.split_child?
-            attrs.delete(:entryable_attributes) unless entry.transaction?
+        # 1. Bulk update Entry standard fields using update_all.
+        #    Split-child entries must not have their date changed (it must match the parent).
+        if entry_attrs.present?
+          non_split_attrs = entry_attrs.merge(updated_at: now)
+          split_attrs     = entry_attrs.except(:date).merge(updated_at: now)
 
-            if attrs.present?
-              attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
-              attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
-              entry.update! attrs
-              entry.transaction.record_category_usage! if entry.transaction?
-              changed = true
-            end
-          end
+          all.where(parent_entry_id: nil).update_all(non_split_attrs)
+          all.where.not(parent_entry_id: nil).update_all(split_attrs) if split_attrs.except(:updated_at).present?
+        end
 
-          # Handle tags separately - only when explicitly requested
-          if update_tags && entry.transaction?
-            entry.transaction.tag_ids = tag_ids
-            entry.transaction.save!
-            entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
-            changed = true
-          end
+        # 2. Bulk update Transaction entryable fields using update_all.
+        if transaction_attrs.present?
+          transaction_entryable_ids = all.where(entryable_type: "Transaction").select(:entryable_id)
+          Transaction.where(id: transaction_entryable_ids).update_all(transaction_attrs.merge(updated_at: now))
 
-          if changed
-            entry.lock_saved_attributes!
-            entry.mark_user_modified!
+          # Touch category once instead of once-per-entry
+          if transaction_attrs[:category_id].present?
+            Category.where(id: transaction_attrs[:category_id]).update_all(last_used_at: now)
           end
         end
+
+        # 3. Handle tags — requires per-row join-table operations; kept iterative but
+        #    restricted to only transaction-type entries.
+        if update_tags
+          all.where(entryable_type: "Transaction").includes(:entryable).each do |entry|
+            entry.entryable.tag_ids = tag_ids
+            entry.entryable.save!
+            entry.entryable.lock_attr!(:tag_ids) if entry.entryable.tags.any?
+          end
+        end
+
+        # 4. Bulk lock the changed attributes on entries (replaces per-entry lock_saved_attributes!).
+        if entry_attrs.present?
+          entry_lock_keys = entry_attrs.keys.map(&:to_s)
+          entry_lock_json = entry_lock_keys.index_with(now).to_json
+
+          # Non-split entries locked for all changed entry_attrs
+          all.where(parent_entry_id: nil).update_all(
+            "locked_attributes = locked_attributes || '#{entry_lock_json}'::jsonb"
+          )
+
+          # Split-child entries locked for entry_attrs minus :date
+          split_lock_keys = entry_lock_keys - [ "date" ]
+          if split_lock_keys.any?
+            split_lock_json = split_lock_keys.index_with(now).to_json
+            all.where.not(parent_entry_id: nil).update_all(
+              "locked_attributes = locked_attributes || '#{split_lock_json}'::jsonb"
+            )
+          end
+        end
+
+        # 5. Bulk lock the changed attributes on Transaction entryables.
+        if transaction_attrs.present?
+          tx_lock_json = transaction_attrs.keys.map(&:to_s).index_with(now).to_json
+          transaction_entryable_ids ||= all.where(entryable_type: "Transaction").select(:entryable_id)
+          Transaction.where(id: transaction_entryable_ids).update_all(
+            "locked_attributes = locked_attributes || '#{tx_lock_json}'::jsonb"
+          )
+        end
+
+        # 6. Bulk mark all updated entries as user-modified (single UPDATE instead of one per entry).
+        all.update_all(user_modified: true, updated_at: now)
       end
 
       all.size
