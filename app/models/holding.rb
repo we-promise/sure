@@ -27,6 +27,11 @@ class Holding < ApplicationRecord
   scope :for, ->(security) { where(security_id: security).order(:date) }
   scope :with_locked_cost_basis, -> { where(cost_basis_locked: true) }
   scope :with_unlocked_cost_basis, -> { where(cost_basis_locked: false) }
+  # Non-provider rows that are not user-entered/locked cost basis.
+  scope :calculated, -> {
+    where(account_provider_id: nil, cost_basis_locked: false)
+      .where("cost_basis_source IS DISTINCT FROM ?", "manual")
+  }
 
   delegate :ticker, to: :security
 
