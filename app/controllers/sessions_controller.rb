@@ -65,6 +65,16 @@ class SessionsController < ApplicationController
     end
 
     if user
+      # Check before starting the MFA challenge, not just after — otherwise a
+      # deactivated user's correct password still sets session[:mfa_user_id],
+      # and completing MFA later (e.g. after being reactivated) would finish
+      # a login whose first factor was accepted while inactive.
+      unless user.active?
+        flash.now[:alert] = t(".account_deactivated")
+        render :new, status: :unprocessable_entity
+        return
+      end
+
       if user.otp_required?
         log_super_admin_override_login(user)
         session[:mfa_user_id] = user.id
@@ -214,6 +224,14 @@ class SessionsController < ApplicationController
     # carries only a user id), so re-check the account here before minting one.
     unless user&.active?
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      return
+    end
+
+    # Same reasoning as SessionsController#create: check before starting the
+    # MFA challenge, not just after, so a stale in-flight login can't finish
+    # once the user is reactivated.
+    unless user.active?
+      redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
       return
     end
 
