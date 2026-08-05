@@ -37,6 +37,25 @@ en:
       title: Terms of Service
       heading: Terms of Service
       placeholder: Terms of service content will be displayed here.
+    roadmap:
+      title: Sure roadmap
+      back_to_sure: Back to Sure
+      back_to_app: Open app
+      eyebrow: Building Sure together
+      heading: The Sure roadmap
+      subtitle: A transparent view of what we’re improving, what’s next, and where the community can help shape the future of personal finance.
+      phases_heading: Roadmap phases
+      item_count:
+        one: "%{count} item"
+        other: "%{count} items"
+      statuses:
+        in_progress: In progress
+        planned: Planned
+        exploring: Exploring
+      status:
+        heading: Roadmap status
+        description: Our priorities are guided by real-world use and community feedback.
+        note: Timelines can change as we learn. Follow the project to stay up to date.
     dashboard:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"

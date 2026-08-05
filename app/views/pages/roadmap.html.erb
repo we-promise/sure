@@ -1,0 +1,82 @@
+<% content_for :title, t("pages.roadmap.title") %>
+
+<div class="h-full overflow-y-auto">
+  <div class="mx-auto w-full max-w-6xl px-5 py-6 sm:px-8 lg:px-12">
+    <header class="flex items-center justify-between border-b border-divider pb-5">
+    <%= link_to root_path, class: "inline-flex items-center gap-3 focus-ring rounded-lg", aria: { label: t("pages.roadmap.back_to_sure") } do %>
+      <%= image_tag "logomark-color.svg", class: "h-9 w-9", alt: "" %>
+      <span class="text-sm font-semibold text-primary"><%= brand_name %></span>
+    <% end %>
+    <%= render DS::Link.new(text: t("pages.roadmap.back_to_app"), href: root_path) %>
+    </header>
+
+    <main id="main" class="py-16 sm:py-20">
+    <div class="mx-auto max-w-3xl text-center">
+      <p class="text-xs font-semibold uppercase tracking-widest text-secondary"><%= t("pages.roadmap.eyebrow") %></p>
+      <h1 class="mt-4 text-4xl font-semibold tracking-tight text-primary sm:text-5xl"><%= t("pages.roadmap.heading") %></h1>
+      <p class="mx-auto mt-5 max-w-2xl text-base leading-7 text-secondary sm:text-lg"><%= t("pages.roadmap.subtitle") %></p>
+    </div>
+
+    <div class="mt-14 grid gap-12 lg:grid-cols-4 lg:gap-16">
+      <aside class="self-start lg:col-span-1 lg:sticky lg:top-8" aria-labelledby="roadmap-status-heading">
+        <%= render DS::Card.new(class: "gap-5") do %>
+          <div>
+            <h2 id="roadmap-status-heading" class="text-sm font-semibold text-primary"><%= t("pages.roadmap.status.heading") %></h2>
+            <p class="mt-2 text-sm leading-6 text-secondary"><%= t("pages.roadmap.status.description") %></p>
+          </div>
+          <dl class="divide-y divide-tertiary border-y border-divider">
+            <% %i[in_progress planned exploring].each do |status| %>
+              <div class="flex items-center justify-between gap-3 py-3">
+                <dt class="flex items-center gap-2 text-sm text-secondary">
+                  <%= render DS::Pill.new(label: t("pages.roadmap.statuses.#{status}"), tone: status == :in_progress ? :success : :neutral, marker: false, show_dot: true) %>
+                </dt>
+                <dd class="text-sm font-semibold tabular-nums text-primary"><%= @roadmap.status_counts.fetch(status, 0) %></dd>
+              </div>
+            <% end %>
+          </dl>
+          <p class="text-xs leading-5 text-subdued"><%= t("pages.roadmap.status.note") %></p>
+        <% end %>
+      </aside>
+
+      <section class="lg:col-span-3" aria-labelledby="roadmap-phases-heading">
+        <h2 id="roadmap-phases-heading" class="sr-only"><%= t("pages.roadmap.phases_heading") %></h2>
+        <div class="border-l border-divider">
+          <% @roadmap.phases.each do |phase| %>
+            <div class="relative -ml-px border-b border-divider pb-8 pl-7 pt-1 first:pt-0 last:border-b-0">
+              <span class="absolute -left-[0.4375rem] top-2 h-3 w-3 rounded-full border-2 border-primary bg-surface first:top-1" aria-hidden="true"></span>
+              <%= render DS::Disclosure.new(body_class: "mt-5", summary_class: "list-none cursor-pointer rounded-lg focus-ring") do |disclosure| %>
+                <% disclosure.with_summary_content do %>
+                  <div class="flex w-full items-start justify-between gap-4">
+                    <div>
+                      <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                        <h3 class="text-lg font-semibold text-primary"><%= phase.name %></h3>
+                        <span class="text-xs text-secondary"><%= t("pages.roadmap.item_count", count: phase.items.size) %></span>
+                      </div>
+                      <p class="mt-2 max-w-xl text-sm leading-6 text-secondary"><%= phase.description %></p>
+                    </div>
+                    <%= icon("chevron-down", class: "mt-1 shrink-0 text-secondary transition-transform group-open:rotate-180", size: "sm") %>
+                  </div>
+                <% end %>
+                <div class="divide-y divide-tertiary border-t border-divider">
+                  <% phase.items.each do |item| %>
+                    <article class="py-4 first:pt-5 last:pb-1">
+                      <div class="flex flex-wrap items-center justify-between gap-3">
+                        <h4 class="text-sm font-medium text-primary"><%= item.title %></h4>
+                        <%= render DS::Pill.new(label: t("pages.roadmap.statuses.#{item.status}"), tone: item.status == :in_progress ? :success : :neutral, marker: false) %>
+                      </div>
+                      <p class="mt-1.5 text-sm leading-6 text-secondary"><%= item.description %></p>
+                      <% if item.issue_url %>
+                        <%= link_to "GitHub issue for #{item.title}", item.issue_url, class: "mt-2 inline-flex text-sm text-secondary underline focus-ring rounded", target: "_blank", rel: "noopener", aria: { label: "View GitHub issue for #{item.title}" } %>
+                      <% end %>
+                    </article>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </section>
+    </div>
+    </main>
+  </div>
+</div>

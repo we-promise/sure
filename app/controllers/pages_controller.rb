@@ -29,7 +29,9 @@ class PagesController < ApplicationController
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
   DEFAULT_HEIGHT_PRESET = "auto"
 
-  skip_authentication only: %i[redis_configuration_error privacy terms]
+  # Roadmap is a public project page, so it uses the same guest-accessible
+  # convention as the legal pages and the shared blank shell.
+  skip_authentication only: %i[redis_configuration_error privacy terms roadmap]
   before_action :ensure_intro_guest!, only: :intro
 
   def dashboard
@@ -107,6 +109,11 @@ class PagesController < ApplicationController
   end
 
   def terms
+    render layout: "blank"
+  end
+
+  def roadmap
+    @roadmap = RoadmapPresenter.new
     render layout: "blank"
   end
 
