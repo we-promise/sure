@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 
 // Basic functionality to filter a list based on a provided text attribute.
 export default class extends Controller {
-  static targets = ["input", "list", "emptyMessage", "addItem", "addText"];
+  static targets = ["input", "list", "emptyMessage", "addItem", "addText", "addLabel"];
 
   connect() {
     this.inputTarget.focus();
@@ -123,7 +123,11 @@ export default class extends Controller {
       (item) => item.style.display !== "none"
     );
 
-    if (this.hasAddItemTarget && this.addItemTarget.style.display !== "none") {
+    if (
+      this.hasAddItemTarget &&
+      this.addItemTarget.style.display !== "none" &&
+      !this.addItemTarget.classList.contains("hidden")
+    ) {
       items.unshift(this.addItemTarget);
     }
 
