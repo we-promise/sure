@@ -72,17 +72,15 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
 
   test "show returns all messages when count exceeds default pagy page size" do
     api_key = create_read_api_key # pipelock:ignore
-    21.times do |i|
-      role_class = i.even? ? UserMessage : AssistantMessage
-      role_class.create!(chat: @chat, content: "msg #{i}", ai_model: "test")
-    end
+    initial_count = @chat.messages.count
+    21.times { |i| AssistantMessage.create!(chat: @chat, content: "msg #{i}", ai_model: "test") }
 
     get "/api/v1/chats/#{@chat.id}", headers: api_headers(api_key)
     assert_response :success
 
     response_body = JSON.parse(response.body)
-    assert response_body["messages"].length > 20,
-      "Expected more than 20 messages but got #{response_body['messages'].length}"
+    assert_equal initial_count + 21, response_body["messages"].length
+    assert_equal "msg 20", response_body["messages"].last["content"]
   end
 
   test "should create chat with write scope" do
