@@ -39,6 +39,8 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "login page offers passkey sign-in" do
+    AuthConfig.stubs(:passkey_login_enabled?).returns(true)
+
     get new_session_url
 
     assert_response :success

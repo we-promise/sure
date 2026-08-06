@@ -25,6 +25,28 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
     assert_operator @stored_credential.sign_count, :>, 0
   end
 
+  # The pending invitation lives in the Rack session, and complete_sign_in reads
+  # it immediately after creating the session. Anything that clears the session
+  # in between — a reset_session added to "fix" session fixation, say — drops the
+  # invitee into their own family with no error and no failing test.
+  test "accepts a pending invitation stored before the passkey sign-in" do
+    invitation = Invitation.create!(
+      email: @user.email,
+      role: "member",
+      family: @user.family,
+      inviter: @user
+    )
+
+    get new_session_path(invitation: invitation.token)
+    assert_response :success
+
+    post passkey_session_path, params: { credential: passkey_assertion }, as: :json
+
+    assert_response :success
+    assert invitation.reload.accepted_at.present?, "invitation was not accepted during passkey sign-in"
+    assert_equal "member", @user.reload.role
+  end
+
   test "rejects an assertion without user verification" do
     assertion = passkey_assertion(user_verified: false)
 

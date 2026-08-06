@@ -48,6 +48,31 @@ Sign-in is "usernameless": no email is submitted, because the browser returns th
 - Users must enable two-factor authentication before they can register a passkey. Disabling 2FA removes every registered passkey, which also removes passwordless sign-in for that user.
 - Passkey sign-in follows the same policy as local login. When `AUTH_LOCAL_LOGIN_ENABLED=false`, only super admins with `AUTH_LOCAL_ADMIN_OVERRIDE_ENABLED=true` may use it.
 
+### Upgrading an instance that already has passkeys
+
+Passwordless sign-in is on by default, and it applies to passkeys that were
+registered before this feature existed. A passkey a user added purely as a
+second factor can, after the upgrade, sign that user in on its own.
+
+Nothing needs to be re-registered for this to happen, and nothing in the
+database marks a credential as discoverable — whether a stored credential turns
+up in the passkey picker is decided by the authenticator that holds it. In
+practice, every credential held by a password manager or platform authenticator
+(Proton Pass, iCloud Keychain, 1Password, Bitwarden, Windows Hello) is
+discoverable and becomes usable for passwordless sign-in. Hardware security keys
+registered without a free resident-key slot stay second-factor only.
+
+The opt-out is instance-wide. There is no per-user or per-credential setting: to
+keep passkeys as a second factor for everyone, set
+`AUTH_PASSKEY_LOGIN_ENABLED=false` before upgrading. A single user can only opt
+out by removing the credential.
+
+This is not a reduction in security — the passwordless ceremony requires user
+verification, so the passkey alone is still two factors, as described above. It
+is a change in what an already-registered credential can do, and users who chose
+a passkey specifically as a *second* factor have not consented to it signing
+them in alone.
+
 ### Browser autofill
 
 When the browser supports conditional mediation, saved passkeys are offered from the email field's autofill menu, before any button is clicked. Browsers without it fall back to the "Sign in with a passkey" button, which works the same way.

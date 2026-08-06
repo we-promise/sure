@@ -34,6 +34,12 @@ export default class extends WebauthnController {
       return;
     }
 
+    // A second click would mint a fresh challenge while the first
+    // authenticator prompt is still open, so the assertion the user is about
+    // to produce would verify against a challenge the server has replaced.
+    if (this.authenticating) return;
+    this.authenticating = true;
+
     // A pending conditional request holds the challenge minted on connect.
     // Fetching options below replaces it server-side, so the stale request has
     // to go first or its assertion would verify against a challenge that no
@@ -49,28 +55,48 @@ export default class extends WebauthnController {
       await this.verifyCredential(serializePublicKeyCredential(credential));
     } catch (error) {
       this.showError(error.message);
+    } finally {
+      this.authenticating = false;
     }
   }
 
   async startConditionalMediation() {
+    // Created before the first await so a button click or a Turbo disconnect
+    // in the meantime has something to abort. Held in a local because
+    // abortConditionalMediation() nulls the field.
+    const controller = new AbortController();
+    this.abortController = controller;
+
     const available =
       await window.PublicKeyCredential?.isConditionalMediationAvailable?.();
-    if (!available) return;
+    if (!available || controller.signal.aborted) return;
 
-    this.abortController = new AbortController();
+    let credential;
 
     try {
       const options = await this.fetchOptions();
-      const credential = await navigator.credentials.get({
+      if (controller.signal.aborted) return;
+
+      credential = await navigator.credentials.get({
         publicKey: prepareCredentialRequestOptions(options),
         mediation: "conditional",
-        signal: this.abortController.signal,
+        signal: controller.signal,
       });
-
-      await this.verifyCredential(serializePublicKeyCredential(credential));
     } catch (_error) {
-      // Aborted, dismissed, or the user signed in another way. This runs
-      // without a user gesture, so failures stay silent.
+      // Nothing has been asked of the user yet: aborted, dismissed, or the
+      // background options request failed. Surfacing that would paint an error
+      // on a login page nobody has touched.
+      return;
+    }
+
+    if (controller.signal.aborted || !credential) return;
+
+    try {
+      await this.verifyCredential(serializePublicKeyCredential(credential));
+    } catch (error) {
+      // The user did pick a passkey from the autofill menu, so a rejection
+      // here has to be visible.
+      this.showError(error.message);
     }
   }
 

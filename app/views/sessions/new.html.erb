@@ -56,9 +56,14 @@
   <% end %>
 
   <%#
-    Sits with the SSO buttons rather than under the password fields: it is an
-    alternative to the credential form, not part of it, and the four outline
-    buttons read as one group.
+    Last thing in the local-login branch, so it renders directly above the SSO
+    buttons: a passkey is an alternative to the credential form, not part of it.
+
+    It stays inside this branch on purpose. PasskeySessionsController#create
+    gates on AuthConfig.local_login_allowed_for?, so in SSO-only mode (local
+    login off, no admin override) every assertion is rejected. Hoisting this
+    out would render a button that always fails, and mount a Stimulus
+    controller that mints an unredeemable challenge on every page view.
   %>
   <% if passkey_login_enabled %>
     <div class="mt-6 space-y-3"
