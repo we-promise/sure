@@ -670,4 +670,31 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_includes confirmed_ids, confirmed.entryable.id
     assert_not_includes pending_ids, confirmed.entryable.id
   end
+
+  test "reconcile_status filter matches the selected manual reconciliation statuses" do
+    unreconciled = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    cleared = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    reconciled = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+
+    cleared.update!(reconciled_status: "cleared")
+    reconciled.update!(reconciled_status: "reconciled")
+
+    cleared_ids = Transaction::Search.new(@family, filters: { reconcile_status: [ "cleared" ] }).transactions_scope.pluck(:id)
+    assert_includes cleared_ids, cleared.entryable.id
+    assert_not_includes cleared_ids, unreconciled.entryable.id
+    assert_not_includes cleared_ids, reconciled.entryable.id
+
+    cleared_or_reconciled_ids = Transaction::Search.new(@family, filters: { reconcile_status: [ "cleared", "reconciled" ] }).transactions_scope.pluck(:id)
+    assert_includes cleared_or_reconciled_ids, cleared.entryable.id
+    assert_includes cleared_or_reconciled_ids, reconciled.entryable.id
+    assert_not_includes cleared_or_reconciled_ids, unreconciled.entryable.id
+  end
+
+  test "reconcile_status filter is a no-op when blank" do
+    entry = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+
+    ids = Transaction::Search.new(@family, filters: { reconcile_status: [] }).transactions_scope.pluck(:id)
+
+    assert_includes ids, entry.entryable.id
+  end
 end

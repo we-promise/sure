@@ -769,6 +769,49 @@ end
                  "Expected transfer counterparty accounts to be preloaded"
   end
 
+  test "reconcile cycles through unreconciled -> cleared -> reconciled -> unreconciled on a manual account" do
+    manual_account = accounts(:depository)
+    assert manual_account.manual?, "fixture precondition: depository account must be manual"
+
+    entry = create_transaction(account: manual_account, amount: 50)
+    assert_equal "unreconciled", entry.reconciled_status
+
+    patch reconcile_transaction_path(entry.transaction)
+    assert_redirected_to transactions_path
+    assert_equal "cleared", entry.reload.reconciled_status
+    assert_equal "Marked as Cleared", flash[:notice]
+
+    patch reconcile_transaction_path(entry.transaction)
+    assert_equal "reconciled", entry.reload.reconciled_status
+
+    patch reconcile_transaction_path(entry.transaction)
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile is rejected for accounts with a live bank sync connection" do
+    linked_account = accounts(:connected)
+    assert_not linked_account.manual?, "fixture precondition: connected account must not be manual"
+
+    entry = create_transaction(account: linked_account, amount: 50)
+
+    patch reconcile_transaction_path(entry.transaction)
+
+    assert_redirected_to transactions_path
+    assert_equal "Reconciliation status only applies to manually-entered accounts (no bank sync)", flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile is not accessible for another family's transaction" do
+    other_family = families(:empty)
+    other_account = other_family.accounts.create!(name: "Other family manual account", balance: 0, currency: "USD", accountable: Depository.new)
+    other_entry = create_transaction(account: other_account, amount: 25)
+
+    patch reconcile_transaction_path(other_entry.transaction)
+
+    assert_response :not_found
+    assert_equal "unreconciled", other_entry.reload.reconciled_status
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }

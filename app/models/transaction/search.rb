@@ -7,6 +7,7 @@ class Transaction::Search
   attribute :amount_operator, :string
   attribute :types, array: true
   attribute :status, array: true
+  attribute :reconcile_status, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
@@ -36,6 +37,7 @@ class Transaction::Search
       query = apply_category_filter(query, categories)
       query = apply_type_filter(query, types)
       query = apply_status_filter(query, status)
+      query = apply_reconcile_status_filter(query, reconcile_status)
       query = apply_merchant_filter(query, merchants)
       query = apply_tag_filter(query, tags)
       query = EntrySearch.apply_search_filter(query, search)
@@ -207,5 +209,18 @@ class Transaction::Search
       else
         query
       end
+    end
+
+    # Filters by the manual reconciled_status enum (see Entry#reconciled_status).
+    # Unlike apply_status_filter (bank-sync pending/confirmed), this is a
+    # user-controlled flag, so any subset of the three values is meaningful —
+    # there's no "all selected = no filter" shortcut.
+    def apply_reconcile_status_filter(query, reconcile_statuses)
+      return query unless reconcile_statuses.present?
+
+      valid_statuses = reconcile_statuses & Entry.reconciled_statuses.keys
+      return query if valid_statuses.empty?
+
+      query.where(entries: { reconciled_status: valid_statuses })
     end
 end

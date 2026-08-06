@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     sign_in @user = users(:family_admin)
   end
@@ -117,5 +119,35 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
 
     transaction_entry.reload
     assert_equal [ new_tag.id ], transaction_entry.transaction.tag_ids
+  end
+
+  test "bulk update sets reconciled_status on manual accounts" do
+    manual_entry = create_transaction(account: accounts(:depository))
+    assert accounts(:depository).manual?
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ manual_entry.id ],
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "reconciled", manual_entry.reload.reconciled_status
+  end
+
+  test "bulk update ignores reconciled_status on synced accounts" do
+    synced_entry = create_transaction(account: accounts(:connected))
+    assert_not accounts(:connected).manual?
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ synced_entry.id ],
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "unreconciled", synced_entry.reload.reconciled_status
   end
 end
