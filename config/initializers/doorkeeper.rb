@@ -293,7 +293,12 @@ Doorkeeper.configure do
   # Check out https://github.com/doorkeeper-gem/doorkeeper/wiki/Changing-how-clients-are-authenticated
   # for more information on customization
   #
-  # access_token_methods :from_bearer_authorization, :from_access_token_param, :from_bearer_param
+  # SECURITY: restricted to the Authorization header only. Doorkeeper's default also accepts
+  # `?access_token=` / `?bearer_token=` query parameters, which RFC 6750 §2.3 discourages
+  # because credentials in a URL leak into web server and proxy access logs, browser history,
+  # and Referer headers. Nothing in this app passes tokens that way — Api::V1::BaseController
+  # already requires the Authorization header — so this only closes the unused path.
+  access_token_methods :from_bearer_authorization
 
   # Forces the usage of the HTTPS protocol in non-native redirect uris (enabled
   # by default in non-development environments). OAuth2 delegates security in
