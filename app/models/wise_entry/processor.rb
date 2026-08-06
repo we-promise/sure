@@ -150,8 +150,15 @@ class WiseEntry::Processor
       raise ArgumentError, "Wise transfer missing created date" unless raw
 
       case raw
-      when Date   then raw
-      when String then DateTime.parse(raw).to_date
+      when String
+        if raw.include?("T") || raw.include?(":")
+          Time.parse(raw).in_time_zone(account&.family&.timezone).to_date
+        else
+          Date.parse(raw)
+        end
+      when Time, DateTime
+        raw.in_time_zone(account&.family&.timezone).to_date
+      when Date then raw
       else raise ArgumentError, "Invalid date format: #{raw.inspect}"
       end
     rescue ArgumentError

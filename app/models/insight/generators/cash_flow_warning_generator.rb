@@ -78,6 +78,17 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
     # Projected occurrences of known recurring transactions within the horizon.
     # Transfers are internal moves, and cross-currency amounts can't be applied
     # to a family-currency balance without a rate lookup, so both are skipped.
+    #
+    # Deliberately NOT gated on family.recurring_transactions_disabled?, unlike
+    # SubscriptionAuditGenerator. That generator's entire subject is "your
+    # recurring transactions" — with detection off, there's nothing left to
+    # report. Here, recurring transactions are one input refining a cash-flow
+    # projection whose subject (will your balance dip low in the next 30 days)
+    # stays meaningful either way. Disabling the setting only stops the
+    # identification job from finding NEW recurring transactions
+    # (IdentifyRecurringTransactionsJob) — it doesn't clear out ones already
+    # identified, so this keeps using that last-known set rather than silently
+    # degrading to the flatter median-only baseline.
     def upcoming_recurring_entries
       family.recurring_transactions
         .expected_soon

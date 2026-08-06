@@ -54,7 +54,7 @@ class SnaptradeItemsController < ApplicationController
     snaptrade_item = Current.family.snaptrade_items.find_by(id: params[:item_id])
 
     if snaptrade_item
-      snaptrade_item.sync_later unless snaptrade_item.syncing?
+      snaptrade_item.sync_later_with_follow_up
 
       if params[:return_to].presence == "setup_accounts"
         redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: params[:accountable_type].presence), notice: t(".success")
@@ -91,6 +91,15 @@ class SnaptradeItemsController < ApplicationController
       .where(account_providers: { id: nil })
       .order(:name)
 
+    @account_type_options = [
+      [ t(".account_types.depository"), "Depository" ],
+      [ t(".account_types.credit_card"), "CreditCard" ],
+      [ t(".account_types.investment"), "Investment" ],
+      [ t(".account_types.crypto"), "Crypto" ],
+      [ t(".account_types.loan"), "Loan" ],
+      [ t(".account_types.other_asset"), "OtherAsset" ]
+    ]
+
     # Determine view state
     @syncing = @snaptrade_item.syncing?
     @waiting_for_sync = no_accounts && @syncing
@@ -101,6 +110,7 @@ class SnaptradeItemsController < ApplicationController
   def complete_account_setup
     Rails.logger.info "SnapTrade complete_account_setup - params: #{params.to_unsafe_h.inspect}"
     account_ids = params[:account_ids] || []
+    account_types = params[:account_types] || {}
     sync_start_dates = params[:sync_start_dates] || {}
     Rails.logger.info "SnapTrade complete_account_setup - account_ids: #{account_ids.inspect}, sync_start_dates: #{sync_start_dates.inspect}"
 
@@ -127,7 +137,7 @@ class SnaptradeItemsController < ApplicationController
         end
 
         Rails.logger.info "SnapTrade complete_account_setup - linking snaptrade_account #{snaptrade_account_id}"
-        link_snaptrade_account(snaptrade_account)
+        link_snaptrade_account(snaptrade_account, account_types[snaptrade_account_id])
         linked_count += 1
         Rails.logger.info "SnapTrade complete_account_setup - successfully linked snaptrade_account #{snaptrade_account_id}"
       rescue => e
@@ -233,7 +243,7 @@ class SnaptradeItemsController < ApplicationController
       code_verifier: oauth_session[:code_verifier]
     )
 
-    snaptrade_item.sync_later unless snaptrade_item.syncing?
+    snaptrade_item.sync_later_with_follow_up
 
     if oauth_session[:return_to] == "setup_accounts"
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: oauth_session[:accountable_type].presence), notice: t(".success")
@@ -312,7 +322,7 @@ class SnaptradeItemsController < ApplicationController
     end
 
     if snaptrade_item.oauth_configured?
-      snaptrade_item.sync_later unless snaptrade_item.syncing?
+      snaptrade_item.sync_later_with_follow_up
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item)
     else
       redirect_to oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id)
@@ -370,7 +380,7 @@ class SnaptradeItemsController < ApplicationController
         end
 
         # Trigger sync to process the linked account
-        snaptrade_item.sync_later unless snaptrade_item.syncing?
+        snaptrade_item.sync_later_with_follow_up
 
         redirect_to account_path(account), notice: t(".success", default: "Successfully linked to SnapTrade account.")
       rescue => e
@@ -425,9 +435,11 @@ class SnaptradeItemsController < ApplicationController
       { connections: [] }
     end
 
-    def link_snaptrade_account(snaptrade_account)
-      # Determine account type based on SnapTrade account type
-      accountable_type = infer_accountable_type(snaptrade_account.account_type)
+    def link_snaptrade_account(snaptrade_account, selected_type)
+      accountable_type = selected_type.presence || snaptrade_account.suggested_account_type
+      unless Accountable::TYPES.include?(accountable_type)
+        raise ArgumentError, "Invalid SnapTrade account type: #{accountable_type}"
+      end
 
       # Create the Sure account
       account = Current.family.accounts.create!(
@@ -447,21 +459,5 @@ class SnaptradeItemsController < ApplicationController
       end
 
       account
-    end
-
-    def infer_accountable_type(snaptrade_type)
-      # SnapTrade account types: https://docs.snaptrade.com/reference/get_accounts
-      case snaptrade_type&.downcase
-      when "tfsa", "rrsp", "rrif", "resp", "rdsp", "lira", "lrsp", "lif", "rlsp", "prif",
-           "401k", "403b", "457b", "ira", "roth_ira", "roth_401k", "sep_ira", "simple_ira",
-           "pension", "retirement", "registered"
-        "Investment" # Tax-advantaged accounts
-      when "margin", "cash", "non-registered", "individual", "joint"
-        "Investment" # Standard brokerage accounts
-      when "crypto"
-        "Crypto"
-      else
-        "Investment" # Default to Investment for brokerage accounts
-      end
     end
 end

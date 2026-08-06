@@ -318,4 +318,23 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert transfer.persisted?
     assert_in_delta(-0.0001, transfer.inflow_transaction.entry.amount, 0.0001)
   end
+
+  test "creates transfer with tags applied to both transactions" do
+    other_depository = @family.accounts.create!(name: "Savings", balance: 1000, currency: "USD", accountable: Depository.new)
+    tag = tags(:one)
+
+    creator = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: other_depository.id,
+      date: @date,
+      amount: @amount,
+      tag_ids: [ tag.id ]
+    )
+
+    transfer = creator.create
+
+    assert_equal [ tag.id ], transfer.outflow_transaction.tag_ids
+    assert_equal [ tag.id ], transfer.inflow_transaction.tag_ids
+  end
 end
