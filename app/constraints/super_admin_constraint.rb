@@ -15,10 +15,18 @@ class SuperAdminConstraint
     cookie_value = request.cookie_jar.signed[:session_token]
     return false if cookie_value.blank?
 
-    user = Session.find_by(id: cookie_value)&.user
-    return false unless user&.active?
+    session_record = Session.find_by(id: cookie_value)
+    return false unless session_record
 
-    user.super_admin?
+    unless session_record.user&.active?
+      # Same cleanup as Authentication#find_session_by_cookie — a stale
+      # session belonging to a deactivated user is destroyed here, not just
+      # denied, so it can't be reused once found.
+      session_record.destroy
+      return false
+    end
+
+    session_record.user.super_admin?
   rescue => e
     Rails.logger.warn("SuperAdminConstraint rejected request: #{e.class}: #{e.message}")
     false

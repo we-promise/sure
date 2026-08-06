@@ -31,14 +31,16 @@ class SidekiqWebAccessTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "deactivated super admin gets 404" do
+  test "deactivated super admin gets 404 and the stale session is destroyed" do
     super_admin = users(:sure_support_staff)
     sign_in super_admin
+    session_record = super_admin.sessions.order(created_at: :desc).first
     super_admin.update_column(:active, false)
 
     get "/sidekiq"
 
     assert_response :not_found
+    assert_not Session.exists?(id: session_record.id), "stale session should be destroyed, not just denied"
   end
 
   test "garbage session cookie fails closed" do
