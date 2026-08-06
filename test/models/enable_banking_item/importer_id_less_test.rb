@@ -57,7 +57,7 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
       raw_transactions_payload: [ old_transaction ]
     )
     @importer.stubs(:fetch_paginated_transactions)
-      .with(@enable_banking_account, has_entry(start_date: selected_date, transaction_status: "BOOK"))
+      .with(@enable_banking_account, has_entries(start_date: selected_date, transaction_status: "BOOK"))
       .returns([ new_transaction ])
     @importer.stubs(:include_pending?).returns(false)
 
