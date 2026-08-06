@@ -24,9 +24,10 @@
                       list_filter_target: "addItem",
                       list_filter_add_url: new_category_path(transaction_id: @transaction.id, grouped: params[:grouped]),
                       turbo_frame: :modal
-                    } do %>
+                    },
+                    id: "add-category" do %>
           <%= icon("plus", size: "sm") %>
-          <span><%= t(".add_category_prefix") %> <span data-list-filter-target="addText"></span> <%= t(".add_category_suffix") %></span>
+          <span data-list-filter-target="addLabel" data-list-filter-add-template="<%= t(".add_category", name: "%{name}") %>"></span>
         <% end %>
         <div class="pb-2 pl-4 mr-2 text-secondary hidden" data-list-filter-target="emptyMessage">
           <%= t(".no_categories") %>

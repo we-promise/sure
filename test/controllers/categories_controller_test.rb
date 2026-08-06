@@ -110,6 +110,21 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @transaction.reload.category, new_category
   end
 
+  test "read-only users cannot create and assign a category to a transaction" do
+    sign_in users(:family_member)
+    transaction = transactions(:transfer_in)
+
+    assert_no_difference "Category.count" do
+      post categories_url, params: {
+        transaction_id: transaction.id,
+        category: { name: "Read-only Category", color: Category::COLORS.sample } }
+    end
+
+    assert_redirected_to transaction_path(transaction.entry)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_nil transaction.reload.category_id
+  end
+
   test "edit" do
     get edit_category_url(categories(:food_and_drink))
     assert_response :success

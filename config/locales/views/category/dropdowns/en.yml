@@ -6,8 +6,7 @@ en:
         delete: Delete category
         edit: Edit category
       show:
-        add_category_prefix: "+ Add"
-        add_category_suffix: Category
+        add_category: "+ Add %{name} Category"
         clear: Clear category
         no_categories: No categories found
         search_placeholder: Search

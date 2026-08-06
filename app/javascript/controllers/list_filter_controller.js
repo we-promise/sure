@@ -11,7 +11,8 @@ export default class extends Controller {
   }
 
   filter() {
-    const filterValue = this.inputTarget.value.toLowerCase();
+    const rawFilterValue = this.inputTarget.value;
+    const filterValue = rawFilterValue.trim().toLowerCase();
     const items = this.listTarget.querySelectorAll(".filterable-item");
     let noMatchFound = true;
 
@@ -33,7 +34,7 @@ export default class extends Controller {
       this.emptyMessageTarget.classList.remove("hidden");
     }
 
-    this.updateAddCategory(filterValue, noMatchFound);
+    this.updateAddCategory(rawFilterValue, noMatchFound);
 
     this.highlightedIndex = -1;
     this.clearHighlights();
@@ -84,6 +85,11 @@ export default class extends Controller {
       item.classList.remove("bg-container-inset-hover");
       item.setAttribute("aria-selected", "false");
     });
+
+    if (this.hasAddItemTarget) {
+      this.addItemTarget.classList.remove("bg-container-inset-hover");
+      this.addItemTarget.setAttribute("aria-selected", "false");
+    }
   }
 
   selectHighlighted() {
@@ -91,6 +97,11 @@ export default class extends Controller {
     if (this.highlightedIndex < 0 || this.highlightedIndex >= items.length) return;
 
     const item = items[this.highlightedIndex];
+    if (this.hasAddItemTarget && item === this.addItemTarget) {
+      item.click();
+      return;
+    }
+
     const form = item.querySelector("form");
     if (form) {
       form.requestSubmit();
@@ -108,19 +119,30 @@ export default class extends Controller {
   }
 
   get visibleItems() {
-    return Array.from(this.listTarget.querySelectorAll(".filterable-item")).filter(
+    const items = Array.from(this.listTarget.querySelectorAll(".filterable-item")).filter(
       (item) => item.style.display !== "none"
     );
+
+    if (this.hasAddItemTarget && this.addItemTarget.style.display !== "none") {
+      items.unshift(this.addItemTarget);
+    }
+
+    return items;
   }
 
-  updateAddCategory(filterValue, noMatchFound) {
+  updateAddCategory(rawFilterValue, noMatchFound) {
     if (!this.hasAddItemTarget) return;
 
-    const categoryName = filterValue.trim();
+    const categoryName = rawFilterValue.trim();
     const shouldShow = noMatchFound && categoryName.length > 0;
     this.addItemTarget.classList.toggle("hidden", !shouldShow);
 
-    if (this.hasAddTextTarget) {
+    if (this.hasAddLabelTarget) {
+      this.addLabelTarget.textContent = this.addLabelTarget.dataset.listFilterAddTemplate.replace(
+        "%{name}",
+        categoryName
+      );
+    } else if (this.hasAddTextTarget) {
       this.addTextTarget.textContent = categoryName;
     }
 

@@ -2,6 +2,7 @@ class CategoriesController < ApplicationController
   before_action :set_category, only: %i[edit update destroy]
   before_action :set_categories, only: %i[update edit]
   before_action :set_transaction, only: :create
+  before_action :authorize_transaction_annotation, only: :create
 
   def index
     @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
@@ -121,6 +122,16 @@ class CategoriesController < ApplicationController
       if params[:transaction_id].present?
         @transaction = Current.family.transactions.find(params[:transaction_id])
       end
+    end
+
+    def authorize_transaction_annotation
+      return true unless @transaction
+
+      require_account_permission!(
+        @transaction.account,
+        :annotate,
+        redirect_path: transaction_path(@transaction.entry)
+      )
     end
 
     def category_params

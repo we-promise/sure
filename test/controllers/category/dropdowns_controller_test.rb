@@ -15,6 +15,6 @@ class Category::DropdownsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[data-list-filter-target='addItem'][data-turbo-frame='modal']", count: 1
     assert_select "a[data-list-filter-target='addItem'][href*='transaction_id=#{@transaction.id}']", count: 1
-    assert_select "[data-list-filter-target='addText']", count: 1
+    assert_select "[data-list-filter-target='addLabel']", count: 1
   end
 end
