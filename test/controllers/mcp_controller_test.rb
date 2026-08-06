@@ -47,6 +47,56 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2025-03-26", result["protocolVersion"]
   end
 
+  test "authenticates a token issued to a dynamically registered MCP client" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "https://claude.ai/callback" ],
+        grant_types: [ "authorization_code" ],
+        response_types: [ "code" ],
+        token_endpoint_auth_method: "none"
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
+    assert_equal "read_write", app.scopes.to_s
+
+    sign_in(@user)
+    verifier = SecureRandom.urlsafe_base64(64)
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+
+    post "/oauth/authorize", params: {
+      client_id: app.uid,
+      redirect_uri: app.redirect_uri,
+      response_type: "code",
+      code_challenge: challenge,
+      code_challenge_method: "S256"
+    }
+
+    assert_response :redirect
+    code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
+    assert code.present?, "Authorization response should contain a code"
+
+    post "/oauth/token", params: {
+      grant_type: "authorization_code",
+      client_id: app.uid,
+      redirect_uri: app.redirect_uri,
+      code: code,
+      code_verifier: verifier
+    }
+
+    assert_response :success
+    token_response = JSON.parse(response.body)
+    assert_equal "read_write", token_response["scope"]
+
+    post "/mcp", params: jsonrpc_request("initialize").to_json,
+         headers: mcp_headers(token_response["access_token"])
+
+    assert_response :ok
+    assert_equal "2025-03-26", JSON.parse(response.body).dig("result", "protocolVersion")
+  end
+
   test "rejects token with read-only scope" do
     app = Doorkeeper::Application.create!(
       name: "Test MCP Client #{SecureRandom.hex(4)}",
