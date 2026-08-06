@@ -86,7 +86,7 @@ de:
         success: Erfolg
         warning: Warnung
         error: Fehler
-        destructive: Fehler
+        destructive: Destruktiv
     pill:
       default_label: Vorschau
     dialog:

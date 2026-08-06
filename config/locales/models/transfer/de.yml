@@ -16,7 +16,9 @@ de:
           different_accounts: Muss von unterschiedlichen Konten stammen
           same_family: Muss aus derselben Familie stammen
           opposite_amounts: Muss entgegengesetzte Beträge aufweisen
-          within_days: Muss innerhalb von %{count} Tagen liegen
+          within_days:
+            one: Muss innerhalb von %{count} Tag liegen
+            other: Muss innerhalb von %{count} Tagen liegen
   transfer:
     name: Überweisung an %{to_account}
     payment_name: Zahlung an %{to_account}

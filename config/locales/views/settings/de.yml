@@ -115,7 +115,7 @@ de:
         subscription_subtitle: Aktualisiere dein Abonnement und deine Zahlungsdetails
         subscription_title: Abonnement verwalten
         currently_on_plan: 'Dein aktueller Tarif:'
-        trialing: Du nutzst derzeit die offene Demo von %{product_name}
+        trialing: Du nutzt derzeit die offene Demo von %{product_name}
         trial_days_left:
           one: Deine Daten werden in %{count} Tag gelöscht
           other: Deine Daten werden in %{count} Tagen gelöscht

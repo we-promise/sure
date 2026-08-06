@@ -65,7 +65,7 @@ de:
         no_asset: Noch keine Vermögenswerte
         no_liability: Noch keine Verbindlichkeiten
         add_asset_accounts: Füge deine Vermögenskonten hinzu, um eine vollständige Aufschlüsselung zu sehen
-        add_liability_accounts: Füge deine Verbindlichkeiten-Konten hinzu, um eine vollständige Aufschlüsselung zu sehen
+        add_liability_accounts: Füge deine Verbindlichkeitskonten hinzu, um eine vollständige Aufschlüsselung zu sehen
         weight: Gewicht
         value: Wert
         classifications:

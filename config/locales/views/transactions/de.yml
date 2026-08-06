@@ -142,6 +142,9 @@ de:
       split: Aufteilung
       split_tooltip: Diese Transaktion wurde in mehrere Einträge aufgeteilt
       split_child_tooltip: Teil einer aufgeteilten Transaktion
+    merge_duplicate:
+      success: Transaktionen erfolgreich zusammengeführt
+      failure: Transaktionen konnten nicht zusammengeführt werden
     dismiss_duplicate:
       success: Als getrennte Transaktionen beibehalten
       failure: Duplikatshinweis konnte nicht verworfen werden

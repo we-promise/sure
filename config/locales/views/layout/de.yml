@@ -29,6 +29,6 @@ de:
         cannot_be_undone: Diese Aktion kann nicht rückgängig gemacht werden.
         confirm: Bestätigen
     trial:
-      open_demo: Offene Demo
+      open_demo: Demo öffnen
       data_deleted_in_days: Daten werden in %{days} Tagen gelöscht
       contribute: Beitragen

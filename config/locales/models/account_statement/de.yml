@@ -13,8 +13,8 @@ de:
         institution_name_hint: Hinweis Institut
         opening_balance: Anfangssaldo
         original_file: Kontoauszug
-        period_end_on: Zeitraum Ende
-        period_start_on: Zeitraum Beginn
+        period_end_on: Ende des Zeitraums
+        period_start_on: Beginn des Zeitraums
     errors:
       models:
         account_statement:
@@ -27,4 +27,4 @@ de:
               invalid_format: muss eine PDF-, CSV- oder XLSX-Datei sein
               too_large: ist zu groß. Maximale Größe ist %{max_mb}MB
             period_end_on:
-              on_or_after_start: muss am oder nach dem Zeitraum Beginn liegen
+              on_or_after_start: muss am oder nach dem Beginn des Zeitraums liegen
