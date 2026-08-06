@@ -36,6 +36,20 @@ class HoldingTest < ActiveSupport::TestCase
     assert_in_delta 0.75, foreign_holding.weight, 0.001
   end
 
+  test "weight is nil when foreign-currency holding cannot be converted" do
+    foreign_security = Security.create!(ticker: "NOFX", name: "Missing FX Holding")
+    foreign_holding = @account.holdings.create!(
+      security: foreign_security,
+      date: Date.current,
+      qty: 1,
+      price: 100,
+      amount: 100,
+      currency: "EUR"
+    )
+
+    assert_nil foreign_holding.weight
+  end
+
   test "calculates average cost basis" do
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current)

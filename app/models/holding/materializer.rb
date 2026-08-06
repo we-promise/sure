@@ -186,34 +186,55 @@ class Holding::Materializer
     # currency (orphaned from prior account-currency normalization).
     # Locked/manual cost-basis rows are migrated onto the kept currency first so
     # user-entered basis is not lost with the stale account-currency row.
+    #
+    # Batches the candidate lookup for all rematerialized (security, date) keys in
+    # one query so reverse materialization does not N+1 over every day/security.
     def cleanup_stale_calculated_currencies
       return if @holdings.empty?
 
+      keep_by_key = @holdings
+        .group_by { |holding| [ holding.security_id, holding.date ] }
+        .transform_values { |rows| rows.map(&:currency).uniq }
+
+      security_ids = keep_by_key.keys.map(&:first).uniq
+      dates = keep_by_key.keys.map(&:last).uniq
+
+      candidates = account.holdings
+        .where(account_provider_id: nil, security_id: security_ids, date: dates)
+        .to_a
+
+      targets_by_key = {}
+      stale_by_key = Hash.new { |h, k| h[k] = [] }
+
+      candidates.each do |holding|
+        key = [ holding.security_id, holding.date ]
+        keep_currencies = keep_by_key[key]
+        next unless keep_currencies
+
+        if keep_currencies.include?(holding.currency)
+          targets_by_key[key] = holding if holding.currency == keep_currencies.first
+        else
+          stale_by_key[key] << holding
+        end
+      end
+
+      return if stale_by_key.empty?
+
       deletable_ids = []
 
-      @holdings.group_by { |holding| [ holding.security_id, holding.date ] }.each do |(security_id, date), rows|
-        keep_currencies = rows.map(&:currency).uniq
-        stale_rows = account.holdings
-          .where(account_provider_id: nil, security_id: security_id, date: date)
-          .where.not(currency: keep_currencies)
-          .to_a
-
-        next if stale_rows.empty?
-
+      stale_by_key.each do |(security_id, date), stale_rows|
         preserve_ids = migrate_manual_cost_basis_from_stale_rows(
           stale_rows: stale_rows,
-          target_currency: keep_currencies.first,
-          security_id: security_id,
+          target: targets_by_key[[ security_id, date ]],
           date: date
         )
 
-        # Delete calculated orphans via the canonical scope. Successfully migrated
-        # manual/locked rows are also removed; failed migrations stay in preserve_ids.
-        calculated_ids = account.holdings
-          .calculated
-          .where(security_id: security_id, date: date)
-          .where.not(currency: keep_currencies)
-          .pluck(:id)
+        # Delete calculated orphans in memory (same rules as Holding.calculated).
+        # Successfully migrated manual/locked rows are also removed; failed
+        # migrations stay in preserve_ids.
+        calculated_ids = stale_rows
+          .reject { |holding| holding.cost_basis_locked? || holding.cost_basis_source == "manual" }
+          .map(&:id)
 
         migrated_manual_ids = stale_rows
           .select { |holding| holding.cost_basis_locked? || holding.cost_basis_source == "manual" }
@@ -230,19 +251,13 @@ class Holding::Materializer
     # Moves locked/manual cost basis from an orphaned account-currency row onto the
     # newly materialized native-currency row. Returns stale row IDs that must be kept
     # when migration is not possible (missing target or FX conversion failure).
-    def migrate_manual_cost_basis_from_stale_rows(stale_rows:, target_currency:, security_id:, date:)
+    def migrate_manual_cost_basis_from_stale_rows(stale_rows:, target:, date:)
       manual_rows = stale_rows.select { |holding| holding.cost_basis_locked? || holding.cost_basis_source == "manual" }
       return [] if manual_rows.empty?
 
       source = manual_rows.max_by { |holding| [ holding.cost_basis_locked? ? 1 : 0, holding.updated_at || Time.at(0) ] }
       return manual_rows.map(&:id) unless source.cost_basis.present?
 
-      target = account.holdings.find_by(
-        account_provider_id: nil,
-        security_id: security_id,
-        date: date,
-        currency: target_currency
-      )
       return manual_rows.map(&:id) unless target
 
       # Native-currency row already has a user-locked basis — keep it and drop stale copies.
