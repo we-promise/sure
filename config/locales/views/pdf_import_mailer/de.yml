@@ -9,7 +9,7 @@ de:
       transactions_note: Dieses Dokument scheint Buchungen zu enthalten. Du kannst diese jetzt extrahieren und prüfen.
       document_stored_note: Dieses Dokument wurde zu deiner Referenz gespeichert. Es kann für Kontext in zukünftigen KI-Gesprächen verwendet werden.
       next_steps_label: Was als Nächstes?
-      next_steps_intro: "Sie haben mehrere Möglichkeiten:"
+      next_steps_intro: "Du hast mehrere Möglichkeiten:"
       option_extract_transactions: Buchungen aus diesem Kontoauszug extrahieren
       option_keep_reference: Dokument für Referenz in zukünftigen KI-Gesprächen behalten
       option_delete: Import löschen, wenn du ihn nicht mehr brauchst
