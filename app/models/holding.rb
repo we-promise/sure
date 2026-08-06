@@ -43,7 +43,10 @@ class Holding < ApplicationRecord
     return nil unless amount
     return 0 if amount.zero?
 
-    account.balance.zero? ? 1 : amount_in_account_currency / account.balance * 100
+    converted = amount_in_account_currency
+    return nil if converted.nil?
+
+    account.balance.zero? ? 1 : converted / account.balance * 100
   end
 
   # Returns average cost per share, or nil if unknown.
@@ -266,7 +269,7 @@ class Holding < ApplicationRecord
 
       Money.new(amount, currency).exchange_to(account.currency, date: date).amount
     rescue Money::ConversionError
-      amount
+      nil
     end
 
     def calculate_trend
