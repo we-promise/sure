@@ -54,13 +54,15 @@ Passwordless sign-in is on by default, and it applies to passkeys that were
 registered before this feature existed. A passkey a user added purely as a
 second factor can, after the upgrade, sign that user in on its own.
 
-Nothing needs to be re-registered for this to happen, and nothing in the
-database marks a credential as discoverable — whether a stored credential turns
-up in the passkey picker is decided by the authenticator that holds it. In
-practice, every credential held by a password manager or platform authenticator
-(Proton Pass, iCloud Keychain, 1Password, Bitwarden, Windows Hello) is
-discoverable and becomes usable for passwordless sign-in. Hardware security keys
-registered without a free resident-key slot stay second-factor only.
+This applies to a credential only if the authenticator that holds it made it
+discoverable. Registration asks with `residentKey: "preferred"`, which an
+authenticator is free to decline, and nothing in the database records what it
+decided — so Sure cannot tell you in advance which existing credentials are
+affected. In practice password managers and platform authenticators (Proton
+Pass, iCloud Keychain, 1Password, Bitwarden, Windows Hello) store discoverable
+credentials by default, so theirs generally are; a credential an authenticator
+stored non-discoverably, such as one on a hardware key with no free resident-key
+slot, stays second-factor only. Nothing needs to be re-registered either way.
 
 The opt-out is instance-wide. There is no per-user or per-credential setting: to
 keep passkeys as a second factor for everyone, set

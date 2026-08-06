@@ -18,7 +18,7 @@ export default class extends WebauthnController {
   };
 
   connect() {
-    if (this.conditionalValue) this.startConditionalMediation();
+    if (this.conditionalValue) this.#startConditionalMediation();
   }
 
   disconnect() {
@@ -60,7 +60,7 @@ export default class extends WebauthnController {
     }
   }
 
-  async startConditionalMediation() {
+  async #startConditionalMediation() {
     // Created before the first await so a button click or a Turbo disconnect
     // in the meantime has something to abort. Held in a local because
     // abortConditionalMediation() nulls the field.
@@ -74,7 +74,7 @@ export default class extends WebauthnController {
     let credential;
 
     try {
-      const options = await this.fetchOptions();
+      const options = await this.fetchOptions(controller.signal);
       if (controller.signal.aborted) return;
 
       credential = await navigator.credentials.get({
@@ -105,11 +105,15 @@ export default class extends WebauthnController {
     this.abortController = null;
   }
 
-  async fetchOptions() {
+  // Takes a signal so the conditional flow's request can be cancelled. The
+  // challenge rides in the session cookie, so a response whose Set-Cookie never
+  // lands cannot overwrite the challenge a manual click just minted.
+  async fetchOptions(signal) {
     const response = await fetch(this.optionsUrlValue, {
       method: "POST",
       headers: this.headers,
       credentials: "same-origin",
+      signal,
     });
 
     if (!response.ok) throw new Error(await this.errorMessage(response));
