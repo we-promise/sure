@@ -439,6 +439,8 @@ class EnableBankingItemsController < ApplicationController
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
     @sync_start_date = 3.months.ago.to_date
+    @sync_start_date_min = EnableBankingItem.minimum_sync_start_date
+    @sync_start_date_max = Date.current
 
     # Filter out Enable Banking accounts that are already linked to any account
     # (either via account_provider or legacy account association)
@@ -476,18 +478,6 @@ class EnableBankingItemsController < ApplicationController
     ).exists?
     if other_provider_exists || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
       return render_link_existing_error(t("enable_banking_items.link_existing_account.errors.only_manual"))
-    end
-
-    # Verify the Enable Banking account belongs to this family's Enable Banking items
-    unless enable_banking_account.enable_banking_item.present? &&
-           Current.family.enable_banking_items.include?(enable_banking_account.enable_banking_item)
-      flash[:alert] = t("enable_banking_items.link_existing_account.errors.invalid_enable_banking_account")
-      if turbo_frame_request?
-        render turbo_stream: Array(flash_notification_stream_items)
-      else
-        redirect_to account_path(@account), alert: flash[:alert]
-      end
-      return
     end
 
     # Relink behavior: detach any legacy link and point provider link at the chosen account

@@ -19,8 +19,8 @@
             <%= form.date_field :sync_start_date,
                   label: t(".sync_start_date_label"),
                   value: @sync_start_date,
-                  min: EnableBankingItem.minimum_sync_start_date,
-                  max: Date.current,
+                  min: @sync_start_date_min,
+                  max: @sync_start_date_max,
                   required: true %>
             <p class="text-xs text-secondary"><%= t(".sync_start_date_help") %></p>
           </div>

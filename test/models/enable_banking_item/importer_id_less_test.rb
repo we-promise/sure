@@ -51,11 +51,14 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
   test "historical re-fetch appends without shrinking already stored history" do
     old_transaction = id_less_tx(amount: "25.00", creditor: "Old merchant", date: 20.months.ago.to_date.to_s)
     new_transaction = id_less_tx(amount: "50.00", creditor: "New merchant", date: 1.month.ago.to_date.to_s)
+    selected_date = 18.months.ago.to_date
     @enable_banking_account.update!(
-      sync_start_date: 18.months.ago.to_date,
+      sync_start_date: selected_date,
       raw_transactions_payload: [ old_transaction ]
     )
-    @importer.stubs(:fetch_paginated_transactions).returns([ new_transaction ])
+    @importer.stubs(:fetch_paginated_transactions)
+      .with(@enable_banking_account, has_entry(start_date: selected_date, transaction_status: "BOOK"))
+      .returns([ new_transaction ])
     @importer.stubs(:include_pending?).returns(false)
 
     @importer.send(:fetch_and_store_transactions, @enable_banking_account)
