@@ -518,4 +518,33 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal expected, EnableBankingEntry::Processor.compute_external_id(tx.merge(value_date: "2026-08-01"))
     refute_equal expected, EnableBankingEntry::Processor.compute_external_id(tx.merge(booking_date: "2026-08-09"))
   end
+
+  test "all-future booking clamp stays put across daily resyncs until a real date arrives" do
+    tx = {
+      transaction_id: "future_clamp_resync",
+      booking_date: "2026-08-10",
+      value_date: "2026-08-09",
+      transaction_amount: { amount: "40.00", currency: "EUR" },
+      creditor: { name: "Future Clamp Shop" },
+      credit_debit_indicator: "DBIT",
+      status: "BOOK"
+    }
+
+    travel_to Date.new(2026, 8, 5) do
+      result = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+      assert_equal Date.new(2026, 8, 5), result.date
+    end
+
+    travel_to Date.new(2026, 8, 6) do
+      result = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+      assert_equal Date.new(2026, 8, 5), result.date,
+        "clamped entries.date must not advance with each daily sync while booking stays future"
+    end
+
+    travel_to Date.new(2026, 8, 10) do
+      result = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+      assert_equal Date.new(2026, 8, 10), result.date,
+        "once booking_date is on or before as_of, entries.date should adopt it"
+    end
+  end
 end

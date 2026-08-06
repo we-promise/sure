@@ -67,7 +67,13 @@ class PlaidEntry::Processor
         [ "authorized_date", parse_provider_date(plaid_transaction["authorized_date"]) ],
         [ "datetime", parse_provider_date(plaid_transaction["datetime"]) ],
         [ "authorized_datetime", parse_provider_date(plaid_transaction["authorized_datetime"]) ]
-      ], as_of: Provider::BankEntryDate.family_today(account&.family))
+      ],
+        as_of: Provider::BankEntryDate.family_today(account&.family),
+        existing_date: Provider::BankEntryDate.existing_entry_date(
+          account: account,
+          external_id: external_id,
+          source: "plaid"
+        ))
 
       return selected if selected
 

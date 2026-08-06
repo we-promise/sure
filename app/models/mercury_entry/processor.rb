@@ -162,7 +162,13 @@ class MercuryEntry::Processor
       selected = Provider::BankEntryDate.select([
         [ "postedAt", parse_provider_date(data[:postedAt]) ],
         [ "createdAt", parse_provider_date(data[:createdAt]) ]
-      ], as_of: Provider::BankEntryDate.family_today(account&.family))
+      ],
+        as_of: Provider::BankEntryDate.family_today(account&.family),
+        existing_date: Provider::BankEntryDate.existing_entry_date(
+          account: account,
+          external_id: external_id,
+          source: "mercury"
+        ))
 
       return selected if selected
 

@@ -279,4 +279,49 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     sf = entry.transaction.extra.fetch("simplefin")
     assert_equal false, sf["pending"], "expected a non-numeric posted value to not be inferred as pending"
   end
+
+  test "uses non-future transacted_at when posted is in the future" do
+    travel_to Date.new(2026, 8, 5) do
+      tx = {
+        id: "tx_future_posted",
+        amount: "-25.00",
+        currency: "USD",
+        payee: "Future Shop",
+        description: "Auth",
+        posted: "2026-08-08",
+        transacted_at: "2026-08-04"
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_future_posted", source: "simplefin")
+      assert_equal Date.new(2026, 8, 4), entry.date
+      assert_equal "2026-08-08", entry.transaction.extra.dig("simplefin", "posted")
+      assert_equal "2026-08-04", entry.transaction.extra.dig("simplefin", "transacted_at")
+    end
+  end
+
+  test "all-future date clamp stays put across daily resyncs" do
+    tx = {
+      id: "tx_future_clamp",
+      amount: "-40.00",
+      currency: "USD",
+      payee: "Clamp Shop",
+      description: "Hold",
+      posted: "2026-08-10",
+      transacted_at: "2026-08-09"
+    }
+
+    travel_to Date.new(2026, 8, 5) do
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      assert_equal Date.new(2026, 8, 5),
+        @account.entries.find_by!(external_id: "simplefin_tx_future_clamp").date
+    end
+
+    travel_to Date.new(2026, 8, 6) do
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      assert_equal Date.new(2026, 8, 5),
+        @account.entries.find_by!(external_id: "simplefin_tx_future_clamp").date
+    end
+  end
 end

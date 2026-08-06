@@ -181,7 +181,12 @@ class SimplefinEntry::Processor
 
       selected = Provider::BankEntryDate.select(
         candidates,
-        as_of: Provider::BankEntryDate.family_today(account&.family)
+        as_of: Provider::BankEntryDate.family_today(account&.family),
+        existing_date: Provider::BankEntryDate.existing_entry_date(
+          account: account,
+          external_id: external_id,
+          source: "simplefin"
+        )
       )
       return selected if selected
 

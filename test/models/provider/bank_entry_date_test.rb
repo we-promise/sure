@@ -43,6 +43,35 @@ class Provider::BankEntryDateTest < ActiveSupport::TestCase
     assert_equal as_of, selected
   end
 
+  test "preserves existing clamped date when every candidate is still in the future" do
+    as_of = Date.new(2026, 8, 6)
+    existing = Date.new(2026, 8, 5)
+    selected = Provider::BankEntryDate.select(
+      [
+        [ "booking_date", Date.new(2026, 8, 9) ],
+        [ "value_date", Date.new(2026, 8, 8) ]
+      ],
+      as_of: as_of,
+      existing_date: existing
+    )
+
+    assert_equal existing, selected
+  end
+
+  test "updates from existing clamp once a non-future candidate appears" do
+    as_of = Date.new(2026, 8, 8)
+    selected = Provider::BankEntryDate.select(
+      [
+        [ "booking_date", Date.new(2026, 8, 8) ],
+        [ "value_date", Date.new(2026, 8, 4) ]
+      ],
+      as_of: as_of,
+      existing_date: Date.new(2026, 8, 5)
+    )
+
+    assert_equal Date.new(2026, 8, 8), selected
+  end
+
   test "returns nil when no date candidates are present" do
     assert_nil Provider::BankEntryDate.select([ [ "booking_date", nil ], [ "value_date", nil ] ])
   end
