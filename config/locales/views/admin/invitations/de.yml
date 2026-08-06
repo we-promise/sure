@@ -1,0 +1,8 @@
+---
+de:
+  admin:
+    invitations:
+      destroy:
+        success: Einladung gelöscht.
+      destroy_all:
+        success: Alle Einladungen für diese Familie wurden gelöscht.

@@ -5,6 +5,7 @@ de:
       brokerage_cash: Depotguthaben
     destroy:
       success: Position gelöscht
+      cannot_delete: Du kannst diese Position nicht löschen
     update:
       success: Einstandspreis gespeichert.
       error: Ungültiger Einstandspreis.
@@ -15,6 +16,10 @@ de:
       security_not_found: Das ausgewählte Wertpapier konnte nicht gefunden werden.
     reset_security:
       success: Wertpapier auf Provider-Wert zurückgesetzt.
+    sync_prices:
+      success: Marktdaten erfolgreich synchronisiert.
+      unavailable: Die Synchronisierung von Marktdaten ist für Offline-Wertpapiere nicht verfügbar.
+      provider_error: Die aktuellen Preise konnten nicht abgerufen werden. Bitte versuche es in ein paar Minuten erneut.
     errors:
       security_collision: "Umbildung nicht möglich: Sie haben bereits eine Position für %{ticker} am %{date}."
     cost_basis_sources:
@@ -23,6 +28,7 @@ de:
       provider: Vom Provider
     cost_basis_cell:
       unknown: "--"
+      set: Festlegen
       set_cost_basis_header: "Einstandspreis für %{ticker} setzen (%{qty} Anteile)"
       total_cost_basis_label: Gesamter Einstandspreis
       or_per_share_label: "Oder pro Anteil eingeben:"
@@ -65,6 +71,11 @@ de:
       search_security_placeholder: Nach Ticker oder Name suchen
       cancel: Abbrechen
       remap_security: Speichern
+      provider_disabled_warning: Preisaktualisierungen pausiert — der Provider %{provider} ist deaktiviert. Wechsle unten zu einem anderen Provider oder aktiviere ihn erneut in den Einstellungen.
+      truncated_history_warning: Der Preisverlauf ist erst ab dem %{date} verfügbar. Für frühere Daten liegen vom ausgewählten Provider keine Daten vor — das kann passieren, wenn der Vermögenswert erst nach deinem Handelsdatum gelistet wurde oder wenn der Provider in seinem aktuellen Tarif nur einen begrenzten historischen Zeitraum anbietet.
+      switch_provider_label: Provider wechseln
+      switch_provider_description: '%{provider} ist deaktiviert. Suche dieses Wertpapier über einen anderen aktivierten Provider.'
+      switch_provider_button: Wechseln
       no_security_provider: Wertpapier-Provider nicht konfiguriert. Suche nach Wertpapieren nicht möglich.
       security_remapped_label: Wertpapier umgebildet
       provider_sent: "Provider: %{ticker}"
@@ -77,6 +88,11 @@ de:
       shares_label: Anteile
       book_value_label: Buchwert
       market_value_label: Marktwert
+      market_data_label: Marktdaten
+      market_data_sync_button: Aktualisieren
+      last_price_update: Letzte Preisaktualisierung
+      syncing: Wird synchronisiert...
+      never: Nie
       unknown: Unbekannt
       cost_basis_locked_label: Einstandspreis ist gesperrt
       cost_basis_locked_description: Ihr manuell gesetzter Einstandspreis wird durch Syncs nicht geändert.

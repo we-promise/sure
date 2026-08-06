@@ -1,0 +1,275 @@
+---
+de:
+  goals:
+    color_picker:
+      trigger_label: Farbe und Symbol wählen
+      color_heading: Farbe
+      icon_heading: Symbol
+      poor_contrast: Schlechter Kontrast, wähle eine dunklere Farbe oder
+      auto_adjust: automatisch anpassen.
+    index:
+      title: Ziele
+      subtitle: Spare für das, was dir wichtig ist.
+      new_goal: Neues Ziel
+      empty_filtered: Keine Ziele gefunden.
+      pending_pledges_callout: Du hast ausstehende Zusagen. Sure bestätigt sie beim nächsten Sync.
+      kpi:
+        contributed_label: Eingezahlt · letzte 30 Tage
+        velocity_delta_up: ↑ %{percent}%% ggü. vorherigen 30 Tagen
+        velocity_delta_down: ↓ %{percent}%% ggü. vorherigen 30 Tagen
+        velocity_delta_flat: ggü. vorherigen 30 Tagen
+        velocity_delta_zero_base: Erste 30 Tage Aktivität
+        needs_this_month_label: Diesen Monat nötig
+        needs_this_month_sub:
+          one: 1 Ziel hinter dem Plan
+          other: '%{count} Ziele hinter dem Plan'
+        needs_this_month_zero_sub: Keine Ziele hinter dem Plan
+        on_track_label: Ziele im Plan
+        on_track_value: '%{on_track} von %{total}'
+        on_track_sub_parts:
+          reached:
+            one: 1 erreicht
+            other: '%{count} erreicht'
+          behind:
+            one: 1 im Rückstand
+            other: '%{count} im Rückstand'
+          no_date:
+            one: 1 ohne Zieldatum
+            other: '%{count} ohne Zieldatum'
+          paused:
+            one: 1 pausiert
+            other: '%{count} pausiert'
+        on_track_sub_all_good: Alle aktiven Ziele im Plan
+        on_track_all_caught_up: Alles erledigt
+      goals_section:
+        heading: Ziele
+        subtitle: Spare für das, was dir wichtig ist.
+      ongoing_section:
+        heading: Ziele
+      archived_section:
+        heading: Archiviert
+      search:
+        placeholder: Ziele durchsuchen…
+        aria_label: Ziele durchsuchen
+        empty: Keine Ziele gefunden.
+        empty_with_query: Keine Ziele für „%{query}“ gefunden.
+        empty_with_filter: Keine Ziele für diesen Filter gefunden.
+        empty_with_both: Keine Ziele für „%{query}“ mit diesem Filter gefunden.
+        clear_search: Suche zurücksetzen
+        show_all: Alle anzeigen
+      chips:
+        all: Alle
+        on_track: Im Plan
+        behind: Im Rückstand
+        no_target_date: Offen
+        paused: Pausiert
+        completed: Abgeschlossen
+    new:
+      heading: Neues Ziel
+      subtitle: Spare gezielt für etwas Bestimmtes.
+    edit:
+      heading: Ziel bearbeiten
+      save: Änderungen speichern
+    create:
+      success: Ziel erstellt.
+    update:
+      success: Ziel aktualisiert.
+    destroy:
+      success: Ziel gelöscht.
+      archive_first: Archiviere das Ziel, bevor du es löschst.
+    pause:
+      success: Ziel pausiert.
+      invalid_transition: Ziel kann in seinem aktuellen Status nicht pausiert werden.
+    resume:
+      success: Ziel fortgesetzt.
+      invalid_transition: Ziel kann in seinem aktuellen Status nicht fortgesetzt werden.
+    complete:
+      success: Ziel als abgeschlossen markiert.
+      invalid_transition: Ziel kann in seinem aktuellen Status nicht abgeschlossen werden.
+    archive:
+      success: Ziel archiviert.
+      invalid_transition: Ziel kann in seinem aktuellen Status nicht archiviert werden.
+    unarchive:
+      success: Ziel wiederhergestellt.
+      invalid_transition: Ziel kann in seinem aktuellen Status nicht wiederhergestellt werden.
+    reopen:
+      success: Ziel wieder geöffnet.
+      invalid_transition: Ziel kann in seinem aktuellen Status nicht wieder geöffnet werden.
+    show:
+      edit: Bearbeiten
+      pause: Pausieren
+      resume: Fortsetzen
+      complete: Als abgeschlossen markieren
+      archive: Archivieren
+      unarchive: Wiederherstellen
+      reopen: Ziel wieder öffnen
+      delete: Endgültig löschen
+      record_pledge_cta: Zusage erfassen
+      pledge_just_transferred: Eine getätigte Überweisung erfassen
+      pledge_just_saved: Zurückgelegtes Geld erfassen
+      funding_accounts_heading: Finanzierungskonten
+      funding_accounts:
+        earmarked_of: '%{earmarked} von %{balance} zweckgebunden'
+        empty:
+          heading: Noch keine Finanzierungskonten verknüpft
+          body: Bearbeite das Ziel, um die Einlagenkonten zu verknüpfen, in die du sparst.
+      notes: Notizen
+      funding_last_30d: letzte 30 Tage
+      funding_last_90d: letzte 90 Tage
+      status_callout:
+        behind: spare %{amount}/Monat mehr, um aufzuholen
+        behind_covered: ausstehende Zusagen schließen die Lücke
+        on_track: erreicht das Ziel um %{date}
+        no_target_date: lege ein Zieldatum fest, um eine Prognose zu erstellen
+      pending_pledge:
+        title:
+          zero: 'Ausstehend: %{amount} auf %{account} · läuft heute ab'
+          one: 'Ausstehend: %{amount} auf %{account} · noch 1 Tag'
+          other: 'Ausstehend: %{amount} auf %{account} · noch %{count} Tage'
+        body_transfer: Wird automatisch bestätigt, sobald Sure beim nächsten Sync eine passende Einzahlung findet.
+        body_manual: Wird bei deiner nächsten manuellen Saldoänderung bestätigt.
+        pledged_at: Zugesagt vor %{time_ago}
+        extend: Um 7 Tage verlängern
+        cancel: Abbrechen
+        confirm_cancel_title: Diese Zusage stornieren?
+        confirm_cancel_body: Die Zusage über %{amount} wird entfernt. Du kannst jederzeit eine neue erfassen.
+        confirm_cancel_cta: Zusage stornieren
+      header:
+        target: Ziel %{amount}
+        target_by: Ziel %{amount} bis %{date}
+        target_by_past: Ziel %{amount} · fällig war %{date}
+      ring:
+        saved: Gespart
+        of: von %{target}
+        to_go: noch %{amount}
+        of_target: vom Ziel
+        market_value: Marktwert %{amount}
+        aria_label: Ziel zu %{percent}% erreicht. %{amount} von %{target} gespart.
+      projection:
+        heading: Prognose
+        legend_saved: Gespart
+        legend_projection: Prognose
+        legend_required: Erforderlich
+        reached: Du hast das Ziel erreicht. Keine Prognose nötig.
+        no_target_date: Kein Zieldatum festgelegt. Lege eines fest, um eine Prognose zu erstellen.
+        no_pace: Noch keine Einzahlungen. Zahle Geld auf ein verknüpftes Konto ein, um eine Prognose zu starten.
+        behind: Beim aktuellen Tempo wirst du das Ziel verfehlen.
+        on_track_html: Bei deinem aktuellen Tempo erreichst du dieses Ziel um <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: Prognosediagramm für %{name}
+        today_marker: Heute
+        tooltip_projected: 'Prognostiziert: %{amount}'
+        tooltip_saved: 'Gespart: %{amount}'
+        tooltip_target_relation: '%{percent}% von Ziel %{target}'
+      catch_up:
+        title: Spare %{amount}/Monat mehr, um aufzuholen
+        body: Aktuelles Tempo %{avg}/Monat · erforderlich %{required}/Monat, um dein Ziel zu erreichen.
+        adjust_target_cta: Stattdessen Ziel anpassen
+      confirm_complete_title: Dieses Ziel als abgeschlossen markieren?
+      confirm_complete_body: Es verlässt die Liste „Laufend“. Du kannst es später trotzdem archivieren oder wiederherstellen.
+      confirm_complete_body_short: Du bist bei %{progress}%, %{saved} von %{target}. Wenn du es als abgeschlossen markierst, wird dies statt des ursprünglichen Ziels als deine Leistung festgehalten. Fortfahren, oder schließen und stattdessen das Ziel anpassen?
+      confirm_complete_cta: Als abgeschlossen markieren
+      confirm_archive_title: Dieses Ziel archivieren?
+      confirm_archive_body: Archivierte Ziele verschwinden aus der Hauptliste. Du kannst sie später wiederherstellen.
+      confirm_archive_cta: Archivieren
+      paused_banner:
+        title: Dieses Ziel ist pausiert
+        body: Setze es fort, um deinen Fortschritt weiter zu verfolgen.
+        resume_cta: Ziel fortsetzen
+      archived_banner:
+        title: Dieses Ziel ist archiviert
+        body: Stelle es wieder her, um weiter einzuzahlen, oder lasse es als Aufzeichnung bestehen.
+        restore_cta: Ziel wiederherstellen
+      celebration:
+        heading: Ziel erreicht. Gut gemacht!
+        body: Ziel abgeschlossen bei %{saved} von %{target}. Behalte es als Aufzeichnung oder archiviere es jetzt.
+        archive_cta: Ziel archivieren
+      inactive:
+        heading_paused: Dieses Ziel ist pausiert
+        heading_archived: Dieses Ziel ist archiviert
+        body: Bisher %{saved} von %{target} gespart.
+      no_target_date:
+        heading: Zieldatum hinzufügen
+        body: Lege eine Frist fest, um eine Prognose zu erstellen und das erforderliche Tempo zu verfolgen.
+        cta: Zieldatum festlegen
+      empty:
+        heading: Noch keine Einzahlungen
+        body: Tätige eine Überweisung auf dein verknüpftes Konto. Sure erfasst sie beim nächsten Sync. Oder aktualisiere deinen manuellen Kontosaldo.
+    errors:
+      not_found: Dieses Ziel konnte nicht gefunden werden. Es wurde möglicherweise gelöscht.
+    states:
+      active: Aktiv
+      paused: Pausiert
+      completed: Abgeschlossen
+      archived: Archiviert
+    status:
+      on_track: Im Plan
+      behind: Im Rückstand
+      reached: Erreicht
+      completed: Abgeschlossen
+      no_target_date: Offen
+      paused: Pausiert
+      archived: Archiviert
+    empty_state:
+      heading: Noch keine Ziele
+      body: Lege ein Ziel fest, verknüpfe die Konten, in die du sparst, und verfolge deinen Fortschritt.
+      subtitle: Lege ein Ziel fest und beginne, dafür zu sparen.
+      new_goal: Erstelle dein erstes Ziel
+      no_depository_accounts: Du benötigst mindestens ein Einlagenkonto (Giro, Spar, HSA, Festgeld, Geldmarkt), bevor du ein Ziel erstellen kannst.
+      add_account: Konto hinzufügen
+    goal_card:
+      no_accounts: Keine verknüpften Konten
+      left: übrig
+      aria_progress: '%{percent}% von %{target}'
+      accounts:
+        one: 1 Konto
+        other: '%{count} Konten'
+      no_target_date: Offen
+      completed: Abgeschlossen
+      past_due: Überfällig
+      days_left:
+        one: noch 1 Tag
+        other: noch %{count} Tage
+      pace_with_target: '%{avg}/Monat · Ziel %{target}/Monat'
+      pace_no_target: '%{avg}/Monat im Schnitt'
+      footer_paused: Pausiert
+      footer_archived: Archiviert
+      footer_reached: Ziel erreicht
+      footer_catch_up: Spare %{amount}/Monat, um aufzuholen
+      footer_no_deadline: Offen
+      pending_pledge: Ausstehende Zusage
+      pending_count:
+        one: 1 ausstehend
+        other: '%{count} ausstehend'
+      footer_no_pledges: Noch keine zugeordneten Zusagen
+      footer_last_today: Letzte Zusage heute zugeordnet
+      footer_last_days:
+        one: Letzte Zusage vor 1 Tag zugeordnet
+        other: Letzte Zusage vor %{count} Tagen zugeordnet
+    form:
+      create: Ziel erstellen
+      save: Änderungen speichern
+      suggested_with_date: Spare {monthly}/Monat über {accounts}, um es rechtzeitig zu erreichen.
+      suggested_no_date: Lege ein Zieldatum fest, um eine Prognose zu erstellen.
+      errors:
+        name_required: Gib deinem Ziel einen Namen.
+        amount_required: Lege ein Ziel über null fest.
+        accounts_required: Wähle mindestens ein Finanzierungskonto.
+      fields:
+        name_placeholder: Notgroschen, Anzahlung fürs Haus…
+        target_amount: Zielbetrag
+        target_date: Zieldatum
+        color: Farbe
+        notes: Notizen (optional)
+        notes_placeholder: Eine Erinnerung für dein zukünftiges Ich…
+        funding_accounts: Finanzierungskonten
+        funding_accounts_hint: Der Saldo dieses Ziels ist der Saldo (oder zweckgebundene Anteil) dieser Konten.
+        whole_balance: Gesamter Saldo
+        earmark_for: Betrag für %{account} zweckbinden
+        earmark_hint: Lasse einen Betrag leer, um den gesamten Saldo dieses Kontos zu widmen.
+      subtypes:
+        checking: Girokonto
+        savings: Sparkonto
+        hsa: Gesundheits-Sparkonto
+        cd: Festgeld
+        money_market: Geldmarkt
+        other: Sonstiges

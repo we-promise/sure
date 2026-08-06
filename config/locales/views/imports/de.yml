@@ -2,6 +2,8 @@
 de:
   import:
     qif_category_selections:
+      update:
+        success: Kategorien und Tags gespeichert.
       show:
         title: "Konfigurieren und auswählen"
         description: "Überprüfe das erkannte Datumsformat und wähle dann die Kategorien und Tags aus deiner QIF-Datei aus, die in %{product_name} importiert werden sollen."
@@ -27,19 +29,62 @@ de:
         split_badge: aufgeteilt
     cleans:
       show:
+        not_configured: Bitte konfiguriere deinen Import, bevor du fortfährst.
         description: Bearbeite deine Daten in der Tabelle unten. Rote Zellen sind ungültig.
         errors_notice: Deine Daten enthalten Fehler. Fahre mit der Maus über den Fehler, um Details zu sehen.
         errors_notice_mobile: Deine Daten enthalten Fehler. Tippe auf den Fehler-Tooltip, um Details zu sehen.
         title: Daten bereinigen
+        data_cleaned: Deine Daten wurden bereinigt
+        next_step: Nächster Schritt
+        all_rows: Alle Zeilen
+        error_rows: Fehlerhafte Zeilen
     configurations:
       update:
         success: Import wurde erfolgreich konfiguriert.
+      account_import:
+        leave_empty: Leer lassen
+        default: Standard
+        entity_type: Entitätstyp
+        balance: Kontostand
+        currency: Währung
+        balance_date: Datum des Kontostands
+        date_format: Datumsformat
+        select_format: Format auswählen
+        apply_configuration: Konfiguration anwenden
       category_import:
         button_label: Weiter
         description: Lade eine einfache CSV-Datei hoch (z. B. wie bei einem Export). Die Spalten werden automatisch zugeordnet.
         instructions: Wähle Weiter, um die CSV zu parsen und zum Bereinigungsschritt zu gelangen.
+      merchant_import:
+        button_label: Weiter
+        description: Lade eine CSV-Datei mit deinen Händlern hoch. Wir ordnen die Spalten automatisch für dich zu.
+        instructions: Wähle Weiter, um die CSV zu parsen und zum Bereinigungsschritt zu gelangen.
       mint_import:
         date_format_label: Datumsformat
+      actual_import:
+        preconfigured_notice: Wir haben deinen Actual-Budget-Import bereits für dich vorkonfiguriert. Bitte fahre mit dem nächsten Schritt fort.
+        leave_empty: Leer lassen
+        date_label: Datum
+        date_format_label: Datumsformat
+        amount_label: Betrag
+        signage_convention_label: Vorzeichenkonvention
+        incomes_are_negative: Einnahmen sind negativ
+        incomes_are_positive: Einnahmen sind positiv
+        account_label: Konto (optional)
+        name_label: Zahlungsempfänger (optional)
+        category_label: Kategorie (optional)
+        notes_label: Notizen (optional)
+        apply_configuration: Konfiguration anwenden
+      ynab_import:
+        preconfigured_notice: Wir haben deinen YNAB-Import bereits für dich vorkonfiguriert. Bitte fahre mit dem nächsten Schritt fort.
+        amount_notice: Beträge werden automatisch aus den Spalten „Outflow“ und „Inflow“ erkannt.
+        leave_empty: Leer lassen
+        date_label: Datum
+        date_format_label: Datumsformat
+        account_label: Konto (optional)
+        name_label: Zahlungsempfänger (optional)
+        category_label: Kategorie (optional)
+        apply_configuration: Konfiguration anwenden
       rule_import:
         description: Konfigurieren Sie den Regel-Import. Regeln werden basierend auf den CSV-Daten erstellt oder aktualisiert.
         process_button: Regeln verarbeiten
@@ -48,11 +93,58 @@ de:
         description: Wähle die Spalten aus, die den jeweiligen Feldern in deiner CSV entsprechen.
         title: Import konfigurieren
       trade_import:
+        select_column: Spalte auswählen
+        date_label: Datum
+        quantity_label: Menge
+        buys_are_positive: Käufe haben eine positive Menge
+        buys_are_negative: Käufe haben eine negative Menge
+        default: Standard
+        currency_label: Währung
+        select_format: Format auswählen
+        leave_empty: Leer lassen
+        stock_exchange_code_label: Börsenkürzel
+        price_label: Preis
+        account_label: Konto
+        note_label: Notiz
+        no_security_provider_warning: Der Anbieter für Wertpapierpreise ist nicht konfiguriert. Deine Trade-Importe funktionieren trotzdem, aber Sure füllt den Kursverlauf nicht rückwirkend auf. Bitte richte dies in deinen Einstellungen ein.
         date_format_label: Datumsformat
+        apply_configuration: Konfiguration anwenden
       transaction_import:
+        date_label: Datum
+        select_column: Spalte auswählen
+        select_format: Format auswählen
+        amount_label: Betrag
+        default: Standard
+        currency_label: Währung
+        amount_type_strategy_label: Strategie für Betragstyp
+        select_strategy: Strategie auswählen
+        set: Festlegen
+        as_amount_type_column: als Betragstyp-Spalte
+        select_value: Wert auswählen
+        as_identifier_value: als Identifikationswert
+        treat_as_html: '"<span class="font-medium">%{value}</span>" behandeln als'
+        income_inflow: Einnahme (Zufluss)
+        expense_outflow: Ausgabe (Abfluss)
+        select_type: Typ auswählen
+        leave_empty: Leer lassen
+        account_label: Konto
+        category_label: Kategorie
+        notes_label: Notizen
+        apply_configuration: Konfiguration anwenden
+        incomes_are_positive: Einnahmen sind positiv
+        incomes_are_negative: Einnahmen sind negativ
+        amount_type_label: Betragstyp
+        select_convention: Konvention auswählen
         date_format_label: Datumsformat
         rows_to_skip_label: Erste n Zeilen überspringen
     confirms:
+      sure_import:
+        title: Bestätige deinen Import
+        description: Überprüfe die Daten, die aus deiner Exportdatei importiert werden.
+        summary: Import-Zusammenfassung
+        empty_summary: In dieser Datei wurden keine importierbaren Datensätze gefunden. Sie ist möglicherweise leer, oder die Zeilen entsprechen nicht dem erwarteten Exportformat (jede Zeile sollte ein JSON-Objekt mit den Schlüsseln „type“ und „data“ und unterstützten Typen sein).
+        publish_button: Import starten
+        cancel: Abbrechen
       mappings:
         create_account: Konto erstellen
         csv_mapping_label: "%{mapping} in CSV"
@@ -60,7 +152,9 @@ de:
         no_accounts: Du hast noch keine Konten. Bitte erstelle ein Konto, das wir für nicht zugewiesene Zeilen in deiner CSV verwenden können, oder gehe zurück zum Bereinigungsschritt und gib dort einen Kontonamen an.
         rows_label: Zeilen
         unassigned_account: Neues Konto für nicht zugewiesene Zeilen erstellen?
+        next: Weiter
       show:
+        invalid_data: Deine Daten enthalten Fehler. Bitte bearbeite sie, bis alle Fehler behoben sind.
         account_mapping_description: Weise alle Konten aus deiner importierten Datei den bestehenden Konten in %{product_name} zu. Du kannst auch neue Konten hinzufügen oder sie ohne Kategorie lassen.
         account_mapping_title: Konten zuweisen
         account_type_mapping_description: Weise alle Kontotypen aus deiner importierten Datei den Kontotypen in %{product_name} zu.
@@ -70,7 +164,22 @@ de:
         tag_mapping_description: Weise alle Tags aus deiner importierten Datei den bestehenden Tags in %{product_name} zu. Du kannst auch neue Tags hinzufügen oder sie ohne Kategorie lassen.
         tag_mapping_title: Tags zuweisen
     uploads:
+      handle_qif_upload:
+        qif_uploaded: QIF-Datei wurde erfolgreich hochgeladen.
+      update:
+        qif_uploaded: QIF-Datei wurde erfolgreich hochgeladen.
       show:
+        csv_invalid: Muss eine gültige CSV-Datei mit Kopfzeile und mindestens einer Datenzeile sein
+        drop_csv_title: CSV zum Hochladen hier ablegen
+        drop_csv_subtitle: Deine Datei wird automatisch hochgeladen
+        upload_csv_tab: CSV hochladen
+        copy_paste_tab: Kopieren & Einfügen
+        account_optional_label: Konto (optional)
+        multi_account_import: Mehrkonten-Import
+        upload_csv_button: CSV hochladen
+        paste_csv_placeholder: Füge hier den Inhalt deiner CSV-Datei ein
+        download_sample_csv: Beispiel-CSV herunterladen
+        to_see_format: um das erforderliche CSV-Format zu sehen
         qif_title: QIF-Datei hochladen
         qif_description: Wähle das Konto, zu dem diese QIF-Datei gehört, und lade deinen .qif-Export aus Quicken hoch.
         qif_account_label: Konto
@@ -87,13 +196,113 @@ de:
         instructions_4: Spalten mit einem Sternchen (*) sind Pflichtfelder.
         instructions_5: Keine Kommas, Währungssymbole oder Klammern in Zahlen verwenden.
         title: Daten importieren
+      sure_import:
+        title: Aus Export importieren
+        description: Lade die Datei all.ndjson aus deinem Datenexport hoch, um deine Konten, Transaktionen, Kategorien und mehr wiederherzustellen.
+        drop_title: NDJSON zum Hochladen hier ablegen
+        drop_subtitle: Deine Datei wird automatisch hochgeladen
+        browse: Durchsuchen
+        browse_hint: um deine all.ndjson-Datei hier hinzuzufügen
+        upload_button: NDJSON hochladen
+        hint_html: Lade die Datei <strong>all.ndjson</strong> aus deinem Datenexport-ZIP hoch
+        ndjson_invalid: Muss ein gültiges NDJSON mit mindestens einem Eintrag sein
   imports:
+    mapping_labels:
+      account_type: Kontotyp
+      account: Konto
+      category: Kategorie
+    dry_run_resources:
+      transactions: Transaktionen
+      balances: Salden
+      accounts: Konten
+      categories: Kategorien
+      rules: Regeln
+      merchants: Händler
+      recurring_transactions: Wiederkehrende Transaktionen
+      transfers: Überweisungen
+      rejected_transfers: Abgelehnte Überweisungen
+      holdings: Bestände
+      valuations: Bewertungen
+      budget_categories: Budget-Kategorien
+    column_labels:
+      date: Datum
+      amount: Betrag
+      currency: Währung
+      category: Kategorie
+      account: Konto
+      notes: Notizen
+      qty: Menge
+      exchange: Börse
+      price: Preis
+      entity_type: Typ
+      category_parent: Übergeordnete Kategorie
+      category_color: Farbe
+      category_icon: Lucide-Icon
+      merchant_color: Farbe
+      merchant_website: Website-URL
+    update:
+      account_saved: Konto gespeichert.
+      invalid_account: Konto nicht gefunden.
+    publish:
+      started: Dein Import wurde im Hintergrund gestartet.
+      max_rows_exceeded: Dein Import überschreitet die maximale Zeilenanzahl von %{max}.
+    revert:
+      started: Der Import wird im Hintergrund rückgängig gemacht.
+    cancel:
+      cancelled: Import als fehlgeschlagen markiert. Du kannst es auf der Import-Seite erneut versuchen.
+      not_cancellable: Dieser Import kann gerade nicht als fehlgeschlagen markiert werden – der zugehörige Job läuft möglicherweise noch. Versuche es erneut, sobald er eine Stunde lang inaktiv war.
+    apply_template:
+      template_applied: Vorlage angewendet.
+      no_template_found: Keine Vorlage gefunden, bitte konfiguriere deinen Import manuell.
+    destroy:
+      deleted: Dein Import wurde gelöscht.
+    failure:
+      title: Import fehlgeschlagen
+      description: Bitte überprüfe dein Dateiformat auf Fehler und stelle sicher, dass alle Pflichtfelder ausgefüllt sind. Versuche es anschließend erneut.
+      try_again: Erneut versuchen
+    success:
+      title: Import erfolgreich
+      description: Deine importierten Daten wurden erfolgreich hinzugefügt und stehen jetzt zur Verfügung.
+      back_to_dashboard: Zurück zur Übersicht
+      verification:
+        title: Rücklese-Überprüfung
+        checked: Geprüft
+        mismatches: Abweichungen
+        status:
+          not_verified: Nicht überprüft
+          matched: Übereinstimmend
+          mismatch: Abweichung
+          failed: Fehlgeschlagen
+          reverted: Zurückgesetzt
+    importing:
+      title: Import läuft
+      description: Dein Import läuft. Sieh im Import-Menü nach Statusaktualisierungen oder klicke auf „Status prüfen“, um die Seite zu aktualisieren. Du kannst die App währenddessen weiter nutzen.
+      check_status: Status prüfen
+      back_to_dashboard: Zurück zur Übersicht
+    revert_failure:
+      title: Rückgängigmachen des Imports fehlgeschlagen
+      description: Bitte versuche es erneut
+      try_again: Erneut versuchen
     date_format:
       heading: Datumsformat
       description: "Das Datumsformat wurde automatisch aus deiner Datei erkannt. Ändere es, wenn die Datumsangaben falsch aussehen."
       preview: "Erstes erkanntes Datum"
       error_title: "Datumsformat konnte nicht erkannt werden"
       error_description: "Keines der unterstützten Datumsformate konnte die Datumsangaben in dieser Datei lesen. Bitte überprüfe, ob die Datei gültige Datumseinträge enthält."
+    type_labels:
+      transaction_import: Transaktionsimport
+      trade_import: Trade-Import
+      account_import: Kontoimport
+      mint_import: Mint-Import
+      actual_import: Actual-Import
+      ynab_import: YNAB-Import
+      qif_import: QIF-Import
+      category_import: Kategorienimport
+      rule_import: Regelimport
+      merchant_import: Händlerimport
+      pdf_import: PDF-Import
+      document_import: Dokumentimport
+      sure_import: Sure-Import
     steps:
       upload: Hochladen
       configure: Konfigurieren
@@ -101,6 +310,9 @@ de:
       map: Zuordnen
       confirm: Bestätigen
       select: Auswählen
+      progress: Schritt %{step} von %{total}
+    empty:
+      message: Keine Importe gefunden.
     index:
       title: Importe
       new: Neuer Import
@@ -112,6 +324,13 @@ de:
         status: Status
         actions: Aktionen
       row:
+        type_labels:
+          transaction_import: Transaktion
+          account_import: Konto
+          category_import: Kategorie
+          rule_import: Regel
+          merchant_import: Händler
+          document_import: Dokument
         status:
           in_progress: Wird ausgeführt
           uploading: Zeilen werden verarbeitet
@@ -124,18 +343,27 @@ de:
           confirm_revert: Dadurch werden importierte Transaktionen gelöscht, Sie können Ihre Daten aber jederzeit wieder einsehen und erneut importieren.
           delete: Löschen
           view: Anzeigen
+          mark_failed: Als fehlgeschlagen markieren
+          confirm_mark_failed: Dieser Import war eine Weile inaktiv, sein Hintergrund-Job wurde vermutlich unterbrochen. Als fehlgeschlagen markieren, damit du es erneut versuchen kannst? Es werden keine importierten Daten übernommen.
       empty: Noch keine Importe vorhanden.
     new:
       description: Du kannst verschiedene Datentypen manuell über CSV importieren oder eine unserer Importvorlagen wie Mint verwenden.
+      tab_financial_tools: Finanz-Tools & Dateien
+      tab_raw_data: Rohdaten
+      import_ynab: Von YNAB importieren
       import_accounts: Konten importieren
       import_categories: Kategorien importieren
+      import_merchants: Händler importieren
       import_file: Dokument importieren
       import_file_description: KI-gestützte Analyse für PDFs und durchsuchbarer Upload für weitere Formate
       import_mint: Von Mint importieren
+      import_actual: Von Actual Budget importieren
       import_portfolio: Investitionen importieren
       import_rules: Regeln importieren
       import_transactions: Transaktionen importieren
       import_qif: Von Quicken importieren (QIF)
+      import_sure: Von Sure importieren
+      import_sure_description: Vollständige Export-Datei (.ndjson)
       requires_account: Importiere zuerst Konten, um diese Option zu nutzen.
       resume: "%{type} fortsetzen"
       sources: Quellen
@@ -144,19 +372,24 @@ de:
       file_too_large: Datei ist zu groß. Maximale Größe %{max_size} MB.
       invalid_file_type: Ungültiger Dateityp. Bitte laden Sie eine CSV-Datei hoch.
       csv_uploaded: CSV wurde erfolgreich hochgeladen.
+      ndjson_uploaded: NDJSON-Datei wurde erfolgreich hochgeladen.
       pdf_too_large: PDF ist zu groß. Maximale Größe %{max_size} MB.
       pdf_processing: Ihre PDF wird verarbeitet. Sie erhalten eine E-Mail, wenn die Analyse abgeschlossen ist.
       invalid_pdf: Die hochgeladene Datei ist keine gültige PDF.
+      duplicate_pdf_unavailable: Dieses PDF ist bereits als Kontoauszug gespeichert, auf den du keinen Zugriff hast.
       document_too_large: Dokument ist zu groß. Maximale Größe %{max_size} MB.
       invalid_document_file_type: Ungültiger Dokumenttyp für den aktiven Vektorspeicher.
       document_uploaded: Dokument wurde erfolgreich hochgeladen.
       document_upload_failed: Das Dokument konnte nicht in den Vektorspeicher hochgeladen werden. Bitte versuchen Sie es erneut.
+      invalid_ndjson_file_type: Ungültiger Dateityp oder ungültiges Format. Bitte lade eine gültige .ndjson- oder .json-Exportdatei hoch.
       document_provider_not_configured: Kein Vektorspeicher für Dokument-Uploads konfiguriert.
     show:
       finalize_upload: Bitte schließen Sie den Datei-Upload ab.
       finalize_mappings: Bitte schließen Sie die Zuordnungen ab, bevor Sie fortfahren.
     errors:
       custom_column_requires_inflow: "Bei benutzerdefinierten Spalten muss eine Einnahmen-Spalte ausgewählt werden."
+      interrupted: Der Hintergrundprozess wurde unterbrochen, bevor dieser Vorgang abgeschlossen war. Die importierten Daten wurden zurückgesetzt – du kannst es gefahrlos erneut versuchen.
+      presumed_lost: Als fehlgeschlagen markiert, da der Hintergrund-Job vermutlich verloren gegangen ist. Die importierten Daten wurden zurückgesetzt – du kannst es gefahrlos erneut versuchen.
     document_types:
       bank_statement: Kontoauszug
       credit_card_statement: Kreditkartenabrechnung
@@ -177,6 +410,7 @@ de:
       complete_title: Dokument analysiert
       complete_description: Wir haben Ihre PDF analysiert – hier ist das Ergebnis.
       document_type_label: Dokumenttyp
+      source_statement: Quell-Kontoauszug
       summary_label: Zusammenfassung
       email_sent_notice: Sie haben eine E-Mail mit den nächsten Schritten erhalten.
       back_to_imports: Zurück zu Importen
@@ -184,6 +418,24 @@ de:
       unknown_state_description: Dieser Import befindet sich in einem unerwarteten Zustand. Bitte kehren Sie zu den Importen zurück.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Verarbeitung fehlgeschlagen: %{error}"
+      ready_for_review_title: Bereit zur Überprüfung
+      ready_for_review_description: Wir haben %{count} Transaktionen aus deinem Kontoauszug extrahiert. Überprüfe sie und veröffentliche sie, um sie deinem Konto hinzuzufügen.
+      transactions_extracted: Extrahierte Transaktionen
+      transactions_extracted_count:
+        one: '%{count} Transaktion'
+        other: '%{count} Transaktionen'
+      select_account: In Konto importieren
+      select_account_placeholder: Konto auswählen…
+      select_account_hint: Wähle das Konto aus, in das diese Transaktionen importiert werden sollen.
+      no_accounts: Keine Konten verfügbar. Bitte erstelle zuerst ein Konto.
+      create_account: Konto erstellen
+      save_account: Speichern
+      publish_transactions:
+        one: '%{count} Transaktion veröffentlichen'
+        other: '%{count} Transaktionen veröffentlichen'
+      review_transactions: Transaktionen überprüfen
+      select_account_to_continue: Bitte wähle oben ein Konto aus, um fortzufahren.
+      unknown_document_type: Unbekannt
     ready:
       description: Hier ist eine Zusammenfassung der neuen Elemente, die deinem Konto hinzugefügt werden, sobald du diesen Import veröffentlichst.
       title: Importdaten bestätigen

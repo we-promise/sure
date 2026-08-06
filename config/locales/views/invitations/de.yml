@@ -9,6 +9,7 @@ de:
       title: "%{family} beitreten"
     create:
       existing_user_added: Der Benutzer wurde Ihrem Haushalt hinzugefügt.
+      existing_user_has_family_data: Dieser Nutzer verwaltet bereits einen eigenen Haushalt mit Konten. Diese müssen zuerst entfernt oder übertragen werden, bevor er Ihrem Haushalt beitreten kann.
       failure: Einladung konnte nicht gesendet werden.
       success: Einladung erfolgreich gesendet.
     destroy:

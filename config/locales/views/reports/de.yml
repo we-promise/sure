@@ -18,6 +18,13 @@ de:
         from: Von
         to: Bis
       showing_period: "Zeitraum: %{start} bis %{end}"
+      previous_period: Vorheriger Zeitraum
+      next_period: Nächster Zeitraum
+      today: Heute
+      previous_year: Vorheriges Jahr
+      next_year: Nächstes Jahr
+      previous_decade: Vorheriges Jahrzehnt
+      next_decade: Nächstes Jahrzehnt
     invalid_date_range: "Das Enddatum kann nicht vor dem Startdatum liegen. Die Daten wurden vertauscht."
     summary:
       total_income: Gesamteinnahmen
@@ -97,6 +104,7 @@ de:
       title: Anlageperformance
       portfolio_value: Portfoliowert
       total_return: Gesamtrendite
+      period_return: Zeitraumrendite
       contributions: Einlagen im Zeitraum
       withdrawals: Entnahmen im Zeitraum
       top_holdings: Top-Positionen
@@ -125,8 +133,11 @@ de:
       title: Anlageflüsse
       description: Verfolge Geldflüsse in und aus deinen Anlagekonten
       contributions: Einlagen
+      contributions_description: In Anlagen eingezahltes Geld
       withdrawals: Entnahmen
+      withdrawals_description: Aus Anlagen entnommenes Geld
       net_flow: Nettozufluss
+      net_flow_description: Gesamte Nettoveränderung
     transactions_breakdown:
       title: Transaktionsübersicht
       no_transactions: Keine Transaktionen für den ausgewählten Zeitraum und Filter gefunden
@@ -220,6 +231,7 @@ de:
         title: Anlagen
         portfolio_value: Portfoliowert
         total_return: Gesamtrendite
+        period_return: Zeitraumrendite
         contributions: Einlagen
         withdrawals: Entnahmen
         this_period: dieser Zeitraum

@@ -23,3 +23,13 @@ de:
       trend: Entwicklung
       unknown: Unbekannt
       year: Baujahr
+    tabs:
+      overview:
+        current_price: Aktueller Preis
+        make_model: Marke und Modell
+        mileage: Kilometerstand
+        purchase_price: Kaufpreis
+        trend: Entwicklung
+        unknown: Unbekannt
+        year: Baujahr
+        edit_account_details: Kontodetails bearbeiten

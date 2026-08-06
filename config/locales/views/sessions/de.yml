@@ -16,6 +16,8 @@ de:
       sso_provider_unavailable: "Der SSO-Anbieter ist derzeit nicht verfügbar. Bitte versuche es später erneut oder wende dich an einen Administrator."
       sso_invalid_response: "Vom SSO-Anbieter wurde eine ungültige Antwort erhalten. Bitte versuche es erneut."
       sso_failed: "Single Sign-On-Anmeldung fehlgeschlagen. Bitte versuche es erneut."
+    mobile_sso_start:
+      redirecting_html: Weiterleitung zur Anmeldung ... <a href="%{url}">Hier klicken</a>, falls du nicht automatisch weitergeleitet wirst.
     new:
       email: E-Mail-Adresse
       email_placeholder: du@beispiel.de

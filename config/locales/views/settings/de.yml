@@ -1,3 +1,4 @@
+---
 de:
   views:
     settings:
@@ -5,6 +6,94 @@ de:
         renewal: "Ihr Beitrag wird fortgesetzt am %{date}."
         cancellation: "Ihr Beitrag endet am %{date}."
   settings:
+    background_jobs:
+      show:
+        page_title: Hintergrundjobs
+        title: Worker-Status
+        subtitle: 'Live-Laufzeitstatus von Sidekiq: Worker-Prozesse, Warteschlangentiefen sowie Retry-/Dead-Sets.'
+        redis_unreachable: Sidekiq-Status ist nicht verfügbar (Redis nicht erreichbar). Der Liveness-Status ist unbekannt, daher sind Aktionen deaktiviert.
+        operations_title: Laufende Vorgänge
+        operations_subtitle: Synchronisierungen, Importe und Exporte aller Familien, die noch keinen Endstatus erreicht haben. Vorgänge, die seit über 30 Minuten inaktiv sind und keinen sichtbaren Job haben, gelten als verloren und können entsprechend markiert werden.
+        empty: Keine laufenden Vorgänge.
+        stats:
+          workers: Worker
+          busy: Beschäftigt
+          enqueued: In Warteschlange
+          retries: Wiederholungen
+          scheduled: Geplant
+          dead: Tot
+          latency: '%{value}s Latenz'
+        table:
+          type: Vorgang
+          family: Familie
+          last_activity: Letzte Aktivität
+          action: Aktion
+      operation:
+        ago: vor %{time}
+        running: Läuft
+        queued: In Warteschlange
+        recent: Kürzlich
+        unknown: Unbekannt
+        stuck: Hängt fest — vermutlich verloren
+        confirm: Diesen Vorgang als verloren markieren? Der Eintrag wird in einen Endstatus versetzt, damit er erneut versucht werden kann. Die zugrunde liegenden Daten bleiben unangetastet.
+        actions:
+          mark_stale: Als veraltet markieren
+          mark_failed: Als fehlgeschlagen markieren
+          release_claim: Sperre freigeben
+      cancel:
+        cancelled: '%{type} als verloren markiert.'
+        not_cancellable: Dieser Vorgang kann derzeit nicht geändert werden — der Job befindet sich möglicherweise noch in der Warteschlange oder läuft. Versuche es erneut, sobald er 30 Minuten inaktiv war.
+        cancelled_error: Von einem Administrator als fehlgeschlagen markiert — der Hintergrundjob wurde als verloren eingestuft.
+    debugs:
+      show:
+        title: Debug-Ereignisprotokoll
+        subtitle: Relevante Betriebsereignisse für Super-Admins. Neueste zuerst.
+        empty: Keine Debug-Ereignisse gefunden.
+        filters:
+          all: Alle
+          category: Kategorie
+          source: Quelle
+          provider: Anbieter
+          start_date: Von
+          end_date: Bis
+          family_id: Familien-ID
+          account_id: Konto-ID
+          user_id: Benutzer-ID
+          account_provider_id: Kontoanbieter-ID
+          submit: Filtern
+          reset: Zurücksetzen
+        table:
+          time: Zeit
+          category: Kategorie
+          source: Quelle
+          message: Nachricht
+          context: Kontext
+          metadata: Metadaten
+          view_metadata: Anzeigen
+    llm_usages:
+      show:
+        page_title: KI-Nutzung & Kosten
+        subtitle: Verfolge deine KI-Nutzung und geschätzten Kosten
+        start_date: Startdatum
+        end_date: Enddatum
+        filter: Filtern
+        total_requests: Anfragen gesamt
+        total_tokens: Tokens gesamt
+        completion: Vervollständigung
+        total_cost: Gesamtkosten
+        avg_cost_per_request: Ø Kosten/Anfrage
+        based_on_requests: Basierend auf %{with_cost} von %{total} Anfragen mit Kostendaten
+        cost_by_operation: Kosten nach Vorgang
+        cost_by_model: Kosten nach Modell
+        recent_usage: Letzte Nutzung
+        col_date: Datum
+        col_operation: Vorgang
+        col_model: Modell
+        col_cost: Kosten
+        failed: Fehlgeschlagen
+        no_usage_data: Keine Nutzungsdaten für den ausgewählten Zeitraum gefunden
+        cost_estimates_title: Über die Kostenschätzungen
+        cost_estimates_description: Die Kosten werden anhand veröffentlichter Preise der Anbieter geschätzt, einschließlich der OpenAI-Preise mit Stand Juli 2026. Die tatsächlichen Kosten können abweichen. Die Preise gelten pro 1 Million Tokens und variieren je nach Modell. Bei benutzerdefinierten oder selbst gehosteten Modellen wird "N/A" angezeigt; sie sind nicht in den Gesamtkosten enthalten.
     ai_prompts:
       show:
         page_title: KI-Eingabeaufforderungen
@@ -25,6 +114,17 @@ de:
         page_title: Zahlung
         subscription_subtitle: Aktualisiere dein Abonnement und deine Zahlungsdetails
         subscription_title: Abonnement verwalten
+        currently_on_plan: 'Dein aktueller Tarif:'
+        trialing: Du nutzst derzeit die offene Demo von %{product_name}
+        trial_days_left:
+          one: Deine Daten werden in %{count} Tag gelöscht
+          other: Deine Daten werden in %{count} Tagen gelöscht
+        not_contributing_prefix: Du trägst derzeit
+        not_contributing_emphasis: nicht bei
+        contributions_note: Beiträge zu %{product_name} werden hier angezeigt.
+        manage: Verwalten
+        choose_level: Stufe auswählen
+        payment_via_stripe: Zahlung über Stripe
     preferences:
       show:
         country: Land
@@ -46,15 +146,54 @@ de:
         month_start_day: Budgetmonat beginnt am
         month_start_day_hint: Lege fest, wann dein Budgetmonat beginnt (z. B. Gehaltstag)
         month_start_day_warning: Deine Budgets und MTD-Berechnungen verwenden diesen benutzerdefinierten Starttag anstelle des 1. jedes Monats.
+        translations_notice: Bitte beachte, dass wir noch an den Übersetzungen für verschiedene Sprachen arbeiten.
+        currencies_title: '%{moniker}-Währungen'
+        currencies_subtitle: Wähle, welche Währungen in Geldfeldern für dein %{moniker} angezeigt werden
+        base_currency_label: Basiswährung
+        base_currency_badge: Basiswährung
+        additional_currencies_label: Weitere Währungen
+        no_additional_currencies: Keine ausgewählt
+        currencies_more: +%{count} weitere
+        manage_currencies: Währungen verwalten
+        manage_currencies_subtitle: Entferne die Häkchen bei Währungen, die du nie verwendest, oder reduziere die Liste auf wenige.
+        select_all_currencies: Alle auswählen
+        select_base_only: Nur Basiswährung
+        currency_search_placeholder: Währungen suchen
+        no_matching_currencies: Keine Währungen gefunden
+        selected_currencies_count:
+          one: '%{count} ausgewählt'
+          other: '%{count} ausgewählt'
+        save_currencies: Währungen speichern
+        sharing_title: '%{moniker}-Freigabe'
+        sharing_subtitle: Steuere, wie Konten in deinem %{moniker} geteilt werden
+        sharing_default_label: Standardfreigabe für neue Konten
+        sharing_shared: Mit allen Mitgliedern teilen
+        sharing_private: Standardmäßig privat halten
+        preview:
+          title: Vorschau-Funktionen aktivieren
+          description: Aktiviere in Entwicklung befindliche Funktionen, die als Vorschau oder Canary gekennzeichnet sind.
     appearances:
       show:
+        page_title: Anzeige
+        theme_title: Design
+        theme_subtitle: Wähle ein bevorzugtes Design für die App
+        theme_dark: Dunkel
+        theme_light: Hell
         modals_title: Modale Fenster
         modals_subtitle: Verhalten der modalen Fenster anpassen
         disable_modal_click_outside_title: Modale Fenster bei Klick außerhalb geöffnet lassen
         disable_modal_click_outside_description: Verhindert das Schließen modaler Fenster beim Klicken außerhalb. Nützlich, um ungespeicherte Änderungen nicht versehentlich zu verlieren.
+        transactions_title: Transaktionen
+        transactions_subtitle: Passe an, wie Transaktionen angezeigt werden
+        dashboard_subtitle: Passe an, wie das Dashboard angezeigt wird
+        dashboard_two_column_title: Zweispaltiges Layout
+        dashboard_two_column_description: Zeigt Dashboard-Widgets auf großen Bildschirmen in zwei Spalten an, mit Breiten- und Höhensteuerung pro Widget in dessen Kopfzeile. Ist die Option deaktiviert, werden die Widgets in einer einzelnen Spalte gestapelt.
+        split_grouped_title: Aufgeteilte Transaktionen gruppieren
+        split_grouped_description: Zeigt aufgeteilte Transaktionen gruppiert unter ihrer übergeordneten Transaktion in der Transaktionsliste an. Ist die Option deaktiviert, erscheinen die Teiltransaktionen als einzelne Zeilen.
     profiles:
       destroy:
         cannot_remove_self: Du kannst dich nicht selbst aus dem Konto entfernen.
+        member_owns_other_family_data: Dieses Mitglied besitzt noch Konten in einem anderen Haushalt und kann nicht entfernt werden. Übertrage oder entferne diese Konten zuerst.
         member_removal_failed: Beim Entfernen des Mitglieds ist ein Problem aufgetreten.
         member_removed: Mitglied wurde erfolgreich entfernt.
         not_authorized: Du bist nicht berechtigt, Mitglieder zu entfernen.
@@ -99,10 +238,16 @@ de:
         profile_title: Persönlich
         remove_invitation: Einladung entfernen
         remove_member: Mitglied entfernen
+        resend_confirmation_link: eine neue Bestätigungs-E-Mail anfordern
         save: Speichern
+        unconfirmed_email_notice_html: Du hast beantragt, deine E-Mail-Adresse in %{email} zu ändern. Bitte rufe deine E-Mails ab und bestätige die Änderung, damit sie wirksam wird. Falls du die E-Mail nicht erhalten hast, überprüfe bitte deinen Spam-Ordner, oder %{resend_link}.
     securities:
       show:
         page_title: Sicherheit
+        encryption_warning:
+          title: Verschlüsselungsschlüssel fehlen
+          intro: 'Sensible Daten (API-Schlüssel, Provider-Tokens, MFA-Geheimnisse und personenbezogene Daten) werden derzeit unverschlüsselt gespeichert. Um die Verschlüsselung zu aktivieren, lege die folgenden Schlüssel in deinen Umgebungsvariablen oder Rails-Credentials fest:'
+          generate: 'Erzeuge einen Satz mit: bin/rails db:encryption:init'
         mfa_title: Zwei-Faktor-Authentifizierung
         mfa_description: Erhöhe die Sicherheit deines Kontos, indem du bei der Anmeldung einen Code von deiner Authenticator-App verlangst
         enable_mfa: 2FA aktivieren
@@ -120,10 +265,31 @@ de:
         sso_confirm_body: Bist du sicher, dass du dein %{provider}-Konto trennen möchtest? Du kannst es später erneut verbinden, indem du dich erneut mit diesem Anbieter anmeldest.
         sso_confirm_button: Trennen
         sso_warning_message: Dies ist deine einzige Anmeldemethode. Du solltest vor dem Trennen ein Passwort in den Sicherheitseinstellungen festlegen, sonst könntest du dich aus deinem Konto ausschließen.
+    mcp:
+      show:
+        page_title: MCP-Server
+        connect_title: KI-Assistenten verbinden
+        connect_subtitle: Füge diese URL in Claude.ai (oder einen beliebigen MCP-kompatiblen Client) ein, um ihn mit deinem Sure-Konto zu verbinden.
+        copy_url: Kopieren
+        copied: Kopiert!
+        how_to_connect_title: So verbindest du Claude
+        step_1: Öffne Claude.ai und gehe zu Einstellungen → Integrationen.
+        step_2: Klicke auf „Add integration“ und füge die obige MCP-Server-URL ein.
+        step_3: Klicke auf „Connect“ — du wirst zu Sure weitergeleitet, um dich anzumelden und den Zugriff zu autorisieren.
+        step_4: Nach der Autorisierung kann Claude auf deine Konten, Transaktionen und Kontostanddaten zugreifen.
+        connected_title: Verbundene Clients
+        connected_subtitle: Diese Apps haben derzeit Zugriff auf deine Sure-Daten. Entziehe den Zugriff für alle, die du nicht mehr verwendest.
+        unknown_client: Unbekannter Client
+        connected_ago: Verbunden vor %{time}
+        revoke: Entziehen
+        revoke_confirm: Zugriff für diesen Client entziehen?
+      revoke:
+        revoked: Verbindung entzogen.
     settings_nav:
       accounts_label: Konten
       advanced_section_title: Erweitert
       ai_prompts_label: KI-Eingabeaufforderungen
+      background_jobs_label: Hintergrundjobs
       api_key_label: API-Schlüssel
       payment_label: Zahlung
       categories_label: Kategorien
@@ -131,8 +297,10 @@ de:
       general_section_title: Allgemein
       imports_label: Importe
       exports_label: Exporte
+      llm_usage_label: KI-Nutzung
       logout: Abmelden
       merchants_label: Händler
+      providers_label: Anbieter
       guides_label: Anleitungen
       other_section_title: Mehr
       preferences_label: Einstellungen
@@ -141,10 +309,14 @@ de:
       rules_label: Regeln
       security_label: Sicherheit
       self_hosting_label: Self-Hosting
+      sso_providers_label: SSO-Anbieter
+      statement_vault_label: Kontoauszug-Tresor
       tags_label: Tags
       transactions_section_title: Transaktionen
+      users_label: Benutzer
       whats_new_label: Was ist neu
       api_keys_label: API-Schlüssel
+      appearance_label: Anzeige
       bank_sync_label: Banksynchronisierung
     settings_nav_link_large:
       next: Weiter
@@ -157,9 +329,75 @@ de:
     providers:
       show:
         coinbase_title: Coinbase
+      update:
+        updated_successfully: Anbietereinstellungen erfolgreich aktualisiert
+        no_changes: Es wurden keine Änderungen vorgenommen
+      not_authorized: Nicht autorisiert
+      bank_sync:
+        page_title: Banksynchronisierung
+        lede: Verbinde externe Konten, damit Transaktionen, Kontostände und Bestände automatisch in Sure einfließen.
+      status:
+        'False': Nicht konfiguriert
+        ok: Verbunden
+        warn: Aktion erforderlich
+        err: Fehler
+      drawer_trust_statement: Nur Lesezugriff. Sure kann niemals Geld bewegen, und deine Zugangsdaten werden verschlüsselt gespeichert.
+      setup_steps:
+        eyebrow: Einrichtung
+        need_help: Brauchst du Hilfe?
+      connect: Verbinden
+      groups:
+        your_connections: Deine Verbindungen
+        available: Verfügbar
+        empty_available: Alle verfügbaren Anbieter sind bereits verbunden.
+      health_strip:
+        connected: verbunden
+        needs_attention: benötigt Aufmerksamkeit
+        accounts_syncing: Konten werden synchronisiert
+        last_synced: Zuletzt synchronisiert vor %{time}
+      meta:
+        sync_error: Sync-Fehler
+        no_recent_sync: Sync überfällig
+        reconsent_required: Erneute Zustimmung erforderlich
+        reconsent_needed:
+          one: Erneute Zustimmung in 1 Tag erforderlich
+          other: Erneute Zustimmung in %{count} Tagen erforderlich
+        last_synced: Synchronisiert vor %{time}
+      sync_all: Alle synchronisieren
+      sync_all_in_progress: Alle verbundenen Anbieter werden synchronisiert…
+      sync_all_recently: Synchronisierung läuft bereits. Versuche es gleich noch einmal.
+      sync_provider: Jetzt synchronisieren
+      sync_provider_in_progress: Synchronisierung gestartet.
+      recently_synced: Kürzlich synchronisiert. Versuche es gleich noch einmal.
+      taglines:
+        lunchflow: Verbinde über 20.000 Banken aus mehr als 40 Ländern (UK, EU, USA und mehr!)
+        enable_banking: Synchronisiere europäische Bankkonten über PSD2 Open Banking.
+        coinstats: Behalte dein gesamtes Krypto-Portfolio über Wallets und Börsen hinweg im Blick.
+        mercury: Synchronisiere deine Mercury-Geschäftskonten automatisch.
+        brex: Synchronisiere Brex-Kontostände und Firmenkarten-Aktivitäten mit Lesezugriff.
+        coinbase: Importiere deine Coinbase-Krypto-Bestände und verfolge die Wertentwicklung.
+        binance: Synchronisiere deine Binance-Spot-Salden mit einem Nur-Lese-API-Schlüssel.
+        kraken: Synchronisiere Kraken-Salden und Spot-Trade-Ausführungen mit einem Nur-Lese-API-Schlüssel.
+        snaptrade: Verbinde Broker-Konten über das SnapTrade-Aggregationsnetzwerk.
+        trading212: Synchronisiere dein Trading-212-Investmentportfolio mit einem Nur-Lese-API-Schlüssel.
+        ibkr: Synchronisiere Interactive-Brokers-Investmentkonten über Flex-Query-Importe.
+        questrade: Synchronisiere deine Questrade-Investmentkonten direkt über die Questrade-API.
+        indexa_capital: Verfolge dein automatisiertes Indexa-Capital-Investmentportfolio.
+        sophtron: Verbinde US-amerikanische und kanadische Banken und Versorger.
+      search_filters:
+        aria_label: Anbieter suchen
+        placeholder: Anbieter suchen
+        chips:
+          all: Alle
+          bank: Banken
+          crypto: Krypto
+      empty_filter: Keine Anbieter entsprechen deinem Filter.
+      clear_filter: Filter zurücksetzen
       encryption_error:
         title: Verschlüsselungskonfiguration erforderlich
         message: Die Active-Record-Verschlüsselungsschlüssel sind nicht konfiguriert. Bitte stelle die Verschlüsselungszugangsdaten (active_record_encryption.primary_key, active_record_encryption.deterministic_key und active_record_encryption.key_derivation_salt) in deinen Rails-Zugangsdaten oder Umgebungsvariablen ein, bevor du Sync-Anbieter verwendest.
+      provider_form:
+        save_and_connect: Speichern und verbinden
       coinbase_panel:
         setup_instructions: "So verbindest du Coinbase:"
         step1_html: Gehe zu <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API-Einstellungen</a>
@@ -173,6 +411,152 @@ de:
         syncing: Wird synchronisiert…
         sync: Synchronisieren
         disconnect_confirm: Bist du sicher, dass du diese Coinbase-Verbindung trennen möchtest? Deine synchronisierten Konten werden zu manuellen Konten.
+      binance_panel:
+        setup_instructions: 'Um Binance zu verbinden, erstelle einen Nur-Lese-API-Schlüssel:'
+        step1_html: Gehe zu <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance-API-Verwaltung</a>
+        step2: Erstelle einen neuen API-Schlüssel nur mit aktivierter Berechtigung „Enable Reading“
+        step3: Füge deinen API-Schlüssel und dein Secret unten ein
+        no_withdraw_title: Nur Leserechte
+        no_withdraw_body: Aktiviere beim Erstellen deines Binance-API-Schlüssels keine Auszahlungsberechtigungen. Sure benötigt nur Lesezugriff.
+        ip_hint_title: IP-Whitelisting erforderlich
+        ip_hint_body: 'Füge die ausgehende IP-Adresse des App-Servers zur Binance-API-Schlüssel-Whitelist hinzu:'
+        ip_hint_contact_admin: Wende dich an deinen Administrator, um die ausgehende IP-Adresse des App-Servers zu erhalten.
+        api_key_label: API-Schlüssel
+        api_key_placeholder: Füge deinen Binance-API-Schlüssel ein
+        api_secret_label: API-Geheimnis
+        api_secret_placeholder: Füge dein Binance-API-Geheimnis ein
+        connect_button: Binance verbinden
+        syncing: Wird synchronisiert…
+        sync: Synchronisieren
+        historical_import: Einstellungen für historischen Import
+        sync_start_date_label: Daten importieren ab
+        sync_start_date_help: Wähle, wie weit historische Trades zurückreichen sollen.
+        disconnect_confirm: Bist du sicher, dass du Binance trennen möchtest?
+      kraken_panel:
+        step1_html: Gehe zu <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken-API-Einstellungen</a>
+        step2: Erstelle einen API-Schlüssel nur mit den Berechtigungen „Query Funds“ und „Query Closed Orders & Trades“.
+        step3: Füge den API-Schlüssel und den privaten Schlüssel unten ein.
+        read_only_title: Nur Lesezugriff für die Börsen-Synchronisierung
+        read_only_body: Erteile keine Berechtigungen für Handel, Stornierung, Auszahlung, Export, Ledger, Earn, Staking oder Transfer. Sure importiert nur Salden, Bestände und Spot-Trade-Ausführungen.
+        add_connection: Kraken-Verbindung hinzufügen
+        update_connection: Verbindung aktualisieren
+        connection_name_label: Verbindungsname
+        connection_name_placeholder: Haupt-Kraken
+        api_key_label: API-Schlüssel
+        api_key_placeholder: Füge deinen Kraken-API-Schlüssel ein
+        keep_api_key_placeholder: Leer lassen, um den vorhandenen API-Schlüssel zu behalten
+        api_secret_label: Privater Schlüssel
+        api_secret_placeholder: Füge deinen privaten Kraken-Schlüssel ein
+        keep_api_secret_placeholder: Leer lassen, um den vorhandenen privaten Schlüssel zu behalten
+        setup_accounts: Konto einrichten
+        syncing: Wird synchronisiert…
+        sync: Synchronisieren
+        disconnect: Trennen
+        disconnect_confirm: Bist du sicher, dass du %{name} trennen möchtest?
       enable_banking_panel:
         callback_url_instruction: "Für die Callback-URL, verwende %{callback_url}."
         connection_error: Verbindungsfehler
+        step_1_html: Gehe zu %{link} und hol dir deine Entwickler-Zugangsdaten.
+        step_2: Wähle dein Land und füge unten die Application ID und das Client-Zertifikat ein.
+        step_3: Speichere und verwende dann „Add Connection“, um deine Bank zu verknüpfen.
+        config_locked_title: Konfiguration gesperrt
+        config_locked_message: Trenne alle verknüpften Banken, bevor du diese Zugangsdaten änderst.
+        application_id_placeholder_new: Application ID eingeben
+        application_id_placeholder_update: Neue ID zum Aktualisieren eingeben
+        client_certificate_label: Client-Zertifikat (mit privatem Schlüssel)
+        save_and_connect: Speichern und verbinden
+        update_connection: Verbindung aktualisieren
+        connected_bank: Verbundene Bank
+        session_expires: 'Sitzung läuft ab: %{date}'
+        unknown: Unbekannt
+        connection: Verbindung
+        session_expired_reconnect: Sitzung abgelaufen – erneut verbinden
+        configured: Konfiguriert
+        ready_to_link: Bereit zum Verknüpfen von Konten
+        sync: Synchronisieren
+        reconnect: Erneut verbinden
+        connect_bank: Bank verbinden
+        remove: Entfernen
+        remove_confirm: Bist du sicher, dass du diese Verbindung entfernen möchtest?
+        add_connection: Verbindung hinzufügen
+        syncing: Wird synchronisiert
+        select_country: Land auswählen…
+        country_label: Land
+      lunchflow_panel:
+        step_1_html: Gehe zu %{link} und erstelle einen API-Schlüssel.
+        step_2: Füge deinen Schlüssel unten ein und verbinde.
+        step_3: Gehe anschließend zu Konten, um deine synchronisierten Konten zu verknüpfen.
+        api_key_label: API-Schlüssel
+        api_key_placeholder_new: API-Schlüssel hier einfügen
+        api_key_placeholder_update: Neuen API-Schlüssel zum Aktualisieren eingeben
+        base_url_label: Basis-URL (optional)
+        base_url_placeholder: https://lunchflow.app/api/v1 (Standard)
+        save_and_connect: Speichern und verbinden
+        update_connection: Verbindung aktualisieren
+      up_panel:
+        step_1_html: Gehe zu %{link} und erstelle einen persönlichen Zugriffstoken.
+        step_2: Kopiere deinen persönlichen Zugriffstoken.
+        step_3: Füge den Token unten ein, speichere und verknüpfe anschließend deine synchronisierten Konten.
+      not_found: Anbieter nicht gefunden.
+      sync_provider_no_items: Keine Verbindungen zum Synchronisieren verfügbar.
+      ibkr_panel:
+        steps:
+          step_1: Navigiere in deinem IBKR Client Portal zu „Performance & Reports“ > „Flex Queries“.
+          step_2: Klicke auf das „+“-Symbol im Bereich „Activity Flex Query“, um eine neue Abfrage zu erstellen.
+          step_3: Benenne deine Abfrage (z. B. „Sure Sync“), sieh dir dann die Flex-Query-Details unten an und aktiviere die aufgeführten Abschnitte, Felder und Konfigurationsoptionen.
+          step_4: Speichere die Abfrage, notiere dir deine „Query ID“ und verwende dann das Zahnrad-Symbol im Bereich „Flex Web Service Configuration“, um ein Zugriffstoken zu erstellen.
+          step_5: Füge deine Query ID und dein Token unten ein, speichere die Konfiguration und gehe anschließend zu Konten, um gefundene IBKR-Konten zu verknüpfen.
+        flex_query_details:
+          title: Abschnitte, Felder und Konfiguration
+          summary: Erweitern, um die genauen Abschnitte, Felder und Einstellungen zu sehen, die deine IBKR Activity Flex Query enthalten muss.
+          sections_heading: Aktiviere diese Abschnitte und Felder
+          configuration_heading: Lege diese Abfrageoptionen fest
+        sections:
+          cash_report_options: 'Optionen: None'
+          cash_report_fields: 'Felder: Currency, Ending Cash'
+          cash_transactions_options: 'Optionen: Dividends, Deposits & Withdrawals, Detail'
+          cash_transactions_fields: 'Felder: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type'
+          net_asset_value_options: 'Optionen: None'
+          net_asset_value_fields: 'Felder: Currency, Report Date, Total'
+          open_positions_options: 'Optionen: Summary'
+          open_positions_fields: 'Felder: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol'
+          trades_options: 'Optionen: Execution'
+          trades_fields: 'Felder: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
+        configuration:
+          date_time_separator: 'Date/Time Separator: ; (Semikolon)'
+          all_other_options: 'Alle übrigen Konfigurationsoptionen: „No“'
+        report_window_note: IBKR-Flex-Berichte sind auf das in IBKR konfigurierte Abfragefenster begrenzt. Sure importiert die vollständigen aktuellen Bestände sowie die Aktivität der letzten bis zu 365 Tage aus diesem Bericht.
+        sync: Synchronisieren
+        disconnect_confirm: Interactive Brokers trennen?
+        query_id_placeholder_new: Gib deine IBKR-Flex-Query-ID ein
+        query_id_placeholder_existing: Leer lassen, um die aktuelle Query ID zu behalten
+        token_placeholder_new: Gib dein IBKR-Flex-Web-Service-Token ein
+        token_placeholder_existing: Leer lassen, um das aktuelle Token zu behalten
+        save_configuration: Konfiguration speichern
+        update_configuration: Konfiguration aktualisieren
+        status_configured_prefix: '%{summary}. Besuche den Tab'
+        accounts_tab: Konten
+        status_configured_suffix: ', um gefundene Konten zu verwalten.'
+        not_configured: Nicht konfiguriert.
+      trading212_panel:
+        steps:
+          step_1: Gehe in Trading 212 zu Einstellungen → API (Web oder mobile App).
+          step_2: Erstelle einen neuen API-Schlüssel — Trading 212 zeigt dir eine API-ID und einen Secret Key an.
+          step_3: Füge beides unten ein, wähle deine Umgebung und Kontowährung und speichere anschließend.
+        api_key_label: API-ID
+        api_key_placeholder_new: Füge deine Trading-212-API-ID ein
+        api_key_placeholder_existing: Leer lassen, um die aktuelle API-ID zu behalten
+        api_secret_placeholder_new: Füge deinen Trading-212-Secret-Key ein
+        api_secret_placeholder_existing: Leer lassen, um den aktuellen Secret Key zu behalten
+        environment_label: Umgebung
+        environment_live: Live-Konto
+        environment_demo: Demo-Konto
+        currency_label: Kontowährung
+        save_configuration: Konfiguration speichern
+        update_configuration: Konfiguration aktualisieren
+        sync: Synchronisieren
+        disconnect_confirm: Trading 212 trennen?
+        status_configured_prefix: Konfiguriert. Besuche den Tab
+        accounts_tab: Konten
+        status_configured_suffix: ', um gefundene Konten zu verwalten.'
+        not_configured: Nicht konfiguriert.

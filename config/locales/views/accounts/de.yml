@@ -1,7 +1,13 @@
 ---
 de:
+  account:
+    entries:
+      destroy:
+        success: Buchung erfolgreich gelöscht.
   accounts:
+    not_authorized: Du hast keine Berechtigung, dieses Konto zu verwalten
     account:
+      complete_setup: Einrichtung abschließen
       edit: Bearbeiten
       link_lunchflow: Mit Lunch Flow verknüpfen
       link_provider: Mit Provider verknüpfen
@@ -9,10 +15,14 @@ de:
       troubleshoot: Fehlerbehebung
       enable: Konto aktivieren
       disable: Konto deaktivieren
+      exclude_from_reports: Von allen Berichten ausschließen
+      include_in_reports: In Berichte einschließen
+      excluded_from_reports_indicator: Von Berichten ausgeschlossen
       set_default: Als Standard festlegen
       remove_default: Standard aufheben
       default_label: Standard
       delete: Konto löschen
+      sharing: Freigabe
     chart:
       data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar
     create:
@@ -22,6 +32,7 @@ de:
     destroy:
       success: "%{type}-Konto zur Löschung vorgemerkt"
       cannot_delete_linked: "Ein verknüpftes Konto kann nicht gelöscht werden. Bitte trennen Sie es zuerst."
+      failed: Löschen der Ressource fehlgeschlagen. Bitte versuche es später erneut.
     empty:
       empty_message: Füge ein Konto über eine Verbindung, einen Import oder manuell hinzu
       new_account: Neues Konto
@@ -38,8 +49,12 @@ de:
       institution_domain_placeholder: "z. B. chase.com"
       notes_label: Notizen
       notes_placeholder: Zusätzliche Informationen wie Kontonummern, Sort codes, IBAN, Routing-Nummern usw.
+      exclude_from_reports: Von allen Berichten ausschließen
+      enable_category_matcher_label: Automatische Kategoriezuordnung aktivieren
+      enable_category_matcher_hint: Wenn aktiviert, wird die vom Anbieter vorgeschlagene Kategorie auf importierte Transaktionen angewendet. Deaktiviere dies, um neue Transaktionen unkategorisiert zu lassen.
     index:
       accounts: Konten
+      cancel_sync: Synchronisierung abbrechen
       manual_accounts:
         other_accounts: Andere Konten
       new_account: Neues Konto
@@ -48,6 +63,10 @@ de:
       syncing: "Konten werden synchronisiert..."
     new:
       import_accounts: Konten importieren
+      container:
+        select: Auswählen
+        navigate: Navigieren
+        close: Schließen
       method_selector:
         connected_entry: Konto verknüpfen
         connected_entry_eu: EU-Konto verknüpfen
@@ -57,6 +76,12 @@ de:
         title: Wie möchtest du es hinzufügen
       title: Was möchtest du hinzufügen
     show:
+      limited_fx_history_warning: Der Wechselkursverlauf ist erst ab dem %{date} verfügbar. Transaktionen vor diesem Datum verwenden angenäherte Währungsumrechnungen – dies kann vorkommen, wenn der FX-Anbieter nur einen begrenzten historischen Zeitraum bereitstellt.
+      tabs:
+        activity: Aktivität
+        holdings: Bestände
+        overview: Übersicht
+        statements: Kontoauszüge
       activity:
         amount: Betrag
         balance: Kontostand
@@ -75,20 +100,28 @@ de:
         pending: Ausstehend
         search:
           placeholder: Buchungen nach Name suchen
+        search_placeholder: Buchungen nach Name suchen
         status: Status
         title: Aktivität
       chart:
         balance: Kontostand
         owed: Geschuldeter Betrag
+      header:
+        complete_setup: Einrichtung abschließen
       menu:
         confirm_accept: "%{name} löschen"
         confirm_body_html: "<p>Wenn du dieses Konto löschst, werden dessen Wertverläufe gelöscht, was sich auf verschiedene Bereiche deines Gesamtvermögens auswirkt Diese Aktion beeinflusst direkt deine Nettovermögensberechnung und die Kontodiagramme</p><br /> <p>Nach dem Löschen kann das Konto nicht wiederhergestellt werden Du müsstest es als neues Konto hinzufügen</p>"
         confirm_title: Konto löschen
+        delete_account: Konto löschen
         edit: Bearbeiten
         import: Transaktionen importieren
         import_trades: Trades importieren
         import_transactions: Transaktionen importieren
         manage: Konten verwalten
+        sharing: Freigabe
+        statements: Kontoauszüge
+        exclude_from_reports: Von allen Berichten ausschließen
+        include_in_reports: In Berichte einschließen
     update:
       success: "%{type}-Konto aktualisiert"
     sidebar:
@@ -113,12 +146,23 @@ de:
       credit_card: Kreditkarte
       loan: Darlehen
       other_liability: Sonstige Verbindlichkeit
+    types_plural:
+      depository: Bargeld
+      investment: Investitionen
+      crypto: Krypto
+      property: Immobilien
+      vehicle: Fahrzeuge
+      other_asset: Sonstiges Vermögen
+      credit_card: Kreditkarten
+      loan: Darlehen
+      other_liability: Sonstige Verbindlichkeiten
     subtype_regions:
       us: Vereinigte Staaten
       uk: Vereinigtes Königreich
       ca: Kanada
       au: Australien
       eu: Europa
+      in: Indien
       generic: Generisch
     tax_treatments:
       taxable: Versteuerbar

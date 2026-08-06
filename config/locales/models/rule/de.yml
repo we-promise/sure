@@ -1,0 +1,9 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        rule:
+          min_actions: muss mindestens eine Aktion enthalten
+          duplicate_actions: Regel darf keine doppelten Aktionen %{types} enthalten
+          nested_conditions: Zusammengesetzte Bedingungen können nicht verschachtelt werden

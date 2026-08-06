@@ -7,7 +7,13 @@ de:
       success: Überweisung entfernt
     form:
       amount: Betrag
+      bank_charges: Bankgebühren
+      outgoing_fee: Gebühr für ausgehende Überweisung
+      incoming_fee: Gebühr für eingehende Überweisung
       date: Datum
+      destination_amount: Zielbetrag
+      destination_amount_display: 'Zielbetrag: %{amount}'
+      exchange_rate_display: 'Wechselkurs: %{rate}'
       expense: Ausgabe
       from: Von
       income: Einnahme
@@ -22,9 +28,19 @@ de:
       delete_subtitle: Dadurch wird die Überweisung entfernt. Die zugrunde liegenden Transaktionen bleiben erhalten.
       delete_title: Überweisung entfernen?
       details: Details
+      mark_recurring: Als wiederkehrend markieren
+      mark_recurring_subtitle: Markiere diese Überweisung als wiederkehrendes Muster im Feed „Anstehend“ und auf der Seite „Wiederkehrend“.
+      mark_recurring_title: Überweisung als wiederkehrend markieren
       note_label: Notizen
       note_placeholder: Füge dieser Überweisung eine Notiz hinzu …
       overview: Übersicht
       settings: Einstellungen
+      from: Von
+      date: Datum
+      transfer_amount: Überweisungsbetrag
+      total: Gesamt
+      bank_charges: Bankgebühren
+      category: Kategorie
+      uncategorized: Ohne Kategorie
     update:
       success: Überweisung aktualisiert

@@ -2,13 +2,17 @@
 de:
   layouts:
     application:
+      insights: Einblicke
       privacy_mode: Datenschutzmodus umschalten
+      resize_left_sidebar: Größe der Konten-Seitenleiste anpassen
+      resize_right_sidebar: Größe der Assistent-Seitenleiste anpassen
       skip_to_main: Zum Hauptinhalt springen
       nav:
         assistant: Assistent
         budgets: Budgets
         home: Startseite
         reports: Berichte
+        goals: Ziele
         transactions: Transaktionen
     auth:
       existing_account: Du hast bereits ein Konto?
@@ -20,6 +24,10 @@ de:
       footer:
         privacy_policy: Datenschutzrichtlinie
         terms_of_service: Nutzungsbedingungen
+      confirm_dialog:
+        are_you_sure: Bist du sicher?
+        cannot_be_undone: Diese Aktion kann nicht rückgängig gemacht werden.
+        confirm: Bestätigen
     trial:
       open_demo: Offene Demo
       data_deleted_in_days: Daten werden in %{days} Tagen gelöscht

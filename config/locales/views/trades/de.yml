@@ -5,6 +5,7 @@ de:
       account: Überweisungskonto (optional)
       account_prompt: Konto suchen
       amount: Betrag
+      fee: Transaktionsgebühr
       holding: Tickersymbol
       holding_optional: Tickersymbol (optional)
       price: Preis pro Anteil
@@ -19,6 +20,7 @@ de:
       type_dividend: Dividende
       type_interest: Zinsen
       dividend_requires_security: Für Dividenden ist ein Wertpapier erforderlich
+      trade_requires_security: Für Kauf- und Verkaufstrades ist ein Wertpapier (Ticker) erforderlich
     header:
       buy: Kaufen
       sell: Verkaufen
@@ -40,9 +42,11 @@ de:
       cost_per_share_label: Kosten pro Anteil
       date_label: Datum
       delete: Löschen
+      fee_label: Transaktionsgebühr
       delete_subtitle: Diese Aktion kann nicht rückgängig gemacht werden
       delete_title: Trade löschen
       details: Details
+      provider_disabled_warning: Preisaktualisierungen pausiert — der Provider %{provider} ist deaktiviert. Aktiviere ihn in den Einstellungen erneut oder ordne die Position einem anderen Provider zu.
       exclude_subtitle: Dieser Trade wird nicht in Berichten und Berechnungen berücksichtigt
       exclude_title: Von Analysen ausschließen
       no_category: Keine Kategorie

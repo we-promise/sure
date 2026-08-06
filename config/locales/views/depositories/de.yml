@@ -8,3 +8,16 @@ de:
       subtype_prompt: Kontotyp auswählen
     new:
       title: Kontostand eingeben
+    subtypes:
+      cd:
+        long: Festgeld
+      checking:
+        long: Girokonto
+        short: Girokonto
+      hsa:
+        long: Gesundheitssparkonto
+      money_market:
+        long: Geldmarktkonto
+      savings:
+        long: Sparkonto
+        short: Sparkonto
