@@ -99,7 +99,86 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
     assert_match(/32 MB request limit/i, err.message)
   end
 
+  test "captures the error response body in span output when the API call fails" do
+    error = StandardError.new("boom")
+    def error.body
+      { "type" => "error", "error" => { "message" => "invalid request" } }
+    end
+
+    client = stub_failing_client(error)
+    captured_output = nil
+    trace = stub_trace { |output| captured_output = output }
+
+    assert_raises(StandardError) do
+      Provider::Anthropic::PdfProcessor.new(
+        client,
+        model: "claude-sonnet-4-6",
+        pdf_content: @pdf_content,
+        langfuse_trace: trace
+      ).process
+    end
+
+    assert_equal({ "type" => "error", "error" => { "message" => "invalid request" } }, captured_output[:response_body])
+  end
+
+  test "response_body is nil in span output when the error exposes no body" do
+    error = StandardError.new("boom")
+
+    client = stub_failing_client(error)
+    captured_output = nil
+    trace = stub_trace { |output| captured_output = output }
+
+    assert_raises(StandardError) do
+      Provider::Anthropic::PdfProcessor.new(
+        client,
+        model: "claude-sonnet-4-6",
+        pdf_content: @pdf_content,
+        langfuse_trace: trace
+      ).process
+    end
+
+    assert_nil captured_output[:response_body]
+  end
+
+  test "response_body falls back to a placeholder when reading the body itself raises" do
+    error = StandardError.new("boom")
+    def error.body
+      raise "body accessor exploded"
+    end
+
+    client = stub_failing_client(error)
+    captured_output = nil
+    trace = stub_trace { |output| captured_output = output }
+
+    assert_raises(StandardError) do
+      Provider::Anthropic::PdfProcessor.new(
+        client,
+        model: "claude-sonnet-4-6",
+        pdf_content: @pdf_content,
+        langfuse_trace: trace
+      ).process
+    end
+
+    assert_match(/body unavailable/i, captured_output[:response_body])
+  end
+
   private
+    def stub_failing_client(error)
+      messages = mock
+      messages.expects(:create).raises(error)
+      client = mock
+      client.stubs(:messages).returns(messages)
+      client
+    end
+
+    def stub_trace
+      span = mock
+      span.expects(:end).with { |args| yield(args[:output]); true }
+      trace = mock
+      trace.stubs(:span).returns(span)
+      trace
+    end
+
     def stub_client(response)
       messages = mock
       messages.expects(:create).with do |params|

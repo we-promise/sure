@@ -74,4 +74,12 @@ module Provider::Anthropic::Concerns::UsageRecorder
     rescue => e
       "(message unavailable: #{e.class})"
     end
+
+    # Anthropic::Errors::APIStatusError carries the parsed response body
+    # directly on the error, unlike Faraday-based providers.
+    def safe_error_body(error)
+      error.respond_to?(:body) ? error.body : nil
+    rescue => e
+      "(body unavailable: #{e.class})"
+    end
 end

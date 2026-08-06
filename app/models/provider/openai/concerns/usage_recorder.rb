@@ -99,4 +99,12 @@ module Provider::Openai::Concerns::UsageRecorder
     rescue => e
       "(message unavailable: #{e.class})"
     end
+
+    # ruby-openai raises Faraday::Error, which carries the parsed response
+    # body via response_body rather than exposing it directly.
+    def safe_error_body(error)
+      error.respond_to?(:response_body) ? error.response_body : nil
+    rescue => e
+      "(body unavailable: #{e.class})"
+    end
 end
