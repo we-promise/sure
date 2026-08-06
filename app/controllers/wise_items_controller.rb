@@ -35,7 +35,7 @@ class WiseItemsController < ApplicationController
       return render_provider_panel_error
     end
 
-    session[:wise_pending_profiles] = profiles
+    session[:wise_pending_profiles] = pending_profile_session_payload(profiles)
     session[:wise_pending_encrypted_token] = encrypt_pending_token(token)
 
     redirect_to select_profiles_wise_items_path
@@ -261,6 +261,23 @@ class WiseItemsController < ApplicationController
              [ details["firstName"], details["lastName"] ].compact.join(" ").presence
 
       name.present? ? "#{name} (#{type_label})" : "Wise #{type_label}"
+    end
+
+    def pending_profile_session_payload(profiles)
+      profiles.map do |profile|
+        details = profile["details"].is_a?(Hash) ? profile["details"] : {}
+
+        {
+          "id" => profile["id"].to_s,
+          "type" => profile["type"].to_s,
+          "details" => {
+            "name" => details["name"].to_s,
+            "firstName" => details["firstName"].to_s,
+            "lastName" => details["lastName"].to_s,
+            "email" => details["email"].to_s
+          }.compact_blank
+        }.compact_blank
+      end
     end
 
     def render_provider_panel_success(message)
