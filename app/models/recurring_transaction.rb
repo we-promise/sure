@@ -258,6 +258,56 @@ class RecurringTransaction < ApplicationRecord
     end
   end
 
+  def display_name
+    merchant&.name.presence || name
+  end
+
+  # Map entry IDs on the current page/list to their matching active recurring
+  # pattern. Prefers manual patterns when multiple could match.
+  def self.matches_for_entries(entries, family:, user:)
+    return {} if family.recurring_transactions_disabled?
+
+    entry_list = Array(entries).compact
+    return {} if entry_list.empty?
+
+    recurrings = family.recurring_transactions
+      .accessible_by(user)
+      .active
+      .includes(:merchant, :account, :destination_account)
+      .order(manual: :desc)
+      .to_a
+
+    return {} if recurrings.empty?
+
+    entry_list.each_with_object({}) do |entry, map|
+      next unless entry.entryable_type == "Transaction"
+
+      match = recurrings.find { |recurring| recurring.matches_entry?(entry) }
+      map[entry.id] = match if match
+    end
+  end
+
+  def self.match_for_entry(entry, family:, user:)
+    matches_for_entries([ entry ], family: family, user: user)[entry.id]
+  end
+
+  # Whether this active pattern's heuristics match a concrete ledger entry.
+  # Mirrors the filters used by matching_transactions / the Cleaner.
+  def matches_entry?(entry)
+    return false unless active?
+    return false unless entry.entryable_type == "Transaction"
+    return false unless entry.currency == currency
+
+    transaction = entry.entryable
+    return false unless transaction.is_a?(Transaction)
+
+    if transfer?
+      matches_transfer_entry?(entry, transaction)
+    else
+      matches_regular_entry?(entry, transaction)
+    end
+  end
+
   # Find matching transactions for this recurring pattern
   def matching_transactions
     # Recurring transfers can't be matched by single-account name/amount —
@@ -272,10 +322,8 @@ class RecurringTransaction < ApplicationRecord
 
     # Filter by merchant or name
     if merchant_id.present?
-      # Match by merchant through the entryable (Transaction)
-      entries.select do |entry|
-        entry.entryable.is_a?(Transaction) && entry.entryable.merchant_id == merchant_id
-      end
+      entries.joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+             .where(transactions: { merchant_id: merchant_id })
     else
       # Match by entry name
       entries.where(name: name)
@@ -387,6 +435,47 @@ class RecurringTransaction < ApplicationRecord
   end
 
   private
+    def matches_regular_entry?(entry, transaction)
+      return false if account_id.present? && entry.account_id != account_id
+      return false unless amount_matches?(entry.amount)
+      return false unless day_matches?(entry.date)
+
+      if merchant_id.present?
+        transaction.merchant_id == merchant_id
+      else
+        entry.name == name
+      end
+    end
+
+    def matches_transfer_entry?(entry, transaction)
+      return false if account_id.blank? || destination_account_id.blank?
+      return false unless entry.account_id == account_id
+      return false unless amount_matches?(entry.amount)
+      return false unless day_matches?(entry.date)
+
+      transfer = transaction.transfer
+      return false unless transfer
+      return false unless transfer.outflow_transaction_id == transaction.id
+
+      inflow_entry = transfer.inflow_transaction&.entry
+      inflow_entry&.account_id == destination_account_id
+    end
+
+    def amount_matches?(entry_amount)
+      if manual? && has_amount_variance?
+        entry_amount >= expected_amount_min && entry_amount <= expected_amount_max
+      else
+        entry_amount == amount
+      end
+    end
+
+    def day_matches?(date)
+      day = date.day
+      min_day = [ expected_day_of_month - 2, 1 ].max
+      max_day = [ expected_day_of_month + 2, 31 ].min
+      day >= min_day && day <= max_day
+    end
+
     # Issue #1590: a recurring transfer's future occurrences rarely share the
     # seed's name (user free-text, importer wording, the auto-matcher's
     # "Transfer to ..."), so name-based matching returns [] and the Cleaner

@@ -58,6 +58,9 @@ en:
       mark_recurring: Mark as Recurring
       mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
       mark_recurring_title: Recurring Transaction
+      view_recurring: View Recurring
+      view_recurring_subtitle: This transaction matches an active recurring pattern.
+      view_recurring_title: Recurring Transaction
       merge_duplicate: Yes, merge them
       potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
       potential_duplicate_title: Possible duplicate detected
@@ -136,6 +139,8 @@ en:
       reject_match: Reject match
       transfer_confirmed: Transfer is confirmed
     transaction:
+      recurring: Recurring
+      recurring_tooltip: Part of a recurring pattern — view details
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
       linked_with_provider: Linked with %{provider}

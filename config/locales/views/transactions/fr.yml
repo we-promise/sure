@@ -289,6 +289,9 @@ fr:
       mark_recurring: Marquer comme récurrent
       mark_recurring_subtitle: Suivez cela comme une transaction récurrente. L’écart de montant est automatiquement calculé à partir des 6 derniers mois de transactions similaires.
       mark_recurring_title: Transaction récurrente
+      view_recurring: Voir la récurrence
+      view_recurring_subtitle: Cette transaction correspond à un modèle récurrent actif.
+      view_recurring_title: Transaction récurrente
       memo: Mémo
       merchant_label: Marchand
       merge_duplicate: Oui, fusionne-les
@@ -328,6 +331,8 @@ fr:
     transaction:
       activity_type_tooltip: Type d'activité d'investissement
       linked_with_provider: Lié avec %{provider}
+      recurring: Récurrent
+      recurring_tooltip: Fait partie d'un modèle récurrent — voir les détails
       pending: En attente
       pending_tooltip: Transaction en attente — peut changer une fois validée
       possible_duplicate: Doublon ?

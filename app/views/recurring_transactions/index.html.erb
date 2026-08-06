@@ -98,7 +98,7 @@
             <% @recurring_transactions.each do |recurring_transaction| %>
               <tr class="border-b border-subdued hover:bg-surface-hover <%= "opacity-60" unless recurring_transaction.active? %>">
                 <td class="py-3 px-2 text-sm">
-                  <div class="flex items-center gap-2">
+                  <%= link_to recurring_transaction_path(recurring_transaction), class: "flex items-center gap-2 hover:opacity-80" do %>
                     <% if recurring_transaction.merchant.present? %>
                       <% if recurring_transaction.merchant.logo_url.present? %>
                         <%= image_tag recurring_transaction.merchant.logo_url,
@@ -127,7 +127,7 @@
                         <%= t("recurring_transactions.badges.manual") %>
                       </span>
                     <% end %>
-                  </div>
+                  <% end %>
                 </td>
                 <% if recurring_transaction.transfer? %>
                   <td class="py-3 px-2 text-sm font-medium privacy-sensitive text-secondary">

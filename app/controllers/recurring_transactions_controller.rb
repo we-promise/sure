@@ -9,6 +9,24 @@ class RecurringTransactionsController < ApplicationController
     @family = Current.family
   end
 
+  def show
+    @recurring_transaction = Current.family.recurring_transactions
+      .accessible_by(Current.user)
+      .includes(:merchant, :account, :destination_account)
+      .find(params[:id])
+
+    @matching_entries = @recurring_transaction.matching_transactions
+      .includes(:account, entryable: :merchant)
+      .limit(50)
+      .to_a
+
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.recurring_transactions"), recurring_transactions_path ],
+      [ @recurring_transaction.display_name, nil ]
+    ]
+  end
+
   def update_settings
     Current.family.update!(recurring_settings_params)
 

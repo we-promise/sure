@@ -50,6 +50,16 @@ en:
       inactive: Inactive
     badges:
       manual: Manual
+    show:
+      back: Back
+      pause: Pause
+      resume: Resume
+      delete: Delete
+      occurrences: Occurrences
+      account: Account
+      history_title: Matching transactions
+      history_empty_title: No matching transactions
+      history_empty_description: No past transactions currently match this recurring pattern.
     transfer_marked_as_recurring: Transfer marked as recurring
     transfer_already_exists: A recurring transfer already exists for this account pair
     transfer_creation_failed: Failed to create recurring transfer. Please check the transfer details and try again.

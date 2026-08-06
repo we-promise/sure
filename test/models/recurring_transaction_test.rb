@@ -1106,4 +1106,134 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       @family.recurring_transactions.create!(base_attrs)
     end
   end
+
+  test "matches_entry? matches merchant amount day and account" do
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 3
+    )
+
+    matching_entry = @account.entries.create!(
+      date: Date.current.beginning_of_month + 4.days,
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+
+    other_amount = @account.entries.create!(
+      date: Date.current.beginning_of_month + 4.days,
+      amount: 20.00,
+      currency: "USD",
+      name: "Netflix",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+
+    assert recurring.matches_entry?(matching_entry)
+    assert_not recurring.matches_entry?(other_amount)
+  end
+
+  test "matches_for_entries maps page entries to active recurring patterns" do
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 3
+    )
+    user = users(:family_admin)
+
+    matching_entry = @account.entries.create!(
+      date: Date.current.beginning_of_month + 4.days,
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+
+    unmatched_entry = @account.entries.create!(
+      date: Date.current,
+      amount: 42.00,
+      currency: "USD",
+      name: "Coffee",
+      entryable: Transaction.create!(category: categories(:food_and_drink))
+    )
+
+    matches = RecurringTransaction.matches_for_entries(
+      [ matching_entry, unmatched_entry ],
+      family: @family,
+      user: user
+    )
+
+    assert_equal recurring, matches[matching_entry.id]
+    assert_nil matches[unmatched_entry.id]
+  end
+
+  test "matches_for_entries returns empty when recurring feature is disabled" do
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 3
+    )
+    @family.update!(recurring_transactions_disabled: true)
+    user = users(:family_admin)
+
+    entry = @account.entries.create!(
+      date: Date.current.beginning_of_month + 4.days,
+      amount: recurring.amount,
+      currency: recurring.currency,
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+
+    assert_empty RecurringTransaction.matches_for_entries([ entry ], family: @family, user: user)
+  ensure
+    @family.update!(recurring_transactions_disabled: false)
+  end
+
+  test "display_name prefers merchant name" do
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 3
+    )
+    assert_equal @merchant.name, recurring.display_name
+
+    named = @family.recurring_transactions.create!(
+      account: @account,
+      name: "Gym Membership",
+      amount: 40,
+      currency: "USD",
+      expected_day_of_month: 1,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 1,
+      manual: true
+    )
+    assert_equal "Gym Membership", named.display_name
+  end
 end

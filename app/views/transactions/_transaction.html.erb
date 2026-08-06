@@ -96,6 +96,22 @@
                       </span>
                     <% end %>
 
+                    <% matched_recurring = @matched_recurring_by_entry_id&.[](entry.id) %>
+                    <% if matched_recurring %>
+                      <%= link_to recurring_transaction_path(matched_recurring),
+                            data: { turbo_frame: "_top" },
+                            class: "inline-flex",
+                            title: t("transactions.transaction.recurring_tooltip") do %>
+                        <%= render DS::Pill.new(
+                          label: t("transactions.transaction.recurring"),
+                          tone: :info,
+                          marker: false,
+                          icon: "repeat",
+                          title: t("transactions.transaction.recurring_tooltip")
+                        ) %>
+                      <% end %>
+                    <% end %>
+
                     <%# Pending indicator %>
                     <% if transaction.pending? %>
                       <%= render DS::Pill.new(

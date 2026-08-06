@@ -1,0 +1,146 @@
+<%= content_for :page_title, @recurring_transaction.display_name %>
+<%= content_for :page_actions do %>
+  <%= render DS::Link.new(
+    text: t("recurring_transactions.show.back"),
+    icon: "arrow-left",
+    variant: "outline",
+    href: recurring_transactions_path
+  ) %>
+  <%= render DS::Button.new(
+    text: @recurring_transaction.active? ? t("recurring_transactions.show.pause") : t("recurring_transactions.show.resume"),
+    variant: "outline",
+    icon: @recurring_transaction.active? ? "pause" : "play",
+    href: toggle_status_recurring_transaction_path(@recurring_transaction),
+    method: :post
+  ) %>
+  <%= render DS::Button.new(
+    text: t("recurring_transactions.show.delete"),
+    variant: "outline_destructive",
+    icon: "trash-2",
+    href: recurring_transaction_path(@recurring_transaction),
+    method: :delete,
+    confirm: t("recurring_transactions.confirm_delete")
+  ) %>
+<% end %>
+
+<div class="space-y-4 flex flex-col">
+  <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
+    <div class="flex items-start justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0">
+        <% if @recurring_transaction.merchant&.logo_url.present? %>
+          <%= image_tag @recurring_transaction.merchant.logo_url,
+              class: "w-10 h-10 rounded-full shrink-0",
+              loading: "lazy" %>
+        <% else %>
+          <%= render DS::FilledIcon.new(
+            variant: :text,
+            text: @recurring_transaction.display_name,
+            size: "lg",
+            rounded: true
+          ) %>
+        <% end %>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h2 class="text-lg font-medium text-primary truncate"><%= @recurring_transaction.display_name %></h2>
+            <% if @recurring_transaction.manual? %>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-tint-10 text-link">
+                <%= t("recurring_transactions.badges.manual") %>
+              </span>
+            <% end %>
+            <% if @recurring_transaction.active? %>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-success theme-dark:bg-green-tint-10">
+                <%= t("recurring_transactions.status.active") %>
+              </span>
+            <% else %>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-inset text-primary">
+                <%= t("recurring_transactions.status.inactive") %>
+              </span>
+            <% end %>
+          </div>
+          <p class="text-sm text-secondary mt-1">
+            <%= t("recurring_transactions.day_of_month", day: @recurring_transaction.expected_day_of_month) %>
+          </p>
+        </div>
+      </div>
+
+      <div class="text-right shrink-0">
+        <% if @recurring_transaction.transfer? %>
+          <p class="text-lg font-medium text-secondary privacy-sensitive">
+            <%= format_money(@recurring_transaction.amount_money.abs) %>
+          </p>
+        <% elsif @recurring_transaction.manual? && @recurring_transaction.has_amount_variance? %>
+          <p class="text-lg font-medium privacy-sensitive <%= @recurring_transaction.amount.negative? ? "text-success" : "text-primary" %>">
+            ~<%= format_money(-@recurring_transaction.expected_amount_avg_money) %>
+          </p>
+        <% else %>
+          <p class="text-lg font-medium privacy-sensitive <%= @recurring_transaction.amount.negative? ? "text-success" : "text-primary" %>">
+            <%= format_money(-@recurring_transaction.amount_money) %>
+          </p>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="rounded-lg bg-container-inset p-3">
+        <p class="text-xs text-secondary uppercase"><%= t("recurring_transactions.table.next_date") %></p>
+        <p class="text-sm font-medium text-primary mt-1"><%= l(@recurring_transaction.next_expected_date, format: :short) %></p>
+      </div>
+      <div class="rounded-lg bg-container-inset p-3">
+        <p class="text-xs text-secondary uppercase"><%= t("recurring_transactions.table.last_occurrence") %></p>
+        <p class="text-sm font-medium text-primary mt-1"><%= l(@recurring_transaction.last_occurrence_date, format: :short) %></p>
+      </div>
+      <div class="rounded-lg bg-container-inset p-3">
+        <p class="text-xs text-secondary uppercase"><%= t("recurring_transactions.show.occurrences") %></p>
+        <p class="text-sm font-medium text-primary mt-1"><%= @matching_entries.size %><%= "+" if @matching_entries.size >= 50 %></p>
+      </div>
+      <% if @recurring_transaction.account.present? %>
+        <div class="rounded-lg bg-container-inset p-3">
+          <p class="text-xs text-secondary uppercase"><%= t("recurring_transactions.show.account") %></p>
+          <p class="text-sm font-medium text-primary mt-1 truncate">
+            <%= @recurring_transaction.account.name %>
+            <% if @recurring_transaction.transfer? && @recurring_transaction.destination_account.present? %>
+              → <%= @recurring_transaction.destination_account.name %>
+            <% end %>
+          </p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="flex items-center gap-1.5 px-1 pb-3 text-xs font-medium text-secondary uppercase">
+      <p><%= t("recurring_transactions.show.history_title") %></p>
+      <span class="text-subdued">&middot;</span>
+      <p><%= @matching_entries.size %></p>
+    </div>
+
+    <% if @matching_entries.empty? %>
+      <%= render DS::EmptyState.new(
+        icon: "repeat",
+        title: t("recurring_transactions.show.history_empty_title"),
+        description: t("recurring_transactions.show.history_empty_description")
+      ) %>
+    <% else %>
+      <div class="bg-container-inset rounded-lg divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
+        <% @matching_entries.each do |entry| %>
+          <%= link_to entry_path(entry),
+                data: { turbo_frame: "drawer" },
+                class: "flex items-center justify-between gap-3 p-3 hover:bg-surface-hover first:rounded-t-lg last:rounded-b-lg" do %>
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-primary truncate"><%= entry.name %></p>
+              <p class="text-xs text-secondary mt-0.5">
+                <%= l(entry.date, format: :short) %>
+                <% if entry.account.present? %>
+                  · <%= entry.account.name %>
+                <% end %>
+              </p>
+            </div>
+            <p class="text-sm font-medium privacy-sensitive shrink-0 <%= entry.amount.negative? ? "text-success" : "text-primary" %>">
+              <%= format_money(-entry.amount_money) %>
+            </p>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
