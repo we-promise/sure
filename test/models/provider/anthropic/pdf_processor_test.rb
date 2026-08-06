@@ -99,10 +99,14 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
     assert_match(/32 MB request limit/i, err.message)
   end
 
-  test "captures the error response body in span output when the API call fails" do
+  test "extracts only allowlisted error fields into span output when the API call fails" do
     error = StandardError.new("boom")
     def error.body
-      { "type" => "error", "error" => { "message" => "invalid request" } }
+      {
+        "type" => "error",
+        "error" => { "type" => "invalid_request_error", "message" => "invalid request" },
+        "request" => { "document" => "base64-pdf-contents-that-should-never-leak" }
+      }
     end
 
     client = stub_failing_client(error)
@@ -118,10 +122,10 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
       ).process
     end
 
-    assert_equal({ "type" => "error", "error" => { "message" => "invalid request" } }, captured_output[:response_body])
+    assert_equal({ type: "invalid_request_error", message: "invalid request" }, captured_output[:error_detail])
   end
 
-  test "response_body is nil in span output when the error exposes no body" do
+  test "error_detail is nil in span output when the error exposes no body" do
     error = StandardError.new("boom")
 
     client = stub_failing_client(error)
@@ -137,10 +141,10 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
       ).process
     end
 
-    assert_nil captured_output[:response_body]
+    assert_nil captured_output[:error_detail]
   end
 
-  test "response_body falls back to a placeholder when reading the body itself raises" do
+  test "error_detail falls back to a placeholder when reading the body itself raises" do
     error = StandardError.new("boom")
     def error.body
       raise "body accessor exploded"
@@ -159,7 +163,7 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
       ).process
     end
 
-    assert_match(/body unavailable/i, captured_output[:response_body])
+    assert_match(/detail unavailable/i, captured_output[:error_detail])
   end
 
   private
