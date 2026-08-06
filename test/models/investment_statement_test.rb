@@ -134,6 +134,28 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 60.0, top.first.weight, 0.01
   end
 
+  test "top_holdings still lists positions when portfolio_value is stale zero" do
+    # Cached Account#balance can lag behind Holding rows; presence must not
+    # depend on portfolio_value alone.
+    account = create_investment_account(balance: 0, cash_balance: 0, currency: "USD")
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 200, amount: 2000, currency: "USD"
+    )
+
+    assert_equal 0, @statement.portfolio_value
+
+    top = @statement.top_holdings(limit: 5)
+
+    assert_equal 1, top.size
+    assert_equal "AAPL", top.first.ticker
+    assert_equal Money.new(2000, "USD"), top.first.amount_money
+    # Falls back to holdings total as weight denominator when portfolio is 0
+    assert_in_delta 100.0, top.first.weight, 0.01
+  end
+
   test "top_holdings computes trends only for the selected limit" do
     large = create_investment_account(balance: 5000, cash_balance: 0)
     small = create_investment_account(balance: 1000, cash_balance: 0)

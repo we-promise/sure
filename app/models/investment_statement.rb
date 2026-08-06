@@ -82,13 +82,23 @@ class InvestmentStatement
 
   # Top investments rolled up by security across accounts, ranked by
   # family-currency value. Weight is % of total portfolio (including cash).
+  # Presence is gated on holdings totals — not Account#balance — so a stale
+  # zero portfolio_value still surfaces real positions.
   def top_holdings(limit: 5)
+    rolled_up = holdings_rolled_up_by_security
+    return [] if rolled_up.empty?
+
+    holdings_total = rolled_up.sum { |_, value, _| value }
+    return [] if holdings_total.zero?
+
+    # Prefer portfolio_value (includes cash) for weight; fall back to holdings
+    # total when cached account balances are stale/zero.
     total = portfolio_value
-    return [] if total.zero?
+    total = holdings_total if total.zero?
 
     # Rank/limit on value first; only then compute cost-basis trends for the
     # rows that will be rendered (avoids avg_cost/trade lookups for the rest).
-    holdings_rolled_up_by_security
+    rolled_up
       .first(limit)
       .map do |security, value, holdings|
         HoldingAllocation.new(
