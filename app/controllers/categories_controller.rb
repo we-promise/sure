@@ -29,7 +29,10 @@ class CategoriesController < ApplicationController
     @category = Current.family.categories.new(category_params)
 
     if @category.save
-      @transaction.update(category_id: @category.id) if @transaction
+      if @transaction
+        @transaction.update(category_id: @category.id)
+        @transaction.record_category_usage!
+      end
 
       flash[:notice] = t(".success")
 

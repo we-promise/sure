@@ -48,7 +48,11 @@ class OauthRegistrationController < ApplicationController
     app = Doorkeeper::Application.new(
       name: client_name,
       redirect_uri: redirect_uris.join("\n"),
-      confidential: false
+      confidential: false,
+      # MCP requires the read_write scope. Without assigning it to the
+      # dynamically registered client, Doorkeeper falls back to the provider's
+      # default read scope and the token is rejected by McpController.
+      scopes: "read_write"
     )
 
     if app.save
