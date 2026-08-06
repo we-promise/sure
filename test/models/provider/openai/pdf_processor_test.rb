@@ -13,6 +13,9 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
         "request" => { "messages" => "statement text that should never leak" }
       }
     end
+    def error.response_headers
+      { "x-request-id" => "req_abc123" }
+    end
 
     captured_output = nil
     trace = stub_trace { |output| captured_output = output }
@@ -22,7 +25,7 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     end
 
     assert_equal(
-      { type: "invalid_request_error", message: "invalid request", code: "bad_pdf" },
+      { type: "invalid_request_error", message: "invalid request", code: "bad_pdf", request_id: "req_abc123" },
       captured_output[:error_detail]
     )
   end
