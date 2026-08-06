@@ -3,6 +3,9 @@ de:
   transfers:
     create:
       success: Überweisung erstellt
+      exchange_rate_unavailable: Kein Wechselkurs für die gewählten Währungen und das
+        Datum verfügbar
+      date_invalid: ist ungültig
     destroy:
       success: Überweisung entfernt
     form:

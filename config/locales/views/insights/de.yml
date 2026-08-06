@@ -10,11 +10,13 @@ de:
       spending_anomaly: Transaktionen zu %{category} ansehen
       subscription_audit: Wiederkehrende Buchungen prüfen
     card:
-      dismiss: Ausblenden
-      dismissed: Insight ausgeblendet
+      acknowledge: Verstanden
+      acknowledge_title: Ausblenden, bis sich die Zahlen ändern
+      acknowledged: Verstanden – ausgeblendet, bis sich das ändert
       new: Neu
       undo: Rückgängig
     feed:
+      acknowledge_aria: "Verstanden: %{title}"
       header: Neueste
       header_new: Neu
       view_all: Alle Insights ansehen
@@ -25,6 +27,7 @@ de:
       idle_days:
         one: "%{count} Tag ungenutzt"
         other: "%{count} Tage ungenutzt"
+      need_attention: zu prüfen
       of_budget: vom Budget
       on_pace: hochgerechnet
       today: heute
