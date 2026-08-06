@@ -31,7 +31,15 @@
   <% error_msg = local_assigns[:error_message] || @error_message %>
   <% if error_msg.present? %>
     <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
-      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+      <div class="flex items-start gap-1.5">
+        <%# DS::Tooltip replaces the raw title= hover affordance flagged by DS
+            Drift Patrol — the full error is revealed on hover/focus via the
+            Stimulus tooltip controller (keyboard + touch parity), while the
+            clamped <p> keeps the actionable message visible in this setup
+            panel. %>
+        <%= render DS::Tooltip.new(text: error_msg, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+        <p class="line-clamp-3"><%= error_msg %></p>
+      </div>
     </div>
     <p class="text-xs text-secondary flex items-start gap-1.5">
       <%= icon("alert-triangle", class: "w-3.5 h-3.5 mt-0.5 shrink-0") %>
