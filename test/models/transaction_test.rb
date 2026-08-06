@@ -219,4 +219,77 @@ class TransactionTest < ActiveSupport::TestCase
 
     assert_nil category.reload.last_used_at
   end
+
+  test "restore_amount_inversion_state accepts a well-formed inverted pair" do
+    transaction = Transaction.new
+
+    assert transaction.restore_amount_inversion_state(
+      "source_amount" => "-100.0", "corrected_amount" => "100.0"
+    )
+    assert_equal(
+      { "source_amount" => "-100.0", "corrected_amount" => "100.0" },
+      transaction.amount_inversion_state
+    )
+  end
+
+  test "restore_amount_inversion_state normalizes numeric and BigDecimal payloads to strings" do
+    transaction = Transaction.new
+
+    assert transaction.restore_amount_inversion_state(
+      "source_amount" => 250, "corrected_amount" => BigDecimal("-250")
+    )
+    assert_equal(
+      { "source_amount" => "250.0", "corrected_amount" => "-250.0" },
+      transaction.amount_inversion_state
+    )
+  end
+
+  test "restore_amount_inversion_state rejects malformed payloads" do
+    # Each of these must leave the transaction with no watermark rather than a
+    # half-valid one. A bad watermark would let a later rule run invert an
+    # already-corrected amount a second time and flip the sign back.
+    rejected_payloads = {
+      "non-numeric source" => { "source_amount" => "abc", "corrected_amount" => "100.0" },
+      "non-numeric corrected" => { "source_amount" => "-100.0", "corrected_amount" => "not a number" },
+      "nil source" => { "source_amount" => nil, "corrected_amount" => "100.0" },
+      "nil corrected" => { "source_amount" => "-100.0", "corrected_amount" => nil },
+      "missing keys" => {},
+      "zero source" => { "source_amount" => "0.0", "corrected_amount" => "0.0" },
+      "pair does not negate" => { "source_amount" => "-100.0", "corrected_amount" => "50.0" },
+      "same sign pair" => { "source_amount" => "-100.0", "corrected_amount" => "-100.0" },
+      "nested hash value" => { "source_amount" => { "a" => 1 }, "corrected_amount" => "100.0" },
+      "not a hash" => "-100.0",
+      "nil state" => nil,
+      "array state" => [ "-100.0", "100.0" ]
+    }
+
+    rejected_payloads.each do |description, payload|
+      transaction = Transaction.new
+
+      assert_not transaction.restore_amount_inversion_state(payload),
+        "expected #{description} to be rejected"
+      assert_nil transaction.amount_inversion_state,
+        "expected #{description} to leave no inversion state"
+    end
+  end
+
+  test "restore_amount_inversion_state preserves unrelated extra keys" do
+    transaction = Transaction.new(extra: { "simplefin" => { "pending" => true } })
+
+    assert transaction.restore_amount_inversion_state(
+      "source_amount" => "-100.0", "corrected_amount" => "100.0"
+    )
+
+    assert_equal true, transaction.extra.dig("simplefin", "pending")
+    assert_equal "100.0", transaction.extra.dig("rules", "invert_transaction_amount", "corrected_amount")
+  end
+
+  test "amount_inversion_state ignores a stored watermark that no longer normalizes" do
+    transaction = Transaction.new(
+      extra: { "rules" => { "invert_transaction_amount" => { "source_amount" => "-100.0", "corrected_amount" => "37.0" } } }
+    )
+
+    assert_nil transaction.amount_inversion_state
+    assert_nil transaction.amount_inversion_corrected_amount
+  end
 end
