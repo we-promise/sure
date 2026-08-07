@@ -467,7 +467,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       accountable: Investment.new(subtype: "brokerage")
     )
 
-    create_trade(securities(:aapl), account: account, qty: 1, date: Date.current, price: 100).update!(category: category)
+    create_trade(securities(:aapl), account: account, qty: 1, date: Date.current, price: 100).entryable.update!(category: category)
     create_trade(securities(:aapl), account: account, qty: 2, date: Date.current, price: 200)
     create_transaction(account: account, name: "Ordinary transaction", amount: 50, category: transaction_category)
 

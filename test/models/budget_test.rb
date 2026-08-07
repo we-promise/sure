@@ -36,7 +36,7 @@ class BudgetTest < ActiveSupport::TestCase
       amount: 1_000
     ).create
 
-    budget = Budget.find_or_bootstrap(family: @family, start_date: Date.current)
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
     contribution_budget_category = budget.budget_categories.find_by!(category: @family.investment_contributions_category)
 
     assert_equal 1000, budget.actual_spending

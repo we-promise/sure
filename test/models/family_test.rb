@@ -32,10 +32,10 @@ class FamilyTest < ActiveSupport::TestCase
     first = Transfer.create!(outflow_transaction: first_outflow.entryable, inflow_transaction: first_inflow.entryable)
     second = Transfer.create!(outflow_transaction: second_outflow.entryable, inflow_transaction: second_inflow.entryable)
 
-    @syncable.remove_instance_variable(:@transfers_cache_version)
+    @syncable.remove_instance_variable(:@transfers_cache_version) if @syncable.instance_variable_defined?(:@transfers_cache_version)
     version_before = @syncable.transfers_cache_version
     first.destroy!
-    @syncable.remove_instance_variable(:@transfers_cache_version)
+    @syncable.remove_instance_variable(:@transfers_cache_version) if @syncable.instance_variable_defined?(:@transfers_cache_version)
 
     assert_not_equal version_before, @syncable.transfers_cache_version
     assert second.persisted?

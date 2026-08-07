@@ -35,10 +35,9 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_member)
     family = users(:family_member).family
 
-    assert_raises ActiveRecord::RecordNotFound do
-      patch settings_preferences_url, params: { family: { treat_investment_contributions_as_transfers: "1" } }
-    end
+    patch settings_preferences_url, params: { family: { treat_investment_contributions_as_transfers: "1" } }
 
+    assert_response :not_found
     assert_not family.reload.treat_investment_contributions_as_transfers?
   end
 

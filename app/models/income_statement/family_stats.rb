@@ -79,7 +79,7 @@ class IncomeStatement::FamilyStats
           )
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
-            AND (#{Transaction.cash_flow_transfer_sql("t")})
+            AND (#{transfer_filter_sql("t")})
             AND ae.excluded = false
             AND a.exclude_from_reports = false
             #{pending_providers_sql}
