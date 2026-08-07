@@ -158,6 +158,8 @@ class Transaction < ApplicationRecord
   # IncomeStatement::Totals#classification_sql (SQL).
   def classification
     "expense" if refund?
+  end
+
   # Marks a category as recently used. Called explicitly from the manual
   # category-assignment controllers (picker, edit form, categorization
   # wizard, create-and-assign) after a successful save — not wired to a
