@@ -510,7 +510,7 @@ class Entry < ApplicationRecord
       return 0 unless has_updates
 
       transaction do
-        all.each do |entry|
+        all.includes(:account).each do |entry|
           changed = false
 
           # Update standard attributes

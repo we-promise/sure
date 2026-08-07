@@ -26,6 +26,7 @@ en:
     selection_bar:
       duplicate: Duplicate
       edit: Edit
+      reconcile: Reconcile
       selected: selected
     form:
       details: Details
