@@ -10,7 +10,7 @@
   <% else %>
     <div class="flex items-center justify-between gap-4">
       <p class="text-secondary"><%= t("settings.providers.bank_sync.lede") %></p>
-      <% if @connected.any? || @needs_attention.any? %>
+      <% if Current.user.admin? && (@connected.any? || @needs_attention.any?) %>
         <% sync_all_disabled = Current.family.last_sync_all_attempted_at.present? && Current.family.last_sync_all_attempted_at > 30.seconds.ago %>
         <%= render DS::Button.new(
               text: t("settings.providers.sync_all"),
@@ -47,6 +47,10 @@
       </div>
     <% end %>
 
+    <%# The "Available" providers list is admin-only: connecting a provider
+        routes through admin-gated endpoints (connect_form), so non-admins get
+        a read-only view of existing connections without connect controls. %>
+    <% if Current.user.admin? %>
     <% if @available.any? %>
       <div data-controller="providers-filter">
         <%= render "settings/providers/search_filters" %>
@@ -90,6 +94,7 @@
                  count: 0,
                  anchor: "available" %>
       <p class="text-sm text-secondary px-1 py-2"><%= t("settings.providers.groups.empty_available") %></p>
+    <% end %>
     <% end %>
   <% end %>
 </div>
