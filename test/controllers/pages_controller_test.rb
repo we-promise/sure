@@ -142,7 +142,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     donut_total = segments.sum { |segment| segment.fetch("amount") }
     segments.each do |segment|
       expected_percentage = (segment.fetch("amount") / donut_total * 100).round(1)
-      assert_equal expected_percentage, segment.fetch("percentage")
+      assert_equal expected_percentage, segment.fetch("percentage").to_f
     end
 
     sankey = css_select("[data-controller='sankey-chart']").first

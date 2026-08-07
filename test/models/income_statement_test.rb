@@ -479,7 +479,9 @@ class IncomeStatementTest < ActiveSupport::TestCase
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    assert_equal Money.new(0, @family.currency), totals.income_money
+    # Pending matches are not authoritative, so the funds-movement inflow is
+    # still counted as income until the transfer is confirmed.
+    assert_equal Money.new(1_000, @family.currency), totals.income_money
     assert_equal Money.new(1_900, @family.currency), totals.expense_money
   end
 

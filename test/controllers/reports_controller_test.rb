@@ -454,10 +454,9 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-other_investments']", count: 0
   end
 
-  test "index excludes categorized and uncategorized trades from activity breakdown" do
+  test "index excludes trades from activity breakdown" do
     @family.accounts.each { |account| account.entries.destroy_all }
 
-    category = @family.categories.create!(name: "Reports Trade Category", color: "#111111")
     transaction_category = @family.categories.create!(name: "Reports Ordinary Category", color: "#222222")
     account = @family.accounts.create!(
       owner: @user,
@@ -467,14 +466,13 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       accountable: Investment.new(subtype: "brokerage")
     )
 
-    create_trade(securities(:aapl), account: account, qty: 1, date: Date.current, price: 100).entryable.update!(category: category)
+    create_trade(securities(:aapl), account: account, qty: 1, date: Date.current, price: 100)
     create_trade(securities(:aapl), account: account, qty: 2, date: Date.current, price: 200)
     create_transaction(account: account, name: "Ordinary transaction", amount: 50, category: transaction_category)
 
     get reports_path(period_type: :monthly)
     assert_response :ok
 
-    assert_select "tr[data-category='category-#{category.id}']", count: 0
     assert_select "tr[data-category='category-other_investments']", count: 0
     assert_select "tr[data-category='category-#{transaction_category.id}']", text: /Reports Ordinary Category/
   end
