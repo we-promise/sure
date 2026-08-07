@@ -24,8 +24,7 @@
           <% profile_id = profile["id"].to_s %>
           <% already_connected = @existing_profile_ids.include?(profile_id) %>
           <% profile_type = profile["type"] == "business" ? "business" : "personal" %>
-          <% details = profile["details"] || {} %>
-          <% display_name = details["name"].presence || [ details["firstName"], details["lastName"] ].compact.join(" ") %>
+          <% display_name = profile["display_name"] %>
 
           <label class="flex items-start gap-3 p-3 border <%= already_connected ? "border-secondary opacity-60 cursor-not-allowed" : "border-primary hover:bg-subtle cursor-pointer" %> rounded-lg transition-colors">
             <%= check_box_tag "profile_ids[]", profile_id, !already_connected, disabled: already_connected, class: "mt-1" %>
@@ -39,9 +38,6 @@
                   <span class="text-xs text-secondary"><%= t(".already_connected_label") %></span>
                 <% end %>
               </div>
-              <% if details["email"].present? %>
-                <p class="text-xs text-secondary mt-0.5"><%= details["email"] %></p>
-              <% end %>
             </div>
           </label>
         <% end %>

@@ -35,7 +35,7 @@ class WiseItemsController < ApplicationController
       return render_provider_panel_error
     end
 
-    session[:wise_pending_profiles] = profiles
+    session[:wise_pending_profiles] = Provider::Wise.pending_profile_session_payload(profiles)
     session[:wise_pending_encrypted_token] = encrypt_pending_token(token)
 
     redirect_to select_profiles_wise_items_path
@@ -78,14 +78,11 @@ class WiseItemsController < ApplicationController
       next unless selected_ids.include?(profile_id)
       next if Current.family.wise_items.exists?(profile_id: profile_id)
 
-      profile_type = profile["type"] == "business" ? "business" : "personal"
-      display_name = profile_display_name(profile)
-
       Current.family.create_wise_item!(
         token: token,
         profile_id: profile_id,
-        profile_type: profile_type,
-        item_name: display_name
+        profile_type: profile["type"] == "business" ? "business" : "personal",
+        item_name: Provider::Wise.profile_label(profile)
       )
       created += 1
     end
@@ -251,16 +248,6 @@ class WiseItemsController < ApplicationController
       WiseAccount.joins(:wise_item)
                  .merge(Current.family.wise_items.active)
                  .find_by(id: wise_account_id)
-    end
-
-    def profile_display_name(profile)
-      type_key = profile["type"] == "business" ? :business : :personal
-      type_label = I18n.t("wise_items.profile_types.#{type_key}")
-      details = profile["details"] || {}
-      name = details["name"].presence ||
-             [ details["firstName"], details["lastName"] ].compact.join(" ").presence
-
-      name.present? ? "#{name} (#{type_label})" : "Wise #{type_label}"
     end
 
     def render_provider_panel_success(message)

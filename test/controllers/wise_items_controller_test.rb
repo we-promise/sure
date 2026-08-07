@@ -30,6 +30,38 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='encrypted_pending_token']"
   end
 
+  test "create keeps only bounded display profile fields in the session" do
+    profiles = 25.times.map do |index|
+      {
+        "id" => "#{index}-#{"i" * 500}",
+        "type" => index.even? ? "personal" : "business",
+        "details" => {
+          "firstName" => "Jane",
+          "lastName" => "Doe #{"n" * 500}",
+          "email" => "jane-#{index}@example.com",
+          "address" => "x" * 3.kilobytes,
+          "avatar" => "y" * 3.kilobytes
+        },
+        "extra" => "z" * 3.kilobytes
+      }
+    end
+    Provider::Wise.any_instance.stubs(:get_profiles).returns(profiles)
+
+    post wise_items_url, params: { wise_item: { token: "live_token_abc" } }
+
+    pending_profile = session[:wise_pending_profiles].first
+    assert_equal(
+      {
+        "id" => "0-#{"i" * 62}",
+        "type" => "personal",
+        "display_name" => "Jane Doe #{"n" * 55}"
+      },
+      pending_profile
+    )
+    assert_equal 10, session[:wise_pending_profiles].size
+    assert_operator session[:wise_pending_profiles].to_json.bytesize, :<, 2.kilobytes
+  end
+
   test "create stores an encrypted token that round-trips to the original value" do
     Provider::Wise.any_instance.stubs(:get_profiles).returns(@valid_profiles)
 
