@@ -59,6 +59,16 @@ class RecurringTransaction
             entries: entries
           }
 
+          # When amounts were clustered under a tolerance band, persist the
+          # observed min/max/avg so matching_transactions can use BETWEEN
+          # instead of exact equality on the representative average.
+          if family.recurring_detection_amount_tolerance_percent.positive?
+            cluster_amounts = entries.map(&:amount)
+            pattern[:amount_min] = cluster_amounts.min
+            pattern[:amount_max] = cluster_amounts.max
+            pattern[:amount_avg] = amount
+          end
+
           if identifier_type == :merchant
             pattern[:merchant_id] = identifier_value
           else
@@ -120,7 +130,8 @@ class RecurringTransaction
             last_occurrence_date: pattern[:last_occurrence_date],
             next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], pattern[:expected_day_of_month]),
             occurrence_count: pattern[:occurrence_count],
-            status: recurring_transaction.new_record? ? "active" : recurring_transaction.status
+            status: recurring_transaction.new_record? ? "active" : recurring_transaction.status,
+            **amount_variance_attributes(pattern)
           )
 
           recurring_transaction.save!
@@ -142,7 +153,8 @@ class RecurringTransaction
             expected_day_of_month: pattern[:expected_day_of_month],
             last_occurrence_date: pattern[:last_occurrence_date],
             next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], pattern[:expected_day_of_month]),
-            occurrence_count: pattern[:occurrence_count]
+            occurrence_count: pattern[:occurrence_count],
+            **amount_variance_attributes(pattern)
           )
         end
       end
@@ -192,6 +204,17 @@ class RecurringTransaction
     end
 
     private
+      def amount_variance_attributes(pattern)
+        return {} unless pattern.key?(:amount_min)
+
+        {
+          amount: pattern[:amount],
+          expected_amount_min: pattern[:amount_min],
+          expected_amount_max: pattern[:amount_max],
+          expected_amount_avg: pattern[:amount_avg]
+        }
+      end
+
       def group_entries_for_detection(entries_with_transactions)
         transaction_entries = entries_with_transactions.select { |entry| entry.entryable.is_a?(Transaction) }
         amount_tolerance_percent = family.recurring_detection_amount_tolerance_percent

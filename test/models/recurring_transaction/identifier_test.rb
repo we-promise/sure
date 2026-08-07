@@ -246,6 +246,13 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     recurring = @family.recurring_transactions.first
     assert_equal 3, recurring.occurrence_count
     assert_in_delta amounts.sum / amounts.size, recurring.amount, 0.01
+    assert_equal amounts.min, recurring.expected_amount_min
+    assert_equal amounts.max, recurring.expected_amount_max
+    assert_in_delta amounts.sum / amounts.size, recurring.expected_amount_avg, 0.01
+
+    # matching_transactions must honor the variance band — not exact average
+    matched_amounts = recurring.matching_transactions.map(&:amount).sort
+    assert_equal amounts.sort, matched_amounts
   end
 
   test "updates existing recurring transaction when pattern is found again" do

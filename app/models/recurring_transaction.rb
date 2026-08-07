@@ -365,8 +365,8 @@ class RecurringTransaction < ApplicationRecord
     return nil unless active?
     return nil unless next_expected_date.future?
 
-    # Use average amount for manual recurring with variance, otherwise use fixed amount
-    display_amount = if manual? && expected_amount_avg.present?
+    # Use average amount when a variance band is present, otherwise use fixed amount
+    display_amount = if expected_amount_avg.present?
       expected_amount_avg
     else
       amount
@@ -416,9 +416,10 @@ class RecurringTransaction < ApplicationRecord
     end
 
     # Transaction entries whose amount fits the pattern: exact, or within the
-    # configured variance band for manual recurring rows.
+    # configured variance band (manual rows, or auto-detected rows clustered
+    # under a family amount-tolerance setting).
     def amount_window_scope(relation)
-      if manual? && has_amount_variance?
+      if has_amount_variance?
         relation.where("entries.amount BETWEEN ? AND ?", expected_amount_min, expected_amount_max)
       else
         relation.where("entries.amount = ?", amount)
