@@ -10,11 +10,7 @@ class PluggyItem::Importer
   def import
     result = { accounts: 0, transactions: 0, investments: 0, processed: [], errors: [] }
 
-    # Institution metadata from the item's connector. Normalize the connector's
-    # website_url to a bare hostname so the cached institution_domain column
-    # matches the bare-hostname contract PluggyAdapter#institution_domain derives
-    # off metadata (DRY: same URI.parse + www strip), rather than the importer
-    # caching the full URL while the adapter returns a bare host.
+    # Normalize to a bare hostname to match PluggyAdapter#institution_domain.
     item = @pluggy_provider.get_item
     connector = item["connector"] || {}
     @pluggy_item.update!(
@@ -34,7 +30,10 @@ class PluggyItem::Importer
     @pluggy_item.upsert_pluggy_snapshot!(accounts_data)
     result[:accounts] = accounts_data.size
 
-    investment_container_upserted = false
+    # Container pick is sticky across syncs (#investment_container_id) because
+    # /accounts order is unstable.
+    investment_account_ids = accounts_data.filter_map { |acc| acc["id"] if investment_account?(acc) }
+    container_id = investment_container_id(investment_account_ids)
 
     accounts_data.each do |acc|
       begin
@@ -44,43 +43,26 @@ class PluggyItem::Importer
         pluggy_account.upsert_pluggy_transactions_snapshot!(transactions)
         result[:transactions] += transactions.size
 
-        if investment_account?(acc)
-          # Pluggy investments are ITEM-scoped (one /investments array for the whole
-          # item), so they attach to exactly ONE investment-typed container — not to
-          # every investment-type account /accounts happens to return. The old loop
-          # snapshotted the full item holdings onto EACH investment-type PluggyAccount;
-          # HoldingsProcessor (l61) then re-imported the same rows under each account's
-          # own account_provider_id, and once AutoSetup / the setup wizard linked them,
-          # Processor#upsert_investment_balance summed the FULL item value per linked
-          # account → the family's investment balance multi-counted by the number of
-          # investment-type accounts. Use the FIRST investment-type account as the
-          # sole container; any further investment-type accounts keep their banking
-          # transactions + processing above but carry no holdings (balance 0 — a
-          # known empty-container state, not a silent over-report). The container flag
-          # already gates the synthesis path at l92, so "real container present → no
-          # synthetic" keeps working. Activities (investment transactions) are
-          # snapshotted on the container only; Trades import stays OUT OF SCOPE
-          # (phase 2), so activities_fetch_pending stays true on it to flag the item
-          # as still fetching.
-          unless investment_container_upserted
-            pluggy_account.upsert_pluggy_holdings_snapshot!(investments_data)
-            pluggy_account.upsert_pluggy_activities_snapshot!(activities_data)
-            pluggy_account.update!(activities_fetch_pending: true)
-            investment_container_upserted = true
-          end
+        # Investments are item-scoped, so the snapshot attaches to ONE container
+        # only — otherwise HoldingsProcessor re-imports the same rows under each
+        # account and the balance multi-counts. The sticky container_id keeps the
+        # snapshot from jumping accounts on a /accounts reorder. Trades stay out
+        # of scope (phase 2), so activities_fetch_pending flags the item as still
+        # fetching.
+        if acc["id"] == container_id
+          pluggy_account.upsert_pluggy_holdings_snapshot!(investments_data)
+          pluggy_account.upsert_pluggy_activities_snapshot!(activities_data)
+          pluggy_account.update!(activities_fetch_pending: true)
         end
 
         PluggyAccount::Processor.new(pluggy_account).process
         result[:processed] << pluggy_account.id
       rescue Provider::Pluggy::AuthenticationError
-        # Auth failure is item-wide, not account-scoped: re-raise so the top-level
-        # rescue marks the item requires_update and captures once, instead of once
-        # per account plus a partial import that reads as success to support.
+        # Item-wide, not account-scoped: re-raise so the top-level rescue fires once.
         raise
       rescue => e
         # Isolate per-account failures so one bad account can't abort the whole
-        # item import: record it, surface via DebugLogEntry for /settings/debug,
-        # and continue. Mirrors EnableBanking/Lunchflow importer isolation.
+        # import. Mirrors EnableBanking/Lunchflow.
         result[:errors] << { account_id: acc["id"], error_class: e.class.name, error: e.message }
         DebugLogEntry.capture(
           category: "provider_sync_error",
@@ -95,15 +77,10 @@ class PluggyItem::Importer
       end
     end
 
-    # Pluggy frequently returns investments at the ITEM level even when /accounts
-    # exposes no investment-type container (only credit/checking). Without a
-    # PluggyAccount row the holdings never surface in unlinked_pluggy_accounts, so
-    # the user can never link them — manifesting as "investments didn't arrive"
-    # (yet visible on Pluggy's dashboard) plus "no accounts yet" on the accounts
-    # screen. Synthesize a container so they become a linkable Investment account.
-    # When /accounts DID include an investment-typed account the loop above already
-    # attached holdings there, so skip synthesis to avoid a duplicate container.
-    if investments_data.any? && !investment_container_upserted
+    # Investments may exist at item level with no investment-type account in
+    # /accounts; synthesize a linkable container in that case. Skip when the loop
+    # already attached holdings to a real container.
+    if investments_data.any? && container_id.blank?
       synthetic = synthesize_investment_account!(investments_data, activities_data)
       PluggyAccount::Processor.new(synthetic).process
       result[:processed] << synthetic.id
@@ -130,10 +107,21 @@ class PluggyItem::Importer
       acc["type"].to_s.downcase == "investment"
     end
 
-    # Builds an investment-typed PluggyAccount from the item-scoped /investments
-    # payload so the holdings become a linkable Investment account even when
-    # /accounts exposes no investment-type container. The synthetic id is stable
-    # per item so re-imports upsert the same row rather than duplicating it.
+    # Sticky container pick: prefer the investment-type account already carrying
+    # a non-empty snapshot, else the lexically-smallest id in /accounts. Returns
+    # nil when there's no investment-type account (caller synthesizes).
+    def investment_container_id(investment_account_ids)
+      existing = @pluggy_item.pluggy_accounts
+        .where(account_type: "investment")
+        .where("jsonb_array_length(raw_holdings_payload) > 0")
+        .order(:pluggy_account_id)
+        .first
+      return existing.pluggy_account_id if existing
+      investment_account_ids.min
+    end
+
+    # Synthesize a linkable investment container when /accounts has no
+    # investment-type row. Stable per-item id so re-imports upsert the same row.
     def synthesize_investment_account!(investments_data, activities_data)
       synthetic_hash = {
         "id" => "synthetic-investment-#{@pluggy_item.id}",
@@ -150,11 +138,8 @@ class PluggyItem::Importer
       pluggy_account
     end
 
-    # Derive a bare hostname from the connector's website_url (e.g.
-    # "https://bank.example" → "bank.example"), mirroring
-    # PluggyAdapter#institution_domain so the importer-side cache and the
-    # adapter-side derivation agree on the bare-hostname contract. Blank/invalid
-    # URLs fall back to nil rather than persisting a malformed value.
+    # Bare hostname (e.g. "https://bank.example" → "bank.example"), mirroring
+    # PluggyAdapter#institution_domain. Blank/invalid → nil.
     def normalize_institution_domain(url)
       return nil if url.blank?
       URI.parse(url).host&.gsub(/^www\./, "")
