@@ -6,6 +6,8 @@ class Provider::Wise
 
   LIVE_BASE_URL = "https://api.wise.com"
   SANDBOX_BASE_URL = "https://api.sandbox.transferwise.tech"
+  MAX_PENDING_PROFILES = 10
+  MAX_PENDING_PROFILE_FIELD_LENGTH = 64
 
   headers "User-Agent" => "Sure Finance Wise Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
@@ -23,6 +25,29 @@ class Provider::Wise
 
   def get_profiles
     get("/v1/profiles")
+  end
+
+  def self.pending_profile_session_payload(profiles)
+    Array(profiles).first(MAX_PENDING_PROFILES).filter_map do |profile|
+      next unless profile.is_a?(Hash)
+
+      profile_id = truncate_session_field(profile["id"])
+      next if profile_id.blank?
+
+      {
+        "id" => profile_id,
+        "type" => profile_type(profile),
+        "display_name" => truncate_session_field(profile_display_name(profile))
+      }.compact_blank
+    end
+  end
+
+  def self.profile_label(profile)
+    type_key = profile_type(profile).to_sym
+    type_label = I18n.t("wise_items.profile_types.#{type_key}")
+    display_name = truncate_session_field(profile["display_name"].presence || profile_display_name(profile))
+
+    display_name.present? ? "#{display_name} (#{type_label})" : "Wise #{type_label}"
   end
 
   def get_balances(profile_id)
@@ -113,5 +138,20 @@ class Provider::Wise
         super(message)
         @error_type = error_type
       end
+    end
+
+    def self.profile_type(profile)
+      profile["type"] == "business" ? "business" : "personal"
+    end
+
+    def self.profile_display_name(profile)
+      details = profile["details"].is_a?(Hash) ? profile["details"] : {}
+
+      details["name"].presence ||
+        [ details["firstName"], details["lastName"] ].compact.join(" ").presence
+    end
+
+    def self.truncate_session_field(value)
+      value.to_s.first(MAX_PENDING_PROFILE_FIELD_LENGTH)
     end
 end
