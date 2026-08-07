@@ -5784,7 +5784,13 @@ paths:
         content:
           multipart/form-data:
             schema:
-              type: file
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
         required: true
         description: 'CSV file with columns: name* (required), color, website_url'
   "/api/v1/merchants/{id}":
