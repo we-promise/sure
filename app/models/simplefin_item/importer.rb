@@ -1312,6 +1312,10 @@ class SimplefinItem::Importer
       stale_unmatched = account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(excluded: false)
+        # Skip split parents/children: their pending flag is inherited, not
+        # authoritative, so counting them over-reports stale unmatched pending.
+        .excluding_split_parents
+        .excluding_split_children
         .where("entries.date < ?", 8.days.ago.to_date)
         .where(<<~SQL.squish)
           (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true

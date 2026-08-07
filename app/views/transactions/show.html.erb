@@ -28,13 +28,31 @@
                 </div>
               </div>
               <div class="flex items-center gap-2 mt-3">
-                <%= render DS::Button.new(
-                  text: t("transactions.show.merge_duplicate"),
-                  href: merge_duplicate_transaction_path(@entry.transaction),
-                  variant: :primary,
-                  size: :sm,
-                  data: { turbo_method: :post, turbo_frame: "_top" }
-                ) %>
+                <% if @entry.split_parent? %>
+                  <div class="inline-flex items-center gap-1.5">
+                    <%= render DS::Button.new(
+                      text: t("transactions.show.merge_duplicate"),
+                      variant: :primary,
+                      size: :sm,
+                      disabled: true
+                    ) %>
+                    <%= render DS::Tooltip.new(
+                      text: t("transactions.show.merge_split_parent_blocked"),
+                      icon: "info",
+                      size: "sm",
+                      color: "warning",
+                      as: :span
+                    ) %>
+                  </div>
+                <% else %>
+                  <%= render DS::Button.new(
+                    text: t("transactions.show.merge_duplicate"),
+                    href: merge_duplicate_transaction_path(@entry.transaction),
+                    variant: :primary,
+                    size: :sm,
+                    data: { turbo_method: :post, turbo_frame: "_top" }
+                  ) %>
+                <% end %>
                 <%= render DS::Button.new(
                   text: t("transactions.show.keep_both"),
                   href: dismiss_duplicate_transaction_path(@entry.transaction),
@@ -364,8 +382,8 @@
               frame: :modal
             ) %>
           </div>
-          <!-- Pending Duplicate Merger -->
-          <% if @entry.entryable.is_a?(Transaction) && @entry.entryable.pending? %>
+          <!-- Pending Duplicate Merger — hidden for split parents; merge_with_duplicate! rejects them -->
+          <% if @entry.entryable.is_a?(Transaction) && @entry.entryable.pending? && !@entry.split_parent? %>
             <div class="flex items-center justify-between gap-4 p-3">
               <div class="text-sm space-y-1">
                 <h4 class="text-primary"><%= t("transactions.show.pending_duplicate_merger_title") %></h4>
