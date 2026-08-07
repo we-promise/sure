@@ -393,7 +393,7 @@ class Budget < ApplicationRecord
     # viewer sees the owner's numbers, and household vs. personal actually
     # differ instead of both reflecting the viewer's full accessible set.
     def income_statement_accounts
-      family.accounts.where(owner_id: user_id) if user_id.present?
+      family.accounts.where(owner_id: user_id).included_in_reports if user_id.present?
     end
 
     def net_totals

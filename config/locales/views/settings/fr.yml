@@ -141,7 +141,8 @@ fr:
         base_currency_label: Devise de base
         budget_sharing_title: Partage de budget
         budget_sharing_subtitle: Autorisez d'autres membres à consulter ou modifier votre budget personnel
-        budget_sharing_no_members: Aucun autre membre dans votre %{moniker} avec qui partager
+        budget_sharing_no_members: Aucun autre membre de votre %{moniker} avec qui partager
+        budget_sharing_permission_label: "Accès de %{name}"
         budget_sharing_permissions:
           none: Aucun accès
           read_only: Lecture seule

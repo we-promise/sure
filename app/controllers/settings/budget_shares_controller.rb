@@ -31,8 +31,10 @@ class Settings::BudgetSharesController < ApplicationController
     def sharing_members_params
       return [] unless params.dig(:budget_shares, :members)
 
-      params.require(:budget_shares).permit(
+      members = params.require(:budget_shares).permit(
         members: [ :viewer_id, :permission ]
-      )[:members]&.values || []
+      )[:members]
+
+      members.is_a?(Array) ? members : members&.values || []
     end
 end

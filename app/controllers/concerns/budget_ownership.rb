@@ -32,10 +32,26 @@ module BudgetOwnership
     end
 
     def resolve_budget(start_date)
+      target_user = budget_target_user
+
+      if target_user != Current.user
+        # Viewing another family member's shared budget: resolve an existing
+        # budget for that period without creating one on their behalf — a
+        # mere page view shouldn't vivify a row in someone else's budget
+        # history. Falls back to the viewer's own budget (auto-created) when
+        # the owner hasn't set one up yet, same as the household fallback
+        # below, so shared-budget navigation doesn't dead-end.
+        budget_start, budget_end = Budget.period_for(start_date, family: Current.family)
+        existing = Current.family.budgets.find_by(start_date: budget_start, end_date: budget_end, user: target_user)
+        return existing if existing
+
+        return Budget.find_or_bootstrap(Current.family, start_date: start_date, user: Current.user, household: false)
+      end
+
       budget = Budget.find_or_bootstrap(
         Current.family,
         start_date: start_date,
-        user: budget_target_user,
+        user: target_user,
         household: viewing_household_budget?
       )
 
@@ -71,7 +87,7 @@ module BudgetOwnership
       end
 
       options << {
-        label: Current.user.first_name,
+        label: Current.user.display_name,
         icon: nil,
         owner_param: Current.user.id,
         active: budget.user_id == Current.user.id
@@ -79,7 +95,7 @@ module BudgetOwnership
 
       Current.user.budget_owners_shared_with_me.find_each do |owner|
         options << {
-          label: owner.first_name,
+          label: owner.display_name,
           icon: nil,
           owner_param: owner.id,
           active: budget.user_id == owner.id

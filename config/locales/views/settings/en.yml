@@ -188,6 +188,7 @@ en:
         budget_sharing_title: Budget sharing
         budget_sharing_subtitle: Let other members view or edit your personal budget
         budget_sharing_no_members: No other members in your %{moniker} to share with
+        budget_sharing_permission_label: "%{name}'s access"
         budget_sharing_permissions:
           none: No access
           read_only: View only

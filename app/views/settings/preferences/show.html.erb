@@ -76,6 +76,7 @@
         <div class="bg-container-inset rounded-xl p-1">
           <% @family_members.each_with_index do |member, index| %>
             <% share = @budget_shares[member.id] %>
+            <% select_id = "budget_share_permission_#{member.id}" %>
             <input type="hidden" name="budget_shares[members][<%= index %>][viewer_id]" value="<%= member.id %>">
             <div class="flex items-center justify-between gap-3 bg-container p-4 shadow-border-xs rounded-lg mt-2">
               <div class="flex items-center gap-2 min-w-0">
@@ -84,7 +85,8 @@
                 </div>
                 <span class="text-sm text-primary truncate"><%= member.display_name %></span>
               </div>
-              <select name="budget_shares[members][<%= index %>][permission]" class="text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary" data-auto-submit-form-target="auto">
+              <label for="<%= select_id %>" class="sr-only"><%= t(".budget_sharing_permission_label", name: member.display_name) %></label>
+              <select id="<%= select_id %>" name="budget_shares[members][<%= index %>][permission]" class="text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary" data-auto-submit-form-target="auto">
                 <option value="" <%= "selected" if share.nil? %>><%= t(".budget_sharing_permissions.none") %></option>
                 <% BudgetShare::PERMISSIONS.each do |perm| %>
                   <option value="<%= perm %>" <%= "selected" if share&.permission == perm %>>
