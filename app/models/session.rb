@@ -14,6 +14,15 @@ class Session < ApplicationRecord
 
   before_create :capture_session_info
 
+  # ip_address is opaque to queries once encryption is configured, so lookups go
+  # through this digest instead. Kept here so callers can't drift from what
+  # capture_session_info writes.
+  def self.ip_address_digest_for(ip_address)
+    return nil if ip_address.blank?
+
+    Digest::SHA256.hexdigest(ip_address.to_s)
+  end
+
   def get_preferred_tab(tab_key)
     data.dig("tab_preferences", tab_key)
   end
@@ -30,6 +39,6 @@ class Session < ApplicationRecord
       self.user_agent = Current.user_agent
       raw_ip = Current.ip_address
       self.ip_address = raw_ip
-      self.ip_address_digest = Digest::SHA256.hexdigest(raw_ip.to_s) if raw_ip.present?
+      self.ip_address_digest = self.class.ip_address_digest_for(raw_ip)
     end
 end

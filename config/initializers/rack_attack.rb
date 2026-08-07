@@ -14,6 +14,25 @@ class Rack::Attack
     request.ip if request.post? && request.path == "/register"
   end
 
+  # A proxy doing forward-auth stamps the identity header on every request it
+  # forwards, so counting all of them would throttle ordinary browsing. Only a
+  # cookieless request to the browser UI can actually mint a session from the
+  # header: one carrying a session cookie is served from it, and /api and /mcp
+  # skip_authentication and never honor the header at all. Cookie presence is
+  # not verified here, so this bounds an accident (a proxy looping on one
+  # identity, a cookieless client with a rotating user agent) rather than an
+  # attacker who is already inside the trusted range.
+  throttle("remote-user-header/email", limit: 30, period: 1.minute) do |request|
+    next if request.cookies["session_token"].present?
+    next if request.path.start_with?("/api/", "/mcp")
+
+    header_name = Rails.application.config.remote_user_header_email
+    if header_name.present?
+      env_name = "HTTP_#{header_name.upcase.tr("-", "_")}"
+      request.get_header(env_name)&.strip&.downcase.presence
+    end
+  end
+
   # Throttle unauthenticated WebAuthn MFA ceremonies similarly to sign-in
   # endpoints; registration remains behind normal application authentication.
   throttle("mfa/webauthn", limit: 10, period: 1.minute) do |request|
