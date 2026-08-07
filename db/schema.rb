@@ -2085,7 +2085,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
     t.uuid "taggable_id"
     t.string "taggable_type"
     t.datetime "updated_at", null: false
-    t.index ["tag_id", "taggable_type", "taggable_id"], name: "index_taggings_on_tag_and_taggable_unique", unique: true
     t.index ["tag_id"], name: "index_taggings_on_tag_id"
     t.index ["taggable_type", "taggable_id"], name: "index_taggings_on_taggable"
   end
