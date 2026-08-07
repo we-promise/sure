@@ -13,6 +13,8 @@ de:
       model_placeholder: Camry
       year: Baujahr
       year_placeholder: '2023'
+      mileage_unit_kilometers: Kilometer
+      mileage_unit_miles: Meilen
     new:
       title: Fahrzeugdetails eingeben
     overview:
@@ -23,3 +25,13 @@ de:
       trend: Entwicklung
       unknown: Unbekannt
       year: Baujahr
+    tabs:
+      overview:
+        current_price: Aktueller Wert
+        edit_account_details: Kontodaten bearbeiten
+        make_model: Marke & Modell
+        mileage: Kilometerstand
+        purchase_price: Kaufpreis
+        trend: Entwicklung
+        unknown: Unbekannt
+        year: Baujahr
