@@ -205,8 +205,6 @@ class RecurringTransaction
 
     private
       def amount_variance_attributes(pattern)
-        return {} unless pattern.key?(:amount_min)
-
         {
           amount: pattern[:amount],
           expected_amount_min: pattern[:amount_min],

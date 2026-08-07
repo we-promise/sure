@@ -285,6 +285,50 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal amounts.sort, matched_amounts
   end
 
+  test "clears persisted amount variance when amount tolerance is disabled" do
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    recurring = @family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current,
+      occurrence_count: 3,
+      status: "active",
+      manual: false,
+      expected_amount_min: 15.50,
+      expected_amount_max: 16.50,
+      expected_amount_avg: 15.99
+    )
+
+    [ 0, 1, 2 ].each do |months_ago|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: months_ago.months.ago.beginning_of_month + 4.days,
+        amount: 15.99,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    @family.update!(recurring_detection_amount_tolerance_percent: 0)
+    RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
+
+    recurring.reload
+    assert_nil recurring.expected_amount_min
+    assert_nil recurring.expected_amount_max
+    assert_nil recurring.expected_amount_avg
+    assert_equal BigDecimal("15.99"), recurring.amount
+  end
+
   test "tolerant rematch reuses closest row when multiple candidates exist" do
     @family.update!(recurring_detection_amount_tolerance_percent: 5)
     account = @family.accounts.first
