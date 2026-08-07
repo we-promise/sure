@@ -1,18 +1,43 @@
 ---
 de:
   transactions:
+    bulk_updates:
+      new:
+        cancel: Abbrechen
+        category_label: Kategorie
+        category_prompt: Kategorie auswählen
+        date_label: Datum
+        header_title: Transaktionen bearbeiten
+        merchant_label: Händler
+        merchant_prompt: Händler auswählen
+        name_label: Name
+        name_placeholder: Gib einen Namen ein, der auf die ausgewählten Transaktionen angewendet wird
+        none: "(keine)"
+        notes_label: Notizen
+        notes_placeholder: Gib eine Notiz ein, die auf die ausgewählten Transaktionen angewendet wird
+        overview: Übersicht
+        save: Speichern
+        tags_label: Tags
+        transactions_section: Transaktionen
     unknown_name: Unbekannte Transaktion
+    selection_bar:
+      duplicate: Duplizieren
+      edit: Bearbeiten
+      selected: ausgewählt
     form:
+      details: Details
       account: Konto
       account_prompt: Konto auswählen
       amount: Betrag
       category: Kategorie
+      category_label: Kategorie
       category_prompt: Kategorie auswählen
       date: Datum
       description: Beschreibung
       description_placeholder: Transaktion beschreiben
       expense: Ausgabe
       income: Einnahme
+      merchant_label: Händler
       none: (keine)
       note_label: Notizen
       note_placeholder: Notiz eingeben
@@ -21,9 +46,22 @@ de:
       tag_search_placeholder: Tag suchen oder erstellen
       tags_label: Tags
       transfer: Überweisung
+    create:
+      created: Transaktion erstellt
+    update:
+      updated: Transaktion aktualisiert
     new:
       new_transaction: Neue Transaktion
     show:
+      keep_both: Nein, beide behalten
+      loan_payment: Darlehenszahlung
+      mark_recurring: Als wiederkehrend markieren
+      mark_recurring_subtitle: Verfolge dies als wiederkehrende Transaktion. Die Betragsabweichung wird automatisch aus den letzten 6 Monaten ähnlicher Transaktionen berechnet.
+      mark_recurring_title: Wiederkehrende Transaktion
+      merge_duplicate: Ja, zusammenführen
+      potential_duplicate_description: Diese ausstehende Transaktion könnte mit der unten stehenden gebuchten Transaktion übereinstimmen. Wenn ja, führe sie zusammen, um Doppelzählung zu vermeiden.
+      potential_duplicate_title: Mögliches Duplikat erkannt
+      transfer: Überweisung
       account_label: Konto
       amount: Betrag
       category_label: Kategorie
@@ -32,15 +70,20 @@ de:
       delete_subtitle: Diese Aktion löscht die Transaktion dauerhaft, beeinflusst deine bisherigen Kontostände und kann nicht rückgängig gemacht werden.
       delete_title: Transaktion löschen
       details: Details
+      attachments: Anhänge
       exclude: Ausschließen
       exclude_description: Ausgeschlossene Transaktionen werden aus Budgetberechnungen und Berichten entfernt.
       activity_type: Aktivitätsart
       activity_type_description: Art der Anlageaktivität (Kauf, Verkauf, Dividende usw.). Wird automatisch erkannt oder manuell gesetzt.
       one_time_title: Einmalige %{type}
       one_time_description: Einmalige Transaktionen werden aus bestimmten Budgetberechnungen und Berichten ausgeschlossen, damit du das Wichtige besser erkennst.
-      convert_to_trade_title: In Wertpapier-Trade umwandeln
+      convert_to_trade_title: In Wertpapiergeschäft umwandeln
       convert_to_trade_description: Diese Transaktion in einen Kauf- oder Verkaufstrade mit Wertpapierdetails für die Portfolioverfolgung umwandeln.
-      convert_to_trade_button: In Trade umwandeln
+      convert_to_trade_button: In Wertpapiergeschäft umwandeln
+      transfer_matcher_description: Verknüpfe diese Transaktion mit ihrem Gegenstück in einem anderen Konto.
+      pending_duplicate_merger_title: Duplikat einer gebuchten Transaktion?
+      pending_duplicate_merger_description: Führe diese ausstehende Transaktion manuell mit ihrer gebuchten Version zusammen.
+      pending_duplicate_merger_button: Zusammenführung öffnen
       merchant_label: Händler
       name_label: Name
       nature: Typ
@@ -53,6 +96,14 @@ de:
       tab_transactions: Transaktionen
       tab_upcoming: Anstehend
       uncategorized: (ohne Kategorie)
+      additional_details: Weitere Details
+      payee: Zahlungsempfänger
+      description: Beschreibung
+      memo: Vermerk
+      provider_extras: Anbieterdaten
+      transfer_or_debt_payment: Überweisung oder Schuldentilgung?
+      open_matcher: Zuordnung öffnen
+      convert: Umwandeln
     activity_labels:
       buy: Kaufen
       sell: Verkaufen
@@ -72,8 +123,16 @@ de:
     mark_recurring_title: Wiederkehrende Transaktion
     potential_duplicate_title: Mögliches Duplikat erkannt
     potential_duplicate_description: Diese ausstehende Transaktion könnte mit der unten stehenden gebuchten Transaktion übereinstimmen. Wenn ja, führe sie zusammen, um Doppelzählung zu vermeiden.
-    merge_duplicate: Ja, zusammenführen
     keep_both: Nein, beide behalten
+    split_parent_row:
+      split_label: Aufteilung
+    transfer_match:
+      auto_matched: Automatisch zugeordnet
+      auto_matched_short: Auto
+      confirm_match: Zuordnung bestätigen
+      payment_confirmed: Zahlung ist bestätigt
+      reject_match: Zuordnung ablehnen
+      transfer_confirmed: Überweisung ist bestätigt
     transaction:
       pending: Ausstehend
       pending_tooltip: Ausstehende Transaktion — kann sich bei Buchung ändern
@@ -83,12 +142,28 @@ de:
       potential_duplicate_tooltip: Dies könnte ein Duplikat einer anderen Transaktion sein
       review_recommended: Prüfen
       review_recommended_tooltip: Große Betragsabweichung — Prüfung empfohlen, ob es sich um ein Duplikat handelt
+      split: Aufgeteilt
+      split_tooltip: Diese Transaktion wurde in mehrere Einträge aufgeteilt
+      split_child_tooltip: Teil einer aufgeteilten Transaktion
     merge_duplicate:
       success: Transaktionen erfolgreich zusammengeführt
       failure: Transaktionen konnten nicht zusammengeführt werden
     dismiss_duplicate:
       success: Als getrennte Transaktionen beibehalten
       failure: Duplikatshinweis konnte nicht verworfen werden
+    pending_duplicate_merge:
+      possible_duplicate: Duplikat?
+      possible_duplicate_short: Dupl.?
+      review_recommended: Prüfen
+      review_recommended_short: Prüf.
+      confirm_title: "Mit gebuchter Transaktion zusammenführen (%{posted_amount})"
+      reject_title: Als getrennte Transaktionen behalten
+    summary:
+      total_transactions: Transaktionen insgesamt
+      income: Einnahmen
+      expenses: Ausgaben
+      inflow: Zuflüsse
+      outflow: Abflüsse
     header:
       edit_categories: Kategorien bearbeiten
       edit_imports: Importe bearbeiten
@@ -96,9 +171,53 @@ de:
       edit_tags: Tags bearbeiten
       import: Importieren
     index:
+      title: Transaktionen
       transaction: Transaktion
       transactions: Transaktionen
       import: Import
+      new_rule: Neue Regel
+      edit_rules: Regeln bearbeiten
+      edit_categories: Kategorien bearbeiten
+      edit_tags: Tags bearbeiten
+      edit_merchants: Händler bearbeiten
+      edit_imports: Importe bearbeiten
+      new_transaction: Neue Transaktion
+      categorize_button:
+        one: Kategorisieren (1)
+        other: "Kategorisieren (%{count})"
+    categorizes:
+      show:
+        exit: Beenden
+        skip: Überspringen
+        remaining:
+          one: 1 nicht kategorisierte Transaktion verbleibt
+          other: "%{count} nicht kategorisierte Transaktionen verbleiben"
+        transaction_count:
+          one: 1 Transaktion
+          other: "%{count} Transaktionen"
+        transactions_hint: Deaktiviere eine Transaktion, um sie auszuschließen, oder weise ihr direkt in der Zeile eine andere Kategorie zu.
+        assign_category: Kategorie zuweisen
+        assign_category_prompt: "→ zuweisen"
+        filter_placeholder: Kategorien durchsuchen …
+        col_transaction: Transaktion
+        col_date: Datum
+        col_amount: Betrag
+        col_category: Kategorie
+        type_income: Einnahme
+        type_expense: Ausgabe
+        create_rule_label: Kategorisierungsregel erstellen
+        rule_description_prefix: "Künftige Transaktionen vom Typ %{type}, deren Name Folgendes enthält:"
+        rule_description_suffix: sollen ebenfalls diese Kategorie erhalten.
+        no_categories: Keine passenden Kategorien
+        all_done: Alle Transaktionen sind kategorisiert
+      create:
+        categorized:
+          one: 1 Transaktion kategorisiert
+          other: "%{count} Transaktionen kategorisiert"
+        rule_creation_failed: Die Transaktionen wurden kategorisiert, aber die Regel konnte nicht erstellt werden (möglicherweise existiert sie bereits).
+      entry_row:
+        include_checkbox: "%{name} einschließen"
+        assign_category_select: "Kategorie für %{name} zuweisen"
     list:
       drag_drop_title: CSV zum Importieren ablegen
       drag_drop_subtitle: Transaktionen direkt hochladen
@@ -116,8 +235,8 @@ de:
         tag: Tag
         merchant: Händler
     convert_to_trade:
-      title: In Wertpapier-Trade umwandeln
-      description: Diese Transaktion in einen Trade mit Wertpapierdetails umwandeln
+      title: In Wertpapiergeschäft umwandeln
+      description: Diese Transaktion in ein Wertpapiergeschäft mit Wertpapierdetails umwandeln
       date_label: "Datum:"
       account_label: "Konto:"
       amount_label: "Betrag:"
@@ -138,17 +257,17 @@ de:
       price_placeholder: z. B. 52,15
       price_hint: Preis pro Aktie (%{currency})
       qty_or_price_hint: Gib mindestens Menge ODER Preis ein. Der andere Wert wird aus dem Transaktionsbetrag (%{amount}) berechnet.
-      trade_type_label: Trade-Typ
+      trade_type_label: Geschäftsart
       trade_type_hint: Kauf oder Verkauf von Wertpapieranteilen
       exchange_label: Börse (optional)
       exchange_placeholder: XNAS
       exchange_hint: Leer lassen für automatische Erkennung
       cancel: Abbrechen
-      submit: In Trade umwandeln
-      success: Transaktion in Trade umgewandelt
+      submit: In Wertpapiergeschäft umwandeln
+      success: Transaktion in Wertpapiergeschäft umgewandelt
       conversion_note: "Umgewandelt aus Transaktion: %{original_name} (%{original_date})"
       errors:
-        not_investment_account: Nur Transaktionen in Anlagekonten können in Trades umgewandelt werden
+        not_investment_account: Nur Transaktionen in Anlagekonten können in Wertpapiergeschäfte umgewandelt werden
         already_converted: Diese Transaktion wurde bereits umgewandelt oder ausgeschlossen
         enter_ticker: Bitte gib ein Tickersymbol ein
         security_not_found: Das gewählte Wertpapier existiert nicht mehr. Bitte wähle ein anderes.
@@ -159,6 +278,17 @@ de:
         unexpected_error: "Unerwarteter Fehler bei der Umwandlung: %{error}"
     searches:
       filters:
+        account_filter:
+          filter_accounts: Konten filtern
+        category_filter:
+          filter_category: Kategorie filtern
+        date_filter:
+          start_date: Startdatum
+          end_date: Enddatum
+        merchant_filter:
+          filter_merchants: Händler filtern
+        tag_filter:
+          filter_tags: Tags filtern
         amount_filter:
           equal_to: Gleich
           greater_than: Größer als
@@ -197,3 +327,23 @@ de:
         less_than: kleiner als
       form:
         toggle_selection_checkboxes: Alle Kontrollkästchen umschalten
+        search_placeholder: Transaktionen durchsuchen …
+        filter: Filter
+    attachments:
+      cannot_exceed: "Pro Transaktion sind höchstens %{count} Anhänge möglich"
+      uploaded_one: Anhang erfolgreich hochgeladen
+      uploaded_many: "%{count} Anhänge erfolgreich hochgeladen"
+      failed_upload: "Anhang konnte nicht hochgeladen werden: %{error}"
+      no_files_selected: Keine Dateien zum Hochladen ausgewählt
+      attachment_deleted: Anhang erfolgreich gelöscht
+      failed_delete: "Anhang konnte nicht gelöscht werden: %{error}"
+      upload_failed: Der Anhang konnte nicht hochgeladen werden. Versuche es erneut oder wende dich an den Support.
+      delete_failed: Der Anhang konnte nicht gelöscht werden. Versuche es erneut oder wende dich an den Support.
+      upload: Hochladen
+      no_attachments: Noch keine Anhänge
+      select_up_to: "Wähle bis zu %{count} Dateien aus (Bilder oder PDFs, jeweils max. %{size} MB) • %{used} von %{count} verwendet"
+      files:
+        one: Datei (1)
+        other: "Dateien (%{count})"
+      browse_to_add: Dateien zum Hinzufügen auswählen
+      max_reached: "Maximale Dateianzahl erreicht (%{count}/%{max}). Lösche eine vorhandene Datei, um eine weitere hochzuladen."

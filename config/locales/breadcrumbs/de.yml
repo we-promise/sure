@@ -1,6 +1,88 @@
 ---
 de:
   breadcrumbs:
+    account_sharings: Kontofreigaben
+    account_statements: Kontoauszugsarchiv
+    accounts: Konten
+    ai_prompts: KI-Anweisungen
+    api_key: API-Schlüssel
+    api_keys: API-Schlüssel
+    appearance: Darstellung
+    appearances: Darstellung
+    bank_sync: Banksynchronisierung
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Budgetkategorien
+    budgets: Budgets
+    categories: Kategorien
+    categorize: Kategorisieren
+    chats: Chats
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Kreditkarten
+    cryptos: Krypto
+    dashboard: Dashboard
+    debug: Fehlerdiagnose
+    debugs: Fehlerdiagnose
+    depositories: Bargeldkonten
+    enable_banking_items: Enable Banking
     exports: Exporte
+    family_exports: Exporte
+    family_merchants: Händler
+    guides: Anleitungen
+    holdings: Bestände
     home: Startseite
+    hostings: Self-Hosting
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Benutzerübernahmen
     imports: Importe
+    indexa_capital_items: Indexa Capital
+    intro: Einführung
+    investments: Kapitalanlagen
+    invitations: Einladungen
+    invite_codes: Einladungscodes
+    kraken_items: Kraken
+    llm_usage: LLM-Nutzung
+    llm_usages: LLM-Nutzung
+    loans: Darlehen
+    lunchflow_items: Lunch Flow
+    mcp: MCP-Server
+    merchants: Händler
+    mercury_items: Mercury
+    messages: Nachrichten
+    mfa: Zwei-Faktor-Authentifizierung
+    oidc_accounts: SSO-Konten
+    onboardings: Einführung
+    other_assets: Sonstiges Vermögen
+    other_liabilities: Sonstige Schulden
+    payments: Zahlungen
+    pending_duplicate_merges: Duplikatprüfung
+    plaid_items: Plaid
+    preferences: Einstellungen
+    profile: Profilinformationen
+    profiles: Profilinformationen
+    properties: Immobilien
+    providers: Anbieter
+    recurring_transactions: Wiederkehrende Transaktionen
+    registrations: Registrieren
+    reports: Berichte
+    rules: Regeln
+    securities: Wertpapier
+    security: Sicherheit
+    self_hosting: Self-Hosting
+    sessions: Anmelden
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Aufteilung
+    sso_identities: SSO-Verbindungen
+    sso_providers: SSO-Anbieter
+    subscriptions: Abonnement
+    tags: Tags
+    trades: Wertpapiergeschäfte
+    transactions: Transaktionen
+    transfer_matches: Umbuchungszuordnungen
+    transfers: Umbuchungen
+    users: Benutzer
+    valuations: Bewertungen
+    vehicles: Fahrzeuge

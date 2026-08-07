@@ -41,9 +41,9 @@ de:
       date_label: Datum
       delete: Löschen
       delete_subtitle: Diese Aktion kann nicht rückgängig gemacht werden
-      delete_title: Trade löschen
+      delete_title: Wertpapiergeschäft löschen
       details: Details
-      exclude_subtitle: Dieser Trade wird nicht in Berichten und Berechnungen berücksichtigt
+      exclude_subtitle: Dieses Wertpapiergeschäft wird nicht in Berichten und Berechnungen berücksichtigt
       exclude_title: Von Analysen ausschließen
       no_category: Keine Kategorie
       note_label: Notiz

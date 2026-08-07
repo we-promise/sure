@@ -199,13 +199,21 @@ class Period
 
   def comparison_label
     if key
-      I18n.t("period.#{key}.comparison_label", default: key_metadata&.fetch(:comparison_label) || "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}")
+      I18n.t("period.#{key}.comparison_label", default: key_metadata&.fetch(:comparison_label) || ->(*) { localized_comparison_range })
     else
-      "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}"
+      localized_comparison_range
     end
   end
 
   private
+    def localized_comparison_range
+      I18n.t(
+        "period.custom.comparison_label",
+        start: I18n.l(start_date, format: :long).strip,
+        end: I18n.l(end_date, format: :long).strip
+      )
+    end
+
     def key_metadata
       @key_metadata ||= PERIODS[key]
     end

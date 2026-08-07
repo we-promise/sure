@@ -20,6 +20,7 @@ tr:
     custom:
       label: Özel Dönem
       label_short: Özel
+      comparison_label: "%{start} – %{end}"
     last_10_years:
       comparison_label: 10 yıl öncesine göre
       label: Son 10 Yıl

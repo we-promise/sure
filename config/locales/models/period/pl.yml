@@ -52,3 +52,4 @@ pl:
     custom:
       label_short: "Niest."
       label: "Okres niestandardowy"
+      comparison_label: "od %{start} do %{end}"

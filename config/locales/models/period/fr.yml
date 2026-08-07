@@ -20,6 +20,7 @@ fr:
     custom:
       label: Période personnalisée
       label_short: Personnalisé
+      comparison_label: "du %{start} au %{end}"
     last_10_years:
       comparison_label: vs il y a 10 ans
       label: 10 dernières années

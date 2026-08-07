@@ -52,3 +52,4 @@ en:
     custom:
       label_short: "Custom"
       label: "Custom Period"
+      comparison_label: "%{start} to %{end}"
