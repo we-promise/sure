@@ -7,9 +7,13 @@ class IncomeStatement
 
   attr_reader :family, :user
 
-  def initialize(family, user: nil)
+  # account_ids: optional explicit scope (e.g. a budget plan's linked
+  # accounts). Intersected with the user-derived account set when both are
+  # present; nil keeps today's user-or-whole-family behavior.
+  def initialize(family, user: nil, account_ids: nil)
     @family = family
     @user = user || Current.user
+    @scoped_account_ids = account_ids&.map(&:to_s)
   end
 
   def totals(transactions_scope: nil, date_range:)
@@ -131,6 +135,9 @@ class IncomeStatement
       tax_advantaged_ids = family.tax_advantaged_account_ids
       scope = scope.where.not(id: tax_advantaged_ids) if tax_advantaged_ids.present?
       scope = scope.merge(Account.included_in_finances_for(user)) if user
+      # Keep the offered accounts consistent with the totals: an explicit
+      # scope (e.g. a budget plan's linked accounts) excludes everything else.
+      scope = scope.where(id: @scoped_account_ids) if @scoped_account_ids
       scope
     end
   end
@@ -239,7 +246,15 @@ class IncomeStatement
     end
 
     def included_account_ids
-      @included_account_ids ||= user ? user.finance_accounts.pluck(:id) : nil
+      return @included_account_ids if defined?(@included_account_ids)
+
+      user_ids = user ? user.finance_accounts.pluck(:id) : nil
+      @included_account_ids =
+        if user_ids && @scoped_account_ids
+          user_ids & @scoped_account_ids
+        else
+          @scoped_account_ids || user_ids
+        end
     end
 
     def included_account_ids_hash

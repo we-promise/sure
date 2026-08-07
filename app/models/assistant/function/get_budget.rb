@@ -1,5 +1,6 @@
 class Assistant::Function::GetBudget < Assistant::Function
   include ActiveSupport::NumberHelper
+  include Assistant::Function::MonthResolvable
 
   MAX_PRIOR_MONTHS = 11
 
@@ -22,6 +23,8 @@ class Assistant::Function::GetBudget < Assistant::Function
         - `month` (optional): "YYYY-MM" or "MMM-YYYY". Defaults to the current month.
         - `prior_months` (optional): integer 0..#{MAX_PRIOR_MONTHS}. Number of months
           preceding the target month to include for trend comparison. Default 0.
+        - `budget` (optional): which budget to read when the family keeps more than
+          one (name or slug — see list_budgets). Defaults to the primary budget.
 
         Example (current month only):
 
@@ -54,12 +57,17 @@ class Assistant::Function::GetBudget < Assistant::Function
           description: "Number of months before the target month to also return for trend comparison.",
           minimum: 0,
           maximum: MAX_PRIOR_MONTHS
+        },
+        budget: {
+          type: "string",
+          description: "Which budget to read when the family keeps more than one (name or slug — see list_budgets). Defaults to the primary budget."
         }
       }
     )
   end
 
   def call(params = {})
+    plan = find_budget_plan!(params["budget"])
     target_start = resolve_month_start(params["month"])
     prior = [ params["prior_months"].to_i, 0 ].max
     prior = [ prior, MAX_PRIOR_MONTHS ].min
@@ -69,11 +77,12 @@ class Assistant::Function::GetBudget < Assistant::Function
 
     months = month_starts.filter_map do |start_date|
       next unless Budget.budget_date_valid?(start_date, family: family)
-      build_month_payload(start_date, bootstrap: start_date == target_start)
+      build_month_payload(start_date, plan: plan, bootstrap: start_date == target_start)
     end
 
     result = {
       currency: family.currency,
+      budget: { name: plan.name, slug: plan.slug, is_default: plan.is_default },
       months: months
     }
     unavailable = requested - months.length
@@ -82,12 +91,12 @@ class Assistant::Function::GetBudget < Assistant::Function
   end
 
   private
-    def build_month_payload(start_date, bootstrap:)
+    def build_month_payload(start_date, plan:, bootstrap:)
       budget = if bootstrap
-        Budget.find_or_bootstrap(family, start_date: start_date, user: user)
+        Budget.find_or_bootstrap(family, start_date: start_date, user: user, plan: plan)
       else
         budget_start, budget_end = Budget.period_for(start_date, family: family)
-        family.budgets.find_by(start_date: budget_start, end_date: budget_end)
+        plan.budgets.find_by(start_date: budget_start, end_date: budget_end)
       end
       return nil unless budget
 
@@ -155,30 +164,6 @@ class Assistant::Function::GetBudget < Assistant::Function
       return "near_limit" if bc.budgeted? && bc.near_limit?
       return "on_track" if bc.on_track?
       "no_activity"
-    end
-
-    def resolve_month_start(raw)
-      base = parse_month(raw)
-      return (base || Date.current).beginning_of_month unless family.uses_custom_month_start?
-
-      # Match Budget.param_to_date for explicit slugs so the input round-trips with the response.
-      base ? Date.new(base.year, base.month, family.month_start_day) : family.custom_month_start_for(Date.current)
-    end
-
-    def parse_month(raw)
-      return nil if raw.blank?
-
-      # Date.strptime ignores trailing characters, so guard with strict anchors first.
-      fmt = case raw
-      when /\A\d{4}-\d{2}\z/         then "%Y-%m"
-      when /\A[A-Za-z]{3}-\d{4}\z/   then "%b-%Y"
-      end
-
-      raise Assistant::Error, "Invalid month: #{raw}. Use YYYY-MM or MMM-YYYY." if fmt.nil?
-
-      Date.strptime(raw, fmt)
-    rescue ArgumentError
-      raise Assistant::Error, "Invalid month: #{raw}. Use YYYY-MM or MMM-YYYY."
     end
 
     def shift_months(date, n)

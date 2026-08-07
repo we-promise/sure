@@ -79,6 +79,19 @@ class Assistant::Function
       user.family
     end
 
+    # Resolves a budget-plan reference (slug or case-insensitive name) from a
+    # function's optional `budget` param; blank means the default plan.
+    def find_budget_plan!(ref)
+      return family.default_budget_plan if ref.blank?
+
+      normalized = ref.to_s.strip.downcase
+      plan = family.budget_plans.find_by(slug: normalized) ||
+             family.budget_plans.where("LOWER(name) = ?", normalized).first
+
+      plan || raise(Assistant::Error,
+        "Budget '#{ref}' not found. Available budgets: #{family.budget_plans.pluck(:name).join(', ')}. Use list_budgets to see them.")
+    end
+
     def valid_uuid?(str)
       UuidFormat.valid?(str)
     end

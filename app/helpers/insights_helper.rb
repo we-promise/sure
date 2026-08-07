@@ -86,7 +86,10 @@ module InsightsHelper
       { text: t("insights.actions.net_worth_milestone"), href: reports_path }
     when "budget_at_risk", "budget_on_track"
       return nil unless insight.period_start
-      { text: t("insights.actions.budget"), href: budget_path(Budget.date_to_param(insight.period_start)) }
+      # Insights created before budget plans existed carry no budget_param;
+      # the bare month param resolves to the default plan's budget.
+      param = insight.metadata&.dig("budget_param").presence || Budget.date_to_param(insight.period_start)
+      { text: t("insights.actions.budget"), href: budget_path(param) }
     end
   end
 

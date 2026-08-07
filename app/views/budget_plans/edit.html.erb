@@ -1,0 +1,15 @@
+<% if turbo_frame_request? %>
+  <%= render DS::Dialog.new(width: "lg") do |dialog| %>
+    <% dialog.with_header(title: t(".heading")) %>
+    <% dialog.with_body do %>
+      <%= render "form", budget_plan: @budget_plan, selectable_accounts: @selectable_accounts, scoped_account_ids: @scoped_account_ids %>
+    <% end %>
+  <% end %>
+<% else %>
+  <div class="max-w-2xl mx-auto py-8 px-4">
+    <header class="mb-6">
+      <h1 class="text-xl font-medium text-primary"><%= t(".heading") %></h1>
+    </header>
+    <%= render "form", budget_plan: @budget_plan, selectable_accounts: @selectable_accounts, scoped_account_ids: @scoped_account_ids %>
+  </div>
+<% end %>

@@ -1748,6 +1748,87 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 5000.0, budget.expected_income.to_f
   end
 
+  test "legacy budget exports without plans land on the default plan" do
+    ndjson = build_ndjson([
+      {
+        type: "Budget",
+        data: {
+          id: "budget-1",
+          start_date: "2024-01-01",
+          end_date: "2024-01-31",
+          budgeted_spending: "3000.00",
+          currency: "USD"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal @family.default_budget_plan, @family.budgets.first.budget_plan
+  end
+
+  test "imports budget plans with account scopes and remaps the default plan" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Scoped Checking",
+          balance: "100.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" }
+        }
+      },
+      {
+        type: "BudgetPlan",
+        data: { id: "plan-default", name: "Primary", slug: "primary", is_default: true }
+      },
+      {
+        type: "BudgetPlan",
+        data: { id: "plan-joint", name: "Joint", slug: "joint", is_default: false }
+      },
+      {
+        type: "BudgetPlanAccount",
+        data: { id: "bpa-1", budget_plan_id: "plan-joint", account_id: "old-account-1" }
+      },
+      {
+        type: "Budget",
+        data: {
+          id: "budget-1",
+          budget_plan_id: "plan-joint",
+          start_date: "2024-01-01",
+          end_date: "2024-01-31",
+          budgeted_spending: "900.00",
+          currency: "USD"
+        }
+      },
+      {
+        type: "Budget",
+        data: {
+          id: "budget-2",
+          budget_plan_id: "plan-default",
+          start_date: "2024-01-01",
+          end_date: "2024-01-31",
+          budgeted_spending: "3000.00",
+          currency: "USD"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal 2, @family.budget_plans.count
+
+    joint = @family.budget_plans.find_by!(slug: "joint")
+    assert_not joint.is_default?
+    assert_equal [ "Scoped Checking" ], joint.accounts.pluck(:name)
+    assert_equal 900.0, joint.budgets.sole.budgeted_spending.to_f
+
+    default = @family.default_budget_plan
+    assert_equal 3000.0, default.budgets.sole.budgeted_spending.to_f
+  end
+
   test "imports budget_categories" do
     ndjson = build_ndjson([
       {

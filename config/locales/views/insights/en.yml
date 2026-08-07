@@ -75,7 +75,11 @@ en:
       budget_at_risk:
         one: One category needs attention in your budget
         other: "%{count} categories need attention in your budget"
+      budget_at_risk_named:
+        one: One category needs attention in your %{budget} budget
+        other: "%{count} categories need attention in your %{budget} budget"
       budget_on_track: Your budget is on track
+      budget_on_track_named: Your %{budget} budget is on track
     templates:
       spending_anomaly:
         above: You're on pace to spend %{projected_spend} on %{category} this month, about %{deviation_pct}% more than your recent monthly average of %{baseline_spend}.

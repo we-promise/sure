@@ -32,6 +32,7 @@ en:
       depository_only: "Only cash and credit card accounts can be set as default."
     destroy:
       success: "%{type} account scheduled for deletion"
+      cannot_delete_last_budget_plan_account: "This account is the only one tracked by the %{plans} budget. Update or delete that budget first."
       cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."
       failed: "Resource deletion failed. Try again later."
     empty:

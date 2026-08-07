@@ -162,4 +162,27 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, "MORTGAGE_REPRO_OUTFLOW",
       "loan_payment outflow remains visible (kind is not BUDGET_EXCLUDED)"
   end
+
+  test "index resolves a sibling plan's budget from its plan-qualified param" do
+    plan = budget_plans(:dylan_personal)
+    sibling_budget = Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan)
+
+    get budget_budget_categories_path(sibling_budget)
+
+    assert_response :success
+  end
+
+  test "update rejects a budget category belonging to a sibling plan's budget" do
+    plan = budget_plans(:dylan_personal)
+    sibling_budget = Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan)
+    sibling_bc = sibling_budget.budget_categories.find_by!(category: @parent_category)
+    sibling_bc.update!(budgeted_spending: 111)
+
+    patch budget_budget_category_path(@budget, sibling_bc),
+          params: { budget_category: { budgeted_spending: 999 } },
+          as: :turbo_stream
+
+    assert_response :not_found
+    assert_equal 111, sibling_bc.reload.budgeted_spending
+  end
 end

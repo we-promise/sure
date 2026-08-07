@@ -371,6 +371,32 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports budget plans with their account scopes before budgets" do
+    plan = budget_plans(:dylan_personal)
+    plan.budget_plan_accounts.create!(account: @account)
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      lines = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      types = lines.map { |line| line["type"] }
+
+      assert_includes types, "BudgetPlan"
+      assert_includes types, "BudgetPlanAccount"
+      assert types.index("BudgetPlanAccount") < types.index("Budget"), "plan lines must precede budgets"
+
+      plan_line = lines.find { |line| line["type"] == "BudgetPlan" && line["data"]["slug"] == "personal" }
+      assert_not_nil plan_line
+
+      scope_line = lines.find { |line| line["type"] == "BudgetPlanAccount" }
+      assert_equal plan.id, scope_line["data"]["budget_plan_id"]
+      assert_equal @account.id, scope_line["data"]["account_id"]
+
+      budget_line = lines.find { |line| line["type"] == "Budget" }
+      assert budget_line["data"].key?("budget_plan_id")
+    end
+  end
+
   test "only exports data from the specified family" do
     # Create data for another family that should NOT be exported
     other_account = @other_family.accounts.create!(

@@ -14,6 +14,15 @@ json.currency budget.currency
 json.initialized budget.initialized?
 json.current budget.current?
 
+json.budget_plan do
+  json.id budget.budget_plan_id
+  json.name budget.budget_plan.name
+  json.slug budget.budget_plan.slug
+  json.is_default budget.budget_plan.is_default
+  # [] means the plan tracks all of the family's accounts.
+  json.account_ids budget.budget_plan.budget_plan_accounts.map(&:account_id)
+end
+
 json.budgeted_spending budget.budgeted_spending_money&.format
 json.budgeted_spending_cents money_to_minor_units.call(budget.budgeted_spending_money)
 json.expected_income budget.expected_income_money&.format

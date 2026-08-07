@@ -298,9 +298,40 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' }
             }
           },
+          BudgetPlan: {
+            type: :object,
+            required: %w[id name slug is_default account_ids created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              slug: { type: :string },
+              is_default: { type: :boolean },
+              account_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Accounts this plan is scoped to; empty means all of the family\'s accounts'
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          BudgetPlanRef: {
+            type: :object,
+            required: %w[id name slug is_default account_ids],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              slug: { type: :string },
+              is_default: { type: :boolean },
+              account_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid }
+              }
+            }
+          },
           BudgetSummary: {
             type: :object,
-            required: %w[id start_date end_date name currency initialized current created_at updated_at],
+            required: %w[id start_date end_date name currency initialized current budget_plan created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               start_date: { type: :string, format: :date },
@@ -309,6 +340,7 @@ RSpec.configure do |config|
               currency: { type: :string },
               initialized: { type: :boolean },
               current: { type: :boolean },
+              budget_plan: { '$ref' => '#/components/schemas/BudgetPlanRef' },
               budgeted_spending: { type: :string, nullable: true },
               budgeted_spending_cents: { type: :integer, nullable: true },
               expected_income: { type: :string, nullable: true },
@@ -321,7 +353,7 @@ RSpec.configure do |config|
           },
           Budget: {
             type: :object,
-            required: %w[id start_date end_date name currency initialized current created_at updated_at],
+            required: %w[id start_date end_date name currency initialized current budget_plan created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               start_date: { type: :string, format: :date },
@@ -330,6 +362,7 @@ RSpec.configure do |config|
               currency: { type: :string },
               initialized: { type: :boolean },
               current: { type: :boolean },
+              budget_plan: { '$ref' => '#/components/schemas/BudgetPlanRef' },
               budgeted_spending: { type: :string, nullable: true },
               budgeted_spending_cents: { type: :integer, nullable: true },
               expected_income: { type: :string, nullable: true },

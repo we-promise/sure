@@ -27,7 +27,7 @@ RSpec.describe 'API V1 Budgets', type: :request do
       name: 'API Docs Key',
       key: key,
       display_key: key,
-      scopes: %w[read],
+      scopes: %w[read_write],
       source: 'web'
     )
   end
@@ -70,6 +70,9 @@ RSpec.describe 'API V1 Budgets', type: :request do
       parameter name: :end_date, in: :query, required: false,
                 schema: { type: :string, format: :date },
                 description: 'Filter budgets ending on or before this date'
+      parameter name: :budget_plan_id, in: :query, required: false,
+                schema: { type: :string, format: :uuid },
+                description: 'Filter budgets belonging to a specific budget plan'
 
       response '200', 'budgets listed' do
         schema '$ref' => '#/components/schemas/BudgetCollection'

@@ -168,4 +168,45 @@ class Assistant::Function::GetBudgetTest < ActiveSupport::TestCase
       assert totals.key?(key), "totals should include #{key}"
     end
   end
+
+  test "defaults to the primary budget and says so in the response" do
+    result = @function.call({})
+
+    assert result[:budget][:is_default]
+    assert_equal "primary", result[:budget][:slug]
+  end
+
+  test "reads a named budget by name or slug with plan-qualified month slugs" do
+    plan = budget_plans(:dylan_personal)
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current, plan: plan)
+    budget.update!(budgeted_spending: 1234)
+
+    [ "Personal", "personal" ].each do |ref|
+      result = @function.call({ "budget" => ref })
+
+      assert_equal "personal", result[:budget][:slug]
+      month = result[:months].first
+      assert_equal "personal-#{Budget.date_to_param(Date.current)}", month[:month]
+      assert month[:initialized]
+    end
+  end
+
+  test "named budget months do not leak into the primary budget" do
+    plan = budget_plans(:dylan_personal)
+    Budget.find_or_bootstrap(@family, start_date: 1.month.ago, plan: plan)
+
+    result = @function.call({ "prior_months" => 1 })
+
+    # The primary budget has no row last month and priors don't bootstrap.
+    assert_equal [ true ], result[:months].map { |m| m[:is_current] }
+  end
+
+  test "unknown budget raises a helpful error listing available budgets" do
+    error = assert_raises Assistant::Error do
+      @function.call({ "budget" => "Ghost" })
+    end
+
+    assert_match "Ghost", error.message
+    assert_match "Personal", error.message
+  end
 end

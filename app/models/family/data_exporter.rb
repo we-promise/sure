@@ -455,6 +455,22 @@ class Family::DataExporter
         }.to_json
       end
 
+      # Export budget plans (before budgets, which reference them)
+      @family.budget_plans.find_each do |budget_plan|
+        lines << {
+          type: "BudgetPlan",
+          data: budget_plan.as_json
+        }.to_json
+      end
+
+      # Export budget plan account scopes
+      @family.budget_plan_accounts.find_each do |budget_plan_account|
+        lines << {
+          type: "BudgetPlanAccount",
+          data: budget_plan_account.as_json
+        }.to_json
+      end
+
       # Export budgets
       @family.budgets.find_each do |budget|
         lines << {

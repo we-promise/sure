@@ -1,0 +1,28 @@
+---
+en:
+  budget_plans:
+    create:
+      success: Budget created
+    destroy:
+      cannot_delete_default: The default budget can't be deleted
+      success: Budget deleted
+    edit:
+      heading: Edit budget
+    form:
+      create: Create budget
+      delete: Delete budget
+      delete_confirm: Delete this budget and all of its monthly data? This cannot
+        be undone.
+      fields:
+        accounts: Accounts
+        accounts_hint: This budget only counts transactions from the checked accounts.
+          Leave all unchecked to include every account.
+        name: Name
+        name_placeholder: e.g. Personal, Joint, Test
+      save: Save
+    new:
+      heading: New budget
+      subtitle: Budget a subset of your accounts, or run a separate budget alongside
+        your main one.
+    update:
+      success: Budget updated

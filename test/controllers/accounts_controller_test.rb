@@ -492,6 +492,17 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     ActionView::Base.logger = original_view_logger
     Rails.logger = original_rails_logger
   end
+
+  test "destroy is refused while the account is a budget plan's only scoped account" do
+    plan = @user.family.budget_plans.create!(name: "Solo")
+    plan.budget_plan_accounts.create!(account: @account)
+
+    delete account_url(@account)
+
+    assert_redirected_to account_path(@account)
+    assert_match plan.name, flash[:alert]
+    assert Account.exists?(@account.id)
+  end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest

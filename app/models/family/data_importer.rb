@@ -31,7 +31,7 @@ class Family::DataImporter
     end
   end
 
-  SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
+  SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction Transaction Transfer RejectedTransfer Trade Holding Valuation BudgetPlan BudgetPlanAccount Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
@@ -49,6 +49,7 @@ class Family::DataImporter
     merchants: "Merchant",
     recurring_transactions: "RecurringTransaction",
     transactions: "Transaction",
+    budget_plans: "BudgetPlan",
     budgets: "Budget",
     securities: "Security",
     rules: "Rule"
@@ -66,6 +67,8 @@ class Family::DataImporter
     "Trade" => "trades",
     "Holding" => "holdings",
     "Valuation" => "valuations",
+    "BudgetPlan" => "budget_plans",
+    "BudgetPlanAccount" => "budget_plan_accounts",
     "Budget" => "budgets",
     "BudgetCategory" => "budget_categories",
     "Rule" => "rules"
@@ -84,6 +87,7 @@ class Family::DataImporter
       merchants: {},
       recurring_transactions: {},
       transactions: {},
+      budget_plans: {},
       budgets: {},
       securities: {},
       rules: {}
@@ -113,6 +117,8 @@ class Family::DataImporter
       import_trades(records["Trade"] || [])
       import_holdings(records["Holding"] || [])
       import_valuations(records["Valuation"] || [])
+      import_budget_plans(records["BudgetPlan"] || [])
+      import_budget_plan_accounts(records["BudgetPlanAccount"] || [])
       import_budgets(records["Budget"] || [])
       import_budget_categories(records["BudgetCategory"] || [])
       import_rules(records["Rule"] || [])
@@ -961,6 +967,66 @@ class Family::DataImporter
       nil
     end
 
+    def import_budget_plans(records)
+      records.each do |record|
+        data = record["data"]
+        old_id = data["id"]
+
+        require_source_id!("BudgetPlan", old_id)
+
+        budget_plan = mapped_record(:budget_plans, old_id, @family.budget_plans, record_type: "BudgetPlan")
+        created = budget_plan.blank?
+
+        # The default plan is a per-family singleton — imports remap onto it
+        # rather than creating a second one (the partial unique index forbids it).
+        if budget_plan.blank? && truthy?(data["is_default"])
+          budget_plan = @family.default_budget_plan
+          created = false
+        end
+
+        budget_plan ||= @family.budget_plans.build
+
+        budget_plan.name = data["name"] if data["name"].present?
+        # Slug is regenerated (and uniquified) locally rather than imported.
+
+        budget_plan.save!
+        map_source!(:budget_plans, old_id, budget_plan)
+        increment_summary("BudgetPlan", created ? :created : :updated)
+      end
+    end
+
+    def import_budget_plan_accounts(records)
+      records.each do |record|
+        data = record["data"]
+
+        new_plan_id = mapped_id(:budget_plans, data["budget_plan_id"], record_type: "BudgetPlanAccount")
+        next unless new_plan_id
+
+        new_account_id = mapped_id(:accounts, data["account_id"], record_type: "BudgetPlanAccount")
+        next unless new_account_id
+
+        budget_plan = @family.budget_plans.find(new_plan_id)
+
+        budget_plan_account = budget_plan.budget_plan_accounts.find_or_initialize_by(account_id: new_account_id)
+        created = budget_plan_account.new_record?
+
+        budget_plan_account.save!
+        increment_summary("BudgetPlanAccount", created ? :created : :updated)
+      end
+    end
+
+    # The first legacy budget implicitly creates the family default plan,
+    # which must show up in the summary (and the import readback) like any
+    # other created plan.
+    def fallback_budget_plan_id
+      @fallback_budget_plan_id ||= begin
+        existed = @family.budget_plans.exists?(is_default: true)
+        plan = @family.default_budget_plan
+        increment_summary("BudgetPlan", :created) unless existed
+        plan.id
+      end
+    end
+
     def import_budgets(records)
       records.each do |record|
         data = record["data"]
@@ -972,7 +1038,14 @@ class Family::DataImporter
         created = budget.blank?
         budget ||= @family.budgets.build
 
+        # Exports predating budget plans have no budget_plan_id; those
+        # budgets land on the family's default plan.
+        budget_plan_id = if data["budget_plan_id"].present?
+          mapped_id(:budget_plans, data["budget_plan_id"], record_type: "Budget", required: false)
+        end
+
         budget.assign_attributes(
+          budget_plan_id: budget_plan_id || fallback_budget_plan_id,
           start_date: Date.parse(data["start_date"].to_s),
           end_date: Date.parse(data["end_date"].to_s),
           budgeted_spending: data["budgeted_spending"]&.to_d,

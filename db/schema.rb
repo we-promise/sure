@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_27_111051) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_04_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -372,8 +372,31 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_27_111051) do
     t.index ["category_id"], name: "index_budget_categories_on_category_id"
   end
 
+  create_table "budget_plan_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "budget_plan_id", null: false
+    t.uuid "account_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_budget_plan_accounts_on_account_id"
+    t.index ["budget_plan_id", "account_id"], name: "index_budget_plan_accounts_on_plan_and_account", unique: true
+    t.index ["budget_plan_id"], name: "index_budget_plan_accounts_on_budget_plan_id"
+  end
+
+  create_table "budget_plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.boolean "is_default", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "slug"], name: "index_budget_plans_on_family_id_and_slug", unique: true
+    t.index ["family_id"], name: "index_budget_plans_on_family_id"
+    t.index ["family_id"], name: "index_budget_plans_one_default_per_family", unique: true, where: "is_default"
+  end
+
   create_table "budgets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
+    t.uuid "budget_plan_id", null: false
     t.date "start_date", null: false
     t.date "end_date", null: false
     t.decimal "budgeted_spending", precision: 19, scale: 4
@@ -381,7 +404,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_27_111051) do
     t.string "currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["family_id", "start_date", "end_date"], name: "index_budgets_on_family_id_and_start_date_and_end_date", unique: true
+    t.index ["budget_plan_id", "start_date", "end_date"], name: "index_budgets_on_plan_and_start_date_and_end_date", unique: true
     t.index ["family_id"], name: "index_budgets_on_family_id"
   end
 
@@ -2341,6 +2364,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_27_111051) do
   add_foreign_key "brex_items", "families"
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
+  add_foreign_key "budget_plan_accounts", "accounts", on_delete: :cascade
+  add_foreign_key "budget_plan_accounts", "budget_plans", on_delete: :cascade
+  add_foreign_key "budget_plans", "families", on_delete: :cascade
+  add_foreign_key "budgets", "budget_plans"
   add_foreign_key "budgets", "families"
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
