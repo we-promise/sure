@@ -611,6 +611,26 @@ class SureImportTest < ActiveSupport::TestCase
     assert_includes codes, "missing_reference"
   end
 
+  test "preflight accepts rules with a null name" do
+    # Rule#name is nullable (allow_nil: true) and the exporter emits null names,
+    # so a null-named Rule must not abort the import. Regression for #2721.
+    attach_ndjson(build_ndjson([
+      { type: "Rule", data: {
+        id: "rule-1",
+        name: nil,
+        resource_type: "transaction",
+        active: true,
+        conditions: [],
+        actions: []
+      } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert result.valid?, result.error_message
+    assert_empty result.errors.select { |error| error[:code] == "missing_required_fields" }
+  end
+
   test "preflight rejects invalid accountable types through explicit allowlist" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
