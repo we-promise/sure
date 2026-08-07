@@ -385,6 +385,85 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_in_delta amounts.sum / amounts.size, closer.amount, 0.01
   end
 
+  test "merges amount clusters that collide on rounded representative key" do
+    @family.update!(recurring_detection_amount_tolerance_percent: 5)
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    created_ids = [ BigDecimal("10.004"), BigDecimal("10.004"), BigDecimal("9.995"), BigDecimal("9.995") ].map.with_index do |amount, i|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: i.months.ago.beginning_of_month + 4.days,
+        amount: amount,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      ).id
+    end
+
+    loaded = Entry.where(id: created_ids).includes(:entryable).order(:date).to_a
+    identifier = RecurringTransaction::Identifier.new(@family)
+    # Both cluster averages round to 10.00 — a plain Hash write would drop one.
+    identifier.define_singleton_method(:cluster_entries_by_amount) do |*|
+      [ loaded[0, 2], loaded[2, 2] ]
+    end
+
+    grouped = identifier.send(:group_entries_for_detection, loaded)
+
+    assert_equal 1, grouped.size
+    assert_equal 4, grouped.values.first.size
+    assert_equal loaded.map(&:amount).sort, grouped.values.first.map(&:amount).sort
+  end
+
+  test "manual variance update honors family lookback window" do
+    travel_to Date.new(2026, 8, 6) do
+      @family.update!(recurring_detection_lookback_months: 2)
+      account = @family.accounts.first
+      merchant = merchants(:netflix)
+
+      recurring = @family.recurring_transactions.create!(
+        account: account,
+        merchant: merchant,
+        amount: 15.99,
+        currency: "USD",
+        expected_day_of_month: 17,
+        last_occurrence_date: Date.new(2026, 7, 17),
+        next_expected_date: Date.new(2026, 8, 17),
+        occurrence_count: 1,
+        status: "active",
+        manual: true
+      )
+
+      # lookback_date is 2026-06-06: July is in-window, May is not.
+      {
+        Date.new(2026, 7, 17) => BigDecimal("16.50"),
+        Date.new(2026, 5, 17) => BigDecimal("14.00")
+      }.each do |date, amount|
+        transaction = Transaction.create!(
+          merchant: merchant,
+          category: categories(:food_and_drink)
+        )
+        account.entries.create!(
+          date: date,
+          amount: amount,
+          currency: "USD",
+          name: "Netflix Subscription",
+          entryable: transaction
+        )
+      end
+
+      RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
+
+      recurring.reload
+      assert_equal 1, recurring.occurrence_count
+      assert_equal BigDecimal("16.50"), recurring.expected_amount_min
+      assert_equal BigDecimal("16.50"), recurring.expected_amount_max
+    end
+  end
+
   test "updates existing recurring transaction when pattern is found again" do
     account = @family.accounts.first
     merchant = merchants(:amazon)  # Use different merchant to avoid fixture conflicts

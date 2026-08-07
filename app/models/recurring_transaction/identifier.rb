@@ -172,7 +172,7 @@ class RecurringTransaction
     # both endpoints rather than the single-account name/merchant match
     # the helper performs. Issue #1590 tracks the proper Cleaner-aware
     # matching for recurring transfers.
-    def update_manual_recurring_transactions(_since_date)
+    def update_manual_recurring_transactions(since_date)
       manual_recurring_transactions = family.recurring_transactions
         .where(manual: true, status: "active", destination_account_id: nil)
         .includes(:account)
@@ -180,7 +180,7 @@ class RecurringTransaction
 
       matching_entries_by_recurring_id = matching_entries_by_manual_recurring_id(
         manual_recurring_transactions,
-        lookback_months: 6
+        since_date: since_date
       )
 
       manual_recurring_transactions.each do |recurring|
@@ -238,7 +238,10 @@ class RecurringTransaction
         by_identity.each do |(identifier, currency, account_id), entries|
           cluster_entries_by_amount(entries, amount_tolerance_percent).each do |cluster|
             representative_amount = (cluster.sum(&:amount) / cluster.size).round(2)
-            grouped[[ identifier, representative_amount, currency, account_id ]] = cluster
+            key = [ identifier, representative_amount, currency, account_id ]
+            # Distinct clusters can share a two-decimal representative; merge so
+            # later clusters are not dropped by Hash key overwrite.
+            grouped[key] = grouped.fetch(key, []) + cluster
           end
         end
         grouped
@@ -319,10 +322,10 @@ class RecurringTransaction
         [ amount, currency, account_id, identifier_type, identifier_value ]
       end
 
-      def matching_entries_by_manual_recurring_id(recurring_transactions, lookback_months:)
+      def matching_entries_by_manual_recurring_id(recurring_transactions, since_date:)
         return {} if recurring_transactions.empty?
 
-        lookback_date = lookback_months.months.ago.to_date
+        lookback_date = since_date
         currencies = recurring_transactions.map(&:currency).uniq
         account_ids = recurring_transactions.filter_map(&:account_id).uniq
 
