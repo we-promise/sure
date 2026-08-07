@@ -139,6 +139,8 @@ fr:
         additional_currencies_label: Devises supplémentaires
         base_currency_badge: Devise de base
         base_currency_label: Devise de base
+        budget_subtitle: Configurez le fonctionnement de vos budgets
+        budget_title: Budget
         country: Pays
         currencies_more: "+%{count} de plus"
         currencies_subtitle: Choisissez les devises qui apparaissent dans les champs monétaires de votre %{moniker}
