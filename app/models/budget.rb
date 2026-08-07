@@ -99,11 +99,13 @@ class Budget < ApplicationRecord
 
     # Create missing categories
     categories_to_add.each do |category_id|
-      budget_categories.create!(
-        category: current_categories_by_id.fetch(category_id),
-        budgeted_spending: 0,
-        currency: family.currency
-      )
+      budget_categories.find_or_create_by!(category_id: category_id) do |bc|
+        bc.category = current_categories_by_id.fetch(category_id)
+        bc.budgeted_spending = 0
+        bc.currency = family.currency
+      end
+    rescue ActiveRecord::RecordNotUnique
+      # Another concurrent request already created this category; safe to ignore.
     end
 
     # Remove old categories
