@@ -4,7 +4,6 @@ en:
     switcher:
       aria_label: "Switch budget"
       household: "Household"
-      mine: "Mine"
     budget_donut:
       spent: "Spent"
       new_budget: "New budget"

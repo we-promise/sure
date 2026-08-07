@@ -37,7 +37,6 @@ fr:
     switcher:
       aria_label: "Changer de budget"
       household: "Commun"
-      mine: "Le mien"
     actuals_summary:
       expenses: Dépenses
       income: Revenu

@@ -53,7 +53,9 @@ module BudgetOwnership
 
     # Pills for the household/personal budget switcher. Empty (no switcher)
     # unless personal_budgets is on — families that never turned it on keep
-    # the single, switcher-less budget page they've always had.
+    # the single, switcher-less budget page they've always had. Household
+    # gets a people icon; every person (the viewer included) gets a
+    # colored initial avatar, so all three read as "who" at a glance.
     def budget_switch_options(budget)
       return [] unless Current.family.personal_budgets?
 
@@ -62,13 +64,15 @@ module BudgetOwnership
       if Current.family.household_budget_enabled?
         options << {
           label: t("budgets.switcher.household"),
+          icon: "users",
           owner_param: "household",
           active: budget.user_id.nil?
         }
       end
 
       options << {
-        label: t("budgets.switcher.mine"),
+        label: Current.user.first_name,
+        icon: nil,
         owner_param: Current.user.id,
         active: budget.user_id == Current.user.id
       }
@@ -76,6 +80,7 @@ module BudgetOwnership
       Current.user.budget_owners_shared_with_me.find_each do |owner|
         options << {
           label: owner.first_name,
+          icon: nil,
           owner_param: owner.id,
           active: budget.user_id == owner.id
         }
