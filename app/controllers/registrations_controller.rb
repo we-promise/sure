@@ -3,6 +3,7 @@ class RegistrationsController < ApplicationController
 
   layout "auth"
 
+  before_action :ensure_local_login_enabled
   before_action :ensure_signup_open, if: :self_hosted?
   before_action :set_user, only: :create
   before_action :set_invitation
@@ -112,5 +113,20 @@ class RegistrationsController < ApplicationController
       return unless Setting.onboarding_state == "closed"
 
       redirect_to new_session_path, alert: t("registrations.closed")
+    end
+
+    # In pure SSO-only mode (local login disabled), local account creation must
+    # be blocked entirely — accounts are provisioned through the SSO provider,
+    # which also handles pending invitations. Otherwise a local account could be
+    # created that can never log in again after logout (see issue #1430).
+    #
+    # Stash any pending invitation in the session before redirecting so the SSO
+    # callback can still claim it (via accept_pending_invitation_for), even when
+    # the SSO email differs from the invited email.
+    def ensure_local_login_enabled
+      return if AuthConfig.local_login_enabled?
+
+      store_pending_invitation_if_valid
+      redirect_to new_session_path, alert: t("registrations.local_login_disabled")
     end
 end
