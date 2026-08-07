@@ -3,6 +3,8 @@
 require "test_helper"
 
 class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
+  include ApiRateLimitTestHelper
+
   setup do
     @user = users(:family_admin)
     @oauth_app = Doorkeeper::Application.create!(
@@ -367,11 +369,12 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return 429 when rate limit exceeded" do
-    # Make 100 requests to exhaust the rate limit
-    100.times do
-      get "/api/v1/test", headers: { "X-Api-Key" => @plain_api_key }
-      assert_response :success
-    end
+    # Seed the counter at 99 so the next request exhausts the limit
+    # (equivalent to making 100 requests, without the request overhead)
+    seed_api_rate_limit(@api_key, 99)
+
+    get "/api/v1/test", headers: { "X-Api-Key" => @plain_api_key }
+    assert_response :success
 
     # 101st request should be rate limited
     get "/api/v1/test", headers: { "X-Api-Key" => @plain_api_key }
@@ -400,9 +403,7 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
 
   test "should provide detailed rate limit information in 429 response" do
     # Exhaust the rate limit
-    100.times do
-      get "/api/v1/test", headers: { "X-Api-Key" => @plain_api_key }
-    end
+    seed_api_rate_limit(@api_key, 100)
 
     # Make the rate-limited request
     get "/api/v1/test", headers: { "X-Api-Key" => @plain_api_key }
@@ -426,11 +427,12 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     )
 
     begin
-      # Make 50 requests with first API key
-      50.times do
-        get "/api/v1/test", headers: { "X-Api-Key" => @plain_api_key }
-        assert_response :success
-      end
+      # Put the first API key halfway through its budget and verify it
+      # still works
+      seed_api_rate_limit(@api_key, 49)
+      get "/api/v1/test", headers: { "X-Api-Key" => @plain_api_key }
+      assert_response :success
+      assert_equal "50", response.headers["X-RateLimit-Remaining"]
 
       # Should still be able to make requests with second API key
       get "/api/v1/test", headers: { "X-Api-Key" => other_api_key.display_key }
