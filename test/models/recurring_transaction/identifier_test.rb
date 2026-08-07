@@ -285,6 +285,62 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal amounts.sort, matched_amounts
   end
 
+  test "tolerant rematch reuses closest row when multiple candidates exist" do
+    @family.update!(recurring_detection_amount_tolerance_percent: 5)
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    farther = @family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 16.50,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current,
+      occurrence_count: 3,
+      status: "active",
+      manual: false
+    )
+    closer = @family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 16.00,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current,
+      occurrence_count: 3,
+      status: "active",
+      manual: false
+    )
+
+    amounts = [ 15.99, 16.10, 16.20 ]
+    amounts.each_with_index do |amount, i|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: i.months.ago.beginning_of_month + 4.days,
+        amount: amount,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      @identifier.identify_recurring_patterns
+    end
+
+    closer.reload
+    farther.reload
+    assert_equal "active", closer.status
+    assert_equal "inactive", farther.status
+    assert_in_delta amounts.sum / amounts.size, closer.amount, 0.01
+  end
+
   test "updates existing recurring transaction when pattern is found again" do
     account = @family.accounts.first
     merchant = merchants(:amazon)  # Use different merchant to avoid fixture conflicts

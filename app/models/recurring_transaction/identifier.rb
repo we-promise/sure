@@ -280,15 +280,29 @@ class RecurringTransaction
         tolerance = family.recurring_detection_amount_tolerance_percent
         return nil if tolerance.zero?
 
-        existing_by_key.values.find do |recurring|
-          next if recurring.manual?
-          next unless recurring.currency == find_conditions[:currency]
-          next unless recurring.account_id == find_conditions[:account_id]
-          next unless recurring.merchant_id == find_conditions[:merchant_id]
-          next unless recurring.name == find_conditions[:name]
+        candidates = existing_by_key.values.select do |recurring|
+          next false if recurring.manual?
+          next false unless recurring.currency == find_conditions[:currency]
+          next false unless recurring.account_id == find_conditions[:account_id]
+          next false unless recurring.merchant_id == find_conditions[:merchant_id]
+          next false unless recurring.name == find_conditions[:name]
 
           amounts_within_tolerance?(recurring.amount, find_conditions[:amount], tolerance)
         end
+
+        return nil if candidates.empty?
+        return candidates.first if candidates.one?
+
+        # Ambiguous matches: reuse the closest amount (stable id tie-break) and
+        # retire the other active rows so we do not keep duplicate projections.
+        target_amount = find_conditions[:amount]
+        chosen = candidates.min_by { |recurring| [ (recurring.amount - target_amount).abs, recurring.id.to_s ] }
+        candidates.each do |duplicate|
+          next if duplicate == chosen || !duplicate.active?
+
+          duplicate.update!(status: "inactive")
+        end
+        chosen
       end
 
       def recurring_transaction_lookup_key(recurring_or_attributes)
