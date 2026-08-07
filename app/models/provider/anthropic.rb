@@ -154,7 +154,7 @@ class Provider::Anthropic < Provider
     VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
   end
 
-  def process_pdf(pdf_content:, model: "", family: nil)
+  def process_pdf(pdf_content:, model: "", family: nil, user: nil)
     with_provider_response do
       effective_model = model.presence || @default_model
       raise Error, "Model does not support PDF processing: #{effective_model}" unless supports_pdf_processing?(model: effective_model)

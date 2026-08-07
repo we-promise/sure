@@ -146,11 +146,11 @@ class PdfImport < Import
     ai_summary.present?
   end
 
-  def process_with_ai_later
+  def process_with_ai_later(user: Current.user)
     return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing) }
 
     begin
-      ProcessPdfJob.perform_later(self)
+      ProcessPdfJob.perform_later(self, user)
       true
     rescue StandardError => e
       Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name} - #{e.message}")
@@ -159,7 +159,7 @@ class PdfImport < Import
     end
   end
 
-  def process_with_ai
+  def process_with_ai(user: nil)
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # process_pdf (PR #1985).
     provider = Provider::Registry.preferred_llm_provider
@@ -168,7 +168,8 @@ class PdfImport < Import
 
     response = provider.process_pdf(
       pdf_content: pdf_file_content,
-      family: family
+      family: family,
+      user: user
     )
 
     unless response.success?
@@ -177,10 +178,16 @@ class PdfImport < Import
     end
 
     result = response.data
-    update!(
+
+    attrs = {
       ai_summary: result.summary,
       document_type: result.document_type
-    )
+    }
+    if result.reconciliation.present?
+      attrs[:extracted_data] = (result.extracted_data || {}).merge("reconciliation" => result.reconciliation)
+    end
+
+    update!(attrs)
 
     result
   end
@@ -203,8 +210,10 @@ class PdfImport < Import
       raise error_message
     end
 
-    update!(extracted_data: response.data)
-    response.data
+    new_data = response.data.deep_stringify_keys
+    merged = (extracted_data || {}).deep_merge(new_data)
+    update!(extracted_data: merged)
+    merged
   end
 
   def bank_statement?
@@ -213,6 +222,28 @@ class PdfImport < Import
 
   def statement_with_transactions?
     document_type.in?(%w[bank_statement credit_card_statement])
+  end
+
+  def reconciliation_data
+    extracted_data&.dig("reconciliation")
+  end
+
+  def reconciliation_reportable?
+    recon = reconciliation_data
+    return false unless recon.present?
+    return false unless recon["performed"] == true
+    return false unless recon["account_id"].present?
+    return false if recon["statement_transaction_count"].to_i == 0
+    true
+  end
+
+  def reconciliation_matched?
+    reconciliation_reportable? && reconciliation_data["balance_match"] == true
+  end
+
+  def reconciliation_account
+    return nil unless reconciliation_data&.dig("account_id").present?
+    family.accounts.find_by(id: reconciliation_data["account_id"])
   end
 
   def has_extracted_transactions?

@@ -154,7 +154,8 @@ class Provider::Anthropic::PdfProcessor
       PdfProcessingResult.new(
         summary: parsed["summary"] || parsed[:summary],
         document_type: normalize_document_type(parsed["document_type"] || parsed[:document_type]),
-        extracted_data: parsed["extracted_data"] || parsed[:extracted_data] || {}
+        extracted_data: parsed["extracted_data"] || parsed[:extracted_data] || {},
+        reconciliation: nil
       )
     end
 
