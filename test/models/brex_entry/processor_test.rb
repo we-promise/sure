@@ -109,6 +109,38 @@ class BrexEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "USD", entry.currency
   end
 
+  test "uses non-future initiated_at_date when posted_at_date is in the future" do
+    travel_to Date.new(2026, 8, 5) do
+      transaction = card_transaction(id: "tx_future_posted", amount: 12_34).merge(
+        posted_at_date: "2026-08-08",
+        initiated_at_date: "2026-08-04"
+      )
+
+      entry = BrexEntry::Processor.new(transaction, brex_account: @brex_account).process
+
+      assert_equal Date.new(2026, 8, 4), entry.date
+      assert_equal "2026-08-08", entry.transaction.extra.dig("brex", "posted_at_date")
+      assert_equal "2026-08-04", entry.transaction.extra.dig("brex", "initiated_at_date")
+    end
+  end
+
+  test "all-future date clamp stays put across daily resyncs" do
+    transaction = card_transaction(id: "tx_future_clamp", amount: 40_00).merge(
+      posted_at_date: "2026-08-10",
+      initiated_at_date: "2026-08-09"
+    )
+
+    travel_to Date.new(2026, 8, 5) do
+      entry = BrexEntry::Processor.new(transaction, brex_account: @brex_account).process
+      assert_equal Date.new(2026, 8, 5), entry.date
+    end
+
+    travel_to Date.new(2026, 8, 6) do
+      entry = BrexEntry::Processor.new(transaction, brex_account: @brex_account).process
+      assert_equal Date.new(2026, 8, 5), entry.date
+    end
+  end
+
   private
 
     def card_transaction(id: "tx_1", amount:, type: "CARD_EXPENSE")

@@ -169,6 +169,11 @@ class EnableBankingEntry::Processor
 
       eb[:merchant_category_code] = data[:merchant_category_code] if data[:merchant_category_code].present?
       eb[:pending] = true if data[:_pending] == true
+      eb.merge!(Provider::BankEntryDate.provenance([
+        [ :booking_date, data[:booking_date] ],
+        [ :value_date, data[:value_date] ],
+        [ :transaction_date, data[:transaction_date] ]
+      ]))
 
       eb.compact!
       eb.empty? ? nil : { enable_banking: eb }
@@ -252,9 +257,31 @@ class EnableBankingEntry::Processor
       Rails.logger.warn("Invalid currency code '#{currency_value}' in Enable Banking transaction #{safe_id}, falling back to account currency")
     end
 
+    # Prefer booking_date, then value_date, then transaction_date — but never use a
+    # future booking/posting date as entries.date when an earlier non-future
+    # candidate exists (see #2907). Content-based external IDs still fingerprint
+    # the raw provider dates above and are intentionally unchanged.
     def date
-      # Prefer booking_date, fall back to value_date, then transaction_date
-      date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
+      selected = Provider::BankEntryDate.select([
+        [ "booking_date", parse_provider_date(data[:booking_date]) ],
+        [ "value_date", parse_provider_date(data[:value_date]) ],
+        [ "transaction_date", parse_provider_date(data[:transaction_date]) ]
+      ],
+        as_of: Provider::BankEntryDate.family_today(account&.family),
+        existing_date: Provider::BankEntryDate.existing_entry_date(
+          account: account,
+          external_id: self.class.compute_external_id(data),
+          source: "enable_banking"
+        ))
+
+      return selected if selected
+
+      Rails.logger.error("Enable Banking transaction has invalid date value: #{[ data[:booking_date], data[:value_date], data[:transaction_date] ].inspect}")
+      raise ArgumentError, "Invalid date format: #{[ data[:booking_date], data[:value_date], data[:transaction_date] ].inspect}"
+    end
+
+    def parse_provider_date(date_value)
+      return nil if date_value.blank?
 
       case date_value
       when String
@@ -270,11 +297,10 @@ class EnableBankingEntry::Processor
       when Date
         date_value
       else
-        Rails.logger.error("Enable Banking transaction has invalid date value: #{date_value.inspect}")
-        raise ArgumentError, "Invalid date format: #{date_value.inspect}"
+        nil
       end
     rescue ArgumentError, TypeError => e
       Rails.logger.error("Failed to parse Enable Banking transaction date '#{date_value}': #{e.message}")
-      raise ArgumentError, "Unable to parse transaction date: #{date_value.inspect}"
+      nil
     end
 end

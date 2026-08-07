@@ -142,7 +142,24 @@ class BrexEntry::Processor
     end
 
     def date
-      date_value = data[:posted_at_date].presence || data[:initiated_at_date].presence
+      selected = Provider::BankEntryDate.select([
+        [ "posted_at_date", parse_provider_date(data[:posted_at_date]) ],
+        [ "initiated_at_date", parse_provider_date(data[:initiated_at_date]) ]
+      ],
+        as_of: Provider::BankEntryDate.family_today(account&.family),
+        existing_date: Provider::BankEntryDate.existing_entry_date(
+          account: account,
+          external_id: external_id,
+          source: "brex"
+        ))
+
+      return selected if selected
+
+      raise ArgumentError, "Invalid date format: #{[ data[:posted_at_date], data[:initiated_at_date] ].inspect}"
+    end
+
+    def parse_provider_date(date_value)
+      return nil if date_value.blank?
 
       case date_value
       when String
@@ -158,11 +175,11 @@ class BrexEntry::Processor
       when Date
         date_value
       else
-        raise ArgumentError, "Invalid date format: #{date_value.inspect}"
+        nil
       end
     rescue ArgumentError, TypeError => e
       Rails.logger.error("Failed to parse Brex transaction date '#{date_value}': #{e.message}")
-      raise ArgumentError, "Unable to parse transaction date: #{date_value.inspect}"
+      nil
     end
 
     def extra
