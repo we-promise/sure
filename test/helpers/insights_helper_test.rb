@@ -103,6 +103,7 @@ class InsightsHelperTest < ActionView::TestCase
 
       assert_equal "Budget · August", insight_meta_line(insight)
     end
+  end
 
   test "meta line falls back to the subject when there is no period" do
     insight = build_insight("idle_cash", facts: { "account" => "Emergency fund" })
