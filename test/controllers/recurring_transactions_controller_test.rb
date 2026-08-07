@@ -36,4 +36,27 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='recurring_detection_lookback_months']"
     assert_select "input[name='recurring_detection_amount_tolerance_percent']"
   end
+
+  test "update_settings rejects non-integer threshold values" do
+    original = @family.recurring_detection_min_occurrences
+
+    patch update_settings_recurring_transactions_path, params: {
+      recurring_detection_min_occurrences: "12abc"
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal original, @family.reload.recurring_detection_min_occurrences
+    assert_match(/valid whole number/i, flash[:alert].to_s + response.body)
+  end
+
+  test "update_settings rejects out-of-range thresholds without raising" do
+    original = @family.recurring_detection_min_occurrences
+
+    patch update_settings_recurring_transactions_path, params: {
+      recurring_detection_min_occurrences: 1
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal original, @family.reload.recurring_detection_min_occurrences
+  end
 end

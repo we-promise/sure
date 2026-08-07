@@ -10,7 +10,18 @@ class RecurringTransactionsController < ApplicationController
   end
 
   def update_settings
-    Current.family.update!(recurring_settings_params)
+    settings = recurring_settings_params
+
+    if Current.family.errors.any? || !Current.family.update(settings)
+      @family = Current.family
+      @recurring_transactions = Current.family.recurring_transactions
+                                      .accessible_by(Current.user)
+                                      .includes(:merchant)
+                                      .order(status: :asc, next_expected_date: :asc)
+      flash.now[:alert] = Current.family.errors.full_messages.to_sentence
+      render :index, status: :unprocessable_entity
+      return
+    end
 
     respond_to do |format|
       format.html do
@@ -98,7 +109,11 @@ class RecurringTransactionsController < ApplicationController
       ].each do |key|
         next if permitted[key].blank?
 
-        settings[key] = permitted[key].to_i
+        begin
+          settings[key] = Integer(permitted[key], 10)
+        rescue ArgumentError, TypeError
+          Current.family.errors.add(key, t("recurring_transactions.settings.invalid_integer"))
+        end
       end
 
       settings
