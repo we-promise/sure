@@ -126,4 +126,14 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       listbox = container.find("[role='listbox']", visible: true)
       listbox.find("[role='option'][data-value='#{record.id}']", visible: true).click
     end
+
+    # Waits for async exchange-rate fetches to populate the Stimulus-controlled field.
+    def assert_exchange_rate_value(expected, controller: "transaction-form")
+      selector = "[data-#{controller}-target='exchangeRateField']"
+
+      page.document.synchronize do
+        actual = find(selector).value
+        raise Capybara::ExpectationNotMet, "expected exchange rate #{expected}, got #{actual.inspect}" unless actual == expected
+      end
+    end
 end
