@@ -1,0 +1,9 @@
+<%# locals: (switch_options:, switch_path:) %>
+
+<div class="max-w-full overflow-x-auto no-scrollbar">
+  <%= render DS::SegmentedControl.new(aria_label: t("budgets.switcher.aria_label")) do |sc| %>
+    <% switch_options.each do |option| %>
+      <% sc.with_segment option[:label], active: option[:active], href: switch_path.call(option[:owner_param]) %>
+    <% end %>
+  <% end %>
+</div>

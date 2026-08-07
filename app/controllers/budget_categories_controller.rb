@@ -1,5 +1,8 @@
 class BudgetCategoriesController < ApplicationController
+  include BudgetOwnership
+
   before_action :set_budget
+  before_action :ensure_budget_editable!, only: %i[index update]
 
   def index
     @budget_categories = @budget.budget_categories.includes(:category)
@@ -35,7 +38,7 @@ class BudgetCategoriesController < ApplicationController
 
     respond_to do |format|
       format.turbo_stream
-      format.html { redirect_to budget_budget_categories_path(@budget) }
+      format.html { redirect_to budget_budget_categories_path(@budget, **budget_owner_query) }
     end
   rescue ActiveRecord::RecordInvalid
     render :index, status: :unprocessable_entity
@@ -51,7 +54,7 @@ class BudgetCategoriesController < ApplicationController
 
     def set_budget
       start_date = Budget.param_to_date(params[:budget_month_year], family: Current.family)
-      @budget = Budget.find_or_bootstrap(Current.family, start_date: start_date, user: Current.user)
+      @budget = resolve_budget(start_date)
       raise ActiveRecord::RecordNotFound unless @budget
     end
 end

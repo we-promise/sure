@@ -183,6 +183,15 @@ en:
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
         personal_budgets: Personal budgets
         personal_budgets_hint: Enable individual budgets for each family member.
+        household_budget_enabled: Household budget
+        household_budget_enabled_hint: Keep a shared household budget alongside personal budgets. Turn off to use personal budgets only.
+        budget_sharing_title: Budget sharing
+        budget_sharing_subtitle: Let other members view or edit your personal budget
+        budget_sharing_no_members: No other members in your %{moniker} to share with
+        budget_sharing_permissions:
+          none: No access
+          read_only: View only
+          read_write: Can edit
         currencies_title: "%{moniker} Currencies"
         currencies_subtitle: Choose which currencies appear in money fields for your %{moniker}
         base_currency_label: Base currency
@@ -208,6 +217,9 @@ en:
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.
+    budget_shares:
+      update:
+        success: Budget sharing settings updated
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.

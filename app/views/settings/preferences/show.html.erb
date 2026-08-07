@@ -53,10 +53,53 @@
             <%= family_form.toggle :personal_budgets,
                 data: { auto_submit_form_target: "auto" } %>
           </div>
+
+          <% if @user.family.personal_budgets? %>
+            <div class="flex items-center justify-between">
+              <div class="space-y-1">
+                <p class="text-sm"><%= t(".household_budget_enabled") %></p>
+                <p class="text-secondary text-sm"><%= t(".household_budget_enabled_hint") %></p>
+              </div>
+              <%= family_form.toggle :household_budget_enabled,
+                  data: { auto_submit_form_target: "auto" } %>
+            </div>
+          <% end %>
         <% end %>
       <% end %>
     <% end %>
   </div>
+<% end %>
+<% if @user.family.personal_budgets? && preview_features_enabled? %>
+  <%= settings_section title: t(".budget_sharing_title"), subtitle: t(".budget_sharing_subtitle") do %>
+    <% if @family_members.any? %>
+      <%= styled_form_with url: settings_budget_shares_path, method: :patch, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
+        <div class="bg-container-inset rounded-xl p-1">
+          <% @family_members.each_with_index do |member, index| %>
+            <% share = @budget_shares[member.id] %>
+            <input type="hidden" name="budget_shares[members][<%= index %>][viewer_id]" value="<%= member.id %>">
+            <div class="flex items-center justify-between gap-3 bg-container p-4 shadow-border-xs rounded-lg mt-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-8 h-8 shrink-0 rounded-full bg-surface-inset flex items-center justify-center text-xs font-medium text-secondary">
+                  <%= member.initials %>
+                </div>
+                <span class="text-sm text-primary truncate"><%= member.display_name %></span>
+              </div>
+              <select name="budget_shares[members][<%= index %>][permission]" class="text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary" data-auto-submit-form-target="auto">
+                <option value="" <%= "selected" if share.nil? %>><%= t(".budget_sharing_permissions.none") %></option>
+                <% BudgetShare::PERMISSIONS.each do |perm| %>
+                  <option value="<%= perm %>" <%= "selected" if share&.permission == perm %>>
+                    <%= t(".budget_sharing_permissions.#{perm}") %>
+                  </option>
+                <% end %>
+              </select>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".budget_sharing_no_members", moniker: family_moniker_downcase) %></p>
+    <% end %>
+  <% end %>
 <% end %>
 <% if Current.user.admin? %>
   <%= settings_section title: t(".currencies_title", moniker: family_moniker), subtitle: t(".currencies_subtitle", moniker: family_moniker_downcase) do %>

@@ -181,3 +181,37 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       "loan_payment outflow remains visible (kind is not BUDGET_EXCLUDED)"
   end
 end
+
+class BudgetCategoriesControllerSharingTest < ActionDispatch::IntegrationTest
+  setup do
+    @family = families(:empty)
+    @family.update!(personal_budgets: true)
+    @owner = users(:josh)
+    @viewer = users(:ann)
+    @date = Date.current.beginning_of_month
+    @family.categories.create!(name: "Groceries", color: "#6172F3")
+    @owner_budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @owner)
+  end
+
+  test "a read_only viewer cannot reach the categories wizard for the owner's budget" do
+    BudgetShare.create!(owner: @owner, viewer: @viewer, permission: "read_only")
+    sign_in @viewer
+
+    get budget_budget_categories_path(@owner_budget, owner: @owner.id)
+
+    assert_response :not_found
+  end
+
+  test "a read_write viewer can update a category on the owner's budget" do
+    BudgetShare.create!(owner: @owner, viewer: @viewer, permission: "read_write")
+    budget_category = @owner_budget.budget_categories.first
+    sign_in @viewer
+
+    patch budget_budget_category_path(@owner_budget, budget_category, owner: @owner.id),
+          params: { budget_category: { budgeted_spending: 250 } },
+          as: :turbo_stream
+
+    assert_response :success
+    assert_equal 250.0, budget_category.reload.budgeted_spending.to_f
+  end
+end

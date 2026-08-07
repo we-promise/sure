@@ -45,17 +45,29 @@ class Budget < ApplicationRecord
       end
     end
 
-    def find_or_bootstrap(family, start_date:, user: nil)
+    # `household: true` explicitly requests the shared household budget
+    # (user_id NULL) regardless of `user:` — this is what lets a household
+    # budget and personal budgets coexist once `family.personal_budgets?` is
+    # on. Without it, `user:` resolves to that user's personal budget when
+    # personal_budgets is on, or the shared budget otherwise (unchanged
+    # behavior for families that never turned personal budgets on).
+    #
+    # Returns nil if the household budget was explicitly requested but the
+    # family opted out of it via `household_budget_enabled?`.
+    def find_or_bootstrap(family, start_date:, user: nil, household: false)
       return nil unless budget_date_valid?(start_date, family: family)
+      return nil if household && family.personal_budgets? && !family.household_budget_enabled?
 
       Budget.transaction do
         budget_start, budget_end = period_for(start_date, family: family)
+
+        owner = (household || !family.personal_budgets?) ? nil : user
 
         budget = Budget.find_or_create_by!(
           family: family,
           start_date: budget_start,
           end_date: budget_end,
-          user: family.personal_budgets? ? user : nil
+          user: owner
         ) do |b|
           b.currency = family.currency
         end
@@ -119,11 +131,20 @@ class Budget < ApplicationRecord
     end
   end
 
+  # Personal budgets only ever reflect the owner's own accounts, regardless
+  # of who's viewing (a shared read-only/read-write viewer sees the owner's
+  # numbers, not their own accessible accounts). The household budget keeps
+  # the pre-personal-budgets behavior: whatever the requesting viewer can
+  # see, since it has no single owner to scope by.
   def transactions
     scope = family.transactions.visible.in_period(period)
-    if current_user
+
+    if user_id.present?
+      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.where(owner_id: user_id).included_in_reports.select(:id) })
+    elsif current_user
       scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).included_in_reports.select(:id) })
     end
+
     scope
   end
 
@@ -141,6 +162,24 @@ class Budget < ApplicationRecord
 
   def initialized?
     budgeted_spending.present?
+  end
+
+  # The household budget (user_id nil) is visible/editable by every family
+  # member, matching pre-personal_budgets behavior. A personal budget is
+  # only visible/editable by its owner, or by someone the owner shared it
+  # with via BudgetShare.
+  def viewable_by?(user)
+    return true if user_id.nil?
+    return true if user_id == user.id
+
+    BudgetShare.exists?(owner_id: user_id, viewer_id: user.id)
+  end
+
+  def editable_by?(user)
+    return true if user_id.nil?
+    return true if user_id == user.id
+
+    BudgetShare.exists?(owner_id: user_id, viewer_id: user.id, permission: "read_write")
   end
 
   def most_recent_initialized_budget
@@ -320,11 +359,11 @@ class Budget < ApplicationRecord
   # Income: How much user earned relative to what they expected to earn
   # =============================================================================
   def estimated_income
-    family.income_statement.median_income(interval: "month")
+    income_statement.median_income(interval: "month")
   end
 
   def actual_income
-    family.income_statement.income_totals(period: self.period).total
+    income_statement.income_totals(period: self.period).total
   end
 
   def actual_income_percent
@@ -345,7 +384,16 @@ class Budget < ApplicationRecord
 
   private
     def income_statement
-      @income_statement ||= family.income_statement(user: current_user)
+      @income_statement ||= family.income_statement(user: current_user, accounts: income_statement_accounts)
+    end
+
+    # nil for the household budget (IncomeStatement falls back to whatever
+    # `current_user` can see, unchanged pre-personal-budgets behavior). For a
+    # personal budget, restrict to the owner's own accounts so a shared
+    # viewer sees the owner's numbers, and household vs. personal actually
+    # differ instead of both reflecting the viewer's full accessible set.
+    def income_statement_accounts
+      family.accounts.where(owner_id: user_id) if user_id.present?
     end
 
     def net_totals

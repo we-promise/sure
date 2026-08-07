@@ -1,6 +1,8 @@
 require "test_helper"
 
 class PersonalBudgetTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @family = families(:empty)
     @user1 = users(:josh)
@@ -97,5 +99,85 @@ class PersonalBudgetTest < ActiveSupport::TestCase
 
     assert_nil Budget.find_by(id: budget.id)
     assert_nil BudgetCategory.find_by(id: budget_category.id)
+  end
+
+  test "household and personal budgets coexist when household: true is explicitly requested" do
+    @family.update!(personal_budgets: true)
+
+    household_budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1, household: true)
+    personal_budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1)
+
+    assert_not_equal household_budget.id, personal_budget.id
+    assert_nil household_budget.user_id
+    assert_equal @user1.id, personal_budget.user_id
+  end
+
+  test "household: true returns nil when the family disabled household_budget_enabled" do
+    @family.update!(personal_budgets: true, household_budget_enabled: false)
+
+    assert_nil Budget.find_or_bootstrap(@family, start_date: @date, user: @user1, household: true)
+  end
+
+  test "household: true ignores household_budget_enabled when personal_budgets is off" do
+    @family.update!(personal_budgets: false, household_budget_enabled: false)
+
+    budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1, household: true)
+
+    assert budget.present?
+    assert_nil budget.user_id
+  end
+
+  test "viewable_by? and editable_by? allow every family member on the household budget" do
+    household_budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1, household: true)
+
+    assert household_budget.viewable_by?(@user1)
+    assert household_budget.viewable_by?(@user2)
+    assert household_budget.editable_by?(@user1)
+    assert household_budget.editable_by?(@user2)
+  end
+
+  test "viewable_by? and editable_by? restrict a personal budget to its owner by default" do
+    @family.update!(personal_budgets: true)
+    personal_budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1)
+
+    assert personal_budget.viewable_by?(@user1)
+    assert personal_budget.editable_by?(@user1)
+    assert_not personal_budget.viewable_by?(@user2)
+    assert_not personal_budget.editable_by?(@user2)
+  end
+
+  test "a read_only BudgetShare grants viewing but not editing" do
+    @family.update!(personal_budgets: true)
+    personal_budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1)
+    BudgetShare.create!(owner: @user1, viewer: @user2, permission: "read_only")
+
+    assert personal_budget.viewable_by?(@user2)
+    assert_not personal_budget.editable_by?(@user2)
+  end
+
+  test "a read_write BudgetShare grants both viewing and editing" do
+    @family.update!(personal_budgets: true)
+    personal_budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1)
+    BudgetShare.create!(owner: @user1, viewer: @user2, permission: "read_write")
+
+    assert personal_budget.viewable_by?(@user2)
+    assert personal_budget.editable_by?(@user2)
+  end
+
+  test "household actual spending reflects the viewer's accessible accounts, personal reflects only the owner's own" do
+    @family.update!(personal_budgets: true)
+
+    owned_account = Account.create!(family: @family, accountable: Depository.new, name: "Josh checking", status: "active", currency: "USD", balance: 0, owner: @user1)
+    joint_account = Account.create!(family: @family, accountable: Depository.new, name: "Joint savings", status: "active", currency: "USD", balance: 0, owner: @user2)
+    AccountShare.create!(account: joint_account, user: @user1, permission: "read_write", include_in_finances: true)
+
+    create_transaction(account: owned_account, amount: 50, date: @date)
+    create_transaction(account: joint_account, amount: 200, date: @date)
+
+    household_budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1, household: true)
+    personal_budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1)
+
+    assert_equal 250.0, household_budget.actual_spending.to_f
+    assert_equal 50.0, personal_budget.actual_spending.to_f
   end
 end

@@ -34,6 +34,10 @@ fr:
       status: Statut
       view_all_transactions: Voir toutes les transactions de catégorie
   budgets:
+    switcher:
+      aria_label: "Changer de budget"
+      household: "Commun"
+      mine: "Le mien"
     actuals_summary:
       expenses: Dépenses
       income: Revenu
