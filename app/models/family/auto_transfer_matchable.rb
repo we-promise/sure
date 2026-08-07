@@ -55,9 +55,11 @@ module Family::AutoTransferMatchable
         inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
         outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
         destination_account = inflow_transaction.entry.account
-        transfer_kind = Transfer.kind_for_account(destination_account)
+        source_account = outflow_transaction.entry.account
+        transfer_kind = Transfer.kind_for_account(destination_account, source_account: source_account)
 
-        # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
+        # The kind is determined by the DESTINATION account (inflow) relative to the SOURCE
+        # (outflow) account, matching Transfer::Creator logic
         inflow_transaction.update!(kind: "funds_movement")
         outflow_transaction.update!(kind: transfer_kind)
 
