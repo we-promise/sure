@@ -12,7 +12,6 @@ class TransfersController < ApplicationController
 
   def show
     @categories = Current.family.categories.alphabetically_by_hierarchy
-    @categories = Current.family.categories.alphabetically
     @tags = Current.family.tags.alphabetically
 
     # Whether the current user can hit `mark_as_recurring`: feature flag on,
