@@ -30,7 +30,9 @@ class BudgetCategoriesController < ApplicationController
   end
 
   def update
-    @budget_category = Current.family.budget_categories.find(params[:id])
+    @budget_category = Current.family.budget_categories
+                                     .includes(:category, budget: { budget_categories: :category })
+                                     .find(params[:id])
     @budget_category.update_budgeted_spending!(budgeted_spending_param)
 
     respond_to do |format|

@@ -6,6 +6,7 @@ class BudgetsController < ApplicationController
   end
 
   def show
+    @budget.budget_categories.includes(:category).load
     @source_budget = @budget.most_recent_initialized_budget unless @budget.initialized?
     @breadcrumbs = plan_breadcrumb_prefix + [ [ t("breadcrumbs.budgets"), nil ] ]
   end
