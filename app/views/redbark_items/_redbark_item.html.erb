@@ -1,81 +1,83 @@
 <%# locals: (redbark_item:) %>
 
 <%= tag.div id: dom_id(redbark_item) do %>
-  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
-    <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
-      <div class="flex items-center gap-2">
-        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="w-full flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-        <div class="flex items-center justify-center h-8 w-8 bg-primary/10 rounded-full">
-          <div class="flex items-center justify-center">
-            <%= tag.p redbark_item.name.first.upcase, class: "text-primary text-xs font-medium" %>
+          <div class="flex items-center justify-center h-8 w-8 bg-primary/10 rounded-full">
+            <div class="flex items-center justify-center">
+              <%= tag.p redbark_item.name.first.upcase, class: "text-primary text-xs font-medium" %>
+            </div>
+          </div>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p redbark_item.name, class: "font-medium text-primary" %>
+              <% if redbark_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+            <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+            <% if redbark_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif redbark_item.requires_update? %>
+              <div class="text-warning flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t(".requires_update") %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if redbark_item.last_synced_at %>
+                  <% if redbark_item.sync_status_summary %>
+                    <%= t(".status_with_summary", timestamp: time_ago_in_words(redbark_item.last_synced_at), summary: redbark_item.sync_status_summary) %>
+                  <% else %>
+                    <%= t(".status", timestamp: time_ago_in_words(redbark_item.last_synced_at)) %>
+                  <% end %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
+            <% end %>
           </div>
         </div>
 
-        <div class="pl-1 text-sm">
-          <div class="flex items-center gap-2">
-            <%= tag.p redbark_item.name, class: "font-medium text-primary" %>
-            <% if redbark_item.scheduled_for_deletion? %>
-              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
-            <% end %>
-          </div>
-          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
-          <% if redbark_item.syncing? %>
-            <div class="text-secondary flex items-center gap-1">
-              <%= icon "loader", size: "sm", class: "animate-spin" %>
-              <%= tag.span t(".syncing") %>
-            </div>
-          <% elsif redbark_item.requires_update? %>
-            <div class="text-warning flex items-center gap-1">
-              <%= icon "alert-triangle", size: "sm", color: "warning" %>
-              <%= tag.span t(".requires_update") %>
-            </div>
+        <div class="flex items-center gap-2">
+          <% if redbark_item.requires_update? %>
+            <%= render DS::Link.new(
+              text: t(".update_credentials"),
+              icon: "refresh-cw",
+              variant: "secondary",
+              href: settings_providers_path,
+              frame: "_top"
+            ) %>
           <% else %>
-            <p class="text-secondary">
-              <% if redbark_item.last_synced_at %>
-                <% if redbark_item.sync_status_summary %>
-                  <%= t(".status_with_summary", timestamp: time_ago_in_words(redbark_item.last_synced_at), summary: redbark_item.sync_status_summary) %>
-                <% else %>
-                  <%= t(".status", timestamp: time_ago_in_words(redbark_item.last_synced_at)) %>
-                <% end %>
-              <% else %>
-                <%= t(".status_never") %>
-              <% end %>
-            </p>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_redbark_item_path(redbark_item),
+              disabled: redbark_item.syncing?
+            ) %>
+          <% end %>
+
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(".delete"),
+              icon: "trash-2",
+              href: redbark_item_path(redbark_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(redbark_item.name, high_severity: true)
+            ) %>
           <% end %>
         </div>
       </div>
-
-      <div class="flex items-center gap-2">
-        <% if redbark_item.requires_update? %>
-          <%= render DS::Link.new(
-            text: t(".update_credentials"),
-            icon: "refresh-cw",
-            variant: "secondary",
-            href: settings_providers_path,
-            frame: "_top"
-          ) %>
-        <% else %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_redbark_item_path(redbark_item),
-            disabled: redbark_item.syncing?
-          ) %>
-        <% end %>
-
-        <%= render DS::Menu.new do |menu| %>
-          <% menu.with_item(
-            variant: "button",
-            text: t(".delete"),
-            icon: "trash-2",
-            href: redbark_item_path(redbark_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(redbark_item.name, high_severity: true)
-          ) %>
-        <% end %>
-      </div>
-    </summary>
+    <% end %>
 
     <% unless redbark_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
@@ -129,5 +131,5 @@
         <% end %>
       </div>
     <% end %>
-  </details>
+  <% end %>
 <% end %>

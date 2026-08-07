@@ -45,7 +45,14 @@ module InsightsHelper
       facts["amount"] && [ facts["amount"], t("insights.figures.days_overdue", count: facts["days_overdue"].to_i) ]
     when "idle_cash"
       facts["balance"] && [ facts["balance"], t("insights.figures.idle_days", count: facts["idle_days"].to_i) ]
-    when "budget_at_risk", "budget_on_track"
+    when "budget_at_risk"
+      # Not budget_spent_pct: this card's headline is "N categories need
+      # attention", and total consumption ("14% of budget") reads as reassurance
+      # next to it — a focal figure arguing against its own card. The flagged
+      # count is what the card is actually about.
+      facts["count"] && [ facts["count"].to_s, t("insights.figures.need_attention") ]
+    when "budget_on_track"
+      # Still the right figure here, where overall usage *is* the subject.
       facts["budget_spent_pct"] && [ "#{facts["budget_spent_pct"]}%", t("insights.figures.of_budget") ]
     end
   end
@@ -141,18 +148,24 @@ module InsightsHelper
         return facts["account"] || facts["name"]
       end
 
-      if start_date == start_date.beginning_of_month && end_date == start_date.end_of_month
-        format = start_date.year == Date.current.year ? "%B" : "%B %Y"
-        return I18n.l(start_date, format: format)
-      end
-
       days = (end_date - start_date).to_i
-      if start_date >= Date.current - 1
+      if rolling_period_insight?(insight) && start_date >= Date.current - 1
+        t("insights.meta.next_n_days", count: days)
+      elsif rolling_period_insight?(insight) && end_date >= Date.current - 1
+        t("insights.meta.last_n_days", count: days)
+      elsif start_date == start_date.beginning_of_month && end_date == start_date.end_of_month
+        format = start_date.year == Date.current.year ? "%B" : "%B %Y"
+        I18n.l(start_date, format: format)
+      elsif start_date >= Date.current - 1
         t("insights.meta.next_n_days", count: days)
       elsif end_date >= Date.current - 1
         t("insights.meta.last_n_days", count: days)
       else
         t("insights.meta.date_range", from: I18n.l(start_date, format: :short), to: I18n.l(end_date, format: :short))
       end
+    end
+
+    def rolling_period_insight?(insight)
+      insight.insight_type.in?(%w[cash_flow_warning net_worth_milestone])
     end
 end

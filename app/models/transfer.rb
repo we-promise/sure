@@ -4,7 +4,7 @@ class Transfer < ApplicationRecord
 
   has_many :fee_transactions, class_name: "Transaction", dependent: :destroy
 
-  attr_accessor :source_fee_amount, :destination_fee_amount
+  attr_accessor :source_fee_amount, :destination_fee_amount, :tag_ids
 
   enum :status, { pending: "pending", confirmed: "confirmed" }
 

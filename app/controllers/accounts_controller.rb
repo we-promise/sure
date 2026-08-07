@@ -29,6 +29,7 @@ class AccountsController < ApplicationController
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
     @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
+    @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
 
@@ -57,8 +58,10 @@ class AccountsController < ApplicationController
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
+    @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
+
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -69,7 +72,36 @@ class AccountsController < ApplicationController
       limit: safe_per_page,
       params: request.query_parameters.except("tab").merge("tab" => "activity")
     )
+
+    # Preload transfer associations only for Transaction entries
+    txn_entryables = @entries.filter_map { |e| e.entryable if e.entryable_type == "Transaction" }
+    ActiveRecord::Associations::Preloader.new(
+      records: txn_entryables,
+      associations: {
+        transfer_as_outflow: { inflow_transaction: { entry: :account } },
+        transfer_as_inflow: { outflow_transaction: { entry: :account } }
+      }
+    ).call
+
     Transaction::ActivitySecurityPreloader.new(@entries).preload
+
+    # The preload and split-parent lookup below are intentionally scoped to the
+    # current page (@entries) — only this page is rendered, so a child entry
+    # whose split parent sits on another page deliberately won't resolve it.
+    transactions = @entries.filter_map { |e| e.entryable if e.transaction? }
+    if transactions.any?
+      ActiveRecord::Associations::Preloader.new(
+        records: transactions,
+        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant ]
+      ).call
+    end
+
+    entry_ids = @entries.map(&:id)
+    @split_parent_entry_ids = if entry_ids.any?
+      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+    else
+      Set.new
+    end
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end
@@ -276,6 +308,7 @@ class AccountsController < ApplicationController
         @indexa_capital_items,
         @sophtron_items,
         @binance_items,
+        @kraken_items,
         @questrade_items,
         @wise_items
       ].flatten.compact
