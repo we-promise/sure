@@ -19,6 +19,7 @@ class Category < ApplicationRecord
   validate :category_level_limit
 
   before_save :inherit_color_from_parent
+  after_update :sync_subcategory_colors, if: :saved_change_to_color?
 
   scope :alphabetically, -> { order(:name) }
   scope :recently_used, -> { where.not(last_used_at: nil).order(last_used_at: :desc) }
@@ -308,6 +309,13 @@ class Category < ApplicationRecord
 
   def inherit_color_from_parent
     self.color = parent.color if subcategory? && parent
+  end
+
+  # Subcategories inherit their parent's color on their own save, but changing
+  # a parent's color must also cascade to already-saved subcategories, or their
+  # stored color goes stale and mismatches the parent (#2816).
+  def sync_subcategory_colors
+    subcategories.where.not(color: color).update_all(color: color)
   end
 
   def replace_and_destroy!(replacement)
