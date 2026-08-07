@@ -21,7 +21,7 @@ de:
       unavailable: Die Synchronisierung von Marktdaten ist für Offline-Wertpapiere nicht verfügbar.
       provider_error: Die aktuellen Preise konnten nicht abgerufen werden. Bitte versuche es in ein paar Minuten erneut.
     errors:
-      security_collision: "Umbildung nicht möglich: Sie haben bereits eine Position für %{ticker} am %{date}."
+      security_collision: "Umbildung nicht möglich: Du hast bereits eine Position für %{ticker} am %{date}."
     cost_basis_sources:
       manual: Vom Benutzer gesetzt
       calculated: Aus Trades
@@ -95,7 +95,7 @@ de:
       never: Nie
       unknown: Unbekannt
       cost_basis_locked_label: Einstandspreis ist gesperrt
-      cost_basis_locked_description: Ihr manuell gesetzter Einstandspreis wird durch Syncs nicht geändert.
+      cost_basis_locked_description: Dein manuell gesetzter Einstandspreis wird durch Syncs nicht geändert.
       unlock_cost_basis: Freigeben
       unlock_confirm_title: Einstandspreis freigeben?
       unlock_confirm_body: Der Einstandspreis kann dann durch Provider-Syncs oder Trade-Berechnungen aktualisiert werden.
