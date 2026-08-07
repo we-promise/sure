@@ -223,7 +223,9 @@ class RecurringTransaction
           return transaction_entries.group_by do |entry|
             transaction = entry.entryable
             identifier = transaction.merchant_id.present? ? [ :merchant, transaction.merchant_id ] : [ :name, entry.name ]
-            [ identifier, entry.amount.round(2), entry.currency, entry.account_id ]
+            # Keep full decimal precision (entries.amount is scale 4) so exact
+            # matching does not collapse distinct four-decimal amounts.
+            [ identifier, entry.amount, entry.currency, entry.account_id ]
           end
         end
 

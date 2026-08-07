@@ -219,6 +219,36 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     end
   end
 
+  test "zero amount tolerance keeps distinct four-decimal amounts separate" do
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    # Same payee/currency/account, amounts that round(2) would collapse but
+    # differ at scale-4 precision — must remain separate exact matches.
+    { BigDecimal("15.9900") => [ 5, 6, 7 ], BigDecimal("15.9910") => [ 8, 9, 10 ] }.each do |amount, days|
+      days.each_with_index do |day, i|
+        transaction = Transaction.create!(
+          merchant: merchant,
+          category: categories(:food_and_drink)
+        )
+        account.entries.create!(
+          date: i.months.ago.beginning_of_month + (day - 1).days,
+          amount: amount,
+          currency: "USD",
+          name: "Netflix Subscription",
+          entryable: transaction
+        )
+      end
+    end
+
+    patterns_count = @identifier.identify_recurring_patterns
+
+    assert_equal 2, patterns_count
+    assert_equal 2, @family.recurring_transactions.count
+    assert_equal [ BigDecimal("15.9900"), BigDecimal("15.9910") ],
+                 @family.recurring_transactions.order(:amount).map(&:amount)
+  end
+
   test "groups nearby amounts when amount tolerance percent is configured" do
     @family.update!(recurring_detection_amount_tolerance_percent: 5)
     account = @family.accounts.first
