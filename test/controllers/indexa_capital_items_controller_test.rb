@@ -51,6 +51,20 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "select_accounts schedules refresh without fetching provider accounts synchronously" do
+    @item.syncs.destroy_all
+    Provider::IndexaCapital.expects(:new).never
+
+    assert_difference "@item.syncs.count", 1 do
+      assert_enqueued_with job: SyncJob do
+        get select_accounts_indexa_capital_items_url(accountable_type: "Investment")
+      end
+    end
+
+    assert_response :success
+    assert_includes response.body, indexa_capital_accounts(:mutual_fund).name
+  end
+
   test "complete_account_setup creates accounts for selected indexa_capital_accounts" do
     ica = indexa_capital_accounts(:mutual_fund)
 
