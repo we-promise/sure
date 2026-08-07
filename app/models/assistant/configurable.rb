@@ -14,7 +14,7 @@ module Assistant::Configurable
       else
         {
           instructions: default_instructions(preferred_currency, preferred_date_format),
-          functions: default_functions
+          functions: default_functions(chat.user)
         }
       end
     end
@@ -51,8 +51,8 @@ module Assistant::Configurable
         PROMPT
       end
 
-      def default_functions
-        Assistant.function_classes
+      def default_functions(user = nil)
+        Assistant.function_classes(user)
       end
 
       def default_instructions(preferred_currency, preferred_date_format)

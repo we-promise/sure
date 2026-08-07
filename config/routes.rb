@@ -207,7 +207,9 @@ Rails.application.routes.draw do
   get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
-  use_doorkeeper
+  use_doorkeeper do |mapping|
+    mapping.controllers authorizations: "oauth/authorizations"
+  end
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
     get :verify
@@ -377,6 +379,9 @@ Rails.application.routes.draw do
     get :picker, on: :collection
   end
 
+  # Hub page fronting budgets + goals under a single "Plan" nav entry.
+  resource :plan, only: :show
+
   resources :budgets, only: %i[index show edit update], param: :month_year do
     post :copy_previous, on: :member
     get :picker, on: :collection
@@ -414,6 +419,7 @@ Rails.application.routes.draw do
   resources :transfers, only: %i[new create destroy show update] do
     member do
       post :mark_as_recurring
+      patch :tags, action: :update_tags
     end
   end
 
@@ -503,8 +509,8 @@ Rails.application.routes.draw do
     end
 
     member do
-      patch :dismiss
-      patch :undismiss
+      patch :acknowledge
+      patch :unacknowledge
     end
   end
 

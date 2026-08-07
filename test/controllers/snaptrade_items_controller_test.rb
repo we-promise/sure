@@ -156,6 +156,49 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     Rails.configuration.x.snaptrade.oauth_client_secret = nil
   end
 
+  test "oauth_callback clears a reconnect warning after successful authorization" do
+    Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
+    Rails.configuration.x.snaptrade.oauth_client_secret = "client-secret"
+    @snaptrade_item.update!(status: :requires_update)
+
+    get oauth_authorize_snaptrade_items_url(item_id: @snaptrade_item.id)
+    oauth_session = session[:snaptrade_oauth]
+    Provider::Snaptrade.expects(:exchange_code).returns({ "access_token" => "at", "refresh_token" => "rt" })
+
+    get oauth_callback_snaptrade_items_url(code: "c0de", state: oauth_session["state"])
+
+    assert @snaptrade_item.reload.good?
+  ensure
+    Rails.configuration.x.snaptrade.oauth_client_id = nil
+    Rails.configuration.x.snaptrade.oauth_client_secret = nil
+  end
+
+  test "oauth_callback queues a sync even while activities are fetching" do
+    Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
+    Rails.configuration.x.snaptrade.oauth_client_secret = "client-secret"
+    get oauth_authorize_snaptrade_items_url(item_id: @snaptrade_item.id)
+    oauth_session = session[:snaptrade_oauth]
+    Provider::Snaptrade.expects(:exchange_code).returns({ "access_token" => "at", "refresh_token" => "rt" })
+    active_sync = @snaptrade_item.syncs.create!
+    active_sync.start!
+
+    assert_enqueued_with job: SnaptradeFollowUpSyncJob do
+      get oauth_callback_snaptrade_items_url(code: "c0de", state: oauth_session["state"])
+    end
+  ensure
+    Rails.configuration.x.snaptrade.oauth_client_id = nil
+    Rails.configuration.x.snaptrade.oauth_client_secret = nil
+  end
+
+  test "Reconnect starts OAuth authorization instead of adding a brokerage" do
+    @snaptrade_item.update!(status: :requires_update)
+
+    get accounts_url
+
+    assert_select "a[href='#{oauth_authorize_snaptrade_items_path(item_id: @snaptrade_item.id)}'][data-turbo-frame='_top']", text: /Reconnect/
+    assert_select "a[href='#{connect_snaptrade_item_path(@snaptrade_item)}']", text: /Reconnect/, count: 0
+  end
+
   test "select_accounts redirects unregistered users into connect flow" do
     sign_out
     sign_in @user = users(:empty)
@@ -242,6 +285,29 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     refute_match(/option.*#{accounts(:investment).name}/, response.body)
     # Crypto still unlinked → should appear
     assert_match accounts(:crypto).name, response.body
+  end
+
+  test "setup_accounts preselects types from SnapTrade account categories" do
+    account = snaptrade_accounts(:fidelity_401k)
+    account.update!(raw_payload: { "account_category" => "DEPOSIT" })
+
+    get setup_accounts_snaptrade_item_url(@snaptrade_item)
+
+    assert_select "input[name='account_types[#{account.id}]'][value='Depository']"
+  end
+
+  test "complete_account_setup uses the selected account type" do
+    account = snaptrade_accounts(:fidelity_401k)
+    @snaptrade_item.stubs(:sync_later)
+
+    assert_difference "Account.where(accountable_type: 'Depository').count", 1 do
+      post complete_account_setup_snaptrade_item_url(@snaptrade_item), params: {
+        account_ids: [ account.id ],
+        account_types: { account.id => "Depository" }
+      }
+    end
+
+    assert_equal "Depository", account.reload.current_account.accountable_type
   end
 
   test "select_existing_account prefers registered active item over pending one" do
