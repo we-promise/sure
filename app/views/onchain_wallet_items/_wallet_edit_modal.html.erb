@@ -1,0 +1,60 @@
+<%# locals: (onchain_wallet_item:, chain:, old_address:, new_address:, wallet_accounts:, error_message: nil) %>
+
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(
+         title: t(".title"),
+         subtitle: t(".subtitle")
+       ) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <% if error_message.present? %>
+          <%= render DS::Alert.new(message: error_message, variant: :error) %>
+        <% end %>
+
+        <div class="rounded-lg border border-primary bg-container-inset p-3 space-y-1">
+          <p class="text-sm font-medium text-primary"><%= chain.titleize %></p>
+          <p class="text-xs text-secondary break-all"><%= old_address %></p>
+          <% if wallet_accounts.any? %>
+            <p class="text-xs text-secondary">
+              <%= t(".currently_tracking", assets: wallet_accounts.map(&:symbol).uniq.join(", ")) %>
+            </p>
+          <% end %>
+        </div>
+
+        <% if OnchainWalletAccount.evm_chain?(chain) %>
+          <%= render DS::Alert.new(variant: :info, message: t(".evm_note")) %>
+        <% end %>
+
+        <%= form_with url: update_wallet_onchain_wallet_item_path(onchain_wallet_item),
+                      method: :patch,
+                      data: { turbo: true },
+                      class: "space-y-4" do |form| %>
+          <%= form.hidden_field :source, value: "account_modal" %>
+          <%= form.hidden_field :chain, value: chain %>
+          <%= form.hidden_field :old_wallet_address, value: old_address %>
+
+          <div>
+            <%= form.label :wallet_address, t(".new_address_label"), class: "block text-sm font-medium text-secondary mb-1" %>
+            <%= form.text_field :wallet_address,
+                                value: new_address,
+                                placeholder: t(".new_address_placeholder"),
+                                class: "w-full rounded-lg border border-primary bg-container px-3 py-2 text-sm text-primary" %>
+            <p class="text-xs text-secondary mt-1"><%= t(".new_address_hint") %></p>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <%= render DS::Button.new(
+                  text: t(".cancel"),
+                  variant: :secondary,
+                  type: "button",
+                  data: { action: "DS--dialog#close" }
+                ) %>
+            <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
