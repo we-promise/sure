@@ -2,6 +2,7 @@ require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
+  include EntriesTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -114,6 +115,28 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{frame_id}", count: 1
     assert_select "select[name='statement_year']"
     assert_select "turbo-frame##{dom_id(@account, :container)}", count: 0
+  end
+
+  test "holdings tab lazy frame returns matching frame content" do
+    account = accounts(:investment)
+    frame_id = dom_id(account, "holdings_tab")
+
+    get account_url(account, tab: "holdings"), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id}", count: 1
+    assert_select "turbo-frame##{dom_id(account, :container)}", count: 0
+  end
+
+  test "overview tab lazy frame returns matching frame content" do
+    account = accounts(:property)
+    frame_id = dom_id(account, "overview_tab")
+
+    get account_url(account, tab: "overview"), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id}", count: 1
+    assert_select "turbo-frame##{dom_id(account, :container)}", count: 0
   end
 
   test "statements tab filters historical coverage by year" do
@@ -465,6 +488,57 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     holding.reload
 
     assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
+  end
+
+  test "show preloads transfer counterparties and split parents to avoid activity N+1" do
+    family = @user.family
+    to_account = family.accounts.create!(
+      name: "Transfer Counterparty",
+      currency: family.currency,
+      balance: 0,
+      accountable: Depository.new
+    )
+
+    6.times do |i|
+      create_transfer(
+        from_account: @account,
+        to_account: to_account,
+        amount: 25 + i,
+        date: Date.current - i.days
+      )
+    end
+
+    parent = create_transaction(account: @account, amount: 100, date: Date.current)
+    parent.split!([
+      { name: "Part A", amount: 40, category_id: Category.first.id },
+      { name: "Part B", amount: 60, category_id: Category.first.id }
+    ])
+
+    queries = capture_sql_queries do
+      get account_url(@account, per_page: 50)
+    end
+
+    assert_response :success
+
+    normalized = queries.map { |sql| sql.to_s.squish.gsub(/[`"]/, "").downcase }
+
+    # Per-row Transfer#to_account walks (lazy equality lookups only)
+    assert_empty normalized.grep(/from\s+transactions\s+where\s+transactions\.id\s*=/),
+                 "Expected transfer counterparty transactions to be preloaded"
+    assert_empty normalized.grep(/from\s+entries\s+where\s+entries\.entryable_id\s*=/),
+                 "Expected transfer counterparty entries to be preloaded"
+    assert_empty normalized.grep(/from\s+accounts\s+where\s+accounts\.id\s*=/),
+                 "Expected transfer counterparty accounts to be preloaded"
+
+    # Entry#split_parent? uses child_entries.exists? unless @split_parent_entry_ids is set
+    assert_empty normalized.grep(/from\s+entries\s+where\s+entries\.parent_entry_id\s*=/),
+                 "Expected split-parent existence checks to be batched"
+
+    # Flat transfer associations should be batch-loaded, not per-row
+    assert_empty normalized.grep(/from\s+transfers\s+where\s+transfers\.inflow_transaction_id\s*=/),
+                 "Expected transfer_as_inflow to be preloaded"
+    assert_empty normalized.grep(/from\s+transfers\s+where\s+transfers\.outflow_transaction_id\s*=/),
+                 "Expected transfer_as_outflow to be preloaded"
   end
 
   # Regression for #2516: the account sidebar fragment cache renders DS::* view

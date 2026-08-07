@@ -77,8 +77,13 @@ class UI::AccountPage < ApplicationComponent
     when :activity
       activity_feed
     when :holdings, :overview
-      # Accountable is responsible for implementing the partial in the correct folder
-      render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
+      return render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account if tab == active_tab
+
+      turbo_frame_tag(
+        helpers.account_tab_panel_frame_id(account: account, tab: tab),
+        src: helpers.account_path(account, tab: tab),
+        loading: :lazy
+      )
     when :statements
       render_statement_tab
     end
