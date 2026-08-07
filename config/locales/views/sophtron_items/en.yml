@@ -287,6 +287,17 @@ en:
       accounts_need_setup: "%{count} account(s) need setup"
       processing_transactions: "Processing transactions for linked accounts..."
       calculating_balances: "Calculating balances for linked accounts..."
+      accounts_failed:
+        one: "%{count} account failed to import"
+        other: "%{count} accounts failed to import"
+      transactions_failed:
+        one: "%{count} transaction failed to import"
+        other: "%{count} transactions failed to import"
+      import_failed: "Sophtron import failed"
+    errors:
+      refresh_failed: "Sophtron refresh failed"
+      refresh_timeout: "Sophtron refresh did not finish before the polling timeout"
+      refresh_requires_mfa: "Sophtron refresh requires MFA"
     sophtron_entry:
       processor:
         unknown_transaction: "Unknown transaction"
