@@ -86,7 +86,7 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
       SimplefinHoldingsApplyJob.perform_now(@sfa.id)
     end
 
-    holding = @account.holdings.find_by(external_id: "simplefin_h_vanguard")
+    holding = @account.holdings.find_by(external_id: "simplefin_HOL-VFIAX-USD")
     refute_nil holding
 
     # Price should be derived from market_value / shares, NOT from value / shares
@@ -118,7 +118,7 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
       SimplefinHoldingsApplyJob.perform_now(@sfa.id)
     end
 
-    holding = @account.holdings.find_by(external_id: "simplefin_h_fallback")
+    holding = @account.holdings.find_by(external_id: "simplefin_HOL-FXAIX-USD")
     refute_nil holding
 
     # Price derived from market_value
@@ -126,5 +126,41 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
 
     # cost_basis should fall back to "value" field and normalize total basis to per-share basis
     assert_in_delta 450.0, holding.cost_basis.to_f, 0.01
+  end
+
+  test "aggregates multiple lots for the same symbol into a single holding" do
+    @account.holdings.delete_all
+
+    @sfa.update!(
+      raw_holdings_payload: [
+        {
+          "id" => "lot-a",
+          "symbol" => "AAPL",
+          "shares" => 3,
+          "market_value" => 600,
+          "cost_basis" => 900,
+          "currency" => "USD"
+        },
+        {
+          "id" => "lot-b",
+          "symbol" => "AAPL",
+          "shares" => 7,
+          "market_value" => 1400,
+          "cost_basis" => 1000,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    assert_difference "Holding.where(account: @account).count", 1 do
+      SimplefinHoldingsApplyJob.perform_now(@sfa.id)
+    end
+
+    holding = @account.holdings.find_by(external_id: "simplefin_HOL-AAPL-USD")
+    refute_nil holding
+    assert_equal 10, holding.qty
+    assert_in_delta 2000.0, holding.amount.to_f, 0.01
+    # Weighted average per-share cost_basis: (3×900 + 7×1000) / 10 = 97
+    assert_in_delta 970.0, holding.cost_basis.to_f, 0.01
   end
 end
