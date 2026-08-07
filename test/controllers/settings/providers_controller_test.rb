@@ -110,7 +110,6 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     )
     sign_in users(:empty)
 
-    Provider::Pluggy.stubs(:latest_item_id).returns(nil)
     Provider::Pluggy.expects(:connect_token).with(
       client_id: "client-id", client_secret: "client-secret",
       client_user_id: "pluggy_#{family.id}",

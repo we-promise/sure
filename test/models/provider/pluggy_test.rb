@@ -146,30 +146,6 @@ class Provider::PluggyTest < ActiveSupport::TestCase
     assert_equal "ACTIVE", item[:status]
   end
 
-  test "list_items loops through /items pages" do
-    page1 = { "page" => 1, "totalPages" => 2, "results" => [ { "id" => "it-1" } ] }.with_indifferent_access
-    page2 = { "page" => 2, "totalPages" => 2, "results" => [ { "id" => "it-2" } ] }.with_indifferent_access
-
-    Provider::Pluggy.stubs(:send_with_auth)
-                   .with(:get, "/items", client_id: "c", client_secret: "s", query: { page: 1, pageSize: 500, clientUserId: "u1" })
-                   .returns(page1)
-    Provider::Pluggy.stubs(:send_with_auth)
-                   .with(:get, "/items", client_id: "c", client_secret: "s", query: { page: 2, pageSize: 500, clientUserId: "u1" })
-                   .returns(page2)
-
-    items = Provider::Pluggy.list_items(client_id: "c", client_secret: "s", client_user_id: "u1")
-    assert_equal %w[it-1 it-2], items.map { |item| item[:id] }
-  end
-
-  test "latest_item_id picks the newest item by updatedAt" do
-    Provider::Pluggy.stubs(:list_items).returns([
-      { id: "old", updatedAt: "2024-01-01T00:00:00Z" },
-      { id: "new", updatedAt: "2026-01-01T00:00:00Z" }
-    ].map(&:with_indifferent_access))
-
-    assert_equal "new", Provider::Pluggy.latest_item_id(client_id: "c", client_secret: "s", client_user_id: "u1")
-  end
-
   test "delete_item returns true" do
     Provider::Pluggy.stubs(:send_with_auth).with(:delete, "/items/abc", client_id: "c", client_secret: "s").returns({}.with_indifferent_access)
     assert Provider::Pluggy.delete_item(item_id: "abc", client_id: "c", client_secret: "s")

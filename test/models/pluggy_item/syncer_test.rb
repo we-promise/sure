@@ -126,12 +126,19 @@ class PluggyItem::SyncerTest < ActiveSupport::TestCase
     assert_equal 1, @pluggy_item.linked_accounts_count
   end
 
-  # Discovery moved off the request path (PluggyItemsController#create) into the
-  # sync job: when an item is created with credentials but no upstream id, the
-  # Syncer's first act in perform_sync is hydrate_item_id! so the /items lookup
-  # runs here, not on the request thread. Mirrors the no-id leg of create — the
-  # item arrives blank, the sync discovers the id, import proceeds with it set.
-  test "discovers a blank pluggy_item_id from the provider API at the start of the sync" do
+  # Regression for Codex P2 / #2861: Pluggy's docs state listing existing
+  # connections "is not provided" (security policy —
+  # https://docs.pluggy.ai/docs/item), so the Syncer MUST NOT discover a blank
+  # pluggy_item_id from the provider API. The upstream id has to be persisted
+  # from the widget / webhook / dashboard. With discovery removed (hydrate is
+  # now a no-op), a blank id flows straight into import_latest_pluggy_data,
+  # whose first call (Importer#get_item at importer.rb:18) needs that id to
+  # build /items/:id and raises; the syncer's generic rescue surfaces it as
+  # sync_error instead of silently minting "good". The
+  # expects(:latest_item_id).never guard is the real lock — it fails if anyone
+  # re-adds an eager hydrate that calls the listing endpoint (mirrors the #4
+  # lock on create in pluggy_items_controller_test.rb).
+  test "does not discover a blank pluggy_item_id from the provider API; a blank id surfaces a sync_error instead" do
     fresh = PluggyItem.create!(
       family: families(:dylan_family),
       name: "No-id Pluggy",
@@ -139,14 +146,26 @@ class PluggyItem::SyncerTest < ActiveSupport::TestCase
       client_secret: "test_secret",
       status: :requires_update
     )
-    PluggyItem.any_instance.stubs(:import_latest_pluggy_data)
-    Provider::Pluggy.stubs(:latest_item_id).returns("discovered-item")
+
+    # Discovery is gone — the listing endpoint must never be called.
+    Provider::Pluggy.expects(:latest_item_id).never
+    # A blank pluggy_item_id makes the importer's first get_item call fail
+    # (needs the id to build /items/:id); stub the raise rather than hitting
+    # the network, then let the syncer's generic rescue surface it.
+    PluggyItem.any_instance.stubs(:import_latest_pluggy_data).raises(StandardError, "boom")
 
     sync = fresh.syncs.create!
     sync.perform
 
     fresh.reload
-    assert_equal "discovered-item", fresh.pluggy_item_id
-    assert_equal "good", fresh.status
+    sync.reload
+
+    # The id stays blank — no fabricated discovery.
+    assert_nil fresh.pluggy_item_id
+    # The sync failed as a sync_error (not silently "good").
+    assert_predicate sync, :failed?
+    assert_equal "sync_error", sync.sync_stats.dig("errors", 0, "category")
+    # And the item was NOT marked good.
+    assert_not_equal "good", fresh.status
   end
 end

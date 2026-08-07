@@ -102,15 +102,11 @@ class PluggyItemsController < ApplicationController
     # silently break `credentials_configured?`.
     attrs.delete(:client_secret) if attrs[:client_secret].blank?
 
-    # Credential-first path: if we still don't have an item id, try to discover
-    # an existing Pluggy item for this family before persisting the update.
-    if @pluggy_item.pluggy_item_id.blank?
-      hydrated_item = @pluggy_item.dup
-      hydrated_item.assign_attributes(attrs)
-      PluggyItem.hydrate_item_id!(hydrated_item)
-      attrs[:pluggy_item_id] = hydrated_item.pluggy_item_id if hydrated_item.pluggy_item_id.present?
-    end
-
+    # Pluggy does not expose item listing (https://docs.pluggy.ai/docs/item), so
+    # an existing upstream item id cannot be auto-discovered here — it must have
+    # been persisted from the widget / webhook / dashboard flow. A credential
+    # edit never touches `pluggy_item_id`; the existing value is preserved by
+    # the `update` below.
     if @pluggy_item.update(attrs)
       # `update` is only reached from the "Update Configuration" credential form on
       # the providers panel. Don't force the Pluggy Connect drawer open on every
@@ -203,8 +199,6 @@ class PluggyItemsController < ApplicationController
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
-
-    PluggyItem.hydrate_item_id!(pluggy_item)
 
     unless pluggy_item.pluggy_item_id.present?
       redirect_to settings_providers_path,
@@ -397,17 +391,16 @@ class PluggyItemsController < ApplicationController
       item = PluggyItem.preferred_for_connect(family)
       return [ nil, nil ] unless item&.credentials_configured?
 
-      # Hydrate the upstream item id before minting so the connect token binds
-      # to the existing Pluggy item (UPDATE mode) instead of creating a new one.
-      # Without this, a row with a blank `pluggy_item_id` mints a CREATE-mode
-      # token; combined with the hardcoded `avoidDuplicates: true` below, Pluggy
-      # rejects it with ITEM_USER_ALREADY_EXISTS whenever an item already exists
-      # for the family's `clientUserId`. Mirrors the connect_form path in
-      # Settings::ProvidersController (which also hydrates via PluggyItem.hydrate_item_id!).
-      # When creds are invalid the hydrate rescue returns the item unchanged and
-      # connect_token raises into the outer rescue — same end state as before.
-      item = PluggyItem.hydrate_item_id!(item)
-
+      # The connect token's UPDATE-vs-CREATE mode is driven by
+      # `item.pluggy_item_id.presence` passed as `item_id:` below (nil → CREATE,
+      # set → UPDATE/re-auth). Pluggy does NOT expose item listing
+      # (https://docs.pluggy.ai/docs/item), so the upstream id must have been
+      # persisted from the widget / webhook / dashboard flow — there is no
+      # discovery call to make here. The SDK derives `avoidDuplicates` from
+      # `item_id` presence (nil → CREATE/false, set → UPDATE/true), so a family
+      # that already has an upstream item reaches the re-auth path only when the
+      # id was persisted. Mirrors the connect_form path in
+      # Settings::ProvidersController.
       token = item.pluggy_provider.connect_token( # pipelock:ignore Credential in URL
         client_user_id: item.client_user_id,
         webhook_url: item.webhook_url,

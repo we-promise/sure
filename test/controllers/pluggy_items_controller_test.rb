@@ -17,7 +17,6 @@ class PluggyItemsControllerTest < ActionDispatch::IntegrationTest
     ensure_tailwind_build
     sign_in users(:family_admin)
     Provider::Factory.ensure_adapters_loaded
-    Provider::Pluggy.stubs(:latest_item_id).returns(nil)
   end
 
   test "credential flow creates a PluggyItem and redirects to providers Connect drawer when no item id can be discovered" do
@@ -42,16 +41,19 @@ class PluggyItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil item.pluggy_item_id
   end
 
-  # #4: the /items lookup moved off the create request into the sync job
-  # (PluggyItem::Syncer#perform_sync hydrates the id when the sync runs). A
-  # credential-only POST (no pluggy_item_id) takes the auto-connect branch
+  # #4: Pluggy explicitly refuses listing existing connections ("not provided
+  # for security reasons" per https://docs.pluggy.ai/docs/item), so a
+  # PluggyItem's pluggy_item_id can NEVER be auto-discovered from the
+  # credentials alone — it must be persisted from the widget/webhook/dashboard.
+  # A credential-only POST (no pluggy_item_id) takes the auto-connect branch
   # (should_auto_connect?), redirects to the Connect drawer, and leaves
-  # pluggy_item_id blank for the Syncer to discover later — even when Pluggy
-  # WOULD return an id if asked. The `expects(:latest_item_id).never` guard is
-  # the real #4 lock: it fails if anyone re-adds an eager hydrate on `create`,
-  # which the nil-stub in `setup` alone would NOT catch (a regressed eager
-  # hydrate with a nil stub is a silent no-op, so `assert_no_enqueued_jobs`
-  # would still pass).
+  # pluggy_item_id blank; the Syncer's `hydrate_item_id!` is now an intentional
+  # no-op (see PluggyItem#hydrate_item_id!), so the row stays unhydrated until
+  # the user completes the widget. The `expects(:latest_item_id).never` guard is
+  # the #4 lock: it fails if anyone re-adds an eager /items discovery on
+  # `create`. (The deleted `Provider::Pluggy.latest_item_id` wrapped the
+  # refused endpoint — mocha tolerates `.never` against the now-missing method,
+  # raising only if a regressed call actually happens.)
   test "credential flow does not eagerly call the Pluggy API on create even when an item id is discoverable" do
     Provider::Pluggy.expects(:latest_item_id).never
 

@@ -149,47 +149,13 @@ class Provider::Pluggy
       token
     end
 
+    # Pluggy's docs state listing existing connections "is not provided" due to
+    # security reasons — callers MUST track their own itemId (widget / webhook /
+    # dashboard) and retrieve by known id only. Do NOT re-add a list_items /
+    # latest_item_id helper here; it wraps an endpoint Pluggy refuses. See
+    # https://docs.pluggy.ai/docs/item and PluggyItem.hydrate_item_id!.
     def get_item(item_id:, client_id:, client_secret:)
       send_with_auth(:get, "/items/#{item_id}", client_id:, client_secret:)
-    end
-
-    def list_items(client_id:, client_secret:, client_user_id: nil)
-      results = []
-      page = 1
-      total_pages = 1
-
-      while page <= total_pages
-        query = { page: page, pageSize: PAGE_SIZE }
-        query[:clientUserId] = client_user_id if client_user_id.present?
-
-        data = send_with_auth(:get, "/items", client_id:, client_secret:, query:)
-        total_pages = (data[:totalPages] || data["totalPages"] || 1).to_i
-        results += (data[:results] || data["results"] || [])
-        page += 1
-      end
-
-      results
-    end
-
-    def latest_item_id(client_id:, client_secret:, client_user_id: nil)
-      # Only ever query items scoped to this family's clientUserId. list_items
-      # already drops the clientUserId filter when client_user_id is blank, so
-      # legacy/demo items (no client_user_id) are still discovered. We must NOT
-      # fall back to an unscoped query when client_user_id IS present: that could
-      # match another family's Pluggy item (same client_id, different
-      # clientUserId) and cross-link families via the auto-hydrated
-      # pluggy_item_id (see PluggyItem.hydrate_item_id!).
-      items = list_items(client_id:, client_secret:, client_user_id:)
-      return nil if items.blank?
-
-      latest = items.max_by do |item|
-        ts = item[:updatedAt] || item["updatedAt"] || item[:createdAt] || item["createdAt"]
-        Time.zone.parse(ts.to_s)&.to_i || 0
-      rescue StandardError
-        0
-      end
-
-      latest&.dig(:id) || latest&.dig("id")
     end
 
     def update_item(item_id:, client_user_id:, credentials:, client_id:, client_secret:)

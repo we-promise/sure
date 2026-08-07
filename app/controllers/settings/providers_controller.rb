@@ -127,11 +127,14 @@ class Settings::ProvidersController < ApplicationController
       # prepare_show_context).
       if provider_key == "pluggy"
         @connect_item = PluggyItem.preferred_for_connect(Current.family)
-        # Hydrate before minting so the token binds UPDATE mode when Pluggy still
-        # holds an item for this `client_user_id` but the local `pluggy_item_id`
-        # is blank — otherwise the CREATE-mode token makes the widget POST /items
-        # and Pluggy rejects the duplicate as ITEM_USER_ALREADY_EXISTS.
-        @connect_item = PluggyItem.hydrate_item_id!(@connect_item)
+        # The connect token's UPDATE-vs-CREATE mode is driven by
+        # `@connect_item.pluggy_item_id.presence` passed as `item_id:` below (nil
+        # → CREATE, set → UPDATE/re-auth). Pluggy does NOT expose item listing
+        # (https://docs.pluggy.ai/docs/item), so the upstream id must have been
+        # persisted from the widget / webhook / dashboard flow — there is no
+        # discovery call to make here. The SDK derives `avoid_duplicates` from
+        # `item_id` presence, so the re-auth path is reached only when the id was
+        # already persisted.
         if @connect_item&.credentials_configured?
           # `avoid_duplicates:` is intentionally OMITTED: the SDK derives the flag
           # from `item_id` presence (nil -> CREATE: false, present -> UPDATE:
@@ -185,13 +188,6 @@ class Settings::ProvidersController < ApplicationController
 
       redirect_to root_path, alert: t("settings.providers.not_authorized")
     end
-
-    # Hydration of the upstream Pluggy item id is centralized on the model —
-    # see `PluggyItem.hydrate_item_id!` (app/models/pluggy_item.rb). Both this
-    # controller's mint paths (show + connect_form) and PluggyItemsController
-    # delegate to it, so the connect token binds UPDATE mode whenever Pluggy
-    # still holds an item for the family's `client_user_id` (prevents the
-    # ITEM_USER_ALREADY_EXISTS duplicate-create rejection).
 
     # Reload provider configurations after settings update
     def reload_provider_configs(updated_fields)

@@ -44,38 +44,17 @@ class PluggyItem < ApplicationRecord
       family.pluggy_items.where.not(client_id: [ nil, "" ]).ordered.first
   end
 
-  # Hydrate the upstream Pluggy item id by asking the Pluggy API for the
-  # latest item this family's credentials have already connected. Single
-  # source of truth shared by PluggyItemsController and
-  # Settings::ProvidersController (previously two near-identical copies
-  # that had drifted). Rescues Provider::Pluggy::Error and unexpected
-  # errors so a request-thread caller never crashes the render; returns
-  # the item unchanged on failure or when no upstream item is found.
+  # Intentionally a no-op. Pluggy does NOT expose listing existing connections
+  # — its docs state it "is not provided" for security reasons and that callers
+  # must track their own itemId (https://docs.pluggy.ai/docs/item). The upstream
+  # id must be persisted from the widget / webhook / dashboard flow, not
+  # discovered after the fact. Kept as a stable, harmless hook so the single
+  # remaining caller — `PluggyItem::Syncer#perform_sync` (sync job, not request
+  # thread) — doesn't need to guard; returns the item unchanged so an
+  # uncredentialed or unhydrated row surfaces a real `sync_error` in the import
+  # phase (`get_item` with a blank id raises Provider::Pluggy::Error) rather than
+  # failing the job here. See Provider::Pluggy.
   def self.hydrate_item_id!(item)
-    return item if item.blank? || item.pluggy_item_id.present?
-    return item unless item.credentials_configured?
-
-    # Resolve from the top-level Provider namespace: this class is defined as
-    # `class PluggyItem` (nested form), so a bare `Provider` would resolve to
-    # the inner `PluggyItem::Provider` (a real class) and shadow the top-level
-    # `Provider::Pluggy`, raising NameError. The sibling PluggyItem::* files
-    # are defined via the `::` form (`class PluggyItem::Importer`), so bare
-    # `Provider` falls through to top-level there — but not here.
-    discovered_id = ::Provider::Pluggy.latest_item_id(
-      client_id: item.client_id,
-      client_secret: item.client_secret,
-      client_user_id: item.client_user_id
-    )
-    return item if discovered_id.blank?
-
-    item.pluggy_item_id = discovered_id
-    item.save!(validate: false) if item.persisted? && item.changed?
-    item
-  rescue ::Provider::Pluggy::Error => e
-    Rails.logger.warn("Pluggy item auto-discovery failed for family #{Current.family&.id}: #{e.class} - #{e.message}")
-    item
-  rescue StandardError => e
-    Rails.logger.warn("Unexpected Pluggy item auto-discovery error for family #{Current.family&.id}: #{e.class} - #{e.message}")
     item
   end
 
