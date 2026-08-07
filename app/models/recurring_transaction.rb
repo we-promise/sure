@@ -195,19 +195,45 @@ class RecurringTransaction < ApplicationRecord
     )
   end
 
+  # Scope entries whose day-of-month is within ±tolerance of expected_day on a
+  # 31-day circle (same semantics as Identifier#circular_distance). When the
+  # window wraps past 1 or 31, use two BETWEEN ranges instead of clamping.
+  def self.apply_day_of_month_tolerance(relation, expected_day:, day_tolerance:)
+    low = expected_day - day_tolerance
+    high = expected_day + day_tolerance
+
+    if low >= 1 && high <= 31
+      relation.where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?", low, high)
+    elsif low < 1 && high > 31
+      relation # tolerance covers the entire month
+    elsif low < 1
+      # e.g. expected 1, tol 2 → days 30–31 and 1–3
+      relation.where(
+        "(EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?) OR (EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?)",
+        31 + low, 31, 1, high
+      )
+    else
+      # e.g. expected 31, tol 2 → days 29–31 and 1–2
+      relation.where(
+        "(EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?) OR (EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?)",
+        low, 31, 1, high - 31
+      )
+    end
+  end
+
   # Find matching transaction entries for variance calculation
   def self.find_matching_transaction_entries(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil, date_variance: nil)
     lookback_date = lookback_months.months.ago.to_date
     day_tolerance = date_variance || family.recurring_detection_day_tolerance
 
-    entries = (account.present? ? account.entries : family.entries)
-      .where(entryable_type: "Transaction")
-      .where(currency: currency)
-      .where("entries.date >= ?", lookback_date)
-      .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-             [ expected_day - day_tolerance, 1 ].max,
-             [ expected_day + day_tolerance, 31 ].min)
-      .order(date: :desc)
+    entries = apply_day_of_month_tolerance(
+      (account.present? ? account.entries : family.entries)
+        .where(entryable_type: "Transaction")
+        .where(currency: currency)
+        .where("entries.date >= ?", lookback_date),
+      expected_day: expected_day,
+      day_tolerance: day_tolerance
+    ).order(date: :desc)
 
     # Filter by merchant or name
     if merchant_id.present?
@@ -426,12 +452,14 @@ class RecurringTransaction < ApplicationRecord
       end
     end
 
-    # Entries whose day-of-month lands within the family's configured day tolerance.
+    # Entries whose day-of-month lands within the family's configured day tolerance
+    # (circular wrap at month boundaries — see apply_day_of_month_tolerance).
     def day_of_month_scope(relation)
-      day_tolerance = family.recurring_detection_day_tolerance
-      relation.where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-                     [ expected_day_of_month - day_tolerance, 1 ].max,
-                     [ expected_day_of_month + day_tolerance, 31 ].min)
+      self.class.apply_day_of_month_tolerance(
+        relation,
+        expected_day: expected_day_of_month,
+        day_tolerance: family.recurring_detection_day_tolerance
+      )
     end
 
     def monetizable_currency
