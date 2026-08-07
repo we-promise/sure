@@ -203,12 +203,24 @@ class RecurringTransaction < ApplicationRecord
     expected_day = Integer(expected_day)
     day_tolerance = Integer(day_tolerance)
 
-    month_end_day = "EXTRACT(DAY FROM (DATE_TRUNC('month', entries.date) + INTERVAL '1 month' - INTERVAL '1 day'))::integer"
-    entry_day = "EXTRACT(DAY FROM entries.date)::integer"
-    clamped_expected = "LEAST(#{expected_day}, #{month_end_day})"
-    circular_distance = "LEAST(ABS(#{entry_day} - (#{clamped_expected})), 31 - ABS(#{entry_day} - (#{clamped_expected})))"
-
-    relation.where("#{circular_distance} <= ?", day_tolerance)
+    # expected_day is bound twice (once per LEAST) — never interpolated into SQL.
+    relation.where(
+      <<~SQL.squish,
+        LEAST(
+          ABS(
+            EXTRACT(DAY FROM entries.date)::integer
+            - LEAST(?, EXTRACT(DAY FROM (DATE_TRUNC('month', entries.date) + INTERVAL '1 month' - INTERVAL '1 day'))::integer)
+          ),
+          31 - ABS(
+            EXTRACT(DAY FROM entries.date)::integer
+            - LEAST(?, EXTRACT(DAY FROM (DATE_TRUNC('month', entries.date) + INTERVAL '1 month' - INTERVAL '1 day'))::integer)
+          )
+        ) <= ?
+      SQL
+      expected_day,
+      expected_day,
+      day_tolerance
+    )
   end
 
   # Find matching transaction entries for variance calculation
