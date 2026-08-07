@@ -37,6 +37,38 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
     }
   end
 
+  test "account sync start date widens a re-fetch even when raw transactions are stored" do
+    selected_date = 18.months.ago.to_date
+    @enable_banking_account.update!(
+      sync_start_date: selected_date,
+      raw_transactions_payload: [ id_less_tx(date: 1.month.ago.to_date.to_s) ]
+    )
+    @enable_banking_item.stubs(:last_synced_at).returns(Time.current)
+
+    assert_equal selected_date, @importer.send(:determine_sync_start_date, @enable_banking_account)
+  end
+
+  test "historical re-fetch appends without shrinking already stored history" do
+    old_transaction = id_less_tx(amount: "25.00", creditor: "Old merchant", date: 20.months.ago.to_date.to_s)
+    new_transaction = id_less_tx(amount: "50.00", creditor: "New merchant", date: 1.month.ago.to_date.to_s)
+    selected_date = 18.months.ago.to_date
+    @enable_banking_account.update!(
+      sync_start_date: selected_date,
+      raw_transactions_payload: [ old_transaction ]
+    )
+    @importer.stubs(:fetch_paginated_transactions)
+      .with(@enable_banking_account, has_entries(start_date: selected_date, transaction_status: "BOOK"))
+      .returns([ new_transaction ])
+    @importer.stubs(:include_pending?).returns(false)
+
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    stored = @enable_banking_account.reload.raw_transactions_payload
+    assert_equal 2, stored.size
+    assert_includes stored.map { |tx| tx["creditor"]["name"] }, "Old merchant"
+    assert_includes stored.map { |tx| tx["creditor"]["name"] }, "New merchant"
+  end
+
   test "stores id-less transactions in raw_transactions_payload on first sync" do
     tx = id_less_tx
 

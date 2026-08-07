@@ -16,11 +16,21 @@ class EnableBankingAccount < ApplicationRecord
 
   validates :name, :currency, presence: true
   validates :uid, presence: true, uniqueness: { scope: :enable_banking_item_id }
+  validate :sync_start_date_within_provider_range
   # account_id is not uniquely scoped: uid already enforces one-account-per-identifier per item
 
   # Helper to get account using account_providers system
   def current_account
     account
+  end
+
+  def sync_start_date_within_provider_range
+    return if sync_start_date.blank?
+    return if persisted? && !will_save_change_to_sync_start_date?
+
+    unless sync_start_date.between?(EnableBankingItem.minimum_sync_start_date, Date.current)
+      errors.add(:sync_start_date, :inclusion)
+    end
   end
 
   # Returns the API account ID (UUID) for Enable Banking API calls
