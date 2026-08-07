@@ -169,6 +169,8 @@ class CategoryTest < ActiveSupport::TestCase
     assert_not_nil parent_index
     assert_not_nil child_index
     assert_equal parent_index + 1, child_index
+  end
+
   test "recently_used_for orders by last_used_at, most recent first" do
     older = categories(:income)
     newer = categories(:food_and_drink)
