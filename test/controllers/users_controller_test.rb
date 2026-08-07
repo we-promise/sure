@@ -155,6 +155,17 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: UserPurgeJob, args: [ @member ])
   end
 
+  test "deactivated user with existing web session is redirected to sign in" do
+    get root_path
+    assert_response :success
+
+    @user.update_column(:active, false)
+
+    get root_path
+
+    assert_redirected_to new_session_url
+  end
+
   test "admin prevented from deactivating when other users are present" do
     sign_in @admin = users(:family_admin)
     delete user_url(users(:family_member))
