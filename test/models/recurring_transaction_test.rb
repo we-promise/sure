@@ -1137,10 +1137,43 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     )
 
     assert recurring.matches_entry?(matching_entry)
+    assert recurring.matches_transaction?(matching_entry.entryable)
     assert_not recurring.matches_entry?(other_amount)
   end
 
-  test "matches_for_entries maps page entries to active recurring patterns" do
+  test "matches_entry? clamps end-of-month schedules to February" do
+    [ 29, 30, 31 ].each do |expected_day|
+      recurring = @family.recurring_transactions.create!(
+        account: @account,
+        merchant: @merchant,
+        amount: 15.99,
+        currency: "USD",
+        expected_day_of_month: expected_day,
+        last_occurrence_date: Date.new(2024, 1, 31),
+        next_expected_date: Date.new(2024, 2, 29),
+        status: "active",
+        occurrence_count: 3
+      )
+
+      feb_entry = @account.entries.create!(
+        date: Date.new(2024, 2, 29),
+        amount: 15.99,
+        currency: "USD",
+        name: "Netflix",
+        entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+      )
+
+      assert recurring.matches_entry?(feb_entry),
+             "expected day #{expected_day} should match Feb 29"
+
+      assert_includes recurring.matching_transactions.map(&:id), feb_entry.id
+
+      recurring.destroy!
+      feb_entry.destroy!
+    end
+  end
+
+  test "matches_for_transactions maps page transactions to active recurring patterns" do
     recurring = @family.recurring_transactions.create!(
       account: @account,
       merchant: @merchant,
@@ -1170,8 +1203,8 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       entryable: Transaction.create!(category: categories(:food_and_drink))
     )
 
-    matches = RecurringTransaction.matches_for_entries(
-      [ matching_entry, unmatched_entry ],
+    matches = RecurringTransaction.matches_for_transactions(
+      [ matching_entry.entryable, unmatched_entry.entryable ],
       family: @family,
       user: user
     )
@@ -1204,8 +1237,48 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     )
 
     assert_empty RecurringTransaction.matches_for_entries([ entry ], family: @family, user: user)
+    assert_nil RecurringTransaction.match_for_entry(nil, family: @family, user: user)
   ensure
     @family.update!(recurring_transactions_disabled: false)
+  end
+
+  test "matches_for_transactions ignores patterns from another family" do
+    user = users(:family_admin)
+    other_family = families(:empty)
+    other_account = other_family.accounts.create!(
+      name: "Other Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    other_family.recurring_transactions.create!(
+      account: other_account,
+      name: "Netflix Subscription",
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 3
+    )
+
+    matching_entry = @account.entries.create!(
+      date: Date.current.beginning_of_month + 4.days,
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(category: categories(:food_and_drink))
+    )
+
+    matches = RecurringTransaction.matches_for_transactions(
+      [ matching_entry.entryable ],
+      family: @family,
+      user: user
+    )
+
+    assert_empty matches
   end
 
   test "display_name prefers merchant name" do

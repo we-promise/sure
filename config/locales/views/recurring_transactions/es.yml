@@ -51,3 +51,13 @@ es:
       inactive: Inactiva
     badges:
       manual: Manual
+    show:
+      back: Volver
+      pause: Pausar
+      resume: Reanudar
+      delete: Eliminar
+      occurrences: Ocurrencias
+      account: Cuenta
+      history_title: Transacciones coincidentes
+      history_empty_title: No hay transacciones coincidentes
+      history_empty_description: "Ninguna transacción pasada coincide actualmente con este patrón recurrente."

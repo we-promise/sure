@@ -24,6 +24,9 @@ nl:
     new:
       new_transaction: Nieuwe transactie
     show:
+      view_recurring: "Terugkerende bekijken"
+      view_recurring_subtitle: "Deze transactie komt overeen met een actief terugkerend patroon."
+      view_recurring_title: "Terugkerende transactie"
       account_label: Account
       amount: Bedrag
       category_label: Categorie
@@ -74,6 +77,8 @@ nl:
     merge_duplicate: Ja, voeg ze samen
     keep_both: Nee, bewaar beide
     transaction:
+      recurring: "Terugkerend"
+      recurring_tooltip: "Onderdeel van een terugkerend patroon — bekijk details"
       pending: Wachtend
       pending_tooltip: Wachtende transactie — kan wijzigen bij posting
       linked_with_provider: Gekoppeld met %{provider}

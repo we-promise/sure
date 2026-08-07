@@ -16,7 +16,9 @@ class RecurringTransactionsController < ApplicationController
       .find(params[:id])
 
     @matching_entries = @recurring_transaction.matching_transactions
-      .includes(:account, entryable: :merchant)
+      .joins(:account)
+      .merge(Account.accessible_by(Current.user))
+      .preload(:account, entryable: :merchant)
       .limit(50)
       .to_a
 

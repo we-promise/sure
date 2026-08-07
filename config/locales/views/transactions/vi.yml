@@ -56,6 +56,9 @@ vi:
       mark_recurring: Đánh dấu là định kỳ
       mark_recurring_subtitle: Theo dõi giao dịch định kỳ này. Mức biến động được tự động tính từ 6 tháng giao dịch tương tự.
       mark_recurring_title: Giao dịch định kỳ
+      view_recurring: "Xem định kỳ"
+      view_recurring_subtitle: "Giao dịch này khớp với một mẫu định kỳ đang hoạt động."
+      view_recurring_title: "Giao dịch định kỳ"
       merge_duplicate: Có, gộp lại
       potential_duplicate_description: Giao dịch đang chờ này có thể giống với giao dịch đã đăng bên dưới. Nếu vậy, hãy gộp lại để tránh tính hai lần.
       potential_duplicate_title: Phát hiện trùng lặp có thể
@@ -133,6 +136,8 @@ vi:
       reject_match: Từ chối khớp
       transfer_confirmed: Chuyển khoản đã được xác nhận
     transaction:
+      recurring: "Định kỳ"
+      recurring_tooltip: "Thuộc một mẫu định kỳ — xem chi tiết"
       pending: Đang chờ
       pending_tooltip: Giao dịch đang chờ — có thể thay đổi khi được đăng
       linked_with_provider: Liên kết với %{provider}

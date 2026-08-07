@@ -262,50 +262,88 @@ class RecurringTransaction < ApplicationRecord
     merchant&.name.presence || name
   end
 
-  # Map entry IDs on the current page/list to their matching active recurring
+  # Map entry IDs for the current page/list to their matching active recurring
   # pattern. Prefers manual patterns when multiple could match.
-  def self.matches_for_entries(entries, family:, user:)
+  #
+  # Pass already-loaded Transaction records (e.g. `@transactions` on index) so
+  # matching can reuse their preloaded `entry` / transfer associations instead of
+  # walking `entry.entryable` and triggering N+1 queries.
+  def self.matches_for_transactions(transactions, family:, user:)
     return {} if family.recurring_transactions_disabled?
 
-    entry_list = Array(entries).compact
-    return {} if entry_list.empty?
+    transaction_list = Array(transactions).compact
+    return {} if transaction_list.empty?
 
+    # Avoid includes(:account) here: matching only needs FK columns on the
+    # recurring rows, and a single-account preload shows up as
+    # `accounts.id = $1` which the transactions index N+1 guard treats as a
+    # lazy load.
     recurrings = family.recurring_transactions
       .accessible_by(user)
       .active
-      .includes(:merchant, :account, :destination_account)
       .order(manual: :desc)
       .to_a
 
     return {} if recurrings.empty?
 
-    entry_list.each_with_object({}) do |entry, map|
-      next unless entry.entryable_type == "Transaction"
+    transaction_list.each_with_object({}) do |transaction, map|
+      entry = transaction.entry
+      next unless entry
 
-      match = recurrings.find { |recurring| recurring.matches_entry?(entry) }
+      match = recurrings.find { |recurring| recurring.matches_transaction?(transaction) }
       map[entry.id] = match if match
     end
   end
 
-  def self.match_for_entry(entry, family:, user:)
-    matches_for_entries([ entry ], family: family, user: user)[entry.id]
+  def self.match_for_transaction(transaction, family:, user:)
+    return nil if transaction.blank?
+
+    entry = transaction.entry
+    return nil if entry.blank?
+
+    matches_for_transactions([ transaction ], family: family, user: user)[entry.id]
   end
 
-  # Whether this active pattern's heuristics match a concrete ledger entry.
-  # Mirrors the filters used by matching_transactions / the Cleaner.
-  def matches_entry?(entry)
-    return false unless active?
-    return false unless entry.entryable_type == "Transaction"
-    return false unless entry.currency == currency
+  # Convenience wrappers for Entry-centric callers (e.g. show pages). Prefer
+  # matches_for_transactions when the Transaction records are already loaded.
+  def self.matches_for_entries(entries, family:, user:)
+    transactions = Array(entries).compact.filter_map do |entry|
+      next unless entry.entryable_type == "Transaction"
 
-    transaction = entry.entryable
+      entry.entryable
+    end
+
+    matches_for_transactions(transactions, family: family, user: user)
+  end
+
+  def self.match_for_entry(entry, family:, user:)
+    return nil if entry.blank?
+    return nil unless entry.entryable_type == "Transaction"
+
+    match_for_transaction(entry.entryable, family: family, user: user)
+  end
+
+  # Whether this active pattern's heuristics match a concrete Transaction.
+  # Mirrors the filters used by matching_transactions / the Cleaner.
+  def matches_transaction?(transaction)
+    return false unless active?
     return false unless transaction.is_a?(Transaction)
+
+    entry = transaction.entry
+    return false unless entry
+    return false unless entry.currency == currency
 
     if transfer?
       matches_transfer_entry?(entry, transaction)
     else
       matches_regular_entry?(entry, transaction)
     end
+  end
+
+  def matches_entry?(entry)
+    return false unless entry&.entryable_type == "Transaction"
+
+    matches_transaction?(entry.entryable)
   end
 
   # Find matching transactions for this recurring pattern
@@ -470,10 +508,16 @@ class RecurringTransaction < ApplicationRecord
     end
 
     def day_matches?(date)
-      day = date.day
-      min_day = [ expected_day_of_month - 2, 1 ].max
-      max_day = [ expected_day_of_month + 2, 31 ].min
-      day >= min_day && day <= max_day
+      expected_day = [ expected_day_of_month, date.end_of_month.day ].min
+      circular_day_distance(date.day, expected_day) <= 2
+    end
+
+    # Same 31-day circular distance used by Identifier for month-boundary wraps
+    # (e.g. expected day 31 vs occurrence on day 1).
+    def circular_day_distance(day1, day2)
+      linear_distance = (day1 - day2).abs
+      wrap_distance = 31 - linear_distance
+      [ linear_distance, wrap_distance ].min
     end
 
     # Issue #1590: a recurring transfer's future occurrences rarely share the
@@ -510,11 +554,35 @@ class RecurringTransaction < ApplicationRecord
       end
     end
 
-    # Entries whose day-of-month lands within ±2 days of the expected day.
+    # Entries whose day-of-month lands within ±2 circular days of the
+    # calendar-clamped expected day (so a 31st schedule still matches Feb 28/29).
     def day_of_month_scope(relation)
-      relation.where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-                     [ expected_day_of_month - 2, 1 ].max,
-                     [ expected_day_of_month + 2, 31 ].min)
+      relation.where(<<~SQL.squish, expected: expected_day_of_month)
+        LEAST(
+          ABS(
+            EXTRACT(DAY FROM entries.date)::integer
+            - LEAST(
+                :expected,
+                EXTRACT(
+                  DAY FROM (
+                    DATE_TRUNC('month', entries.date) + INTERVAL '1 month' - INTERVAL '1 day'
+                  )
+                )::integer
+              )
+          ),
+          31 - ABS(
+            EXTRACT(DAY FROM entries.date)::integer
+            - LEAST(
+                :expected,
+                EXTRACT(
+                  DAY FROM (
+                    DATE_TRUNC('month', entries.date) + INTERVAL '1 month' - INTERVAL '1 day'
+                  )
+                )::integer
+              )
+          )
+        ) <= 2
+      SQL
     end
 
     def monetizable_currency

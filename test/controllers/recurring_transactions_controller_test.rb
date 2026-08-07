@@ -37,4 +37,47 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     get recurring_transaction_url(other_recurring)
     assert_response :not_found
   end
+
+  test "show hides matching entries from inaccessible accounts" do
+    sign_in users(:family_member)
+
+    family = families(:dylan_family)
+    accessible_account = accounts(:depository)
+    inaccessible_account = accounts(:investment)
+
+    recurring = family.recurring_transactions.create!(
+      account: nil,
+      name: "Accountless Access Pattern",
+      amount: 66.66,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 3,
+      manual: true
+    )
+
+    accessible_account.entries.create!(
+      date: Date.current.beginning_of_month + 4.days,
+      amount: 66.66,
+      currency: "USD",
+      name: "Accountless Access Pattern",
+      entryable: Transaction.create!(category: categories(:food_and_drink))
+    )
+
+    inaccessible_account.entries.create!(
+      date: Date.current.beginning_of_month + 4.days,
+      amount: 66.66,
+      currency: "USD",
+      name: "Accountless Access Pattern",
+      entryable: Transaction.create!(category: categories(:food_and_drink))
+    )
+
+    get recurring_transaction_url(recurring)
+
+    assert_response :success
+    assert_select "p", text: /#{Regexp.escape(accessible_account.name)}/
+    assert_select "p", text: /#{Regexp.escape(inaccessible_account.name)}/, count: 0
+  end
 end

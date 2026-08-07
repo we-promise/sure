@@ -324,6 +324,9 @@ ru:
         в сумме автоматически рассчитывается на основе последних 6 месяцев аналогичных
         операций.
       mark_recurring_title: Повторяющаяся операция
+      view_recurring: "Открыть повторяющуюся"
+      view_recurring_subtitle: "Эта операция соответствует активному повторяющемуся шаблону."
+      view_recurring_title: "Повторяющаяся операция"
       memo: Заметка
       merchant_label: Продавец
       merge_duplicate: Да, объединить их
@@ -365,6 +368,8 @@ ru:
       total_transactions: Всего операций
     toggle_recurring_section: Переключить предстоящие повторяющиеся операции
     transaction:
+      recurring: "Повторяющаяся"
+      recurring_tooltip: "Часть повторяющегося шаблона — открыть подробности"
       activity_type_tooltip: Тип инвестиционной активности
       linked_with_provider: Связано с %{provider}
       pending: В ожидании

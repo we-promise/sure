@@ -24,6 +24,9 @@ de:
     new:
       new_transaction: Neue Transaktion
     show:
+      view_recurring: "Wiederkehrende anzeigen"
+      view_recurring_subtitle: "Diese Transaktion entspricht einem aktiven wiederkehrenden Muster."
+      view_recurring_title: "Wiederkehrende Transaktion"
       account_label: Konto
       amount: Betrag
       category_label: Kategorie
@@ -75,6 +78,8 @@ de:
     merge_duplicate: Ja, zusammenführen
     keep_both: Nein, beide behalten
     transaction:
+      recurring: "Wiederkehrend"
+      recurring_tooltip: "Teil eines wiederkehrenden Musters — Details anzeigen"
       pending: Ausstehend
       pending_tooltip: Ausstehende Transaktion — kann sich bei Buchung ändern
       linked_with_provider: Mit %{provider} verknüpft

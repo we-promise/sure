@@ -79,8 +79,8 @@ class TransactionsController < ApplicationController
                                          Date.current)
                                   .includes(:merchant)
 
-    @matched_recurring_by_entry_id = RecurringTransaction.matches_for_entries(
-      @transactions.map(&:entry),
+    @matched_recurring_by_entry_id = RecurringTransaction.matches_for_transactions(
+      @transactions,
       family: Current.family,
       user: Current.user
     )
@@ -89,8 +89,8 @@ class TransactionsController < ApplicationController
   end
 
   def show
-    @matched_recurring = RecurringTransaction.match_for_entry(
-      @entry,
+    @matched_recurring = RecurringTransaction.match_for_transaction(
+      @entry.entryable,
       family: Current.family,
       user: Current.user
     )

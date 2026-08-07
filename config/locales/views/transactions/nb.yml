@@ -23,6 +23,9 @@ nb:
     new:
       new_transaction: Ny transaksjon
     show:
+      view_recurring: "Vis gjentakende"
+      view_recurring_subtitle: "Denne transaksjonen matcher et aktivt gjentakende mønster."
+      view_recurring_title: "Gjentakende transaksjon"
       account_label: Konto
       amount: Beløp
       category_label: Kategori
@@ -49,6 +52,8 @@ nb:
       edit_tags: Rediger tagger
       import: Importer
     transaction:
+      recurring: "Gjentakende"
+      recurring_tooltip: "Del av et gjentakende mønster — se detaljer"
       linked_with_provider: Koblet med %{provider}
     index:
       transaction: transaksjon

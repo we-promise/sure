@@ -24,6 +24,9 @@ es:
     new:
       new_transaction: Nueva transacción
     show:
+      view_recurring: "Ver recurrente"
+      view_recurring_subtitle: "Esta transacción coincide con un patrón recurrente activo."
+      view_recurring_title: "Transacción recurrente"
       account_label: Cuenta
       amount: Importe
       category_label: Categoría
@@ -76,6 +79,8 @@ es:
       merge_duplicate: Sí, combinarlas
       keep_both: No, mantener ambas
     transaction:
+      recurring: "Recurrente"
+      recurring_tooltip: "Forma parte de un patrón recurrente — ver detalles"
       pending: Pendiente
       pending_tooltip: Transacción pendiente — puede cambiar al confirmarse
       linked_with_provider: Vinculado con %{provider}

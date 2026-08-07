@@ -5,6 +5,16 @@ ru:
     amount_range: 'Диапазон: от %{min} до %{max}'
     badges:
       manual: Вручную
+    show:
+      back: Назад
+      pause: Приостановить
+      resume: Возобновить
+      delete: Удалить
+      occurrences: Вхождения
+      account: Счёт
+      history_title: Совпадающие операции
+      history_empty_title: Нет совпадающих операций
+      history_empty_description: "На данный момент ни одна прошедшая операция не соответствует этому повторяющемуся шаблону."
     cleaned_up: Очищено %{count} устаревших регулярных операций
     cleanup_stale: Очистить устаревшие
     confirm_delete: Вы уверены, что хотите удалить эту регулярную операцию?

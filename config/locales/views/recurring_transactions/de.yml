@@ -50,3 +50,13 @@ de:
       inactive: Inaktiv
     badges:
       manual: Manuell
+    show:
+      back: Zurück
+      pause: Pausieren
+      resume: Fortsetzen
+      delete: Löschen
+      occurrences: Vorkommen
+      account: Konto
+      history_title: Übereinstimmende Transaktionen
+      history_empty_title: Keine übereinstimmenden Transaktionen
+      history_empty_description: "Derzeit passen keine vergangenen Transaktionen zu diesem wiederkehrenden Muster."

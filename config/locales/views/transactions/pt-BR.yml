@@ -35,6 +35,9 @@ pt-BR:
       mark_recurring: Marcar como Recorrente
       mark_recurring_subtitle: Acompanhe como uma transação recorrente. A variação de valor é calculada automaticamente com base nos últimos 6 meses de transações similares.
       mark_recurring_title: Transação Recorrente
+      view_recurring: "Ver recorrente"
+      view_recurring_subtitle: "Esta transação corresponde a um padrão recorrente ativo."
+      view_recurring_title: "Transação recorrente"
       merchant_label: Comerciante
       name_label: Nome
       nature: Tipo
@@ -52,6 +55,8 @@ pt-BR:
       edit_tags: Editar tags
       import: Importar
     transaction:
+      recurring: "Recorrente"
+      recurring_tooltip: "Faz parte de um padrão recorrente — ver detalhes"
       linked_with_provider: Vinculado com %{provider}
     index:
       transaction: transação

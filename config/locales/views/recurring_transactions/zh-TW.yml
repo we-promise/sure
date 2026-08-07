@@ -47,3 +47,13 @@ zh-TW:
       inactive: 已停用
     badges:
       manual: 手動
+    show:
+      back: 返回
+      pause: 暫停
+      resume: 繼續
+      delete: 刪除
+      occurrences: 發生次數
+      account: 帳戶
+      history_title: 相符交易
+      history_empty_title: 沒有相符交易
+      history_empty_description: "目前沒有過去的交易符合此定期模式。"

@@ -312,6 +312,9 @@ tr:
       mark_recurring_subtitle: Bunu yinelenen bir işlem olarak takip edin. Tutar farkı,
         geçmiş 6 aydaki benzer işlemlerden otomatik olarak hesaplanır.
       mark_recurring_title: Yinelenen İşlem
+      view_recurring: "Yineleneni gör"
+      view_recurring_subtitle: "Bu işlem etkin bir yinelenen kalıpla eşleşiyor."
+      view_recurring_title: "Yinelenen işlem"
       memo: Not
       merchant_label: Satıcı
       merge_duplicate: Evet, birleştir
@@ -352,6 +355,8 @@ tr:
       total_transactions: Toplam işlem
     toggle_recurring_section: Yaklaşan yinelenen işlemleri aç/kapat
     transaction:
+      recurring: "Yinelenen"
+      recurring_tooltip: "Yinelenen bir kalıbın parçası — ayrıntıları gör"
       activity_type_tooltip: Yatırım aktivite türü
       linked_with_provider: "%{provider} ile bağlantılı"
       pending: Beklemede

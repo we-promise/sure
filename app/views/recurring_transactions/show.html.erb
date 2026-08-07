@@ -43,18 +43,25 @@
           <div class="flex items-center gap-2 flex-wrap">
             <h2 class="text-lg font-medium text-primary truncate"><%= @recurring_transaction.display_name %></h2>
             <% if @recurring_transaction.manual? %>
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-tint-10 text-link">
-                <%= t("recurring_transactions.badges.manual") %>
-              </span>
+              <%= render DS::Pill.new(
+                label: t("recurring_transactions.badges.manual"),
+                tone: :info,
+                marker: false
+              ) %>
             <% end %>
             <% if @recurring_transaction.active? %>
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-success theme-dark:bg-green-tint-10">
-                <%= t("recurring_transactions.status.active") %>
-              </span>
+              <%= render DS::Pill.new(
+                label: t("recurring_transactions.status.active"),
+                tone: :success,
+                marker: false,
+                show_dot: true
+              ) %>
             <% else %>
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-inset text-primary">
-                <%= t("recurring_transactions.status.inactive") %>
-              </span>
+              <%= render DS::Pill.new(
+                label: t("recurring_transactions.status.inactive"),
+                tone: :neutral,
+                marker: false
+              ) %>
             <% end %>
           </div>
           <p class="text-sm text-secondary mt-1">

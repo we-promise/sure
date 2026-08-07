@@ -58,6 +58,9 @@ it:
       mark_recurring: Segna come ricorrente
       mark_recurring_subtitle: Monitora questa come transazione ricorrente. La varianza dell'importo viene calcolata automaticamente dagli ultimi 6 mesi di transazioni simili.
       mark_recurring_title: Transazione ricorrente
+      view_recurring: "Vedi ricorrente"
+      view_recurring_subtitle: "Questa transazione corrisponde a un modello ricorrente attivo."
+      view_recurring_title: "Transazione ricorrente"
       merge_duplicate: Sì, uniscile
       potential_duplicate_description: Questa transazione in attesa potrebbe essere la stessa di quella registrata qui sotto. In caso affermativo, uniscile per evitare il doppio conteggio.
       potential_duplicate_title: Possibile duplicato rilevato
@@ -134,6 +137,8 @@ it:
       reject_match: Rifiuta abbinamento
       transfer_confirmed: Bonifico confermato
     transaction:
+      recurring: "Ricorrente"
+      recurring_tooltip: "Fa parte di un modello ricorrente — vedi i dettagli"
       pending: In attesa
       pending_tooltip: Transazione in attesa — potrebbe cambiare alla registrazione
       linked_with_provider: Collegata con %{provider}
