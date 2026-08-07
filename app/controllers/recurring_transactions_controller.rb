@@ -72,6 +72,35 @@ class RecurringTransactionsController < ApplicationController
   private
 
     def recurring_settings_params
-      { recurring_transactions_disabled: params[:recurring_transactions_disabled] == "true" }
+      permitted = params.permit(
+        :recurring_transactions_disabled,
+        :recurring_detection_lookback_months,
+        :recurring_detection_min_occurrences,
+        :recurring_detection_recent_window_days,
+        :recurring_detection_day_tolerance,
+        :recurring_detection_day_cluster_stddev,
+        :recurring_detection_amount_tolerance_percent
+      )
+
+      settings = {}
+
+      if permitted.key?(:recurring_transactions_disabled)
+        settings[:recurring_transactions_disabled] = permitted[:recurring_transactions_disabled] == "true"
+      end
+
+      %i[
+        recurring_detection_lookback_months
+        recurring_detection_min_occurrences
+        recurring_detection_recent_window_days
+        recurring_detection_day_tolerance
+        recurring_detection_day_cluster_stddev
+        recurring_detection_amount_tolerance_percent
+      ].each do |key|
+        next if permitted[key].blank?
+
+        settings[key] = permitted[key].to_i
+      end
+
+      settings
     end
 end

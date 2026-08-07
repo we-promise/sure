@@ -15,6 +15,21 @@ en:
     settings:
       enable_label: Enable Recurring Transactions
       enable_description: Automatically detect recurring transaction patterns and show upcoming projected transactions.
+      detection_title: Automatic detection thresholds
+      detection_description: Tune how strict automatic pattern detection is for this family. Defaults match the previous built-in rules.
+      lookback_months_label: Lookback window (months)
+      lookback_months_help: "How far back to scan for patterns. Default: 3. Range: 1–24."
+      min_occurrences_label: Minimum occurrences
+      min_occurrences_help: "How many matching transactions are required before a pattern is created. Default: 3. Range: 2–12."
+      recent_window_days_label: Recently seen window (days)
+      recent_window_days_help: "Ignore patterns whose latest match is older than this. Default: 45. Range: 7–365."
+      day_tolerance_label: Day-of-month match tolerance (days)
+      day_tolerance_help: "How many days around the expected day still count as a match. Default: 2. Range: 0–14."
+      day_cluster_stddev_label: Day clustering strictness (std. dev.)
+      day_cluster_stddev_help: "Maximum day-of-month spread allowed when detecting a pattern. Default: 5. Range: 1–15."
+      amount_tolerance_percent_label: Amount tolerance (%)
+      amount_tolerance_percent_help: "Group nearby amounts for the same payee. 0 keeps exact-amount matching (default). Range: 0–25."
+      save_detection: Save thresholds
     settings_updated: Recurring transactions settings updated
     info:
       title: Automatic Pattern Detection

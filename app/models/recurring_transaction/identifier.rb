@@ -8,7 +8,10 @@ class RecurringTransaction
 
     # Identify and create/update recurring transactions for the family
     def identify_recurring_patterns
-      three_months_ago = 3.months.ago.to_date
+      lookback_months = family.recurring_detection_lookback_months
+      min_occurrences = family.recurring_detection_min_occurrences
+      recent_window_days = family.recurring_detection_recent_window_days
+      lookback_date = lookback_months.months.ago.to_date
 
       # Skip transfer-kind transactions: they're one half of a Transfer pair, so grouping them
       # under their single account would produce incoherent recurring "patterns" that don't
@@ -18,31 +21,25 @@ class RecurringTransaction
       entries_with_transactions = family.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
         .where(entryable_type: "Transaction")
-        .where("entries.date >= ?", three_months_ago)
+        .where("entries.date >= ?", lookback_date)
         .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
         .includes(:entryable)
         .to_a
 
       # Group by merchant (if present) or name, along with amount (preserve sign) and currency.
-      grouped_transactions = entries_with_transactions
-        .select { |entry| entry.entryable.is_a?(Transaction) }
-        .group_by do |entry|
-          transaction = entry.entryable
-          # Use merchant_id if present, otherwise use entry name
-          identifier = transaction.merchant_id.present? ? [ :merchant, transaction.merchant_id ] : [ :name, entry.name ]
-          [ identifier, entry.amount.round(2), entry.currency, entry.account_id ]
-        end
+      # When amount tolerance is configured, cluster nearby amounts under the same identity.
+      grouped_transactions = group_entries_for_detection(entries_with_transactions)
 
       recurring_patterns = []
 
       grouped_transactions.each do |(identifier, amount, currency, account_id), entries|
-        next if entries.size < 3  # Must have at least 3 occurrences
+        next if entries.size < min_occurrences
 
-        # Check if the last occurrence was within the last 45 days
+        # Check if the last occurrence was within the configured recent window
         last_occurrence = entries.max_by(&:date)
-        next if last_occurrence.date < 45.days.ago.to_date
+        next if last_occurrence.date < recent_window_days.days.ago.to_date
 
-        # Check if transactions occur on similar days (within 5 days of each other)
+        # Check if transactions occur on similar days
         days_of_month = entries.map { |e| e.date.day }.sort
 
         # Calculate if days cluster together (standard deviation check)
@@ -97,6 +94,7 @@ class RecurringTransaction
         begin
           lookup_key = recurring_transaction_lookup_key(find_conditions)
           recurring_transaction = existing_recurring_transactions_by_key[lookup_key] ||
+                                  find_existing_within_amount_tolerance(find_conditions, existing_recurring_transactions_by_key) ||
                                   family.recurring_transactions.build(find_conditions)
 
           # Handle manual recurring transactions specially
@@ -150,7 +148,7 @@ class RecurringTransaction
       end
 
       # Also check for manual recurring transactions that might need variance updates
-      update_manual_recurring_transactions(three_months_ago)
+      update_manual_recurring_transactions(lookback_date)
 
       recurring_patterns.size
     end
@@ -194,6 +192,80 @@ class RecurringTransaction
     end
 
     private
+      def group_entries_for_detection(entries_with_transactions)
+        transaction_entries = entries_with_transactions.select { |entry| entry.entryable.is_a?(Transaction) }
+        amount_tolerance_percent = family.recurring_detection_amount_tolerance_percent
+
+        if amount_tolerance_percent.zero?
+          return transaction_entries.group_by do |entry|
+            transaction = entry.entryable
+            identifier = transaction.merchant_id.present? ? [ :merchant, transaction.merchant_id ] : [ :name, entry.name ]
+            [ identifier, entry.amount.round(2), entry.currency, entry.account_id ]
+          end
+        end
+
+        # Loose amount matching: group by identity first, then cluster nearby amounts.
+        by_identity = transaction_entries.group_by do |entry|
+          transaction = entry.entryable
+          identifier = transaction.merchant_id.present? ? [ :merchant, transaction.merchant_id ] : [ :name, entry.name ]
+          [ identifier, entry.currency, entry.account_id ]
+        end
+
+        grouped = {}
+        by_identity.each do |(identifier, currency, account_id), entries|
+          cluster_entries_by_amount(entries, amount_tolerance_percent).each do |cluster|
+            representative_amount = (cluster.sum(&:amount) / cluster.size).round(2)
+            grouped[[ identifier, representative_amount, currency, account_id ]] = cluster
+          end
+        end
+        grouped
+      end
+
+      # Greedy clustering: sort by absolute amount, attach each entry to the first
+      # cluster whose representative is within tolerance percent.
+      def cluster_entries_by_amount(entries, tolerance_percent)
+        sorted = entries.sort_by { |entry| entry.amount.abs }
+        clusters = []
+
+        sorted.each do |entry|
+          cluster = clusters.find do |members|
+            amounts_within_tolerance?(members.first.amount, entry.amount, tolerance_percent)
+          end
+
+          if cluster
+            cluster << entry
+          else
+            clusters << [ entry ]
+          end
+        end
+
+        clusters
+      end
+
+      def amounts_within_tolerance?(left, right, tolerance_percent)
+        return left.round(2) == right.round(2) if tolerance_percent.zero?
+
+        baseline = [ left.abs, right.abs ].max
+        return left.round(2) == right.round(2) if baseline.zero?
+
+        ((left - right).abs / baseline * 100) <= tolerance_percent
+      end
+
+      def find_existing_within_amount_tolerance(find_conditions, existing_by_key)
+        tolerance = family.recurring_detection_amount_tolerance_percent
+        return nil if tolerance.zero?
+
+        existing_by_key.values.find do |recurring|
+          next if recurring.manual?
+          next unless recurring.currency == find_conditions[:currency]
+          next unless recurring.account_id == find_conditions[:account_id]
+          next unless recurring.merchant_id == find_conditions[:merchant_id]
+          next unless recurring.name == find_conditions[:name]
+
+          amounts_within_tolerance?(recurring.amount, find_conditions[:amount], tolerance)
+        end
+      end
+
       def recurring_transaction_lookup_key(recurring_or_attributes)
         # Keep this aligned with the non-transfer recurring transaction unique
         # indexes. Automatic recurring rows are amount-scoped; variable manual
@@ -247,7 +319,7 @@ class RecurringTransaction
 
         expected_day = [ recurring.expected_day_of_month, entry.date.end_of_month.day ].min
         day = entry.date.day
-        return false if circular_distance(day, expected_day) > 2
+        return false if circular_distance(day, expected_day) > family.recurring_detection_day_tolerance
 
         if recurring.merchant_id.present?
           entry.read_attribute("transaction_merchant_id") == recurring.merchant_id
@@ -256,7 +328,7 @@ class RecurringTransaction
         end
       end
 
-      # Check if days cluster together (within ~5 days variance)
+      # Check if days cluster together within the family's configured std-dev.
       # Uses circular distance to handle month-boundary wrapping (e.g., 28, 29, 30, 31, 1, 2)
       def days_cluster_together?(days)
         return false if days.empty?
@@ -272,8 +344,7 @@ class RecurringTransaction
         variance = circular_distances.map { |dist| (dist - mean_distance)**2 }.sum / circular_distances.size
         std_dev = Math.sqrt(variance)
 
-        # Allow up to 5 days standard deviation
-        std_dev <= 5
+        std_dev <= family.recurring_detection_day_cluster_stddev
       end
 
       # Calculate circular distance between two days on a 31-day circle

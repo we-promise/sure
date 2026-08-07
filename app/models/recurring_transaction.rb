@@ -140,10 +140,11 @@ class RecurringTransaction < ApplicationRecord
 
   # Create a manual recurring transaction from an existing transaction
   # Automatically calculates amount variance from past 6 months of matching transactions
-  def self.create_from_transaction(transaction, date_variance: 2)
+  def self.create_from_transaction(transaction, date_variance: nil)
     entry = transaction.entry
     family = entry.account.family
     expected_day = entry.date.day
+    date_variance ||= family.recurring_detection_day_tolerance
 
     # Find matching transactions from the past 6 months
     matching_amounts = find_matching_transaction_amounts(
@@ -153,7 +154,8 @@ class RecurringTransaction < ApplicationRecord
       currency: entry.currency,
       expected_day: expected_day,
       lookback_months: 6,
-      account: entry.account
+      account: entry.account,
+      date_variance: date_variance
     )
 
     # Calculate amount variance from historical data
@@ -194,16 +196,17 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Find matching transaction entries for variance calculation
-  def self.find_matching_transaction_entries(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil)
+  def self.find_matching_transaction_entries(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil, date_variance: nil)
     lookback_date = lookback_months.months.ago.to_date
+    day_tolerance = date_variance || family.recurring_detection_day_tolerance
 
     entries = (account.present? ? account.entries : family.entries)
       .where(entryable_type: "Transaction")
       .where(currency: currency)
       .where("entries.date >= ?", lookback_date)
       .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-             [ expected_day - 2, 1 ].max,
-             [ expected_day + 2, 31 ].min)
+             [ expected_day - day_tolerance, 1 ].max,
+             [ expected_day + day_tolerance, 31 ].min)
       .order(date: :desc)
 
     # Filter by merchant or name
@@ -219,7 +222,7 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Find matching transaction amounts for variance calculation
-  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil)
+  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil, date_variance: nil)
     matching_entries = find_matching_transaction_entries(
       family: family,
       merchant_id: merchant_id,
@@ -227,7 +230,8 @@ class RecurringTransaction < ApplicationRecord
       currency: currency,
       expected_day: expected_day,
       lookback_months: lookback_months,
-      account: account
+      account: account,
+      date_variance: date_variance
     )
 
     matching_entries.map(&:amount)
@@ -421,11 +425,12 @@ class RecurringTransaction < ApplicationRecord
       end
     end
 
-    # Entries whose day-of-month lands within ±2 days of the expected day.
+    # Entries whose day-of-month lands within the family's configured day tolerance.
     def day_of_month_scope(relation)
+      day_tolerance = family.recurring_detection_day_tolerance
       relation.where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-                     [ expected_day_of_month - 2, 1 ].max,
-                     [ expected_day_of_month + 2, 31 ].min)
+                     [ expected_day_of_month - day_tolerance, 1 ].max,
+                     [ expected_day_of_month + day_tolerance, 31 ].min)
     end
 
     def monetizable_currency

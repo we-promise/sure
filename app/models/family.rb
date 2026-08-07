@@ -28,6 +28,14 @@ class Family < ApplicationRecord
   ASSISTANT_TYPES = %w[builtin external].freeze
   SHARING_DEFAULTS = %w[shared private].freeze
 
+  # Per-family automatic recurring detection knobs (defaults match Identifier constants).
+  RECURRING_DETECTION_LOOKBACK_MONTHS_RANGE = 1..24
+  RECURRING_DETECTION_MIN_OCCURRENCES_RANGE = 2..12
+  RECURRING_DETECTION_RECENT_WINDOW_DAYS_RANGE = 7..365
+  RECURRING_DETECTION_DAY_TOLERANCE_RANGE = 0..14
+  RECURRING_DETECTION_DAY_CLUSTER_STDDEV_RANGE = 1..15
+  RECURRING_DETECTION_AMOUNT_TOLERANCE_PERCENT_RANGE = 0..25
+
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
@@ -144,6 +152,12 @@ class Family < ApplicationRecord
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
+  validates :recurring_detection_lookback_months, inclusion: { in: RECURRING_DETECTION_LOOKBACK_MONTHS_RANGE }
+  validates :recurring_detection_min_occurrences, inclusion: { in: RECURRING_DETECTION_MIN_OCCURRENCES_RANGE }
+  validates :recurring_detection_recent_window_days, inclusion: { in: RECURRING_DETECTION_RECENT_WINDOW_DAYS_RANGE }
+  validates :recurring_detection_day_tolerance, inclusion: { in: RECURRING_DETECTION_DAY_TOLERANCE_RANGE }
+  validates :recurring_detection_day_cluster_stddev, inclusion: { in: RECURRING_DETECTION_DAY_CLUSTER_STDDEV_RANGE }
+  validates :recurring_detection_amount_tolerance_percent, inclusion: { in: RECURRING_DETECTION_AMOUNT_TOLERANCE_PERCENT_RANGE }
 
   before_validation :normalize_enabled_currencies!
 

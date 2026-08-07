@@ -166,6 +166,88 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal 0, @family.recurring_transactions.count
   end
 
+  test "honors family min_occurrences threshold below the default" do
+    @family.update!(recurring_detection_min_occurrences: 2)
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    [ 5, 6 ].each_with_index do |day, i|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: i.months.ago.beginning_of_month + (day - 1).days,
+        amount: 15.99,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    patterns_count = @identifier.identify_recurring_patterns
+
+    assert_equal 1, patterns_count
+    assert_equal 1, @family.recurring_transactions.count
+  end
+
+  test "honors family recent_window_days when last occurrence is stale under default" do
+    travel_to Date.new(2026, 8, 6) do
+      @family.update!(recurring_detection_lookback_months: 6)
+      account = @family.accounts.first
+      merchant = merchants(:netflix)
+
+      # Last occurrence is 50 days ago (Jun 17); default recent window is 45
+      [ Date.new(2026, 4, 17), Date.new(2026, 5, 17), Date.new(2026, 6, 17) ].each do |date|
+        transaction = Transaction.create!(
+          merchant: merchant,
+          category: categories(:food_and_drink)
+        )
+        account.entries.create!(
+          date: date,
+          amount: 15.99,
+          currency: "USD",
+          name: "Netflix Subscription",
+          entryable: transaction
+        )
+      end
+
+      assert_equal 0, RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
+
+      @family.update!(recurring_detection_recent_window_days: 60)
+      assert_equal 1, RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
+    end
+  end
+
+  test "groups nearby amounts when amount tolerance percent is configured" do
+    @family.update!(recurring_detection_amount_tolerance_percent: 5)
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    amounts = [ 15.99, 16.25, 16.50 ]
+    amounts.each_with_index do |amount, i|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: i.months.ago.beginning_of_month + 4.days,
+        amount: amount,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    patterns_count = @identifier.identify_recurring_patterns
+
+    assert_equal 1, patterns_count
+    assert_equal 1, @family.recurring_transactions.count
+    recurring = @family.recurring_transactions.first
+    assert_equal 3, recurring.occurrence_count
+    assert_in_delta amounts.sum / amounts.size, recurring.amount, 0.01
+  end
+
   test "updates existing recurring transaction when pattern is found again" do
     account = @family.accounts.first
     merchant = merchants(:amazon)  # Use different merchant to avoid fixture conflicts

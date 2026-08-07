@@ -7,6 +7,19 @@ class FamilyTest < ActiveSupport::TestCase
     @syncable = families(:dylan_family)
   end
 
+  test "validates recurring detection threshold ranges" do
+    family = families(:dylan_family)
+
+    family.recurring_detection_lookback_months = 0
+    assert_not family.valid?
+    assert_includes family.errors[:recurring_detection_lookback_months], "is not included in the list"
+
+    family.reload
+    family.recurring_detection_amount_tolerance_percent = 50
+    assert_not family.valid?
+    assert_includes family.errors[:recurring_detection_amount_tolerance_percent], "is not included in the list"
+  end
+
   test "investment_contributions_category creates category when missing" do
     family = families(:dylan_family)
     family.categories.where(name: Category.investment_contributions_name).destroy_all
