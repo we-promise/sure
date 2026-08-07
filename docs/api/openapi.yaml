@@ -3420,7 +3420,7 @@ paths:
                       ai_enabled:
                         type: boolean
         '401':
-          description: invalid credentials or MFA required
+          description: invalid credentials, MFA required, or account deactivated
           content:
             application/json:
               schema:
@@ -3553,7 +3553,7 @@ paths:
                   created_at:
                     type: integer
         '401':
-          description: invalid refresh token
+          description: invalid or revoked refresh token, or account deactivated
           content:
             application/json:
               schema:
@@ -3637,7 +3637,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '401':
-          description: invalid credentials or expired linking code
+          description: invalid credentials, expired linking code, or account deactivated
           content:
             application/json:
               schema:

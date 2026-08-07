@@ -73,6 +73,11 @@ module Api
         user = User.find_by(email: params[:email])
 
         if user&.authenticate(params[:password])
+          unless user.active?
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          end
+
           # Check MFA if enabled
           if user.otp_required?
             unless params[:otp_code].present? && user.verify_otp?(params[:otp_code])
@@ -90,6 +95,15 @@ module Api
             return
           end
 
+          # Reload right before minting — narrows the window where a
+          # concurrent deactivation between the check above and this point
+          # could otherwise still get a token issued, same reasoning as
+          # Authentication#create_session_for.
+          unless user.reload.active?
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          end
+
           # Create device and OAuth token
           begin
             device = MobileDevice.upsert_device!(user, device_params)
@@ -97,6 +111,13 @@ module Api
           rescue ActiveRecord::RecordInvalid => e
             Rails.logger.error("[Auth] Device registration failed: #{e.message}")
             render json: { error: "Failed to register device" }, status: :unprocessable_entity
+            return
+          end
+
+          # issue_token! itself is the authoritative active? gate (see its
+          # comment) — nil means a deactivation landed after the check above.
+          unless token_response
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return
           end
 
@@ -155,6 +176,11 @@ module Api
 
         unless user
           render json: { error: "Invalid email or password" }, status: :unauthorized
+          return
+        end
+
+        unless user.active?
+          render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
           return
         end
 
@@ -288,6 +314,17 @@ module Api
           return
         end
 
+        user = User.find_by(id: access_token.resource_owner_id)
+        unless user&.active?
+          render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+          return
+        end
+
+        # This mints directly (rotating an existing token, not via
+        # MobileDevice#issue_token!) with the same not-lock-protected
+        # check-then-act shape as that method — see its comment for why
+        # this residual race is a deliberately accepted risk, not an
+        # oversight.
         # Create new access token
         new_token = Doorkeeper::AccessToken.create!(
           application: access_token.application,
@@ -302,7 +339,6 @@ module Api
         access_token.revoke
 
         # Update device last seen
-        user = User.find(access_token.resource_owner_id)
         device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
         device&.update_last_seen!
 
@@ -409,10 +445,26 @@ module Api
           Rails.cache.delete("mobile_sso_link:#{linking_code}")
         end
 
+        # Shared by sso_link (existing user, needs the active? re-check) and
+        # sso_create_account (brand-new user, always active — the reload is
+        # a harmless no-op there). Reload right before minting, same
+        # reasoning as Authentication#create_session_for.
         def issue_mobile_tokens(user, device_info)
+          unless user.reload.active?
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          end
+
           device_info = device_info.symbolize_keys if device_info.respond_to?(:symbolize_keys)
           device = MobileDevice.upsert_device!(user, device_info)
           token_response = device.issue_token!
+
+          # issue_token! itself is the authoritative active? gate (see its
+          # comment) — nil means a deactivation landed after the check above.
+          unless token_response
+            render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          end
 
           render json: token_response.merge(user: mobile_user_payload(user))
         rescue ActiveRecord::RecordInvalid => e
