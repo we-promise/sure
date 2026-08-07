@@ -36,7 +36,6 @@
       label: t(".date"),
       required: true,
       min: Entry.min_supported_date,
-      max: Date.current,
       value: f.object.date || Date.current,
       data: { transaction_form_target: "date", action: "change->transaction-form#checkCurrencyDifference" } %>
 

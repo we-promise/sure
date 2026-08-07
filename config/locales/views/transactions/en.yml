@@ -147,6 +147,9 @@ en:
       split: Split
       split_tooltip: This transaction has been split into multiple entries
       split_child_tooltip: Part of a split transaction
+      scheduled: Scheduled
+      scheduled_tooltip: Scheduled for a future date — won't affect today's balance until it posts
+      scheduled_fx_tooltip: Scheduled for a future date — won't affect today's balance until it posts. The converted amount is provisional; the exchange rate is finalized on the transaction date.
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions
