@@ -1109,6 +1109,13 @@ class Family::DataImporter
         return merchant.id
       end
 
+      # Map tag names to IDs
+      if condition_type == "transaction_tag"
+        tag = @family.tags.find_by(name: value)
+        tag ||= @family.tags.create!(name: value)
+        return tag.id
+      end
+
       value
     end
 

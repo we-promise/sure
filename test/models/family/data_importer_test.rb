@@ -1842,6 +1842,47 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal category.id, action.value
   end
 
+  test "imports transaction_tag rule condition by remapping the tag name to an id" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Flag Reimbursable",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            {
+              condition_type: "transaction_tag",
+              operator: "=",
+              value: "Reimbursable"
+            }
+          ],
+          actions: [
+            {
+              action_type: "set_transaction_name",
+              value: "Reimbursable expense"
+            }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    rule = @family.rules.find_by(name: "Flag Reimbursable")
+    assert_not_nil rule
+
+    condition = rule.conditions.first
+    assert_equal "transaction_tag", condition.condition_type
+
+    # The tag should be created and the condition value remapped to its id
+    tag = @family.tags.find_by(name: "Reimbursable")
+    assert_not_nil tag
+    assert_equal tag.id, condition.value
+  end
+
   test "session rule reimport only replaces current family conditions and actions" do
     rule = @family.rules.build(name: "Original Rule", resource_type: "transaction", active: true)
     rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "old")
