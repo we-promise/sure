@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_05_174227) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_07_071153) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -654,7 +654,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_174227) do
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
-    t.index ["reconciled_status"], name: "index_entries_on_reconciled_status"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
   end
 

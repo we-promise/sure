@@ -697,4 +697,18 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     assert_includes ids, entry.entryable.id
   end
+
+  test "reconcile_status filter excludes synced accounts even though they default to unreconciled" do
+    manual_entry = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    synced_account = accounts(:connected)
+    synced_entry = create_transaction(account: synced_account, amount: 100, kind: "standard")
+
+    assert_equal "unreconciled", manual_entry.reconciled_status
+    assert_equal "unreconciled", synced_entry.reconciled_status
+
+    ids = Transaction::Search.new(@family, filters: { reconcile_status: [ "unreconciled" ] }).transactions_scope.pluck(:id)
+
+    assert_includes ids, manual_entry.entryable.id
+    assert_not_includes ids, synced_entry.entryable.id
+  end
 end

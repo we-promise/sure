@@ -212,6 +212,12 @@ class Transaction::Search
     end
 
     # Filters by the manual reconciled_status enum (see Entry#reconciled_status).
+    # Scoped to manual accounts — every entry defaults to "unreconciled"
+    # regardless of account type, but the UI/update paths only ever
+    # show/change this for accounts with no live bank sync. Without this
+    # scope, selecting "Unreconciled" would also match every synced
+    # transaction in the family.
+    #
     # Unlike apply_status_filter (bank-sync pending/confirmed), this is a
     # user-controlled flag, so any subset of the three values is meaningful —
     # there's no "all selected = no filter" shortcut.
@@ -221,6 +227,7 @@ class Transaction::Search
       valid_statuses = reconcile_statuses & Entry.reconciled_statuses.keys
       return query if valid_statuses.empty?
 
-      query.where(entries: { reconciled_status: valid_statuses })
+      manual_account_ids = family.accounts.manual.pluck(:id)
+      query.where(entries: { account_id: manual_account_ids, reconciled_status: valid_statuses })
     end
 end

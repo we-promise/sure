@@ -509,6 +509,8 @@ class Entry < ApplicationRecord
 
       return 0 unless has_updates
 
+      updated_count = 0
+
       transaction do
         all.includes(:account).each do |entry|
           changed = false
@@ -542,11 +544,12 @@ class Entry < ApplicationRecord
           if changed
             entry.lock_saved_attributes!
             entry.mark_user_modified!
+            updated_count += 1
           end
         end
       end
 
-      all.size
+      updated_count
     end
   end
 

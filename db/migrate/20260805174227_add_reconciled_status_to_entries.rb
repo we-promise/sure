@@ -9,11 +9,12 @@ class AddReconciledStatusToEntries < ActiveRecord::Migration[7.2]
     #   cleared      - confirmed to exist on the bank/card statement, but the
     #                  statement period hasn't been fully reconciled yet.
     #   reconciled   - statement period fully reconciled; this line is locked in.
+    #
+    # Indexing is a separate migration (see AddReconciledStatusIndexToEntries)
+    # so it can run with algorithm: :concurrently — entries is one of the
+    # largest tables here, and a plain add_index takes a write-blocking lock
+    # for the duration of the build on self-hosted instances with a lot of
+    # history.
     add_column :entries, :reconciled_status, :string, default: "unreconciled", null: false
-    add_index :entries, :reconciled_status
-
-    # Composite index for the common "reconcile this account" query:
-    # unreconciled/cleared entries for one account, ordered by date.
-    add_index :entries, [ :account_id, :reconciled_status ], name: "index_entries_on_account_id_and_reconciled_status"
   end
 end

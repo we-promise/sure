@@ -3,9 +3,15 @@ class Transactions::BulkUpdatesController < ApplicationController
   end
 
   def create
-    # Skip split parents from bulk update - update children instead
+    # Skip split parents from bulk update - update children instead.
+    # Scope to accounts the current user can actually write to — family
+    # membership alone isn't enough (e.g. a read_only account share). Entries
+    # on accounts the user can't write to are silently excluded from the
+    # selection, the same "skip, don't error" posture bulk_update! already
+    # uses for reconciled_status on synced accounts.
     updated = Current.family
                      .entries
+                     .where(account_id: Account.writable_by(Current.user).select(:id))
                      .excluding_split_parents
                      .where(id: bulk_update_params[:entry_ids])
                      .bulk_update!(bulk_update_params, update_tags: tags_provided?)

@@ -102,4 +102,17 @@ class EntryTest < ActiveSupport::TestCase
 
     assert_equal "unreconciled", entry.reload.reconciled_status
   end
+
+  test "bulk_update! applies reconciled_status only to manual entries in a mixed selection and reports the accurate count" do
+    manual_entry = create_transaction(account: accounts(:depository))
+    synced_entry = create_transaction(account: accounts(:connected))
+
+    updated_count = Entry.where(id: [ manual_entry.id, synced_entry.id ])
+                          .bulk_update!({ reconciled_status: "cleared" })
+
+    assert_equal "cleared", manual_entry.reload.reconciled_status
+    assert_equal "unreconciled", synced_entry.reload.reconciled_status
+    assert_equal 1, updated_count, "only the manual entry actually changed, so the reported count should be 1, not 2"
+    assert_not synced_entry.user_modified?
+  end
 end

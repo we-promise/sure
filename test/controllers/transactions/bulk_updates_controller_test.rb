@@ -150,4 +150,30 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to transactions_url
     assert_equal "unreconciled", synced_entry.reload.reconciled_status
   end
+
+  test "bulk update does not modify entries on accounts the user only has read-only access to" do
+    read_only_user = users(:family_member)
+    sign_in read_only_user
+
+    # family_member has read_only access to credit_card (see account_shares fixture)
+    read_only_account = accounts(:credit_card)
+    assert_not Account.writable_by(read_only_user).exists?(id: read_only_account.id)
+
+    read_only_entry = create_transaction(account: read_only_account, name: "Not mine to edit")
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ read_only_entry.id ],
+        reconciled_status: "reconciled",
+        notes: "Should not be applied"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "0 transactions updated", flash[:notice]
+
+    read_only_entry.reload
+    assert_equal "unreconciled", read_only_entry.reconciled_status
+    assert_nil read_only_entry.notes
+  end
 end

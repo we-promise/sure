@@ -40,7 +40,7 @@
         <% menu.with_item(
             variant: "button",
             text: t("transactions.reconcile.statuses.#{status}"),
-            icon: { "unreconciled" => "circle", "cleared" => "circle-dot", "reconciled" => "check-circle" }[status],
+            icon: reconcile_status_icon(status),
             href: transactions_bulk_update_path(bulk_update: { reconciled_status: status }),
             method: :post,
             data: { action: "bulk-select#submitBulkRequest", bulk_select_scope_param: "bulk_update" }
