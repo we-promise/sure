@@ -52,6 +52,14 @@ de:
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+          tiingo: Tiingo
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
+          binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
       assistant_settings:
         title: KI-Assistent
         description: Wähle, wie der Chat-Assistent antwortet. „Integriert“ verwendet direkt deinen konfigurierten LLM-Anbieter. „Extern“ delegiert an einen externen KI-Agenten, der über MCP auf die Finanztools von Sure zugreifen kann.
@@ -64,6 +72,7 @@ de:
         env_notice: Der Assistententyp ist über die Umgebungsvariable ASSISTANT_TYPE auf „%{type}“ festgelegt.
         env_configured_external: Erfolgreich über Umgebungsvariablen konfiguriert.
         url_label: Endpunkt-URL
+        url_placeholder: https://your-agent-host/v1/chat
         url_help: Die vollständige URL zum API-Endpunkt deines Agenten. Dein Agent-Anbieter stellt dir diese zur Verfügung.
         token_label: API-Token
         token_placeholder: Gib das Token deines Agent-Anbieters ein
@@ -94,11 +103,14 @@ de:
         description: Wähle, welches LLM den KI-Chat antreibt. Batch-Vorgänge (Transaktionskategorisierung, Händlererkennung und PDF-Verarbeitung) verwenden derzeit immer OpenAI.
         env_configured_message: Erfolgreich über die Umgebungsvariable LLM_PROVIDER konfiguriert.
         provider_label: Aktiver LLM-Anbieter
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
         provider_help: Der Anbieterwechsel wird beim nächsten Chat wirksam. Konfiguriere unten die Zugangsdaten des aktiven Anbieters.
         not_configured_hint: Füge unten einen %{provider}-API-Schlüssel hinzu, um ihn zu aktivieren.
         data_retention_heading: Datenverarbeitung
         data_retention: API-Eingaben werden standardmäßig nicht zum Training von Modellen verwendet; die gehosteten APIs der Anbieter speichern Daten für ca. 30 Tage zu Vertrauens- und Sicherheitszwecken. Benutzerdefinierte oder selbst gehostete Endpunkte folgen deiner eigenen Richtlinie.
       anthropic_settings:
+        title: Anthropic (Claude)
         description: Gib deinen Anthropic-API-Schlüssel ein. Optional kannst du die Basis-URL auf AWS Bedrock oder GCP Vertex verweisen.
         env_configured_message: Erfolgreich über Umgebungsvariablen konfiguriert.
         access_token_label: API-Schlüssel
@@ -148,12 +160,21 @@ de:
         connection_failed: Verbindung zu Yahoo Finance konnte nicht hergestellt werden
         troubleshooting: Überprüfe deine Internetverbindung und Firewall-Einstellungen. Yahoo Finance könnte vorübergehend nicht verfügbar sein.
       rentcast_settings:
+        title: RentCast
         description: Gib deinen RentCast-API-Schlüssel ein, um beim Hinzufügen einer Immobilie US-Immobiliendetails und Wertschätzungen abzurufen. Die kostenlose Stufe ist auf 50 API-Anfragen pro Monat begrenzt, aufgeteilt zwischen Immobiliensuchen und täglichen Aktualisierungen der Bewertung. Erhöhe bei einem kostenpflichtigen Tarif das Limit mit der Umgebungsvariable RENTCAST_MAX_REQUESTS_PER_MONTH.
         env_configured_message: Erfolgreich über die Umgebungsvariable RENTCAST_API_KEY konfiguriert.
         label: API-Schlüssel
         placeholder: Gib hier deinen RentCast-API-Schlüssel ein
         usage: '%{used} von %{limit} monatlichen Anfragen genutzt'
+      realie_settings:
+        title: Realie
+        description: Gib deinen Realie-API-Schlüssel ein, um beim Hinzufügen einer Immobilie Details und Wertschätzungen von US-Immobilien abzurufen. Die kostenlose Version ist auf 25 API-Anfragen pro Monat beschränkt, die für Immobilienabfragen und tägliche Bewertungsaktualisierungen verwendet werden. In einem kostenpflichtigen Tarif kannst du das Limit mit der Umgebungsvariablen REALIE_MAX_REQUESTS_PER_MONTH erhöhen.
+        env_configured_message: Die Konfiguration über die Umgebungsvariable REALIE_API_KEY war erfolgreich.
+        label: API-Schlüssel
+        placeholder: Gib hier deinen Realie-API-Schlüssel ein
+        usage: '%{used} von %{limit} monatlichen Anfragen verwendet'
       tiingo_settings:
+        title: Tiingo
         description: Gib das von Tiingo bereitgestellte API-Token ein. Die kostenlose Stufe unterstützt 50 eindeutige Symbole pro Stunde mit über 30 Jahren historischer Daten.
         env_configured_message: Erfolgreich über die Umgebungsvariable TIINGO_API_KEY konfiguriert.
         label: API-Token
@@ -163,6 +184,7 @@ de:
         step_2_html: Gehe zur Seite <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a>.
         step_3: Kopiere dein API-Token und füge es unten ein.
       tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
         description: Gib ein schreibgeschütztes T-Invest-API-Token ein. Es wird verwendet, um Markenlogos für Wertpapiere abzurufen (auch für Fonds und Anleihen, selbst wenn MOEX sie bepreist) und, wenn oben aktiviert, Kurse für russische Instrumente.
         env_configured_message: Erfolgreich über die Umgebungsvariable TINKOFF_INVEST_API_KEY konfiguriert.
         label: API-Token
@@ -172,6 +194,7 @@ de:
         step_2: Erstelle ein Token mit schreibgeschütztem Zugriff.
         step_3: Kopiere das Token und füge es unten ein.
       eodhd_settings:
+        title: EODHD
         description: Gib das von EODHD bereitgestellte API-Token ein. Unterstützt EU-ETFs an der LSE, XETRA und anderen internationalen Börsen.
         env_configured_message: Erfolgreich über die Umgebungsvariable EODHD_API_KEY konfiguriert.
         label: API-Token
@@ -182,6 +205,7 @@ de:
         step_3: Kopiere dein API-Token und füge es unten ein.
         rate_limit_warning: Die kostenlose EODHD-Stufe ist auf 20 API-Aufrufe pro Tag begrenzt. Am besten als ergänzender Anbieter für EU-ETFs geeignet, die bei anderen Anbietern nicht verfügbar sind.
       alpha_vantage_settings:
+        title: Alpha Vantage
         description: Gib den API-Schlüssel von Alpha Vantage ein. Unterstützt EU-ETFs an der London Stock Exchange, XETRA und anderen Börsen.
         env_configured_message: Erfolgreich über die Umgebungsvariable ALPHA_VANTAGE_API_KEY konfiguriert.
         label: API-Schlüssel

@@ -6,6 +6,7 @@ de:
       label: Letzter Tag
       comparison_label: vs. gestern
     current_week:
+      label_short: WTD
       label: Aktuelle Woche
       comparison_label: vs. Wochenbeginn
     last_7_days:
@@ -13,6 +14,7 @@ de:
       label: Letzte 7 Tage
       comparison_label: vs. letzte Woche
     current_month:
+      label_short: MTD
       label: Aktueller Monat
       comparison_label: vs. Monatsbeginn
     last_month:
@@ -28,6 +30,7 @@ de:
       label: Letzte 90 Tage
       comparison_label: vs. letztes Quartal
     current_year:
+      label_short: YTD
       label: Aktuelles Jahr
       comparison_label: vs. Jahresbeginn
     last_365_days:
