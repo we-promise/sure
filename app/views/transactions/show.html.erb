@@ -334,6 +334,33 @@
             <% end %>
           </div>
         <% end %>
+        <%# Refund — only visible for inflows (amount < 0) that are not transfers or split children.
+            A refund offsets the original expense in budgets; it is not treated as income. %>
+        <% if @entry.amount.negative? && !@entry.transaction.transfer? && !@entry.split_child? %>
+          <div class="pb-4">
+            <%= styled_form_with model: @entry,
+                  url: transaction_path(@entry),
+                  class: "p-3",
+                  data: { controller: "auto-submit-form" } do |f| %>
+              <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+              <%= f.fields_for :entryable do |ef| %>
+                <div class="space-y-3">
+                  <div class="flex cursor-pointer items-center gap-4 justify-between">
+                    <div class="text-sm space-y-1">
+                      <h4 class="text-primary"><%= t(".refund_title") %></h4>
+                      <p class="text-secondary"><%= t(".refund_description") %></p>
+                    </div>
+                    <%= ef.toggle :refund, {
+                          checked: @entry.transaction.refund?,
+                          data: { auto_submit_form_target: "auto" }
+                        } %>
+                  </div>
+
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
         <%# Split Transaction %>
         <% if @entry.transaction.splittable? %>
           <div class="flex items-center justify-between gap-4 p-3">

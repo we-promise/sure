@@ -66,8 +66,8 @@ class IncomeStatement::CategoryStats
           SELECT
             c.id as category_id,
             date_trunc(:interval, ae.date) as period,
-            CASE WHEN t.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
-            SUM(CASE WHEN t.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END) as total
+            #{IncomeStatement::ClassificationSql.classification(transactions_alias: "t")} as classification,
+            SUM(#{IncomeStatement::ClassificationSql.signed_amount(transactions_alias: "t")}) as total
           FROM transactions t
           JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Transaction'
           JOIN accounts a ON a.id = ae.account_id
@@ -84,14 +84,26 @@ class IncomeStatement::CategoryStats
             #{pending_providers_sql}
             #{exclude_tax_advantaged_sql}
             #{scope_to_account_ids_sql}
-          GROUP BY c.id, period, CASE WHEN t.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+          GROUP BY c.id, period, #{IncomeStatement::ClassificationSql.classification(transactions_alias: "t")}
+        ),
+        -- See IncomeStatement::FamilyStats for why this step exists: a
+        -- category+period where refunds exceed expenses sums negative under
+        -- 'expense'; re-label it 'income' (and vice versa) before
+        -- aggregating instead of ABS-ing the final median/avg.
+        corrected_totals AS (
+          SELECT
+            category_id,
+            period,
+            #{IncomeStatement::ClassificationSql.reclassify_by_sign} as classification,
+            ABS(total) as total
+          FROM period_totals
         )
         SELECT
           category_id,
           classification,
-          ABS(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total)) as median,
-          ABS(AVG(total)) as avg
-        FROM period_totals
+          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total) as median,
+          AVG(total) as avg
+        FROM corrected_totals
         GROUP BY category_id, classification;
       SQL
     end

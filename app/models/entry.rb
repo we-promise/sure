@@ -25,6 +25,7 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
+  validate :refund_must_have_negative_amount, if: -> { transaction? && entryable.refund? }
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
@@ -110,8 +111,8 @@ class Entry < ApplicationRecord
               .where("BTRIM(REGEXP_REPLACE(entries.name, '[[:space:]]+', ' ', 'g')) ILIKE ?", "%#{sanitized}%")
 
     scope = case transaction_type
-    when "income"  then scope.where("entries.amount < 0")
-    when "expense" then scope.where("entries.amount >= 0")
+    when "income"  then scope.where("entries.amount < 0 AND transactions.refund != true")
+    when "expense" then scope.where("entries.amount >= 0 OR transactions.refund = true")
     else scope
     end
 
@@ -270,6 +271,10 @@ class Entry < ApplicationRecord
   end
 
   def classification
+    if entryable.is_a?(Transaction)
+      override = entryable.classification
+      return override if override
+    end
     amount.negative? ? "income" : "expense"
   end
 
@@ -525,6 +530,12 @@ class Entry < ApplicationRecord
       return if date == parent_entry.date
 
       errors.add(:date, "must match the parent transaction date for split children")
+    end
+
+    def refund_must_have_negative_amount
+      return if amount.blank? || amount.negative?
+
+      errors.add(:amount, "must be negative for a refund")
     end
 
     def prevent_individual_child_deletion
