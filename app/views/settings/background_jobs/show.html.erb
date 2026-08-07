@@ -30,9 +30,11 @@
 
           <div class="flex flex-wrap gap-2">
             <% @console.stats.queues.each do |queue| %>
-              <span class="rounded-full bg-container-inset px-3 py-1 text-xs text-secondary font-mono">
-                <%= queue[:name] %>: <%= queue[:size] %> · <%= t(".stats.latency", value: queue[:latency]) %>
-              </span>
+              <%= render DS::Pill.new(
+                label: "#{queue[:name]}: #{queue[:size]} · #{t(".stats.latency", value: queue[:latency])}",
+                tone: :neutral,
+                marker: false
+              ) %>
             <% end %>
           </div>
         </div>
