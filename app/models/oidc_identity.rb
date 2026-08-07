@@ -98,7 +98,7 @@ class OidcIdentity < ApplicationRecord
 
   # Find the configured provider for this identity
   def provider_config
-    AuthConfig.sso_providers&.find { |p| p[:name] == provider || p[:id] == provider }
+    AuthConfig.find_sso_provider(provider)
   end
 
   # Validate that the stored issuer matches the configured provider's issuer
