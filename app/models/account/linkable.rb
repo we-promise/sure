@@ -23,7 +23,7 @@ module Account::Linkable
 
   # A "linked" account gets transaction and balance data from a third party like Plaid or SimpleFin
   def linked?
-    account_providers.any? || plaid_account.present? || simplefin_account.present?
+    account_providers_count.to_i.positive? || plaid_account_id.present? || simplefin_account_id.present?
   end
 
   # An "offline" or "unlinked" account is one where the user tracks values and

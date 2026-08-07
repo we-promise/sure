@@ -7,6 +7,20 @@ class UserTest < ActiveSupport::TestCase
     @user = users(:family_admin)
   end
 
+  def count_sql_queries
+    count = 0
+    subscriber = lambda do |_name, _started, _finished, _unique_id, payload|
+      sql = payload[:sql]
+      next if payload[:name] == "SCHEMA"
+      next if sql.match?(/\A(?:BEGIN|COMMIT|SAVEPOINT|RELEASE|ROLLBACK)\b/i)
+
+      count += 1
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { yield }
+    count
+  end
+
   def teardown
     clear_enqueued_jobs
     clear_performed_jobs
@@ -86,6 +100,16 @@ class UserTest < ActiveSupport::TestCase
     assert user.otp_secret.present?
     assert_not user.otp_required?
     assert_empty user.otp_backup_codes
+  end
+
+  test "finance_account_ids memoizes within request" do
+    user = User.find(@user.id)
+
+    first = count_sql_queries { user.finance_account_ids }
+    second = count_sql_queries { user.finance_account_ids }
+
+    assert first.positive?
+    assert_equal 0, second
   end
 
   test "enable_mfa! enables MFA and generates backup codes" do
