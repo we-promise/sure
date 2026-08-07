@@ -501,26 +501,29 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   test "matching_transactions wraps day-of-month tolerance below day 1" do
     @family.update!(recurring_detection_day_tolerance: 2)
 
+    prior_month_end = 1.month.ago.to_date.end_of_month
+    non_match_date = prior_month_end - 3.days
+
     recurring = @family.recurring_transactions.create!(
       account: @account,
       merchant: @merchant,
       amount: 15.99,
       currency: "USD",
       expected_day_of_month: 1,
-      last_occurrence_date: Date.new(2026, 8, 1),
-      next_expected_date: Date.new(2026, 9, 1),
+      last_occurrence_date: Date.current.beginning_of_month,
+      next_expected_date: Date.current.next_month.beginning_of_month,
       status: "active"
     )
 
     wrap_entry = @account.entries.create!(
-      date: Date.new(2026, 7, 31),
+      date: prior_month_end,
       amount: 15.99,
       currency: "USD",
       name: "Netflix Subscription",
       entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
     )
     far_entry = @account.entries.create!(
-      date: Date.new(2026, 7, 28), # day 28 is 4 circular days from 1
+      date: non_match_date, # outside ±2 circular days of expected day 1
       amount: 15.99,
       currency: "USD",
       name: "Netflix Subscription",
@@ -546,26 +549,29 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   test "matching_transactions wraps day-of-month tolerance above day 31" do
     @family.update!(recurring_detection_day_tolerance: 2)
 
+    month_start = Date.current.beginning_of_month
+    day_four = month_start + 3.days
+
     recurring = @family.recurring_transactions.create!(
       account: @account,
       merchant: @merchant,
       amount: 15.99,
       currency: "USD",
       expected_day_of_month: 31,
-      last_occurrence_date: Date.new(2026, 7, 31),
-      next_expected_date: Date.new(2026, 8, 31),
+      last_occurrence_date: 1.month.ago.to_date.end_of_month,
+      next_expected_date: Date.current.end_of_month,
       status: "active"
     )
 
     wrap_entry = @account.entries.create!(
-      date: Date.new(2026, 8, 1),
+      date: month_start,
       amount: 15.99,
       currency: "USD",
       name: "Netflix Subscription",
       entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
     )
     far_entry = @account.entries.create!(
-      date: Date.new(2026, 8, 4), # day 4 is 4 circular days from 31
+      date: day_four, # day 4 is 4 circular days from 31
       amount: 15.99,
       currency: "USD",
       name: "Netflix Subscription",
