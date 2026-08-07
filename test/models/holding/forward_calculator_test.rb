@@ -111,6 +111,24 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_holdings(expected, calculated)
   end
 
+  # Gap-filled days must carry cost_basis forward to keep avg_cost/trend
+  # consistent with the surrounding real holdings.
+  test "carries cost_basis forward into gap-filled holdings" do
+    wmt = Security.create!(ticker: "WMT", name: "Walmart Inc.")
+
+    # Only the trade date has a price; the following days have neither a market
+    # price nor a trade, so the calculator gap-fills them.
+    create_trade(wmt, qty: 100, date: 3.days.ago.to_date, price: 100, account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+
+    real_holding = calculated.find { |h| h.security == wmt && h.date == 3.days.ago.to_date }
+    gap_filled = calculated.find { |h| h.security == wmt && h.date == 1.day.ago.to_date }
+
+    assert_equal 100, real_holding.cost_basis
+    assert_equal real_holding.cost_basis, gap_filled.cost_basis
+  end
+
   test "offline tickers sync holdings based on most recent trade price" do
     offline_security = Security.create!(ticker: "OFFLINE", name: "Offline Ticker")
 
