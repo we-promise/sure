@@ -10,6 +10,19 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new only exposes accounts accessible to the signed-in user" do
+    # family_member has shares for :depository (full_control) and :credit_card (read_only)
+    # but not for :investment or :loan, which are owned solely by family_admin.
+    sign_in users(:family_member)
+
+    get new_transfer_url
+
+    assert_response :success
+    assert_includes response.body, accounts(:depository).id.to_s
+    refute_includes response.body, accounts(:investment).id.to_s
+    refute_includes response.body, accounts(:loan).id.to_s
+  end
+
   test "can create transfers" do
     assert_difference "Transfer.count", 1 do
       post transfers_url, params: {
