@@ -148,6 +148,9 @@ RSpec.describe 'API V1 Chats', type: :request do
       tags 'Chats'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
+      description 'Returns the chat with its most recent messages (up to ' \
+                  'EXTERNAL_ASSISTANT_MAX_MESSAGES, default 200). ' \
+                  'The `pagination` field is omitted from this response.'
 
       let(:id) { chat.id }
 
