@@ -63,8 +63,8 @@ class IncomeStatement
       end
     }
 
-    expense_by_cat = expense.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
-    income_by_cat = income.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
+    expense_by_cat = expense.category_totals.reject { |ct| subcategory_for_totals?(ct.category) }.index_by { |ct| cat_key.call(ct) }
+    income_by_cat = income.category_totals.reject { |ct| subcategory_for_totals?(ct.category) }.index_by { |ct| cat_key.call(ct) }
 
     all_keys = (expense_by_cat.keys + income_by_cat.keys).uniq
     raw_expense_categories = []
@@ -119,6 +119,37 @@ class IncomeStatement
     totals(transactions_scope: scope, date_range: period.date_range)
   end
 
+  # Income/expense totals for a run of calendar months, in one query.
+  #
+  # `totals_for` costs one multi-join aggregate per period, so a caller
+  # charting N months (the dashboard money flow widget) paid N of them per
+  # request. This buckets by month server-side instead.
+  #
+  # Returns { month_beginning_of_month => ScopeTotals }, zero-filled for
+  # months with no matching activity so callers can render every bar.
+  def totals_by_month(months, account_ids: nil)
+    normalized = Array(months).map { |month| month.to_date.beginning_of_month }.uniq.sort
+    return {} if normalized.empty?
+
+    range_start = normalized.first
+    # Cap at today so an in-progress month doesn't report totals for its
+    # not-yet-arrived days, matching the per-month behavior it replaces.
+    range_end = [ normalized.last.end_of_month, Date.current ].min
+
+    rows = range_end < range_start ? [] : monthly_totals_query(range_start: range_start, range_end: range_end, account_ids: account_ids)
+    rows_by_month = rows.group_by(&:month)
+
+    normalized.index_with do |month|
+      month_rows = rows_by_month[month] || []
+
+      ScopeTotals.new(
+        transactions_count: month_rows.sum { |row| row.transactions_count.to_i },
+        income_money: Money.new(month_rows.select { |row| row.classification == "income" }.sum(&:total), family.currency),
+        expense_money: Money.new(month_rows.select { |row| row.classification == "expense" }.sum(&:total), family.currency)
+      )
+    end
+  end
+
   # Accounts actually reflected in totals/totals_for: visible, not excluded
   # from reports, not tax-advantaged, and (when scoped to a user) included in
   # that user's finances. Callers offering an account filter (e.g. a
@@ -162,8 +193,20 @@ class IncomeStatement
     NetCategoryTotals = Data.define(:net_expense_categories, :net_income_categories, :total_net_expense, :total_net_income, :currency)
 
     def categories
-      # Keep Category#subcategory?'s parent-based orphan semantics without lazy loads.
-      @categories ||= family.categories.includes(:parent).to_a
+      @categories ||= family.categories.to_a
+    end
+
+    def categories_by_id
+      @categories_by_id ||= categories.index_by(&:id)
+    end
+
+    # Treat categories as subcategories only when their parent exists in the
+    # family. Orphaned categories (stale parent_id) roll up as roots without
+    # per-id parent lookups or eager-loading parents.
+    def subcategory_for_totals?(category)
+      return false if category.parent_id.blank?
+
+      categories_by_id[category.parent_id].present?
     end
 
     def period_cache_key(period)
@@ -209,7 +252,7 @@ class IncomeStatement
 
       PeriodTotal.new(
         classification: classification,
-        total: category_totals.reject { |ct| ct.category.subcategory? }.sum(&:total),
+        total: category_totals.reject { |ct| subcategory_for_totals?(ct.category) }.sum(&:total),
         currency: family.currency,
         category_totals: category_totals
       )
@@ -250,8 +293,27 @@ class IncomeStatement
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i
+        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version, accounts_cache_version
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
+    end
+
+    def monthly_totals_query(range_start:, range_end:, account_ids:)
+      period = Period.custom(start_date: range_start, end_date: range_end)
+      scope = family.transactions.visible.excluding_pending.in_period(period)
+      scope = scope.where(entries: { account_id: account_ids }) if account_ids.present?
+
+      sql_hash = Digest::MD5.hexdigest(scope.to_sql)
+
+      Rails.cache.fetch([
+        "income_statement", "monthly_totals_query", "v1", family.id, user&.id, included_account_ids_hash, sql_hash, range_start, range_end, family.entries_cache_version, accounts_cache_version
+      ]) { MonthlyTotals.new(family, transactions_scope: scope, date_range: period.date_range, included_account_ids: included_account_ids).call }
+    end
+
+    # Part of every totals cache key. Reading it through the family's memo
+    # keeps it to one `SELECT MAX(updated_at) FROM accounts` per request
+    # instead of one per period being totalled.
+    def accounts_cache_version
+      family.accounts_cache_version&.to_i
     end
 
     def monetizable_currency

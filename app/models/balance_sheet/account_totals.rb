@@ -28,21 +28,6 @@ class BalanceSheet::AccountTotals
       delegate_missing_to :account
     end
 
-    def visible_accounts
-      @visible_accounts ||= begin
-        scope = family.accounts.visible.with_attached_logo
-                  .includes(
-                    :account_shares,
-                    :accountable,
-                    :plaid_account,
-                    :simplefin_account,
-                    account_providers: :provider
-                  )
-        scope = scope.accessible_by(user) if user
-        scope
-      end
-    end
-
     def finance_account_ids
       @finance_account_ids ||= if user
         family.accounts.included_in_finances_for(user).pluck(:id).to_set
@@ -73,19 +58,12 @@ class BalanceSheet::AccountTotals
       )
     end
 
-    # Loads visible accounts, caching their IDs to speed up subsequent requests.
-    # On cache miss, loads records once and writes IDs; on hit, filters by cached IDs.
+    # Shares the family's request-level visible account load with dashboard and sidebar.
     def accounts
       @accounts ||= begin
-        ids = Rails.cache.read(cache_key)
-
-        if ids
-          visible_accounts.where(id: ids).to_a
-        else
-          records = visible_accounts.to_a
-          Rails.cache.write(cache_key, records.map(&:id))
-          records
-        end
+        loaded = family.visible_accessible_accounts(user: user)
+        Rails.cache.write(cache_key, loaded.map(&:id)) unless Rails.cache.read(cache_key)
+        loaded
       end
     end
 
@@ -94,7 +72,7 @@ class BalanceSheet::AccountTotals
     def exchange_rates
       @exchange_rates ||= begin
         foreign_currencies = accounts.filter_map { |a| a.currency if a.currency != family.currency }
-        ExchangeRate.rates_for(foreign_currencies, to: family.currency, date: Date.current)
+        family.exchange_rates_for(foreign_currencies, date: Date.current)
       end
     end
 

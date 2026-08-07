@@ -12,9 +12,13 @@ class PropertiesEditTest < ApplicationSystemTestCase
   end
 
   test "can persist property subtype" do
-    click_link "[system test] Property Account"
+    visit account_url(@property_account)
+    assert_text "Estimated property value", wait: 10
+
     open_account_edit_dialog
-    assert_equal "single_family_home", find("#account_accountable_attributes_subtype").value
+
+    assert_selector "dialog[open]", wait: 10
+    assert_selector "#account_accountable_attributes_subtype option[selected][value='single_family_home']", wait: 10
   end
 
   private
@@ -31,7 +35,7 @@ class PropertiesEditTest < ApplicationSystemTestCase
     def open_account_edit_dialog
       3.times do
         # A prior (slow) attempt may have already opened the edit form.
-        return if has_selector?("#account_accountable_attributes_subtype", wait: 0)
+        return if has_selector?("dialog[open] #account_accountable_attributes_subtype", wait: 0)
 
         begin
           within_testid("account-menu") do
@@ -50,9 +54,9 @@ class PropertiesEditTest < ApplicationSystemTestCase
           )
           next
         end
-        return if has_selector?("#account_accountable_attributes_subtype", wait: 2)
+        return if has_selector?("dialog[open] #account_accountable_attributes_subtype", wait: 2)
       end
-      assert_selector "#account_accountable_attributes_subtype"
+      assert_selector "dialog[open] #account_accountable_attributes_subtype"
     end
 
     def open_new_account_modal
@@ -91,10 +95,10 @@ class PropertiesEditTest < ApplicationSystemTestCase
       # Verify account was created and is now active
       assert_text account_name
 
-      created_account = Account.order(:created_at).last
-      assert_equal "active", created_account.status
-      assert_equal 500000, created_account.balance
-      assert_equal "123 Main St", created_account.property.address.line1
-      assert_equal "San Francisco", created_account.property.address.locality
+      @property_account = Account.order(:created_at).last
+      assert_equal "active", @property_account.status
+      assert_equal 500000, @property_account.balance
+      assert_equal "123 Main St", @property_account.property.address.line1
+      assert_equal "San Francisco", @property_account.property.address.locality
     end
 end

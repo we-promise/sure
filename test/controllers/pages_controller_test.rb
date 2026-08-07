@@ -213,6 +213,67 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal default_bars, filtered_bars
   end
 
+  test "dashboard totals the money flow months in a single aggregate query" do
+    account = @family.accounts.create!(name: "Money Flow Perf", currency: @family.currency, balance: 0, accountable: Depository.new)
+    5.downto(0) do |i|
+      date = (Date.current.beginning_of_month - i.months) + 2.days
+      next if date > Date.current
+      create_transaction(account: account, name: "Expense #{i}", amount: 30 + i, date: date)
+    end
+
+    queries = capture_sql_queries do
+      get root_path
+    end
+
+    assert_response :ok
+
+    # The widget charts PagesController::MONEY_FLOW_CHART_MONTHS months. Totalling
+    # them one period at a time meant an aggregate scan per bar.
+    assert_equal 1, queries.grep(/DATE_TRUNC\('month', ae\.date\)/i).size
+
+    # Per-period category aggregates are recognizable by their
+    # is_uncategorized_investment column; only the dashboard period itself
+    # should need one, not every money flow bar.
+    per_period_aggregates = queries.grep(/is_uncategorized_investment/)
+    assert_operator per_period_aggregates.size, :<, PagesController::MONEY_FLOW_CHART_MONTHS
+  end
+
+  test "dashboard batches holding avg-cost trades queries for investment summary" do
+    account = @family.accounts.create!(
+      name: "Brokerage Perf",
+      currency: @family.currency,
+      balance: 50_000,
+      accountable: Investment.new
+    )
+
+    4.times do |idx|
+      security = Security.create!(ticker: "AVG#{idx}", name: "Avg Cost #{idx}")
+      create_trade(security, account: account, qty: 10, price: 100 + idx, date: 10.days.ago.to_date)
+      create_trade(security, account: account, qty: 5, price: 110 + idx, date: 5.days.ago.to_date)
+      Holding.create!(
+        account: account,
+        security: security,
+        date: Date.current,
+        qty: 15,
+        price: 120 + idx,
+        amount: (120 + idx) * 15,
+        currency: @family.currency
+      )
+    end
+
+    queries = capture_sql_queries do
+      get root_path
+    end
+
+    assert_response :ok
+    assert_select "#investment-summary"
+
+    # Skylight fingerprint: one SUM(trades...) per holding via Holding#calculate_avg_cost.
+    # InvestmentStatement preloads these via Holding::CalculatedAvgCosts instead.
+    assert_equal 1, queries.grep(/WITH holding_specs/).size
+    assert_empty queries.grep(/FROM "trades" INNER JOIN "entries".*"trades"\."security_id" =/)
+  end
+
   test "dashboard clamps a future money flow month instead of erroring" do
     get root_path, params: { money_flow_month: 1.month.from_now.beginning_of_month.iso8601 }
 
