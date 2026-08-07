@@ -588,6 +588,71 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_not_includes found, far_entry
   end
 
+  test "matching_transactions clamps expected day 31 to February month end" do
+    @family.update!(recurring_detection_day_tolerance: 2)
+
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 31,
+      last_occurrence_date: Date.new(2026, 1, 31),
+      next_expected_date: Date.new(2026, 2, 28),
+      status: "active"
+    )
+
+    # 2026 is not a leap year — expected 31 clamps to Feb 28
+    month_end_entry = @account.entries.create!(
+      date: Date.new(2026, 2, 28),
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+    within_tol_entry = @account.entries.create!(
+      date: Date.new(2026, 2, 26),
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+    outside_tol_entry = @account.entries.create!(
+      date: Date.new(2026, 2, 25), # circular distance from clamped day 28 is 3
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+    # Old fixed 1–31 wrap treated Feb 1 as a match for expected 31; clamp semantics must not.
+    false_wrap_entry = @account.entries.create!(
+      date: Date.new(2026, 2, 1),
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+
+    matches = recurring.matching_transactions
+    assert_includes matches, month_end_entry
+    assert_includes matches, within_tol_entry
+    assert_not_includes matches, outside_tol_entry
+    assert_not_includes matches, false_wrap_entry
+
+    found = RecurringTransaction.find_matching_transaction_entries(
+      family: @family,
+      merchant_id: @merchant.id,
+      name: nil,
+      currency: "USD",
+      expected_day: 31,
+      account: @account
+    )
+    assert_includes found, month_end_entry
+    assert_includes found, within_tol_entry
+    assert_not_includes found, outside_tol_entry
+    assert_not_includes found, false_wrap_entry
+  end
+
   test "should_be_inactive? has longer threshold for manual recurring" do
     # Manual recurring - 6 months threshold
     manual_recurring = @family.recurring_transactions.create!(

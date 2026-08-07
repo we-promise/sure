@@ -195,30 +195,20 @@ class RecurringTransaction < ApplicationRecord
     )
   end
 
-  # Scope entries whose day-of-month is within ±tolerance of expected_day on a
-  # 31-day circle (same semantics as Identifier#circular_distance). When the
-  # window wraps past 1 or 31, use two BETWEEN ranges instead of clamping.
+  # Scope entries whose day-of-month is within ±tolerance of expected_day.
+  # Matches Identifier#manual_recurring_matches_entry?: clamp expected_day to the
+  # entry's month length, then compare with circular distance on a 31-day circle
+  # (so expected day 31 matches Feb 28 and can still wrap to day 1 of a 31-day month).
   def self.apply_day_of_month_tolerance(relation, expected_day:, day_tolerance:)
-    low = expected_day - day_tolerance
-    high = expected_day + day_tolerance
+    expected_day = Integer(expected_day)
+    day_tolerance = Integer(day_tolerance)
 
-    if low >= 1 && high <= 31
-      relation.where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?", low, high)
-    elsif low < 1 && high > 31
-      relation # tolerance covers the entire month
-    elsif low < 1
-      # e.g. expected 1, tol 2 → days 30–31 and 1–3
-      relation.where(
-        "(EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?) OR (EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?)",
-        31 + low, 31, 1, high
-      )
-    else
-      # e.g. expected 31, tol 2 → days 29–31 and 1–2
-      relation.where(
-        "(EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?) OR (EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?)",
-        low, 31, 1, high - 31
-      )
-    end
+    month_end_day = "EXTRACT(DAY FROM (DATE_TRUNC('month', entries.date) + INTERVAL '1 month' - INTERVAL '1 day'))::integer"
+    entry_day = "EXTRACT(DAY FROM entries.date)::integer"
+    clamped_expected = "LEAST(#{expected_day}, #{month_end_day})"
+    circular_distance = "LEAST(ABS(#{entry_day} - (#{clamped_expected})), 31 - ABS(#{entry_day} - (#{clamped_expected})))"
+
+    relation.where("#{circular_distance} <= ?", day_tolerance)
   end
 
   # Find matching transaction entries for variance calculation
