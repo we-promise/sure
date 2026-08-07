@@ -16,6 +16,7 @@ en:
     budgets: Budgets
     categories: Categories
     categorize: Categorize
+    changelog: What's new
     chats: Chats
     coinbase_items: Coinbase
     coinstats_items: CoinStats
@@ -29,6 +30,7 @@ en:
     exports: Exports
     family_exports: Exports
     family_merchants: Merchants
+    feedback: Feedback
     guides: Guides
     holdings: Holdings
     home: Home
