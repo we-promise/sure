@@ -99,6 +99,7 @@ en:
       go_to_provider_settings: Go to Provider Settings
     reauthorize:
       invalid_redirect: The authorization URL received is invalid. Please try again.
+      no_bank_selected: No bank has been selected for this connection. Please select a bank to continue.
       reauthorization_failed: Reauthorization failed
     select_bank:
       beta_label: Beta
