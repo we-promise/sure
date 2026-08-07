@@ -35,6 +35,12 @@ class Entry < ApplicationRecord
     reconciled: "reconciled"      # statement period fully reconciled; treat as locked
   }, default: "unreconciled", validate: true
 
+  # Order the manual reconciliation status advances through when a user
+  # clicks the reconcile badge, e.g. on the transaction row or detail view.
+  # Derived from the enum (not hardcoded) so it can't drift from it if a
+  # status is ever renamed or added.
+  RECONCILED_STATUS_CYCLE = reconciled_statuses.keys.freeze
+
   validates :date, :name, :amount, :currency, presence: true
   validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
@@ -68,8 +74,8 @@ class Entry < ApplicationRecord
   }
 
   # Manual reconciliation scopes (see reconciled_status enum above)
-  scope :needs_reconciliation, -> { where(reconciled_status: [ "unreconciled", "cleared" ]) }
-  scope :cleared_or_reconciled, -> { where(reconciled_status: [ "cleared", "reconciled" ]) }
+  scope :needs_reconciliation, -> { where(reconciled_status: [ :unreconciled, :cleared ]) }
+  scope :cleared_or_reconciled, -> { where(reconciled_status: [ :cleared, :reconciled ]) }
 
   # Pending transaction scopes - check Transaction.extra for provider pending flags
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
@@ -444,10 +450,6 @@ class Entry < ApplicationRecord
       children
     end
   end
-
-  # Order the manual reconciliation status advances through when a user
-  # clicks the reconcile badge, e.g. on the transaction row or detail view.
-  RECONCILED_STATUS_CYCLE = %w[unreconciled cleared reconciled].freeze
 
   # Advances reconciled_status to the next state in RECONCILED_STATUS_CYCLE,
   # wrapping back to :unreconciled after :reconciled. Used by the quick-toggle
