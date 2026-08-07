@@ -82,17 +82,26 @@ class Holding::ReverseCalculator
     def precompute_cost_basis
       @cost_basis_snapshots = Hash.new { |h, k| h[k] = [] }
       tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+      # Securities whose cost basis became unknowable due to a missing FX rate
+      invalid_securities = {}
 
       portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
         trade = trade_entry.entryable
         next unless trade.qty > 0
 
         security_id = trade.security_id
+        # Once a security is invalid, skip further trades for it — the nil snapshot
+        # from the first failure already propagates nil for all subsequent dates.
+        next if invalid_securities[security_id]
+
         trade_price = Money.new(trade.price, trade.currency)
         begin
-          converted_price = trade_price.exchange_to(account.currency).amount
+          converted_price = trade_price.exchange_to(account.currency, date: trade_entry.date).amount
         rescue Money::ConversionError
-          converted_price = trade.price
+          Rails.logger.warn("[Holding::ReverseCalculator] No FX rate for #{trade.currency}→#{account.currency} on #{trade_entry.date}. Marking security #{security_id} cost basis as unknown.")
+          invalid_securities[security_id] = true
+          @cost_basis_snapshots[security_id] << [ trade_entry.date, nil ]
+          next
         end
 
         tracker[security_id][:total_cost] += converted_price * trade.qty
