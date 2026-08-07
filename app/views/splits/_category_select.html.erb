@@ -60,6 +60,7 @@
       </div>
 
       <% categories.each do |category| %>
+        <% is_child = category.parent_id.present? %>
         <% is_selected = category.id == selected_id %>
         <% hex_color = category.color.presence || default_color %>
         <div class="filterable-item text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
@@ -72,6 +73,9 @@
           <span class="check-icon <%= "hidden" unless is_selected %>">
             <%= icon("check") %>
           </span>
+          <% if is_child %>
+            <%= icon("corner-down-right", size: "sm") %>
+          <% end %>
           <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border truncate"
                 style="background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent); border-color: color-mix(in oklab, <%= hex_color %> 20%, transparent); color: <%= hex_color %>;">
             <% if category.lucide_icon.present? %>

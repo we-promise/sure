@@ -8,6 +8,21 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:transaction)
   end
 
+  test "index groups subcategories immediately after their parent in the category filter" do
+    get transactions_url
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    checkbox_values = doc.css("input[name='q[categories][]']").map { |node| node["value"] }
+
+    parent_index = checkbox_values.index(categories(:food_and_drink).name)
+    child_index = checkbox_values.index(categories(:subcategory).name)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {
@@ -465,6 +480,37 @@ end
     assert_empty entry.locked_attributes, "Entry locked_attributes should be cleared"
     assert_empty entry.entryable.locked_attributes, "Transaction locked_attributes should be cleared"
     assert_not entry.protected_from_sync?
+  end
+
+  test "new groups subcategories immediately after their parent in the category select" do
+    get new_transaction_url
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    trigger = doc.at_css("#category_id_trigger")
+    assert_not_nil trigger, "expected the category select trigger button to render"
+
+    wrapper = trigger.ancestors(".relative").first
+    category_values = wrapper.css("[data-value]").map { |node| node["data-value"] }
+
+    parent_index = category_values.index(categories(:food_and_drink).id)
+    child_index = category_values.index(categories(:subcategory).id)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+  end
+
+  test "new renders a search box for account selection" do
+    get new_transaction_url
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    trigger = doc.at_css("#account_id_trigger")
+    assert_not_nil trigger, "expected the account select trigger button to render"
+
+    wrapper = trigger.ancestors(".relative").first
+    assert_not_nil wrapper.at_css("input[type='search']"), "expected a search input inside the account select"
   end
 
   test "new with duplicate_entry_id pre-fills form from source transaction" do

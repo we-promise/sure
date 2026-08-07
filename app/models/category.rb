@@ -123,11 +123,35 @@ class Category < ApplicationRecord
 
     delegate :name, :color, to: :category
 
+    # NOTE: if `categories` is a filtered/partial collection, any child whose
+    # parent isn't included is silently dropped (it's grouped under its
+    # parent_id, but that parent never appears in `roots`). Every current
+    # call site passes the full family category list, so this is latent
+    # today — pass a filtered scope with care.
     def self.for(categories)
       categories_by_parent_id = categories.to_a.group_by(&:parent_id)
 
-      categories_by_parent_id[nil].to_a.map do |category|
-        new(category, categories_by_parent_id[category.id].to_a)
+      roots = categories_by_parent_id[nil].to_a.sort_by { |category| category.name.downcase }
+
+      roots.map do |category|
+        subcategories = categories_by_parent_id[category.id].to_a.sort_by { |sub| sub.name.downcase }
+        new(category, subcategories)
+      end
+    end
+
+    # Builds [label, id] pairs for plain HTML <select> elements, ordered
+    # parent-then-children with children visually indented. Native <select>
+    # options can't render icons, so we use a unicode arrow prefix (regular
+    # leading spaces collapse in <option> text).
+    #
+    # Pass indent: false when the result is used as a display-label lookup
+    # rather than rendered as actual <select> options (e.g. Rule::Action and
+    # Rule::Condition#value_display), so the cosmetic arrow doesn't leak into
+    # plain-text summaries.
+    def self.select_options(categories, indent: true)
+      self.for(categories).flat_map do |group|
+        [ [ group.category.name, group.category.id ] ] +
+          group.subcategories.map { |sub| [ indent ? "↳ #{sub.name}" : sub.name, sub.id ] }
       end
     end
 
