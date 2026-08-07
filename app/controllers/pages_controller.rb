@@ -53,7 +53,7 @@ class PagesController < ApplicationController
     @outflows_data = build_outflows_donut_data(net_totals)
     # Preview-gated: skip the query outright rather than loading rows the
     # section won't be built from.
-    @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(3) : Insight.none
+    @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT) : Insight.none
 
     @money_flow_accounts = income_statement.eligible_accounts
     @money_flow_month = money_flow_month_param
@@ -78,6 +78,7 @@ class PagesController < ApplicationController
   end
 
   def changelog
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.changelog"), nil ] ]
     @release_notes = github_provider.fetch_latest_release_notes
 
     # Fallback if no release notes are available
@@ -95,6 +96,7 @@ class PagesController < ApplicationController
   end
 
   def feedback
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.feedback"), nil ] ]
     render layout: "settings"
   end
 

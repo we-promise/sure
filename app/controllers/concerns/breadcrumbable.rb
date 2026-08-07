@@ -19,4 +19,13 @@ module Breadcrumbable
         [ I18n.t("breadcrumbs.#{controller_name}", default: controller_name.titleize), nil ]
       ]
     end
+
+    # Trail prefix for pages living under the Plan hub (budgets, goals).
+    # Preview users reach them through /plan, so their trail starts
+    # Home > Plan; without the flag it's the plain Home prefix.
+    def plan_breadcrumb_prefix
+      prefix = [ [ I18n.t("breadcrumbs.home"), root_path ] ]
+      prefix << [ I18n.t("breadcrumbs.plan"), plan_path ] if preview_features_enabled?
+      prefix
+    end
 end

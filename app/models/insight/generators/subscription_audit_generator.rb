@@ -8,6 +8,8 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
   MAX_INSIGHTS = 3
 
   def generate
+    return [] if family.recurring_transactions_disabled?
+
     overdue_recurring.map do |recurring|
       name = recurring.merchant&.name.presence || recurring.name
       amount = Money.new(recurring.amount, recurring.currency).format

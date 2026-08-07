@@ -59,6 +59,7 @@ ca:
       opening_balance_date_label: Data del saldo inicial
     index:
       accounts: Comptes
+      cancel_sync: Cancel·la la sincronització
       manual_accounts:
         other_accounts: Altres comptes
       new_account: Nou compte
