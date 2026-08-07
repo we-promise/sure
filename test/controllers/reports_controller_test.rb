@@ -451,11 +451,30 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-#{taxable_category.id}']", text: /Reports Taxable Income/
     assert_select "tr[data-category='category-#{retirement_category.id}']", count: 0
 
-    other_investments_row = css_select("tr[data-category='category-other_investments']").first
-    assert_not_nil other_investments_row
-    assert_match(/#{Regexp.escape(Category.other_investments.name)}/, other_investments_row.text)
-    assert_match(/#{Regexp.escape(I18n.t("reports.transactions_breakdown.table.entries", count: 1))}/, other_investments_row.text)
-    assert_match(/\$100\.00/, other_investments_row.text)
+    assert_select "tr[data-category='category-other_investments']", count: 0
+  end
+
+  test "index excludes trades from activity breakdown" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+
+    transaction_category = @family.categories.create!(name: "Reports Ordinary Category", color: "#222222")
+    account = @family.accounts.create!(
+      owner: @user,
+      name: "Reports Brokerage",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "brokerage")
+    )
+
+    create_trade(securities(:aapl), account: account, qty: 1, date: Date.current, price: 100)
+    create_trade(securities(:aapl), account: account, qty: 2, date: Date.current, price: 200)
+    create_transaction(account: account, name: "Ordinary transaction", amount: 50, category: transaction_category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "tr[data-category='category-other_investments']", count: 0
+    assert_select "tr[data-category='category-#{transaction_category.id}']", text: /Reports Ordinary Category/
   end
 
   test "monthly period navigation shows previous month link" do

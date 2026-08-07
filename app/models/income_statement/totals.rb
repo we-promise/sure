@@ -1,10 +1,13 @@
 class IncomeStatement::Totals
-  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil)
+  include IncomeStatement::TransferFiltering
+
+  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil, include_investment_contributions: true)
     @family = family
     @transactions_scope = transactions_scope
     @date_range = date_range
     @include_trades = include_trades
     @included_account_ids = included_account_ids
+    @include_investment_contributions = include_investment_contributions
 
     validate_date_range!
   end
@@ -74,6 +77,7 @@ class IncomeStatement::Totals
           er.to_currency = :target_currency
         )
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
+          AND (#{transfer_filter_sql("at")})
           AND ae.excluded = false
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
@@ -103,6 +107,7 @@ class IncomeStatement::Totals
           er.to_currency = :target_currency
         )
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
+          AND (#{transfer_filter_sql("at")})
           AND (
             at.investment_activity_label IS NULL
             OR at.investment_activity_label NOT IN ('Transfer', 'Sweep In', 'Sweep Out', 'Exchange')

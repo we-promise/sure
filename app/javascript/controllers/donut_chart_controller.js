@@ -194,6 +194,8 @@ export default class extends Controller {
     }
 
     const reducedOpacityColor = d3.color(color);
+    if (!reducedOpacityColor) return color;
+
     reducedOpacityColor.opacity = this.segmentOpacityValue;
     return reducedOpacityColor;
   };
@@ -251,6 +253,11 @@ export default class extends Controller {
 
   // Handles click on segment (optional, controlled by enableClick value)
   #handleClick(segment) {
+    if (segment.transactions_url) {
+      Turbo.visit(segment.transactions_url);
+      return;
+    }
+
     if (!segment.name) return;
 
     Turbo.visit(

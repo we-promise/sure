@@ -7,15 +7,13 @@ class BudgetCategoriesController < ApplicationController
   end
 
   def show
-    # The aggregate `Budget#actual_spending` already excludes transactions
-    # whose kind is in BUDGET_EXCLUDED_KINDS (funds_movement, one_time,
-    # cc_payment) via IncomeStatement. The drilldown list must apply the
-    # same filter, otherwise a matched transfer (post-#874 the matcher
-    # correctly tags inflow as funds_movement and outflow per destination
-    # account) shows under the Uncategorized card -- or any retained
-    # category -- even though the aggregate ignores it. See issue #1059.
-    @recent_transactions = @budget.transactions
-                                  .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
+    # Keep this drilldown aligned with Budget#actual_spending: ordinary matched
+    # transfers are excluded, while investment contributions remain visible as
+    # a dedicated cash-flow expense.
+    @recent_transactions = @budget.transactions.where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
+    @recent_transactions = @recent_transactions.for_cash_flow_reporting(
+      include_investment_contributions: !@budget.family.treat_investment_contributions_as_transfers?
+    )
 
     if params[:id] == BudgetCategory.uncategorized.id
       @budget_category = @budget.uncategorized_budget_category
@@ -52,5 +50,6 @@ class BudgetCategoriesController < ApplicationController
     def set_budget
       start_date = Budget.param_to_date(params[:budget_month_year], family: Current.family)
       @budget = Current.family.budgets.find_by!(start_date: start_date)
+      @budget.current_user = Current.user
     end
 end

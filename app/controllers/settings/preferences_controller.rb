@@ -12,6 +12,11 @@ class Settings::PreferencesController < ApplicationController
   def update
     @user = Current.user
     user_params = params.permit(user: [ :preview_features_enabled ]).fetch(:user, {})
+    family_params = params.permit(family: [ :treat_investment_contributions_as_transfers ]).fetch(:family, {})
+
+    if family_params.key?(:treat_investment_contributions_as_transfers) && !@user.admin?
+      raise ActiveRecord::RecordNotFound
+    end
 
     @user.transaction do
       @user.lock!
@@ -21,6 +26,12 @@ class Settings::PreferencesController < ApplicationController
           ActiveModel::Type::Boolean.new.cast(user_params[:preview_features_enabled])
       end
       @user.update!(preferences: updated_prefs)
+      if family_params.key?(:treat_investment_contributions_as_transfers)
+        @user.family.update!(
+          treat_investment_contributions_as_transfers:
+            ActiveModel::Type::Boolean.new.cast(family_params[:treat_investment_contributions_as_transfers])
+        )
+      end
     end
     redirect_to settings_preferences_path
   end

@@ -247,9 +247,16 @@ class PagesController < ApplicationController
       links = []
       node_indices = {}
 
-      add_node = ->(unique_key, display_name, value, percentage, color) {
+      add_node = ->(unique_key, display_name, value, percentage, color, category: nil) {
         node_indices[unique_key] ||= begin
-          nodes << { id: unique_key, name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
+          nodes << {
+            id: unique_key,
+            name: display_name,
+            value: value.to_f.round(2),
+            percentage: percentage.to_f.round(1),
+            color: color,
+            transactions_url: category_transactions_url(category)
+          }
           nodes.size - 1
         end
       }
@@ -358,7 +365,7 @@ class PagesController < ApplicationController
         opposite_subs = all_subs.select { |s| s[:net_direction] != matching_direction }
 
         if same_side_subs.any?
-          parent_idx = add_node.call(node_key, ct.category.name, val, percentage, color)
+          parent_idx = add_node.call(node_key, ct.category.name, val, percentage, color, category: ct.category)
 
           if flow_direction == :inbound
             links << { source: parent_idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
@@ -371,7 +378,7 @@ class PagesController < ApplicationController
             sub_pct = val.zero? ? 0 : (sub_val / val * 100).round(1)
             sub_color = sub[:category].color.presence || color
             sub_key = "#{prefix}_sub_#{sub[:category].id}"
-            sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color)
+            sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color, category: sub[:category])
 
             if flow_direction == :inbound
               links << { source: sub_idx, target: parent_idx, value: sub_val, color: sub_color, percentage: sub_pct }
@@ -380,7 +387,7 @@ class PagesController < ApplicationController
             end
           end
         else
-          idx = add_node.call(node_key, ct.category.name, val, percentage, color)
+          idx = add_node.call(node_key, ct.category.name, val, percentage, color, category: ct.category)
 
           if flow_direction == :inbound
             links << { source: idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
@@ -398,7 +405,7 @@ class PagesController < ApplicationController
           sub_pct = total.zero? ? 0 : (sub_val / total * 100).round(1)
           sub_color = sub[:category].color.presence || color
           sub_key = "#{opposite_prefix}_sub_#{sub[:category].id}"
-          sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color)
+          sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color, category: sub[:category])
 
           # Opposite direction: if parent is outbound (expense), this sub is inbound (income)
           if flow_direction == :inbound
@@ -419,18 +426,50 @@ class PagesController < ApplicationController
         .sort_by { |ct| -ct.total }
         .map do |ct|
           {
-            id: ct.category.id,
+            id: dashboard_category_id(ct.category),
             name: ct.category.name,
             amount: ct.total.to_f.round(2),
             currency: ct.currency,
-            percentage: ct.weight.round(1),
+            percentage: 0,
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
             icon: ct.category.lucide_icon,
-            clickable: !ct.category.other_investments?
+            clickable: !ct.category.other_investments?,
+            transactions_url: category_transactions_url(ct.category)
           }
         end
 
+      categories.each do |category|
+        category[:percentage] = total.zero? ? 0 : (category[:amount] / total * 100).round(1)
+      end
+      categories.sort_by! { |category| -category[:amount] }
+
       { categories: categories, total: total.to_f.round(2), currency: net_totals.currency, currency_symbol: currency_symbol }
+    end
+
+    def category_transactions_url(category)
+      return nil if category.nil? || category.synthetic?
+
+      filters = {
+        categories: [ category.name ],
+        start_date: @period.date_range.first,
+        end_date: @period.date_range.last
+      }
+      filters[:kinds] = [ "investment_contribution" ] if Category.all_investment_contributions_names.include?(category.name)
+
+      transactions_path(q: filters)
+    end
+
+    def dashboard_category_id(category)
+      return category.id if category.persisted?
+
+      case
+      when category.uncategorized?
+        "uncategorized"
+      when category.other_investments?
+        "other_investments"
+      else
+        "synthetic_#{category.name.parameterize}"
+      end
     end
 
     def money_flow_month_param

@@ -117,7 +117,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     # appearing under whatever category they retained (or under
     # Uncategorized once the matcher cleared the category). Filter
     # them out so the drilldown matches the aggregate.
-    create_transaction(
+    outflow = create_transaction(
       date: @budget.start_date,
       account: accounts(:depository),
       amount: 500,
@@ -130,6 +130,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "BUG_1059_REPRO_INFLOW"
     )
     @family.auto_match_transfers!
+    Transfer.find_by!(outflow_transaction: outflow.entryable).confirm!
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success
@@ -139,11 +140,10 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       "matched funds_movement inflow must not appear in Uncategorized drilldown"
   end
 
-  test "show drilldown still lists loan_payment transfers (intentionally budget-tracked)" do
-    # loan_payment is NOT in BUDGET_EXCLUDED_KINDS. The drilldown should
-    # keep showing loan_payment transfers so the user can see what's
-    # under Uncategorized (or whichever category they manually set).
-    create_transaction(
+  test "show drilldown includes matched loan_payment transfers" do
+    # Loan payments are real cash outflows, so their confirmed transfer match
+    # must not hide them from the budget aggregate or its drilldown.
+    outflow = create_transaction(
       date: @budget.start_date,
       account: accounts(:depository),
       amount: 500,
@@ -156,10 +156,11 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "MORTGAGE_REPRO_INFLOW"
     )
     @family.auto_match_transfers!
+    Transfer.find_by!(outflow_transaction: outflow.entryable).confirm!
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success
     assert_includes @response.body, "MORTGAGE_REPRO_OUTFLOW",
-      "loan_payment outflow remains visible (kind is not BUDGET_EXCLUDED)"
+      "matched loan_payment outflow must appear in Uncategorized drilldown"
   end
 end

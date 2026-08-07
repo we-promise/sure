@@ -105,6 +105,75 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='sankey-chart']"
   end
 
+  test "dashboard shows matched investment contributions as a separate outflow" do
+    checking_account = @family.accounts.first
+    investment_account = @family.accounts.create!(
+      name: "Dashboard Brokerage",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Investment.new
+    )
+    outflow = create_transaction(
+      account: checking_account,
+      name: "Brokerage transfer",
+      amount: 1_000,
+      category: @family.investment_contributions_category,
+      kind: "investment_contribution"
+    )
+    inflow = create_transaction(
+      account: investment_account,
+      name: "Brokerage transfer",
+      amount: -1_000,
+      kind: "funds_movement"
+    )
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
+
+    get root_path
+
+    assert_response :ok
+    donut = css_select("[data-controller='donut-chart']").first
+    segments = JSON.parse(donut["data-donut-chart-segments-value"])
+    investment_segment = segments.find { |segment| segment["name"] == Category.investment_contributions_name }
+
+    assert_equal Category.investment_contributions_name, investment_segment["name"]
+    assert_equal 1000.0, investment_segment["amount"]
+    assert_includes investment_segment["transactions_url"], "q%5Bkinds%5D%5B%5D=investment_contribution"
+    assert_equal segments.sort_by { |segment| -segment.fetch("amount") }, segments
+    donut_total = segments.sum { |segment| segment.fetch("amount") }
+    segments.each do |segment|
+      expected_percentage = (segment.fetch("amount") / donut_total * 100).round(1)
+      assert_equal expected_percentage, segment.fetch("percentage").to_f
+    end
+
+    sankey = css_select("[data-controller='sankey-chart']").first
+    sankey_data = JSON.parse(sankey["data-sankey-chart-data-value"])
+    contribution_node = sankey_data.fetch("nodes").find { |node| node["name"] == Category.investment_contributions_name }
+
+    assert_equal Category.investment_contributions_name, contribution_node["name"]
+    assert_equal 1000.0, contribution_node["value"]
+    assert_includes contribution_node["transactions_url"], "q%5Bkinds%5D%5B%5D=investment_contribution"
+    assert_not sankey_data.fetch("nodes").any? { |node| node["id"] == "surplus_node" }
+  end
+
+  test "dashboard gives uncategorized outflow a stable synthetic segment id" do
+    create_transaction(
+      account: @family.accounts.first,
+      name: "Uncategorized dashboard expense",
+      amount: 125,
+      category: nil
+    )
+
+    get root_path
+
+    assert_response :ok
+    donut = css_select("[data-controller='donut-chart']").first
+    segments = JSON.parse(donut["data-donut-chart-segments-value"])
+    uncategorized_segment = segments.find { |segment| segment["name"] == Category.uncategorized_name }
+
+    assert_equal "uncategorized", uncategorized_segment.fetch("id")
+    assert_select "#segment_uncategorized", count: 1
+  end
+
   test "dashboard renders sankey chart zoom controls and stable node ids" do
     parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
     subcategory = @family.categories.create!(name: "Groceries", parent: parent_category, color: "#33FF57")
