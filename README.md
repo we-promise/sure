@@ -75,6 +75,7 @@ The instructions below are for developers to get started with contributing to th
 - Redis > 5.4 (latest stable version recommended)
 
 ### Getting Started
+
 ```sh
 cd sure
 cp .env.local.example .env.local
@@ -111,11 +112,11 @@ For further instructions, see guides below.
 
 <a href="https://kilocode.pxf.io/repo-readme"><img src="https://kilo.ai/kiloclaw/partner-resources/kiloclaw-logo-yellow-bg-typography.png" alt="Managed OpenClaw for Sure Finances" width="185"/></a>
 
-
 ## License and Trademarks
 
 Maybe and Sure are both distributed under
 an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
+
 - "Maybe" is a trademark of Maybe Finance, Inc.
 - "Sure" is not, and refers to this community fork.
 

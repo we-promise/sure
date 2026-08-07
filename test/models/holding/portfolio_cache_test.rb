@@ -84,17 +84,16 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     assert_equal @trade.price, cache.get_price(@security.id, @trade.entry.date).price
   end
 
-  test "converts historical prices using the requested date exchange rate" do
+  test "preserves native price currency instead of converting to account currency" do
     account = families(:empty).accounts.create!(
-      name: "CHF Brokerage",
+      name: "CAD Brokerage",
       balance: 10000,
-      currency: "CHF",
+      currency: "CAD",
       accountable: Investment.new
     )
     holding_date = 2.days.ago.to_date
 
-    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: holding_date, rate: 0.80)
-    ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: Date.current, rate: 0.95)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: holding_date, rate: 1.35)
 
     Holding.create!(
       security: @security,
@@ -114,9 +113,9 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     )
 
     cache = Holding::PortfolioCache.new(account, use_holdings: true)
-    converted_price = cache.get_price(@security.id, holding_date)
+    price = cache.get_price(@security.id, holding_date)
 
-    assert_equal BigDecimal("80.0"), converted_price.price
-    assert_equal "CHF", converted_price.currency
+    assert_equal BigDecimal("100.0"), price.price
+    assert_equal "USD", price.currency
   end
 end

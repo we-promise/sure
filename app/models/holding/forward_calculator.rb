@@ -4,8 +4,9 @@ class Holding::ForwardCalculator
   def initialize(account, security_ids: nil)
     @account = account
     @security_ids = security_ids
-    # Track cost basis per security: { security_id => { total_cost: BigDecimal, total_qty: BigDecimal } }
-    @cost_basis_tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+    # Track buy lots per security so cost basis can be converted into the holding's
+    # native price currency (not forced into account.currency).
+    @cost_basis_tracker = Hash.new { |h, k| h[k] = [] }
   end
 
   def calculate
@@ -84,27 +85,40 @@ class Holding::ForwardCalculator
         trade = trade_entry.entryable
         next unless trade.qty > 0 # Only track buys
 
-        security_id = trade.security_id
-        tracker = @cost_basis_tracker[security_id]
-
-        # Convert trade price to account currency if needed
-        trade_price = Money.new(trade.price, trade.currency)
-        begin
-          converted_price = trade_price.exchange_to(account.currency).amount
-        rescue Money::ConversionError
-          converted_price = trade.price
-        end
-
-        tracker[:total_cost] += converted_price * trade.qty
-        tracker[:total_qty] += trade.qty
+        @cost_basis_tracker[trade.security_id] << {
+          qty: trade.qty,
+          price: trade.price,
+          currency: trade.currency,
+          date: trade_entry.date
+        }
       end
     end
 
-    # Returns the current cost basis for a security, or nil if no buys recorded
+    # Returns the current cost basis for a security in the holding currency, or nil if no buys recorded
+    # or a cross-currency buy cannot be converted.
     def cost_basis_for(security_id, currency)
-      tracker = @cost_basis_tracker[security_id]
-      return nil if tracker[:total_qty].zero?
+      buys = @cost_basis_tracker[security_id]
+      return nil if buys.empty?
 
-      tracker[:total_cost] / tracker[:total_qty]
+      total_qty = buys.sum { |buy| buy[:qty] }
+      return nil if total_qty.zero?
+
+      total_cost = BigDecimal("0")
+
+      buys.each do |buy|
+        if buy[:currency] == currency
+          total_cost += buy[:price] * buy[:qty]
+        else
+          begin
+            converted_price = Money.new(buy[:price], buy[:currency]).exchange_to(currency, date: buy[:date]).amount
+          rescue Money::ConversionError
+            return nil
+          end
+
+          total_cost += converted_price * buy[:qty]
+        end
+      end
+
+      total_cost / total_qty
     end
 end

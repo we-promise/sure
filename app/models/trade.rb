@@ -110,7 +110,15 @@ class Trade < ApplicationRecord
 
       return nil unless holding&.avg_cost
 
-      cost_basis = holding.avg_cost * qty.abs
+      # Holding cost basis is stored in the security/holding currency, which can
+      # differ from the sell trade currency for manual multi-currency accounts.
+      converted_avg_cost = begin
+        holding.avg_cost.exchange_to(currency, date: entry.date)
+      rescue Money::ConversionError
+        return nil
+      end
+
+      cost_basis = converted_avg_cost * qty.abs
       sale_proceeds = price_money * qty.abs
 
       Trend.new(current: sale_proceeds, previous: cost_basis)
