@@ -94,10 +94,16 @@ class Depository::FixedReturnPoster
       depository.fixed_return_start_date >> (index * months_per_period)
     end
 
+    # Posting dates already credited on this account, read back off the
+    # idempotency key so a period is never paid twice.
     def already_posted_dates
       account.entries.where(source: SOURCE).pluck(:external_id).compact.map { |id| Date.parse(id) }.to_set
     end
 
+    # Writes one interest credit. The entry carries the posting date as its
+    # external_id under the fixed_return source, which is what makes repeated
+    # syncs idempotent — entries has a unique index on (account, source,
+    # external_id).
     def post_period(posting_date, interest)
       entry = account.entries.create!(
         date: posting_date,
