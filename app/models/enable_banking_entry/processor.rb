@@ -3,6 +3,9 @@ require "digest/md5"
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
 
+  # Small-merchant card terminal providers that prefix the payee with "KEYWORD *"
+  PAYMENT_PROCESSOR_PREFIX = /\A(SUMUP|SQ|IZETTLE|ZETTLE|PAYPAL)\s*\*\s*/i
+
   # enable_banking_transaction is the raw hash fetched from Enable Banking API
   # Transaction structure from Enable Banking:
   # {
@@ -219,11 +222,32 @@ class EnableBankingEntry::Processor
     end
 
     def primary_remittance_information
+      lines = remittance_information_lines
+      descriptive = lines.find { |line| !technical_remittance_line?(line) } || lines.first
+      strip_payment_processor_prefix(descriptive)
+    end
+
+    def remittance_information_lines
       remittance = data[:remittance_information]
       Array.wrap(remittance)
         .map { |value| value.to_s.strip.presence }
         .compact
-        .first
+    end
+
+    def technical_remittance_line?(value)
+      line = value.to_s.strip
+      # Terminal booking lines like "POS   45,13 AT  D6   31.07. 10:27" or "ATM ...":
+      # Signal 1: keyword immediately followed by a decimal amount (kept narrow so a
+      #           real merchant like "ATM Superstore 24" doesn't false-positive).
+      # Signal 2: ends with a date+time stamp ("DD.MM. HH:MM") — an ASPSP-independent
+      #           signal a real merchant name practically never has.
+      line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b/i) ||
+        line.match?(/\d{2}[.\/]\d{2}\.?\s+\d{2}:\d{2}\z/)
+    end
+
+    def strip_payment_processor_prefix(value)
+      return value if value.blank?
+      value.sub(PAYMENT_PROCESSOR_PREFIX, "").strip.presence || value
     end
 
     def merchant_name_candidate
