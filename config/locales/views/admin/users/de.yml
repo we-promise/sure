@@ -10,6 +10,9 @@ de:
         trial_ends_at: "Testversion endet"
         not_available: "k. A."
         no_users: "Keine Benutzer gefunden."
+        unnamed_family: Unbenannte Familie/Gruppe
+        no_subscription: Kein Abonnement
+        family_summary: '%{members} Mitglieder · %{accounts} Konten · %{transactions} Buchungen'
         filters:
           role: "Rolle"
           role_all: "Alle Rollen"
@@ -40,6 +43,11 @@ de:
           member: "Standard-Zugriff. Kann eigene Konten, Buchungen und Einstellungen verwalten."
           admin: "Familien-Administrator. Zugriff auf erweiterte Einstellungen wie API-Schlüssel, Importe und KI-Prompts."
           super_admin: "Instanz-Administrator. Kann SSO-Provider, Benutzerrollen verwalten und Benutzer für Support vertreten."
+        invitations:
+          pending_label: Eingeladen (ausstehend)
+          expires: Läuft ab am %{date}
+          delete: Löschen
+          delete_all: Alle löschen
       update:
         success: "Benutzerrolle wurde erfolgreich aktualisiert."
         failure: "Benutzerrolle konnte nicht aktualisiert werden."

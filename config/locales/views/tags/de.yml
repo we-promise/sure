@@ -6,6 +6,8 @@ de:
       error: Fehler beim Erstellen des Tags %{error}
     destroy:
       deleted: Tag gelöscht
+    destroy_all:
+      all_deleted: Alle Tags gelöscht
     edit:
       edit: Tag bearbeiten
     form:
@@ -14,6 +16,7 @@ de:
       empty: Noch keine Tags vorhanden
       new: Neuer Tag
       tags: Tags
+      delete_all: Alle löschen
     new:
       new: Neuer Tag
     tag:

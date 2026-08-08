@@ -46,7 +46,7 @@ de:
         long: "529 Bildungssparplan"
       hsa:
         short: HSA
-        long: Health Savings Account
+        long: Gesundheits-Sparkonto
       ugma:
         short: UGMA
         long: UGMA-Treuhandkonto
@@ -95,6 +95,41 @@ de:
       riester:
         short: Riester
         long: Riester-Rente
+      indian_stocks:
+        short: Indische Aktien
+        long: Indische Aktien (Demat)
+      indian_equity:
+        short: Indische Beteiligungen
+        long: Indische Beteiligungen
+      indian_etf:
+        short: Indischer ETF
+        long: Indischer ETF
+      life_insurance:
+        short: Lebensversicherung
+        long: Lebensversicherung
+      fd:
+        long: Festgeld (Fixed Deposit)
+      rd:
+        long: Ansparplan (Recurring Deposit)
+      gold_etf:
+        short: Gold-ETF
+        long: Gold-ETF
+      gold_mf:
+        short: Gold-Fonds
+        long: Gold-Investmentfonds
+      g_sec:
+        long: Staatsanleihen (G-Secs)
+      sdl:
+        long: Staatliche Entwicklungsanleihen (SDLs)
+      corporate_bond:
+        short: Unternehmensanleihe
+        long: Unternehmensanleihe
+      infrastructure_bond:
+        short: Infrastrukturanleihe
+        long: Infrastrukturanleihe
+      tax_free_bond:
+        short: Steuerfreie Anleihe
+        long: Steuerfreie Anleihe
       pension:
         short: Pension
         long: Pension
@@ -104,6 +139,8 @@ de:
       mutual_fund:
         short: Fonds
         long: Investmentfonds
+      gold:
+        long: Gold (physisch oder digital)
       angel:
         short: Angel
         long: Angel-Investment

@@ -100,7 +100,7 @@ de:
         depository:
           checking: Girokonto
           savings: Sparkonto
-          hsa: Health Savings Account
+          hsa: Gesundheits-Sparkonto
           cd: Festgeld
           money_market: Geldmarkt
         investment:
@@ -112,7 +112,7 @@ de:
           "403b": "403(b)"
           tsp: Thrift Savings Plan
           "529_plan": "529 Plan"
-          hsa: Health Savings Account
+          hsa: Gesundheits-Sparkonto
           mutual_fund: Fonds
           ira: Traditionelles IRA
           roth_ira: Roth IRA

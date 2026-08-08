@@ -1,3 +1,4 @@
+---
 de:
   recurring_transactions:
     title: Wiederkehrende Transaktionen
@@ -21,8 +22,8 @@ de:
       manual_description: Du kannst Muster manuell erkennen oder alte wiederkehrende Transaktionen mit den obigen Schaltflächen bereinigen.
       automatic_description: "Die automatische Erkennung wird außerdem ausgeführt nach:"
       triggers:
-        - Abschluss von CSV-Importen (Transaktionen, Trades, Konten usw.)
-        - Abschluss einer Anbieter-Synchronisierung (Plaid, SimpleFIN usw.)
+      - Abschluss von CSV-Importen (Transaktionen, Trades, Konten usw.)
+      - Abschluss einer Anbieter-Synchronisierung (Plaid, SimpleFIN usw.)
     identified: "%{count} wiederkehrende Transaktionsmuster erkannt"
     cleaned_up: "%{count} alte wiederkehrende Transaktionen bereinigt"
     marked_inactive: Wiederkehrende Transaktion als inaktiv markiert
@@ -50,3 +51,7 @@ de:
       inactive: Inaktiv
     badges:
       manual: Manuell
+    transfer_marked_as_recurring: Überweisung als wiederkehrend markiert
+    transfer_already_exists: Für dieses Kontopaar existiert bereits eine wiederkehrende Überweisung
+    transfer_creation_failed: Wiederkehrende Überweisung konnte nicht erstellt werden. Bitte überprüfe die Überweisungsdetails und versuche es erneut.
+    transfer_feature_disabled: Wiederkehrende Transaktionen sind für diese Familie deaktiviert

@@ -1,0 +1,20 @@
+---
+de:
+  goal_pledges:
+    new:
+      helper_transfer: Sure sucht nach einer passenden Einzahlung auf deinem verknüpften Konto. Die Zusage bleibt 7 Tage ausstehend und wird automatisch bestätigt, sobald Sure sie erkennt.
+      helper_manual: Sure erfasst dies bei deiner nächsten manuellen Saldoänderung und bestätigt den Beitrag.
+      amount_label: Betrag
+      account_label: In Konto
+      submit: Zusage erfassen
+      preview_zero: Aktuell {current} von {target} gespart.
+      preview_nonzero: Erreicht {percent}%, {newTotal} von {target}.
+      preview_reached: Erreicht dein Ziel von {target}. Ziel erreicht.
+    create:
+      success: Zusage erfasst. Sure bestätigt sie bei der nächsten Synchronisierung.
+    renew:
+      success: Zusagefrist um 7 Tage verlängert.
+      not_open: Nur offene Zusagen können verlängert werden.
+    destroy:
+      success: Zusage storniert.
+      not_open: Nur offene Zusagen können storniert werden.

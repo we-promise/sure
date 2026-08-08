@@ -4,3 +4,41 @@ de:
     demo_banner_title: "Demo-Modus aktiv"
     demo_banner_message: "Sie nutzen ein Open-Weight Qwen3-LLM mit Credits von Cloudflare Workers AI. Die Ergebnisse können variieren, da die Codebasis hauptsächlich mit `gpt-4.1` getestet wurde – Ihre Tokens werden jedoch nicht anderswo zum Training verwendet! 🤖"
     thinking: "Wird verarbeitet ..."
+    worker_unhealthy_warning: KI-Antworten werden aktuell möglicherweise nicht zugestellt – der Hintergrund-Worker scheint nicht zu laufen oder überlastet zu sein. Prüfen Sie, ob Ihr Sidekiq-Worker läuft.
+    ai_greeting:
+      greeting: Hallo %{name}! Ich bin ein KI-/Sprachmodell, das Ihnen bei Ihren Finanzen helfen kann. Ich habe Zugriff auf das Web und Ihre Kontodaten.
+      there: zusammen
+      commands_hint_html: Mit <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> haben Sie Zugriff auf Befehle
+      questions_intro: 'Hier sind einige Fragen, die Sie stellen können:'
+      evaluate_portfolio: Anlageportfolio bewerten
+      spending_insights: Ausgaben-Einblicke anzeigen
+      unusual_patterns: Ungewöhnliche Muster finden
+    chat:
+      edit_chat_title: Chat-Titel bearbeiten
+      delete_chat: Chat löschen
+    chat_nav:
+      all_chats: Alle Chats
+      start_new_chat: Neuen Chat starten
+      edit_chat_title: Chat-Titel bearbeiten
+      delete_chat: Chat löschen
+    error:
+      retry: Erneut versuchen
+    destroy:
+      notice: Chat wurde erfolgreich gelöscht
+    index:
+      new_chat: Neuer Chat
+    update:
+      success: Chat aktualisiert
+    ai_consent:
+      title: KI-Chats aktivieren
+      available_description: Der KI-Chat kann Finanzfragen beantworten und Einblicke basierend auf Ihren Daten liefern. Um diese Funktion zu nutzen, müssen Sie sie ausdrücklich aktivieren.
+      unavailable_description_html: Um den KI-Assistenten zu nutzen, müssen Sie die Umgebungsvariable <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> setzen oder sie in den Self-Hosting-Einstellungen Ihrer Instanz konfigurieren.
+      enable_button: KI-Chats aktivieren
+      disable_note: Jederzeit deaktivierbar. Alle an unsere LLM-Anbieter gesendeten Daten werden anonymisiert.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Denkprozess des Assistenten
+    tool_calls:
+      tool_calls: Tool-Aufrufe
+      function: 'Funktion:'
+      arguments: 'Argumente:'

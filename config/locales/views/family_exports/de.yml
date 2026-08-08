@@ -3,13 +3,28 @@ de:
   family_exports:
     access_denied: Zugriff verweigert
     create:
-      success: Export gestartet. Sie können ihn in Kürze herunterladen.
-    delete_confirmation: Möchten Sie diesen Export wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-    delete_failed_confirmation: Möchten Sie diesen fehlgeschlagenen Export wirklich löschen?
+      success: Export gestartet. Du kannst ihn in Kürze herunterladen.
+    delete_confirmation: Möchtest du diesen Export wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+    delete_failed_confirmation: Möchtest du diesen fehlgeschlagenen Export wirklich löschen?
+    cancel:
+      cancelled: Export als fehlgeschlagen markiert. Du kannst sofort einen neuen Export erstellen.
+      not_cancellable: Dieser Export kann gerade nicht als fehlgeschlagen markiert werden – der zugehörige Job läuft möglicherweise noch. Versuche es erneut, sobald er eine Stunde lang inaktiv war.
     destroy:
       success: Export erfolgreich gelöscht
     export_not_ready: Export noch nicht zum Download bereit
     exporting: Wird exportiert...
+    new:
+      dialog_title: Deine Daten exportieren
+      dialog_subtitle: Lade alle deine Finanzdaten herunter
+      whats_included: 'Was enthalten ist:'
+      accounts_and_balances: Alle Konten und Kontostände
+      transaction_history: Transaktionsverlauf
+      investment_trades: Investment-Trades
+      categories_tags_rules: Kategorien, Tags und Regeln
+      note_label: Hinweis
+      note_description: Dieser Export enthält alle deine Daten, aber nur ein Teil davon kann über die CSV-Importfunktion wieder importiert werden. Wir unterstützen den Import von Konten, Transaktionen (mit Kategorie und Tags) und Trades. Andere Kontodaten können nicht importiert werden und dienen nur zu deiner Dokumentation.
+      cancel: Abbrechen
+      export_data: Daten exportieren
     index:
       title: Exporte
       new: Neuer Export
@@ -28,4 +43,6 @@ de:
         actions:
           delete: Löschen
           download: Herunterladen
+          mark_failed: Als fehlgeschlagen markieren
+          confirm_mark_failed: Dieser Export war eine Weile inaktiv, sein Hintergrund-Job wurde vermutlich unterbrochen. Als fehlgeschlagen markieren? Du kannst sofort einen neuen Export erstellen.
       empty: Noch keine Exporte vorhanden.

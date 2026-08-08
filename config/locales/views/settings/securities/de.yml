@@ -6,5 +6,26 @@ de:
         disable_mfa: 2FA deaktivieren
         disable_mfa_confirm: Bist du sicher dass du die Zwei-Faktor-Authentifizierung deaktivieren möchtest Dadurch wird dein Konto weniger sicher
         enable_mfa: 2FA aktivieren
+        mfa_enabled_status_html: Zwei-Faktor-Authentifizierung ist <span class="font-medium text-green-600">aktiviert</span>
+        mfa_enabled_description: Dein Konto ist durch eine zusätzliche Sicherheitsebene geschützt.
+        mfa_disabled_status_html: Zwei-Faktor-Authentifizierung ist <span class="font-medium text-red-600">deaktiviert</span>
+        mfa_disabled_description: Aktiviere 2FA, um deinem Konto eine zusätzliche Sicherheitsebene hinzuzufügen.
         mfa_description: Füge deinem Konto eine zusätzliche Sicherheitsebene hinzu indem du beim Anmelden einen Code aus deiner Authenticator-App eingibst
         mfa_title: Zwei-Faktor-Authentifizierung
+        webauthn_add: Passkey oder Sicherheitsschlüssel hinzufügen
+        webauthn_added: Hinzugefügt am %{date}
+        webauthn_description: Verwende einen Passkey, Touch ID, Windows Hello oder einen Hardware-Sicherheitsschlüssel als zweiten Faktor bei der Anmeldung.
+        webauthn_empty: Es sind noch keine Passkeys oder Sicherheitsschlüssel registriert.
+        webauthn_last_used: Zuletzt verwendet vor %{time_ago}
+        webauthn_name_label: Name des Schlüssels
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey usw.
+        webauthn_remove: Entfernen
+        webauthn_remove_confirm: Bist du sicher, dass du diesen Passkey oder Sicherheitsschlüssel entfernen möchtest?
+        webauthn_remove_confirm_body: Du musst diesen Passkey oder Sicherheitsschlüssel erneut registrieren, bevor er wieder für die Anmeldeverifizierung verwendet werden kann.
+        webauthn_title: Passkeys und Sicherheitsschlüssel
+        webauthn_unsupported: Dieser Browser unterstützt keine Passkeys oder Sicherheitsschlüssel.
+  webauthn_credentials:
+    default_name: Sicherheitsschlüssel
+    failure: Dieser Passkey oder Sicherheitsschlüssel konnte nicht gespeichert werden. Bitte versuche es erneut.
+    mfa_required: Aktiviere die Zwei-Faktor-Authentifizierung, bevor du einen Passkey oder Sicherheitsschlüssel hinzufügst.
+    success: Passkey oder Sicherheitsschlüssel entfernt.

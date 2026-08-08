@@ -3,6 +3,8 @@ de:
   defaults:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
+    common:
+      close: Schließen
   global:
     expand: "Aufklappen"
   activerecord:
@@ -11,8 +13,7 @@ de:
         record_invalid: 'Gültigkeitsprüfung ist fehlgeschlagen: %{errors}'
         restrict_dependent_destroy:
           has_many: Datensatz kann nicht gelöscht werden, da abhängige %{record} existieren.
-          has_one: Datensatz kann nicht gelöscht werden, da ein abhängiger %{record}-Datensatz
-            existiert.
+          has_one: Datensatz kann nicht gelöscht werden, da ein abhängiger %{record}-Datensatz existiert.
   date:
     abbr_day_names:
     - So
@@ -154,6 +155,8 @@ de:
   helpers:
     select:
       prompt: Bitte wählen
+      search_placeholder: Suchen
+      default_label: Auswählen...
     submit:
       create: "%{model} erstellen"
       submit: "%{model} speichern"

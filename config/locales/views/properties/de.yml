@@ -23,6 +23,45 @@ de:
       year_built_placeholder: '2000'
     new:
       title: Immobiliendetails eingeben
+      next: Weiter
+      avm_option: Über %{provider} hinzufügen
+      avm_title: Immobilie über %{provider} hinzufügen
+      avm_description: Gib einen Namen für die Immobilie und ihre Adresse ein. %{provider} ermittelt für dich die Immobiliendetails und den geschätzten Marktwert.
+      avm_us_only: '%{provider} unterstützt nur Immobilien in den USA.'
+      avm_submit: Immobilie suchen
+      avm_preview_title: Immobiliendetails bestätigen
+      avm_preview_description: Das hat %{provider} gefunden. Überprüfe die Details, bevor du die Immobilie hinzufügst — es wurde noch nichts erstellt.
+      avm_preview_no_record: '%{provider} konnte an dieser Adresse keinen Immobiliendatensatz finden, daher ist der angezeigte Wert eine Schätzung auf Grundlage der Umgebung. Überprüfe die Adresse, bevor du fortfährst.'
+      avm_preview_back: Zurück
+      avm_preview_confirm: Immobilie hinzufügen
+    address:
+      title: Immobiliendetails eingeben
+      address_line1_label: Adresszeile 1
+      address_line1_placeholder: Musterstraße 123
+      city_label: Stadt
+      city_placeholder: Wien
+      state_region_label: Bundesland/Region
+      state_region_placeholder: W
+      postal_code_label: Postleitzahl
+      postal_code_placeholder: 1010
+      country_label: Land
+      country_placeholder: AT
+      save: Speichern
+    balances:
+      title: Immobiliendetails eingeben
+      market_value_label: Geschätzter Marktwert
+      market_value_tooltip: Der geschätzte Marktwert deiner Immobilie. Diese Zahl findest du oft auf Websites wie Zillow oder Redfin, sie ist nie ein exakter Wert.
+      save: Speichern
+      next: Weiter
+    overview_fields:
+      name_placeholder: Ferienhaus
+      subtype_prompt: Typ auswählen
+      property_type_label: Immobilientyp
+      year_built_label: Baujahr (optional)
+      area_label: Fläche (optional)
+      square_feet: Quadratfuß
+      square_meters: Quadratmeter
+      area_unit_label: Flächeneinheit
     overview:
       living_area: Wohnfläche
       market_value: Marktwert
@@ -30,3 +69,28 @@ de:
       trend: Entwicklung
       unknown: Unbekannt
       year_built: Baujahr
+    tabs:
+      overview:
+        living_area: Wohnfläche
+        market_value: Marktwert
+        purchase_price: Kaufpreis
+        trend: Entwicklung
+        unknown: Unbekannt
+        year_built: Baujahr
+        edit_account_details: Kontodetails bearbeiten
+    subtypes:
+      apartment:
+        short: Wohnung
+        long: Wohnung
+      plot:
+        short: Grundstück
+        long: Grundstück / Land
+      commercial:
+        short: Gewerbe
+        long: Gewerbeimmobilie
+      rented:
+        short: Vermietet
+        long: Vermietete Immobilie
+      agri_land:
+        short: Agrarland
+        long: Landwirtschaftliche Fläche

@@ -1,15 +1,28 @@
 ---
 de:
   admin:
-    unauthorized: "Sie sind nicht berechtigt, auf diesen Bereich zuzugreifen."
+    unauthorized: "Du bist nicht berechtigt, auf diesen Bereich zuzugreifen."
     sso_providers:
       index:
+        page_title: SSO-Provider
         title: "SSO-Provider"
-        description: "Single-Sign-On-Authentifizierungsprovider für Ihre Instanz verwalten"
+        description: "Single-Sign-On-Authentifizierungsprovider für deine Instanz verwalten"
+        restart_required: Änderungen erfordern einen Neustart des Servers, um wirksam zu werden.
+        configured_providers: Konfigurierte Provider
         add_provider: "Provider hinzufügen"
         no_providers_title: "Keine SSO-Provider"
-        no_providers_message: "Fügen Sie Ihren ersten SSO-Provider hinzu."
-        note: "Änderungen an SSO-Providern erfordern einen Neustart des Servers. Alternativ aktivieren Sie das Feature AUTH_PROVIDERS_SOURCE=db, um Provider dynamisch aus der Datenbank zu laden."
+        no_providers_message: "Füge deinen ersten SSO-Provider hinzu."
+        note: "Änderungen an SSO-Providern erfordern einen Neustart des Servers. Alternativ aktiviere das Feature AUTH_PROVIDERS_SOURCE=db, um Provider dynamisch aus der Datenbank zu laden."
+        enabled: Aktiviert
+        disabled: Deaktiviert
+        edit: Bearbeiten
+        enable: Aktivieren
+        disable: Deaktivieren
+        delete: Löschen
+        configuration_mode: Konfigurationsmodus
+        db_backed_providers: Datenbankgestützte Provider
+        db_backed_providers_description: Provider aus der Datenbank statt aus der YAML-Konfiguration laden
+        db_backed_providers_help_html: Setze <code class="bg-surface px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code>, um datenbankgestützte Provider zu aktivieren. Dadurch sind Änderungen ohne Server-Neustart möglich.
         table:
           name: "Name"
           strategy: "Strategie"
@@ -19,7 +32,7 @@ de:
           enabled: "Aktiviert"
           disabled: "Deaktiviert"
         legacy_providers_title: "Umgebungskonfigurierte Provider"
-        legacy_providers_notice: "Diese Provider werden über Umgebungsvariablen oder YAML konfiguriert und können nicht über diese Oberfläche verwaltet werden. Zur Verwaltung hier migrieren Sie sie zu datenbankgestützten Providern (AUTH_PROVIDERS_SOURCE=db) und legen Sie sie in der Oberfläche neu an."
+        legacy_providers_notice: "Diese Provider werden über Umgebungsvariablen oder YAML konfiguriert und können nicht über diese Oberfläche verwaltet werden. Zur Verwaltung hier migriere sie zu datenbankgestützten Providern (AUTH_PROVIDERS_SOURCE=db) und lege sie in der Oberfläche neu an."
         env_configured: "Env/YAML"
       new:
         title: "SSO-Provider hinzufügen"
@@ -33,12 +46,12 @@ de:
         success: "SSO-Provider wurde erfolgreich aktualisiert."
       destroy:
         success: "SSO-Provider wurde erfolgreich gelöscht."
-        confirm: "Möchten Sie diesen Provider wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+        confirm: "Möchtest du diesen Provider wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
       toggle:
         success_enabled: "SSO-Provider wurde erfolgreich aktiviert."
         success_disabled: "SSO-Provider wurde erfolgreich deaktiviert."
-        confirm_enable: "Möchten Sie diesen Provider aktivieren?"
-        confirm_disable: "Möchten Sie diesen Provider deaktivieren?"
+        confirm_enable: "Möchtest du diesen Provider aktivieren?"
+        confirm_disable: "Möchtest du diesen Provider deaktivieren?"
       form:
         basic_information: "Grundinformationen"
         oauth_configuration: "OAuth/OIDC-Konfiguration"
@@ -59,20 +72,26 @@ de:
         issuer_placeholder: "https://accounts.google.com"
         issuer_help: "OIDC-Issuer-URL (validiert .well-known/openid-configuration)"
         client_id_label: "Client ID"
-        client_id_placeholder: "your-client-id"
-        client_id_help: "OAuth-Client-ID Ihres Identitätsanbieters"
+        client_id_placeholder: "deine-client-id"
+        client_id_help: "OAuth-Client-ID deines Identitätsanbieters"
         client_secret_label: "Client Secret"
-        client_secret_placeholder_new: "your-client-secret"
+        client_secret_placeholder_new: "dein-client-secret"
         client_secret_placeholder_existing: "••••••••••••••••"
         client_secret_help: "OAuth-Client-Secret (verschlüsselt in der Datenbank)"
         client_secret_help_existing: " – leer lassen, um bestehendes beizubehalten"
         redirect_uri_label: "Redirect URI"
         redirect_uri_placeholder: "https://yourdomain.com/auth/openid_connect/callback"
         redirect_uri_help: "Callback-URL, die beim Identitätsanbieter eingetragen werden muss"
+        saml_sp_callback_url_label: SP-Callback-URL (ACS-URL)
+        saml_sp_callback_url_help: Konfiguriere diese URL als Assertion-Consumer-Service-URL in deinem IdP
         copy_button: "Kopieren"
         cancel: "Abbrechen"
         submit: "Provider speichern"
-        errors_title: "%{count} Fehler verhinderte das Speichern dieses Providers:"
+        create_provider: Provider erstellen
+        update_provider: Provider aktualisieren
+        errors_title:
+          one: "Ein Fehler hat verhindert, dass dieser Provider gespeichert wurde:"
+          other: "%{count} Fehler haben verhindert, dass dieser Provider gespeichert wurde:"
         provisioning_title: "Benutzer-Bereitstellung"
         default_role_label: "Standardrolle für neue Benutzer"
         default_role_help: "Rolle für per JIT-SSO bereitgestellte Benutzer. Standard: Mitglied."
@@ -100,9 +119,9 @@ de:
         test_connection: "Verbindung testen"
         saml_configuration: "SAML-Konfiguration"
         idp_metadata_url: "IdP-Metadaten-URL"
-        idp_metadata_url_help: "URL zu den SAML-Metadaten Ihres IdP. Andere SAML-Einstellungen werden dann automatisch gesetzt."
+        idp_metadata_url_help: "URL zu den SAML-Metadaten deines IdP. Andere SAML-Einstellungen werden dann automatisch gesetzt."
         manual_saml_config: "Manuelle Konfiguration (ohne Metadaten-URL)"
-        manual_saml_help: "Nur verwenden, wenn Ihr IdP keine Metadaten-URL bereitstellt."
+        manual_saml_help: "Nur verwenden, wenn dein IdP keine Metadaten-URL bereitstellt."
         idp_sso_url: "IdP-SSO-URL"
         idp_slo_url: "IdP-SLO-URL (optional)"
         idp_certificate: "IdP-Zertifikat"
@@ -110,6 +129,6 @@ de:
         idp_cert_fingerprint: "Zertifikats-Fingerabdruck (Alternative)"
         name_id_format: "NameID-Format"
         name_id_email: "E-Mail-Adresse (Standard)"
-        name_id_persistent: "Persistent"
-        name_id_transient: "Transient"
+        name_id_persistent: "Dauerhaft"
+        name_id_transient: "Temporär"
         name_id_unspecified: "Nicht angegeben"

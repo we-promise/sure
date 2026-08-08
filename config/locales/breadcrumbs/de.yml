@@ -1,6 +1,59 @@
 ---
 de:
   breadcrumbs:
+    account_sharings: Kontofreigabe
+    account_statements: Kontoauszüge
+    accounts: Konten
+    appearance: Anzeige
+    appearances: Anzeige
+    bank_sync: Banksynchronisierung
+    budget_categories: Budgetkategorien
+    categories: Kategorien
+    categorize: Kategorisieren
+    credit_cards: Kreditkarten
+    cryptos: Krypto
+    depositories: Bankkonten
     exports: Exporte
+    family_merchants: Händler
+    guides: Anleitungen
+    holdings: Positionen
     home: Startseite
+    impersonation_sessions: Identitätswechsel
     imports: Importe
+    intro: Einführung
+    investments: Investitionen
+    invitations: Einladungen
+    invite_codes: Einladungscodes
+    llm_usage: LLM-Nutzung
+    llm_usages: LLM-Nutzung
+    loans: Darlehen
+    merchants: Händler
+    messages: Nachrichten
+    mfa: Zwei-Faktor-Authentifizierung
+    oidc_accounts: SSO-Konten
+    other_assets: Sonstiges Vermögen
+    other_liabilities: Sonstige Verbindlichkeiten
+    payments: Zahlung
+    pending_duplicate_merges: Duplikatprüfung
+    preferences: Einstellungen
+    profile: Profil Info
+    profiles: Profil Info
+    properties: Immobilien
+    providers: Anbieter
+    recurring_transactions: Wiederkehrend
+    registrations: Registrierung
+    reports: Berichte
+    rules: Regeln
+    securities: Wertpapiere
+    security: Sicherheit
+    sessions: Anmelden
+    splits: Aufteilung
+    sso_identities: SSO-Verbindungen
+    sso_providers: SSO-Anbieter
+    subscriptions: Abonnement
+    transactions: Transaktionen
+    transfer_matches: Überweisungen verbinden
+    transfers: Überweisungen
+    users: Benutzer
+    valuations: Bewertungen
+    vehicles: Fahrzeuge

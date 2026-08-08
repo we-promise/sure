@@ -3,8 +3,60 @@ de:
   rules:
     no_action: Keine Aktion
     no_condition: Keine Bedingung
+    rule:
+      edit: Bearbeiten
+      re_apply_rule: Regel erneut anwenden
+      delete: Löschen
+      then: DANN
+      and_more_conditions:
+        one: und 1 weitere Bedingung
+        other: und %{count} weitere Bedingungen
+      and_more_actions:
+        one: und 1 weitere Aktion
+        other: und %{count} weitere Aktionen
+      action_label_to: '%{label} auf %{value}'
+      all_past_and_future: Alle vergangenen und zukünftigen %{resource}
+      on_or_after: '%{resource} am oder nach %{date}'
+    form:
+      rule_name_label: Regelname (optional)
+      rule_name_placeholder: Gib einen Namen für diese Regel ein
+      add_condition: Bedingung hinzufügen
+      add_condition_group: Bedingungsgruppe hinzufügen
+      add_action: Aktion hinzufügen
+      all_past_and_future: Alle vergangenen und zukünftigen %{resource}
+      starting_from: Ab
+      then: DANN
+    index:
+      page_title: Regeln
+      delete_all_rules: Alle Regeln löschen
+      new_rule: Neue Regel
+      ai_cost_warning: KI-gestützte Regelaktionen verursachen Kosten. Filtere so eng wie möglich, um unnötige Kosten zu vermeiden.
+      rules_heading: Regeln
+      sort_by: 'Sortieren nach:'
+      sort_updated_at: Aktualisiert am
+      toggle_sort_direction: Sortierrichtung umschalten
+      no_rules_title: Noch keine Regeln
+      no_rules_description: Richte Regeln ein, um bei jeder Kontosynchronisierung Aktionen auf deine Transaktionen und andere Daten anzuwenden.
+    confirm:
+      title: Änderungen bestätigen
+      title_with_name: Änderungen an „%{name}“ bestätigen
+      apply_notice_html: Du bist dabei, diese Regel auf <span class="text-primary font-medium">%{count} %{resource}</span> anzuwenden, die den angegebenen Regelkriterien entsprechen. Bitte bestätige, wenn du mit dieser Änderung fortfahren möchtest.
+      ai_cost_title: KI-Kostenschätzung
+      ai_cost_with_estimate_html: 'Dies verwendet KI, um %{count} Transaktion(en) zu kategorisieren. Geschätzte Kosten: <span class="font-semibold">ca. %{cost} $</span>'
+      ai_cost_no_estimate_html: Dies verwendet KI, um %{count} Transaktion(en) zu kategorisieren.
+      cost_unavailable_model: Kostenschätzung für Modell „%{model}“ nicht verfügbar.
+      cost_unavailable_no_provider: Kostenschätzung nicht verfügbar (kein LLM-Anbieter konfiguriert).
+      cost_warning: Es können Kosten entstehen. Bitte informiere dich beim Modellanbieter über die aktuellen Preise.
+      view_usage_history: Nutzungshistorie anzeigen
+      confirm_changes: Änderungen bestätigen
     actions:
       value_placeholder: Wert eingeben
+    update:
+      success: Regel aktualisiert
+    destroy:
+      success: Regel gelöscht
+    destroy_all:
+      success: Alle Regeln gelöscht
     apply_all:
       button: Alle anwenden
       confirm_title: Alle Regeln anwenden
@@ -31,6 +83,7 @@ de:
           queued: In Warteschlange
           processed: Verarbeitet
           modified: Geändert
+          blocked: Blockiert
       execution_types:
         manual: Manuell
         scheduled: Geplant
@@ -50,3 +103,12 @@ de:
         expense: Ausgabe
         transfer: Überweisung
         equal_to: Gleich
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: und
+        match: erfüllen
+        all: alle
+        any: eine
+        of_the_following_conditions: der folgenden Bedingungen
+        add_condition: Bedingung hinzufügen

@@ -1,8 +1,33 @@
 ---
 de:
   pages:
+    feedback:
+      heading: Feedback geben
+      description: Lass uns wissen, wenn du konkretes Feedback hast. Du kannst gerne Links zu Videos oder Screenshots hinzufügen.
+      feature_request: Feature-Wunsch schreiben
+      bug_report: Fehler melden
+      discuss: '%{product} mit anderen diskutieren'
+    intro:
+      not_authorized: Intro ist nur für Gastnutzer verfügbar.
+      welcome: Willkommen!
+      coming_soon: Intro-Erlebnis kommt bald
+      description: Wir arbeiten an einem umfangreicheren Onboarding, um mehr über deine Ziele, Meilensteine und alltäglichen Bedürfnisse zu erfahren. Wechsle in der Zwischenzeit zur Chat-Seitenleiste, um ein Gespräch mit Sure zu starten, und lass uns wissen, wo du auf deiner finanziellen Reise stehst.
+      start_chatting: Chat starten
+    redis_configuration_error:
+      page_title: Redis-Konfiguration erforderlich - Sure
+      heading: Redis-Konfiguration erforderlich
+      subheading: Deine selbst gehostete Sure-Installation benötigt eine korrekt konfigurierte Redis-Instanz.
+      why_required_title: Warum wird Redis benötigt?
+      why_required_body: Sure nutzt Redis, um Sidekiq-Hintergrundjobs für Aufgaben wie das Synchronisieren von Kontodaten, die Verarbeitung von Importen und andere Hintergrundprozesse zu betreiben, die deine Finanzdaten aktuell halten.
+      view_setup_guide: Einrichtungsanleitung ansehen
+      setup_guide_hint: Folge unserer vollständigen Docker-Anleitung, um Redis zu konfigurieren
+      refresh_hint: Sobald du Redis konfiguriert hast, lade diese Seite neu, um fortzufahren.
+      refresh_page: Seite neu laden
     changelog:
       title: Was ist neu
+    release_notes_unavailable:
+      name: Release Notes nicht verfügbar
+      body_html: <p>Die neuesten Release Notes konnten derzeit nicht geladen werden. Bitte versuche es später erneut oder besuche direkt unsere <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub-Releases-Seite</a>.</p>
     privacy:
       title: Datenschutzrichtlinie
       heading: Datenschutzrichtlinie
@@ -15,8 +40,17 @@ de:
       welcome: "Willkommen zurück, %{name}"
       subtitle: "Hier siehst du, was in deinen Finanzen passiert."
       new: "Neu"
+      sections_aria_label: Dashboard-Bereiche
       drag_to_reorder: "Bereich per Drag & Drop neu anordnen"
       toggle_section: "Sichtbarkeit des Bereichs umschalten"
+      widget_size:
+        label: Größe anpassen
+        width_label: Breite
+        half: Halb
+        full: Voll
+        height_label: Höhe
+        compact: Kompakt
+        tall: Hoch
       net_worth_chart:
         data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar.
         title: Nettovermögen
@@ -28,8 +62,20 @@ de:
         title: "Bilanz"
         no_items: "Noch keine %{name}"
         add_accounts: "Füge deine %{name}-Konten hinzu, um eine vollständige Übersicht zu erhalten."
+        no_asset: Noch keine Vermögenswerte
+        no_liability: Noch keine Verbindlichkeiten
+        add_asset_accounts: Füge deine Vermögenskonten hinzu, um eine vollständige Aufschlüsselung zu sehen
+        add_liability_accounts: Füge deine Verbindlichkeitskonten hinzu, um eine vollständige Aufschlüsselung zu sehen
+        weight: Gewicht
+        value: Wert
+        classifications:
+          asset: Vermögenswerte
+          liability: Verbindlichkeiten
+      insights_feed:
+        title: Einblicke
       cashflow_sankey:
         title: "Cashflow"
+        zoom_out: Zurück zum vollständigen Cashflow
         no_data_title: "Keine Cashflow-Daten für diesen Zeitraum"
         no_data_description: "Füge Transaktionen hinzu, um Cashflow-Daten anzuzeigen, oder erweitere den Zeitraum."
         add_transaction: "Transaktion hinzufügen"
@@ -56,3 +102,16 @@ de:
         trades: "Trades"
         no_investments: "Keine Anlagekonten"
         add_investment: "Füge ein Anlagekonto hinzu, um dein Portfolio zu verfolgen"
+      money_flow:
+        title: Geldein-/ausgang
+        date_range: '%{start_date} bis %{end_date}'
+        month_picker_aria_label: Monat auswählen
+        filter_accounts: Konten filtern (%{count})
+        filter_accounts_all: Alle Konten
+        period_scope_hint: Zeigt die hier ausgewählten Monate — unabhängig vom Zeitraum oben im Dashboard.
+        search_accounts: Konten suchen
+        apply: Anwenden
+        balance: Transaktionssaldo
+        chart_span: Letzte %{count} Monate
+        income: Einnahmen
+        expenses: Ausgaben

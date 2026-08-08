@@ -1,0 +1,92 @@
+---
+de:
+  insights:
+    index:
+      title: Einblicke
+      subtitle: Was in deinen Finanzen passiert – jede Nacht aktualisiert.
+      refresh: Nach neuen Einblicken suchen
+      empty:
+        title: Noch keine Einblicke
+        description: Einblicke erscheinen hier, sobald genügend Aktivität in deinen Konten vorhanden ist. Sie werden jede Nacht automatisch aktualisiert.
+    refresh:
+      queued: Wir erstellen gerade neue Einblicke. Schau in einer Minute wieder vorbei.
+      checking: Wird geprüft…
+    card:
+      acknowledge: Verstanden
+      acknowledge_title: Ausblenden, bis sich die Zahlen ändern
+      new: Neu
+      acknowledged: Verstanden – ausgeblendet, bis sich das ändert
+      undo: Rückgängig machen
+    feed:
+      view_all: Alle Einblicke anzeigen
+      header: Neueste
+      header_new: Neu
+    types:
+      spending_anomaly: Ausgaben
+      cash_flow_warning: Cashflow
+      net_worth_milestone: Nettovermögen
+      subscription_audit: Abonnements
+      savings_rate_change: Sparquote
+      idle_cash: Ungenutztes Guthaben
+    meta:
+      next_n_days:
+        one: Nächster Tag
+        other: Nächste %{count} Tage
+      last_n_days:
+        one: Letzter Tag
+        other: Letzte %{count} Tage
+      date_range: '%{from} bis %{to}'
+    figures:
+      vs_previous: ggü. Vormonat
+      today: heute
+      on_pace: auf Kurs
+      of_budget: des Budgets
+      days_overdue:
+        one: '%{count} Tag überfällig'
+        other: '%{count} Tage überfällig'
+      idle_days:
+        one: '%{count} Tag ungenutzt'
+        other: '%{count} Tage ungenutzt'
+    actions:
+      spending_anomaly: '%{category}-Transaktionen anzeigen'
+      cash_flow_warning: Wiederkehrende Transaktionen überprüfen
+      net_worth_milestone: Nettovermögensbericht anzeigen
+      subscription_audit: Wiederkehrende Transaktionen überprüfen
+      savings_rate_change: Transaktionen dieses Monats anzeigen
+      idle_cash: Zum Konto
+      budget: Budget anzeigen
+    titles:
+      spending_anomaly:
+        above: Ausgaben für %{category} steigen
+        below: Ausgaben für %{category} sinken
+      cash_flow_warning:
+        low: Dein Kontostand könnte knapp werden
+        negative: Dein Kontostand könnte ins Minus rutschen
+      net_worth_milestone: 'Meilenstein beim Nettovermögen: %{milestone}'
+      subscription_audit: Ist %{name} noch aktiv?
+      savings_rate_change:
+        up: Deine Sparquote hat sich im %{month} verbessert
+        down: Deine Sparquote ist im %{month} gesunken
+      idle_cash: Ungenutztes Guthaben in %{account}
+      budget_at_risk:
+        one: Eine Kategorie in deinem Budget benötigt Aufmerksamkeit
+        other: '%{count} Kategorien in deinem Budget benötigen Aufmerksamkeit'
+      budget_on_track: Dein Budget liegt im Plan
+    templates:
+      spending_anomaly:
+        above: Du bist auf dem Weg, diesen Monat %{projected_spend} für %{category} auszugeben – etwa %{deviation_pct}% mehr als dein bisheriger Monatsdurchschnitt von %{baseline_spend}.
+        below: Du bist auf dem Weg, diesen Monat %{projected_spend} für %{category} auszugeben – etwa %{deviation_pct}% weniger als dein bisheriger Monatsdurchschnitt von %{baseline_spend}.
+      cash_flow_warning:
+        low: Basierend auf deinen anstehenden wiederkehrenden Transaktionen und deinem üblichen Ausgabeverhalten könnte dein Kontostand um den %{projected_low_date} auf %{projected_low} sinken.
+        negative: Basierend auf deinen anstehenden wiederkehrenden Transaktionen und deinem üblichen Ausgabeverhalten könnte dein Kontostand um den %{projected_low_date} auf %{projected_low} fallen.
+      net_worth_milestone: Dein Nettovermögen hat %{milestone} überschritten und liegt jetzt bei %{net_worth}.
+      subscription_audit: '%{name} (%{amount}) ist seit dem erwarteten Termin am %{expected_on} nicht mehr aufgetaucht. Möglicherweise wurde es gekündigt, oder die Abbuchung hat sich verschoben.'
+      savings_rate_change:
+        up: Du hast im %{month} %{current_rate}% deines Einkommens gespart, %{change_pp} Prozentpunkte mehr als die %{previous_rate}% im Monat davor.
+        down: Du hast im %{month} %{current_rate}% deines Einkommens gespart, %{change_pp} Prozentpunkte weniger als die %{previous_rate}% im Monat davor.
+        down_negative: 'Du hast im %{month} mehr ausgegeben, als du eingenommen hast: Deine Sparquote fiel auf %{current_rate}%, nach %{previous_rate}% im Monat davor.'
+      idle_cash: '%{account} enthält %{balance} ohne Aktivität in den letzten %{idle_days} Tagen.'
+      budget_at_risk:
+        over: '%{categories} haben diesen Monat das Budget überschritten. Du hast bisher %{budget_spent_pct}% deines Gesamtbudgets ausgegeben.'
+        near: '%{categories} nähern sich diesen Monat ihren Limits. Du hast bisher %{budget_spent_pct}% deines Gesamtbudgets ausgegeben.'
+      budget_on_track: Du hast %{spent} von deinem Budget in Höhe von %{budgeted} ausgegeben (%{budget_spent_pct}%) und alles liegt innerhalb der Limits.

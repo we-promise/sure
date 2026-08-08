@@ -1,0 +1,8 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: Kategorie „%{name}“ kann nicht ihr eigenes übergeordnetes Element sein
+          missing_columns: 'Erforderliche Spalten fehlen: %{columns}'

@@ -11,8 +11,37 @@ de:
         read_balances: Kontostände anzeigen
         write_transactions: Transaktionen erstellen
     api_keys:
+      create:
+        success: Dein API-Schlüssel wurde erfolgreich erstellt
+      destroy:
+        revoked_successfully: API-Schlüssel wurde erfolgreich widerrufen
+        revoke_failed: API-Schlüssel konnte nicht widerrufen werden
+      shared:
+        active: Aktiv
+        created_ago: Erstellt vor %{time}
+        last_used_ago: Zuletzt verwendet vor %{time}
+        never_used: Noch nie verwendet
+        scope_read_only: Nur Lesen
+        scope_read_write: Lesen/Schreiben
+      index:
+        title: API-Schlüssel
+        subtitle: Verwalte API-Schlüssel für den programmatischen Zugriff auf deine Daten.
+        new_key: Neuer API-Schlüssel
+        empty_heading: Noch keine API-Schlüssel
+        empty_description: Erstelle einen API-Schlüssel, um programmatisch auf deine Daten zuzugreifen.
+        revoke_key: Widerrufen
+        revoke_confirmation: Bist du sicher, dass du „%{name}“ widerrufen möchtest? Dadurch werden alle Anwendungen, die diesen Schlüssel verwenden, sofort deaktiviert.
       show:
         title: API-Schlüsselverwaltung
+        newly_created:
+          page_title: API-Schlüssel erfolgreich erstellt
+          heading: API-Schlüssel erfolgreich erstellt!
+          key_ready: Dein neuer API-Schlüssel „%{name}“ wurde erstellt und ist einsatzbereit.
+          your_api_key: Dein API-Schlüssel
+          copy_store_securely: Kopiere diesen Schlüssel und bewahre ihn sicher auf. Du benötigst ihn, um deine API-Anfragen zu authentifizieren.
+          copy_api_key: API-Schlüssel kopieren
+          how_to_use: So verwendest du deinen API-Schlüssel
+          continue: Weiter zu den API-Schlüssel-Einstellungen
         no_api_key:
           title: API-Schlüssel
           heading: Greife programmatisch auf deine Kontodaten zu
@@ -36,29 +65,41 @@ de:
           never_used: Noch nie verwendet
           never_expires: Läuft nie ab
           permissions: Berechtigungen
+          copy_api_key: API-Schlüssel kopieren
+          copy_store_securely: Kopiere diesen Schlüssel und bewahre ihn sicher auf. Du benötigst ihn, um deine API-Anfragen zu authentifizieren.
           usage_instructions_title: Verwendung deines API-Schlüssels
           usage_instructions: "Füge deinen API-Schlüssel im X-Api-Key-Header ein, wenn du Anfragen an die Sure-API sendest:"
+          back_to_keys: Zurück zu den API-Schlüsseln
           regenerate_key: Neuen Schlüssel erstellen
           revoke_key: Schlüssel widerrufen
           revoke_confirmation: Bist du sicher, dass du diesen API-Schlüssel widerrufen möchtest? Diese Aktion kann nicht rückgängig gemacht werden und deaktiviert sofort alle Anwendungen, die diesen Schlüssel verwenden.
       new:
         title: API-Schlüssel erstellen
+        create_new_api_key: Neuen API-Schlüssel erstellen
+        subtitle: Erstelle einen neuen API-Schlüssel, um programmatisch auf deine Sure-Daten zuzugreifen.
         create_new_key: Neuen API-Schlüssel erstellen
         description: Konfiguriere deinen neuen API-Schlüssel mit einem aussagekräftigen Namen und den passenden Berechtigungen.
         name_label: Name des API-Schlüssels
         name_placeholder: z. B. Produktions-App, Analyse-Dashboard
+        name_help_text: Wähle einen aussagekräftigen Namen, damit du diesen Schlüssel später leicht wiedererkennst.
         name_help: Wähle einen aussagekräftigen Namen, um den Zweck dieses Schlüssels leichter zu erkennen.
         permissions_label: Berechtigungen
         permissions_help: Wähle die Berechtigungen, die dein API-Schlüssel benötigt. Du kannst jederzeit einen neuen Schlüssel mit anderen Berechtigungen erstellen.
+        scope_read_only: Nur Lesen
+        scope_read_only_description: Zeigt deine Konten, Transaktionen und Kontostände an
+        scope_read_write: Lesen/Schreiben
+        scope_read_write_description: Zeigt deine Daten an und erstellt neue Transaktionen
         scope_details:
           read_accounts: Zeigt Kontoinformationen, Kontostände und kontobezogene Daten an.
           read_transactions: Zeigt Transaktionsdaten, Kategorien und Transaktionsdetails an.
           read_balances: Zeigt historische Kontostände und Wertentwicklungen an.
           write_transactions: Erstellt und aktualisiert Transaktionsdatensätze (demnächst verfügbar).
         security_warning_title: Wichtiger Sicherheitshinweis
+        security_warning_body: Dein API-Schlüssel wird nach der Erstellung nur einmal angezeigt. Kopiere ihn und bewahre ihn sicher auf. Jeder, der Zugriff auf diesen Schlüssel hat, kann entsprechend der von dir ausgewählten Berechtigungen auf deine Daten zugreifen.
         security_warning: Dein API-Schlüssel wird nur einmal nach der Erstellung angezeigt. Bewahre ihn sicher auf und teile ihn niemals öffentlich. Wenn du ihn verlierst, musst du einen neuen erstellen.
         create_key: API-Schlüssel erstellen
         cancel: Abbrechen
+        save_api_key: API-Schlüssel speichern
       created:
         title: API-Schlüssel erstellt
         success_title: API-Schlüssel erfolgreich erstellt

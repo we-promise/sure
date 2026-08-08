@@ -1,6 +1,30 @@
 ---
 de:
   valuations:
+    confirmation_contents:
+      this_will: Dies %{action_verb} den Kontowert am
+      total_account_value: Gesamtkontowert
+      holdings_value: Wert der Positionen
+      account_balance: Kontostand
+      credit_card_balance: Kreditkartensaldo
+      loan_balance: Darlehenssaldo
+      property_value: Immobilienwert
+      vehicle_value: Fahrzeugwert
+      crypto_balance: Krypto-Saldo
+      asset_value: Vermögenswert
+      liability_balance: Verbindlichkeitssaldo
+      balance: Saldo
+      "on": am
+      recalculate_notice: Alle zukünftigen Transaktionen und Salden werden basierend auf dieser %{change_or_update} neu berechnet.
+      change: Änderung
+      update: Aktualisierung
+    create:
+      account_updated: Konto aktualisiert
+    update:
+      account_updated: Konto aktualisiert
+      entry_updated: Eintrag aktualisiert
+    errors:
+      amount_required: Betrag ist erforderlich
     form:
       amount: Betrag
       submit: Kontostand aktualisieren
@@ -17,6 +41,7 @@ de:
       title: Neuer Kontostand
     show:
       amount: Betrag
+      amount_label: Kontowert zum Datum
       date_label: Datum
       delete: Löschen
       delete_subtitle: Diese Aktion kann nicht rückgängig gemacht werden
@@ -29,3 +54,4 @@ de:
       overview: Übersicht
       settings: Einstellungen
       opening_balance: Eröffnungssaldo
+      update_value: Wert aktualisieren

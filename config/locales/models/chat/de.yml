@@ -1,0 +1,9 @@
+---
+de:
+  chat:
+    errors:
+      rate_limited: Das Anfragelimit des KI-Anbieters wurde erreicht. Bitte versuche es in ein paar Minuten erneut.
+      temporarily_unavailable: Der KI-Anbieter ist gerade vorübergehend nicht verfügbar. Bitte versuche es in ein paar Minuten erneut.
+      misconfigured: Der KI-Anbieter ist nicht korrekt konfiguriert. Bitte wende dich an deinen Administrator.
+      no_response: Der Assistent hat nicht geantwortet. Möglicherweise ist der Hintergrundprozess nicht aktiv oder die KI ist nicht vollständig konfiguriert. Bitte versuche es erneut.
+      default: Antwort konnte nicht generiert werden. Bitte versuche es erneut.

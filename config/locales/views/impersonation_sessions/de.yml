@@ -13,3 +13,11 @@ de:
       success: Sitzung verlassen
     reject:
       success: Anfrage abgelehnt
+    super_admin_bar:
+      super_admin: Super-Admin
+      impersonating: Impersoniert als
+      leave: Verlassen
+      terminate: Beenden
+      join_a_session: Sitzung beitreten
+      join: Beitreten
+      request_impersonation: Impersonation anfordern

@@ -3,11 +3,16 @@ de:
   activerecord:
     attributes:
       import:
+        col_sep: Spaltentrennzeichen
+        col_seps:
+          comma: Komma (,)
+          semicolon: Semikolon (;)
         currency: Währung
         number_format: Zahlenformat
     errors:
       models:
         import:
+          duplicate_headers: 'CSV-Kopfzeilen ergeben doppelte Spalten: %{columns}'
           attributes:
             raw_file_str:
               invalid_csv_format: ist kein gültiges CSV-Format

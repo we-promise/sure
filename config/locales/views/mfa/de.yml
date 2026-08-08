@@ -9,7 +9,7 @@ de:
       page_title: Backup-Codes
       title: Backup-Codes speichern
     create:
-      invalid_code: Ungültiger Bestätigungscode Bitte versuche es erneut
+      invalid_code: Ungültiger Bestätigungscode. Bitte versuche es erneut.
     disable:
       success: Zwei-Faktor-Authentifizierung wurde deaktiviert
     new:
@@ -27,8 +27,15 @@ de:
       verify_title: 2. Bestätigungscode eingeben
     verify:
       description: Gib den Code aus deiner Authenticator-App ein um fortzufahren
+      or: oder
       page_title: Zwei-Faktor-Authentifizierung überprüfen
       title: Zwei-Faktor-Authentifizierung
       verify_button: Überprüfen
+      webauthn_button: Passkey oder Sicherheitsschlüssel verwenden
+      webauthn_unsupported: Dieser Browser unterstützt keine Passkeys oder Sicherheitsschlüssel.
     verify_code:
-      invalid_code: Ungültiger Authentifizierungscode Bitte versuche es erneut
+      invalid_code: Ungültiger Authentifizierungscode. Bitte versuche es erneut.
+    verify_webauthn:
+      invalid_credential: Dieser Passkey oder Sicherheitsschlüssel konnte nicht überprüft werden. Bitte versuche es erneut.
+    webauthn_options:
+      unavailable: Für dieses Konto sind keine Passkeys oder Sicherheitsschlüssel verfügbar.

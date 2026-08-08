@@ -1,0 +1,6 @@
+---
+de:
+  syncs:
+    cancel:
+      cancelled: Synchronisierung abgebrochen. Bereits synchronisierte Daten bleiben erhalten; wartende Aufgaben wurden gestoppt.
+      not_cancellable: Diese Synchronisierung ist bereits abgeschlossen.
