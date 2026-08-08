@@ -56,6 +56,42 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert linked_account.reload.enable_category_matcher?
   end
 
+  test "persists fixed return settings" do
+    patch depository_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          fixed_return_rate: 3.25,
+          fixed_return_frequency: "monthly",
+          fixed_return_start_date: "2026-01-01"
+        }
+      }
+    }
+
+    depository = @account.reload.depository
+
+    assert_equal 3.25, depository.fixed_return_rate
+    assert_equal "monthly", depository.fixed_return_frequency
+    assert_equal Date.new(2026, 1, 1), depository.fixed_return_start_date
+    assert depository.fixed_return?
+  end
+
+  test "rejects an unknown fixed return frequency" do
+    depository = @account.depository
+    depository.fixed_return_frequency = "hourly"
+
+    assert_not depository.valid?
+    assert_includes depository.errors[:fixed_return_frequency], "is not included in the list"
+  end
+
+  test "edit form renders the fixed return fields" do
+    get edit_account_url(@account)
+
+    assert_response :success
+    assert_select "input[name='account[accountable_attributes][fixed_return_rate]']", 1
+    assert_select "select[name='account[accountable_attributes][fixed_return_frequency]']", 1
+  end
+
   test "edit form renders category matcher toggle only for accounts that support it" do
     get edit_account_url(accounts(:connected))
     assert_response :success

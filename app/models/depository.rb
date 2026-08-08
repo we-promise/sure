@@ -19,6 +19,21 @@ class Depository < ApplicationRecord
   # was previously invisible to the tax-advantaged filter PR #724 introduced.
   TAX_ADVANTAGED_SUBTYPES = %w[hsa].freeze
 
+  FIXED_RETURN_FREQUENCIES = %w[monthly quarterly annually].freeze
+
+  validates :fixed_return_frequency, inclusion: { in: FIXED_RETURN_FREQUENCIES }, allow_blank: true
+  validates :fixed_return_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+
+  # A fixed-return account pays a known rate that no data provider reports, so
+  # Sure credits the interest itself. All three settings are required: without
+  # a rate there's nothing to pay, and without a start date and frequency we
+  # don't know which periods to pay it for.
+  def fixed_return?
+    fixed_return_rate.to_d.positive? &&
+      fixed_return_frequency.in?(FIXED_RETURN_FREQUENCIES) &&
+      fixed_return_start_date.present?
+  end
+
   # `TaxTreatable` (the `Account` concern) reads this via `respond_to?` so
   # adding it here transparently flips `Account#tax_advantaged?` for HSA
   # depositories without touching the concern itself.

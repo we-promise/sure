@@ -8,6 +8,7 @@ class Account::Syncer
   def perform_sync(sync)
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
+    post_fixed_return_interest
     materialize_balances(window_start_date: sync.window_start_date)
     apply_provider_balance_overrides
   end
@@ -20,6 +21,17 @@ class Account::Syncer
     def materialize_balances(window_start_date: nil)
       strategy = account.linked? ? :reverse : :forward
       Balance::Materializer.new(account, strategy: strategy, window_start_date: window_start_date).materialize_balances
+    end
+
+    # Credits any interest that has come due on a fixed-return account. Runs
+    # before balances are materialized so the new entries land in this sync's
+    # balance series. A failure here must not fail the whole sync — the next
+    # sync will post the same periods, since postings are keyed by date.
+    def post_fixed_return_interest
+      Depository::FixedReturnPoster.new(account).post_due_interest!
+    rescue => e
+      Rails.logger.error("Error posting fixed-return interest for account #{account.id}: #{e.message}")
+      Sentry.capture_exception(e)
     end
 
     # Syncs all the exchange rates + security prices this account needs to display historical chart data
