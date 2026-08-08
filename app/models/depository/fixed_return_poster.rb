@@ -32,7 +32,20 @@ class Depository::FixedReturnPoster
   def post_due_interest!
     return [] unless depository&.fixed_return?
 
-    due_periods.filter_map { |period_start, posting_date| post_period(period_start, posting_date) }
+    # Balances are materialized after this runs, so when several periods are
+    # backfilled at once the rows a later period reads still predate the
+    # interest we just posted for the earlier ones. Carrying that forward is
+    # what lets catch-up periods compound — without it they would be credited
+    # short, and being keyed by date, never revisited.
+    posted_interest = BigDecimal(0)
+
+    due_periods.filter_map do |period_start, posting_date|
+      entry = post_period(period_start, posting_date, carry: posted_interest)
+      next if entry.nil?
+
+      posted_interest += entry.amount.abs
+      entry
+    end
   end
 
   private
@@ -75,8 +88,8 @@ class Depository::FixedReturnPoster
       account.entries.where(source: SOURCE).pluck(:external_id).compact.map { |id| Date.parse(id) }.to_set
     end
 
-    def post_period(period_start, posting_date)
-      interest = interest_for(period_start, posting_date)
+    def post_period(period_start, posting_date, carry:)
+      interest = interest_for(period_start, posting_date, carry: carry)
       return nil if interest.zero?
 
       entry = account.entries.create!(
@@ -89,30 +102,33 @@ class Depository::FixedReturnPoster
         entryable: Transaction.new
       )
 
-      Rails.logger.info("Posted fixed-return interest #{interest} to account #{account.id} on #{posting_date}")
+      Rails.logger.info("Posted fixed-return interest to account #{account.id} on #{posting_date}")
 
       entry
     end
 
     # Average daily balance over (period_start, posting_date], at actual/365.
-    def interest_for(period_start, posting_date)
+    def interest_for(period_start, posting_date, carry:)
       accrual_dates = (period_start + 1)..posting_date
+      days = accrual_dates.count
       balances = balances_by_date(accrual_dates)
-      return BigDecimal(0) if balances.empty?
 
-      average_balance = balances.sum(BigDecimal(0)) / balances.size
+      # Every day of the period needs a balance row. Averaging the rows that do
+      # exist and then charging for the full period would credit interest for
+      # days with no balance history at all. Skipping leaves the period
+      # uncredited and unrecorded, so a later sync posts it once the balances
+      # are there.
+      return BigDecimal(0) unless balances.size == days
+
+      average_balance = balances.sum(BigDecimal(0)) / days + carry
       return BigDecimal(0) if average_balance <= 0
 
-      days = accrual_dates.count
       rate = BigDecimal(depository.fixed_return_rate.to_s) / 100
 
       (average_balance * rate * days / DAY_COUNT_BASIS).round(currency_precision)
     end
 
-    # Materialized end-of-day balances for the range. Days with no balance row
-    # (before the account existed, or not yet materialized) are skipped rather
-    # than counted as zero, so a partially materialized history understates the
-    # period instead of wiping it out.
+    # Materialized end-of-day balances for the range.
     def balances_by_date(dates)
       account.balances
              .where(date: dates, currency: account.currency)

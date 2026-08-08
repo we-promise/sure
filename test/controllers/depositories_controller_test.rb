@@ -84,6 +84,27 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_includes depository.errors[:fixed_return_frequency], "is not included in the list"
   end
 
+  test "a fixed return rate requires a frequency and a start date" do
+    depository = @account.depository
+    depository.fixed_return_rate = 3.25
+
+    assert_not depository.valid?
+    assert_includes depository.errors[:fixed_return_frequency], "can't be blank"
+    assert_includes depository.errors[:fixed_return_start_date], "can't be blank"
+  end
+
+  test "rejects a fixed return start date in the future" do
+    depository = @account.depository
+    depository.assign_attributes(
+      fixed_return_rate: 3.25,
+      fixed_return_frequency: "monthly",
+      fixed_return_start_date: Date.current + 1
+    )
+
+    assert_not depository.valid?
+    assert_includes depository.errors[:fixed_return_start_date], "can't be in the future"
+  end
+
   test "edit form renders the fixed return fields" do
     get edit_account_url(@account)
 
