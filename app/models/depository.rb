@@ -23,6 +23,8 @@ class Depository < ApplicationRecord
 
   validates :fixed_return_frequency, inclusion: { in: FIXED_RETURN_FREQUENCIES }, allow_blank: true
   validates :fixed_return_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :fixed_return_frequency, :fixed_return_start_date, presence: true, if: :fixed_return_rate?
+  validate :fixed_return_start_date_cannot_be_in_the_future
 
   # A fixed-return account pays a known rate that no data provider reports, so
   # Sure credits the interest itself. All three settings are required: without
@@ -32,6 +34,12 @@ class Depository < ApplicationRecord
     fixed_return_rate.to_d.positive? &&
       fixed_return_frequency.in?(FIXED_RETURN_FREQUENCIES) &&
       fixed_return_start_date.present?
+  end
+
+  # A rate on its own would look configured while silently paying nothing, so
+  # the other two settings are required alongside it.
+  def fixed_return_rate?
+    fixed_return_rate.to_d.positive?
   end
 
   # `TaxTreatable` (the `Account` concern) reads this via `respond_to?` so
@@ -61,4 +69,11 @@ class Depository < ApplicationRecord
       "landmark"
     end
   end
+
+  private
+    def fixed_return_start_date_cannot_be_in_the_future
+      return if fixed_return_start_date.blank? || fixed_return_start_date <= Date.current
+
+      errors.add(:fixed_return_start_date, "can't be in the future")
+    end
 end

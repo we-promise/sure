@@ -31,6 +31,13 @@ class Account::Syncer
       Depository::FixedReturnPoster.new(account).post_due_interest!
     rescue => e
       Rails.logger.error("Error posting fixed-return interest for account #{account.id}: #{e.message}")
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "error",
+        message: "Failed to post fixed-return interest: #{e.class}: #{e.message}",
+        source: self.class.name,
+        account: account
+      )
       Sentry.capture_exception(e)
     end
 

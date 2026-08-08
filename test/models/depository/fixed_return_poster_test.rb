@@ -78,6 +78,38 @@ class Depository::FixedReturnPosterTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2026, 4, 1), Date.new(2026, 7, 1) ], entries.map(&:date)
   end
 
+  test "catch-up periods compound on the interest posted for earlier ones" do
+    start_date = Date.new(2026, 1, 31)
+    account = fixed_return_account(rate: 12, frequency: "monthly", start_date: start_date)
+    materialize_balances(account, start_date..Date.new(2026, 3, 31), 100_000)
+
+    entries = travel_to(Date.new(2026, 3, 31)) { Depository::FixedReturnPoster.new(account).post_due_interest! }
+
+    # March accrues on 100,000 plus the 920.55 credited for February, not on
+    # the stale materialized balance alone.
+    assert_equal BigDecimal("-920.55"), entries.first.amount
+    assert_equal BigDecimal("-1028.56"), entries.second.amount
+  end
+
+  test "skips a period whose balance history is only partly materialized" do
+    start_date = Date.new(2026, 1, 1)
+    account = fixed_return_account(rate: 4, frequency: "monthly", start_date: start_date)
+    materialize_balances(account, Date.new(2026, 1, 20)..Date.new(2026, 2, 1), 10_000)
+
+    assert_empty travel_to(Date.new(2026, 2, 1)) { Depository::FixedReturnPoster.new(account).post_due_interest! }
+  end
+
+  test "posts a skipped period once its balances are materialized" do
+    start_date = Date.new(2026, 1, 1)
+    account = fixed_return_account(rate: 4, frequency: "monthly", start_date: start_date)
+
+    assert_empty travel_to(Date.new(2026, 2, 1)) { Depository::FixedReturnPoster.new(account).post_due_interest! }
+
+    materialize_balances(account, start_date..Date.new(2026, 2, 1), 10_000)
+
+    assert_equal 1, travel_to(Date.new(2026, 2, 1)) { Depository::FixedReturnPoster.new(account).post_due_interest! }.size
+  end
+
   test "skips periods with no balance history" do
     start_date = Date.new(2026, 1, 1)
     account = fixed_return_account(rate: 4, frequency: "monthly", start_date: start_date)
