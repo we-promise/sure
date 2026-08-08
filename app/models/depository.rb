@@ -71,6 +71,8 @@ class Depository < ApplicationRecord
   end
 
   private
+    # The form caps the picker at today, but a request can carry any date and
+    # a future start would leave the account configured yet never paying.
     def fixed_return_start_date_cannot_be_in_the_future
       return if fixed_return_start_date.blank? || fixed_return_start_date <= Date.current
 
