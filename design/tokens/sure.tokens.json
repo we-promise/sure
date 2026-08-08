@@ -274,6 +274,7 @@
   "utility": {
     "bg-inverse":             { "$type": "utility", "$value": "{color.gray.800}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.white}" } },
     "bg-inverse-hover":       { "$type": "utility", "$value": "{color.gray.700}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.100}" } },
+    "bg-subdued":             { "$type": "utility", "$value": "{color.gray.400}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.400}" } },
     "bg-overlay": {
       "$type": "utility",
       "$value": "{color.gray.100|50%}",

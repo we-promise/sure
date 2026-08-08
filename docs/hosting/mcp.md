@@ -13,14 +13,15 @@ This is useful when:
 
 ## Prerequisites
 
-To enable the MCP endpoint, you need to set two environment variables:
+For legacy bearer-token authentication, set these two environment variables:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `MCP_API_TOKEN` | Bearer token for authentication | `your-secret-token-here` |
 | `MCP_USER_EMAIL` | Email of the Sure user whose data the assistant can access | `user@example.com` |
 
-Both variables are **required**. The endpoint will not activate if either is missing.
+Both variables are required for the legacy token flow. OAuth clients using the
+MCP discovery and dynamic registration endpoints do not need these variables.
 
 ### Generating a secure token
 
@@ -82,7 +83,14 @@ POST /mcp
 
 ### Authentication
 
-All requests must include the `MCP_API_TOKEN` as a Bearer token:
+MCP supports OAuth authorization-code flow for clients such as Claude Code.
+Clients should discover the protected-resource metadata, register dynamically,
+request the advertised `read_write` scope, and send the resulting access token
+as a Bearer token. Dynamically registered clients are assigned this scope so
+their tokens can authenticate to MCP.
+
+For self-hosted deployments or clients without OAuth support, requests may use
+the legacy `MCP_API_TOKEN` as a Bearer token:
 
 ```
 Authorization: Bearer <MCP_API_TOKEN>
@@ -110,9 +118,29 @@ The MCP endpoint exposes these financial tools:
 | `get_balance_sheet` | Current financial position (assets, liabilities, net worth) |
 | `get_income_statement` | Income and expenses over a period |
 | `import_bank_statement` | Import bank statement data |
-| `search_family_files` | Search uploaded documents in the vault |
+| `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
 
 These are the same tools used by Sure's builtin AI assistant.
+
+### Preview Tools
+
+These additional tools appear only when the MCP user has opted into preview
+features (Settings → Preferences). Until then they are absent from `tools/list`,
+and calling one by name returns an "Unknown tool" error. The Statement Vault
+tools additionally require the user to be an admin or member, matching the
+permissions enforced in the web UI.
+
+| Tool | Description |
+|------|-------------|
+| `upload_account_statement` | Store a statement document (PDF/CSV/XLSX) in the Statement Vault; deduplicates by SHA-256 |
+| `list_account_statements` | List vault documents with their SHA-256, period, linked account and review status |
+| `get_account_statement` | One statement's details and its reconciliation checks against the ledger — present only once someone has entered the statement's opening/closing balances in the web UI, since nothing extracts them from the document. Does not return the file: stored documents are served only to a signed-in browser session |
+| `get_statement_coverage` | Month-by-month statement coverage for an account: `covered`, `missing`, `mismatched`, `ambiguous`, `duplicate`, `not_expected`, each with a reconciliation status |
+| `record_valuation` | Record an account's value on a date, with a required source citation |
+
+They exist for agents that maintain a document-backed record of a family's
+wealth over time. See
+[Wealth history with an external agent harness](../llm-guides/wealth-agent-harness.md).
 
 ## Example Requests
 
