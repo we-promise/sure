@@ -107,6 +107,10 @@ class RecurringTransaction
                                   find_existing_within_amount_tolerance(find_conditions, existing_recurring_transactions_by_key) ||
                                   family.recurring_transactions.build(find_conditions)
 
+          # Respect user deactivation — do not refresh inactive projections.
+          # Unique indexes prevent creating a second row with the same key.
+          next if recurring_transaction.persisted? && !recurring_transaction.active?
+
           # Handle manual recurring transactions specially
           if recurring_transaction.persisted? && recurring_transaction.manual?
             # Manual recurring variance is recalculated once in the batch pass
@@ -159,8 +163,9 @@ class RecurringTransaction
         end
       end
 
-      # Also check for manual recurring transactions that might need variance updates
-      update_manual_recurring_transactions(lookback_date)
+      # Also recalculate variance for manual recurring transactions (fixed
+      # 6-month window — independent of automatic detection lookback).
+      update_manual_recurring_transactions
 
       recurring_patterns.size
     end
@@ -172,7 +177,8 @@ class RecurringTransaction
     # both endpoints rather than the single-account name/merchant match
     # the helper performs. Issue #1590 tracks the proper Cleaner-aware
     # matching for recurring transfers.
-    def update_manual_recurring_transactions(since_date)
+    def update_manual_recurring_transactions
+      since_date = RecurringTransaction::MANUAL_VARIANCE_LOOKBACK_MONTHS.months.ago.to_date
       manual_recurring_transactions = family.recurring_transactions
         .where(manual: true, status: "active", destination_account_id: nil)
         .includes(:account)
@@ -282,6 +288,7 @@ class RecurringTransaction
         return nil if tolerance.zero?
 
         candidates = existing_by_key.values.select do |recurring|
+          next false unless recurring.active?
           next false if recurring.manual?
           next false unless recurring.currency == find_conditions[:currency]
           next false unless recurring.account_id == find_conditions[:account_id]

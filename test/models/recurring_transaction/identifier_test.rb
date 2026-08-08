@@ -418,8 +418,9 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal loaded.map(&:amount).sort, grouped.values.first.map(&:amount).sort
   end
 
-  test "manual variance update honors family lookback window" do
+  test "manual variance lookback stays at 6 months independent of detection lookback" do
     travel_to Date.new(2026, 8, 6) do
+      # Family detection lookback of 2 would exclude May if conflated with manual variance.
       @family.update!(recurring_detection_lookback_months: 2)
       account = @family.accounts.first
       merchant = merchants(:netflix)
@@ -437,10 +438,10 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
         manual: true
       )
 
-      # lookback_date is 2026-06-06: July is in-window, May is not.
       {
-        Date.new(2026, 7, 17) => BigDecimal("16.50"),
-        Date.new(2026, 5, 17) => BigDecimal("14.00")
+        Date.new(2026, 7, 17) => BigDecimal("16.50"), # within both windows
+        Date.new(2026, 5, 17) => BigDecimal("14.00"), # outside detection lookback (2mo), inside manual (6mo)
+        Date.new(2026, 1, 17) => BigDecimal("10.00")  # outside manual 6-month window
       }.each do |date, amount|
         transaction = Transaction.create!(
           merchant: merchant,
@@ -458,10 +459,55 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
       RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
 
       recurring.reload
-      assert_equal 1, recurring.occurrence_count
-      assert_equal BigDecimal("16.50"), recurring.expected_amount_min
+      assert_equal 2, recurring.occurrence_count
+      assert_equal BigDecimal("14.00"), recurring.expected_amount_min
       assert_equal BigDecimal("16.50"), recurring.expected_amount_max
     end
+  end
+
+  test "tolerant rematch does not revive or update inactive rows" do
+    @family.update!(recurring_detection_amount_tolerance_percent: 5)
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    inactive = @family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 16.00,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 2.months.ago.to_date,
+      next_expected_date: Date.current,
+      occurrence_count: 2,
+      status: "inactive",
+      manual: false
+    )
+
+    amounts = [ 15.99, 16.10, 16.20 ]
+    amounts.each_with_index do |amount, i|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: i.months.ago.beginning_of_month + 4.days,
+        amount: amount,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    @identifier.identify_recurring_patterns
+
+    inactive.reload
+    assert_equal "inactive", inactive.status
+    assert_equal 2, inactive.occurrence_count
+    assert_equal BigDecimal("16.00"), inactive.amount
+
+    active = @family.recurring_transactions.active.where(merchant: merchant).where.not(id: inactive.id)
+    assert_equal 1, active.count
+    assert_in_delta amounts.sum / amounts.size, active.first.amount, 0.01
   end
 
   test "updates existing recurring transaction when pattern is found again" do

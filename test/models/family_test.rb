@@ -20,6 +20,22 @@ class FamilyTest < ActiveSupport::TestCase
     assert_includes family.errors[:recurring_detection_amount_tolerance_percent], "is not included in the list"
   end
 
+  test "update_recurring_settings coerces thresholds and rejects invalid integers" do
+    family = families(:dylan_family)
+
+    assert family.update_recurring_settings(
+      recurring_detection_lookback_months: "6",
+      recurring_detection_min_occurrences: "4"
+    )
+    family.reload
+    assert_equal 6, family.recurring_detection_lookback_months
+    assert_equal 4, family.recurring_detection_min_occurrences
+
+    assert_not family.update_recurring_settings(recurring_detection_min_occurrences: "12abc")
+    assert_includes family.errors[:recurring_detection_min_occurrences], "is not a valid whole number"
+    assert_equal 4, family.reload.recurring_detection_min_occurrences
+  end
+
   test "investment_contributions_category creates category when missing" do
     family = families(:dylan_family)
     family.categories.where(name: Category.investment_contributions_name).destroy_all

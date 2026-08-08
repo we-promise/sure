@@ -42,6 +42,26 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_includes recurring.errors[:occurrence_count], "must be greater than or equal to 0"
   end
 
+  test "amount variance consistency applies to auto-detected rows" do
+    recurring = @family.recurring_transactions.build(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      manual: false,
+      expected_amount_min: 20,
+      expected_amount_max: 10,
+      expected_amount_avg: 15
+    )
+
+    assert_not recurring.valid?
+    assert_includes recurring.errors[:expected_amount_min], "cannot be greater than expected_amount_max"
+  end
+
   test "identify_patterns_for creates recurring transactions for patterns with 3+ occurrences" do
     # Create a series of transactions with same merchant and amount on similar days
     # Use dates within the last 3 months: today, 1 month ago, 2 months ago

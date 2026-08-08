@@ -13,6 +13,10 @@ class RecurringTransaction < ApplicationRecord
 
   enum :status, { active: "active", inactive: "inactive" }
 
+  # Manual variance / occurrence recalculation window. Kept independent of
+  # Family#recurring_detection_lookback_months (automatic detection only).
+  MANUAL_VARIANCE_LOOKBACK_MONTHS = 6
+
   validates :amount, presence: true
   validates :currency, presence: true
   validates :expected_day_of_month, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: 31 }
@@ -29,12 +33,10 @@ class RecurringTransaction < ApplicationRecord
   end
 
   def amount_variance_consistency
-    return unless manual?
+    return unless expected_amount_min.present? && expected_amount_max.present?
 
-    if expected_amount_min.present? && expected_amount_max.present?
-      if expected_amount_min > expected_amount_max
-        errors.add(:expected_amount_min, "cannot be greater than expected_amount_max")
-      end
+    if expected_amount_min > expected_amount_max
+      errors.add(:expected_amount_min, "cannot be greater than expected_amount_max")
     end
   end
 
@@ -139,21 +141,22 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Create a manual recurring transaction from an existing transaction
-  # Automatically calculates amount variance from past 6 months of matching transactions
+  # Automatically calculates amount variance from past MANUAL_VARIANCE_LOOKBACK_MONTHS
+  # of matching transactions
   def self.create_from_transaction(transaction, date_variance: nil)
     entry = transaction.entry
     family = entry.account.family
     expected_day = entry.date.day
     date_variance ||= family.recurring_detection_day_tolerance
 
-    # Find matching transactions from the past 6 months
+    # Find matching transactions from the past manual variance lookback window
     matching_amounts = find_matching_transaction_amounts(
       family: family,
       merchant_id: transaction.merchant_id,
       name: transaction.merchant_id.present? ? nil : entry.name,
       currency: entry.currency,
       expected_day: expected_day,
-      lookback_months: 6,
+      lookback_months: MANUAL_VARIANCE_LOOKBACK_MONTHS,
       account: entry.account,
       date_variance: date_variance
     )

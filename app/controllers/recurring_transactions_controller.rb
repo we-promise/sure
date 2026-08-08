@@ -10,9 +10,7 @@ class RecurringTransactionsController < ApplicationController
   end
 
   def update_settings
-    settings = recurring_settings_params
-
-    if Current.family.errors.any? || !Current.family.update(settings)
+    unless Current.family.update_recurring_settings(recurring_settings_params)
       @family = Current.family
       @recurring_transactions = Current.family.recurring_transactions
                                       .accessible_by(Current.user)
@@ -83,7 +81,7 @@ class RecurringTransactionsController < ApplicationController
   private
 
     def recurring_settings_params
-      permitted = params.permit(
+      params.permit(
         :recurring_transactions_disabled,
         :recurring_detection_lookback_months,
         :recurring_detection_min_occurrences,
@@ -92,30 +90,5 @@ class RecurringTransactionsController < ApplicationController
         :recurring_detection_day_cluster_stddev,
         :recurring_detection_amount_tolerance_percent
       )
-
-      settings = {}
-
-      if permitted.key?(:recurring_transactions_disabled)
-        settings[:recurring_transactions_disabled] = permitted[:recurring_transactions_disabled] == "true"
-      end
-
-      %i[
-        recurring_detection_lookback_months
-        recurring_detection_min_occurrences
-        recurring_detection_recent_window_days
-        recurring_detection_day_tolerance
-        recurring_detection_day_cluster_stddev
-        recurring_detection_amount_tolerance_percent
-      ].each do |key|
-        next if permitted[key].blank?
-
-        begin
-          settings[key] = Integer(permitted[key], 10)
-        rescue ArgumentError, TypeError
-          Current.family.errors.add(key, t("recurring_transactions.settings.invalid_integer"))
-        end
-      end
-
-      settings
     end
 end

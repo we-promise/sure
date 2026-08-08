@@ -35,6 +35,14 @@ class Family < ApplicationRecord
   RECURRING_DETECTION_DAY_TOLERANCE_RANGE = 0..14
   RECURRING_DETECTION_DAY_CLUSTER_STDDEV_RANGE = 1..15
   RECURRING_DETECTION_AMOUNT_TOLERANCE_PERCENT_RANGE = 0..25
+  RECURRING_DETECTION_THRESHOLD_ATTRS = %i[
+    recurring_detection_lookback_months
+    recurring_detection_min_occurrences
+    recurring_detection_recent_window_days
+    recurring_detection_day_tolerance
+    recurring_detection_day_cluster_stddev
+    recurring_detection_amount_tolerance_percent
+  ].freeze
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
@@ -243,6 +251,33 @@ class Family < ApplicationRecord
 
   def uses_custom_month_start?
     month_start_day != 1
+  end
+
+  # Coerce and persist recurring settings from form params. Integer threshold
+  # fields are coerced here so invalid strings surface as model errors instead
+  # of raising / being handled in the controller.
+  def update_recurring_settings(raw_params)
+    attrs = {}
+    permitted = raw_params.to_h.with_indifferent_access
+
+    if permitted.key?(:recurring_transactions_disabled)
+      attrs[:recurring_transactions_disabled] = permitted[:recurring_transactions_disabled].to_s == "true"
+    end
+
+    RECURRING_DETECTION_THRESHOLD_ATTRS.each do |key|
+      next unless permitted.key?(key)
+      next if permitted[key].blank?
+
+      begin
+        attrs[key] = Integer(permitted[key], 10)
+      rescue ArgumentError, TypeError
+        errors.add(key, I18n.t("recurring_transactions.settings.invalid_integer"))
+      end
+    end
+
+    return false if errors.any?
+
+    update(attrs)
   end
 
   def custom_month_start_for(date)
