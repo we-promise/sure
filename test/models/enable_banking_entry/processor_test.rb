@@ -484,18 +484,32 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "SPARKASSE EISENSTADT 7000", name
   end
 
-  test "recognizes technical remittance line by trailing date+time even without POS/ATM keyword" do
+  test "does not treat a POS/ATM-prefixed line as technical when it lacks a trailing date+time (merchant embedded in the same line)" do
     name = build_name(
       credit_debit_indicator: "DBIT",
       creditor: { name: "" },
       bank_transaction_code: nil,
       remittance_information: [
-        "KAUF          12,00 AT  D6   31.07. 10:27",
-        "STADTKIND EISENSTADT 7000"
+        "POS 45,13 BILLA DANKT 0007114 SIEGENDORF 7011",
+        "Reference 0394676"
       ]
     )
 
-    assert_equal "STADTKIND EISENSTADT 7000", name
+    assert_equal "POS 45,13 BILLA DANKT 0007114 SIEGENDORF 7011", name
+  end
+
+  test "does not treat a legitimate line as technical just because it ends with a date+time stamp" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "Invoice paid 31.07. 10:27",
+        "Reference 0394676"
+      ]
+    )
+
+    assert_equal "Invoice paid 31.07. 10:27", name
   end
 
   test "strips SumUp payment processor prefix from the merchant line" do

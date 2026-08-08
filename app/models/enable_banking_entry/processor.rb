@@ -236,13 +236,15 @@ class EnableBankingEntry::Processor
 
     def technical_remittance_line?(value)
       line = value.to_s.strip
-      # Terminal booking lines like "POS   45,13 AT  D6   31.07. 10:27" or "ATM ...":
-      # Signal 1: keyword immediately followed by a decimal amount (kept narrow so a
-      #           real merchant like "ATM Superstore 24" doesn't false-positive).
-      # Signal 2: ends with a date+time stamp ("DD.MM. HH:MM") — an ASPSP-independent
-      #           signal a real merchant name practically never has.
-      line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b/i) ||
-        line.match?(/\d{2}[.\/]\d{2}\.?\s+\d{2}:\d{2}\z/)
+      # Terminal booking line, e.g. "POS   45,13 AT  D6   31.07. 10:27": require the
+      # keyword+amount prefix AND the trailing date+time stamp TOGETHER, not either
+      # alone. Either signal in isolation false-positives on legitimate descriptors:
+      # a line like "POS 45,13 BILLA DANKT ..." (merchant appended after the amount,
+      # no separate technical-only element) would wrongly match on the prefix alone,
+      # and a line like "Invoice paid 31.07. 10:27" would wrongly match on the date
+      # suffix alone. Requiring both matches every real technical line observed in
+      # production while leaving both of those legitimate shapes untouched.
+      line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{2}[.\/]\d{2}\.?\s+\d{2}:\d{2}\z/i)
     end
 
     def strip_payment_processor_prefix(value)
