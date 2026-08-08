@@ -77,6 +77,18 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
   test "returns no payments when the term is zero" do
     assert_empty build_schedule(term_months: 0).payments
     assert_nil build_schedule(term_months: 0).payoff_date
+    assert_equal BigDecimal("0"), build_schedule(term_months: 0).periodic_payment.amount
+    assert_equal BigDecimal("0"), build_schedule(principal: 0).periodic_payment.amount
+  end
+
+  test "keeps the periods it built when rounding clears the balance early" do
+    # 10 over 51 months rounds to a 0.20 payment, which pays the loan off in 50.
+    schedule = build_schedule(principal: 10, annual_rate: 0, term_months: 51)
+
+    assert_equal 50, schedule.payments.count
+    assert_equal BigDecimal("0"), schedule.payments.last.ending_balance.amount
+    assert_equal BigDecimal("10"), schedule.total_paid.amount
+    assert_equal schedule.payments.last.date, schedule.payoff_date
   end
 
   test "payment_for finds the payment landing in a given month" do

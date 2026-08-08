@@ -44,6 +44,8 @@ class Loan::AmortizationSchedule
   # The level payment charged every period. The last payment can differ by a
   # few cents — read it off #payments when the exact figure matters.
   def periodic_payment
+    return money(0) unless schedulable?
+
     money(raw_periodic_payment)
   end
 
@@ -83,12 +85,16 @@ class Loan::AmortizationSchedule
     end
 
     def build_payments
-      return [] unless term_months.positive? && principal.positive?
+      return [] unless schedulable?
 
       balance = principal
       level_payment = raw_periodic_payment
+      built = []
 
-      (1..term_months).filter_map do |number|
+      (1..term_months).each do |number|
+        # Rounding can make the level payment slightly over-cover the loan, so
+        # the balance can reach zero before the nominal term is up. Stop, and
+        # keep the periods built so far.
         break if balance <= 0
 
         interest = round_to_currency(balance * monthly_rate)
@@ -102,7 +108,7 @@ class Loan::AmortizationSchedule
 
         balance -= principal_portion
 
-        Payment.new(
+        built << Payment.new(
           number: number,
           date: start_date >> number,
           payment: money(principal_portion + interest),
@@ -111,6 +117,12 @@ class Loan::AmortizationSchedule
           ending_balance: money(balance)
         )
       end
+
+      built
+    end
+
+    def schedulable?
+      term_months.positive? && principal.positive?
     end
 
     def round_to_currency(value)
