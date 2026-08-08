@@ -7,6 +7,10 @@ import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 // Modeled after time_series_chart_controller's lifecycle (install/teardown,
 // ResizeObserver, turbo:load reinstall, page-relative tooltip positioning)
 // but with scaleBand/scaleLinear instead of a line.
+
+// Breathing room between neighbouring month labels before they read as touching.
+const LABEL_GAP_PX = 8;
+
 export default class extends Controller {
   static values = {
     data: Array,
@@ -120,7 +124,7 @@ export default class extends Controller {
       .on("mousemove", (event, d) => showTooltip(event, d.month, d.key))
       .on("mouseleave", hideTooltip);
 
-    group
+    const axisLabels = group
       .append("g")
       .attr("transform", `translate(0,${innerHeight})`)
       .call(d3.axisBottom(x0).tickSize(0))
@@ -129,6 +133,29 @@ export default class extends Controller {
       .attr("class", (_d, i) => (data[i].highlighted ? "text-primary fill-current" : "text-secondary fill-current"))
       .style("font-size", "12px")
       .style("font-weight", (_d, i) => (data[i].highlighted ? 600 : 500));
+
+    this._fitAxisLabels(axisLabels, data, x0.step());
+  }
+
+  // The month labels are sized by the locale, not by the chart: "Mar 2026" fits
+  // a phone, "Mar de 2026" (ca/es/pt) does not and overlaps its neighbours.
+  // Measure what actually rendered and step down until it fits — full label,
+  // then the abbreviated month, then every other tick. Measuring beats guessing
+  // at a character width, which varies by locale, font and zoom.
+  _fitAxisLabels(labels, data, step) {
+    if (labels.empty()) return;
+
+    const widest = () => d3.max(labels.nodes(), (node) => node.getComputedTextLength()) || 0;
+    const fits = () => widest() <= step - LABEL_GAP_PX;
+
+    if (fits()) return;
+
+    labels.text((_d, i) => data[i].short_label ?? data[i].label);
+    if (fits()) return;
+
+    // Still too wide (a very narrow column): thin out rather than overlap,
+    // always keeping the highlighted month visible.
+    labels.style("display", (_d, i) => (i % 2 === 0 || data[i].highlighted ? null : "none"));
   }
 
   _tooltipTemplate(month, key) {
