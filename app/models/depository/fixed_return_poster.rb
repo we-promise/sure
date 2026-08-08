@@ -38,14 +38,24 @@ class Depository::FixedReturnPoster
     # what lets catch-up periods compound — without it they would be credited
     # short, and being keyed by date, never revisited.
     posted_interest = BigDecimal(0)
+    posted = []
 
-    due_periods.filter_map do |period_start, posting_date|
-      entry = post_period(period_start, posting_date, carry: posted_interest)
-      next if entry.nil?
+    due_periods.each do |period_start, posting_date|
+      interest = interest_for(period_start, posting_date, carry: posted_interest)
 
-      posted_interest += entry.amount.abs
-      entry
+      # Incomplete balance history: stop rather than skip ahead. Posting a
+      # later period first would compound it off a balance that is still
+      # missing this period's interest, and since postings are keyed by date,
+      # that entry would stay short forever once this period is backfilled.
+      break if interest.nil?
+
+      next if interest.zero?
+
+      posted << post_period(posting_date, interest)
+      posted_interest += interest
     end
+
+    posted
   end
 
   private
@@ -88,10 +98,7 @@ class Depository::FixedReturnPoster
       account.entries.where(source: SOURCE).pluck(:external_id).compact.map { |id| Date.parse(id) }.to_set
     end
 
-    def post_period(period_start, posting_date, carry:)
-      interest = interest_for(period_start, posting_date, carry: carry)
-      return nil if interest.zero?
-
+    def post_period(posting_date, interest)
       entry = account.entries.create!(
         date: posting_date,
         name: I18n.t("depositories.fixed_return.interest_entry_name", default: "Interest"),
@@ -108,6 +115,10 @@ class Depository::FixedReturnPoster
     end
 
     # Average daily balance over (period_start, posting_date], at actual/365.
+    #
+    # Returns nil when the period's balance history is incomplete — distinct
+    # from a period that genuinely earns nothing, which returns zero. Callers
+    # stop on nil and skip on zero.
     def interest_for(period_start, posting_date, carry:)
       accrual_dates = (period_start + 1)..posting_date
       days = accrual_dates.count
@@ -115,10 +126,9 @@ class Depository::FixedReturnPoster
 
       # Every day of the period needs a balance row. Averaging the rows that do
       # exist and then charging for the full period would credit interest for
-      # days with no balance history at all. Skipping leaves the period
-      # uncredited and unrecorded, so a later sync posts it once the balances
-      # are there.
-      return BigDecimal(0) unless balances.size == days
+      # days with no balance history at all. Leaving the period uncredited and
+      # unrecorded lets a later sync post it once the balances are there.
+      return nil unless balances.size == days
 
       average_balance = balances.sum(BigDecimal(0)) / days + carry
       return BigDecimal(0) if average_balance <= 0

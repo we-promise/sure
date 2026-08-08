@@ -74,6 +74,6 @@ class Depository < ApplicationRecord
     def fixed_return_start_date_cannot_be_in_the_future
       return if fixed_return_start_date.blank? || fixed_return_start_date <= Date.current
 
-      errors.add(:fixed_return_start_date, "can't be in the future")
+      errors.add(:fixed_return_start_date, :in_the_future)
     end
 end

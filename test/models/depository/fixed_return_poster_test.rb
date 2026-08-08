@@ -99,6 +99,19 @@ class Depository::FixedReturnPosterTest < ActiveSupport::TestCase
     assert_empty travel_to(Date.new(2026, 2, 1)) { Depository::FixedReturnPoster.new(account).post_due_interest! }
   end
 
+  test "stops at the first period with incomplete history rather than skipping ahead" do
+    start_date = Date.new(2026, 1, 1)
+    account = fixed_return_account(rate: 4, frequency: "monthly", start_date: start_date)
+    # January is missing its first days; February is complete.
+    materialize_balances(account, Date.new(2026, 1, 20)..Date.new(2026, 3, 1), 10_000)
+
+    entries = travel_to(Date.new(2026, 3, 1)) { Depository::FixedReturnPoster.new(account).post_due_interest! }
+
+    # Posting February first would compound it off a balance still missing
+    # January's interest, and it could never be corrected afterwards.
+    assert_empty entries
+  end
+
   test "posts a skipped period once its balances are materialized" do
     start_date = Date.new(2026, 1, 1)
     account = fixed_return_account(rate: 4, frequency: "monthly", start_date: start_date)
