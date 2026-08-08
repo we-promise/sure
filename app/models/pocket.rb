@@ -98,14 +98,14 @@ class Pocket < ApplicationRecord
       if fill_direction == "both"
         # Net = incomes - expenses, floored at 0.
         # DB convention: income = negative amount, expense = positive → SUM(-amount) gives net.
-        ApplicationRecord.connection.select_value(
-          "SELECT GREATEST(0, COALESCE(SUM(-amount), 0)) FROM (#{subq.to_sql}) deduplicated_entries"
-        ).to_d
+        Entry.from(subq, :deduplicated_entries)
+             .pick(Arel.sql("GREATEST(0, COALESCE(SUM(-amount), 0))"))
+             .to_d
       else
         subq = subq.where(direction_condition)
-        ApplicationRecord.connection.select_value(
-          "SELECT COALESCE(SUM(ABS(amount)), 0) FROM (#{subq.to_sql}) deduplicated_entries"
-        ).to_d
+        Entry.from(subq, :deduplicated_entries)
+             .pick(Arel.sql("COALESCE(SUM(ABS(amount)), 0)"))
+             .to_d
       end
     end
 

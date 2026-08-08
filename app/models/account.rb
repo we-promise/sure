@@ -612,12 +612,12 @@ class Account < ApplicationRecord
     end
   end
 
-  def free_balance
-    balance - pockets.sum(:allocated_amount)
+  def free_balance(pockets_total = pockets.sum(:allocated_amount))
+    balance - pockets_total
   end
 
-  def pockets_overflow?
-    pockets.sum(:allocated_amount) > balance
+  def pockets_overflow?(pockets_total = pockets.sum(:allocated_amount))
+    free_balance(pockets_total) < 0
   end
 
   def owned_by?(user)

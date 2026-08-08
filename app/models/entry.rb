@@ -562,9 +562,10 @@ class Entry < ApplicationRecord
     end
 
     def recompute_account_pockets_for_taggings(target_account)
+      pockets_by_tag_id = target_account.pockets.where.not(tag_id: nil).index_by(&:tag_id)
+
       entryable.taggings.each do |tagging|
-        pocket = target_account.pockets.find_by(tag_id: tagging.tag_id)
-        pocket&.recompute_from_tag!
+        pockets_by_tag_id[tagging.tag_id]&.recompute_from_tag!
       end
     end
 end
