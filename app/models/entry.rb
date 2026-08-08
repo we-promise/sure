@@ -18,6 +18,29 @@ class Entry < ApplicationRecord
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
 
+  # Manual, Bluecoins-style reconciliation status. Distinct from Transaction#pending?
+  # (which reflects the bank/provider's own pending-vs-posted status) and from the
+  # sync-time duplicate-claim logic in Account::ProviderImportAdapter (which already
+  # auto-matches/merges manual entries against later bank-synced transactions).
+  #
+  # This is a user-controlled flag for manually checking entries off against a
+  # paper/PDF statement — line-by-line, the way a checkbook register works. The
+  # column exists on every entry, but the UI only surfaces it for manual
+  # (unsynced) accounts, i.e. `account.manual?` — synced accounts already have
+  # duplicate-matching (Account::ProviderImportAdapter) and statement-level
+  # reconciliation (AccountStatement, Account::ReconciliationManager).
+  enum :reconciled_status, {
+    unreconciled: "unreconciled", # default — not yet checked against a statement
+    cleared: "cleared",           # confirmed to appear on a statement, not yet locked in
+    reconciled: "reconciled"      # statement period fully reconciled; treat as locked
+  }, default: "unreconciled", validate: true
+
+  # Order the manual reconciliation status advances through when a user
+  # clicks the reconcile badge, e.g. on the transaction row or detail view.
+  # Derived from the enum (not hardcoded) so it can't drift from it if a
+  # status is ever renamed or added.
+  RECONCILED_STATUS_CYCLE = reconciled_statuses.keys.freeze
+
   validates :date, :name, :amount, :currency, presence: true
   validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
@@ -49,6 +72,10 @@ class Entry < ApplicationRecord
       id: :desc
     )
   }
+
+  # Manual reconciliation scopes (see reconciled_status enum above)
+  scope :needs_reconciliation, -> { where(reconciled_status: [ :unreconciled, :cleared ]) }
+  scope :cleared_or_reconciled, -> { where(reconciled_status: [ :cleared, :reconciled ]) }
 
   # Pending transaction scopes - check Transaction.extra for provider pending flags
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
@@ -424,6 +451,16 @@ class Entry < ApplicationRecord
     end
   end
 
+  # Advances reconciled_status to the next state in RECONCILED_STATUS_CYCLE,
+  # wrapping back to :unreconciled after :reconciled. Used by the quick-toggle
+  # UI control so a single click/tap moves a transaction through the same
+  # None -> Cleared -> Reconciled flow Bluecoins uses.
+  def advance_reconciled_status!
+    current_index = RECONCILED_STATUS_CYCLE.index(reconciled_status) || 0
+    next_status = RECONCILED_STATUS_CYCLE[(current_index + 1) % RECONCILED_STATUS_CYCLE.length]
+    update!(reconciled_status: next_status)
+  end
+
   # Removes split children and restores parent entry.
   def unsplit!
     self.class.transaction do
@@ -462,6 +499,7 @@ class Entry < ApplicationRecord
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
         name: bulk_update_params[:name],
+        reconciled_status: bulk_update_params[:reconciled_status],
         entryable_attributes: {
           category_id: bulk_update_params[:category_id],
           merchant_id: bulk_update_params[:merchant_id]
@@ -473,15 +511,28 @@ class Entry < ApplicationRecord
 
       return 0 unless has_updates
 
+      updated_count = 0
+
       transaction do
-        all.each do |entry|
+        all.includes(:account).each do |entry|
           changed = false
+          # Whether this row's changes should lock saved attributes / mark
+          # user-modified. Reconciling is a verification action, not an
+          # edit — the single-row Entry#advance_reconciled_status! (used by
+          # the quick-toggle badge) never locks anything, so a bulk
+          # reconcile-only update shouldn't either. If reconciled_status is
+          # combined with a real edit (category, notes, etc.) in the same
+          # bulk update, the usual locking still applies to those fields.
+          lockable_change = false
 
           # Update standard attributes
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
             attrs.delete(:date) if entry.split_child?
             attrs.delete(:entryable_attributes) unless entry.transaction?
+            # reconciled_status is a manual-accounts-only concept — synced accounts
+            # already have duplicate-matching + statement-level reconciliation.
+            attrs.delete(:reconciled_status) unless entry.account.manual?
 
             if attrs.present?
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
@@ -489,6 +540,7 @@ class Entry < ApplicationRecord
               entry.update! attrs
               entry.transaction.record_category_usage! if entry.transaction?
               changed = true
+              lockable_change = attrs.except(:reconciled_status).present?
             end
           end
 
@@ -498,16 +550,20 @@ class Entry < ApplicationRecord
             entry.transaction.save!
             entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
             changed = true
+            lockable_change = true
           end
 
           if changed
-            entry.lock_saved_attributes!
-            entry.mark_user_modified!
+            if lockable_change
+              entry.lock_saved_attributes!
+              entry.mark_user_modified!
+            end
+            updated_count += 1
           end
         end
       end
 
-      all.size
+      updated_count
     end
   end
 

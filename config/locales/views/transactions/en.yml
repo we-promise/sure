@@ -12,10 +12,13 @@ en:
         merchant_prompt: Select a merchant
         name_label: Name
         name_placeholder: Enter a name that will be applied to selected transactions
+        no_change: (no change)
         none: "(none)"
         notes_label: Notes
         notes_placeholder: Enter a note that will be applied to selected transactions
         overview: Overview
+        reconciled_status_hint: Only applies to manually-entered accounts (no bank sync).
+        reconciled_status_label: Reconciliation status
         save: Save
         tags_label: Tags
         transactions_section: Transactions
@@ -23,6 +26,7 @@ en:
     selection_bar:
       duplicate: Duplicate
       edit: Edit
+      reconcile: Reconcile
       selected: selected
     form:
       details: Details
@@ -153,6 +157,18 @@ en:
     dismiss_duplicate:
       success: Kept as separate transactions
       failure: Could not dismiss duplicate suggestion
+    reconcile:
+      success: Marked as %{status}
+      failure: Could not update reconciliation status
+      not_manual_account: Reconciliation status only applies to manually-entered accounts (no bank sync)
+      statuses:
+        unreconciled: Unreconciled
+        cleared: Cleared
+        reconciled: Reconciled
+      badge:
+        unreconciled_tooltip: "Not yet checked against a statement. Click to mark as cleared."
+        cleared_tooltip: "Confirmed on a statement, not yet fully reconciled. Click to mark as reconciled."
+        reconciled_tooltip: "Statement period fully reconciled. Click to reset to unreconciled."
     pending_duplicate_merge:
       possible_duplicate: Duplicate?
       possible_duplicate_short: Dup?
@@ -232,6 +248,7 @@ en:
         date: Date
         type: Type
         status: Status
+        reconcile_status: Reconciliation
         amount: Amount
         category: Category
         tag: Tag
@@ -320,6 +337,7 @@ en:
         clear_filters: Clear filters
         date_filter: Date
         merchant_filter: Merchant
+        reconcile_status_filter: Reconciliation
         status_filter: Status
         tag_filter: Tag
         type_filter: Type
