@@ -59,8 +59,27 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "turbo-stream", response.body
     assert_no_match(/#{Regexp.escape(unacknowledge_insight_path(@insight))}/, response.body)
-    assert_no_match(/#{Regexp.escape(CGI.escapeHTML(I18n.t("insights.index.title")))}.*undo/i, response.body)
     assert @insight.reload.acknowledged?
+  end
+
+  # The card leaves via a stream, which is silent to a screen reader, and takes
+  # the control the user just activated with it. With the toast gone, the shared
+  # live region carries that confirmation instead.
+  test "acknowledge announces the dismissal in the shared live region" do
+    patch acknowledge_insight_url(@insight), as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=update][target=?]", "aria-announcer" do
+      assert_match CGI.escapeHTML(I18n.t("insights.card.acknowledged")), response.body
+    end
+  end
+
+  test "the live region is present before any stream updates it" do
+    get insights_url
+
+    assert_response :success
+    assert_select "#aria-announcer[role=status][aria-live=polite]", 1,
+      "a live region that arrives with its content is not announced"
   end
 
   # The card used to leave via `turbo_stream.remove`, which emptied

@@ -10,6 +10,7 @@ tr:
       spending_anomaly: "%{category} işlemlerini görüntüle"
       subscription_audit: Yinelenen işlemleri incele
     card:
+      acknowledged: "İçgörü yoksayıldı"
       dismiss: Yoksay
       dismissed: İçgörü yoksayıldı
       new: Yeni
