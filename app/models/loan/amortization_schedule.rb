@@ -37,6 +37,8 @@ class Loan::AmortizationSchedule
     @currency = currency
   end
 
+  # Every scheduled payment, oldest first. Empty when there is nothing to
+  # amortize; shorter than the term when rounding clears the balance early.
   def payments
     @payments ||= build_payments
   end
@@ -49,14 +51,19 @@ class Loan::AmortizationSchedule
     money(raw_periodic_payment)
   end
 
+  # What the loan costs in interest over its whole life. Sits slightly above
+  # the naive periodic_payment * term figure because interest is rounded to
+  # the currency's precision every period.
   def total_interest
     money(payments.sum(BigDecimal(0)) { |payment| payment.interest.amount })
   end
 
+  # Principal plus total_interest — everything the borrower pays.
   def total_paid
     money(payments.sum(BigDecimal(0)) { |payment| payment.payment.amount })
   end
 
+  # The date of the final payment, or nil when there's nothing to amortize.
   def payoff_date
     payments.last&.date
   end
