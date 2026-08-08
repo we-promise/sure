@@ -293,8 +293,8 @@ en:
         copy_url: Copy
         copied: Copied!
         how_to_connect_title: How to connect Claude
-        step_1: "Open Claude.ai and go to Settings → Integrations."
-        step_2: Click "Add integration" and paste the MCP server URL above.
+        step_1: "Open Claude.ai and go to Settings → Customize → Connectors."
+        step_2: Click "Add connector" and paste the MCP server URL above.
         step_3: Click Connect — you'll be redirected to Sure to sign in and authorize access.
         step_4: Once authorized, Claude can read your accounts, transactions, and balance data.
         connected_title: Connected clients
