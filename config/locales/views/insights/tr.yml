@@ -13,7 +13,6 @@ tr:
       dismiss: Yoksay
       dismissed: İçgörü yoksayıldı
       new: Yeni
-      undo: Geri al
     feed:
       header: Son
       header_new: Yeni

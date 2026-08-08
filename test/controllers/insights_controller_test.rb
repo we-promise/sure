@@ -49,13 +49,44 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
       "insights_feed should be prepended, not appended, for saved orders that predate it"
   end
 
-  test "acknowledge removes the insight from the feed and offers undo via turbo stream" do
+  # Acknowledging is a quiet action — no undo toast. Acknowledgement only covers
+  # the numbers the user saw (see Insight's class comment), so a dismissed
+  # insight resurfaces on its own when those numbers move; a toast interrupting
+  # every dismissal bought little.
+  test "acknowledge clears the insight without an undo toast" do
     patch acknowledge_insight_url(@insight), as: :turbo_stream
 
     assert_response :success
     assert_match "turbo-stream", response.body
-    assert_match unacknowledge_insight_path(@insight), response.body
+    assert_no_match(/#{Regexp.escape(unacknowledge_insight_path(@insight))}/, response.body)
+    assert_no_match(/#{Regexp.escape(CGI.escapeHTML(I18n.t("insights.index.title")))}.*undo/i, response.body)
     assert @insight.reload.acknowledged?
+  end
+
+  # The card used to leave via `turbo_stream.remove`, which emptied
+  # #insights-list without re-rendering the partial that owns the empty state —
+  # so dismissing the last insight showed a blank page until reload.
+  test "acknowledging the last insight renders the empty state" do
+    @user.family.insights.where.not(id: @insight.id).destroy_all
+
+    patch acknowledge_insight_url(@insight), as: :turbo_stream
+
+    assert_response :success
+    assert_match "insights-list", response.body
+    assert_match CGI.escapeHTML(I18n.t("insights.index.empty.title")), response.body
+  end
+
+  # A full dashboard render already drops the section (insights_feed_section sets
+  # `visible: @feed_insights.any?`), so the turbo path has to as well — otherwise
+  # the section shell lingered with its header above an empty well.
+  test "acknowledging the last insight removes the dashboard section" do
+    @user.family.insights.where.not(id: @insight.id).destroy_all
+
+    patch acknowledge_insight_url(@insight), as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=remove][targets=?]", "[data-section-key='insights_feed']"
+    assert_select "turbo-stream[action=replace][target=?]", "insights-feed", count: 0
   end
 
   test "unacknowledge restores the insight as read and re-renders the list" do

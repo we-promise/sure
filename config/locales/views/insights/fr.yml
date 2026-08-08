@@ -13,7 +13,6 @@ fr:
       dismiss: Ignorer
       dismissed: Analyse ignorée
       new: Nouveau
-      undo: Annuler
     feed:
       header: Dernières
       header_new: Nouveau

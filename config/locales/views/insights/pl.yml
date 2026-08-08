@@ -15,7 +15,6 @@ pl:
       dismiss: Odrzuć
       new: Nowa
       dismissed: Analiza odrzucona
-      undo: Cofnij
     feed:
       view_all: Zobacz wszystkie analizy
       header: Najnowsze

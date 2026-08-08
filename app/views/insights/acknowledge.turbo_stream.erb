@@ -1,16 +1,26 @@
-<%# Acknowledging is reachable from two surfaces now, so this response carries
-    the update for both and each applies only the streams whose targets it has —
+<%# Acknowledging is reachable from two surfaces, so this response carries the
+    update for both and each applies only the streams whose targets it has —
     Turbo silently ignores a stream whose target is absent. %>
 
-<%# /insights: drop the card. %>
-<%= turbo_stream.remove dom_id(@insight) %>
-
-<%# Dashboard: re-render the well rather than removing a row, so the next
-    insight is promoted into the freed slot instead of leaving a gap. %>
-<%= turbo_stream.replace "insights-feed" do %>
-  <%= render "pages/dashboard/insights_feed", insights: @feed_insights %>
+<%# /insights: re-render the whole list rather than removing the one card.
+    Removing left an empty #insights-list behind, so dismissing the last insight
+    showed a blank page until reload — the empty state lives in this partial and
+    only renders when the partial does. %>
+<%= turbo_stream.replace "insights-list" do %>
+  <%= render "insights/list", insights: @insights, unread_ids: @unread_ids %>
 <% end %>
 
-<%= turbo_stream.append "notification-tray" do %>
-  <%= render "insights/undo_toast", insight: @insight %>
+<% if @feed_insights.any? %>
+  <%# Dashboard: re-render the well rather than removing a row, so the next
+      insight is promoted into the freed slot instead of leaving a gap. %>
+  <%= turbo_stream.replace "insights-feed" do %>
+    <%= render "pages/dashboard/insights_feed", insights: @feed_insights %>
+  <% end %>
+<% else %>
+  <%# Nothing left to show: drop the whole dashboard section, not just the well
+      inside it, or the section shell lingers with its header and an empty box.
+      Matches what a reload does — PagesController#insights_feed_section sets
+      `visible: @feed_insights.any?`. Targeted by attribute because the section
+      element is emitted by the shared dashboard loop and carries no id. %>
+  <%= turbo_stream.remove_all "[data-section-key='insights_feed']" %>
 <% end %>

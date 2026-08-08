@@ -15,8 +15,6 @@ en:
       acknowledge: Got it
       acknowledge_title: Hide this until the numbers change
       new: New
-      acknowledged: Got it — hidden until this changes
-      undo: Undo
     feed:
       view_all: View all insights
       header: Latest
