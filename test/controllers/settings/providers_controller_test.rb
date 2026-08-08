@@ -42,6 +42,117 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "brex-providers-panel"
   end
 
+  test "shows configured Pluggy connections in bank sync settings" do
+    get settings_providers_url
+
+    assert_response :success
+    assert_includes response.body, "Pluggy"
+    # Pluggy panel renders the configured-status banner (not an item name, unlike
+    # the Brex/Sophtron panels). Asserting this string proves the panel partial
+    # rendered inside the connected-entries section — i.e. Pluggy registered as a
+    # connected family panel rather than an available ProviderCard.
+    assert_includes response.body, "Connected and ready to sync"
+    assert_includes response.body, "pluggy-providers-panel"
+  end
+
+  test "GET /settings/providers renders the Connect drawer link and never mints a Pluggy connect_token on the read" do
+    # #6 regression guard: prepare_show_context used to eagerly hydrate the item
+    # id AND mint a real Pluggy connect_token on every GET render (a synchronous
+    # network round-trip plus a save! on a read request, with auth failures
+    # swallowed by `rescue nil`). The token now mints lazily in the
+    # `connect_form` action (the Connect drawer, loaded via a Turbo frame when
+    # the user opens it), so a plain GET must NOT touch the live Pluggy API.
+    # The `expects(...).never` locks are the real guards: a nil-stub alone
+    # would let a regressed eager mint silently no-op, so `assert_response
+    # :success` would still hold — the .never expectations fail the moment
+    # anyone re-adds an upstream call on the read path.
+    family = families(:empty)
+    PluggyItem.create!(
+      family: family,
+      name: "Pluggy Connection",
+      client_id: "client-id",
+      client_secret: "client-secret"
+    )
+
+    sign_in users(:empty)
+
+    Provider::Pluggy.expects(:connect_token).never
+    assert_not Provider::Pluggy.respond_to?(:latest_item_id)
+
+    get settings_providers_url
+
+    assert_response :success
+    # Credentials configured but no item connected -> the "credentials only"
+    # status banner (the elsif branch in _pluggy_panel), not a widget block.
+    assert_includes response.body, I18n.t("pluggy_items.panel.status_credentials_only")
+    # The widget launcher block is gated by `@connect_token.present?`, which is
+    # blank on a plain GET post-#6, so the live-widget markers are ABSENT — the
+    # panel falls back to the Connect drawer link (which mints a fresh token via
+    # connect_form when the user opens it).
+    refute_includes response.body, I18n.t("pluggy_items.panel.connect_widget_title")
+    refute_includes response.body, I18n.t("pluggy_items.panel.connect_widget_button")
+    assert_includes response.body, connect_form_settings_providers_path(provider_key: "pluggy")
+  end
+
+  test "connect_form mints a CREATE-mode token without hardcoding avoid_duplicates for a credentialed family with no connected item" do
+    # Regression guard for the ITEM_USER_ALREADY_EXISTS fix. connect_form must NOT
+    # pass `avoid_duplicates: true` to the SDK when there is no connected item
+    # (CREATE mode); the SDK derives `avoidDuplicates: false` from a blank
+    # `item_id` so a Pluggy-side orphan re-binds instead of 400-ing. mocha's
+    # strict kwarg match fails if the controller re-adds `avoid_duplicates: true`
+    # (extra kwarg) — staying green requires the controller to OMIT it.
+    family = families(:empty)
+    PluggyItem.create!(
+      family: family,
+      name: "Pluggy Connection",
+      client_id: "client-id",
+      client_secret: "client-secret"
+    )
+    sign_in users(:empty)
+
+    Provider::Pluggy.expects(:connect_token).with(
+      client_id: "client-id", client_secret: "client-secret",
+      client_user_id: "pluggy_#{family.id}",
+      webhook_url: anything, redirect_url: anything,
+      item_id: nil
+    ).returns("create-token")
+
+    get connect_form_settings_providers_url(provider_key: "pluggy")
+
+    assert_response :success
+  end
+
+  test "connect_form surfaces a Pluggy token-mint failure in the panel error slot instead of a 500" do
+    # A bad/invalid Pluggy credential or a Pluggy outage turns the connect_token
+    # mint into a raised Provider::Pluggy::AuthenticationError (< Error). The
+    # controller rescues Provider::Pluggy::Error, sets @error_message (read by
+    # _pluggy_panel's error slot), and leaves @connect_token nil so the widget
+    # box stays hidden and the drawer-link fallback renders — instead of crashing
+    # into a 500 on a blank drawer.
+    family = families(:empty)
+    PluggyItem.create!(
+      family: family,
+      name: "Pluggy Connection",
+      client_id: "client-id",
+      client_secret: "client-secret"
+    )
+    sign_in users(:empty)
+
+    Provider::Pluggy.stubs(:connect_token).raises(
+      Provider::Pluggy::AuthenticationError.new("Invalid credentials", :unauthorized)
+    )
+
+    get connect_form_settings_providers_url(provider_key: "pluggy")
+
+    assert_response :success
+    assert_includes response.body, "Invalid credentials"
+    # Widget launcher is gated on @connect_token.present? — with the mint
+    # failing it must stay hidden and the drawer-link fallback must render so the
+    # user can retry instead of being stranded on a blank drawer.
+    refute_includes response.body, I18n.t("pluggy_items.panel.connect_widget_button")
+    assert_includes response.body, connect_form_settings_providers_path(provider_key: "pluggy")
+  end
+
   test "shows Brex as available when family has no Brex connections" do
     sign_in users(:empty)
 
