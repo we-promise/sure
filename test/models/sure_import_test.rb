@@ -460,6 +460,9 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_difference -> { Entry.where(id: split_entry_ids).count }, -3 do
       @import.revert
+      puts "DEBUG status=#{@import.reload.status} error=#{@import.reload.respond_to?(:error) ? @import.reload.error : 'n/a'}"
+      puts "DEBUG entries remaining=#{Entry.where(id: split_entry_ids).count}"
+      puts "DEBUG import entries count=#{@import.entries.where(parent_entry_id: nil).count}"
     end
     assert_equal "pending", @import.reload.status
   end
