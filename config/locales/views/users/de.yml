@@ -16,6 +16,7 @@ de:
     reset_with_sample_data:
       success: Dein Konto wurde zurückgesetzt, und Beispieldaten werden vorbereitet. In Kürze wirst du Demodaten sehen.
     roles:
+      admin: Admin
       member: Mitglied
       super_admin: Super-Admin
     user_menu:
@@ -23,4 +24,6 @@ de:
       settings: Einstellungen
       changelog: Änderungsprotokoll
       contact: Kontakt
+      feedback: Feedback
+      version: Version
       log_out: Abmelden

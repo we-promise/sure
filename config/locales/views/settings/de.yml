@@ -337,7 +337,7 @@ de:
         page_title: Banksynchronisierung
         lede: Verbinde externe Konten, damit Transaktionen, Kontostände und Bestände automatisch in Sure einfließen.
       status:
-        'False': Nicht konfiguriert
+        "off": Nicht konfiguriert
         ok: Verbunden
         warn: Aktion erforderlich
         err: Fehler

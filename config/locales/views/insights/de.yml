@@ -12,9 +12,10 @@ de:
       queued: Wir erstellen gerade neue Einblicke. Schau in einer Minute wieder vorbei.
       checking: Wird geprüft…
     card:
-      dismiss: Verwerfen
-      dismissed: Einblick verworfen
+      acknowledge: Verstanden
+      acknowledge_title: Ausblenden, bis sich die Zahlen ändern
       new: Neu
+      acknowledged: Verstanden – ausgeblendet, bis sich das ändert
       undo: Rückgängig machen
     feed:
       view_all: Alle Einblicke anzeigen

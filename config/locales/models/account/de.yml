@@ -7,6 +7,12 @@ de:
     balance_desc:
       label: Kontostand (absteigend)
       label_short: Kontostand ↓
+    name_asc:
+      label: Name (A-Z)
+      label_short: Name ↑
+    name_desc:
+      label: Name (Z-A)
+      label_short: Name ↓
   activerecord:
     attributes:
       account:

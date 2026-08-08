@@ -14,7 +14,7 @@ de:
       asset_value: Vermögenswert
       liability_balance: Verbindlichkeitssaldo
       balance: Saldo
-      on: am
+      "on": am
       recalculate_notice: Alle zukünftigen Transaktionen und Salden werden basierend auf dieser %{change_or_update} neu berechnet.
       change: Änderung
       update: Aktualisierung

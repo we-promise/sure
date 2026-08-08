@@ -17,6 +17,7 @@ de:
       expense: Ausgabe
       from: Von
       income: Einnahme
+      source_amount: Quellbetrag
       select_account: Konto auswählen
       submit: Überweisung erstellen
       to: An
@@ -36,6 +37,9 @@ de:
       overview: Übersicht
       settings: Einstellungen
       from: Von
+      to: An
+      source_fee: Quellgebühr
+      destination_fee: Zielgebühr
       date: Datum
       transfer_amount: Überweisungsbetrag
       total: Gesamt

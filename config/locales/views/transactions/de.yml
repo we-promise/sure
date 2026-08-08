@@ -10,12 +10,14 @@ de:
         header_title: Transaktionen bearbeiten
         merchant_label: Händler
         merchant_prompt: Händler auswählen
+        name_label: Name
         name_placeholder: Gib einen Namen ein, der auf die ausgewählten Transaktionen angewendet wird
         none: (keine)
         notes_label: Notizen
         notes_placeholder: Gib eine Notiz ein, die auf die ausgewählten Transaktionen angewendet wird
         overview: Übersicht
         save: Speichern
+        tags_label: Tags
         transactions_section: Transaktionen
     unknown_name: Unbekannte Transaktion
     selection_bar:

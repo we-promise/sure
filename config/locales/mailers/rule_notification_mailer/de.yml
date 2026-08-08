@@ -10,6 +10,7 @@ de:
         other: '%{count} neue Transaktionen entsprechen deiner Regel'
       intro: 'Diese Transaktionen entsprechen der Regel „%{rule}“:'
       date: Datum
+      name: Name
       account: Konto
       amount: Betrag
       cta: Transaktionen anzeigen
