@@ -15,18 +15,29 @@ class Loan < ApplicationRecord
 
   def monthly_payment
     return nil if term_months.nil? || interest_rate.nil? || rate_type.nil? || rate_type != "fixed"
-    return Money.new(0, account.currency) if account.loan.original_balance.amount.zero? || term_months.zero?
+    return Money.new(0, account.currency) if original_balance.amount.zero? || term_months.zero?
 
-    annual_rate = interest_rate / 100.0
-    monthly_rate = annual_rate / 12.0
+    amortization_schedule&.periodic_payment
+  end
 
-    if monthly_rate.zero?
-      payment = account.loan.original_balance.amount / term_months
-    else
-      payment = (account.loan.original_balance.amount * monthly_rate * (1 + monthly_rate)**term_months) / ((1 + monthly_rate)**term_months - 1)
-    end
+  # A loan can be amortized once we know what was borrowed, at what fixed rate,
+  # and over how long. Variable-rate loans are excluded: their payment changes
+  # with the rate, so a schedule built off today's rate would be fiction.
+  def amortizable?
+    rate_type == "fixed" &&
+      interest_rate.present? &&
+      term_months.to_i.positive? &&
+      original_balance.amount.positive?
+  end
 
-    Money.new(payment.round, account.currency)
+  def amortization_schedule
+    @amortization_schedule ||= AmortizationSchedule.for(self)
+  end
+
+  # The date the loan was drawn down. Sure records that as the account's first
+  # valuation (the opening balance), falling back to the opening anchor.
+  def origination_date
+    account.first_valuation&.date || account.opening_anchor_date
   end
 
   def original_balance
