@@ -45,7 +45,7 @@
                     <div class="flex items-center gap-2 flex-wrap">
                       <p class="font-medium text-sm text-primary"><%= aspsp[:name] %></p>
                       <% if aspsp[:beta] %>
-                        <%= render DS::Pill.new(label: t(".beta_label", default: "Beta"), tone: :warning, marker: false) %>
+                        <%= render DS::Pill.new(label: t(".beta_label"), tone: :warning, marker: false) %>
                       <% end %>
                     </div>
                     <% if aspsp[:bic].present? %>

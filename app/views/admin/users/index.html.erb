@@ -154,12 +154,16 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                           <%= form_with url: admin_invitation_path(invitation), method: :delete, class: "inline" do |f| %>
-                            <button type="submit"
-                                    data-admin-invitation-delete-target="button"
-                                    data-action="click->admin-invitation-delete#handleClick"
-                                    class="text-sm text-destructive border border-destructive rounded-lg px-2 py-1 hover:bg-destructive/10 transition-colors">
-                              <%= t(".invitations.delete") %>
-                            </button>
+                            <%= render DS::Button.new(
+                                  text: t(".invitations.delete"),
+                                  type: "submit",
+                                  variant: :outline_destructive,
+                                  size: :sm,
+                                  data: {
+                                    admin_invitation_delete_target: "button",
+                                    action: "click->admin-invitation-delete#handleClick"
+                                  }
+                                ) %>
                           <% end %>
                         </td>
                       </tr>
