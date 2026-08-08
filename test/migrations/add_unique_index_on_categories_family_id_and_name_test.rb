@@ -67,6 +67,42 @@ class AddUniqueIndexOnCategoriesFamilyIdAndNameTest < ActiveSupport::TestCase
     ensure_unique_index!
   end
 
+  test "remaps import_source_mappings Category targets to the keeper and leaves other targets alone" do
+    drop_unique_index_if_present!
+
+    keeper = create_category("Dedupe Import Source Keeper")
+    duplicate = create_duplicate_category!(keeper.name)
+    account = accounts(:depository)
+    session = @family.import_sessions.create!(client_session_id: "dedupe-category-mapping", expected_chunks: 1)
+
+    category_mapping = ImportSourceMapping.create!(
+      family: @family,
+      import_session: session,
+      source_type: "Category",
+      source_id: "ext-category-1",
+      target_type: "Category",
+      target_id: duplicate.id
+    )
+    account_mapping = ImportSourceMapping.create!(
+      family: @family,
+      import_session: session,
+      source_type: "Account",
+      source_id: "ext-account-1",
+      target_type: "Account",
+      target_id: account.id
+    )
+
+    @migration.up
+
+    assert_not Category.exists?(duplicate.id)
+    assert_equal keeper.id, category_mapping.reload.target_id
+    assert_equal "Category", category_mapping.target_type
+    assert_equal account.id, account_mapping.reload.target_id
+    assert_equal "Account", account_mapping.target_type
+  ensure
+    ensure_unique_index!
+  end
+
   private
     def create_category(name)
       @family.categories.create!(

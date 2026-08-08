@@ -115,6 +115,14 @@ class AddUniqueIndexOnCategoriesFamilyIdAndName < ActiveRecord::Migration[7.2]
       SQL
 
       execute <<~SQL.squish
+        UPDATE import_source_mappings
+        SET target_id = map.keeper_id
+        FROM category_dedupe_map AS map
+        WHERE import_source_mappings.target_type = 'Category'
+          AND import_source_mappings.target_id = map.duplicate_id
+      SQL
+
+      execute <<~SQL.squish
         UPDATE rule_actions
         SET value = map.keeper_id::text
         FROM category_dedupe_map AS map
