@@ -58,9 +58,12 @@ class AddUniqueIndexOnCategoriesFamilyIdAndName < ActiveRecord::Migration[7.2]
         WHERE transactions.category_id = map.duplicate_id
       SQL
 
-      # budget_categories has a unique (budget_id, category_id) index. Match
-      # Category::Merger: fold duplicate budgeted_spending into the keeper row
-      # before deleting collisions, then reassign non-colliding rows.
+      # Preservation policy for colliding budget_categories rows on the same
+      # (budget_id, category_id) after remapping:
+      # 1. Sum each duplicate's budgeted_spending into the keeper row
+      #    (matches Category::Merger — totals stay unchanged even when amounts differ)
+      # 2. Delete the duplicate budget_categories rows that would violate the unique index
+      # 3. Reassign any remaining non-colliding duplicate rows to the keeper
       execute <<~SQL.squish
         UPDATE budget_categories AS keeper_bc
         SET budgeted_spending = COALESCE(keeper_bc.budgeted_spending, 0) + dup_totals.total_spending
