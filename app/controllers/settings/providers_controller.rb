@@ -189,6 +189,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
       { key: "enable_banking", title: "Enable Banking",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
       { key: "coinstats",      title: "CoinStats",       turbo_id: "coinstats",      partial: "coinstats_panel" },
+      { key: "onchain_wallet", title: "On-chain Wallets", turbo_id: "onchain-wallet", partial: "onchain_wallet_panel" },
       { key: "wise",           title: "Wise",            turbo_id: "wise",           partial: "wise_panel" },
       { key: "mercury",        title: "Mercury",         turbo_id: "mercury",        partial: "mercury_panel" },
       { key: "brex",           title: "Brex",            turbo_id: "brex",           partial: "brex_panel" },
@@ -214,6 +215,7 @@ class Settings::ProvidersController < ApplicationController
       "redbark"        => "RedbarkItem",
       "enable_banking" => "EnableBankingItem",
       "coinstats"      => "CoinstatsItem",
+      "onchain_wallet" => "OnchainWalletItem",
       "wise"           => "WiseItem",
       "mercury"        => "MercuryItem",
       "brex"           => "BrexItem",
@@ -244,6 +246,8 @@ class Settings::ProvidersController < ApplicationController
         @enable_banking_items = Current.family.enable_banking_items.ordered
       when "coinstats"
         @coinstats_items = Current.family.coinstats_items.ordered
+      when "onchain_wallet"
+        @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered.includes(:onchain_wallet_accounts)
       when "wise"
         @wise_items = Current.family.wise_items.active.ordered.includes(:syncs, :wise_accounts)
       when "mercury"
@@ -289,6 +293,7 @@ class Settings::ProvidersController < ApplicationController
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
+      @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered.includes(:onchain_wallet_accounts)
       @wise_items = Current.family.wise_items.active.ordered
       @mercury_items = Current.family.mercury_items.active.ordered
       @brex_items = Current.family.brex_items.active.ordered
@@ -324,6 +329,7 @@ class Settings::ProvidersController < ApplicationController
         "redbark"        => @redbark_items,
         "enable_banking" => @enable_banking_items,
         "coinstats"      => @coinstats_items,
+        "onchain_wallet" => @onchain_wallet_items,
         "wise"           => @wise_items,
         "mercury"        => @mercury_items,
         "brex"           => @brex_items,

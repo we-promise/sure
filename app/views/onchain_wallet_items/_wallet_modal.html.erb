@@ -1,0 +1,51 @@
+<%= turbo_frame_tag "modal" do %>
+  <% selected_chain = local_assigns[:selected_chain].presence || params[:chain].presence || "auto" %>
+  <% wallet_address = local_assigns[:wallet_address].presence || params[:wallet_address].to_s %>
+  <% chain_items = [ { value: "auto", label: t(".auto_detect_chain") } ] +
+                   OnchainWalletAccount::CHAINS.map { |chain| { value: chain, label: chain.titleize } } %>
+
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(
+         title: t(".title"),
+         subtitle: t(".subtitle")
+       ) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <% if local_assigns[:error_message].present? %>
+          <%= render DS::Alert.new(message: local_assigns[:error_message], variant: :error) %>
+        <% end %>
+
+        <%= styled_form_with url: link_wallet_onchain_wallet_items_path,
+                             method: :post,
+                             data: { turbo: true },
+                             class: "space-y-4" do |form| %>
+          <%= form.hidden_field :source, value: "account_modal" %>
+
+          <%= render DS::Select.new(
+                form: form,
+                method: :chain,
+                items: chain_items,
+                selected: selected_chain,
+                label: t(".chain_label")
+              ) %>
+
+          <%= form.text_field :wallet_address,
+                              value: wallet_address,
+                              label: t(".wallet_address_label"),
+                              placeholder: t(".wallet_address_placeholder") %>
+
+          <div class="flex justify-end gap-2">
+            <%= render DS::Button.new(
+                  text: t(".cancel"),
+                  variant: :secondary,
+                  type: "button",
+                  data: { action: "DS--dialog#close" }
+                ) %>
+            <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

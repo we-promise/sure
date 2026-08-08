@@ -1,0 +1,10 @@
+---
+en:
+  onchain_wallet_items:
+    onchain_wallet_item:
+      fallback_name: On-chain Wallets
+      sync_status:
+        no_accounts: No wallets connected
+        all_synced:
+          one: 1 wallet asset connected
+          other: "%{count} wallet assets connected"
