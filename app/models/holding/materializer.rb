@@ -75,7 +75,7 @@ class Holding::Materializer
         )
 
         base_attrs = holding.attributes
-          .slice("date", "currency", "qty", "price", "amount", "security_id")
+          .slice("date", "currency", "qty", "price", "amount", "security_id", "cash_equivalent")
           .merge("account_id" => account.id, "updated_at" => current_time)
 
         if existing&.cost_basis_locked?

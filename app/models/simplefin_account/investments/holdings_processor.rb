@@ -86,7 +86,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
           external_id: "simplefin_#{holding_id}",
           account_provider_id: simplefin_account.account_provider&.id,
           source: "simplefin",
-          delete_future_holdings: false  # SimpleFin tracks each holding uniquely
+          delete_future_holdings: false,  # SimpleFin tracks each holding uniquely
+          cash_equivalent: SimplefinAccount::Investments::BalanceCalculator.cash_equivalent?(
+            symbol: simplefin_holding["symbol"], description: simplefin_holding["description"]
+          )
         )
 
         Rails.logger.debug({ event: "simplefin.holding.saved", account_id: account&.id, holding_id: saved.id, security_id: saved.security_id, qty: saved.qty.to_s, amount: saved.amount.to_s, currency: saved.currency, date: saved.date, external_id: saved.external_id }.to_json)

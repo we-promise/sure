@@ -125,6 +125,30 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal yesterday_holding.qty * yesterday_holding.price, yesterday_holding.amount
   end
 
+  test "carries provider cash-equivalent classification to reverse-calculated history" do
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    Holding.create!(
+      account: @account,
+      security: @aapl,
+      qty: 10,
+      price: 200,
+      amount: 2000,
+      currency: "USD",
+      date: Date.current,
+      account_provider: account_provider,
+      cash_equivalent: true
+    )
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    yesterday_holding = @account.holdings.find_by!(security: @aapl, date: Date.yesterday, currency: "USD")
+    assert yesterday_holding.cash_equivalent?
+    assert_equal 0, Balance::SyncCache.new(@account).get_holdings_value(Date.yesterday)
+  end
+
   test "cleans up calculated current-day holdings when a provider snapshot exists in another currency" do
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
 

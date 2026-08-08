@@ -23,7 +23,7 @@ class Balance::SyncCache
     end
 
     def holdings_value_by_date
-      @holdings_value_by_date ||= account.holdings.each_with_object(Hash.new(0)) do |h, totals|
+      @holdings_value_by_date ||= account.holdings.includes(:security).reject { |h| h.cash_equivalent? || h.security.cash? }.each_with_object(Hash.new(0)) do |h, totals|
         begin
           converted = Money.new(h.amount, h.currency).exchange_to(account.currency, date: h.date).amount
         rescue Money::ConversionError
