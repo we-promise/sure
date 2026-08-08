@@ -36,3 +36,15 @@ ro:
     status:
       active: Activ
       inactive: Inactiv
+    badges:
+      manual: Manual
+    show:
+      back: Înapoi
+      pause: Întrerupe
+      resume: Reia
+      delete: Șterge
+      occurrences: Apariții
+      account: Cont
+      history_title: Tranzacții corespunzătoare
+      history_empty_title: Nicio tranzacție corespunzătoare
+      history_empty_description: "Nicio tranzacție anterioară nu corespunde momentan acestui tipar recurent."

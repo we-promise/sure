@@ -47,3 +47,13 @@ nl:
       inactive: Inactief
     badges:
       manual: Handmatig
+    show:
+      back: Terug
+      pause: Pauzeren
+      resume: Hervatten
+      delete: Verwijderen
+      occurrences: Voorkomens
+      account: Rekening
+      history_title: Overeenkomende transacties
+      history_empty_title: Geen overeenkomende transacties
+      history_empty_description: "Er komen momenteel geen eerdere transacties overeen met dit terugkerende patroon."

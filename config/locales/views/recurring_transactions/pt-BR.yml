@@ -43,3 +43,13 @@ pt-BR:
       inactive: Inativa
     badges:
       manual: Manual
+    show:
+      back: Voltar
+      pause: Pausar
+      resume: Retomar
+      delete: Excluir
+      occurrences: Ocorrências
+      account: Conta
+      history_title: Transações correspondentes
+      history_empty_title: Nenhuma transação correspondente
+      history_empty_description: "Nenhuma transação anterior corresponde atualmente a este padrão recorrente."

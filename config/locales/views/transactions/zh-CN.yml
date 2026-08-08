@@ -58,6 +58,9 @@ zh-CN:
       mark_recurring: 标记为循环
       mark_recurring_subtitle: 将此交易跟踪为循环交易。金额差异会根据过去 6 个月的相似交易自动计算。
       mark_recurring_title: 循环交易
+      view_recurring: "查看循环"
+      view_recurring_subtitle: "此交易匹配一个有效的循环模式。"
+      view_recurring_title: "循环交易"
       merge_duplicate: 是，合并它们
       potential_duplicate_description: 这笔待处理交易可能与下方已入账交易相同。如果是这样，请合并以避免重复计算。
       potential_duplicate_title: 检测到可能的重复项
@@ -336,6 +339,8 @@ zh-CN:
       max_reached: 已达到最大文件数（%{count}/%{max}）。删除现有文件后才能上传另一个。
     potential_duplicate_description: 这笔待处理交易可能与下方已入账交易相同。如是，请合并以避免重复计算。
     transaction:
+      recurring: "循环"
+      recurring_tooltip: "属于循环模式 — 查看详情"
       pending: 待处理
       pending_tooltip: 待处理交易，入账后可能变化
       linked_with_provider: 已关联 %{provider}

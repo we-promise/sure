@@ -34,6 +34,9 @@ zh-TW:
       mark_recurring: 標記為定期交易
       mark_recurring_subtitle: 將此筆交易追蹤為定期交易。系統會根據過去 6 個月的類似交易自動計算金額變動範圍。
       mark_recurring_title: 定期交易
+      view_recurring: "查看定期"
+      view_recurring_subtitle: "此交易符合一個有效的定期模式。"
+      view_recurring_title: "定期交易"
       merchant_label: 商家
       name_label: 名稱
       nature: 類型
@@ -51,6 +54,8 @@ zh-TW:
       edit_tags: 編輯標籤
       import: 匯入
     transaction:
+      recurring: "定期"
+      recurring_tooltip: "屬於定期模式 — 查看詳情"
       linked_with_provider: 已與 %{provider} 連結
     index:
       transaction: 筆交易

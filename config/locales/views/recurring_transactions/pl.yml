@@ -52,3 +52,13 @@ pl:
       inactive: Nieaktywna
     badges:
       manual: Ręczna
+    show:
+      back: Wstecz
+      pause: Wstrzymaj
+      resume: Wznów
+      delete: Usuń
+      occurrences: Wystąpienia
+      account: Konto
+      history_title: Pasujące transakcje
+      history_empty_title: Brak pasujących transakcji
+      history_empty_description: "Żadne wcześniejsze transakcje nie pasują obecnie do tego cyklicznego wzorca."

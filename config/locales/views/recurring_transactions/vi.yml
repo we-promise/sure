@@ -50,7 +50,16 @@ vi:
       inactive: Không hoạt động
     badges:
       manual: Thủ công
-    transfer_marked_as_recurring: Chuyển khoản đã được đánh dấu là định kỳ
+    show:
+      back: Quay lại
+      pause: Tạm dừng
+      resume: Tiếp tục
+      delete: Xóa
+      occurrences: Lần xuất hiện
+      account: Tài khoản
+      history_title: Giao dịch khớp
+      history_empty_title: Không có giao dịch khớp
+      history_empty_description: "Hiện không có giao dịch trước đây nào khớp với mẫu định kỳ này."
     transfer_already_exists: Đã tồn tại chuyển khoản định kỳ cho cặp tài khoản này
     transfer_creation_failed: Không thể tạo chuyển khoản định kỳ. Vui lòng kiểm tra thông tin và thử lại.
     transfer_feature_disabled: Chuyển khoản định kỳ đã bị tắt cho hộ gia đình này

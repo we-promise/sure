@@ -50,7 +50,16 @@ it:
       inactive: Inattiva
     badges:
       manual: Manuale
-    transfer_marked_as_recurring: Bonifico contrassegnato come ricorrente
+    show:
+      back: Indietro
+      pause: Metti in pausa
+      resume: Riprendi
+      delete: Elimina
+      occurrences: Occorrenze
+      account: Conto
+      history_title: Transazioni corrispondenti
+      history_empty_title: Nessuna transazione corrispondente
+      history_empty_description: "Nessuna transazione passata corrisponde attualmente a questo modello ricorrente."
     transfer_already_exists: Esiste già un bonifico ricorrente per questa coppia di conti
     transfer_creation_failed: Impossibile creare il bonifico ricorrente. Verifica i dettagli e riprova.
     transfer_feature_disabled: Le transazioni ricorrenti sono disabilitate per questa famiglia

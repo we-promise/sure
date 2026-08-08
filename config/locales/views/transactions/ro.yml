@@ -23,6 +23,9 @@ ro:
     new:
       new_transaction: Tranzacție nouă
     show:
+      view_recurring: "Vezi recurenta"
+      view_recurring_subtitle: "Această tranzacție corespunde unui tipar recurent activ."
+      view_recurring_title: "Tranzacție recurentă"
       account_label: Cont
       amount: Sumă
       category_label: Categorie
@@ -48,6 +51,8 @@ ro:
       edit_tags: Editează etichete
       import: Importă
     transaction:
+      recurring: "Recurentă"
+      recurring_tooltip: "Face parte dintr-un tipar recurent — vezi detaliile"
       linked_with_provider: Conectat cu %{provider}
     index:
       transaction: tranzacție

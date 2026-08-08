@@ -5,7 +5,16 @@ tr:
     amount_range: 'Aralık: %{min} - %{max}'
     badges:
       manual: Manuel
-    cleaned_up: "%{count} eski yinelenen işlem temizlendi"
+    show:
+      back: Geri
+      pause: Duraklat
+      resume: Sürdür
+      delete: Sil
+      occurrences: Oluşumlar
+      account: Hesap
+      history_title: Eşleşen işlemler
+      history_empty_title: Eşleşen işlem yok
+      history_empty_description: "Şu anda bu yinelenen kalıpla eşleşen geçmiş işlem yok."
     cleanup_stale: Eskileri Temizle
     confirm_delete: Bu yinelenen işlemi silmek istediğinizden emin misiniz?
     creation_failed: Yinelenen işlem oluşturulamadı. Lütfen işlem bilgilerini kontrol

@@ -5,6 +5,16 @@ fr:
     amount_range: 'Plage : %{min} à %{max}'
     badges:
       manual: Manuel
+    show:
+      back: Retour
+      pause: Pause
+      resume: Reprendre
+      delete: Supprimer
+      occurrences: Occurrences
+      account: Compte
+      history_title: Transactions correspondantes
+      history_empty_title: Aucune transaction correspondante
+      history_empty_description: Aucune transaction passée ne correspond actuellement à ce modèle récurrent.
     cleaned_up: "%{count} transactions récurrentes obsolètes nettoyées"
     cleanup_stale: Nettoyer les obsolètes
     confirm_delete: Êtes-vous sûr(e) de vouloir supprimer cette transaction récurrente

@@ -58,6 +58,9 @@ hu:
       mark_recurring: Ismétlődőként jelölés
       mark_recurring_subtitle: Kövesd ezt ismétlődő tranzakcióként. Az összegeltérés automatikusan kiszámításra kerül az elmúlt 6 hónap hasonló tranzakcióiból.
       mark_recurring_title: Ismétlődő tranzakció
+      view_recurring: "Ismétlődő megtekintése"
+      view_recurring_subtitle: "Ez a tranzakció egy aktív ismétlődő mintához illeszkedik."
+      view_recurring_title: "Ismétlődő tranzakció"
       merge_duplicate: Igen, egyesítsd őket
       potential_duplicate_description: Ez a függőben lévő tranzakció megegyezhet az alábbi közzétett tranzakcióval. Ha igen, egyesítsd őket a kettős könyvelés elkerülése érdekében.
       potential_duplicate_title: Lehetséges duplikátum észlelve
@@ -128,6 +131,8 @@ hu:
     split_parent_row:
       split_label: "Felosztva"
     transaction:
+      recurring: "Ismétlődő"
+      recurring_tooltip: "Ismétlődő minta része — részletek megtekintése"
       pending: Függőben
       pending_tooltip: Függőben lévő tranzakció — közzétételkor változhat
       linked_with_provider: "Összekapcsolva: %{provider}"

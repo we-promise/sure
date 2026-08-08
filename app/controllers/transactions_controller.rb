@@ -79,7 +79,21 @@ class TransactionsController < ApplicationController
                                          Date.current)
                                   .includes(:merchant)
 
+    @matched_recurring_by_entry_id = RecurringTransaction.matches_for_transactions(
+      @transactions,
+      family: Current.family,
+      user: Current.user
+    )
+
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
+  end
+
+  def show
+    @matched_recurring = RecurringTransaction.match_for_transaction(
+      @entry.entryable,
+      family: Current.family,
+      user: Current.user
+    )
   end
 
   def clear_filter

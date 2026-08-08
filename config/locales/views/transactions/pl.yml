@@ -28,6 +28,9 @@ pl:
     new:
       new_transaction: Nowa transakcja
     show:
+      view_recurring: "Zobacz cykliczną"
+      view_recurring_subtitle: "Ta transakcja pasuje do aktywnego wzorca cyklicznego."
+      view_recurring_title: "Transakcja cykliczna"
       account_label: Konto
       amount: Kwota
       category_label: Kategoria
@@ -87,6 +90,8 @@ pl:
     split_parent_row:
       split_label: Podział
     transaction:
+      recurring: "Cykliczna"
+      recurring_tooltip: "Część wzorca cyklicznego — zobacz szczegóły"
       pending: Oczekująca
       pending_tooltip: Transakcja oczekująca — może się zmienić po zaksięgowaniu
       linked_with_provider: Połączono z %{provider}

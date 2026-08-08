@@ -305,6 +305,9 @@ ca:
         d'import es calcula automàticament a partir dels últims 6 mesos de transaccions
         similars.
       mark_recurring_title: Transacció recurrent
+      view_recurring: "Veure la recurrència"
+      view_recurring_subtitle: "Aquesta transacció coincideix amb un patró recurrent actiu."
+      view_recurring_title: "Transacció recurrent"
       memo: Memo
       merchant_label: Comerç
       merge_duplicate: Sí, fusiona-les
@@ -354,6 +357,8 @@ ca:
       total_transactions: Total de transaccions
     toggle_recurring_section: Mostra/Amaga les transaccions recurrents properes
     transaction:
+      recurring: "Recurrent"
+      recurring_tooltip: "Forma part d'un patró recurrent — veure'n els detalls"
       activity_type_tooltip: Tipus d'activitat d'inversió
       linked_with_provider: Vinculat amb %{provider}
       pending: Pendent

@@ -5,7 +5,16 @@ ca:
     amount_range: 'Rang: %{min} a %{max}'
     badges:
       manual: Manual
-    cleaned_up: S'han netejat %{count} transaccions recurrents obsoletes
+    show:
+      back: Enrere
+      pause: Posa en pausa
+      resume: Reprèn
+      delete: Suprimeix
+      occurrences: Ocurrències
+      account: Compte
+      history_title: Transaccions coincidents
+      history_empty_title: Cap transacció coincident
+      history_empty_description: "Ara mateix no hi ha transaccions passades que coincideixin amb aquest patró recurrent."
     cleanup_stale: Neteja obsoletes
     confirm_delete: Segur que vols eliminar aquesta transacció recurrent?
     creation_failed: No s'ha pogut crear la transacció recurrent. Comprova els detalls

@@ -50,7 +50,16 @@ zh-CN:
       inactive: 停用
     badges:
       manual: 手动
-    transfer_marked_as_recurring: 转账已标记为循环
+    show:
+      back: 返回
+      pause: 暂停
+      resume: 恢复
+      delete: 删除
+      occurrences: 发生次数
+      account: 账户
+      history_title: 匹配的交易
+      history_empty_title: 没有匹配的交易
+      history_empty_description: "目前没有过去的交易匹配此循环模式。"
     transfer_already_exists: 此账户对已存在循环转账
     transfer_creation_failed: 创建循环转账失败。请检查转账详情后重试。
     transfer_feature_disabled: 此家庭已禁用循环交易

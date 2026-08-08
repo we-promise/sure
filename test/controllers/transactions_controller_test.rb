@@ -722,6 +722,85 @@ end
     assert_nil created_entry.transaction.extra["exchange_rate"]
   end
 
+  test "index and show render recurring pill for matched transactions" do
+    account = accounts(:depository)
+    expected_day = Date.current.day.clamp(1, 28)
+    recurring = @user.family.recurring_transactions.create!(
+      account: account,
+      name: "Unique Recurring Pill Pattern",
+      amount: 77.77,
+      currency: "USD",
+      expected_day_of_month: expected_day,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 3,
+      manual: true
+    )
+
+    entry = create_transaction(
+      account: account,
+      name: "Unique Recurring Pill Pattern",
+      amount: 77.77,
+      date: Date.current,
+      currency: "USD"
+    )
+    transaction = entry.entryable
+
+    assert_equal recurring, RecurringTransaction.match_for_transaction(
+      transaction,
+      family: @user.family,
+      user: @user
+    )
+
+    get transaction_url(entry)
+    assert_response :success
+    assert_select "h4", text: I18n.t("transactions.show.view_recurring_title")
+    assert_select "form[action=?]", recurring_transaction_path(recurring)
+
+    get transactions_url(q: { search: entry.name }, per_page: 50)
+    assert_response :success
+    assert_select "#" + dom_id(transaction)
+    assert_select "#" + dom_id(transaction) + " a[href=?]", recurring_transaction_path(recurring)
+    assert_select "#" + dom_id(transaction) + " span", text: I18n.t("transactions.transaction.recurring")
+  end
+
+  test "index does not match recurring patterns from another family" do
+    other_family = families(:empty)
+    other_account = other_family.accounts.create!(
+      name: "Other Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    expected_day = Date.current.day.clamp(1, 28)
+    other_recurring = other_family.recurring_transactions.create!(
+      account: other_account,
+      name: "Cross Family Netflix Match",
+      amount: 88.88,
+      currency: "USD",
+      expected_day_of_month: expected_day,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 3,
+      manual: true
+    )
+
+    entry = accounts(:depository).entries.create!(
+      date: Date.current,
+      amount: 88.88,
+      currency: "USD",
+      name: "Cross Family Netflix Match",
+      entryable: Transaction.create!(category: categories(:food_and_drink))
+    )
+
+    get transactions_url(q: { search: entry.name })
+    assert_response :success
+    assert_select "a[href=?]", recurring_transaction_path(other_recurring), count: 0
+    assert_select "#" + dom_id(entry.entryable) + " a[href*='recurring_transactions']", count: 0
+  end
+
   test "index preloads transfer counterparty entry and account to avoid N+1" do
     family = @user.family
     from_account = family.accounts.visible.first
