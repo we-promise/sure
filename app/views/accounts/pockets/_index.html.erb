@@ -1,9 +1,11 @@
 <%# locals: (account:) %>
 
-<% pockets = account.pockets.includes(:tag).order(:name) %>
-<% overflow = account.pockets_overflow? %>
+<% pockets = account.pockets.includes(:tag).order(:name).to_a %>
+<% pockets_total = pockets.sum(&:allocated_amount) %>
+<% overflow = account.pockets_overflow?(pockets_total) %>
 <% account_balance = account.balance.to_f %>
-<% free_amount = [ account.free_balance, 0 ].max.to_f %>
+<% free_balance = account.free_balance(pockets_total) %>
+<% free_amount = [ free_balance, 0 ].max.to_f %>
 
 <div id="<%= dom_id(account, :pockets_content) %>" class="space-y-4 px-3">
 
@@ -13,7 +15,7 @@
       <div class="space-y-0.5">
         <p class="text-xs text-secondary uppercase font-medium tracking-wide"><%= t("pockets.index.total_allocated") %></p>
         <p class="text-lg font-semibold text-primary privacy-sensitive">
-          <%= format_money Money.new(account.pockets.sum(:allocated_amount), account.currency) %>
+          <%= format_money Money.new(pockets_total, account.currency) %>
         </p>
       </div>
 
@@ -22,7 +24,7 @@
       <div class="space-y-0.5">
         <p class="text-xs text-secondary uppercase font-medium tracking-wide"><%= t("pockets.index.free_balance") %></p>
         <p class="text-lg font-semibold privacy-sensitive <%= overflow ? "text-destructive" : "text-success" %>">
-          <%= format_money Money.new(account.free_balance, account.currency) %>
+          <%= format_money Money.new(free_balance, account.currency) %>
         </p>
       </div>
 

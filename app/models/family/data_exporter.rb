@@ -185,19 +185,17 @@ class Family::DataExporter
       CSV.generate do |csv|
         csv << [ "id", "account_name", "name", "allocated_amount", "currency", "fill_direction", "tag", "created_at" ]
 
-        @family.accounts.find_each do |account|
-          account.pockets.includes(:tag).find_each do |pocket|
-            csv << [
-              pocket.id,
-              account.name,
-              pocket.name,
-              pocket.allocated_amount.to_s,
-              pocket.currency,
-              pocket.fill_direction,
-              pocket.tag&.name,
-              pocket.created_at.iso8601
-            ]
-          end
+        Pocket.joins(:account).where(accounts: { family_id: @family.id }).includes(:account, :tag).find_each do |pocket|
+          csv << [
+            pocket.id,
+            pocket.account.name,
+            pocket.name,
+            pocket.allocated_amount.to_s,
+            pocket.currency,
+            pocket.fill_direction,
+            pocket.tag&.name,
+            pocket.created_at.iso8601
+          ]
         end
       end
     end

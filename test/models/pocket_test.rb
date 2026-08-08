@@ -105,6 +105,26 @@ class PocketTest < ActiveSupport::TestCase
     end
   end
 
+  # Regression: transaction.tag_ids= is the path actually used by the edit
+  # form, bulk update, rules, and the API to add/remove tags. Unlike
+  # Tagging.create!/destroy! above, removing an id from a has_many :through
+  # collection without dependent: :destroy issues a raw DELETE that skips
+  # Tagging#after_destroy, so the pocket amount never reverses.
+  test "removing a tag via tag_ids= unfills linked pocket" do
+    fresh_tag = @account.family.tags.create!(name: "Tag Ids Unfill Tag")
+    pocket = @account.pockets.create!(name: "Tag Ids Unfill Pocket", allocated_amount: 0, currency: "USD",
+                                      tag: fresh_tag, fill_direction: "both")
+
+    entry = Entry.create!(account: @account, entryable: Transaction.new,
+      date: 1.day.ago.to_date, name: "Fresh income", amount: -10, currency: "USD")
+    entry.entryable.tag_ids = [ fresh_tag.id ]
+    assert_equal 10, pocket.reload.allocated_amount
+
+    assert_difference "pocket.reload.allocated_amount", -10 do
+      entry.entryable.tag_ids = []
+    end
+  end
+
   test "tagging with unlinked tag does not affect any pocket" do
     # Fresh entry — transactions(:one) is already tagged with tags(:two) via
     # fixtures, and the new taggings unique index rejects a literal duplicate.
@@ -126,15 +146,7 @@ class PocketTest < ActiveSupport::TestCase
 
   test "linking a tag to a pocket retroactively sums existing tagged transactions" do
     # Use a fresh account and tag with known transactions so we control the data
-    fresh_account = Account.create!(
-      family: families(:dylan_family),
-      owner: users(:family_admin),
-      accountable: Depository.new,
-      name: "Retro Account",
-      balance: 5000,
-      currency: "USD",
-      status: "active"
-    )
+    fresh_account = create_depository_account("Retro Account")
     fresh_tag = families(:dylan_family).tags.create!(name: "RetroTag")
 
     # Create two deposit transactions (negative = money coming in) and tag them
@@ -153,15 +165,7 @@ class PocketTest < ActiveSupport::TestCase
 
   test "changing tag subtracts old contribution and adds new tag sum" do
     # Build a controlled scenario: a fresh account with known tagged transactions
-    fresh_account = Account.create!(
-      family: families(:dylan_family),
-      owner: users(:family_admin),
-      accountable: Depository.new,
-      name: "Change Tag Account",
-      balance: 5000,
-      currency: "USD",
-      status: "active"
-    )
+    fresh_account = create_depository_account("Change Tag Account")
     tag_a = families(:dylan_family).tags.create!(name: "TagA")
     tag_b = families(:dylan_family).tags.create!(name: "TagB")
 
@@ -188,15 +192,7 @@ class PocketTest < ActiveSupport::TestCase
   end
 
   test "removing a tag clears the tag contribution from allocated amount" do
-    fresh_account = Account.create!(
-      family: families(:dylan_family),
-      owner: users(:family_admin),
-      accountable: Depository.new,
-      name: "Remove Tag Account",
-      balance: 5000,
-      currency: "USD",
-      status: "active"
-    )
+    fresh_account = create_depository_account("Remove Tag Account")
     fresh_tag = families(:dylan_family).tags.create!(name: "RemoveTag")
     entry = Entry.create!(account: fresh_account, entryable: Transaction.new,
                           date: 1.day.ago.to_date, name: "deposit", amount: -80, currency: "USD")
@@ -213,9 +209,7 @@ class PocketTest < ActiveSupport::TestCase
   # fill_direction filtering
 
   test "inflows direction only counts negative amounts" do
-    fresh_account = Account.create!(family: families(:dylan_family), owner: users(:family_admin),
-                                    accountable: Depository.new, name: "Dir Account", balance: 5000,
-                                    currency: "USD", status: "active")
+    fresh_account = create_depository_account("Dir Account")
     tag = families(:dylan_family).tags.create!(name: "DirTag")
 
     deposit = Entry.create!(account: fresh_account, entryable: Transaction.new,
@@ -231,9 +225,7 @@ class PocketTest < ActiveSupport::TestCase
   end
 
   test "outflows direction only counts positive amounts" do
-    fresh_account = Account.create!(family: families(:dylan_family), owner: users(:family_admin),
-                                    accountable: Depository.new, name: "Out Account", balance: 5000,
-                                    currency: "USD", status: "active")
+    fresh_account = create_depository_account("Out Account")
     tag = families(:dylan_family).tags.create!(name: "OutTag")
 
     deposit = Entry.create!(account: fresh_account, entryable: Transaction.new,
@@ -249,9 +241,7 @@ class PocketTest < ActiveSupport::TestCase
   end
 
   test "changing fill_direction triggers recompute" do
-    fresh_account = Account.create!(family: families(:dylan_family), owner: users(:family_admin),
-                                    accountable: Depository.new, name: "Recomp Account", balance: 5000,
-                                    currency: "USD", status: "active")
+    fresh_account = create_depository_account("Recomp Account")
     tag = families(:dylan_family).tags.create!(name: "RecompTag")
     Entry.create!(account: fresh_account, entryable: Transaction.new,
                   date: 1.day.ago.to_date, name: "deposit", amount: -300, currency: "USD").tap do |e|
@@ -351,11 +341,7 @@ class PocketTest < ActiveSupport::TestCase
   # recompute_from_tag!
 
   test "recompute_from_tag! sets allocated_amount from current tagged transactions" do
-    fresh_account = Account.create!(
-      family: families(:dylan_family), owner: users(:family_admin),
-      accountable: Depository.new, name: "Recompute Account",
-      balance: 5000, currency: "USD", status: "active"
-    )
+    fresh_account = create_depository_account("Recompute Account")
     fresh_tag = families(:dylan_family).tags.create!(name: "RecomputeTag")
     entry = Entry.create!(account: fresh_account, entryable: Transaction.new,
                           date: 1.day.ago.to_date, name: "salary", amount: -400, currency: "USD")
@@ -370,11 +356,7 @@ class PocketTest < ActiveSupport::TestCase
   end
 
   test "destroying an entry via AR decrements the linked pocket" do
-    fresh_account = Account.create!(
-      family: families(:dylan_family), owner: users(:family_admin),
-      accountable: Depository.new, name: "Destroy Chain Account",
-      balance: 5000, currency: "USD", status: "active"
-    )
+    fresh_account = create_depository_account("Destroy Chain Account")
     fresh_tag = families(:dylan_family).tags.create!(name: "DestroyChainTag")
     entry = Entry.create!(account: fresh_account, entryable: Transaction.new,
                           date: 1.day.ago.to_date, name: "salary", amount: -300, currency: "USD")
@@ -394,4 +376,18 @@ class PocketTest < ActiveSupport::TestCase
     @pocket.recompute_from_tag!
     assert_equal 999, @pocket.reload.allocated_amount
   end
+
+  private
+
+    def create_depository_account(name)
+      Account.create!(
+        family: families(:dylan_family),
+        owner: users(:family_admin),
+        accountable: Depository.new,
+        name: name,
+        balance: 5000,
+        currency: "USD",
+        status: "active"
+      )
+    end
 end

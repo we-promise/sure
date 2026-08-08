@@ -81,4 +81,42 @@ class PocketsControllerTest < ActionDispatch::IntegrationTest
     get account_pockets_url(@account)
     assert_response :not_found
   end
+
+  test "read_write user cannot create, update, or destroy pockets" do
+    account_shares(:depository_shared_with_member).update!(permission: "read_write")
+    sign_in users(:family_member)
+
+    assert_no_difference "Pocket.count" do
+      post account_pockets_url(@account), params: { pocket: { name: "Nope", allocated_amount: 10 } }
+    end
+    assert_redirected_to account_path(@account)
+
+    patch account_pocket_url(@account, @pocket), params: { pocket: { name: "Renamed" } }
+    assert_redirected_to account_path(@account)
+    assert_not_equal "Renamed", @pocket.reload.name
+
+    assert_no_difference "Pocket.count" do
+      delete account_pocket_url(@account, @pocket)
+    end
+    assert_redirected_to account_path(@account)
+  end
+
+  test "read_only user cannot create, update, or destroy pockets" do
+    account_shares(:depository_shared_with_member).update!(permission: "read_only")
+    sign_in users(:family_member)
+
+    assert_no_difference "Pocket.count" do
+      post account_pockets_url(@account), params: { pocket: { name: "Nope", allocated_amount: 10 } }
+    end
+    assert_redirected_to account_path(@account)
+
+    patch account_pocket_url(@account, @pocket), params: { pocket: { name: "Renamed" } }
+    assert_redirected_to account_path(@account)
+    assert_not_equal "Renamed", @pocket.reload.name
+
+    assert_no_difference "Pocket.count" do
+      delete account_pocket_url(@account, @pocket)
+    end
+    assert_redirected_to account_path(@account)
+  end
 end

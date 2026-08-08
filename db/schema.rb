@@ -101,6 +101,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.uuid "accountable_id"
     t.string "accountable_type"
     t.decimal "balance", precision: 19, scale: 4
+    t.uuid "budget_owner_id"
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
     t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.datetime "created_at", null: false
@@ -123,6 +124,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.datetime "updated_at", null: false
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
+    t.index ["budget_owner_id"], name: "index_accounts_on_budget_owner_id"
     t.index ["currency"], name: "index_accounts_on_currency"
     t.index ["family_id", "accountable_type"], name: "index_accounts_on_family_id_and_accountable_type"
     t.index ["family_id", "exclude_from_reports"], name: "index_accounts_on_family_id_and_exclude_from_reports"
@@ -373,6 +375,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.index ["budget_id"], name: "index_budget_categories_on_budget_id"
     t.index ["category_id"], name: "index_budget_categories_on_category_id"
     t.check_constraint "rolled_over_amount >= 0::numeric", name: "chk_budget_categories_rolled_over_amount_non_negative"
+  end
+
+  create_table "budget_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "owner_id", null: false
+    t.string "permission", default: "read_only", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "viewer_id", null: false
+    t.index ["owner_id", "viewer_id"], name: "index_budget_shares_on_owner_id_and_viewer_id", unique: true
+    t.index ["owner_id"], name: "index_budget_shares_on_owner_id"
+    t.index ["viewer_id"], name: "index_budget_shares_on_viewer_id"
   end
 
   create_table "budget_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2662,6 +2675,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
   add_foreign_key "accounts", "simplefin_accounts"
+  add_foreign_key "accounts", "users", column: "budget_owner_id", on_delete: :nullify
   add_foreign_key "accounts", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
