@@ -28,6 +28,18 @@ en:
       type: Type
       unknown: Unknown
     tabs:
+      schedule:
+        date: Date
+        description: Projected from the original balance, rate and term, starting %{start_date}. Extra payments and rate changes are not reflected.
+        interest: Interest
+        monthly_payment: Monthly Payment
+        number: "#"
+        payment: Payment
+        payoff_date: Payoff Date
+        principal: Principal
+        remaining_balance: Remaining Balance
+        total_cost: Total Cost
+        total_interest: Total Interest
       overview:
         interest_rate: Interest Rate
         monthly_payment: Monthly Payment
