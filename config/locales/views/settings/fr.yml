@@ -113,8 +113,8 @@ fr:
         page_title: Serveur MCP
         revoke: Révoquer
         revoke_confirm: Révoquer l'accès pour ce client ?
-        step_1: Ouvrez Claude.ai et allez dans Paramètres → Intégrations.
-        step_2: Cliquez sur "Ajouter l'intégration" et collez l'URL du serveur MCP ci-dessus.
+        step_1: Ouvrez Claude.ai et allez dans Paramètres → Personnaliser → Connecteurs.
+        step_2: Cliquez sur "Ajouter un connecteur" et collez l'URL du serveur MCP ci-dessus.
         step_3: Cliquez sur Connecter — vous serez redirigé vers Sure pour vous connecter et autoriser l'accès.
         step_4: Une fois autorisé, Claude peut lire vos comptes, transactions et données de solde.
         unknown_client: Client inconnu

@@ -487,6 +487,7 @@ class Entry < ApplicationRecord
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
               attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
               entry.update! attrs
+              entry.transaction.record_category_usage! if entry.transaction?
               changed = true
             end
           end
