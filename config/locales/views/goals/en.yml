@@ -57,6 +57,7 @@ en:
         empty_with_both: "No goals match \"%{query}\" with this filter."
         clear_search: Clear search
         show_all: Show all
+      chips_aria: Filter goals by status
       chips:
         all: All
         on_track: On track
