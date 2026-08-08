@@ -58,8 +58,32 @@ class AddUniqueIndexOnCategoriesFamilyIdAndName < ActiveRecord::Migration[7.2]
         WHERE transactions.category_id = map.duplicate_id
       SQL
 
-      # budget_categories has a unique (budget_id, category_id) index — drop
-      # rows that would collide, then reassign the rest.
+      # budget_categories has a unique (budget_id, category_id) index. Match
+      # Category::Merger: fold duplicate budgeted_spending into the keeper row
+      # before deleting collisions, then reassign non-colliding rows.
+      execute <<~SQL.squish
+        UPDATE budget_categories AS keeper_bc
+        SET budgeted_spending = COALESCE(keeper_bc.budgeted_spending, 0) + dup_totals.total_spending
+        FROM (
+          SELECT
+            map.keeper_id,
+            bc.budget_id,
+            SUM(COALESCE(bc.budgeted_spending, 0)) AS total_spending
+          FROM budget_categories AS bc
+          INNER JOIN category_dedupe_map AS map
+            ON bc.category_id = map.duplicate_id
+          WHERE EXISTS (
+            SELECT 1
+            FROM budget_categories AS existing_keeper
+            WHERE existing_keeper.budget_id = bc.budget_id
+              AND existing_keeper.category_id = map.keeper_id
+          )
+          GROUP BY map.keeper_id, bc.budget_id
+        ) AS dup_totals
+        WHERE keeper_bc.budget_id = dup_totals.budget_id
+          AND keeper_bc.category_id = dup_totals.keeper_id
+      SQL
+
       execute <<~SQL.squish
         DELETE FROM budget_categories AS bc
         USING category_dedupe_map AS map
