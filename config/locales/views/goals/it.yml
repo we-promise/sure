@@ -170,6 +170,9 @@ it:
       confirm_archive_title: Archiviare questo obiettivo?
       confirm_archive_body: Gli obiettivi archiviati scompaiono dalla lista principale. Puoi ripristinarli in seguito.
       confirm_archive_cta: Archivia
+      confirm_delete_title: "Eliminare questo obiettivo?"
+      confirm_delete_body: "%{name} e la sua cronologia dei versamenti vengono eliminati definitivamente. I conti collegati, i saldi e le transazioni non vengono toccati. Per conservarlo come traccia, archivialo invece."
+      confirm_delete_cta: "Elimina obiettivo"
       paused_banner:
         title: Questo obiettivo è in pausa
         body: Riprendi per continuare a monitorare i tuoi progressi.

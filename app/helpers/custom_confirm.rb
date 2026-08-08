@@ -2,12 +2,18 @@
 # default browser confirm API via Turbo.
 class CustomConfirm
   class << self
+    # `body` is the one field the dialog renders as HTML — confirm_dialog_controller
+    # assigns it to innerHTML so bodies such as accounts' `confirm_body_html` can
+    # carry markup, while title and button label go through textContent. Every
+    # caller passes a user-named record here, so the name is escaped on its way
+    # into the body: without it a record named "<img src=x onerror=…>" executes
+    # as soon as someone opens the confirmation.
     def for_resource_deletion(resource_name, high_severity: false)
       new(
         destructive: true,
         high_severity: high_severity,
         title: "Delete #{resource_name.titleize}?",
-        body: "Are you sure you want to delete #{resource_name.downcase}? This is not reversible.",
+        body: "Are you sure you want to delete #{ERB::Util.html_escape(resource_name.downcase)}? This is not reversible.",
         btn_text: "Delete #{resource_name.titleize}"
       )
     end

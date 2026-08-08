@@ -487,7 +487,12 @@ class Goal < ApplicationRecord
       destructive: true,
       high_severity: true,
       title: I18n.t("goals.show.confirm_delete_title"),
-      body: I18n.t("goals.show.confirm_delete_body", name: name),
+      # Escaped: the dialog assigns `body` to innerHTML (so bodies like the
+      # accounts' confirm_body_html can carry <p>), so a goal named
+      # "<img src=x onerror=…>" would otherwise run when a family member opens
+      # the confirmation. Only `body` needs this — the dialog sets its title and
+      # button label with textContent.
+      body: I18n.t("goals.show.confirm_delete_body", name: ERB::Util.html_escape(name)),
       btn_text: I18n.t("goals.show.confirm_delete_cta")
     )
   end

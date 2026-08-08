@@ -14,6 +14,28 @@ class GoalTest < ActiveSupport::TestCase
     assert @goal.valid?
   end
 
+  # The confirm dialog assigns `body` to innerHTML, so an unescaped goal name
+  # would execute when a family member opens the delete confirmation.
+  test "deletion_confirm escapes the goal name in the dialog body" do
+    @goal.name = "<img src=x onerror=alert(1)>"
+
+    body = @goal.deletion_confirm.to_data_attribute[:body]
+
+    assert_includes body, "&lt;img src=x onerror=alert(1)&gt;"
+    assert_no_match(/<img/, body)
+  end
+
+  test "confirm_delete copy resolves in every locale that ships goal translations" do
+    %i[en fr it pl ru tr zh-CN].each do |locale|
+      I18n.with_locale(locale) do
+        body = I18n.t("goals.show.confirm_delete_body", name: "Wedding", locale: locale)
+        assert_includes body, "Wedding", "#{locale} dropped the %{name} interpolation"
+        assert I18n.t("goals.show.confirm_delete_title", locale: locale).present?
+        assert I18n.t("goals.show.confirm_delete_cta", locale: locale).present?
+      end
+    end
+  end
+
   test "name is required" do
     @goal.name = ""
     assert_not @goal.valid?
