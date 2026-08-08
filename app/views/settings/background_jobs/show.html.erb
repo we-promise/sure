@@ -31,7 +31,7 @@
           <div class="flex flex-wrap gap-2">
             <% @console.stats.queues.each do |queue| %>
               <%= render DS::Pill.new(
-                    label: "#{queue[:name]}: #{queue[:size]} · #{t(".stats.latency", value: queue[:latency])}",
+                    label: t(".stats.queue_label", name: queue[:name], size: queue[:size], latency: queue[:latency]),
                     tone: :neutral,
                     marker: false,
                     show_dot: false
