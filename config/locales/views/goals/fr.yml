@@ -16,7 +16,6 @@ fr:
     create:
       success: Objectif créé.
     destroy:
-      archive_first: Archivez l'objectif avant de le supprimer.
       success: Objectif supprimé.
     edit:
       heading: Modifier l'objectif
@@ -180,7 +179,7 @@ fr:
       confirm_complete_body_short: Vous êtes à %{progress}%, %{saved} sur %{target}. Marquer comme terminé enregistrera cela comme votre réussite à la place de l'objectif initial. Continuer, ou fermer ceci et ajuster l'objectif à la place ?
       confirm_complete_cta: Marquer comme terminé
       confirm_complete_title: Marquer cet objectif comme terminé ?
-      delete: Supprimer définitivement
+      delete: Supprimer
       edit: Modifier
       empty:
         body: Effectuez un virement sur votre compte lié. Sure le détectera lors de la prochaine synchronisation. Ou mettez à jour manuellement le solde du compte.

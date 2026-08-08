@@ -16,7 +16,6 @@ tr:
     create:
       success: Hedef oluşturuldu.
     destroy:
-      archive_first: Hedefi silmeden önce arşivleyin.
       success: Hedef silindi.
     edit:
       heading: Hedefi düzenle
@@ -190,7 +189,7 @@ tr:
         yerine başarınız olarak kaydeder. Devam edin ya da bunu kapatıp hedefi ayarlayın."
       confirm_complete_cta: Tamamlandı olarak işaretle
       confirm_complete_title: Bu hedef tamamlandı olarak işaretlensin mi?
-      delete: Kalıcı olarak sil
+      delete: Sil
       edit: Düzenle
       empty:
         body: Bağlı hesabınıza bir transfer yapın. Sure bir sonraki eşitlemede bunu

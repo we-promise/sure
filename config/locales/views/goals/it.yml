@@ -76,7 +76,6 @@ it:
       success: Obiettivo aggiornato.
     destroy:
       success: Obiettivo eliminato.
-      archive_first: Archivia l'obiettivo prima di eliminarlo.
     pause:
       success: Obiettivo messo in pausa.
       invalid_transition: L'obiettivo non può essere messo in pausa dal suo stato attuale.
@@ -103,7 +102,7 @@ it:
       archive: Archivia
       unarchive: Ripristina
       reopen: Riapri obiettivo
-      delete: Elimina definitivamente
+      delete: Elimina
       record_pledge_cta: Registra impegno
       pledge_just_transferred: Registra un trasferimento effettuato
       pledge_just_saved: Registra denaro messo da parte

@@ -86,7 +86,6 @@ pl:
       success: Cel zaktualizowany.
     destroy:
       success: Cel usunięty.
-      archive_first: Zarchiwizuj cel przed jego usunięciem.
     pause:
       success: Cel wstrzymany.
       invalid_transition: Cel nie może być wstrzymany z bieżącego stanu.
@@ -113,7 +112,7 @@ pl:
       archive: Archiwizuj
       unarchive: Przywróć
       reopen: Otwórz ponownie
-      delete: Usuń na stałe
+      delete: Usuń
       record_pledge_cta: Zapisz zobowiązanie
       pledge_just_transferred: Zarejestruj wykonany przelew
       pledge_just_saved: Zarejestruj odłożone pieniądze

@@ -16,7 +16,6 @@ ru:
     create:
       success: Цель создана.
     destroy:
-      archive_first: Сначала архивируйте цель перед удалением.
       success: Цель удалена.
     edit:
       heading: Редактировать цель

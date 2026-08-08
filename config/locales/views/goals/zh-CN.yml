@@ -76,7 +76,6 @@ zh-CN:
       success: 目标已更新。
     destroy:
       success: 目标已删除。
-      archive_first: 删除前请先归档该目标。
     pause:
       success: 目标已暂停。
       invalid_transition: 目标当前状态不能暂停。
@@ -103,7 +102,7 @@ zh-CN:
       archive: 归档
       unarchive: 恢复
       reopen: 重新开启目标
-      delete: 永久删除
+      delete: 删除
       record_pledge_cta: 记录承诺
       pledge_just_transferred: 记录你完成的转账
       pledge_just_saved: 记录你留出的资金

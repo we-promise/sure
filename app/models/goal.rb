@@ -476,6 +476,22 @@ class Goal < ApplicationRecord
     end
   end
 
+  # Confirm dialog for deleting this goal, shared by the show-page kebab and
+  # the index card kebab so the two can't drift. Spelled out rather than using
+  # CustomConfirm.for_resource_deletion, whose generic "This is not reversible"
+  # reads scarier than a goal delete is: only the goal, its account links and
+  # its pledge history go — the accounts, balances and transactions behind it
+  # are untouched.
+  def deletion_confirm
+    CustomConfirm.new(
+      destructive: true,
+      high_severity: true,
+      title: I18n.t("goals.show.confirm_delete_title"),
+      body: I18n.t("goals.show.confirm_delete_body", name: name),
+      btn_text: I18n.t("goals.show.confirm_delete_cta")
+    )
+  end
+
   # Single-line state summary rendered between the header and the ring on
   # the show page. Replaces the stacked catch-up alert + inline status pill;
   # carries the same actionable copy without owning a CTA. Returns nil when
