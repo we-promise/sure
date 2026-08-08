@@ -122,6 +122,37 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "connect_form surfaces a Pluggy token-mint failure in the panel error slot instead of a 500" do
+    # A bad/invalid Pluggy credential or a Pluggy outage turns the connect_token
+    # mint into a raised Provider::Pluggy::AuthenticationError (< Error). The
+    # controller rescues Provider::Pluggy::Error, sets @error_message (read by
+    # _pluggy_panel's error slot), and leaves @connect_token nil so the widget
+    # box stays hidden and the drawer-link fallback renders — instead of crashing
+    # into a 500 on a blank drawer.
+    family = families(:empty)
+    PluggyItem.create!(
+      family: family,
+      name: "Pluggy Connection",
+      client_id: "client-id",
+      client_secret: "client-secret"
+    )
+    sign_in users(:empty)
+
+    Provider::Pluggy.stubs(:connect_token).raises(
+      Provider::Pluggy::AuthenticationError.new("Invalid credentials", :unauthorized)
+    )
+
+    get connect_form_settings_providers_url(provider_key: "pluggy")
+
+    assert_response :success
+    assert_includes response.body, "Invalid credentials"
+    # Widget launcher is gated on @connect_token.present? — with the mint
+    # failing it must stay hidden and the drawer-link fallback must render so the
+    # user can retry instead of being stranded on a blank drawer.
+    refute_includes response.body, I18n.t("pluggy_items.panel.connect_widget_button")
+    assert_includes response.body, connect_form_settings_providers_path(provider_key: "pluggy")
+  end
+
   test "shows Brex as available when family has no Brex connections" do
     sign_in users(:empty)
 

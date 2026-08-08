@@ -231,4 +231,30 @@ class PluggyItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "new_client", item.reload.client_id
     assert_equal "new_secret", item.reload.client_secret
   end
+
+  test "update with a blank client_id keeps the stored client_id so credentials_configured? stays true" do
+    # Same hazard as a blank client_secret: a `password_field` POSTs a blank
+    # value when the user leaves it untouched on an edit. The controller drops
+    # the blank param so the update never overwrites the stored client_id with
+    # nil — which would make credentials_configured? false and silently break
+    # every later Connect token mint + sync for that item.
+    item = PluggyItem.create!(
+      family: users(:family_admin).family,
+      name: "Pluggy Connected",
+      client_id: "old_client",
+      client_secret: "old_secret",
+      pluggy_item_id: "item-123"
+    )
+
+    patch pluggy_item_url(item),
+          params: { pluggy_item: { client_id: "", client_secret: "new_secret" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_equal "old_client", item.reload.client_id,
+                 "blank client_id must not wipe the stored value"
+    assert_equal "new_secret", item.reload.client_secret
+    assert item.reload.credentials_configured?,
+           "credentials_configured? must stay true after a blank-id patch"
+  end
 end

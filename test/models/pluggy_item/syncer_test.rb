@@ -168,4 +168,33 @@ class PluggyItem::SyncerTest < ActiveSupport::TestCase
     # And the item was NOT marked good.
     assert_not_equal "good", fresh.status
   end
+
+  # Regression for PluggyItem#process_accounts swallowing processor-rescued
+  # failures as success: true. PluggyAccount::Processor#process rescues
+  # account-level failures and returns `{ error: }` instead of raising — a
+  # blanket `success: true` on that result hid the failure from Syncer's
+  # aggregation (which only counts `success: false`), so a partially failed sync
+  # reported total_errors: 0 and marked the item good. The fix marks a returned
+  # error hash success: false so collect_health_stats surfaces it.
+  test "process_accounts marks a processor-returned error hash as success: false" do
+    pa = @pluggy_item.pluggy_accounts.create!(
+      pluggy_account_id: "pa-err", name: "Checking", currency: "BRL", account_type: "BANK"
+    )
+
+    # Stub the linked scope to include pa without the full AccountProvider
+    # graph (process_accounts only needs the row to build the result hash and
+    # call Processor — it doesn't read the linked Account here).
+    linked_stub = Object.new
+    linked_stub.stubs(:includes).returns([ pa ])
+    @pluggy_item.stubs(:linked_pluggy_accounts).returns(linked_stub)
+
+    # Processor#process returned a rescued error hash, not a raise.
+    PluggyAccount::Processor.any_instance.stubs(:process).returns(error: "boom")
+
+    results = @pluggy_item.process_accounts
+    err = results.find { |r| r[:pluggy_account_id] == pa.id }
+    assert_not err[:success],
+               "processor-returned error hash must be success: false so Syncer aggregates it"
+    assert_equal "boom", err[:error]
+  end
 end

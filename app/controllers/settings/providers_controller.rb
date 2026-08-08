@@ -143,12 +143,26 @@ class Settings::ProvidersController < ApplicationController
           # bank credentials matched the orphaned upstream item after a Docker
           # `-v` wipe and 400'd with ITEM_USER_ALREADY_EXISTS. See
           # Provider::Pluggy.connect_token derivation comment.
-          @connect_token = @connect_item.pluggy_provider.connect_token(
-            client_user_id: @connect_item.client_user_id,
-            webhook_url: @connect_item.webhook_url,
-            redirect_url: @connect_item.redirect_url,
-            item_id: @connect_item.pluggy_item_id.presence
-          )
+          begin
+            @connect_token = @connect_item.pluggy_provider.connect_token(
+              client_user_id: @connect_item.client_user_id,
+              webhook_url: @connect_item.webhook_url,
+              redirect_url: @connect_item.redirect_url,
+              item_id: @connect_item.pluggy_item_id.presence
+            )
+          rescue Provider::Pluggy::Error => e
+            # Bad/invalid Pluggy credentials or a Pluggy API outage turns the
+            # token mint into a 500 here — leaving the drawer blank with no
+            # usable error. Surface the message in the panel's existing error
+            # slot (@error_message is read in _pluggy_panel) and leave
+            # @connect_token nil so the widget box stays hidden and the
+            # drawer-link fallback renders. AuthenticationError < Error, so this
+            # catches the bad-credentials path too. Mirrors the swallow in
+            # PluggyItemsController#issue_pluggy_connect_token but keeps the
+            # message visible instead of silently nil.
+            Rails.logger.error "Failed to mint Pluggy connect token: #{e.class} - #{e.message}"
+            @error_message = e.message
+          end
         end
       end
 

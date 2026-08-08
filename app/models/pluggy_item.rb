@@ -94,7 +94,17 @@ class PluggyItem < ApplicationRecord
     linked_pluggy_accounts.includes(account_provider: :account).each do |pluggy_account|
       begin
         result = PluggyAccount::Processor.new(pluggy_account).process
-        results << { pluggy_account_id: pluggy_account.id, success: true, result: result }
+        # Processor#process rescues account-level failures and returns
+        # `{ error: }` instead of raising (see PluggyAccount::Processor#process).
+        # A blanket `success: true` here hides those failures from Syncer's
+        # aggregation (which only counts `success: false`), so a partially failed
+        # sync reports total_errors: 0 and marks the item good. Treat a returned
+        # error hash as `success: false` so collect_health_stats surfaces it.
+        if result.is_a?(Hash) && result.key?(:error)
+          results << { pluggy_account_id: pluggy_account.id, success: false, error: result[:error] }
+        else
+          results << { pluggy_account_id: pluggy_account.id, success: true, result: result }
+        end
       rescue => e
         Rails.logger.error "PluggyItem #{id} - Failed to process account #{pluggy_account.id}: #{e.message}"
         results << { pluggy_account_id: pluggy_account.id, success: false, error: e.message }

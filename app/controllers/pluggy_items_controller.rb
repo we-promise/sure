@@ -95,12 +95,15 @@ class PluggyItemsController < ApplicationController
   def update
     attrs = pluggy_item_params
 
-    # `client_secret` is rendered as a `password_field` (blank value, no DOM
-    # leak of the decrypted secret — see _pluggy_panel). Leaving the field
-    # blank on an edit means "keep the existing secret", not "clear it" — drop
-    # the blank param so the update doesn't wipe the stored credential and
-    # silently break `credentials_configured?`.
+    # Both credentials are rendered as `password_field`s (blank value, no DOM
+    # leak of the decrypted secret — see _pluggy_panel). Leaving a field blank
+    # on an edit means "keep the existing value", not "clear it" — drop the
+    # blank param so the update doesn't wipe the stored credential and silently
+    # break `credentials_configured?` (which gates Connect token minting + syncs).
+    # A blank `client_id` write is the same hazard as a blank `client_secret`:
+    # it empties the stored id and makes `credentials_configured?` false.
     attrs.delete(:client_secret) if attrs[:client_secret].blank?
+    attrs.delete(:client_id) if attrs[:client_id].blank?
 
     # Pluggy does not expose item listing (https://docs.pluggy.ai/docs/item), so
     # an existing upstream item id cannot be auto-discovered here — it must have
