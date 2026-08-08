@@ -92,4 +92,21 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Loan account updated", flash[:notice]
     assert_enqueued_with(job: SyncJob)
   end
+
+  test "renders the amortization schedule tab for a fixed rate loan" do
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    assert_select "table tbody tr", count: @account.loan.term_months
+    assert_match "Total Interest", response.body
+  end
+
+  test "hides the schedule tab when the loan cannot be amortized" do
+    @account.loan.update!(rate_type: "variable")
+
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    assert_select "table tbody tr", count: 0
+  end
 end
