@@ -17,16 +17,20 @@ class GoalTest < ActiveSupport::TestCase
   # The days-left segment is returned separately so the view can keep it
   # unbroken; joined into one string it wrapped after "days" on a phone.
   test "header_summary_parts keeps the days-left phrase in its own segment" do
-    # Target well above the linked account's balance, or the goal reads as
-    # :reached and drops the days-left segment on purpose.
-    @goal.target_amount = 1_000_000
-    @goal.target_date = 184.days.from_now.to_date
+    # Pinned: the count is `target_date - Date.current`, so a suite that crossed
+    # midnight between setting the date and reading it would report 183.
+    travel_to Date.new(2026, 6, 1) do
+      # Target well above the linked account's balance, or the goal reads as
+      # :reached and drops the days-left segment on purpose.
+      @goal.target_amount = 1_000_000
+      @goal.target_date = Date.current + 184
 
-    parts = @goal.header_summary_parts
+      parts = @goal.header_summary_parts
 
-    assert_equal 2, parts.size
-    assert_match(/184 days left/, parts.last)
-    assert_no_match(/days left/, parts.first)
+      assert_equal 2, parts.size
+      assert_match(/184 days left/, parts.last)
+      assert_no_match(/days left/, parts.first)
+    end
   end
 
   test "header_summary_parts omits days left once the target is reached" do
