@@ -22,13 +22,20 @@
         second line. `overflow-x-auto` is the backstop for a container too
         narrow even for the reduced set (see PaginationHelper). %>
     <% series = pagy.series %>
+    <% mobile_plan = pagination_mobile_plan(series) %>
     <div class="rounded-xl p-1 bg-container-inset flex items-center flex-nowrap overflow-x-auto max-w-full">
       <% series.each_with_index do |series_item, index| %>
-        <% responsive_class = pagination_item_class(series, index) %>
+        <% mobile_state = mobile_plan[index] %>
+        <%# Stands in for the run of pages hidden from here on a phone, so the
+            remaining numbers don't read as adjacent. Mirrors the real gap's
+            markup and disappears from `sm` up, where the run is shown. %>
+        <% if mobile_state == :collapsed %>
+          <span class="inline-flex sm:hidden shrink-0 items-center px-2 py-1 text-sm font-medium text-secondary" aria-hidden="true">...</span>
+        <% end %>
         <% if series_item.is_a?(Integer) %>
           <%= link_to pagy_url_for(pagy, series_item),
                 data: { turbo_frame: :_top },
-                class: class_names("rounded-md px-2 py-1 shrink-0 items-center text-sm font-medium text-secondary hover:border-secondary hover:text-secondary", responsive_class || "inline-flex") do %>
+                class: class_names("rounded-md px-2 py-1 shrink-0 items-center text-sm font-medium text-secondary hover:border-secondary hover:text-secondary", mobile_state == :visible ? "inline-flex" : "hidden sm:inline-flex") do %>
             <%= series_item %>
           <% end %>
         <% elsif series_item.is_a?(String) %>
