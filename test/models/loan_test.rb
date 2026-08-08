@@ -21,6 +21,12 @@ class LoanTest < ActiveSupport::TestCase
         rate_type: "fixed"
       )
 
-    assert_equal 2245, loan_account.loan.monthly_payment.amount
+    assert_equal BigDecimal("2245.22"), loan_account.loan.monthly_payment.amount
+  end
+
+  test "variable rate loans have no payment or schedule" do
+    loan = Loan.new(interest_rate: 3.5, term_months: 360, rate_type: "variable")
+
+    assert_not loan.amortizable?
   end
 end
