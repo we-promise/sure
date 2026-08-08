@@ -16,7 +16,7 @@ if Rails.env.development? && ENV["CODESPACES"] == "true"
   # If you use the VS Code "Preview" (iframe), you need SameSite=None; Secure
   # Codespaces serves over HTTPS, so secure: true is OK here.
   Rails.application.config.session_store :cookie_store,
-    key: "_app_session",
+    key: Rails.application.config.session_options[:key],
     same_site: :none,
     secure: true
 
