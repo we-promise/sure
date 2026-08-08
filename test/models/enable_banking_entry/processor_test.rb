@@ -208,6 +208,29 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_includes entry.notes, "Détail comptable interne"
   end
 
+  test "imports transaction with real merchant name instead of generic POS terminal line (issue #2935)" do
+    tx = {
+      entry_reference: "ref_pos_2935",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "45.13", currency: "EUR" },
+      creditor: { name: "" },
+      debtor: nil,
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [
+        "POS          45,13 AT  D6   31.07. 10:27",
+        "BILLA DANKT 0007114 SIEGENDORF 7011"
+      ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_pos_2935")
+    assert_equal "BILLA DANKT 0007114 SIEGENDORF 7011", entry.name
+    assert_includes entry.notes, "POS          45,13 AT  D6   31.07. 10:27"
+  end
+
   test "stores exchange_rate in extra when present" do
     tx = {
       entry_reference: "ref_fx",
@@ -429,6 +452,100 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     )
 
     assert_nil processor.send(:merchant)
+  end
+
+  # --- technical remittance line skip (issue #2935) ---
+
+  test "skips generic POS terminal line and uses real merchant from remittance_information" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "POS          45,13 AT  D6   31.07. 10:27",
+        "BILLA DANKT 0007114 SIEGENDORF 7011"
+      ]
+    )
+
+    assert_equal "BILLA DANKT 0007114 SIEGENDORF 7011", name
+  end
+
+  test "skips generic ATM terminal line and uses real merchant from remittance_information" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "ATM          50,00 AT  D6   31.07. 10:27",
+        "SPARKASSE EISENSTADT 7000"
+      ]
+    )
+
+    assert_equal "SPARKASSE EISENSTADT 7000", name
+  end
+
+  test "does not treat a POS/ATM-prefixed line as technical when it lacks a trailing date+time (merchant embedded in the same line)" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "POS 45,13 BILLA DANKT 0007114 SIEGENDORF 7011",
+        "Reference 0394676"
+      ]
+    )
+
+    assert_equal "POS 45,13 BILLA DANKT 0007114 SIEGENDORF 7011", name
+  end
+
+  test "does not treat a legitimate line as technical just because it ends with a date+time stamp" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "Invoice paid 31.07. 10:27",
+        "Reference 0394676"
+      ]
+    )
+
+    assert_equal "Invoice paid 31.07. 10:27", name
+  end
+
+  test "strips SumUp payment processor prefix from the merchant line" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "POS         130,00 AT  D6   21.07. 14:20",
+        "SUMUP  *HERR DR. EISENSTADT 7000"
+      ]
+    )
+
+    assert_equal "HERR DR. EISENSTADT 7000", name
+  end
+
+  test "falls back to the technical line when remittance_information has no descriptive line" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "POS          45,13 AT  D6   31.07. 10:27" ]
+    )
+
+    assert_equal "POS          45,13 AT  D6   31.07. 10:27", name
+  end
+
+  test "does not treat a merchant-like line starting with POS/ATM as technical" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "POS Café Wien" ]
+    )
+
+    assert_equal "POS Café Wien", name
   end
 
   test "converts unix timestamp date using family timezone not UTC" do
