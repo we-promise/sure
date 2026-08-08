@@ -4,7 +4,7 @@
   default_color = "#737373"
 %>
 
-<div class="category-select-container relative flex-1 md:flex-none md:w-44" data-controller="select list-filter form-dropdown category-badge-select" data-action="dropdown:select->form-dropdown#onSelect dropdown:select->category-badge-select#updateButton">
+<div class="category-select-container relative flex-1 md:flex-initial md:w-auto md:min-w-44 md:max-w-72" data-controller="select list-filter form-dropdown category-badge-select" data-action="dropdown:select->form-dropdown#onSelect dropdown:select->category-badge-select#updateButton">
   <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.category_label") %></label>
   <input type="hidden"
          name="<%= name %>"
@@ -19,20 +19,21 @@
           aria-expanded="false">
     <% if selected_category %>
       <% hex_color = selected_category.color.presence || default_color %>
-      <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border truncate"
+      <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border min-w-0 max-w-64"
+            title="<%= selected_category.display_name %>"
             style="background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent); border-color: color-mix(in oklab, <%= hex_color %> 20%, transparent); color: <%= hex_color %>;">
         <% if selected_category.lucide_icon.present? %>
           <%= icon selected_category.lucide_icon, size: "sm", color: "current" %>
         <% else %>
-          <span class="size-1.5 rounded-full" style="background-color: <%= hex_color %>;"></span>
+          <span class="size-1.5 rounded-full shrink-0" style="background-color: <%= hex_color %>;"></span>
         <% end %>
-        <%= selected_category.display_name %>
+        <span class="truncate"><%= selected_category.display_name %></span>
       </span>
     <% else %>
       <%= t("splits.new.uncategorized") %>
     <% end %>
   </button>
-  <div class="absolute z-50 p-1.5 w-full min-w-48 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+  <div class="absolute z-50 p-1.5 w-full min-w-48 md:w-80 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
     <div class="flex items-center bg-container border border-secondary rounded-lg mb-1 focus-within:ring-4 focus-within:ring-alpha-black-200 theme-dark:focus-within:ring-alpha-white-300 transition-shadow">
       <%= render DS::SearchInput.new(
         variant: :embedded,
@@ -72,14 +73,15 @@
           <span class="check-icon <%= "hidden" unless is_selected %>">
             <%= icon("check") %>
           </span>
-          <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border truncate"
+          <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border min-w-0 max-w-64"
+                title="<%= category.display_name %>"
                 style="background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent); border-color: color-mix(in oklab, <%= hex_color %> 20%, transparent); color: <%= hex_color %>;">
             <% if category.lucide_icon.present? %>
               <%= icon category.lucide_icon, size: "sm", color: "current" %>
             <% else %>
-              <span class="size-1.5 rounded-full" style="background-color: <%= hex_color %>;"></span>
+              <span class="size-1.5 rounded-full shrink-0" style="background-color: <%= hex_color %>;"></span>
             <% end %>
-            <%= category.display_name %>
+            <span class="truncate"><%= category.display_name %></span>
           </span>
         </div>
       <% end %>
