@@ -70,6 +70,15 @@ export default class extends Controller {
         pluggyScript = document.createElement("script");
         pluggyScript.src =
           "https://cdn.pluggy.ai/pluggy-connect/v2.8.2/pluggy-connect.js";
+        // SRI pins the CDN-served script to its v2.8.2 hash so a tampered or
+        // compromised CDN can't swap the widget code; crossOrigin is required
+        // for integrity enforcement and is safe because cdn.pluggy.ai serves
+        // `Access-Control-Allow-Origin: *` (verified). Bump the hash whenever
+        // the pinned version above changes — recompute with:
+        //   curl -s <src> | openssl dgst -sha384 -binary | base64 -w0
+        pluggyScript.integrity =
+          "sha384-TiENJGtPLgAoIa1MVo8Euy1JSwDECMBKmbxMFz5b+nMo/A6DdIwvMk1JnYnkM2pv";
+        pluggyScript.crossOrigin = "anonymous";
         pluggyScript.async = true;
         pluggyScript.dataset.pluggyState = "loading";
         document.head.appendChild(pluggyScript);
