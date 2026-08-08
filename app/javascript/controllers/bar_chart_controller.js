@@ -153,9 +153,15 @@ export default class extends Controller {
     labels.text((_d, i) => data[i].short_label ?? data[i].label);
     if (fits()) return;
 
-    // Still too wide (a very narrow column): thin out rather than overlap,
-    // always keeping the highlighted month visible.
-    labels.style("display", (_d, i) => (i % 2 === 0 || data[i].highlighted ? null : "none"));
+    // Still too wide (a very narrow column): thin out rather than overlap.
+    // The parity is taken from the highlighted month rather than fixed at even,
+    // so that month survives without being an exception to the pattern — it
+    // sits last (build_money_flow_data counts down to the selected month), and
+    // keeping it on top of every even index left the final two labels one step
+    // apart, the very spacing that had just been measured as too tight.
+    const highlightedIndex = data.findIndex((d) => d.highlighted);
+    const keepParity = highlightedIndex >= 0 ? highlightedIndex % 2 : 0;
+    labels.style("display", (_d, i) => (i % 2 === keepParity ? null : "none"));
   }
 
   _tooltipTemplate(month, key) {
