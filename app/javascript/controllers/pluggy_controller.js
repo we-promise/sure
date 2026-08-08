@@ -194,11 +194,22 @@ export default class extends Controller {
       return;
     }
 
-    // For new connections, store the widget-returned itemId verbatim. The
-    // initial sync is enqueued server-side in PluggyItemsController#create.
-    fetch("/pluggy_items", {
-      method: "POST",
+    // Store the widget-returned itemId verbatim. When the widget was opened
+    // from an existing credential-only PluggyItem (this.recordIdValue present
+    // — issued by PluggyItemsController#update's connect-token path), PATCH
+    // that record so the itemId binds to the credentialed row instead of
+    // POSTing a second, orphan PluggyItem. The controller's update path
+    // preserves client_secret when the field is blank, enqueues a sync once
+    // pluggy_item_id is present, and re-renders the panel. Fall back to the
+    // collection POST only when no record id is wired (standalone new page).
+    const saveUrl = this.recordIdValue
+      ? `/pluggy_items/${this.recordIdValue}`
+      : "/pluggy_items";
+    const saveMethod = this.recordIdValue ? "PATCH" : "POST";
+    fetch(saveUrl, {
+      method: saveMethod,
       headers: {
+        Accept: "application/json",
         "Content-Type": "application/json",
         "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content,
       },

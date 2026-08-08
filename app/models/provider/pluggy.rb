@@ -154,17 +154,21 @@ class Provider::Pluggy
     # dashboard) and retrieve by known id only. Do NOT re-add a list_items /
     # latest_item_id helper here; it wraps an endpoint Pluggy refuses. See
     # https://docs.pluggy.ai/docs/item and PluggyItem.hydrate_item_id!.
+    # item_id is widget-sourced (a Pluggy UUID), but escape it before path
+    # interpolation anyway — a value carrying `/`, `..`, `?`, or `#` would
+    # otherwise re-resolve the path or append a query string. CGI is already
+    # required at the top of this file.
     def get_item(item_id:, client_id:, client_secret:)
-      send_with_auth(:get, "/items/#{item_id}", client_id:, client_secret:)
+      send_with_auth(:get, "/items/#{CGI.escape(item_id.to_s)}", client_id:, client_secret:)
     end
 
     def update_item(item_id:, client_user_id:, credentials:, client_id:, client_secret:)
       body = { clientUserId: client_user_id, credentials: credentials }
-      send_with_auth(:put, "/items/#{item_id}", client_id:, client_secret:, body: body.to_json)
+      send_with_auth(:put, "/items/#{CGI.escape(item_id.to_s)}", client_id:, client_secret:, body: body.to_json)
     end
 
     def delete_item(item_id:, client_id:, client_secret:)
-      send_with_auth(:delete, "/items/#{item_id}", client_id:, client_secret:)
+      send_with_auth(:delete, "/items/#{CGI.escape(item_id.to_s)}", client_id:, client_secret:)
       true
     end
 

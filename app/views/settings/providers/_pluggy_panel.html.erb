@@ -66,13 +66,13 @@
       existing credentialed PluggyItem (is_new_record=false) via
       pluggy_item_path, which PluggyItemsController#update supports.
 
-      `client_secret` uses `password_field` (NOT `text_field ... type:
-      :password`) so the decrypted secret is NEVER written into the field's
-      `value=` attribute — `text_field` populates the value from the model and
-      leaks the plaintext secret into the DOM even when masked, while
-      `password_field` renders no value. The paired controller update path
-      skips a blank `client_secret` so leaving the field blank preserves the
-      stored credential (see PluggyItemsController#update). %>
+      BOTH `client_id` and `client_secret` use `password_field` (NOT
+      `text_field ... type: :password`) so the decrypted credentials are NEVER
+      written into the field's `value=` attribute — `text_field` populates the
+      value from the model and leaks the plaintext into the DOM even when
+      masked, while `password_field` renders no value. The paired controller
+      update path skips a blank `client_secret` so leaving the field blank
+      preserves the stored credential (see PluggyItemsController#update). %>
   <!-- Credential-First Flow (dev/sandbox) -->
   <%= styled_form_with model: pluggy_item,
                         url: is_new_record ? pluggy_items_path : pluggy_item_path(pluggy_item),
@@ -80,10 +80,9 @@
                         method: is_new_record ? :post : :patch,
                         data: { turbo: true, turbo_frame: "drawer" },
                         class: "space-y-3" do |form| %>
-    <%= form.text_field :client_id,
+    <%= form.password_field :client_id,
                         label: t("pluggy_items.panel.fields.client_id.label"),
-                        placeholder: is_new_record ? t("pluggy_items.panel.fields.client_id.placeholder_new") : t("pluggy_items.panel.fields.client_id.placeholder_update"),
-                        type: :password %>
+                        placeholder: is_new_record ? t("pluggy_items.panel.fields.client_id.placeholder_new") : t("pluggy_items.panel.fields.client_id.placeholder_update") %>
 
     <%= form.password_field :client_secret,
                         label: t("pluggy_items.panel.fields.client_secret.label"),

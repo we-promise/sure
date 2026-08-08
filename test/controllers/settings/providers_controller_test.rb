@@ -77,7 +77,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:empty)
 
     Provider::Pluggy.expects(:connect_token).never
-    Provider::Pluggy.expects(:latest_item_id).never
+    assert_not Provider::Pluggy.respond_to?(:latest_item_id)
 
     get settings_providers_url
 

@@ -147,8 +147,8 @@ class PluggyItem::SyncerTest < ActiveSupport::TestCase
       status: :requires_update
     )
 
-    # Discovery is gone — the listing endpoint must never be called.
-    Provider::Pluggy.expects(:latest_item_id).never
+    # Discovery is gone — the listing helper must not be re-added.
+    assert_not Provider::Pluggy.respond_to?(:latest_item_id)
     # A blank pluggy_item_id makes the importer's first get_item call fail
     # (needs the id to build /items/:id); stub the raise rather than hitting
     # the network, then let the syncer's generic rescue surface it.

@@ -49,13 +49,15 @@ class PluggyItemsControllerTest < ActionDispatch::IntegrationTest
   # (should_auto_connect?), redirects to the Connect drawer, and leaves
   # pluggy_item_id blank; the Syncer's `hydrate_item_id!` is now an intentional
   # no-op (see PluggyItem#hydrate_item_id!), so the row stays unhydrated until
-  # the user completes the widget. The `expects(:latest_item_id).never` guard is
-  # the #4 lock: it fails if anyone re-adds an eager /items discovery on
-  # `create`. (The deleted `Provider::Pluggy.latest_item_id` wrapped the
-  # refused endpoint — mocha tolerates `.never` against the now-missing method,
-  # raising only if a regressed call actually happens.)
+  # the user completes the widget. The `assert_not respond_to?(:latest_item_id)`
+  # guard is the #4 lock: it fails at load time if anyone re-adds
+  # `Provider::Pluggy.latest_item_id` (the deleted helper wrapped Pluggy's
+  # refused "list items" endpoint). A definition-level lock is stricter than a
+  # call-level `.never` expectation, which silently passes while the method
+  # stays undefined — the latter only fires if a regressed caller actually
+  # invokes it.
   test "credential flow does not eagerly call the Pluggy API on create even when an item id is discoverable" do
-    Provider::Pluggy.expects(:latest_item_id).never
+    assert_not Provider::Pluggy.respond_to?(:latest_item_id)
 
     assert_difference -> { PluggyItem.count }, 1 do
       assert_no_enqueued_jobs only: SyncJob do

@@ -40,16 +40,21 @@ class PluggyItem::Syncer
     # left the flag stale (true) because AutoSetup#call does not re-finalize it.
     finalize_setup_counts(sync)
 
-    # Phase 3: Process data for linked accounts
+    # Phase 3: Process data for linked accounts. Each per-account call returns
+    # a { success:, error: } hash (see PluggyItem#process_accounts /
+    # #schedule_account_syncs); aggregate failures so sync.health_stats
+    # reflects partial-account failures instead of reporting total_errors: 0.
+    account_errors = []
+
     linked_pluggy_accounts = pluggy_item.linked_pluggy_accounts.includes(account_provider: :account)
     if linked_pluggy_accounts.any?
       sync.update!(status_text: I18n.t("pluggy_items.sync.status.processing")) if sync.respond_to?(:status_text)
       mark_import_started(sync)
-      pluggy_item.process_accounts
+      process_results = pluggy_item.process_accounts
 
       # Phase 4: Schedule balance calculations
       sync.update!(status_text: I18n.t("pluggy_items.sync.status.calculating")) if sync.respond_to?(:status_text)
-      pluggy_item.schedule_account_syncs(
+      schedule_results = pluggy_item.schedule_account_syncs(
         parent_sync: sync,
         window_start_date: sync.window_start_date,
         window_end_date: sync.window_end_date
@@ -58,13 +63,18 @@ class PluggyItem::Syncer
       # Phase 5: Collect statistics
       account_ids = linked_pluggy_accounts.filter_map { |pa| pa.current_account&.id }
       collect_transaction_stats(sync, account_ids: account_ids, source: "pluggy")
+
+      account_errors = [ *process_results, *schedule_results ]
+        .select { |result| result.is_a?(Hash) && !result[:success] }
+        .map { |result| { message: result[:error] || "account sync failed", category: "sync_error" } }
     end
 
     # A clean run means the item's credentials are healthy again.
     pluggy_item.update!(status: :good)
 
-    # Mark sync health
-    collect_health_stats(sync, errors: nil)
+    # Mark sync health — surfaces per-account failures from Phase 3/4 as
+    # sync_error entries (total_errors reflects them); nil when nothing errored.
+    collect_health_stats(sync, errors: account_errors.presence)
   rescue Provider::Pluggy::AuthenticationError => e
     pluggy_item.update!(status: :requires_update)
     collect_health_stats(sync, errors: [ { message: e.message, category: "auth_error" } ])
