@@ -42,7 +42,7 @@
     </div>
   <% elsif param_key == "reconcile_status" %>
     <div class="flex items-center gap-2 px-1">
-      <%= icon(param_value == "reconciled" ? "check-circle" : (param_value == "cleared" ? "circle-dot" : "circle"), size: "sm") %>
+      <%= icon(reconcile_status_icon(param_value), size: "sm") %>
       <p><%= t("transactions.reconcile.statuses.#{param_value}") %></p>
     </div>
   <% else %>

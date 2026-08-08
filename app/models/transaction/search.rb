@@ -227,7 +227,9 @@ class Transaction::Search
       valid_statuses = reconcile_statuses & Entry.reconciled_statuses.keys
       return query if valid_statuses.empty?
 
-      manual_account_ids = family.accounts.manual.pluck(:id)
-      query.where(entries: { account_id: manual_account_ids, reconciled_status: valid_statuses })
+      # Subquery rather than pluck(:id) — avoids loading every manual
+      # account id into Ruby, consistent with the writable-accounts scoping
+      # in Transactions::BulkUpdatesController#create.
+      query.where(entries: { account_id: family.accounts.manual.select(:id), reconciled_status: valid_statuses })
     end
 end

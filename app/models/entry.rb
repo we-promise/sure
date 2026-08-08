@@ -516,6 +516,14 @@ class Entry < ApplicationRecord
       transaction do
         all.includes(:account).each do |entry|
           changed = false
+          # Whether this row's changes should lock saved attributes / mark
+          # user-modified. Reconciling is a verification action, not an
+          # edit — the single-row Entry#advance_reconciled_status! (used by
+          # the quick-toggle badge) never locks anything, so a bulk
+          # reconcile-only update shouldn't either. If reconciled_status is
+          # combined with a real edit (category, notes, etc.) in the same
+          # bulk update, the usual locking still applies to those fields.
+          lockable_change = false
 
           # Update standard attributes
           if bulk_attributes.present?
@@ -532,6 +540,7 @@ class Entry < ApplicationRecord
               entry.update! attrs
               entry.transaction.record_category_usage! if entry.transaction?
               changed = true
+              lockable_change = attrs.except(:reconciled_status).present?
             end
           end
 
@@ -541,11 +550,14 @@ class Entry < ApplicationRecord
             entry.transaction.save!
             entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
             changed = true
+            lockable_change = true
           end
 
           if changed
-            entry.lock_saved_attributes!
-            entry.mark_user_modified!
+            if lockable_change
+              entry.lock_saved_attributes!
+              entry.mark_user_modified!
+            end
             updated_count += 1
           end
         end

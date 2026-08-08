@@ -115,4 +115,25 @@ class EntryTest < ActiveSupport::TestCase
     assert_equal 1, updated_count, "only the manual entry actually changed, so the reported count should be 1, not 2"
     assert_not synced_entry.user_modified?
   end
+
+  test "bulk_update! reconciling alone does not lock saved attributes, matching advance_reconciled_status!" do
+    entry = create_transaction(account: accounts(:depository), category: categories(:food_and_drink))
+
+    Entry.where(id: entry.id).bulk_update!({ reconciled_status: "cleared" })
+    entry.reload
+
+    assert_equal "cleared", entry.reconciled_status
+    assert_not entry.user_modified?, "reconciling alone shouldn't lock the entry from future auto-categorization, same as clicking the badge does"
+  end
+
+  test "bulk_update! locks saved attributes when reconciled_status is combined with a real edit" do
+    entry = create_transaction(account: accounts(:depository))
+
+    Entry.where(id: entry.id).bulk_update!({ reconciled_status: "cleared", notes: "verified against statement" })
+    entry.reload
+
+    assert_equal "cleared", entry.reconciled_status
+    assert_equal "verified against statement", entry.notes
+    assert entry.user_modified?, "a real edit alongside reconciliation should still lock as before"
+  end
 end

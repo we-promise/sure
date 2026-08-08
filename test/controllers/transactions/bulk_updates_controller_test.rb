@@ -176,4 +176,20 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unreconciled", read_only_entry.reconciled_status
     assert_nil read_only_entry.notes
   end
+
+  test "bulk update rejects an invalid reconciled_status value without raising" do
+    manual_entry = create_transaction(account: accounts(:depository))
+
+    assert_no_changes -> { manual_entry.reload.reconciled_status } do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: [ manual_entry.id ],
+          reconciled_status: "not_a_real_status"
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.reconcile.failure"), flash[:alert]
+  end
 end
