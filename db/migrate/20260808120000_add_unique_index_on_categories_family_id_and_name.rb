@@ -63,7 +63,10 @@ class AddUniqueIndexOnCategoriesFamilyIdAndName < ActiveRecord::Migration[7.2]
       # 1. Sum each duplicate's budgeted_spending into the keeper row
       #    (matches Category::Merger — totals stay unchanged even when amounts differ)
       # 2. Delete the duplicate budget_categories rows that would violate the unique index
-      # 3. Reassign any remaining non-colliding duplicate rows to the keeper
+      # 3. When the keeper has no row yet but 2+ duplicates share a budget, sum into
+      #    one survivor and delete the extras (otherwise the final UPDATE would
+      #    violate index_budget_categories_on_budget_id_and_category_id)
+      # 4. Reassign any remaining non-colliding duplicate rows to the keeper
       execute <<~SQL.squish
         UPDATE budget_categories AS keeper_bc
         SET budgeted_spending = COALESCE(keeper_bc.budgeted_spending, 0) + dup_totals.total_spending
@@ -98,6 +101,54 @@ class AddUniqueIndexOnCategoriesFamilyIdAndName < ActiveRecord::Migration[7.2]
               AND keeper_bc.category_id = map.keeper_id
           )
       SQL
+
+      execute <<~SQL.squish
+        CREATE TEMPORARY TABLE budget_category_dup_collapse AS
+        WITH ranked AS (
+          SELECT
+            bc.id,
+            COALESCE(bc.budgeted_spending, 0) AS budgeted_spending,
+            ROW_NUMBER() OVER (
+              PARTITION BY bc.budget_id, map.keeper_id
+              ORDER BY bc.id ASC
+            ) AS row_num,
+            FIRST_VALUE(bc.id) OVER (
+              PARTITION BY bc.budget_id, map.keeper_id
+              ORDER BY bc.id ASC
+            ) AS survivor_id
+          FROM budget_categories AS bc
+          INNER JOIN category_dedupe_map AS map
+            ON bc.category_id = map.duplicate_id
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM budget_categories AS keeper_bc
+            WHERE keeper_bc.budget_id = bc.budget_id
+              AND keeper_bc.category_id = map.keeper_id
+          )
+        )
+        SELECT id AS duplicate_bc_id, survivor_id, budgeted_spending
+        FROM ranked
+        WHERE row_num > 1
+      SQL
+
+      execute <<~SQL.squish
+        UPDATE budget_categories AS survivor
+        SET budgeted_spending = COALESCE(survivor.budgeted_spending, 0) + extras.total_spending
+        FROM (
+          SELECT survivor_id, SUM(budgeted_spending) AS total_spending
+          FROM budget_category_dup_collapse
+          GROUP BY survivor_id
+        ) AS extras
+        WHERE survivor.id = extras.survivor_id
+      SQL
+
+      execute <<~SQL.squish
+        DELETE FROM budget_categories AS bc
+        USING budget_category_dup_collapse AS collapse
+        WHERE bc.id = collapse.duplicate_bc_id
+      SQL
+
+      execute "DROP TABLE budget_category_dup_collapse"
 
       execute <<~SQL.squish
         UPDATE budget_categories

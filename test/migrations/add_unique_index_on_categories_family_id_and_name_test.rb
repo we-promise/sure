@@ -67,6 +67,42 @@ class AddUniqueIndexOnCategoriesFamilyIdAndNameTest < ActiveSupport::TestCase
     ensure_unique_index!
   end
 
+  test "collapses multiple duplicate budget_categories for the same budget when keeper has none" do
+    drop_unique_index_if_present!
+
+    keeper = create_category("Dedupe Multi Dup Budget Keeper")
+    duplicate_a = create_duplicate_category!(keeper.name)
+    duplicate_b = create_duplicate_category!(keeper.name)
+
+    amount_a = 30
+    amount_b = 45
+    expected_total = amount_a + amount_b
+
+    @budget.budget_categories.create!(
+      category: duplicate_a,
+      budgeted_spending: amount_a,
+      currency: @budget.currency
+    )
+    @budget.budget_categories.create!(
+      category: duplicate_b,
+      budgeted_spending: amount_b,
+      currency: @budget.currency
+    )
+
+    assert_difference -> { Category.where(id: [ duplicate_a.id, duplicate_b.id ]).count }, -2 do
+      @migration.up
+    end
+
+    assert_not Category.exists?(duplicate_a.id)
+    assert_not Category.exists?(duplicate_b.id)
+
+    keeper_budget_categories = @budget.budget_categories.where(category_id: keeper.id)
+    assert_equal 1, keeper_budget_categories.count
+    assert_equal expected_total, keeper_budget_categories.first.budgeted_spending
+  ensure
+    ensure_unique_index!
+  end
+
   test "remaps import_source_mappings Category targets to the keeper and leaves other targets alone" do
     drop_unique_index_if_present!
 
