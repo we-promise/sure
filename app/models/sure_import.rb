@@ -331,6 +331,7 @@ class SureImport < Import
         merchants: family.merchants.count,
         recurring_transactions: family.recurring_transactions.count,
         transactions: family.entries.where(entryable_type: "Transaction").count,
+        pockets: Pocket.joins(:account).where(accounts: { family_id: family.id }).count,
         transfers: Transfer.joins(inflow_transaction: { entry: :account }).where(accounts: { family_id: family.id }).count,
         rejected_transfers: RejectedTransfer.joins(inflow_transaction: { entry: :account }).where(accounts: { family_id: family.id }).count,
         trades: family.entries.where(entryable_type: "Trade").count,
