@@ -45,6 +45,14 @@ en:
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags
+      payment_channel_label: Payment Channel
+      payment_channels:
+        wechat_pay: WeChat Pay
+        alipay: Alipay
+        apple_pay: Apple Pay
+        paypal: PayPal
+        unionpay: UnionPay
+        cash: Cash
       transfer: Transfer
     create:
       created: Transaction created

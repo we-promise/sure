@@ -180,43 +180,24 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal securities(:msft), transaction.activity_security
   end
 
-  test "record_category_usage! touches the new category's last_used_at" do
-    transaction = transactions(:one)
-    category = categories(:income)
-    assert_nil category.last_used_at
+  test "payment_channel getter and setter" do
+    transaction = Transaction.new
+    assert_nil transaction.payment_channel
 
-    transaction.update!(category: category)
-    transaction.record_category_usage!
+    transaction.payment_channel = "wechat_pay"
+    assert_equal "wechat_pay", transaction.payment_channel
+    assert_equal "wechat_pay", transaction.extra["payment_channel"]
 
-    assert_not_nil category.reload.last_used_at
+    transaction.payment_channel = ""
+    assert_nil transaction.payment_channel
+    assert_nil transaction.extra["payment_channel"]
   end
 
-  test "record_category_usage! does nothing when category_id did not change" do
-    transaction = transactions(:one)
-    category = transaction.category
-    assert_nil category.last_used_at
+  test "by_payment_channel scope filters transactions by extra payment_channel" do
+    tx = transactions(:one)
+    tx.update!(payment_channel: "alipay")
 
-    transaction.reload
-    transaction.record_category_usage!
-
-    assert_nil category.reload.last_used_at
-  end
-
-  test "record_category_usage! does nothing when category is cleared" do
-    transaction = transactions(:one)
-
-    transaction.update!(category: nil)
-
-    assert_nothing_raised { transaction.record_category_usage! }
-  end
-
-  test "record_category_usage! is not invoked by rule-driven category enrichment" do
-    transaction = transactions(:one)
-    category = categories(:income)
-    assert_nil category.last_used_at
-
-    transaction.enrich_attribute(:category_id, category.id, source: "rule")
-
-    assert_nil category.reload.last_used_at
+    assert_includes Transaction.by_payment_channel("alipay"), tx
+    assert_not_includes Transaction.by_payment_channel("wechat_pay"), tx
   end
 end

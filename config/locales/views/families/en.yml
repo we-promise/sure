@@ -1,0 +1,15 @@
+---
+en:
+  families:
+    new:
+      title: Create new ledger
+      name_label: Ledger Name
+      name_placeholder: e.g. My Business
+      currency_label: Base Currency
+    default_name: Default Ledger
+    sidebar_title: Ledgers
+    current_ledger: Current Ledger
+    switch: Switch
+    active: Active
+    create:
+      success: Ledger created successfully.

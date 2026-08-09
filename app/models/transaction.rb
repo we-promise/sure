@@ -27,6 +27,16 @@ class Transaction < ApplicationRecord
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
+  PAYMENT_CHANNELS = %w[wechat_pay alipay apple_pay paypal unionpay cash].freeze
+
+  def payment_channel
+    extra&.dig("payment_channel")
+  end
+
+  def payment_channel=(val)
+    self.extra = (extra || {}).merge("payment_channel" => val.presence)
+  end
+
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
 
   # Accessors for exchange_rate stored in extra jsonb field
@@ -123,6 +133,8 @@ class Transaction < ApplicationRecord
       "AND (#{table_alias}.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true"
     end.join("\n")
   end
+
+  scope :by_payment_channel, ->(channel) { where("extra ->> 'payment_channel' = ?", channel) }
 
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)

@@ -669,7 +669,7 @@ class Account < ApplicationRecord
     end
 
     def owner_belongs_to_family
-      return if User.where(id: owner_id, family_id: family_id).exists?
+      return if User.where(id: owner_id, family_id: family_id).exists? || FamilyMembership.exists?(user_id: owner_id, family_id: family_id)
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
     end
 

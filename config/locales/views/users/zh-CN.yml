@@ -24,7 +24,6 @@ zh-CN:
       feedback: 反馈
       contact: 联系我们
       log_out: 退出登录
-    roles:
-      admin: 管理员
-      member: 成员
-      super_admin: 超级管理员
+      switch_ledger: 切换账本
+      create_ledger: 新建账本
+      current_ledger: 当前账本

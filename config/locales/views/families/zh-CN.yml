@@ -1,0 +1,15 @@
+---
+zh-CN:
+  families:
+    new:
+      title: 新建账本
+      name_label: 账本名称
+      name_placeholder: 例如：我的工作区
+      currency_label: 基础货币
+    default_name: 默认账本
+    sidebar_title: 账本
+    current_ledger: 当前账本
+    switch: 切换
+    active: 当前
+    create:
+      success: 新账本创建成功。
