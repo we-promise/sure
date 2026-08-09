@@ -93,6 +93,7 @@ class AddUniqueIndexOnCategoriesFamilyIdAndNameTest < ActiveSupport::TestCase
       @migration.up
     end
 
+    assert index_present?, "unique index should be restored after migration"
     assert_not Category.exists?(duplicate_a.id)
     assert_not Category.exists?(duplicate_b.id)
 
