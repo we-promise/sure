@@ -65,8 +65,8 @@ uk:
       net_worth_milestone: "Етап чистої вартості: %{milestone}"
       subscription_audit: "Чи %{name} все ще активний?"
       savings_rate_change:
-        up: Ваш рівень заощаджень покращився в %{month} на %{change_pp} процентних пунктів порівняно з %{previous_rate}% попереднього місяця.
-        down: Ваш рівень заощаджень знизився в %{month} на %{change_pp} процентних пунктів порівняно з %{previous_rate}% попереднього місяця.
+        up: Ваш рівень заощаджень покращився в %{month}
+        down: Ваш рівень заощаджень знизився в %{month}
       idle_cash: Неактивна готівка на %{account}
       budget_at_risk:
         one: Одна категорія потребує уваги у вашому бюджеті
