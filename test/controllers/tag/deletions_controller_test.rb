@@ -13,6 +13,8 @@ class Tag::DeletionsControllerTest < ActionDispatch::IntegrationTest
 
   test "create with replacement" do
     replacement_tag = tags(:two)
+    pocket = pockets(:vacation)
+    assert_equal @tag, pocket.tag
 
     affected_transaction_count = @tag.transactions.count
 
@@ -23,19 +25,25 @@ class Tag::DeletionsControllerTest < ActionDispatch::IntegrationTest
     # dropped rather than duplicated (see Tag#replace_and_destroy!).
     new_transaction_count = (@tag.transactions.to_a - replacement_tag.transactions.to_a).size
 
-    assert_difference -> { Tag.count } => -1, -> { replacement_tag.transactions.count } => new_transaction_count do
+    assert_difference -> { Tag.count } => -1, -> { replacement_tag.transactions.count } => new_transaction_count, -> { Pocket.count } => -1 do
       post tag_deletions_url(@tag), params: { replacement_tag_id: replacement_tag.id }
     end
+
+    assert_not Pocket.exists?(pocket.id)
   end
 
   test "create without replacement" do
     affected_transactions = @tag.transactions
+    pocket = pockets(:vacation)
+    assert_equal @tag, pocket.tag
 
     assert affected_transactions.count > 0
 
-    assert_difference -> { Tag.count } => -1, -> { Tagging.count } => affected_transactions.count * -1 do
+    assert_difference -> { Tag.count } => -1, -> { Tagging.count } => affected_transactions.count * -1, -> { Pocket.count } => -1 do
       post tag_deletions_url(@tag)
     end
+
+    assert_not Pocket.exists?(pocket.id)
   end
 
   test "create with invalid or cross-family tag_id returns not found" do
