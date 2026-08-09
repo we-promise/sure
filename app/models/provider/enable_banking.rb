@@ -216,25 +216,23 @@ class Provider::EnableBanking
     # further retry should be attempted.
     def next_transactions_date_from(error, current_date_from, retry_attempt)
       return nil unless error.wrong_transactions_period?
+      return nil if retry_attempt > FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.length
 
       current = current_date_from&.to_date
 
-      # Prefer the ASPSP-suggested date on the first retry (original behaviour).
+      # Prefer the ASPSP-suggested date on the first retry (original behaviour),
+      # but only when it actually moves the window forward.
       if retry_attempt.zero?
         corrected = error.corrected_date_from
-        return corrected if corrected.present? && corrected != current
+        return corrected if corrected.present? && (current.nil? || corrected > current)
       end
 
-      # Otherwise fall back to progressively shorter windows.
-      days = FALLBACK_TRANSACTIONS_DATE_FROM_DAYS[retry_attempt]
-      return nil unless days
-
-      fallback = days.days.ago.to_date
-      # Only retry when this moves the window forward, to guarantee progress
-      # and avoid an infinite retry loop.
-      return nil if current && fallback <= current
-
-      fallback
+      # Otherwise pick the first progressively-shorter window that advances the
+      # window forward, skipping any window that is not newer than the current
+      # date_from. Moving strictly forward guarantees progress and termination.
+      FALLBACK_TRANSACTIONS_DATE_FROM_DAYS
+        .map { |days| days.days.ago.to_date }
+        .find { |candidate| current.nil? || candidate > current }
     end
 
     def safe_psu_headers(headers)
