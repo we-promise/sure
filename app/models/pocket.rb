@@ -85,27 +85,34 @@ class Pocket < ApplicationRecord
     end
 
     def tagged_transaction_total(tag_id)
-      subq = Entry.joins(
-        "INNER JOIN transactions ON transactions.id = entries.entryable_id
-           AND entries.entryable_type = 'Transaction'"
-      ).joins(
-        "INNER JOIN taggings ON taggings.taggable_id = transactions.id
-           AND taggings.taggable_type = 'Transaction'"
-      ).where(entries: { account_id: account_id, currency: currency })
-       .where(taggings: { tag_id: tag_id })
-       .select("DISTINCT entries.id, entries.amount")
+      # Runs its own independent aggregate query, so it must not inherit an
+      # ambient current_scope (e.g. Entry.bulk_update! invoked via a
+      # `family.entries` has_many :through relation leaves an accounts JOIN
+      # in scope). Entry.from(subq, ...) replaces the FROM clause, so any
+      # inherited JOIN referencing "entries" would break the query.
+      Entry.unscoped do
+        subq = Entry.joins(
+          "INNER JOIN transactions ON transactions.id = entries.entryable_id
+             AND entries.entryable_type = 'Transaction'"
+        ).joins(
+          "INNER JOIN taggings ON taggings.taggable_id = transactions.id
+             AND taggings.taggable_type = 'Transaction'"
+        ).where(entries: { account_id: account_id, currency: currency })
+         .where(taggings: { tag_id: tag_id })
+         .select("DISTINCT entries.id, entries.amount")
 
-      if fill_direction == "both"
-        # Net = incomes - expenses, floored at 0.
-        # DB convention: income = negative amount, expense = positive → SUM(-amount) gives net.
-        Entry.from(subq, :deduplicated_entries)
-             .pick(Arel.sql("GREATEST(0, COALESCE(SUM(-amount), 0))"))
-             .to_d
-      else
-        subq = subq.where(direction_condition)
-        Entry.from(subq, :deduplicated_entries)
-             .pick(Arel.sql("COALESCE(SUM(ABS(amount)), 0)"))
-             .to_d
+        if fill_direction == "both"
+          # Net = incomes - expenses, floored at 0.
+          # DB convention: income = negative amount, expense = positive → SUM(-amount) gives net.
+          Entry.from(subq, :deduplicated_entries)
+               .pick(Arel.sql("GREATEST(0, COALESCE(SUM(-amount), 0))"))
+               .to_d
+        else
+          subq = subq.where(direction_condition)
+          Entry.from(subq, :deduplicated_entries)
+               .pick(Arel.sql("COALESCE(SUM(ABS(amount)), 0)"))
+               .to_d
+        end
       end
     end
 
