@@ -378,6 +378,28 @@ class Family::DataExporter
         }.to_json
       end
 
+      # Export pockets after accounts, tags, and transactions so import can remap
+      # account_id/tag_id and recompute tag-linked allocations from restored taggings.
+      Pocket.joins(:account).where(accounts: { family_id: @family.id }).find_each do |pocket|
+        lines << {
+          type: "Pocket",
+          data: {
+            id: pocket.id,
+            account_id: pocket.account_id,
+            tag_id: pocket.tag_id,
+            name: pocket.name,
+            allocated_amount: pocket.allocated_amount,
+            currency: pocket.currency,
+            fill_direction: pocket.fill_direction,
+            color: pocket.color,
+            icon: pocket.icon,
+            description: pocket.description,
+            created_at: pocket.created_at,
+            updated_at: pocket.updated_at
+          }
+        }.to_json
+      end
+
       # Export transfer decisions after transactions so import can remap both sides.
       family_transfers.find_each do |transfer|
         lines << {

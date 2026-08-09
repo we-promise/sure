@@ -31,7 +31,7 @@ class Family::DataImporter
     end
   end
 
-  SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
+  SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction Transaction Pocket Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
@@ -49,6 +49,7 @@ class Family::DataImporter
     merchants: "Merchant",
     recurring_transactions: "RecurringTransaction",
     transactions: "Transaction",
+    pockets: "Pocket",
     budgets: "Budget",
     securities: "Security",
     rules: "Rule"
@@ -61,6 +62,7 @@ class Family::DataImporter
     "Merchant" => "merchants",
     "RecurringTransaction" => "recurring_transactions",
     "Transaction" => "transactions",
+    "Pocket" => "pockets",
     "Transfer" => "transfers",
     "RejectedTransfer" => "rejected_transfers",
     "Trade" => "trades",
@@ -84,6 +86,7 @@ class Family::DataImporter
       merchants: {},
       recurring_transactions: {},
       transactions: {},
+      pockets: {},
       budgets: {},
       securities: {},
       rules: {}
@@ -108,6 +111,7 @@ class Family::DataImporter
       import_merchants(records["Merchant"] || [])
       import_recurring_transactions(records["RecurringTransaction"] || [])
       import_transactions(records["Transaction"] || [])
+      import_pockets(records["Pocket"] || [])
       import_transfers(records["Transfer"] || [])
       import_rejected_transfers(records["RejectedTransfer"] || [])
       import_trades(records["Trade"] || [])
@@ -685,6 +689,58 @@ class Family::DataImporter
         map_source!(:transactions, row[:old_id], transaction) if row[:old_id].present?
         @created_entries << child_entry
       end
+    end
+
+    def import_pockets(records)
+      records.each do |record|
+        data = record["data"]
+        old_id = data["id"]
+
+        require_source_id!("Pocket", old_id)
+
+        new_account_id = mapped_id(:accounts, data["account_id"], record_type: "Pocket")
+        next unless new_account_id
+
+        account = @family.accounts.find(new_account_id)
+
+        new_tag_id = remap_optional_id(:tags, data["tag_id"], record_type: "Pocket")
+        next if data["tag_id"].present? && new_tag_id.blank?
+
+        pocket = mapped_record(:pockets, old_id, account.pockets, record_type: "Pocket")
+        created = pocket.blank?
+        pocket ||= account.pockets.build
+
+        pocket.assign_attributes(
+          name: data["name"],
+          allocated_amount: data["allocated_amount"].to_d,
+          currency: data["currency"] || account.currency,
+          fill_direction: pocket_fill_direction_for(data["fill_direction"]),
+          tag_id: new_tag_id,
+          color: data["color"],
+          icon: data["icon"],
+          description: data["description"]
+        )
+
+        pocket.save!
+
+        # Pocket#sync_from_tag fires on any tag_id OR fill_direction change (even for
+        # tag-less pockets) and recomputes allocated_amount from live taggings, which
+        # would zero out a manual pocket's imported amount. Re-assert the correct
+        # amount after save: recomputed from restored taggings when tag-linked,
+        # otherwise the imported value for manual pockets.
+        if new_tag_id.present?
+          pocket.recompute_from_tag!
+        else
+          pocket.update_column(:allocated_amount, data["allocated_amount"].to_d)
+        end
+
+        map_source!(:pockets, old_id, pocket)
+        increment_summary("Pocket", created ? :created : :updated)
+      end
+    end
+
+    def pocket_fill_direction_for(value)
+      value.to_s.in?(Pocket.fill_directions.keys) ? value.to_s : "inflows"
     end
 
     def import_transfers(records)

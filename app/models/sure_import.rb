@@ -13,6 +13,7 @@ class SureImport < Import
     "Merchant" => :merchants,
     "RecurringTransaction" => :recurring_transactions,
     "Transaction" => :transactions,
+    "Pocket" => :pockets,
     "Transfer" => :transfers,
     "RejectedTransfer" => :rejected_transfers,
     "Trade" => :trades,

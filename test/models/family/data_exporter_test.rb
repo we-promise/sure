@@ -79,6 +79,37 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports pockets to ndjson for restore" do
+    pocket = @account.pockets.create!(
+      name: "NDJSON Test Pocket",
+      allocated_amount: 250,
+      currency: "USD",
+      fill_direction: "outflows",
+      tag: @tag,
+      color: "#875BF7",
+      icon: "wallet",
+      description: "Vacation fund"
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson = zip.read("all.ndjson")
+      record = ndjson.each_line.map { |line| JSON.parse(line) }.find { |r| r["type"] == "Pocket" && r.dig("data", "id") == pocket.id }
+
+      assert_not_nil record
+      data = record["data"]
+      assert_equal pocket.id, data["id"]
+      assert_equal @account.id, data["account_id"]
+      assert_equal @tag.id, data["tag_id"]
+      assert_equal "NDJSON Test Pocket", data["name"]
+      assert_equal "outflows", data["fill_direction"]
+      assert_equal "#875BF7", data["color"]
+      assert_equal "wallet", data["icon"]
+      assert_equal "Vacation fund", data["description"]
+    end
+  end
+
   test "exports attachment manifest metadata without binary payloads" do
     entry = @account.entries.create!(
       name: "Receipt Transaction",
