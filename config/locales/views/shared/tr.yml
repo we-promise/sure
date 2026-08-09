@@ -15,6 +15,9 @@ tr:
       default_body: Bu işlem geri alınamaz.
       default_btn_text: Onayla
       default_title: Emin misiniz?
+      resource_deletion_title: "%{resource} silinsin mi?"
+      resource_deletion_body: "%{resource} ögesini silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+      resource_deletion_btn_text: "%{resource} sil"
     exchange_rate_tabs:
       calculate_rate_tab: Döviz Kuru Hesapla
       convert_tab: Döviz Kuru ile Dönüştür

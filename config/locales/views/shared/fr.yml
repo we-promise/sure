@@ -14,6 +14,9 @@ fr:
       default_body: Ceci n’est pas réversible.
       default_btn_text: Confirmer
       default_title: Êtes-vous sûr?
+      resource_deletion_title: "Supprimer %{resource} ?"
+      resource_deletion_body: "Êtes-vous sûr de vouloir supprimer %{resource} ? Ceci n’est pas réversible."
+      resource_deletion_btn_text: "Supprimer %{resource}"
     exchange_rate_tabs:
       calculate_rate_tab: Calculer le taux FX
       convert_tab: Convertir avec le taux FX
