@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_25_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -100,7 +100,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
     t.uuid "accountable_id"
     t.string "accountable_type"
     t.decimal "balance", precision: 19, scale: 4
-    t.uuid "budget_owner_id"
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
     t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.datetime "created_at", null: false
@@ -123,7 +122,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
     t.datetime "updated_at", null: false
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
-    t.index ["budget_owner_id"], name: "index_accounts_on_budget_owner_id"
     t.index ["currency"], name: "index_accounts_on_currency"
     t.index ["family_id", "accountable_type"], name: "index_accounts_on_family_id_and_accountable_type"
     t.index ["family_id", "exclude_from_reports"], name: "index_accounts_on_family_id_and_exclude_from_reports"
@@ -373,17 +371,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
     t.index ["category_id"], name: "index_budget_categories_on_category_id"
   end
 
-  create_table "budget_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.uuid "owner_id", null: false
-    t.string "permission", default: "read_only", null: false
-    t.datetime "updated_at", null: false
-    t.uuid "viewer_id", null: false
-    t.index ["owner_id", "viewer_id"], name: "index_budget_shares_on_owner_id_and_viewer_id", unique: true
-    t.index ["owner_id"], name: "index_budget_shares_on_owner_id"
-    t.index ["viewer_id"], name: "index_budget_shares_on_viewer_id"
-  end
-
   create_table "budgets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.decimal "budgeted_spending", precision: 19, scale: 4
     t.datetime "created_at", null: false
@@ -393,10 +380,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
     t.uuid "family_id", null: false
     t.date "start_date", null: false
     t.datetime "updated_at", null: false
-    t.uuid "user_id"
-    t.index ["family_id", "start_date", "end_date", "user_id"], name: "index_budgets_on_family_start_end_user", unique: true
+    t.index ["family_id", "start_date", "end_date"], name: "index_budgets_on_family_id_and_start_date_and_end_date", unique: true
     t.index ["family_id"], name: "index_budgets_on_family_id"
-    t.index ["user_id"], name: "index_budgets_on_user_id"
   end
 
   create_table "categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -774,7 +759,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
     t.string "default_account_sharing", default: "shared", null: false
     t.boolean "early_access", default: false
     t.string "enabled_currencies", array: true
-    t.boolean "household_budget_enabled", default: true, null: false
     t.datetime "last_sync_all_attempted_at"
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
@@ -782,7 +766,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
     t.string "moniker", default: "Family", null: false
     t.integer "month_start_day", default: 1, null: false
     t.string "name"
-    t.boolean "personal_budgets", default: false, null: false
     t.boolean "recurring_transactions_disabled", default: false, null: false
     t.string "stripe_customer_id"
     t.string "timezone"
@@ -2364,7 +2347,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
   add_foreign_key "accounts", "imports"
   add_foreign_key "accounts", "plaid_accounts"
   add_foreign_key "accounts", "simplefin_accounts"
-  add_foreign_key "accounts", "users", column: "budget_owner_id", on_delete: :nullify
   add_foreign_key "accounts", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
@@ -2376,12 +2358,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
   add_foreign_key "binance_items", "families"
   add_foreign_key "brex_accounts", "brex_items"
   add_foreign_key "brex_items", "families"
-  add_foreign_key "budget_categories", "budgets", on_delete: :cascade
+  add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
-  add_foreign_key "budget_shares", "users", column: "owner_id"
-  add_foreign_key "budget_shares", "users", column: "viewer_id"
   add_foreign_key "budgets", "families"
-  add_foreign_key "budgets", "users", on_delete: :cascade
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
