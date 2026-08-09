@@ -393,7 +393,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_25_000000) do
     t.string "name", null: false
     t.uuid "parent_id"
     t.datetime "updated_at", null: false
+    t.datetime "last_used_at"
     t.index ["family_id"], name: "index_categories_on_family_id"
+    t.index ["family_id", "last_used_at"], name: "index_categories_on_family_id_and_last_used_at"
   end
 
   create_table "chats", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

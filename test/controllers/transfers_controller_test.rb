@@ -285,6 +285,82 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can create transfer with tags on both sides" do
+    tag = tags(:one)
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          tag_ids: [ tag.id ]
+        }
+      }
+    end
+
+    transfer = Transfer.order(:created_at).last
+    assert_equal [ tag.id ], transfer.outflow_transaction.tag_ids
+    assert_equal [ tag.id ], transfer.inflow_transaction.tag_ids
+  end
+
+  test "can update transfer tags on both sides" do
+    transfer = transfers(:one)
+    tag = tags(:one)
+
+    patch tags_transfer_url(transfer), params: { tag_ids: [ tag.id ] }, as: :json
+
+    assert_response :success
+    assert_equal [ tag.id ], transfer.outflow_transaction.reload.tag_ids
+    assert_equal [ tag.id ], transfer.inflow_transaction.reload.tag_ids
+    assert_equal [ tag.id ], JSON.parse(response.body)["tag_ids"]
+  end
+
+  test "update transfer tags ignores tags from other families" do
+    transfer = transfers(:one)
+    family_tag = tags(:one)
+    other_family = Family.create!(name: "Other Family", currency: "USD")
+    other_tag = other_family.tags.create!(name: "Foreign")
+
+    patch tags_transfer_url(transfer), params: {
+      tag_ids: [ family_tag.id, other_tag.id ]
+    }, as: :json
+
+    assert_response :success
+    assert_equal [ family_tag.id ], transfer.outflow_transaction.reload.tag_ids
+    assert_equal [ family_tag.id ], transfer.inflow_transaction.reload.tag_ids
+  end
+
+  test "can clear transfer tags" do
+    transfer = transfers(:one)
+    tag = tags(:one)
+    transfer.outflow_transaction.update!(tag_ids: [ tag.id ])
+    transfer.inflow_transaction.update!(tag_ids: [ tag.id ])
+
+    patch tags_transfer_url(transfer), params: { tag_ids: [] }, as: :json
+
+    assert_response :success
+    assert_empty transfer.outflow_transaction.reload.tag_ids
+    assert_empty transfer.inflow_transaction.reload.tag_ids
+  end
+
+  test "update tags requires annotate permission on both transfer sides" do
+    # family_member: full_control on depository (outflow), read_only on credit_card (inflow)
+    sign_in users(:family_member)
+    transfer = transfers(:one)
+    tag = tags(:one)
+    original_outflow_tags = transfer.outflow_transaction.tag_ids
+    original_inflow_tags = transfer.inflow_transaction.tag_ids
+
+    patch tags_transfer_url(transfer), params: { tag_ids: [ tag.id ] }, as: :json
+
+    assert_response :forbidden
+    assert_equal I18n.t("accounts.not_authorized"), JSON.parse(response.body)["error"]
+    assert_equal original_outflow_tags, transfer.outflow_transaction.reload.tag_ids
+    assert_equal original_inflow_tags, transfer.inflow_transaction.reload.tag_ids
+  end
+
   test "can add notes to transfer" do
     transfer = transfers(:one)
     assert_nil transfer.notes
