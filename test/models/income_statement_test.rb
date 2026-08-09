@@ -479,20 +479,20 @@ class IncomeStatementTest < ActiveSupport::TestCase
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    # Pending matches are not authoritative, so the funds-movement inflow is
-    # still counted as income until the transfer is confirmed.
-    assert_equal Money.new(1_000, @family.currency), totals.income_money
+    # Pending matches are not authoritative, so both legs remain visible
+    # until the transfer is confirmed.
+    assert_equal Money.new(2_000, @family.currency), totals.income_money
     assert_equal Money.new(1_900, @family.currency), totals.expense_money
   end
 
-  test "treats pending auto-matched loan payments like confirmed transfers" do
+  test "keeps pending auto-matched loan payments as visible outflows" do
     loan_outflow = create_transaction(account: @checking_account, amount: 500, kind: "loan_payment")
     loan_inflow = create_transaction(account: @loan_account, amount: -500, kind: "funds_movement")
     Transfer.create!(outflow_transaction: loan_outflow.entryable, inflow_transaction: loan_inflow.entryable, status: "pending")
 
     totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
 
-    assert_equal Money.new(1_000, @family.currency), totals.income_money
+    assert_equal Money.new(1_500, @family.currency), totals.income_money
     assert_equal Money.new(1_400, @family.currency), totals.expense_money
   end
 
