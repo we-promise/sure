@@ -3,9 +3,12 @@ zh-TW:
   settings:
     hostings:
       invite_code_settings:
-        description: 控制新使用者註冊您的 %{product} 實例 (Instance) 的方式。
-        email_confirmation_description: 啟用後，使用者在更改電子郵件地址時必須進行驗證。
+        description: 設定新使用者可以用哪些方式註冊您的 %{product} 實例 (Instance)。
+        email_confirmation_description: 啟用後，使用者在更改電子郵件地址時必須驗證。
         email_confirmation_title: 需要電子郵件驗證
+        default_family_title: 新使用者的預設家庭
+        default_family_description: 只有在新使用者沒有收到邀請時，才把新使用者放進這個家庭／群組。
+        default_family_none: 無（建立新家庭）
         generate_tokens: 產生新代碼
         generated_tokens: 已產生的代碼
         title: 加入流程
@@ -15,64 +18,244 @@ zh-TW:
           invite_only: 僅限邀請
       show:
         general: 一般設定
-        financial_data_providers: 金融資料提供商
+        ai_assistant: AI 助手
+        financial_data_providers: 金融資料供應商
+        property_valuation_providers: 房產估價供應商
+        sync_settings: 同步設定
         invites: 邀請碼
         title: 自行代管 (Self-Hosting)
         danger_zone: 危險區域
         clear_cache: 清除資料快取
-        clear_cache_warning: 清除資料快取將會移除所有匯率、證券價格、帳戶餘額等資料。這不會刪除帳戶、交易紀錄、類別或其他使用者擁有的資料。
+        clear_cache_warning: 清除資料快取會移除所有匯率、證券價格、帳戶餘額等快取資料。您自己的帳戶、交易紀錄、分類等資料都不會被刪除。
         confirm_clear_cache:
           title: 清除資料快取？
           body: 您確定要清除資料快取嗎？這將移除所有匯率、證券價格、帳戶餘額及其他暫存資料。此操作無法復原。
       provider_selection:
-        title: 提供商選擇
-        description: 選擇用於獲取匯率和證券價格的服務。Yahoo Finance 是免費的且不需要 API 金鑰。Twelve Data 需要免費的 API 金鑰，但可能提供更廣的資料涵蓋範圍。
-        exchange_rate_provider_label: 匯率資料提供商
-        securities_provider_label: 證券（股價）資料提供商
-        env_configured_message: 提供商選擇已被停用，因為已設定環境變數 (EXCHANGE_RATE_PROVIDER 或 SECURITIES_PROVIDER)。若要在此處啟用選擇，請從系統配置中移除這些環境變數。
+        exchange_rate_title: 匯率資料供應商
+        exchange_rate_description: 選擇單一供應商來取得貨幣匯率。
+        exchange_rate_provider_label: 匯率資料供應商
+        securities_title: 證券資料供應商
+        securities_description: 啟用一個或多個供應商來取得股票、ETF 與共同基金的價格。搜尋時會同時查詢所有已啟用的供應商，並將結果合併。
+        env_configured_message: 因為已設定環境變數，這裡無法選擇供應商。若要改在這裡選擇，請先移除那些環境變數。
+        twelve_data_hint: 需要 API 金鑰，每天 800 點額度
+        yahoo_finance_hint: 免費，不需要 API 金鑰
+        requires_api_key: 需要 API 金鑰
+        requires_api_key_eodhd: 需要 API 金鑰，每天上限 20 次呼叫
+        requires_api_key_alpha_vantage: 需要 API 金鑰，每天上限 25 次呼叫
+        mfapi_hint: 免費，不需要 API 金鑰 - 僅限印度共同基金
+        binance_public_hint: 免費，不需要 API 金鑰 - 僅限加密貨幣（BTC、ETH 等）
+        moex_public_hint: 免費，不需要 API 金鑰 - 俄羅斯股票、基金與債券（MOEX），含盧布匯率
+        tinkoff_invest_hint: 需要唯讀 Token - 俄羅斯股票/基金/債券價格 + 品牌標誌
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+          tiingo: Tiingo
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
+          binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+        title: 供應商選擇
+        description: 選擇用於取得匯率和證券價格的服務。Yahoo Finance 是免費的且不需要 API 金鑰。Twelve Data 需要免費的 API 金鑰，但可能提供更廣的資料涵蓋範圍。
+        securities_provider_label: 證券（股價）資料供應商
+      assistant_settings:
+        title: AI 助手
+        description: 選擇聊天助手的回應方式。內建模式會直接使用您設定的 LLM 供應商；外部模式則交給遠端 AI 代理處理，該代理可以透過 MCP 回頭呼叫 Sure 的財務工具。
+        type_label: 助手類型
+        type_builtin: 內建（直接使用 LLM）
+        type_external: 外部（遠端代理）
+        external_status: 外部助手端點
+        external_configured: 已設定
+        external_not_configured: 尚未設定。請在下方輸入網址與 Token，或設定 EXTERNAL_ASSISTANT_URL 與 EXTERNAL_ASSISTANT_TOKEN 環境變數。
+        env_notice: 助手類型已透過 ASSISTANT_TYPE 環境變數鎖定為「%{type}」。
+        env_configured_external: 已透過環境變數成功設定。
+        url_label: 端點網址
+        url_placeholder: https://your-agent-host/v1/chat
+        url_help: 代理 API 端點的完整網址，請向您的代理供應商索取。
+        token_label: API 權杖 (API Token)
+        token_placeholder: 輸入您的代理供應商給的 Token
+        token_help: 由您的外部代理提供的驗證 Token，每次請求都會以 Bearer token 的形式送出。
+        agent_id_label: Agent ID（選填）
+        agent_id_placeholder: main（預設）
+        agent_id_help: 當供應商託管多個代理時，用來指定其中一個。留白即使用預設值。
+        disconnect_title: 外部連線
+        disconnect_description: 移除外部助手連線，改回使用內建助手。
+        disconnect_button: 中斷連線
+        confirm_disconnect:
+          title: 要中斷外部助手嗎？
+          body: 這會移除已儲存的網址、Token 與 Agent ID，並切換回內建助手。日後輸入新的憑證就能重新連線。
       brand_fetch_settings:
         description: 輸入 Brand Fetch 提供的 Client ID
+        env_configured_message: 您已透過 BRAND_FETCH_CLIENT_ID 環境變數成功設定 Brand Fetch Client ID。
+        show_details: （顯示詳細資訊）
+        setup_step_1_html: 前往 <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> 註冊一個免費的 Brand Fetch 開發者帳號。
+        setup_step_2_html: 前往 <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> 頁面。
+        setup_step_3: 點選「Your Client ID」區塊下方的眼睛圖示以顯示您的 Client ID，然後貼到下方。
         label: Client ID
         placeholder: 在此輸入您的 Client ID
         title: Brand Fetch 設定
+        high_res_label: 啟用高解析度標誌
+        high_res_description: 啟用後，標誌會以 120x120 而非 40x40 的解析度取得，在高 DPI 螢幕上會更清晰。
+      llm_provider_selector:
+        title: AI 供應商
+        description: 選擇由哪一個 LLM 驅動 AI 聊天。批次作業（交易分類、商家辨識與 PDF 處理）目前一律使用 OpenAI。
+        env_configured_message: 已透過 LLM_PROVIDER 環境變數成功設定。
+        provider_label: 目前啟用的 LLM 供應商
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: 切換供應商會在下一次聊天時生效。請在下方設定目前供應商的憑證。
+        not_configured_hint: 請在下方加入 %{provider} API 金鑰以啟用。
+        data_retention_heading: 資料處理方式
+        data_retention: API 輸入預設不會用於訓練模型；各供應商託管的 API 會為了信任與安全用途保留資料約 30 天。自訂或自行代管的端點則依照您自己的政策。
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: 輸入您的 Anthropic API 金鑰。您也可以把 Base URL 指向 AWS Bedrock 或 GCP Vertex。
+        env_configured_message: 已透過環境變數成功設定。
+        access_token_label: API 金鑰
+        access_token_placeholder: 輸入您的 Anthropic API 金鑰
+        base_url_label: Base URL（選填）
+        base_url_placeholder: https://api.anthropic.com（預設）
+        model_label: 預設模型（選填）
+        model_placeholder: claude-sonnet-4-6（預設）
+        model_help: 用於聊天與 PDF 處理。批次作業（自動分類、商家辨識）為了成本考量預設使用 Haiku。
       openai_settings:
-        description: 輸入存取權杖 (Access Token)，並可選擇配置自定義的 OpenAI 相容提供商。
-        env_configured_message: 已透過環境變數成功配置。
+        description: 輸入存取權杖 (Access Token)，並可選擇設定自訂的 OpenAI 相容供應商。
+        env_configured_message: 已透過環境變數成功設定。
         access_token_label: 存取權杖 (Access Token)
-        access_token_placeholder: 在此輸入您的存取權杖
+        access_token_placeholder: 在此輸入您的 Access Token
         uri_base_label: API 基礎 URL（選填）
-        uri_base_placeholder: "預設為 https://api.openai.com/v1"
+        uri_base_placeholder: 預設為 https://api.openai.com/v1
         model_label: 模型名稱（選填）
-        model_placeholder: "預設為 gpt-4.1"
+        model_placeholder: 預設為 gpt-4.1
         json_mode_label: JSON 模式
         json_mode_auto: 自動（建議）
         json_mode_strict: 嚴格 (Strict) - 最適合思考模型
         json_mode_none: 無 (None) - 最適合標準模型
         json_mode_json_object: JSON 物件 (JSON Object)
-        json_mode_help: "「嚴格模式」最適合思考模型（如 qwen-thinking, deepseek-reasoner）。「無模式」最適合標準模型（如 llama, mistral, gpt-oss）。"
+        json_mode_help: 「嚴格模式」最適合思考模型（如 qwen-thinking, deepseek-reasoner）。「無模式」最適合標準模型（如 llama, mistral, gpt-oss）。
+        budget_heading: Token 預算
+        budget_description: 適用於相容 OpenAI 的呼叫（聊天、自動分類、商家辨識與 PDF 處理）。預設值是為了小上下文的本機模型而保守設定的。若使用上下文視窗較大的雲端模型，請把數值調高。
+        context_window_label: 上下文視窗（選填）
+        context_window_help: 模型可接受的 Token 總數。預設值：2048 - 使用雲端 OpenAI 或大上下文的本機模型時請提高到 8192 以上。
+        max_response_tokens_label: 回應 Token 數上限（選填）
+        max_response_tokens_help: 保留給模型回覆的 Token 數。預設值：512。調低可以空出更多空間給較長的對話紀錄。
+        max_items_per_call_label: 每批項目數上限（選填）
+        max_items_per_call_help: 自動分類／商家辨識每批次的上限。預設值：25。過大的批次會自動切分以符合上下文視窗。
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance 提供免費的股票價格、匯率和金融資料存取，且不需要 API 金鑰。
+        status_healthy: Yahoo Finance 運作正常。
+        status_rate_limited: Yahoo Finance 暫時限制了請求速率。
+        rate_limited_title: 已達 Yahoo Finance 的速率限制。
+        rate_limited_message: 不需要處理。Sure 會在 30 分鐘內避免額外的健康檢查。價格與匯率作業會獨立繼續執行。
+        status_unavailable: Yahoo Finance 目前無法使用。
+        unavailable_title: 無法驗證 Yahoo Finance。
+        unavailable_message: 無法連線至 Yahoo Finance，或收到非預期的回應。請檢查您的網路連線，稍後再試。
+        status_unknown: 正在檢查 Yahoo Finance 狀態。
         status_active: Yahoo Finance 已啟用且運作正常
         status_inactive: Yahoo Finance 連線失敗
         connection_failed: 無法連線至 Yahoo Finance
         troubleshooting: 請檢查您的網路連線與防火牆設定。Yahoo Finance 可能暫時無法使用。
+      rentcast_settings:
+        title: RentCast
+        description: 輸入您的 RentCast API 金鑰，即可在新增房產時查詢美國房產的細節與估價。免費方案每月限 50 次 API 請求，由房產查詢與每日估價更新共用。付費方案可用 RENTCAST_MAX_REQUESTS_PER_MONTH 環境變數提高上限。
+        env_configured_message: 已透過 RENTCAST_API_KEY 環境變數成功設定。
+        label: API 金鑰
+        placeholder: 在此輸入您的 RentCast API 金鑰
+        usage: 本月已使用 %{used} / %{limit} 次請求
+      realie_settings:
+        title: Realie
+        description: 輸入您的 Realie API 金鑰，即可在新增房產時查詢美國房產的細節與估價。免費方案每月限 25 次 API 請求，由房產查詢與每日估價更新共用。付費方案可用 REALIE_MAX_REQUESTS_PER_MONTH 環境變數提高上限。
+        env_configured_message: 已透過 REALIE_API_KEY 環境變數成功設定。
+        label: API 金鑰
+        placeholder: 在此輸入您的 Realie API 金鑰
+        usage: 本月已使用 %{used} / %{limit} 次請求
+      tiingo_settings:
+        title: Tiingo
+        description: 輸入 Tiingo 提供的 API Token。免費方案每小時支援 50 個不重複的代碼，並提供 30 年以上的歷史資料。
+        env_configured_message: 已透過 TIINGO_API_KEY 環境變數成功設定。
+        label: API 權杖 (API Token)
+        placeholder: 在此輸入您的 Tiingo API Token
+        show_details: （顯示詳細資訊）
+        step_1_html: 前往 <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> 註冊一個免費帳號。
+        step_2_html: 前往 <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a> 頁面。
+        step_3: 複製您的 API Token 並貼到下方。
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: 輸入唯讀的 T-Invest API Token。用於取得證券的品牌標誌（包含基金與債券，即使價格來自 MOEX），並在上方啟用時提供俄羅斯金融商品的價格。
+        env_configured_message: 已透過 TINKOFF_INVEST_API_KEY 環境變數成功設定。
+        label: API 權杖 (API Token)
+        placeholder: 在此輸入您的 T-Invest API Token
+        show_details: （顯示詳細資訊）
+        step_1: 開啟 T-Bank 投資，接著進入 Settings，然後是 API tokens（需要已開立的 T-Bank 券商帳戶）。
+        step_2: 建立一個唯讀存取的 Token。
+        step_3: 複製 Token 並貼到下方。
+      eodhd_settings:
+        title: EODHD
+        description: 輸入 EODHD 提供的 API Token。支援 LSE、XETRA 與其他國際交易所的歐洲 ETF。
+        env_configured_message: 已透過 EODHD_API_KEY 環境變數成功設定。
+        label: API 權杖 (API Token)
+        placeholder: 在此輸入您的 EODHD API Token
+        show_details: （顯示詳細資訊）
+        step_1_html: 前往 <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> 註冊一個免費帳號。
+        step_2_html: 前往您的 <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> 找到您的 API Token。
+        step_3: 複製您的 API Token 並貼到下方。
+        rate_limit_warning: EODHD 免費方案每天限用 20 次 API 呼叫，最適合當作補充用的供應商，處理其他供應商查不到的歐洲 ETF。
+      alpha_vantage_settings:
+        title: Alpha Vantage
+        description: 輸入 Alpha Vantage 的 API 金鑰。支援倫敦證券交易所、XETRA 與其他交易所的歐洲 ETF。
+        env_configured_message: 已透過 ALPHA_VANTAGE_API_KEY 環境變數成功設定。
+        label: API 金鑰
+        placeholder: 在此輸入您的 Alpha Vantage API 金鑰
+        show_details: （顯示詳細資訊）
+        step_1_html: 前往 <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> 索取您的免費 API 金鑰。
+        step_2: 複製 API 金鑰並貼到下方。
+        rate_limit_warning: Alpha Vantage 免費方案每天限用 25 次 API 呼叫，最適合當作補充用的供應商，處理其他供應商查不到的歐洲 ETF。
+        no_health_check_note: 由於這個供應商的用量限制很嚴格，因此不做連線健康檢查。
       twelve_data_settings:
-        api_calls_used: "每日 API 呼叫已使用 %{used} / %{limit} (%{percentage})"
+        api_calls_used: 每日 API 呼叫已使用 %{used} / %{limit} (%{percentage})
         description: 輸入 Twelve Data 提供的 API 金鑰
-        env_configured_message: 已透過 TWELVE_DATA_API_KEY 環境變數成功配置。
+        env_configured_message: 已透過 TWELVE_DATA_API_KEY 環境變數成功設定。
         label: API 金鑰
         placeholder: 在此輸入您的 API 金鑰
-        plan: "%{plan} 方案"
+        show_details: （顯示詳細資訊）
+        step_1_html: 前往 <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> 註冊一個免費的 Twelve Data 開發者帳號。
+        step_2_html: 前往 <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a> 頁面。
+        step_3: 顯示您的 Secret Key 並貼到下方。
+        plan: '%{plan} 方案'
+        plan_upgrade_warning_title: 部分代碼需要付費方案
+        plan_upgrade_warning_description: 您投資組合中的下列代碼，無法用目前的 Twelve Data 方案同步價格。
+        requires_plan: 需要 %{plan} 方案
+        view_pricing: 查看 Twelve Data 價格方案
         title: Twelve Data
       update:
         failure: 設定值無效
         success: 設定已更新
         invalid_onboarding_state: 註冊狀態無效
+        invalid_sync_time: 同步時間格式無效，請使用 HH:MM 格式（例如 02:30）。
+        invalid_llm_budget: '%{field} 必須是大於或等於 %{minimum} 的整數。'
+        invalid_anthropic_base_url: Anthropic Base URL 必須是 http(s) 網址。
+        anthropic_model_required_for_base_url: 設定自訂 Base URL 時，必須一併指定 Anthropic 模型。
+        scheduler_sync_failed: 設定已儲存，但同步排程更新失敗。請再試一次，或查看伺服器紀錄檔。
+      disconnect_external_assistant:
+        external_assistant_disconnected: 外部助手已中斷連線
       clear_cache:
-        cache_cleared: 資料快取已清除。這可能需要幾分鐘的時間來完成。
+        cache_cleared: 資料快取已清除。這可能需要一點時間才會完成。
       not_authorized: 您沒有權限執行此操作
+      ensure_admin:
+        not_authorized: 您沒有權限執行此操作
+      ensure_super_admin_for_onboarding:
+        not_authorized: 您沒有權限執行此操作
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: 設定已儲存，但同步排程更新失敗。請再試一次，或查看伺服器紀錄檔。
+      sync_settings:
+        auto_sync_label: 啟用自動同步
+        auto_sync_description: 啟用後，所有帳戶都會在指定時間每天自動同步。
+        auto_sync_time_label: 同步時間 (HH:MM)
+        auto_sync_time_description: 指定每天要進行自動同步的時間。
+        include_pending_label: 納入待處理交易
+        include_pending_description: 啟用後，待處理（尚未清算）的交易會被匯入，並在入帳時自動核對。如果您的銀行提供的待處理資料不可靠，請關閉這個選項。
+        env_configured_message: 這項設定已停用，因為系統設定了供應商的環境變數（SIMPLEFIN_INCLUDE_PENDING 或 PLAID_INCLUDE_PENDING）。移除它才能啟用這項設定。
