@@ -17,8 +17,9 @@ jobs:
           persist-credentials: false
 
       - name: Pipelock Scan
-        uses: luckyPipewrench/pipelock@cef4f47eb99ffe00e20fa7d1423bff1a44742dbe # v2.4.0
+        uses: luckyPipewrench/pipelock@818ca0a7af4dbcd56ada7fa57e2dc32f9e799e34 # v2.8.0
         with:
+          version: '2.8.0'
           scan-diff: 'true'
           fail-on-findings: 'true'
           test-vectors: 'false'
@@ -30,3 +31,6 @@ jobs:
             docs/hosting/ai.md
             app/models/provider/binance.rb
             workers/preview/package-lock.json
+            # Preview Dockerfile uses local dev credentials (rails/rails) that are
+            # not real secrets; Dockerfile format does not support inline # pipelock:ignore
+            Dockerfile.preview
