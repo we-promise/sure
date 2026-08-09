@@ -1,0 +1,18 @@
+uk:
+  pdf_import_mailer:
+    success_email:
+      subject: "Sure: Імпорт PDF успішний"
+      title: "Імпорт PDF успішний"
+      intro: "Ваш імпорт PDF успішно завершено."
+      details: "Деталі:"
+      filename: "Назва файлу: %{filename}"
+      transactions_created: "Створено транзакцій: %{count}"
+      go_to_sure: "Перейти до Sure"
+    failure_email:
+      subject: "Sure: Імпорт PDF не вдався"
+      title: "Імпорт PDF не вдався"
+      intro: "Ваш імпорт PDF не вдався."
+      details: "Деталі:"
+      filename: "Назва файлу: %{filename}"
+      error_message: "Помилка: %{error}"
+      go_to_sure: "Перейти до Sure"
