@@ -11,6 +11,7 @@
   <% dialog.with_body do %>
     <%= styled_form_with url: complete_account_setup_akahu_item_path(@akahu_item),
                          method: :post,
+                         scope: :account_types,
                          local: true,
                          data: { turbo_frame: "_top" },
                          class: "space-y-6" do |form| %>
@@ -42,7 +43,7 @@
                 </p>
               </div>
 
-              <%= form.select "account_types[#{akahu_account.id}]",
+              <%= form.select akahu_account.id,
                               @account_type_options,
                               {
                                 label: t(".account_type_label"),
