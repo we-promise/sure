@@ -1,0 +1,5 @@
+nl:
+  wise_items:
+    provider_panel:
+      instructions:
+        open_tokens: Ga naar Instellingen → Apps koppelen en beheren → API-tokens (onder Ontwikkelaarstools)

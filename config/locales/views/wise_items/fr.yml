@@ -69,7 +69,7 @@ fr:
           uniquement pour synchroniser vos soldes et transactions.
         create_token: Créez un nouveau jeton API personnel avec un accès en lecture
           seule
-        open_tokens: Accédez à Paramètres → Jetons API
+        open_tokens: Accédez à Paramètres → Connecter et gérer les applications → Jetons API (sous Outils pour les développeurs)
         sign_in_html: Visitez %{link} et connectez-vous à votre compte
       keep_token_placeholder: Laisser vide pour conserver le jeton actuel
       not_configured: Non configuré

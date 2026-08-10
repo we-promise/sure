@@ -1,0 +1,5 @@
+zh-TW:
+  wise_items:
+    provider_panel:
+      instructions:
+        open_tokens: 前往「設定」→「連線並管理應用程式」→「API 權杖」（位於「開發者工具」下）

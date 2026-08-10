@@ -1,0 +1,5 @@
+vi:
+  wise_items:
+    provider_panel:
+      instructions:
+        open_tokens: Đi tới Cài đặt → Kết nối và quản lý ứng dụng → Mã thông báo API (trong Công cụ dành cho nhà phát triển)

@@ -1,0 +1,5 @@
+it:
+  wise_items:
+    provider_panel:
+      instructions:
+        open_tokens: Vai su Impostazioni → Connetti e gestisci app → Token API (in Strumenti per sviluppatori)
