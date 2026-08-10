@@ -78,7 +78,7 @@ en:
         message: Configure Active Record encryption keys before adding Wise tokens in production. Without encryption, tokens are stored in plaintext.
       instructions:
         sign_in_html: "Visit %{link} and log in to your account"
-        open_tokens: "Go to Settings → API tokens"
+        open_tokens: "Go to Settings → Connect and manage apps → Developer tools → API tokens"
         create_token: "Create a new personal API token with read-only access"
         copy_token_html: "Copy the token and paste it below. Sure uses it only to sync your balances and transactions."
     provider_connection:
