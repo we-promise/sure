@@ -483,7 +483,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(1_900, @family.currency), totals.expense_money
   end
 
-  test "treats pending auto-matched investment contributions like confirmed transfers" do
+  test "does not treat pending auto-matched investment contributions as confirmed transfers" do
     investment_account = @family.accounts.create!(
       name: "Pending Brokerage",
       currency: @family.currency,
@@ -501,7 +501,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
 
-    assert_equal Money.new(1_000, @family.currency), totals.income_money
+    assert_equal Money.new(0, @family.currency), totals.income_money
     assert_equal Money.new(1_900, @family.currency), totals.expense_money
   end
 
