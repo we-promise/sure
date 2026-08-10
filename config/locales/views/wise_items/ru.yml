@@ -2,4 +2,4 @@ ru:
   wise_items:
     provider_panel:
       instructions:
-        open_tokens: Перейдите в Настройки → Подключение и управление приложениями → Токены API (в разделе Инструменты разработчика)
+        open_tokens: Перейдите в Settings → Connect and manage apps → API tokens (under Developer tools)

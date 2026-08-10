@@ -2,4 +2,4 @@ hu:
   wise_items:
     provider_panel:
       instructions:
-        open_tokens: Lépjen a Beállítások → Alkalmazások csatlakoztatása és kezelése → API-tokenek menüpontra (a Fejlesztői eszközök alatt)
+        open_tokens: Lépjen a Settings → Connect and manage apps → API tokens (under Developer tools) menüpontra

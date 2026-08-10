@@ -2,4 +2,4 @@ ro:
   wise_items:
     provider_panel:
       instructions:
-        open_tokens: Accesați Setări → Conectați și gestionați aplicațiile → Tokenuri API (în Instrumente pentru dezvoltatori)
+        open_tokens: Accesați Settings → Connect and manage apps → API tokens (under Developer tools)

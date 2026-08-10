@@ -2,4 +2,4 @@ es:
   wise_items:
     provider_panel:
       instructions:
-        open_tokens: Ve a Configuración → Conectar y gestionar aplicaciones → Tokens de API (en Herramientas para desarrolladores)
+        open_tokens: Ve a Settings → Connect and manage apps → API tokens (under Developer tools)

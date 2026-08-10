@@ -65,7 +65,7 @@ tr:
         copy_token_html: Token'ı kopyalayın ve aşağıya yapıştırın. Sure bunu yalnızca
           bakiyelerinizi ve işlemlerinizi eşitlemek için kullanır.
         create_token: Salt okunur erişimle yeni bir kişisel API token'ı oluşturun
-        open_tokens: Ayarlar → Uygulamaları bağlayın ve yönetin → API token'ları (Geliştirici araçları altında) bölümüne gidin
+        open_tokens: Settings → Connect and manage apps → API tokens (under Developer tools) bölümüne gidin
         sign_in_html: "%{link} adresini ziyaret edin ve hesabınıza giriş yapın"
       keep_token_placeholder: Mevcut token'ı korumak için boş bırakın
       not_configured: Yapılandırılmamış
