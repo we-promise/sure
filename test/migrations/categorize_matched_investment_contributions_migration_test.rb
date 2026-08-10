@@ -44,4 +44,29 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
 
     assert_nil outflow.reload.entryable.category_id
   end
+
+  test "does not merge existing investment contribution category variants" do
+    family = Family.create!(name: "Migration with duplicate categories")
+    source = family.accounts.create!(name: "Migration source", currency: "USD", balance: 0, accountable: Depository.new)
+    destination = family.accounts.create!(name: "Migration destination", currency: "USD", balance: 0, accountable: Investment.new)
+    category = family.categories.create!(name: Category.investment_contributions_name, color: "#0d9488", lucide_icon: "trending-up")
+    duplicate_name = Category.all_investment_contributions_names.find { |name| name != category.name }
+    assert_not_nil duplicate_name
+    duplicate_category = family.categories.create!(name: duplicate_name, color: "#0d9488", lucide_icon: "trending-up")
+
+    existing_outflow = create_transaction(account: source, amount: 50, kind: "investment_contribution", category: duplicate_category)
+    existing_inflow = create_transaction(account: destination, amount: -50, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: existing_outflow.entryable, inflow_transaction: existing_inflow.entryable, status: "confirmed")
+    backfill_outflow = create_transaction(account: source, amount: 100, kind: "investment_contribution")
+    backfill_inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: backfill_outflow.entryable, inflow_transaction: backfill_inflow.entryable, status: "confirmed")
+
+    assert_no_difference -> { family.categories.count } do
+      CategorizeMatchedInvestmentContributions.new.up
+    end
+
+    assert Category.exists?(duplicate_category.id)
+    assert_equal duplicate_category.id, existing_outflow.reload.entryable.category_id
+    assert_equal category.id, backfill_outflow.reload.entryable.category_id
+  end
 end
