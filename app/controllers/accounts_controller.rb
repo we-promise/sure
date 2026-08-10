@@ -96,6 +96,14 @@ class AccountsController < ApplicationController
       ).call
     end
 
+    trades = @entries.filter_map { |e| e.entryable if e.entryable_type == "Trade" }
+    if trades.any?
+      ActiveRecord::Associations::Preloader.new(
+        records: trades,
+        associations: [ :security ]
+      ).call
+    end
+
     entry_ids = @entries.map(&:id)
     @split_parent_entry_ids = if entry_ids.any?
       Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
