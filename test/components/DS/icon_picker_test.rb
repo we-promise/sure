@@ -19,12 +19,12 @@ class DS::IconPickerTest < ViewComponent::TestCase
     assert_selector "[data-list-filter-target='emptyMessage']", text: "No matching icons", visible: :all
   end
 
-  test "wires Enter to the list-filter keydown handler" do
+  test "prevents Enter in the search field from submitting the form" do
     render_icon_picker(icons: %w[pizza])
 
     action = page.find("input[type='search']")["data-action"]
     assert_includes action, "input->list-filter#filter"
-    assert_includes action, "keydown.enter->list-filter#handleKeydown"
+    assert_includes action, "keydown.enter->list-filter#filter:prevent"
   end
 
   test "preserves the color-icon-picker contract on each radio" do

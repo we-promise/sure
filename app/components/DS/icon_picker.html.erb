@@ -1,13 +1,12 @@
 <div data-controller="list-filter" class="flex flex-col gap-2">
   <%# Enter in the search field would otherwise submit the surrounding
-      category/goal form — `handleKeydown` preventDefaults it. %>
+      category/goal form. %>
   <%= render DS::SearchInput.new(
-        variant: :embedded,
+        variant: :standalone,
         placeholder: placeholder,
-        icon_size: "sm",
         data: {
           list_filter_target: "input",
-          action: "input->list-filter#filter keydown.enter->list-filter#handleKeydown"
+          action: "input->list-filter#filter keydown.enter->list-filter#filter:prevent"
         }
       ) %>
 

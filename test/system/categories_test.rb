@@ -58,6 +58,27 @@ class CategoriesTest < ApplicationSystemTestCase
     assert_equal "pizza", @user.family.categories.find_by!(name: "Takeout").lucide_icon
   end
 
+  test "reopening the icon picker clears the previous search" do
+    visit categories_url
+    click_link I18n.t("categories.new.new_category")
+
+    picker = find("summary[aria-label='#{I18n.t("categories.form.trigger_label")}']")
+    picker.click
+
+    within "[data-controller='list-filter']" do
+      find("input[type='search']").set("pizza")
+      assert_no_selector "label[data-filter-name='coffee']"
+    end
+
+    picker.click
+    picker.click
+
+    within "[data-controller='list-filter']" do
+      assert_selector "label[data-filter-name='coffee']"
+      assert_equal "", find("input[type='search']").value
+    end
+  end
+
   test "pressing enter in the icon search does not submit the category form" do
     visit categories_url
     click_link I18n.t("categories.new.new_category")

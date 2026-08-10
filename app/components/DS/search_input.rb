@@ -20,15 +20,14 @@
 class DS::SearchInput < DesignSystemComponent
   VARIANTS = %i[standalone embedded].freeze
 
-  attr_reader :variant, :name, :placeholder, :value, :aria_label, :icon_size, :extra_classes, :opts
+  attr_reader :variant, :name, :placeholder, :value, :aria_label, :extra_classes, :opts
 
-  def initialize(variant: :standalone, name: nil, placeholder: nil, value: nil, aria_label: nil, icon_size: "md", class: nil, **opts)
+  def initialize(variant: :standalone, name: nil, placeholder: nil, value: nil, aria_label: nil, class: nil, **opts)
     @variant = variant.to_sym
     @name = name
     @placeholder = placeholder
     @value = value
     @aria_label = aria_label || placeholder
-    @icon_size = icon_size
     @extra_classes = binding.local_variable_get(:class)
     @opts = opts
 
