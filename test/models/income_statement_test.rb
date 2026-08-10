@@ -460,7 +460,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 5, totals.transactions_count
   end
 
-  test "does not treat a pending transfer as matched for reporting" do
+  test "treats a pending matched investment contribution as a transfer for reporting" do
     investment_account = @family.accounts.create!(
       name: "Pending Brokerage",
       currency: @family.currency,
@@ -479,20 +479,42 @@ class IncomeStatementTest < ActiveSupport::TestCase
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    # Pending matches are not authoritative for reporting until confirmed.
+    assert_equal Money.new(0, @family.currency), totals.income_money
+    assert_equal Money.new(1_900, @family.currency), totals.expense_money
+  end
+
+  test "treats pending auto-matched investment contributions like confirmed transfers" do
+    investment_account = @family.accounts.create!(
+      name: "Pending Brokerage",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Investment.new
+    )
+    outflow = create_transaction(account: @checking_account, amount: 1_000, kind: "standard")
+    inflow = create_transaction(account: investment_account, amount: -1_000, kind: "standard")
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(outflow_transaction_id: outflow.entryable_id)
+    assert_predicate transfer, :pending?
+    assert_equal "investment_contribution", outflow.reload.entryable.kind
+    assert_equal "funds_movement", inflow.reload.entryable.kind
+
+    totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
     assert_equal Money.new(1_000, @family.currency), totals.income_money
     assert_equal Money.new(1_900, @family.currency), totals.expense_money
   end
 
-  test "keeps pending auto-matched loan payments as visible outflows" do
+  test "treats pending auto-matched loan payments like confirmed transfers" do
     loan_outflow = create_transaction(account: @checking_account, amount: 500, kind: "loan_payment")
     loan_inflow = create_transaction(account: @loan_account, amount: -500, kind: "funds_movement")
-    Transfer.create!(outflow_transaction: loan_outflow.entryable, inflow_transaction: loan_inflow.entryable, status: "pending")
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(outflow_transaction_id: loan_outflow.entryable_id)
+    assert_predicate transfer, :pending?
 
     totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
 
-    # Pending auto-matches remain excluded as matched transfers, while loan
-    # payment outflows remain visible.
     assert_equal Money.new(1_000, @family.currency), totals.income_money
     assert_equal Money.new(1_400, @family.currency), totals.expense_money
   end
