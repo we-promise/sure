@@ -90,7 +90,7 @@ pl:
         message: Skonfiguruj klucze szyfrowania Active Record przed dodaniem tokenów Wise w produkcji. Bez szyfrowania tokeny są przechowywane w postaci zwykłego tekstu.
       instructions:
         sign_in_html: "Odwiedź %{link} i zaloguj się na swoje konto"
-        open_tokens: "Przejdź do Ustawienia → Tokeny API"
+        open_tokens: "Przejdź do Settings → Connect and manage apps → Developer tools → API tokens"
         create_token: "Utwórz nowy osobisty token API z dostępem tylko do odczytu"
         copy_token_html: "Skopiuj token i wklej go poniżej. Sure używa go tylko do synchronizacji sald i transakcji."
     provider_connection:
