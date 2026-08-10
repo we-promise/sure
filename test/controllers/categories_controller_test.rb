@@ -126,19 +126,20 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "read-write users can create and assign a category to a transaction" do
-    sign_in users(:family_member)
-    accounts(:depository).account_shares.find_by!(user: @user).update!(permission: "read_write")
+    sign_in @user = users(:family_member)
+    transaction = transactions(:one)
+    transaction.entry.account.account_shares.find_by!(user: @user).update!(permission: "read_write")
 
     assert_difference "Category.count", +1 do
       post categories_url, params: {
-        transaction_id: @transaction.id,
+        transaction_id: transaction.id,
         category: { name: "Read-write Category", color: Category::COLORS.sample } }
     end
 
     new_category = Category.order(:created_at).last
 
     assert_redirected_to categories_url
-    assert_equal new_category, @transaction.reload.category
+    assert_equal new_category, transaction.reload.category
   end
 
   test "edit" do

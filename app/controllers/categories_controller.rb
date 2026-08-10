@@ -131,7 +131,7 @@ class CategoriesController < ApplicationController
       return true unless @transaction
 
       require_account_permission!(
-        @transaction.account,
+        @transaction.entry.account,
         :annotate,
         redirect_path: transaction_path(@transaction.entry)
       )
