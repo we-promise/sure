@@ -24,6 +24,7 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     app = Doorkeeper::Application.find_by(uid: json["client_id"])
     assert app.present?, "Application should be persisted"
     assert_not app.confidential?, "Application must be non-confidential (public client)"
+    assert_equal "read_write", app.scopes.to_s
   end
 
   test "returns error for invalid JSON body" do

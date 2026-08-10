@@ -2,7 +2,15 @@ import { Controller } from "@hotwired/stimulus";
 
 // Basic functionality to filter a list based on a provided text attribute.
 export default class extends Controller {
-  static targets = ["input", "list", "emptyMessage", "addItem", "addText", "addLabel"];
+  static targets = [
+    "input",
+    "list",
+    "emptyMessage",
+    "recentSection",
+    "addItem",
+    "addText",
+    "addLabel",
+  ];
 
   connect() {
     this.inputTarget.focus();
@@ -12,17 +20,24 @@ export default class extends Controller {
 
   filter() {
     const rawFilterValue = this.inputTarget.value;
-    const filterValue = rawFilterValue.trim().toLowerCase();
+    const categoryName = rawFilterValue.trim();
+    const filterValue = this.normalize(categoryName);
+    const hasSearch = categoryName.length > 0;
     const items = this.listTarget.querySelectorAll(".filterable-item");
     let noMatchFound = true;
+
+    if (this.hasRecentSectionTarget) {
+      this.recentSectionTarget.classList.toggle("hidden", hasSearch);
+    }
 
     if (this.hasEmptyMessageTarget) {
       this.emptyMessageTarget.classList.add("hidden");
     }
 
     items.forEach((item) => {
-      const text = item.getAttribute("data-filter-name").toLowerCase();
-      const shouldDisplay = text.includes(filterValue);
+      const text = this.normalize(item.getAttribute("data-filter-name"));
+      const shouldDisplay =
+        !hasSearch || (filterValue.length > 0 && text.includes(filterValue));
       item.style.display = shouldDisplay ? "" : "none";
 
       if (shouldDisplay) {
@@ -39,6 +54,21 @@ export default class extends Controller {
     this.highlightedIndex = -1;
     this.clearHighlights();
     this.updateAriaActiveDescendant();
+  }
+
+  // Case- and diacritic-insensitive: "prestecs" should match "Prèstecs".
+  // NFD splits each accented char into base char + combining mark, then
+  // \p{Mark} strips the marks, so both sides compare on bare base characters.
+  // Not \p{Diacritic}: that property is broader than combining marks — it
+  // also covers standalone characters like "^", "`", the middot, and
+  // modifier letters (e.g. the Hawaiian ʻokina) — so a query of just one of
+  // those would normalize to "", and "".includes() matches everything,
+  // silently showing every row instead of filtering.
+  normalize(value) {
+    return value
+      .normalize("NFD")
+      .replace(/\p{Mark}/gu, "")
+      .toLowerCase();
   }
 
   handleKeydown(event) {
@@ -59,7 +89,10 @@ export default class extends Controller {
     if (items.length === 0) return;
 
     this.clearHighlights();
-    this.highlightedIndex = Math.min(this.highlightedIndex + 1, items.length - 1);
+    this.highlightedIndex = Math.min(
+      this.highlightedIndex + 1,
+      items.length - 1,
+    );
     this.highlightItem(items[this.highlightedIndex]);
     this.updateAriaActiveDescendant();
   }
@@ -94,7 +127,8 @@ export default class extends Controller {
 
   selectHighlighted() {
     const items = this.visibleItems;
-    if (this.highlightedIndex < 0 || this.highlightedIndex >= items.length) return;
+    if (this.highlightedIndex < 0 || this.highlightedIndex >= items.length)
+      return;
 
     const item = items[this.highlightedIndex];
     if (this.hasAddItemTarget && item === this.addItemTarget) {
@@ -119,9 +153,14 @@ export default class extends Controller {
   }
 
   get visibleItems() {
-    const items = Array.from(this.listTarget.querySelectorAll(".filterable-item")).filter(
-      (item) => item.style.display !== "none"
-    );
+    const items = Array.from(this.listTarget.querySelectorAll(".filterable-item")).filter((item) => {
+      if (item.style.display === "none") return false;
+      return !(
+        this.hasRecentSectionTarget &&
+        this.recentSectionTarget.classList.contains("hidden") &&
+        this.recentSectionTarget.contains(item)
+      );
+    });
 
     if (
       this.hasAddItemTarget &&
