@@ -350,6 +350,18 @@ de:
       summary_label: Zusammenfassung
       email_sent_notice: Du hast eine E-Mail mit den nächsten Schritten bekommen.
       back_to_imports: Zurück zu Importen
+      reconciliation_title: Abgleichsbericht
+      reconciliation_description: Wir haben deinen Auszug mit den synchronisierten Daten verglichen und alles stimmt überein.
+      reconciliation_mismatch_description: Wir haben deinen Auszug mit den synchronisierten Daten verglichen und Abweichungen gefunden. Prüf die Angaben unten und passe sie bei Bedarf an.
+      reconciliation_details_label: Abgleichsdetails
+      reconciliation_statement_balance: Schlusssaldo laut Auszug
+      reconciliation_synced_balance: Synchronisierter Schlusssaldo
+      reconciliation_balance_match: Saldo stimmt überein
+      reconciliation_balance_yes: Ja
+      reconciliation_balance_no: Nein
+      reconciliation_statement_txns: Transaktionen laut Auszug
+      reconciliation_synced_txns: Synchronisierte Transaktionen
+      reconciliation_matched_txns: Abgeglichene Transaktionen
       unknown_state_title: Unbekannter Status
       unknown_state_description: Dieser Import ist in einem unerwarteten Zustand. Kehr zu den Importen zurück.
       processing_failed_with_message: "%{message}"
