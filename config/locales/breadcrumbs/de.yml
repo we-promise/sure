@@ -19,6 +19,7 @@ de:
     budgets: Budgets
     categories: Kategorien
     categorize: Kategorisieren
+    changelog: Was ist neu
     chats: Chats
     coinbase_items: Coinbase
     coinstats_items: CoinStats
@@ -31,6 +32,7 @@ de:
     enable_banking_items: Enable Banking
     family_exports: Exporte
     family_merchants: Händler
+    feedback: Feedback
     guides: Anleitungen
     holdings: Bestände
     hostings: Self-Hosting

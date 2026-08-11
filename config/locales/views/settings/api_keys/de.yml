@@ -11,6 +11,8 @@ de:
         read_balances: Kontostände anzeigen
         write_transactions: Transaktionen erstellen
     api_keys:
+      key_reveal:
+        copied: Kopiert!
       show:
         title: API-Schlüsselverwaltung
         no_api_key:
