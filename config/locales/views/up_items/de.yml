@@ -1,0 +1,116 @@
+---
+de:
+  family:
+    up:
+      create_up_item:
+        default_name: Up-Verbindung
+  providers:
+    up:
+      description: Verbindet australische Up-Bankkonten über einen persönlichen Zugriffstoken
+      name: Up
+  up_account:
+    fallback: Up-Konto
+  up_item:
+    errors:
+      account_processing_failed: Das Up-Konto ließ sich nicht abgleichen
+      account_sync_schedule_failed: Der Abgleich des Up-Kontos ließ sich nicht einplanen
+      sync_failed: Die Up-Verbindung ließ sich nicht abgleichen
+      transactions_failed: Die Up-Transaktionen ließen sich nicht abrufen
+    institution_summary:
+      count:
+        one: 1 Institut
+        other: "%{count} Institute"
+      none: Keine Institute verbunden
+      one: 1 Institut
+    sync_status:
+      all_synced:
+        one: 1 Konto synchronisiert
+        other: "%{count} Konten synchronisiert"
+      no_accounts: Keine Konten gefunden
+      partial: "%{linked} synchronisiert, %{unlinked} müssen eingerichtet werden"
+  up_items:
+    complete_account_setup:
+      all_skipped: Es wurden keine Up-Konten angelegt.
+      creation_failed: Die Up-Konten ließen sich nicht anlegen.
+      no_accounts: Es wurden keine Up-Konten ausgewählt.
+      success:
+        one: 1 Up-Konto angelegt.
+        other: "%{count} Up-Konten angelegt."
+    create:
+      success: Up-Verbindung gespeichert.
+    destroy:
+      success: Up-Verbindung zum Löschen vorgemerkt.
+      unlink_failed: Die Up-Verbindung ließ sich nicht trennen
+    link_accounts:
+      link_failed: Es wurden keine Konten verknüpft.
+      no_accounts_selected: Wähl mindestens ein Konto.
+      no_credentials_configured: Richte Up zuerst in den Anbietereinstellungen ein.
+      success:
+        one: 1 Up-Konto verknüpft.
+        other: "%{count} Up-Konten verknüpft."
+      unsupported_account_type: Diese Kontoart unterstützt Up nicht.
+    link_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
+      no_account_selected: Wähl ein Up-Konto zum Verknüpfen.
+      success: Up-Konto mit %{account_name} verknüpft.
+      up_account_already_linked: Dieses Up-Konto ist bereits verknüpft.
+    provider_panel:
+      access_token_label: Persönlicher Zugriffstoken
+      access_token_placeholder: Persönlichen Up-Zugriffstoken einfügen
+      add_connection: Up-Verbindung hinzufügen
+      connection_name_label: Name der Verbindung
+      connection_name_placeholder: Up Haupt
+      default_connection_name: Up-Verbindung
+      disconnect: Trennen
+      disconnect_confirm: "%{name} wirklich trennen?"
+      keep_access_token_placeholder: Leer lassen, um den bisherigen Token zu behalten
+      setup_accounts: Konten einrichten
+      sync: Sync
+      syncing: Sync läuft …
+      update_connection: Verbindung aktualisieren
+    select_accounts:
+      cancel: Abbrechen
+      description: Wähl die Up-Konten, die du hinzufügen willst.
+      link_accounts: Konten verknüpfen
+      no_accounts_found: Es wurden keine unverknüpften Up-Konten gefunden.
+      no_credentials_configured: Richte Up zuerst in den Anbietereinstellungen ein.
+      title: Up-Konten verknüpfen
+    select_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
+      cancel: Abbrechen
+      description: Wähl ein unverknüpftes Up-Konto für dieses Konto.
+      link_account: Konto verknüpfen
+      no_accounts_found: Es wurden keine unverknüpften Up-Konten gefunden.
+      no_credentials_configured: Richte Up zuerst in den Anbietereinstellungen ein.
+      title: Up-Konto mit %{account_name} verknüpfen
+    setup_accounts:
+      account_type_label: Kontoart
+      account_types:
+        depository: Bankkonto
+        loan: Kredit
+        skip: Überspringen
+      all_accounts_linked: Alle Up-Konten sind bereits verknüpft.
+      api_error: Die Up-Konten ließen sich nicht abrufen.
+      cancel: Abbrechen
+      choose_account_type: Kontoart wählen
+      choose_account_type_description: Überspring Konten, die du nicht verfolgen willst.
+      create_accounts: Konten anlegen
+      fetch_failed: Konten ließen sich nicht abrufen
+      no_accounts_to_setup: Keine Konten einzurichten
+      no_credentials: Richte zuerst deine Up-Zugangsdaten ein.
+      subtitle: Leg fest, wie jedes Up-Konto in Sure erscheinen soll.
+      title: Up-Konten verknüpfen
+    up_item:
+      delete: Löschen
+      deletion_in_progress: Wird gelöscht
+      error: Fehler
+      no_accounts_description: Ruf die Up-Konten ab und wähl aus, welche verknüpft werden sollen.
+      no_accounts_title: Noch keine Konten importiert
+      setup_action: Konten einrichten
+      setup_description: "%{linked} von %{total} Konten verknüpft."
+      setup_needed: Konten müssen eingerichtet werden
+      status_never: Noch nie synchronisiert
+      status_with_summary: Synchronisiert vor %{timestamp} · %{summary}
+      syncing: Sync läuft
+    update:
+      success: Up-Verbindung aktualisiert.
