@@ -1,6 +1,8 @@
 ---
 en:
   messages:
+    create:
+      chat_not_found: This chat is no longer available.
     chat_form:
       placeholder: "Ask anything ..."
       disclaimer: "AI responses are informational only. Not financial advice!"

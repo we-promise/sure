@@ -55,8 +55,8 @@
                 unread ones ("New · 3"), and with only three rows the pill was
                 usually on all of them — saying the same thing twice while
                 crowding the title. %>
-            <span class="text-sm font-medium text-primary truncate block"><%= insight.title %></span>
-            <p class="text-sm text-secondary truncate"><%= insight.body %></p>
+            <span class="text-sm font-medium text-primary truncate block"><%= insight_privacy_text(insight.title) %></span>
+            <p class="text-sm text-secondary truncate"><%= insight_privacy_text(insight.body) %></p>
           </div>
 
           <% if (figure = insight_key_figure(insight)) %>
