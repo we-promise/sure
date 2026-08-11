@@ -153,10 +153,10 @@ class ProcessPdfJobTest < ActiveJob::TestCase
         }
       }
     )
-    @import.expects(:process_with_ai).with(user: nil).once.returns(process_result)
-    @import.expects(:extract_transactions).once do
-      @import.update!(
-        extracted_data: @import.extracted_data.deep_merge(
+    PdfImport.any_instance.expects(:process_with_ai).with(user: nil).once.returns(process_result)
+    PdfImport.any_instance.expects(:extract_transactions).once do |import|
+      import.update!(
+        extracted_data: import.extracted_data.deep_merge(
           "transactions" => [
             {
               "date" => "2024-01-01",
@@ -167,8 +167,8 @@ class ProcessPdfJobTest < ActiveJob::TestCase
         )
       )
     end
-    @import.expects(:sync_mappings).once
-    @import.stubs(:send_next_steps_email)
+    PdfImport.any_instance.expects(:sync_mappings).once
+    PdfImport.any_instance.stubs(:send_next_steps_email)
 
     @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
       assert_equal pdf_content, file_content
@@ -180,6 +180,81 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     ProcessPdfJob.perform_now(@import)
 
     assert_nil @import.reload.account
+  end
+
+  test "does not skip extraction when reconciliation has unmatched transactions" do
+    attach_pdf!(@import)
+
+    @import.update!(
+      ai_summary: nil,
+      status: :pending,
+      document_type: "bank_statement",
+      extracted_data: {
+        "reconciliation" => {
+          "performed" => true,
+          "account_id" => accounts(:depository).id,
+          "balance_match" => true,
+          "statement_transaction_count" => 2,
+          "synced_transaction_count" => 2,
+          "matched_count" => 1,
+          "new_count" => 1,
+          "missing_count" => 0,
+          "new_transactions" => [
+            { "date" => "2024-01-02", "amount" => "-12.34", "description" => "Unmatched" }
+          ],
+          "missing_transactions" => []
+        }
+      }
+    )
+    provider_response = Struct.new(:data) do
+      def success? = true
+      def error = nil
+    end
+    provider = Class.new do
+      attr_reader :extract_called
+
+      def initialize(process_result, provider_response)
+        @process_result = process_result
+        @provider_response = provider_response
+        @extract_called = false
+      end
+
+      def supports_pdf_processing? = true
+
+      def process_pdf(pdf_content:, family:, user:)
+        @provider_response.new(@process_result)
+      end
+
+      def extract_bank_statement(pdf_content:, family:)
+        @extract_called = true
+        @provider_response.new(
+          {
+            transactions: [
+              {
+                date: "2024-01-01",
+                amount: "10.00",
+                name: "Coffee Shop"
+              }
+            ]
+          }
+        )
+      end
+    end.new(
+      Provider::LlmConcept::PdfProcessingResult.new(
+        summary: "Processed",
+        document_type: "bank_statement",
+        extracted_data: @import.extracted_data.except("reconciliation"),
+        reconciliation: @import.extracted_data.fetch("reconciliation")
+      ),
+      provider_response
+    )
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    @family.stubs(:upload_document).returns(family_documents(:tax_return))
+    @import.stubs(:send_next_steps_email)
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert provider.extract_called, "expected unmatched reconciliation to continue to extraction"
   end
 
   private

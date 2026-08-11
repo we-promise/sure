@@ -29,7 +29,7 @@ class Provider::Openai::PdfProcessor
       process_with_vision
     end
 
-    span&.end(output: response.to_h)
+    span&.end(output: response.trace_payload)
     response
   rescue => e
     span&.end(output: { error: e.message }, level: "ERROR")
@@ -187,6 +187,7 @@ class Provider::Openai::PdfProcessor
           }
         }
       end
+      partial_statement = images_base64.size > 5
       content << {
         type: "text",
         text: "Please analyze this PDF document (#{images_base64.size} pages total, showing first #{[ images_base64.size, 5 ].min}) and respond with valid JSON only."
@@ -213,7 +214,7 @@ class Provider::Openai::PdfProcessor
         metadata: { pdf_size: pdf_content&.bytesize, pages: images_base64.size }
       )
 
-      parse_response_generic(response)
+      parse_response_generic(response, partial_statement: partial_statement)
     end
 
     def convert_pdf_to_images
@@ -238,11 +239,11 @@ class Provider::Openai::PdfProcessor
       []
     end
 
-    def parse_response_generic(response)
+    def parse_response_generic(response, partial_statement: false)
       raw = response.dig("choices", 0, "message", "content")
       parsed = parse_json_flexibly(raw)
 
-      build_result(parsed)
+      build_result(parsed, partial_statement: partial_statement)
     end
 
     def run_reconciliation_tool_loop(initial_params)
@@ -330,9 +331,11 @@ class Provider::Openai::PdfProcessor
         { error: "Unknown tool", function_name: function_name }
       end
     rescue JSON::ParserError => e
-      { error: "Invalid tool arguments JSON", details: e.message }
+      Rails.logger.warn("PDF reconciliation tool call failed: function=#{function_name.inspect} error=#{e.class.name}")
+      { error: "Invalid tool arguments JSON", function_name: function_name }
     rescue => e
-      { error: "Tool execution failed", function_name: function_name, details: e.message }
+      Rails.logger.warn("PDF reconciliation tool call failed: function=#{function_name.inspect} error=#{e.class.name}")
+      { error: "Tool execution failed", function_name: function_name }
     end
 
     def tool_user
@@ -397,13 +400,23 @@ class Provider::Openai::PdfProcessor
       total_usage["total_tokens"] += usage["total_tokens"].to_i
     end
 
-    def build_result(parsed)
+    def build_result(parsed, partial_statement: false)
       PdfProcessingResult.new(
         summary: parsed["summary"],
         document_type: normalize_document_type(parsed["document_type"]),
         extracted_data: parsed["extracted_data"] || {},
-        reconciliation: parsed["reconciliation"]
+        reconciliation: sanitized_reconciliation(parsed["reconciliation"], partial_statement: partial_statement)
       )
+    end
+
+    def sanitized_reconciliation(reconciliation, partial_statement:)
+      return reconciliation unless partial_statement && reconciliation.present?
+
+      {
+        "performed" => false,
+        "partial_statement" => true,
+        "reason" => "Only the first five pages were processed, so reconciliation counts and transaction matches are not definitive."
+      }
     end
 
     def normalize_document_type(doc_type)

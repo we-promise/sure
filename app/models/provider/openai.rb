@@ -231,7 +231,7 @@ class Provider::Openai < Provider
         max_response_tokens: max_response_tokens
       ).process
 
-      upsert_langfuse_trace(trace: trace, output: result.to_h)
+      upsert_langfuse_trace(trace: trace, output: result.trace_payload)
 
       result
     end

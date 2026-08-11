@@ -19,7 +19,37 @@ module Provider::LlmConcept
     raise NotImplementedError, "Subclasses must implement #enhance_provider_merchants"
   end
 
-  PdfProcessingResult = Data.define(:summary, :document_type, :extracted_data, :reconciliation)
+  PdfProcessingResult = Data.define(:summary, :document_type, :extracted_data, :reconciliation) do
+    TRACE_EXTRACTED_DATA_KEYS = %w[
+      institution_name
+      statement_period_start
+      statement_period_end
+      transaction_count
+      currency
+      account_holder
+    ].freeze
+
+    TRACE_RECONCILIATION_KEYS = %w[
+      performed
+      partial_statement
+      account_id
+      balance_match
+      statement_transaction_count
+      synced_transaction_count
+      matched_count
+      new_count
+      missing_count
+    ].freeze
+
+    def trace_payload
+      {
+        summary: summary,
+        document_type: document_type,
+        extracted_data: extracted_data.to_h.slice(*TRACE_EXTRACTED_DATA_KEYS),
+        reconciliation: reconciliation.to_h.slice(*TRACE_RECONCILIATION_KEYS)
+      }
+    end
+  end
 
   def supports_pdf_processing?
     false

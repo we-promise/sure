@@ -158,4 +158,119 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
 
     assert_nil args["accounts"]
   end
+
+  test "vision processing marks truncated documents as partial reconciliation" do
+    client = mock("openai_client")
+    processor = Provider::Openai::PdfProcessor.new(
+      client,
+      model: "gpt-4.1",
+      pdf_content: "fake-pdf",
+      family: @family,
+      user: @user,
+      max_response_tokens: 4096
+    )
+
+    processor.stubs(:convert_pdf_to_images).returns(Array.new(6) { "base64-image" })
+
+    final_json = {
+      document_type: "bank_statement",
+      summary: "Processed",
+      extracted_data: { transaction_count: 10 },
+      reconciliation: {
+        performed: true,
+        balance_match: true,
+        new_transactions: [
+          { date: "2024-01-02", amount: -12.34, description: "Unseen later page" }
+        ],
+        missing_transactions: []
+      }
+    }.to_json
+
+    client.expects(:chat).with do |parameters:|
+      text_part = parameters[:messages].last[:content].find { |part| part[:type] == "text" }
+      assert_includes text_part[:text], "6 pages total, showing first 5"
+      true
+    end.returns(
+      "choices" => [
+        {
+          "message" => {
+            "content" => final_json
+          }
+        }
+      ],
+      "usage" => { "total_tokens" => 50 }
+    )
+
+    result = processor.send(:process_with_vision)
+
+    assert_equal false, result.reconciliation["performed"]
+    assert_equal true, result.reconciliation["partial_statement"]
+    assert_nil result.reconciliation["new_transactions"]
+    assert_nil result.reconciliation["missing_transactions"]
+  end
+
+  test "tool execution errors return stable payloads without raw exception details" do
+    processor = Provider::Openai::PdfProcessor.new(
+      stub("openai_client"),
+      model: "gpt-4.1",
+      pdf_content: "fake-pdf",
+      family: @family,
+      user: @user,
+      max_response_tokens: 4096
+    )
+
+    Assistant::Function::GetAccounts.any_instance
+      .stubs(:call)
+      .raises(StandardError, "secret account details")
+    Rails.logger.expects(:warn).with(regexp_matches(/function="get_accounts" error=StandardError/))
+
+    result = processor.send(
+      :execute_reconciliation_tool_call,
+      {
+        "function" => {
+          "name" => "get_accounts",
+          "arguments" => "{}"
+        }
+      }
+    )
+
+    assert_equal "Tool execution failed", result[:error]
+    assert_equal "get_accounts", result[:function_name]
+    assert_not result.key?(:details)
+  end
+
+  test "processing trace payload redacts reconciliation balances and transaction details" do
+    result = Provider::LlmConcept::PdfProcessingResult.new(
+      summary: "Processed",
+      document_type: "bank_statement",
+      extracted_data: {
+        "institution_name" => "Bank",
+        "opening_balance" => 100.0,
+        "closing_balance" => 200.0,
+        "transaction_count" => 2
+      },
+      reconciliation: {
+        "performed" => true,
+        "balance_match" => false,
+        "statement_closing_balance" => 200.0,
+        "synced_closing_balance" => 190.0,
+        "statement_transaction_count" => 2,
+        "new_transactions" => [
+          { "date" => "2024-01-02", "amount" => -12.34, "description" => "Private merchant" }
+        ]
+      }
+    )
+
+    payload = result.trace_payload
+
+    assert_equal "Bank", payload[:extracted_data]["institution_name"]
+    assert_equal 2, payload[:extracted_data]["transaction_count"]
+    assert_not payload[:extracted_data].key?("opening_balance")
+    assert_not payload[:extracted_data].key?("closing_balance")
+    assert_equal false, payload[:reconciliation]["balance_match"]
+    assert_equal 2, payload[:reconciliation]["statement_transaction_count"]
+    assert_not payload[:reconciliation].key?("statement_closing_balance")
+    assert_not payload[:reconciliation].key?("synced_closing_balance")
+    assert_not payload[:reconciliation].key?("new_transactions")
+  end
 end

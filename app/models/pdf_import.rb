@@ -238,7 +238,17 @@ class PdfImport < Import
   end
 
   def reconciliation_matched?
-    reconciliation_reportable? && reconciliation_data["balance_match"] == true
+    return false unless reconciliation_reportable?
+
+    recon = reconciliation_data
+    recon["balance_match"] == true &&
+      recon["statement_transaction_count"].present? &&
+      recon["synced_transaction_count"].present? &&
+      recon["statement_transaction_count"].to_i == recon["synced_transaction_count"].to_i &&
+      recon["new_count"].to_i.zero? &&
+      recon["missing_count"].to_i.zero? &&
+      Array.wrap(recon["new_transactions"]).empty? &&
+      Array.wrap(recon["missing_transactions"]).empty?
   end
 
   def reconciliation_account
