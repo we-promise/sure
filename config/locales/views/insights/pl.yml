@@ -12,10 +12,10 @@ pl:
       queued: Generujemy świeże analizy. Sprawdź za minutę.
       checking: Sprawdzanie...
     card:
+      acknowledged: "Analiza odrzucona"
       dismiss: Odrzuć
       new: Nowa
       dismissed: Analiza odrzucona
-      undo: Cofnij
     feed:
       view_all: Zobacz wszystkie analizy
       header: Najnowsze
