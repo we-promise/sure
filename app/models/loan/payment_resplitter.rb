@@ -20,26 +20,40 @@ class Loan::PaymentResplitter
     resplittable_transfers.each do |transfer|
       cash_entry = transfer.outflow_transaction.entry
       loan_entry = transfer.inflow_transaction.entry
-      payment_amount = cash_entry.amount
+      payment_amount = cash_entry.amount.to_d.abs
       as_of_date = cash_entry.date
 
-      Transfer.transaction do
+      interest = loan.interest_portion(
+        payment_amount: payment_amount, as_of_date: as_of_date, outstanding_balance: outstanding
+      ).amount
+
+      new_transfer = Transfer.transaction do
         # Full (non-split) transfer: destroying it just unlinks and resets kinds.
         transfer.destroy!
         # Remove the full-amount principal reduction on the loan.
         loan_entry.destroy!
 
-        Loan::PaymentSplitter.new(
+        split = Loan::PaymentSplitter.new(
           payment_entry: cash_entry.reload,
           loan_account: @loan_account,
           outstanding_balance: outstanding
         ).split!
+
+        # split! is a no-op (returns nil) when the payment isn't splittable at
+        # this point in the replay — a payoff-sized or interest-heavy payment
+        # whose interest would consume the whole amount (principal <= 0), or a
+        # currency mismatch. Roll the destroys back so the original full-amount
+        # transfer survives, rather than committing a destroy with nothing to
+        # replace it, which would leave the payment unlinked and silently drop
+        # the loan's principal reduction.
+        raise ActiveRecord::Rollback if split.nil?
+
+        split
       end
 
-      interest = loan.interest_portion(
-        payment_amount: payment_amount, as_of_date: as_of_date, outstanding_balance: outstanding
-      )
-      outstanding -= (payment_amount.to_d.abs - interest.amount)
+      # Advance the running balance: by principal only when the split landed, by
+      # the full payment when it was left as its original full-amount transfer.
+      outstanding -= new_transfer ? (payment_amount - interest) : payment_amount
     end
 
     @loan_account.sync_later

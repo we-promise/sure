@@ -34,6 +34,30 @@ class Loan::PaymentResplitterTest < ActiveSupport::TestCase
     assert_equal [ -250.0, -251.25 ], loan_principals
   end
 
+  test "leaves an interest-heavy payment as a full transfer instead of silently dropping it" do
+    # Monthly interest on the opening balance is 10000 * 6% / 12 = 50.00, so a
+    # $40 payment is entirely interest: principal would be <= 0 and the split is
+    # not applicable. The original full-amount transfer must survive rather than
+    # be destroyed with nothing to replace it, which would leave the payment
+    # unlinked and drop the loan's principal reduction with no error.
+    transfer = create_full_payment(amount: 40, date: 1.month.ago.to_date)
+    loan_entry_id = transfer.inflow_transaction.entry.id
+
+    Loan::PaymentResplitter.new(@loan_account).call
+
+    assert Transfer.exists?(transfer.id), "original transfer was destroyed with no replacement"
+    assert Entry.exists?(loan_entry_id), "loan principal reduction was dropped"
+
+    # The loan still carries its single full-amount principal reduction...
+    assert_equal [ -40.0 ], @loan_account.entries.map { |e| e.amount.to_f }
+
+    # ...and no interest expense leaked onto the checking account.
+    interest_entries = @checking.entries
+                                .joins("JOIN transactions t ON t.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+                                .where(t: { category_id: @family.loan_interest_category.id })
+    assert_empty interest_entries
+  end
+
   test "is idempotent - already-split payments are not touched again" do
     create_full_payment(amount: 300, date: 1.month.ago.to_date)
 
