@@ -1,0 +1,5 @@
+hu:
+  wise_items:
+    provider_panel:
+      instructions:
+        open_tokens: Lépjen a Settings → Connect and manage apps → Developer tools → API tokens menüpontra

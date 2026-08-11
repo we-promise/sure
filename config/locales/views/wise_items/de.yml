@@ -61,7 +61,7 @@ de:
       instructions:
         copy_token_html: Kopier den Token und füg ihn unten ein. Sure nutzt ihn ausschließlich, um deine Guthaben und Transaktionen abzugleichen.
         create_token: Leg einen neuen persönlichen API-Token mit reinem Lesezugriff an
-        open_tokens: Geh zu Einstellungen → API-Tokens
+        open_tokens: Gehe zu Settings → Connect and manage apps → Developer tools → API tokens
         sign_in_html: Öffne %{link} und melde dich in deinem Konto an
       keep_token_placeholder: Leer lassen, um den bisherigen Token zu behalten
       not_configured: Nicht eingerichtet

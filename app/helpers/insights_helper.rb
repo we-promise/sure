@@ -14,6 +14,30 @@ module InsightsHelper
     INSIGHT_ICONS.fetch(insight.insight_type, "lightbulb")
   end
 
+  # Matches the numeric fragments inside insight prose: currency amounts
+  # ("€288.59", "1 234,56 €"), percentages ("142%"), and bare counts. Digit
+  # groups may be separated by ".", ",", or the (narrow) no-break spaces some
+  # locales format with, but must start and end on a digit so sentence
+  # punctuation stays outside the match.
+  INSIGHT_NUMERIC_FRAGMENT = /
+    (?:\p{Sc}[\s\u00A0\u202F]?)?          # currency symbol prefix
+    \d(?:[\d.,\s\u00A0\u202F]*\d)?        # digits with grouping separators
+    (?:[\s\u00A0\u202F]?(?:%|\p{Sc}))?    # percent or currency symbol suffix
+  /x
+
+  # Insight titles and bodies are stored as finished prose with the amounts
+  # already interpolated (by the i18n template or the LLM writer), so unlike
+  # the rest of the app the figures can't be tagged where they're formatted.
+  # This wraps each numeric fragment in a privacy-sensitive span at render
+  # time so privacy mode blurs the numbers but the sentence stays readable.
+  def insight_privacy_text(text)
+    safe_join(
+      text.to_s.split(/(#{INSIGHT_NUMERIC_FRAGMENT})/o).map.with_index do |part, index|
+        index.odd? ? tag.span(part, class: "privacy-sensitive") : part
+      end
+    )
+  end
+
   # "Savings rate · June" / "Cash flow · Next 30 days" — the card's meta line.
   # Uses the insight's stored period; falls back to the subject (account or
   # merchant name from facts) for insights without one.
