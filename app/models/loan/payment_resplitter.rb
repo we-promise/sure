@@ -23,6 +23,12 @@ class Loan::PaymentResplitter
       payment_amount = cash_entry.amount.to_d.abs
       as_of_date = cash_entry.date
 
+      # Loan-side amount of the existing full transfer, in the loan's currency.
+      # For a cross-currency payment this differs from the cash-side
+      # +payment_amount+ by the FX conversion, and it is what actually reduces
+      # the loan balance when the transfer is left intact.
+      loan_side_amount = loan_entry.amount.to_d.abs
+
       interest = loan.interest_portion(
         payment_amount: payment_amount, as_of_date: as_of_date, outstanding_balance: outstanding
       ).amount
@@ -51,9 +57,11 @@ class Loan::PaymentResplitter
         split
       end
 
-      # Advance the running balance: by principal only when the split landed, by
-      # the full payment when it was left as its original full-amount transfer.
-      outstanding -= new_transfer ? (payment_amount - interest) : payment_amount
+      # Advance the running balance: by principal only when the split landed
+      # (same-currency by definition, so cash and loan amounts agree), and by the
+      # transfer's loan-side amount when it was left as its original full-amount
+      # transfer (correct even across currencies).
+      outstanding -= new_transfer ? (payment_amount - interest) : loan_side_amount
     end
 
     @loan_account.sync_later

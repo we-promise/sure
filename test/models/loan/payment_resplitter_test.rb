@@ -58,6 +58,37 @@ class Loan::PaymentResplitterTest < ActiveSupport::TestCase
     assert_empty interest_entries
   end
 
+  test "retained multi-currency payment reduces the running balance by its loan-side amount" do
+    # A EUR payment into a USD loan can't be split (currency mismatch), so it is
+    # left as a full-amount transfer. The replay's running balance must fall by
+    # the transfer's USD loan-side amount (100 EUR * 1.1 = 110 USD), not the raw
+    # EUR cash figure, so a later same-currency payment prices interest correctly.
+    eur_checking = Account.create! \
+      family: @family, name: "EUR Checking", balance: 1000, currency: "EUR",
+      accountable: Depository.new
+
+    Transfer::Creator.new(
+      family: @family,
+      source_account_id: eur_checking.id,
+      destination_account_id: @loan_account.id,
+      date: 2.months.ago.to_date,
+      amount: 100,
+      exchange_rate: 1.1
+    ).create
+
+    create_full_payment(amount: 300, date: 1.month.ago.to_date)
+
+    Loan::PaymentResplitter.new(@loan_account).call
+
+    # Interest on the USD payment reflects 10000 - 110 = 9890 outstanding:
+    # 9890 * 6% / 12 = 49.45 (it would be 49.50 if the EUR cash amount were used).
+    interest = @checking.entries
+                        .joins("JOIN transactions t ON t.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+                        .where(t: { category_id: @family.loan_interest_category.id })
+                        .sole
+    assert_equal 49.45, interest.amount.to_f
+  end
+
   test "is idempotent - already-split payments are not touched again" do
     create_full_payment(amount: 300, date: 1.month.ago.to_date)
 
