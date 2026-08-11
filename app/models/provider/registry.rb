@@ -137,6 +137,10 @@ class Provider::Registry
         Provider::Mfapi.new
       end
 
+      def bibit
+        Provider::Bibit.new
+      end
+
       def binance_public
         Provider::BinancePublic.new
       end
@@ -204,7 +208,7 @@ class Provider::Registry
       when :exchange_rates
         %i[twelve_data yahoo_finance moex_public frankfurter]
       when :securities
-        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest]
+        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi bibit binance_public moex_public tinkoff_invest]
       when :llm
         %i[openai anthropic]
       when :property_valuations
