@@ -13,7 +13,7 @@ module Account::Chartable
 
     @balance_series ||= {}
 
-    memo_key = [ period.start_date, period.end_date, interval ].compact.join("_")
+    memo_key = [ period.start_date, period.end_date, interval, view ].compact.join("_")
 
     builder = (@balance_series[memo_key] ||= Balance::ChartSeriesBuilder.new(
       account_ids: [ id ],

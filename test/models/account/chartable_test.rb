@@ -28,7 +28,7 @@ class Account::ChartableTest < ActiveSupport::TestCase
         interval: nil
       )
       .returns(builder2)
-      .once
+      .times(3)
 
     builder1.expects(:balance_series).returns(test_series).twice
     series1 = account.balance_series
@@ -42,6 +42,20 @@ class Account::ChartableTest < ActiveSupport::TestCase
     memoized_series2 = account.balance_series(period: Period.last_90_days)
     memoized_series2_cash_view = account.balance_series(period: Period.last_90_days, view: :cash_balance)
     memoized_series2_holdings_view = account.balance_series(period: Period.last_90_days, view: :holdings_balance)
+  end
+
+  test "memoizes each selected view separately" do
+    account = accounts(:investment)
+    balance_builder = mock
+    cash_builder = mock
+    series = mock
+
+    Balance::ChartSeriesBuilder.expects(:new).twice.returns(balance_builder, cash_builder)
+    balance_builder.expects(:balance_series).returns(series)
+    cash_builder.expects(:cash_balance_series).returns(series)
+
+    account.balance_series(view: :balance)
+    account.balance_series(view: :cash_balance)
   end
 
   test "supports gains view and rejects unknown views" do

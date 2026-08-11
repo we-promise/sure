@@ -70,6 +70,25 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal Date.current, holdings.second.date
   end
 
+  test "persists cash-equivalent classification from the security resolver" do
+    @plaid_account.update!(raw_holdings_payload: {
+      securities: [],
+      holdings: [ { "security_id" => "spaxx", "quantity" => 4000, "institution_price" => 1, "iso_currency_code" => "USD" } ],
+      transactions: []
+    })
+    @security_resolver.expects(:resolve).with(plaid_security_id: "spaxx").returns(
+      OpenStruct.new(security: securities(:aapl), cash_equivalent?: true, brokerage_cash?: false)
+    )
+
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    account = @plaid_account.current_account
+    assert_equal 1, account.holdings.count
+
+    holding = account.holdings.find_by!(security: securities(:aapl), qty: 4000)
+    assert holding.cash_equivalent?
+  end
+
   # Plaid does not delete future holdings because it doesn't support holdings deletion
   # (PlaidAdapter#can_delete_holdings? returns false). This test verifies that future
   # holdings are NOT deleted when processing Plaid holdings data.

@@ -1,6 +1,17 @@
 # SimpleFin Investment balance calculator
 # SimpleFin provides clear balance and holdings data, so calculations are simpler than Plaid
 class SimplefinAccount::Investments::BalanceCalculator
+  def self.cash_equivalent?(symbol:, description:)
+    symbol = symbol.to_s.upcase.strip
+    description = description.to_s
+
+    money_market_tickers = Rails.configuration.x.simplefin.money_market_tickers || []
+    return true if money_market_tickers.include?(symbol)
+
+    money_market_patterns = Rails.configuration.x.simplefin.money_market_patterns || []
+    money_market_patterns.any? { |pattern| description.match?(pattern) }
+  end
+
   def initialize(simplefin_account)
     @simplefin_account = simplefin_account
   end
@@ -48,22 +59,7 @@ class SimplefinAccount::Investments::BalanceCalculator
     end
 
     def cash_equivalent?(holding)
-      symbol = holding["symbol"].to_s.upcase.strip
-      description = holding["description"].to_s
-
-      # Check known money market tickers (configured in config/initializers/simplefin.rb)
-      return true if money_market_tickers.include?(symbol)
-
-      # Check description patterns
-      money_market_patterns.any? { |pattern| description.match?(pattern) }
-    end
-
-    def money_market_tickers
-      Rails.configuration.x.simplefin.money_market_tickers || []
-    end
-
-    def money_market_patterns
-      Rails.configuration.x.simplefin.money_market_patterns || []
+      self.class.cash_equivalent?(symbol: holding["symbol"], description: holding["description"])
     end
 
     def parse_market_value(market_value)

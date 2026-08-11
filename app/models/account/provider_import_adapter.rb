@@ -391,8 +391,9 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name
   # @param account_provider_id [String, nil] The AccountProvider ID that owns this holding (optional)
   # @param delete_future_holdings [Boolean] Whether to delete holdings after this date (default: false)
+  # @param cash_equivalent [Boolean, nil] Whether this position should be charted as cash; nil preserves an existing classification
   # @return [Holding] The created or updated holding
-  def import_holding(security:, quantity:, amount:, currency:, date:, price: nil, cost_basis: nil, external_id: nil, source:, account_provider_id: nil, delete_future_holdings: false)
+  def import_holding(security:, quantity:, amount:, currency:, date:, price: nil, cost_basis: nil, external_id: nil, source:, account_provider_id: nil, delete_future_holdings: false, cash_equivalent: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -500,6 +501,7 @@ class Account::ProviderImportAdapter
         account_provider_id: account_provider_id,
         external_id: external_id
       }
+      attributes[:cash_equivalent] = cash_equivalent unless cash_equivalent.nil?
 
       # Only update security if not locked by user
       if holding.new_record? || holding.security_replaceable_by_provider?
@@ -547,6 +549,7 @@ class Account::ProviderImportAdapter
               price: price,
               amount: amount
             }
+            updates[:cash_equivalent] = cash_equivalent unless cash_equivalent.nil?
 
             # Reconcile cost_basis to respect priority hierarchy
             collision_reconciled = Holding::CostBasisReconciler.reconcile(
