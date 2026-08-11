@@ -907,7 +907,7 @@ eth:
   separator: "."
   delimiter: ","
   default_format: "%u%n"
-  default_precision: 18
+  default_precision: 8
 jep:
   name: Jersey Pound
   priority: 100

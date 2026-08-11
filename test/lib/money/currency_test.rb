@@ -39,18 +39,17 @@ class Money::CurrencyTest < ActiveSupport::TestCase
     assert_equal "Ξ", eth.symbol
     assert_equal "Wei", eth.minor_unit
     assert_equal 1000000000000000000, eth.minor_unit_conversion
-    assert_equal 18, eth.default_precision
+    assert_equal 8, eth.default_precision
   end
 
-  test "ethereum step represents wei precision" do
+  test "ethereum step represents display precision" do
     eth = Money::Currency.new(:eth)
-    assert_equal 0.000000000000000001, eth.step
+    assert_equal 0.00000001, eth.step
   end
 
-  test "ethereum conversion formula: 1 ETH = 10^18 Wei" do
+  test "ethereum conversion formula: step = 10^-default_precision" do
     eth = Money::Currency.new(:eth)
     expected_step = 1.0 / (10 ** eth.default_precision)
     assert_equal expected_step, eth.step
-    assert_equal 0.000000000000000001, eth.step
   end
 end
