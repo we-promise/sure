@@ -210,6 +210,36 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert fresh.reload.active?
   end
 
+  # A goal whose last funding account is deleted survives with zero links and
+  # fails `must_have_at_least_one_linked_account` from then on. Editing is the
+  # only way back, so update must validate the accounts the user SUBMITTED,
+  # not the stale (empty) set already on the record.
+  test "an orphaned goal can be repaired by re-linking an account" do
+    orphan = orphaned_goal
+
+    patch goal_url(orphan), params: {
+      goal: { name: orphan.name, target_amount: orphan.target_amount, account_ids: [ @depository.id ] }
+    }
+
+    assert_redirected_to goal_path(orphan)
+    assert_equal [ @depository.id ], orphan.reload.goal_accounts.pluck(:account_id)
+    assert orphan.valid?
+  end
+
+  # AASM's bang event returns false rather than raising when the post-transition
+  # save fails validation. The controller used to discard that, flashing
+  # "Goal archived." while the state never moved.
+  test "a transition that fails validation reports the error, not success" do
+    orphan = orphaned_goal
+
+    patch archive_goal_url(orphan)
+
+    assert_redirected_to goal_path(orphan)
+    assert_nil flash[:notice]
+    assert_match(/at least one account/i, flash[:alert])
+    assert_equal "active", orphan.reload.state
+  end
+
   test "destroy on non-archived is rejected" do
     assert_no_difference "Goal.count" do
       delete goal_url(@goal)
@@ -257,6 +287,23 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    # A goal in the state account deletion leaves behind: still present, zero
+    # linked accounts, failing its own validations.
+    def orphaned_goal
+      family = @user.family
+      throwaway = Account.create!(
+        family: family, accountable: Depository.new, name: "Throwaway", currency: "USD", balance: 100
+      )
+      goal = family.goals.new(name: "Orphan", target_amount: 500, currency: "USD")
+      goal.goal_accounts.build(account: throwaway)
+      goal.save!
+
+      throwaway.destroy!
+      goal.reload
+      assert_empty goal.goal_accounts, "fixture setup failed to orphan the goal"
+      goal
+    end
+
     def build_goal(family, name, target_amount: 1_000_000, target_date: nil)
       g = family.goals.new(name: name, target_amount: target_amount, target_date: target_date, currency: "USD")
       g.goal_accounts.build(account: @depository)
