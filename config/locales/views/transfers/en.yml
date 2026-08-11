@@ -3,6 +3,8 @@ en:
   transfers:
     create:
       success: Transfer created
+      exchange_rate_unavailable: Exchange rate unavailable for selected currencies and date
+      date_invalid: is invalid
     destroy:
       success: Transfer removed
     form:
