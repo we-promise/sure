@@ -98,6 +98,23 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not @family.wise_items.find_by!(profile_id: "99999999").import_all_history?
   end
 
+  test "link_profiles applies import_all_history to every created profile" do
+    profiles = [
+      { "id" => "99999999", "type" => "personal", "details" => { "firstName" => "Jane", "lastName" => "Doe" } },
+      { "id" => "88888888", "type" => "business", "details" => { "name" => "Acme" } }
+    ]
+    Provider::Wise.any_instance.stubs(:get_profiles).returns(profiles)
+    post wise_items_url, params: { wise_item: { token: "live_token_abc", import_all_history: "1" } }
+
+    assert_difference "WiseItem.count", 2 do
+      post link_profiles_wise_items_url, params: { profile_ids: [ "99999999", "88888888" ] }
+    end
+
+    assert @family.wise_items.find_by!(profile_id: "99999999").import_all_history?
+    assert @family.wise_items.find_by!(profile_id: "88888888").import_all_history?
+    assert_nil session[:wise_pending_import_all_history]
+  end
+
   test "link_profiles redirects to providers when there is no pending session" do
     post link_profiles_wise_items_url, params: { profile_ids: [ "99999999" ] }
 

@@ -52,4 +52,23 @@ class Provider::WiseTest < ActiveSupport::TestCase
 
     assert_equal [], result
   end
+
+  test "retries a rate-limited window without restarting earlier windows" do
+    error = Provider::Wise::WiseError.new("rate limited", :rate_limited)
+    @provider.stubs(:sleep)
+    @provider.stubs(:get_balance_statement)
+      .raises(error).then
+      .returns({ "transactions" => [] }).then
+      .returns({ "transactions" => [] })
+
+    result = @provider.get_balance_statements(
+      "111",
+      "222",
+      currency: "EUR",
+      start_date: Date.new(2018, 1, 1),
+      end_date: Date.new(2018, 4, 30)
+    )
+
+    assert_equal [], result
+  end
 end

@@ -28,8 +28,15 @@ class WiseItem::Importer
     transfers = fetch_transfers if legacy_transfer_import_needed?
     activities = fetch_jar_activities
     statements = fetch_statements
-    transfers ||= fetch_transfers if statements.values.none?(&:present?)
-    transaction_result = store_transfers_per_account(transfers || [], activities: activities, statements: statements)
+    statement_fallbacks = statement_fetches_failed_completely?
+    transfers ||= fetch_transfers if statement_fallbacks
+    transaction_result = store_transfers_per_account(
+      transfers || [],
+      activities: activities,
+      statements: statements,
+      statement_failures: Array(@statement_fetch_failed_accounts),
+      fallback_to_transfers: statement_fallbacks
+    )
     @interbalance_activities = activities.select { |a| a["type"] == "INTERBALANCE" }
 
     wise_item.update!(status: :good) if account_result[:accounts_failed].zero? && transaction_result[:transactions_failed].zero?
@@ -192,6 +199,9 @@ class WiseItem::Importer
     # are retained and only backfilled with statements older than their oldest
     # transfer, avoiding duplicate imports during the migration.
     def fetch_statements
+      @statement_fetch_attempted_accounts = []
+      @statement_fetch_failed_accounts = []
+
       wise_item.wise_accounts.each_with_object({}) do |wise_account, result|
         next if wise_account.jar?
 
@@ -218,25 +228,37 @@ class WiseItem::Importer
 
         next if start_date > end_date
 
-        rows = with_rate_limit_retry do
-          wise_provider.get_balance_statements(
-            wise_item.profile_id,
-            wise_account.balance_id,
-            currency: wise_account.currency,
-            start_date: start_date,
-            end_date: end_date
-          )
-        end
+        @statement_fetch_attempted_accounts << wise_account.id
+        rows = wise_provider.get_balance_statements(
+          wise_item.profile_id,
+          wise_account.balance_id,
+          currency: wise_account.currency,
+          start_date: start_date,
+          end_date: end_date
+        )
         result[wise_account.id] = Array(rows).map { |row| row.merge("wise_statement" => true) }
       rescue Provider::Wise::WiseError => e
+        @statement_fetch_failed_accounts << wise_account.id
         capture_statement_error(wise_account, e, level: "warn")
         Rails.logger.warn "WiseItem::Importer - Could not fetch statements for wise_account #{wise_account.id} (#{e.message})"
         result[wise_account.id] = []
       rescue => e
+        @statement_fetch_failed_accounts << wise_account.id
         capture_statement_error(wise_account, e, level: "warn")
         Rails.logger.warn "WiseItem::Importer - Unexpected error fetching statements for wise_account #{wise_account.id}: #{e.message}"
         result[wise_account.id] = []
       end
+    end
+
+    # Statements are only "unavailable" when every attempted standard balance
+    # request failed (e.g. the token lacks statement access). Successful
+    # requests that return zero rows are normal — quiet incremental syncs must
+    # not re-enable the transfer fallback, which would duplicate movements that
+    # are already imported as statement rows.
+    def statement_fetches_failed_completely?
+      attempted = Array(@statement_fetch_attempted_accounts)
+      failed = Array(@statement_fetch_failed_accounts)
+      attempted.any? && (attempted - failed).empty?
     end
 
     # The transfer endpoint remains a compatibility fallback for tokens that
@@ -254,11 +276,19 @@ class WiseItem::Importer
     # - Expenses (outgoing): matched by sourceCurrency
     # - Incomes (incoming): matched by targetCurrency
     # Routes transfers to STANDARD accounts and activities to JAR accounts.
-    def store_transfers_per_account(transfers, activities: [], statements: {})
+    def store_transfers_per_account(transfers, activities: [], statements: {}, statement_failures: [], fallback_to_transfers: false)
       transactions_imported = 0
       transactions_failed = 0
 
       wise_item.wise_accounts.find_each do |wise_account|
+        # A failed statement request for this balance (without a transfer
+        # fallback) leaves the account incomplete: keep its existing payload
+        # and surface the failure so the item is not marked good.
+        if statement_failures.include?(wise_account.id) && !fallback_to_transfers
+          transactions_failed += 1
+          next
+        end
+
         if wise_account.jar?
           jar_activities = activities.select { |a| activity_for_account?(a, wise_account) }
           wise_account.upsert_wise_transactions_snapshot!(jar_activities)
@@ -398,8 +428,6 @@ class WiseItem::Importer
     end
 
     def transfer_cutoff
-      return FULL_HISTORY_START_DATE.beginning_of_day if full_history?
-
       return sync_start_date_value.to_time if sync_start_date.present? || wise_item.sync_start_date.present?
 
       # Use last_synced_at only if we actually have stored transfers — otherwise fall back to full history.
@@ -407,6 +435,8 @@ class WiseItem::Importer
 
       if has_stored_transfers && wise_item.last_synced_at.present?
         wise_item.last_synced_at - 7.days
+      elsif full_history?
+        FULL_HISTORY_START_DATE.beginning_of_day
       else
         DEFAULT_HISTORY_DAYS.days.ago
       end

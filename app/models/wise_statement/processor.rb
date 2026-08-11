@@ -12,15 +12,17 @@ class WiseStatement::Processor
       return :skipped
     end
 
-    import_adapter.import_transaction(
-      external_id: "wise_statement_#{transaction_id}",
-      amount: amount,
-      currency: currency,
-      date: date,
-      name: name,
-      source: "wise",
-      extra: extra
-    )
+    result = import_main_transaction
+
+    if fee.positive?
+      begin
+        import_fee_transaction
+      rescue => e
+        Rails.logger.warn "WiseStatement::Processor - Fee transaction failed for statement #{safe_id}: #{e.message}"
+      end
+    end
+
+    result
   rescue ArgumentError => e
     Rails.logger.error "WiseStatement::Processor - Validation error for statement #{safe_id}: #{e.message}"
     raise
@@ -39,6 +41,32 @@ class WiseStatement::Processor
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
+    end
+
+    def import_main_transaction
+      import_adapter.import_transaction(
+        external_id: "wise_statement_#{transaction_id}",
+        amount: amount,
+        currency: currency,
+        date: date,
+        name: name,
+        source: "wise",
+        extra: extra
+      )
+    end
+
+    # The statement amount excludes fees, so the fee is imported as its own
+    # entry (mirroring WiseEntry::Processor) to preserve the balance impact.
+    def import_fee_transaction
+      import_adapter.import_transaction(
+        external_id: "wise_statement_#{transaction_id}_fee",
+        amount: fee,
+        currency: currency,
+        date: date,
+        name: I18n.t("wise_items.entries.fee_name"),
+        source: "wise",
+        extra: { wise: { statement_id: transaction_id, type: "FEE", fee: fee } }
+      )
     end
 
     def transaction_id

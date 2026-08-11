@@ -54,13 +54,15 @@ class Provider::Wise
 
     while window_start <= end_date
       window_end = [ window_start + MAX_STATEMENT_DAYS - 1, end_date ].min
-      response = get_balance_statement(
-        profile_id,
-        balance_id,
-        currency: currency,
-        interval_start: window_start.beginning_of_day,
-        interval_end: window_end.end_of_day
-      )
+      response = with_rate_limit_retry do
+        get_balance_statement(
+          profile_id,
+          balance_id,
+          currency: currency,
+          interval_start: window_start.beginning_of_day,
+          interval_end: window_end.end_of_day
+        )
+      end
       transactions.concat(Array(response["transactions"] || response[:transactions]))
       window_start = window_end + 1.day
     end
@@ -131,12 +133,28 @@ class Provider::Wise
       end
     end
 
-    class WiseError < StandardError
-      attr_reader :error_type
+    private
 
-      def initialize(message, error_type = :unknown)
-        super(message)
-        @error_type = error_type
+      # Retries only the failed window so a rate-limited request does not
+      # restart earlier windows in a multi-window statement fetch.
+      def with_rate_limit_retry(max_retries: 3)
+        retries = 0
+        begin
+          yield
+        rescue WiseError => e
+          raise unless e.error_type == :rate_limited && retries < max_retries
+          retries += 1
+          sleep(2 ** retries)
+          retry
+        end
       end
-    end
+
+      class WiseError < StandardError
+        attr_reader :error_type
+
+        def initialize(message, error_type = :unknown)
+          super(message)
+          @error_type = error_type
+        end
+      end
 end

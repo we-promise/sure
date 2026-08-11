@@ -63,6 +63,11 @@ class WiseStatement::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Sent money to Questrade, Inc. INV-1234", entry.name
     assert_equal "INV-1234", entry.entryable.extra.dig("wise", "payment_reference")
     assert_equal "0.04", entry.entryable.extra.dig("wise", "fee")
+
+    fee_entry = @account.entries.find_by(external_id: "wise_statement_statement-456_fee")
+    assert_not_nil fee_entry
+    assert_equal BigDecimal("0.04"), fee_entry.amount
+    assert_equal I18n.t("wise_items.entries.fee_name"), fee_entry.name
   end
 
   test "ignores fees denominated in a different currency" do
@@ -78,5 +83,6 @@ class WiseStatement::ProcessorTest < ActiveSupport::TestCase
     entry = WiseStatement::Processor.new(statement, wise_account: @wise_account).process
 
     assert_equal BigDecimal("10.00"), entry.amount
+    assert_equal 1, @account.entries.where(source: "wise").count
   end
 end
