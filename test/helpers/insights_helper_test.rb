@@ -141,6 +141,34 @@ class InsightsHelperTest < ActionView::TestCase
     assert_equal "of budget", caption
   end
 
+  test "privacy text wraps amounts, percentages and counts in privacy-sensitive spans" do
+    body = "Your grocery spending is at €288.59, which is 142% above your usual €119.01."
+
+    rendered = insight_privacy_text(body)
+
+    assert_predicate rendered, :html_safe?
+    assert_equal <<~HTML.strip, rendered
+      Your grocery spending is at <span class="privacy-sensitive">€288.59</span>, which is <span class="privacy-sensitive">142%</span> above your usual <span class="privacy-sensitive">€119.01</span>.
+    HTML
+  end
+
+  test "privacy text handles locale formats with suffix currency and no-break-space grouping" do
+    rendered = insight_privacy_text("Checking holds 1 234,56 € with no activity in the last 45 days.")
+
+    assert_includes rendered, %(<span class="privacy-sensitive">1 234,56 €</span>)
+    assert_includes rendered, %(<span class="privacy-sensitive">45</span> days)
+  end
+
+  test "privacy text leaves numberless prose untouched and escapes HTML" do
+    assert_equal "Is Netflix still active?", insight_privacy_text("Is Netflix still active?")
+    assert_equal "", insight_privacy_text(nil)
+
+    rendered = insight_privacy_text("It's <b>big</b>: $1,200.50")
+
+    assert_includes rendered, "It&#39;s &lt;b&gt;big&lt;/b&gt;:"
+    assert_includes rendered, %(<span class="privacy-sensitive">$1,200.50</span>)
+  end
+
   test "action link resolves the stored subject and disappears when it cannot" do
     account = families(:dylan_family).accounts.visible.first
     resolvable = build_insight("idle_cash", metadata: { "account_id" => account.id })
