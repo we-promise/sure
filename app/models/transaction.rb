@@ -144,6 +144,16 @@ class Transaction < ApplicationRecord
     update!(category: category)
   end
 
+  # Marks a category as recently used. Called explicitly from the manual
+  # category-assignment controllers (picker, edit form, categorization
+  # wizard, create-and-assign) after a successful save — not wired to a
+  # blanket after_save callback because rule and import auto-assignment
+  # also go through `category_id=`, and those shouldn't count as a "recent"
+  # pick. See Category.recently_used_for.
+  def record_category_usage!
+    category.touch(:last_used_at) if saved_change_to_category_id? && category.present?
+  end
+
   def pending?
     extra_data = extra.is_a?(Hash) ? extra : {}
     PENDING_PROVIDERS.any? do |provider|

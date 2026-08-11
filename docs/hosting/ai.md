@@ -450,6 +450,21 @@ EXTERNAL_ASSISTANT_AGENT_ID=your-agent-name
 EXTERNAL_ASSISTANT_URL=http://my-agent.my-namespace.svc.cluster.local:18789/v1/chat/completions
 ```
 
+#### Giving the agent a long-term memory of its own
+
+An external agent can do more than answer questions about the current balance:
+with its own repository behind it, it can maintain a document-backed history of
+a family's wealth, where every figure traces back to the statement it came from.
+
+That is a two-install shape — Sure as the system of record, the agent harness as
+the model and the compiler — rather than a feature inside Sure. Sure exposes a
+set of preview MCP tools for it (the Statement Vault, coverage gaps, and
+valuations that require a source citation).
+
+See [Wealth history with an external agent harness](../llm-guides/wealth-agent-harness.md)
+for which side owns what, and [the blueprint](../llm-guides/wealth-blueprint.md)
+it implements.
+
 ### Security with Pipelock
 
 When [Pipelock](https://github.com/luckyPipewrench/pipelock) is enabled (`pipelock.enabled=true` in Helm, or the `pipelock` service in Docker Compose), all traffic between Sure and the external agent is scanned:
