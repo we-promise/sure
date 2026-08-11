@@ -74,6 +74,10 @@ pl:
       keep_token_placeholder: Pozostaw puste, aby zachować bieżący token
       connection_name_label: Nazwa połączenia
       connection_name_placeholder: Wise Osobiste
+      sync_start_date_label: Importuj transakcje od
+      sync_start_date_help: Wyciągi Wise są importowane od tej daty. Pozostaw wartość domyślną, aby zaimportować do roku historii.
+      import_all_history_label: Importuj pełną historię transakcji
+      import_all_history_help: Pobiera wszystkie historyczne wyciągi Wise zamiast tylko ostatniego roku.
       connect: Połącz Wise
       update_connection: Aktualizuj połączenie
       setup_accounts: Konfiguruj konta

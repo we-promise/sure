@@ -2,17 +2,19 @@ require "test_helper"
 
 class WiseItem::ImporterTest < ActiveSupport::TestCase
   class FakeWiseProvider
-    attr_reader :calls
+    attr_reader :calls, :statement_requests
 
     def initialize(balances: nil, savings_balances: nil, borderless_accounts: nil,
-                   transfers: nil, activities: nil, raise_on: {})
+                   transfers: nil, activities: nil, statements: nil, raise_on: {})
       @balances = balances || [ standard_balance ]
       @savings_balances = savings_balances || []
       @borderless_accounts = borderless_accounts || [ borderless_account ]
       @transfers = transfers || []
       @activities = activities || []
+      @statements = statements || []
       @raise_on = raise_on
       @calls = []
+      @statement_requests = []
     end
 
     def get_balances(profile_id)
@@ -36,6 +38,13 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     def get_transfers(profile_id, limit: 100, offset: 0)
       @calls << :get_transfers
       @transfers
+    end
+
+    def get_balance_statements(profile_id, balance_id, currency:, start_date:, end_date:)
+      @calls << :get_balance_statements
+      @statement_requests << { profile_id: profile_id, balance_id: balance_id, currency: currency,
+                               start_date: start_date, end_date: end_date }
+      @statements
     end
 
     def get_activities(profile_id, cursor: nil, size: 100)
@@ -164,6 +173,74 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
 
     eur_account = @wise_item.wise_accounts.find_by(currency: "EUR")
     assert_equal 1, eur_account.raw_transactions_payload.size
+  end
+
+  test "imports standard account balance statements and honors configured history start" do
+    @wise_item.update!(sync_start_date: Date.new(2024, 1, 1))
+    statements = [
+      {
+        "type" => "CREDIT",
+        "date" => "2024-01-02T10:00:00Z",
+        "amount" => { "value" => "25.00", "currency" => "EUR" },
+        "details" => { "description" => "Salary" },
+        "referenceNumber" => "statement-1"
+      }
+    ]
+    provider = FakeWiseProvider.new(statements: statements)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    account = @wise_item.wise_accounts.find_by(currency: "EUR")
+    assert_equal statements.first.merge("wise_statement" => true), account.raw_transactions_payload.first
+    assert_equal Date.new(2024, 1, 1), provider.statement_requests.first[:start_date]
+    assert_equal Date.current, provider.statement_requests.first[:end_date]
+  end
+
+  test "fetches full statement history when import_all_history is enabled" do
+    @wise_item.update!(import_all_history: true)
+    provider = FakeWiseProvider.new(statements: [])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal WiseItem::Importer::FULL_HISTORY_START_DATE, provider.statement_requests.first[:start_date]
+    assert_equal Date.current, provider.statement_requests.first[:end_date]
+  end
+
+  test "starts full history from balance creation time when available" do
+    @wise_item.update!(import_all_history: true)
+    balance = {
+      "id" => "10000001",
+      "amount" => { "value" => 100.0, "currency" => "EUR" },
+      "type" => "STANDARD",
+      "creationTime" => "2015-04-12T10:00:00Z"
+    }
+    provider = FakeWiseProvider.new(balances: [ balance ], statements: [])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal Date.new(2015, 4, 12), provider.statement_requests.first[:start_date]
+  end
+
+  test "keeps incremental sync window after statements already exist" do
+    @wise_item.update!(import_all_history: true)
+    statements = [
+      {
+        "type" => "CREDIT",
+        "date" => "2024-01-02T10:00:00Z",
+        "amount" => { "value" => "25.00", "currency" => "EUR" },
+        "details" => { "description" => "Salary" },
+        "referenceNumber" => "statement-1"
+      }
+    ]
+    WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(statements: statements)).import
+
+    sync = @wise_item.syncs.create!(status: :completed, completed_at: Time.current)
+
+    second_provider = FakeWiseProvider.new(statements: [])
+    WiseItem::Importer.new(@wise_item, wise_provider: second_provider).import
+
+    assert_equal (sync.completed_at - 7.days).to_date, second_provider.statement_requests.first[:start_date]
+    assert_equal Date.current, second_provider.statement_requests.first[:end_date]
   end
 
   # Activity routing

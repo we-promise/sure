@@ -1,6 +1,7 @@
 {
   "name": "Sure",
   "dockerComposeFile": "docker-compose.yml",
+  "containerUser": "sid",
   "service": "app",
   "runServices": [
     "db",
