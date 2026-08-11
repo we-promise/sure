@@ -36,9 +36,16 @@ class BudgetsController < ApplicationController
   end
 
   def picker
+    plan = if params[:plan].present?
+      Current.family.budget_plans.find_by!(slug: params[:plan])
+    else
+      Current.family.default_budget_plan
+    end
+
     render partial: "budgets/picker", locals: {
       family: Current.family,
-      year: params[:year].to_i || Date.current.year
+      year: params[:year].to_i.nonzero? || Date.current.year,
+      plan: plan
     }
   end
 
@@ -53,8 +60,8 @@ class BudgetsController < ApplicationController
     end
 
     def set_budget
-      start_date = Budget.param_to_date(params[:month_year], family: Current.family)
-      @budget = Budget.find_or_bootstrap(Current.family, start_date: start_date, user: Current.user)
+      plan, start_date = Budget.resolve_param(params[:month_year], family: Current.family)
+      @budget = Budget.find_or_bootstrap(Current.family, start_date: start_date, user: Current.user, plan: plan)
       raise ActiveRecord::RecordNotFound unless @budget
     end
 

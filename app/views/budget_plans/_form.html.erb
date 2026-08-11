@@ -1,0 +1,59 @@
+<%# locals: (budget_plan:, selectable_accounts:, scoped_account_ids: []) %>
+
+<%= styled_form_with model: budget_plan,
+                     url: budget_plan.persisted? ? budget_plan_path(budget_plan) : budget_plans_path,
+                     method: budget_plan.persisted? ? :patch : :post,
+                     class: "space-y-5" do |f| %>
+  <%= f.text_field :name,
+                   label: t("budget_plans.form.fields.name"),
+                   placeholder: t("budget_plans.form.fields.name_placeholder"),
+                   autofocus: true,
+                   required: true %>
+
+  <div>
+    <div class="mb-2">
+      <span class="block text-sm font-medium text-primary"><%= t("budget_plans.form.fields.accounts") %></span>
+      <p class="text-xs text-secondary mt-0.5"><%= t("budget_plans.form.fields.accounts_hint") %></p>
+    </div>
+
+    <%# Always-present blank entry so unchecking every box still submits
+        budget_plan[account_ids] (= "track all accounts") instead of
+        omitting the key (= "leave the scope unchanged"). %>
+    <%= hidden_field_tag "budget_plan[account_ids][]", "" %>
+
+    <div class="bg-container-inset rounded-lg p-1">
+      <% grouped = selectable_accounts.group_by(&:accountable_type) %>
+      <% grouped.each_with_index do |(type, accounts), group_idx| %>
+        <div class="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-secondary"><%= Accountable.from_type(type)&.display_name || type.titleize %></div>
+        <div class="bg-container rounded-md <%= "mb-1" if group_idx < grouped.size - 1 %>">
+          <% accounts.each_with_index do |account, idx| %>
+            <label class="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover cursor-pointer <%= "border-t border-subdued" if idx > 0 %>">
+              <%= check_box_tag "budget_plan[account_ids][]",
+                                account.id,
+                                scoped_account_ids.include?(account.id.to_s),
+                                id: "budget_plan_account_ids_#{account.id}",
+                                class: "checkbox checkbox--light shrink-0" %>
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-primary truncate"><%= account.name %></p>
+                <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= Money.new(account.balance, account.currency).format %></p>
+              </div>
+            </label>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between pt-2">
+    <% if budget_plan.persisted? && !budget_plan.is_default? %>
+      <%= button_to t("budget_plans.form.delete"),
+                    budget_plan_path(budget_plan),
+                    method: :delete,
+                    class: "text-sm text-destructive hover:underline cursor-pointer",
+                    form: { data: { turbo_frame: :_top, turbo_confirm: t("budget_plans.form.delete_confirm") } } %>
+    <% end %>
+    <div class="ml-auto">
+      <%= f.submit budget_plan.persisted? ? t("budget_plans.form.save") : t("budget_plans.form.create") %>
+    </div>
+  </div>
+<% end %>

@@ -178,6 +178,23 @@ class InsightsHelperTest < ActionView::TestCase
     assert_nil insight_action(dangling)
   end
 
+  test "budget insight CTA uses the stored budget param" do
+    param = "personal-#{Budget.date_to_param(Date.current)}"
+    insight = build_insight(
+      "budget_at_risk",
+      metadata: { "budget_param" => param },
+      period_start: Date.current.beginning_of_month
+    )
+
+    assert_equal budget_path(param), insight_action(insight)[:href]
+  end
+
+  test "budget insight CTA falls back to the month param for legacy rows" do
+    insight = build_insight("budget_on_track", period_start: Date.current.beginning_of_month)
+
+    assert_equal budget_path(Budget.date_to_param(Date.current.beginning_of_month)), insight_action(insight)[:href]
+  end
+
   private
     def build_insight(insight_type, priority: "medium", metadata: {}, facts: {}, period_start: nil, period_end: nil)
       Insight.new(

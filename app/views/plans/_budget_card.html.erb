@@ -1,4 +1,4 @@
-<%# locals: (budget:, top_budget_categories:) %>
+<%# locals: (budget:, top_budget_categories:, other_plans: []) %>
 
 <%= render DS::Card.new do %>
   <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -107,4 +107,20 @@
     full_width: true,
     class: "mt-5"
   ) %>
+
+  <% if other_plans.any? %>
+    <div class="mt-3 border-t border-tertiary pt-3">
+      <p class="mb-1 text-[11px] font-medium uppercase tracking-wide text-secondary"><%= t(".other_plans") %></p>
+      <% other_plans.each do |plan| %>
+        <%= render DS::Link.new(
+          text: plan.name,
+          variant: "ghost",
+          href: budget_path(Budget.param_for(plan, budget.start_date)),
+          icon: "chevron-right",
+          icon_position: :right,
+          full_width: true
+        ) %>
+      <% end %>
+    </div>
+  <% end %>
 <% end %>

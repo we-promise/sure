@@ -7,7 +7,7 @@ class Api::V1::BudgetsController < Api::V1::BaseController
   before_action :set_budget, only: :show
 
   def index
-    budgets_query = apply_filters(budgets_scope).order(start_date: :desc)
+    budgets_query = apply_filters(budgets_scope).order(start_date: :desc, created_at: :asc, id: :asc)
     @per_page = safe_per_page_param
 
     @pagy, @budgets = pagy(
@@ -38,10 +38,14 @@ class Api::V1::BudgetsController < Api::V1::BaseController
     def apply_filters(query)
       query = query.where("budgets.start_date >= ?", parse_date_param(:start_date)) if params[:start_date].present?
       query = query.where("budgets.end_date <= ?", parse_date_param(:end_date)) if params[:end_date].present?
+      if params[:budget_plan_id].present?
+        raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:budget_plan_id])
+        query = query.where(budget_plan_id: params[:budget_plan_id])
+      end
       query
     end
 
     def budgets_scope
-      current_resource_owner.family.budgets.includes(budget_categories: :category)
+      current_resource_owner.family.budgets.includes({ budget_plan: :budget_plan_accounts }, budget_categories: :category)
     end
 end

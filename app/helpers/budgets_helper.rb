@@ -1,4 +1,9 @@
 module BudgetsHelper
+  # Plans offered by the switcher menu on the budget page.
+  def budget_plan_switcher_plans
+    Current.family.budget_plans.default_first
+  end
+
   def budget_has_over_budget?(budget)
     return false unless budget.initialized?
 

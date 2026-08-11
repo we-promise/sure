@@ -8,6 +8,7 @@ class PlansController < ApplicationController
   def show
     @budget = Budget.find_or_bootstrap(Current.family, start_date: Date.current, user: Current.user)
     @top_budget_categories = @budget.initialized? ? @budget.top_spending_categories : []
+    @other_budget_plans = Current.family.budget_plans.where(is_default: false).order(:name)
 
     @goals = Goal.active_prepared_for(Current.family)
     @goals_summary = Goal.summary_for(@goals, currency: Current.family.primary_currency_code)

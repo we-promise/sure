@@ -23,6 +23,8 @@ class SureImport::Preflight
     "Trade" => %w[account_id date amount qty price ticker],
     "Holding" => %w[account_id date amount qty price ticker],
     "Valuation" => %w[account_id date amount],
+    "BudgetPlan" => %w[id name],
+    "BudgetPlanAccount" => %w[budget_plan_id account_id],
     "Budget" => %w[id start_date end_date],
     "BudgetCategory" => %w[budget_id category_id],
     "Rule" => %w[name]
@@ -34,6 +36,7 @@ class SureImport::Preflight
     "Account" => :accounts,
     "RecurringTransaction" => :recurring_transactions,
     "Transaction" => :transactions,
+    "BudgetPlan" => :budget_plans,
     "Budget" => :budgets
   ).freeze
 
@@ -47,6 +50,8 @@ class SureImport::Preflight
     "Trade" => { accounts: %w[account_id] },
     "Holding" => { accounts: %w[account_id] },
     "Valuation" => { accounts: %w[account_id] },
+    "BudgetPlanAccount" => { budget_plans: %w[budget_plan_id], accounts: %w[account_id] },
+    "Budget" => { budget_plans: %w[budget_plan_id] },
     "BudgetCategory" => { budgets: %w[budget_id], categories: %w[category_id] }
   }.freeze
 

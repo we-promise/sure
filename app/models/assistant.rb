@@ -52,7 +52,11 @@ module Assistant
         Function::GetCategories,
         Function::CreateCategory,
         Function::UpdateCategory,
-        Function::UpdateTransaction
+        Function::UpdateTransaction,
+        Function::UpdateBudget,
+        Function::ListBudgets,
+        Function::CreateBudget,
+        Function::DeleteBudget
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?

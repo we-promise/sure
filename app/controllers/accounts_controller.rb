@@ -178,6 +178,8 @@ class AccountsController < ApplicationController
   def destroy
     if @account.linked?
       redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
+    elsif (plan_names = @account.solely_scoped_budget_plans.pluck(:name)).any?
+      redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_last_budget_plan_account", plans: plan_names.to_sentence)
     else
       begin
         @account.destroy_later

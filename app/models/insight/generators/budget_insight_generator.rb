@@ -1,7 +1,8 @@
-# Reads the family's current budget (if they've set one up) and produces
-# either a warning — categories over or near their limit — or, once the month
-# is at least half over, a quiet positive signal that everything is on track.
-# Reuses BudgetCategory's own health checks rather than re-deriving pace math.
+# Reads the family's current budgets (if they've set any up) and produces,
+# per budget, either a warning — categories over or near their limit — or,
+# once the month is at least half over, a quiet positive signal that
+# everything is on track. Reuses BudgetCategory's own health checks rather
+# than re-deriving pace math.
 class Insight::Generators::BudgetInsightGenerator < Insight::Generator
   produces "budget_at_risk", "budget_on_track"
 
@@ -10,28 +11,29 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
   MAX_LISTED_CATEGORIES = 3
 
   def generate
-    budget = current_budget
-    return [] unless budget&.initialized?
+    current_budgets.flat_map do |budget|
+      next [] unless budget.initialized?
 
-    parent_categories = budget.budget_categories.reject(&:subcategory?)
-    over = parent_categories.select(&:over_budget_with_budget?)
-    near = parent_categories.select { |bc| bc.budgeted? && bc.near_limit? }
+      parent_categories = budget.budget_categories.reject(&:subcategory?)
+      over = parent_categories.select(&:over_budget_with_budget?)
+      near = parent_categories.select { |bc| bc.budgeted? && bc.near_limit? }
 
-    if over.any? || near.any?
-      [ at_risk_insight(budget, over, near) ]
-    elsif on_track_eligible?(budget, parent_categories)
-      [ on_track_insight(budget) ]
-    else
-      []
+      if over.any? || near.any?
+        [ at_risk_insight(budget, over, near) ]
+      elsif on_track_eligible?(budget, parent_categories)
+        [ on_track_insight(budget) ]
+      else
+        []
+      end
     end
   end
 
   private
-    def current_budget
+    def current_budgets
       family.budgets
-        .includes(budget_categories: :category)
+        .includes(:budget_plan, budget_categories: :category)
         .where("start_date <= ? AND end_date >= ?", Date.current, Date.current)
-        .first
+        .order(:created_at)
     end
 
     def at_risk_insight(budget, over, near)
@@ -41,7 +43,7 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
       build_insight(
         insight_type: "budget_at_risk",
         priority: over.any? ? "high" : "medium",
-        title: I18n.t("insights.titles.budget_at_risk", count: flagged.size),
+        title: insight_title("budget_at_risk", budget, count: flagged.size),
         template_key: over.any? ? "budget_at_risk.over" : "budget_at_risk.near",
         facts: {
           categories: category_names.to_sentence,
@@ -53,10 +55,11 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
         metadata: {
           over_category_ids: over.map { |bc| bc.category.id }.sort,
           near_category_ids: near.map { |bc| bc.category.id }.sort,
-          budget_spent_pct_bucket: (round(budget.percent_of_budget_spent, 0).to_i / 10) * 10
+          budget_spent_pct_bucket: (round(budget.percent_of_budget_spent, 0).to_i / 10) * 10,
+          budget_param: budget.to_param
         },
         period: budget.period,
-        dedup_key: "budget_at_risk:#{month_token(budget.start_date)}"
+        dedup_key: "budget_at_risk:#{dedup_scope(budget)}#{month_token(budget.start_date)}"
       )
     end
 
@@ -64,7 +67,7 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
       build_insight(
         insight_type: "budget_on_track",
         priority: "low",
-        title: I18n.t("insights.titles.budget_on_track"),
+        title: insight_title("budget_on_track", budget),
         template_key: "budget_on_track",
         facts: {
           spent: format_money(budget.actual_spending),
@@ -74,11 +77,26 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
         # Bucketed to damp nightly churn: a one-point move shouldn't count as
         # a material change that rewrites the body or reactivates a dismissal.
         metadata: {
-          budget_spent_pct_bucket: (round(budget.percent_of_budget_spent, 0).to_i / 10) * 10
+          budget_spent_pct_bucket: (round(budget.percent_of_budget_spent, 0).to_i / 10) * 10,
+          budget_param: budget.to_param
         },
         period: budget.period,
-        dedup_key: "budget_on_track:#{month_token(budget.start_date)}"
+        dedup_key: "budget_on_track:#{dedup_scope(budget)}#{month_token(budget.start_date)}"
       )
+    end
+
+    # The default plan keeps the legacy month-only key so existing insights
+    # don't duplicate after upgrade; sibling budgets get their plan id.
+    def dedup_scope(budget)
+      budget.budget_plan.is_default? ? "" : "#{budget.budget_plan_id}:"
+    end
+
+    def insight_title(insight_type, budget, count: nil)
+      if budget.budget_plan.is_default?
+        I18n.t("insights.titles.#{insight_type}", count: count)
+      else
+        I18n.t("insights.titles.#{insight_type}_named", budget: budget.budget_plan.name, count: count)
+      end
     end
 
     def on_track_eligible?(budget, parent_categories)

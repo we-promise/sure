@@ -66,6 +66,58 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "budget payload includes its budget plan" do
+    get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
+
+    assert_response :success
+    plan = JSON.parse(response.body)["budget_plan"]
+    assert_equal @budget.budget_plan_id, plan["id"]
+    assert_equal "Primary", plan["name"]
+    assert plan["is_default"]
+    assert_equal [], plan["account_ids"]
+  end
+
+  test "filters budgets by budget_plan_id" do
+    sibling_plan = @family.budget_plans.create!(name: "Test")
+    sibling_budget = @family.budgets.create!(
+      budget_plan: sibling_plan,
+      start_date: @budget.start_date,
+      end_date: @budget.end_date,
+      budgeted_spending: 100,
+      currency: "USD"
+    )
+
+    get api_v1_budgets_url, params: { budget_plan_id: sibling_plan.id }, headers: api_headers(@api_key)
+
+    assert_response :success
+    ids = JSON.parse(response.body)["budgets"].map { |b| b["id"] }
+    assert_equal [ sibling_budget.id ], ids
+  end
+
+  test "rejects a malformed budget_plan_id filter" do
+    get api_v1_budgets_url, params: { budget_plan_id: "not-a-uuid" }, headers: api_headers(@api_key)
+
+    assert_response :not_found
+  end
+
+  test "orders same-month sibling budgets deterministically" do
+    sibling_plan = @family.budget_plans.create!(name: "Test")
+    sibling_budget = @family.budgets.create!(
+      budget_plan: sibling_plan,
+      start_date: @budget.start_date,
+      end_date: @budget.end_date,
+      budgeted_spending: 100,
+      currency: "USD"
+    )
+
+    get api_v1_budgets_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    ids = JSON.parse(response.body)["budgets"].map { |b| b["id"] }
+    assert_equal ids.index(@budget.id) + 1, ids.index(sibling_budget.id),
+      "sibling budgets for the same month should sort by creation order"
+  end
+
   test "shows a budget" do
     get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
 
