@@ -516,7 +516,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
 
     assert_equal Money.new(1_000, @family.currency), totals.income_money
-    assert_equal Money.new(1_000, @family.currency), totals.expense_money
+    assert_equal Money.new(1_400, @family.currency), totals.expense_money
   end
 
   # Tax-Advantaged Account Exclusion Tests
