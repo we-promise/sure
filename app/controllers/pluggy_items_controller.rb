@@ -46,7 +46,7 @@ class PluggyItemsController < ApplicationController
     if @pluggy_item.save
       if should_auto_connect?(@pluggy_item)
         redirect_to connect_form_settings_providers_path(provider_key: "pluggy"),
-                    notice: t(".connect_next", default: "Credentials saved. Continue with Pluggy Connect."),
+                    notice: t(".connect_next"),
                     status: :see_other
         return
       end
@@ -64,7 +64,7 @@ class PluggyItemsController < ApplicationController
       @pluggy_item.sync_later if @pluggy_item.credentials_configured? && !@pluggy_item.syncing?
 
       if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured Pluggy.")
+        flash.now[:notice] = t(".success")
         @pluggy_items = Current.family.pluggy_items.ordered
         render turbo_stream: [
           turbo_stream.replace(
@@ -133,7 +133,7 @@ class PluggyItemsController < ApplicationController
         # launcher — the partial gates the widget box on @connect_token. Without this
         # the turbo-stream update would hide the button the user saved credentials to use.
         @connect_token, @connect_item = issue_pluggy_connect_token(Current.family)
-        notice_message = t(".success", default: "Successfully updated Pluggy configuration.")
+        notice_message = t(".success")
         render turbo_stream: [
           # Drawer: `update` re-renders the <turbo-frame id="pluggy-connect-form"
           # target="_top"> wrapper in place — the frame keeps its dialog lifecycle and
@@ -171,7 +171,7 @@ class PluggyItemsController < ApplicationController
 
   def destroy
     @pluggy_item.destroy_later
-    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled Pluggy connection for deletion.")
+    redirect_to settings_providers_path, notice: t(".success")
   end
 
   def sync
@@ -205,7 +205,7 @@ class PluggyItemsController < ApplicationController
 
     unless pluggy_item.pluggy_item_id.present?
       redirect_to settings_providers_path,
-                  alert: t(".missing_item_id_for_sync", default: "No Pluggy item found for these credentials yet.")
+                  alert: t(".missing_item_id_for_sync")
       return
     end
 

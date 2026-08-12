@@ -65,6 +65,7 @@ pt-BR:
     # CRUD success messages
     create:
       success: "Conexão com o Pluggy criada com sucesso"
+      connect_next: "Credenciais salvas. Continue com o Pluggy Connect."
     update:
       success: "Conexão com o Pluggy atualizada"
     destroy:
@@ -245,3 +246,4 @@ pt-BR:
     # Preload accounts
     preload_accounts:
       no_credentials_configured: "Configure suas credenciais do Pluggy primeiro em Configurações do Provedor."
+      missing_item_id_for_sync: "Nenhum item do Pluggy encontrado para estas credenciais ainda."

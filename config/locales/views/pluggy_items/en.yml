@@ -65,6 +65,7 @@ en:
     # CRUD success messages
     create:
       success: "Pluggy connection created successfully"
+      connect_next: "Credentials saved. Continue with Pluggy Connect."
     update:
       success: "Pluggy connection updated"
     destroy:
@@ -245,3 +246,4 @@ en:
     # Preload accounts
     preload_accounts:
       no_credentials_configured: "Please configure your Pluggy credentials first in Provider Settings."
+      missing_item_id_for_sync: "No Pluggy item found for these credentials yet."
