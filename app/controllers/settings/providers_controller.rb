@@ -2,7 +2,7 @@ class Settings::ProvidersController < ApplicationController
   layout -> { turbo_frame_request? ? "turbo_rails/frame" : "settings" }
 
   before_action :ensure_admin, only: [ :show, :update, :sync_all, :sync, :connect_form ]
-  before_action :set_encryption_warning_context, only: [ :show, :connect_form ]
+  before_action :set_encryption_warning_context, only: [ :connect_form ]
 
   def show
     @breadcrumbs = [

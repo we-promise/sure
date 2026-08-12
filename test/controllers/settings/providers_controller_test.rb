@@ -430,6 +430,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
     assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
     refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
   end
@@ -442,6 +443,20 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+  end
+
+  test "GET connect_form hides encryption warning in managed mode" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
     assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
     refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
   end
