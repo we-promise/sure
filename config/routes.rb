@@ -535,7 +535,7 @@ Rails.application.routes.draw do
 
     member do
       match :toggle_status, via: [ :get, :post ]
-      match :restore, via: [ :get, :post ]
+      post :restore
     end
   end
 

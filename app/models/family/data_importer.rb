@@ -518,6 +518,11 @@ class Family::DataImporter
         next unless last_occurrence_date && next_expected_date
 
         recurring_transaction ||= @family.recurring_transactions.build
+        # A pre-dismissed-feature export (or any payload that simply omits the
+        # key) must not silently un-dismiss an existing row on re-import —
+        # only touch dismissed_at when the payload actually says something
+        # about it.
+        dismissed_at = data.key?("dismissed_at") ? parse_import_datetime(data["dismissed_at"]) : recurring_transaction.dismissed_at
         recurring_transaction.assign_attributes(
           account_id: new_account_id,
           merchant_id: new_merchant_id,
@@ -552,7 +557,7 @@ class Family::DataImporter
           weekend_adjust: imported_enum_value(data["weekend_adjust"], RecurringTransaction.weekend_adjusts, "none"),
           holiday_calendar: data["holiday_calendar"],
           matcher_hints: data["matcher_hints"] || {},
-          dismissed_at: parse_import_datetime(data["dismissed_at"])
+          dismissed_at: dismissed_at
         )
         # These columns are NOT NULL with database defaults. An export written
         # before they existed omits them, and assigning nil would replace a

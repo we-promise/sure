@@ -560,6 +560,47 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal(-89.99, recurring_transaction.expected_amount_avg.to_f)
   end
 
+  test "re-importing a recurring transaction without dismissed_at preserves existing dismissal" do
+    account_record = {
+      type: "Account",
+      data: {
+        id: "acct-1",
+        name: "Main Checking",
+        balance: "5000",
+        currency: "USD",
+        accountable_type: "Depository"
+      }
+    }
+    recurring_record = {
+      id: "recurring-1",
+      account_id: "acct-1",
+      name: "Gym Membership",
+      amount: "49.99",
+      currency: "USD",
+      expected_day_of_month: 1,
+      last_occurrence_date: "2024-01-01",
+      next_expected_date: "2024-02-01",
+      status: "active",
+      occurrence_count: 3,
+      manual: false
+    }
+
+    # First pass: the export explicitly marks the row dismissed. Second pass
+    # (e.g. an older export format, or any payload that simply omits the
+    # field) must not be treated as "clear the dismissal" — the key's
+    # absence is not the same as an explicit dismissed_at: nil.
+    ndjson = build_ndjson([
+      account_record,
+      { type: "RecurringTransaction", data: recurring_record.merge(dismissed_at: "2024-03-01T12:00:00Z") },
+      { type: "RecurringTransaction", data: recurring_record }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    recurring_transaction = @family.recurring_transactions.find_by!(name: "Gym Membership")
+    assert recurring_transaction.dismissed?, "omitting dismissed_at on re-import must not clear an existing dismissal"
+  end
+
   test "round trips recurring transaction export semantics" do
     source_family = Family.create!(name: "Recurring Source", currency: "USD")
     source_account = source_family.accounts.create!(

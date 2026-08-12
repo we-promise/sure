@@ -403,6 +403,34 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal 0, @family.recurring_transactions.visible.count
   end
 
+  test "does not recalculate variance for a dismissed manual recurring transaction" do
+    account = @family.accounts.first
+    name = "Dismissed Manual Subscription"
+
+    create_name_pattern_entries(account: account, name: name, amount: 50, day: 6)
+
+    dismissed_manual = @family.recurring_transactions.create!(
+      account: account,
+      name: name,
+      amount: 50,
+      currency: "USD",
+      expected_day_of_month: 6,
+      last_occurrence_date: 4.months.ago.to_date,
+      next_expected_date: 1.month.from_now.to_date,
+      occurrence_count: 1,
+      status: "active",
+      manual: true,
+      dismissed_at: 1.day.ago
+    )
+
+    @identifier.identify_recurring_patterns
+
+    dismissed_manual.reload
+    assert dismissed_manual.dismissed?
+    assert_equal 1, dismissed_manual.occurrence_count, "Dismissed manual row must not be recalculated by the variance pass"
+    assert_equal 4.months.ago.to_date, dismissed_manual.last_occurrence_date
+  end
+
   test "identifies name patterns without per-pattern recurring transaction lookups" do
     account = @family.accounts.first
     names = Array.new(4) { |index| "Performance Subscription #{index}" }
