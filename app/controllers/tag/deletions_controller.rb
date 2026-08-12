@@ -13,10 +13,12 @@ class Tag::DeletionsController < ApplicationController
   private
 
     def set_tag
-      @tag = Current.family.tags.find_by(id: params[:tag_id])
+      @tag = Current.family.tags.find(params[:tag_id])
     end
 
     def set_replacement_tag
-      @replacement_tag = Current.family.tags.find_by(id: params[:replacement_tag_id])
+      if params[:replacement_tag_id].present?
+        @replacement_tag = Current.family.tags.find(params[:replacement_tag_id])
+      end
     end
 end

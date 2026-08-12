@@ -1,0 +1,211 @@
+---
+en:
+  redbark_items:
+    default_name: "Redbark Connection"
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "No accounts found"
+      synced:
+        one: "%{count} account synced"
+        other: "%{count} accounts synced"
+      synced_with_setup: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: "No institutions connected"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+    errors:
+      provider_not_configured: "Redbark provider is not configured"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Importing accounts from Redbark..."
+        processing: "Processing transactions..."
+        calculating: "Calculating balances..."
+        importing_data: "Importing account data..."
+        checking_setup: "Checking account configuration..."
+        needs_setup: "%{count} accounts need setup..."
+      success: "Sync started"
+
+    # Panel (settings view)
+    panel:
+      setup_instructions: "Setup instructions:"
+      step_1: "Create an API key at app.redbark.com under Settings"
+      step_2: "Enter your API key below and click the Save button"
+      step_3: "After a successful connection, go to the Accounts tab to set up new accounts"
+      field_descriptions: "Field descriptions:"
+      optional: "(Optional)"
+      required: "(required)"
+      optional_with_default: "(optional, defaults to %{default_value})"
+      save_button: "Save Configuration"
+      update_button: "Update Configuration"
+      status_configured_html: "Configured and ready to use. Visit the <a href=\"%{accounts_path}\" class=\"link\">Accounts</a> tab to manage and set up accounts."
+      status_not_configured: "Not configured"
+      fields:
+        api_key:
+          label: "API Key"
+          description: "Your Redbark API key (starts with rbk_live_)"
+          placeholder_new: "rbk_live_..."
+          placeholder_update: "Enter new API key to update"
+
+    # CRUD success messages
+    create:
+      success: "Redbark connection created successfully"
+    update:
+      success: "Redbark connection updated"
+    destroy:
+      success: "Redbark connection removed"
+      unlink_failed:
+        one: "Could not unlink %{count} account. Please try again."
+        other: "Could not unlink %{count} accounts. Please try again."
+    index:
+      title: "Redbark Connections"
+
+    # Loading states
+    loading:
+      loading_message: "Loading Redbark accounts..."
+      loading_title: "Loading"
+
+    # Provider item display (used in _item partial)
+    redbark_item:
+      accounts_need_setup: "Accounts need setup"
+      delete: "Delete connection"
+      deletion_in_progress: "deletion in progress..."
+      error: "Error"
+      more_accounts_available:
+        one: "%{count} more account available"
+        other: "%{count} more accounts available"
+      no_accounts_description: "This connection has no linked accounts yet."
+      no_accounts_title: "No accounts"
+      provider_name: "Redbark"
+      requires_update: "Connection needs update"
+      setup_action: "Set Up New Accounts"
+      setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported Redbark accounts."
+      setup_needed: "New accounts ready to set up"
+      status: "Synced %{timestamp} ago"
+      status_never: "Never synced"
+      status_with_summary: "Last synced %{timestamp} ago - %{summary}"
+      syncing: "Syncing..."
+      total: "Total"
+      unlinked: "Unlinked"
+      update_credentials: "Update credentials"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "accounts selected"
+      api_error: "API error: %{message}"
+      cancel: "Cancel"
+      configure_name_in_provider: "Cannot import - please configure account name in Redbark"
+      description: "Select the accounts you want to link to your %{product_name} account."
+      link_accounts: "Link selected accounts"
+      no_accounts_found: "No accounts found. Please check your API key configuration."
+      no_api_key: "Redbark API key is not configured. Please configure it in Settings."
+      no_credentials_configured: "Please configure your Redbark credentials first in Provider Settings."
+      no_name_placeholder: "(No name)"
+      title: "Select Redbark Accounts"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "This account is already linked to a provider"
+      all_accounts_already_linked: "All Redbark accounts are already linked"
+      api_error: "API error: %{message}"
+      balance_label: "Balance:"
+      cancel: "Cancel"
+      cancel_button: "Cancel"
+      configure_name_in_provider: "Cannot import - please configure account name in Redbark"
+      connect_hint: "Connect a Redbark account to enable automatic syncing."
+      description: "Select a Redbark account to link with this account. Transactions will be synced and deduplicated automatically."
+      header: "Link with Redbark"
+      link_account: "Link account"
+      link_button: "Link this account"
+      linking_to: "Linking to:"
+      no_account_specified: "No account specified"
+      no_accounts: "No unlinked Redbark accounts found."
+      no_accounts_found: "No Redbark accounts found. Please check your API key configuration."
+      no_api_key: "Redbark API key is not configured. Please configure it in Settings."
+      no_credentials_configured: "Please configure your Redbark credentials first in Provider Settings."
+      no_name_placeholder: "(No name)"
+      settings_link: "Go to Provider Settings"
+      subtitle: "Choose a Redbark account"
+      title: "Link %{account_name} with Redbark"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "This account is already linked to a provider"
+      api_error: "API error: %{message}"
+      invalid_account_name: "Cannot link account with blank name"
+      provider_account_already_linked: "This Redbark account is already linked to another account"
+      provider_account_not_found: "Redbark account not found"
+      missing_parameters: "Missing required parameters"
+      no_api_key: "Redbark API key not found. Please configure it in Provider Settings."
+      success: "Successfully linked %{account_name} with Redbark"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Account Type:"
+      accounts_count:
+        one: "%{count} account available"
+        other: "%{count} accounts available"
+      all_accounts_linked: "All your Redbark accounts have already been set up."
+      api_error: "API error: %{message}"
+      creating: "Creating accounts..."
+      fetch_failed: "Failed to Fetch Accounts"
+      import_selected: "Import selected accounts"
+      instructions: "Select the accounts you want to import from Redbark. You can choose multiple accounts."
+      no_accounts: "No unlinked accounts found from this Redbark connection."
+      no_accounts_to_setup: "No Accounts to Set Up"
+      no_api_key: "Redbark API key is not configured. Please check your connection settings."
+      select_all: "Select all"
+      account_types:
+        skip: "Skip this account"
+        depository: "Checking or Savings Account"
+        credit_card: "Credit Card"
+        loan: "Loan or Mortgage"
+        other_asset: "Other Asset"
+      subtype_labels:
+        depository: "Account Subtype:"
+        credit_card: ""
+        loan: "Loan Type:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Credit cards will be automatically set up as credit card accounts."
+        other_asset: "No additional options needed for Other Assets."
+      subtypes:
+        depository:
+          checking: "Checking"
+          savings: "Savings"
+          hsa: "Health Savings Account"
+          cd: "Certificate of Deposit"
+          money_market: "Money Market"
+        loan:
+          mortgage: "Mortgage"
+          student: "Student Loan"
+          auto: "Auto Loan"
+          other: "Other Loan"
+      balance: "Balance"
+      cancel: "Cancel"
+      done: "Done"
+      choose_account_type: "Choose the correct account type for each Redbark account:"
+      create_accounts: "Create Accounts"
+      creating_accounts: "Creating Accounts..."
+      historical_data_range: "Historical Data Range:"
+      subtitle: "Choose the correct account types for your imported accounts"
+      sync_start_date_help: "Select how far back you want to sync transaction history."
+      sync_start_date_label: "Start syncing transactions from:"
+      title: "Set Up Your Redbark Accounts"
+
+    setup_required:
+      title: Connect Redbark first
+      not_configured_title: Redbark isn't connected yet
+      not_configured_description: Add your Redbark API key under Provider settings, then come back here to link accounts.
+      go_to_provider_settings: Go to provider settings
+
+    # Complete account setup
+    complete_account_setup:
+      all_skipped: "All accounts were skipped. No accounts were created."
+      creation_failed: "Failed to create accounts: %{error}"
+      creation_failed_generic: "Failed to create accounts."
+      setup_failed: "%{count} account(s) could not be created. Nothing else was changed - fix the issue and try again."
+      no_accounts: "No accounts to set up."
+      success: "Successfully created %{count} account(s)."

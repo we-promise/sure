@@ -124,10 +124,8 @@ class AssistantTest < ActiveSupport::TestCase
   test "responds with tool function calls" do
     @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
 
-    # Only first provider call executes function
     Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("test value").once
 
-    # Call #1: Function requests
     call1_response_chunk = provider_response_chunk(
       id: "1",
       model: "gpt-4.1",
@@ -137,9 +135,6 @@ class AssistantTest < ActiveSupport::TestCase
       ]
     )
 
-    call1_response = provider_success_response(call1_response_chunk.data)
-
-    # Call #2: Text response (that uses function results)
     call2_text_chunks = [
       provider_text_chunk("Your net worth is "),
       provider_text_chunk("$124,200")
@@ -152,35 +147,152 @@ class AssistantTest < ActiveSupport::TestCase
       function_requests: []
     )
 
-    call2_response = provider_success_response(call2_response_chunk.data)
-
-    sequence = sequence("provider_chat_response")
-
-    @provider.expects(:chat_response).with do |message, **options|
-      assert_equal @expected_session_id, options[:session_id]
-      assert_equal @expected_user_identifier, options[:user_identifier]
-      assert_equal @expected_conversation_history, options[:messages]
-      call2_text_chunks.each do |text_chunk|
-        options[:streamer].call(text_chunk)
-      end
-
-      options[:streamer].call(call2_response_chunk)
-      true
-    end.returns(call2_response).once.in_sequence(sequence)
-
-    @provider.expects(:chat_response).with do |message, **options|
-      assert_equal @expected_session_id, options[:session_id]
-      assert_equal @expected_user_identifier, options[:user_identifier]
-      assert_equal @expected_conversation_history, options[:messages]
-      options[:streamer].call(call1_response_chunk)
-      true
-    end.returns(call1_response).once.in_sequence(sequence)
+    expect_provider_rounds(
+      [ call1_response_chunk ],
+      [ *call2_text_chunks, call2_response_chunk ]
+    )
 
     assert_difference "AssistantMessage.count", 1 do
       @assistant.respond_to(@message)
       message = @chat.messages.ordered.where(type: "AssistantMessage").last
+      assert_equal "complete", message.status
+      assert_equal "Your net worth is $124,200", message.content
       assert_equal 1, message.tool_calls.size
     end
+  end
+
+  test "responds after multiple rounds of tool calls" do
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
+    @provider.stubs(:supports_responses_endpoint?).returns(false)
+
+    Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("accounts").twice
+    Assistant::Function::GetIncomeStatement.any_instance.stubs(:call).returns("income").once
+
+    first_tools = provider_response_chunk(
+      id: "1",
+      model: "gpt-4.1",
+      messages: [],
+      function_requests: [
+        provider_function_request(id: "1", call_id: "1", function_name: "get_accounts", function_args: "{}")
+      ]
+    )
+    second_tools = provider_response_chunk(
+      id: "2",
+      model: "gpt-4.1",
+      messages: [],
+      function_requests: [
+        provider_function_request(id: "2", call_id: "2", function_name: "get_income_statement", function_args: "{}"),
+        provider_function_request(id: "2", call_id: "3", function_name: "get_accounts", function_args: "{}")
+      ]
+    )
+    final_text = provider_text_chunk("Final answer.")
+    final_response = provider_response_chunk(
+      id: "3",
+      model: "gpt-4.1",
+      messages: [ provider_message(id: "3", text: final_text.data) ],
+      function_requests: []
+    )
+
+    expect_provider_rounds(
+      [ first_tools ],
+      [ second_tools ],
+      [ final_text, final_response ],
+      expected_function_result_ids: [ [], [ "1" ], [ "1", "2", "3" ] ]
+    )
+
+    assert_difference "AssistantMessage.count", 1 do
+      @assistant.respond_to(@message)
+    end
+
+    response = @chat.messages.ordered.where(type: "AssistantMessage").last
+    assert_equal "complete", response.status
+    assert_equal "Final answer.", response.content
+    assert_equal [ "get_accounts", "get_accounts", "get_income_statement" ],
+                 response.tool_calls.map(&:function_name).sort
+  end
+
+  test "keeps earlier text when the final tool follow-up is empty" do
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
+    Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("accounts").once
+
+    partial_text = provider_text_chunk("I found your accounts.")
+    tools_with_text = provider_response_chunk(
+      id: "1",
+      model: "gpt-4.1",
+      messages: [ provider_message(id: "1", text: partial_text.data) ],
+      function_requests: [
+        provider_function_request(id: "1", call_id: "1", function_name: "get_accounts", function_args: "{}")
+      ]
+    )
+    empty_follow_up = provider_response_chunk(
+      id: "2",
+      model: "gpt-4.1",
+      messages: [],
+      function_requests: []
+    )
+
+    expect_provider_rounds(
+      [ partial_text, tools_with_text ],
+      [ empty_follow_up ]
+    )
+
+    @assistant.respond_to(@message)
+
+    response = @chat.messages.ordered.where(type: "AssistantMessage").last
+    assert_equal "complete", response.status
+    assert_equal "I found your accounts.", response.content
+    assert_equal 1, response.tool_calls.size
+  end
+
+  test "cleans up the pending message when the tool-call limit is exceeded" do
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
+    Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("accounts").once
+
+    first_tools = provider_response_chunk(
+      id: "1",
+      model: "gpt-4.1",
+      messages: [],
+      function_requests: [
+        provider_function_request(id: "1", call_id: "1", function_name: "get_accounts", function_args: "{}")
+      ]
+    )
+    second_tools = provider_response_chunk(
+      id: "2",
+      model: "gpt-4.1",
+      messages: [],
+      function_requests: [
+        provider_function_request(id: "2", call_id: "2", function_name: "get_accounts", function_args: "{}")
+      ]
+    )
+
+    expect_provider_rounds([ first_tools ], [ second_tools ])
+    pending = AssistantMessage.create!(chat: @chat, content: "", ai_model: @message.ai_model, status: :pending)
+
+    with_env_overrides("ASSISTANT_MAX_TOOL_CALL_ITERATIONS" => "1") do
+      @assistant.respond_to(@message, assistant_message: pending)
+    end
+
+    assert_not AssistantMessage.exists?(pending.id)
+    assert_includes @chat.reload.technical_error_message, "tool-call limit"
+  end
+
+  test "cleans up the pending message when the model returns no text or tools" do
+    @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
+
+    empty_response = provider_response_chunk(
+      id: "1",
+      model: "gpt-4.1",
+      messages: [],
+      function_requests: []
+    )
+
+    expect_provider_rounds([ empty_response ])
+    pending = AssistantMessage.create!(chat: @chat, content: "", ai_model: @message.ai_model, status: :pending)
+
+    @assistant.respond_to(@message, assistant_message: pending)
+
+    assert_not AssistantMessage.exists?(pending.id)
+    assert_includes @chat.reload.technical_error_message, "neither text nor tool calls"
   end
 
   test "for_chat returns Builtin by default" do
@@ -572,5 +684,26 @@ class AssistantTest < ActiveSupport::TestCase
         ),
         usage: usage
       )
+    end
+
+    def expect_provider_rounds(*rounds, expected_function_result_ids: nil)
+      queued_rounds = rounds.dup
+      queued_result_ids = expected_function_result_ids&.dup
+      responses = rounds.map do |chunks|
+        response_chunk = chunks.find { |chunk| chunk.type == "response" }
+        provider_success_response(response_chunk.data)
+      end
+
+      @provider.expects(:chat_response).times(rounds.length).with do |_message, **options|
+        assert_equal @expected_session_id, options[:session_id]
+        assert_equal @expected_user_identifier, options[:user_identifier]
+        assert_equal @expected_conversation_history, options[:messages]
+        if queued_result_ids
+          assert_equal queued_result_ids.shift, options[:function_results].map { |result| result[:call_id] }
+        end
+        chunks = queued_rounds.shift
+        chunks.each { |chunk| options[:streamer].call(chunk) }
+        true
+      end.returns(*responses)
     end
 end

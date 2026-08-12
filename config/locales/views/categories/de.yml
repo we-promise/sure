@@ -14,57 +14,57 @@ de:
       edit: Kategorie bearbeiten
     form:
       placeholder: Kategoriename
-      name_label: Name
-      unassigned: "(nicht zugewiesen)"
-      parent_category_label: "Übergeordnete Kategorie (optional)"
-      trigger_label: Farbe und Symbol auswählen
+      auto_adjust: automatisch anpassen.
       color: Farbe
       icon: Symbol
-      auto_adjust: automatisch anpassen.
-      poor_contrast: "Zu geringer Kontrast, wähle eine dunklere Farbe oder"
-    destroy_all:
-      success: Alle Kategorien gelöscht
+      name_label: Name
+      parent_category_label: Oberkategorie (optional)
+      poor_contrast: Schwacher Kontrast, wähl eine dunklere Farbe oder
+      trigger_label: Farbe und Symbol wählen
+      unassigned: "(nicht zugewiesen)"
     index:
       bootstrap: Standard verwenden (empfohlen)
       categories: Kategorien
       categories_expenses: Ausgabenkategorien
       categories_incomes: Einnahmekategorien
       empty: Keine Kategorien gefunden
+      new: Neue Kategorie
       delete_all: Alle löschen
       merge: Kategorien zusammenführen
-      new: Neue Kategorie
-    merge:
-      title: Kategorien zusammenführen
-      description: Wähle eine Zielkategorie und die Kategorien aus, die darin zusammengeführt werden sollen. Zugehörige Transaktionen und Budgetposten werden in die Zielkategorie verschoben.
-      target_label: Zusammenführen in (Ziel)
-      select_target: Zielkategorie auswählen …
-      sources_label: Zusammenzuführende Kategorien
-      sources_hint: Die ausgewählten Kategorien werden gelöscht, nachdem ihre Transaktionen und Budgetposten in die Zielkategorie verschoben wurden. Wähle die Zielkategorie nicht als Quelle aus.
-      submit: Ausgewählte zusammenführen
     menu:
       loading: Wird geladen...
     new:
       new_category: Neue Kategorie
-    perform_merge:
-      success:
-        one: "%{count} Kategorie erfolgreich zusammengeführt"
-        other: "%{count} Kategorien erfolgreich zusammengeführt"
-      no_categories_selected: Keine Kategorien zum Zusammenführen ausgewählt
-      target_not_found: Zielkategorie nicht gefunden
-      invalid_categories: Ungültige Kategorien ausgewählt
-      target_selected_as_source: Wähle unterschiedliche Kategorien als Ziel und Quellen aus.
     update:
       success: Kategorie erfolgreich aktualisiert
+    destroy_all:
+      success: Alle Kategorien gelöscht
+    merge:
+      description: Wähl eine Zielkategorie und die Kategorien, die darin aufgehen sollen. Passende Transaktionen und Budgetzeilen wandern ins Ziel.
+      select_target: Zielkategorie wählen …
+      sources_hint: Die gewählten Kategorien werden gelöscht, sobald ihre Transaktionen und Budgetzeilen ins Ziel gewandert sind. Wähl das Ziel nicht als Quelle.
+      sources_label: Kategorien zum Zusammenführen
+      submit: Auswahl zusammenführen
+      target_label: Zusammenführen in (Ziel)
+      title: Kategorien zusammenführen
+    perform_merge:
+      invalid_categories: Ungültige Kategorien gewählt
+      no_categories_selected: Keine Kategorien zum Zusammenführen gewählt
+      success:
+        one: "%{count} Kategorie zusammengeführt"
+        other: "%{count} Kategorien zusammengeführt"
+      target_not_found: Zielkategorie nicht gefunden
+      target_selected_as_source: Wähl unterschiedliche Kategorien für Ziel und Quellen.
     virtual:
-      transfer: Überweisung
       payment: Zahlung
-      trade: Wertpapiergeschäft
+      trade: Trade
+      transfer: Überweisung
   category:
     dropdowns:
       show:
         bootstrap: Standardkategorien erstellen
         empty: Keine Kategorien gefunden
-        match_transfer: Überweisung/Zahlung zuordnen
-        one_time: "Einmalige %{type}"
-        income: Einnahme
         expense: Ausgabe
+        income: Einnahme
+        match_transfer: Überweisung/Zahlung zuordnen
+        one_time: Einmalige %{type}

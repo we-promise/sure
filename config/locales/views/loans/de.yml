@@ -6,32 +6,35 @@ de:
     form:
       interest_rate: Zinssatz
       interest_rate_placeholder: '5,25'
-      initial_balance: Ursprünglicher Darlehensbetrag
+      initial_balance: Ursprünglicher Kreditbetrag
       rate_type: Zinssatztyp
       term_months: Laufzeit (Monate)
       term_months_placeholder: '360'
+      rate_type_adjustable: Anpassbar
+      rate_type_fixed: Fest
+      rate_type_variable: Variabel
       none: Keine
-      subtype_prompt: Darlehensart auswählen
       subtype_none: Keine
+      subtype_prompt: Kreditart wählen
     new:
-      title: Darlehensdetails eingeben
+      title: Kreditdetails eingeben
     overview:
       interest_rate: Zinssatz
       monthly_payment: Monatliche Zahlung
       not_applicable: Nicht zutreffend
-      original_principal: Ursprünglicher Darlehensbetrag
-      remaining_principal: Verbleibender Darlehensbetrag
+      original_principal: Ursprünglicher Kreditbetrag
+      remaining_principal: Verbleibender Kreditbetrag
       term: Laufzeit
       type: Typ
       unknown: Unbekannt
     tabs:
       overview:
+        edit_loan_details: Kreditdaten bearbeiten
         interest_rate: Zinssatz
-        monthly_payment: Monatliche Zahlung
-        not_applicable: Nicht zutreffend
-        original_principal: Ursprünglicher Darlehensbetrag
-        remaining_principal: Verbleibender Darlehensbetrag
+        monthly_payment: Monatsrate
+        not_applicable: "–"
+        original_principal: Ursprüngliche Kreditsumme
+        remaining_principal: Restschuld
         term: Laufzeit
-        type: Typ
+        type: Art
         unknown: Unbekannt
-        edit_loan_details: Darlehensdetails bearbeiten

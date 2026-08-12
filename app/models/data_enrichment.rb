@@ -17,6 +17,7 @@ class DataEnrichment < ApplicationRecord
     indexa_capital: "indexa_capital",
     sophtron: "sophtron",
     ibkr: "ibkr",
-    questrade: "questrade"
+    questrade: "questrade",
+    redbark: "redbark"
   }
 end

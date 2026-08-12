@@ -2,45 +2,45 @@
 de:
   reports:
     index:
+      period_aria: Berichtszeitraum
       title: Berichte
       subtitle: Umfassende Einblicke in deine finanzielle Situation
       export: CSV exportieren
       print_report: Bericht drucken
       drag_to_reorder: "Bereich per Drag & Drop neu anordnen"
       toggle_section: "Sichtbarkeit des Bereichs umschalten"
-      period_aria: "Berichtszeitraum"
       sections_aria_label: "Berichtsabschnitte"
       periods:
         monthly: Monatlich
         quarterly: Vierteljährlich
-        ytd: Seit Jahresbeginn
+        ytd: Jahr bis heute
         last_6_months: Letzte 6 Monate
         custom: Benutzerdefinierter Zeitraum
       date_range:
         from: Von
         to: Bis
       showing_period: "Zeitraum: %{start} bis %{end}"
-      previous_period: "Vorheriger Zeitraum"
-      next_period: "Nächster Zeitraum"
-      today: "Heute"
+      next_decade: Nächstes Jahrzehnt
+      next_period: Nächster Zeitraum
+      next_year: Nächstes Jahr
       period_label:
-        quarterly: "Q%{quarter} %{year}"
-        ytd: "Seit Jahresbeginn %{year}"
-        past_year: "%{year}"
         last_6_months: "%{start} – %{end}"
+        past_year: "%{year}"
+        quarterly: Q%{quarter} %{year}
+        ytd: "%{year} bis heute"
       period_picker:
-        quarter: "Q%{quarter} %{year}"
-        ytd: "Seit Jahresbeginn %{year}"
-      previous_year: "Vorheriges Jahr"
-      next_year: "Nächstes Jahr"
-      previous_decade: "Vorheriges Jahrzehnt"
-      next_decade: "Nächstes Jahrzehnt"
+        quarter: Q%{quarter} %{year}
+        ytd: "%{year} bis heute"
+      previous_decade: Vorheriges Jahrzehnt
+      previous_period: Vorheriger Zeitraum
+      previous_year: Vorheriges Jahr
+      today: Heute
     invalid_date_range: "Das Enddatum kann nicht vor dem Startdatum liegen. Die Daten wurden vertauscht."
     summary:
       total_income: Gesamteinnahmen
       total_expenses: Gesamtausgaben
       net_savings: Nettoersparnis
-      budget_performance: Budgetentwicklung
+      budget_performance: Budgetleistung
       vs_previous: im Vergleich zum vorherigen Zeitraum
       income_minus_expenses: Einnahmen minus Ausgaben
       of_budget_used: des Budgets genutzt
@@ -60,7 +60,7 @@ de:
         reduced: Reduziert
         increased: Gestiegen
     budget_performance:
-      title: Budgetentwicklung
+      title: Budgetleistung
       spent: Ausgegeben
       budgeted: Budgetiert
       remaining: Verbleibend
@@ -111,10 +111,9 @@ de:
       no_assets: Keine Vermögenswerte
       no_liabilities: Keine Verbindlichkeiten
     investment_performance:
-      title: Anlageentwicklung
+      title: Anlageperformance
       portfolio_value: Portfoliowert
       total_return: Gesamtrendite
-      period_return: Rendite im Zeitraum
       contributions: Einlagen im Zeitraum
       withdrawals: Entnahmen im Zeitraum
       top_holdings: Top-Positionen
@@ -139,15 +138,16 @@ de:
       holdings: Positionen
       sell_trades: Verkaufstrades
       and_more: "+%{count} weitere"
+      period_return: Rendite im Zeitraum
     investment_flows:
       title: Anlageflüsse
-      description: Verfolge Einzahlungen auf und Auszahlungen von deinen Anlagekonten.
+      description: Verfolge Geldflüsse in und aus deinen Anlagekonten
       contributions: Einlagen
-      contributions_description: In Anlagen eingezahltes Geld
       withdrawals: Entnahmen
-      withdrawals_description: Aus Anlagen entnommenes Geld
       net_flow: Nettozufluss
-      net_flow_description: Gesamte Nettoveränderung
+      contributions_description: In Investments eingezahlt
+      net_flow_description: Nettoveränderung gesamt
+      withdrawals_description: Aus Investments entnommen
     transactions_breakdown:
       title: Transaktionsübersicht
       no_transactions: Keine Transaktionen für den ausgewählten Zeitraum und Filter gefunden
@@ -209,9 +209,9 @@ de:
       go_to_api_keys: Zu den API-Schlüsseln
       close: Verstanden
     print:
+      date_range: "%{start} – %{end}"
       document_title: Finanzbericht
       title: Finanzbericht
-      date_range: "%{start} – %{end}"
       generated_on: "Erstellt am %{date}"
       summary:
         title: Zusammenfassung
@@ -242,7 +242,6 @@ de:
         title: Anlagen
         portfolio_value: Portfoliowert
         total_return: Gesamtrendite
-        period_return: Rendite im Zeitraum
         contributions: Einlagen
         withdrawals: Entnahmen
         this_period: dieser Zeitraum
@@ -251,6 +250,7 @@ de:
         weight: Gewicht
         value: Wert
         return: Rendite
+        period_return: Rendite im Zeitraum
       spending:
         title: Ausgaben nach Kategorie
         income: Einnahmen

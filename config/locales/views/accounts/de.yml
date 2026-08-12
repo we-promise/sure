@@ -1,18 +1,7 @@
 ---
 de:
-  account:
-    entries:
-      destroy:
-        success: Eintrag wurde gelöscht.
   accounts:
-    not_authorized: Du bist nicht berechtigt, dieses Konto zu verwalten
     account:
-      complete_setup: Einrichtung abschließen
-      change_simplefin_account: SimpleFIN-Konto ändern
-      exclude_from_reports: Aus allen Berichten ausschließen
-      include_in_reports: In Berichte aufnehmen
-      excluded_from_reports_indicator: Aus Berichten ausgeschlossen
-      sharing: Freigabe
       edit: Bearbeiten
       link_lunchflow: Mit Lunch Flow verknüpfen
       link_provider: Mit Provider verknüpfen
@@ -24,16 +13,22 @@ de:
       remove_default: Standard aufheben
       default_label: Standard
       delete: Konto löschen
+      change_simplefin_account: SimpleFIN-Konto wechseln
+      complete_setup: Setup abschließen
+      exclude_from_reports: Aus allen Berichten ausschließen
+      excluded_from_reports_indicator: Nicht in Berichten
+      include_in_reports: In Berichte aufnehmen
+      sharing: Freigabe
     chart:
       data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar
     create:
       success: "%{type}-Konto erstellt"
     set_default:
-      depository_only: "Nur Bargeld- und Kreditkartenkonten können als Standard festgelegt werden."
+      depository_only: Nur Bank- und Kreditkartenkonten können als Standard festgelegt werden.
     destroy:
       success: "%{type}-Konto zur Löschung vorgemerkt"
-      cannot_delete_linked: "Ein verknüpftes Konto kann nicht gelöscht werden. Trenne es zuerst."
-      failed: Die Ressource konnte nicht gelöscht werden. Versuche es später erneut.
+      cannot_delete_linked: Ein verknüpftes Konto lässt sich nicht löschen. Trenn es zuerst.
+      failed: Löschen fehlgeschlagen. Versuch es später noch einmal.
     empty:
       empty_message: Füge ein Konto über eine Verbindung, einen Import oder manuell hinzu
       new_account: Neues Konto
@@ -50,24 +45,20 @@ de:
       institution_domain_placeholder: "z. B. chase.com"
       notes_label: Notizen
       notes_placeholder: Zusätzliche Informationen wie Kontonummern, Sort codes, IBAN, Routing-Nummern usw.
+      enable_category_matcher_hint: Ist die Option an, wird die vom Anbieter vorgeschlagene Kategorie auf importierte Transaktionen angewendet. Schalte sie aus, damit neue Transaktionen ohne Kategorie bleiben.
+      enable_category_matcher_label: Kategoriezuordnung aktivieren
       exclude_from_reports: Aus allen Berichten ausschließen
-      enable_category_matcher_label: Kategorieabgleich aktivieren
-      enable_category_matcher_hint: Wenn aktiviert, wird die vom Anbieter vorgeschlagene Kategorie auf importierte Transaktionen angewendet. Deaktiviere diese Option, damit neue Transaktionen unkategorisiert bleiben.
     index:
       accounts: Konten
-      cancel_sync: Synchronisierung abbrechen
       manual_accounts:
         other_accounts: Andere Konten
       new_account: Neues Konto
       sync: Alle synchronisieren
+      cancel_sync: Sync abbrechen
     sync_all:
       syncing: "Konten werden synchronisiert..."
     new:
       import_accounts: Konten importieren
-      container:
-        select: Auswählen
-        navigate: Navigieren
-        close: Schließen
       method_selector:
         connected_entry: Konto verknüpfen
         connected_entry_eu: EU-Konto verknüpfen
@@ -76,13 +67,11 @@ de:
         manual_entry: Kontostand manuell eingeben
         title: Wie möchtest du es hinzufügen
       title: Was möchtest du hinzufügen
+      container:
+        close: Schließen
+        navigate: Navigieren
+        select: Auswählen
     show:
-      limited_fx_history_warning: "Der Wechselkursverlauf ist erst ab dem %{date} verfügbar. Für frühere Transaktionen werden Näherungswerte verwendet – dies kann vorkommen, wenn der Wechselkursanbieter nur einen begrenzten historischen Zeitraum abdeckt."
-      tabs:
-        activity: Aktivitäten
-        holdings: Bestände
-        overview: Übersicht
-        statements: Kontoauszüge
       activity:
         amount: Betrag
         balance: Kontostand
@@ -94,35 +83,41 @@ de:
         new: Neu
         new_activity: Neue Aktivität
         new_balance: Neuer Kontostand
-        new_trade: Neues Wertpapiergeschäft
+        new_trade: Neuer Trade
         new_transaction: Neue Transaktion
         new_transfer: Neue Überweisung
         no_entries: Keine Buchungen gefunden
         pending: Ausstehend
         search:
           placeholder: Buchungen nach Name suchen
-        search_placeholder: Buchungen nach Name suchen
         status: Status
         title: Aktivität
+        search_placeholder: Einträge nach Name suchen
       chart:
         balance: Kontostand
         owed: Geschuldeter Betrag
-      header:
-        complete_setup: Einrichtung abschließen
       menu:
         confirm_accept: "%{name} löschen"
-        confirm_body_html: "<p>Wenn du dieses Konto löschst, werden dessen Wertverläufe gelöscht, was sich auf verschiedene Bereiche deines Gesamtvermögens auswirkt. Diese Aktion beeinflusst direkt deine Nettovermögensberechnung und die Kontodiagramme.</p><br /> <p>Nach dem Löschen kann das Konto nicht wiederhergestellt werden. Du müsstest es als neues Konto hinzufügen.</p>"
+        confirm_body_html: "<p>Wenn du dieses Konto löschst, werden dessen Wertverläufe gelöscht, was sich auf verschiedene Bereiche deines Gesamtvermögens auswirkt Diese Aktion beeinflusst direkt deine Nettovermögensberechnung und die Kontodiagramme</p><br /> <p>Nach dem Löschen kann das Konto nicht wiederhergestellt werden Du müsstest es als neues Konto hinzufügen</p>"
         confirm_title: Konto löschen
         edit: Bearbeiten
         import: Transaktionen importieren
-        import_trades: Wertpapiergeschäfte importieren
+        import_trades: Trades importieren
         import_transactions: Transaktionen importieren
         manage: Konten verwalten
         delete_account: Konto löschen
-        sharing: Freigabe
-        statements: Kontoauszüge
         exclude_from_reports: Aus allen Berichten ausschließen
         include_in_reports: In Berichte aufnehmen
+        sharing: Freigabe
+        statements: Auszüge
+      header:
+        complete_setup: Setup abschließen
+      limited_fx_history_warning: Wechselkurse liegen erst ab %{date} vor. Transaktionen davor rechnen mit Näherungswerten, was vorkommt, wenn der Kursanbieter nur einen begrenzten Verlauf liefert.
+      tabs:
+        activity: Aktivität
+        holdings: Bestände
+        overview: Übersicht
+        statements: Auszüge
     update:
       success: "%{type}-Konto aktualisiert"
     sidebar:
@@ -134,40 +129,30 @@ de:
         assets: Vermögen
         debts: Schulden
       new_asset: Neues Vermögen
-      new_debt: Neue Schuld
+      new_debt: Neue Verbindlichkeit
       new_account: Neues Konto
-      capitalize_account_group: true
       new_account_group: "%{account_group} hinzufügen"
+      capitalize_account_group: true
     types:
-      depository: Bargeld
-      investment: Investition
+      depository: Bankkonto
+      investment: Investment
       crypto: Krypto
       property: Immobilie
       vehicle: Fahrzeug
       other_asset: Sonstiges Vermögen
       credit_card: Kreditkarte
       loan: Darlehen
-      other_liability: Sonstige Schuld
-    types_plural:
-      depository: Bargeld
-      investment: Kapitalanlagen
-      crypto: Krypto
-      property: Immobilien
-      vehicle: Fahrzeuge
-      other_asset: Sonstiges Vermögen
-      credit_card: Kreditkarten
-      loan: Darlehen
-      other_liability: Sonstige Schulden
+      other_liability: Sonstige Verbindlichkeit
     subtype_regions:
       us: Vereinigte Staaten
       uk: Vereinigtes Königreich
       ca: Kanada
       au: Australien
       eu: Europa
-      in: Indien
       generic: Generisch
+      in: Indien
     tax_treatments:
-      taxable: Steuerpflichtig
+      taxable: Versteuerbar
       tax_deferred: Steuerlich aufgeschoben
       tax_exempt: Steuerfrei
       tax_advantaged: Steuerbegünstigt
@@ -178,10 +163,10 @@ de:
       tax_advantaged: Besondere Steuervorteile unter Bedingungen
     confirm_unlink:
       title: Konto vom Provider trennen?
-      description_html: "Du bist dabei, <strong>%{account_name}</strong> von <strong>%{provider_name}</strong> zu trennen. Das Konto wird zu einem manuellen Konto."
+      description_html: Du bist dabei, <strong>%{account_name}</strong> von <strong>%{provider_name}</strong> zu trennen. Das Konto wird danach manuell geführt.
       warning_title: Was das bedeutet
       warning_no_sync: Das Konto wird nicht mehr automatisch mit dem Provider synchronisiert
-      warning_manual_updates: Du musst Buchungen und Salden manuell pflegen
+      warning_manual_updates: Du musst Buchungen und Salden selbst pflegen
       warning_transactions_kept: Bestehende Buchungen und Salden bleiben erhalten
       warning_can_delete: Nach dem Trennen kannst du das Konto bei Bedarf löschen
       confirm_button: Bestätigen und trennen
@@ -189,14 +174,29 @@ de:
       success: "Konto erfolgreich getrennt. Es ist jetzt ein manuelles Konto."
       not_linked: "Konto ist mit keinem Provider verknüpft"
       error: "Konto konnte nicht getrennt werden: %{error}"
-      generic_error: "Ein unerwarteter Fehler ist aufgetreten. Versuche es erneut."
+      generic_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal.
     select_provider:
       title: Provider zum Verknüpfen auswählen
-      description: "Wähle den Anbieter, mit dem %{account_name} verknüpft werden soll"
+      description: Wähle den Anbieter, mit dem %{account_name} verknüpft werden soll
       already_linked: "Konto ist bereits mit einem Provider verknüpft"
       no_providers: "Derzeit sind keine Provider konfiguriert"
+    not_authorized: Du darfst dieses Konto nicht verwalten
+    types_plural:
+      credit_card: Kreditkarten
+      crypto: Krypto
+      depository: Bankkonten
+      investment: Investments
+      loan: Kredite
+      other_asset: Sonstige Vermögenswerte
+      other_liability: Sonstige Verbindlichkeiten
+      property: Immobilien
+      vehicle: Fahrzeuge
 
   email_confirmations:
     new:
       invalid_token: Ungültiger oder abgelaufener Bestätigungslink
       success_login: Deine E-Mail-Adresse wurde bestätigt Bitte melde dich mit deiner neuen Adresse an
+  account:
+    entries:
+      destroy:
+        success: Eintrag gelöscht.

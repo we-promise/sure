@@ -1,50 +1,52 @@
 ---
 de:
   breadcrumbs:
-    account_sharings: Kontofreigaben
-    account_statements: Kontoauszugsarchiv
+    exports: Exporte
+    home: Startseite
+    imports: Importe
+    account_sharings: Kontofreigabe
+    account_statements: Auszugsarchiv
     accounts: Konten
-    ai_prompts: KI-Anweisungen
-    api_key: API-Schlüssel
-    api_keys: API-Schlüssel
+    ai_prompts: KI-Prompts
+    api_key: API-Key
+    api_keys: API-Keys
     appearance: Darstellung
     appearances: Darstellung
-    bank_sync: Banksynchronisierung
+    bank_sync: Bank-Sync
     binance_items: Binance
     brex_items: Brex
     budget_categories: Budgetkategorien
     budgets: Budgets
     categories: Kategorien
     categorize: Kategorisieren
+    changelog: Was ist neu
     chats: Chats
     coinbase_items: Coinbase
     coinstats_items: CoinStats
     credit_cards: Kreditkarten
     cryptos: Krypto
     dashboard: Dashboard
-    debug: Fehlerdiagnose
-    debugs: Fehlerdiagnose
-    depositories: Bargeldkonten
+    debug: Debug
+    debugs: Debug
+    depositories: Bankkonten
     enable_banking_items: Enable Banking
-    exports: Exporte
     family_exports: Exporte
     family_merchants: Händler
+    feedback: Feedback
     guides: Anleitungen
     holdings: Bestände
-    home: Startseite
     hostings: Self-Hosting
     ibkr_items: Interactive Brokers
-    impersonation_sessions: Benutzerübernahmen
-    imports: Importe
+    impersonation_sessions: Sitzungsübernahmen
     indexa_capital_items: Indexa Capital
     intro: Einführung
-    investments: Kapitalanlagen
+    investments: Investments
     invitations: Einladungen
     invite_codes: Einladungscodes
     kraken_items: Kraken
     llm_usage: LLM-Nutzung
     llm_usages: LLM-Nutzung
-    loans: Darlehen
+    loans: Kredite
     lunchflow_items: Lunch Flow
     mcp: MCP-Server
     merchants: Händler
@@ -52,22 +54,24 @@ de:
     messages: Nachrichten
     mfa: Zwei-Faktor-Authentifizierung
     oidc_accounts: SSO-Konten
-    onboardings: Einführung
-    other_assets: Sonstiges Vermögen
-    other_liabilities: Sonstige Schulden
+    onboardings: Einrichtung
+    other_assets: Sonstige Vermögenswerte
+    other_liabilities: Sonstige Verbindlichkeiten
     payments: Zahlungen
     pending_duplicate_merges: Duplikatprüfung
     plaid_items: Plaid
+    plan: Plan
     preferences: Einstellungen
-    profile: Profilinformationen
-    profiles: Profilinformationen
+    profile: Profil
+    profiles: Profil
     properties: Immobilien
     providers: Anbieter
-    recurring_transactions: Wiederkehrende Transaktionen
+    recurring_transactions: Wiederkehrend
+    redbark_items: Redbark
     registrations: Registrieren
     reports: Berichte
     rules: Regeln
-    securities: Wertpapier
+    securities: Wertpapiere
     security: Sicherheit
     self_hosting: Self-Hosting
     sessions: Anmelden
@@ -77,12 +81,12 @@ de:
     splits: Aufteilung
     sso_identities: SSO-Verbindungen
     sso_providers: SSO-Anbieter
-    subscriptions: Abonnement
+    subscriptions: Abo
     tags: Tags
-    trades: Wertpapiergeschäfte
+    trades: Trades
     transactions: Transaktionen
-    transfer_matches: Umbuchungszuordnungen
-    transfers: Umbuchungen
+    transfer_matches: Überweisungszuordnung
+    transfers: Überweisungen
     users: Benutzer
-    valuations: Bewertungen
+    valuations: Saldostände
     vehicles: Fahrzeuge

@@ -1,55 +1,55 @@
 ---
 de:
   period:
-    last_day:
-      label_short: "1T"
-      label: "Letzter Tag"
-      comparison_label: "gegenüber gestern"
-    current_week:
-      label_short: "Woche"
-      label: "Laufende Woche"
-      comparison_label: "gegenüber Wochenbeginn"
-    last_7_days:
-      label_short: "7T"
-      label: "Letzte 7 Tage"
-      comparison_label: "gegenüber der letzten Woche"
-    current_month:
-      label_short: "Monat"
-      label: "Laufender Monat"
-      comparison_label: "gegenüber Monatsbeginn"
-    last_month:
-      label_short: "LM"
-      label: "Letzter Monat"
-      comparison_label: "gegenüber dem letzten Monat"
-    last_30_days:
-      label_short: "30T"
-      label: "Letzte 30 Tage"
-      comparison_label: "gegenüber den letzten 30 Tagen"
-    last_90_days:
-      label_short: "90T"
-      label: "Letzte 90 Tage"
-      comparison_label: "gegenüber dem letzten Quartal"
-    current_year:
-      label_short: "Jahr"
-      label: "Laufendes Jahr"
-      comparison_label: "gegenüber Jahresbeginn"
-    last_365_days:
-      label_short: "365T"
-      label: "Letzte 365 Tage"
-      comparison_label: "gegenüber dem Stand vor einem Jahr"
-    last_5_years:
-      label_short: "5J"
-      label: "Letzte 5 Jahre"
-      comparison_label: "gegenüber dem Stand vor 5 Jahren"
-    last_10_years:
-      label_short: "10J"
-      label: "Letzte 10 Jahre"
-      comparison_label: "gegenüber dem Stand vor 10 Jahren"
     all_time:
-      label_short: "Gesamt"
-      label: "Gesamter Zeitraum"
-      comparison_label: "gegenüber dem Beginn"
+      comparison_label: vs. Beginn
+      label: Gesamter Zeitraum
+      label_short: Alle
+    current_month:
+      comparison_label: vs. Monatsstart
+      label: Aktueller Monat
+      label_short: Monat
+    current_week:
+      comparison_label: vs. Wochenstart
+      label: Aktuelle Woche
+      label_short: Woche
+    current_year:
+      comparison_label: vs. Jahresstart
+      label: Aktuelles Jahr
+      label_short: Jahr
     custom:
-      label_short: "Benutzerdefiniert"
-      label: "Benutzerdefinierter Zeitraum"
       comparison_label: "%{start} bis %{end}"
+      label: Eigener Zeitraum
+      label_short: Eigen
+    last_10_years:
+      comparison_label: vs. vor 10 Jahren
+      label: Letzte 10 Jahre
+      label_short: 10J
+    last_30_days:
+      comparison_label: vs. den letzten 30 Tagen
+      label: Letzte 30 Tage
+      label_short: 30T
+    last_365_days:
+      comparison_label: vs. Vorjahr
+      label: Letzte 365 Tage
+      label_short: 365T
+    last_5_years:
+      comparison_label: vs. vor 5 Jahren
+      label: Letzte 5 Jahre
+      label_short: 5J
+    last_7_days:
+      comparison_label: vs. Vorwoche
+      label: Letzte 7 Tage
+      label_short: 7T
+    last_90_days:
+      comparison_label: vs. Vorquartal
+      label: Letzte 90 Tage
+      label_short: 90T
+    last_day:
+      comparison_label: vs. gestern
+      label: Letzter Tag
+      label_short: 1T
+    last_month:
+      comparison_label: vs. Vormonat
+      label: Letzter Monat
+      label_short: Vormonat

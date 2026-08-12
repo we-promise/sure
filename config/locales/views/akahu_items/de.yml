@@ -1,0 +1,127 @@
+---
+de:
+  akahu_account:
+    fallback: Akahu-Konto
+  akahu_entry:
+    notes:
+      code: Code
+      other_account: Gegenkonto
+      particulars: Angaben
+      reference: Verwendungszweck
+  akahu_item:
+    errors:
+      account_processing_failed: Das Akahu-Konto ließ sich nicht abgleichen
+      account_sync_schedule_failed: Der Abgleich des Akahu-Kontos ließ sich nicht einplanen
+      pending_transactions_failed: Die offenen Akahu-Transaktionen ließen sich nicht abrufen
+      sync_failed: Die Akahu-Verbindung ließ sich nicht abgleichen
+      transactions_failed: Die Akahu-Transaktionen ließen sich nicht abrufen
+    institution_summary:
+      count:
+        one: 1 Institut
+        other: "%{count} Institute"
+      none: Keine Institute verbunden
+      one: 1 Institut
+    sync_status:
+      all_synced:
+        one: 1 Konto synchronisiert
+        other: "%{count} Konten synchronisiert"
+      no_accounts: Keine Konten gefunden
+      partial: "%{linked} synchronisiert, %{unlinked} müssen eingerichtet werden"
+  akahu_items:
+    akahu_item:
+      delete: Löschen
+      deletion_in_progress: Wird gelöscht
+      error: Fehler
+      no_accounts_description: Ruf die Akahu-Konten ab und wähl aus, welche verknüpft werden sollen.
+      no_accounts_title: Noch keine Konten importiert
+      setup_action: Konten einrichten
+      setup_description: "%{linked} von %{total} Konten verknüpft."
+      setup_needed: Konten müssen eingerichtet werden
+      status_never: Noch nie synchronisiert
+      status_with_summary: Synchronisiert vor %{timestamp} · %{summary}
+      syncing: Sync läuft
+    complete_account_setup:
+      all_skipped: Es wurden keine Akahu-Konten angelegt.
+      creation_failed: Die Akahu-Konten ließen sich nicht anlegen.
+      no_accounts: Es wurden keine Akahu-Konten ausgewählt.
+      success:
+        one: 1 Akahu-Konto angelegt.
+        other: "%{count} Akahu-Konten angelegt."
+    create:
+      success: Akahu-Verbindung gespeichert.
+    destroy:
+      success: Akahu-Verbindung zum Löschen vorgemerkt.
+      unlink_failed: Die Akahu-Verbindung ließ sich nicht trennen
+    link_accounts:
+      link_failed: Es wurden keine Konten verknüpft.
+      no_accounts_selected: Wähl mindestens ein Konto.
+      no_credentials_configured: Richte Akahu zuerst in den Anbietereinstellungen ein.
+      success:
+        one: 1 Akahu-Konto verknüpft.
+        other: "%{count} Akahu-Konten verknüpft."
+      unsupported_account_type: Diese Kontoart unterstützt Akahu nicht.
+    link_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
+      akahu_account_already_linked: Dieses Akahu-Konto ist bereits verknüpft.
+      success: Akahu-Konto mit %{account_name} verknüpft.
+    provider_panel:
+      add_connection: Akahu-Verbindung hinzufügen
+      app_token_label: App-Token
+      app_token_placeholder: Akahu-App-Token einfügen
+      connection_name_label: Name der Verbindung
+      connection_name_placeholder: Akahu Haupt
+      default_connection_name: Akahu-Verbindung
+      disconnect: Trennen
+      disconnect_confirm: "%{name} wirklich trennen?"
+      keep_app_token_placeholder: Leer lassen, um den bisherigen App-Token zu behalten
+      keep_user_token_placeholder: Leer lassen, um den bisherigen User-Token zu behalten
+      setup_accounts: Konten einrichten
+      sync: Sync
+      syncing: Sync läuft …
+      update_connection: Verbindung aktualisieren
+      user_token_label: User-Token
+      user_token_placeholder: Akahu-User-Token einfügen
+    select_accounts:
+      cancel: Abbrechen
+      description: Wähl die Akahu-Konten, die du hinzufügen willst.
+      link_accounts: Konten verknüpfen
+      no_accounts_found: Es wurden keine unverknüpften Akahu-Konten gefunden.
+      no_credentials_configured: Richte Akahu zuerst in den Anbietereinstellungen ein.
+      title: Akahu-Konten verknüpfen
+    select_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
+      cancel: Abbrechen
+      description: Wähl ein unverknüpftes Akahu-Konto für dieses Konto.
+      link_account: Konto verknüpfen
+      no_accounts_found: Es wurden keine unverknüpften Akahu-Konten gefunden.
+      no_credentials_configured: Richte Akahu zuerst in den Anbietereinstellungen ein.
+      title: Akahu-Konto mit %{account_name} verknüpfen
+    setup_accounts:
+      account_type_label: Kontoart
+      account_types:
+        credit_card: Kreditkarte
+        depository: Bankkonto
+        investment: Investment
+        loan: Kredit
+        skip: Überspringen
+      all_accounts_linked: Alle Akahu-Konten sind bereits verknüpft.
+      api_error: Die Akahu-Konten ließen sich nicht abrufen.
+      cancel: Abbrechen
+      choose_account_type: Kontoart wählen
+      choose_account_type_description: Überspring Konten, die du nicht verfolgen willst.
+      create_accounts: Konten anlegen
+      fetch_failed: Konten ließen sich nicht abrufen
+      no_accounts_to_setup: Keine Konten einzurichten
+      no_credentials: Richte zuerst deine Akahu-Zugangsdaten ein.
+      subtitle: Leg fest, wie jedes Akahu-Konto in Sure erscheinen soll.
+      title: Akahu-Konten einrichten
+    update:
+      success: Akahu-Verbindung aktualisiert.
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Akahu-Verbindung
+  providers:
+    akahu:
+      description: Verbindet neuseeländische Bankkonten über Akahu
+      name: Akahu
