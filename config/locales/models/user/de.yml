@@ -4,8 +4,8 @@ de:
     attributes:
       user:
         email: E-Mail
-        family: Familie
-        family_id: Familie
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         first_name: Vorname
         last_name: Nachname
         password: Passwort
@@ -18,4 +18,3 @@ de:
               cannot_deactivate_admin_with_other_users: Admin kann das Konto nicht löschen, solange noch andere Benutzer vorhanden sind Bitte zuerst alle Mitglieder löschen
             profile_image:
               invalid_file_size: Dateigröße muss kleiner als %{max_megabytes}MB sein
-

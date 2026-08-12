@@ -1,0 +1,166 @@
+---
+zh-TW:
+  UI:
+    period_picker:
+      aria_label: 時間區間：%{period}
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: 切換選取
+      balance_reconciliation:
+        labels:
+          adjustments: 調整
+          buys: 買入
+          change_in_brokerage_cash: 券商現金變動
+          change_in_holdings_market: 持股變動（市價變動）
+          change_in_holdings_trades: 持股變動（買入／賣出）
+          charges: 新增消費
+          end_balance: 期末餘額
+          end_principal: 期末本金
+          end_value: 期末價值
+          final_balance: 最終餘額
+          final_principal: 最終本金
+          final_value: 最終價值
+          market_changes: 市價變動
+          net_cash_flow: 淨現金流
+          net_principal_change: 本金淨變動
+          net_value_change: 價值淨變動
+          payments: 付款
+          sells: 賣出
+          start_balance: 期初餘額
+          start_principal: 期初本金
+          start_value: 期初價值
+        tooltips:
+          adjustments: 手動對帳或其他調整
+          adjustments_asset: 手動調整價值或重新估價
+          buys: 當天買入的加密貨幣
+          change_in_brokerage_cash: 存入、提領與交易造成的現金淨變動
+          change_in_holdings_market: 市價波動造成的持股價值變動
+          change_in_holdings_trades: 買賣證券對持股的影響
+          charges: 當天新增的消費
+          end_balance: 計入所有交易之後算出的餘額
+          end_balance_investment: 計入所有活動之後算出的餘額
+          end_principal: 計入所有交易之後算出的本金
+          end_value: 計入所有變動之後算出的價值
+          final_balance: 當天最後的帳戶餘額
+          final_balance_credit: 當天最後的應付餘額
+          final_balance_crypto: 當天最後的加密貨幣持有價值
+          final_balance_investment: 當天最後的投資組合價值
+          final_principal: 當天最後的本金餘額
+          final_value: 當天最後的資產價值
+          market_changes: 市價波動造成的價值變動
+          net_cash_flow: 當天所有交易造成的餘額淨變動
+          net_principal_change: 當天的本金償還與新增借款
+          net_value_change: 所有價值變動，包含修繕改良與折舊
+          payments: 當天對這張卡片的還款
+          sells: 當天賣出的加密貨幣
+          start_balance: 這一天開始時的帳戶餘額
+          start_balance_credit: 這一天開始時的應付餘額
+          start_balance_crypto: 這一天開始時的加密貨幣持有價值
+          start_balance_investment: 這一天開始時的投資組合總值
+          start_principal: 這一天開始時的本金餘額
+          start_value: 這一天開始時的資產價值
+      chart:
+        no_data_available: 沒有可用的資料
+        title:
+          balance: 餘額
+          cash_value: 現金價值
+          debt_balance: 負債餘額
+          estimated_property_value: 房地產估計價值
+          estimated_vehicle_value: 車輛估計價值
+          holdings_value: 持股價值
+          remaining_principal_balance: 剩餘本金餘額
+          total_account_value: 帳戶總價值
+          total_gains: 總獲利
+        views:
+          cash: 現金
+          gains: 獲利 / 報酬率
+          holdings: 持股
+          total_value: 總價值
+        vs_available_history: （對比可用歷史資料）
+      activity_date:
+        balance_tooltip: 計入所有交易與調整之後的當日結束餘額
+        no_balance_data: 這一天沒有可用的餘額資料
+  ds:
+    alert:
+      variants:
+        info: 資訊
+        success: 成功
+        warning: 警告
+        error: 錯誤
+        destructive: 錯誤
+    pill:
+      aria_label: '%{label}'
+      default_label: 預覽
+    dialog:
+      close: 關閉
+    popover:
+      avatar_default_label: 開啟選單
+    tooltip:
+      trigger_label: 更多資訊
+    link:
+      opens_in_new_tab: （在新分頁開啟）
+  provider_sync_summary:
+    title: 同步摘要
+    last_sync: 上次同步：%{time_ago}前
+    accounts:
+      title: 帳戶
+      total: 總計：%{count}
+      linked: 已連結：%{count}
+      unlinked: 未連結：%{count}
+      institutions: 機構：%{count}
+    transactions:
+      title: 交易紀錄
+      seen: 偵測到：%{count}
+      imported: 已匯入：%{count}
+      updated: 已更新：%{count}
+      skipped: 已跳過：%{count}
+      fetching: 正在從券商取得資料...
+      protected:
+        one: '%{count} 筆項目受保護（未被覆蓋）'
+        other: '%{count} 筆項目受保護（未被覆蓋）'
+      view_protected: 查看受保護的項目
+    skip_reasons:
+      excluded: 已排除
+      user_modified: 使用者已修改
+      import_locked: CSV 匯入
+      protected: 受保護
+    holdings:
+      title: 持股
+      found: 找到：%{count}
+      processed: 已處理：%{count}
+    trades:
+      title: 證券交易
+      imported: 已匯入：%{count}
+      skipped: 已跳過：%{count}
+      fetching: 正在從券商取得交易活動...
+    health:
+      title: 健康狀態
+      view_error_details: 查看錯誤詳情
+      rate_limited: '%{time_ago}前遭到用量限制'
+      recently: 不久
+      errors: 錯誤：%{count}
+      pending_reconciled:
+        one: 已對帳 %{count} 筆重複的待處理交易
+        other: 已對帳 %{count} 筆重複的待處理交易
+      view_reconciled: 查看已對帳的交易
+      duplicate_suggestions:
+        one: '%{count} 筆可能重複的交易需要檢視'
+        other: '%{count} 筆可能重複的交易需要檢視'
+      view_duplicate_suggestions: 查看疑似重複的交易
+      stale_pending:
+        one: '%{count} 筆過期的待處理交易（已排除於預算之外）'
+        other: '%{count} 筆過期的待處理交易（已排除於預算之外）'
+      view_stale_pending: 查看受影響的帳戶
+      stale_pending_count:
+        one: '%{count} 筆交易'
+        other: '%{count} 筆交易'
+      stale_unmatched:
+        one: '%{count} 筆待處理交易需要手動檢視'
+        other: '%{count} 筆待處理交易需要手動檢視'
+      view_stale_unmatched: 查看需要檢視的交易
+      stale_unmatched_count:
+        one: '%{count} 筆交易'
+        other: '%{count} 筆交易'
+      data_warnings: 資料警告：%{count}
+      notices: 通知：%{count}
+      view_data_quality: 查看資料品質詳情
