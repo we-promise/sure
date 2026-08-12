@@ -189,11 +189,16 @@
     </div>
 
     <% if @dismissed_recurring_transactions.any? %>
-      <details class="bg-container rounded-xl shadow-border-xs p-4">
-        <summary class="cursor-pointer text-sm font-medium text-primary">
-          <%= t("recurring_transactions.dismissed.title", count: @dismissed_recurring_transactions.size) %>
-        </summary>
-        <p class="text-xs text-secondary mt-2 mb-3"><%= t("recurring_transactions.dismissed.description") %></p>
+      <%= render DS::Disclosure.new(variant: :card) do |disclosure| %>
+        <% disclosure.with_summary_content do %>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm font-medium text-primary">
+              <%= t("recurring_transactions.dismissed.title", count: @dismissed_recurring_transactions.size) %>
+            </span>
+            <%= icon "chevron-down", class: "group-open:rotate-180 motion-safe:transition-transform motion-safe:duration-150" %>
+          </div>
+        <% end %>
+        <p class="text-xs text-secondary mb-3"><%= t("recurring_transactions.dismissed.description") %></p>
         <div class="rounded-lg bg-container-inset overflow-x-auto">
           <table class="w-full">
             <thead>
@@ -274,7 +279,7 @@
             </tbody>
           </table>
         </div>
-      </details>
+      <% end %>
     <% end %>
   <% end %>
 </div>

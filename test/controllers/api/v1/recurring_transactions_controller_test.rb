@@ -319,6 +319,36 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
     assert_equal "Recurring transaction already exists", response_data["message"]
   end
 
+  test "should revive a dismissed recurring transaction instead of conflicting on create" do
+    @recurring_transaction.dismiss!
+
+    params = {
+      recurring_transaction: {
+        account_id: @account.id,
+        merchant_id: @merchant.id,
+        amount: @recurring_transaction.amount.to_s,
+        currency: @recurring_transaction.currency,
+        expected_day_of_month: 20,
+        last_occurrence_date: "2026-06-20",
+        next_expected_date: "2026-07-20",
+        status: "active",
+        occurrence_count: 1
+      }
+    }
+
+    assert_no_difference("@family.recurring_transactions.count") do
+      post api_v1_recurring_transactions_url,
+           params: params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :ok
+    response_data = JSON.parse(response.body)
+    assert_equal @recurring_transaction.id, response_data["id"]
+    assert_equal 20, response_data["expected_day_of_month"]
+    assert_not @recurring_transaction.reload.dismissed?
+  end
+
   test "should update recurring transaction" do
     patch api_v1_recurring_transaction_url(@recurring_transaction),
           params: { recurring_transaction: { status: "inactive", expected_day_of_month: 16 } },

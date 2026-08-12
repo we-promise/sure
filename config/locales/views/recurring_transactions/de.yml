@@ -55,3 +55,7 @@ de:
       title: "Gelöschte wiederkehrende Transaktionen (%{count})"
       description: Gelöschte wiederkehrende Transaktionen bleiben ausgeblendet und werden nicht erneut erkannt. Stelle einen Eintrag wieder her, wenn er wieder verfolgt werden soll.
       restore_action: Wiederherstellen
+    transfer_already_exists: Für dieses Kontenpaar gibt es bereits eine wiederkehrende Überweisung
+    transfer_creation_failed: Die wiederkehrende Überweisung ließ sich nicht anlegen. Prüf die Angaben und versuch es noch einmal.
+    transfer_feature_disabled: Wiederkehrende Transaktionen sind für diese Familie deaktiviert
+    transfer_marked_as_recurring: Überweisung als wiederkehrend markiert

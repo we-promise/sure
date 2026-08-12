@@ -3,9 +3,11 @@ zh-TW:
   tags:
     create:
       created: 標籤已建立
-      error: '建立標籤時發生錯誤：%{error}'
+      error: 建立標籤時發生錯誤：%{error}
     destroy:
       deleted: 標籤已刪除
+    destroy_all:
+      all_deleted: 所有標籤已刪除
     edit:
       edit: 編輯標籤
     form:
@@ -14,6 +16,7 @@ zh-TW:
       empty: 尚無標籤
       new: 新增標籤
       tags: 標籤
+      delete_all: 全部刪除
     new:
       new: 新增標籤
     tag:

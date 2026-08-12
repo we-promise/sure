@@ -1,0 +1,6 @@
+---
+zh-TW:
+  syncs:
+    cancel:
+      cancelled: 同步已取消。已同步的內容會保留，佇列中的工作已停止。
+      not_cancellable: 此同步已經完成。

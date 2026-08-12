@@ -5,6 +5,7 @@ de:
       brokerage_cash: Depotguthaben
     destroy:
       success: Position gelöscht
+      cannot_delete: Diese Position lässt sich nicht löschen
     update:
       success: Einstandspreis gespeichert.
       error: Ungültiger Einstandspreis.
@@ -16,7 +17,7 @@ de:
     reset_security:
       success: Wertpapier auf Provider-Wert zurückgesetzt.
     errors:
-      security_collision: "Umbildung nicht möglich: Sie haben bereits eine Position für %{ticker} am %{date}."
+      security_collision: 'Umbildung nicht möglich: Du hast bereits eine Position für %{ticker} am %{date}.'
     cost_basis_sources:
       manual: Vom Benutzer gesetzt
       calculated: Aus Trades
@@ -31,6 +32,7 @@ de:
       save: Speichern
       overwrite_confirm_title: Einstandspreis überschreiben?
       overwrite_confirm_body: "Dies ersetzt den aktuellen Einstandspreis von %{current}."
+      set: Setzen
     holding:
       per_share: pro Anteil
       shares: "%{qty} Anteile"
@@ -45,7 +47,7 @@ de:
       return: Gesamtrendite
       weight: Gewichtung
     missing_price_tooltip:
-      description: Diese Investition enthält fehlende Werte, daher konnten Rendite und Wert nicht berechnet werden
+      description: Bei dieser Position fehlen Werte, deshalb ließen sich Rendite und Wert nicht berechnen
       missing_data: Fehlende Daten
     show:
       avg_cost_label: Durchschnittlicher Einstandspreis
@@ -79,7 +81,21 @@ de:
       market_value_label: Marktwert
       unknown: Unbekannt
       cost_basis_locked_label: Einstandspreis ist gesperrt
-      cost_basis_locked_description: Ihr manuell gesetzter Einstandspreis wird durch Syncs nicht geändert.
+      cost_basis_locked_description: Dein manuell gesetzter Einstandspreis wird durch Syncs nicht geändert.
       unlock_cost_basis: Freigeben
       unlock_confirm_title: Einstandspreis freigeben?
       unlock_confirm_body: Der Einstandspreis kann dann durch Provider-Syncs oder Trade-Berechnungen aktualisiert werden.
+      last_price_update: Letzte Kursaktualisierung
+      market_data_label: Marktdaten
+      market_data_sync_button: Aktualisieren
+      never: Nie
+      provider_disabled_warning: Kursaktualisierung pausiert – der Anbieter %{provider} ist deaktiviert. Wechsle unten den Anbieter oder aktivier ihn in den Einstellungen wieder.
+      switch_provider_button: Wechseln
+      switch_provider_description: "%{provider} ist deaktiviert. Such dieses Wertpapier bei einem anderen aktiven Anbieter."
+      switch_provider_label: Anbieter wechseln
+      syncing: Sync läuft …
+      truncated_history_warning: Kurshistorie liegt erst ab %{date} vor. Für frühere Tage hat der gewählte Anbieter keine Daten. Das kommt vor, wenn das Papier erst nach deinem Kaufdatum notiert wurde oder der Anbieter im aktuellen Tarif nur einen begrenzten Verlauf liefert.
+    sync_prices:
+      provider_error: Die aktuellen Kurse ließen sich nicht abrufen. Versuch es in ein paar Minuten noch einmal.
+      success: Marktdaten aktualisiert.
+      unavailable: Für Offline-Wertpapiere gibt es keinen Marktdaten-Abgleich.
