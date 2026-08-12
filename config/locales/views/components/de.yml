@@ -157,6 +157,9 @@ de:
       close: Schließen
     link:
       opens_in_new_tab: "(öffnet in neuem Tab)"
+    icon_picker:
+      no_matching_icons: Keine passenden Symbole
+      search_placeholder: Symbole suchen ...
     pill:
       aria_label: "%{label}"
       default_label: Vorschau
