@@ -166,6 +166,7 @@ class RecurringTransaction
     # matching for recurring transfers.
     def update_manual_recurring_transactions(_since_date)
       manual_recurring_transactions = family.recurring_transactions
+        .visible
         .where(manual: true, status: "active", destination_account_id: nil)
         .includes(:account)
         .to_a
