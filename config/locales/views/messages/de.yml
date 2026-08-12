@@ -1,6 +1,9 @@
 ---
 de:
   messages:
+    create:
+      chat_not_found: Dieser Chat ist nicht mehr verfügbar.
     chat_form:
-      placeholder: "Fragen Sie irgendetwas ..."
+      placeholder: Frag mich etwas …
       disclaimer: "KI-Antworten dienen nur zur Information. Keine Finanzberatung!"
+      coming_soon: Kommt bald

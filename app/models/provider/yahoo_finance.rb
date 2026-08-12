@@ -570,7 +570,8 @@ class Provider::YahooFinance < Provider
     EXCHANGE_CONFIG = {
       "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
       "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },
-      "XBOG" => { yahoo_suffix: ".CL", default_currency: "COP" }
+      "XBOG" => { yahoo_suffix: ".CL", default_currency: "COP" },
+      "XIDX" => { yahoo_suffix: ".JK", default_currency: "IDR" }
     }.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
@@ -1056,6 +1057,8 @@ class Provider::YahooFinance < Provider
         "MX"
       when /JSE|JOHANNESBURG/
         "ZA"
+      when /JAKARTA|IDX/
+        "ID"
       else
         nil
       end
@@ -1108,6 +1111,8 @@ class Provider::YahooFinance < Provider
         "XBOM" # BSE (Bombay Stock Exchange)
       when "BVC"
         "XBOG" # Colombian Securities Exchange
+      when "JKT"
+        "XIDX" # Indonesia Stock Exchange (IDX)
       else
         exchange_code.upcase
       end

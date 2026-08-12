@@ -1,0 +1,16 @@
+---
+de:
+  rule_notification_mailer:
+    digest:
+      account: Konto
+      amount: Betrag
+      cta: Transaktionen ansehen
+      date: Datum
+      heading:
+        one: 1 neue Transaktion passt zu deiner Regel
+        other: "%{count} neue Transaktionen passen zu deiner Regel"
+      intro: 'Diese Transaktionen passen zur Regel „%{rule}“:'
+      name: Name
+      subject:
+        one: 1 neue Transaktion passt zu deiner Regel auf %{product_name}
+        other: "%{count} neue Transaktionen passen zu deiner Regel auf %{product_name}"
