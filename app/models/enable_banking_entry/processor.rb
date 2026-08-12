@@ -6,6 +6,21 @@ class EnableBankingEntry::Processor
   # Small-merchant card terminal providers that prefix the payee with "KEYWORD *"
   PAYMENT_PROCESSOR_PREFIX = /\A(SUMUP|SQ|IZETTLE|ZETTLE|PAYPAL)\s*\*\s*/i
 
+  # Austrian/German retail POS terminals often include a "DANKT"/"DANKE" thank-you
+  # marker somewhere in the merchant line (e.g. "<CHAIN> DANKT ..." or
+  # "DANKE ... <CHAIN>"). It's never part of the retailer's actual name, so it's
+  # safe to remove -- but its position relative to the merchant name isn't fixed,
+  # so only the marker word itself is removed rather than truncating the line at
+  # it. Used as a last-resort fallback when no known merchant name matches (see
+  # matched_known_merchant_name) -- generalizes across retailers and phrasings
+  # without risking the real merchant name being cut off.
+  LOYALTY_MARKER_WORD = /\b(DANKT|DANKE)\b/i
+
+  # Guard against spurious matches from very short known merchant names (e.g. a
+  # 2-letter FamilyMerchant name matching inside unrelated text, like "IT" would
+  # inside "NAME IT" -- a real chain name observed in this issue's own data).
+  MIN_KNOWN_MERCHANT_MATCH_LENGTH = 3
+
   # enable_banking_transaction is the raw hash fetched from Enable Banking API
   # Transaction structure from Enable Banking:
   # {
@@ -224,7 +239,9 @@ class EnableBankingEntry::Processor
     def primary_remittance_information
       lines = remittance_information_lines
       descriptive = lines.find { |line| !technical_remittance_line?(line) } || lines.first
-      strip_payment_processor_prefix(descriptive)
+      return descriptive if descriptive.blank?
+
+      matched_known_merchant_name(descriptive) || strip_loyalty_marker(strip_payment_processor_prefix(descriptive))
     end
 
     def remittance_information_lines
@@ -243,8 +260,10 @@ class EnableBankingEntry::Processor
       # no separate technical-only element) would wrongly match on the prefix alone,
       # and a line like "Invoice paid 31.07. 10:27" would wrongly match on the date
       # suffix alone. Requiring both matches every real technical line observed in
-      # production while leaving both of those legitimate shapes untouched.
-      line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{2}[.\/]\d{2}\.?\s+\d{2}:\d{2}\z/i)
+      # production while leaving both of those legitimate shapes untouched. Day/month
+      # accept 1-2 digits (not just 2) so an un-padded ASPSP date ("1.07." instead of
+      # "01.07.") is still recognized as technical.
+      line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{1,2}[.\/]\d{1,2}\.?\s+\d{2}:\d{2}\z/i)
     end
 
     def strip_payment_processor_prefix(value)
@@ -252,12 +271,53 @@ class EnableBankingEntry::Processor
       value.sub(PAYMENT_PROCESSOR_PREFIX, "").strip.presence || value
     end
 
+    def strip_loyalty_marker(value)
+      return value if value.blank?
+      # Only touch the string when the marker is actually present -- squeeze/strip
+      # would otherwise also collapse intentional multi-space formatting (e.g. the
+      # raw technical POS line) on lines that never had a marker to remove.
+      return value unless value.match?(LOYALTY_MARKER_WORD)
+      value.sub(LOYALTY_MARKER_WORD, "").squeeze(" ").strip.presence || value
+    end
+
+    # Prefer a merchant name the family already knows over any text heuristic: it's
+    # already clean/trusted, and sidesteps guessing which parts of a POS line are
+    # noise (store numbers, city, thank-you markers, ...) vs. part of the name.
+    # Case-insensitive, whole-word match; the *stored* name (and its casing) wins,
+    # so e.g. "BILLA DANKT 0007114" resolves to "Billa", not "BILLA". Longest match
+    # wins when multiple known names match (prefer the more specific one).
+    def matched_known_merchant_name(line)
+      candidates = known_merchant_names.select { |name| name.length >= MIN_KNOWN_MERCHANT_MATCH_LENGTH }
+      # Lookaround instead of \b at both ends: \b only fires on a word/non-word
+      # transition, so it silently fails to match right after a name that itself
+      # ends in punctuation (e.g. "A+B (Café)" ends in ")" -- a non-word char next
+      # to another non-word char has no \b between them). Asserting "the boundary
+      # character, if any, isn't alphanumeric" works regardless of how the known
+      # name itself starts/ends.
+      matches = candidates.select do |name|
+        line.match?(/(?<![[:alnum:]_])#{Regexp.escape(name)}(?![[:alnum:]_])/i)
+      end
+      matches.max_by(&:length)
+    end
+
+    def known_merchant_names
+      @known_merchant_names ||= account&.family&.known_merchant_names || []
+    end
+
     def merchant_name_candidate
       counterparty = counterparty_name.to_s.strip
       return counterparty if counterparty.present? && !technical_card_counterparty?(counterparty)
-      # For technical CARD-* counterparties, reuse remittance as the best merchant candidate
+
       remittance = primary_remittance_information
-      return remittance.truncate(100, omission: "") if remittance.present? && technical_card_counterparty?(counterparty)
+      return nil if remittance.blank?
+
+      # Trust remittance-derived text as a merchant candidate when either the
+      # counterparty was a technical CARD-* placeholder (existing Wise case), or
+      # the text matched an ALREADY-KNOWN merchant for this family. Inventing a
+      # brand-new merchant from raw noisy POS text (blank counterparty, no CARD-*
+      # signal, no known-merchant match) stays out of scope, unchanged from #2935.
+      return remittance.truncate(100, omission: "") if technical_card_counterparty?(counterparty)
+      return remittance if known_merchant_names.include?(remittance)
 
       nil
     end

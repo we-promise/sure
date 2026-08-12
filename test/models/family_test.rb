@@ -173,6 +173,20 @@ class FamilyTest < ActiveSupport::TestCase
     assert_includes family.available_merchants, new_merchant
   end
 
+  test "known_merchant_names includes both assigned and family-owned merchant names, deduplicated" do
+    family = families(:dylan_family)
+
+    provider_merchant = ProviderMerchant.create!(name: "Known Provider Merchant", source: "enable_banking")
+    transactions(:one).update!(merchant: provider_merchant)
+    unassigned_family_merchant = family.merchants.create!(name: "Unassigned Family Merchant")
+
+    names = family.known_merchant_names
+
+    assert_includes names, "Known Provider Merchant"
+    assert_includes names, unassigned_family_merchant.name
+    assert_equal names.uniq, names
+  end
+
   test "enabled currencies always include the base currency" do
     family = families(:dylan_family)
     family.update!(currency: "SGD", enabled_currencies: [ "USD" ])
