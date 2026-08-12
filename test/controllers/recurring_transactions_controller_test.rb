@@ -36,24 +36,24 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
     get recurring_transactions_path
     assert_response :success
-    assert_not_includes assigns(:recurring_transactions), @recurring_transaction
-    assert_includes assigns(:dismissed_recurring_transactions), @recurring_transaction
+    assert_select "a[href=?]", restore_recurring_transaction_path(@recurring_transaction)
+    assert_select "a[href=?][data-turbo-method=delete]", recurring_transaction_path(@recurring_transaction), count: 0
   end
 
   test "toggle_status 404s for an already-dismissed recurring transaction" do
     @recurring_transaction.dismiss!
 
-    assert_raises(ActiveRecord::RecordNotFound) do
-      post toggle_status_recurring_transaction_path(@recurring_transaction)
-    end
+    post toggle_status_recurring_transaction_path(@recurring_transaction)
+
+    assert_response :not_found
   end
 
   test "destroying an already-dismissed recurring transaction 404s" do
     @recurring_transaction.dismiss!
 
-    assert_raises(ActiveRecord::RecordNotFound) do
-      delete recurring_transaction_path(@recurring_transaction)
-    end
+    delete recurring_transaction_path(@recurring_transaction)
+
+    assert_response :not_found
   end
 
   test "restore undismisses a recurring transaction" do
@@ -71,8 +71,8 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
     sign_in users(:family_member)
 
-    assert_raises(ActiveRecord::RecordNotFound) do
-      post restore_recurring_transaction_path(@recurring_transaction)
-    end
+    post restore_recurring_transaction_path(@recurring_transaction)
+
+    assert_response :not_found
   end
 end
