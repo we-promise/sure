@@ -23,8 +23,8 @@ de:
       duplicates:
         one: 1 doppelter Kontoauszug wurde übersprungen.
         other: "%{count} doppelte Kontoauszüge wurden übersprungen."
-      invalid_file_type: Laden Sie einen Kontoauszug als PDF, CSV oder XLSX innerhalb der Größenbeschränkung hoch.
-      no_files: Wählen Sie mindestens eine Kontoauszugsdatei aus.
+      invalid_file_type: Lad einen Kontoauszug als PDF, CSV oder XLSX innerhalb der Größenbeschränkung hoch.
+      no_files: Wähl mindestens eine Kontoauszugsdatei aus.
       success:
         one: 1 Kontoauszug hochgeladen.
         other: "%{count} Kontoauszüge hochgeladen."
@@ -47,10 +47,10 @@ de:
       storage_used: Belegter Speicher
       title: Kontoauszug-Tresor
       unmatched_title: Nicht zugeordneter Posteingang
-      upload_description: Laden Sie Kontoauszüge in den Posteingang hoch oder wählen Sie ein Konto zur sofortigen Verknüpfung.
+      upload_description: Lad Kontoauszüge in den Posteingang hoch oder wähl ein Konto zur sofortigen Verknüpfung.
       upload_title: Kontoauszüge hochladen
     link:
-      no_account: Wählen Sie ein Konto aus, bevor Sie diesen Kontoauszug verknüpfen.
+      no_account: Wähl ein Konto aus, bevor du diesen Kontoauszug verknüpfst.
       success: Kontoauszug mit %{account} verknüpft.
     period:
       unknown: Zeitraum unbekannt
@@ -85,7 +85,7 @@ de:
       period_end_on: Ende des Zeitraums
       period_start_on: Beginn des Zeitraums
       reconciliation_title: Abgleich
-      reconciliation_unavailable: Fügen Sie einen Kontoauszugszeitraum und einen Anfangs- oder Schlusssaldo hinzu und stellen Sie sicher, dass Sure für diese Daten einen Saldoverlauf hat.
+      reconciliation_unavailable: Füg einen Kontoauszugszeitraum und einen Anfangs- oder Schlusssaldo hinzu und stell sicher, dass Sure für diese Daten einen Saldoverlauf hat.
       reject: Ablehnen
       save: Kontoauszug speichern
       statement_amount: Kontoauszug
