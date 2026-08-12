@@ -422,6 +422,30 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Query ID/i, response.body)
   end
 
+  test "GET connect_form warns when self-hosted encryption keys are not explicitly configured" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+  end
+
+  test "GET connect_form hides encryption warning when self-hosted encryption keys are configured" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+  end
+
   test "GET connect_form for snaptrade shows OAuth setup instructions when instance is not configured" do
     Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
 
