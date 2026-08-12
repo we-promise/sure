@@ -396,6 +396,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_09_000000) do
     t.string "lucide_icon", default: "shapes", null: false
     t.datetime "last_used_at"
     t.index ["family_id"], name: "index_categories_on_family_id"
+    t.index ["family_id", "name"], name: "index_categories_on_family_id_and_name", unique: true
     t.index ["family_id", "last_used_at"], name: "index_categories_on_family_id_and_last_used_at"
   end
 

@@ -187,4 +187,18 @@ class CategoryTest < ActiveSupport::TestCase
 
     assert_equal [ c ], result.to_a
   end
+
+  test "database enforces unique category names per family" do
+    existing = categories(:food_and_drink)
+    duplicate = Category.new(
+      name: existing.name,
+      color: "#123456",
+      lucide_icon: "shapes",
+      family: @family
+    )
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      duplicate.save!(validate: false)
+    end
+  end
 end
