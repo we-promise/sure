@@ -277,6 +277,10 @@ Rails.application.routes.draw do
 
   resource :registration, only: %i[new create]
   resources :sessions, only: %i[index new create destroy]
+  # Passwordless sign-in with a discoverable passkey. Unauthenticated by design;
+  # rate limited alongside the MFA WebAuthn endpoints in Rack::Attack.
+  post "/sessions/passkey_options", to: "passkey_sessions#options", as: :passkey_session_options
+  post "/sessions/passkey", to: "passkey_sessions#create", as: :passkey_session
   # Desktop app SSO: opens the flow in the system browser (so passkeys/WebAuthn
   # work), then hands a single-use, PKCE-bound code back via the sure:// scheme
   # which the desktop webview exchanges for a normal web session.
