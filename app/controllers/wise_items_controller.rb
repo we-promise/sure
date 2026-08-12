@@ -37,6 +37,7 @@ class WiseItemsController < ApplicationController
 
     session[:wise_pending_profiles] = profiles
     session[:wise_pending_encrypted_token] = encrypt_pending_token(token)
+    session[:wise_pending_import_all_history] = params.dig(:wise_item, :import_all_history) == "1"
 
     redirect_to select_profiles_wise_items_path
   rescue Provider::Wise::WiseError => e
@@ -72,6 +73,8 @@ class WiseItemsController < ApplicationController
       redirect_to select_profiles_wise_items_path, alert: t(".no_profiles_selected") and return
     end
 
+    import_all_history = session[:wise_pending_import_all_history] || false
+
     created = 0
     profiles.each do |profile|
       profile_id = profile["id"].to_s
@@ -85,13 +88,15 @@ class WiseItemsController < ApplicationController
         token: token,
         profile_id: profile_id,
         profile_type: profile_type,
-        item_name: display_name
+        item_name: display_name,
+        import_all_history: import_all_history
       )
       created += 1
     end
 
     session.delete(:wise_pending_profiles)
     session.delete(:wise_pending_encrypted_token)
+    session.delete(:wise_pending_import_all_history)
 
     if created.zero?
       redirect_to settings_providers_path, alert: t(".already_connected")
@@ -229,7 +234,7 @@ class WiseItemsController < ApplicationController
     end
 
     def wise_item_update_params
-      permitted = params.require(:wise_item).permit(:name, :sync_start_date, :token)
+      permitted = params.require(:wise_item).permit(:name, :sync_start_date, :import_all_history, :token)
       permitted.delete(:token) if @wise_item.persisted? && permitted[:token].blank?
       permitted[:token] = permitted[:token].to_s.strip if permitted[:token].present?
       permitted

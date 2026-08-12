@@ -1,0 +1,14 @@
+---
+zh-TW:
+  activerecord:
+    attributes:
+      brex_item:
+        base_url: Base URL
+        name: 連線名稱
+        token: 權杖 (Token)
+    errors:
+      models:
+        brex_item:
+          attributes:
+            base_url:
+              official_hosts_only: 必須留白，或是 https://api.brex.com、https://api-staging.brex.com
