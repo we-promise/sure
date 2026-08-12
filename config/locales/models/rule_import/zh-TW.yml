@@ -1,0 +1,9 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        rule_import:
+          unsupported_resource_type: 不支援的資源類型：%{resource_type}
+          invalid_json: 條件或動作中的 JSON 無效：%{message}
+          min_actions: 規則至少須包含一個動作

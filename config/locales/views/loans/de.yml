@@ -10,6 +10,12 @@ de:
       rate_type: Zinssatztyp
       term_months: Laufzeit (Monate)
       term_months_placeholder: '360'
+      rate_type_adjustable: Anpassbar
+      rate_type_fixed: Fest
+      rate_type_variable: Variabel
+      none: Keine
+      subtype_none: Keine
+      subtype_prompt: Kreditart wählen
     new:
       title: Kreditdetails eingeben
     overview:
@@ -21,3 +27,14 @@ de:
       term: Laufzeit
       type: Typ
       unknown: Unbekannt
+    tabs:
+      overview:
+        edit_loan_details: Kreditdaten bearbeiten
+        interest_rate: Zinssatz
+        monthly_payment: Monatsrate
+        not_applicable: "–"
+        original_principal: Ursprüngliche Kreditsumme
+        remaining_principal: Restschuld
+        term: Laufzeit
+        type: Art
+        unknown: Unbekannt

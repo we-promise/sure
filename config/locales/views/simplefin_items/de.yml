@@ -2,34 +2,42 @@
 de:
   simplefin_items:
     new:
-      title: SimpleFin verbinden
+      title: SimpleFIN verbinden
       setup_token: Setup-Token
-      setup_token_placeholder: Füge dein SimpleFin-Setup-Token ein
+      setup_token_placeholder: Füge dein SimpleFIN-Setup-Token ein
       connect: Verbinden
       cancel: Abbrechen
     create:
-      success: SimpleFin-Verbindung erfolgreich hinzugefügt! Deine Konten werden in Kürze angezeigt, sobald sie im Hintergrund synchronisiert wurden.
+      success: SimpleFIN-Verbindung erfolgreich hinzugefügt! Deine Konten werden in Kürze angezeigt, sobald sie im Hintergrund synchronisiert wurden.
       errors:
-        blank_token: Bitte gib ein SimpleFin-Setup-Token ein.
-        invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige Token aus der SimpleFin Bridge kopiert hast.
+        blank_token: Bitte gib ein SimpleFIN-Setup-Token ein.
+        invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige Token aus der SimpleFIN Bridge kopiert hast.
         token_compromised: Das Setup-Token ist möglicherweise kompromittiert, abgelaufen oder wurde bereits verwendet. Bitte erstelle ein neues.
         create_failed: "Verbindung konnte nicht hergestellt werden: %{message}"
         unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.
     destroy:
-      success: SimpleFin-Verbindung wird entfernt.
+      success: SimpleFIN-Verbindung wird entfernt.
     update:
-      success: SimpleFin-Verbindung erfolgreich aktualisiert! Deine Konten werden neu verbunden.
+      success: SimpleFIN-Verbindung erfolgreich aktualisiert! Deine Konten werden neu verbunden.
       errors:
-        blank_token: Bitte gib ein SimpleFin-Setup-Token ein.
-        invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige Token aus der SimpleFin Bridge kopiert hast.
+        blank_token: Bitte gib ein SimpleFIN-Setup-Token ein.
+        invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige Token aus der SimpleFIN Bridge kopiert hast.
         token_compromised: Das Setup-Token ist möglicherweise kompromittiert, abgelaufen oder wurde bereits verwendet. Bitte erstelle ein neues.
         update_failed: "Verbindung konnte nicht aktualisiert werden: %{message}"
         unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.
     edit:
       setup_token:
-        label: "SimpleFin-Setup-Token:"
-        placeholder: "Füge hier dein SimpleFin-Setup-Token ein..."
+        label: "SimpleFIN-Setup-Token:"
+        placeholder: "Füge hier dein SimpleFIN-Setup-Token ein..."
         help_text: "Das Token sollte eine lange Zeichenfolge aus Buchstaben und Zahlen sein."
+      cancel: Abbrechen
+      connection_needs_update: 'Deine SimpleFIN-Verbindung muss aktualisiert werden:'
+      header_subtitle: Hol dir einen neuen Einrichtungstoken, um dein SimpleFIN-Konto wieder zu verbinden
+      step_1_html: Öffne die <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> und erzeug einen neuen Einrichtungstoken
+      step_2: Kopier den Token und füg ihn unten ein
+      step_3: Klick auf „Aktualisieren“, um den Zugriff wiederherzustellen
+      title: SimpleFIN-Verbindung aktualisieren
+      update: Aktualisieren
     setup_accounts:
       stale_accounts:
         title: "Konten nicht mehr in SimpleFIN"
@@ -41,11 +49,44 @@ de:
         transaction_count:
           one: "%{count} Transaktion"
           other: "%{count} Transaktionen"
+      account_card:
+        balance: Saldo
+      account_type_checking_savings: Giro oder Spar
+      account_type_checking_savings_desc: Normale Bankkonten
+      account_type_credit_card: Kreditkarte
+      account_type_credit_card_desc: Kreditkartenkonten
+      account_type_investment: Investment
+      account_type_investment_desc: Depots, 401(k), IRA
+      account_type_label: 'Kontoart:'
+      account_type_loan: Kredit oder Hypothek
+      account_type_loan_desc: Schuldenkonten
+      account_type_other_asset: Sonstiger Vermögenswert
+      account_type_other_asset_desc: Alles Übrige
+      activity:
+        days_ago:
+          one: vor 1 Tag
+          other: vor %{count} Tagen
+        dormant: Keine Bewegung seit %{days} Tagen
+        empty: Noch keine Transaktionen importiert
+        likely_closed: Keine Bewegung und Saldo null – die Karte ist womöglich gekündigt oder ersetzt
+        recent:
+          one: 1 Transaktion • zuletzt %{when}
+          other: "%{count} Transaktionen • zuletzt %{when}"
+        today: heute
+        yesterday: gestern
+      cancel: Abbrechen
+      choose_account_type: 'Wähl für jedes SimpleFIN-Konto die passende Kontoart:'
+      create_accounts: Konten anlegen
+      creating_accounts: Konten werden angelegt …
+      header_subtitle: Wähl die passende Kontoart für deine importierten Konten
+      title: SimpleFIN-Konten einrichten
+      transaction_history_description_html: SimpleFIN liefert je nach Bank meist <strong>60 bis 90 Tage</strong> Transaktionshistorie. Nach der Einrichtung kommen neue Transaktionen automatisch dazu. Wie weit die Historie zurückreicht, hängt vom Institut und der Kontoart ab.
+      transaction_history_title: 'Transaktionshistorie:'
     complete_account_setup:
       all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten erstellt."
       no_accounts: "Keine Konten zum Einrichten."
       success:
-        one: "Ein SimpleFIN-Konto erfolgreich erstellt! Deine Transaktionen und Positionen werden im Hintergrund importiert."
+        one: "%{count} SimpleFIN-Konto erfolgreich erstellt! Deine Transaktionen und Positionen werden im Hintergrund importiert."
         other: "%{count} SimpleFIN-Konten erfolgreich erstellt! Deine Transaktionen und Positionen werden im Hintergrund importiert."
       stale_accounts_processed: "Veraltete Konten: %{deleted} gelöscht, %{moved} verschoben."
       stale_accounts_errors:
@@ -55,7 +96,7 @@ de:
       add_new: Neue Verbindung hinzufügen
       confirm_accept: Verbindung löschen
       confirm_body: Dadurch werden alle Konten dieser Gruppe und alle zugehörigen Daten dauerhaft gelöscht.
-      confirm_title: SimpleFin-Verbindung löschen?
+      confirm_title: SimpleFIN-Verbindung löschen?
       delete: Löschen
       deletion_in_progress: "(Löschung läuft...)"
       error: Beim Synchronisieren der Daten ist ein Fehler aufgetreten.
@@ -63,7 +104,7 @@ de:
       no_accounts_title: Keine Konten gefunden
       requires_update: Erneute Authentifizierung erforderlich
       setup_needed: Neue Konten bereit zur Einrichtung
-      setup_description: Wähle die Kontotypen für deine neu importierten SimpleFin-Konten aus.
+      setup_description: Wähle die Kontotypen für deine neu importierten SimpleFIN-Konten aus.
       setup_action: Neue Konten einrichten
       setup_accounts_menu: Konten einrichten
       more_accounts_available:
@@ -89,6 +130,7 @@ de:
       link_account: Konto verknüpfen
       no_accounts_found: "Keine SimpleFIN-Konten für diesen %{moniker} gefunden."
       wait_for_sync: Wenn du gerade verbunden oder synchronisiert hast, versuche es nach Abschluss der Synchronisierung erneut.
+      check_provider_health: Prüf unter Einstellungen → Anbieter, ob deine SimpleFIN-Verbindung in Ordnung ist.
       unlink_to_move: Um eine Verknüpfung zu verschieben, trenne sie zuerst im Aktionsmenü des Kontos.
       all_accounts_already_linked: Alle SimpleFIN-Konten scheinen bereits verknüpft zu sein.
       currently_linked_to: "Aktuell verknüpft mit: %{account_name}"
@@ -97,6 +139,7 @@ de:
       errors:
         only_manual: Nur manuelle Konten können verknüpft werden
         invalid_simplefin_account: Ungültiges SimpleFIN-Konto ausgewählt
+        different_provider: Dieses Konto ist mit einem anderen Anbieter verknüpft. Lös die Verknüpfung dort zuerst, dann kannst du es mit SimpleFIN verbinden.
     reconciled_status:
       message:
         one: "%{count} doppelte ausstehende Transaktion abgeglichen"
@@ -105,3 +148,12 @@ de:
       message:
         one: "%{count} ausstehende Transaktion älter als %{days} Tage"
         other: "%{count} ausstehende Transaktionen älter als %{days} Tage"
+    dismiss_replacement_suggestion:
+      dismissed: Hinweis auf die Ersatzkarte ausgeblendet
+    replacement_prompt:
+      confirm_body: "„%{account_name}“ wird mit „%{new_name}“ verknüpft. Deine bisherige Historie bleibt, künftige Transaktionen kommen von der neuen Karte."
+      confirm_title: Mit der neuen Karte verknüpfen?
+      description: "„%{account_name}“ ist mit „%{old_name}“ verknüpft, wo es zuletzt keine Bewegung gab und der Saldo null ist. Beim selben Institut ist jetzt eine neue Karte aktiv: „%{new_name}“. Verknüpf sie neu, damit deine Historie erhalten bleibt."
+      dismiss_aria: Hinweis auf die Ersatzkarte ausblenden
+      relink: Mit neuer Karte verknüpfen
+      title: Deine Karte bei %{institution} wurde womöglich ersetzt

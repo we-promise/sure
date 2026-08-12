@@ -2,34 +2,80 @@
 zh-TW:
   family_merchants:
     create:
-      error: '建立商家時發生錯誤：%{error}'
+      error: 建立商家時發生錯誤：%{error}
       success: 成功建立新商家
     destroy:
       success: 成功刪除商家
+      unlinked_success: 已將商家從您的交易中移除
     edit:
       title: 編輯商家
     form:
       name_placeholder: 商家名稱
+      website_placeholder: 網站（例如 starbucks.com）
+      website_hint: 輸入商家的網站，就會自動顯示標誌
     index:
       empty: 尚無商家
       new: 新增商家
+      import: 匯入商家
+      merge: 合併商家
       title: 商家管理
-      family_title: 家庭商家
-      family_empty: 尚無家庭商家
-      provider_title: 提供商商家
-      provider_empty: 目前尚無連結至此家庭的提供商商家
-      provider_read_only: 提供商商家是從您連結的金融機構同步而來的，無法在此進行編輯。
+      family_title: '%{moniker}商家'
+      family_empty: 尚無%{moniker}商家
+      provider_title: 同步商家
+      provider_empty: 目前尚無連結至此%{moniker}的同步商家
+      provider_read_only: 同步商家是從您連結的金融機構同步而來的，無法在此進行編輯。
+      provider_info: 這些商家是您的銀行連線或 AI 自動偵測到的。您可以編輯後存成自己的版本，也可以移除，讓交易不再連結到這些商家。
+      enhance_info:
+        one: 有 %{count} 個同步商家缺少網站資訊。用 AI 增強即可偵測網站、顯示標誌並合併重複的商家。
+        other: 有 %{count} 個同步商家缺少網站資訊。用 AI 增強即可偵測網站、顯示標誌並合併重複的商家。
+      enhance_button: 以 AI 增強
+      search_family_merchants: 搜尋家庭商家...
+      search_provider_merchants: 搜尋同步商家...
+      no_family_merchants_found: 找不到符合的家庭商家
+      no_provider_merchants_found: 找不到符合的同步商家
+      per_page: 每頁
+      unlinked_title: 最近取消連結的商家
+      unlinked_info: 這些商家最近從您的交易中被移除。除非重新指定給某筆交易，否則 30 天後就會從這份清單消失。
       table:
         merchant: 商家
         actions: 操作
         source: 來源
+    family_merchant:
+      edit: 編輯
+      delete: 刪除
     merchant:
       confirm_accept: 刪除商家
       confirm_body: 您確定要刪除此商家嗎？刪除此商家將會解除所有相關交易的連結，並可能影響您的報表產出。
       confirm_title: 確定要刪除商家嗎？
       delete: 刪除商家
       edit: 編輯商家
+    merge:
+      title: 合併商家
+      description: 請選擇目標商家，以及要併入目標的商家。被合併商家的所有交易都會改指向目標商家。
+      target_label: 併入（目標）
+      select_target: 選擇目標商家...
+      sources_label: 要合併的商家
+      sources_search_placeholder: 搜尋商家...
+      no_merchants_found: 找不到符合的商家
+      sources_hint: 所選的商家會併入目標。家庭商家會被刪除，同步商家則會取消連結。
+      submit: 合併所選項目
     new:
       title: 新增商家
+    perform_merge:
+      success:
+        one: 成功合併 %{count} 個商家
+        other: 成功合併 %{count} 個商家
+      no_merchants_selected: 沒有選擇要合併的商家
+      target_not_found: 找不到目標商家
+      invalid_merchants: 所選的商家無效
+    provider_merchant:
+      edit: 編輯
+      remove: 移除
+      remove_confirm_title: 要移除這個商家嗎？
+      remove_confirm_body: 確定要移除 %{name} 嗎？這會讓所有相關交易不再連結到這個商家，但不會刪除商家本身。
+    enhance:
+      success: 已開始增強同步商家。稍後會完成增強並合併重複項目。
+      already_running: 增強作業已在進行中，請等它完成。
     update:
       success: 商家資訊已成功更新
+      converted_success: 商家轉換並更新成功

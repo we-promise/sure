@@ -10,10 +10,10 @@ fr:
       spending_anomaly: Voir les transactions de %{category}
       subscription_audit: Vérifier les transactions récurrentes
     card:
+      acknowledged: "Analyse ignorée"
       dismiss: Ignorer
       dismissed: Analyse ignorée
       new: Nouveau
-      undo: Annuler
     feed:
       header: Dernières
       header_new: Nouveau
