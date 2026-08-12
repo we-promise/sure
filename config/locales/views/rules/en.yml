@@ -113,3 +113,5 @@ en:
         any: any
         of_the_following_conditions: of the following conditions
         add_condition: Add condition
+      condition:
+        value_placeholder: Enter a value

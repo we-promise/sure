@@ -71,7 +71,7 @@ export default class extends Controller {
 
     row.innerHTML = `
       <div class="flex flex-wrap md:flex-nowrap items-end gap-2">
-        <div class="w-full md:flex-1 md:w-auto min-w-0">
+        <div class="w-full md:flex-1 md:w-auto min-w-0 md:min-w-28">
           <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Name</label>
           <input type="text"
                  name="split[splits][${index}][name]"
