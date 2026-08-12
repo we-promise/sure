@@ -4,8 +4,14 @@ class RecurringTransactionsController < ApplicationController
   def index
     @recurring_transactions = Current.family.recurring_transactions
                                     .accessible_by(Current.user)
+                                    .visible
                                     .includes(:merchant)
                                     .order(status: :asc, next_expected_date: :asc)
+    @dismissed_recurring_transactions = Current.family.recurring_transactions
+                                    .accessible_by(Current.user)
+                                    .dismissed
+                                    .includes(:merchant)
+                                    .order(updated_at: :desc)
     @family = Current.family
   end
 
@@ -43,7 +49,7 @@ class RecurringTransactionsController < ApplicationController
   end
 
   def toggle_status
-    @recurring_transaction = Current.family.recurring_transactions.accessible_by(Current.user).find(params[:id])
+    @recurring_transaction = Current.family.recurring_transactions.accessible_by(Current.user).visible.find(params[:id])
 
     if @recurring_transaction.active?
       @recurring_transaction.mark_inactive!
@@ -62,10 +68,18 @@ class RecurringTransactionsController < ApplicationController
   end
 
   def destroy
-    @recurring_transaction = Current.family.recurring_transactions.accessible_by(Current.user).find(params[:id])
-    @recurring_transaction.destroy!
+    @recurring_transaction = Current.family.recurring_transactions.accessible_by(Current.user).visible.find(params[:id])
+    @recurring_transaction.dismiss!
 
     flash[:notice] = t("recurring_transactions.deleted")
+    redirect_to recurring_transactions_path
+  end
+
+  def restore
+    @recurring_transaction = Current.family.recurring_transactions.accessible_by(Current.user).dismissed.find(params[:id])
+    @recurring_transaction.undismiss!
+
+    flash[:notice] = t("recurring_transactions.restored")
     redirect_to recurring_transactions_path
   end
 

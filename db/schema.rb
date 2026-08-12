@@ -1808,6 +1808,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.string "currency", null: false
     t.string "dedup_scope", default: "", null: false
     t.uuid "destination_account_id"
+    t.datetime "dismissed_at"
     t.integer "end_after_count"
     t.string "end_mode", default: "never", null: false
     t.date "end_on"

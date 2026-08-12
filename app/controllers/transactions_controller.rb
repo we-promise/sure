@@ -81,6 +81,7 @@ class TransactionsController < ApplicationController
     @projected_recurring = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
       Current.family.recurring_transactions
                     .accessible_by(Current.user)
+                    .visible
                     .active
                     .where("next_expected_date <= ? AND next_expected_date >= ?",
                            10.days.from_now.to_date,

@@ -22,6 +22,7 @@ class RecurringTransaction
 
       family.recurring_transactions
             .active
+            .visible
             .find_each do |recurring_transaction|
         next unless recurring_transaction.should_be_inactive?
 
@@ -45,6 +46,7 @@ class RecurringTransaction
 
       family.recurring_transactions
         .inactive
+        .visible
         .where(manual: false)
         .where("updated_at < ?", six_months_ago)
         .destroy_all

@@ -125,7 +125,7 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
   end
 
   def destroy
-    @recurring_transaction.destroy!
+    @recurring_transaction.dismiss!
 
     render json: { message: "Recurring transaction deleted successfully" }, status: :ok
   rescue ActiveRecord::RecordNotFound
@@ -164,11 +164,11 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
     end
 
     def read_recurring_transactions_scope
-      current_resource_owner.family.recurring_transactions.accessible_by(current_resource_owner)
+      current_resource_owner.family.recurring_transactions.accessible_by(current_resource_owner).visible
     end
 
     def write_recurring_transactions_scope
-      scope = current_resource_owner.family.recurring_transactions
+      scope = current_resource_owner.family.recurring_transactions.visible
       writable_account_ids = current_resource_owner.family.accounts.writable_by(current_resource_owner).select(:id)
       scope.where(account_id: writable_account_ids).or(scope.where(account_id: nil))
     end

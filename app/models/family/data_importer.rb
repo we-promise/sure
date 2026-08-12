@@ -551,7 +551,8 @@ class Family::DataImporter
           end_after_count: data["end_after_count"],
           weekend_adjust: imported_enum_value(data["weekend_adjust"], RecurringTransaction.weekend_adjusts, "none"),
           holiday_calendar: data["holiday_calendar"],
-          matcher_hints: data["matcher_hints"] || {}
+          matcher_hints: data["matcher_hints"] || {},
+          dismissed_at: parse_import_datetime(data["dismissed_at"])
         )
         # These columns are NOT NULL with database defaults. An export written
         # before they existed omits them, and assigning nil would replace a
@@ -1254,6 +1255,14 @@ class Family::DataImporter
 
       Date.parse(value.to_s)
     rescue Date::Error
+      nil
+    end
+
+    def parse_import_datetime(value)
+      return if value.blank?
+
+      Time.zone.parse(value.to_s)
+    rescue ArgumentError, TypeError
       nil
     end
 

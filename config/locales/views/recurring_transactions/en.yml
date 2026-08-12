@@ -47,6 +47,7 @@ en:
     marked_inactive: Recurring transaction marked as inactive
     marked_active: Recurring transaction marked as active
     deleted: Recurring transaction deleted
+    restored: Recurring transaction restored
     confirm_delete: Are you sure you want to delete this recurring transaction?
     marked_as_recurring: Transaction marked as recurring
     already_exists: A manual recurring transaction already exists for this pattern
@@ -69,6 +70,10 @@ en:
       inactive: Inactive
     badges:
       manual: Manual
+    dismissed:
+      title: "Deleted recurring transactions (%{count})"
+      description: Deleted recurring transactions stay hidden and won't be re-detected. Restore one if you want it tracked again.
+      restore_action: Restore
     transfer_marked_as_recurring: Transfer marked as recurring
     transfer_already_exists: A recurring transfer already exists for this account pair
     transfer_creation_failed: Failed to create recurring transfer. Please check the transfer details and try again.

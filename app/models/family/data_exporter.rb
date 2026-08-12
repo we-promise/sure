@@ -631,6 +631,7 @@ class Family::DataExporter
         matcher_hints: recurring_transaction.matcher_hints,
         dedup_scope: recurring_transaction.dedup_scope,
         replaced_by_id: recurring_transaction.replaced_by_id,
+        dismissed_at: recurring_transaction.dismissed_at,
         created_at: recurring_transaction.created_at,
         updated_at: recurring_transaction.updated_at
       }

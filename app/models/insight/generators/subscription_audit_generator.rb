@@ -52,7 +52,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
       candidates = family.recurring_occurrences
         .open_status
         .joins(:recurring_transaction)
-        .where(recurring_transactions: { status: :active, destination_account_id: nil })
+        .where(recurring_transactions: { status: :active, destination_account_id: nil, dismissed_at: nil })
         .where("recurring_transactions.amount > 0")
         .where("due_on < ?", Date.current)
         .includes(recurring_transaction: [ :merchant, :recurrence_rules ])

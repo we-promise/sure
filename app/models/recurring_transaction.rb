@@ -257,7 +257,9 @@ class RecurringTransaction < ApplicationRecord
   end
 
   scope :for_family, ->(family) { where(family: family) }
-  scope :expected_soon, -> { active.where("next_expected_date <= ?", 1.month.from_now) }
+  scope :visible, -> { where(dismissed_at: nil) }
+  scope :dismissed, -> { where.not(dismissed_at: nil) }
+  scope :expected_soon, -> { active.visible.where("next_expected_date <= ?", 1.month.from_now) }
 
   # An active recurring expense you owe someone: transfers are internal moves and
   # income is not owed, so neither belongs on a list of things to pay. No minimum
@@ -660,6 +662,23 @@ class RecurringTransaction < ApplicationRecord
   # Mark as active
   def mark_active!
     update!(status: "active")
+  end
+
+  # A dismissed recurring transaction is a durable user veto: the row stays in
+  # place (occupying its identity slot in the unique indexes below) so the
+  # Identifier can recognize the pattern and skip re-creating it, instead of a
+  # hard delete which is indistinguishable from "never detected".
+  def dismissed?
+    dismissed_at.present?
+  end
+
+  def dismiss!
+    update!(dismissed_at: Time.current)
+  end
+
+  def undismiss!
+    return unless dismissed?
+    update!(dismissed_at: nil)
   end
 
   # Update based on a new transaction occurrence

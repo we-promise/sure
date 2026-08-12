@@ -108,7 +108,9 @@ class RecurringTransaction
         if claimed
           # Manual rows are refreshed by the dedicated variance pass; ended
           # rows are tombstones (the user dismissed or cancelled the bill).
-          next if claimed.manual? || claimed.ended?
+          # Dismissed rows are a durable user veto and must never be revived
+          # by detection.
+          next if claimed.manual? || claimed.ended? || claimed.dismissed?
 
           update_claimed_series(claimed, pattern)
           next
@@ -122,7 +124,7 @@ class RecurringTransaction
           # save. Re-read and treat it as the claimed series.
           racer = family.recurring_transactions.find_by(identity_conditions(pattern, scoped: candidates.any?))
           next unless racer
-          next if racer.manual? || racer.ended?
+          next if racer.manual? || racer.ended? || racer.dismissed?
 
           update_claimed_series(racer, pattern)
         end

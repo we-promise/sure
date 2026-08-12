@@ -479,11 +479,20 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
   end
 
   test "should destroy recurring transaction" do
-    assert_difference("@family.recurring_transactions.count", -1) do
+    assert_no_difference("@family.recurring_transactions.count") do
       delete api_v1_recurring_transaction_url(@recurring_transaction), headers: api_headers(@api_key)
     end
 
     assert_response :ok
+    assert @recurring_transaction.reload.dismissed?
+  end
+
+  test "should return not found when destroying an already-dismissed recurring transaction" do
+    @recurring_transaction.dismiss!
+
+    delete api_v1_recurring_transaction_url(@recurring_transaction), headers: api_headers(@api_key)
+
+    assert_response :not_found
   end
 
   test "should require authentication when destroying recurring transaction" do
