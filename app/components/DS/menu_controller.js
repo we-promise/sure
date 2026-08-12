@@ -24,10 +24,19 @@ export default class extends Controller {
   };
 
   connect() {
-    this.show = this.showValue;
     this.boundUpdate = this.update.bind(this);
     this.addEventListeners();
     this.startAutoUpdate();
+  }
+
+  // Derived from the content element's own class rather than tracked as
+  // separate state. A Turbo morph (e.g. the same-page refresh after this
+  // menu's own "disable account" action) re-renders the content element
+  // closed without going through toggle()/close(), which would otherwise
+  // leave a plain instance property out of sync with the DOM — swallowing
+  // the next click because toggle() would think it still needs to close.
+  get show() {
+    return !this.contentTarget.classList.contains("hidden");
   }
 
   disconnect() {
@@ -103,17 +112,16 @@ export default class extends Controller {
   };
 
   toggle = () => {
-    this.show = !this.show;
-    this.contentTarget.classList.toggle("hidden", !this.show);
-    this.buttonTarget.setAttribute("aria-expanded", this.show.toString());
-    if (this.show) {
+    const nextShow = !this.show;
+    this.contentTarget.classList.toggle("hidden", !nextShow);
+    this.buttonTarget.setAttribute("aria-expanded", nextShow.toString());
+    if (nextShow) {
       this.update();
       this.#focusFirstMenuItem();
     }
   };
 
   close() {
-    this.show = false;
     this.contentTarget.classList.add("hidden");
     this.buttonTarget.setAttribute("aria-expanded", "false");
   }

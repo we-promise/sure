@@ -56,6 +56,16 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
   enum :role, { guest: "guest", member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+
+  # SQL counterpart to #preview_features_enabled?, for callers that filter
+  # users (or their families) in one query instead of loading and iterating.
+  # The `@>` containment operator uses index_users_on_preferences (GIN) and
+  # matches only a JSON boolean true, so it agrees with that predicate's
+  # strict `== true` — a stray "yes" enables neither.
+  scope :with_preview_features, -> {
+    where("preferences @> ?", { preview_features_enabled: true }.to_json)
+  }
+
   attribute :ui_layout, :string
   enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
 
@@ -314,6 +324,16 @@ class User < ApplicationRecord
     preferences&.[]("section_order") || default_dashboard_section_order
   end
 
+  # Per-widget height preset override ("compact" | "auto" | "tall"); nil = use default.
+  def dashboard_section_height(section_key)
+    preferences&.dig("dashboard_section_layout", section_key, "height")
+  end
+
+  # Per-widget column-span override ("single" | "full"); nil = use default.
+  def dashboard_section_width(section_key)
+    preferences&.dig("dashboard_section_layout", section_key, "col_span")
+  end
+
   def update_dashboard_preferences(prefs)
     # Use pessimistic locking to ensure atomic read-modify-write
     # This prevents race conditions when multiple sections are collapsed quickly
@@ -324,7 +344,9 @@ class User < ApplicationRecord
       prefs.each do |key, value|
         if value.is_a?(Hash)
           updated_prefs[key] ||= {}
-          updated_prefs[key] = updated_prefs[key].merge(value)
+          # deep_merge so a partial update of one nested dimension (e.g. a widget's
+          # col_span) doesn't clobber a sibling dimension (e.g. its height).
+          updated_prefs[key] = updated_prefs[key].deep_merge(value)
         else
           updated_prefs[key] = value
         end
@@ -373,6 +395,10 @@ class User < ApplicationRecord
 
   def dashboard_two_column?
     preferences&.dig("dashboard_two_column") == true
+  end
+
+  def disable_modal_click_outside?
+    preferences&.dig("disable_modal_click_outside") == true
   end
 
   def preview_features_enabled?
@@ -440,7 +466,7 @@ class User < ApplicationRecord
     end
 
     def default_dashboard_section_order
-      %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet]
+      %w[insights_feed cashflow_sankey outflows_donut net_worth_chart balance_sheet]
     end
 
     def default_reports_section_order

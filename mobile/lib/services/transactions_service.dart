@@ -4,6 +4,8 @@ import '../models/transaction.dart';
 import 'api_config.dart';
 
 class TransactionsService {
+  static const String mobileIdempotencySource = 'sure_mobile';
+
   final http.Client _client;
 
   TransactionsService({http.Client? client})
@@ -21,8 +23,15 @@ class TransactionsService {
     String? categoryId,
     String? merchantId,
     List<String>? tagIds,
+    String? externalId,
+    String? source,
   }) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions');
+    // Idempotency is only valid when both halves of the key are present.
+    final hasIdempotencyKey = externalId != null &&
+        externalId.isNotEmpty &&
+        source != null &&
+        source.isNotEmpty;
 
     final body = {
       'transaction': {
@@ -36,6 +45,8 @@ class TransactionsService {
         if (categoryId != null) 'category_id': categoryId,
         if (merchantId != null) 'merchant_id': merchantId,
         if (tagIds != null) 'tag_ids': tagIds,
+        if (hasIdempotencyKey) 'external_id': externalId,
+        if (hasIdempotencyKey) 'source': source,
       }
     };
 

@@ -9,22 +9,36 @@ class TransactionsController < ApplicationController
     prefill_params_from_duplicate!
     super
     apply_duplicate_attributes!
-    @income_categories = Current.family.categories.incomes.alphabetically
-    @expense_categories = Current.family.categories.expenses.alphabetically
-    @categories = Current.family.categories.alphabetically
+    set_new_transaction_form_options
   end
 
   def index
     @q = search_params
-    accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
-    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: accessible_account_ids)
+    @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
+    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: @accessible_account_ids)
 
     base_scope = @search.transactions_scope
                        .reverse_chronological
                        .includes(
                          { entry: :account },
                          :category, :merchant, :tags,
-                         :transfer_as_inflow, :transfer_as_outflow
+                         # Union of #2643 counterpart UI + Skylight category-menu N+1:
+                         # - outflow rows need inflow_transaction (to_account) for both
+                         #   counterpart display and Transfer#categorizable?/#payment?
+                         # - inflow rows need outflow_transaction (from_account) for
+                         #   counterpart display, and inflow_transaction (to_account)
+                         #   for the category menu on the same row
+                         {
+                           transfer_as_outflow: {
+                             inflow_transaction: { entry: :account }
+                           }
+                         },
+                         {
+                           transfer_as_inflow: {
+                             inflow_transaction: { entry: :account },
+                             outflow_transaction: { entry: :account }
+                           }
+                         }
                        )
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
@@ -117,6 +131,7 @@ class TransactionsController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
       end
     else
+      set_new_transaction_form_options
       render :new, status: :unprocessable_entity
     end
   end
@@ -124,6 +139,7 @@ class TransactionsController < ApplicationController
   def update
     if @entry.update(permitted_entry_params)
       transaction = @entry.transaction
+      transaction.record_category_usage!
 
       if needs_rule_notification?(transaction)
         flash[:cta] = {
@@ -487,6 +503,21 @@ class TransactionsController < ApplicationController
 
     def set_entry_for_tags
       set_entry
+    end
+
+    def set_new_transaction_form_options
+      accessible_accounts_scope = accessible_accounts
+
+      @account_currencies = accessible_accounts_scope.pluck(:id, :currency).to_h
+      @manual_accounts = accessible_accounts_scope
+        .manual
+        .active
+        .alphabetically
+        .includes(:account_providers, logo_attachment: :blob)
+        .to_a
+      @categories = Current.family.categories.alphabetically.to_a
+      @merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
+      @tags = Current.family.tags.alphabetically.to_a
     end
 
     # Filters entry_params based on the user's permission on the account.

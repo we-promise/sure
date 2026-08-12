@@ -1,0 +1,43 @@
+---
+ru:
+  concerns:
+    self_hostable:
+      redis_configured: Redis теперь настроен правильно! Вы можете настроить своё
+        приложение Sure.
+  shared:
+    cancel: Отмена
+    confirm_modal:
+      accept: Подтвердить
+      body_html: "<p>Вы не сможете отменить это решение</p>"
+      cancel: Отмена
+      title: Вы уверены?
+    custom_confirm:
+      default_body: Это действие необратимо.
+      default_btn_text: Подтвердить
+      default_title: Вы уверены?
+    exchange_rate_tabs:
+      calculate_rate_tab: Рассчитать курс
+      convert_tab: Конвертировать по курсу
+      destination_amount: Сумма назначения
+      exchange_rate: Обменный курс
+      exchange_rate_help: Выберите способ ввода суммы.
+    family_moniker:
+      group_plural: Группы
+      group_singular: Группа
+      plural: Семьи
+      singular: Семья
+    money_field:
+      label: Сумма
+    preview: Просмотр
+    require_admin: Только администраторы могут выполнить это действие
+    sync_toast:
+      message: Ваши данные были обновлены
+      refresh: Обновить сейчас
+    syncing_notice:
+      syncing: Синхронизация данных счетов...
+    transaction_tabs:
+      expense: Расход
+      income: Доход
+      transfer: Перевод
+    trend_change:
+      no_change: без изменений

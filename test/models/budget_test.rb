@@ -263,6 +263,7 @@ class BudgetTest < ActiveSupport::TestCase
     budget.stubs(:available_to_spend).returns(200)
     budget.stubs(:budget_category_actual_spending).with(parent_budget_category).returns(63.11)
     budget.stubs(:budget_category_actual_spending).with(standalone_budget_category).returns(25)
+    budget.stubs(:budget_category_actual_spending).with(budget.uncategorized_budget_category).returns(0)
 
     segments = budget.to_donut_segments_json
 
@@ -278,6 +279,59 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 63.11, segments_by_id[parent_budget_category.id][:amount]
     assert_equal 25, segments_by_id[standalone_budget_category.id][:amount]
     assert_equal 200, segments_by_id["unused"][:amount]
+  end
+
+  test "to_donut_segments_json includes uncategorized spending" do
+    family = @family
+    account = Account.create!(
+      family: family,
+      accountable: Depository.new,
+      name: "Checking",
+      status: "active",
+      currency: "USD",
+      balance: 0
+    )
+
+    category = Category.create!(
+      name: "Groceries #{Time.now.to_f}",
+      family: family,
+      color: "#407706",
+      lucide_icon: "shopping-bag"
+    )
+
+    budget = Budget.create!(
+      family: family,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month,
+      currency: "USD",
+      budgeted_spending: 100
+    )
+
+    BudgetCategory.create!(
+      budget: budget,
+      category: category,
+      budgeted_spending: 100,
+      currency: "USD"
+    )
+
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: nil),
+      date: Date.current,
+      name: "Uncategorized donut spending",
+      amount: 125,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+    uncategorized = budget.uncategorized_budget_category
+    segments = budget.to_donut_segments_json
+    uncategorized_segment = segments.find { |segment| segment[:id] == uncategorized.id }
+
+    assert_equal 125, budget.actual_spending
+    assert_equal 125, uncategorized.actual_spending
+    assert_not_nil uncategorized_segment
+    assert_equal 125, uncategorized_segment[:amount]
   end
 
   test "actual_spending subtracts uncategorized refunds" do
@@ -452,5 +506,21 @@ class BudgetTest < ActiveSupport::TestCase
     # Must be > 0 — the nil-key collision between Uncategorized and
     # Other Investments synthetic categories previously caused this to return 0
     assert spending >= 75, "Uncategorized actual spending should include the $75 transaction, got #{spending}"
+  end
+
+  test "days_remaining counts today through the end of the period" do
+    budget = budgets(:one)
+
+    travel_to budget.start_date do
+      assert_equal (budget.end_date - budget.start_date).to_i + 1, budget.days_remaining
+    end
+
+    travel_to budget.end_date do
+      assert_equal 1, budget.days_remaining
+    end
+
+    travel_to budget.end_date + 1.day do
+      assert_equal 0, budget.days_remaining
+    end
   end
 end

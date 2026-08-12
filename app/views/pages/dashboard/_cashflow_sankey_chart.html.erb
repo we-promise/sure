@@ -1,10 +1,12 @@
-<%# locals: (sankey_data:) %>
+<%# locals: (sankey_data:, period:) %>
 <div
   data-controller="sankey-chart"
   data-sankey-chart-data-value="<%= sankey_data.to_json %>"
   data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
+  data-sankey-chart-start-date-value="<%= period.start_date&.iso8601 %>"
+  data-sankey-chart-end-date-value="<%= period.end_date&.iso8601 %>"
   class="w-full h-full privacy-sensitive flex flex-col gap-2">
-  <div class="flex justify-start">
+  <div class="flex justify-start px-4">
     <%= render DS::Button.new(
       variant: :icon,
       icon: "arrow-left",

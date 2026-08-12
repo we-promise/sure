@@ -250,6 +250,15 @@ class SnaptradeAccount::ActivitiesProcessor
         amount.abs   # Money out should be positive in Sure
       when "CONTRIBUTION", "TRANSFER_IN", "DIVIDEND", "DIV", "INTEREST", "CASH"
         -amount.abs  # Money in should be negative in Sure
+      when "TRANSFER"
+        # Direction is not encoded in the type (unlike TRANSFER_IN/TRANSFER_OUT), so the
+        # provider's sign is the only directional signal available. SnapTrade signs these
+        # from the account's perspective (positive = money in), which is the inverse of
+        # Sure's convention, so invert it rather than passing it through unchanged.
+        # Passing it through stored a 401k contribution as a positive amount, which
+        # Entry#classification reads as an expense and ReverseCalculator reads as a
+        # value decrease — a correct current balance with a declining history (issue #2756).
+        -amount
       else
         amount
       end

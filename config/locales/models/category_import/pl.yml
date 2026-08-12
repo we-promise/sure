@@ -1,0 +1,8 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: "Kategoria '%{name}' nie może być swoim własnym rodzicem"
+          missing_columns: "Brakujące wymagane kolumny: %{columns}"

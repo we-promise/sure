@@ -90,7 +90,9 @@ class Budget < ApplicationRecord
   end
 
   def sync_budget_categories
-    current_category_ids = family.categories.pluck(:id).to_set
+    # Category changes can leave the association memoized before this sync runs.
+    current_categories_by_id = family.categories.reload.index_by(&:id)
+    current_category_ids = current_categories_by_id.keys.to_set
     existing_budget_category_ids = budget_categories.pluck(:category_id).to_set
     categories_to_add = current_category_ids - existing_budget_category_ids
     categories_to_remove = existing_budget_category_ids - current_category_ids
@@ -98,7 +100,7 @@ class Budget < ApplicationRecord
     # Create missing categories
     categories_to_add.each do |category_id|
       budget_categories.create!(
-        category_id: category_id,
+        category: current_categories_by_id.fetch(category_id),
         budgeted_spending: 0,
         currency: family.currency
       )
@@ -118,7 +120,7 @@ class Budget < ApplicationRecord
   def transactions
     scope = family.transactions.visible.in_period(period)
     if current_user
-      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).select(:id) })
+      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).included_in_reports.select(:id) })
     end
     scope
   end
@@ -186,6 +188,25 @@ class Budget < ApplicationRecord
     end
   end
 
+  # Whole days from today through the period's last day (today counts).
+  # 0 once the period is over. Also feeds
+  # BudgetCategory#suggested_daily_spending's per-day split.
+  def days_remaining
+    [ (end_date - Date.current).to_i + 1, 0 ].max
+  end
+
+  # Biggest parent categories by what's actually been spent this period,
+  # falling back to allocation size early in the month before spending
+  # lands. Categories with neither spend nor an allocation are noise in a
+  # summary. (The budget_categories association preloads :category.)
+  def top_spending_categories(limit: 4)
+    budget_categories
+      .reject(&:subcategory?)
+      .reject { |bc| bc.actual_spending.to_d.zero? && bc.budgeted_spending.to_d.zero? }
+      .sort_by { |bc| [ -bc.actual_spending.to_d, -bc.budgeted_spending.to_d ] }
+      .first(limit)
+  end
+
   def previous_budget_param
     previous_date = start_date - 1.month
     return nil unless self.class.budget_date_valid?(previous_date, family: family)
@@ -206,7 +227,7 @@ class Budget < ApplicationRecord
     # Continuous gray segment for empty budgets
     return [ { color: "var(--budget-unallocated-fill)", amount: 1, id: unused_segment_id } ] unless allocations_valid?
 
-    segments = budget_categories.reject(&:subcategory?).map do |bc|
+    segments = donut_budget_categories.map do |bc|
       { color: bc.category.color, amount: budget_category_actual_spending(bc), id: bc.id }
     end
 
@@ -215,6 +236,17 @@ class Budget < ApplicationRecord
     end
 
     segments
+  end
+
+  def donut_budget_categories
+    categories = budget_categories.reject(&:subcategory?).to_a
+    uncategorized = uncategorized_budget_category
+
+    if budget_category_actual_spending(uncategorized).positive?
+      categories << uncategorized
+    end
+
+    categories
   end
 
   # =============================================================================

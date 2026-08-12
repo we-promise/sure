@@ -38,19 +38,42 @@ class GoalPledge < ApplicationRecord
 
   # Tolerance check: entry date within [created_at − 5d, expires_at] (so
   # extend! widens the upper bound) and amount within ±$0.50 OR ±1%.
-  # Transfer pledges only fire on inflows (Sure convention: inflow < 0).
-  # Without this guard, .abs below lets a $200 outflow satisfy a $200
-  # transfer pledge as readily as a $200 deposit.
-  def matches?(entry)
+  #
+  # The amount being compared is the money that actually moved IN:
+  #   - transfer pledges resolve against a Transaction inflow (Sure
+  #     convention: inflow < 0), so the entry amount IS the contribution.
+  #   - manual_save pledges resolve against a Valuation, whose amount is the
+  #     account's full new TOTAL balance — not the contribution. The caller
+  #     (Account::ReconciliationManager) passes the balance delta
+  #     (new_balance − prior_balance) via `valuation_delta`; that delta is
+  #     the contribution we match against. Comparing the raw valuation amount
+  #     would only ever match on an account whose entire balance equals the
+  #     pledge (i.e. one starting from ~$0).
+  #
+  # Both kinds only fire on money coming in: transfers require an inflow
+  # entry, manual_save requires a positive balance delta. Without these
+  # guards, .abs below would let a $200 outflow / a $200 drawdown satisfy a
+  # $200 pledge as readily as a $200 deposit.
+  def matches?(entry, valuation_delta: nil)
     return false unless status_open?
     return false unless entry.account_id == account_id
-    return false if kind_transfer? && !entry.amount.to_d.negative?
+
+    is_valuation = entry.entryable.is_a?(Valuation)
+
+    if is_valuation
+      # Never match a valuation delta on an investment account: it may be a
+      # market move, not a deposit, and would false-match (investment goals).
+      return false if account&.investment?
+      return false if valuation_delta.nil? || valuation_delta.to_d <= 0
+    elsif kind_transfer? && !entry.amount.to_d.negative?
+      return false
+    end
 
     earliest = created_at.to_date - MATCH_DATE_TOLERANCE_DAYS.days
     latest = [ created_at.to_date + MATCH_DATE_TOLERANCE_DAYS.days, expires_at.to_date ].max
     return false unless entry.date >= earliest && entry.date <= latest
 
-    txn_amount = entry.amount.to_d.abs
+    txn_amount = (is_valuation ? valuation_delta.to_d : entry.amount.to_d).abs
     pledge_amount = amount.to_d
     diff_abs = (txn_amount - pledge_amount).abs
 

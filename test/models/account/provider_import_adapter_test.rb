@@ -55,6 +55,37 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "applies an explicit provider kind on a depository account" do
+    entry = @adapter.import_transaction(
+      external_id: "up_transfer_1",
+      amount: -50.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Transfer to Savings",
+      source: "up",
+      kind: "funds_movement"
+    )
+
+    assert_equal "funds_movement", entry.transaction.kind
+  end
+
+  test "account-type kind takes precedence over an explicit provider kind" do
+    loan_adapter = Account::ProviderImportAdapter.new(accounts(:loan))
+
+    entry = loan_adapter.import_transaction(
+      external_id: "up_loan_repayment_1",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Home Loan Repayment",
+      source: "up",
+      kind: "funds_movement"
+    )
+
+    assert_equal "loan_payment", entry.transaction.kind,
+                 "a repayment on a Loan account must stay loan_payment, not the provider's funds_movement"
+  end
+
   test "updates existing transaction instead of creating duplicate" do
     # Create initial transaction
     entry = @adapter.import_transaction(

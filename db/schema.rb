@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_09_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -118,7 +118,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.text "notes"
     t.uuid "owner_id"
     t.datetime "disabled_at"
+    t.boolean "exclude_from_reports", default: false, null: false
     t.integer "account_providers_count", default: 0, null: false
+    t.boolean "enable_category_matcher", default: true, null: false
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -126,6 +128,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.index ["family_id", "id"], name: "index_accounts_on_family_id_and_id"
     t.index ["family_id", "status", "accountable_type"], name: "index_accounts_on_family_id_status_accountable_type"
     t.index ["family_id", "status"], name: "index_accounts_on_family_id_and_status"
+    t.index ["family_id", "exclude_from_reports"], name: "index_accounts_on_family_id_and_exclude_from_reports"
     t.index ["family_id"], name: "index_accounts_on_family_id"
     t.index ["import_id"], name: "index_accounts_on_import_id"
     t.index ["owner_id"], name: "index_accounts_on_owner_id"
@@ -391,7 +394,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.uuid "parent_id"
     t.string "classification_unused", default: "expense", null: false
     t.string "lucide_icon", default: "shapes", null: false
+    t.datetime "last_used_at"
     t.index ["family_id"], name: "index_categories_on_family_id"
+    t.index ["family_id", "last_used_at"], name: "index_categories_on_family_id_and_last_used_at"
   end
 
   create_table "chats", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -576,6 +581,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.string "product"
     t.decimal "credit_limit", precision: 19, scale: 4
     t.jsonb "identification_hashes", default: []
+    t.boolean "treat_balance_as_available_credit", default: false, null: false
     t.index ["account_id"], name: "index_enable_banking_accounts_on_account_id"
     t.index ["enable_banking_item_id"], name: "index_enable_banking_accounts_on_enable_banking_item_id"
     t.index ["identification_hashes"], name: "index_enable_banking_accounts_on_identification_hashes", using: :gin
@@ -636,10 +642,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.boolean "import_locked", default: false, null: false
     t.uuid "parent_entry_id"
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
+    t.index ["account_id", "date", "entryable_id"], name: "index_entries_on_investment_totals_lookup", where: "(((entryable_type)::text = 'Trade'::text) AND (excluded = false))"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
-    t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "((entryable_type)::text = 'Transaction'::text)"
+    t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
     t.index ["date"], name: "index_entries_on_date"
     t.index ["entryable_type"], name: "index_entries_on_entryable_type"
     t.index ["import_id"], name: "index_entries_on_import_id"
@@ -810,9 +817,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.uuid "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "allocated_amount", precision: 19, scale: 4
     t.index ["account_id"], name: "index_goal_accounts_on_account_id"
     t.index ["goal_id", "account_id"], name: "index_savings_goal_accounts_on_goal_and_account", unique: true
     t.index ["goal_id"], name: "index_goal_accounts_on_goal_id"
+    t.check_constraint "allocated_amount IS NULL OR allocated_amount >= 0::numeric", name: "chk_goal_accounts_allocation_non_negative"
   end
 
   create_table "goal_pledges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -846,9 +855,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "icon"
+    t.string "progress_basis", default: "balance", null: false
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
+    t.check_constraint "progress_basis::text = ANY (ARRAY['balance'::character varying, 'contributions'::character varying]::text[])", name: "chk_goals_progress_basis_enum"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying, 'paused'::character varying, 'completed'::character varying, 'archived'::character varying]::text[])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
   end
@@ -978,6 +989,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.text "conditions"
     t.text "actions"
     t.integer "source_row_number", null: false
+    t.string "merchant_color"
+    t.string "merchant_website"
     t.index ["import_id", "source_row_number"], name: "index_import_rows_on_import_id_and_source_row_number", unique: true
     t.index ["import_id"], name: "index_import_rows_on_import_id"
     t.check_constraint "source_row_number > 0", name: "chk_import_rows_source_row_number_positive"
@@ -1141,6 +1154,31 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+  end
+
+  create_table "insights", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", default: "USD", null: false
+    t.string "dedup_key", null: false
+    t.datetime "dismissed_at"
+    t.jsonb "facts", default: {}, null: false
+    t.uuid "family_id", null: false
+    t.datetime "generated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.string "insight_type", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.date "period_end"
+    t.date "period_start"
+    t.string "priority", default: "medium", null: false
+    t.datetime "read_at"
+    t.string "status", default: "active", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "dedup_key"], name: "index_insights_on_family_id_and_dedup_key", unique: true
+    t.index ["family_id", "generated_at"], name: "index_insights_on_family_id_and_generated_at"
+    t.index ["family_id", "status"], name: "index_insights_on_family_id_and_status"
+    t.check_constraint "priority::text = ANY (ARRAY['high'::character varying, 'medium'::character varying, 'low'::character varying]::text[])", name: "chk_insights_priority"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'read'::character varying, 'dismissed'::character varying, 'expired'::character varying]::text[])", name: "chk_insights_status"
   end
 
   create_table "invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1371,6 +1409,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.index ["user_id"], name: "index_mobile_devices_on_user_id"
   end
 
+  create_table "notification_deliveries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "rule_id", null: false
+    t.uuid "transaction_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["rule_id", "transaction_id"], name: "index_notification_deliveries_on_rule_and_transaction", unique: true
+    t.index ["rule_id"], name: "index_notification_deliveries_on_rule_id"
+    t.index ["transaction_id"], name: "index_notification_deliveries_on_transaction_id"
+  end
+
   create_table "oauth_access_grants", force: :cascade do |t|
     t.string "resource_owner_id", null: false
     t.bigint "application_id", null: false
@@ -1496,6 +1544,69 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.string "area_unit"
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.string "avm_provider"
+    t.date "avm_last_synced_on"
+    t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying]::text[]))", name: "properties_avm_provider_check"
+  end
+
+  create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.string "period", null: false
+    t.string "provider_key", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider_key", "period"], name: "index_provider_request_counts_on_provider_key_and_period", unique: true
+  end
+
+  create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_number"
+    t.string "account_status"
+    t.string "account_type"
+    t.boolean "activities_fetch_pending", default: false
+    t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.jsonb "institution_metadata"
+    t.datetime "last_activities_sync"
+    t.datetime "last_holdings_sync"
+    t.string "name"
+    t.string "provider"
+    t.string "questrade_account_id"
+    t.string "questrade_authorization_id"
+    t.uuid "questrade_item_id", null: false
+    t.jsonb "raw_activities_payload", default: []
+    t.jsonb "raw_balances_payload"
+    t.jsonb "raw_holdings_payload", default: []
+    t.jsonb "raw_payload"
+    t.date "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["questrade_authorization_id"], name: "index_questrade_accounts_on_questrade_authorization_id"
+    t.index ["questrade_item_id", "questrade_account_id"], name: "idx_on_questrade_item_id_questrade_account_id_c3e6274342", unique: true
+    t.index ["questrade_item_id"], name: "index_questrade_accounts_on_questrade_item_id"
+  end
+
+  create_table "questrade_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "api_server"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.string "name"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_institution_payload"
+    t.jsonb "raw_payload"
+    t.text "refresh_token"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_questrade_items_on_family_id"
+    t.index ["status"], name: "index_questrade_items_on_status"
   end
 
   create_table "recurring_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1529,6 +1640,49 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.index ["next_expected_date"], name: "index_recurring_transactions_on_next_expected_date"
     t.check_constraint "destination_account_id IS NULL OR account_id IS NOT NULL", name: "chk_recurring_txns_transfer_requires_source"
     t.check_constraint "destination_account_id IS NULL OR destination_account_id <> account_id", name: "chk_recurring_txns_transfer_distinct_accounts"
+  end
+
+  create_table "redbark_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "redbark_item_id", null: false
+    t.string "name", null: false
+    t.string "redbark_account_id", null: false
+    t.string "connection_id"
+    t.string "account_number"
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.boolean "ignored", default: false, null: false
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.date "sync_start_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["redbark_item_id", "redbark_account_id"], name: "index_redbark_accounts_on_item_and_account_id", unique: true
+    t.index ["redbark_item_id"], name: "index_redbark_accounts_on_redbark_item_id"
+  end
+
+  create_table "redbark_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.text "api_key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_redbark_items_on_family_id"
+    t.index ["status"], name: "index_redbark_items_on_status"
   end
 
   create_table "rejected_transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1749,6 +1903,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.string "consumer_key"
     t.string "snaptrade_user_id"
     t.string "snaptrade_user_secret"
+    t.text "oauth_access_token"
+    t.text "oauth_refresh_token"
+    t.string "oauth_token_type"
+    t.string "oauth_scope"
+    t.datetime "oauth_token_expires_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_snaptrade_items_on_family_id"
@@ -1879,8 +2038,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.date "window_start_date"
     t.date "window_end_date"
     t.text "sync_stats"
+    t.datetime "cancel_requested_at"
     t.index ["parent_id"], name: "index_syncs_on_parent_id"
     t.index ["status"], name: "index_syncs_on_status"
+    t.index ["syncable_type", "syncable_id", "created_at", "id"], name: "index_syncs_on_syncable_and_created_at_and_id", order: { created_at: :desc, id: :desc }
     t.index ["syncable_type", "syncable_id"], name: "index_syncs_on_syncable"
   end
 
@@ -1932,6 +2093,43 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
+  create_table "trading212_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_type"
+    t.decimal "cash_balance", precision: 19, scale: 4
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.datetime "last_orders_sync"
+    t.datetime "last_positions_sync"
+    t.string "name"
+    t.jsonb "raw_dividends_payload", default: [], null: false
+    t.jsonb "raw_orders_payload", default: [], null: false
+    t.jsonb "raw_positions_payload", default: [], null: false
+    t.jsonb "raw_transactions_payload", default: [], null: false
+    t.string "trading212_account_id"
+    t.uuid "trading212_item_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["trading212_item_id", "trading212_account_id"], name: "index_trading212_accounts_on_item_and_account_id", unique: true, where: "(trading212_account_id IS NOT NULL)"
+    t.index ["trading212_item_id"], name: "index_trading212_accounts_on_trading212_item_id"
+  end
+
+  create_table "trading212_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "api_key"
+    t.string "api_secret"
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.string "environment", default: "live", null: false
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_instruments_payload", default: [], null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_trading212_items_on_family_id"
+    t.index ["status"], name: "index_trading212_items_on_status"
+  end
+
   create_table "transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -1942,6 +2140,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
     t.string "investment_activity_label"
+    t.uuid "transfer_id"
     t.index "(((extra -> 'goal'::text) ->> 'pledge_id'::text))", name: "ix_transactions_extra_goal_pledge_id", unique: true, where: "(((extra -> 'goal'::text) ->> 'pledge_id'::text) IS NOT NULL)"
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
@@ -1949,9 +2148,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.index ["investment_activity_label"], name: "index_transactions_on_investment_activity_label"
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
+    t.index ["transfer_id"], name: "index_transactions_on_transfer_id"
   end
 
   create_table "transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "amount", precision: 19, scale: 4, default: "0.0", null: false
     t.uuid "inflow_transaction_id", null: false
     t.uuid "outflow_transaction_id", null: false
     t.string "status", default: "pending", null: false
@@ -1962,6 +2163,50 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.index ["inflow_transaction_id"], name: "index_transfers_on_inflow_transaction_id"
     t.index ["outflow_transaction_id"], name: "index_transfers_on_outflow_transaction_id"
     t.index ["status"], name: "index_transfers_on_status"
+    t.check_constraint "amount >= 0::numeric", name: "check_transfer_amount_non_negative"
+  end
+
+  create_table "up_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "up_item_id", null: false
+    t.string "name", null: false
+    t.string "account_id"
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "ownership_type"
+    t.string "provider"
+    t.boolean "ignored", default: false, null: false
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.date "sync_start_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_up_accounts_on_account_id"
+    t.index ["up_item_id", "account_id"], name: "index_up_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
+    t.index ["up_item_id"], name: "index_up_accounts_on_up_item_id"
+  end
+
+  create_table "up_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.date "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.text "access_token"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_up_items_on_family_id"
+    t.index ["status"], name: "index_up_items_on_status"
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2040,6 +2285,40 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
     t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
+  create_table "wise_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "balance_id", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "name"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.decimal "reserved_balance", precision: 19, scale: 4
+    t.datetime "updated_at", null: false
+    t.uuid "wise_item_id", null: false
+    t.index ["wise_item_id", "balance_id"], name: "index_wise_accounts_on_wise_item_id_and_balance_id", unique: true
+    t.index ["wise_item_id"], name: "index_wise_accounts_on_wise_item_id"
+  end
+
+  create_table "wise_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.string "profile_id", null: false
+    t.string "profile_type", null: false
+    t.jsonb "raw_payload"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "sync_start_date"
+    t.text "token", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "import_all_history", default: false, null: false
+    t.index ["family_id", "profile_id"], name: "index_wise_items_on_family_id_and_profile_id", unique: true
+    t.index ["family_id"], name: "index_wise_items_on_family_id"
+    t.index ["status"], name: "index_wise_items_on_status"
+  end
+
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
   add_foreign_key "account_shares", "accounts"
   add_foreign_key "account_shares", "users"
@@ -2111,6 +2390,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
   add_foreign_key "imports", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_imports_session_family", on_delete: :cascade
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
+  add_foreign_key "insights", "families"
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "kraken_accounts", "kraken_items"
@@ -2123,17 +2403,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
   add_foreign_key "mercury_items", "families"
   add_foreign_key "messages", "chats"
   add_foreign_key "mobile_devices", "users"
+  add_foreign_key "notification_deliveries", "rules", on_delete: :cascade
+  add_foreign_key "notification_deliveries", "transactions", on_delete: :cascade
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oidc_identities", "users"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
+  add_foreign_key "questrade_accounts", "questrade_items"
+  add_foreign_key "questrade_items", "families"
   add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
   add_foreign_key "recurring_transactions", "families"
   add_foreign_key "recurring_transactions", "merchants"
-  add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id"
-  add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id"
+  add_foreign_key "redbark_accounts", "redbark_items"
+  add_foreign_key "redbark_items", "families"
+  add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
+  add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
   add_foreign_key "rule_actions", "rules"
   add_foreign_key "rule_conditions", "rule_conditions", column: "parent_id"
   add_foreign_key "rule_conditions", "rules"
@@ -2155,12 +2441,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_31_213000) do
   add_foreign_key "tags", "families"
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "trades", "securities"
+  add_foreign_key "trading212_accounts", "trading212_items"
+  add_foreign_key "trading212_items", "families"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
+  add_foreign_key "transactions", "transfers", column: "transfer_id"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
+  add_foreign_key "up_accounts", "up_items"
+  add_foreign_key "up_items", "families"
   add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
   add_foreign_key "webauthn_credentials", "users"
+  add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
+  add_foreign_key "wise_items", "families"
 end

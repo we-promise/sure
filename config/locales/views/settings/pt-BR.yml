@@ -34,6 +34,10 @@ pt-BR:
         theme_dark: Escuro
         theme_light: Claro
         theme_system: Sistema
+        modals_title: Modais
+        modals_subtitle: Personalizar o comportamento dos modais
+        disable_modal_click_outside_title: Manter modais abertos ao clicar fora
+        disable_modal_click_outside_description: Impede que os modais fechem ao clicar fora deles. Útil para evitar perder alterações não salvas acidentalmente.
         transactions_title: Transações
         transactions_subtitle: Personalize como as transações são exibidas
         dashboard_title: Painel

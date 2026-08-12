@@ -1,0 +1,277 @@
+---
+zh-CN:
+  goals:
+    color_picker:
+      trigger_label: 选择颜色和图标
+      color_heading: 颜色
+      icon_heading: 图标
+      poor_contrast: 对比度较低，请选择更深的颜色或
+      auto_adjust: 自动调整。
+    index:
+      title: 目标
+      subtitle: 为重要目标储蓄。
+      new_goal: 新建目标
+      empty_filtered: 没有匹配的目标。
+      pending_pledges_callout: 你有待确认的承诺。Sure 会在下次同步时确认。
+      kpi:
+        contributed_label: 已投入 · 最近 30 天
+        velocity_delta_up: 较前 30 天 ↑ %{percent}%%
+        velocity_delta_down: 较前 30 天 ↓ %{percent}%%
+        velocity_delta_flat: 相比前 30 天
+        velocity_delta_zero_base: 首个 30 天活动期
+        needs_this_month_label: 本月所需
+        needs_this_month_sub:
+          one: 1 个目标进度落后
+          other: "%{count} 个目标进度落后"
+        needs_this_month_zero_sub: 没有进度落后的目标
+        on_track_label: 进度正常的目标
+        on_track_value: "%{total} 个中 %{on_track} 个"
+        on_track_sub_parts:
+          reached:
+            one: 1 个已达成
+            other: "%{count} 个已达成"
+          behind:
+            one: 1 个落后
+            other: "%{count} 个落后"
+          no_date:
+            one: 1 个没有截止日期
+            other: "%{count} 个没有截止日期"
+          paused:
+            one: 1 个已暂停
+            other: "%{count} 个已暂停"
+        on_track_sub_all_good: 所有进行中的目标进度正常
+        on_track_all_caught_up: 全部已赶上进度
+      goals_section:
+        heading: 目标
+        subtitle: 为重要目标储蓄。
+      ongoing_section:
+        heading: 目标
+      archived_section:
+        heading: 已归档
+      search:
+        placeholder: 搜索目标…
+        aria_label: 搜索目标
+        empty: 没有匹配的目标。
+        empty_with_query: 没有与“%{query}”匹配的目标。
+        empty_with_filter: 没有目标匹配此筛选条件。
+        empty_with_both: 此筛选条件下没有与“%{query}”匹配的目标。
+        clear_search: 清除搜索
+        show_all: 显示全部
+      chips:
+        all: 全部
+        on_track: 进度正常
+        behind: 进度落后
+        no_target_date: 开放
+        paused: 已暂停
+        completed: 已完成
+    new:
+      heading: 新建目标
+      subtitle: 为具体目标储蓄。
+    edit:
+      heading: 编辑目标
+      save: 保存更改
+    create:
+      success: 目标已创建。
+    update:
+      success: 目标已更新。
+    destroy:
+      success: 目标已删除。
+      archive_first: 删除前请先归档该目标。
+    pause:
+      success: 目标已暂停。
+      invalid_transition: 目标当前状态不能暂停。
+    resume:
+      success: 目标已恢复。
+      invalid_transition: 目标当前状态不能恢复。
+    complete:
+      success: 目标已标记为完成。
+      invalid_transition: 目标当前状态不能标记为完成。
+    archive:
+      success: 目标已归档。
+      invalid_transition: 目标当前状态不能归档。
+    unarchive:
+      success: 目标已恢复。
+      invalid_transition: 目标当前状态不能恢复。
+    reopen:
+      success: 目标已重新开启。
+      invalid_transition: 目标当前状态无法重新开启。
+    show:
+      edit: 编辑
+      pause: 暂停
+      resume: 恢复
+      complete: 标记完成
+      archive: 归档
+      unarchive: 恢复
+      reopen: 重新开启目标
+      delete: 永久删除
+      record_pledge_cta: 记录承诺
+      pledge_just_transferred: 记录你完成的转账
+      pledge_just_saved: 记录你留出的资金
+      funding_accounts_heading: 资金账户
+      funding_accounts:
+        earmarked_of: 已预留 %{earmarked}（共 %{balance}）
+        empty:
+          heading: 尚未关联资金账户
+          body: 编辑目标以关联用于储蓄的存款账户。
+      notes: 备注
+      funding_last_30d: 最近 30 天
+      funding_last_90d: 最近 90 天
+      status_callout:
+        behind: 每月多存 %{amount} 以赶上进度
+        behind_covered: 待确认承诺可以补足差距
+        on_track: 预计在 %{date} 左右达成目标
+        no_target_date: 设置目标日期以预测完成时间
+      pending_pledge:
+        title:
+          zero: 待确认：%{amount} 存入 %{account} · 今天过期
+          one: 待确认：%{amount} 存入 %{account} · 剩余 1 天
+          other: 待确认：%{amount} 存入 %{account} · 剩余 %{count} 天
+        body_transfer: Sure 在下次同步发现匹配存款时会自动确认。
+        body_manual: 会在你下次手动编辑余额时确认。
+        pledged_at: "%{time_ago} 前承诺"
+        extend: 延长 7 天
+        cancel: 取消
+        confirm_cancel_title: 取消此承诺？
+        confirm_cancel_body: "%{amount} 的承诺将被移除。你可以随时记录新的承诺。"
+        confirm_cancel_cta: 取消承诺
+      header:
+        target: 目标 %{amount}
+        target_by: 到 %{date} 达到 %{amount}
+        target_by_past: 目标 %{amount} · 原定 %{date} 到期
+      ring:
+        saved: 已存
+        of: 共 %{target}
+        to_go: 还差 %{amount}
+        of_target: 目标进度
+        market_value: 市值 %{amount}
+        aria_label: 目标已完成 %{percent}%。已存 %{target} 中的 %{amount}。
+      projection:
+        heading: 预测
+        legend_saved: 已存
+        legend_projection: 预测
+        legend_required: 所需
+        reached: 你已达到目标，无需预测。
+        no_target_date: 尚未设置目标日期。设置后可预测完成时间。
+        no_pace: 还没有存入资金。向关联账户存钱后即可开始预测。
+        behind: 按当前进度会低于目标。
+        on_track_html: 按当前进度，你大约会在 <strong class="text-primary whitespace-nowrap">%{date}</strong> 达成此目标。
+        aria_label: "%{name} 的预测图表"
+        today_marker: 今天
+        tooltip_projected: 预计：%{amount}
+        tooltip_saved: 已存：%{amount}
+        tooltip_target_relation: 目标 %{target} 的 %{percent}%
+      catch_up:
+        title: 每月多存 %{amount} 以赶上进度
+        body: 当前进度 %{avg}/月 · 达成目标需要 %{required}/月。
+        adjust_target_cta: 改为调整目标
+      confirm_complete_title: 将此目标标记为完成？
+      confirm_complete_body: 完成后会从进行中的目标列表移除。之后仍可归档或恢复。
+      confirm_complete_body_short: 当前进度为 %{progress}，已存 %{saved}/%{target}。标记完成会把当前结果记录为达成值，而不是原始目标。要继续吗？
+      confirm_complete_cta: 标记完成
+      confirm_archive_title: 归档此目标？
+      confirm_archive_body: 归档后的目标会从主列表隐藏。之后可以恢复。
+      confirm_archive_cta: 归档
+      paused_banner:
+        title: 此目标已暂停
+        body: 恢复它以继续跟踪进度。
+        resume_cta: 恢复目标
+      archived_banner:
+        title: 此目标已归档
+        body: 恢复后可继续投入，也可以保留为记录。
+        restore_cta: 恢复目标
+      celebration:
+        heading: 目标已达成。做得不错。
+        body: 目标以 %{saved}/%{target} 关闭。可以保留记录，或现在归档。
+        archive_cta: 归档目标
+      inactive:
+        heading_paused: 此目标已暂停
+        heading_archived: 此目标已归档
+        body: 目前已存 %{target} 中的 %{saved}。
+      no_target_date:
+        heading: 添加目标日期
+        body: 设置截止日期以预测完成时间并跟踪所需进度。
+        cta: 设置目标日期
+      empty:
+        heading: 还没有存入资金
+        body: 向关联账户转入资金。Sure 会在下次同步时识别，或你也可以更新手动账户余额。
+    errors:
+      not_found: 找不到该目标。它可能已被删除。
+    states:
+      active: 进行中
+      paused: 已暂停
+      completed: 已完成
+      archived: 已归档
+    status:
+      on_track: 进度正常
+      behind: 进度落后
+      reached: 已达成
+      completed: 已完成
+      no_target_date: 开放
+      paused: 已暂停
+      archived: 已归档
+    empty_state:
+      heading: 还没有目标
+      body: 设定目标，关联储蓄账户，并查看进度累积。
+      subtitle: 设定目标并开始储蓄。
+      new_goal: 创建第一个目标
+      no_depository_accounts: 创建目标前至少需要一个存款账户（支票、储蓄、HSA、CD、货币市场账户）。
+      add_account: 添加账户
+    goal_card:
+      no_accounts: 没有关联账户
+      n_accounts: "%{first} +%{count}"
+      left: 剩余
+      aria_progress: "%{target} 的 %{percent}%"
+      accounts:
+        one: 1 个账户
+        other: "%{count} 个账户"
+      no_target_date: 开放
+      completed: 已完成
+      past_due: 已逾期
+      days_left:
+        one: 剩余 1 天
+        other: 剩余 %{count} 天
+      pace_with_target: 平均 %{avg}/月 · 目标 %{target}/月
+      pace_no_target: 平均 %{avg}/月
+      footer_paused: 已暂停
+      footer_archived: 已归档
+      footer_reached: 目标已达成
+      footer_catch_up: 每月存入 %{amount} 以赶上进度
+      footer_no_deadline: 开放
+      pending_pledge: 待确认承诺
+      pending_count:
+        one: 1 个待处理
+        other: "%{count} 个待处理"
+      footer_no_pledges: 暂无匹配的承诺
+      footer_last_today: 上次承诺今天已匹配
+      footer_last_days:
+        one: 上次承诺 1 天前已匹配
+        other: 上次承诺 %{count} 天前已匹配
+    form:
+      create: 创建目标
+      save: 保存更改
+      suggested_with_date: 在 {accounts} 中每月存入 {monthly} 以按时达成目标。
+      suggested_no_date: 设置目标日期以预测完成时间。
+      errors:
+        name_required: 请为目标命名。
+        amount_required: 请设置大于 0 的目标。
+        accounts_required: 请选择至少一个资金账户。
+      fields:
+        name: 名称
+        name_placeholder: 应急基金、购房首付…
+        target_amount: 目标金额
+        target_date: 目标日期
+        color: 颜色
+        notes: 备注（可选）
+        notes_placeholder: 给未来自己的提醒…
+        funding_accounts: 资金账户
+        funding_accounts_hint: 此目标余额等于这些账户的余额（或预留的部分）。
+        whole_balance: 全部余额
+        earmark_for: 为「%{account}」预留的金额
+        earmark_hint: 留空则使用该账户的全部余额。
+      subtypes:
+        checking: 支票账户
+        savings: 储蓄账户
+        hsa: HSA
+        cd: 定期存单
+        money_market: 货币市场
+        other: 其他

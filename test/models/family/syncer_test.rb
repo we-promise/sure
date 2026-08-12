@@ -14,11 +14,6 @@ class Family::SyncerTest < ActiveSupport::TestCase
     )
 
     manual_accounts_count = @family.accounts.manual.count
-    plaid_items_count = @family.plaid_items.syncable.count
-    brex_items_count = @family.brex_items.syncable.count
-    akahu_items_count = @family.akahu_items.syncable.count
-    binance_items_count = @family.binance_items.syncable.count
-
     syncer = Family::Syncer.new(@family)
 
     Account.any_instance
@@ -26,29 +21,35 @@ class Family::SyncerTest < ActiveSupport::TestCase
            .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
            .times(manual_accounts_count)
 
-    PlaidItem.any_instance
-               .expects(:sync_later)
-               .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
-               .times(plaid_items_count)
-
-    BrexItem.any_instance
-            .expects(:sync_later)
-            .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
-            .times(brex_items_count)
-
-    AkahuItem.any_instance
-             .expects(:sync_later)
-             .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
-             .times(akahu_items_count)
-
-    BinanceItem.any_instance
-               .expects(:sync_later)
-               .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
-               .times(binance_items_count)
+    syncable_item_associations.each do |association|
+      association.klass.any_instance
+                 .expects(:sync_later)
+                 .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
+                 .times(@family.public_send(association.name).syncable.count)
+    end
 
     syncer.perform_sync(family_sync)
 
     assert_equal "completed", family_sync.reload.status
+  end
+
+  test "syncs ibkr items through reflective provider discovery" do
+    family_sync = syncs(:family)
+    syncer = Family::Syncer.new(@family)
+
+    assert_includes syncable_item_associations.map(&:name), :ibkr_items
+
+    Account.any_instance.stubs(:sync_later)
+    syncable_item_associations.reject { |association| association.name == :ibkr_items }.each do |association|
+      association.klass.any_instance.stubs(:sync_later)
+    end
+
+    IbkrItem.any_instance
+            .expects(:sync_later)
+            .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil)
+            .times(@family.ibkr_items.syncable.count)
+
+    syncer.perform_sync(family_sync)
   end
 
   test "only applies active rules during sync" do
@@ -79,16 +80,21 @@ class Family::SyncerTest < ActiveSupport::TestCase
 
     # Mock the account and plaid item syncs to avoid side effects
     Account.any_instance.stubs(:sync_later)
-    PlaidItem.any_instance.stubs(:sync_later)
-    SimplefinItem.any_instance.stubs(:sync_later)
-    LunchflowItem.any_instance.stubs(:sync_later)
-    EnableBankingItem.any_instance.stubs(:sync_later)
-    SophtronItem.any_instance.stubs(:sync_later)
-    BrexItem.any_instance.stubs(:sync_later)
-    AkahuItem.any_instance.stubs(:sync_later)
-    BinanceItem.any_instance.stubs(:sync_later)
+    syncable_item_associations.each do |association|
+      association.klass.any_instance.stubs(:sync_later)
+    end
 
     syncer.perform_sync(family_sync)
     syncer.perform_post_sync
   end
+
+  private
+    def syncable_item_associations
+      Family.reflect_on_all_associations(:has_many).select do |association|
+        association.name.to_s.end_with?("_items") &&
+          association.klass.included_modules.include?(Syncable)
+      rescue NameError
+        false
+      end
+    end
 end

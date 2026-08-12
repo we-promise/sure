@@ -1,0 +1,102 @@
+---
+de:
+  providers:
+    trading212:
+      connection_description: Verbindet ein Trading-212-Depot über einen API-Key
+      institution_name: Trading 212
+      name: Trading 212
+  trading212_items:
+    complete_account_setup:
+      none_created: Es wurden keine Konten angelegt.
+      none_selected: Es wurden keine Konten ausgewählt.
+      success:
+        one: "%{count} Trading-212-Konto angelegt."
+        other: "%{count} Trading-212-Konten angelegt."
+    create:
+      success: Trading 212 eingerichtet.
+    defaults:
+      name: Trading 212
+    destroy:
+      success: Trading 212-Verbindung zum Löschen vorgemerkt.
+    link_existing_account:
+      already_linked: Dieses Trading 212-Konto ist bereits verknüpft.
+      failed: Das Trading-212-Konto ließ sich nicht verknüpfen.
+      not_found: Konto oder Trading-212-Konfiguration nicht gefunden.
+      only_manual_investment: Mit Trading 212 lassen sich nur manuelle Investmentkonten verknüpfen.
+      success: Mit dem Trading-212-Konto verknüpft.
+    select_accounts:
+      not_configured: Trading 212 ist nicht eingerichtet.
+    select_existing_account:
+      balance: Saldo
+      cancel: Abbrechen
+      link: Verknüpfen
+      no_accounts_available: Es sind noch keine unverknüpften Trading-212-Konten verfügbar.
+      run_sync_hint: Starte nach dem Speichern des API-Keys einen Sync unter Einstellungen > Anbieter.
+      title: Trading-212-Konto verknüpfen
+      wait_for_sync: Warte, bis die Kontosuche abgeschlossen ist.
+    setup_accounts:
+      available_accounts:
+        account_id: 'Konto-ID: %{account_id}'
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_type_investment: Investment
+        title: Verfügbares Konto
+      buttons:
+        back_to_settings: Zurück zu den Einstellungen
+        cancel: Abbrechen
+        create_selected_accounts: Gewählte Konten anlegen
+        done: Fertig
+        link: Verknüpfen
+        refresh: Aktualisieren
+      dialog_title: Dein Trading-212-Konto einrichten
+      info_box:
+        items:
+          item_1: Aktuelle Positionen mit Kursen und Stückzahlen
+          item_2: Vollständige Orderhistorie (Käufe und Verkäufe)
+          item_3: Dividenden und Barbewegungen
+        title: Import über die Trading-212-API
+      link_existing:
+        description: Oder verknüpf das gefundene Trading-212-Konto mit einem bestehenden manuellen Investmentkonto.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Konto wählen …
+      linked_accounts:
+        linked_to_html: 'Verknüpft mit: %{account}'
+        title: Bereits verknüpft
+      page_title: Trading-212-Konto einrichten
+      status:
+        fetching_accounts: Konto wird von Trading 212 abgerufen …
+        no_accounts_found_description: Sure hat kein Trading-212-Konto gefunden. Prüf, ob dein API-Key gültig ist.
+        no_accounts_found_title: Kein Konto gefunden.
+      subtitle: Verknüpf dein Trading-212-Depot.
+    sync:
+      status:
+        accounts_need_setup:
+          one: 1 Trading-212-Konto muss eingerichtet werden …
+          other: "%{count} Trading-212-Konten müssen eingerichtet werden …"
+        calculating_balances: Salden werden berechnet …
+        checking_configuration: Kontokonfiguration wird geprüft …
+        checking_credentials: Trading-212-Zugangsdaten werden geprüft …
+        importing_account: Trading-212-Konto wird importiert …
+        processing_activity: Positionen und Bewegungen werden verarbeitet …
+    sync_status:
+      all_linked:
+        one: 1 Konto verknüpft
+        other: "%{count} Konten verknüpft"
+      no_accounts: Noch kein Trading-212-Konto gefunden
+      partial: "%{linked} verknüpft, %{unlinked} müssen eingerichtet werden"
+    trading212_item:
+      accounts_need_setup: Konto muss eingerichtet werden
+      accounts_need_setup_description: Dein Trading-212-Konto muss noch mit einem Sure-Konto verknüpft werden.
+      delete: Löschen
+      deletion_in_progress: Wird gelöscht
+      environment_label_demo: Demokonto
+      environment_label_live: Echtes Konto
+      error: Fehler
+      never_synced: Noch nie synchronisiert.
+      no_accounts_discovered: Noch kein Trading-212-Konto gefunden.
+      no_accounts_discovered_description: Starte nach dem Speichern des API-Keys einen Sync, damit dein Konto gefunden wird.
+      requires_update: API-Key braucht Aufmerksamkeit
+      setup_accounts: Konten einrichten
+      synced: Synchronisiert vor %{time}. %{summary}.
+      syncing: Sync läuft
+    update:
+      success: Trading-212-Konfiguration aktualisiert.

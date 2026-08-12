@@ -9,7 +9,7 @@ class DS::Buttonish < DesignSystemComponent
       icon_classes: "text-primary"
     },
     destructive: {
-      container_classes: "text-inverse bg-red-600 theme-dark:bg-red-400 hover:bg-red-700 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
+      container_classes: "text-inverse button-bg-destructive hover:button-bg-destructive-hover disabled:bg-red-200 theme-dark:disabled:bg-red-600",
       icon_classes: "text-inverse"
     },
     outline: {
@@ -34,16 +34,25 @@ class DS::Buttonish < DesignSystemComponent
     }
   }.freeze
 
+  # Icon-only containers share a height rail with the text buttons of the
+  # same size (sm ≈ 28px, md ≈ 36px, lg ≈ 48px), so a mixed row — icon
+  # trigger next to text buttons, the most common header layout — lines up
+  # instead of mixing 32/44px squares with 36px buttons.
+  #
+  # pointer-coarse restores the 44px square on touch devices: the visual
+  # rail is a pointer-precision tradeoff, and WCAG 2.5.5's 44x44 target
+  # minimum is about fingers, not mice. Coarse-pointer users get the full
+  # target; fine-pointer users get the aligned row.
   SIZES = {
     sm: {
       container_classes: "px-2 py-1",
-      icon_container_classes: "inline-flex items-center justify-center w-8 h-8",
+      icon_container_classes: "inline-flex items-center justify-center w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11",
       radius_classes: "rounded-md",
       text_classes: "text-sm"
     },
     md: {
       container_classes: "px-3 py-2",
-      icon_container_classes: "inline-flex items-center justify-center w-11 h-11",
+      icon_container_classes: "inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11",
       radius_classes: "rounded-lg",
       text_classes: "text-sm"
     },
@@ -77,7 +86,13 @@ class DS::Buttonish < DesignSystemComponent
 
   def container_classes(override_classes = nil)
     class_names(
-      "font-medium whitespace-nowrap",
+      # Tailwind v4 preflight sets `cursor: pointer` on all <button>s, which
+      # also applies while disabled. Override so disabled buttons read as
+      # non-interactive. The aria-disabled twins cover buttons that gate via
+      # `aria-disabled` to stay clickable/focusable (e.g. submit buttons whose
+      # click handler surfaces validation errors — a truly disabled default
+      # submit would also swallow Enter-key implicit submission).
+      "font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
       merged_base_classes,
       full_width ? "w-full justify-center" : nil,
       container_size_classes,

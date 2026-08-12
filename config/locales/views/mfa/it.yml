@@ -1,0 +1,41 @@
+---
+it:
+  mfa:
+    backup_codes:
+      backup_codes_description: Ogni codice può essere usato una sola volta. Tieni questi codici al sicuro.
+      backup_codes_title: I tuoi codici di backup
+      continue: Continua alle Impostazioni di Sicurezza
+      description: Conserva questi codici di backup in un posto sicuro — ne avrai bisogno se perdi l'accesso alla tua app di autenticazione
+      page_title: Codici di backup
+      title: Salva i tuoi codici di backup
+    create:
+      invalid_code: Codice di verifica non valido. Riprova.
+    disable:
+      success: L'autenticazione a due fattori è stata disabilitata
+    new:
+      code_label: Codice di verifica
+      code_placeholder: Inserisci il codice a 6 cifre
+      description: Migliora la sicurezza del tuo account configurando l'autenticazione a due fattori
+      page_title: Configurazione autenticazione a due fattori
+      scan_description: Usa un'app di autenticazione come Google Authenticator o 1Password per scansionare questo QR code
+      scan_title: 1. Scansiona il QR Code
+      secret_description: Se non riesci a scansionare il QR code, inserisci manualmente questa chiave segreta nella tua app di autenticazione
+      secret_title: Codice per inserimento manuale
+      title: Configura l'autenticazione a due fattori
+      verify_button: Verifica e abilita 2FA
+      verify_description: Inserisci il codice a 6 cifre dalla tua app di autenticazione
+      verify_title: 2. Inserisci il codice di verifica
+    verify:
+      description: Inserisci il codice dalla tua app di autenticazione per continuare
+      or: oppure
+      page_title: Verifica autenticazione a due fattori
+      title: Autenticazione a due fattori
+      verify_button: Verifica
+      webauthn_button: Usa passkey o chiave di sicurezza
+      webauthn_unsupported: Questo browser non supporta passkey o chiavi di sicurezza.
+    verify_code:
+      invalid_code: Codice di autenticazione non valido. Riprova.
+    verify_webauthn:
+      invalid_credential: Impossibile verificare la passkey o la chiave di sicurezza. Riprova.
+    webauthn_options:
+      unavailable: Nessuna passkey o chiave di sicurezza disponibile per questo account.

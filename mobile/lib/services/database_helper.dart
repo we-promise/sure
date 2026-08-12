@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'log_service.dart';
+import 'telemetry_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -44,7 +47,12 @@ class DatabaseHelper {
       return _database!;
     } catch (e, stackTrace) {
       _log.error('DatabaseHelper',
-          'Error initializing local database sure_offline.db: $e');
+          'Error initializing local database sure_offline.db: ${e.runtimeType}');
+      unawaited(TelemetryService.instance.captureHandledException(
+        e,
+        stackTrace,
+        operation: 'database.open',
+      ));
       FlutterError.reportError(
         FlutterErrorDetails(
           exception: e,
@@ -70,7 +78,14 @@ class DatabaseHelper {
       );
     } catch (e, stackTrace) {
       _log.error(
-          'DatabaseHelper', 'Error opening database file "$filePath": $e');
+        'DatabaseHelper',
+        'Error opening database file "$filePath": ${e.runtimeType}',
+      );
+      unawaited(TelemetryService.instance.captureHandledException(
+        e,
+        stackTrace,
+        operation: 'database.initialize',
+      ));
       FlutterError.reportError(
         FlutterErrorDetails(
           exception: e,
@@ -144,7 +159,15 @@ class DatabaseHelper {
         ON transactions(server_id)
       ''');
     } catch (e, stackTrace) {
-      _log.error('DatabaseHelper', 'Error creating local database schema: $e');
+      _log.error(
+        'DatabaseHelper',
+        'Error creating local database schema: ${e.runtimeType}',
+      );
+      unawaited(TelemetryService.instance.captureHandledException(
+        e,
+        stackTrace,
+        operation: 'database.create_schema',
+      ));
       FlutterError.reportError(
         FlutterErrorDetails(
           exception: e,
@@ -201,8 +224,7 @@ class DatabaseHelper {
       return localId;
     }
     final db = await database;
-    _log.debug('DatabaseHelper',
-        'Inserting transaction: local_id=${transaction['local_id']}, account_id="${transaction['account_id']}", server_id=${transaction['server_id']}');
+    _log.debug('DatabaseHelper', 'Inserting transaction into local database');
     await db.insert(
       'transactions',
       transaction,
@@ -235,8 +257,7 @@ class DatabaseHelper {
     final db = await database;
 
     if (accountId != null) {
-      _log.debug('DatabaseHelper',
-          'Querying transactions WHERE account_id = "$accountId"');
+      _log.debug('DatabaseHelper', 'Querying scoped transactions');
       final results = await db.query(
         'transactions',
         where: 'account_id = ?',

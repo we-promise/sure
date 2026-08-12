@@ -6,10 +6,11 @@ class Family::SyncCompleteEvent
   end
 
   def broadcast
-    # Append a lightweight toast to the notification tray instead of a full
-    # page refresh.  The sync-toast Stimulus controller handles two cases:
-    #   - User is idle       → auto-reloads after a short delay
-    #   - User is mid-form   → toast stays visible; user clicks "Refresh now"
+    # Replace the #sync-toast slot with a lightweight toast instead of a full
+    # page refresh.  The sync-toast Stimulus controller handles three cases:
+    #   - User is idle         → morph-refreshes after a short delay
+    #   - User is mid-form     → toast stays visible; user clicks "Refresh"
+    #   - A modal is open      → toast defers until the dialog closes
     #
     # This avoids wiping in-progress form state when a background sync fires.
     # The partial contains no user-scoped data (Current.user is nil here), so
@@ -18,6 +19,21 @@ class Family::SyncCompleteEvent
       family,
       target: "sync-toast",
       partial: "shared/notifications/sync_toast"
+    )
+
+    # The accounts page's own sync toolbar (refresh icon + "Cancel sync") is
+    # plain server-rendered HTML from whatever request last loaded the page,
+    # so without this it stays stuck showing "still syncing" — disabled icon,
+    # "Cancel sync" visible — indefinitely after the sync actually finishes,
+    # even while the toast above says otherwise. Replace it in the same
+    # broadcast so the two agree. Visitors not on the accounts page simply
+    # don't have #accounts-sync-controls in their DOM, so this no-ops for
+    # them, same as the sync-toast replace above.
+    family.broadcast_replace_to(
+      family,
+      target: "accounts-sync-controls",
+      partial: "accounts/sync_controls",
+      locals: { family: family }
     )
 
     # Schedule recurring transaction pattern identification (debounced to run after all syncs complete)

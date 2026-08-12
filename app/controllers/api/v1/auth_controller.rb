@@ -214,17 +214,41 @@ module Api
           user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
         end
 
-        if user.save
-          # Mark invitation as accepted if one was used
-          invitation&.update!(accepted_at: Time.current)
+        identity = nil
+        account_created = false
 
-          OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+        begin
+          account_created = ActiveRecord::Base.transaction do
+            unless user.save
+              raise ActiveRecord::Rollback
+            end
 
-          SsoAuditLog.log_jit_account_created!(
-            user: user,
-            provider: cached[:provider],
-            request: request
-          )
+            # Mark invitation as accepted if one was used
+            invitation&.update!(accepted_at: Time.current)
+
+            # Joining an existing family via invitation must honor the family's
+            # default sharing policy, matching Invitation#accept_for, so a mobile
+            # SSO invitee sees the accounts the family shares by default.
+            user.family.auto_share_existing_accounts_with(user) if invitation.present?
+
+            identity = OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+            true
+          end
+        rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+          # Expected persistence failures (e.g. a duplicate identity) roll the
+          # whole onboarding back and return the error response. Unexpected
+          # errors propagate so they surface instead of being hidden.
+          user.errors.add(:base, e.message)
+        end
+
+        if account_created
+          if identity&.persisted?
+            SsoAuditLog.log_jit_account_created!(
+              user: user,
+              provider: cached[:provider],
+              request: request
+            )
+          end
 
           issue_mobile_tokens(user, cached[:device_info])
         else

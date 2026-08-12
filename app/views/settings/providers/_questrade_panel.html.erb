@@ -1,0 +1,82 @@
+<div class="space-y-4">
+  <% items = local_assigns[:questrade_items] || @questrade_items || Current.family.questrade_items.where.not(refresh_token: nil) %>
+  <% connected = items.present? && items.any? %>
+
+  <% unless connected %>
+    <%= render "settings/providers/setup_steps",
+               eyebrow: t("questrade_items.panel.eyebrow", default: "Setup · desktop only"),
+               steps: [
+                 t("questrade_items.panel.steps.s1_html", default: %q{Sign in to the <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">Questrade portal</a> on a desktop browser. The API settings are not available in the mobile app.}).html_safe,
+                 t("questrade_items.panel.steps.s2", default: "Open Settings, and under General settings edit the IQ API settings."),
+                 t("questrade_items.panel.steps.s3_html", default: %q{In the API access modal, click <strong>Manage</strong> under <strong>My applications</strong>.}).html_safe,
+                 t("questrade_items.panel.steps.s4", default: "Register a personal app with a name and description, then save."),
+                 t("questrade_items.panel.steps.s5", default: "Add a new device and generate a token."),
+                 t("questrade_items.panel.steps.s6", default: "Paste the generated token below and save.")
+               ],
+               help: { url: "https://www.questrade.com/api/documentation/getting-started", text: t("questrade_items.panel.help_text", default: "Questrade API docs") } %>
+  <% end %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% if connected %>
+    <div class="flex items-center gap-2">
+      <div class="w-2 h-2 bg-success rounded-full shrink-0"></div>
+      <p class="text-sm text-secondary"><%= t("questrade_items.panel.status_configured_html", accounts_path: accounts_path).html_safe %></p>
+    </div>
+
+    <div class="mt-4 space-y-3">
+      <p class="text-xs text-secondary"><%= t("questrade_items.panel.token_refresh_hint") %></p>
+
+      <%= styled_form_with model: items.first,
+                           url: questrade_item_path(items.first),
+                           scope: :questrade_item,
+                           method: :patch,
+                           data: { turbo: true },
+                           class: "space-y-3" do |form| %>
+        <%= form.text_field :refresh_token,
+                            label: t("questrade_items.panel.fields.refresh_token.label"),
+                            placeholder: t("questrade_items.panel.fields.refresh_token.placeholder_update"),
+                            type: :password,
+                            value: nil %>
+
+        <div class="flex justify-end">
+          <%= render DS::Button.new(text: t("questrade_items.panel.update_button"), type: "submit") %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="flex items-center gap-2 mt-4">
+      <%= render DS::Button.new(
+        text: t("questrade_items.panel.disconnect", default: "Disconnect"),
+        icon: "trash-2",
+        variant: :outline_destructive,
+        size: :sm,
+        href: questrade_item_path(items.first),
+        method: :delete,
+        data: { turbo_frame: "_top", turbo_confirm: t("questrade_items.panel.disconnect_confirm", default: "Disconnect Questrade? This removes the connection and unlinks its synced accounts.") }
+      ) %>
+    </div>
+  <% else %>
+    <%
+      questrade_item = Current.family.questrade_items.first_or_initialize(name: "Questrade Connection")
+    %>
+    <%= styled_form_with model: questrade_item,
+                         url: questrade_items_path,
+                         scope: :questrade_item,
+                         method: :post,
+                         data: { turbo: true },
+                         class: "space-y-3" do |form| %>
+      <%= form.text_field :refresh_token,
+                          label: t("questrade_items.panel.fields.refresh_token.label"),
+                          placeholder: t("questrade_items.panel.fields.refresh_token.placeholder_new"),
+                          type: :password %>
+
+      <div class="flex justify-end">
+        <%= render DS::Button.new(text: t("questrade_items.panel.save_button"), type: "submit") %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

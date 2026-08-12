@@ -1,0 +1,56 @@
+---
+it:
+  recurring_transactions:
+    title: Transazioni ricorrenti
+    upcoming: Transazioni ricorrenti in arrivo
+    projected: Proiettata
+    recurring: Ricorrente
+    expected_today: "Prevista oggi"
+    expected_in:
+      one: "Prevista tra %{count} giorno"
+      other: "Prevista tra %{count} giorni"
+    day_of_month: Giorno %{day} del mese
+    identify_patterns: Identifica schemi
+    cleanup_stale: Elimina obsolete
+    settings:
+      enable_label: Abilita transazioni ricorrenti
+      enable_description: Rileva automaticamente gli schemi di transazioni ricorrenti e mostra le transazioni proiettate in arrivo.
+    settings_updated: Impostazioni transazioni ricorrenti aggiornate
+    info:
+      title: Rilevamento automatico degli schemi
+      manual_description: Puoi identificare manualmente gli schemi o eliminare le transazioni ricorrenti obsolete usando i pulsanti sopra.
+      automatic_description: "Il rilevamento automatico viene eseguito anche dopo:"
+      triggers:
+        - Completamento importazioni CSV (transazioni, operazioni, conti, ecc.)
+        - Completamento di qualsiasi sincronizzazione provider (Plaid, SimpleFIN, ecc.)
+    identified: Identificati %{count} schemi di transazioni ricorrenti
+    cleaned_up: Eliminate %{count} transazioni ricorrenti obsolete
+    marked_inactive: Transazione ricorrente contrassegnata come inattiva
+    marked_active: Transazione ricorrente contrassegnata come attiva
+    deleted: Transazione ricorrente eliminata
+    confirm_delete: Sei sicuro di voler eliminare questa transazione ricorrente?
+    marked_as_recurring: Transazione contrassegnata come ricorrente
+    already_exists: Esiste già una transazione ricorrente manuale per questo schema
+    creation_failed: Impossibile creare la transazione ricorrente. Verifica i dettagli della transazione e riprova.
+    unexpected_error: Si è verificato un errore imprevisto durante la creazione della transazione ricorrente
+    amount_range: "Intervallo: %{min} a %{max}"
+    empty:
+      title: Nessuna transazione ricorrente trovata
+      description: Clicca "Identifica schemi" per rilevare automaticamente le transazioni ricorrenti dalla cronologia delle transazioni.
+    table:
+      merchant: Nome
+      amount: Importo
+      expected_day: Giorno previsto
+      next_date: Data successiva
+      last_occurrence: Ultima occorrenza
+      status: Stato
+      actions: Azioni
+    status:
+      active: Attiva
+      inactive: Inattiva
+    badges:
+      manual: Manuale
+    transfer_marked_as_recurring: Bonifico contrassegnato come ricorrente
+    transfer_already_exists: Esiste già un bonifico ricorrente per questa coppia di conti
+    transfer_creation_failed: Impossibile creare il bonifico ricorrente. Verifica i dettagli e riprova.
+    transfer_feature_disabled: Le transazioni ricorrenti sono disabilitate per questa famiglia

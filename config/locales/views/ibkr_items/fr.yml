@@ -1,0 +1,102 @@
+---
+fr:
+  ibkr_items:
+    complete_account_setup:
+      none_created: Aucun compte n'a été créé.
+      none_selected: Aucun compte n'a été sélectionné.
+      success:
+        one: Le compte %{count} Interactive Brokers a été créé avec succès.
+        other: Comptes %{count} Interactive Brokers créés avec succès.
+    create:
+      success: Interactive Brokers configuré avec succès.
+    defaults:
+      name: Courtiers interactifs
+    destroy:
+      success: Connexion Interactive Brokers planifiée pour suppression.
+    ibkr_item:
+      accounts_need_setup: Les comptes doivent être configurés
+      accounts_need_setup_description: Certains comptes d'IBKR doivent être liés à
+        des comptes Sure.
+      delete: Supprimer
+      deletion_in_progress: Suppression en cours
+      error: Erreur
+      flex_web_service: Service Web flexible
+      never_synced: Jamais synchronisé.
+      no_accounts_discovered: Aucun compte IBKR découvert pour l'instant.
+      no_accounts_discovered_description: Exécutez une synchronisation après holding
+        configuré votre requête Flex pour découvrir les comptes.
+      requires_update: Les informations d'identification nécessitent une attention
+        particulière
+      setup_accounts: Configurer des comptes
+      synced: Synchronisé il y a %{time}. %{summary}.
+      syncing: Synchronisation
+    link_existing_account:
+      already_linked: Ce compte Interactive Brokers est déjà lié.
+      failed: Échec de l'association du compte Interactive Brokers.
+      not_found: Configuration du compte ou d'Interactive Brokers introuvable.
+      only_manual_investment: Seuls les comptes d'investissement manuels peuvent être
+        liés à Interactive Brokers.
+      success: Lié avec succès au compte Interactive Brokers.
+    select_accounts:
+      not_configured: Interactive Brokers n'est pas configuré.
+    select_existing_account:
+      balance: Solde
+      cancel: Annuler
+      link: Lien
+      no_accounts_available: Aucun compte Interactive Brokers non lié n’est encore
+        disponible.
+      run_sync_hint: Exécutez une synchronisation depuis Paramètres > Fournisseurs
+        après avoir mis à jour votre requête Flex.
+      title: Associer un compte Interactive Brokers
+      wait_for_sync: Attendez la fin de la synchronisation de la découverte du compte.
+    setup_accounts:
+      available_accounts:
+        account_id: 'Identifiant de compte : %{account_id}'
+        account_summary: "%{account_type} • Solde : %{balance}"
+        account_type_investment: Investissement
+        title: Comptes disponibles
+      buttons:
+        back_to_settings: Retour aux paramètres
+        cancel: Annuler
+        create_selected_accounts: Créer les comptes sélectionnés
+        done: Terminé
+        link: Lien
+        refresh: Actualiser
+      dialog_title: Configurez vos comptes Interactive Brokers
+      info_box:
+        items:
+          item_1: Fonds avec prix et quantités actuels
+          item_2: Base de coût par poste
+          item_3: Transactions, dividendes, commissions et dépôts ou retraits en espèces
+        title: Importation de requêtes IBKR Flex
+        warning: L'activité historique est limitée à la fenêtre de rapport de Flex
+          Query
+      link_existing:
+        description: Ou associez un compte IBKR découvert à un compte d'investissement
+          manuel existant.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Sélectionnez un compte...
+      linked_accounts:
+        linked_to_html: 'Lié à : %{account}'
+        title: Déjà lié
+      page_title: Configurer des comptes Interactive Brokers
+      status:
+        fetching_accounts: Récupération de comptes auprès d'Interactive Brokers...
+        no_accounts_found_description: Bien sûr, aucun compte IBKR n’a été trouvé
+          dans le dernier rapport Flex.
+        no_accounts_found_title: Aucun compte trouvé.
+      subtitle: Sélectionnez les comptes de courtage IBKR à lier.
+    sync_status:
+      all_linked:
+        one: 1 compte lié
+        other: "%{count} comptes associés"
+      no_accounts: Aucun compte IBKR découvert pour l'instant
+      partial: "%{linked} lié, %{unlinked} doit être configuré"
+    update:
+      success: La configuration d'Interactive Brokers a été mise à jour avec succès.
+  providers:
+    ibkr:
+      connection_description: Connecter un rapport de service Web Flex d'Interactive
+        Brokers
+      institution_name: Courtiers interactifs
+      name: Courtiers interactifs

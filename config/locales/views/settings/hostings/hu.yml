@@ -44,6 +44,7 @@ hu:
         requires_api_key_alpha_vantage: API-kulcs szükséges, 25 hívás/nap limit
         mfapi_hint: ingyenes, nem kell API-kulcs – csak indiai befektetési alapok
         binance_public_hint: ingyenes, nem kell API-kulcs – csak kriptó (BTC, ETH stb.)
+        moex_public_hint: ingyenes, nem kell API-kulcs – orosz részvények, alapok és kötvények (MOEX), RUB devizával
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -52,6 +53,7 @@ hu:
           alpha_vantage: Alpha Vantage
           mfapi: MFAPI.in
           binance_public: Binance
+          moex_public: MOEX
       assistant_settings:
         title: AI-asszisztens
         description: Válaszd ki, hogyan válaszoljon a csevegési asszisztens. A beépített mód közvetlenül a beállított LLM-szolgáltatót használja. A külső mód egy távoli AI-ügynökhöz továbbítja a kérést, amely MCP-n keresztül hozzáférhet a Sure pénzügyi eszközeihez.

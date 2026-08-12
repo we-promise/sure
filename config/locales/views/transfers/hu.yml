@@ -7,14 +7,10 @@ hu:
       success: Átutalás eltávolítva
     form:
       amount: Összeg
-      calculate_rate_tab: Árfolyam kiszámítása
-      convert_tab: Átváltás árfolyammal
       date: Dátum
       destination_amount: Célösszeg
       destination_amount_display: "Célösszeg: %{amount}"
-      exchange_rate: Árfolyam
       exchange_rate_display: "Árfolyam: %{rate}"
-      exchange_rate_help: Válaszd meg, hogyan adod meg az átutalás összegét.
       expense: Kiadás
       from: Honnan
       income: Bevétel
@@ -43,5 +39,7 @@ hu:
       amount: Összeg
       category: Kategória
       uncategorized: Kategorizálatlan
+      total: '[Total]'
+      transfer_amount: '[Transfer amount]'
     update:
       success: Átutalás frissítve

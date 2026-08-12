@@ -1,12 +1,7 @@
 <%= content_for :page_title, t(".page_title") %>
 
 <div class="space-y-6">
-  <div class="bg-container rounded-xl shadow-border-xs p-4">
-    <h1 class="text-lg font-semibold text-primary"><%= t(".title") %></h1>
-    <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
-  </div>
-
-  <div class="bg-container rounded-xl shadow-border-xs p-4">
+  <%= settings_section title: t(".title"), subtitle: t(".subtitle") do %>
     <%= form_with url: settings_debug_path, method: :get, class: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-end" do |f| %>
       <div>
         <%= f.label :category, t(".filters.category"), class: "block text-sm font-medium text-primary mb-1" %>
@@ -53,7 +48,7 @@
         <%= render DS::Link.new(text: t(".filters.reset"), href: settings_debug_path, variant: "ghost") %>
       </div>
     <% end %>
-  </div>
+  <% end %>
 
   <div class="bg-container rounded-xl shadow-border-xs overflow-hidden">
     <% if @debug_log_entries.any? %>

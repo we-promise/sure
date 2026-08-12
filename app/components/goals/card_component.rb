@@ -51,17 +51,18 @@ class Goals::CardComponent < ApplicationComponent
   end
 
   def secondary_line
-    if goal.completed?
-      I18n.t("goals.goal_card.completed")
-    elsif goal.target_date.nil?
-      I18n.t("goals.goal_card.no_target_date")
+    # nil when the status pill already carries it — the pill now sits on this
+    # same meta line, so "Completed Completed" / "Open Open" would read twice.
+    return nil if goal.completed? || goal.target_date.nil?
+
+    days = (goal.target_date - Date.current).to_i
+    if days >= 0
+      # Count only ("211 days left"); the full target date lives on the show
+      # page. Appending "· by <long date>" here overflowed the card's single
+      # line and truncated to a useless "211 d…".
+      I18n.t("goals.goal_card.days_left", count: days)
     else
-      days = (goal.target_date - Date.current).to_i
-      if days >= 0
-        I18n.t("goals.goal_card.days_left_by", count: days, date: I18n.l(goal.target_date, format: :long))
-      else
-        I18n.t("goals.goal_card.past_due")
-      end
+      I18n.t("goals.goal_card.past_due")
     end
   end
 
