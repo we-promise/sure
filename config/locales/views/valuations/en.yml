@@ -21,6 +21,8 @@ en:
       recalculate_notice: "All future transactions and balances will be recalculated based on this %{change_or_update}."
       change: change
       update: update
+      action_set: set
+      action_update: update
     create:
       account_updated: Account updated
     update:
@@ -58,3 +60,9 @@ en:
       settings: Settings
       opening_balance: "Opening balance"
       update_value: Update value
+    confirm_create:
+      confirm: Confirm
+      title: Confirm new balance
+    confirm_update:
+      title: Update balance
+      update: Update

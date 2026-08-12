@@ -259,9 +259,19 @@ class AccountsController < ApplicationController
     end
 
     def set_account
-      @account = Current.user.accessible_accounts
-        .includes(:accountable, :plaid_account, :simplefin_account, account_providers: :provider)
-        .find(params[:id])
+      accounts = Current.user.accessible_accounts
+      # Only the show page touches these associations (menu/logo/activity). Keep
+      # sparkline/sync/default toggles lean — sparkline is hit once per sidebar row.
+      if action_name == "show"
+        accounts = accounts.includes(
+          :accountable,
+          :plaid_account,
+          :simplefin_account,
+          account_providers: :provider
+        )
+      end
+
+      @account = accounts.find(params[:id])
     end
 
     def set_manageable_account

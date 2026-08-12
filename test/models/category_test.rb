@@ -159,4 +159,32 @@ class CategoryTest < ActiveSupport::TestCase
     assert lookup.key?(category.id)
     assert_not lookup.key?(0)
   end
+
+  test "recently_used_for orders by last_used_at, most recent first" do
+    older = categories(:income)
+    newer = categories(:food_and_drink)
+    older.update!(last_used_at: 2.days.ago)
+    newer.update!(last_used_at: 1.day.ago)
+
+    assert_equal [ newer, older ], Category.recently_used_for(family: @family).to_a
+  end
+
+  test "recently_used_for excludes categories with no usage yet" do
+    categories(:food_and_drink).update!(last_used_at: 1.day.ago)
+
+    assert_not_includes Category.recently_used_for(family: @family).to_a, categories(:income)
+  end
+
+  test "recently_used_for excludes given categories and respects limit" do
+    a = categories(:income)
+    b = categories(:food_and_drink)
+    c = categories(:subcategory)
+    a.update!(last_used_at: 3.days.ago)
+    b.update!(last_used_at: 2.days.ago)
+    c.update!(last_used_at: 1.day.ago)
+
+    result = Category.recently_used_for(family: @family, excluding: b, limit: 1)
+
+    assert_equal [ c ], result.to_a
+  end
 end

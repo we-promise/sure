@@ -12,12 +12,12 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilderTest < ActiveSupport::TestCase
   end
 
   test "builds monthly points with group breakdown that sums to net worth" do
-    period = Period.custom(start_date: 3.months.ago.to_date, end_date: Date.current)
+    period = Period.custom(start_date: Date.new(2026, 4, 15), end_date: Date.new(2026, 7, 15))
 
     create_balance(account: @asset_account, date: period.start_date, balance: 5000)
-    create_balance(account: @asset_account, date: Date.current, balance: 6000)
+    create_balance(account: @asset_account, date: period.end_date, balance: 6000)
     create_balance(account: @liability_account, date: period.start_date, balance: 1000)
-    create_balance(account: @liability_account, date: Date.current, balance: 1500)
+    create_balance(account: @liability_account, date: period.end_date, balance: 1500)
 
     series = builder.breakdown_series(period: period)
 
@@ -47,10 +47,10 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilderTest < ActiveSupport::TestCase
   end
 
   test "includes group metadata and excludes groups with no balances" do
-    period = Period.custom(start_date: 1.month.ago.to_date, end_date: Date.current)
+    period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
 
-    create_balance(account: @asset_account, date: Date.current, balance: 5000)
-    create_balance(account: @liability_account, date: Date.current, balance: 1000)
+    create_balance(account: @asset_account, date: period.end_date, balance: 5000)
+    create_balance(account: @liability_account, date: period.end_date, balance: 1000)
 
     series = builder.breakdown_series(period: period)
     groups = series[:values].last[:groups]

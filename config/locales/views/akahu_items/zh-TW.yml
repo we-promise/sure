@@ -1,0 +1,127 @@
+---
+zh-TW:
+  providers:
+    akahu:
+      name: Akahu
+      description: 透過 Akahu 連結紐西蘭的銀行帳戶
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Akahu 連線
+  akahu_account:
+    fallback: Akahu 帳戶
+  akahu_entry:
+    notes:
+      reference: Reference（參考資訊）
+      particulars: Particulars（明細）
+      code: Code（代碼）
+      other_account: 對方帳戶
+  akahu_item:
+    errors:
+      account_processing_failed: 無法同步 Akahu 帳戶
+      account_sync_schedule_failed: 無法排程 Akahu 帳戶同步
+      pending_transactions_failed: 無法取得 Akahu 待處理交易
+      transactions_failed: 無法取得 Akahu 交易
+      sync_failed: 無法同步 Akahu 連線
+    sync_status:
+      no_accounts: 找不到帳戶
+      all_synced:
+        one: 已同步 1 個帳戶
+        other: 已同步 %{count} 個帳戶
+      partial: 已同步 %{linked} 個，%{unlinked} 個需要設定
+    institution_summary:
+      none: 沒有已連線的機構
+      one: 1 個機構
+      count:
+        one: 1 個機構
+        other: '%{count} 個機構'
+  akahu_items:
+    provider_panel:
+      default_connection_name: Akahu 連線
+      add_connection: 新增 Akahu 連線
+      update_connection: 更新連線
+      connection_name_label: 連線名稱
+      connection_name_placeholder: 主要 Akahu
+      app_token_label: 應用程式權杖 (App Token)
+      app_token_placeholder: 貼上您的 Akahu app token
+      keep_app_token_placeholder: 留白即維持現有的 app token
+      user_token_label: 使用者權杖 (User Token)
+      user_token_placeholder: 貼上您的 Akahu user token
+      keep_user_token_placeholder: 留白即維持現有的 user token
+      setup_accounts: 設定帳戶
+      syncing: 同步中...
+      sync: 同步
+      disconnect: 中斷連線
+      disconnect_confirm: 確定要中斷 %{name} 嗎？
+    create:
+      success: Akahu 連線已儲存。
+    update:
+      success: Akahu 連線已更新。
+    destroy:
+      success: 已排定刪除這個 Akahu 連線。
+      unlink_failed: 無法中斷 Akahu 連線
+    select_accounts:
+      title: 連結 Akahu 帳戶
+      description: 選擇要加入的 Akahu 帳戶。
+      no_accounts_found: 找不到未連結的 Akahu 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Akahu。
+      cancel: 取消
+      link_accounts: 連結帳戶
+    link_accounts:
+      success:
+        one: 已連結 1 個 Akahu 帳戶。
+        other: 已連結 %{count} 個 Akahu 帳戶。
+      no_accounts_selected: 請選擇至少一個帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Akahu。
+      unsupported_account_type: Akahu 不支援此帳戶類型。
+      link_failed: 沒有連結任何帳戶。
+    select_existing_account:
+      title: 將 Akahu 帳戶連結到 %{account_name}
+      description: 選擇一個未連結的 Akahu 帳戶來連到這個帳戶。
+      no_accounts_found: 找不到未連結的 Akahu 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Akahu。
+      account_already_linked: 此帳戶已連結到供應商。
+      cancel: 取消
+      link_account: 連結帳戶
+    link_existing_account:
+      success: 已將 Akahu 帳戶連結到 %{account_name}。
+      account_already_linked: 此帳戶已連結到供應商。
+      akahu_account_already_linked: 這個 Akahu 帳戶已經連結過了。
+    setup_accounts:
+      title: 設定 Akahu 帳戶
+      subtitle: 選擇每個 Akahu 帳戶要以什麼形式出現在 Sure 中。
+      no_credentials: 請先設定 Akahu 憑證。
+      api_error: 無法取得 Akahu 帳戶。
+      fetch_failed: 無法取得帳戶
+      no_accounts_to_setup: 沒有需要設定的帳戶
+      all_accounts_linked: 所有 Akahu 帳戶都已經連結過了。
+      choose_account_type: 選擇帳戶類型
+      choose_account_type_description: 跳過不想追蹤的帳戶。
+      account_type_label: 帳戶類型
+      account_types:
+        skip: 跳過
+        depository: 現金/存款
+        credit_card: 信用卡
+        investment: 投資帳戶
+        loan: 貸款
+      create_accounts: 建立帳戶
+      cancel: 取消
+    complete_account_setup:
+      success:
+        one: 已建立 1 個 Akahu 帳戶。
+        other: 已建立 %{count} 個 Akahu 帳戶。
+      all_skipped: 沒有建立任何 Akahu 帳戶。
+      no_accounts: 沒有選擇任何 Akahu 帳戶。
+      creation_failed: 無法建立 Akahu 帳戶。
+    akahu_item:
+      deletion_in_progress: 正在刪除
+      syncing: 正在同步
+      error: 錯誤
+      status_with_summary: '%{timestamp}前已同步 · %{summary}'
+      status_never: 從未同步
+      delete: 刪除
+      setup_needed: 需要設定帳戶
+      setup_description: 已連結 %{linked}/%{total} 個帳戶。
+      setup_action: 設定帳戶
+      no_accounts_title: 尚未匯入帳戶
+      no_accounts_description: 取得 Akahu 帳戶，然後選擇要連結哪些。

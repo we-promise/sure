@@ -62,6 +62,10 @@ en:
       keep_token_placeholder: Leave blank to keep the current token
       connection_name_label: Connection name
       connection_name_placeholder: Wise Personal
+      sync_start_date_label: Import transactions from
+      sync_start_date_help: Wise statements are imported from this date onward. Leave the default for up to one year of history.
+      import_all_history_label: Import full transaction history
+      import_all_history_help: Fetch all historical Wise statements instead of only the last year.
       connect: Connect Wise
       update_connection: Update connection
       setup_accounts: Set up accounts
@@ -78,7 +82,7 @@ en:
         message: Configure Active Record encryption keys before adding Wise tokens in production. Without encryption, tokens are stored in plaintext.
       instructions:
         sign_in_html: "Visit %{link} and log in to your account"
-        open_tokens: "Go to Settings → API tokens"
+        open_tokens: "Go to Settings → Connect and manage apps → Developer tools → API tokens"
         create_token: "Create a new personal API token with read-only access"
         copy_token_html: "Copy the token and paste it below. Sure uses it only to sync your balances and transactions."
     provider_connection:

@@ -193,9 +193,23 @@ class SnaptradeItem < ApplicationRecord
 
   # Override Syncable#syncing? to also show syncing state when activities are being
   # fetched in the background. This ensures the UI shows the spinner until all data
-  # is truly imported, not just when the main sync job completes.
+  # is truly imported, not just when the main sync job completes. Unlinked
+  # provider records are intentionally retained for relinking, so a stale fetch
+  # flag on one must not keep the whole connection in a syncing state.
   def syncing?
-    super || snaptrade_accounts.where(activities_fetch_pending: true).exists?
+    super || linked_snaptrade_accounts.where(activities_fetch_pending: true).exists?
+  end
+
+  # Queue a fresh import after an in-flight item sync. This is needed when a
+  # user completes OAuth, adds a brokerage, or links an account midway through
+  # a sync: Syncable#sync_later intentionally reuses the in-flight Sync.
+  def sync_later_with_follow_up
+    active_sync = syncs.visible.ordered.first
+    sync_later
+
+    return unless active_sync&.reload&.in_progress?
+
+    SnaptradeFollowUpSyncJob.set(wait: SnaptradeFollowUpSyncJob::RETRY_DELAY).perform_later(self)
   end
 
   # Get accounts linked via AccountProvider
