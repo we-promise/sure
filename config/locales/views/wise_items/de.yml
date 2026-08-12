@@ -63,12 +63,16 @@ de:
         create_token: Leg einen neuen persönlichen API-Token mit reinem Lesezugriff an
         open_tokens: Gehe zu Settings → Connect and manage apps → Developer tools → API tokens
         sign_in_html: Öffne %{link} und melde dich in deinem Konto an
+      import_all_history_help: Holt alle historischen Wise-Kontoauszüge statt nur das letzte Jahr.
+      import_all_history_label: Vollständige Transaktionshistorie importieren
       keep_token_placeholder: Leer lassen, um den bisherigen Token zu behalten
       not_configured: Nicht eingerichtet
       sandbox_note_html: Nutz zum Testen die <strong>Sandbox</strong>-Basis-URL (<code>https://api.sandbox.transferwise.tech</code>). Setz dafür <code>WISE_BASE_URL</code> in deiner Umgebung.
       setup_accounts: Konten einrichten
       setup_title: 'So richtest du es ein:'
       sync: Sync
+      sync_start_date_help: Wise-Kontoauszüge werden ab diesem Datum importiert. Lass die Vorgabe stehen, um bis zu ein Jahr Historie zu importieren.
+      sync_start_date_label: Transaktionen importieren ab
       token_label: API-Token
       token_placeholder: Persönlichen Wise-API-Token einfügen
       update_connection: Verbindung aktualisieren
