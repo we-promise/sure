@@ -4,7 +4,7 @@
     <%= render "settings/providers/drawer_header", provider_key: provider_key, title: @panel_title %>
   <% end %>
   <% dialog.with_body do %>
-    <% if @provider_setup_encryption_warning %>
+    <% if @provider_setup_encryption_warning && !@panel_handles_encryption_warning %>
       <div class="mb-4">
         <%= render DS::Alert.new(
               variant: :warning,
