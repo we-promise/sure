@@ -100,9 +100,10 @@ class RecurringTransaction
                                   family.recurring_transactions.build(find_conditions)
 
           # Handle manual recurring transactions specially
-          if recurring_transaction.persisted? && recurring_transaction.manual?
+          if recurring_transaction.persisted? && (recurring_transaction.manual? || recurring_transaction.dismissed?)
             # Manual recurring variance is recalculated once in the batch pass
-            # after automatic pattern updates finish.
+            # after automatic pattern updates finish. Dismissed rows are a
+            # durable user veto and must never be revived by detection.
             next
           end
 
@@ -134,9 +135,10 @@ class RecurringTransaction
           next unless recurring_transaction
 
           # Skip manual recurring transactions
-          if recurring_transaction.manual?
+          if recurring_transaction.manual? || recurring_transaction.dismissed?
             # Manual recurring variance is recalculated once in the batch pass
-            # after automatic pattern updates finish.
+            # after automatic pattern updates finish. Dismissed rows are a
+            # durable user veto and must never be revived by detection.
             next
           end
 

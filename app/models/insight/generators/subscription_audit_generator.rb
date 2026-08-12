@@ -43,6 +43,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
       family.recurring_transactions
         .includes(:merchant)
         .active
+        .visible
         .where(destination_account_id: nil)
         .where("amount > 0")
         .where("next_expected_date < ?", OVERDUE_DAYS.days.ago.to_date)

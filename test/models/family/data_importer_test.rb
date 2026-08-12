@@ -532,7 +532,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           manual: true,
           expected_amount_min: "-95.00",
           expected_amount_max: "-85.00",
-          expected_amount_avg: "-89.99"
+          expected_amount_avg: "-89.99",
+          dismissed_at: "2024-03-01T12:00:00Z"
         }
       }
     ])
@@ -551,6 +552,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "active", recurring_transaction.status
     assert_equal 6, recurring_transaction.occurrence_count
     assert_equal true, recurring_transaction.manual
+    assert recurring_transaction.dismissed?, "dismissed_at must round-trip through import so a restored backup doesn't un-dismiss patterns"
     assert_equal(-95.0, recurring_transaction.expected_amount_min.to_f)
     assert_equal(-85.0, recurring_transaction.expected_amount_max.to_f)
     assert_equal(-89.99, recurring_transaction.expected_amount_avg.to_f)

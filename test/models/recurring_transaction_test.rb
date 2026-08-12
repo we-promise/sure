@@ -1106,4 +1106,100 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       @family.recurring_transactions.create!(base_attrs)
     end
   end
+
+  test "dismiss! sets dismissed_at without removing the row" do
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      manual: false,
+      occurrence_count: 3
+    )
+
+    assert_not recurring.dismissed?
+
+    assert_no_difference "RecurringTransaction.count" do
+      recurring.dismiss!
+    end
+
+    assert recurring.reload.dismissed?
+    assert_not_nil recurring.dismissed_at
+  end
+
+  test "undismiss! clears dismissed_at" do
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      manual: false,
+      occurrence_count: 3,
+      dismissed_at: 1.day.ago
+    )
+
+    recurring.undismiss!
+
+    assert_not recurring.reload.dismissed?
+    assert_nil recurring.dismissed_at
+  end
+
+  test "undismiss! is a no-op when not dismissed" do
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      manual: false,
+      occurrence_count: 3
+    )
+    original_updated_at = recurring.updated_at
+
+    travel 1.hour do
+      recurring.undismiss!
+    end
+
+    assert_not recurring.dismissed?
+    assert_equal original_updated_at, recurring.reload.updated_at, "undismiss! should not write when already not dismissed"
+  end
+
+  test "visible and dismissed scopes partition recurring transactions" do
+    visible_recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      manual: false,
+      occurrence_count: 3
+    )
+    dismissed_recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: merchants(:amazon),
+      amount: 9.99,
+      currency: "USD",
+      expected_day_of_month: 15,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      manual: false,
+      occurrence_count: 3,
+      dismissed_at: Time.current
+    )
+
+    assert_includes @family.recurring_transactions.visible, visible_recurring
+    assert_not_includes @family.recurring_transactions.visible, dismissed_recurring
+    assert_includes @family.recurring_transactions.dismissed, dismissed_recurring
+    assert_not_includes @family.recurring_transactions.dismissed, visible_recurring
+  end
 end

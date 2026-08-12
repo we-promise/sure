@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_27_111051) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_08_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1628,6 +1628,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_27_111051) do
     t.decimal "expected_amount_avg", precision: 19, scale: 4
     t.uuid "account_id"
     t.uuid "destination_account_id"
+    t.datetime "dismissed_at"
     t.index ["account_id"], name: "index_recurring_transactions_on_account_id"
     t.index ["destination_account_id"], name: "index_recurring_transactions_on_destination_account_id"
     t.index ["family_id", "account_id", "destination_account_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_pair_merchant", unique: true, where: "((destination_account_id IS NOT NULL) AND (merchant_id IS NOT NULL))"

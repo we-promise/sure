@@ -558,6 +558,7 @@ class Family::DataExporter
         expected_amount_min: recurring_transaction.expected_amount_min,
         expected_amount_max: recurring_transaction.expected_amount_max,
         expected_amount_avg: recurring_transaction.expected_amount_avg,
+        dismissed_at: recurring_transaction.dismissed_at,
         created_at: recurring_transaction.created_at,
         updated_at: recurring_transaction.updated_at
       }

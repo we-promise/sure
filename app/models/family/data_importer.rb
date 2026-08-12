@@ -517,7 +517,8 @@ class Family::DataImporter
           manual: boolean_import_value(data, "manual", default: false),
           expected_amount_min: data["expected_amount_min"]&.to_d,
           expected_amount_max: data["expected_amount_max"]&.to_d,
-          expected_amount_avg: data["expected_amount_avg"]&.to_d
+          expected_amount_avg: data["expected_amount_avg"]&.to_d,
+          dismissed_at: parse_import_datetime(data["dismissed_at"])
         )
 
         recurring_transaction.save!
@@ -958,6 +959,14 @@ class Family::DataImporter
 
       Date.parse(value.to_s)
     rescue Date::Error
+      nil
+    end
+
+    def parse_import_datetime(value)
+      return if value.blank?
+
+      Time.zone.parse(value.to_s)
+    rescue ArgumentError, TypeError
       nil
     end
 
