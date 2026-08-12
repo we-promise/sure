@@ -519,6 +519,16 @@ assert_run_includes(comment_on_pr, "github.rest.issues.listComments", "github.re
   '-H "x-preview-diagnostics-nonce: $PREVIEW_DIAGNOSTICS_NONCE"'
 ].each { |needle| assert(preview_dockerfile.include?(needle), "preview Dockerfile entrypoint must include #{needle.inspect}") }
 
+pipelock_workflow = YAML.safe_load_file(File.join(ROOT, ".github/workflows/pipelock.yml"), aliases: true)
+pipelock_step = pipelock_workflow.fetch("jobs").fetch("security-scan").fetch("steps").find { |step| step["uses"]&.include?("pipelock") }
+pipelock_excludes = pipelock_step.fetch("with").fetch("exclude-paths").to_s
+assert(!pipelock_excludes.include?("Dockerfile.preview"), "Dockerfile.preview must stay in pipelock scan scope; use inline pipelock:ignore for ephemeral preview credentials")
+
+[
+  'CREATE USER rails WITH SUPERUSER PASSWORD \'rails\';" # pipelock:ignore',
+  'export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-rails}" # pipelock:ignore'
+].each { |needle| assert(preview_dockerfile.include?(needle), "preview Dockerfile must inline-suppress pipelock false positives with #{needle.inspect}") }
+
 secret_steps = deploy_steps.select { |step| env_hash(step).then { |env| env.key?("CLOUDFLARE_API_TOKEN") || env.key?("CLOUDFLARE_ACCOUNT_ID") } }
 assert(secret_steps.map { |step| step["name"] } == [ push_image["name"], deploy["name"] ], "only image push and deploy may receive Cloudflare secrets")
 assert_secret_env_sources!(push_image, EXPECTED_PUSH_SECRET_ENV)

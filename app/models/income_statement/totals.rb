@@ -105,7 +105,7 @@ class IncomeStatement::Totals
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
           AND (
             at.investment_activity_label IS NULL
-            OR at.investment_activity_label NOT IN ('Transfer', 'Sweep In', 'Sweep Out', 'Exchange')
+            OR at.investment_activity_label NOT IN (#{internal_movement_labels_sql})
           )
           AND ae.excluded = false
           AND a.family_id = :family_id
@@ -163,6 +163,12 @@ class IncomeStatement::Totals
 
     def budget_excluded_kinds_sql
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
+    end
+
+    # Shared with IncomeStatement::MonthlyTotals, which must filter identically
+    # for its month-bucketed totals to agree with these per-period ones.
+    def internal_movement_labels_sql
+      @internal_movement_labels_sql ||= Transaction::INTERNAL_MOVEMENT_LABELS.map { |label| ActiveRecord::Base.connection.quote(label) }.join(", ")
     end
 
     def validate_date_range!

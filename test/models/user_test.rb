@@ -264,52 +264,49 @@ class UserTest < ActiveSupport::TestCase
 
   test "ai_available? returns true when openai access token set in settings" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
-    previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
-      Setting.openai_access_token = nil
+    without_configured_ai_providers do
       assert_not @user.ai_available?
 
-      Setting.openai_access_token = "token"
+      Provider::Openai.unstub(:configured?)
+      Provider::Openai.stubs(:configured?).returns(true)
       assert @user.ai_available?
     end
-  ensure
-    Setting.openai_access_token = previous
   end
 
   test "ai_available? returns true when external assistant is configured and family type is external" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
-    previous = Setting.openai_access_token
     @user.family.update!(assistant_type: "external")
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
-      Setting.openai_access_token = nil
+    without_configured_ai_providers(
+      EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat",
+      EXTERNAL_ASSISTANT_TOKEN: "test-token"
+    ) do
       assert @user.ai_available?
     end
   ensure
-    Setting.openai_access_token = previous
     @user.family.update!(assistant_type: "builtin")
   end
 
   test "ai_available? returns false when external assistant is configured but family type is builtin" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
-    previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
-      Setting.openai_access_token = nil
+    without_configured_ai_providers(
+      EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat",
+      EXTERNAL_ASSISTANT_TOKEN: "test-token"
+    ) do
       assert_not @user.ai_available?
     end
-  ensure
-    Setting.openai_access_token = previous
   end
 
   test "ai_available? returns false when external assistant is configured but user is not in allowlist" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
-    previous = Setting.openai_access_token
     @user.family.update!(assistant_type: "external")
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
-      Setting.openai_access_token = nil
+    without_configured_ai_providers(
+      EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat",
+      EXTERNAL_ASSISTANT_TOKEN: "test-token",
+      EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com"
+    ) do
       assert_not @user.ai_available?
     end
   ensure
-    Setting.openai_access_token = previous
     @user.family.update!(assistant_type: "builtin")
   end
 
@@ -356,9 +353,7 @@ class UserTest < ActiveSupport::TestCase
 
   test "new member defaults show_ai_sidebar to false when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
-    previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
-      Setting.openai_access_token = nil
+    without_configured_ai_providers do
       user = User.new(
         family: families(:empty),
         email: "member-no-ai@example.com",
@@ -369,15 +364,11 @@ class UserTest < ActiveSupport::TestCase
       assert user.save, user.errors.full_messages.to_sentence
       assert_not user.show_ai_sidebar?
     end
-  ensure
-    Setting.openai_access_token = previous
   end
 
   test "new admin defaults show_ai_sidebar to true even when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
-    previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
-      Setting.openai_access_token = nil
+    without_configured_ai_providers do
       user = User.new(
         family: families(:empty),
         email: "admin-no-ai@example.com",
@@ -388,8 +379,6 @@ class UserTest < ActiveSupport::TestCase
       assert user.save, user.errors.full_messages.to_sentence
       assert user.show_ai_sidebar?
     end
-  ensure
-    Setting.openai_access_token = previous
   end
 
   test "new member defaults show_ai_sidebar to true when AI is available" do
@@ -407,9 +396,7 @@ class UserTest < ActiveSupport::TestCase
 
   test "new guest defaults show_ai_sidebar to false when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
-    previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
-      Setting.openai_access_token = nil
+    without_configured_ai_providers do
       user = User.new(
         family: families(:empty),
         email: "guest-no-ai@example.com",
@@ -420,8 +407,6 @@ class UserTest < ActiveSupport::TestCase
       assert user.save, user.errors.full_messages.to_sentence
       assert_not user.show_ai_sidebar?
     end
-  ensure
-    Setting.openai_access_token = previous
   end
 
   test "new guest defaults show_ai_sidebar to false when AI is available" do
@@ -756,4 +741,25 @@ class UserTest < ActiveSupport::TestCase
     assert_not Family.exists?(family.id)
     assert_not ActiveStorage::Attachment.exists?(export_attachment_id)
   end
+
+  private
+
+    NO_AI_PROVIDER_ENV = {
+      OPENAI_ACCESS_TOKEN: nil,
+      ANTHROPIC_ACCESS_TOKEN: nil,
+      ANTHROPIC_API_KEY: nil,
+      EXTERNAL_ASSISTANT_URL: nil,
+      EXTERNAL_ASSISTANT_TOKEN: nil
+    }.freeze
+
+    def without_configured_ai_providers(**extra_env, &block)
+      with_env_overrides(**NO_AI_PROVIDER_ENV, **extra_env) do
+        Provider::Openai.stubs(:configured?).returns(false)
+        Provider::Anthropic.stubs(:configured?).returns(false)
+        yield
+      end
+    ensure
+      Provider::Openai.unstub(:configured?)
+      Provider::Anthropic.unstub(:configured?)
+    end
 end

@@ -307,7 +307,27 @@ class Family < ApplicationRecord
   end
 
   def balance_sheet(user: Current.user)
-    BalanceSheet.new(self, user: user)
+    @balance_sheets_by_user ||= {}
+    @balance_sheets_by_user[user&.id] ||= BalanceSheet.new(self, user: user)
+  end
+
+  # Loads visible, accessible accounts once per request for dashboard, sidebar, and balance sheet.
+  def visible_accessible_accounts(user: Current.user)
+    cache = (Current.visible_accessible_accounts_cache ||= {})
+    cache[[ id, user&.id ]] ||= load_visible_accessible_accounts(user)
+  end
+
+  # Memoizes exchange rates for the request so balance sheet, investment summary,
+  # and other dashboard widgets share one batched lookup per target date.
+  def exchange_rates_for(currencies, date: Date.current)
+    @exchange_rates_for ||= {}
+    cache = (@exchange_rates_for[date] ||= {})
+    target_currency = primary_currency_code
+
+    missing = currencies.compact.uniq.reject { |code| code == target_currency || cache.key?(code) }
+    cache.merge!(ExchangeRate.rates_for(missing, to: target_currency, date: date)) if missing.any?
+
+    cache
   end
 
   def income_statement(user: Current.user)
@@ -382,7 +402,8 @@ class Family < ApplicationRecord
   end
 
   def investment_statement(user: Current.user)
-    InvestmentStatement.new(self, user: user)
+    @investment_statements_by_user ||= {}
+    @investment_statements_by_user[user&.id] ||= InvestmentStatement.new(self, user: user)
   end
 
   def eu?
@@ -390,8 +411,11 @@ class Family < ApplicationRecord
   end
 
   def requires_securities_data_provider?
-    # If family has any trades, they need a provider for historical prices
-    trades.any?
+    # If family has any trades, they need a provider for historical prices.
+    # Memoized: dashboard layout (sidebar warning) can ask more than once.
+    return @requires_securities_data_provider if defined?(@requires_securities_data_provider)
+
+    @requires_securities_data_provider = trades.exists?
   end
 
   def requires_exchange_rates_data_provider?
@@ -446,8 +470,19 @@ class Family < ApplicationRecord
       id,
       key,
       data_invalidation_key,
-      accounts.maximum(:updated_at)
+      accounts_cache_version
     ].compact.join("_")
+  end
+
+  # Used for invalidating account related aggregation queries. Memoized like
+  # entries_cache_version: a dashboard render builds several cache keys, each
+  # of which would otherwise re-issue this same MAX(updated_at) lookup.
+  # Sync-driven invalidation is unaffected — that rides on
+  # data_invalidation_key, which is still read live.
+  def accounts_cache_version
+    return @accounts_cache_version if defined?(@accounts_cache_version)
+
+    @accounts_cache_version = accounts.maximum(:updated_at)
   end
 
   # Used for invalidating entry related aggregation queries
@@ -463,6 +498,19 @@ class Family < ApplicationRecord
   end
 
   private
+    def load_visible_accessible_accounts(user)
+      scope = accounts.visible.with_attached_logo
+                .includes(
+                  :account_shares,
+                  :accountable,
+                  :plaid_account,
+                  :simplefin_account,
+                  account_providers: :provider
+                )
+      scope = scope.accessible_by(user) if user
+      scope.to_a
+    end
+
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
     # `tax_advantaged_account_ids`. Joins `depositories` and filters by
     # `Depository::TAX_ADVANTAGED_SUBTYPES` (currently `%w[hsa]`). Extracted

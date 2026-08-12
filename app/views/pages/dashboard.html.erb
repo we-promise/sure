@@ -30,7 +30,7 @@
 <% end %>
 
 <%= turbo_frame_tag "dashboard_sections", target: "_top" do %>
-  <% if accessible_accounts.any? %>
+  <% if @accounts.any? %>
     <div class="flex items-center justify-end mb-4">
       <%= render UI::PeriodPicker.new(selected: @period, url: root_path, frame: "dashboard_sections") %>
     </div>
@@ -38,7 +38,7 @@
 
   <% two_column = Current.user.dashboard_two_column? %>
   <div class="grid grid-cols-1 <%= "2xl:grid-cols-2 2xl:items-start 2xl:gap-y-0 2xl:[grid-auto-flow:row_dense] 2xl:[grid-auto-rows:1px]" if two_column %> gap-6 pb-6 lg:pb-12" data-controller="dashboard-sortable dashboard-masonry" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="<%= t("pages.dashboard.sections_aria_label") %>">
-  <% if accessible_accounts.any? %>
+  <% if @accounts.any? %>
     <% @dashboard_sections.each do |section| %>
       <% next unless section[:visible] %>
       <section
