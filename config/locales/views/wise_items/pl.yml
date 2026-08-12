@@ -74,6 +74,10 @@ pl:
       keep_token_placeholder: Pozostaw puste, aby zachować bieżący token
       connection_name_label: Nazwa połączenia
       connection_name_placeholder: Wise Osobiste
+      sync_start_date_label: Importuj transakcje od
+      sync_start_date_help: Wyciągi Wise są importowane od tej daty. Pozostaw wartość domyślną, aby zaimportować do roku historii.
+      import_all_history_label: Importuj pełną historię transakcji
+      import_all_history_help: Pobiera wszystkie historyczne wyciągi Wise zamiast tylko ostatniego roku.
       connect: Połącz Wise
       update_connection: Aktualizuj połączenie
       setup_accounts: Konfiguruj konta
@@ -90,7 +94,7 @@ pl:
         message: Skonfiguruj klucze szyfrowania Active Record przed dodaniem tokenów Wise w produkcji. Bez szyfrowania tokeny są przechowywane w postaci zwykłego tekstu.
       instructions:
         sign_in_html: "Odwiedź %{link} i zaloguj się na swoje konto"
-        open_tokens: "Przejdź do Ustawienia → Tokeny API"
+        open_tokens: "Przejdź do Settings → Connect and manage apps → Developer tools → API tokens"
         create_token: "Utwórz nowy osobisty token API z dostępem tylko do odczytu"
         copy_token_html: "Skopiuj token i wklej go poniżej. Sure używa go tylko do synchronizacji sald i transakcji."
     provider_connection:

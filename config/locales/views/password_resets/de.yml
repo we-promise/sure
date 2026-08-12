@@ -1,8 +1,8 @@
 ---
 de:
   password_resets:
-    disabled: Passwort-Zurücksetzen über Sure ist deaktiviert. Bitte setzen Sie Ihr Passwort über Ihren Identitätsanbieter zurück.
-    sso_only_user: Ihr Konto nutzt SSO zur Anmeldung. Bitte wenden Sie sich an Ihren Administrator, um Ihre Zugangsdaten zu verwalten.
+    disabled: Passwort-Zurücksetzen über Sure ist deaktiviert. Bitte setz dein Passwort über deinen Identitätsanbieter zurück.
+    sso_only_user: Dein Konto nutzt SSO zur Anmeldung. Wende dich an deine Administration, wenn du Hilfe brauchst.
     edit:
       title: Passwort zurücksetzen
     new:
