@@ -52,10 +52,16 @@ class EnableBankingEntry::Processor
     "enable_banking_content_#{Digest::MD5.hexdigest(content)}"
   end
 
-  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil)
+  # known_merchant_names: optional pre-fetched Family#known_merchant_names, so a
+  # caller processing many transactions in one batch (see
+  # EnableBankingAccount::Transactions::Processor) can compute it once instead of
+  # once per row -- same pattern as the shared import_adapter. Falls back to
+  # fetching it lazily per-instance when not provided (e.g. in isolation/tests).
+  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil)
     @enable_banking_transaction = enable_banking_transaction
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
+    @known_merchant_names = known_merchant_names
   end
 
   def process
@@ -241,7 +247,12 @@ class EnableBankingEntry::Processor
       descriptive = lines.find { |line| !technical_remittance_line?(line) } || lines.first
       return descriptive if descriptive.blank?
 
-      matched_known_merchant_name(descriptive) || strip_loyalty_marker(strip_payment_processor_prefix(descriptive))
+      # Loyalty-marker removal before prefix stripping: PAYMENT_PROCESSOR_PREFIX is
+      # anchored at the start of the string (\A), so if a marker ever preceded it
+      # (unusual, but not impossible), stripping the prefix first would leave it
+      # unmatched. Order doesn't matter for any known real shape, but this way the
+      # result is correct regardless of input order.
+      matched_known_merchant_name(descriptive) || strip_payment_processor_prefix(strip_loyalty_marker(descriptive))
     end
 
     def remittance_information_lines
@@ -277,7 +288,8 @@ class EnableBankingEntry::Processor
       # would otherwise also collapse intentional multi-space formatting (e.g. the
       # raw technical POS line) on lines that never had a marker to remove.
       return value unless value.match?(LOYALTY_MARKER_WORD)
-      value.sub(LOYALTY_MARKER_WORD, "").squeeze(" ").strip.presence || value
+      # gsub, not sub: remove every marker occurrence, not just the first.
+      value.gsub(LOYALTY_MARKER_WORD, "").squeeze(" ").strip.presence || value
     end
 
     # Prefer a merchant name the family already knows over any text heuristic: it's
