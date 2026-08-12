@@ -250,9 +250,27 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     # accessible-accounts set transactions_path defaults to when account_ids
     # is absent.
     assert_includes income_href, "q%5Baccount_ids%5D%5B%5D="
-    assert_not_includes income_href, excluded_account.id
+    assert_not_includes income_href, excluded_account.id.to_s
     assert_includes expense_href, "q%5Baccount_ids%5D%5B%5D="
-    assert_not_includes expense_href, excluded_account.id
+    assert_not_includes expense_href, excluded_account.id.to_s
+  end
+
+  test "dashboard money flow income/expense links omit account_ids when the default selection matches all accessible accounts" do
+    # Plain @family fixture: every account is owned outright by family_admin,
+    # none excluded from reports or tax-advantaged, so the widget's eligible
+    # accounts exactly match Current.user.accessible_accounts (see #2955).
+    get root_path
+
+    assert_response :ok
+    income_href = css_select("a[href*='q%5Btypes%5D%5B%5D=income']").first["href"]
+    expense_href = css_select("a[href*='q%5Btypes%5D%5B%5D=expense']").first["href"]
+
+    # With nothing to scope down from the transactions page's own default,
+    # the link should skip enumerating every account id so the URL stays
+    # short (long q[account_ids][] lists break forward-auth proxies in front
+    # of self-hosted deployments, see #2955).
+    assert_not_includes income_href, "q%5Baccount_ids%5D"
+    assert_not_includes expense_href, "q%5Baccount_ids%5D"
   end
 
   test "changelog" do
