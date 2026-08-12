@@ -15,6 +15,22 @@ de:
     settings:
       enable_label: Wiederkehrende Transaktionen aktivieren
       enable_description: Erkenne automatisch wiederkehrende Transaktionsmuster und zeige anstehende prognostizierte Transaktionen an.
+      detection_title: Schwellenwerte für automatische Erkennung
+      detection_description: Passe an, wie streng die automatische Mustererkennung für diese Familie ist. Die Standardwerte entsprechen den bisherigen festen Regeln.
+      lookback_months_label: Rückblickzeitraum (Monate)
+      lookback_months_help: "Wie weit zurück nach Mustern gesucht wird. Standard: 3. Bereich: 1–24."
+      min_occurrences_label: Mindestanzahl Vorkommen
+      min_occurrences_help: "Wie viele passende Transaktionen nötig sind, bevor ein Muster erstellt wird. Standard: 3. Bereich: 2–12."
+      recent_window_days_label: Kürzlich gesehen (Tage)
+      recent_window_days_help: "Muster ignorieren, deren letzte Übereinstimmung älter ist. Standard: 45. Bereich: 7–365."
+      day_tolerance_label: Toleranz für Tag-im-Monat (Tage)
+      day_tolerance_help: "Wie viele Tage um den erwarteten Tag herum noch als Übereinstimmung zählen. Standard: 2. Bereich: 0–14."
+      day_cluster_stddev_label: Strenge der Tagesgruppierung (Std.-Abw.)
+      day_cluster_stddev_help: "Maximal erlaubte Streuung des Tags im Monat bei der Mustererkennung. Standard: 5. Bereich: 1–15."
+      amount_tolerance_percent_label: Betragstoleranz (%)
+      amount_tolerance_percent_help: "Nahe Beträge für denselben Empfänger gruppieren. 0 behält exakte Betragsübereinstimmung bei (Standard). Bereich: 0–25."
+      save_detection: Schwellenwerte speichern
+      invalid_integer: ist keine gültige ganze Zahl
     settings_updated: Einstellungen für wiederkehrende Transaktionen aktualisiert
     info:
       title: Automatische Mustererkennung
