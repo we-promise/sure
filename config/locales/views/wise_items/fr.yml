@@ -55,6 +55,10 @@ fr:
       connect: Connecter Wise
       connection_name_label: Nom de la connexion
       connection_name_placeholder: Wise Personnel
+      sync_start_date_label: Importer les transactions à partir de
+      sync_start_date_help: Les relevés Wise sont importés à partir de cette date. Conservez la valeur par défaut pour importer jusqu'à un an d'historique.
+      import_all_history_label: Importer tout l'historique des transactions
+      import_all_history_help: Récupère tous les relevés Wise historiques au lieu de seulement la dernière année.
       disconnect: Déconnecter
       disconnect_confirm: Voulez-vous vraiment déconnecter %{name} ? Cela supprimera
         toutes les données de compte synchronisées.
@@ -69,7 +73,7 @@ fr:
           uniquement pour synchroniser vos soldes et transactions.
         create_token: Créez un nouveau jeton API personnel avec un accès en lecture
           seule
-        open_tokens: Accédez à Paramètres → Jetons API
+        open_tokens: Accédez à Settings → Connect and manage apps → Developer tools → API tokens
         sign_in_html: Visitez %{link} et connectez-vous à votre compte
       keep_token_placeholder: Laisser vide pour conserver le jeton actuel
       not_configured: Non configuré
