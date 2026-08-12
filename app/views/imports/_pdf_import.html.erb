@@ -5,6 +5,7 @@
     <% if import.respond_to?(:reconciliation_reportable?) && import.reconciliation_reportable? && (import.complete? || (import.pending? && import.rows_count > 0)) %>
       <% recon = import.reconciliation_data %>
       <% balance_matched = import.reconciliation_matched? %>
+      <% currency_unit = import.extracted_data&.dig("currency").presence || import.account&.currency.presence || "" %>
 
       <div class="mx-auto h-8 w-8 rounded-full flex items-center justify-center <%= balance_matched ? "bg-success/10" : "bg-warning/10" %>">
         <%= icon balance_matched ? "check" : "alert-triangle", class: balance_matched ? "text-success" : "text-warning" %>
@@ -29,13 +30,13 @@
             <% if recon["statement_closing_balance"].present? %>
               <div class="flex justify-between text-sm">
                 <span class="text-secondary"><%= t("imports.pdf_import.reconciliation_statement_balance") %></span>
-                <span class="text-primary font-medium privacy-sensitive"><%= number_to_currency(recon["statement_closing_balance"], unit: import.extracted_data&.dig("currency") || "") %></span>
+                <span class="text-primary font-medium privacy-sensitive"><%= number_to_currency(recon["statement_closing_balance"], unit: currency_unit) %></span>
               </div>
             <% end %>
             <% if recon["synced_closing_balance"].present? %>
               <div class="flex justify-between text-sm">
                 <span class="text-secondary"><%= t("imports.pdf_import.reconciliation_synced_balance") %></span>
-                <span class="text-primary font-medium privacy-sensitive"><%= number_to_currency(recon["synced_closing_balance"], unit: import.extracted_data&.dig("currency") || "") %></span>
+                <span class="text-primary font-medium privacy-sensitive"><%= number_to_currency(recon["synced_closing_balance"], unit: currency_unit) %></span>
               </div>
             <% end %>
             <div class="flex justify-between text-sm">

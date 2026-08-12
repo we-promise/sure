@@ -328,6 +328,7 @@ class Provider::Openai::PdfProcessor
         result = Assistant::Function::GetTransactions.new(tool_user).call(normalized_args)
         augment_get_transactions_result_with_balance(result, normalized_args)
       else
+        Rails.logger.warn("PDF reconciliation received unknown tool call: function=#{function_name.inspect}")
         { error: "Unknown tool", function_name: function_name }
       end
     rescue JSON::ParserError => e
@@ -377,6 +378,7 @@ class Provider::Openai::PdfProcessor
         "balance_record_date" => balance_record&.date&.iso8601
       )
     rescue ArgumentError
+      Rails.logger.warn("PDF reconciliation could not parse statement end date: end_date=#{end_date.inspect}")
       result
     end
 

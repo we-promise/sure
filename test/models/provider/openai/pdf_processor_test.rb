@@ -239,6 +239,57 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_not result.key?(:details)
   end
 
+  test "unknown reconciliation tool calls are logged" do
+    processor = Provider::Openai::PdfProcessor.new(
+      stub("openai_client"),
+      model: "gpt-4.1",
+      pdf_content: "fake-pdf",
+      family: @family,
+      user: @user,
+      max_response_tokens: 4096
+    )
+
+    Rails.logger.expects(:warn).with(regexp_matches(/unknown tool call: function="unknown_tool"/))
+
+    result = processor.send(
+      :execute_reconciliation_tool_call,
+      {
+        "function" => {
+          "name" => "unknown_tool",
+          "arguments" => "{}"
+        }
+      }
+    )
+
+    assert_equal "Unknown tool", result[:error]
+    assert_equal "unknown_tool", result[:function_name]
+  end
+
+  test "invalid statement end date leaves tool result unchanged and logs" do
+    processor = Provider::Openai::PdfProcessor.new(
+      stub("openai_client"),
+      model: "gpt-4.1",
+      pdf_content: "fake-pdf",
+      family: @family,
+      user: @user,
+      max_response_tokens: 4096
+    )
+
+    original_result = { "transactions" => [], "total_results" => 0 }
+    Rails.logger.expects(:warn).with(regexp_matches(/could not parse statement end date: end_date="not-a-date"/))
+
+    result = processor.send(
+      :augment_get_transactions_result_with_balance,
+      original_result,
+      {
+        "accounts" => [ @account.name ],
+        "end_date" => "not-a-date"
+      }
+    )
+
+    assert_equal original_result, result
+  end
+
   test "processing trace payload redacts reconciliation balances and transaction details" do
     result = Provider::LlmConcept::PdfProcessingResult.new(
       summary: "Processed",
