@@ -166,6 +166,350 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal 0, @family.recurring_transactions.count
   end
 
+  test "honors family min_occurrences threshold below the default" do
+    @family.update!(recurring_detection_min_occurrences: 2)
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    [ 5, 6 ].each_with_index do |day, i|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: i.months.ago.beginning_of_month + (day - 1).days,
+        amount: 15.99,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    patterns_count = @identifier.identify_recurring_patterns
+
+    assert_equal 1, patterns_count
+    assert_equal 1, @family.recurring_transactions.count
+  end
+
+  test "honors family recent_window_days when last occurrence is stale under default" do
+    travel_to Date.new(2026, 8, 6) do
+      @family.update!(recurring_detection_lookback_months: 6)
+      account = @family.accounts.first
+      merchant = merchants(:netflix)
+
+      # Last occurrence is 50 days ago (Jun 17); default recent window is 45
+      [ Date.new(2026, 4, 17), Date.new(2026, 5, 17), Date.new(2026, 6, 17) ].each do |date|
+        transaction = Transaction.create!(
+          merchant: merchant,
+          category: categories(:food_and_drink)
+        )
+        account.entries.create!(
+          date: date,
+          amount: 15.99,
+          currency: "USD",
+          name: "Netflix Subscription",
+          entryable: transaction
+        )
+      end
+
+      assert_equal 0, RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
+
+      @family.update!(recurring_detection_recent_window_days: 60)
+      assert_equal 1, RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
+    end
+  end
+
+  test "zero amount tolerance keeps distinct four-decimal amounts separate" do
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    # Same payee/currency/account, amounts that round(2) would collapse but
+    # differ at scale-4 precision — must remain separate exact matches.
+    { BigDecimal("15.9900") => [ 5, 6, 7 ], BigDecimal("15.9910") => [ 8, 9, 10 ] }.each do |amount, days|
+      days.each_with_index do |day, i|
+        transaction = Transaction.create!(
+          merchant: merchant,
+          category: categories(:food_and_drink)
+        )
+        account.entries.create!(
+          date: i.months.ago.beginning_of_month + (day - 1).days,
+          amount: amount,
+          currency: "USD",
+          name: "Netflix Subscription",
+          entryable: transaction
+        )
+      end
+    end
+
+    patterns_count = @identifier.identify_recurring_patterns
+
+    assert_equal 2, patterns_count
+    assert_equal 2, @family.recurring_transactions.count
+    assert_equal [ BigDecimal("15.9900"), BigDecimal("15.9910") ],
+                 @family.recurring_transactions.order(:amount).map(&:amount)
+  end
+
+  test "groups nearby amounts when amount tolerance percent is configured" do
+    @family.update!(recurring_detection_amount_tolerance_percent: 5)
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    amounts = [ 15.99, 16.25, 16.50 ]
+    amounts.each_with_index do |amount, i|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: i.months.ago.beginning_of_month + 4.days,
+        amount: amount,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    patterns_count = @identifier.identify_recurring_patterns
+
+    assert_equal 1, patterns_count
+    assert_equal 1, @family.recurring_transactions.count
+    recurring = @family.recurring_transactions.first
+    assert_equal 3, recurring.occurrence_count
+    assert_in_delta amounts.sum / amounts.size, recurring.amount, 0.01
+    assert_equal amounts.min, recurring.expected_amount_min
+    assert_equal amounts.max, recurring.expected_amount_max
+    assert_in_delta amounts.sum / amounts.size, recurring.expected_amount_avg, 0.01
+
+    # matching_transactions must honor the variance band — not exact average
+    matched_amounts = recurring.matching_transactions.map(&:amount).sort
+    assert_equal amounts.sort, matched_amounts
+  end
+
+  test "clears persisted amount variance when amount tolerance is disabled" do
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    recurring = @family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current,
+      occurrence_count: 3,
+      status: "active",
+      manual: false,
+      expected_amount_min: 15.50,
+      expected_amount_max: 16.50,
+      expected_amount_avg: 15.99
+    )
+
+    [ 0, 1, 2 ].each do |months_ago|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: months_ago.months.ago.beginning_of_month + 4.days,
+        amount: 15.99,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    @family.update!(recurring_detection_amount_tolerance_percent: 0)
+    RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
+
+    recurring.reload
+    assert_nil recurring.expected_amount_min
+    assert_nil recurring.expected_amount_max
+    assert_nil recurring.expected_amount_avg
+    assert_equal BigDecimal("15.99"), recurring.amount
+  end
+
+  test "tolerant rematch reuses closest row when multiple candidates exist" do
+    @family.update!(recurring_detection_amount_tolerance_percent: 5)
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    farther = @family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 16.50,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current,
+      occurrence_count: 3,
+      status: "active",
+      manual: false
+    )
+    closer = @family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 16.00,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current,
+      occurrence_count: 3,
+      status: "active",
+      manual: false
+    )
+
+    amounts = [ 15.99, 16.10, 16.20 ]
+    amounts.each_with_index do |amount, i|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: i.months.ago.beginning_of_month + 4.days,
+        amount: amount,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      @identifier.identify_recurring_patterns
+    end
+
+    closer.reload
+    farther.reload
+    assert_equal "active", closer.status
+    assert_equal "inactive", farther.status
+    assert_in_delta amounts.sum / amounts.size, closer.amount, 0.01
+  end
+
+  test "merges amount clusters that collide on rounded representative key" do
+    @family.update!(recurring_detection_amount_tolerance_percent: 5)
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    created_ids = [ BigDecimal("10.004"), BigDecimal("10.004"), BigDecimal("9.995"), BigDecimal("9.995") ].map.with_index do |amount, i|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: i.months.ago.beginning_of_month + 4.days,
+        amount: amount,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      ).id
+    end
+
+    loaded = Entry.where(id: created_ids).includes(:entryable).order(:date).to_a
+    identifier = RecurringTransaction::Identifier.new(@family)
+    # Both cluster averages round to 10.00 — a plain Hash write would drop one.
+    identifier.define_singleton_method(:cluster_entries_by_amount) do |*|
+      [ loaded[0, 2], loaded[2, 2] ]
+    end
+
+    grouped = identifier.send(:group_entries_for_detection, loaded)
+
+    assert_equal 1, grouped.size
+    assert_equal 4, grouped.values.first.size
+    assert_equal loaded.map(&:amount).sort, grouped.values.first.map(&:amount).sort
+  end
+
+  test "manual variance lookback stays at 6 months independent of detection lookback" do
+    travel_to Date.new(2026, 8, 6) do
+      # Family detection lookback of 2 would exclude May if conflated with manual variance.
+      @family.update!(recurring_detection_lookback_months: 2)
+      account = @family.accounts.first
+      merchant = merchants(:netflix)
+
+      recurring = @family.recurring_transactions.create!(
+        account: account,
+        merchant: merchant,
+        amount: 15.99,
+        currency: "USD",
+        expected_day_of_month: 17,
+        last_occurrence_date: Date.new(2026, 7, 17),
+        next_expected_date: Date.new(2026, 8, 17),
+        occurrence_count: 1,
+        status: "active",
+        manual: true
+      )
+
+      {
+        Date.new(2026, 7, 17) => BigDecimal("16.50"), # within both windows
+        Date.new(2026, 5, 17) => BigDecimal("14.00"), # outside detection lookback (2mo), inside manual (6mo)
+        Date.new(2026, 1, 17) => BigDecimal("10.00")  # outside manual 6-month window
+      }.each do |date, amount|
+        transaction = Transaction.create!(
+          merchant: merchant,
+          category: categories(:food_and_drink)
+        )
+        account.entries.create!(
+          date: date,
+          amount: amount,
+          currency: "USD",
+          name: "Netflix Subscription",
+          entryable: transaction
+        )
+      end
+
+      RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
+
+      recurring.reload
+      assert_equal 2, recurring.occurrence_count
+      assert_equal BigDecimal("14.00"), recurring.expected_amount_min
+      assert_equal BigDecimal("16.50"), recurring.expected_amount_max
+    end
+  end
+
+  test "tolerant rematch does not revive or update inactive rows" do
+    @family.update!(recurring_detection_amount_tolerance_percent: 5)
+    account = @family.accounts.first
+    merchant = merchants(:netflix)
+
+    inactive = @family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 16.00,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 2.months.ago.to_date,
+      next_expected_date: Date.current,
+      occurrence_count: 2,
+      status: "inactive",
+      manual: false
+    )
+
+    amounts = [ 15.99, 16.10, 16.20 ]
+    amounts.each_with_index do |amount, i|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: i.months.ago.beginning_of_month + 4.days,
+        amount: amount,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    @identifier.identify_recurring_patterns
+
+    inactive.reload
+    assert_equal "inactive", inactive.status
+    assert_equal 2, inactive.occurrence_count
+    assert_equal BigDecimal("16.00"), inactive.amount
+
+    active = @family.recurring_transactions.active.where(merchant: merchant).where.not(id: inactive.id)
+    assert_equal 1, active.count
+    assert_in_delta amounts.sum / amounts.size, active.first.amount, 0.01
+  end
+
   test "updates existing recurring transaction when pattern is found again" do
     account = @family.accounts.first
     merchant = merchants(:amazon)  # Use different merchant to avoid fixture conflicts

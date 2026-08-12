@@ -40,6 +40,85 @@
   </div>
 
   <% unless @family.recurring_transactions_disabled? %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
+      <div>
+        <p class="text-sm font-medium text-primary"><%= t("recurring_transactions.settings.detection_title") %></p>
+        <p class="text-xs text-secondary"><%= t("recurring_transactions.settings.detection_description") %></p>
+      </div>
+
+      <%= form_with url: update_settings_recurring_transactions_path, method: :patch, class: "space-y-4", data: { turbo_frame: "_top" } do |f| %>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <%= f.number_field :recurring_detection_lookback_months,
+                  label: t("recurring_transactions.settings.lookback_months_label"),
+                  value: @family.recurring_detection_lookback_months,
+                  min: Family::RECURRING_DETECTION_LOOKBACK_MONTHS_RANGE.begin,
+                  max: Family::RECURRING_DETECTION_LOOKBACK_MONTHS_RANGE.end,
+                  required: true %>
+            <p class="text-xs text-secondary mt-1"><%= t("recurring_transactions.settings.lookback_months_help") %></p>
+          </div>
+
+          <div>
+            <%= f.number_field :recurring_detection_min_occurrences,
+                  label: t("recurring_transactions.settings.min_occurrences_label"),
+                  value: @family.recurring_detection_min_occurrences,
+                  min: Family::RECURRING_DETECTION_MIN_OCCURRENCES_RANGE.begin,
+                  max: Family::RECURRING_DETECTION_MIN_OCCURRENCES_RANGE.end,
+                  required: true %>
+            <p class="text-xs text-secondary mt-1"><%= t("recurring_transactions.settings.min_occurrences_help") %></p>
+          </div>
+
+          <div>
+            <%= f.number_field :recurring_detection_recent_window_days,
+                  label: t("recurring_transactions.settings.recent_window_days_label"),
+                  value: @family.recurring_detection_recent_window_days,
+                  min: Family::RECURRING_DETECTION_RECENT_WINDOW_DAYS_RANGE.begin,
+                  max: Family::RECURRING_DETECTION_RECENT_WINDOW_DAYS_RANGE.end,
+                  required: true %>
+            <p class="text-xs text-secondary mt-1"><%= t("recurring_transactions.settings.recent_window_days_help") %></p>
+          </div>
+
+          <div>
+            <%= f.number_field :recurring_detection_day_tolerance,
+                  label: t("recurring_transactions.settings.day_tolerance_label"),
+                  value: @family.recurring_detection_day_tolerance,
+                  min: Family::RECURRING_DETECTION_DAY_TOLERANCE_RANGE.begin,
+                  max: Family::RECURRING_DETECTION_DAY_TOLERANCE_RANGE.end,
+                  required: true %>
+            <p class="text-xs text-secondary mt-1"><%= t("recurring_transactions.settings.day_tolerance_help") %></p>
+          </div>
+
+          <div>
+            <%= f.number_field :recurring_detection_day_cluster_stddev,
+                  label: t("recurring_transactions.settings.day_cluster_stddev_label"),
+                  value: @family.recurring_detection_day_cluster_stddev,
+                  min: Family::RECURRING_DETECTION_DAY_CLUSTER_STDDEV_RANGE.begin,
+                  max: Family::RECURRING_DETECTION_DAY_CLUSTER_STDDEV_RANGE.end,
+                  required: true %>
+            <p class="text-xs text-secondary mt-1"><%= t("recurring_transactions.settings.day_cluster_stddev_help") %></p>
+          </div>
+
+          <div>
+            <%= f.number_field :recurring_detection_amount_tolerance_percent,
+                  label: t("recurring_transactions.settings.amount_tolerance_percent_label"),
+                  value: @family.recurring_detection_amount_tolerance_percent,
+                  min: Family::RECURRING_DETECTION_AMOUNT_TOLERANCE_PERCENT_RANGE.begin,
+                  max: Family::RECURRING_DETECTION_AMOUNT_TOLERANCE_PERCENT_RANGE.end,
+                  required: true %>
+            <p class="text-xs text-secondary mt-1"><%= t("recurring_transactions.settings.amount_tolerance_percent_help") %></p>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <%= render DS::Button.new(
+            text: t("recurring_transactions.settings.save_detection"),
+            variant: "primary",
+            type: "submit"
+          ) %>
+        </div>
+      <% end %>
+    </div>
+
     <div class="p-4 bg-container-inset border border-secondary rounded-lg">
       <div class="flex items-start gap-2">
         <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>

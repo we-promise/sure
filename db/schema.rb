@@ -767,6 +767,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_09_000000) do
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
     t.boolean "recurring_transactions_disabled", default: false, null: false
+    t.integer "recurring_detection_lookback_months", default: 3, null: false
+    t.integer "recurring_detection_min_occurrences", default: 3, null: false
+    t.integer "recurring_detection_recent_window_days", default: 45, null: false
+    t.integer "recurring_detection_day_tolerance", default: 2, null: false
+    t.integer "recurring_detection_day_cluster_stddev", default: 5, null: false
+    t.integer "recurring_detection_amount_tolerance_percent", default: 0, null: false
     t.integer "month_start_day", default: 1, null: false
     t.string "moniker", default: "Family", null: false
     t.string "vector_store_id"
@@ -776,6 +782,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_09_000000) do
     t.datetime "last_sync_all_attempted_at"
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
+    t.check_constraint "recurring_detection_lookback_months >= 1 AND recurring_detection_lookback_months <= 24", name: "recurring_detection_lookback_months_range"
+    t.check_constraint "recurring_detection_min_occurrences >= 2 AND recurring_detection_min_occurrences <= 12", name: "recurring_detection_min_occurrences_range"
+    t.check_constraint "recurring_detection_recent_window_days >= 7 AND recurring_detection_recent_window_days <= 365", name: "recurring_detection_recent_window_days_range"
+    t.check_constraint "recurring_detection_day_tolerance >= 0 AND recurring_detection_day_tolerance <= 14", name: "recurring_detection_day_tolerance_range"
+    t.check_constraint "recurring_detection_day_cluster_stddev >= 1 AND recurring_detection_day_cluster_stddev <= 15", name: "recurring_detection_day_cluster_stddev_range"
+    t.check_constraint "recurring_detection_amount_tolerance_percent >= 0 AND recurring_detection_amount_tolerance_percent <= 25", name: "recurring_detection_amount_tolerance_percent_range"
   end
 
   create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

@@ -42,6 +42,26 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_includes recurring.errors[:occurrence_count], "must be greater than or equal to 0"
   end
 
+  test "amount variance consistency applies to auto-detected rows" do
+    recurring = @family.recurring_transactions.build(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      manual: false,
+      expected_amount_min: 20,
+      expected_amount_max: 10,
+      expected_amount_avg: 15
+    )
+
+    assert_not recurring.valid?
+    assert_includes recurring.errors[:expected_amount_min], "cannot be greater than expected_amount_max"
+  end
+
   test "identify_patterns_for creates recurring transactions for patterns with 3+ occurrences" do
     # Create a series of transactions with same merchant and amount on similar days
     # Use dates within the last 3 months: today, 1 month ago, 2 months ago
@@ -496,6 +516,167 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     matches = recurring.matching_transactions
     assert_includes matches, entry_within
     assert_not_includes matches, entry_outside
+  end
+
+  test "matching_transactions wraps day-of-month tolerance below day 1" do
+    @family.update!(recurring_detection_day_tolerance: 2)
+
+    prior_month_end = 1.month.ago.to_date.end_of_month
+    non_match_date = prior_month_end - 3.days
+
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 1,
+      last_occurrence_date: Date.current.beginning_of_month,
+      next_expected_date: Date.current.next_month.beginning_of_month,
+      status: "active"
+    )
+
+    wrap_entry = @account.entries.create!(
+      date: prior_month_end,
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+    far_entry = @account.entries.create!(
+      date: non_match_date, # outside ±2 circular days of expected day 1
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+
+    matches = recurring.matching_transactions
+    assert_includes matches, wrap_entry
+    assert_not_includes matches, far_entry
+
+    found = RecurringTransaction.find_matching_transaction_entries(
+      family: @family,
+      merchant_id: @merchant.id,
+      name: nil,
+      currency: "USD",
+      expected_day: 1,
+      account: @account
+    )
+    assert_includes found, wrap_entry
+    assert_not_includes found, far_entry
+  end
+
+  test "matching_transactions wraps day-of-month tolerance above day 31" do
+    @family.update!(recurring_detection_day_tolerance: 2)
+
+    month_start = Date.current.beginning_of_month
+    day_four = month_start + 3.days
+
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 31,
+      last_occurrence_date: 1.month.ago.to_date.end_of_month,
+      next_expected_date: Date.current.end_of_month,
+      status: "active"
+    )
+
+    wrap_entry = @account.entries.create!(
+      date: month_start,
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+    far_entry = @account.entries.create!(
+      date: day_four, # day 4 is 4 circular days from 31
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+
+    matches = recurring.matching_transactions
+    assert_includes matches, wrap_entry
+    assert_not_includes matches, far_entry
+
+    found = RecurringTransaction.find_matching_transaction_entries(
+      family: @family,
+      merchant_id: @merchant.id,
+      name: nil,
+      currency: "USD",
+      expected_day: 31,
+      account: @account
+    )
+    assert_includes found, wrap_entry
+    assert_not_includes found, far_entry
+  end
+
+  test "matching_transactions clamps expected day 31 to February month end" do
+    @family.update!(recurring_detection_day_tolerance: 2)
+
+    recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 31,
+      last_occurrence_date: Date.new(2026, 1, 31),
+      next_expected_date: Date.new(2026, 2, 28),
+      status: "active"
+    )
+
+    # 2026 is not a leap year — expected 31 clamps to Feb 28
+    month_end_entry = @account.entries.create!(
+      date: Date.new(2026, 2, 28),
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+    within_tol_entry = @account.entries.create!(
+      date: Date.new(2026, 2, 26),
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+    outside_tol_entry = @account.entries.create!(
+      date: Date.new(2026, 2, 25), # circular distance from clamped day 28 is 3
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+    # Old fixed 1–31 wrap treated Feb 1 as a match for expected 31; clamp semantics must not.
+    false_wrap_entry = @account.entries.create!(
+      date: Date.new(2026, 2, 1),
+      amount: 15.99,
+      currency: "USD",
+      name: "Netflix Subscription",
+      entryable: Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    )
+
+    matches = recurring.matching_transactions
+    assert_includes matches, month_end_entry
+    assert_includes matches, within_tol_entry
+    assert_not_includes matches, outside_tol_entry
+    assert_not_includes matches, false_wrap_entry
+
+    found = RecurringTransaction.find_matching_transaction_entries(
+      family: @family,
+      merchant_id: @merchant.id,
+      name: nil,
+      currency: "USD",
+      expected_day: 31,
+      account: @account
+    )
+    assert_includes found, month_end_entry
+    assert_includes found, within_tol_entry
+    assert_not_includes found, outside_tol_entry
+    assert_not_includes found, false_wrap_entry
   end
 
   test "should_be_inactive? has longer threshold for manual recurring" do
