@@ -84,7 +84,6 @@ class Provider::Bibit < Provider
       data = fetch_and_decrypt("#{base_url}/products/#{CGI.escape(symbol)}")
 
       manager = data["investment_manager"] || {}
-      custodian = data["custodian_bank"] || {}
 
       SecurityInfo.new(
         symbol: symbol,
@@ -117,9 +116,6 @@ class Provider::Bibit < Provider
   def fetch_security_prices(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
       throttle_request
-      # Bibit chart endpoint returns daily NAV data for a given period
-      # We use 'all' to get the full history and filter client-side,
-      # since Bibit doesn't support arbitrary date ranges
       period = select_period(start_date, end_date)
 
       data = fetch_and_decrypt("#{base_url}/products/#{CGI.escape(symbol)}/chart") do |req|
@@ -246,6 +242,8 @@ class Provider::Bibit < Provider
       plaintext = cipher.update(ciphertext) + cipher.final
       JSON.parse(plaintext)
     rescue OpenSSL::Cipher::CipherError => e
+      raise DecryptionError, "Failed to decrypt Bibit response: #{e.message}"
+    rescue ArgumentError => e
       raise DecryptionError, "Failed to decrypt Bibit response: #{e.message}"
     rescue JSON::ParserError => e
       raise DecryptionError, "Decrypted data is not valid JSON: #{e.message}"
