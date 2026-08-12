@@ -6,3 +6,4 @@ en:
     chat_form:
       placeholder: "Ask anything ..."
       disclaimer: "AI responses are informational only. Not financial advice!"
+      coming_soon: Coming soon
