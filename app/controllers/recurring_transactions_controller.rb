@@ -47,6 +47,16 @@ class RecurringTransactionsController < ApplicationController
   def identify
     count = RecurringTransaction.identify_patterns_for!(Current.family)
 
+    # Manual-first parity with the sync pipeline: a user with no bank feed
+    # (or a fresh install reviewing history) gets the same materialize +
+    # reconcile the post-sync job performs.
+    Current.family.recurring_transactions.active.find_each do |series|
+      RecurringTransaction::OccurrenceGenerator.new(series).generate!
+    end
+    matcher = RecurringTransaction::Matcher.new(Current.family)
+    matcher.repair_orphans!
+    matcher.run!
+
     respond_to do |format|
       format.html do
         flash[:notice] = t("recurring_transactions.identified", count: count)

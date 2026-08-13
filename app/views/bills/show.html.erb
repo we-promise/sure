@@ -92,13 +92,31 @@
       <% end %>
 
       <div class="flex items-center justify-between pt-2 border-t border-divider">
-        <%= render DS::Link.new(
-              text: t(".edit"),
-              icon: "pencil",
-              variant: "ghost",
-              href: edit_recurring_transaction_path(@series),
-              frame: :modal
-            ) %>
+        <div class="flex items-center gap-1">
+          <%= render DS::Link.new(
+                text: t(".edit"),
+                icon: "pencil",
+                variant: "ghost",
+                href: edit_recurring_transaction_path(@series),
+                frame: :modal
+              ) %>
+          <%= render DS::Link.new(
+                text: @series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+                icon: @series.active? ? "pause" : "play",
+                variant: "ghost",
+                href: toggle_status_recurring_transaction_path(@series),
+                method: :post
+              ) %>
+          <%= render DS::Link.new(
+                text: t("recurring_transactions.actions.delete"),
+                icon: "trash-2",
+                variant: "ghost",
+                class: "text-destructive",
+                href: recurring_transaction_path(@series),
+                method: :delete,
+                data: { turbo_confirm: t("recurring_transactions.confirm_delete") }
+              ) %>
+        </div>
         <%= render "recurring_transactions/pay_action", recurring_transaction: @series, show_add: false %>
       </div>
     </div>

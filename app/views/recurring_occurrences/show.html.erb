@@ -108,7 +108,15 @@
                   href: reopen_recurring_occurrence_path(@occurrence), method: :post) %>
           <% end %>
         </div>
-        <%= render "recurring_transactions/pay_action", recurring_transaction: series, show_add: false %>
+        <div class="flex items-center gap-2">
+          <%= render DS::Link.new(
+                text: t(".view_bill"),
+                variant: "ghost",
+                href: bill_path(series),
+                data: { turbo_frame: "drawer" }
+              ) %>
+          <%= render "recurring_transactions/pay_action", recurring_transaction: series, show_add: false %>
+        </div>
       </div>
     </div>
   <% end %>
