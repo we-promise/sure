@@ -556,6 +556,8 @@ class Family::DataExporter
         name: recurring_transaction.name,
         manual: recurring_transaction.manual,
         payment_url: recurring_transaction.payment_url,
+        autopay: recurring_transaction.autopay,
+        notes: recurring_transaction.notes,
         expected_amount_min: recurring_transaction.expected_amount_min,
         expected_amount_max: recurring_transaction.expected_amount_max,
         expected_amount_avg: recurring_transaction.expected_amount_avg,

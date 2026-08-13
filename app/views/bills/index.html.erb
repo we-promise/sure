@@ -26,7 +26,13 @@
           <%= format_money(@total_due) %>
         </p>
         <p class="text-xs text-secondary mt-1">
-          <%= t(".summary_hint", count: @overdue.size + @this_month.size) %>
+          <%= t(".summary_count", count: @due_count) %>
+          <span class="text-subdued">&middot;</span>
+          <% if @needs_action_count.zero? %>
+            <%= t(".all_automatic") %>
+          <% else %>
+            <%= t(".summary_needs_action", count: @needs_action_count) %>
+          <% end %>
         </p>
         <% if @unconvertible_count.to_i.positive? %>
           <p class="text-xs text-warning mt-1">

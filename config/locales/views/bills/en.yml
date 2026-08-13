@@ -1,6 +1,7 @@
 ---
 en:
   bills:
+    paid_from: "from %{account}"
     due_label:
       overdue:
         one: "Overdue by 1 day, was due %{date}"
@@ -12,9 +13,13 @@ en:
     index:
       title: Bills
       summary_label: Due this month
-      summary_hint:
-        one: "1 bill to pay"
-        other: "%{count} bills to pay"
+      summary_count:
+        one: "1 bill due"
+        other: "%{count} bills due"
+      summary_needs_action:
+        one: "1 needs you"
+        other: "%{count} need you"
+      all_automatic: "all on autopay"
       unconvertible:
         one: "1 bill is not included, no exchange rate available"
         other: "%{count} bills are not included, no exchange rate available"

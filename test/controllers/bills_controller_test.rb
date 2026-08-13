@@ -96,6 +96,30 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.index.unconvertible", count: 1), response.body
   end
 
+  # Autopay is information, not a task. The bill stays listed and still counts toward
+  # the total, but it must not read as something demanding to be clicked.
+  test "index shows an autopaying bill without a pay call to action" do
+    create_bill(name: "Handled bill", amount: 30, autopay: true,
+                payment_url: "https://pay.example.com")
+
+    get bills_url
+
+    assert_response :success
+    assert_match "Handled bill", response.body
+    assert_match I18n.t("recurring_transactions.pay_action.autopay"), response.body
+    assert_no_match(/>\s*#{I18n.t("recurring_transactions.pay_action.pay")}\s*</, response.body)
+  end
+
+  test "index shows the account a bill is paid from and its notes" do
+    create_bill(name: "Annotated bill", amount: 60, notes: "Account 4821, on the Amex")
+
+    get bills_url
+
+    assert_response :success
+    assert_match "Account 4821, on the Amex", response.body
+    assert_match I18n.t("bills.paid_from", account: accounts(:depository).name), response.body
+  end
+
   test "index renders an empty state with no bills" do
     get bills_url
 

@@ -12,7 +12,29 @@
   `_blank` targets.
 %>
 
-<% if RecurringTransaction.valid_payment_url?(recurring_transaction.payment_url) %>
+<% has_link = RecurringTransaction.valid_payment_url?(recurring_transaction.payment_url) %>
+
+<% if recurring_transaction.autopay? %>
+  <%# Autopay is information, not a task, so it never renders as a call to action. The
+      portal stays reachable when a link exists -- you still want to check a charge --
+      but demoted to a quiet control rather than something demanding to be clicked. %>
+  <% if has_link %>
+    <%= render DS::Link.new(
+          text: t(".autopay"),
+          href: recurring_transaction.payment_url,
+          icon: "refresh-cw",
+          variant: "ghost",
+          size: "sm",
+          target: "_blank",
+          aria: { label: t(".autopay_aria", name: recurring_transaction.display_name) }
+        ) %>
+  <% else %>
+    <span class="inline-flex items-center gap-1 px-2 py-1 text-sm text-secondary">
+      <%= icon "refresh-cw", size: "sm", color: "current" %>
+      <%= t(".autopay") %>
+    </span>
+  <% end %>
+<% elsif has_link %>
   <%= render DS::Link.new(
         text: t(".pay"),
         href: recurring_transaction.payment_url,

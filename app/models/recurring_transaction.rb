@@ -130,6 +130,12 @@ class RecurringTransaction < ApplicationRecord
   # handled by the existing pause action, which is what it is for.
   scope :bills, -> { active.where(destination_account_id: nil).where("amount > 0") }
 
+  # The bills that actually want something from you. A bill on autopay still belongs on
+  # the list -- you want to know it is coming and what it will cost -- but it is not a
+  # task, and a list that cannot tell the two apart makes the user re-derive that every
+  # month from memory.
+  scope :needs_action, -> { where(autopay: false) }
+
   # The stored `next_expected_date` can sit a whole cycle too far out.
   # `calculate_next_expected_date` always jumps to `last_occurrence_date.next_month`, so
   # a payment that posts earlier in the month than the bill's expected day skips the

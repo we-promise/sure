@@ -114,7 +114,7 @@ class RecurringTransactionsController < ApplicationController
     end
 
     def recurring_transaction_params
-      params.require(:recurring_transaction).permit(:payment_url)
+      params.require(:recurring_transaction).permit(:payment_url, :autopay, :notes)
     end
 
     # One merchant routinely owns several bills (three separate Twitch subscriptions,

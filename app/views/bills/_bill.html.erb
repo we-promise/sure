@@ -1,6 +1,8 @@
 <%# locals: (bill:) %>
 
-<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4">
+<%# An autopaying bill is still worth seeing and still counts toward the total, but it
+    recedes so the rows that want something from you carry the visual weight. %>
+<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 <%= "opacity-70" if bill.autopay? %>">
   <div class="flex items-center gap-3 lg:gap-4 min-w-0 flex-1">
     <% if bill.merchant&.logo_url.present? %>
       <%= image_tag Setting.transform_brand_fetch_url(bill.merchant.logo_url),
@@ -18,8 +20,11 @@
     <div class="min-w-0">
       <p class="text-primary text-sm font-medium truncate"><%= bill.display_name %></p>
       <p class="text-xs <%= bill.overdue? ? "text-destructive" : "text-secondary" %>">
-        <%= bills_due_label(bill) %>
+        <%= bills_due_label(bill) %><%= bills_paid_from_label(bill) %>
       </p>
+      <% if bill.notes.present? %>
+        <p class="text-xs text-subdued truncate"><%= bill.notes %></p>
+      <% end %>
     </div>
   </div>
 

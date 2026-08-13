@@ -247,7 +247,9 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
         :expected_amount_min,
         :expected_amount_max,
         :expected_amount_avg,
-        :payment_url
+        :payment_url,
+        :autopay,
+        :notes
       )
     end
 
@@ -256,7 +258,9 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
         :status,
         :expected_day_of_month,
         :next_expected_date,
-        :payment_url
+        :payment_url,
+        :autopay,
+        :notes
       )
     end
 

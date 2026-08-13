@@ -22,6 +22,8 @@ en:
       pay_aria: "Pay %{name} (opens in new tab)"
       add_link: Add link
       add_link_aria: "Add a payment link for %{name}"
+      autopay: Autopay
+      autopay_aria: "%{name} pays automatically, open its portal in a new tab"
     edit:
       trigger_label: Edit bill
       title: "Payment link for %{name}"
@@ -29,6 +31,11 @@ en:
       payment_url_label: Payment link
       payment_url_placeholder: bank.example.com/pay
       payment_url_hint: Where you go to pay this bill. Opens in a new tab from your recurring and upcoming lists.
+      autopay_label: Pays automatically
+      autopay_hint: Keep it on your bills list, but stop treating it as something to do.
+      notes_label: Notes
+      notes_placeholder: Account 4821, charged to the Amex
+      notes_hint: Anything you want in front of you when paying. Shown on the bill.
       apply_to_siblings:
         one: "Also use this link for the other %{name} bill"
         other: "Also use this link for the other %{count} %{name} bills"

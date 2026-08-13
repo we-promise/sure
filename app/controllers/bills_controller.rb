@@ -19,7 +19,10 @@ class BillsController < ApplicationController
     @overdue, upcoming = bills.partition(&:overdue?)
     @this_month, @later = upcoming.partition { |bill| bill.next_due_date <= Date.current.end_of_month }
 
-    @total_due = total_of(@overdue + @this_month)
+    due_now = @overdue + @this_month
+    @total_due = total_of(due_now)
+    @due_count = due_now.size
+    @needs_action_count = due_now.count { |bill| !bill.autopay? }
   end
 
   private

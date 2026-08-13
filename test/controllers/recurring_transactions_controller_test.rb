@@ -51,6 +51,24 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil @recurring_transaction.reload.payment_url
   end
 
+  test "update saves autopay and notes" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { autopay: "1", notes: "Account 4821" } }
+
+    @recurring_transaction.reload
+    assert @recurring_transaction.autopay?
+    assert_equal "Account 4821", @recurring_transaction.notes
+  end
+
+  test "update can turn autopay back off" do
+    @recurring_transaction.update!(autopay: true)
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { autopay: "0" } }
+
+    assert_not @recurring_transaction.reload.autopay?
+  end
+
   test "update clears the payment link when submitted blank" do
     @recurring_transaction.update!(payment_url: "https://pay.example.com")
 

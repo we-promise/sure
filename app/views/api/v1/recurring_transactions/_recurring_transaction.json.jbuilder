@@ -15,6 +15,8 @@ json.occurrence_count recurring_transaction.occurrence_count
 json.name recurring_transaction.name
 json.manual recurring_transaction.manual
 json.payment_url recurring_transaction.payment_url
+json.autopay recurring_transaction.autopay
+json.notes recurring_transaction.notes
 json.expected_amount_min recurring_transaction.expected_amount_min_money&.format
 json.expected_amount_min_cents money_to_minor_units.call(recurring_transaction.expected_amount_min_money)
 json.expected_amount_max recurring_transaction.expected_amount_max_money&.format

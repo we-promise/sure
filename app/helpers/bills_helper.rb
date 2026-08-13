@@ -16,4 +16,12 @@ module BillsHelper
       t("bills.due_label.upcoming", count: days, date: date)
     end
   end
+
+  # Which account the charge lands on. Sure already knows this and has never shown it,
+  # and it is exactly what you check when deciding whether a bill is covered.
+  def bills_paid_from_label(bill)
+    return "" if bill.account.blank?
+
+    " · #{t('bills.paid_from', account: bill.account.name)}"
+  end
 end
