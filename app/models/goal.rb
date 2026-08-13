@@ -507,7 +507,11 @@ class Goal < ApplicationRecord
   # Header copy under the goal title on show. Used to live as a multi-line
   # if/elsif block in show.html.erb. Keeps the view template free of date
   # math + i18n key picking.
-  def header_summary
+  # The dot-separated segments of the header line, kept as separate strings so
+  # the view can stop a short one breaking mid-phrase. Joined into a single
+  # string, "184 days left" could wrap after "days" and orphan "left" on the
+  # next line — which is what a phone did.
+  def header_summary_parts
     parts = []
     if target_date
       days = (target_date - Date.current).to_i
@@ -528,7 +532,7 @@ class Goal < ApplicationRecord
       parts << I18n.t("goals.show.header.target",
                       amount: target_amount_money.format(precision: 0))
     end
-    parts.join(" · ")
+    parts
   end
 
   # Single source of truth for the projection-chart subtitle / chart-aria
