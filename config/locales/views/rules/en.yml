@@ -52,6 +52,17 @@ en:
       confirm_changes: Confirm changes
     actions:
       value_placeholder: Enter a value
+      split:
+        mode_fixed: Fixed amount
+        mode_percentage: Percentage
+        add_split: Add split
+        name_placeholder: Split name
+        no_merchant: No merchant
+        tags_hint: "Hold Ctrl/Cmd to select multiple tags"
+        fixed_mode_hint: "Fixed amounts only work reliably if you also add a condition that matches an exact transaction amount (e.g. Amount = 42.00), since every matching transaction needs the same total for the shares to add up."
+        summary:
+          one: "%{count} split (%{mode})"
+          other: "%{count} splits (%{mode})"
     update:
       success: Rule updated
     destroy:

@@ -3,7 +3,7 @@
 <% action = form.object %>
 <% rule = action.rule %>
 
-<li data-controller="rule--actions" data-rule--actions-action-executors-value="<%= rule.action_executors.to_json %>" class="flex items-center gap-3">
+<li data-controller="rule--actions" data-rule--actions-action-executors-value="<%= rule.action_executors.to_json %>" class="<%= class_names("flex gap-3", action.executor.type == "split" ? "items-start" : "items-center") %>">
   <%= form.hidden_field :_destroy, value: false, data: { rule__actions_target: "destroyField" } %>
 
   <div class="grid grid-cols-1 gap-2 items-center h-full w-full">
@@ -11,15 +11,26 @@
       <%= form.select :action_type, rule.action_executors.map { |executor| [ executor.label, executor.key ] }, {}, data: { action: "rule--actions#handleActionTypeChange" } %>
     </div>
 
-    <%= tag.div class: class_names("min-w-1/2 flex items-center gap-2", { "hidden": action.executor.type == "function" }),
+    <%
+      action_value_classes = if action.executor.type == "split"
+        "w-full"
+      else
+        "min-w-1/2 flex items-center gap-2"
+      end
+    %>
+    <%= tag.div class: class_names(action_value_classes, { "hidden": action.executor.type == "function" }),
                 data: { rule__actions_target: "actionValue" } do %>
       <%# Initial rendering based on the action executor type. %>
       <%# Subsequent renders are injected by the Stimulus controller, which uses the templates from below. %>
-      <span class="font-medium text-primary uppercase text-xs">to</span>
+      <% unless action.executor.type == "split" %>
+        <span class="font-medium text-primary uppercase text-xs">to</span>
+      <% end %>
       <% if action.executor.type == "select" %>
         <%= form.select :value, action.options || [], {} %>
       <% elsif action.executor.type == "text" %>
         <%= form.text_field :value, placeholder: t("rules.actions.value_placeholder") %>
+      <% elsif action.executor.type == "split" %>
+        <%= render "rule/actions/split_builder", form: form, action: action %>
       <% end %>
     <% end %>
   </div>
@@ -39,6 +50,10 @@
   <template data-rule--actions-target="textTemplate">
     <span class="font-medium text-primary uppercase text-xs">to</span>
     <%= form.text_field :value, placeholder: t("rules.actions.value_placeholder") %>
+  </template>
+
+  <template data-rule--actions-target="splitTemplate">
+    <%= render "rule/actions/split_builder", form: form, action: action, blank: true %>
   </template>
 
   <%# The function type doesn't need an input, so no template is required.%>

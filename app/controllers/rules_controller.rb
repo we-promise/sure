@@ -146,7 +146,8 @@ class RulesController < ApplicationController
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]
         ],
         actions_attributes: [
-          :id, :action_type, :value, :_destroy
+          :id, :action_type, :value, :_destroy, :split_mode,
+          split_rows: [ :name, :share, :category_id, :merchant_id, tag_ids: [] ]
         ]
       )
     end
