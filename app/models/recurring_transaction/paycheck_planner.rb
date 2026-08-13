@@ -45,11 +45,16 @@ class RecurringTransaction
     end
 
     private
+      # Only income the user DECLARED (the "This is income" checkbox, or
+      # marking a real paycheck transaction as recurring) defines paydays.
+      # Auto-detected inflows never do: sign alone proves nothing -- a
+      # recurring one-cent balance transfer is "income" by sign and would
+      # slice time into nonsense periods.
       def upcoming_income_occurrences
         family.recurring_occurrences
               .open_status
               .joins(:recurring_transaction)
-              .where(recurring_transactions: { status: :active, bill_type: :income })
+              .where(recurring_transactions: { status: :active, bill_type: :income, manual: true })
               .merge(RecurringTransaction.accessible_by(user))
               .where("recurring_occurrences.due_on >= ?", Date.current)
               .includes(:recurring_transaction)

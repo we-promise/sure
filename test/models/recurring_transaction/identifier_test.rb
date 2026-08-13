@@ -79,14 +79,15 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     account = @family.accounts.first
     merchant = merchants(:netflix)
 
-    # Create 3 transactions on days 28, 29, 30, 31, 1, 2 (should cluster with circular distance)
+    # Days 30, 31, 1 and 2: all within the 2-day tolerance of the expected
+    # day ON THE CIRCLE, which is what makes a month-boundary biller one
+    # pattern. (A wider wobble is deliberately no longer a pattern:
+    # consistency is per-occurrence, not on average.)
     dates = [
-      3.months.ago.end_of_month - 3.days,  # Day 28
-      2.months.ago.end_of_month - 2.days,  # Day 29
-      2.months.ago.end_of_month - 1.day,   # Day 30
-      1.month.ago.end_of_month,            # Day 31
-      Date.current.beginning_of_month,     # Day 1
-      Date.current.beginning_of_month + 1.day  # Day 2
+      Date.new(2026, 5, 30),
+      Date.new(2026, 5, 31),
+      Date.new(2026, 7, 1),
+      Date.new(2026, 8, 2)
     ]
 
     dates.each do |date|
@@ -103,7 +104,7 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
       )
     end
 
-    patterns_count = @identifier.identify_recurring_patterns
+    patterns_count = travel_to(Date.new(2026, 8, 13)) { @identifier.identify_recurring_patterns }
 
     assert_equal 1, patterns_count, "Should identify pattern with circular clustering at month boundary"
     assert_equal 1, @family.recurring_transactions.count
@@ -467,6 +468,42 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
   test "days_cluster_together returns false for widely spread days" do
     days = [ 1, 15, 30 ]
     assert_not @identifier.send(:days_cluster_together?, days)
+  end
+
+  test "scattered days are not a recurring pattern, whatever their average" do
+    # Charges on the 3rd, 10th and 16th averaged out under the old std-dev
+    # gate; per-occurrence consistency rejects them.
+    account = @family.accounts.first
+    [ [ 0, 3 ], [ 1, 10 ], [ 2, 16 ] ].each do |months_ago, day|
+      transaction = Transaction.create!(category: categories(:food_and_drink))
+      account.entries.create!(
+        date: months_ago.months.ago.beginning_of_month + (day - 1).days,
+        amount: 30, currency: "USD", name: "SCATTERED CHARGES",
+        entryable: transaction
+      )
+    end
+
+    assert_no_difference -> { @family.recurring_transactions.count } do
+      @identifier.identify_recurring_patterns
+    end
+  end
+
+  test "short-month clamping still reads as the same day" do
+    account = @family.accounts.first
+    # A day-30 bill: Feb lands on the 28th, two away on the circle -- in.
+    [ Date.new(2026, 1, 30), Date.new(2026, 2, 28), Date.new(2026, 3, 30) ].each do |date|
+      transaction = Transaction.create!(category: categories(:food_and_drink))
+      account.entries.create!(
+        date: date, amount: 55, currency: "USD", name: "MONTH END BILL",
+        entryable: transaction
+      )
+    end
+
+    travel_to Date.new(2026, 4, 10) do
+      assert_difference -> { @family.recurring_transactions.count }, 1 do
+        @identifier.identify_recurring_patterns
+      end
+    end
   end
 
   test "a price change within tolerance stays one series" do

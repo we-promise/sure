@@ -334,24 +334,22 @@ class RecurringTransaction
         end
       end
 
-      # Check if days cluster together (within ~5 days variance)
-      # Uses circular distance to handle month-boundary wrapping (e.g., 28, 29, 30, 31, 1, 2)
+      # A recurring charge lands on the SAME day each month: every occurrence
+      # must sit within the matching tolerance (2 days) of the expected day
+      # on the circular calendar. Circular distance is what handles short
+      # months -- a day-30 bill's February charge on the 28th is 2 away, in.
+      #
+      # This replaced a standard-deviation test that averaged the drift and
+      # so accepted charges scattered across the 5th, 10th and 15th as one
+      # "recurring" pattern. Consistency is per-occurrence, not on average,
+      # and detection now agrees with the matcher about what "the same
+      # occurrence" means.
       def days_cluster_together?(days)
         return false if days.empty?
 
-        # Calculate median as reference point
-        median = calculate_expected_day(days)
+        expected = calculate_expected_day(days)
 
-        # Calculate circular distances from median
-        circular_distances = days.map { |day| circular_distance(day, median) }
-
-        # Calculate standard deviation of circular distances
-        mean_distance = circular_distances.sum.to_f / circular_distances.size
-        variance = circular_distances.map { |dist| (dist - mean_distance)**2 }.sum / circular_distances.size
-        std_dev = Math.sqrt(variance)
-
-        # Allow up to 5 days standard deviation
-        std_dev <= 5
+        days.all? { |day| circular_distance(day, expected) <= Schedule::DAY_MATCH_TOLERANCE }
       end
 
       # Circular day distance is owned by Schedule; kept as a private alias

@@ -16,6 +16,15 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_nil Planner.new(@family, user: @user).plan
   end
 
+  test "auto-detected inflows never define paydays" do
+    penny = create_series(name: "To Car Vault", amount: -0.01, due: Date.current + 2, income: true)
+    penny.update!(manual: false)
+    create_series(name: "Rent", amount: 2150, due: Date.current + 10)
+
+    assert_nil Planner.new(@family, user: @user).plan,
+               "a recurring one-cent transfer is income by sign and a paycheck by nothing"
+  end
+
   test "periods slice by paycheck and apportion bills to their due dates" do
     first_payday = Date.current + 3
     create_series(name: "Paycheck", amount: -1840, due: first_payday, preset: "weekly", income: true)

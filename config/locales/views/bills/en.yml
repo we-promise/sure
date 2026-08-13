@@ -45,7 +45,7 @@ en:
     paycheck:
       empty:
         title: Declare your income schedule
-        description: Add your paycheck as recurring income (use "This is income" in the add dialog) and this view will show which bills each paycheck needs to cover.
+        description: Add your paycheck with "This is income" in the add dialog, or mark a real paycheck transaction as recurring. Detected inflows never define your paydays on their own -- you do.
         action: Add income
       next_paycheck: Next paycheck
       bills_that_period: Bills that period
