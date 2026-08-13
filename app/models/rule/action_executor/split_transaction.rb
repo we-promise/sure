@@ -34,12 +34,26 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     return 0 unless config
 
     scope = transaction_scope.with_entry
+    # Resolved once per rule application (not per transaction) since the scope shares one family.
+    family_ids = {
+      categories: family.categories.pluck(:id).to_set,
+      merchants: family.merchants.pluck(:id).to_set,
+      tags: family.tags.pluck(:id).to_set
+    }
+
+    unless ignore_attribute_locks
+      # Filter by entry's locked_attributes, not transaction's
+      # Since excluded is on Entry, not Transaction, we need to check entries.locked_attributes
+      scope = scope.where.not(
+        Arel.sql("entries.locked_attributes ? 'excluded'")
+      )
+    end
 
     count_modified_resources(scope) do |txn|
       next false unless txn.splittable?
 
       entry = txn.entry
-      splits = self.class.build_splits(config, entry.amount, family)
+      splits = self.class.build_splits(config, entry.amount, family_ids)
       next false unless splits
 
       begin
@@ -80,9 +94,11 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       splits.each_with_index do |split, index|
         name = split["name"]
         share = parse_decimal(split["share"])
-        category_id = split["category_id"].presence
-        merchant_id = split["merchant_id"].presence
-        tag_ids = Array(split["tag_ids"]).reject(&:blank?)
+        # Form/JSON ids arrive as strings; family id sets are plucked as integers. Normalize
+        # to integers before comparing, otherwise every valid selection looks invalid.
+        category_id = split["category_id"].presence&.to_i
+        merchant_id = split["merchant_id"].presence&.to_i
+        tag_ids = Array(split["tag_ids"]).reject(&:blank?).map(&:to_i)
         position = index + 1
 
         errors << [ :split_name_required, { index: position } ] if name.blank?
@@ -128,17 +144,18 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     # specific matching transaction. Returns nil if the config can't be applied to this amount
     # (e.g. fixed amounts don't sum to this transaction's total) rather than raising, so the
     # caller can skip just this transaction and keep processing the rest of the scope.
-    def build_splits(config, entry_amount, family)
+    def build_splits(config, entry_amount, family_ids)
       mode = config["mode"]
       raw_splits = config["splits"]
       sign = entry_amount.negative? ? -1 : 1
       total_magnitude = entry_amount.abs
 
-      # Defensively re-resolve category/merchant/tag ids against the current family state rather
-      # than trusting the cached JSON — any of them may have been deleted since the rule was saved.
-      family_category_ids = family.categories.pluck(:id).to_set
-      family_merchant_ids = family.merchants.pluck(:id).to_set
-      family_tag_ids = family.tags.pluck(:id).to_set
+      # Ids are re-resolved against current family state (passed in by the caller, resolved once
+      # per rule application) rather than trusting the cached JSON — any of them may have been
+      # deleted since the rule was saved.
+      family_category_ids = family_ids[:categories]
+      family_merchant_ids = family_ids[:merchants]
+      family_tag_ids = family_ids[:tags]
 
       case mode
       when "fixed"
@@ -165,13 +182,13 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       end
 
       raw_splits.each_with_index.map do |split, index|
-        category_id = split["category_id"].presence
+        category_id = split["category_id"].presence&.to_i
         category_id = nil unless category_id && family_category_ids.include?(category_id)
 
-        merchant_id = split["merchant_id"].presence
+        merchant_id = split["merchant_id"].presence&.to_i
         merchant_id = nil unless merchant_id && family_merchant_ids.include?(merchant_id)
 
-        tag_ids = Array(split["tag_ids"]).reject(&:blank?) & family_tag_ids.to_a
+        tag_ids = Array(split["tag_ids"]).reject(&:blank?).map(&:to_i) & family_tag_ids.to_a
 
         {
           name: split["name"],
