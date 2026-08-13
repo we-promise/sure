@@ -15,7 +15,8 @@ class Provider::Anthropic < Provider
     # Use ENV[].presence rather than ENV.fetch(KEY, default) so the Setting
     # lookup is only performed when the ENV var is actually absent — otherwise
     # the default arg is evaluated eagerly on every call.
-    configured_model = ENV["ANTHROPIC_MODEL"].presence || Setting.anthropic_model
+    configured_model = ENV["ANTHROPIC_MODEL"].to_s.strip.presence ||
+                       Setting.anthropic_model.to_s.strip.presence
     configured_model.presence || DEFAULT_MODEL
   end
 

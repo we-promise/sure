@@ -62,6 +62,14 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     end
   end
 
+  test "effective_model ignores blank env model and falls back to setting" do
+    ClimateControl.modify("ANTHROPIC_MODEL" => "   ") do
+      Setting.stubs(:anthropic_model).returns(" claude-opus-4-7 ")
+
+      assert_equal "claude-opus-4-7", Provider::Anthropic.effective_model
+    end
+  end
+
   test "configured? reflects ENV and Setting presence" do
     ClimateControl.modify("ANTHROPIC_ACCESS_TOKEN" => nil, "ANTHROPIC_API_KEY" => nil) do
       Setting.stubs(:anthropic_access_token).returns(nil)

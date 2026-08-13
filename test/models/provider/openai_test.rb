@@ -17,6 +17,22 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "effective_model ignores blank env model and falls back to setting" do
+    ClimateControl.modify("OPENAI_MODEL" => "   ") do
+      Setting.stubs(:openai_model).returns(" gpt-oss:20b ")
+
+      assert_equal "gpt-oss:20b", Provider::Openai.effective_model
+    end
+  end
+
+  test "effective_model falls back to default when env and setting are blank" do
+    ClimateControl.modify("OPENAI_MODEL" => "") do
+      Setting.stubs(:openai_model).returns(" ")
+
+      assert_equal Provider::Openai::DEFAULT_MODEL, Provider::Openai.effective_model
+    end
+  end
+
   test "custom OpenAI-compatible chat failures are captured in debug log" do
     provider = Provider::Openai.new(
       "test-openai-token",

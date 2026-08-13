@@ -81,8 +81,8 @@ class Provider::Registry
 
         return nil unless access_token.present?
 
-        uri_base = ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
-        model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
+        uri_base = ENV["OPENAI_URI_BASE"].to_s.strip.presence || Setting.openai_uri_base.to_s.strip.presence
+        model = ENV["OPENAI_MODEL"].to_s.strip.presence || Setting.openai_model.to_s.strip.presence
 
         if uri_base.present? && model.blank?
           Rails.logger.error("Custom OpenAI provider configured without a model; please set OPENAI_MODEL or Setting.openai_model")
@@ -99,8 +99,8 @@ class Provider::Registry
 
         return nil unless access_token.present?
 
-        base_url = ENV["ANTHROPIC_BASE_URL"].presence || Setting.anthropic_base_url
-        model = ENV["ANTHROPIC_MODEL"].presence || Setting.anthropic_model
+        base_url = ENV["ANTHROPIC_BASE_URL"].to_s.strip.presence || Setting.anthropic_base_url.to_s.strip.presence
+        model = ENV["ANTHROPIC_MODEL"].to_s.strip.presence || Setting.anthropic_model.to_s.strip.presence
 
         Provider::Anthropic.new(access_token, base_url: base_url, model: model)
       end
