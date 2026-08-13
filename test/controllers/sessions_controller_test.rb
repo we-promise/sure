@@ -38,6 +38,31 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "login page offers passkey sign-in" do
+    AuthConfig.stubs(:passkey_login_enabled?).returns(true)
+
+    get new_session_url
+
+    assert_response :success
+    assert_select "button", text: I18n.t("sessions.new.passkey_button")
+    assert_select "[data-webauthn-authentication-conditional-value='true']"
+    assert_select "[data-webauthn-authentication-unsupported-message-value=?]", I18n.t("sessions.new.passkey_unsupported")
+    assert_select "[data-webauthn-authentication-error-fallback-value=?]", I18n.t("passkey_sessions.invalid_credential")
+    # Browsers only surface passkeys from autofill when the field carries the
+    # "webauthn" token.
+    assert_select "input[type=email][autocomplete='username webauthn']"
+  end
+
+  test "login page hides passkey sign-in when disabled" do
+    AuthConfig.stubs(:passkey_login_enabled?).returns(false)
+
+    get new_session_url
+
+    assert_response :success
+    assert_select "button", text: I18n.t("sessions.new.passkey_button"), count: 0
+    assert_select "input[type=email][autocomplete='email']"
+  end
+
   test "can sign in" do
     sign_in @user
     assert_redirected_to root_url
