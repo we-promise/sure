@@ -64,10 +64,27 @@ class Assistant::FunctionTest < ActiveSupport::TestCase
     assert_equal "object", schema[:type]
   end
 
+  test "keeps populated enum values verbatim, including literal objects and arrays" do
+    schema = {
+      status: { enum: [ { enum: [] }, [ "nested" ] ] },
+      order: { enum: [ "asc" ] }
+    }
+
+    pruned = @function.send(:prune_empty_enums, schema)
+
+    assert_equal [ { enum: [] }, [ "nested" ] ], pruned[:status][:enum]
+    assert_equal [ "asc" ], pruned[:order][:enum]
+  end
+
   test "no registered function emits an empty enum" do
     user = users(:family_admin)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
 
-    Assistant.function_classes(user).each do |function_class|
+    function_classes = Assistant.function_classes(user)
+    assert_empty Assistant::PREVIEW_FUNCTION_CLASSES - function_classes,
+      "expected preview functions to be included in the assertion"
+
+    function_classes.each do |function_class|
       definition = function_class.new(user).to_definition
       assert_no_empty_enums definition[:params_schema], function_class.name
     end

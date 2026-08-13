@@ -66,8 +66,13 @@ class Assistant::Function
         dropped_enum = false
 
         node.each do |key, value|
-          if key.to_sym == :enum && value.is_a?(Array) && value.empty?
-            dropped_enum = true
+          # Enum members are literal values, not subschemas; keep them verbatim
+          if key.to_sym == :enum && value.is_a?(Array)
+            if value.empty?
+              dropped_enum = true
+            else
+              pruned[key] = value
+            end
             next
           end
 
