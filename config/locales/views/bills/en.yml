@@ -23,7 +23,14 @@ en:
     views:
       aria_label: Bills views
       overview: Overview
+      calendar: Calendar
       all: All bills
+    calendar:
+      previous_month: Previous month
+      next_month: Next month
+      today: Today
+      month_totals: "%{expected} expected · %{paid} paid"
+      empty_month: No bills due this month.
     all:
       search_placeholder: Search bills
       any_status: Any status

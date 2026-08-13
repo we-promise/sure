@@ -6,11 +6,16 @@ class BillsController < ApplicationController
   # date and a real payment state, which is what lets overdue and partially
   # paid render at all.
   def index
-    @view = params[:view] == "all" ? "all" : "overview"
+    @view = %w[all calendar].include?(params[:view]) ? params[:view] : "overview"
 
-    if @view == "all"
+    case @view
+    when "all"
       load_all_series
       render :all
+      return
+    when "calendar"
+      load_calendar
+      render :calendar
       return
     end
 
@@ -104,6 +109,50 @@ class BillsController < ApplicationController
       turbo_frame_request? ? false : "settings"
     end
 
+    # Months are materialized on demand up to 13 months out (idempotent
+    # upserts, so navigation is free to re-visit); navigation caps there,
+    # which keeps every rendered chip a real, clickable occurrence.
+    CALENDAR_FORWARD_LIMIT_MONTHS = 13
+
+    def load_calendar
+      today = Date.current
+      @month = begin
+        Date.strptime(params[:month].to_s, "%Y-%m").beginning_of_month
+      rescue ArgumentError
+        today.beginning_of_month
+      end
+
+      limit = (today + CALENDAR_FORWARD_LIMIT_MONTHS.months).beginning_of_month
+      @month = limit if @month > limit
+      @at_forward_limit = @month >= limit
+
+      @grid_start = @month.beginning_of_week(:sunday)
+      @grid_end = @month.end_of_month.end_of_week(:sunday)
+
+      materialize_for_calendar(@grid_end) if @grid_end > today + 89
+
+      occurrences = Current.family.recurring_occurrences
+                           .where(recurring_transaction_id: payable_series_ids)
+                           .due_between(@grid_start, @grid_end)
+                           .includes(recurring_transaction: :merchant)
+                           .to_a
+      preload_allocation_sums(occurrences)
+
+      @by_day = occurrences.group_by(&:due_on)
+      month_occurrences = occurrences.select { |occurrence| occurrence.due_on.between?(@month, @month.end_of_month) }
+      @month_expected, @month_unconvertible = total_of(month_occurrences) { |occurrence| occurrence.resolved_expected_amount_money }
+      @month_paid, _ = total_of(month_occurrences) { |occurrence| occurrence.confirmed_allocated_money }
+    end
+
+    def materialize_for_calendar(through)
+      Current.family.recurring_transactions
+             .active
+             .where(id: payable_series_ids)
+             .find_each do |series|
+        RecurringTransaction::OccurrenceGenerator.new(series).generate!(through: through)
+      end
+    end
+
     def ytd_paid_total
       RecurringAllocation.confirmed
                          .joins(:recurring_occurrence)
@@ -116,21 +165,23 @@ class BillsController < ApplicationController
     # month, for every payable series (bills, subscriptions, and debt
     # payments alike). Inactive series ride along so their leftover open
     # occurrences can render as Dormant instead of haunting Past Due.
-    def payable_occurrences
+    def payable_series_ids
       debt_accounts = Account.where(accountable_type: %w[CreditCard Loan]).select(:id)
 
-      series_ids = Current.family.recurring_transactions
-                          .where(status: %w[active inactive])
-                          .where("amount > 0")
-                          .merge(
-                            RecurringTransaction.where(destination_account_id: nil)
-                                                .or(RecurringTransaction.where(destination_account_id: debt_accounts))
-                          )
-                          .accessible_by(Current.user)
-                          .select(:id)
+      Current.family.recurring_transactions
+             .where(status: %w[active inactive])
+             .where("amount > 0")
+             .merge(
+               RecurringTransaction.where(destination_account_id: nil)
+                                   .or(RecurringTransaction.where(destination_account_id: debt_accounts))
+             )
+             .accessible_by(Current.user)
+             .select(:id)
+    end
 
+    def payable_occurrences
       Current.family.recurring_occurrences
-             .where(recurring_transaction_id: series_ids)
+             .where(recurring_transaction_id: payable_series_ids)
              .where("due_on >= ? OR status = 'scheduled'", Date.current.beginning_of_month)
              .where("due_on <= ?", Date.current + 90)
              .includes(recurring_transaction: :merchant)

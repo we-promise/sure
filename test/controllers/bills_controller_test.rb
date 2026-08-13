@@ -204,6 +204,46 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Beta paused", response.body
   end
 
+  test "the calendar renders the month grid with paid and overdue states" do
+    paid_bill = create_bill(name: "Paid on time", amount: 40, expected_day_of_month: 5)
+    paid_occurrence = paid_bill.recurring_occurrences.find_by!(due_on: Date.current.beginning_of_month + 4)
+    RecurringTransaction::Allocator.new(paid_occurrence).allocate!(amount: "40")
+
+    overdue_day = [ Date.current - 6, Date.current.beginning_of_month ].max
+    create_bill(name: "Still owed", amount: 60,
+                expected_day_of_month: overdue_day.day,
+                last_occurrence_date: 2.months.ago.to_date,
+                next_expected_date: overdue_day)
+
+    get bills_url(view: "calendar")
+
+    assert_response :success
+    assert_match "Paid on time", response.body
+    assert_match "Still owed", response.body
+    assert_match Date.current.strftime("%B %Y"), response.body
+  end
+
+  test "the calendar materializes a far-future month on demand" do
+    create_bill(name: "Forward bill", amount: 25)
+    target = (Date.current + 6.months).beginning_of_month
+
+    get bills_url(view: "calendar", month: target.strftime("%Y-%m"))
+
+    assert_response :success
+    assert_match "Forward bill", response.body
+  end
+
+  test "the calendar caps forward navigation" do
+    create_bill(name: "Some bill", amount: 25)
+    beyond = (Date.current + 30.months).strftime("%Y-%m")
+
+    get bills_url(view: "calendar", month: beyond)
+
+    assert_response :success
+    limit_month = (Date.current + 13.months).beginning_of_month
+    assert_match limit_month.strftime("%B %Y"), response.body
+  end
+
   test "index renders an empty state with no bills" do
     get bills_url
 
