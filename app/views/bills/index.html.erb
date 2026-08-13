@@ -1,0 +1,45 @@
+<%= content_for :page_title, t(".title") %>
+
+<div class="space-y-4 pb-6 lg:pb-12">
+  <% if @overdue.empty? && @this_month.empty? && @later.empty? %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <%= render DS::EmptyState.new(
+            icon: "receipt",
+            title: t(".empty.title"),
+            description: t(".empty.description")
+          ) do |empty| %>
+        <% empty.with_action do %>
+          <%= render DS::Link.new(
+                text: t(".empty.action"),
+                icon: "search",
+                variant: "primary",
+                href: recurring_transactions_path
+              ) %>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <% if @total_due %>
+      <div class="bg-container rounded-xl shadow-border-xs p-4">
+        <p class="text-xs uppercase font-medium text-secondary"><%= t(".summary_label") %></p>
+        <p class="text-2xl font-medium text-primary privacy-sensitive mt-1">
+          <%= format_money(@total_due) %>
+        </p>
+        <p class="text-xs text-secondary mt-1">
+          <%= t(".summary_hint", count: @overdue.size + @this_month.size) %>
+        </p>
+        <% if @unconvertible_count.to_i.positive? %>
+          <p class="text-xs text-warning mt-1">
+            <%= t(".unconvertible", count: @unconvertible_count) %>
+          </p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
+      <%= render "bills/section", title: t(".overdue"), bills: @overdue, tone: :destructive %>
+      <%= render "bills/section", title: t(".this_month"), bills: @this_month %>
+      <%= render "bills/section", title: t(".later"), bills: @later %>
+    </div>
+  <% end %>
+</div>

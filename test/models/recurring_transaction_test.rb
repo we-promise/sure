@@ -1248,6 +1248,56 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     end
   end
 
+  # `calculate_next_expected_date` jumps to `last_occurrence_date.next_month`, so a
+  # payment posting earlier in the month than the expected day skips the occurrence
+  # still ahead this month: rent due on the 29th, last paid on the 6th, is stored as
+  # due next month. Bills must not repeat that to the user.
+  test "next_due_date corrects a stored date that skipped this month's occurrence" do
+    travel_to Date.new(2026, 8, 13) do
+      recurring = build_recurring(
+        expected_day_of_month: 29,
+        last_occurrence_date: Date.new(2026, 8, 6),
+        next_expected_date: Date.new(2026, 9, 29)
+      )
+
+      assert_equal Date.new(2026, 8, 29), recurring.next_due_date
+      assert_not recurring.overdue?
+    end
+  end
+
+  test "next_due_date leaves a correct stored date alone" do
+    travel_to Date.new(2026, 8, 13) do
+      recurring = build_recurring(
+        expected_day_of_month: 21,
+        last_occurrence_date: Date.new(2026, 7, 21),
+        next_expected_date: Date.new(2026, 8, 21)
+      )
+
+      assert_equal Date.new(2026, 8, 21), recurring.next_due_date
+    end
+  end
+
+  test "next_due_date does not advance an overdue bill past its due date" do
+    travel_to Date.new(2026, 8, 13) do
+      recurring = build_recurring(
+        expected_day_of_month: 5,
+        last_occurrence_date: Date.new(2026, 7, 5),
+        next_expected_date: Date.new(2026, 8, 5)
+      )
+
+      assert_equal Date.new(2026, 8, 5), recurring.next_due_date
+      assert recurring.overdue?
+    end
+  end
+
+  test "bills scope keeps expenses and drops income, transfers and paused rows" do
+    expense = build_recurring(name: "Rent", merchant: nil, amount: 1200).tap(&:save!)
+    build_recurring(name: "Paycheck", merchant: nil, amount: -2000).tap(&:save!)
+    build_recurring(name: "Paused", merchant: nil, amount: 40, status: "inactive").tap(&:save!)
+
+    assert_equal [ expense.id ], @family.recurring_transactions.bills.pluck(:id)
+  end
+
   test "display_name prefers the merchant over the free-text name" do
     assert_equal @merchant.name, build_recurring(merchant: @merchant, name: nil).display_name
     assert_equal "Rent", build_recurring(merchant: nil, name: "Rent").display_name

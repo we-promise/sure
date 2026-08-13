@@ -1,0 +1,17 @@
+<%# locals: (title:, bills:, tone: :default) %>
+
+<% if bills.any? %>
+  <div class="rounded-xl bg-container-inset space-y-1 p-1">
+    <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium uppercase <%= tone == :destructive ? "text-destructive" : "text-secondary" %>">
+      <p><%= title %></p>
+      <span class="text-subdued">&middot;</span>
+      <p><%= bills.size %></p>
+    </div>
+
+    <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+      <% bills.each do |bill| %>
+        <%= render "bills/bill", bill: bill %>
+      <% end %>
+    </div>
+  </div>
+<% end %>

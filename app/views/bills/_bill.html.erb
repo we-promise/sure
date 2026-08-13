@@ -1,0 +1,33 @@
+<%# locals: (bill:) %>
+
+<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4">
+  <div class="flex items-center gap-3 lg:gap-4 min-w-0 flex-1">
+    <% if bill.merchant&.logo_url.present? %>
+      <%= image_tag Setting.transform_brand_fetch_url(bill.merchant.logo_url),
+            class: "w-9 h-9 rounded-full shrink-0",
+            loading: "lazy" %>
+    <% else %>
+      <%= render DS::FilledIcon.new(
+            variant: :text,
+            text: bill.display_name,
+            size: "lg",
+            rounded: true
+          ) %>
+    <% end %>
+
+    <div class="min-w-0">
+      <p class="text-primary text-sm font-medium truncate"><%= bill.display_name %></p>
+      <p class="text-xs <%= bill.overdue? ? "text-destructive" : "text-secondary" %>">
+        <%= bills_due_label(bill) %>
+      </p>
+    </div>
+  </div>
+
+  <p class="text-sm font-medium text-primary privacy-sensitive shrink-0">
+    <%= format_money(bill.amount_money) %>
+  </p>
+
+  <div class="shrink-0">
+    <%= render "recurring_transactions/pay_action", recurring_transaction: bill %>
+  </div>
+</div>

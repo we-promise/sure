@@ -119,6 +119,46 @@ class RecurringTransaction < ApplicationRecord
 
   scope :for_family, ->(family) { where(family: family) }
   scope :expected_soon, -> { active.where("next_expected_date <= ?", 1.month.from_now) }
+
+  # A bill is an active recurring *expense* you owe someone. Transfers are internal
+  # moves between your own accounts, and income is not owed, so neither belongs on a
+  # list of things to pay. Expenses are stored positive, matching the convention
+  # `Insight::Generators::SubscriptionAuditGenerator` already relies on.
+  #
+  # Deliberately no minimum amount: a threshold would be an arbitrary number that is
+  # wrong in some currency. A trivial row the user does not consider a bill is
+  # handled by the existing pause action, which is what it is for.
+  scope :bills, -> { active.where(destination_account_id: nil).where("amount > 0") }
+
+  # The stored `next_expected_date` can sit a whole cycle too far out.
+  # `calculate_next_expected_date` always jumps to `last_occurrence_date.next_month`, so
+  # a payment that posts earlier in the month than the bill's expected day skips the
+  # occurrence still ahead in the current month: a rent bill due on the 29th, last paid
+  # on the 6th, is recorded as due *next* month. Compare
+  # `calculate_next_expected_date_from_today` a few lines up, which handles exactly that
+  # case correctly.
+  #
+  # Bills has to answer "what do I owe now", so it derives the date instead of trusting
+  # the stored one. Correcting what gets persisted changes what the Identifier and the
+  # Cleaner write, so it belongs with the scheduling work rather than here.
+  def next_due_date
+    return next_expected_date if next_expected_date <= Date.current
+
+    [ next_expected_date, self.class.calculate_next_expected_date_from_today(expected_day_of_month) ].min
+  end
+
+  def overdue?
+    next_due_date < Date.current
+  end
+
+  # How many whole cycles have elapsed since this was due. Monthly is the only cadence
+  # the model supports today, so a missed quarterly bill still reads as one cycle; this
+  # becomes exact once Schedule lands.
+  def cycles_overdue
+    return 0 unless overdue?
+
+    ((Date.current - next_expected_date).to_i / 30) + 1
+  end
   scope :accessible_by, ->(user) {
     accessible_account_ids = Account.accessible_by(user).select(:id)
     # A recurring row is accessible when:

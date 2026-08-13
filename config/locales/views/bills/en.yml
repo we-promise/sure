@@ -1,0 +1,27 @@
+---
+en:
+  bills:
+    due_label:
+      overdue:
+        one: "Overdue by 1 day, was due %{date}"
+        other: "Overdue by %{count} days, was due %{date}"
+      today: "Due today"
+      upcoming:
+        one: "Due tomorrow, %{date}"
+        other: "Due in %{count} days, %{date}"
+    index:
+      title: Bills
+      summary_label: Due this month
+      summary_hint:
+        one: "1 bill to pay"
+        other: "%{count} bills to pay"
+      unconvertible:
+        one: "1 bill is not included, no exchange rate available"
+        other: "%{count} bills are not included, no exchange rate available"
+      overdue: Overdue
+      this_month: Rest of this month
+      later: Later
+      empty:
+        title: No bills yet
+        description: Bills are your recurring expenses. Sure finds them automatically from your transaction history, and you can add a payment link to each one so you can pay straight from here.
+        action: Find recurring transactions
