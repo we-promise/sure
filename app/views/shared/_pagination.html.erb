@@ -1,7 +1,9 @@
 <%# locals: (pagy:) %>
 
 <nav class="flex w-full items-center justify-between">
-  <div class="flex items-center gap-1 mr-3">
+  <%# min-w-0 so the series pill can actually shrink below its content width;
+      without it the flex item keeps its intrinsic size and overflows the nav. %>
+  <div class="flex min-w-0 items-center gap-1 mr-3">
     <div>
       <% if pagy.prev %>
         <%= link_to pagy_url_for(pagy, pagy.prev),
@@ -15,22 +17,35 @@
         </div>
       <% end %>
     </div>
-    <div class="rounded-xl p-1 bg-container-inset">
-      <% pagy.series.each do |series_item| %>
+    <%# A flex row, not a block: as a block the inline-flex page links flowed as
+        inline content and wrapped like words, dropping the last page onto a
+        second line. `overflow-x-auto` is the backstop for a container too
+        narrow even for the reduced set (see PaginationHelper). %>
+    <% series = pagy.series %>
+    <% mobile_plan = pagination_mobile_plan(series) %>
+    <div class="rounded-xl p-1 bg-container-inset flex items-center flex-nowrap overflow-x-auto max-w-full">
+      <% series.each_with_index do |series_item, index| %>
+        <% mobile_state = mobile_plan[index] %>
+        <%# Stands in for the run of pages hidden from here on a phone, so the
+            remaining numbers don't read as adjacent. Mirrors the real gap's
+            markup and disappears from `sm` up, where the run is shown. %>
+        <% if mobile_state == :collapsed %>
+          <span class="inline-flex sm:hidden shrink-0 items-center px-2 py-1 text-sm font-medium text-secondary" aria-hidden="true">...</span>
+        <% end %>
         <% if series_item.is_a?(Integer) %>
           <%= link_to pagy_url_for(pagy, series_item),
                 data: { turbo_frame: :_top },
-                class: "rounded-md px-2 py-1 inline-flex items-center text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
+                class: class_names("rounded-md px-2 py-1 shrink-0 items-center text-sm font-medium text-secondary hover:border-secondary hover:text-secondary", mobile_state == :visible ? "inline-flex" : "hidden sm:inline-flex") do %>
             <%= series_item %>
           <% end %>
         <% elsif series_item.is_a?(String) %>
           <%= link_to pagy_url_for(pagy, series_item),
                 data: { turbo_frame: :_top },
-                class: "rounded-md px-2 py-1 bg-container border border-secondary shadow-xs inline-flex items-center text-sm font-medium text-primary" do %>
+                class: "rounded-md px-2 py-1 bg-container border border-secondary shadow-xs inline-flex shrink-0 items-center text-sm font-medium text-primary" do %>
             <%= series_item %>
           <% end %>
         <% elsif series_item == :gap %>
-          <span class="inline-flex items-center px-2 py-1 text-sm font-medium text-secondary">...</span>
+          <span class="inline-flex shrink-0 items-center px-2 py-1 text-sm font-medium text-secondary">...</span>
         <% end %>
       <% end %>
     </div>
