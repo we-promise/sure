@@ -96,11 +96,30 @@ export default class extends Controller {
       const operatorSelect = row.querySelector("select[name*='[operator]']");
       if (typeSelect?.value !== "transaction_amount" || operatorSelect?.value !== "=") continue;
 
+      // Mirrors Rule::Action#exact_amount_condition_present?, which only accepts this
+      // condition at the top level or nested inside "and" compounds — an "or"/"any"
+      // compound doesn't guarantee it holds for every matching transaction.
+      if (!this.#isWithinAndOnlyAncestry(row)) continue;
+
       const valueInput = row.querySelector("[name*='[value]']");
       const amount = Number.parseFloat(valueInput?.value);
       if (Number.isFinite(amount)) return amount;
     }
 
     return null;
+  }
+
+  #isWithinAndOnlyAncestry(row) {
+    let subList = row.parentElement?.closest("[data-rule--conditions-target='subConditionsList']");
+
+    while (subList) {
+      const compoundRow = subList.closest("[data-controller~='rule--conditions']");
+      const operatorSelect = compoundRow?.querySelector("select[name*='[operator]']");
+      if (operatorSelect?.value !== "and") return false;
+
+      subList = compoundRow.parentElement?.closest("[data-rule--conditions-target='subConditionsList']");
+    }
+
+    return true;
   }
 }

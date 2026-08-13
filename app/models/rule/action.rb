@@ -89,7 +89,7 @@ class Rule::Action < ApplicationRecord
     # would just silently skip them one by one). Require an exact "Amount =" condition,
     # ANDed in (an "any"/OR compound doesn't guarantee it for every match).
     def exact_amount_condition_present?(conditions = rule.conditions)
-      conditions.any? do |condition|
+      conditions.reject(&:marked_for_destruction?).any? do |condition|
         if condition.compound?
           condition.operator == "and" && exact_amount_condition_present?(condition.sub_conditions)
         else
