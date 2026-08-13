@@ -1,14 +1,36 @@
 class RecurringTransactionsController < ApplicationController
   layout "settings"
 
-  before_action :set_recurring_transaction, only: %i[edit update toggle_status destroy]
+  before_action :set_recurring_transaction, only: %i[edit update toggle_status destroy confirm dismiss]
 
   def index
-    @recurring_transactions = Current.family.recurring_transactions
-                                    .accessible_by(Current.user)
-                                    .includes(:merchant)
-                                    .order(status: :asc, next_expected_date: :asc)
+    scope = Current.family.recurring_transactions
+                  .accessible_by(Current.user)
+                  .includes(:merchant)
+
+    # Fresh detections wait in their own review strip until confirmed; they
+    # are not real bills yet and would only be noise inside the main table.
+    @suggested = scope.suggested.order(next_expected_date: :asc)
+    @recurring_transactions = scope.where.not(status: :suggested)
+                                   .order(status: :asc, next_expected_date: :asc)
     @family = Current.family
+  end
+
+  # Detection proposes, the user disposes: confirming makes the suggestion a
+  # real, active bill; dismissing tombstones it as `ended`, which the
+  # Identifier treats as "never suggest this again".
+  def confirm
+    @recurring_transaction.update!(status: "active")
+
+    flash[:notice] = t("recurring_transactions.confirmed")
+    redirect_to recurring_transactions_path
+  end
+
+  def dismiss
+    @recurring_transaction.update!(status: "ended")
+
+    flash[:notice] = t("recurring_transactions.dismissed")
+    redirect_to recurring_transactions_path
   end
 
   def update_settings

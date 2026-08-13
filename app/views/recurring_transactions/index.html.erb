@@ -57,7 +57,46 @@
     </div>
 
     <div class="bg-container rounded-xl shadow-border-xs p-4">
-      <% if @recurring_transactions.empty? %>
+      <% if @suggested.any? %>
+        <div class="rounded-xl bg-container-inset space-y-1 p-1 mb-4">
+          <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+            <p><%= t("recurring_transactions.suggested.title") %></p>
+            <span class="text-subdued">&middot;</span>
+            <p><%= @suggested.count %></p>
+          </div>
+
+          <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
+            <% @suggested.each do |suggestion| %>
+              <div class="flex items-center justify-between gap-4 px-4 py-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-primary truncate"><%= suggestion.display_name %></p>
+                  <p class="text-xs text-secondary">
+                    <span class="privacy-sensitive"><%= format_money(-suggestion.amount_money) %></span>
+                    &middot; <%= frequency_label(suggestion) %>
+                    &middot; <%= t("recurring_transactions.suggested.seen_count", count: suggestion.occurrence_count) %>
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <%= render DS::Link.new(
+                    text: t("recurring_transactions.suggested.confirm"),
+                    variant: "primary",
+                    href: confirm_recurring_transaction_path(suggestion),
+                    method: :post
+                  ) %>
+                  <%= render DS::Link.new(
+                    text: t("recurring_transactions.suggested.dismiss"),
+                    variant: "ghost",
+                    href: dismiss_recurring_transaction_path(suggestion),
+                    method: :post
+                  ) %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <% if @recurring_transactions.empty? && @suggested.empty? %>
         <%= render DS::EmptyState.new(
           icon: "repeat",
           title: t("recurring_transactions.empty.title"),
@@ -73,7 +112,7 @@
             ) %>
           <% end %>
         <% end %>
-      <% else %>
+      <% elsif @recurring_transactions.any? %>
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
         <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
           <p><%= t("recurring_transactions.title") %></p>
@@ -155,15 +194,9 @@
                   <%= l(recurring_transaction.last_occurrence_date, format: :short) %>
                 </td>
                 <td class="py-3 px-2 text-sm">
-                  <% if recurring_transaction.active? %>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-success theme-dark:bg-green-tint-10">
-                      <%= t("recurring_transactions.status.active") %>
-                    </span>
-                  <% else %>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-inset text-primary">
-                      <%= t("recurring_transactions.status.inactive") %>
-                    </span>
-                  <% end %>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= recurring_status_badge_classes(recurring_transaction.status) %>">
+                    <%= t("recurring_transactions.status.#{recurring_transaction.status}") %>
+                  </span>
                 </td>
                 <td class="py-3 px-2 text-sm text-right">
                   <div class="flex items-center justify-end gap-2">

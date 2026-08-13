@@ -106,6 +106,18 @@ en:
     status:
       active: Active
       inactive: Inactive
+      suggested: Suggested
+      paused: Paused
+      ended: Ended
+    suggested:
+      title: Possible new bills
+      seen_count:
+        one: "seen once"
+        other: "seen %{count} times"
+      confirm: Add bill
+      dismiss: Not a bill
+    confirmed: Bill added to your recurring transactions
+    dismissed: "Dismissed. This pattern won't be suggested again."
     badges:
       manual: Manual
     transfer_marked_as_recurring: Transfer marked as recurring

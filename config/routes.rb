@@ -506,6 +506,8 @@ Rails.application.routes.draw do
 
     member do
       match :toggle_status, via: [ :get, :post ]
+      post :confirm
+      post :dismiss
     end
   end
 

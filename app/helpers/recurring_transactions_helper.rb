@@ -3,6 +3,17 @@ module RecurringTransactionsHelper
     RecurringTransaction::FrequencyPreset.label(recurring_transaction)
   end
 
+  def recurring_status_badge_classes(status)
+    case status.to_s
+    when "active"
+      "bg-green-50 text-success theme-dark:bg-green-tint-10"
+    when "suggested"
+      "bg-warning/10 text-warning"
+    else
+      "bg-surface-inset text-primary"
+    end
+  end
+
   def frequency_preset_options(recurring_transaction)
     options = RecurringTransaction::FrequencyPreset::PRESETS.map do |preset|
       [ t("recurring_transactions.frequency_presets.#{preset}"), preset ]
