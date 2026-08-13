@@ -78,6 +78,7 @@ class PagesController < ApplicationController
   end
 
   def changelog
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.changelog"), nil ] ]
     @release_notes = github_provider.fetch_latest_release_notes
 
     # Fallback if no release notes are available
@@ -95,6 +96,7 @@ class PagesController < ApplicationController
   end
 
   def feedback
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.feedback"), nil ] ]
     render layout: "settings"
   end
 
@@ -471,6 +473,12 @@ class PagesController < ApplicationController
         {
           date: month_start,
           label: I18n.l(month_start, format: :short_month_year),
+          # Fallback for the axis when the full label does not fit its band.
+          # `short_month_year` is only short in some locales — "Mar 2026" in
+          # English, but "Mar de 2026" in ca/es/pt, which is wide enough to
+          # collide with its neighbours on a phone. The bar chart measures the
+          # rendered labels and drops to this when they overlap.
+          short_label: I18n.l(month_start, format: "%b"),
           income: totals.income_money.amount.to_f.round(2),
           expense: totals.expense_money.amount.to_f.round(2),
           highlighted: month_start == selected_month,

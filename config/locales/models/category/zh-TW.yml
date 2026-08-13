@@ -1,0 +1,29 @@
+---
+zh-TW:
+  models:
+    category:
+      uncategorized: 未分類
+      other_investments: 其他投資
+      investment_contributions: 投資投入金額
+      defaults:
+        income: 收入
+        food_and_drink: 餐飲
+        groceries: 生鮮雜貨
+        shopping: 購物
+        transportation: 交通
+        travel: 旅遊
+        entertainment: 娛樂
+        healthcare: 醫療保健
+        personal_care: 個人保養
+        home_improvement: 居家修繕
+        mortgage_rent: 房貸／房租
+        utilities: 水電瓦斯
+        subscriptions: 訂閱
+        insurance: 保險
+        sports_and_fitness: 運動與健身
+        gifts_and_donations: 禮物與捐款
+        taxes: 稅金
+        loan_payments: 貸款還款
+        services: 服務
+        fees: 手續費
+        savings_and_investments: 儲蓄與投資

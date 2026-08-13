@@ -5,7 +5,18 @@
     </div>
     <div class="min-w-0 flex-1">
       <h1 class="text-2xl font-semibold text-primary break-words"><%= @goal.name %></h1>
-      <p class="text-sm text-secondary mt-1 privacy-sensitive"><%= @goal.header_summary %></p>
+      <%# Each segment is its own nowrap span so a short trailing one — "184 days
+          left" — moves to the next line whole instead of breaking after "days".
+          The first segment carries the target and a long-format date, so it is
+          left free to wrap; pinning it would overflow a narrow screen. %>
+      <p class="text-sm text-secondary mt-1 privacy-sensitive">
+        <%= safe_join(
+              @goal.header_summary_parts.map.with_index { |part, i|
+                tag.span(part, class: ("whitespace-nowrap" unless i.zero?))
+              },
+              " · "
+            ) %>
+      </p>
       <% last_days = @goal.last_matched_pledge_days_ago %>
       <% unless last_days.nil? %>
         <p class="text-xs text-subdued mt-0.5">
