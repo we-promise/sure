@@ -28,6 +28,45 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal @groceries_category, transaction_entry.transaction.category
   end
 
+  test "split_transaction rule end to end" do
+    transaction_entry = create_transaction(
+      date: Date.current,
+      amount: 100,
+      account: @account,
+      name: "Netflix+Hulu Bundle"
+    )
+
+    hulu_category = @family.categories.create!(name: "Streaming")
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Netflix+Hulu Bundle"),
+        Rule::Condition.new(condition_type: "transaction_amount", operator: "=", value: 100)
+      ],
+      actions: [
+        Rule::Action.new(
+          action_type: "split_transaction",
+          value: {
+            mode: "fixed",
+            splits: [
+              { name: "Netflix", share: "70", category_id: @groceries_category.id },
+              { name: "Hulu", share: "30", category_id: hulu_category.id }
+            ]
+          }.to_json
+        )
+      ]
+    )
+
+    rule.apply
+
+    transaction_entry.reload
+    assert transaction_entry.split_parent?
+    assert_equal [ 30, 70 ], transaction_entry.child_entries.order(:amount).pluck(:amount).map(&:to_i)
+  end
+
   test "compound rule" do
     transaction_entry1 = create_transaction(date: Date.current, amount: 50, account: @account, merchant: @whole_foods_merchant)
     transaction_entry2 = create_transaction(date: Date.current, amount: 100, account: @account, merchant: @whole_foods_merchant)

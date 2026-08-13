@@ -5,6 +5,17 @@ de:
     no_condition: Keine Bedingung
     actions:
       value_placeholder: Wert eingeben
+      split:
+        mode_fixed: Fester Betrag
+        mode_percentage: Prozent
+        add_split: Split hinzufügen
+        name_placeholder: Name des Splits
+        no_merchant: Kein Händler
+        tags_hint: "Strg/Cmd gedrückt halten, um mehrere Tags auszuwählen"
+        fixed_mode_hint: "Feste Beträge funktionieren nur zuverlässig, wenn du zusätzlich eine Bedingung mit einem exakten Transaktionsbetrag hinzufügst (z. B. Betrag = 42,00), da jede passende Transaktion denselben Gesamtbetrag haben muss, damit die Anteile aufgehen."
+        summary:
+          one: "%{count} Split (%{mode})"
+          other: "%{count} Splits (%{mode})"
     apply_all:
       button: Alle anwenden
       confirm_title: Alle Regeln anwenden
