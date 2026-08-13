@@ -766,6 +766,8 @@ RSpec.configure do |config|
               name: { type: :string, nullable: true },
               manual: { type: :boolean },
               payment_url: { type: :string, nullable: true, description: 'Link to the biller portal where this bill is paid. Only http and https are accepted; a bare host is stored as https.' },
+              autopay: { type: :boolean, description: 'Whether this bill pays itself automatically.' },
+              notes: { type: :string, nullable: true, description: 'Free-text notes shown alongside the bill.' },
               expected_amount_min: { type: :string, nullable: true },
               expected_amount_min_cents: { type: :integer, nullable: true, description: 'Minimum expected amount in currency minor units' },
               expected_amount_max: { type: :string, nullable: true },
