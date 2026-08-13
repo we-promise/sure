@@ -109,6 +109,25 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert occurrence.reload.paid?
   end
 
+  test "a months-deep backlog matches each payment to its own occurrence" do
+    # The Curbside bug: every overdue occurrence's window reaches today, so
+    # without nearest-occurrence assignment each exact payment gains
+    # same-series runner-ups and demotes to a discarded suggestion.
+    series = create_series(name: "CURBSIDE CUTS & SHAVE", amount: 150, day_offset: -19)
+    RecurringTransaction::OccurrenceGenerator.new(series).backfill!(from: Date.current - 100)
+
+    past = series.recurring_occurrences.where("due_on <= ?", Date.current).order(:due_on).to_a
+    assert_operator past.size, :>=, 3
+    past.each { |occurrence| create_entry(amount: 150, date: occurrence.due_on, name: "CURBSIDE CUTS & SHAVE") }
+
+    @matcher.run_backfill!
+
+    past.each do |occurrence|
+      assert occurrence.reload.paid?, "#{occurrence.due_on} must close against its own payment"
+      assert_equal occurrence.due_on, occurrence.allocations.sole.paid_on
+    end
+  end
+
   test "backfill mode writes confirmed history only, never suggestions" do
     series = create_series(name: "CITY WATER", amount: 80, day_offset: -7)
     exact_series = create_series(name: "POWER CO", amount: 60, day_offset: 2)

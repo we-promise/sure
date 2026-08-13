@@ -143,7 +143,7 @@ class RecurringTransaction
         rejected = rejected_pairs
         allocated_entry_ids = confirmed_entry_ids
 
-        entries_for(occurrences, include_closed_window).flat_map do |entry|
+        candidates = entries_for(occurrences, include_closed_window).flat_map do |entry|
           occurrences.filter_map do |occurrence|
             series = occurrence.recurring_transaction
             next if rejected.include?([ series.id, entry.id ])
@@ -157,6 +157,21 @@ class RecurringTransaction
             Candidate.new(occurrence: occurrence, entry: entry, confidence: confidence, signals: signals)
           end
         end
+
+        prune_to_nearest_per_series(candidates)
+      end
+
+      # Within ONE series, an entry pairs only with its nearest open
+      # occurrence. Without this, the overdue window extension makes months
+      # of backlogged occurrences all reach "today", every payment gains
+      # same-series runner-ups inside the ambiguity margin, and a perfect
+      # July-25th-for-the-July-25th-bill match gets demoted to a suggestion.
+      # The ambiguity guard exists for CROSS-series twins; same-series
+      # assignment is date arithmetic, not a judgment call.
+      def prune_to_nearest_per_series(candidates)
+        candidates.group_by { |candidate| [ candidate.entry.id, candidate.occurrence.recurring_transaction_id ] }
+                  .values
+                  .map { |group| group.min_by { |candidate| (candidate.entry.date - candidate.occurrence.effective_due_on).to_i.abs } }
       end
 
       def open_occurrences
