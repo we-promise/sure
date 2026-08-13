@@ -6,7 +6,7 @@ class BillsController < ApplicationController
   # date and a real payment state, which is what lets overdue and partially
   # paid render at all.
   def index
-    @view = %w[all calendar].include?(params[:view]) ? params[:view] : "overview"
+    @view = %w[all calendar paycheck].include?(params[:view]) ? params[:view] : "overview"
 
     case @view
     when "all"
@@ -16,6 +16,10 @@ class BillsController < ApplicationController
     when "calendar"
       load_calendar
       render :calendar
+      return
+    when "paycheck"
+      @plan = RecurringTransaction::PaycheckPlanner.new(Current.family, user: Current.user).plan
+      render :paycheck
       return
     end
 

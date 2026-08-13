@@ -3,6 +3,7 @@
   <%= render DS::SegmentedControl.new(aria_label: t("bills.views.aria_label")) do |control| %>
     <% control.with_segment(t("bills.views.overview"), active: active == "overview", href: bills_path) %>
     <% control.with_segment(t("bills.views.calendar"), active: active == "calendar", href: bills_path(view: "calendar")) %>
+    <% control.with_segment(t("bills.views.paycheck"), active: active == "paycheck", href: bills_path(view: "paycheck")) %>
     <% control.with_segment(t("bills.views.all"), active: active == "all", href: bills_path(view: "all")) %>
   <% end %>
 

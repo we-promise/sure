@@ -21,7 +21,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # and a paused row was explicitly set aside, so none of them belong on the list.
   test "index excludes income and inactive rows but shows debt payments" do
     create_bill(name: "Real bill", amount: 50)
-    create_bill(name: "Paycheck", amount: -2000)
+    create_bill(name: "Salary deposit", amount: -2000)
     create_bill(name: "Paused bill", amount: 30, status: "inactive")
     # A recurring transfer into a credit card is a real obligation with a
     # real due date -- it belongs on the pay-run page, marked as what it is.
@@ -37,7 +37,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Real bill", response.body
     assert_match "Card payment", response.body
     assert_match I18n.t("bills.debt_payment"), response.body
-    assert_no_match "Paycheck", response.body
+    assert_no_match "Salary deposit", response.body
     assert_no_match "Paused bill", response.body
     assert_no_match "Moved to savings", response.body
   end
@@ -242,6 +242,27 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     limit_month = (Date.current + 13.months).beginning_of_month
     assert_match limit_month.strftime("%B %Y"), response.body
+  end
+
+  test "the paycheck view prompts for income, then plans around it" do
+    create_bill(name: "Rent", amount: 2150)
+
+    get bills_url(view: "paycheck")
+    assert_response :success
+    assert_match I18n.t("bills.paycheck.empty.title"), response.body
+
+    payday = Date.current + 3
+    @family.recurring_transactions.create!(
+      name: "Paycheck", account: accounts(:depository), amount: -1840, currency: "USD",
+      bill_type: "income", expected_day_of_month: payday.day, anchor_date: payday,
+      last_occurrence_date: payday, next_expected_date: payday, status: "active", manual: true
+    )
+
+    get bills_url(view: "paycheck")
+    assert_response :success
+    assert_match I18n.t("bills.paycheck.paycheck_of", date: I18n.l(payday, format: :long)), response.body
+    assert_match "Rent", response.body
+    assert_match I18n.t("bills.paycheck.remaining_after_bills"), response.body
   end
 
   test "index renders an empty state with no bills" do

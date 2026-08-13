@@ -24,7 +24,22 @@ en:
       aria_label: Bills views
       overview: Overview
       calendar: Calendar
+      paycheck: Paycheck
       all: All bills
+    paycheck:
+      empty:
+        title: Declare your income schedule
+        description: Add your paycheck as recurring income (use "This is income" in the add dialog) and this view will show which bills each paycheck needs to cover.
+        action: Add income
+      before_next_paycheck: Before your next paycheck
+      paycheck_of: "Paycheck %{date}"
+      period_range: "%{from} – %{to}"
+      and_beyond: onward
+      due_here: "Due %{date}"
+      set_aside_for: "Set aside for %{date}"
+      nothing_due: Nothing due this period.
+      remaining_after_bills: Remaining after bills
+      trough_warning: "This period comes up short. %{bill} is the largest obligation here — consider moving its set-aside."
     calendar:
       previous_month: Previous month
       next_month: Next month

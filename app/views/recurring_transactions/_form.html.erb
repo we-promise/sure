@@ -29,6 +29,12 @@
             Current.user.accessible_accounts.visible.alphabetically,
             :id, :name,
             { label: t(".account_label"), include_blank: t(".account_blank") } %>
+
+      <label class="flex items-start gap-2 cursor-pointer">
+        <%= check_box_tag "recurring_transaction[is_income]", "1", false, class: "checkbox checkbox--light mt-0.5" %>
+        <span class="text-sm text-primary"><%= t(".is_income_label") %></span>
+      </label>
+      <p class="text-xs text-secondary"><%= t(".is_income_hint") %></p>
     <% end %>
 
     <div class="space-y-2">

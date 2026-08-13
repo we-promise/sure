@@ -198,7 +198,7 @@ class RecurringTransactionsController < ApplicationController
     def new_recurring_transaction_params
       params.require(:recurring_transaction).permit(
         :name, :amount, :account_id, :first_due_on, :frequency_preset,
-        :payment_url, :autopay, :notes
+        :payment_url, :autopay, :notes, :is_income
       )
     end
 
@@ -207,9 +207,14 @@ class RecurringTransactionsController < ApplicationController
       account = Current.user.accessible_accounts.find_by(id: attrs[:account_id])
       due = Date.parse(attrs[:first_due_on].to_s) rescue nil
 
+      is_income = ActiveModel::Type::Boolean.new.cast(attrs[:is_income]) || false
+      amount = BigDecimal(attrs[:amount].to_s.presence || "0").abs
+      amount = -amount if is_income
+
       recurring = Current.family.recurring_transactions.new(
         name: attrs[:name],
-        amount: attrs[:amount],
+        amount: amount,
+        bill_type: is_income ? "income" : "bill",
         account: account,
         currency: account&.currency || Current.family.currency,
         payment_url: attrs[:payment_url],

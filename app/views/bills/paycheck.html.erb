@@ -1,0 +1,94 @@
+<%= content_for :page_title, t("bills.index.title") %>
+
+<div class="space-y-4 pb-6 lg:pb-12">
+  <%= render "bills/view_switcher", active: "paycheck" %>
+
+  <% if @plan.nil? %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <%= render DS::EmptyState.new(
+            icon: "calendar-clock",
+            title: t(".empty.title"),
+            description: t(".empty.description")
+          ) do |empty| %>
+        <% empty.with_action do %>
+          <%= render DS::Link.new(
+                text: t(".empty.action"),
+                icon: "plus",
+                variant: "primary",
+                href: new_recurring_transaction_path,
+                frame: :modal
+              ) %>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="space-y-3">
+      <% @plan.each_with_index do |period, index| %>
+        <div class="bg-container rounded-xl shadow-border-xs">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-divider">
+            <div>
+              <p class="text-sm font-medium text-primary">
+                <% if index.zero? && !period.income.positive? %>
+                  <%= t(".before_next_paycheck") %>
+                <% else %>
+                  <%= t(".paycheck_of", date: l(period.starts_on, format: :long)) %>
+                <% end %>
+              </p>
+              <p class="text-xs text-secondary">
+                <%= t(".period_range", from: l(period.starts_on, format: :short), to: l(period.ends_on, format: :short)) %>
+                <% if period.final %>&middot; <%= t(".and_beyond") %><% end %>
+              </p>
+            </div>
+            <div class="text-right">
+              <% if period.income.positive? %>
+                <p class="text-sm font-medium text-success privacy-sensitive">
+                  +<%= format_money(Money.new(period.income, Current.family.currency)) %>
+                </p>
+              <% end %>
+            </div>
+          </div>
+
+          <% if period.items.any? %>
+            <div class="divide-y divide-divider">
+              <% period.items.each do |item| %>
+                <% series = item.occurrence.recurring_transaction %>
+                <div class="flex items-center justify-between gap-3 px-4 py-2">
+                  <div class="min-w-0">
+                    <p class="text-sm text-primary truncate">
+                      <%= link_to series.display_name, recurring_occurrence_path(item.occurrence),
+                            data: { turbo_frame: :modal }, class: "hover:underline" %>
+                    </p>
+                    <p class="text-xs text-secondary">
+                      <% if item.due_in_period %>
+                        <%= t(".due_here", date: l(item.occurrence.due_on, format: :short)) %>
+                      <% else %>
+                        <%= t(".set_aside_for", date: l(item.occurrence.due_on, format: :short)) %>
+                      <% end %>
+                    </p>
+                  </div>
+                  <p class="text-sm text-primary privacy-sensitive shrink-0">
+                    <%= format_money(Money.new(item.share, Current.family.currency)) %>
+                  </p>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="px-4 py-3 text-sm text-secondary"><%= t(".nothing_due") %></p>
+          <% end %>
+
+          <div class="flex items-center justify-between px-4 py-3 border-t border-divider">
+            <p class="text-xs font-medium text-secondary uppercase"><%= t(".remaining_after_bills") %></p>
+            <p class="text-sm font-medium privacy-sensitive <%= period.remaining.negative? ? "text-destructive" : "text-primary" %>">
+              <%= format_money(Money.new(period.remaining, Current.family.currency)) %>
+            </p>
+          </div>
+          <% if period.remaining.negative? && period.items.any? %>
+            <p class="px-4 pb-3 text-xs text-destructive">
+              <%= t(".trough_warning", bill: period.items.first.occurrence.recurring_transaction.display_name) %>
+            </p>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
