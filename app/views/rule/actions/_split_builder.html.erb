@@ -34,10 +34,14 @@
   </div>
 
   <div class="flex items-center justify-between gap-2">
-    <button type="button" class="flex items-center gap-1 text-xs text-secondary hover:text-primary" data-action="click->rule--split-action#addRow">
-      <%= icon "plus", size: "xs" %>
-      <%= t("rules.actions.split.add_split") %>
-    </button>
+    <%= render DS::Button.new(
+      text: t("rules.actions.split.add_split"),
+      icon: "plus",
+      variant: "ghost",
+      size: :sm,
+      type: "button",
+      data: { action: "click->rule--split-action#addRow" }
+    ) %>
 
     <span class="text-xs" data-rule--split-action-target="summary"></span>
   </div>
