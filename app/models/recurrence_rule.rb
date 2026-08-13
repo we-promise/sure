@@ -21,9 +21,12 @@ class RecurrenceRule < ApplicationRecord
   validates :weekday, numericality: { only_integer: true, in: 0..6 }, allow_nil: true
   validates :weekday_ordinal, numericality: { only_integer: true, in: -1..5, other_than: 0 }, allow_nil: true
   validates :month_of_year, numericality: { only_integer: true, in: 1..12 }, allow_nil: true
+  # Position uniqueness is enforced by the DB index alone: rules are
+  # rewritten as a set (old rows marked for destruction, new ones built in
+  # the same save), and a model-level uniqueness check would see the doomed
+  # rows still in the table and reject the rewrite.
   validates :position, presence: true,
-                       numericality: { only_integer: true, greater_than_or_equal_to: 0 },
-                       uniqueness: { scope: :recurring_transaction_id }
+                       numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :day_spec_coherent
 
   private

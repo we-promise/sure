@@ -182,13 +182,16 @@ class RecurringTransaction
         last_entry = matching_entries.max_by(&:date)
 
         # Recalculate variance from all occurrences (including identical amounts)
+        # The series' own schedule computes the next date so a manual row
+        # with weekly or other non-monthly rules advances on its real
+        # cadence; legacy monthly rows keep byte-identical behavior.
         recurring.update!(
           expected_amount_min: matching_amounts.min,
           expected_amount_max: matching_amounts.max,
           expected_amount_avg: matching_amounts.sum / matching_amounts.size,
           occurrence_count: matching_amounts.size,
           last_occurrence_date: last_entry.date,
-          next_expected_date: calculate_next_expected_date(last_entry.date, recurring.expected_day_of_month)
+          next_expected_date: recurring.schedule.next_occurrence_after(last_entry.date)
         )
       end
     end

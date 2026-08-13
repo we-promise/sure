@@ -87,7 +87,7 @@
             <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
               <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.merchant") %></th>
               <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.amount") %></th>
-              <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.expected_day") %></th>
+              <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.frequency") %></th>
               <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.next_date") %></th>
               <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.last_occurrence") %></th>
               <th class="text-left py-3 px-2"><%= t("recurring_transactions.table.status") %></th>
@@ -146,7 +146,7 @@
                   </td>
                 <% end %>
                 <td class="py-3 px-2 text-sm text-secondary">
-                  <%= t("recurring_transactions.day_of_month", day: recurring_transaction.expected_day_of_month) %>
+                  <%= frequency_label(recurring_transaction) %>
                 </td>
                 <td class="py-3 px-2 text-sm text-secondary">
                   <%= l(recurring_transaction.next_expected_date, format: :short) %>

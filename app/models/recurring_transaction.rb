@@ -5,7 +5,10 @@ class RecurringTransaction < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :destination_account, optional: true, class_name: "Account"
   belongs_to :merchant, optional: true
-  has_many :recurrence_rules, -> { order(:position) }, dependent: :destroy
+  # autosave so rule rewrites are atomic with the parent save: FrequencyPreset
+  # marks old rules for destruction and builds replacements in one assignment,
+  # and only autosave honors mark_for_destruction on save.
+  has_many :recurrence_rules, -> { order(:position) }, dependent: :destroy, autosave: true
 
   monetize :amount
   monetize :expected_amount_min, allow_nil: true
@@ -29,6 +32,11 @@ class RecurringTransaction < ApplicationRecord
   validate :end_mode_fields_consistent
 
   normalizes :payment_url, with: ->(url) { normalize_payment_url(url) }
+
+  # Form state for the frequency picker; FrequencyPreset translates these to
+  # recurrence_rules on save. Not persisted.
+  attr_accessor :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
+                :frequency_weekday, :frequency_month_of_year
 
   # A scheme, followed by either "//" or by something that is not a port number.
   # "example.com:8080" is a host and port, not a scheme, so it does not match.
@@ -88,7 +96,7 @@ class RecurringTransaction < ApplicationRecord
   # occurrence there is no way to say WHICH biweekly Friday is the right one.
   def anchor_required_for_intervals
     return if anchor_date.present?
-    return unless recurrence_rules.any? { |rule| rule.interval.to_i > 1 }
+    return unless recurrence_rules.reject(&:marked_for_destruction?).any? { |rule| rule.interval.to_i > 1 }
 
     errors.add(:anchor_date, :required_for_intervals)
   end
@@ -175,11 +183,19 @@ class RecurringTransaction < ApplicationRecord
   def next_due_date
     return next_expected_date if next_expected_date <= Date.current
 
-    [ next_expected_date, self.class.calculate_next_expected_date_from_today(expected_day_of_month) ].min
+    [ next_expected_date, schedule.next_occurrence_from_today ].compact.min
   end
 
   def overdue?
     next_due_date < Date.current
+  end
+
+  # This bill's cost normalized to a per-month figure, whatever its cadence:
+  # a $120 annual bill contributes $10, a $10 weekly bill about $43.45. This
+  # is the honest number for "recurring commitment" style totals; summing raw
+  # amounts across mixed cadences answers no meaningful question.
+  def monthly_equivalent_amount
+    amount_money * (schedule.occurrences_per_year / 12.0)
   end
 
   # Deliberately strict: same name ignoring case and spacing, same amount, *and* same
@@ -192,13 +208,13 @@ class RecurringTransaction < ApplicationRecord
     [ display_name.to_s.downcase.gsub(/\s+/, " ").strip, amount, expected_day_of_month ]
   end
 
-  # How many whole cycles have elapsed since this was due. Monthly is the only cadence
-  # the model supports today, so a missed quarterly bill still reads as one cycle; this
-  # becomes exact once Schedule lands.
+  # How many whole cycles have elapsed since this was due, using the series'
+  # real cadence length.
   def cycles_overdue
     return 0 unless overdue?
 
-    ((Date.current - next_expected_date).to_i / 30) + 1
+    cycle_days = 365.25 / schedule.occurrences_per_year
+    ((Date.current - next_due_date).to_i / cycle_days).floor + 1
   end
   scope :accessible_by, ->(user) {
     accessible_account_ids = Account.accessible_by(user).select(:id)

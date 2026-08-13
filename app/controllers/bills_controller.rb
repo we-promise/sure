@@ -20,13 +20,14 @@ class BillsController < ApplicationController
     @this_month, @later = upcoming.partition { |bill| bill.next_due_date <= Date.current.end_of_month }
 
     due_now = @overdue + @this_month
-    @total_due = total_of(due_now)
+    @total_due, @unconvertible_count = total_of(due_now, &:amount_money)
     @due_count = due_now.size
     @needs_action_count = due_now.count { |bill| !bill.autopay? }
 
-    # Every bill is monthly today, so the recurring commitment is simply their sum.
-    # This needs normalising per cadence once bills can be weekly or annual.
-    @monthly_total = total_of(bills)
+    # Normalized per cadence: a weekly bill counts ~4.3x its amount here, an
+    # annual bill a twelfth. Summing raw amounts across mixed cadences would
+    # answer no meaningful question.
+    @monthly_total, _monthly_unconvertible = total_of(bills, &:monthly_equivalent_amount)
 
     @duplicate_keys = bills.group_by(&:duplicate_key)
                            .select { |_key, group| group.size > 1 }
@@ -41,21 +42,25 @@ class BillsController < ApplicationController
     #
     # A pair with no rate available is left out and counted instead of raising, so one
     # missing rate cannot take down the page or, worse, quietly understate the total
-    # without saying so.
-    def total_of(bills)
-      return nil if bills.empty?
+    # without saying so. Returns [total, unconvertible_count] so each caller keeps its
+    # own count -- an earlier version stored the count in an ivar that the second call
+    # silently overwrote.
+    def total_of(bills, &value_of)
+      return [ nil, 0 ] if bills.empty?
 
       target = Current.family.currency
-      @unconvertible_count = 0
+      unconvertible = 0
 
-      bills.reduce(Money.new(0, target)) do |sum, bill|
+      total = bills.reduce(Money.new(0, target)) do |sum, bill|
         begin
-          sum + bill.amount_money.exchange_to(target)
+          sum + value_of.call(bill).exchange_to(target)
         rescue Money::ConversionError
-          @unconvertible_count += 1
+          unconvertible += 1
           sum
         end
       end
+
+      [ total, unconvertible ]
     end
 
     def ensure_recurring_enabled

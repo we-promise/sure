@@ -10,6 +10,25 @@ en:
       one: "Expected in %{count} day"
       other: "Expected in %{count} days"
     day_of_month: Day %{day} of month
+    frequency_presets:
+      monthly: Monthly
+      weekly: Weekly
+      biweekly: Every 2 weeks
+      semimonthly: Twice a month
+      quarterly: Quarterly
+      semiannual: Every 6 months
+      annual: Yearly
+      custom: Custom schedule
+    frequency:
+      monthly: "Monthly on the %{day}"
+      weekly: "Weekly on %{weekday}"
+      biweekly: "Every 2 weeks on %{weekday}"
+      semimonthly: "Twice a month, the %{first} and %{second}"
+      quarterly: "Quarterly on the %{day}"
+      semiannual: "Every 6 months on the %{day}"
+      annual: "Yearly on %{month} %{day}"
+      custom: Custom schedule
+      last_day: last day
     identify_patterns: Identify Patterns
     cleanup_stale: Clean Up Stale
     actions:
@@ -40,6 +59,12 @@ en:
         one: "Also use this link for the other %{name} bill"
         other: "Also use this link for the other %{count} %{name} bills"
       submit: Save bill
+      frequency_label: How often
+      frequency_hint: How often this bill comes due. Pick the day details to match your statement.
+      frequency_day_label: On day
+      frequency_second_day_label: And day
+      frequency_weekday_label: On
+      frequency_month_label: In
     update:
       success: Bill updated
       success_with_siblings:
@@ -73,7 +98,7 @@ en:
     table:
       merchant: Name
       amount: Amount
-      expected_day: Expected Day
+      frequency: Frequency
       next_date: Next Date
       last_occurrence: Last Occurrence
       status: Status

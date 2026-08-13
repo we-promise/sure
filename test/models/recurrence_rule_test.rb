@@ -69,10 +69,15 @@ class RecurrenceRuleTest < ActiveSupport::TestCase
     assert_not rule.valid?
   end
 
-  test "positions are unique within a series" do
+  test "position collisions are caught by the database index" do
+    # No model-level uniqueness validation on purpose: rules are rewritten as
+    # a set (old rows marked for destruction alongside new builds), and a
+    # validation would see the doomed rows and reject the rewrite.
     @recurring.recurrence_rules.create!(frequency: "monthly", day_of_month: 1, position: 0)
-    duplicate = @recurring.recurrence_rules.build(frequency: "monthly", day_of_month: 15, position: 0)
-    assert_not duplicate.valid?
+
+    assert_raises ActiveRecord::RecordNotUnique do
+      @recurring.recurrence_rules.create!(frequency: "monthly", day_of_month: 15, position: 0)
+    end
   end
 
   test "series with an interval rule requires an anchor date" do

@@ -43,6 +43,37 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://pay.example.com/bill", @recurring_transaction.reload.payment_url
   end
 
+  test "update applies a frequency preset as recurrence rules" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { frequency_preset: "biweekly", frequency_weekday: "5" } }
+
+    assert_redirected_to recurring_transactions_url
+    rules = @recurring_transaction.reload.recurrence_rules
+    assert_equal [ [ "weekly", 2, 5 ] ], rules.map { |rule| [ rule.frequency, rule.interval, rule.weekday ] }
+    assert_not_nil @recurring_transaction.anchor_date
+  end
+
+  test "update with an unchanged frequency does not rewrite the rules" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { frequency_preset: "weekly", frequency_weekday: "3" } }
+    original_ids = @recurring_transaction.reload.recurrence_rules.map(&:id)
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { notes: "edited", frequency_preset: "weekly", frequency_weekday: "3" } }
+
+    assert_equal original_ids, @recurring_transaction.reload.recurrence_rules.map(&:id)
+    assert_equal "edited", @recurring_transaction.notes
+  end
+
+  test "update with an incomplete frequency re-renders the form" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { frequency_preset: "weekly" } },
+          headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :unprocessable_entity
+    assert_empty @recurring_transaction.reload.recurrence_rules
+  end
+
   test "update rejects a non-http scheme instead of storing it" do
     patch recurring_transaction_url(@recurring_transaction),
           params: { recurring_transaction: { payment_url: "javascript:alert(1)" } }

@@ -50,13 +50,17 @@ class RecurringTransactionsController < ApplicationController
   # the dialog never opens. Drop the layout for frame requests, as `categories#merge`
   # does, and keep it for a direct visit to the URL.
   def edit
+    assign_frequency_form_state
     @sibling_count = sibling_scope.count
 
     render layout: dialog_layout
   end
 
   def update
-    if @recurring_transaction.update(recurring_transaction_params)
+    @recurring_transaction.assign_attributes(recurring_transaction_params)
+    apply_frequency_preset
+
+    if @recurring_transaction.save
       applied = apply_payment_url_to_siblings
 
       flash[:notice] = if applied.positive?
@@ -114,7 +118,34 @@ class RecurringTransactionsController < ApplicationController
     end
 
     def recurring_transaction_params
-      params.require(:recurring_transaction).permit(:payment_url, :autopay, :notes)
+      params.require(:recurring_transaction).permit(
+        :payment_url, :autopay, :notes,
+        :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
+        :frequency_weekday, :frequency_month_of_year
+      )
+    end
+
+    # Pre-fills the frequency picker's virtual attributes from the series'
+    # rules so the form shows the current cadence.
+    def assign_frequency_form_state
+      detection = RecurringTransaction::FrequencyPreset.detect(@recurring_transaction)
+
+      @recurring_transaction.frequency_preset = detection.key
+      @recurring_transaction.frequency_day_of_month = detection.day_of_month
+      @recurring_transaction.frequency_second_day_of_month = detection.second_day_of_month
+      @recurring_transaction.frequency_weekday = detection.weekday
+      @recurring_transaction.frequency_month_of_year = detection.month_of_year
+    end
+
+    def apply_frequency_preset
+      RecurringTransaction::FrequencyPreset.apply(
+        @recurring_transaction,
+        preset: @recurring_transaction.frequency_preset,
+        day_of_month: @recurring_transaction.frequency_day_of_month,
+        second_day_of_month: @recurring_transaction.frequency_second_day_of_month,
+        weekday: @recurring_transaction.frequency_weekday,
+        month_of_year: @recurring_transaction.frequency_month_of_year
+      )
     end
 
     # One merchant routinely owns several bills (three separate Twitch subscriptions,

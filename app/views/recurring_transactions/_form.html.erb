@@ -23,6 +23,30 @@
       <%= f.toggle :autopay %>
     </div>
 
+    <div class="space-y-2" data-controller="frequency-fields">
+      <%= f.select :frequency_preset,
+            frequency_preset_options(recurring_transaction),
+            { label: t(".frequency_label") },
+            { data: { frequency_fields_target: "preset", action: "change->frequency-fields#update" } } %>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div data-frequency-fields-target="group" data-presets="monthly,semimonthly,quarterly,semiannual,annual" class="hidden">
+          <%= f.select :frequency_day_of_month, frequency_day_options, { label: t(".frequency_day_label") } %>
+        </div>
+        <div data-frequency-fields-target="group" data-presets="semimonthly" class="hidden">
+          <%= f.select :frequency_second_day_of_month, frequency_day_options, { label: t(".frequency_second_day_label") } %>
+        </div>
+        <div data-frequency-fields-target="group" data-presets="weekly,biweekly" class="hidden">
+          <%= f.select :frequency_weekday, frequency_weekday_options, { label: t(".frequency_weekday_label") } %>
+        </div>
+        <div data-frequency-fields-target="group" data-presets="annual" class="hidden">
+          <%= f.select :frequency_month_of_year, frequency_month_options, { label: t(".frequency_month_label") } %>
+        </div>
+      </div>
+
+      <p class="text-xs text-secondary"><%= t(".frequency_hint") %></p>
+    </div>
+
     <div class="space-y-2">
       <%= f.text_area :notes,
             label: t(".notes_label"),
