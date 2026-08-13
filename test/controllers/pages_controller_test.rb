@@ -287,6 +287,10 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     # of silently falling back to "all accounts".
     assert_includes income_href, "q%5Baccount_ids%5D%5B%5D=#{account.id}"
     assert_includes expense_href, "q%5Baccount_ids%5D%5B%5D=#{account.id}"
+
+    account_filter = "q%5Baccount_ids%5D%5B%5D="
+    assert_equal 1, income_href.scan(account_filter).length
+    assert_equal 1, expense_href.scan(account_filter).length
   end
 
   test "changelog" do
