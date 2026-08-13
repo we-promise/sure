@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_13_210500) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_13_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1631,6 +1631,67 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_13_210500) do
     t.check_constraint "weekday_ordinal IS NULL OR weekday_ordinal >= '-1'::integer AND weekday_ordinal <= 5 AND weekday_ordinal <> 0", name: "chk_recurrence_rules_weekday_ordinal_range"
   end
 
+  create_table "recurring_allocations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "recurring_occurrence_id", null: false
+    t.uuid "entry_id"
+    t.decimal "allocated_amount", precision: 19, scale: 4, null: false
+    t.string "currency", null: false
+    t.decimal "source_amount", precision: 19, scale: 4
+    t.string "source_currency"
+    t.string "state", default: "confirmed", null: false
+    t.string "source", null: false
+    t.decimal "match_confidence", precision: 5, scale: 4
+    t.jsonb "match_signals", default: {}, null: false
+    t.date "paid_on"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["entry_id"], name: "index_recurring_allocations_on_entry_id"
+    t.index ["recurring_occurrence_id", "entry_id"], name: "idx_recurring_allocations_entry_once", unique: true, where: "(entry_id IS NOT NULL)"
+    t.index ["recurring_occurrence_id"], name: "index_recurring_allocations_on_recurring_occurrence_id"
+    t.check_constraint "allocated_amount > 0::numeric", name: "chk_recurring_allocations_amount_positive"
+  end
+
+  create_table "recurring_match_rejections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "recurring_transaction_id", null: false
+    t.uuid "entry_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["recurring_transaction_id", "entry_id"], name: "idx_recurring_match_rejections_pair", unique: true
+  end
+
+  create_table "recurring_occurrences", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "recurring_transaction_id", null: false
+    t.uuid "family_id", null: false
+    t.date "original_due_on", null: false
+    t.date "due_on", null: false
+    t.string "currency", null: false
+    t.decimal "expected_amount", precision: 19, scale: 4
+    t.string "status", default: "scheduled", null: false
+    t.date "snoozed_until"
+    t.datetime "closed_at"
+    t.text "notes"
+    t.string "closed_source"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "due_on"], name: "index_recurring_occurrences_on_family_id_and_due_on"
+    t.index ["family_id", "status", "due_on"], name: "index_recurring_occurrences_on_family_id_and_status_and_due_on"
+    t.index ["recurring_transaction_id", "original_due_on"], name: "idx_recurring_occurrences_identity", unique: true
+    t.check_constraint "(status::text = 'scheduled'::text) = (closed_at IS NULL)", name: "chk_recurring_occurrences_closed_state"
+  end
+
+  create_table "recurring_price_changes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "recurring_transaction_id", null: false
+    t.date "effective_on", null: false
+    t.decimal "previous_amount", precision: 19, scale: 4, null: false
+    t.decimal "new_amount", precision: 19, scale: 4, null: false
+    t.string "currency", null: false
+    t.string "source", null: false
+    t.uuid "entry_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["recurring_transaction_id", "effective_on"], name: "idx_recurring_price_changes_identity", unique: true
+  end
+
   create_table "recurring_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.uuid "merchant_id"
@@ -2461,6 +2522,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_13_210500) do
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"
   add_foreign_key "recurrence_rules", "recurring_transactions", on_delete: :cascade
+  add_foreign_key "recurring_allocations", "entries", on_delete: :nullify
+  add_foreign_key "recurring_allocations", "recurring_occurrences", on_delete: :cascade
+  add_foreign_key "recurring_match_rejections", "entries", on_delete: :cascade
+  add_foreign_key "recurring_match_rejections", "recurring_transactions", on_delete: :cascade
+  add_foreign_key "recurring_occurrences", "families", on_delete: :cascade
+  add_foreign_key "recurring_occurrences", "recurring_transactions", on_delete: :cascade
+  add_foreign_key "recurring_price_changes", "entries", on_delete: :nullify
+  add_foreign_key "recurring_price_changes", "recurring_transactions", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
   add_foreign_key "recurring_transactions", "categories", on_delete: :nullify
