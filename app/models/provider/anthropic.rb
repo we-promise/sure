@@ -215,7 +215,7 @@ class Provider::Anthropic < Provider
     user_identifier: nil,
     family: nil
   )
-    with_provider_response do
+    with_provider_response(debug_log: llm_debug_log_attributes(operation: "chat", model: model, family: family, endpoint: "messages")) do
       chat_config = ChatConfig.new(
         prompt: prompt,
         instructions: instructions,
@@ -286,6 +286,24 @@ class Provider::Anthropic < Provider
 
     def default_max_tokens
       ENV.fetch("ANTHROPIC_MAX_TOKENS", 4096).to_i
+    end
+
+    def llm_debug_log_attributes(operation:, model:, family:, endpoint:)
+      {
+        category: "llm_provider_error",
+        level: "error",
+        message: "Anthropic-compatible LLM #{operation} request failed",
+        source: self.class.name,
+        provider_key: "anthropic",
+        family: family,
+        metadata: {
+          operation: operation,
+          model: model,
+          endpoint: endpoint,
+          base_url: @base_url.presence || "https://api.anthropic.com",
+          custom_provider: custom_endpoint?
+        }
+      }
     end
 
     def sync_chat_response(request_params:)

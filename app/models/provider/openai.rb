@@ -316,6 +316,24 @@ class Provider::Openai < Provider
       default
     end
 
+    def llm_debug_log_attributes(operation:, model:, family:, endpoint:)
+      {
+        category: "llm_provider_error",
+        level: "error",
+        message: "OpenAI-compatible LLM #{operation} request failed",
+        source: self.class.name,
+        provider_key: "openai",
+        family: family,
+        metadata: {
+          operation: operation,
+          model: model,
+          endpoint: endpoint,
+          uri_base: @uri_base.presence || "https://api.openai.com",
+          custom_provider: custom_provider?
+        }
+      }
+    end
+
     # Routes one-shot (non-chat) inputs through the BatchSlicer so large
     # caller batches are split to fit the model's context window. `fixed` is
     # the portion of the prompt that stays constant across every sub-batch
@@ -341,7 +359,7 @@ class Provider::Openai < Provider
       user_identifier: nil,
       family: nil
     )
-      with_provider_response do
+      with_provider_response(debug_log: llm_debug_log_attributes(operation: "chat", model: model, family: family, endpoint: "responses")) do
         chat_config = ChatConfig.new(
           functions: functions,
           function_results: function_results
@@ -444,7 +462,7 @@ class Provider::Openai < Provider
       user_identifier: nil,
       family: nil
     )
-      with_provider_response do
+      with_provider_response(debug_log: llm_debug_log_attributes(operation: "chat", model: model, family: family, endpoint: "chat.completions")) do
         messages = build_generic_messages(
           prompt: prompt,
           instructions: instructions,

@@ -17,6 +17,52 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "custom OpenAI-compatible chat failures are captured in debug log" do
+    provider = Provider::Openai.new(
+      "test-openai-token",
+      uri_base: "http://ollama.example.test/v1",
+      model: "gpt-oss:20b"
+    )
+
+    fake_client = mock
+    provider.stubs(:client).returns(fake_client)
+    fake_client.expects(:chat).raises(
+      Faraday::ResourceNotFound.new(
+        "the server responded with status 404",
+        {
+          status: 404,
+          body: {
+            error: {
+              message: "not found",
+              api_key: "should-not-be-persisted"
+            }
+          }
+        }
+      )
+    )
+
+    assert_difference "DebugLogEntry.count", 1 do
+      response = provider.chat_response("hi", model: "gpt-oss:20b", family: families(:dylan_family))
+
+      assert_not response.success?
+      assert_kind_of Provider::Openai::Error, response.error
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "llm_provider_error", entry.category
+    assert_equal "error", entry.level
+    assert_equal "Provider::Openai", entry.source
+    assert_equal "openai", entry.provider_key
+    assert_equal families(:dylan_family), entry.family
+    assert_equal "chat", entry.metadata["operation"]
+    assert_equal "gpt-oss:20b", entry.metadata["model"]
+    assert_equal "chat.completions", entry.metadata["endpoint"]
+    assert_equal "http://ollama.example.test/v1", entry.metadata["uri_base"]
+    assert_equal true, entry.metadata["custom_provider"]
+    assert_equal 404, entry.metadata["http_status_code"]
+    assert_equal "[FILTERED]", entry.metadata.dig("details", "error", "api_key")
+  end
+
   test "auto categorizes transactions by various attributes" do
     VCR.use_cassette("openai/auto_categorize") do
       input_transactions = [
