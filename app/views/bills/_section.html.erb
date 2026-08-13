@@ -10,7 +10,7 @@
 
     <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
       <% bills.each do |bill| %>
-        <%= render "bills/bill", bill: bill %>
+        <%= render "bills/bill", bill: bill, duplicate: @duplicate_keys.include?(bill.duplicate_key) %>
       <% end %>
     </div>
   </div>

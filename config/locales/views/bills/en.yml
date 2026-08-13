@@ -2,6 +2,8 @@
 en:
   bills:
     paid_from: "from %{account}"
+    amount_range: "ranges %{min} to %{max}"
+    possible_duplicate: Possible duplicate
     due_label:
       overdue:
         one: "Overdue by 1 day, was due %{date}"
@@ -20,6 +22,9 @@ en:
         one: "1 needs you"
         other: "%{count} need you"
       all_automatic: "all on autopay"
+      recurring_label: Recurring commitment
+      recurring_monthly: "%{amount} a month"
+      recurring_annual: "%{amount} a year"
       unconvertible:
         one: "1 bill is not included, no exchange rate available"
         other: "%{count} bills are not included, no exchange rate available"

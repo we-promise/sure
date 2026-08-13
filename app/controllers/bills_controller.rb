@@ -23,6 +23,15 @@ class BillsController < ApplicationController
     @total_due = total_of(due_now)
     @due_count = due_now.size
     @needs_action_count = due_now.count { |bill| !bill.autopay? }
+
+    # Every bill is monthly today, so the recurring commitment is simply their sum.
+    # This needs normalising per cadence once bills can be weekly or annual.
+    @monthly_total = total_of(bills)
+
+    @duplicate_keys = bills.group_by(&:duplicate_key)
+                           .select { |_key, group| group.size > 1 }
+                           .keys
+                           .to_set
   end
 
   private

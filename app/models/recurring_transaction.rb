@@ -157,6 +157,16 @@ class RecurringTransaction < ApplicationRecord
     next_due_date < Date.current
   end
 
+  # Deliberately strict: same name ignoring case and spacing, same amount, *and* same
+  # expected day. Loosening any one of those starts flagging genuinely separate
+  # subscriptions to one merchant -- three concurrent Twitch tiers at different prices
+  # on different days are three real bills, and telling someone to merge them is worse
+  # than saying nothing. The pairs this does catch are the ones detection split by
+  # casing, which are unambiguous.
+  def duplicate_key
+    [ display_name.to_s.downcase.gsub(/\s+/, " ").strip, amount, expected_day_of_month ]
+  end
+
   # How many whole cycles have elapsed since this was due. Monthly is the only cadence
   # the model supports today, so a missed quarterly bill still reads as one cycle; this
   # becomes exact once Schedule lands.

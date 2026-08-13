@@ -42,6 +42,17 @@
       </div>
     <% end %>
 
+    <% if @monthly_total %>
+      <div class="bg-container rounded-xl shadow-border-xs p-4">
+        <p class="text-xs uppercase font-medium text-secondary"><%= t(".recurring_label") %></p>
+        <p class="text-sm text-primary privacy-sensitive mt-1">
+          <%= t(".recurring_monthly", amount: format_money(@monthly_total)) %>
+          <span class="text-subdued">&middot;</span>
+          <%= t(".recurring_annual", amount: format_money(@monthly_total * 12)) %>
+        </p>
+      </div>
+    <% end %>
+
     <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
       <%= render "bills/section", title: t(".overdue"), bills: @overdue, tone: :destructive %>
       <%= render "bills/section", title: t(".this_month"), bills: @this_month %>

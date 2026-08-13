@@ -120,6 +120,42 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paid_from", account: accounts(:depository).name), response.body
   end
 
+  test "index flags a pair that detection split only by casing" do
+    create_bill(name: "Grok Xai", amount: 5)
+    create_bill(name: "GROK XAI", amount: 5)
+
+    get bills_url
+
+    assert_response :success
+    assert_equal 2, response.body.scan(I18n.t("bills.possible_duplicate")).size
+  end
+
+  # Three concurrent subscriptions to one merchant, at different prices on different
+  # days, are three real bills. Telling someone to merge them is worse than saying
+  # nothing, so the rule requires the amount and the day to match as well as the name.
+  test "index does not flag separate subscriptions to the same merchant" do
+    create_bill(name: "TWITCH", amount: 5.99, expected_day_of_month: 8)
+    create_bill(name: "TWITCH", amount: 11.99, expected_day_of_month: 2)
+    create_bill(name: "TWITCH", amount: 24.99, expected_day_of_month: 21)
+
+    get bills_url
+
+    assert_response :success
+    assert_no_match I18n.t("bills.possible_duplicate"), response.body
+  end
+
+  test "index shows the monthly and annual recurring commitment" do
+    create_bill(name: "One", amount: 100)
+    create_bill(name: "Two", amount: 50)
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.index.recurring_label"), response.body
+    assert_match "150", response.body
+    assert_match "1,800", response.body
+  end
+
   test "index renders an empty state with no bills" do
     get bills_url
 

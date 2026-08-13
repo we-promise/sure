@@ -1,4 +1,4 @@
-<%# locals: (bill:) %>
+<%# locals: (bill:, duplicate: false) %>
 
 <%# An autopaying bill is still worth seeing and still counts toward the total, but it
     recedes so the rows that want something from you carry the visual weight. %>
@@ -28,9 +28,32 @@
     </div>
   </div>
 
-  <p class="text-sm font-medium text-primary privacy-sensitive shrink-0">
-    <%= format_money(bill.amount_money) %>
-  </p>
+  <div class="shrink-0 text-right">
+    <p class="text-sm font-medium text-primary privacy-sensitive">
+      <%# Variance is only ever computed for manually created bills, so most rows show a
+          flat amount. Where it exists the average is the honest headline and the range
+          belongs underneath it. %>
+      <% if bill.has_amount_variance? %>
+        ~<%= format_money(bill.expected_amount_avg_money || bill.amount_money) %>
+      <% else %>
+        <%= format_money(bill.amount_money) %>
+      <% end %>
+    </p>
+    <% if bill.has_amount_variance? %>
+      <p class="text-xs text-secondary privacy-sensitive">
+        <%= t("bills.amount_range",
+              min: format_money(bill.expected_amount_min_money),
+              max: format_money(bill.expected_amount_max_money)) %>
+      </p>
+    <% end %>
+  </div>
+
+  <% if defined?(duplicate) && duplicate %>
+    <span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-warning/10 text-warning">
+      <%= icon "copy", size: "sm", color: "current" %>
+      <%= t("bills.possible_duplicate") %>
+    </span>
+  <% end %>
 
   <div class="shrink-0">
     <%= render "recurring_transactions/pay_action", recurring_transaction: bill %>
