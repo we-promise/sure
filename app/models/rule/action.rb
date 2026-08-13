@@ -1,7 +1,14 @@
 class Rule::Action < ApplicationRecord
   belongs_to :rule, touch: true
 
+  # Virtual attributes for the split_transaction form: `value` is a single string column, so the
+  # split builder UI posts real, individually-named fields here instead of driving a JSON blob
+  # through custom JS. build_split_value assembles them into `value` before validation runs.
+  attr_accessor :split_mode, :split_rows
+
   validates :action_type, presence: true
+  before_validation :build_split_value, if: -> { action_type == "split_transaction" && (split_mode.present? || split_rows.present?) }
+  validate :split_config_valid, if: -> { action_type == "split_transaction" }
 
   # Pre-seed (watermark): when a send_email_notification action is created — on a
   # new rule OR added to an existing one — record all currently-matching
@@ -29,6 +36,9 @@ class Rule::Action < ApplicationRecord
   end
 
   def value_display
+    custom_display = executor.value_display(value)
+    return custom_display if custom_display.present?
+
     if value.present?
       if options
         options.find { |option| option.last == value }&.first
@@ -45,6 +55,49 @@ class Rule::Action < ApplicationRecord
   end
 
   private
+    def build_split_value
+      rows = split_rows.respond_to?(:values) ? split_rows.values : Array(split_rows)
+      splits = rows.map do |row|
+        {
+          name: row[:name],
+          share: row[:share],
+          category_id: row[:category_id].presence,
+          merchant_id: row[:merchant_id].presence,
+          tag_ids: Array(row[:tag_ids]).reject(&:blank?)
+        }
+      end
+
+      self.value = { mode: split_mode, splits: splits }.to_json
+    end
+
+    def split_config_valid
+      config_errors = Rule::ActionExecutor::SplitTransaction.config_errors(value, family: rule.family)
+      config_errors.each do |key, options|
+        errors.add(:value, key, **options)
+      end
+
+      return unless config_errors.empty?
+
+      config = Rule::ActionExecutor::SplitTransaction.parse_config(value)
+      if config["mode"] == "fixed" && !exact_amount_condition_present?
+        errors.add(:value, :fixed_requires_exact_amount_condition)
+      end
+    end
+
+    # Fixed-amount splits only make sense if every matching transaction has the same total —
+    # otherwise the configured shares can never sum correctly for most matches (rule.apply
+    # would just silently skip them one by one). Require an exact "Amount =" condition,
+    # ANDed in (an "any"/OR compound doesn't guarantee it for every match).
+    def exact_amount_condition_present?(conditions = rule.conditions)
+      conditions.any? do |condition|
+        if condition.compound?
+          condition.operator == "and" && exact_amount_condition_present?(condition.sub_conditions)
+        else
+          condition.condition_type == "transaction_amount" && condition.operator == "="
+        end
+      end
+    end
+
     def seed_notification_baseline
       return unless action_type == "send_email_notification"
 

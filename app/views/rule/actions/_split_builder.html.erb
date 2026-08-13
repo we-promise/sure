@@ -1,0 +1,48 @@
+<%# locals: (form:, action:, blank: false) %>
+
+<%
+  config = blank ? nil : Rule::ActionExecutor::SplitTransaction.parse_config(action.value)
+  config ||= { "mode" => "percentage", "splits" => [ {}, {} ] }
+  split_executor = action.rule.registry.get_executor!("split_transaction")
+  categories = split_executor.options
+  merchants = split_executor.merchant_options
+  tags = split_executor.tag_options
+%>
+
+<div class="flex flex-col gap-2 w-full min-w-0"
+     data-controller="rule--split-action"
+     data-action="input@document->rule--split-action#updateSummary change@document->rule--split-action#updateSummary">
+  <div class="flex items-center gap-3">
+    <label class="flex items-center gap-1 text-xs text-secondary">
+      <%= form.radio_button :split_mode, "fixed", checked: config["mode"] == "fixed", data: { rule__split_action_target: "modeRadio", action: "change->rule--split-action#updateSummary" } %>
+      <%= t("rules.actions.split.mode_fixed") %>
+    </label>
+    <label class="flex items-center gap-1 text-xs text-secondary">
+      <%= form.radio_button :split_mode, "percentage", checked: config["mode"] != "fixed", data: { rule__split_action_target: "modeRadio", action: "change->rule--split-action#updateSummary" } %>
+      <%= t("rules.actions.split.mode_percentage") %>
+    </label>
+  </div>
+
+  <p class="text-xs text-secondary <%= "hidden" unless config["mode"] == "fixed" %>" data-rule--split-action-target="fixedModeHint">
+    <%= t("rules.actions.split.fixed_mode_hint") %>
+  </p>
+
+  <div data-rule--split-action-target="rowsContainer" class="flex flex-col gap-1.5">
+    <% config["splits"].each_with_index do |split, idx| %>
+      <%= render "rule/actions/split_row", form: form, idx: idx, split: split, categories: categories, merchants: merchants, tags: tags %>
+    <% end %>
+  </div>
+
+  <div class="flex items-center justify-between gap-2">
+    <button type="button" class="flex items-center gap-1 text-xs text-secondary hover:text-primary" data-action="click->rule--split-action#addRow">
+      <%= icon "plus", size: "xs" %>
+      <%= t("rules.actions.split.add_split") %>
+    </button>
+
+    <span class="text-xs" data-rule--split-action-target="summary"></span>
+  </div>
+
+  <template data-rule--split-action-target="rowTemplate">
+    <%= render "rule/actions/split_row", form: form, idx: "ROW_IDX_PLACEHOLDER", split: {}, categories: categories, merchants: merchants, tags: tags %>
+  </template>
+</div>

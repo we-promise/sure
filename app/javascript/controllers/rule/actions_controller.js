@@ -7,7 +7,8 @@ export default class extends Controller {
     "destroyField",
     "actionValue",
     "selectTemplate",
-    "textTemplate"
+    "textTemplate",
+    "splitTemplate"
   ];
 
   remove(e) {
@@ -30,10 +31,19 @@ export default class extends Controller {
     // Clear any existing input elements first
     this.#clearFormFields();
 
+    // Split uses a full-width block layout; the other types are a single inline "to <value>" field
+    this.actionValueTarget.classList.toggle("w-full", actionExecutor.type === "split");
+    this.actionValueTarget.classList.toggle("min-w-1/2", actionExecutor.type !== "split");
+    this.actionValueTarget.classList.toggle("flex", actionExecutor.type !== "split");
+    this.actionValueTarget.classList.toggle("items-center", actionExecutor.type !== "split");
+    this.actionValueTarget.classList.toggle("gap-2", actionExecutor.type !== "split");
+
     if (actionExecutor.type === "select") {
       this.#buildSelectFor(actionExecutor);
     } else if (actionExecutor.type === "text") {
       this.#buildTextInputFor();
+    } else if (actionExecutor.type === "split") {
+      this.#buildSplitBuilderFor();
     } else {
       // Hide for any type that doesn't need a value (e.g. function)
       this.#hideActionValue();
@@ -87,6 +97,15 @@ export default class extends Controller {
     if (inputEl) inputEl.value = "";
 
     // Add the template content to the actionValue target and ensure it's visible
+    this.actionValueTarget.appendChild(template);
+    this.actionValueTarget.classList.remove("hidden");
+  }
+
+  #buildSplitBuilderFor() {
+    // Clone the (blank) split builder template. The nested rule--split-action controller
+    // connects automatically once the content is attached to the document.
+    const template = this.splitTemplateTarget.content.cloneNode(true);
+
     this.actionValueTarget.appendChild(template);
     this.actionValueTarget.classList.remove("hidden");
   }

@@ -7,6 +7,20 @@ de:
           duplicate_actions: 'Eine Regel darf keine doppelten Aktionen enthalten: %{types}'
           min_actions: braucht mindestens eine Aktion
           nested_conditions: Zusammengesetzte Bedingungen lassen sich nicht verschachteln
+        rule/action:
+          attributes:
+            value:
+              invalid_config: "muss eine gültige Split-Konfiguration sein"
+              invalid_mode: "Modus muss „fixed“ oder „percentage“ sein"
+              invalid_split_count: "muss zwischen %{min} und %{max} Splits enthalten"
+              split_name_required: "Split #%{index} hat keinen Namen"
+              split_name_too_long: "Split #%{index}: Name ist zu lang (max. 255 Zeichen)"
+              split_share_invalid: "Split #%{index}: Anteil muss eine positive Zahl sein"
+              split_category_invalid: "Split #%{index}: Kategorie gehört nicht zu dieser Familie"
+              split_merchant_invalid: "Split #%{index}: Händler gehört nicht zu dieser Familie"
+              split_tags_invalid: "Split #%{index}: enthält einen Tag, der nicht zu dieser Familie gehört"
+              percentages_must_total_100: "Prozentwerte müssen in Summe 100 ergeben (aktuell %{total})"
+              fixed_requires_exact_amount_condition: "Splits mit festen Beträgen benötigen eine Regel-Bedingung mit exaktem Transaktionsbetrag (z. B. Betrag = 42,00), sonst können die Anteile nicht zuverlässig für jede passende Transaktion aufgehen"
   rule:
     conditions:
       unsupported_label: "Nicht unterstützt (%{type})"
