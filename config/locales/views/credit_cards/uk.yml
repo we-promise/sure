@@ -1,0 +1,28 @@
+---
+uk:
+  credit_cards:
+    edit:
+      edit: "Редагувати %{account}"
+    form:
+      annual_fee: "Річна плата"
+      annual_fee_placeholder: '99'
+      apr: "Річна процентна ставка"
+      apr_placeholder: '15.99'
+      available_credit: "Доступний кредит"
+      available_credit_placeholder: '10000'
+      expiration_date: "Дата закінчення терміну дії"
+      minimum_payment: "Мінімальний платіж"
+      minimum_payment_placeholder: '100'
+      treat_balance_as_available_credit_description: "Увімкніть, якщо ваш банк повідомляє баланс цієї картки як залишок доступного кредиту, а не як суму боргу. Тоді борг розраховується з кредитного ліміту, повідомленого вашим банком, або з поля «Доступний кредит», якщо ваш банк його не надає."
+      treat_balance_as_available_credit_label: "Баланс — це доступний кредит"
+    new:
+      title: "Введіть дані кредитної картки"
+    overview:
+      amount_owed: "Сума боргу"
+      annual_fee: "Річна плата"
+      apr: "Річна процентна ставка"
+      available_credit: "Доступний кредит"
+      edit_account_details: "Редагувати дані рахунку"
+      expiration_date: "Дата закінчення терміну дії"
+      minimum_payment: "Мінімальний платіж"
+      unknown: "Невідомо"
