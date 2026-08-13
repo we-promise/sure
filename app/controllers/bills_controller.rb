@@ -33,6 +33,17 @@ class BillsController < ApplicationController
                            .select { |_key, group| group.size > 1 }
                            .keys
                            .to_set
+
+    # Matches the engine was not sure enough to link on its own. This queue
+    # IS the pay-run page's business: every unreviewed suggestion is a bill
+    # whose paid state is possibly wrong.
+    @suggested_allocations = RecurringAllocation
+                               .suggested
+                               .joins(recurring_occurrence: :recurring_transaction)
+                               .where(recurring_occurrences: { family_id: Current.family.id })
+                               .merge(RecurringTransaction.accessible_by(Current.user))
+                               .includes(:entry, recurring_occurrence: { recurring_transaction: :merchant })
+                               .order(:created_at)
   end
 
   private

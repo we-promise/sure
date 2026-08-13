@@ -18,11 +18,7 @@ class RecurringAllocationsController < ApplicationController
   end
 
   def destroy
-    allocation = RecurringAllocation
-                   .joins(recurring_occurrence: :recurring_transaction)
-                   .where(recurring_occurrences: { family_id: Current.family.id })
-                   .merge(RecurringTransaction.accessible_by(Current.user))
-                   .find(params[:id])
+    allocation = find_allocation
     occurrence = allocation.recurring_occurrence
 
     RecurringTransaction::Allocator.new(occurrence).unallocate!(allocation)
@@ -30,7 +26,43 @@ class RecurringAllocationsController < ApplicationController
     redirect_with occurrence, notice: t(".success")
   end
 
+  def confirm
+    allocation = find_allocation
+    occurrence = allocation.recurring_occurrence
+
+    RecurringTransaction::Allocator.new(occurrence).confirm_suggestion!(allocation)
+
+    redirect_with_return notice: t(".success")
+  end
+
+  def reject
+    allocation = find_allocation
+    occurrence = allocation.recurring_occurrence
+
+    RecurringTransaction::Allocator.new(occurrence).reject_suggestion!(allocation)
+
+    redirect_with_return notice: t(".success")
+  end
+
   private
+    def find_allocation
+      RecurringAllocation
+        .joins(recurring_occurrence: :recurring_transaction)
+        .where(recurring_occurrences: { family_id: Current.family.id })
+        .merge(RecurringTransaction.accessible_by(Current.user))
+        .find(params[:id])
+    end
+
+    # Queue actions come from the Bills page and should land back there.
+    def redirect_with_return(notice:)
+      flash[:notice] = notice
+
+      respond_to do |format|
+        format.html { redirect_back_or_to bills_path }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, request.referer || bills_path) }
+      end
+    end
+
     def find_occurrence(id)
       Current.family.recurring_occurrences
              .joins(:recurring_transaction)

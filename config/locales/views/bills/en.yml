@@ -18,6 +18,12 @@ en:
         other: "Due in %{count} days, %{date}"
     index:
       add_bill: Add bill
+      needs_review: Needs review
+      suggestion_line: "%{entry} looks like a payment of %{bill}"
+      suggestion_unknown_entry: A transaction
+      confidence: "%{percent}% match"
+      accept: Apply
+      reject: Not this bill
       title: Bills
       summary_label: Due this month
       summary_count:

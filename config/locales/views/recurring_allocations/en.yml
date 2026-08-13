@@ -9,3 +9,7 @@ en:
       success: Payment applied
     destroy:
       success: Payment unlinked
+    confirm:
+      success: Payment applied to the bill
+    reject:
+      success: "Dismissed. That transaction won't be suggested for this bill again." 

@@ -509,7 +509,12 @@ Rails.application.routes.draw do
     resources :allocations, controller: :recurring_allocations, only: %i[create]
   end
 
-  resources :recurring_allocations, only: %i[destroy]
+  resources :recurring_allocations, only: %i[destroy] do
+    member do
+      post :confirm
+      post :reject
+    end
+  end
 
   resources :recurring_transactions, only: %i[index new create edit update destroy] do
     collection do

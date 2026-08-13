@@ -105,6 +105,29 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("recurring_allocations.over_allocation"), flash[:alert]
   end
 
+  test "confirming and rejecting suggestions from the queue" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 15.99, currency: "USD", name: "Netflix charge",
+      entryable: Transaction.new(merchant: merchants(:netflix))
+    )
+    suggestion = RecurringTransaction::Allocator.new(@occurrence).allocate_matched!(
+      entry: entry, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+
+    post confirm_recurring_allocation_url(suggestion)
+    assert suggestion.reload.allocation_confirmed?
+    assert @occurrence.reload.paid?
+
+    delete recurring_allocation_url(suggestion)
+    other = RecurringTransaction::Allocator.new(@occurrence.reload).allocate_matched!(
+      entry: entry, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+    post reject_recurring_allocation_url(other)
+
+    assert_not RecurringAllocation.exists?(other.id)
+    assert RecurringMatchRejection.exists?(recurring_transaction: @series, entry: entry)
+  end
+
   test "unlinking a payment reopens an auto-closed occurrence" do
     entry = accounts(:depository).entries.create!(
       date: Date.current, amount: 15.99, currency: "USD", name: "Netflix charge",

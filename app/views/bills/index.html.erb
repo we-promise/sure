@@ -11,6 +11,52 @@
         ) %>
   </div>
 
+  <% if @suggested_allocations.any? %>
+    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p><%= t(".needs_review") %></p>
+        <span class="text-subdued">&middot;</span>
+        <p><%= @suggested_allocations.size %></p>
+      </div>
+
+      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
+        <% @suggested_allocations.each do |suggestion| %>
+          <% series = suggestion.recurring_occurrence.recurring_transaction %>
+          <div class="flex items-center justify-between gap-4 px-4 py-3">
+            <div class="min-w-0">
+              <p class="text-sm text-primary truncate">
+                <%= t(".suggestion_line",
+                      entry: suggestion.entry&.name.presence || t(".suggestion_unknown_entry"),
+                      bill: series.display_name) %>
+              </p>
+              <p class="text-xs text-secondary privacy-sensitive">
+                <%= format_money(suggestion.allocated_amount_money) %>
+                &middot; <%= l(suggestion.paid_on, format: :short) %>
+                <% if suggestion.match_confidence.present? %>
+                  &middot; <%= t(".confidence", percent: (suggestion.match_confidence * 100).round) %>
+                <% end %>
+              </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <%= render DS::Link.new(
+                    text: t(".accept"),
+                    variant: "primary",
+                    href: confirm_recurring_allocation_path(suggestion),
+                    method: :post
+                  ) %>
+              <%= render DS::Link.new(
+                    text: t(".reject"),
+                    variant: "ghost",
+                    href: reject_recurring_allocation_path(suggestion),
+                    method: :post
+                  ) %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <% if @overdue.empty? && @this_month.empty? && @later.empty? %>
     <div class="bg-container rounded-xl shadow-border-xs p-4">
       <%= render DS::EmptyState.new(
