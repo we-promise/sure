@@ -365,27 +365,11 @@ class RecurringTransaction < ApplicationRecord
 
   # Calculate next expected date from today
   def self.calculate_next_expected_date_from_today(expected_day)
-    today = Date.current
-
-    # Try this month first
-    begin
-      this_month_date = Date.new(today.year, today.month, expected_day)
-      return this_month_date if this_month_date > today
-    rescue ArgumentError
-      # Day doesn't exist in this month (e.g., 31st in February)
-    end
-
-    # Otherwise use next month
-    calculate_next_expected_date_for(today, expected_day)
+    Schedule.new(expected_day_of_month: expected_day).next_occurrence_from_today
   end
 
   def self.calculate_next_expected_date_for(from_date, expected_day)
-    next_month = from_date.next_month
-    begin
-      Date.new(next_month.year, next_month.month, expected_day)
-    rescue ArgumentError
-      next_month.end_of_month
-    end
+    Schedule.new(expected_day_of_month: expected_day).next_occurrence_after(from_date)
   end
 
   # Find matching transactions for this recurring pattern
@@ -472,18 +456,15 @@ class RecurringTransaction < ApplicationRecord
     self.expected_amount_avg = expected_amount_avg + ((transaction_amount - expected_amount_avg) / (n + 1))
   end
 
+  # All date math is owned by Schedule; the model keeps thin, signature-stable
+  # delegators for its existing callers.
+  def schedule
+    Schedule.for(self)
+  end
+
   # Calculate the next expected date based on the last occurrence
   def calculate_next_expected_date(from_date = last_occurrence_date)
-    # Start with next month
-    next_month = from_date.next_month
-
-    # Try to use the expected day of month
-    begin
-      Date.new(next_month.year, next_month.month, expected_day_of_month)
-    rescue ArgumentError
-      # If day doesn't exist in month (e.g., 31st in February), use last day of month
-      next_month.end_of_month
-    end
+    schedule.next_occurrence_after(from_date)
   end
 
   # Get the projected transaction for display

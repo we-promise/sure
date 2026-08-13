@@ -333,16 +333,9 @@ class RecurringTransaction
         original_day
       end
 
-      # Calculate next expected date
+      # Calculate next expected date. Date math is owned by Schedule.
       def calculate_next_expected_date(last_date, expected_day)
-        next_month = last_date.next_month
-
-        begin
-          Date.new(next_month.year, next_month.month, expected_day)
-        rescue ArgumentError
-          # If day doesn't exist in month, use last day of month
-          next_month.end_of_month
-        end
+        Schedule.new(expected_day_of_month: expected_day).next_occurrence_after(last_date)
       end
   end
 end

@@ -108,6 +108,43 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
     assert_not_includes matches, outside
   end
 
+  # --- Schedule's own surface (new in the extraction) ---
+
+  test "occurrences_between returns each monthly occurrence in the range inclusively" do
+    schedule = RecurringTransaction::Schedule.new(expected_day_of_month: 15)
+    assert_equal [ Date.new(2026, 8, 15), Date.new(2026, 9, 15), Date.new(2026, 10, 15) ],
+                 schedule.occurrences_between(Date.new(2026, 8, 15), Date.new(2026, 10, 20))
+  end
+
+  test "occurrences_between skips a first occurrence before the range start" do
+    schedule = RecurringTransaction::Schedule.new(expected_day_of_month: 5)
+    assert_equal [ Date.new(2026, 9, 5) ],
+                 schedule.occurrences_between(Date.new(2026, 8, 20), Date.new(2026, 9, 30))
+  end
+
+  test "occurrences_between clamps through short months without losing the day" do
+    schedule = RecurringTransaction::Schedule.new(expected_day_of_month: 31)
+    assert_equal [ Date.new(2026, 1, 31), Date.new(2026, 2, 28), Date.new(2026, 3, 31) ],
+                 schedule.occurrences_between(Date.new(2026, 1, 1), Date.new(2026, 4, 15))
+  end
+
+  test "occurrences_between is empty for an inverted range" do
+    schedule = RecurringTransaction::Schedule.new(expected_day_of_month: 15)
+    assert_empty schedule.occurrences_between(Date.new(2026, 9, 1), Date.new(2026, 8, 1))
+  end
+
+  test "cycle_for brackets a date between its surrounding occurrences" do
+    schedule = RecurringTransaction::Schedule.new(expected_day_of_month: 29)
+    cycle = schedule.cycle_for(Date.new(2026, 8, 10))
+    assert_equal Date.new(2026, 7, 29), cycle.begin
+    assert_equal Date.new(2026, 8, 29), cycle.end
+    assert cycle.exclude_end?
+
+    on_day = schedule.cycle_for(Date.new(2026, 8, 29))
+    assert_equal Date.new(2026, 8, 29), on_day.begin
+    assert_equal Date.new(2026, 9, 29), on_day.end
+  end
+
   private
     def build_recurring(**overrides)
       @family.recurring_transactions.build(
