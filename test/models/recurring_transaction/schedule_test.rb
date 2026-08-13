@@ -157,7 +157,180 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 9, 29), on_day.end
   end
 
+  # --- Rules-based engine ---
+
+  test "weekly rule fires every week on its weekday" do
+    schedule = build_schedule(rules: [ rule(frequency: "weekly", weekday: 5) ])
+    # Fridays in August 2026: 7, 14, 21, 28
+    assert_equal [ 7, 14, 21, 28 ].map { |d| Date.new(2026, 8, d) },
+                 schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 8, 31))
+  end
+
+  test "biweekly rule keeps the anchor's phase, backward and forward" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "weekly", weekday: 5, interval: 2) ],
+      anchor_date: Date.new(2026, 8, 7)
+    )
+    assert_equal [ Date.new(2026, 7, 24), Date.new(2026, 8, 7), Date.new(2026, 8, 21), Date.new(2026, 9, 4) ],
+                 schedule.occurrences_between(Date.new(2026, 7, 20), Date.new(2026, 9, 10))
+  end
+
+  test "semimonthly is two monthly rules" do
+    schedule = build_schedule(rules: [
+      rule(frequency: "monthly", day_of_month: 1),
+      rule(frequency: "monthly", day_of_month: 15)
+    ])
+    assert_equal [ Date.new(2026, 8, 1), Date.new(2026, 8, 15), Date.new(2026, 9, 1), Date.new(2026, 9, 15) ],
+                 schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 9, 20))
+  end
+
+  test "day_of_month -1 means the last day of every month" do
+    schedule = build_schedule(rules: [ rule(frequency: "monthly", day_of_month: -1) ])
+    assert_equal [ Date.new(2026, 1, 31), Date.new(2026, 2, 28), Date.new(2026, 3, 31) ],
+                 schedule.occurrences_between(Date.new(2026, 1, 1), Date.new(2026, 4, 1))
+  end
+
+  test "nth weekday rule finds the third friday" do
+    schedule = build_schedule(rules: [ rule(frequency: "monthly", weekday: 5, weekday_ordinal: 3) ])
+    assert_equal [ Date.new(2026, 8, 21), Date.new(2026, 9, 18) ],
+                 schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 9, 30))
+  end
+
+  test "fifth weekday months are skipped when the month has no fifth" do
+    schedule = build_schedule(rules: [ rule(frequency: "monthly", weekday: 1, weekday_ordinal: 5) ])
+    # August 2026 has five Mondays (31st); September has only four.
+    assert_equal [ Date.new(2026, 8, 31) ],
+                 schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 9, 30))
+  end
+
+  test "ordinal -1 is the last weekday of the month" do
+    schedule = build_schedule(rules: [ rule(frequency: "monthly", weekday: 5, weekday_ordinal: -1) ])
+    assert_equal [ Date.new(2026, 8, 28), Date.new(2026, 9, 25) ],
+                 schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 9, 30))
+  end
+
+  test "quarterly keeps the anchor's month phase" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "monthly", day_of_month: 15, interval: 3) ],
+      anchor_date: Date.new(2026, 2, 15)
+    )
+    assert_equal [ Date.new(2026, 2, 15), Date.new(2026, 5, 15), Date.new(2026, 8, 15) ],
+                 schedule.occurrences_between(Date.new(2026, 1, 1), Date.new(2026, 9, 30))
+  end
+
+  test "yearly rule clamps Feb 29 outside leap years" do
+    schedule = build_schedule(rules: [ rule(frequency: "yearly", month_of_year: 2, day_of_month: 29) ])
+    assert_equal [ Date.new(2024, 2, 29), Date.new(2025, 2, 28), Date.new(2026, 2, 28) ],
+                 schedule.occurrences_between(Date.new(2024, 1, 1), Date.new(2026, 12, 31))
+  end
+
+  test "weekend adjust before moves saturday and sunday to friday" do
+    # Aug 15 2026 is a Saturday, Sep 15 a Tuesday.
+    schedule = build_schedule(rules: [ rule(frequency: "monthly", day_of_month: 15) ], weekend_adjust: "before")
+    assert_equal [ Date.new(2026, 8, 14), Date.new(2026, 9, 15) ],
+                 schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 9, 30))
+  end
+
+  test "weekend adjust after moves to monday and skip drops the occurrence" do
+    after_schedule = build_schedule(rules: [ rule(frequency: "monthly", day_of_month: 15) ], weekend_adjust: "after")
+    assert_equal [ Date.new(2026, 8, 17), Date.new(2026, 9, 15) ],
+                 after_schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 9, 30))
+
+    skip_schedule = build_schedule(rules: [ rule(frequency: "monthly", day_of_month: 15) ], weekend_adjust: "skip")
+    assert_equal [ Date.new(2026, 9, 15) ],
+                 skip_schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 9, 30))
+  end
+
+  test "weekend adjustment near the window edge cannot lose an occurrence" do
+    # Due Sat Aug 1 2026, adjusted back to Fri Jul 31: a July-only query finds
+    # it, an August-only query does not.
+    schedule = build_schedule(rules: [ rule(frequency: "monthly", day_of_month: 1) ], weekend_adjust: "before")
+    assert_includes schedule.occurrences_between(Date.new(2026, 7, 1), Date.new(2026, 7, 31)), Date.new(2026, 7, 31)
+    assert_not_includes schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 8, 31)), Date.new(2026, 7, 31)
+  end
+
+  test "end_on truncates the series" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "monthly", day_of_month: 15) ],
+      end_mode: "on_date", end_on: Date.new(2026, 9, 30)
+    )
+    assert_equal [ Date.new(2026, 8, 15), Date.new(2026, 9, 15) ],
+                 schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 12, 31))
+    assert_nil schedule.first_occurrence_after(Date.new(2026, 9, 15))
+  end
+
+  test "after_count caps lifetime occurrences from the anchor" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "monthly", day_of_month: 15) ],
+      anchor_date: Date.new(2026, 8, 15),
+      end_mode: "after_count", end_after_count: 3
+    )
+    assert_equal [ Date.new(2026, 8, 15), Date.new(2026, 9, 15), Date.new(2026, 10, 15) ],
+                 schedule.occurrences_between(Date.new(2026, 1, 1), Date.new(2027, 12, 31))
+    assert_equal Date.new(2026, 10, 15), schedule.first_occurrence_after(Date.new(2026, 9, 15))
+    assert_nil schedule.first_occurrence_after(Date.new(2026, 10, 15))
+  end
+
+  test "first_occurrence_after survives long weekend-skip droughts" do
+    # A yearly bill due on a Saturday with skip adjustment has no occurrence
+    # that year at all; the search must roll to the next non-weekend year.
+    schedule = build_schedule(
+      rules: [ rule(frequency: "yearly", month_of_year: 8, day_of_month: 15) ],
+      weekend_adjust: "skip"
+    )
+    # Aug 15: 2026 Saturday (skipped), 2027 Sunday (skipped), 2028 Tuesday.
+    assert_equal Date.new(2028, 8, 15), schedule.first_occurrence_after(Date.new(2026, 1, 1))
+  end
+
+  test "occurrences_per_year sums rule cadences" do
+    semimonthly = build_schedule(rules: [
+      rule(frequency: "monthly", day_of_month: 1),
+      rule(frequency: "monthly", day_of_month: 15)
+    ])
+    assert_in_delta 24.0, semimonthly.occurrences_per_year, 0.001
+
+    biweekly = build_schedule(rules: [ rule(frequency: "weekly", weekday: 5, interval: 2) ],
+                              anchor_date: Date.new(2026, 8, 7))
+    assert_in_delta 26.09, biweekly.occurrences_per_year, 0.01
+  end
+
+  test "legacy shims fall through to correct semantics for non-monthly shapes" do
+    schedule = build_schedule(rules: [ rule(frequency: "weekly", weekday: 5) ])
+    # Aug 13 2026 is a Thursday; the next Friday is the 14th -- no
+    # jump-a-whole-period quirk for rule shapes the old code never handled.
+    assert_equal Date.new(2026, 8, 14), schedule.next_occurrence_after(Date.new(2026, 8, 13))
+  end
+
+  test "interval rules refuse to build without an anchor" do
+    assert_raises(ArgumentError) do
+      build_schedule(rules: [ rule(frequency: "weekly", weekday: 5, interval: 2) ])
+    end
+  end
+
+  test "cycle_for works across rule shapes" do
+    schedule = build_schedule(rules: [
+      rule(frequency: "monthly", day_of_month: 1),
+      rule(frequency: "monthly", day_of_month: 15)
+    ])
+    cycle = schedule.cycle_for(Date.new(2026, 8, 10))
+    assert_equal Date.new(2026, 8, 1), cycle.begin
+    assert_equal Date.new(2026, 8, 15), cycle.end
+  end
+
   private
+    def rule(frequency:, interval: 1, day_of_month: nil, weekday: nil, weekday_ordinal: nil, month_of_year: nil)
+      RecurringTransaction::Schedule::Rule.new(
+        frequency:, interval:, day_of_month:, weekday:, weekday_ordinal:, month_of_year:
+      )
+    end
+
+    def build_schedule(rules:, anchor_date: nil, weekend_adjust: "none", end_mode: "never", end_on: nil, end_after_count: nil)
+      RecurringTransaction::Schedule.new(
+        expected_day_of_month: nil,
+        rules:, anchor_date:, weekend_adjust:, end_mode:, end_on:, end_after_count:
+      )
+    end
+
     def build_recurring(**overrides)
       @family.recurring_transactions.build(
         account: @account,
