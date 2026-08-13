@@ -3,6 +3,11 @@ class DS::Tooltip < ApplicationComponent
 
   attr_reader :placement, :offset, :cross_axis, :icon_name, :size, :color, :tooltip_id, :as, :html_class
 
+  # Custom trigger markup (e.g. underlined text) to show instead of the
+  # default `icon_name` glyph. Falls back to the icon when no trigger is
+  # given, so all existing icon-trigger call sites are unaffected.
+  renders_one :trigger
+
   # NOTE: tooltip content must be non-interactive — no buttons, links,
   # or form controls inside. Tooltips are exposed via `aria-describedby`,
   # which announces the content as a description but does not expose
