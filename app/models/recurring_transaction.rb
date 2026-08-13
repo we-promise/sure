@@ -5,6 +5,8 @@ class RecurringTransaction < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :destination_account, optional: true, class_name: "Account"
   belongs_to :merchant, optional: true
+  belongs_to :category, optional: true
+  belongs_to :replaced_by, optional: true, class_name: "RecurringTransaction"
   # autosave so rule rewrites are atomic with the parent save: FrequencyPreset
   # marks old rules for destruction and builds replacements in one assignment,
   # and only autosave honors mark_for_destruction on save.
@@ -15,7 +17,17 @@ class RecurringTransaction < ApplicationRecord
   monetize :expected_amount_max, allow_nil: true
   monetize :expected_amount_avg, allow_nil: true
 
-  enum :status, { active: "active", inactive: "inactive" }
+  # suggested: detector output awaiting user confirmation -- never surfaced as
+  #   a real bill, never generates occurrences.
+  # paused: deliberately parked by the user; resumable.
+  # inactive: auto-retired by the Cleaner after going stale.
+  # ended: reached its end condition, was cancelled, or was dismissed from the
+  #   suggestion queue -- a tombstone the detector sees and will not recreate.
+  enum :status, { suggested: "suggested", active: "active", paused: "paused",
+                  inactive: "inactive", ended: "ended" }
+  enum :bill_type, { bill: "bill", subscription: "subscription", income: "income",
+                     transfer: "transfer", other: "other" }, prefix: :typed
+  enum :amount_strategy, { fixed: "fixed", average: "average", last: "last" }, prefix: :amount
   enum :end_mode, { never: "never", on_date: "on_date", after_count: "after_count" }, prefix: :ends
   enum :weekend_adjust, { none: "none", skip: "skip", before: "before", after: "after" }, prefix: :weekend
 
@@ -30,8 +42,11 @@ class RecurringTransaction < ApplicationRecord
   validate :payment_url_is_http
   validate :anchor_required_for_intervals
   validate :end_mode_fields_consistent
+  validate :bill_type_matches_shape
 
   normalizes :payment_url, with: ->(url) { normalize_payment_url(url) }
+
+  before_validation :derive_transfer_bill_type
 
   # Form state for the frequency picker; FrequencyPreset translates these to
   # recurrence_rules on save. Not persisted.
@@ -92,6 +107,21 @@ class RecurringTransaction < ApplicationRecord
     errors.add(:payment_url, :invalid_scheme) unless self.class.valid_payment_url?(payment_url)
   end
 
+  # A destination account IS the definition of a transfer, so the
+  # classification derives from the shape rather than asking every creation
+  # path to remember it. The validation guards only the reverse: a row
+  # claiming to be a transfer without the shape would route through pair
+  # matching with no pair to match.
+  def derive_transfer_bill_type
+    self.bill_type = "transfer" if transfer?
+  end
+
+  def bill_type_matches_shape
+    if typed_transfer? && !transfer?
+      errors.add(:bill_type, :transfer_shape_mismatch)
+    end
+  end
+
   # An "every N periods" cadence is a phase-shifted grid: without a reference
   # occurrence there is no way to say WHICH biweekly Friday is the right one.
   def anchor_required_for_intervals
@@ -113,8 +143,6 @@ class RecurringTransaction < ApplicationRecord
   end
 
   def amount_variance_consistency
-    return unless manual?
-
     if expected_amount_min.present? && expected_amount_max.present?
       if expected_amount_min > expected_amount_max
         errors.add(:expected_amount_min, "cannot be greater than expected_amount_max")
@@ -281,6 +309,7 @@ class RecurringTransaction < ApplicationRecord
       last_occurrence_date: outflow_entry.date,
       next_expected_date: next_expected,
       status: "active",
+      bill_type: "transfer",
       occurrence_count: 1,
       manual: true
     )
@@ -338,7 +367,7 @@ class RecurringTransaction < ApplicationRecord
     # Calculate next expected date relative to today, not the transaction date
     next_expected = calculate_next_expected_date_from_today(expected_day)
 
-    create!(
+    attributes = {
       family: family,
       account: entry.account,
       merchant_id: transaction.merchant_id,
@@ -349,12 +378,25 @@ class RecurringTransaction < ApplicationRecord
       last_occurrence_date: entry.date,
       next_expected_date: next_expected,
       status: "active",
+      bill_type: entry.amount.negative? ? "income" : "bill",
       occurrence_count: matching_amounts.size,
       manual: true,
       expected_amount_min: expected_min,
       expected_amount_max: expected_max,
       expected_amount_avg: expected_avg
-    )
+    }
+
+    create!(attributes)
+  rescue ActiveRecord::RecordNotUnique
+    # A series for this identifier already exists (identity no longer includes
+    # amount). A second legitimate series for one merchant -- another
+    # subscription tier, say -- is distinguished by stamping its amount into
+    # dedup_scope. Retried once; a true duplicate (same amount too) re-raises
+    # for the caller's existing already-exists handling.
+    scoped = attributes.merge(dedup_scope: entry.amount.to_d.to_s("F"))
+    raise if where(scoped.slice(:family, :account, :merchant_id, :name, :currency, :dedup_scope)).exists?
+
+    create!(scoped)
   end
 
   # Find matching transaction entries for variance calculation
@@ -442,12 +484,23 @@ class RecurringTransaction < ApplicationRecord
     expected_amount_min.present? && expected_amount_max.present?
   end
 
+  # A series is stale after two missed cycles of ITS OWN cadence, floored at
+  # the old flat thresholds (2 months auto, 6 months manual) so a weekly bill
+  # is not retired after a fortnight's gap. The cycle term is what stops a
+  # quarterly or annual bill being auto-retired between its perfectly normal
+  # occurrences -- under the flat threshold every non-monthly bill died.
+  def staleness_threshold_date
+    calendar_floor = (manual? ? 6 : 2).months.ago.to_date
+    cycle_days = (2 * 365.25 / schedule.occurrences_per_year).ceil
+
+    [ calendar_floor, cycle_days.days.ago.to_date ].min
+  end
+
   # Check if this recurring transaction should be marked inactive
   def should_be_inactive?
     return false if last_occurrence_date.nil?
-    # Manual recurring transactions have a longer threshold
-    threshold = manual? ? 6.months.ago : 2.months.ago
-    last_occurrence_date < threshold
+
+    last_occurrence_date < staleness_threshold_date
   end
 
   # Mark as inactive
@@ -564,9 +617,11 @@ class RecurringTransaction < ApplicationRecord
     end
 
     # Transaction entries whose amount fits the pattern: exact, or within the
-    # configured variance band for manual recurring rows.
+    # observed variance band when one has been recorded. Auto-detected rows
+    # carry a band too now that detection clusters within tolerance instead of
+    # requiring exact amounts.
     def amount_window_scope(relation)
-      if manual? && has_amount_variance?
+      if has_amount_variance?
         relation.where("entries.amount BETWEEN ? AND ?", expected_amount_min, expected_amount_max)
       else
         relation.where("entries.amount = ?", amount)

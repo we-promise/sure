@@ -377,7 +377,7 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
 
   test "should reject update with invalid status" do
     patch api_v1_recurring_transaction_url(@recurring_transaction),
-          params: { recurring_transaction: { status: "paused" } },
+          params: { recurring_transaction: { status: "bogus_status" } },
           headers: api_headers(@api_key)
 
     assert_response :unprocessable_entity

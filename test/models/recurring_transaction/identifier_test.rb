@@ -234,10 +234,12 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal names.size, @family.recurring_transactions.where(name: names).count
   end
 
-  test "keeps automatic recurring lookup amount-scoped" do
+  test "claims the nearest existing series per amount cluster without per-pattern lookups" do
     account = @family.accounts.first
     name = "Tiered Performance Subscription"
 
+    # Two tiers under one identity: the second carries a dedup_scope
+    # discriminator, exactly as the detector stamps it.
     recurring_transactions = [ 40, 55 ].map do |amount|
       create_name_pattern_entries(
         account: account,
@@ -250,6 +252,7 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
         account: account,
         name: name,
         amount: amount,
+        dedup_scope: amount == 40 ? "" : amount.to_s,
         currency: "USD",
         expected_day_of_month: 5,
         last_occurrence_date: 4.months.ago.to_date,
@@ -464,6 +467,98 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
   test "days_cluster_together returns false for widely spread days" do
     days = [ 1, 15, 30 ]
     assert_not @identifier.send(:days_cluster_together?, days)
+  end
+
+  test "a price change within tolerance stays one series" do
+    account = @family.accounts.first
+    recurring = @family.recurring_transactions.create!(
+      account: account,
+      name: "Fiber Internet",
+      amount: 79.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 4.months.ago.to_date,
+      next_expected_date: 1.month.from_now.to_date,
+      occurrence_count: 3,
+      status: "active"
+    )
+
+    # Price crept to 81.99 (2.5%): same obligation, must not fork a new row.
+    create_name_pattern_entries(account: account, name: "Fiber Internet", amount: 81.99, day: 5)
+
+    assert_no_difference -> { @family.recurring_transactions.count } do
+      @identifier.identify_recurring_patterns
+    end
+
+    recurring.reload
+    assert_equal 79.99, recurring.amount, "amount updates are the price-change detector's call, not detection's"
+    assert_equal 81.99, recurring.expected_amount_min
+    assert_equal 81.99, recurring.expected_amount_max
+  end
+
+  test "new detections land as suggested and stamp dedup_scope when the identity is taken" do
+    account = @family.accounts.first
+    @family.recurring_transactions.create!(
+      account: account,
+      name: "STREAMCO",
+      amount: 5.99,
+      currency: "USD",
+      expected_day_of_month: 8,
+      last_occurrence_date: 4.months.ago.to_date,
+      next_expected_date: 1.month.from_now.to_date,
+      occurrence_count: 3,
+      status: "active"
+    )
+
+    # A second, genuinely different tier: far outside tolerance of 5.99.
+    create_name_pattern_entries(account: account, name: "STREAMCO", amount: 24.99, day: 21)
+
+    assert_difference -> { @family.recurring_transactions.count }, 1 do
+      @identifier.identify_recurring_patterns
+    end
+
+    created = @family.recurring_transactions.order(:created_at).last
+    assert_equal "suggested", created.status
+    assert_equal "24.99", created.dedup_scope
+    assert_not created.manual?
+  end
+
+  test "detection never recreates a manual bill or a dismissed one" do
+    account = @family.accounts.first
+
+    manual = @family.recurring_transactions.create!(
+      account: account,
+      name: "Declared Rent",
+      amount: 2150,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 2.months.ago.to_date,
+      next_expected_date: 1.month.from_now.to_date,
+      occurrence_count: 1,
+      status: "active",
+      manual: true
+    )
+    create_name_pattern_entries(account: account, name: "Declared Rent", amount: 2150, day: 5)
+
+    dismissed = @family.recurring_transactions.create!(
+      account: account,
+      name: "Not A Bill",
+      amount: 12.50,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 2.months.ago.to_date,
+      next_expected_date: 1.month.from_now.to_date,
+      occurrence_count: 3,
+      status: "ended"
+    )
+    create_name_pattern_entries(account: account, name: "Not A Bill", amount: 12.50, day: 5)
+
+    assert_no_difference -> { @family.recurring_transactions.count } do
+      @identifier.identify_recurring_patterns
+    end
+
+    assert_equal "ended", dismissed.reload.status
+    assert manual.reload.manual?
   end
 
   private

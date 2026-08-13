@@ -13,3 +13,5 @@ en:
               invalid_scheme: "must be a valid http:// or https:// address"
             anchor_date:
               required_for_intervals: "is required when a rule repeats every 2 or more periods"
+            bill_type:
+              transfer_shape_mismatch: "can only be transfer when a destination account is set"

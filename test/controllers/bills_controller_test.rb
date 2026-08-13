@@ -170,6 +170,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
         account: accounts(:depository),
         name: name,
         amount: amount,
+        # Defaults to the amount so same-name test bills (separate
+        # subscription tiers) coexist under the amount-free identity indexes,
+        # the same way the detector stamps a second series for one identifier.
+        dedup_scope: amount.to_s,
         currency: "USD",
         expected_day_of_month: Date.current.day,
         last_occurrence_date: 1.month.ago.to_date,

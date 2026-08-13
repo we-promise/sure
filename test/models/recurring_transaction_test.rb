@@ -68,7 +68,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal @account, recurring.account
     assert_equal 15.99, recurring.amount
     assert_equal "USD", recurring.currency
-    assert_equal "active", recurring.status
+    assert_equal "suggested", recurring.status
     assert_equal 3, recurring.occurrence_count
   end
 
@@ -205,7 +205,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal(-1000.00, recurring.amount)
     assert recurring.amount.negative?, "Income should have negative amount"
     assert_equal "USD", recurring.currency
-    assert_equal "active", recurring.status
+    assert_equal "suggested", recurring.status
   end
 
   test "identify_patterns_for creates name-based recurring transactions for transactions without merchants" do
@@ -233,7 +233,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "Local Coffee Shop", recurring.name
     assert_equal 25.00, recurring.amount
     assert_equal "USD", recurring.currency
-    assert_equal "active", recurring.status
+    assert_equal "suggested", recurring.status
     assert_equal 3, recurring.occurrence_count
   end
 
@@ -559,11 +559,14 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       manual: true
     )
 
-    # Auto recurring - 2 months threshold with different amount to avoid unique constraint
+    # Auto recurring - 2 months threshold. A second series on the same
+    # identity carries a dedup_scope discriminator now that amount is no
+    # longer part of the unique indexes.
     auto_recurring = @family.recurring_transactions.create!(
       account: @account,
       merchant: @merchant,
       amount: 60.00,
+      dedup_scope: "60.0",
       currency: "USD",
       expected_day_of_month: 15,
       last_occurrence_date: 3.months.ago,

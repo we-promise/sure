@@ -667,7 +667,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           expected_day_of_month: "8",
           last_occurrence_date: "2024-01-08",
           next_expected_date: "2024-02-08",
-          status: "paused",
+          status: "bogus_status",
           occurrence_count: 2
         }
       }

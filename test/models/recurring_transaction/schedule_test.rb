@@ -346,7 +346,9 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
     end
 
     def create_recurring(**overrides)
-      recurring = build_recurring(**overrides)
+      # Name-keyed with a unique name: identity no longer includes amount, so
+      # reusing the fixture's merchant would collide with netflix_subscription.
+      recurring = build_recurring(merchant: nil, name: "Window test bill #{overrides[:expected_day_of_month]}", **overrides)
       recurring.save!
       recurring
     end
@@ -356,7 +358,7 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
         date: date,
         amount: recurring.amount,
         currency: recurring.currency,
-        name: "Netflix charge",
+        name: recurring.name || "Netflix charge",
         entryable: Transaction.new(merchant_id: recurring.merchant_id)
       )
     end
