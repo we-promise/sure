@@ -45,6 +45,7 @@ en:
       autopay_aria: "%{name} pays automatically, open its portal in a new tab"
     new:
       title: Add a bill
+      income_title: Add income
     create:
       success: Bill added
       due_date_required: "Enter the bill's next due date"

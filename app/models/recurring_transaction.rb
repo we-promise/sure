@@ -68,7 +68,7 @@ class RecurringTransaction < ApplicationRecord
   # Form state for the frequency picker and the create-bill dialog;
   # FrequencyPreset and the controller translate these on save. Not persisted.
   attr_accessor :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
-                :frequency_weekday, :frequency_month_of_year, :first_due_on
+                :frequency_weekday, :frequency_month_of_year, :first_due_on, :is_income
 
   # A scheme, followed by either "//" or by something that is not a port number.
   # "example.com:8080" is a host and port, not a scheme, so it does not match.

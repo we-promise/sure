@@ -81,10 +81,13 @@ class RecurringTransactionsController < ApplicationController
   # fastest declare path for a bill that already hits the ledger -- name,
   # amount, account and a projected next-due all come from the entry.
   def new
+    income = params[:income].present?
     @recurring_transaction = Current.family.recurring_transactions.new(
-      frequency_preset: "monthly",
+      # Paychecks default to the most common pay cadence; bills to monthly.
+      frequency_preset: income ? "biweekly" : "monthly",
       first_due_on: Date.current
     )
+    @recurring_transaction.is_income = income
 
     if (entry = Current.family.entries.find_by(id: params[:entry_id]))
       @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name

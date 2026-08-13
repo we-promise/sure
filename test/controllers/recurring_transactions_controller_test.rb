@@ -50,6 +50,14 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="modal"/).size
   end
 
+  test "add income opens an income dialog, not a bill dialog" do
+    get new_recurring_transaction_url(income: true), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.income_title"), response.body
+    assert_match(/name="recurring_transaction\[is_income\]"[^>]*checked/, response.body)
+  end
+
   test "new prefills from a transaction" do
     entry = accounts(:depository).entries.create!(
       date: Date.current - 20, amount: 184.37, currency: "USD", name: "PG&E WEB PAYMENT",
