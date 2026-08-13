@@ -93,6 +93,8 @@ class RecurringTransactionsController < ApplicationController
       @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
       @recurring_transaction.amount = entry.amount.abs
       @recurring_transaction.account_id = entry.account_id
+      # A negative entry is an inflow: pre-fill as income, not as a bill.
+      @recurring_transaction.is_income = true if entry.amount.negative?
       @recurring_transaction.first_due_on =
         RecurringTransaction::Schedule.new(expected_day_of_month: entry.date.day).next_occurrence_from_today
     end

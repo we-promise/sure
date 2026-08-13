@@ -71,6 +71,18 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match "184.37", response.body
   end
 
+  test "prefilling from an inflow pre-selects income" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 10, amount: -1840, currency: "USD", name: "ACME PAYROLL",
+      entryable: Transaction.new
+    )
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.income_title"), response.body
+  end
+
   test "create declares a manual bill and materializes its occurrences" do
     due = Date.current + 16
 
