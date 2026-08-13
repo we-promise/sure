@@ -5,7 +5,6 @@
 <% if entry.account.manual? %>
   <%= link_to reconcile_transaction_path(entry.transaction),
       data: { turbo_method: :patch, turbo_frame: "_top" },
-      title: t("transactions.reconcile.badge.#{entry.reconciled_status}_tooltip"),
       class: "hover:opacity-80 transition-opacity" do %>
     <%= render DS::Pill.new(
       label: t("transactions.reconcile.statuses.#{entry.reconciled_status}"),
