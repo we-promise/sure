@@ -16,6 +16,7 @@ en:
       last_account: Last account used
       recent_payments: Recent payments
       manual_payment: Manual payment
+      close: Collapse details
     add_bill: Add bill
     details: Details
     paid_label: Paid

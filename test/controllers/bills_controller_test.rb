@@ -265,13 +265,27 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.remaining_after_bills"), response.body
   end
 
-  test "overview embeds a lazy detail pane pointed at the first open bill" do
+  test "every overview row carries its own empty expansion frame" do
     create_bill(name: "Rent", amount: 2150)
 
     get bills_url
 
     assert_response :success
-    assert_match(/<turbo-frame[^>]*id="bill_detail"[^>]*src="[^"]*display=pane/, response.body)
+    assert_match(/<turbo-frame[^>]*id="pane_recurring_occurrence_/, response.body)
+    assert_match(/data-turbo-frame="pane_recurring_occurrence_/, response.body)
+  end
+
+  test "the expansion renders into the requesting row frame and can collapse" do
+    bill = create_bill(name: "Rent", amount: 2150)
+
+    get bill_url(bill, display: "pane", frame: "pane_recurring_occurrence_abc123")
+    assert_response :success
+    assert_match(/<turbo-frame[^>]*id="pane_recurring_occurrence_abc123"/, response.body)
+
+    get bill_url(bill, display: "pane", frame: "pane_recurring_occurrence_abc123", close: 1)
+    assert_response :success
+    assert_match(/<turbo-frame[^>]*id="pane_recurring_occurrence_abc123"><\/turbo-frame>/, response.body)
+    assert_no_match I18n.t("bills.pane.rules"), response.body
   end
 
   test "the detail pane tells the bill's story inside its frame" do
@@ -286,7 +300,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bill_url(bill, display: "pane")
 
     assert_response :success
-    assert_match(/<turbo-frame[^>]*id="bill_detail"/, response.body)
+    assert_match(/<turbo-frame[^>]*id="bill_detail"/, response.body, "no frame param falls back to a stable id")
     assert_match I18n.t("bills.pane.rules"), response.body
     assert_match I18n.t("bills.pane.key_metrics"), response.body
     assert_match I18n.t("bills.pane.recent_payments"), response.body

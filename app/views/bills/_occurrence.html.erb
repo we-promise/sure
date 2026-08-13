@@ -5,6 +5,7 @@
 
 <%# An autopaying bill is still worth seeing and still counts toward the total,
     but it recedes so the rows that want something from you carry the weight. %>
+<div>
 <div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 <%= "opacity-70" if series.autopay? %>">
   <% if date_label %>
     <div class="w-14 shrink-0 text-xs <%= occurrence.derived_state == :overdue ? "text-destructive font-medium" : "text-secondary" %>">
@@ -33,14 +34,9 @@
 
     <div class="min-w-0">
       <p class="text-primary text-sm font-medium truncate">
-        <span class="hidden 2xl:inline">
-          <%= link_to series.display_name, bill_path(series, display: "pane"),
-                data: { turbo_frame: "bill_detail" }, class: "hover:underline" %>
-        </span>
-        <span class="2xl:hidden">
-          <%= link_to series.display_name, bill_path(series),
-                data: { turbo_frame: "drawer" }, class: "hover:underline" %>
-        </span>
+        <% pane_frame = dom_id(occurrence, :pane) %>
+        <%= link_to series.display_name, bill_path(series, display: "pane", frame: pane_frame),
+              data: { turbo_frame: pane_frame }, class: "hover:underline" %>
         <% if series.transfer? %>
           <span class="text-xs text-secondary font-normal"><%= t("bills.debt_payment") %></span>
         <% end %>
@@ -104,4 +100,9 @@
         ) %>
     <%= render "recurring_transactions/pay_action", recurring_transaction: series %>
   </div>
+</div>
+
+<%# The row's expansion: empty until the name is clicked, then the bill's
+    full story slides in under the line item. %>
+<%= turbo_frame_tag dom_id(occurrence, :pane) %>
 </div>

@@ -3,7 +3,6 @@
 <div class="space-y-4 pb-6 lg:pb-12">
   <%= render "bills/view_switcher", active: "overview" %>
 
-  <div class="2xl:grid 2xl:grid-cols-[minmax(0,1fr)_360px] 2xl:gap-4 2xl:items-start space-y-4 2xl:space-y-0">
   <div class="space-y-4 min-w-0">
   <%# The month at a glance: what is left, how far along, what is done. %>
   <% paid_amount = @paid_this_month_total ? @paid_this_month_total.amount.to_f : 0.0 %>
@@ -131,17 +130,5 @@
       <%= render "bills/occurrence_section", title: t(".dormant"), occurrences: @dormant %>
     </div>
   <% end %>
-  </div>
-
-  <%# Wide-screen detail pane: the selected bill's full story, drawer-free.
-      Gated at 2xl because the app shell's two sidebars leave narrower
-      viewports without room for a fixed column next to the dense rows. %>
-  <div class="hidden 2xl:block sticky top-4">
-    <% if @default_pane_series %>
-      <%= turbo_frame_tag "bill_detail", src: bill_path(@default_pane_series, display: "pane") %>
-    <% else %>
-      <%= turbo_frame_tag "bill_detail" %>
-    <% end %>
-  </div>
   </div>
 </div>

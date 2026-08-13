@@ -67,8 +67,6 @@ class BillsController < ApplicationController
     # The month reads as one chronological list: paid rows stay in place
     # with a check, overdue rows carry "Overdue" where their date would be.
     @month_rows = (@overdue + @this_month + @paid_this_month).sort_by(&:due_on)
-    first_open = @month_rows.find { |occurrence| !occurrence.paid? } || @month_rows.first
-    @default_pane_series = first_open&.recurring_transaction || @later.first&.recurring_transaction
   end
 
   # One bill's complete story: current state, payment history, what is
@@ -95,6 +93,15 @@ class BillsController < ApplicationController
     end
 
     if params[:display] == "pane"
+      # The expansion renders into whichever row frame asked for it; the id
+      # is reflected back sanitized. close returns the empty frame, which
+      # collapses the row.
+      @pane_frame_id = params[:frame].to_s.gsub(/[^a-zA-Z0-9_-]/, "").presence || "bill_detail"
+      if params[:close].present?
+        render :pane_close, layout: false
+        return
+      end
+
       load_pane_extras
       render :pane, layout: false
       return
