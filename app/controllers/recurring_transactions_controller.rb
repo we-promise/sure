@@ -185,10 +185,11 @@ class RecurringTransactionsController < ApplicationController
   end
 
   def destroy
+    income = @recurring_transaction.typed_income?
     @recurring_transaction.destroy!
 
-    flash[:notice] = t("recurring_transactions.deleted")
-    redirect_to recurring_transactions_path
+    flash[:notice] = t(income ? "recurring_transactions.deleted_income" : "recurring_transactions.deleted")
+    redirect_back_or_to bills_path
   end
 
   private

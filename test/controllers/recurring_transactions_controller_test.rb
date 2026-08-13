@@ -161,6 +161,28 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/comes due/, response.body)
   end
 
+  test "removing a bill never touches the ledger and lands back on bills" do
+    due = Date.current + 5
+    bill = @family.recurring_transactions.create!(
+      name: "City Water", account: accounts(:depository), amount: 45, currency: "USD",
+      expected_day_of_month: due.day, anchor_date: due, last_occurrence_date: due,
+      next_expected_date: due, status: "active", manual: true
+    )
+    RecurringTransaction::OccurrenceGenerator.new(bill).generate!
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 45, currency: "USD", name: "CITY WATER",
+      entryable: Transaction.new
+    )
+    occurrence = bill.recurring_occurrences.order(:due_on).first
+    RecurringTransaction::Allocator.new(occurrence).allocate!(amount: "45", entry: entry)
+
+    delete recurring_transaction_url(bill), headers: { "HTTP_REFERER" => bills_url }
+
+    assert_redirected_to bills_url
+    assert_equal I18n.t("recurring_transactions.deleted"), flash[:notice]
+    assert Entry.exists?(entry.id), "removing a bill must never delete ledger entries"
+  end
+
   test "creating income says income, not bill" do
     post recurring_transactions_url, params: {
       recurring_transaction: {

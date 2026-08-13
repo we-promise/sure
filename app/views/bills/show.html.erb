@@ -118,7 +118,7 @@
                 class: "text-destructive",
                 href: recurring_transaction_path(@series),
                 method: :delete,
-                data: { turbo_confirm: t("recurring_transactions.confirm_delete") }
+                data: { turbo_confirm: t(@series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: @series.display_name) }
               ) %>
         </div>
         <%= render "recurring_transactions/pay_action", recurring_transaction: @series, show_add: false %>

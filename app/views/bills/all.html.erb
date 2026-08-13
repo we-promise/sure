@@ -100,7 +100,7 @@
                       href: recurring_transaction_path(series),
                       method: :delete,
                       destructive: true,
-                      confirm: t("recurring_transactions.confirm_delete")) %>
+                      confirm: t(series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: series.display_name)) %>
                 <% end %>
               </td>
             </tr>
