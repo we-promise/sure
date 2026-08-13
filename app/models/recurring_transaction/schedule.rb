@@ -99,16 +99,28 @@ class RecurringTransaction
 
     # --- The rules-based engine ---
 
-    # Every occurrence with start_date <= date <= end_date, weekend-adjusted,
-    # end-mode-truncated, sorted, deduplicated.
-    def occurrences_between(start_date, end_date)
+    # A single generated occurrence: the raw schedule date (the occurrence's
+    # permanent identity) and the weekend-adjusted date it is actually due.
+    Pair = Data.define(:original_due_on, :due_on)
+
+    # Every occurrence whose DUE date falls in the range, as (original, due)
+    # pairs. The original date is what occurrence rows key on, so an
+    # occurrence's identity survives weekend adjustment and later rule edits
+    # that do not move its raw date.
+    def occurrence_pairs_between(start_date, end_date)
       return [] if start_date > end_date
 
       if end_mode == "after_count"
-        lifetime_occurrences(through: end_date).select { |date| date >= start_date }
+        lifetime_pairs(through: end_date).select { |pair| pair.due_on >= start_date }
       else
-        adjusted_occurrences(start_date, end_date)
+        adjusted_pairs(start_date, end_date)
       end
+    end
+
+    # Every occurrence with start_date <= date <= end_date, weekend-adjusted,
+    # end-mode-truncated, sorted, deduplicated.
+    def occurrences_between(start_date, end_date)
+      occurrence_pairs_between(start_date, end_date).map(&:due_on).uniq.sort
     end
 
     # First occurrence strictly after `date`, or nil when the series has
@@ -201,19 +213,26 @@ class RecurringTransaction
           end_mode == "never"
       end
 
-      def adjusted_occurrences(start_date, end_date)
+      def adjusted_pairs(start_date, end_date)
         raw = rules.flat_map { |rule| raw_occurrences(rule, start_date - WEEKEND_MARGIN, end_date + WEEKEND_MARGIN) }
 
-        raw.filter_map { |date| adjust_for_weekend(date) }
-           .uniq
-           .sort
-           .select { |date| date >= start_date && date <= end_date && !past_end_date?(date) }
+        raw.uniq.sort.filter_map { |original|
+          due = adjust_for_weekend(original)
+          next if due.nil?
+          next unless due >= start_date && due <= end_date && !past_end_date?(due)
+
+          Pair.new(original_due_on: original, due_on: due)
+        }
       end
 
       # The series' first end_after_count occurrences, counted from the
       # anchor, up to `through`.
+      def lifetime_pairs(through:)
+        adjusted_pairs(anchor_date, [ through, anchor_date ].max).first(end_after_count)
+      end
+
       def lifetime_occurrences(through:)
-        adjusted_occurrences(anchor_date, [ through, anchor_date ].max).first(end_after_count)
+        lifetime_pairs(through: through).map(&:due_on)
       end
 
       def past_end_date?(date)

@@ -128,6 +128,7 @@ class RecurringTransaction
         end
 
         def write(recurring, target, reference)
+          recurring.rules_rewritten = true
           recurring.recurrence_rules.each(&:mark_for_destruction)
 
           case target.key

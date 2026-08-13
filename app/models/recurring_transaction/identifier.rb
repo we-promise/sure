@@ -224,6 +224,24 @@ class RecurringTransaction
           expected_amount_max: pattern[:expected_amount_max],
           expected_amount_avg: pattern[:expected_amount_avg]
         )
+
+        sync_monthly_rule_day(recurring, pattern[:expected_day_of_month])
+      end
+
+      # Scheduling reads recurrence_rules, not expected_day_of_month, so a
+      # detected day shift on a plain monthly series must move the rule too --
+      # and regenerate the future occurrences the old day produced.
+      def sync_monthly_rule_day(recurring, day)
+        rules = recurring.recurrence_rules
+        return unless rules.size == 1
+
+        rule = rules.first
+        return unless rule.frequency == "monthly" && rule.interval == 1
+        return if rule.day_of_month.blank? || rule.day_of_month == RecurrenceRule::LAST
+        return if rule.day_of_month == day
+
+        rule.update!(day_of_month: day)
+        OccurrenceGenerator.new(recurring).regenerate_future!
       end
 
       def create_suggested_series(pattern, scoped:)

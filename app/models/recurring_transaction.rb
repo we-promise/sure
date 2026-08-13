@@ -11,6 +11,9 @@ class RecurringTransaction < ApplicationRecord
   # marks old rules for destruction and builds replacements in one assignment,
   # and only autosave honors mark_for_destruction on save.
   has_many :recurrence_rules, -> { order(:position) }, dependent: :destroy, autosave: true
+  has_many :recurring_occurrences, dependent: :destroy
+  has_many :recurring_match_rejections, dependent: :destroy
+  has_many :recurring_price_changes, dependent: :destroy
 
   monetize :amount
   monetize :expected_amount_min, allow_nil: true
@@ -47,6 +50,20 @@ class RecurringTransaction < ApplicationRecord
   normalizes :payment_url, with: ->(url) { normalize_payment_url(url) }
 
   before_validation :derive_transfer_bill_type
+
+  # Columns whose change reshapes the occurrence stream. Amount is absent on
+  # purpose: open occurrences inherit their expected amount at read time, so a
+  # price edit needs no regeneration at all.
+  SCHEDULE_SHAPING_ATTRIBUTES = %w[
+    expected_day_of_month anchor_date end_mode end_on end_after_count weekend_adjust status currency
+  ].freeze
+
+  # Set by FrequencyPreset when it rewrites the rules; cleared after the
+  # post-commit regeneration consumes it.
+  attr_accessor :rules_rewritten
+
+  after_commit :generate_occurrences, on: :create
+  after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
 
   # Form state for the frequency picker; FrequencyPreset translates these to
   # recurrence_rules on save. Not persisted.
@@ -105,6 +122,23 @@ class RecurringTransaction < ApplicationRecord
     return if payment_url.blank?
 
     errors.add(:payment_url, :invalid_scheme) unless self.class.valid_payment_url?(payment_url)
+  end
+
+  def generate_occurrences
+    OccurrenceGenerator.new(self).generate!
+  end
+
+  # Regenerating deletes only scheduled, allocation-free, not-yet-due rows and
+  # rebuilds them under the new shape; anything closed or carrying payments is
+  # untouched. Pausing/ending a series prunes its re-generatable future the
+  # same way, because generate! refuses non-active series.
+  def regenerate_future_occurrences
+    self.rules_rewritten = false
+    OccurrenceGenerator.new(self).regenerate_future!
+  end
+
+  def schedule_shape_changed?
+    rules_rewritten || (previous_changes.keys & SCHEDULE_SHAPING_ATTRIBUTES).any?
   end
 
   # A destination account IS the definition of a transfer, so the
@@ -208,6 +242,14 @@ class RecurringTransaction < ApplicationRecord
   # Bills has to answer "what do I owe now", so it derives the date instead of trusting
   # the stored one. Correcting what gets persisted changes what the Identifier and the
   # Cleaner write, so it belongs with the scheduling work rather than here.
+  # The occurrence the user most needs to see: the earliest still-open one
+  # (which is also the most overdue), falling back to the most recent closed
+  # one when everything is settled.
+  def current_occurrence
+    recurring_occurrences.open_status.order(:due_on).first ||
+      recurring_occurrences.order(due_on: :desc).first
+  end
+
   def next_due_date
     return next_expected_date if next_expected_date <= Date.current
 

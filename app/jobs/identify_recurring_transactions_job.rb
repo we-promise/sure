@@ -20,6 +20,13 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
     # Use advisory lock as final safety net against concurrent execution
     with_advisory_lock(family_id) do
       RecurringTransaction::Identifier.new(family).identify_recurring_patterns
+
+      # Keep every active series' occurrence window materialized as new
+      # patterns and fresh data arrive. Idempotent upserts, so running after
+      # every sync is cheap.
+      family.recurring_transactions.active.find_each do |series|
+        RecurringTransaction::OccurrenceGenerator.new(series).generate!
+      end
     end
   end
 
