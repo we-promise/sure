@@ -521,9 +521,14 @@ class RecurringTransaction < ApplicationRecord
     end
   end
 
-  # Check if this recurring transaction has amount variance configured
+  # True only when the observed amounts actually SPREAD. Detection records a
+  # band for every cluster, so a perfectly stable bill carries a degenerate
+  # band (min == max) -- displaying that as "~amount" would claim an
+  # approximation where there is none, and matching against it is identical
+  # to an exact match anyway.
   def has_amount_variance?
-    expected_amount_min.present? && expected_amount_max.present?
+    expected_amount_min.present? && expected_amount_max.present? &&
+      expected_amount_min < expected_amount_max
   end
 
   # A series is stale after two missed cycles of ITS OWN cadence, floored at

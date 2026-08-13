@@ -199,18 +199,17 @@
                   </span>
                 </td>
                 <td class="py-3 px-2 text-sm text-right">
+                  <%# Management only -- the go-and-pay workflow lives on the
+                      Bills page, so this table stays a settings surface
+                      instead of a second copy of it. %>
                   <div class="flex items-center justify-end gap-2">
-                    <%= render "recurring_transactions/pay_action", recurring_transaction: recurring_transaction %>
-
                     <%= render DS::Menu.new do |menu| %>
-                      <% if recurring_transaction.payment_url? %>
-                        <% menu.with_item(
-                            variant: "link",
-                            text: t("recurring_transactions.actions.edit_payment_link"),
-                            icon: "link",
-                            href: edit_recurring_transaction_path(recurring_transaction),
-                            data: { turbo_frame: :modal }) %>
-                      <% end %>
+                      <% menu.with_item(
+                          variant: "link",
+                          text: t("recurring_transactions.edit.trigger_label"),
+                          icon: "pencil",
+                          href: edit_recurring_transaction_path(recurring_transaction),
+                          data: { turbo_frame: :modal }) %>
 
                       <% menu.with_item(
                           variant: "button",
