@@ -1,6 +1,11 @@
 ---
 en:
   recurring_occurrences:
+    history_status:
+      paid: Paid
+      skipped: Skipped
+      missed: Missed
+      scheduled: Open
     show:
       due_on: "Due %{date}"
       paid_of: "%{paid} of %{expected}"

@@ -63,8 +63,12 @@ class RecurringOccurrence < ApplicationRecord
     [ due_on, snoozed_until ].compact.max
   end
 
+  # List views preload allocation sums in one grouped query and inject them
+  # here, so row rendering issues no per-occurrence SUM.
+  attr_writer :cached_confirmed_allocated
+
   def confirmed_allocated
-    allocations.confirmed.sum(:allocated_amount)
+    @cached_confirmed_allocated || allocations.confirmed.sum(:allocated_amount)
   end
 
   def confirmed_allocated_money

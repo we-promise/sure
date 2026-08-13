@@ -24,4 +24,30 @@ module BillsHelper
 
     " · #{t('bills.paid_from', account: bill.account.name)}"
   end
+
+  # The occurrence-level twin of bills_due_label: relative-first, snooze-aware.
+  def occurrence_due_label(occurrence)
+    due = occurrence.effective_due_on
+    days = (due - Date.current).to_i
+    date = l(due, format: :short)
+
+    if occurrence.snoozed_until.present? && occurrence.snoozed_until > occurrence.due_on && days.positive?
+      t("bills.due_label.snoozed", date: date)
+    elsif days.negative?
+      t("bills.due_label.overdue", count: days.abs, date: date)
+    elsif days.zero?
+      t("bills.due_label.today")
+    else
+      t("bills.due_label.upcoming", count: days, date: date)
+    end
+  end
+
+  # An amount whose expectation is derived (average strategy, or an observed
+  # variance band) is shown as approximate; a fixed declared amount never is.
+  def occurrence_amount_estimated?(occurrence)
+    return false if occurrence.expected_amount.present?
+
+    series = occurrence.recurring_transaction
+    !series.amount_fixed? || series.has_amount_variance?
+  end
 end

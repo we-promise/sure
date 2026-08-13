@@ -1,14 +1,38 @@
 <%= content_for :page_title, t(".title") %>
 
 <div class="space-y-4 pb-6 lg:pb-12">
-  <div class="flex justify-end">
-    <%= render DS::Link.new(
-          text: t(".add_bill"),
-          icon: "plus",
-          variant: "primary",
-          href: new_recurring_transaction_path,
-          frame: :modal
-        ) %>
+  <%= render "bills/view_switcher", active: "overview" %>
+
+  <%# One card divided into cells, per the app's KPI convention. %>
+  <div class="grid grid-cols-2 md:grid-cols-4 bg-container rounded-xl shadow-border-xs md:divide-x divide-y md:divide-y-0 divide-alpha-black-100 theme-dark:divide-alpha-white-200">
+    <div class="p-4 space-y-1">
+      <p class="text-sm text-secondary"><%= t(".kpi_remaining") %></p>
+      <p class="text-primary font-medium text-xl privacy-sensitive"><%= @remaining_this_month ? format_money(@remaining_this_month) : "–" %></p>
+      <p class="text-xs text-secondary">
+        <%= t(".summary_count", count: @owed_count) %>
+        <% if @needs_action_count < @owed_count %>
+          &middot; <%= t(".needs_action_count", count: @needs_action_count) %>
+        <% end %>
+      </p>
+      <% if @unconvertible_count.positive? %>
+        <p class="text-xs text-warning"><%= t(".unconvertible", count: @unconvertible_count) %></p>
+      <% end %>
+    </div>
+    <div class="p-4 space-y-1">
+      <p class="text-sm text-secondary"><%= t(".kpi_paid") %></p>
+      <p class="text-primary font-medium text-xl privacy-sensitive"><%= @paid_this_month_total ? format_money(@paid_this_month_total) : "–" %></p>
+      <p class="text-xs text-secondary"><%= t(".paid_count", count: @paid_this_month.size) %></p>
+    </div>
+    <div class="p-4 space-y-1">
+      <p class="text-sm text-secondary"><%= t(".kpi_next_seven") %></p>
+      <p class="text-primary font-medium text-xl privacy-sensitive"><%= @due_next_seven ? format_money(@due_next_seven) : "–" %></p>
+    </div>
+    <div class="p-4 space-y-1">
+      <p class="text-sm text-secondary"><%= t(".kpi_past_due") %></p>
+      <p class="font-medium text-xl privacy-sensitive <%= @past_due_total ? "text-destructive" : "text-primary" %>">
+        <%= @past_due_total ? format_money(@past_due_total) : "–" %>
+      </p>
+    </div>
   </div>
 
   <% if @suggested_allocations.any? %>
@@ -57,7 +81,7 @@
     </div>
   <% end %>
 
-  <% if @overdue.empty? && @this_month.empty? && @later.empty? %>
+  <% if [ @overdue, @this_month, @later, @paid_this_month, @dormant ].all?(&:empty?) %>
     <div class="bg-container rounded-xl shadow-border-xs p-4">
       <%= render DS::EmptyState.new(
             icon: "receipt",
@@ -66,53 +90,22 @@
           ) do |empty| %>
         <% empty.with_action do %>
           <%= render DS::Link.new(
-                text: t(".empty.action"),
-                icon: "search",
+                text: t(".add_bill"),
+                icon: "plus",
                 variant: "primary",
-                href: recurring_transactions_path
+                href: new_recurring_transaction_path,
+                frame: :modal
               ) %>
         <% end %>
       <% end %>
     </div>
   <% else %>
-    <% if @total_due %>
-      <div class="bg-container rounded-xl shadow-border-xs p-4">
-        <p class="text-xs uppercase font-medium text-secondary"><%= t(".summary_label") %></p>
-        <p class="text-2xl font-medium text-primary privacy-sensitive mt-1">
-          <%= format_money(@total_due) %>
-        </p>
-        <p class="text-xs text-secondary mt-1">
-          <%= t(".summary_count", count: @due_count) %>
-          <span class="text-subdued">&middot;</span>
-          <% if @needs_action_count.zero? %>
-            <%= t(".all_automatic") %>
-          <% else %>
-            <%= t(".summary_needs_action", count: @needs_action_count) %>
-          <% end %>
-        </p>
-        <% if @unconvertible_count.to_i.positive? %>
-          <p class="text-xs text-warning mt-1">
-            <%= t(".unconvertible", count: @unconvertible_count) %>
-          </p>
-        <% end %>
-      </div>
-    <% end %>
-
-    <% if @monthly_total %>
-      <div class="bg-container rounded-xl shadow-border-xs p-4">
-        <p class="text-xs uppercase font-medium text-secondary"><%= t(".recurring_label") %></p>
-        <p class="text-sm text-primary privacy-sensitive mt-1">
-          <%= t(".recurring_monthly", amount: format_money(@monthly_total)) %>
-          <span class="text-subdued">&middot;</span>
-          <%= t(".recurring_annual", amount: format_money(@monthly_total * 12)) %>
-        </p>
-      </div>
-    <% end %>
-
-    <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
-      <%= render "bills/section", title: t(".overdue"), bills: @overdue, tone: :destructive %>
-      <%= render "bills/section", title: t(".this_month"), bills: @this_month %>
-      <%= render "bills/section", title: t(".later"), bills: @later %>
+    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+      <%= render "bills/occurrence_section", title: t(".overdue"), occurrences: @overdue, tone: :destructive %>
+      <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @this_month %>
+      <%= render "bills/occurrence_section", title: t(".later"), occurrences: @later %>
+      <%= render "bills/occurrence_section", title: t(".paid_this_month"), occurrences: @paid_this_month %>
+      <%= render "bills/occurrence_section", title: t(".dormant"), occurrences: @dormant %>
     </div>
   <% end %>
 </div>

@@ -19,32 +19,42 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
   # A bill is something you owe. Income is not owed, an internal transfer is not owed,
   # and a paused row was explicitly set aside, so none of them belong on the list.
-  test "index excludes income, transfers and inactive rows" do
+  test "index excludes income and inactive rows but shows debt payments" do
     create_bill(name: "Real bill", amount: 50)
     create_bill(name: "Paycheck", amount: -2000)
     create_bill(name: "Paused bill", amount: 30, status: "inactive")
-    create_bill(name: "Moved to savings", amount: 100,
+    # A recurring transfer into a credit card is a real obligation with a
+    # real due date -- it belongs on the pay-run page, marked as what it is.
+    create_bill(name: "Card payment", amount: 100,
                 destination_account_id: accounts(:credit_card).id)
+    # A transfer into an asset account is just moving money; not a bill.
+    create_bill(name: "Moved to savings", amount: 100,
+                destination_account_id: accounts(:investment).id)
 
     get bills_url
 
     assert_response :success
     assert_match "Real bill", response.body
+    assert_match "Card payment", response.body
+    assert_match I18n.t("bills.debt_payment"), response.body
     assert_no_match "Paycheck", response.body
     assert_no_match "Paused bill", response.body
     assert_no_match "Moved to savings", response.body
   end
 
-  test "index shows an overdue bill" do
+  test "index shows an overdue occurrence in the overdue section" do
+    overdue_day = 10.days.ago.to_date
     create_bill(name: "Late bill", amount: 75,
+                expected_day_of_month: overdue_day.day,
                 last_occurrence_date: 2.months.ago.to_date,
-                next_expected_date: 10.days.ago.to_date)
+                next_expected_date: overdue_day)
 
     get bills_url
 
     assert_response :success
     assert_match "Late bill", response.body
     assert_match I18n.t("bills.index.overdue"), response.body
+    assert_match I18n.t("bills.index.kpi_past_due"), response.body
   end
 
   test "index cannot see another family's bills" do
@@ -120,20 +130,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paid_from", account: accounts(:depository).name), response.body
   end
 
-  test "index flags a pair that detection split only by casing" do
-    create_bill(name: "Grok Xai", amount: 5)
-    create_bill(name: "GROK XAI", amount: 5)
-
-    get bills_url
-
-    assert_response :success
-    assert_equal 2, response.body.scan(I18n.t("bills.possible_duplicate")).size
-  end
-
-  # Three concurrent subscriptions to one merchant, at different prices on different
-  # days, are three real bills. Telling someone to merge them is worse than saying
-  # nothing, so the rule requires the amount and the day to match as well as the name.
-  test "index does not flag separate subscriptions to the same merchant" do
+  # Three concurrent subscriptions to one merchant, at different prices on
+  # different days, are three real bills and render as three rows.
+  test "index shows separate subscription tiers as separate rows" do
     create_bill(name: "TWITCH", amount: 5.99, expected_day_of_month: 8)
     create_bill(name: "TWITCH", amount: 11.99, expected_day_of_month: 2)
     create_bill(name: "TWITCH", amount: 24.99, expected_day_of_month: 21)
@@ -141,19 +140,68 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    assert_no_match I18n.t("bills.possible_duplicate"), response.body
+    assert_operator response.body.scan("TWITCH").size, :>=, 3
   end
 
-  test "index shows the monthly and annual recurring commitment" do
+  test "index sums the remaining KPI from open occurrences" do
     create_bill(name: "One", amount: 100)
     create_bill(name: "Two", amount: 50)
 
     get bills_url
 
     assert_response :success
-    assert_match I18n.t("bills.index.recurring_label"), response.body
-    assert_match "150", response.body
-    assert_match "1,800", response.body
+    assert_match I18n.t("bills.index.kpi_remaining"), response.body
+    assert_match "$150", response.body
+  end
+
+  test "partial payment moves the remaining KPI and shows progress" do
+    bill = create_bill(name: "Rent", amount: 2000)
+    occurrence = bill.recurring_occurrences.order(:due_on).first
+    RecurringTransaction::Allocator.new(occurrence).allocate!(amount: "750")
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.partial_progress", paid: "$750.00", expected: "$2,000.00"), response.body
+    assert_match "$1,250", response.body
+  end
+
+  test "show renders the bill drawer with history and analytics" do
+    bill = create_bill(name: "Power Co", amount: 80)
+    past = bill.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
+      currency: "USD"
+    )
+    RecurringTransaction::Allocator.new(past).allocate!(amount: "78.50")
+    past.reload
+
+    get bill_url(bill), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
+    assert_match I18n.t("bills.show.history"), response.body
+    assert_match I18n.t("bills.show.ytd"), response.body
+    assert_match "$78.50", response.body
+  end
+
+  test "the all view lists every series and filters compose" do
+    create_bill(name: "Alpha bill", amount: 10)
+    create_bill(name: "Beta paused", amount: 20, status: "paused")
+    create_bill(name: "Gamma income", amount: -500)
+
+    get bills_url(view: "all")
+    assert_response :success
+    assert_match "Alpha bill", response.body
+    assert_match "Beta paused", response.body
+    assert_match "Gamma income", response.body
+
+    get bills_url(view: "all", q: { status: "paused" })
+    assert_match "Beta paused", response.body
+    assert_no_match "Alpha bill", response.body
+
+    get bills_url(view: "all", q: { search: "gamma" })
+    assert_match "Gamma income", response.body
+    assert_no_match "Beta paused", response.body
   end
 
   test "index renders an empty state with no bills" do

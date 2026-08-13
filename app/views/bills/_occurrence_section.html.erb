@@ -1,0 +1,16 @@
+<%# locals: (title:, occurrences:, tone: :default) %>
+<% return if occurrences.empty? %>
+
+<div>
+  <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium uppercase <%= tone == :destructive ? "text-destructive" : "text-secondary" %>">
+    <p><%= title %></p>
+    <span class="text-subdued">&middot;</span>
+    <p><%= occurrences.size %></p>
+  </div>
+
+  <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
+    <% occurrences.each do |occurrence| %>
+      <%= render "bills/occurrence", occurrence: occurrence %>
+    <% end %>
+  </div>
+</div>

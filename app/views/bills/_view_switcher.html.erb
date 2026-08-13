@@ -1,0 +1,15 @@
+<%# locals: (active:) %>
+<div class="flex items-center justify-between gap-2">
+  <%= render DS::SegmentedControl.new(aria_label: t("bills.views.aria_label")) do |control| %>
+    <% control.with_segment(t("bills.views.overview"), active: active == "overview", href: bills_path) %>
+    <% control.with_segment(t("bills.views.all"), active: active == "all", href: bills_path(view: "all")) %>
+  <% end %>
+
+  <%= render DS::Link.new(
+        text: t("bills.index.add_bill"),
+        icon: "plus",
+        variant: "primary",
+        href: new_recurring_transaction_path,
+        frame: :modal
+      ) %>
+</div>

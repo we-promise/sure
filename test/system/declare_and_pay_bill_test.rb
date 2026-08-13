@@ -15,7 +15,8 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
     )
 
     visit bills_url
-    click_on I18n.t("bills.index.add_bill")
+    # The switcher and the empty state both offer Add bill; either works.
+    click_on I18n.t("bills.index.add_bill"), match: :first
     fill_in I18n.t("recurring_transactions.form.name_label"), with: "Watson Property"
     fill_in I18n.t("recurring_transactions.form.amount_label"), with: "2150"
     fill_in I18n.t("recurring_transactions.form.first_due_on_label"), with: due.strftime("%m/%d/%Y")
@@ -25,7 +26,7 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
 
     assert_text "Watson Property"
 
-    click_on I18n.t("bills.details")
+    click_on I18n.t("bills.details"), match: :first
     assert_text payment.name
 
     # Attach the real $537.50 payment: the bill must read partial, not paid.

@@ -1,0 +1,77 @@
+<%# locals: (occurrence:) %>
+<% series = occurrence.recurring_transaction %>
+<% expected = occurrence.resolved_expected_amount_money %>
+<% paid = occurrence.confirmed_allocated_money %>
+
+<%# An autopaying bill is still worth seeing and still counts toward the total,
+    but it recedes so the rows that want something from you carry the weight. %>
+<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 <%= "opacity-70" if series.autopay? %>">
+  <div class="flex items-center gap-3 lg:gap-4 min-w-0 flex-1">
+    <% if series.merchant&.logo_url.present? %>
+      <%= image_tag Setting.transform_brand_fetch_url(series.merchant.logo_url),
+            class: "w-9 h-9 rounded-full shrink-0",
+            loading: "lazy" %>
+    <% else %>
+      <%= render DS::FilledIcon.new(
+            variant: :text,
+            text: series.display_name,
+            size: "lg",
+            rounded: true
+          ) %>
+    <% end %>
+
+    <div class="min-w-0">
+      <p class="text-primary text-sm font-medium truncate">
+        <%= link_to series.display_name, bill_path(series),
+              data: { turbo_frame: "drawer" }, class: "hover:underline" %>
+        <% if series.transfer? %>
+          <span class="text-xs text-secondary font-normal"><%= t("bills.debt_payment") %></span>
+        <% end %>
+      </p>
+      <p class="text-xs <%= occurrence.derived_state == :overdue ? "text-destructive" : "text-secondary" %>">
+        <%= occurrence_due_label(occurrence) %><%= bills_paid_from_label(series) %>
+      </p>
+      <% if occurrence.partially_paid? %>
+        <p class="text-xs text-warning privacy-sensitive">
+          <%= t("bills.partial_progress", paid: format_money(paid), expected: format_money(expected)) %>
+        </p>
+      <% elsif occurrence.paid? %>
+        <p class="text-xs text-success privacy-sensitive">
+          <%= occurrence.overpaid? ? t("bills.paid_over", paid: format_money(paid)) : t("bills.paid_label") %>
+        </p>
+      <% end %>
+      <% if series.notes.present? %>
+        <p class="text-xs text-subdued truncate"><%= series.notes %></p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="shrink-0 text-right">
+    <p class="text-sm font-medium text-primary privacy-sensitive">
+      <% if occurrence.partially_paid? %>
+        <%= format_money(occurrence.remaining_amount_money) %>
+      <% else %>
+        <%= "~" if occurrence_amount_estimated?(occurrence) %><%= format_money(expected) %>
+      <% end %>
+    </p>
+    <% if occurrence.partially_paid? %>
+      <p class="text-xs text-secondary"><%= t("bills.remaining_label") %></p>
+    <% elsif occurrence_amount_estimated?(occurrence) && series.has_amount_variance? %>
+      <p class="text-xs text-secondary privacy-sensitive">
+        <%= t("bills.amount_range",
+              min: format_money(series.expected_amount_min_money),
+              max: format_money(series.expected_amount_max_money)) %>
+      </p>
+    <% end %>
+  </div>
+
+  <div class="shrink-0 flex items-center gap-2">
+    <%= render DS::Link.new(
+          text: t("bills.details"),
+          variant: "ghost",
+          href: recurring_occurrence_path(occurrence),
+          frame: :modal
+        ) %>
+    <%= render "recurring_transactions/pay_action", recurring_transaction: series %>
+  </div>
+</div>

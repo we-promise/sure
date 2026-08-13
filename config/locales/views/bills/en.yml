@@ -5,6 +5,9 @@ en:
     details: Details
     paid_label: Paid
     partial_progress: "%{paid} of %{expected} paid"
+    paid_over: "Paid %{paid}, more than expected"
+    remaining_label: remaining
+    debt_payment: "· debt payment"
     paid_from: "from %{account}"
     amount_range: "ranges %{min} to %{max}"
     possible_duplicate: Possible duplicate
@@ -13,9 +16,50 @@ en:
         one: "Overdue by 1 day, was due %{date}"
         other: "Overdue by %{count} days, was due %{date}"
       today: "Due today"
+      snoozed: "Snoozed until %{date}"
       upcoming:
         one: "Due tomorrow, %{date}"
         other: "Due in %{count} days, %{date}"
+    views:
+      aria_label: Bills views
+      overview: Overview
+      all: All bills
+    all:
+      search_placeholder: Search bills
+      any_status: Any status
+      any_type: Any type
+      sort_due: By next due
+      sort_name: By name
+      sort_amount: By amount
+      no_matches_title: Nothing matches
+      no_matches_description: Try clearing a filter or the search.
+      col_name: Name
+      col_type: Type
+      col_frequency: Frequency
+      col_amount: Amount
+      col_next: Next due
+      col_status: Status
+      col_actions: Actions
+      monthly_equivalent: "%{amount}/mo"
+      types:
+        bill: Bill
+        subscription: Subscription
+        income: Income
+        transfer: Transfer
+        other: Other
+    show:
+      current: Current
+      average: Average paid
+      range: "%{min} to %{max}"
+      annualized: A year
+      ytd: Paid this year
+      upcoming: Coming up
+      history: History
+      payment_count:
+        one: "1 payment"
+        other: "%{count} payments"
+      notes: Notes
+      edit: Edit bill
     index:
       add_bill: Add bill
       needs_review: Needs review
@@ -42,6 +86,18 @@ en:
       overdue: Overdue
       this_month: Rest of this month
       later: Later
+      paid_this_month: Paid this month
+      dormant: Dormant
+      kpi_remaining: Remaining this month
+      kpi_paid: Paid this month
+      kpi_next_seven: Due next 7 days
+      kpi_past_due: Past due
+      paid_count:
+        one: "1 bill settled"
+        other: "%{count} bills settled"
+      needs_action_count:
+        one: "1 needs you"
+        other: "%{count} need you"
       empty:
         title: No bills yet
         description: Bills are your recurring expenses. Sure finds them automatically from your transaction history, and you can add a payment link to each one so you can pay straight from here.

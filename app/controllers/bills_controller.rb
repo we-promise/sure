@@ -1,70 +1,187 @@
 class BillsController < ApplicationController
   before_action :ensure_recurring_enabled
 
-  # Bills are read straight off the table rather than through
-  # `RecurringTransaction#projected_entry`, which returns nil for anything not in the
-  # future. Every existing surface is a forecast, so an overdue bill is currently
-  # invisible app-wide -- and "what have I not paid" is the whole question this page
-  # exists to answer.
+  # The pay-run workspace, built on occurrence rows rather than series
+  # projections: every row is a specific obligation instance with a real due
+  # date and a real payment state, which is what lets overdue and partially
+  # paid render at all.
   def index
-    # Sorted and grouped in Ruby rather than SQL because the due date has to be derived
-    # (see RecurringTransaction#next_due_date), and a family's bill count is small.
-    bills = Current.family.recurring_transactions
-                   .accessible_by(Current.user)
-                   .bills
-                   .includes(:merchant)
-                   .to_a
-                   .sort_by(&:next_due_date)
+    @view = params[:view] == "all" ? "all" : "overview"
 
-    @overdue, upcoming = bills.partition(&:overdue?)
-    @this_month, @later = upcoming.partition { |bill| bill.next_due_date <= Date.current.end_of_month }
+    if @view == "all"
+      load_all_series
+      render :all
+      return
+    end
 
-    due_now = @overdue + @this_month
-    @total_due, @unconvertible_count = total_of(due_now, &:amount_money)
-    @due_count = due_now.size
-    @needs_action_count = due_now.count { |bill| !bill.autopay? }
+    occurrences = payable_occurrences
+    preload_allocation_sums(occurrences)
 
-    # Normalized per cadence: a weekly bill counts ~4.3x its amount here, an
-    # annual bill a twelfth. Summing raw amounts across mixed cadences would
-    # answer no meaningful question.
-    @monthly_total, _monthly_unconvertible = total_of(bills, &:monthly_equivalent_amount)
+    today = Date.current
+    month_end = today.end_of_month
 
-    @duplicate_keys = bills.group_by(&:duplicate_key)
-                           .select { |_key, group| group.size > 1 }
-                           .keys
-                           .to_set
+    open_occurrences, closed = occurrences.partition(&:scheduled?)
+    active_open, @dormant = open_occurrences.partition { |occurrence| occurrence.recurring_transaction.active? }
 
-    # Matches the engine was not sure enough to link on its own. This queue
-    # IS the pay-run page's business: every unreviewed suggestion is a bill
-    # whose paid state is possibly wrong.
-    @suggested_allocations = RecurringAllocation
-                               .suggested
-                               .joins(recurring_occurrence: :recurring_transaction)
-                               .where(recurring_occurrences: { family_id: Current.family.id })
-                               .merge(RecurringTransaction.accessible_by(Current.user))
-                               .includes(:entry, recurring_occurrence: { recurring_transaction: :merchant })
-                               .order(:created_at)
+    @overdue, upcoming = active_open.partition { |occurrence| occurrence.derived_state == :overdue }
+    this_month, later = upcoming.partition { |occurrence| occurrence.due_on <= month_end }
+    @this_month = this_month.sort_by(&:due_on)
+    @overdue = @overdue.sort_by(&:due_on)
+    @dormant = @dormant.sort_by(&:due_on)
+
+    # Beyond this month, one row per series is plenty -- a weekly bill's next
+    # six occurrences are not six separate things to think about yet.
+    @later = later.group_by(&:recurring_transaction_id)
+                  .values
+                  .map { |group| group.min_by(&:due_on) }
+                  .sort_by(&:due_on)
+
+    @paid_this_month = closed.select { |occurrence| occurrence.paid? && occurrence.due_on >= today.beginning_of_month }
+                             .sort_by(&:due_on)
+
+    compute_kpis(today, month_end)
+
+    @suggested_allocations = suggested_allocations
+  end
+
+  # One bill's complete story: current state, payment history, what is
+  # coming, and what it has cost.
+  def show
+    @series = Current.family.recurring_transactions
+                     .accessible_by(Current.user)
+                     .includes(:merchant)
+                     .find(params[:id])
+
+    @current_occurrence = @series.current_occurrence
+    @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(:allocations)
+    @upcoming = @series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3)
+
+    paid_amounts = @series.recurring_occurrences.paid.pluck(:expected_amount).compact
+    @analytics = if paid_amounts.any?
+      {
+        average: Money.new(paid_amounts.sum / paid_amounts.size, @series.currency),
+        lowest: Money.new(paid_amounts.min, @series.currency),
+        highest: Money.new(paid_amounts.max, @series.currency),
+        annualized: @series.monthly_equivalent_amount * 12,
+        ytd: Money.new(ytd_paid_total, @series.currency)
+      }
+    end
+
+    render layout: dialog_layout
   end
 
   private
+    # The management table: every series of every type and status, filterable
+    # and sortable. This is the power-user surface; the overview stays a
+    # worklist.
+    def load_all_series
+      scope = Current.family.recurring_transactions
+                     .accessible_by(Current.user)
+                     .includes(:merchant)
 
-    # Converted into the family currency rather than shown per currency, because the
-    # question the headline answers is "how much do I owe", which is one number.
-    #
-    # A pair with no rate available is left out and counted instead of raising, so one
-    # missing rate cannot take down the page or, worse, quietly understate the total
-    # without saying so. Returns [total, unconvertible_count] so each caller keeps its
-    # own count -- an earlier version stored the count in an ivar that the second call
-    # silently overwrote.
-    def total_of(bills, &value_of)
-      return [ nil, 0 ] if bills.empty?
+      if (search = params.dig(:q, :search)).present?
+        pattern = "%#{ActiveRecord::Base.sanitize_sql_like(search)}%"
+        scope = scope.left_joins(:merchant)
+                     .where("recurring_transactions.name ILIKE :p OR merchants.name ILIKE :p", p: pattern)
+      end
+
+      if (status = params.dig(:q, :status)).presence_in(RecurringTransaction.statuses.keys)
+        scope = scope.where(status: status)
+      end
+
+      if (bill_type = params.dig(:q, :bill_type)).presence_in(RecurringTransaction.bill_types.keys)
+        scope = scope.where(bill_type: bill_type)
+      end
+
+      @all_series = case params.dig(:q, :sort)
+      when "name" then scope.order(:name, :amount)
+      when "amount" then scope.order(amount: :desc)
+      else scope.order(status: :asc, next_expected_date: :asc)
+      end
+    end
+
+    def dialog_layout
+      turbo_frame_request? ? false : "settings"
+    end
+
+    def ytd_paid_total
+      RecurringAllocation.confirmed
+                         .joins(:recurring_occurrence)
+                         .where(recurring_occurrences: { recurring_transaction_id: @series.id })
+                         .where("recurring_allocations.paid_on >= ?", Date.current.beginning_of_year)
+                         .sum(:allocated_amount)
+    end
+
+    # Open occurrences through the horizon plus everything closed this
+    # month, for every payable series (bills, subscriptions, and debt
+    # payments alike). Inactive series ride along so their leftover open
+    # occurrences can render as Dormant instead of haunting Past Due.
+    def payable_occurrences
+      debt_accounts = Account.where(accountable_type: %w[CreditCard Loan]).select(:id)
+
+      series_ids = Current.family.recurring_transactions
+                          .where(status: %w[active inactive])
+                          .where("amount > 0")
+                          .merge(
+                            RecurringTransaction.where(destination_account_id: nil)
+                                                .or(RecurringTransaction.where(destination_account_id: debt_accounts))
+                          )
+                          .accessible_by(Current.user)
+                          .select(:id)
+
+      Current.family.recurring_occurrences
+             .where(recurring_transaction_id: series_ids)
+             .where("due_on >= ? OR status = 'scheduled'", Date.current.beginning_of_month)
+             .where("due_on <= ?", Date.current + 90)
+             .includes(recurring_transaction: :merchant)
+             .to_a
+    end
+
+    def preload_allocation_sums(occurrences)
+      sums = RecurringAllocation.confirmed
+                                .where(recurring_occurrence_id: occurrences.map(&:id))
+                                .group(:recurring_occurrence_id)
+                                .sum(:allocated_amount)
+
+      occurrences.each do |occurrence|
+        occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
+      end
+    end
+
+    def compute_kpis(today, month_end)
+      owed_now = @overdue + @this_month
+
+      @remaining_this_month, @unconvertible_count = total_of(owed_now) { |occurrence| occurrence.remaining_amount_money }
+      @paid_this_month_total, _ = total_of(@paid_this_month) { |occurrence| occurrence.confirmed_allocated_money }
+      @due_next_seven, _ = total_of(owed_now.select { |occurrence| occurrence.effective_due_on <= today + 7 }) { |occurrence| occurrence.remaining_amount_money }
+      @past_due_total, _ = total_of(@overdue) { |occurrence| occurrence.remaining_amount_money }
+      @owed_count = owed_now.size
+      @needs_action_count = owed_now.count { |occurrence| !occurrence.recurring_transaction.autopay? }
+    end
+
+    def suggested_allocations
+      RecurringAllocation
+        .suggested
+        .joins(recurring_occurrence: :recurring_transaction)
+        .where(recurring_occurrences: { family_id: Current.family.id })
+        .merge(RecurringTransaction.accessible_by(Current.user))
+        .includes(:entry, recurring_occurrence: { recurring_transaction: :merchant })
+        .order(:created_at)
+    end
+
+    # Converted into the family currency because the headline answers "how
+    # much do I owe", which is one number. A pair with no rate is left out
+    # and counted rather than silently understating the total. Returns
+    # [total, unconvertible_count] so each caller keeps its own count.
+    def total_of(occurrences, &value_of)
+      return [ nil, 0 ] if occurrences.empty?
 
       target = Current.family.currency
       unconvertible = 0
 
-      total = bills.reduce(Money.new(0, target)) do |sum, bill|
+      total = occurrences.reduce(Money.new(0, target)) do |sum, occurrence|
         begin
-          sum + value_of.call(bill).exchange_to(target)
+          sum + value_of.call(occurrence).exchange_to(target)
         rescue Money::ConversionError
           unconvertible += 1
           sum

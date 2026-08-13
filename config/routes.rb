@@ -495,7 +495,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :bills, only: %i[index]
+  resources :bills, only: %i[index show]
 
   resources :recurring_occurrences, only: %i[show] do
     member do
