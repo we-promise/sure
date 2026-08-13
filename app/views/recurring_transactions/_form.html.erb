@@ -1,0 +1,31 @@
+<%# locals: (recurring_transaction:, sibling_count: 0) %>
+
+<%= styled_form_with model: recurring_transaction, class: "space-y-4" do |f| %>
+  <section class="space-y-4">
+    <% if recurring_transaction.errors.any? %>
+      <%= render "shared/form_errors", model: recurring_transaction %>
+    <% end %>
+
+    <div class="space-y-2">
+      <%= f.text_field :payment_url,
+            label: t(".payment_url_label"),
+            placeholder: t(".payment_url_placeholder"),
+            autofocus: true,
+            inputmode: "url" %>
+      <p class="text-xs text-secondary"><%= t(".payment_url_hint") %></p>
+    </div>
+
+    <% if sibling_count.positive? %>
+      <label class="flex items-start gap-2 cursor-pointer">
+        <%= check_box_tag :apply_to_siblings, "1", false, class: "checkbox checkbox--light mt-0.5" %>
+        <span class="text-sm text-primary">
+          <%= t(".apply_to_siblings", count: sibling_count, name: recurring_transaction.display_name) %>
+        </span>
+      </label>
+    <% end %>
+  </section>
+
+  <section>
+    <%= f.submit t(".submit") %>
+  </section>
+<% end %>

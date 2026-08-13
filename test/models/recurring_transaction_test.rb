@@ -1201,4 +1201,70 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       @family.recurring_transactions.create!(base_attrs)
     end
   end
+
+  # The scheme allowlist is the security boundary for payment_url: the value is
+  # rendered as a link, so a "javascript:" or "data:" scheme surviving to the view
+  # would be stored XSS. These cases are the contract, not incidental coverage.
+  test "payment_url rejects any scheme other than http and https" do
+    [
+      "javascript:alert(1)",
+      "JaVaScRiPt:alert(1)",
+      "  javascript:alert(1)  ",
+      "data:text/html,<script>alert(1)</script>",
+      "mailto:billing@example.com",
+      "ftp://example.com/pay",
+      "https://"
+    ].each do |hostile|
+      recurring = build_recurring(payment_url: hostile)
+
+      assert_not recurring.valid?, "expected #{hostile.inspect} to be rejected"
+      assert_includes recurring.errors.attribute_names, :payment_url
+    end
+  end
+
+  test "payment_url accepts http and https and promotes a bare host to https" do
+    {
+      "https://pay.example.com/bill" => "https://pay.example.com/bill",
+      "http://pay.example.com" => "http://pay.example.com",
+      "pay.example.com" => "https://pay.example.com",
+      "  pay.example.com  " => "https://pay.example.com",
+      # A colon followed by digits is a port, not a scheme. Self-hosters link to
+      # LAN services this way.
+      "192.168.1.5:3000/pay" => "https://192.168.1.5:3000/pay"
+    }.each do |input, expected|
+      recurring = build_recurring(payment_url: input)
+
+      assert recurring.valid?, "expected #{input.inspect} to be accepted: #{recurring.errors.full_messages}"
+      assert_equal expected, recurring.payment_url
+    end
+  end
+
+  test "payment_url is optional and normalizes blank to nil" do
+    [ nil, "", "   " ].each do |blank|
+      recurring = build_recurring(payment_url: blank)
+
+      assert recurring.valid?
+      assert_nil recurring.payment_url
+    end
+  end
+
+  test "display_name prefers the merchant over the free-text name" do
+    assert_equal @merchant.name, build_recurring(merchant: @merchant, name: nil).display_name
+    assert_equal "Rent", build_recurring(merchant: nil, name: "Rent").display_name
+  end
+
+  private
+
+    def build_recurring(**overrides)
+      @family.recurring_transactions.build({
+        account: @account,
+        merchant: @merchant,
+        amount: 29.99,
+        currency: "USD",
+        expected_day_of_month: 15,
+        last_occurrence_date: Date.current,
+        next_expected_date: 1.month.from_now.to_date,
+        status: "active"
+      }.merge(overrides))
+    end
 end

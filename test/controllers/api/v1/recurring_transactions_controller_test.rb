@@ -330,6 +330,26 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
     assert_equal 16, response_data["expected_day_of_month"]
   end
 
+  test "should update payment url and normalize a bare host" do
+    patch api_v1_recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { payment_url: "pay.example.com/bill" } },
+          headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal "https://pay.example.com/bill", JSON.parse(response.body)["payment_url"]
+  end
+
+  # The API is a second door onto the same field, so the scheme allowlist has to hold
+  # here too and not only in the web form.
+  test "should reject a payment url with a non-http scheme" do
+    patch api_v1_recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { payment_url: "javascript:alert(1)" } },
+          headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_nil @recurring_transaction.reload.payment_url
+  end
+
   test "should require authentication when updating recurring transaction" do
     patch api_v1_recurring_transaction_url(@recurring_transaction),
           params: { recurring_transaction: { status: "inactive" } }

@@ -1,0 +1,179 @@
+require "test_helper"
+
+class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    sign_in @user = users(:family_admin)
+    @family = @user.family
+    @recurring_transaction = recurring_transactions(:netflix_subscription)
+    ensure_tailwind_build
+  end
+
+  test "edit renders the form" do
+    get edit_recurring_transaction_url(@recurring_transaction)
+
+    assert_response :success
+  end
+
+  # The dialog is delivered into the shared <turbo-frame id="modal"> that every page
+  # layout already renders empty. If this action responds with a full page layout,
+  # the response carries two frames with that id, Turbo matches the empty one first,
+  # and the pencil icon silently does nothing. Assert there is exactly one.
+  test "edit responds to a turbo frame request with a single modal frame" do
+    get edit_recurring_transaction_url(@recurring_transaction),
+        headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="modal"/).size
+  end
+
+  test "a failed update still renders a single modal frame" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { payment_url: "javascript:alert(1)" } },
+          headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :unprocessable_entity
+    assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="modal"/).size
+  end
+
+  test "update saves a payment link" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { payment_url: "pay.example.com/bill" } }
+
+    assert_redirected_to recurring_transactions_url
+    assert_equal "https://pay.example.com/bill", @recurring_transaction.reload.payment_url
+  end
+
+  test "update rejects a non-http scheme instead of storing it" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { payment_url: "javascript:alert(1)" } }
+
+    assert_response :unprocessable_entity
+    assert_nil @recurring_transaction.reload.payment_url
+  end
+
+  test "update clears the payment link when submitted blank" do
+    @recurring_transaction.update!(payment_url: "https://pay.example.com")
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { payment_url: "" } }
+
+    assert_nil @recurring_transaction.reload.payment_url
+  end
+
+  # One biller routinely owns several bills that all pay at one portal, so the link
+  # can be fanned out on request. It must never reach a row outside the family.
+  test "update copies the payment link to sibling bills of the same merchant when asked" do
+    sibling = @family.recurring_transactions.create!(
+      account: accounts(:depository),
+      merchant: @recurring_transaction.merchant,
+      amount: 4.99,
+      currency: "USD",
+      expected_day_of_month: 20,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active"
+    )
+    other_merchant_bill = @family.recurring_transactions.create!(
+      account: accounts(:depository),
+      merchant: merchants(:amazon),
+      amount: 7.99,
+      currency: "USD",
+      expected_day_of_month: 21,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active"
+    )
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: {
+            recurring_transaction: { payment_url: "https://pay.example.com" },
+            apply_to_siblings: "1"
+          }
+
+    assert_equal "https://pay.example.com", sibling.reload.payment_url
+    assert_nil other_merchant_bill.reload.payment_url
+  end
+
+  # Auto-detection leaves merchant_id null whenever the provider feed gave it nothing
+  # to match on, so most real bills are identified by name alone. Matching siblings on
+  # merchant only would skip them entirely.
+  test "update copies the payment link to name-matched siblings when there is no merchant" do
+    named = @family.recurring_transactions.create!(
+      account: accounts(:depository),
+      name: "TWITCH",
+      amount: 24.99,
+      currency: "USD",
+      expected_day_of_month: 21,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active"
+    )
+    same_name = @family.recurring_transactions.create!(
+      account: accounts(:depository),
+      name: "TWITCH",
+      amount: 5.99,
+      currency: "USD",
+      expected_day_of_month: 8,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active"
+    )
+    different_name = @family.recurring_transactions.create!(
+      account: accounts(:depository),
+      name: "HUNTR.CO",
+      amount: 40,
+      currency: "USD",
+      expected_day_of_month: 28,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active"
+    )
+
+    patch recurring_transaction_url(named),
+          params: {
+            recurring_transaction: { payment_url: "https://twitch.tv/subscriptions" },
+            apply_to_siblings: "1"
+          }
+
+    assert_equal "https://twitch.tv/subscriptions", same_name.reload.payment_url
+    assert_nil different_name.reload.payment_url
+    # A merchant-backed row must not be swept up by a name match.
+    assert_nil @recurring_transaction.reload.payment_url
+  end
+
+  test "update does not touch siblings unless asked" do
+    sibling = @family.recurring_transactions.create!(
+      account: accounts(:depository),
+      merchant: @recurring_transaction.merchant,
+      amount: 4.99,
+      currency: "USD",
+      expected_day_of_month: 20,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active"
+    )
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { payment_url: "https://pay.example.com" } }
+
+    assert_nil sibling.reload.payment_url
+  end
+
+  test "update cannot reach another family's recurring transaction" do
+    other_family_recurring = families(:empty).recurring_transactions.create!(
+      name: "Someone else's bill",
+      amount: 10,
+      currency: "USD",
+      expected_day_of_month: 3,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active"
+    )
+
+    patch recurring_transaction_url(other_family_recurring),
+          params: { recurring_transaction: { payment_url: "https://evil.example.com" } }
+
+    assert_response :not_found
+    assert_nil other_family_recurring.reload.payment_url
+  end
+end

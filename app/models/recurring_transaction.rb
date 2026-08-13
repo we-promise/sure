@@ -21,11 +21,62 @@ class RecurringTransaction < ApplicationRecord
   validate :merchant_or_name_present
   validate :amount_variance_consistency
   validate :transfer_endpoints_consistent
+  validate :payment_url_is_http
+
+  normalizes :payment_url, with: ->(url) { normalize_payment_url(url) }
+
+  # A scheme, followed by either "//" or by something that is not a port number.
+  # "example.com:8080" is a host and port, not a scheme, so it does not match.
+  EXPLICIT_SCHEME = %r{\A[a-zA-Z][a-zA-Z0-9+.\-]*:(?://|(?!\d))}
+
+  # Users paste "verizon.com" as often as "https://verizon.com", so a bare host is
+  # promoted to https rather than rejected. Mirrors FamilyMerchant#extract_domain.
+  #
+  # Anything carrying an explicit scheme is left exactly as typed so that validation
+  # can reject it on the merits. Prefixing "javascript:alert(1)" into
+  # "https://javascript:alert(1)" would both hide what the user entered and make the
+  # rejection an accident of URI parsing rather than a decision.
+  def self.normalize_payment_url(url)
+    stripped = url.to_s.strip
+    return nil if stripped.blank?
+    return stripped if stripped.match?(EXPLICIT_SCHEME)
+
+    "https://#{stripped}"
+  end
+
+  # The scheme allowlist is the security boundary: it is what keeps a stored
+  # "javascript:" or "data:" URL from becoming XSS when rendered as a link.
+  # URI::HTTPS subclasses URI::HTTP, so this one check accepts both schemes and
+  # nothing else. The host check rejects a bare "https://".
+  def self.valid_payment_url?(url)
+    return false if url.blank?
+
+    uri = URI.parse(url)
+    uri.is_a?(URI::HTTP) && uri.host.present?
+  rescue URI::InvalidURIError
+    false
+  end
+
+  def payment_url?
+    payment_url.present?
+  end
+
+  # A recurring transaction is identified by its merchant when it has one and by its
+  # free-text name otherwise; `merchant_or_name_present` guarantees one of the two.
+  def display_name
+    merchant&.name.presence || name
+  end
 
   def merchant_or_name_present
     if merchant_id.blank? && name.blank?
       errors.add(:base, :merchant_or_name_required)
     end
+  end
+
+  def payment_url_is_http
+    return if payment_url.blank?
+
+    errors.add(:payment_url, :invalid_scheme) unless self.class.valid_payment_url?(payment_url)
   end
 
   def amount_variance_consistency

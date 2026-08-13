@@ -515,6 +515,7 @@ class Family::DataImporter
           occurrence_count: data["occurrence_count"].to_i,
           name: data["name"],
           manual: boolean_import_value(data, "manual", default: false),
+          payment_url: data["payment_url"],
           expected_amount_min: data["expected_amount_min"]&.to_d,
           expected_amount_max: data["expected_amount_max"]&.to_d,
           expected_amount_avg: data["expected_amount_avg"]&.to_d

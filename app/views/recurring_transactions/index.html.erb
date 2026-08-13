@@ -167,15 +167,33 @@
                 </td>
                 <td class="py-3 px-2 text-sm text-right">
                   <div class="flex items-center justify-end gap-2">
-                    <%= link_to toggle_status_recurring_transaction_path(recurring_transaction),
-                        data: { turbo_method: :post },
-                        class: "text-secondary hover:text-primary" do %>
-                      <%= icon recurring_transaction.active? ? "pause" : "play", size: "sm" %>
-                    <% end %>
-                    <%= link_to recurring_transaction_path(recurring_transaction),
-                        data: { turbo_method: :delete, turbo_confirm: t("recurring_transactions.confirm_delete") },
-                        class: "text-secondary hover:text-destructive" do %>
-                      <%= icon "trash-2", size: "sm" %>
+                    <%= render "recurring_transactions/pay_action", recurring_transaction: recurring_transaction %>
+
+                    <%= render DS::Menu.new do |menu| %>
+                      <% if recurring_transaction.payment_url? %>
+                        <% menu.with_item(
+                            variant: "link",
+                            text: t("recurring_transactions.actions.edit_payment_link"),
+                            icon: "link",
+                            href: edit_recurring_transaction_path(recurring_transaction),
+                            data: { turbo_frame: :modal }) %>
+                      <% end %>
+
+                      <% menu.with_item(
+                          variant: "button",
+                          text: recurring_transaction.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+                          icon: recurring_transaction.active? ? "pause" : "play",
+                          href: toggle_status_recurring_transaction_path(recurring_transaction),
+                          method: :post) %>
+
+                      <% menu.with_item(
+                          variant: "button",
+                          text: t("recurring_transactions.actions.delete"),
+                          icon: "trash-2",
+                          href: recurring_transaction_path(recurring_transaction),
+                          method: :delete,
+                          destructive: true,
+                          confirm: t("recurring_transactions.confirm_delete")) %>
                     <% end %>
                   </div>
                 </td>

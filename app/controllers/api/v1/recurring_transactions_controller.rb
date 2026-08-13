@@ -246,7 +246,8 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
         :manual,
         :expected_amount_min,
         :expected_amount_max,
-        :expected_amount_avg
+        :expected_amount_avg,
+        :payment_url
       )
     end
 
@@ -254,7 +255,8 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
       params.require(:recurring_transaction).permit(
         :status,
         :expected_day_of_month,
-        :next_expected_date
+        :next_expected_date,
+        :payment_url
       )
     end
 

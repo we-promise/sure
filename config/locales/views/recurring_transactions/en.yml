@@ -12,6 +12,32 @@ en:
     day_of_month: Day %{day} of month
     identify_patterns: Identify Patterns
     cleanup_stale: Clean Up Stale
+    actions:
+      edit_payment_link: Edit payment link
+      pause: Pause
+      resume: Resume
+      delete: Delete
+    pay_action:
+      pay: Pay
+      pay_aria: "Pay %{name} (opens in new tab)"
+      add_link: Add link
+      add_link_aria: "Add a payment link for %{name}"
+    edit:
+      trigger_label: Edit bill
+      title: "Payment link for %{name}"
+    form:
+      payment_url_label: Payment link
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Where you go to pay this bill. Opens in a new tab from your recurring and upcoming lists.
+      apply_to_siblings:
+        one: "Also use this link for the other %{name} bill"
+        other: "Also use this link for the other %{count} %{name} bills"
+      submit: Save bill
+    update:
+      success: Bill updated
+      success_with_siblings:
+        one: "Bill updated, and the payment link was copied to 1 other bill"
+        other: "Bill updated, and the payment link was copied to %{count} other bills"
     settings:
       enable_label: Enable Recurring Transactions
       enable_description: Automatically detect recurring transaction patterns and show upcoming projected transactions.

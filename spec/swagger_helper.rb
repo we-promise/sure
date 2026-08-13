@@ -765,6 +765,7 @@ RSpec.configure do |config|
               occurrence_count: { type: :integer, minimum: 0 },
               name: { type: :string, nullable: true },
               manual: { type: :boolean },
+              payment_url: { type: :string, nullable: true, description: 'Link to the biller portal where this bill is paid. Only http and https are accepted; a bare host is stored as https.' },
               expected_amount_min: { type: :string, nullable: true },
               expected_amount_min_cents: { type: :integer, nullable: true, description: 'Minimum expected amount in currency minor units' },
               expected_amount_max: { type: :string, nullable: true },

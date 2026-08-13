@@ -490,6 +490,22 @@
   }
 }
 
+@utility button-bg-accent {
+  @apply bg-blue-tint-5;
+
+  @variant theme-dark {
+    @apply bg-blue-tint-5;
+  }
+}
+
+@utility button-bg-accent-hover {
+  @apply bg-blue-tint-10;
+
+  @variant theme-dark {
+    @apply bg-blue-tint-10;
+  }
+}
+
 @utility tab-item-active {
   @apply bg-white;
 

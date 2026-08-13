@@ -353,6 +353,8 @@
     "button-bg-destructive-hover": { "$type": "utility", "$value": "{color.red.700}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.500}" } },
     "button-bg-ghost-hover":       { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "bg-gray-800 text-inverse" } },
     "button-bg-outline-hover":     { "$type": "utility", "$value": "{color.gray.100}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
+    "button-bg-accent":            { "$type": "utility", "$value": "{color.blue.tint-5}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.blue.tint-5}" } },
+    "button-bg-accent-hover":      { "$type": "utility", "$value": "{color.blue.tint-10}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.blue.tint-10}" } },
 
     "tab-item-active":  { "$type": "utility", "$value": "{color.white}",     "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
     "tab-item-hover":   { "$type": "utility", "$value": "{color.gray.200}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.800}" } },

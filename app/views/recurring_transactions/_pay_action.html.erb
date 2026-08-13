@@ -1,0 +1,40 @@
+<%# locals: (recurring_transaction:, show_add: true) %>
+
+<%#
+  The row's primary action, which depends on state rather than being the same
+  control every time. With a link saved, the thing you want is to go and pay, and
+  editing is rare enough to belong in the overflow menu. With no link saved, the
+  only useful action is adding one.
+
+  The scheme allowlist is re-applied here as well as in the model, because a row
+  can also arrive by NDJSON import, by the v1 API, or by a direct database write.
+  `DS::Link` supplies rel="noopener noreferrer" and the "opens in new tab" cue for
+  `_blank` targets.
+%>
+
+<% if RecurringTransaction.valid_payment_url?(recurring_transaction.payment_url) %>
+  <%= render DS::Link.new(
+        text: t(".pay"),
+        href: recurring_transaction.payment_url,
+        icon: "external-link",
+        icon_position: :right,
+        variant: "accent",
+        size: "sm",
+        target: "_blank",
+        aria: { label: t(".pay_aria", name: recurring_transaction.display_name) }
+      ) %>
+<% elsif show_add %>
+  <%# Dashed outline reads as "nothing here yet", the same cue the split editor uses
+      for its add-another-split control. Suppressed on read-only forecasts, which
+      should not nag about every bill that has no link yet. %>
+  <%= render DS::Link.new(
+        text: t(".add_link"),
+        href: edit_recurring_transaction_path(recurring_transaction),
+        icon: "link",
+        variant: "outline_muted",
+        size: "sm",
+        frame: :modal,
+        class: "border-dashed",
+        aria: { label: t(".add_link_aria", name: recurring_transaction.display_name) }
+      ) %>
+<% end %>
