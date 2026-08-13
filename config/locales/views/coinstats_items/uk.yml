@@ -1,0 +1,75 @@
+---
+uk:
+  coinstats_items:
+    create:
+      success: "Підключення до постачальника CoinStats успішно налаштовано."
+      default_name: "Підключення CoinStats"
+      errors:
+        validation_failed: "Перевірка не вдалася: %{message}."
+    update:
+      success: "Підключення до постачальника CoinStats успішно оновлено."
+      errors:
+        validation_failed: "Перевірка не вдалася: %{message}."
+    destroy:
+      success: "Підключення до постачальника CoinStats заплановано до видалення."
+    link_wallet:
+      success: "%{count} криптогаманець(ів) успішно прив'язано."
+      missing_params: "Відсутні обов'язкові параметри: адреса та блокчейн."
+      failed: "Не вдалося прив'язати криптогаманець."
+      error: "Не вдалося прив'язати криптогаманець: %{message}."
+    link_exchange:
+      success: "Біржу %{name} прив'язано."
+      missing_params: "Потрібні біржа та облікові дані."
+      invalid_exchange: "Вибрана біржа більше не підтримується."
+      failed: "Не вдалося прив'язати біржу."
+      error: "Не вдалося прив'язати біржу: %{message}."
+    new:
+      title: "Прив'язати криптовалюту за допомогою CoinStats"
+      blockchain_fetch_error: "Не вдалося завантажити блокчейни. Будь ласка, спробуйте пізніше."
+      link_wallet_title: "Прив'язати адресу гаманця"
+      link_wallet_description: "Відстежуйте гаманець із самостійним зберіганням або одну адресу в ланцюжку через CoinStats."
+      address_label: "Адреса"
+      address_placeholder: "Обов'язково"
+      blockchain_label: "Блокчейн"
+      blockchain_placeholder: "Обов'язково"
+      blockchain_select_blank: "Вибрати блокчейн"
+      link_wallet_submit: "Прив'язати криптогаманець"
+      link_exchange_title: "Прив'язати API біржі"
+      link_exchange_description: "Використовуйте ключ API біржі лише для читання, щоб CoinStats міг синхронізувати баланси та транзакції з Bitvavo, Binance та інших підтримуваних бірж."
+      link_exchange_note: "Якщо ваша біржа вимагає активації ключа API або підтвердження електронною поштою, виконайте цей крок перед прив'язкою тут."
+      exchange_select_blank: "Вибрати біржу"
+      exchange_label: "Біржа"
+      link_exchange_submit: "Прив'язати біржу"
+      not_configured_title: "Підключення до постачальника CoinStats не налаштовано"
+      not_configured_message: "Щоб прив'язати криптогаманець або біржу, ви повинні спочатку налаштувати підключення до постачальника CoinStats."
+      not_configured_step1_html: "Перейдіть до <strong>Налаштування → Постачальники</strong>"
+      not_configured_step2_html: "Знайдіть постачальника <strong>CoinStats</strong>"
+      not_configured_step3_html: "Дотримуйтесь наданих <strong>інструкцій з налаштування</strong>, щоб завершити конфігурацію постачальника"
+      go_to_settings: "Перейти до налаштувань постачальника"
+      setup_instructions: "Інструкції з налаштування:"
+      step1_html: "Відвідайте <a href=\"https://openapi.coinstats.app/\" class=\"link\" target=\"_blank\" rel=\"noopener noreferrer\">панель керування загальнодоступним API CoinStats</a>, щоб отримати ключ API."
+      step2: "Введіть свій ключ API нижче та натисніть «Налаштувати»."
+      step3_html: "Після успішного підключення перейдіть на вкладку <a href=\"%{accounts_url}\" class=\"link\" data-turbo-frame=\"_top\">Рахунки</a>, щоб налаштувати свої крипторахунки."
+      api_key_label: "Ключ API"
+      api_key_placeholder: "Обов'язково"
+      configure: "Налаштувати"
+      update_configuration: "Переналаштувати"
+      default_name: "Підключення CoinStats"
+    coinstats_item:
+      deletion_in_progress: "Дані криптогаманця видаляються…"
+      provider_name: "CoinStats"
+      syncing: "Синхронізація…"
+      sync_status:
+        no_accounts: "Криптогаманців не знайдено"
+        all_synced:
+          one: "%{count} криптогаманець синхронізовано"
+          other: "%{count} криптогаманців синхронізовано"
+        partial_sync: "%{linked_count} криптогаманців синхронізовано, %{unlinked_count} потребують налаштування"
+      reconnect: "Повторно підключитися"
+      status: "Остання синхронізація %{timestamp} тому"
+      status_never: "Ніколи не синхронізовано"
+      status_with_summary: "Остання синхронізація %{timestamp} тому • %{summary}"
+      update_api_key: "Оновити ключ API"
+      delete: "Видалити"
+      no_wallets_title: "Немає підключених криптогаманців"
+      no_wallets_message: "Наразі до CoinStats не підключено жодного криптогаманця."

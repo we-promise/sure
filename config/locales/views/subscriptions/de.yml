@@ -4,11 +4,21 @@ de:
     self_hosted_alert: "%{product_name} ist im Self-Hosting-Modus nicht verfügbar."
     upgrade:
       contribute_and_support_sure: "Beitragen und Sure unterstützen"
-      cta: "Unterstützen Sie weiterhin die Entwicklung dieser Codebasis!"
+      cta: Unterstütz die Entwicklung dieser Codebasis weiterhin!
       header:
         support: "Unterstützen"
         sure: "Sure"
         today: "heute"
-      redirect_to_stripe: "Im nächsten Schritt werden Sie zu Stripe weitergeleitet, das Kreditkarten für uns verwaltet."
-      trialing: "Ihre Daten werden in %{days} Tagen gelöscht"
-      trial_over: "Ihre Testversion ist abgelaufen"
+      redirect_to_stripe: Im nächsten Schritt wirst du zu Stripe weitergeleitet, das Kreditkarten für uns verwaltet.
+      trialing: Deine Daten werden in %{days} Tagen gelöscht
+      trial_over: Deine Testphase ist abgelaufen
+      account_settings: Kontoeinstellungen
+      already_contributing: Du unterstützt bereits. Danke!
+      page_title: Upgrade
+      sign_out: Abmelden
+    create:
+      trial_already_used: Du hast eine Testphase bereits begonnen oder abgeschlossen. Für die weitere Nutzung ist ein Upgrade nötig.
+      welcome: Willkommen bei Sure!
+    success:
+      contribution_failed: Bei der Verarbeitung deines Beitrags ist etwas schiefgegangen. Versuch es noch einmal.
+      welcome_with_contribution: Willkommen bei Sure! Danke für deinen Beitrag.

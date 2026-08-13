@@ -26,7 +26,7 @@
         <%= icon("pen", size: "xs") %>
       <% end %>
 
-      <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-container p-3 border border-alpha-black-25 rounded-2xl shadow-xs w-80 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto"
+      <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-container p-3 border border-alpha-black-25 rounded-2xl shadow-xs w-80 max-w-[calc(100vw-2rem)] max-h-[60vh] h-fit overflow-y-auto"
            data-color-icon-picker-target="popup">
         <div class="flex gap-2 flex-col mb-3" data-color-icon-picker-target="selection">
           <div data-color-icon-picker-target="pickerSection"></div>
@@ -58,16 +58,7 @@
 
         <div class="flex flex-col gap-2">
           <h4 class="text-secondary text-xs uppercase tracking-wide"><%= t("goals.color_picker.icon_heading") %></h4>
-          <div class="flex flex-wrap gap-0.5 max-h-40 overflow-y-auto scrollbar">
-            <% icons.each do |icon_name| %>
-              <label class="relative">
-                <%= form.radio_button :icon, icon_name, class: "sr-only peer", data: { action: "change->color-icon-picker#handleIconChange change->color-icon-picker#handleIconColorChange", color_icon_picker_target: "icon" } %>
-                <div class="text-secondary w-7 h-7 flex m-0.5 items-center justify-center rounded-full cursor-pointer hover:bg-container-inset-hover peer-checked:bg-container-inset border border-transparent">
-                  <%= icon(icon_name, size: "sm", color: "current") %>
-                </div>
-              </label>
-            <% end %>
-          </div>
+          <%= render DS::IconPicker.new(form: form, method: :icon, icons: icons) %>
         </div>
       </div>
     <% end %>
