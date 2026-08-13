@@ -30,6 +30,9 @@
       </p>
       <p class="text-xs <%= occurrence.derived_state == :overdue ? "text-destructive" : "text-secondary" %>">
         <%= occurrence_due_label(occurrence) %><%= bills_paid_from_label(series) %>
+        <% if (progress = series.installment_progress) %>
+          &middot; <%= t("bills.installment_progress", done_plus_one: progress.first + 1, total: progress.last) %>
+        <% end %>
       </p>
       <% if occurrence.partially_paid? %>
         <p class="text-xs text-warning privacy-sensitive">

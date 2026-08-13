@@ -131,6 +131,11 @@ class RecurringTransactionsController < ApplicationController
     @recurring_transaction.assign_attributes(recurring_transaction_params)
     apply_frequency_preset
 
+    if @recurring_transaction.typed_installment? && @recurring_transaction.end_after_count.present?
+      @recurring_transaction.end_mode = "after_count"
+      @recurring_transaction.anchor_date ||= @recurring_transaction.last_occurrence_date
+    end
+
     if @recurring_transaction.save
       applied = apply_payment_url_to_siblings
 
@@ -191,7 +196,7 @@ class RecurringTransactionsController < ApplicationController
     def recurring_transaction_params
       params.require(:recurring_transaction).permit(
         :payment_url, :autopay, :notes, :bill_type, :category_id,
-        :renews_on, :trial_ends_on, :cancelled_on,
+        :renews_on, :trial_ends_on, :cancelled_on, :end_after_count,
         :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
         :frequency_weekday, :frequency_month_of_year
       )

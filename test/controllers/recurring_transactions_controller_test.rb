@@ -134,6 +134,28 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "", "24.99" ], tiers.map(&:dedup_scope)
   end
 
+  test "marking a bill as an installment plan caps its occurrences and tracks progress" do
+    due = Date.current + 5
+    post recurring_transactions_url, params: {
+      recurring_transaction: { name: "Klarna sofa", amount: "120", first_due_on: due.iso8601, frequency_preset: "monthly" }
+    }
+    bill = @family.recurring_transactions.find_by!(name: "Klarna sofa")
+
+    patch recurring_transaction_url(bill), params: {
+      recurring_transaction: { bill_type: "installment", end_after_count: "4" }
+    }
+
+    bill.reload
+    assert bill.typed_installment?
+    assert bill.ends_after_count?
+    assert_equal 4, bill.recurring_occurrences.reload.count, "the plan materializes exactly its four payments"
+    assert_equal [ 0, 4 ], bill.installment_progress
+
+    occurrence = bill.recurring_occurrences.order(:due_on).first
+    RecurringTransaction::Allocator.new(occurrence).mark_paid!
+    assert_equal [ 1, 4 ], bill.reload.installment_progress
+  end
+
   test "update applies a frequency preset as recurrence rules" do
     patch recurring_transaction_url(@recurring_transaction),
           params: { recurring_transaction: { frequency_preset: "biweekly", frequency_weekday: "5" } }

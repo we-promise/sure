@@ -28,8 +28,8 @@ class RecurringTransaction < ApplicationRecord
   #   suggestion queue -- a tombstone the detector sees and will not recreate.
   enum :status, { suggested: "suggested", active: "active", paused: "paused",
                   inactive: "inactive", ended: "ended" }
-  enum :bill_type, { bill: "bill", subscription: "subscription", income: "income",
-                     transfer: "transfer", other: "other" }, prefix: :typed
+  enum :bill_type, { bill: "bill", subscription: "subscription", installment: "installment",
+                     income: "income", transfer: "transfer", other: "other" }, prefix: :typed
   enum :amount_strategy, { fixed: "fixed", average: "average", last: "last" }, prefix: :amount
   enum :end_mode, { never: "never", on_date: "on_date", after_count: "after_count" }, prefix: :ends
   enum :weekend_adjust, { none: "none", skip: "skip", before: "before", after: "after" }, prefix: :weekend
@@ -254,6 +254,14 @@ class RecurringTransaction < ApplicationRecord
   # Bills has to answer "what do I owe now", so it derives the date instead of trusting
   # the stored one. Correcting what gets persisted changes what the Identifier and the
   # Cleaner write, so it belongs with the scheduling work rather than here.
+  # For installment plans: how many payments are done, out of how many.
+  # nil when the series has no declared payment count.
+  def installment_progress
+    return nil unless typed_installment? && end_after_count.present?
+
+    [ recurring_occurrences.paid.count, end_after_count ]
+  end
+
   # The occurrence the user most needs to see: the earliest still-open one
   # (which is also the most overdue), falling back to the most recent closed
   # one when everything is settled.

@@ -1,5 +1,9 @@
 <%= render DS::Dialog.new(variant: "drawer") do |dialog| %>
-  <% dialog.with_header(title: @series.display_name, subtitle: frequency_label(@series)) %>
+  <% subtitle = frequency_label(@series) %>
+  <% if (progress = @series.installment_progress) %>
+    <% subtitle = "#{subtitle} · #{t("bills.installment_progress", done_plus_one: [ progress.first + 1, progress.last ].min, total: progress.last)}" %>
+  <% end %>
+  <% dialog.with_header(title: @series.display_name, subtitle: subtitle) %>
   <% dialog.with_body do %>
     <div class="space-y-5">
       <% if @current_occurrence %>

@@ -83,15 +83,23 @@
       <% end %>
     </div>
 
-    <% if recurring_transaction.persisted? && %w[bill subscription other].include?(recurring_transaction.bill_type) %>
-      <div class="grid grid-cols-2 gap-3">
+    <% if recurring_transaction.persisted? && %w[bill subscription installment other].include?(recurring_transaction.bill_type) %>
+      <div class="grid grid-cols-2 gap-3" data-controller="frequency-fields">
         <%= f.select :bill_type,
-              %w[bill subscription other].map { |type| [ t("bills.all.types.#{type}"), type ] },
-              { label: t(".bill_type_label") } %>
+              %w[bill subscription installment other].map { |type| [ t("bills.all.types.#{type}"), type ] },
+              { label: t(".bill_type_label") },
+              { data: { frequency_fields_target: "preset", action: "change->frequency-fields#update" } } %>
         <%= f.collection_select :category_id,
               Current.family.categories.alphabetically,
               :id, :name,
               { label: t(".category_label"), include_blank: t(".category_blank") } %>
+
+        <div data-frequency-fields-target="group" data-presets="installment" class="hidden col-span-2">
+          <%= f.number_field :end_after_count,
+                label: t(".installment_count_label"),
+                min: 2, step: 1 %>
+          <p class="text-xs text-secondary mt-1"><%= t(".installment_count_hint") %></p>
+        </div>
       </div>
 
       <% if recurring_transaction.typed_subscription? %>

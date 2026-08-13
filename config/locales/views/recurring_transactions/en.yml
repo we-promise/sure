@@ -73,6 +73,8 @@ en:
       is_income_label: This is income
       is_income_hint: A paycheck or other money that arrives on a schedule. Powers the Paycheck view.
       bill_type_label: Kind
+      installment_count_label: Number of payments
+      installment_count_hint: The plan ends after this many payments and shows its progress until then.
       renews_on_label: Renews
       trial_ends_on_label: Trial ends
       cancelled_on_label: Cancelled

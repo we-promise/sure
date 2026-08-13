@@ -31,6 +31,9 @@ class RecurringTransaction
       wireless phone internet interest finance\ charge
     ].freeze
 
+    # Buy-now-pay-later and financing: a fixed run of payments, then done.
+    INSTALLMENT_KEYWORDS = %w[klarna affirm afterpay sezzle zip\ pay uplift].freeze
+
     # Push-payment fingerprints in raw descriptors.
     ACH_MARKERS = %w[ach web\ pmt webpmt billpay bill\ pay online\ pmt e-pay epay].freeze
 
@@ -53,14 +56,21 @@ class RecurringTransaction
     end
 
     def classify
-      subscription = subscription?
+      kind =
+        if matches?(INSTALLMENT_KEYWORDS)
+          "installment"
+        elsif subscription?
+          "subscription"
+        else
+          "bill"
+        end
 
       Result.new(
-        bill_type: subscription ? "subscription" : "bill",
+        bill_type: kind,
         category_id: modal_category_id,
-        # A subscription IS an auto-charge: it belongs on the list but is
-        # not a task. User-editable like everything else here.
-        autopay: subscription
+        # Subscriptions and BNPL plans ARE auto-charges: on the list, not a
+        # task. User-editable like everything else here.
+        autopay: kind != "bill"
       )
     end
 

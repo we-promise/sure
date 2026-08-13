@@ -64,6 +64,14 @@ class RecurringTransaction
         horizon = Date.current + HORIZON_DAYS
         next_due = schedule.first_occurrence_after(Date.current)
 
+        # A finite plan materializes whole: an installment run is bounded by
+        # definition, and seeing all N payments (and the end) is the point.
+        if series.ends_after_count? && series.end_after_count.present?
+          cycle_days = (365.25 / schedule.occurrences_per_year).ceil
+          plan_end = (series.anchor_date || Date.current) + cycle_days * (series.end_after_count + 1)
+          return [ horizon, next_due, plan_end ].compact.max
+        end
+
         [ horizon, next_due ].compact.max
       end
 

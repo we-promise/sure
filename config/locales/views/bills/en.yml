@@ -4,6 +4,7 @@ en:
     add_bill: Add bill
     details: Details
     paid_label: Paid
+    installment_progress: "Payment %{done_plus_one} of %{total}"
     partial_progress: "%{paid} of %{expected} paid"
     paid_over: "Paid %{paid}, more than expected"
     remaining_label: remaining
@@ -46,6 +47,13 @@ en:
         title: Declare your income schedule
         description: Add your paycheck as recurring income (use "This is income" in the add dialog) and this view will show which bills each paycheck needs to cover.
         action: Add income
+      next_paycheck: Next paycheck
+      bills_that_period: Bills that period
+      safe_after_bills: Safe after bills
+      income_line: "Income %{amount}"
+      obligations_line: "Bills %{amount}"
+      load_aria: "Bills consume %{percent}% of this paycheck"
+      set_aside_disclosure: "Set aside for later · %{amount}"
       before_next_paycheck: Before your next paycheck
       paycheck_of: "Paycheck %{date}"
       period_range: "%{from} – %{to}"
@@ -82,6 +90,7 @@ en:
       types:
         bill: Bill
         subscription: Subscription
+        installment: Installment plan
         income: Income
         transfer: Transfer
         other: Other
