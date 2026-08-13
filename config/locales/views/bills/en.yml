@@ -56,6 +56,7 @@ en:
       remaining_after_bills: Remaining after bills
       trough_warning: "This period comes up short. %{bill} is the largest obligation here — consider moving its set-aside."
     calendar:
+      subscribe_ical: Subscribe (iCal)
       previous_month: Previous month
       next_month: Next month
       today: Today
@@ -100,6 +101,9 @@ en:
     index:
       add_bill: Add bill
       needs_review: Needs review
+      notice_trial: "%{name}'s trial ends %{date}"
+      notice_renewal: "%{name} renews %{date}"
+      notice_price: "%{name} changed price: %{from} → %{to}"
       suggestion_line: "%{entry} looks like a payment of %{bill}"
       suggestion_unknown_entry: A transaction
       confidence: "%{percent}% match"

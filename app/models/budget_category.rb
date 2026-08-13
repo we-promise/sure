@@ -1,4 +1,29 @@
 class BudgetCategory < ApplicationRecord
+  # Money this category's bills still expect inside the budget period --
+  # committed but not yet spent. Read-side only: budgets stay derived from
+  # posted entries, and debt-payment transfers never reach here because
+  # transfer series carry no category.
+  def bills_reserved
+    occurrences = RecurringOccurrence
+                    .open_status
+                    .joins(:recurring_transaction)
+                    .where(recurring_transactions: {
+                             family_id: budget.family_id,
+                             category_id: category_id,
+                             status: :active,
+                             destination_account_id: nil
+                           })
+                    .where("recurring_transactions.amount > 0")
+                    .where(due_on: budget.start_date..budget.end_date)
+                    .includes(:recurring_transaction, :allocations)
+
+    total = occurrences.sum do |occurrence|
+      occurrence.currency == currency ? occurrence.remaining_amount : 0
+    end
+
+    Money.new(total, currency)
+  end
+
   include Monetizable
 
   belongs_to :budget

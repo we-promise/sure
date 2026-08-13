@@ -73,6 +73,11 @@
           </div>
         <% end %>
         <% end %>
+        <% if (reserved = budget_category.bills_reserved).amount.positive? %>
+          <div class="whitespace-nowrap text-xs text-secondary">
+            <%= t("budget_categories.bills_reserved", amount: format_money(reserved)) %>
+          </div>
+        <% end %>
         <div class="whitespace-nowrap w-full sm:w-auto lg:ml-auto">
           <% if budget_category.available_to_spend >= 0 %>
             <span class="text-sm text-secondary"><%= t("reports.budget_performance.remaining") %>:</span>

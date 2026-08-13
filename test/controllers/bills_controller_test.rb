@@ -282,6 +282,33 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.subscriptions.price_changes"), response.body
   end
 
+  test "notices surface trials, renewals and price changes" do
+    sub = create_bill(name: "STREAMFLIX", amount: 24.99)
+    sub.update!(bill_type: "subscription", trial_ends_on: Date.current + 3)
+    sub.recurring_price_changes.create!(
+      effective_on: Date.current - 5, previous_amount: 19.99, new_amount: 24.99,
+      currency: "USD", source: "detected"
+    )
+
+    get bills_url
+
+    assert_response :success
+    assert_match "trial ends #{I18n.l(Date.current + 3, format: :long)}", response.body
+    assert_match "changed price", response.body
+  end
+
+  test "the ical feed serves upcoming occurrences with a signed token and rejects garbage" do
+    create_bill(name: "Rent", amount: 2150)
+
+    get bills_feed_url(token: BillsFeedsController.token_for(@family))
+    assert_response :success
+    assert_match "BEGIN:VCALENDAR", response.body
+    assert_match "Rent", response.body
+
+    get bills_feed_url(token: "tampered")
+    assert_response :not_found
+  end
+
   test "index renders an empty state with no bills" do
     get bills_url
 

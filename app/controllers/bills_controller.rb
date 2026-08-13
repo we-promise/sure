@@ -55,6 +55,7 @@ class BillsController < ApplicationController
     compute_kpis(today, month_end)
 
     @suggested_allocations = suggested_allocations
+    @notices = collect_notices
   end
 
   # One bill's complete story: current state, payment history, what is
@@ -256,6 +257,33 @@ class BillsController < ApplicationController
       @past_due_total, _ = total_of(@overdue) { |occurrence| occurrence.remaining_amount_money }
       @owed_count = owed_now.size
       @needs_action_count = owed_now.count { |occurrence| !occurrence.recurring_transaction.autopay? }
+    end
+
+    Notice = Data.define(:kind, :series, :date, :detail)
+
+    # Lightweight, page-native reminders: the Insights pipeline is
+    # preview-gated, so anything that must reach EVERY user renders here.
+    def collect_notices
+      today = Date.current
+      window = today..(today + 14)
+      series_scope = Current.family.recurring_transactions.accessible_by(Current.user).active
+
+      notices = []
+      series_scope.where(trial_ends_on: window).find_each do |series|
+        notices << Notice.new(kind: :trial, series: series, date: series.trial_ends_on, detail: nil)
+      end
+      series_scope.where(renews_on: window).find_each do |series|
+        notices << Notice.new(kind: :renewal, series: series, date: series.renews_on, detail: nil)
+      end
+      RecurringPriceChange.joins(:recurring_transaction)
+                          .where(recurring_transactions: { family_id: Current.family.id })
+                          .where("effective_on >= ?", today - 30)
+                          .includes(:recurring_transaction)
+                          .find_each do |change|
+        notices << Notice.new(kind: :price, series: change.recurring_transaction, date: change.effective_on, detail: change)
+      end
+
+      notices.sort_by(&:date)
     end
 
     def suggested_allocations

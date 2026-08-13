@@ -1390,6 +1390,85 @@ components:
           type: string
           nullable: true
           description: Free-text notes shown alongside the bill.
+        bill_type:
+          type: string
+          enum:
+          - bill
+          - subscription
+          - income
+          - transfer
+          - other
+          description: What kind of obligation this is.
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        anchor_date:
+          type: string
+          format: date
+          nullable: true
+          description: Reference occurrence that phases every-N cadences.
+        weekend_adjust:
+          type: string
+          enum:
+          - none
+          - skip
+          - before
+          - after
+        end_mode:
+          type: string
+          enum:
+          - never
+          - on_date
+          - after_count
+        end_on:
+          type: string
+          format: date
+          nullable: true
+        end_after_count:
+          type: integer
+          nullable: true
+        renews_on:
+          type: string
+          format: date
+          nullable: true
+        trial_ends_on:
+          type: string
+          format: date
+          nullable: true
+        cancelled_on:
+          type: string
+          format: date
+          nullable: true
+        recurrence_rules:
+          type: array
+          description: Repetition patterns; multiple rows express semimonthly and
+            similar multi-pattern cadences. Empty means legacy monthly on expected_day_of_month.
+          items:
+            type: object
+            properties:
+              frequency:
+                type: string
+                enum:
+                - weekly
+                - monthly
+                - yearly
+              interval:
+                type: integer
+              day_of_month:
+                type: integer
+                nullable: true
+                description: "-1 means the last day of the month."
+              weekday:
+                type: integer
+                nullable: true
+              weekday_ordinal:
+                type: integer
+                nullable: true
+                description: "-1 means the last such weekday."
+              month_of_year:
+                type: integer
+                nullable: true
         expected_amount_min:
           type: string
           nullable: true

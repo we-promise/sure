@@ -1,5 +1,7 @@
 ---
 en:
+  budget_categories:
+    bills_reserved: "%{amount} reserved by bills"
   budgets:
     switcher:
       aria_label: "Switch budget"

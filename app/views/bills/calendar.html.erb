@@ -58,6 +58,12 @@
     </div>
   </div>
 
+  <div class="flex justify-end">
+    <%= link_to t(".subscribe_ical"),
+          bills_feed_path(token: BillsFeedsController.token_for(Current.family)),
+          class: "text-xs text-link hover:underline" %>
+  </div>
+
   <%# Mobile: an agenda list of the month's days that actually have bills,
       not a shrunken grid. %>
   <div class="md:hidden space-y-1 rounded-xl bg-container-inset p-1">

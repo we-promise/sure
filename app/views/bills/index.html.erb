@@ -35,6 +35,32 @@
     </div>
   </div>
 
+  <% if @notices.any? %>
+    <div class="bg-container rounded-xl shadow-border-xs divide-y divide-divider">
+      <% @notices.each do |notice| %>
+        <div class="flex items-center justify-between gap-3 px-4 py-2">
+          <p class="text-sm text-primary">
+            <% case notice.kind %>
+            <% when :trial %>
+              <%= t(".notice_trial", name: notice.series.display_name, date: l(notice.date, format: :long)) %>
+            <% when :renewal %>
+              <%= t(".notice_renewal", name: notice.series.display_name, date: l(notice.date, format: :long)) %>
+            <% when :price %>
+              <span class="privacy-sensitive">
+                <%= t(".notice_price",
+                      name: notice.series.display_name,
+                      from: format_money(notice.detail.previous_amount_money),
+                      to: format_money(notice.detail.new_amount_money)) %>
+              </span>
+            <% end %>
+          </p>
+          <%= link_to t("bills.details"), bill_path(notice.series),
+                data: { turbo_frame: "drawer" }, class: "text-xs text-link hover:underline shrink-0" %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
   <% if @suggested_allocations.any? %>
     <div class="rounded-xl bg-container-inset space-y-1 p-1">
       <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">

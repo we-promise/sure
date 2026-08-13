@@ -89,11 +89,21 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
     # (IdentifyRecurringTransactionsJob) — it doesn't clear out ones already
     # identified, so this keeps using that last-known set rather than silently
     # degrading to the flatter median-only baseline.
+    Obligation = Data.define(:date, :amount)
+
+    # Occurrence rows instead of one projected entry per series: a weekly
+    # bill contributes every hit inside the horizon (the single-projection
+    # version silently under-counted it fourfold), and partially paid
+    # occurrences contribute only what actually remains.
     def upcoming_recurring_entries
-      family.recurring_transactions
-        .expected_soon
-        .where(destination_account_id: nil)
-        .filter_map(&:projected_entry)
-        .select { |e| e.currency == family.currency && e.date <= Date.current + HORIZON_DAYS }
+      family.recurring_occurrences
+        .open_status
+        .joins(:recurring_transaction)
+        .where(recurring_transactions: { status: :active, destination_account_id: nil })
+        .where("recurring_transactions.amount > 0")
+        .where(currency: family.currency)
+        .where(due_on: Date.current..(Date.current + HORIZON_DAYS))
+        .includes(:recurring_transaction)
+        .map { |occurrence| Obligation.new(date: occurrence.due_on, amount: occurrence.remaining_amount) }
     end
 end

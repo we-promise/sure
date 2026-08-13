@@ -496,6 +496,7 @@ Rails.application.routes.draw do
   end
 
   resources :bills, only: %i[index show]
+  get "bills_feed/:token", to: "bills_feeds#show", as: :bills_feed, defaults: { format: :ics }
 
   resources :recurring_occurrences, only: %i[show] do
     member do
