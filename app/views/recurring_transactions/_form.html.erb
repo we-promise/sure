@@ -86,7 +86,7 @@
           </div>
         </div>
 
-        <p class="text-xs text-secondary"><%= t(".frequency_hint") %></p>
+        <p class="text-xs text-secondary"><%= income ? t(".income_frequency_hint") : t(".frequency_hint") %></p>
       <% else %>
         <%# A new series' day details derive from its first date. %>
         <p class="text-xs text-secondary"><%= income ? t(".income_frequency_new_hint") : t(".frequency_new_hint") %></p>

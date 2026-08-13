@@ -43,6 +43,10 @@ en:
       price_changes: Price changes this year
       price_change_line: "%{from} → %{to} (%{percent}%)"
     paycheck:
+      income_section_title: Your income
+      add_income: Add income
+      income_paused: Paused
+      income_next_payday: "next payday %{date}"
       empty:
         title: Declare your income schedule
         description: Add your paycheck with "This is income" in the add dialog, or mark a real paycheck transaction as recurring. Detected inflows never define your paydays on their own -- you do.

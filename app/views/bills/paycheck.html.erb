@@ -3,6 +3,53 @@
 <div class="space-y-4 pb-6 lg:pb-12">
   <%= render "bills/view_switcher", active: "paycheck" %>
 
+  <% if @income_series.present? %>
+    <div class="bg-container rounded-xl shadow-border-xs overflow-hidden">
+      <div class="flex items-center justify-between gap-3 px-4 py-3">
+        <p class="text-sm font-medium text-primary"><%= t(".income_section_title") %></p>
+        <%= render DS::Link.new(
+              text: t(".add_income"),
+              icon: "plus",
+              variant: "ghost",
+              href: new_recurring_transaction_path(income: true),
+              frame: :modal
+            ) %>
+      </div>
+      <div class="border-t border-divider divide-y divide-divider">
+        <% @income_series.each do |series| %>
+          <div class="flex items-center justify-between gap-3 px-4 py-2">
+            <div class="min-w-0">
+              <p class="text-sm text-primary truncate">
+                <%= link_to series.display_name, bill_path(series),
+                      data: { turbo_frame: "drawer" }, class: "hover:underline" %>
+                <% unless series.active? %>
+                  <span class="text-xs text-secondary font-normal"><%= t(".income_paused") %></span>
+                <% end %>
+              </p>
+              <p class="text-xs text-secondary">
+                <%= frequency_label(series) %>
+                <% if series.next_expected_date.present? %>
+                  &middot; <%= t(".income_next_payday", date: l(series.next_expected_date, format: :short)) %>
+                <% end %>
+              </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <p class="text-sm text-success privacy-sensitive">
+                +<%= format_money(Money.new(series.amount.abs, series.currency)) %>
+              </p>
+              <%= render DS::Link.new(
+                    icon: "pencil",
+                    variant: "icon",
+                    href: edit_recurring_transaction_path(series),
+                    frame: :modal
+                  ) %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <% if @plan.nil? %>
     <div class="bg-container rounded-xl shadow-border-xs p-4">
       <%= render DS::EmptyState.new(

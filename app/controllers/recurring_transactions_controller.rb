@@ -114,7 +114,7 @@ class RecurringTransactionsController < ApplicationController
     @recurring_transaction = build_declared_bill
 
     if @recurring_transaction.errors.none? && save_declared_bill
-      flash[:notice] = t(".success")
+      flash[:notice] = @recurring_transaction.typed_income? ? t(".success_income") : t(".success")
 
       respond_to do |format|
         format.html { redirect_to bills_path }

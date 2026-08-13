@@ -144,6 +144,38 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("recurring_transactions.new.income_title"), response.body
   end
 
+  test "editing income keeps bill wording out of the dialog" do
+    payday = Date.current + 3
+    income = @family.recurring_transactions.create!(
+      name: "Paycheck", account: accounts(:depository), amount: -1840, currency: "USD",
+      bill_type: "income", expected_day_of_month: payday.day, anchor_date: payday,
+      last_occurrence_date: payday, next_expected_date: payday, status: "active", manual: true
+    )
+
+    get edit_recurring_transaction_url(income), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.edit.income_title", name: "Paycheck"), response.body
+    # Apostrophes HTML-escape in the body, so match on stable fragments.
+    assert_match "match your payday", response.body
+    assert_no_match(/comes due/, response.body)
+  end
+
+  test "creating income says income, not bill" do
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Paycheck",
+        amount: "1840",
+        account_id: accounts(:depository).id,
+        first_due_on: (Date.current + 3).iso8601,
+        frequency_preset: "biweekly",
+        is_income: "1"
+      }
+    }
+
+    assert_equal I18n.t("recurring_transactions.create.success_income"), flash[:notice]
+  end
+
   test "create declares a manual bill and materializes its occurrences" do
     due = Date.current + 16
 

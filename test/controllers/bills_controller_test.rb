@@ -265,6 +265,22 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.remaining_after_bills"), response.body
   end
 
+  test "the paycheck view lists declared income with an edit affordance" do
+    payday = Date.current + 3
+    income = @family.recurring_transactions.create!(
+      name: "Paycheck", account: accounts(:depository), amount: -1840, currency: "USD",
+      bill_type: "income", expected_day_of_month: payday.day, anchor_date: payday,
+      last_occurrence_date: payday, next_expected_date: payday, status: "active", manual: true
+    )
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_match I18n.t("bills.paycheck.income_section_title"), response.body
+    assert_match edit_recurring_transaction_path(income), response.body
+    assert_match bill_path(income), response.body, "income opens the same drawer as bills for pause and delete"
+  end
+
   test "the subscriptions view rolls up cost and surfaces price changes" do
     sub = create_bill(name: "STREAMFLIX", amount: 24.99)
     sub.update!(bill_type: "subscription", trial_ends_on: Date.current + 5)

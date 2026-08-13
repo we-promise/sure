@@ -19,6 +19,13 @@ class BillsController < ApplicationController
       return
     when "paycheck"
       @plan = RecurringTransaction::PaycheckPlanner.new(Current.family, user: Current.user).plan
+      # The paycheck view is where declared income lives: without this list
+      # an added income series has no visible edit surface anywhere.
+      @income_series = Current.family.recurring_transactions
+                              .accessible_by(Current.user)
+                              .where(bill_type: :income)
+                              .where.not(status: %i[suggested ended])
+                              .order(:name)
       render :paycheck
       return
     when "subscriptions"
