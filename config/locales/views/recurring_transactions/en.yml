@@ -46,6 +46,10 @@ en:
     new:
       title: Add a bill
       income_title: Add income
+      start_from_title: Start from a recurring charge we spotted
+      start_from_income_title: Start from a recurring deposit we spotted
+      start_from_hint: Optional. Picking one just fills in the form; you can still change anything.
+      candidate_meta: "%{count}× · last %{date}"
     create:
       success: Bill added
       due_date_required: "Enter the bill's next due date"

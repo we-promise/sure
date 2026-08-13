@@ -97,6 +97,11 @@ class RecurringTransactionsController < ApplicationController
       @recurring_transaction.is_income = true if entry.amount.negative?
       @recurring_transaction.first_due_on =
         RecurringTransaction::Schedule.new(expected_day_of_month: entry.date.day).next_occurrence_from_today
+    else
+      # Fresh dialog: offer detected-but-undeclared recurring shapes as
+      # optional starting points. Picking one reloads the dialog prefilled
+      # through the entry_id path above; it never replaces manual entry.
+      @candidates = declare_candidates(income: income)
     end
 
     render layout: dialog_layout
@@ -187,6 +192,37 @@ class RecurringTransactionsController < ApplicationController
   end
 
   private
+
+    # Sign-filtered detected patterns not yet covered by any series, mapped
+    # to what the picker renders. Each candidate carries its latest entry's
+    # id so selection can ride the existing entry_id prefill path.
+    def declare_candidates(income:)
+      identifier = RecurringTransaction::Identifier.new(Current.family)
+
+      patterns = if income
+        # Already sorted heaviest-source-first, so the paycheck leads.
+        identifier.income_source_candidates
+      else
+        identifier.candidate_patterns(sign: :outflow)
+                  .sort_by { |pattern| pattern[:last_occurrence_date] }
+                  .reverse
+      end
+
+      patterns
+        .first(8)
+        .map do |pattern|
+          latest = pattern[:entries].max_by(&:date)
+
+          {
+            name: pattern[:name].presence || latest.entryable.try(:merchant)&.name.presence || latest.name,
+            amount: pattern[:expected_amount_avg].abs,
+            currency: pattern[:currency],
+            last_date: pattern[:last_occurrence_date],
+            count: pattern[:occurrence_count],
+            entry_id: latest.id
+          }
+        end
+    end
 
     def dialog_layout
       turbo_frame_request? ? false : "settings"

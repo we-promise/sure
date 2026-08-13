@@ -12,76 +12,80 @@ class RecurringTransaction
     # column default.
     DEFAULT_TOLERANCE_PCT = 7.5
 
-    # Identify and create/update recurring transactions for the family
-    def identify_recurring_patterns
-      three_months_ago = 3.months.ago.to_date
+    # Sub-dollar patterns (penny vault transfers, rounding sweeps) are never
+    # worth offering as a bill or income starting point.
+    MINIMUM_CANDIDATE_AMOUNT = 1
 
-      # Skip transfer-kind transactions: they're one half of a Transfer pair, so grouping them
-      # under their single account would produce incoherent recurring "patterns" that don't
-      # represent the underlying account-pair flow. Recurring transfers are tracked on a
-      # different shape (RecurringTransaction with destination_account_id). Filtering at the
-      # SQL level avoids loading and discarding transfer entries for a busy family.
-      entries_with_transactions = family.entries
+    # Read-only: recurring-shaped patterns NOT already covered by an
+    # existing series, for the add-dialog picker. Two consistent
+    # occurrences are enough to OFFER a candidate (the automatic pipeline
+    # keeps requiring three to act on its own).
+    def candidate_patterns(sign: :outflow, min_occurrences: 2)
+      wanted_negative = sign == :inflow
+      existing_by_identity = family.recurring_transactions.to_a.group_by { |recurring| identity_key(recurring) }
+
+      collect_patterns(min_occurrences: min_occurrences).select do |pattern|
+        next false unless pattern[:amount].negative? == wanted_negative
+        next false if pattern[:expected_amount_avg].abs < MINIMUM_CANDIDATE_AMOUNT
+
+        identity = [ pattern[:merchant_id] ? [ :merchant, pattern[:merchant_id] ] : [ :name, pattern[:name] ],
+                     pattern[:currency], pattern[:account_id], nil ]
+        candidates = existing_by_identity[identity] || []
+        nearest_within_tolerance(candidates, pattern[:expected_amount_avg]).nil?
+      end
+    end
+
+    # Income candidates are source-based, not amount-clustered: a variable
+    # paycheck (weekly hours) never forms an amount cluster and rarely
+    # lands on the same day of the month, but several deposits from one
+    # source inside the lookback is exactly what a payday source looks
+    # like. Bills keep the stricter pattern shape via candidate_patterns.
+    def income_source_candidates(lookback: 90.days, min_occurrences: 2)
+      declared_income = family.recurring_transactions.where(bill_type: "income").to_a
+
+      inflows = family.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
         .where(entryable_type: "Transaction")
-        .where("entries.date >= ?", three_months_ago)
+        .where("entries.date >= ?", lookback.ago.to_date)
+        .where("entries.amount < 0")
         .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
         .includes(:entryable)
         .to_a
 
-      # Group by merchant (if present) or name, plus currency and account --
-      # deliberately NOT by amount. Amounts are clustered within tolerance
-      # inside each group, so three subscription tiers to one merchant remain
-      # three patterns while a price creep stays one.
-      grouped_transactions = entries_with_transactions
-        .select { |entry| entry.entryable.is_a?(Transaction) }
+      inflows
         .group_by do |entry|
           transaction = entry.entryable
           identifier = transaction.merchant_id.present? ? [ :merchant, transaction.merchant_id ] : [ :name, entry.name ]
           [ identifier, entry.currency, entry.account_id ]
         end
+        .filter_map do |(identifier, currency, account_id), group|
+          next if group.size < min_occurrences
 
-      recurring_patterns = []
+          amounts = group.map { |entry| entry.amount.abs }
+          next if (amounts.sum / amounts.size) < MINIMUM_CANDIDATE_AMOUNT
+          next if claimed_income_source?(declared_income, identifier, currency, account_id)
 
-      grouped_transactions.each do |(identifier, currency, account_id), entries|
-        cluster_by_amount(entries).each do |cluster|
-          next if cluster.size < 3  # Must have at least 3 occurrences
+          last_occurrence = group.max_by(&:date)
 
-          # Check if the last occurrence was within the last 45 days
-          last_occurrence = cluster.max_by(&:date)
-          next if last_occurrence.date < 45.days.ago.to_date
-
-          # Check if transactions occur on similar days (within 5 days of each other)
-          days_of_month = cluster.map { |e| e.date.day }.sort
-          next unless days_cluster_together?(days_of_month)
-
-          amounts = cluster.map(&:amount)
-          identifier_type, identifier_value = identifier
-
-          pattern = {
-            # The most recent charge is the current price; the cluster's
-            # spread is recorded as the variance band.
-            amount: last_occurrence.amount,
-            expected_amount_min: amounts.min,
-            expected_amount_max: amounts.max,
-            expected_amount_avg: amounts.sum / amounts.size,
+          {
+            name: identifier.first == :name ? identifier.last : nil,
+            merchant_id: identifier.first == :merchant ? identifier.last : nil,
             currency: currency,
             account_id: account_id,
-            expected_day_of_month: calculate_expected_day(days_of_month),
+            amount: last_occurrence.amount,
+            expected_amount_avg: -(amounts.sum / amounts.size),
             last_occurrence_date: last_occurrence.date,
-            occurrence_count: cluster.size,
-            entries: cluster
+            occurrence_count: group.size,
+            entries: group
           }
-
-          if identifier_type == :merchant
-            pattern[:merchant_id] = identifier_value
-          else
-            pattern[:name] = identifier_value
-          end
-
-          recurring_patterns << pattern
         end
-      end
+        .sort_by { |candidate| -candidate[:entries].sum { |entry| entry.amount.abs } }
+    end
+
+    # Identify and create/update recurring transactions for the family
+    def identify_recurring_patterns
+      three_months_ago = 3.months.ago.to_date
+      recurring_patterns = collect_patterns(min_occurrences: 3)
 
       # Claim-or-create. Existing rows are grouped by identity (merchant or
       # name, currency, account) and each pattern claims the nearest existing
@@ -176,6 +180,83 @@ class RecurringTransaction
         [ identifier, recurring.currency, recurring.account_id, recurring.destination_account_id ]
       end
 
+      # Shared pattern collection: groups three months of non-transfer
+      # entries by identity, clusters amounts within tolerance, and keeps
+      # clusters that recur on a consistent day. The caller decides how many
+      # occurrences constitute a pattern.
+      def collect_patterns(min_occurrences:)
+        three_months_ago = 3.months.ago.to_date
+
+        # Skip transfer-kind transactions: they're one half of a Transfer pair, so grouping them
+        # under their single account would produce incoherent recurring "patterns" that don't
+        # represent the underlying account-pair flow. Recurring transfers are tracked on a
+        # different shape (RecurringTransaction with destination_account_id). Filtering at the
+        # SQL level avoids loading and discarding transfer entries for a busy family.
+        entries_with_transactions = family.entries
+          .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+          .where(entryable_type: "Transaction")
+          .where("entries.date >= ?", three_months_ago)
+          .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
+          .includes(:entryable)
+          .to_a
+
+        # Group by merchant (if present) or name, plus currency and account --
+        # deliberately NOT by amount. Amounts are clustered within tolerance
+        # inside each group, so three subscription tiers to one merchant remain
+        # three patterns while a price creep stays one.
+        grouped_transactions = entries_with_transactions
+          .select { |entry| entry.entryable.is_a?(Transaction) }
+          .group_by do |entry|
+            transaction = entry.entryable
+            identifier = transaction.merchant_id.present? ? [ :merchant, transaction.merchant_id ] : [ :name, entry.name ]
+            [ identifier, entry.currency, entry.account_id ]
+          end
+
+        patterns = []
+
+        grouped_transactions.each do |(identifier, currency, account_id), entries|
+          cluster_by_amount(entries).each do |cluster|
+            next if cluster.size < min_occurrences
+
+            # Check if the last occurrence was within the last 45 days
+            last_occurrence = cluster.max_by(&:date)
+            next if last_occurrence.date < 45.days.ago.to_date
+
+            # Check if transactions occur on similar days (within 5 days of each other)
+            days_of_month = cluster.map { |e| e.date.day }.sort
+            next unless days_cluster_together?(days_of_month)
+
+            amounts = cluster.map(&:amount)
+            identifier_type, identifier_value = identifier
+
+            pattern = {
+              # The most recent charge is the current price; the cluster's
+              # spread is recorded as the variance band.
+              amount: last_occurrence.amount,
+              expected_amount_min: amounts.min,
+              expected_amount_max: amounts.max,
+              expected_amount_avg: amounts.sum / amounts.size,
+              currency: currency,
+              account_id: account_id,
+              expected_day_of_month: calculate_expected_day(days_of_month),
+              last_occurrence_date: last_occurrence.date,
+              occurrence_count: cluster.size,
+              entries: cluster
+            }
+
+            if identifier_type == :merchant
+              pattern[:merchant_id] = identifier_value
+            else
+              pattern[:name] = identifier_value
+            end
+
+            patterns << pattern
+          end
+        end
+
+        patterns
+      end
+
       # Splits a group's entries into amount clusters: sorted by amount, an
       # entry joins the current cluster while it sits within tolerance of the
       # cluster's running mean, else starts a new one. Comparing against the
@@ -203,6 +284,24 @@ class RecurringTransaction
 
       def within_tolerance?(reference, amount)
         (amount - reference).abs <= reference.abs * (DEFAULT_TOLERANCE_PCT / 100.0)
+      end
+
+      # A payday source is claimed by ANY declared income series sharing its
+      # identity, regardless of amount: variable pay means amount-nearness is
+      # meaningless for income.
+      def claimed_income_source?(declared_income, identifier, currency, account_id)
+        identifier_type, identifier_value = identifier
+
+        declared_income.any? do |recurring|
+          next false unless recurring.currency == currency
+          next false if recurring.account_id.present? && recurring.account_id != account_id
+
+          if identifier_type == :merchant
+            recurring.merchant_id == identifier_value
+          else
+            recurring.merchant_id.nil? && recurring.name == identifier_value
+          end
+        end
       end
 
       def nearest_within_tolerance(candidates, target_amount)

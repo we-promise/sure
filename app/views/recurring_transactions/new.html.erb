@@ -1,6 +1,31 @@
 <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: @recurring_transaction.is_income ? t(".income_title") : t(".title")) %>
   <% dialog.with_body do %>
+    <% if @candidates.present? %>
+      <div class="space-y-2 mb-5">
+        <p class="text-sm font-medium text-primary">
+          <%= @recurring_transaction.is_income ? t(".start_from_income_title") : t(".start_from_title") %>
+        </p>
+        <div class="max-h-44 overflow-y-auto rounded-lg shadow-border-xs divide-y divide-divider">
+          <% @candidates.each do |candidate| %>
+            <%= link_to new_recurring_transaction_path(entry_id: candidate[:entry_id], income: params[:income].presence),
+                  class: "flex items-center justify-between gap-3 px-3 py-2 hover:bg-surface-inset" do %>
+              <div class="min-w-0">
+                <p class="text-sm text-primary truncate"><%= candidate[:name] %></p>
+                <p class="text-xs text-secondary">
+                  <%= t(".candidate_meta", count: candidate[:count], date: l(candidate[:last_date], format: :short)) %>
+                </p>
+              </div>
+              <p class="text-sm text-primary privacy-sensitive shrink-0">
+                <%= format_money(Money.new(candidate[:amount], candidate[:currency])) %>
+              </p>
+            <% end %>
+          <% end %>
+        </div>
+        <p class="text-xs text-secondary"><%= t(".start_from_hint") %></p>
+      </div>
+    <% end %>
+
     <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0 %>
   <% end %>
 <% end %>

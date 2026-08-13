@@ -7,6 +7,153 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "candidate_patterns offers undeclared recurring shapes and skips claimed, junk, and wrong-sign ones" do
+    account = @family.accounts.first
+
+    # An undeclared recurring charge: two occurrences on the same day.
+    2.times do |i|
+      account.entries.create!(
+        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        amount: 45.00,
+        currency: "USD",
+        name: "City Water",
+        entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+
+    # A recurring deposit: inflow, so an income candidate only.
+    2.times do |i|
+      account.entries.create!(
+        date: (i + 1).months.ago.beginning_of_month + 2.days,
+        amount: -1840.00,
+        currency: "USD",
+        name: "ACME PAYROLL",
+        entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+
+    # A penny sweep recurs but is never worth offering.
+    2.times do |i|
+      account.entries.create!(
+        date: (i + 1).months.ago.beginning_of_month + 4.days,
+        amount: 0.01,
+        currency: "USD",
+        name: "To Car Vault",
+        entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+
+    # An already-declared charge must not be re-offered.
+    2.times do |i|
+      account.entries.create!(
+        date: (i + 1).months.ago.beginning_of_month + 14.days,
+        amount: 90.00,
+        currency: "USD",
+        name: "Internet Co",
+        entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+    @family.recurring_transactions.create!(
+      name: "Internet Co",
+      account: account,
+      amount: 90.00,
+      currency: "USD",
+      expected_day_of_month: 15,
+      last_occurrence_date: 1.month.ago.beginning_of_month + 14.days,
+      next_expected_date: Date.current.beginning_of_month + 14.days,
+      status: "active",
+      manual: true
+    )
+
+    bill_names = @identifier.candidate_patterns(sign: :outflow).map { |pattern| pattern[:name] }
+    income_names = @identifier.candidate_patterns(sign: :inflow).map { |pattern| pattern[:name] }
+
+    assert_includes bill_names, "City Water"
+    assert_not_includes bill_names, "ACME PAYROLL", "inflows are not bill candidates"
+    assert_not_includes bill_names, "To Car Vault", "sub-dollar patterns are junk"
+    assert_not_includes bill_names, "Internet Co", "declared series are not re-offered"
+    assert_equal [ "ACME PAYROLL" ], income_names
+  end
+
+  test "income_source_candidates surfaces a variable weekly paycheck the pattern gate cannot see" do
+    account = @family.accounts.first
+
+    # Weekly pay, hours-driven amounts: no amount cluster, no stable day of month.
+    [ [ 63, 1199.0 ], [ 56, 1393.75 ], [ 49, 1996.81 ], [ 42, 434.95 ], [ 35, 1254.77 ] ].each do |days_ago, amount|
+      account.entries.create!(
+        date: days_ago.days.ago.to_date,
+        amount: -amount,
+        currency: "USD",
+        name: "ACME PAYROLL",
+        entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+
+    # Interest pennies recur but are never a payday.
+    2.times do |i|
+      account.entries.create!(
+        date: (i + 1).months.ago.end_of_month,
+        amount: -0.31,
+        currency: "USD",
+        name: "Interest earned",
+        entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+
+    candidates = @identifier.income_source_candidates
+
+    assert_equal [ "ACME PAYROLL" ], candidates.map { |candidate| candidate[:name] }
+    assert_equal 5, candidates.first[:occurrence_count]
+    assert @identifier.candidate_patterns(sign: :inflow).none? { |pattern| pattern[:occurrence_count] == 5 },
+           "the amount-cluster path cannot see the whole variable-pay source; the source path must"
+  end
+
+  test "income_source_candidates skips sources already declared as income regardless of amount" do
+    account = @family.accounts.first
+
+    [ [ 40, 1500.0 ], [ 26, 900.0 ], [ 12, 2100.0 ] ].each do |days_ago, amount|
+      account.entries.create!(
+        date: days_ago.days.ago.to_date,
+        amount: -amount,
+        currency: "USD",
+        name: "ACME PAYROLL",
+        entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+
+    @family.recurring_transactions.create!(
+      name: "ACME PAYROLL",
+      account: account,
+      amount: -1800.00,
+      currency: "USD",
+      bill_type: "income",
+      expected_day_of_month: 15,
+      last_occurrence_date: 12.days.ago.to_date,
+      next_expected_date: Date.current + 2,
+      status: "active",
+      manual: true
+    )
+
+    assert_empty @identifier.income_source_candidates
+  end
+
+  test "candidate_patterns needs only two consistent occurrences while identify still needs three" do
+    account = @family.accounts.first
+
+    2.times do |i|
+      account.entries.create!(
+        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        amount: 45.00,
+        currency: "USD",
+        name: "City Water",
+        entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+
+    assert_equal 1, @identifier.candidate_patterns(sign: :outflow).size
+    assert_equal 0, @identifier.identify_recurring_patterns
+  end
+
   test "identifies recurring pattern with transactions on similar days mid-month" do
     account = @family.accounts.first
     merchant = merchants(:netflix)

@@ -63,6 +63,62 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("recurring_transactions.form.submit"), response.body
   end
 
+  test "fresh bill dialog offers detected recurring charges as starting points" do
+    account = accounts(:depository)
+    2.times do |i|
+      account.entries.create!(
+        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        amount: 45.00, currency: "USD", name: "City Water",
+        entryable: Transaction.new
+      )
+    end
+
+    get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.start_from_title"), response.body
+    assert_match "City Water", response.body
+  end
+
+  test "income dialog offers only detected deposits" do
+    account = accounts(:depository)
+    2.times do |i|
+      account.entries.create!(
+        date: (i + 1).months.ago.beginning_of_month + 2.days,
+        amount: -1840.00, currency: "USD", name: "ACME PAYROLL",
+        entryable: Transaction.new
+      )
+      account.entries.create!(
+        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        amount: 45.00, currency: "USD", name: "City Water",
+        entryable: Transaction.new
+      )
+    end
+
+    get new_recurring_transaction_url(income: true), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.start_from_income_title"), response.body
+    assert_match "ACME PAYROLL", response.body
+    assert_no_match "City Water", response.body
+  end
+
+  test "prefilled dialog hides the picker" do
+    account = accounts(:depository)
+    entries = 2.times.map do |i|
+      account.entries.create!(
+        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        amount: 45.00, currency: "USD", name: "City Water",
+        entryable: Transaction.new
+      )
+    end
+
+    get new_recurring_transaction_url(entry_id: entries.last.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_no_match I18n.t("recurring_transactions.new.start_from_title"), response.body
+  end
+
   test "new prefills from a transaction" do
     entry = accounts(:depository).entries.create!(
       date: Date.current - 20, amount: 184.37, currency: "USD", name: "PG&E WEB PAYMENT",
