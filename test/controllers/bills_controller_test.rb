@@ -265,6 +265,23 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.remaining_after_bills"), response.body
   end
 
+  test "the subscriptions view rolls up cost and surfaces price changes" do
+    sub = create_bill(name: "STREAMFLIX", amount: 24.99)
+    sub.update!(bill_type: "subscription", trial_ends_on: Date.current + 5)
+    sub.recurring_price_changes.create!(
+      effective_on: 2.months.ago.to_date, previous_amount: 19.99, new_amount: 24.99,
+      currency: "USD", source: "detected"
+    )
+
+    get bills_url(view: "subscriptions")
+
+    assert_response :success
+    assert_match "STREAMFLIX", response.body
+    assert_match I18n.t("bills.subscriptions.monthly_cost"), response.body
+    assert_match I18n.t("bills.subscriptions.trial_chip", date: I18n.l(Date.current + 5, format: :short)), response.body
+    assert_match I18n.t("bills.subscriptions.price_changes"), response.body
+  end
+
   test "index renders an empty state with no bills" do
     get bills_url
 

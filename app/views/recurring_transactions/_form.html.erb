@@ -93,6 +93,14 @@
               :id, :name,
               { label: t(".category_label"), include_blank: t(".category_blank") } %>
       </div>
+
+      <% if recurring_transaction.typed_subscription? %>
+        <div class="grid grid-cols-3 gap-3">
+          <%= f.date_field :renews_on, label: t(".renews_on_label") %>
+          <%= f.date_field :trial_ends_on, label: t(".trial_ends_on_label") %>
+          <%= f.date_field :cancelled_on, label: t(".cancelled_on_label") %>
+        </div>
+      <% end %>
     <% end %>
 
     <div class="space-y-2">

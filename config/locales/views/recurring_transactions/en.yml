@@ -73,6 +73,9 @@ en:
       is_income_label: This is income
       is_income_hint: A paycheck or other money that arrives on a schedule. Powers the Paycheck view.
       bill_type_label: Kind
+      renews_on_label: Renews
+      trial_ends_on_label: Trial ends
+      cancelled_on_label: Cancelled
       category_label: Category
       category_blank: No category
       frequency_new_hint: The day details come from the due date above. You can refine the schedule after saving.

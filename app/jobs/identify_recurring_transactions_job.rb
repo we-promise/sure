@@ -34,6 +34,7 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
       matcher = RecurringTransaction::Matcher.new(family)
       matcher.repair_orphans!
       matcher.run!
+      RecurringTransaction::PriceChangeDetector.new(family).detect!
     end
   end
 

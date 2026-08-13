@@ -25,7 +25,22 @@ en:
       overview: Overview
       calendar: Calendar
       paycheck: Paycheck
+      subscriptions: Subscriptions
       all: All bills
+    subscriptions:
+      empty:
+        title: No subscriptions marked yet
+        description: Edit a bill and set its kind to Subscription to track it here, with monthly and annual costs, renewals, and price changes.
+      monthly_cost: A month
+      annual_cost: A year
+      active_count: Active
+      next_charge: "next %{date}"
+      cancelled_chip: "Cancelled %{date}"
+      trial_chip: "Trial ends %{date}"
+      renews_chip: "Renews %{date}"
+      price_change_chip: "%{from} → %{to}"
+      price_changes: Price changes this year
+      price_change_line: "%{from} → %{to} (%{percent}%)"
     paycheck:
       empty:
         title: Declare your income schedule

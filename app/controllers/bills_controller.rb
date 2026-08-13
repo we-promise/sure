@@ -6,7 +6,7 @@ class BillsController < ApplicationController
   # date and a real payment state, which is what lets overdue and partially
   # paid render at all.
   def index
-    @view = %w[all calendar paycheck].include?(params[:view]) ? params[:view] : "overview"
+    @view = %w[all calendar paycheck subscriptions].include?(params[:view]) ? params[:view] : "overview"
 
     case @view
     when "all"
@@ -20,6 +20,10 @@ class BillsController < ApplicationController
     when "paycheck"
       @plan = RecurringTransaction::PaycheckPlanner.new(Current.family, user: Current.user).plan
       render :paycheck
+      return
+    when "subscriptions"
+      load_subscriptions
+      render :subscriptions
       return
     end
 
@@ -111,6 +115,46 @@ class BillsController < ApplicationController
 
     def dialog_layout
       turbo_frame_request? ? false : "settings"
+    end
+
+    def load_subscriptions
+      @subscriptions = Current.family.recurring_transactions
+                              .accessible_by(Current.user)
+                              .where(bill_type: "subscription")
+                              .where.not(status: %w[suggested])
+                              .includes(:merchant, :recurring_price_changes)
+                              .order(:name)
+                              .to_a
+
+      active_subscriptions = @subscriptions.select(&:active?)
+      @monthly_cost, @sub_unconvertible = total_of_series(active_subscriptions) { |series| series.monthly_equivalent_amount.abs }
+      @annual_cost = @monthly_cost ? @monthly_cost * 12 : nil
+
+      @recent_price_changes = RecurringPriceChange
+                                .joins(:recurring_transaction)
+                                .where(recurring_transactions: { family_id: Current.family.id })
+                                .where("effective_on >= ?", 1.year.ago.to_date)
+                                .includes(:recurring_transaction)
+                                .order(effective_on: :desc)
+                                .limit(10)
+    end
+
+    def total_of_series(series_list, &value_of)
+      return [ nil, 0 ] if series_list.empty?
+
+      target = Current.family.currency
+      unconvertible = 0
+
+      total = series_list.reduce(Money.new(0, target)) do |sum, series|
+        begin
+          sum + value_of.call(series).exchange_to(target)
+        rescue Money::ConversionError
+          unconvertible += 1
+          sum
+        end
+      end
+
+      [ total, unconvertible ]
     end
 
     # Months are materialized on demand up to 13 months out (idempotent

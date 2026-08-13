@@ -56,6 +56,7 @@ class RecurringTransactionsController < ApplicationController
     matcher = RecurringTransaction::Matcher.new(Current.family)
     matcher.repair_orphans!
     matcher.run!
+    RecurringTransaction::PriceChangeDetector.new(Current.family).detect!
 
     respond_to do |format|
       format.html do
@@ -190,6 +191,7 @@ class RecurringTransactionsController < ApplicationController
     def recurring_transaction_params
       params.require(:recurring_transaction).permit(
         :payment_url, :autopay, :notes, :bill_type, :category_id,
+        :renews_on, :trial_ends_on, :cancelled_on,
         :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
         :frequency_weekday, :frequency_month_of_year
       )

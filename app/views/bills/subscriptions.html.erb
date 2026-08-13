@@ -1,0 +1,108 @@
+<%= content_for :page_title, t("bills.index.title") %>
+
+<div class="space-y-4 pb-6 lg:pb-12">
+  <%= render "bills/view_switcher", active: "subscriptions" %>
+
+  <% if @subscriptions.empty? %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <%= render DS::EmptyState.new(
+            icon: "repeat",
+            title: t(".empty.title"),
+            description: t(".empty.description")
+          ) %>
+    </div>
+  <% else %>
+    <div class="grid grid-cols-3 bg-container rounded-xl shadow-border-xs divide-x divide-alpha-black-100 theme-dark:divide-alpha-white-200">
+      <div class="p-4 space-y-1">
+        <p class="text-sm text-secondary"><%= t(".monthly_cost") %></p>
+        <p class="text-primary font-medium text-xl privacy-sensitive"><%= @monthly_cost ? format_money(@monthly_cost) : "–" %></p>
+        <% if @sub_unconvertible.positive? %>
+          <p class="text-xs text-warning"><%= t("bills.index.unconvertible", count: @sub_unconvertible) %></p>
+        <% end %>
+      </div>
+      <div class="p-4 space-y-1">
+        <p class="text-sm text-secondary"><%= t(".annual_cost") %></p>
+        <p class="text-primary font-medium text-xl privacy-sensitive"><%= @annual_cost ? format_money(@annual_cost) : "–" %></p>
+      </div>
+      <div class="p-4 space-y-1">
+        <p class="text-sm text-secondary"><%= t(".active_count") %></p>
+        <p class="text-primary font-medium text-xl"><%= @subscriptions.count(&:active?) %></p>
+      </div>
+    </div>
+
+    <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
+      <% @subscriptions.each do |series| %>
+        <div class="flex items-center gap-3 p-3 lg:p-4 <%= "opacity-60" unless series.active? %>">
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-primary truncate">
+              <%= link_to series.display_name, bill_path(series),
+                    data: { turbo_frame: "drawer" }, class: "hover:underline" %>
+            </p>
+            <p class="text-xs text-secondary">
+              <%= frequency_label(series) %>
+              <% if series.next_expected_date.future? && series.active? %>
+                &middot; <%= t(".next_charge", date: l(series.next_expected_date, format: :short)) %>
+              <% end %>
+            </p>
+            <div class="flex items-center gap-2 mt-0.5">
+              <% if series.cancelled_on.present? %>
+                <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-surface-inset text-subdued">
+                  <%= t(".cancelled_chip", date: l(series.cancelled_on, format: :short)) %>
+                </span>
+              <% end %>
+              <% if series.trial_ends_on.present? && series.trial_ends_on >= Date.current %>
+                <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-warning/10 text-warning">
+                  <%= t(".trial_chip", date: l(series.trial_ends_on, format: :short)) %>
+                </span>
+              <% end %>
+              <% if series.renews_on.present? && series.renews_on >= Date.current %>
+                <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-surface-inset text-primary">
+                  <%= t(".renews_chip", date: l(series.renews_on, format: :short)) %>
+                </span>
+              <% end %>
+              <% if (change = series.recurring_price_changes.max_by(&:effective_on)) %>
+                <span class="inline-flex px-1.5 py-0.5 rounded text-xs <%= change.new_amount > change.previous_amount ? "bg-warning/10 text-warning" : "bg-green-50 text-success theme-dark:bg-green-tint-10" %> privacy-sensitive">
+                  <%= t(".price_change_chip",
+                        from: format_money(change.previous_amount_money),
+                        to: format_money(change.new_amount_money)) %>
+                </span>
+              <% end %>
+            </div>
+          </div>
+          <div class="shrink-0 text-right">
+            <p class="text-sm font-medium text-primary privacy-sensitive">
+              <%= format_money(Money.new(series.amount.abs, series.currency)) %>
+            </p>
+            <p class="text-xs text-secondary privacy-sensitive">
+              <%= t("bills.all.monthly_equivalent", amount: format_money(series.monthly_equivalent_amount.abs)) %>
+            </p>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <% if @recent_price_changes.any? %>
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+          <p><%= t(".price_changes") %></p>
+        </div>
+        <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
+          <% @recent_price_changes.each do |change| %>
+            <div class="flex items-center justify-between gap-3 px-4 py-2">
+              <div>
+                <p class="text-sm text-primary"><%= change.recurring_transaction.display_name %></p>
+                <p class="text-xs text-secondary"><%= l(change.effective_on, format: :long) %></p>
+              </div>
+              <p class="text-sm privacy-sensitive <%= change.new_amount > change.previous_amount ? "text-warning" : "text-success" %>">
+                <%= t(".price_change_line",
+                      from: format_money(change.previous_amount_money),
+                      to: format_money(change.new_amount_money),
+                      percent: change.previous_amount.positive? ? ((change.new_amount - change.previous_amount) / change.previous_amount * 100).round(1) : 0) %>
+              </p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>
