@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_13_174159) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_13_185408) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1610,6 +1610,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_13_174159) do
     t.index ["status"], name: "index_questrade_items_on_status"
   end
 
+  create_table "recurrence_rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "recurring_transaction_id", null: false
+    t.string "frequency", null: false
+    t.integer "interval", default: 1, null: false
+    t.integer "day_of_month"
+    t.integer "weekday"
+    t.integer "weekday_ordinal"
+    t.integer "month_of_year"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["recurring_transaction_id", "position"], name: "idx_on_recurring_transaction_id_position_62f0900d95", unique: true
+    t.check_constraint "NOT (day_of_month IS NOT NULL AND weekday IS NOT NULL)", name: "chk_recurrence_rules_single_day_spec"
+    t.check_constraint "\"interval\" > 0", name: "chk_recurrence_rules_interval_positive"
+    t.check_constraint "day_of_month IS NULL OR day_of_month >= '-1'::integer AND day_of_month <= 31 AND day_of_month <> 0", name: "chk_recurrence_rules_day_of_month_range"
+    t.check_constraint "month_of_year IS NULL OR month_of_year >= 1 AND month_of_year <= 12", name: "chk_recurrence_rules_month_of_year_range"
+    t.check_constraint "weekday IS NULL OR weekday >= 0 AND weekday <= 6", name: "chk_recurrence_rules_weekday_range"
+    t.check_constraint "weekday_ordinal IS NULL OR weekday IS NOT NULL", name: "chk_recurrence_rules_ordinal_requires_weekday"
+    t.check_constraint "weekday_ordinal IS NULL OR weekday_ordinal >= '-1'::integer AND weekday_ordinal <= 5 AND weekday_ordinal <> 0", name: "chk_recurrence_rules_weekday_ordinal_range"
+  end
+
   create_table "recurring_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.uuid "merchant_id"
@@ -1632,6 +1653,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_13_174159) do
     t.string "payment_url"
     t.boolean "autopay", default: false, null: false
     t.text "notes"
+    t.date "anchor_date"
+    t.string "end_mode", default: "never", null: false
+    t.date "end_on"
+    t.integer "end_after_count"
+    t.string "weekend_adjust", default: "none", null: false
+    t.string "holiday_calendar"
     t.index ["account_id"], name: "index_recurring_transactions_on_account_id"
     t.index ["destination_account_id"], name: "index_recurring_transactions_on_destination_account_id"
     t.index ["family_id", "account_id", "destination_account_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_pair_merchant", unique: true, where: "((destination_account_id IS NOT NULL) AND (merchant_id IS NOT NULL))"
@@ -2417,6 +2444,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_13_174159) do
   add_foreign_key "plaid_items", "families"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"
+  add_foreign_key "recurrence_rules", "recurring_transactions", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
   add_foreign_key "recurring_transactions", "families"

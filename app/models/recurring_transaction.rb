@@ -5,6 +5,7 @@ class RecurringTransaction < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :destination_account, optional: true, class_name: "Account"
   belongs_to :merchant, optional: true
+  has_many :recurrence_rules, -> { order(:position) }, dependent: :destroy
 
   monetize :amount
   monetize :expected_amount_min, allow_nil: true
@@ -12,6 +13,8 @@ class RecurringTransaction < ApplicationRecord
   monetize :expected_amount_avg, allow_nil: true
 
   enum :status, { active: "active", inactive: "inactive" }
+  enum :end_mode, { never: "never", on_date: "on_date", after_count: "after_count" }, prefix: :ends
+  enum :weekend_adjust, { none: "none", skip: "skip", before: "before", after: "after" }, prefix: :weekend
 
   validates :amount, presence: true
   validates :currency, presence: true
@@ -22,6 +25,8 @@ class RecurringTransaction < ApplicationRecord
   validate :amount_variance_consistency
   validate :transfer_endpoints_consistent
   validate :payment_url_is_http
+  validate :anchor_required_for_intervals
+  validate :end_mode_fields_consistent
 
   normalizes :payment_url, with: ->(url) { normalize_payment_url(url) }
 
@@ -77,6 +82,26 @@ class RecurringTransaction < ApplicationRecord
     return if payment_url.blank?
 
     errors.add(:payment_url, :invalid_scheme) unless self.class.valid_payment_url?(payment_url)
+  end
+
+  # An "every N periods" cadence is a phase-shifted grid: without a reference
+  # occurrence there is no way to say WHICH biweekly Friday is the right one.
+  def anchor_required_for_intervals
+    return if anchor_date.present?
+    return unless recurrence_rules.any? { |rule| rule.interval.to_i > 1 }
+
+    errors.add(:anchor_date, :required_for_intervals)
+  end
+
+  def end_mode_fields_consistent
+    case end_mode
+    when "on_date"
+      errors.add(:end_on, :blank) if end_on.blank?
+    when "after_count"
+      if end_after_count.blank? || end_after_count.to_i < 1
+        errors.add(:end_after_count, :blank)
+      end
+    end
   end
 
   def amount_variance_consistency

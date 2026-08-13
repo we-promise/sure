@@ -11,3 +11,5 @@ en:
           attributes:
             payment_url:
               invalid_scheme: "must be a valid http:// or https:// address"
+            anchor_date:
+              required_for_intervals: "is required when a rule repeats every 2 or more periods"
