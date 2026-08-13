@@ -69,7 +69,8 @@ class RecurringTransaction
             account_id: account_id,
             expected_day_of_month: calculate_expected_day(days_of_month),
             last_occurrence_date: last_occurrence.date,
-            occurrence_count: cluster.size
+            occurrence_count: cluster.size,
+            entries: cluster
           }
 
           if identifier_type == :merchant
@@ -245,6 +246,14 @@ class RecurringTransaction
       end
 
       def create_suggested_series(pattern, scoped:)
+        account = pattern[:account_id] && Account.find_by(id: pattern[:account_id])
+        classification = Classifier.classify(
+          name: pattern[:name] || pattern[:entries].first.name,
+          entries: pattern[:entries],
+          account: account
+        )
+        income = pattern[:amount].negative?
+
         family.recurring_transactions.create!(
           identity_conditions(pattern, scoped: scoped).merge(
             amount: pattern[:amount],
@@ -256,7 +265,9 @@ class RecurringTransaction
             next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], pattern[:expected_day_of_month]),
             occurrence_count: pattern[:occurrence_count],
             status: "suggested",
-            bill_type: pattern[:amount].negative? ? "income" : "bill",
+            bill_type: income ? "income" : classification.bill_type,
+            category_id: income ? nil : classification.category_id,
+            autopay: income ? false : classification.autopay,
             manual: false
           )
         )
