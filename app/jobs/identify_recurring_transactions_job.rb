@@ -27,6 +27,13 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
       family.recurring_transactions.active.find_each do |series|
         RecurringTransaction::OccurrenceGenerator.new(series).generate!
       end
+
+      # Then reconcile: re-attach allocations whose entries were replaced by
+      # their provider, auto-link unambiguous payments, queue the rest for
+      # review.
+      matcher = RecurringTransaction::Matcher.new(family)
+      matcher.repair_orphans!
+      matcher.run!
     end
   end
 

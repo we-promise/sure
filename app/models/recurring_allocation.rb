@@ -24,6 +24,7 @@ class RecurringAllocation < ApplicationRecord
   validate :currency_matches_occurrence
 
   scope :confirmed, -> { where(state: :confirmed) }
+  scope :suggested, -> { where(state: :suggested) }
 
   before_validation :default_paid_on
 

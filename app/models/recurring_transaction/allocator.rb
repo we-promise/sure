@@ -43,6 +43,7 @@ class RecurringTransaction
           paid_on: paid_on
         )
 
+        learn_from_manual_attach!(allocation) if entry
         refresh_close_state!
         allocation
       end
@@ -52,6 +53,55 @@ class RecurringTransaction
       occurrence.with_lock do
         allocation.destroy!
         refresh_close_state!
+      end
+    end
+
+    # The Matcher's write path: a scored allocation, confirmed (exact tier)
+    # or suggested (high tier, awaiting review). Suggested allocations never
+    # move close state -- they are questions, not payments.
+    def allocate_matched!(entry:, state:, confidence:, signals:)
+      occurrence.with_lock do
+        allocated, source_amount, source_currency = resolve_amounts(nil, entry)
+        return nil unless allocated.positive?
+
+        allocation = occurrence.allocations.create!(
+          entry: entry,
+          allocated_amount: allocated,
+          currency: occurrence.currency,
+          source_amount: source_amount,
+          source_currency: source_currency,
+          state: state,
+          source: "auto_matched",
+          match_confidence: confidence,
+          match_signals: signals,
+          paid_on: entry.date
+        )
+
+        refresh_close_state! if state == "confirmed"
+        allocation
+      end
+    end
+
+    # Accepting a suggestion makes it a real payment.
+    def confirm_suggestion!(allocation)
+      occurrence.with_lock do
+        allocation.update!(state: "confirmed", source: "user_confirmed")
+        refresh_close_state!
+      end
+    end
+
+    # Rejecting one records the (series, entry) pair so the matcher never
+    # proposes it again -- corrections are permanently sticky.
+    def reject_suggestion!(allocation)
+      occurrence.with_lock do
+        if allocation.entry
+          RecurringMatchRejection.find_or_create_by!(
+            recurring_transaction: occurrence.recurring_transaction,
+            entry: allocation.entry
+          )
+        end
+
+        allocation.destroy!
       end
     end
 
@@ -150,6 +200,45 @@ class RecurringTransaction
         )
 
         [ entry_total - already, 0 ].max
+      end
+
+      # Two transparent things a manual attach can teach the matcher, both
+      # stored in the series' user-visible matcher_hints:
+      #
+      #   * An alias: a name-keyed series attached to an entry it would not
+      #     have recognized -- next time the matcher will.
+      #   * A wider tolerance: when this SINGLE entry essentially is the bill
+      #     and its amount sits outside the band, the band was too tight.
+      #     Partial payments teach nothing (a $537.50 installment against
+      #     $2,150 rent is not evidence rent varies), enforced by the
+      #     only-allocation check and the learning cap.
+      def learn_from_manual_attach!(allocation)
+        series = occurrence.recurring_transaction
+        entry = allocation.entry
+        hints = series.matcher_hints.deep_dup
+
+        if series.merchant_id.blank? && series.name.present?
+          known = ([ series.name ] + Array(hints["name_aliases"]))
+                    .map { |name| Matcher.normalize_name(name) }
+
+          unless known.include?(Matcher.normalize_name(entry.name))
+            hints["name_aliases"] = (Array(hints["name_aliases"]) + [ entry.name ]).uniq
+          end
+        end
+
+        expected = occurrence.resolved_expected_amount
+        if expected.positive? && occurrence.allocations.confirmed.count == 1
+          deviation_pct = (entry.amount.abs - expected).abs / expected * 100
+          current = BigDecimal((hints["learned_tolerance_pct"] || 0).to_s)
+
+          if deviation_pct > series.amount_tolerance_pct &&
+             deviation_pct > current &&
+             deviation_pct <= Matcher::MAX_LEARNED_TOLERANCE_PCT
+            hints["learned_tolerance_pct"] = deviation_pct.round(1).to_f
+          end
+        end
+
+        series.update!(matcher_hints: hints) if hints != series.matcher_hints
       end
 
       # One transaction can pay several occurrences, but never more than
