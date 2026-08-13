@@ -1,0 +1,33 @@
+---
+en:
+  recurring_occurrences:
+    show:
+      due_on: "Due %{date}"
+      paid_of: "%{paid} of %{expected}"
+      remaining: "%{amount} remaining"
+      settled: Paid in full
+      overpaid: Paid, more than expected
+      skipped: Skipped
+      missed: Marked missed
+      payments: Payments
+      manual_payment: Manual payment
+      unlink: Unlink
+      candidates: Recent transactions
+      allocate: Allocate
+      custom_amount_placeholder: Record a payment amount
+      record_payment: Record payment
+      mark_paid: Mark paid
+      skip: Skip
+      snooze_week: Snooze a week
+      reopen: Reopen
+    mark_paid:
+      success: Bill marked paid
+    skip:
+      success: Occurrence skipped
+    reopen:
+      success: Occurrence reopened
+    snooze:
+      success: "Snoozed until %{date}"
+      invalid_date: That date could not be read
+    override_amount:
+      success: Expected amount updated

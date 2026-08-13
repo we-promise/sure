@@ -497,7 +497,21 @@ Rails.application.routes.draw do
 
   resources :bills, only: %i[index]
 
-  resources :recurring_transactions, only: %i[index edit update destroy] do
+  resources :recurring_occurrences, only: %i[show] do
+    member do
+      post :mark_paid
+      post :skip
+      post :reopen
+      patch :snooze
+      patch :override_amount
+    end
+
+    resources :allocations, controller: :recurring_allocations, only: %i[create]
+  end
+
+  resources :recurring_allocations, only: %i[destroy]
+
+  resources :recurring_transactions, only: %i[index new create edit update destroy] do
     collection do
       match :identify, via: [ :get, :post ]
       match :cleanup, via: [ :get, :post ]

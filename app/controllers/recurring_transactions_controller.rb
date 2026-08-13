@@ -66,6 +66,33 @@ class RecurringTransactionsController < ApplicationController
     end
   end
 
+  def new
+    @recurring_transaction = Current.family.recurring_transactions.new(
+      frequency_preset: "monthly",
+      first_due_on: Date.current
+    )
+
+    render layout: dialog_layout
+  end
+
+  # Declared bills are the manual-first path: Name, Amount, Due date,
+  # Frequency, done. The due date carries the day-of-month / weekday detail
+  # the frequency needs, so the form never asks twice.
+  def create
+    @recurring_transaction = build_declared_bill
+
+    if @recurring_transaction.errors.none? && save_declared_bill
+      flash[:notice] = t(".success")
+
+      respond_to do |format|
+        format.html { redirect_to bills_path }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, bills_path) }
+      end
+    else
+      render :new, status: :unprocessable_entity, layout: dialog_layout
+    end
+  end
+
   # The dialog is delivered into the shared <turbo-frame id="modal"> that every page
   # layout already renders empty. Responding with the full "settings" layout would put
   # two frames with that id in one response, and Turbo matches the empty one first, so
@@ -145,6 +172,63 @@ class RecurringTransactionsController < ApplicationController
         :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
         :frequency_weekday, :frequency_month_of_year
       )
+    end
+
+    def new_recurring_transaction_params
+      params.require(:recurring_transaction).permit(
+        :name, :amount, :account_id, :first_due_on, :frequency_preset,
+        :payment_url, :autopay, :notes
+      )
+    end
+
+    def build_declared_bill
+      attrs = new_recurring_transaction_params
+      account = Current.user.accessible_accounts.find_by(id: attrs[:account_id])
+      due = Date.parse(attrs[:first_due_on].to_s) rescue nil
+
+      recurring = Current.family.recurring_transactions.new(
+        name: attrs[:name],
+        amount: attrs[:amount],
+        account: account,
+        currency: account&.currency || Current.family.currency,
+        payment_url: attrs[:payment_url],
+        autopay: ActiveModel::Type::Boolean.new.cast(attrs[:autopay]) || false,
+        notes: attrs[:notes],
+        status: "active",
+        manual: true,
+        occurrence_count: 0
+      )
+      recurring.frequency_preset = attrs[:frequency_preset]
+      recurring.first_due_on = attrs[:first_due_on]
+
+      if due.nil?
+        recurring.errors.add(:base, t("recurring_transactions.create.due_date_required"))
+        return recurring
+      end
+
+      recurring.expected_day_of_month = due.day
+      recurring.anchor_date = due
+      recurring.last_occurrence_date = due
+      recurring.next_expected_date = due
+
+      RecurringTransaction::FrequencyPreset.apply(
+        recurring,
+        preset: attrs[:frequency_preset],
+        day_of_month: due.day,
+        weekday: due.wday,
+        month_of_year: due.month
+      )
+
+      recurring
+    end
+
+    def save_declared_bill
+      @recurring_transaction.save
+    rescue ActiveRecord::RecordNotUnique
+      # A series for this identifier already exists; a second legitimate one
+      # (another tier from the same biller) is distinguished by its amount.
+      @recurring_transaction.dedup_scope = @recurring_transaction.amount.to_d.to_s("F")
+      @recurring_transaction.save
     end
 
     # Pre-fills the frequency picker's virtual attributes from the series'

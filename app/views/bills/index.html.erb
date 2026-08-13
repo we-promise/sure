@@ -1,6 +1,16 @@
 <%= content_for :page_title, t(".title") %>
 
 <div class="space-y-4 pb-6 lg:pb-12">
+  <div class="flex justify-end">
+    <%= render DS::Link.new(
+          text: t(".add_bill"),
+          icon: "plus",
+          variant: "primary",
+          href: new_recurring_transaction_path,
+          frame: :modal
+        ) %>
+  </div>
+
   <% if @overdue.empty? && @this_month.empty? && @later.empty? %>
     <div class="bg-container rounded-xl shadow-border-xs p-4">
       <%= render DS::EmptyState.new(

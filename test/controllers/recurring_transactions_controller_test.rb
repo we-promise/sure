@@ -43,6 +43,84 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://pay.example.com/bill", @recurring_transaction.reload.payment_url
   end
 
+  test "new renders the create dialog in a single modal frame" do
+    get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="modal"/).size
+  end
+
+  test "create declares a manual bill and materializes its occurrences" do
+    due = Date.current + 16
+
+    assert_difference "@family.recurring_transactions.count", 1 do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Watson Property",
+          amount: "2150",
+          account_id: accounts(:depository).id,
+          first_due_on: due.iso8601,
+          frequency_preset: "monthly"
+        }
+      }
+    end
+
+    bill = @family.recurring_transactions.order(:created_at).last
+    assert bill.manual?
+    assert_equal "active", bill.status
+    assert_equal 2150, bill.amount
+    assert_equal due.day, bill.expected_day_of_month
+    assert_equal due, bill.anchor_date
+    # Monthly on the derived day IS the zero-rule implicit shape, so no
+    # redundant rule row is written; the detection reads it back correctly.
+    detection = RecurringTransaction::FrequencyPreset.detect(bill)
+    assert_equal "monthly", detection.key
+    assert_equal due.day, detection.day_of_month
+    assert bill.recurring_occurrences.reload.exists?(due_on: due),
+           "the declared bill's occurrence must materialize immediately"
+  end
+
+  test "create with a non-monthly preset writes explicit rules" do
+    due = Date.current + 4
+
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Cleaning service", amount: "80", account_id: accounts(:depository).id,
+        first_due_on: due.iso8601, frequency_preset: "biweekly"
+      }
+    }
+
+    bill = @family.recurring_transactions.order(:created_at).last
+    rule = bill.recurrence_rules.sole
+    assert_equal [ "weekly", 2, due.wday ], [ rule.frequency, rule.interval, rule.weekday ]
+    assert_equal due, bill.anchor_date
+  end
+
+  test "create without a due date re-renders with an error" do
+    assert_no_difference "@family.recurring_transactions.count" do
+      post recurring_transactions_url, params: {
+        recurring_transaction: { name: "No date", amount: "10", frequency_preset: "monthly", first_due_on: "" }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create stamps dedup_scope when the identity is already taken" do
+    post recurring_transactions_url, params: {
+      recurring_transaction: { name: "STREAMCO", amount: "5.99", account_id: accounts(:depository).id,
+                               first_due_on: (Date.current + 3).iso8601, frequency_preset: "monthly" }
+    }
+    post recurring_transactions_url, params: {
+      recurring_transaction: { name: "STREAMCO", amount: "24.99", account_id: accounts(:depository).id,
+                               first_due_on: (Date.current + 9).iso8601, frequency_preset: "monthly" }
+    }
+
+    tiers = @family.recurring_transactions.where(name: "STREAMCO").order(:amount)
+    assert_equal 2, tiers.count
+    assert_equal [ "", "24.99" ], tiers.map(&:dedup_scope)
+  end
+
   test "update applies a frequency preset as recurrence rules" do
     patch recurring_transaction_url(@recurring_transaction),
           params: { recurring_transaction: { frequency_preset: "biweekly", frequency_weekday: "5" } }

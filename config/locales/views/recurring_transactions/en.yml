@@ -43,6 +43,11 @@ en:
       add_link_aria: "Add a payment link for %{name}"
       autopay: Autopay
       autopay_aria: "%{name} pays automatically, open its portal in a new tab"
+    new:
+      title: Add a bill
+    create:
+      success: Bill added
+      due_date_required: "Enter the bill's next due date"
     edit:
       trigger_label: Edit bill
       title: "Payment link for %{name}"
@@ -59,6 +64,13 @@ en:
         one: "Also use this link for the other %{name} bill"
         other: "Also use this link for the other %{count} %{name} bills"
       submit: Save bill
+      name_label: Name
+      name_placeholder: Rent, PG&E, Netflix
+      amount_label: Amount
+      first_due_on_label: Next due
+      account_label: Paid from
+      account_blank: Any account
+      frequency_new_hint: The day details come from the due date above. You can refine the schedule after saving.
       frequency_label: How often
       frequency_hint: How often this bill comes due. Pick the day details to match your statement.
       frequency_day_label: On day

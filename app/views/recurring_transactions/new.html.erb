@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) %>
+  <% dialog.with_body do %>
+    <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0 %>
+  <% end %>
+<% end %>

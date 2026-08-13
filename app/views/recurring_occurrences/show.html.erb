@@ -1,0 +1,115 @@
+<% series = @occurrence.recurring_transaction %>
+<% expected = @occurrence.resolved_expected_amount_money %>
+<% paid = @occurrence.confirmed_allocated_money %>
+<% percent = expected.amount.positive? ? [ (paid.amount / expected.amount * 100).round, 100 ].min : 0 %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: series.display_name, subtitle: t(".due_on", date: l(@occurrence.effective_due_on, format: :long))) %>
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <div class="flex items-center gap-4">
+        <%= render DS::ProgressRing.new(
+          percent: percent,
+          size: 56,
+          tone: @occurrence.paid? ? :success : (@occurrence.overdue? ? :destructive : :neutral)
+        ) %>
+        <div>
+          <p class="text-xl font-medium text-primary privacy-sensitive">
+            <%= t(".paid_of", paid: format_money(paid), expected: format_money(expected)) %>
+          </p>
+          <p class="text-sm text-secondary privacy-sensitive">
+            <% if @occurrence.paid? %>
+              <%= @occurrence.overpaid? ? t(".overpaid") : t(".settled") %>
+            <% elsif @occurrence.skipped? %>
+              <%= t(".skipped") %>
+            <% elsif @occurrence.missed? %>
+              <%= t(".missed") %>
+            <% else %>
+              <%= t(".remaining", amount: format_money(@occurrence.remaining_amount_money)) %>
+            <% end %>
+          </p>
+        </div>
+      </div>
+
+      <% if @occurrence.allocations.any? %>
+        <div class="space-y-1">
+          <p class="text-xs font-medium text-secondary uppercase"><%= t(".payments") %></p>
+          <div class="bg-container-inset rounded-lg divide-y divide-divider">
+            <% @occurrence.allocations.order(:paid_on).each do |allocation| %>
+              <div class="flex items-center justify-between gap-3 px-3 py-2">
+                <div class="min-w-0">
+                  <p class="text-sm text-primary truncate">
+                    <%= allocation.entry&.name.presence || t(".manual_payment") %>
+                  </p>
+                  <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short) %></p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-sm text-primary privacy-sensitive"><%= format_money(allocation.allocated_amount_money) %></span>
+                  <%= render DS::Link.new(
+                    text: t(".unlink"),
+                    variant: "ghost",
+                    href: recurring_allocation_path(allocation),
+                    method: :delete
+                  ) %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <% if @occurrence.scheduled? && @candidates.any? %>
+        <div class="space-y-1">
+          <p class="text-xs font-medium text-secondary uppercase"><%= t(".candidates") %></p>
+          <div class="bg-container-inset rounded-lg divide-y divide-divider">
+            <% @candidates.each do |entry| %>
+              <div class="flex items-center justify-between gap-3 px-3 py-2">
+                <div class="min-w-0">
+                  <p class="text-sm text-primary truncate"><%= entry.name %></p>
+                  <p class="text-xs text-secondary"><%= l(entry.date, format: :short) %></p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-sm text-primary privacy-sensitive"><%= format_money(entry.amount_money.abs) %></span>
+                  <%= render DS::Link.new(
+                    text: t(".allocate"),
+                    variant: "ghost",
+                    href: recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id),
+                    method: :post
+                  ) %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <% if @occurrence.scheduled? %>
+        <%= form_with url: recurring_occurrence_allocations_path(@occurrence), class: "flex items-end gap-2" do |form| %>
+          <div class="grow">
+            <%= form.number_field :amount, step: 0.01, min: 0.01,
+                  placeholder: t(".custom_amount_placeholder"),
+                  class: "form-field__input" %>
+          </div>
+          <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary") %>
+        <% end %>
+      <% end %>
+
+      <div class="flex items-center justify-between gap-2 pt-2 border-t border-divider">
+        <div class="flex items-center gap-2">
+          <% if @occurrence.scheduled? %>
+            <%= render DS::Link.new(text: t(".mark_paid"), variant: "primary",
+                  href: mark_paid_recurring_occurrence_path(@occurrence), method: :post) %>
+            <%= render DS::Link.new(text: t(".skip"), variant: "ghost",
+                  href: skip_recurring_occurrence_path(@occurrence), method: :post) %>
+            <%= render DS::Link.new(text: t(".snooze_week"), variant: "ghost",
+                  href: snooze_recurring_occurrence_path(@occurrence, until: Date.current + 7), method: :patch) %>
+          <% else %>
+            <%= render DS::Link.new(text: t(".reopen"), variant: "ghost",
+                  href: reopen_recurring_occurrence_path(@occurrence), method: :post) %>
+          <% end %>
+        </div>
+        <%= render "recurring_transactions/pay_action", recurring_transaction: series, show_add: false %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

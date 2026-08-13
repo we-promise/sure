@@ -6,11 +6,36 @@
       <%= render "shared/form_errors", model: recurring_transaction %>
     <% end %>
 
+    <% if recurring_transaction.new_record? %>
+      <%= f.text_field :name,
+            label: t(".name_label"),
+            placeholder: t(".name_placeholder"),
+            autofocus: true,
+            required: true %>
+
+      <div class="grid grid-cols-2 gap-3">
+        <%= f.number_field :amount,
+              label: t(".amount_label"),
+              min: 0,
+              step: 0.01,
+              required: true %>
+        <%= f.date_field :first_due_on,
+              label: t(".first_due_on_label"),
+              value: recurring_transaction.first_due_on,
+              required: true %>
+      </div>
+
+      <%= f.collection_select :account_id,
+            Current.user.accessible_accounts.visible.alphabetically,
+            :id, :name,
+            { label: t(".account_label"), include_blank: t(".account_blank") } %>
+    <% end %>
+
     <div class="space-y-2">
       <%= f.text_field :payment_url,
             label: t(".payment_url_label"),
             placeholder: t(".payment_url_placeholder"),
-            autofocus: true,
+            autofocus: recurring_transaction.persisted?,
             inputmode: "url" %>
       <p class="text-xs text-secondary"><%= t(".payment_url_hint") %></p>
     </div>
@@ -29,22 +54,27 @@
             { label: t(".frequency_label") },
             { data: { frequency_fields_target: "preset", action: "change->frequency-fields#update" } } %>
 
-      <div class="grid grid-cols-2 gap-3">
-        <div data-frequency-fields-target="group" data-presets="monthly,semimonthly,quarterly,semiannual,annual" class="hidden">
-          <%= f.select :frequency_day_of_month, frequency_day_options, { label: t(".frequency_day_label") } %>
+      <% if recurring_transaction.persisted? %>
+        <div class="grid grid-cols-2 gap-3">
+          <div data-frequency-fields-target="group" data-presets="monthly,semimonthly,quarterly,semiannual,annual" class="hidden">
+            <%= f.select :frequency_day_of_month, frequency_day_options, { label: t(".frequency_day_label") } %>
+          </div>
+          <div data-frequency-fields-target="group" data-presets="semimonthly" class="hidden">
+            <%= f.select :frequency_second_day_of_month, frequency_day_options, { label: t(".frequency_second_day_label") } %>
+          </div>
+          <div data-frequency-fields-target="group" data-presets="weekly,biweekly" class="hidden">
+            <%= f.select :frequency_weekday, frequency_weekday_options, { label: t(".frequency_weekday_label") } %>
+          </div>
+          <div data-frequency-fields-target="group" data-presets="annual" class="hidden">
+            <%= f.select :frequency_month_of_year, frequency_month_options, { label: t(".frequency_month_label") } %>
+          </div>
         </div>
-        <div data-frequency-fields-target="group" data-presets="semimonthly" class="hidden">
-          <%= f.select :frequency_second_day_of_month, frequency_day_options, { label: t(".frequency_second_day_label") } %>
-        </div>
-        <div data-frequency-fields-target="group" data-presets="weekly,biweekly" class="hidden">
-          <%= f.select :frequency_weekday, frequency_weekday_options, { label: t(".frequency_weekday_label") } %>
-        </div>
-        <div data-frequency-fields-target="group" data-presets="annual" class="hidden">
-          <%= f.select :frequency_month_of_year, frequency_month_options, { label: t(".frequency_month_label") } %>
-        </div>
-      </div>
 
-      <p class="text-xs text-secondary"><%= t(".frequency_hint") %></p>
+        <p class="text-xs text-secondary"><%= t(".frequency_hint") %></p>
+      <% else %>
+        <%# A new bill's day details derive from its first due date. %>
+        <p class="text-xs text-secondary"><%= t(".frequency_new_hint") %></p>
+      <% end %>
     </div>
 
     <div class="space-y-2">

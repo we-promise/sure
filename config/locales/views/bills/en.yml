@@ -1,6 +1,10 @@
 ---
 en:
   bills:
+    add_bill: Add bill
+    details: Details
+    paid_label: Paid
+    partial_progress: "%{paid} of %{expected} paid"
     paid_from: "from %{account}"
     amount_range: "ranges %{min} to %{max}"
     possible_duplicate: Possible duplicate
@@ -13,6 +17,7 @@ en:
         one: "Due tomorrow, %{date}"
         other: "Due in %{count} days, %{date}"
     index:
+      add_bill: Add bill
       title: Bills
       summary_label: Due this month
       summary_count:
