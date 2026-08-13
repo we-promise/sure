@@ -301,7 +301,7 @@ class Provider::Anthropic < Provider
           operation: operation,
           model: model,
           endpoint: endpoint,
-          base_url: @base_url.presence || "https://api.anthropic.com",
+          base_url: sanitized_provider_debug_url(@base_url.presence || "https://api.anthropic.com"),
           custom_provider: custom_endpoint?
         }
       }

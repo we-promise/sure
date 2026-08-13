@@ -36,7 +36,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
   test "custom OpenAI-compatible chat failures are captured in debug log" do
     provider = Provider::Openai.new(
       "test-openai-token",
-      uri_base: "http://ollama.example.test/v1",
+      uri_base: "http://user:secret@ollama.example.test/v1?api_key=leak#frag",
       model: "gpt-oss:20b"
     )
 
@@ -44,7 +44,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     provider.stubs(:client).returns(fake_client)
     fake_client.expects(:chat).raises(
       Faraday::ResourceNotFound.new(
-        "the server responded with status 404",
+        "the server responded with status 404 Authorization: Bearer sk-shouldnotlog123456",
         {
           status: 404,
           body: {
@@ -77,6 +77,37 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal true, entry.metadata["custom_provider"]
     assert_equal 404, entry.metadata["http_status_code"]
     assert_equal "[FILTERED]", entry.metadata.dig("details", "error", "api_key")
+    assert_no_match(/sk-shouldnotlog/, entry.metadata["error_message"])
+  end
+
+  test "custom OpenAI-compatible debug log scrubs raw string details" do
+    provider = Provider::Openai.new(
+      "test-openai-token",
+      uri_base: "http://ollama.example.test/v1",
+      model: "gpt-oss:20b"
+    )
+
+    fake_client = mock
+    provider.stubs(:client).returns(fake_client)
+    fake_client.expects(:chat).raises(
+      Faraday::BadRequestError.new(
+        "api_key=sk-rawmessage123456 was rejected",
+        {
+          status: 400,
+          body: '{"error":{"message":"Authorization: Bearer sk-rawbody123456","api_key":"raw-secret"}}'
+        }
+      )
+    )
+
+    assert_difference "DebugLogEntry.count", 1 do
+      provider.chat_response("hi", model: "gpt-oss:20b", family: families(:dylan_family))
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_no_match(/sk-rawmessage/, entry.metadata["error_message"])
+    assert_no_match(/sk-rawbody/, entry.metadata["details"])
+    assert_no_match(/raw-secret/, entry.metadata["details"])
+    assert_match(/\[FILTERED\]/, entry.metadata["details"])
   end
 
   test "auto categorizes transactions by various attributes" do
@@ -524,16 +555,22 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       true
     end.returns(nil)
 
-    response = @subject.chat_response(
-      "hi",
-      model: @subject_model,
-      streamer: proc { |_| }
-    )
+    assert_difference "DebugLogEntry.count", 1 do
+      response = @subject.chat_response(
+        "hi",
+        model: @subject_model,
+        streamer: proc { |_| },
+        family: families(:dylan_family)
+      )
 
-    assert_not response.success?
-    assert_kind_of Provider::Openai::Error, response.error
-    assert_match(/Previous response not found/, response.error.message)
-    assert_match(/previous_response_not_found/, response.error.message)
+      assert_not response.success?
+      assert_kind_of Provider::Openai::Error, response.error
+      assert_match(/Previous response not found/, response.error.message)
+      assert_match(/previous_response_not_found/, response.error.message)
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "previous_response_not_found", entry.metadata.dig("details", "error", "code")
   end
 
   test "streaming surfaces a useful error when the stream ends with no response and no error event" do

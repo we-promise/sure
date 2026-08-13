@@ -330,7 +330,7 @@ class Provider::Openai < Provider
           operation: operation,
           model: model,
           endpoint: endpoint,
-          uri_base: @uri_base.presence || "https://api.openai.com",
+          uri_base: sanitized_provider_debug_url(@uri_base.presence || "https://api.openai.com"),
           custom_provider: custom_provider?
         }
       }

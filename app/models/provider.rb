@@ -63,12 +63,14 @@ class Provider
       provider_error = transformed_error || original_error
       attributes = debug_log.respond_to?(:call) ? debug_log.call(original_error, provider_error) : debug_log
       attributes = attributes.to_h.symbolize_keys
-      metadata = (attributes[:metadata] || {}).merge(provider_error_metadata(original_error, provider_error))
+      metadata = sanitized_provider_debug_value(attributes[:metadata] || {})
+                   .merge(provider_error_metadata(original_error, provider_error))
 
       DebugLogEntry.capture(
         category: attributes.fetch(:category, "provider_error"),
         level: attributes.fetch(:level, "error"),
-        message: attributes[:message].presence || "#{self.class.name} request failed: #{safe_provider_error_message(provider_error)}",
+        message: sanitized_debug_message(attributes[:message]) ||
+                 "#{self.class.name} request failed: #{sanitized_provider_error_message(provider_error)}",
         source: attributes.fetch(:source, self.class.name),
         provider_key: attributes[:provider_key],
         family: attributes[:family],
@@ -89,10 +91,17 @@ class Provider
       {
         error_class: original_error.class.name,
         provider_error_class: provider_error.class.name,
-        error_message: safe_provider_error_message(provider_error),
+        error_message: sanitized_provider_error_message(provider_error),
         http_status_code: provider_http_status_code(original_error) || provider_http_status_code(provider_error),
-        details: provider_error.respond_to?(:details) ? sanitized_provider_debug_value(provider_error.details) : nil
+        details: provider_error_details(original_error, provider_error)
       }
+    end
+
+    def provider_error_details(original_error, provider_error)
+      details = provider_error.details if provider_error.respond_to?(:details)
+      details = original_error.details if details.blank? && original_error.respond_to?(:details)
+
+      sanitized_provider_debug_value(details)
     end
 
     def provider_http_status_code(error)
@@ -120,7 +129,7 @@ class Provider
       when Array
         value.map { |nested_value| sanitized_provider_debug_value(nested_value) }
       when String
-        value.truncate(1_000)
+        scrub_provider_debug_string(value).truncate(1_000)
       when NilClass, Numeric, TrueClass, FalseClass
         value
       else
@@ -130,6 +139,36 @@ class Provider
 
     def sensitive_debug_key?(key)
       key.match?(/token|secret|password|authorization|api[_-]?key|credential/i)
+    end
+
+    def sanitized_provider_error_message(error)
+      scrub_provider_debug_string(safe_provider_error_message(error).to_s).truncate(1_000)
+    end
+
+    def sanitized_debug_message(message)
+      return if message.blank?
+
+      scrub_provider_debug_string(message.to_s).truncate(1_000)
+    end
+
+    def scrub_provider_debug_string(value)
+      value.to_s
+           .gsub(/\b(Bearer)\s+[^\s,"'}\]]+/i, '\1 [FILTERED]')
+           .gsub(/\b(api[_-]?key|token|secret|password|authorization|credential)(\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s,"'}\]]+)/i, '\1\2[FILTERED]')
+           .gsub(/("(?:api[_-]?key|token|secret|password|authorization|credential)"\s*:\s*)"[^"]*"/i, '\1"[FILTERED]"')
+           .gsub(/'(?:api[_-]?key|token|secret|password|authorization|credential)'\s*:\s*'[^']*'/i) { |match| match.sub(/:\s*'[^']*'\z/, ": '[FILTERED]'") }
+           .gsub(/\bsk-[A-Za-z0-9_-]{12,}\b/, "sk-[FILTERED]")
+    end
+
+    def sanitized_provider_debug_url(url)
+      uri = URI.parse(url.to_s)
+      uri.user = nil if uri.respond_to?(:user=)
+      uri.password = nil if uri.respond_to?(:password=)
+      uri.query = nil
+      uri.fragment = nil
+      uri.to_s
+    rescue URI::InvalidURIError
+      scrub_provider_debug_string(url.to_s)
     end
 
     def safe_provider_error_message(error)
