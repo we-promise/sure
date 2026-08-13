@@ -55,7 +55,12 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match I18n.t("recurring_transactions.new.income_title"), response.body
-    assert_match(/name="recurring_transaction\[is_income\]"[^>]*checked/, response.body)
+    assert_match I18n.t("recurring_transactions.form.income_name_label"), response.body
+    assert_match I18n.t("recurring_transactions.form.submit_income"), response.body
+    # Nothing bill-shaped survives in income mode.
+    assert_no_match I18n.t("recurring_transactions.form.autopay_hint"), response.body
+    assert_no_match I18n.t("recurring_transactions.form.payment_url_label"), response.body
+    assert_no_match I18n.t("recurring_transactions.form.submit"), response.body
   end
 
   test "new prefills from a transaction" do

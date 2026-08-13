@@ -1,5 +1,9 @@
 <%# locals: (recurring_transaction:, sibling_count: 0) %>
 
+<%# Income mode reshapes the dialog: a paycheck has a source and a payday,
+    not a biller portal and an autopay toggle. %>
+<% income = recurring_transaction.is_income.present? || recurring_transaction.typed_income? %>
+
 <%= styled_form_with model: recurring_transaction, class: "space-y-4" do |f| %>
   <section class="space-y-4">
     <% if recurring_transaction.errors.any? %>
@@ -8,19 +12,19 @@
 
     <% if recurring_transaction.new_record? %>
       <%= f.text_field :name,
-            label: t(".name_label"),
-            placeholder: t(".name_placeholder"),
+            label: income ? t(".income_name_label") : t(".name_label"),
+            placeholder: income ? t(".income_name_placeholder") : t(".name_placeholder"),
             autofocus: true,
             required: true %>
 
       <div class="grid grid-cols-2 gap-3">
         <%= f.number_field :amount,
-              label: t(".amount_label"),
+              label: income ? t(".income_amount_label") : t(".amount_label"),
               min: 0,
               step: 0.01,
               required: true %>
         <%= f.date_field :first_due_on,
-              label: t(".first_due_on_label"),
+              label: income ? t(".income_due_on_label") : t(".first_due_on_label"),
               value: recurring_transaction.first_due_on,
               required: true %>
       </div>
@@ -28,36 +32,42 @@
       <%= f.collection_select :account_id,
             Current.user.accessible_accounts.visible.alphabetically,
             :id, :name,
-            { label: t(".account_label"), include_blank: t(".account_blank") } %>
+            { label: income ? t(".income_account_label") : t(".account_label"), include_blank: t(".account_blank") } %>
 
-      <label class="flex items-start gap-2 cursor-pointer">
-        <%= check_box_tag "recurring_transaction[is_income]", "1", recurring_transaction.is_income.present?, class: "checkbox checkbox--light mt-0.5" %>
-        <span class="text-sm text-primary"><%= t(".is_income_label") %></span>
-      </label>
-      <p class="text-xs text-secondary"><%= t(".is_income_hint") %></p>
+      <% if income %>
+        <%= hidden_field_tag "recurring_transaction[is_income]", "1" %>
+      <% else %>
+        <label class="flex items-start gap-2 cursor-pointer">
+          <%= check_box_tag "recurring_transaction[is_income]", "1", false, class: "checkbox checkbox--light mt-0.5" %>
+          <span class="text-sm text-primary"><%= t(".is_income_label") %></span>
+        </label>
+        <p class="text-xs text-secondary"><%= t(".is_income_hint") %></p>
+      <% end %>
     <% end %>
 
-    <div class="space-y-2">
-      <%= f.text_field :payment_url,
-            label: t(".payment_url_label"),
-            placeholder: t(".payment_url_placeholder"),
-            autofocus: recurring_transaction.persisted?,
-            inputmode: "url" %>
-      <p class="text-xs text-secondary"><%= t(".payment_url_hint") %></p>
-    </div>
-
-    <div class="flex items-start justify-between gap-4">
-      <div>
-        <p class="text-sm font-medium text-primary"><%= t(".autopay_label") %></p>
-        <p class="text-xs text-secondary"><%= t(".autopay_hint") %></p>
+    <% unless income %>
+      <div class="space-y-2">
+        <%= f.text_field :payment_url,
+              label: t(".payment_url_label"),
+              placeholder: t(".payment_url_placeholder"),
+              autofocus: recurring_transaction.persisted?,
+              inputmode: "url" %>
+        <p class="text-xs text-secondary"><%= t(".payment_url_hint") %></p>
       </div>
-      <%= f.toggle :autopay %>
-    </div>
+
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-primary"><%= t(".autopay_label") %></p>
+          <p class="text-xs text-secondary"><%= t(".autopay_hint") %></p>
+        </div>
+        <%= f.toggle :autopay %>
+      </div>
+    <% end %>
 
     <div class="space-y-2" data-controller="frequency-fields">
       <%= f.select :frequency_preset,
             frequency_preset_options(recurring_transaction),
-            { label: t(".frequency_label") },
+            { label: income ? t(".income_frequency_label") : t(".frequency_label") },
             { data: { frequency_fields_target: "preset", action: "change->frequency-fields#update" } } %>
 
       <% if recurring_transaction.persisted? %>
@@ -78,8 +88,8 @@
 
         <p class="text-xs text-secondary"><%= t(".frequency_hint") %></p>
       <% else %>
-        <%# A new bill's day details derive from its first due date. %>
-        <p class="text-xs text-secondary"><%= t(".frequency_new_hint") %></p>
+        <%# A new series' day details derive from its first date. %>
+        <p class="text-xs text-secondary"><%= income ? t(".income_frequency_new_hint") : t(".frequency_new_hint") %></p>
       <% end %>
     </div>
 
@@ -114,9 +124,9 @@
     <div class="space-y-2">
       <%= f.text_area :notes,
             label: t(".notes_label"),
-            placeholder: t(".notes_placeholder"),
+            placeholder: income ? t(".income_notes_placeholder") : t(".notes_placeholder"),
             rows: 2 %>
-      <p class="text-xs text-secondary"><%= t(".notes_hint") %></p>
+      <p class="text-xs text-secondary"><%= income ? t(".income_notes_hint") : t(".notes_hint") %></p>
     </div>
 
     <% if sibling_count.positive? %>
@@ -130,6 +140,6 @@
   </section>
 
   <section>
-    <%= f.submit t(".submit") %>
+    <%= f.submit income ? t(".submit_income") : t(".submit") %>
   </section>
 <% end %>

@@ -51,7 +51,8 @@ en:
       due_date_required: "Enter the bill's next due date"
     edit:
       trigger_label: Edit bill
-      title: "Payment link for %{name}"
+      title: "Edit %{name}"
+      income_title: "Edit income · %{name}"
     form:
       payment_url_label: Payment link
       payment_url_placeholder: bank.example.com/pay
@@ -65,6 +66,16 @@ en:
         one: "Also use this link for the other %{name} bill"
         other: "Also use this link for the other %{count} %{name} bills"
       submit: Save bill
+      submit_income: Save income
+      income_name_label: Source
+      income_name_placeholder: Employer, client, side gig
+      income_amount_label: Amount per paycheck
+      income_due_on_label: Next payday
+      income_account_label: Deposits into
+      income_frequency_label: How often you're paid
+      income_frequency_new_hint: The payday details come from the date above. You can refine the schedule after saving.
+      income_notes_placeholder: Direct deposit, splits across two accounts
+      income_notes_hint: Anything worth remembering about this income.
       name_label: Name
       name_placeholder: Rent, PG&E, Netflix
       amount_label: Amount
