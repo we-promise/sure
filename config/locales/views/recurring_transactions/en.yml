@@ -63,8 +63,8 @@ en:
       frequency_hint: How often this bill comes due. Pick the day details to match your statement.
       frequency_day_label: On day
       frequency_second_day_label: And day
-      frequency_weekday_label: On
-      frequency_month_label: In
+      frequency_weekday_label: "On"
+      frequency_month_label: "In"
     update:
       success: Bill updated
       success_with_siblings:
