@@ -26,9 +26,9 @@ class RecurringTransactionFrequencyTest < ApplicationSystemTestCase
            from: I18n.t("recurring_transactions.form.frequency_weekday_label")
     click_button I18n.t("recurring_transactions.form.submit")
 
-    # The update redirects via the referer; land on the list explicitly and
-    # check the saved cadence reads back as its label.
-    visit recurring_transactions_url
+    # The update redirects via the referer; the cadence label lives on the
+    # All bills management view now.
+    visit bills_url(view: "all")
     assert_text I18n.t("recurring_transactions.frequency.biweekly", weekday: I18n.t("date.day_names")[5])
     assert_equal [ [ "weekly", 2, 5 ] ],
                  @recurring.reload.recurrence_rules.map { |rule| [ rule.frequency, rule.interval, rule.weekday ] }

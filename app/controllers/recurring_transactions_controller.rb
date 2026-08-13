@@ -66,11 +66,22 @@ class RecurringTransactionsController < ApplicationController
     end
   end
 
+  # Optionally pre-filled from an existing transaction (entry_id param): the
+  # fastest declare path for a bill that already hits the ledger -- name,
+  # amount, account and a projected next-due all come from the entry.
   def new
     @recurring_transaction = Current.family.recurring_transactions.new(
       frequency_preset: "monthly",
       first_due_on: Date.current
     )
+
+    if (entry = Current.family.entries.find_by(id: params[:entry_id]))
+      @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
+      @recurring_transaction.amount = entry.amount.abs
+      @recurring_transaction.account_id = entry.account_id
+      @recurring_transaction.first_due_on =
+        RecurringTransaction::Schedule.new(expected_day_of_month: entry.date.day).next_occurrence_from_today
+    end
 
     render layout: dialog_layout
   end
@@ -168,7 +179,7 @@ class RecurringTransactionsController < ApplicationController
 
     def recurring_transaction_params
       params.require(:recurring_transaction).permit(
-        :payment_url, :autopay, :notes,
+        :payment_url, :autopay, :notes, :bill_type, :category_id,
         :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
         :frequency_weekday, :frequency_month_of_year
       )

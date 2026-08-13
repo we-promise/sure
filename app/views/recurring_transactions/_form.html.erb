@@ -77,6 +77,18 @@
       <% end %>
     </div>
 
+    <% if recurring_transaction.persisted? && %w[bill subscription other].include?(recurring_transaction.bill_type) %>
+      <div class="grid grid-cols-2 gap-3">
+        <%= f.select :bill_type,
+              %w[bill subscription other].map { |type| [ t("bills.all.types.#{type}"), type ] },
+              { label: t(".bill_type_label") } %>
+        <%= f.collection_select :category_id,
+              Current.family.categories.alphabetically,
+              :id, :name,
+              { label: t(".category_label"), include_blank: t(".category_blank") } %>
+      </div>
+    <% end %>
+
     <div class="space-y-2">
       <%= f.text_area :notes,
             label: t(".notes_label"),

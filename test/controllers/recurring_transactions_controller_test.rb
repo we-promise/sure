@@ -50,6 +50,19 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="modal"/).size
   end
 
+  test "new prefills from a transaction" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 20, amount: 184.37, currency: "USD", name: "PG&E WEB PAYMENT",
+      entryable: Transaction.new
+    )
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match "PG&amp;E WEB PAYMENT", response.body
+    assert_match "184.37", response.body
+  end
+
   test "create declares a manual bill and materializes its occurrences" do
     due = Date.current + 16
 

@@ -70,6 +70,9 @@ en:
       first_due_on_label: Next due
       account_label: Paid from
       account_blank: Any account
+      bill_type_label: Kind
+      category_label: Category
+      category_blank: No category
       frequency_new_hint: The day details come from the due date above. You can refine the schedule after saving.
       frequency_label: How often
       frequency_hint: How often this bill comes due. Pick the day details to match your statement.
@@ -82,6 +85,10 @@ en:
       success_with_siblings:
         one: "Bill updated, and the payment link was copied to 1 other bill"
         other: "Bill updated, and the payment link was copied to %{count} other bills"
+    manage:
+      title: Your bills live on the Bills page
+      description: Declare, edit, pause and pay everything from there. This page controls detection.
+      cta: Open all bills
     settings:
       enable_label: Enable Recurring Transactions
       enable_description: Automatically detect recurring transaction patterns and show upcoming projected transactions.
