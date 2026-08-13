@@ -66,6 +66,20 @@ class RecurringTransaction::OccurrenceGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a declared bill's first obligation is its anchor, never a fabricated previous cycle" do
+    travel_to Date.new(2026, 8, 13) do
+      declared = @family.recurring_transactions.create!(
+        name: "Declared rent", amount: 2150, currency: "USD",
+        expected_day_of_month: 23, anchor_date: Date.new(2026, 8, 23),
+        last_occurrence_date: Date.new(2026, 8, 23), next_expected_date: Date.new(2026, 8, 23),
+        status: "active", manual: true
+      )
+
+      first = declared.recurring_occurrences.reload.order(:due_on).first
+      assert_equal Date.new(2026, 8, 23), first.due_on, "no phantom July 23 debt"
+    end
+  end
+
   test "suggested series generate nothing" do
     @series.update!(status: "suggested")
     assert_equal 0, Generator.new(@series).generate!.to_i

@@ -26,6 +26,13 @@ class RecurringTransaction
 
       schedule = series.schedule
       from = schedule.cycle_for(Date.current)&.begin || Date.current
+
+      # A declared bill's anchor IS its first obligation: nothing is owed
+      # before it, so the current-cycle lookback must not fabricate a
+      # previous-cycle debt. Auto-detected series keep the cycle start --
+      # their history predates the row.
+      from = [ from, series.anchor_date ].compact.max if series.manual?
+
       through ||= default_horizon(schedule)
 
       upsert_window(from, through)
