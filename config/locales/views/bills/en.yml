@@ -1,6 +1,21 @@
 ---
 en:
   bills:
+    row_overdue: Overdue
+    row_today: Today
+    pane:
+      next_payment: Next payment
+      around: "around %{date}"
+      rules: Rules
+      rule_named: "named %{name}"
+      rule_amount_range: "from %{min} to %{max}"
+      history_aria: Payments over the last twelve months
+      key_metrics: Key metrics
+      spent_per_year: Spent per year
+      avg_payment: Avg payment
+      last_account: Last account used
+      recent_payments: Recent payments
+      manual_payment: Manual payment
     add_bill: Add bill
     details: Details
     paid_label: Paid
@@ -112,6 +127,10 @@ en:
       notes: Notes
       edit: Edit bill
     index:
+      left_to_pay: Left to pay
+      paid_so_far: Paid so far
+      hero_past_due: "%{amount} past due"
+      hero_next_seven: "%{amount} due in the next 7 days"
       add_bill: Add bill
       needs_review: Needs review
       notice_trial: "%{name}'s trial ends %{date}"
@@ -138,7 +157,7 @@ en:
         one: "1 bill is not included, no exchange rate available"
         other: "%{count} bills are not included, no exchange rate available"
       overdue: Overdue
-      this_month: Rest of this month
+      this_month: This month
       later: Later
       paid_this_month: Paid this month
       dormant: Dormant

@@ -63,6 +63,12 @@ class BillsController < ApplicationController
 
     @suggested_allocations = suggested_allocations
     @notices = collect_notices
+
+    # The month reads as one chronological list: paid rows stay in place
+    # with a check, overdue rows carry "Overdue" where their date would be.
+    @month_rows = (@overdue + @this_month + @paid_this_month).sort_by(&:due_on)
+    first_open = @month_rows.find { |occurrence| !occurrence.paid? } || @month_rows.first
+    @default_pane_series = first_open&.recurring_transaction || @later.first&.recurring_transaction
   end
 
   # One bill's complete story: current state, payment history, what is
@@ -88,10 +94,47 @@ class BillsController < ApplicationController
       }
     end
 
+    if params[:display] == "pane"
+      load_pane_extras
+      render :pane, layout: false
+      return
+    end
+
     render layout: dialog_layout
   end
 
   private
+    # The pane tells the series' financial story: a year of payments by
+    # month, per-year totals, and where the money last came from.
+    def load_pane_extras
+      confirmed = RecurringAllocation.confirmed
+        .joins(:recurring_occurrence)
+        .where(recurring_occurrences: { recurring_transaction_id: @series.id })
+
+      window_start = 11.months.ago.beginning_of_month.to_date
+      by_month = confirmed
+        .where("recurring_occurrences.due_on >= ?", window_start)
+        .group(Arel.sql("date_trunc('month', recurring_occurrences.due_on)"))
+        .sum(:allocated_amount)
+        .transform_keys(&:to_date)
+
+      @payment_history = (0..11).map do |offset|
+        month = (window_start + offset.months)
+        [ month, by_month.fetch(month, 0) ]
+      end
+
+      totals = confirmed.group(Arel.sql("date_trunc('year', recurring_occurrences.due_on)")).sum(:allocated_amount)
+      counts = confirmed.group(Arel.sql("date_trunc('year', recurring_occurrences.due_on)")).count
+      @yearly_metrics = totals.map do |year, total|
+        count = counts.fetch(year, 1)
+        { year: year.to_date.year, total: Money.new(total, @series.currency), average: Money.new(total / count, @series.currency) }
+      end.sort_by { |row| -row[:year] }.first(4)
+
+      last_allocation = confirmed.where.not(entry_id: nil).includes(entry: :account).order(paid_on: :desc, created_at: :desc).first
+      @last_account = last_allocation&.entry&.account
+      @recent_allocations = confirmed.includes(:entry).order(paid_on: :desc, created_at: :desc).limit(6)
+    end
+
     # The management table: every series of every type and status, filterable
     # and sortable. This is the power-user surface; the overview stays a
     # worklist.

@@ -53,8 +53,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "Late bill", response.body
-    assert_match I18n.t("bills.index.overdue"), response.body
-    assert_match I18n.t("bills.index.kpi_past_due"), response.body
+    assert_match I18n.t("bills.row_overdue"), response.body
+    assert_match "past due", response.body
   end
 
   test "index cannot see another family's bills" do
@@ -150,7 +150,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    assert_match I18n.t("bills.index.kpi_remaining"), response.body
+    assert_match I18n.t("bills.index.left_to_pay"), response.body
     assert_match "$150", response.body
   end
 
@@ -263,6 +263,35 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.paycheck_of", date: I18n.l(payday, format: :long)), response.body
     assert_match "Rent", response.body
     assert_match I18n.t("bills.paycheck.remaining_after_bills"), response.body
+  end
+
+  test "overview embeds a lazy detail pane pointed at the first open bill" do
+    create_bill(name: "Rent", amount: 2150)
+
+    get bills_url
+
+    assert_response :success
+    assert_match(/<turbo-frame[^>]*id="bill_detail"[^>]*src="[^"]*display=pane/, response.body)
+  end
+
+  test "the detail pane tells the bill's story inside its frame" do
+    bill = create_bill(name: "Rent", amount: 2150)
+    occurrence = bill.recurring_occurrences.order(:due_on).first
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 2150, currency: "USD", name: "WATSON PROPERTY",
+      entryable: Transaction.new
+    )
+    RecurringTransaction::Allocator.new(occurrence).allocate!(amount: "2150", entry: entry)
+
+    get bill_url(bill, display: "pane")
+
+    assert_response :success
+    assert_match(/<turbo-frame[^>]*id="bill_detail"/, response.body)
+    assert_match I18n.t("bills.pane.rules"), response.body
+    assert_match I18n.t("bills.pane.key_metrics"), response.body
+    assert_match I18n.t("bills.pane.recent_payments"), response.body
+    assert_match "WATSON PROPERTY", response.body
+    assert_no_match(/<html/, response.body, "the pane renders frame-only, no layout")
   end
 
   test "the paycheck view lists declared income with an edit affordance" do

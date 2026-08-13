@@ -1,4 +1,4 @@
-<%# locals: (title:, occurrences:, tone: :default) %>
+<%# locals: (title:, occurrences:, tone: :default, date_labels: false) %>
 <% return if occurrences.empty? %>
 
 <div>
@@ -10,7 +10,7 @@
 
   <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
     <% occurrences.each do |occurrence| %>
-      <%= render "bills/occurrence", occurrence: occurrence %>
+      <%= render "bills/occurrence", occurrence: occurrence, date_label: date_labels %>
     <% end %>
   </div>
 </div>

@@ -1,4 +1,4 @@
-<%# locals: (occurrence:) %>
+<%# locals: (occurrence:, date_label: false) %>
 <% series = occurrence.recurring_transaction %>
 <% expected = occurrence.resolved_expected_amount_money %>
 <% paid = occurrence.confirmed_allocated_money %>
@@ -6,6 +6,17 @@
 <%# An autopaying bill is still worth seeing and still counts toward the total,
     but it recedes so the rows that want something from you carry the weight. %>
 <div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 <%= "opacity-70" if series.autopay? %>">
+  <% if date_label %>
+    <div class="w-14 shrink-0 text-xs <%= occurrence.derived_state == :overdue ? "text-destructive font-medium" : "text-secondary" %>">
+      <% if occurrence.derived_state == :overdue %>
+        <%= t("bills.row_overdue") %>
+      <% elsif occurrence.due_on == Date.current %>
+        <%= t("bills.row_today") %>
+      <% else %>
+        <%= l(occurrence.due_on, format: "%b %-d") %>
+      <% end %>
+    </div>
+  <% end %>
   <div class="flex items-center gap-3 lg:gap-4 min-w-0 flex-1">
     <% if series.merchant&.logo_url.present? %>
       <%= image_tag Setting.transform_brand_fetch_url(series.merchant.logo_url),
@@ -22,14 +33,20 @@
 
     <div class="min-w-0">
       <p class="text-primary text-sm font-medium truncate">
-        <%= link_to series.display_name, bill_path(series),
-              data: { turbo_frame: "drawer" }, class: "hover:underline" %>
+        <span class="hidden 2xl:inline">
+          <%= link_to series.display_name, bill_path(series, display: "pane"),
+                data: { turbo_frame: "bill_detail" }, class: "hover:underline" %>
+        </span>
+        <span class="2xl:hidden">
+          <%= link_to series.display_name, bill_path(series),
+                data: { turbo_frame: "drawer" }, class: "hover:underline" %>
+        </span>
         <% if series.transfer? %>
           <span class="text-xs text-secondary font-normal"><%= t("bills.debt_payment") %></span>
         <% end %>
       </p>
-      <p class="text-xs <%= occurrence.derived_state == :overdue ? "text-destructive" : "text-secondary" %>">
-        <%= occurrence_due_label(occurrence) %><%= bills_paid_from_label(series) %>
+      <p class="text-xs <%= !date_label && occurrence.derived_state == :overdue ? "text-destructive" : "text-secondary" %>">
+        <%= date_label ? frequency_label(series) : occurrence_due_label(occurrence) %><%= bills_paid_from_label(series) %>
         <% if (progress = series.installment_progress) %>
           &middot; <%= t("bills.installment_progress", done_plus_one: progress.first + 1, total: progress.last) %>
         <% end %>
@@ -49,6 +66,12 @@
     </div>
   </div>
 
+  <% if series.category %>
+    <div class="hidden md:block shrink-0 max-w-36">
+      <%= render "categories/badge", category: series.category %>
+    </div>
+  <% end %>
+
   <div class="shrink-0 text-right">
     <p class="text-sm font-medium text-primary privacy-sensitive">
       <% if occurrence.partially_paid? %>
@@ -67,6 +90,10 @@
       </p>
     <% end %>
   </div>
+
+  <% if occurrence.paid? %>
+    <%= icon "check", size: "sm", class: "text-success shrink-0" %>
+  <% end %>
 
   <div class="shrink-0 flex items-center gap-2">
     <%= render DS::Link.new(

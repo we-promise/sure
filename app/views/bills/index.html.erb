@@ -3,37 +3,36 @@
 <div class="space-y-4 pb-6 lg:pb-12">
   <%= render "bills/view_switcher", active: "overview" %>
 
-  <%# One card divided into cells, per the app's KPI convention. %>
-  <div class="grid grid-cols-2 md:grid-cols-4 bg-container rounded-xl shadow-border-xs md:divide-x divide-y md:divide-y-0 divide-alpha-black-100 theme-dark:divide-alpha-white-200">
-    <div class="p-4 space-y-1">
-      <p class="text-sm text-secondary"><%= t(".kpi_remaining") %></p>
-      <p class="text-primary font-medium text-xl privacy-sensitive"><%= @remaining_this_month ? format_money(@remaining_this_month) : "–" %></p>
-      <p class="text-xs text-secondary">
-        <%= t(".summary_count", count: @owed_count) %>
-        <% if @needs_action_count < @owed_count %>
-          &middot; <%= t(".needs_action_count", count: @needs_action_count) %>
+  <div class="2xl:grid 2xl:grid-cols-[minmax(0,1fr)_360px] 2xl:gap-4 2xl:items-start space-y-4 2xl:space-y-0">
+  <div class="space-y-4 min-w-0">
+  <%# The month at a glance: what is left, how far along, what is done. %>
+  <% paid_amount = @paid_this_month_total ? @paid_this_month_total.amount.to_f : 0.0 %>
+  <% remaining_amount = @remaining_this_month ? @remaining_this_month.amount.to_f : 0.0 %>
+  <% month_total = paid_amount + remaining_amount %>
+  <% hero_percent = month_total.positive? ? (paid_amount / month_total * 100).round : 0 %>
+  <div class="bg-container rounded-xl shadow-border-xs p-5">
+    <div class="flex items-center justify-center gap-10 lg:gap-14">
+      <div class="text-right space-y-0.5">
+        <p class="text-2xl font-medium text-primary privacy-sensitive"><%= @remaining_this_month ? format_money(@remaining_this_month) : "–" %></p>
+        <p class="text-sm text-secondary"><%= t(".left_to_pay") %></p>
+        <% if @past_due_total %>
+          <p class="text-xs text-destructive privacy-sensitive"><%= t(".hero_past_due", amount: format_money(@past_due_total)) %></p>
         <% end %>
-      </p>
-      <% if @unconvertible_count.positive? %>
-        <p class="text-xs text-warning"><%= t(".unconvertible", count: @unconvertible_count) %></p>
-      <% end %>
+      </div>
+      <%= render DS::ProgressRing.new(percent: hero_percent, size: 72, stroke_width: 7) %>
+      <div class="space-y-0.5">
+        <p class="text-2xl font-medium text-primary privacy-sensitive"><%= @paid_this_month_total ? format_money(@paid_this_month_total) : "–" %></p>
+        <p class="text-sm text-secondary"><%= t(".paid_so_far") %></p>
+        <% if @due_next_seven %>
+          <p class="text-xs text-secondary privacy-sensitive"><%= t(".hero_next_seven", amount: format_money(@due_next_seven)) %></p>
+        <% end %>
+      </div>
     </div>
-    <div class="p-4 space-y-1">
-      <p class="text-sm text-secondary"><%= t(".kpi_paid") %></p>
-      <p class="text-primary font-medium text-xl privacy-sensitive"><%= @paid_this_month_total ? format_money(@paid_this_month_total) : "–" %></p>
-      <p class="text-xs text-secondary"><%= t(".paid_count", count: @paid_this_month.size) %></p>
-    </div>
-    <div class="p-4 space-y-1">
-      <p class="text-sm text-secondary"><%= t(".kpi_next_seven") %></p>
-      <p class="text-primary font-medium text-xl privacy-sensitive"><%= @due_next_seven ? format_money(@due_next_seven) : "–" %></p>
-    </div>
-    <div class="p-4 space-y-1">
-      <p class="text-sm text-secondary"><%= t(".kpi_past_due") %></p>
-      <p class="font-medium text-xl privacy-sensitive <%= @past_due_total ? "text-destructive" : "text-primary" %>">
-        <%= @past_due_total ? format_money(@past_due_total) : "–" %>
-      </p>
-    </div>
+    <% if @unconvertible_count.positive? %>
+      <p class="text-xs text-warning text-center mt-2"><%= t(".unconvertible", count: @unconvertible_count) %></p>
+    <% end %>
   </div>
+
 
   <% if @notices.any? %>
     <div class="bg-container rounded-xl shadow-border-xs divide-y divide-divider">
@@ -107,7 +106,7 @@
     </div>
   <% end %>
 
-  <% if [ @overdue, @this_month, @later, @paid_this_month, @dormant ].all?(&:empty?) %>
+  <% if [ @month_rows, @later, @dormant ].all?(&:empty?) %>
     <div class="bg-container rounded-xl shadow-border-xs p-4">
       <%= render DS::EmptyState.new(
             icon: "receipt",
@@ -127,11 +126,22 @@
     </div>
   <% else %>
     <div class="rounded-xl bg-container-inset space-y-1 p-1">
-      <%= render "bills/occurrence_section", title: t(".overdue"), occurrences: @overdue, tone: :destructive %>
-      <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @this_month %>
+      <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @month_rows, date_labels: true %>
       <%= render "bills/occurrence_section", title: t(".later"), occurrences: @later %>
-      <%= render "bills/occurrence_section", title: t(".paid_this_month"), occurrences: @paid_this_month %>
       <%= render "bills/occurrence_section", title: t(".dormant"), occurrences: @dormant %>
     </div>
   <% end %>
+  </div>
+
+  <%# Wide-screen detail pane: the selected bill's full story, drawer-free.
+      Gated at 2xl because the app shell's two sidebars leave narrower
+      viewports without room for a fixed column next to the dense rows. %>
+  <div class="hidden 2xl:block sticky top-4">
+    <% if @default_pane_series %>
+      <%= turbo_frame_tag "bill_detail", src: bill_path(@default_pane_series, display: "pane") %>
+    <% else %>
+      <%= turbo_frame_tag "bill_detail" %>
+    <% end %>
+  </div>
+  </div>
 </div>

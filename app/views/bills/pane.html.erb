@@ -1,0 +1,148 @@
+<%= turbo_frame_tag "bill_detail" do %>
+  <div class="bg-container rounded-xl shadow-border-xs">
+    <div class="p-4 space-y-3">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0 space-y-1.5">
+          <% if @series.category %>
+            <%= render "categories/badge", category: @series.category %>
+          <% end %>
+          <h3 class="text-lg font-medium text-primary truncate"><%= @series.display_name %></h3>
+        </div>
+        <div class="text-right shrink-0">
+          <p class="text-xs text-secondary"><%= t(".next_payment") %></p>
+          <p class="text-lg font-medium text-primary privacy-sensitive">
+            <%= "~" if @series.has_amount_variance? %><%= format_money(Money.new(@series.amount.abs, @series.currency)) %>
+          </p>
+          <% if @series.next_expected_date.present? %>
+            <p class="text-xs text-secondary"><%= t(".around", date: l(@series.next_expected_date, format: :short)) %></p>
+          <% end %>
+        </div>
+      </div>
+
+      <%# The series' identity as the matcher sees it, as readable chips. %>
+      <div class="space-y-1.5">
+        <p class="text-xs font-medium text-secondary uppercase"><%= t(".rules") %></p>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="text-xs text-primary bg-container-inset rounded-full px-2.5 py-1">
+            <%= t(".rule_named", name: @series.merchant&.name.presence || @series.name) %>
+          </span>
+          <span class="text-xs text-primary bg-container-inset rounded-full px-2.5 py-1 privacy-sensitive">
+            <% if @series.has_amount_variance? %>
+              <%= t(".rule_amount_range", min: format_money(@series.expected_amount_min_money), max: format_money(@series.expected_amount_max_money)) %>
+            <% else %>
+              <%= format_money(Money.new(@series.amount.abs, @series.currency)) %>
+            <% end %>
+          </span>
+          <span class="text-xs text-primary bg-container-inset rounded-full px-2.5 py-1">
+            <%= frequency_label(@series) %>
+          </span>
+          <% if @series.account %>
+            <span class="text-xs text-primary bg-container-inset rounded-full px-2.5 py-1">
+              <%= @series.account.name %>
+            </span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <%# Twelve months of what this bill actually cost. %>
+    <% amounts = @payment_history.map(&:last) %>
+    <% peak = [ amounts.max, 1 ].max %>
+    <div class="border-t border-divider px-4 py-3">
+      <svg viewBox="0 0 336 84" class="w-full text-success" role="img" aria-label="<%= t(".history_aria") %>">
+        <% points = @payment_history.each_with_index.map do |(_month, amount), index|
+             x = 10 + index * (316.0 / 11)
+             y = 62 - (amount.to_f / peak.to_f) * 48
+             [ x, y, amount ]
+           end %>
+        <polyline points="<%= points.map { |x, y, _| "#{x.round(1)},#{y.round(1)}" }.join(" ") %>"
+                  fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.7"/>
+        <% points.each do |x, y, amount| %>
+          <circle cx="<%= x.round(1) %>" cy="<%= y.round(1) %>" r="3"
+                  fill="<%= amount.positive? ? "currentColor" : "none" %>"
+                  stroke="currentColor" stroke-width="1.5"/>
+        <% end %>
+        <% @payment_history.each_with_index do |(month, _), index| %>
+          <% next unless index.even? %>
+          <text x="<%= (10 + index * (316.0 / 11)).round(1) %>" y="80" text-anchor="middle"
+                fill="currentColor" opacity="0.5" font-size="9"><%= l(month, format: "%b") %></text>
+        <% end %>
+      </svg>
+    </div>
+
+    <% if @yearly_metrics.any? %>
+      <div class="border-t border-divider px-4 py-3">
+        <div class="grid grid-cols-3 text-xs text-secondary pb-1">
+          <p class="font-medium uppercase"><%= t(".key_metrics") %></p>
+          <p class="text-right"><%= t(".spent_per_year") %></p>
+          <p class="text-right"><%= t(".avg_payment") %></p>
+        </div>
+        <div class="divide-y divide-divider">
+          <% @yearly_metrics.each do |row| %>
+            <div class="grid grid-cols-3 py-1.5 text-sm">
+              <p class="text-secondary"><%= row[:year] %></p>
+              <p class="text-right text-primary privacy-sensitive"><%= format_money(row[:total]) %></p>
+              <p class="text-right text-primary privacy-sensitive"><%= format_money(row[:average]) %></p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <% if @last_account %>
+      <div class="border-t border-divider px-4 py-3 flex items-center justify-between gap-3">
+        <p class="text-xs text-secondary"><%= t(".last_account") %></p>
+        <p class="text-sm text-primary truncate"><%= @last_account.name %></p>
+      </div>
+    <% end %>
+
+    <% if @recent_allocations.any? %>
+      <div class="border-t border-divider px-4 py-3 space-y-1">
+        <p class="text-xs font-medium text-secondary uppercase"><%= t(".recent_payments") %></p>
+        <div class="divide-y divide-divider">
+          <% @recent_allocations.each do |allocation| %>
+            <div class="flex items-center justify-between gap-3 py-1.5">
+              <div class="min-w-0">
+                <p class="text-sm text-primary truncate"><%= allocation.entry&.name.presence || t(".manual_payment") %></p>
+                <% if allocation.paid_on %>
+                  <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short) %></p>
+                <% end %>
+              </div>
+              <p class="text-sm text-primary privacy-sensitive shrink-0"><%= format_money(allocation.allocated_amount_money) %></p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="border-t border-divider p-3 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-1">
+        <%= render DS::Link.new(
+              text: t("bills.show.edit"),
+              icon: "pencil",
+              variant: "ghost",
+              href: edit_recurring_transaction_path(@series),
+              frame: :modal
+            ) %>
+        <%= render DS::Link.new(
+              text: @series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+              icon: @series.active? ? "pause" : "play",
+              variant: "ghost",
+              href: toggle_status_recurring_transaction_path(@series),
+              method: :post,
+              data: { turbo_frame: "_top" }
+            ) %>
+        <%= render DS::Link.new(
+              text: t("recurring_transactions.actions.delete"),
+              icon: "trash-2",
+              variant: "ghost",
+              class: "text-destructive",
+              href: recurring_transaction_path(@series),
+              method: :delete,
+              data: { turbo_frame: "_top", turbo_confirm: t(@series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: @series.display_name) }
+            ) %>
+      </div>
+      <%= render "recurring_transactions/pay_action", recurring_transaction: @series, show_add: false %>
+    </div>
+  </div>
+<% end %>
