@@ -1,0 +1,114 @@
+uk:
+  rules:
+    no_action: Немає дії
+    no_condition: Немає умови
+    rule:
+      edit: Редагувати
+      re_apply_rule: Повторно застосувати правило
+      delete: Видалити
+      then: ТОДІ
+      and_more_conditions:
+        one: і ще 1 умова
+        other: і ще %{count} умов
+      and_more_actions:
+        one: і ще 1 дія
+        other: і ще %{count} дій
+      action_label_to: "%{label} до %{value}"
+      all_past_and_future: Усі минулі та майбутні %{resource}
+      on_or_after: "%{resource} на або після %{date}"
+    form:
+      rule_name_label: Назва правила (необов'язково)
+      rule_name_placeholder: Введіть назву для цього правила
+      add_condition: Додати умову
+      add_condition_group: Додати групу умов
+      add_action: Додати дію
+      all_past_and_future: Усі минулі та майбутні %{resource}
+      starting_from: Починаючи з
+      then: ТОДІ
+    index:
+      page_title: Правила
+      delete_all_rules: Видалити всі правила
+      new_rule: Нове правило
+      ai_cost_warning: Дії правил з підтримкою AI коштуватимуть грошей. Обов'язково фільтруйте якомога вужче, щоб уникнути непотрібних витрат.
+      rules_heading: Правила
+      sort_by: "Сортувати за:"
+      sort_name: Назва
+      sort_updated_at: Оновлено
+      toggle_sort_direction: Переключити напрямок сортування
+      no_rules_title: Правил ще немає
+      no_rules_description: Налаштуйте правила для виконання дій з вашими транзакціями та іншими даними під час кожної синхронізації облікового запису.
+    confirm:
+      title: Підтвердити зміни
+      title_with_name: "Підтвердити зміни до \"%{name}\""
+      apply_notice_html: "Ви збираєтеся застосувати це правило до <span class=\"text-primary font-medium\">%{count} %{resource}</span>, які відповідають зазначеним критеріям правила. Будь ласка, підтвердьте, якщо ви хочете продовжити цю зміну."
+      ai_cost_title: Оцінка вартості AI
+      ai_cost_with_estimate_html: "Це використовуватиме AI для категоризації %{count} транзакції(й). Орієнтовна вартість: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate_html: "Це використовуватиме AI для категоризації %{count} транзакції(й)."
+      cost_unavailable_model: "Оцінка вартості недоступна для моделі \"%{model}\"."
+      cost_unavailable_no_provider: Оцінка вартості недоступна (не налаштовано постачальника LLM).
+      cost_warning: Ви можете понести витрати, будь ласка, перевірте у постачальника моделі найактуальніші ціни.
+      view_usage_history: Переглянути історію використання
+      confirm_changes: Підтвердити зміни
+    actions:
+      value_placeholder: Введіть значення
+    update:
+      success: Правило оновлено
+    destroy:
+      success: Правило видалено
+    destroy_all:
+      success: Усі правила видалено
+    apply_all:
+      button: Застосувати все
+      confirm_title: Застосувати всі правила
+      confirm_message: Ви збираєтеся застосувати %{count} правил, що впливають на %{transactions} унікальних транзакцій. Будь ласка, підтвердьте, якщо ви хочете продовжити.
+      confirm_button: Підтвердити та застосувати все
+      success: Усі правила поставлено в чергу на виконання
+      ai_cost_title: Оцінка вартості AI
+      ai_cost_message: Це використовуватиме AI для категоризації до %{transactions} транзакцій.
+      estimated_cost: "Орієнтовна вартість: ~$%{cost}"
+      cost_unavailable_model: Оцінка вартості недоступна для моделі "%{model}".
+      cost_unavailable_no_provider: Оцінка вартості недоступна (не налаштовано постачальника LLM).
+      cost_warning: Ви можете понести витрати, будь ласка, перевірте у постачальника моделі найактуальніші ціни.
+      view_usage: Переглянути використання
+    recent_runs:
+      title: Нещодавні запуски
+      description: Переглядайте історію виконання ваших правил, включаючи статус успіху/невдачі та кількість транзакцій.
+      unnamed_rule: Безіменне правило
+      columns:
+        date_time: Дата/Час
+        execution_type: Тип
+        status: Статус
+        rule_name: Назва правила
+        transactions_counts:
+          queued: У черзі
+          processed: Оброблено
+          modified: Змінено
+          blocked: Заблоковано
+      execution_types:
+        manual: Вручну
+        scheduled: За розкладом
+      statuses:
+        pending: Очікується
+        success: Успіх
+        failed: Невдача
+    clear_ai_cache:
+      button: Скинути кеш AI
+      confirm_title: Скинути кеш AI?
+      confirm_body: Ви впевнені, що хочете скинути кеш AI? Це дозволить правилам AI повторно обробити всі транзакції. Це може призвести до додаткових витрат на API.
+      confirm_button: Скинути кеш
+      success: Кеш AI очищується. Це може зайняти кілька хвилин.
+    condition_filters:
+      transaction_type:
+        income: Дохід
+        expense: Витрата
+        transfer: Переказ
+        equal_to: Дорівнює
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: і
+        match: відповідати
+        all: всім
+        any: будь-якій
+        of_the_following_conditions: з наступних умов
+        add_condition: Додати умову

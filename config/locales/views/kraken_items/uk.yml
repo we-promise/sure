@@ -1,0 +1,84 @@
+uk:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: Підключитися до облікового запису біржі Kraken
+      name: "Kraken - %{name}"
+      description: "Підключитися до %{name}"
+    create:
+      default_name: Kraken
+      success: Успішно підключено до Kraken. Ваш обліковий запис біржі синхронізується.
+    update:
+      success: З'єднання Kraken успішно оновлено.
+    destroy:
+      success: Заплановано видалення з'єднання Kraken.
+    select_accounts:
+      select_connection: Виберіть з'єднання Kraken в налаштуваннях постачальника.
+      no_credentials_configured: Додайте облікові дані API Kraken перед налаштуванням облікових записів.
+    link_accounts:
+      select_connection: Виберіть з'єднання Kraken перед пов'язуванням облікових записів.
+    select_existing_account:
+      title: Пов'язати обліковий запис Kraken
+      no_accounts_found: Облікових записів Kraken не знайдено.
+      wait_for_sync: Зачекайте, поки Kraken завершить синхронізацію.
+      check_provider_health: Перевірте, чи дійсні ваші облікові дані API Kraken.
+      link: Пов'язати
+      cancel: Скасувати
+    link_existing_account:
+      success: Успішно пов'язано з обліковим записом Kraken
+      select_connection: Виберіть з'єднання Kraken перед пов'язуванням облікових записів.
+      errors:
+        only_manual: Лише ручні облікові записи криптовалютних бірж без існуючого посилання постачальника можуть бути пов'язані з Kraken
+        invalid_kraken_account: Недійсний обліковий запис Kraken
+        kraken_account_already_linked: Цей обліковий запис Kraken вже пов'язано
+    setup_accounts:
+      title: Імпортувати обліковий запис Kraken
+      subtitle: Виберіть обліковий запис біржі для відстеження
+      instructions: Kraken імпортує один комбінований обліковий запис криптовалютної біржі для цього з'єднання, лише з активами та виконаними спотовими угодами.
+      no_accounts: Усі облікові записи Kraken імпортовано.
+      accounts_count:
+        one: "%{count} доступний обліковий запис"
+        other: "%{count} доступних облікових записів"
+      select_all: Вибрати все
+      import_selected: Імпортувати вибране
+      cancel: Скасувати
+      creating: Імпорт...
+    complete_account_setup:
+      success:
+        one: "Імпортовано %{count} обліковий запис"
+        other: "Імпортовано %{count} облікових записів"
+      none_selected: Не вибрано жодного облікового запису
+      no_accounts: Немає облікових записів для імпорту
+    kraken_item:
+      provider_name: Kraken
+      syncing: Синхронізація...
+      reconnect: Потрібне оновлення облікових даних
+      deletion_in_progress: Видалення...
+      sync_status:
+        no_accounts: Облікових записів не знайдено
+        all_synced:
+          one: "%{count} обліковий запис синхронізовано"
+          other: "%{count} облікових записів синхронізовано"
+        partial_sync: "%{linked_count} синхронізовано, %{unlinked_count} потребують налаштування"
+      status: "Остання синхронізація %{timestamp} тому"
+      status_with_summary: "Остання синхронізація %{timestamp} тому - %{summary}"
+      status_never: Ніколи не синхронізовано
+      delete: Видалити
+      no_accounts_title: Облікових записів не знайдено
+      no_accounts_message: Ваш обліковий запис біржі Kraken з'явиться тут після синхронізації.
+      setup_needed: Обліковий запис готовий до імпорту
+      setup_description: Імпортуйте це з'єднання Kraken як обліковий запис криптовалютної біржі.
+      setup_action: Імпортувати обліковий запис
+      import_accounts_menu: Імпортувати обліковий запис
+      stale_rate_warning: "Баланс є приблизним, оскільки точний курс обміну для %{date} був недоступний. Оновиться під час наступної синхронізації."
+  kraken_item:
+    syncer:
+      checking_credentials: Перевірка облікових даних...
+      credentials_invalid: Недійсні облікові дані API Kraken. Перевірте свій ключ API та секрет.
+      importing_accounts: Імпорт облікових записів з Kraken...
+      checking_configuration: Перевірка конфігурації облікового запису...
+      accounts_need_setup:
+        one: "%{count} обліковий запис потребує налаштування"
+        other: "%{count} облікових записів потребують налаштування"
+      processing_accounts: Обробка даних облікового запису...
+      calculating_balances: Розрахунок балансів...
