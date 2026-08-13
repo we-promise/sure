@@ -1,0 +1,349 @@
+uk:
+  transactions:
+    bulk_updates:
+      new:
+        cancel: Скасувати
+        category_label: Категорія
+        category_prompt: Вибрати категорію
+        date_label: Дата
+        header_title: Редагувати транзакції
+        merchant_label: Продавець
+        merchant_prompt: Вибрати продавця
+        name_label: Назва
+        name_placeholder: Введіть назву, яка буде застосована до вибраних транзакцій
+        none: "(немає)"
+        notes_label: Нотатки
+        notes_placeholder: Введіть нотатку, яка буде застосована до вибраних транзакцій
+        overview: Огляд
+        save: Зберегти
+        tags_label: Теги
+        transactions_section: Транзакції
+    unknown_name: Невідома транзакція
+    selection_bar:
+      duplicate: Дублікат
+      edit: Редагувати
+      selected: вибрано
+    form:
+      details: Деталі
+      account: Рахунок
+      account_prompt: Вибрати рахунок
+      amount: Сума
+      category: Категорія
+      category_label: Категорія
+      category_prompt: Вибрати категорію
+      date: Дата
+      description: Опис
+      description_placeholder: Опишіть транзакцію
+      expense: Витрата
+      income: Дохід
+      merchant_label: Продавець
+      none: (немає)
+      note_label: Нотатки
+      note_placeholder: Введіть нотатку
+      create_tag: Створити
+      submit: Додати транзакцію
+      tag_search_placeholder: Шукати або створити тег
+      tags_label: Теги
+      transfer: Переказ
+    create:
+      created: Транзакцію створено
+    update:
+      updated: Транзакцію оновлено
+    new:
+      new_transaction: Нова транзакція
+    show:
+      keep_both: Ні, залишити обидві
+      loan_payment: Платіж за позикою
+      mark_recurring: Позначити як повторювану
+      mark_recurring_subtitle: Відстежуйте це як повторювану транзакцію. Розбіжність суми автоматично розраховується на основі минулих 6 місяців подібних транзакцій.
+      mark_recurring_title: Повторювана транзакція
+      merge_duplicate: Так, об'єднати їх
+      potential_duplicate_description: Ця очікувана транзакція може бути такою ж, як і опублікована транзакція нижче. Якщо так, об'єднайте їх, щоб уникнути подвійного підрахунку.
+      potential_duplicate_title: Виявлено можливий дублікат
+      transfer: Переказ
+      account_label: Рахунок
+      amount: Сума
+      category_label: Категорія
+      date_label: Дата
+      delete: Видалити
+      delete_subtitle: Це назавжди видаляє транзакцію, впливає на ваші історичні баланси та не може бути скасовано.
+      delete_title: Видалити транзакцію
+      details: Деталі
+      attachments: Вкладення
+      exclude: Виключити
+      exclude_description: Виключені транзакції будуть видалені з розрахунків бюджету та звітів.
+      activity_type: Тип діяльності
+      activity_type_description: Тип інвестиційної діяльності (купівля, продаж, дивіденди тощо). Визначається автоматично або встановлюється вручну.
+      one_time_title: Одноразовий %{type}
+      one_time_description: Одноразові транзакції будуть виключені з певних розрахунків бюджету та звітів, щоб допомогти вам побачити, що справді важливо.
+      convert_to_trade_title: Перетворити на торгівлю цінними паперами
+      convert_to_trade_description: Перетворіть цю транзакцію на торгівлю купівлі або продажу з деталями цінних паперів для відстеження портфеля.
+      convert_to_trade_button: Перетворити на торгівлю
+      transfer_matcher_description: Підключіть цю транзакцію до її відповідника в іншому рахунку.
+      pending_duplicate_merger_title: Дублікат опублікованої транзакції?
+      pending_duplicate_merger_description: Вручну об'єднайте цю очікувану транзакцію з її опублікованою версією.
+      pending_duplicate_merger_button: Відкрити об'єднувач
+      merchant_label: Продавець
+      name_label: Назва
+      nature: Тип
+      none: "(немає)"
+      note_label: Нотатки
+      note_placeholder: Введіть нотатку
+      overview: Огляд
+      settings: Налаштування
+      tags_label: Теги
+      tab_transactions: Транзакції
+      tab_upcoming: Майбутні
+      uncategorized: "(без категорії)"
+      additional_details: "Додаткові відомості"
+      payee: "Одержувач"
+      description: "Опис"
+      memo: "Пам'ятка"
+      provider_extras: "Додаткові відомості від постачальника"
+      transfer_or_debt_payment: "Переказ або сплата боргу?"
+      open_matcher: "Відкрити зіставник"
+      convert: "Перетворити"
+    activity_labels:
+      buy: Купівля
+      sell: Продаж
+      sweep_in: Внесення
+      sweep_out: Виведення
+      dividend: Дивіденди
+      reinvestment: Реінвестування
+      interest: Відсотки
+      fee: Комісія
+      transfer: Переказ
+      contribution: Внесок
+      withdrawal: Зняття
+      exchange: Обмін
+      other: Інше
+    mark_recurring: Позначити як повторювану
+    mark_recurring_subtitle: Відстежуйте це як повторювану транзакцію. Розбіжність суми автоматично розраховується на основі минулих 6 місяців подібних транзакцій.
+    mark_recurring_title: Повторювана транзакція
+    potential_duplicate_title: Виявлено можливий дублікат
+    potential_duplicate_description: Ця очікувана транзакція може бути такою ж, як і опублікована транзакція нижче. Якщо так, об'єднайте їх, щоб уникнути подвійного підрахунку.
+    merge_duplicate: Так, об'єднати їх
+    keep_both: Ні, залишити обидві
+    split_parent_row:
+      split_label: "Розділити"
+    transfer_match:
+      auto_matched: Автоматично зіставлено
+      auto_matched_short: А/З
+      confirm_match: Підтвердити відповідність
+      payment_confirmed: Платіж підтверджено
+      reject_match: Відхилити відповідність
+      transfer_confirmed: Переказ підтверджено
+    transaction:
+      pending: Очікується
+      pending_tooltip: Очікувана транзакція — може змінитися після публікації
+      linked_with_provider: Пов'язано з %{provider}
+      activity_type_tooltip: Тип інвестиційної діяльності
+      possible_duplicate: Дублікат?
+      potential_duplicate_tooltip: Це може бути дублікат іншої транзакції
+      review_recommended: Рекомендується перевірка
+      review_recommended_tooltip: Велика різниця в сумі — рекомендується перевірка, щоб перевірити, чи це не дублікат
+      split: Розділено
+      split_tooltip: Цю транзакцію розділено на кілька записів
+      split_child_tooltip: Частина розділеної транзакції
+    merge_duplicate:
+      success: Транзакції успішно об'єднано
+      failure: Не вдалося об'єднати транзакції
+    dismiss_duplicate:
+      success: Збережено як окремі транзакції
+      failure: Не вдалося відхилити пропозицію про дублікат
+    pending_duplicate_merge:
+      possible_duplicate: Дублікат?
+      possible_duplicate_short: Дуб?
+      review_recommended: Перевірка
+      review_recommended_short: Пер
+      confirm_title: "Об'єднати з опублікованою транзакцією (%{posted_amount})"
+      reject_title: Зберегти як окремі транзакції
+    summary:
+      total_transactions: Усього транзакцій
+      income: Дохід
+      expenses: Витрати
+      inflow: Надходження
+      outflow: Витрата
+    header:
+      edit_categories: Редагувати категорії
+      edit_imports: Редагувати імпорт
+      edit_merchants: Редагувати продавців
+      edit_tags: Редагувати теги
+      import: Імпорт
+    index:
+      title: "Транзакції"
+      transaction: транзакція
+      transactions: транзакції
+      import: Імпорт
+      new_rule: "Нове правило"
+      edit_rules: "Редагувати правила"
+      edit_categories: "Редагувати категорії"
+      edit_tags: "Редагувати теги"
+      edit_merchants: "Редагувати продавців"
+      edit_imports: "Редагувати імпорт"
+      new_transaction: "Нова транзакція"
+      categorize_button:
+        one: "Категоризувати (1)"
+        other: "Категоризувати (%{count})"
+    categorizes:
+      show:
+        exit: "Вихід"
+        skip: "Пропустити"
+        remaining:
+          one: "Залишилася 1 некатегоризована транзакція"
+          other: "Залишилося %{count} некатегоризованих транзакцій"
+        transaction_count:
+          one: "1 транзакція"
+          other: "%{count} транзакцій"
+        transactions_hint: "Зніміть прапорець, щоб виключити транзакцію, або призначте їй іншу категорію безпосередньо в її рядку."
+        assign_category: "Призначити категорію"
+        assign_category_prompt: "→ призначити"
+        filter_placeholder: "Шукати категорії..."
+        col_transaction: "Транзакція"
+        col_date: "Дата"
+        col_amount: "Сума"
+        col_category: "Категорія"
+        type_income: "Дохід"
+        type_expense: "Витрата"
+        create_rule_label: "Створити правило категоризації"
+        rule_description_prefix: "Майбутні транзакції %{type} з назвою, що містить"
+        rule_description_suffix: "також повинні отримати цю категорію."
+        no_categories: "Немає відповідних категорій"
+        all_done: "Усі транзакції категоризовано"
+      create:
+        categorized:
+          one: "1 транзакцію категоризовано"
+          other: "%{count} транзакцій категоризовано"
+        rule_creation_failed: "Транзакції категоризовано, але правило не вдалося створити (можливо, воно вже існує)."
+      entry_row:
+        include_checkbox: "Включити %{name}"
+        assign_category_select: "Призначити категорію для %{name}"
+    list:
+      drag_drop_title: Перетягніть CSV для імпорту
+      drag_drop_subtitle: Завантажуйте транзакції безпосередньо
+      transaction: транзакція
+      transactions: транзакції
+    toggle_recurring_section: Переключити майбутні повторювані транзакції
+    search:
+      filters:
+        account: Рахунок
+        date: Дата
+        type: Тип
+        status: Статус
+        amount: Сума
+        category: Категорія
+        tag: Тег
+        merchant: Продавець
+    convert_to_trade:
+      title: Перетворити на торгівлю цінними паперами
+      description: Перетворіть цю транзакцію на торгівлю з деталями цінних паперів
+      date_label: "Дата:"
+      account_label: "Рахунок:"
+      amount_label: "Сума:"
+      security_label: Цінний папір
+      security_prompt: Вибрати цінний папір...
+      security_custom: "+ Ввести власний тикер"
+      security_not_listed_hint: Не бачите свій цінний папір? Виберіть "Ввести власний тикер" внизу списку.
+      ticker_placeholder: AAPL
+      ticker_hint: Введіть тикер акції/ETF (наприклад, AAPL, MSFT)
+      ticker_search_placeholder: Шукати тикер...
+      ticker_search_hint: Шукайте за тикером або назвою компанії, або введіть власний тикер
+      price_mismatch_title: Ціна може не збігатися
+      price_mismatch_message: "Ваша ціна (%{entered_price}/акція) значно відрізняється від поточної ринкової ціни %{ticker} (%{market_price}). Якщо це здається неправильним, можливо, ви вибрали неправильний цінний папір — спробуйте використати \"Ввести власний тикер\", щоб вказати правильний."
+      quantity_label: Кількість (акцій)
+      quantity_placeholder: напр. 20
+      quantity_hint: Кількість проданих акцій
+      price_label: Ціна за акцію
+      price_placeholder: напр. 52.15
+      price_hint: Ціна за акцію (%{currency})
+      qty_or_price_hint: Введіть принаймні кількість АБО ціну. Інше буде розраховано з суми транзакції (%{amount}).
+      trade_type_label: Тип торгівлі
+      trade_type_hint: Купівля або продаж акцій цінного паперу
+      exchange_label: Біржа (необов'язково)
+      exchange_placeholder: XNAS
+      exchange_hint: Залиште порожнім для автоматичного визначення
+      cancel: Скасувати
+      submit: Перетворити на торгівлю
+      success: Транзакцію перетворено на торгівлю
+      conversion_note: "Перетворено з транзакції: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Тільки транзакції на інвестиційних рахунках можна перетворити на торгівлю
+        already_converted: Цю транзакцію вже перетворено або виключено
+        enter_ticker: Будь ласка, введіть тикер
+        security_not_found: Вибраний цінний папір більше не існує. Будь ласка, виберіть інший.
+        select_security: Будь ласка, виберіть або введіть цінний папір
+        enter_qty_or_price: Будь ласка, введіть кількість або ціну за акцію. Інше буде розраховано з суми транзакції.
+        invalid_qty_or_price: Недійсна кількість або ціна. Будь ласка, введіть дійсні додатні значення.
+        conversion_failed: "Не вдалося перетворити транзакцію: %{error}"
+        unexpected_error: "Несподівана помилка під час перетворення: %{error}"
+    searches:
+      filters:
+        account_filter:
+          filter_accounts: Фільтрувати рахунки
+        category_filter:
+          filter_category: Фільтрувати категорію
+        date_filter:
+          start_date: "Дата початку"
+          end_date: "Дата закінчення"
+        merchant_filter:
+          filter_merchants: Фільтрувати продавців
+        tag_filter:
+          filter_tags: Фільтрувати теги
+        amount_filter:
+          equal_to: Дорівнює
+          greater_than: Більше ніж
+          less_than: Менше ніж
+          placeholder: '0'
+        badge:
+          expense: Витрата
+          income: Дохід
+          on_or_after: на або після %{date}
+          on_or_before: на або до %{date}
+          transfer: Переказ
+          confirmed: Підтверджено
+          pending: Очікується
+        type_filter:
+          expense: Витрата
+          income: Дохід
+          transfer: Переказ
+        status_filter:
+          confirmed: Підтверджено
+          pending: Очікується
+      menu:
+        account_filter: Рахунок
+        amount_filter: Сума
+        apply: Застосувати
+        cancel: Скасувати
+        category_filter: Категорія
+        clear_filters: Очистити фільтри
+        date_filter: Дата
+        merchant_filter: Продавець
+        status_filter: Статус
+        tag_filter: Тег
+        type_filter: Тип
+      search:
+        equal_to: дорівнює
+        greater_than: більше ніж
+        less_than: менше ніж
+      form:
+        toggle_selection_checkboxes: Переключити всі прапорці
+        search_placeholder: "Шукати транзакції ..."
+        filter: "Фільтр"
+    attachments:
+      cannot_exceed: "Не можна перевищувати %{count} вкладень на транзакцію"
+      uploaded_one: "Вкладення успішно завантажено"
+      uploaded_many: "%{count} вкладень успішно завантажено"
+      failed_upload: "Не вдалося завантажити вкладення: %{error}"
+      no_files_selected: "Не вибрано файлів для завантаження"
+      attachment_deleted: "Вкладення успішно видалено"
+      failed_delete: "Не вдалося видалити вкладення: %{error}"
+      upload_failed: "Не вдалося завантажити вкладення. Спробуйте ще раз або зверніться до служби підтримки."
+      delete_failed: "Не вдалося видалити вкладення. Спробуйте ще раз або зверніться до служби підтримки."
+      upload: "Завантажити"
+      no_attachments: "Ще немає вкладень"
+      select_up_to: "Виберіть до %{count} файлів (зображення або PDF, макс. %{size} МБ кожен) • %{used} з %{count} використано"
+      files:
+        one: "Файл (1)"
+        other: "Файли (%{count})"
+      browse_to_add: "Перегляньте, щоб додати файли"
+      max_reached: "Досягнуто максимального ліміту файлів (%{count}/%{max}). Видаліть існуючий файл, щоб завантажити інший."
