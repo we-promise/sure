@@ -250,10 +250,7 @@ class RecurringTransaction
         # happen to share a merchant/day don't get averaged in (issue #2936
         # follow-up).
         return false unless RecurringTransaction.amount_within_variance_band?(entry.amount, recurring.amount)
-
-        expected_day = [ recurring.expected_day_of_month, entry.date.end_of_month.day ].min
-        day = entry.date.day
-        return false if circular_distance(day, expected_day) > 2
+        return false unless recurring.schedule.matches_day?(entry.date)
 
         if recurring.merchant_id.present?
           entry.read_attribute("transaction_merchant_id") == recurring.merchant_id
@@ -282,14 +279,10 @@ class RecurringTransaction
         std_dev <= 5
       end
 
-      # Calculate circular distance between two days on a 31-day circle
-      # Examples:
-      #   circular_distance(1, 31) = 2  (wraps around: 31 -> 1 is 1 day forward)
-      #   circular_distance(28, 2) = 5  (wraps: 28, 29, 30, 31, 1, 2)
+      # Circular day distance is owned by Schedule; kept as a private alias
+      # for the clustering math above.
       def circular_distance(day1, day2)
-        linear_distance = (day1 - day2).abs
-        wrap_distance = 31 - linear_distance
-        [ linear_distance, wrap_distance ].min
+        Schedule.circular_day_distance(day1, day2)
       end
 
       # Calculate the expected day based on the most common day

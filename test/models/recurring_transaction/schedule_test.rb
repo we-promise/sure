@@ -85,20 +85,22 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
 
   # --- day_of_month_scope: linear window, no wraparound, no clamping ---
 
-  test "matching window for day 1 is linear and does not wrap to month end" do
-    # Quirk: the SQL window for day 1 is [1, 3]. An entry on the 30th is 2 days
-    # away on the calendar circle but does NOT match, unlike the Identifier's
-    # circular matcher. This inconsistency is fixed in a follow-up commit.
+  test "matching window is circular: a month-end entry matches a day-1 bill" do
+    # A bill on the 1st paid a day or two early posts at the END of the prior
+    # month. The window wraps the calendar circle, matching the Identifier's
+    # matcher; the pre-unification SQL window [1, 3] silently missed these.
     recurring = create_recurring(expected_day_of_month: 1)
     in_window = create_matching_entry(recurring, date: Date.new(2026, 7, 2))
     wrapped = create_matching_entry(recurring, date: Date.new(2026, 7, 30))
+    outside = create_matching_entry(recurring, date: Date.new(2026, 7, 27))
 
     matches = recurring.matching_transactions
     assert_includes matches, in_window
-    assert_not_includes matches, wrapped
+    assert_includes matches, wrapped
+    assert_not_includes matches, outside
   end
 
-  test "matching window for day 31 tolerates only earlier days" do
+  test "matching window for day 31 keeps its two-day reach" do
     recurring = create_recurring(expected_day_of_month: 31)
     in_window = create_matching_entry(recurring, date: Date.new(2026, 7, 29))
     outside = create_matching_entry(recurring, date: Date.new(2026, 7, 28))
@@ -106,6 +108,16 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
     matches = recurring.matching_transactions
     assert_includes matches, in_window
     assert_not_includes matches, outside
+  end
+
+  test "matching window clamps the expected day into short months" do
+    # A day-31 bill in February is due on the 28th; an entry on the 27th is one
+    # day off the clamped day and must match. Unclamped, it read as four days
+    # from the 31st and was dropped.
+    recurring = create_recurring(expected_day_of_month: 31)
+    clamped = create_matching_entry(recurring, date: Date.new(2026, 2, 27))
+
+    assert_includes recurring.matching_transactions, clamped
   end
 
   # --- Schedule's own surface (new in the extraction) ---

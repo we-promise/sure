@@ -325,9 +325,9 @@ class RecurringTransaction < ApplicationRecord
       .where(entryable_type: "Transaction")
       .where(currency: currency)
       .where("entries.date >= ?", lookback_date)
-      .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-             [ expected_day - 2, 1 ].max,
-             [ expected_day + 2, 31 ].min)
+      .where(Schedule.day_window_sql,
+             expected_day: expected_day,
+             tolerance: Schedule::DAY_MATCH_TOLERANCE)
       # Only entries whose amount is within the variance band of the target
       # amount count as "the same fluctuating payment" — otherwise unrelated
       # charges that happen to share a merchant/day get averaged together
@@ -532,11 +532,14 @@ class RecurringTransaction < ApplicationRecord
       end
     end
 
-    # Entries whose day-of-month lands within ±2 days of the expected day.
+    # Entries whose day-of-month lands within the schedule's tolerance of the
+    # expected day, on the circular calendar with short-month clamping. This is
+    # the same matcher the Identifier applies to manual rows; the two disagreed
+    # for bills on the 1st and the 31st before being unified here.
     def day_of_month_scope(relation)
-      relation.where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-                     [ expected_day_of_month - 2, 1 ].max,
-                     [ expected_day_of_month + 2, 31 ].min)
+      relation.where(Schedule.day_window_sql,
+                     expected_day: expected_day_of_month,
+                     tolerance: Schedule::DAY_MATCH_TOLERANCE)
     end
 
     def monetizable_currency

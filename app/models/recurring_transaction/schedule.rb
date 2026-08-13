@@ -10,8 +10,35 @@ class RecurringTransaction
   class Schedule
     attr_reader :expected_day_of_month
 
+    # How far an entry's day-of-month may drift from the expected day and
+    # still count as the same occurrence.
+    DAY_MATCH_TOLERANCE = 2
+
     def self.for(recurring_transaction)
       new(expected_day_of_month: recurring_transaction.expected_day_of_month)
+    end
+
+    # Distance between two days on the 31-day calendar circle, so the 30th
+    # and the 1st are two days apart, not twenty-nine.
+    def self.circular_day_distance(day1, day2)
+      linear = (day1 - day2).abs
+      [ linear, 31 - linear ].min
+    end
+
+    # SQL fragment selecting entries whose day-of-month lies within
+    # DAY_MATCH_TOLERANCE of :expected_day on the circular calendar, with the
+    # expected day clamped into short months (a day-31 bill matches Feb 28).
+    # Callers bind :expected_day and :tolerance.
+    def self.day_window_sql
+      clamped = "LEAST(:expected_day, EXTRACT(DAY FROM (DATE_TRUNC('month', entries.date) + INTERVAL '1 month' - INTERVAL '1 day')))"
+      distance = "ABS(EXTRACT(DAY FROM entries.date) - #{clamped})"
+      "LEAST(#{distance}, 31 - #{distance}) <= :tolerance"
+    end
+
+    # Ruby-side twin of day_window_sql for code that already holds the entry.
+    def matches_day?(date)
+      clamped_expected = [ expected_day_of_month, date.end_of_month.day ].min
+      self.class.circular_day_distance(date.day, clamped_expected) <= DAY_MATCH_TOLERANCE
     end
 
     def initialize(expected_day_of_month:)
