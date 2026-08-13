@@ -107,7 +107,7 @@ class Depository::FixedReturnPoster
     def post_period(posting_date, interest)
       entry = account.entries.create!(
         date: posting_date,
-        name: I18n.t("depositories.fixed_return.interest_entry_name", default: "Interest"),
+        name: I18n.t("depositories.fixed_return.interest_entry_name"),
         amount: -interest,
         currency: account.currency,
         source: SOURCE,
