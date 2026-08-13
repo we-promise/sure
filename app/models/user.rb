@@ -385,10 +385,6 @@ class User < ApplicationRecord
   end
 
   # Transactions preferences management
-  def transactions_section_collapsed?(section_key)
-    preferences&.dig("transactions_collapsed_sections", section_key) == true
-  end
-
   def show_split_grouped?
     preferences&.dig("show_split_grouped") != false
   end
@@ -403,24 +399,6 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
-  end
-
-  def update_transactions_preferences(prefs)
-    transaction do
-      lock!
-
-      updated_prefs = (preferences || {}).deep_dup
-      prefs.each do |key, value|
-        if value.is_a?(Hash)
-          updated_prefs["transactions_#{key}"] ||= {}
-          updated_prefs["transactions_#{key}"] = updated_prefs["transactions_#{key}"].merge(value)
-        else
-          updated_prefs["transactions_#{key}"] = value
-        end
-      end
-
-      update!(preferences: updated_prefs)
-    end
   end
 
   private
