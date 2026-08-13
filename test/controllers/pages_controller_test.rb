@@ -273,6 +273,22 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes expense_href, "q%5Baccount_ids%5D"
   end
 
+  test "dashboard money flow income/expense links keep account_ids when a subset of accounts is explicitly selected" do
+    account = @family.accounts.first
+
+    get root_path, params: { money_flow_account_ids: [ account.id ] }
+
+    assert_response :ok
+    income_href = css_select("a[href*='q%5Btypes%5D%5B%5D=income']").first["href"]
+    expense_href = css_select("a[href*='q%5Btypes%5D%5B%5D=expense']").first["href"]
+
+    # A deliberate, narrower selection never matches the full
+    # accessible-accounts set, so the links must keep scoping to it instead
+    # of silently falling back to "all accounts".
+    assert_includes income_href, "q%5Baccount_ids%5D%5B%5D=#{account.id}"
+    assert_includes expense_href, "q%5Baccount_ids%5D%5B%5D=#{account.id}"
+  end
+
   test "changelog" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path
