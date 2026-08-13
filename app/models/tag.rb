@@ -7,7 +7,7 @@ class Tag < ApplicationRecord
   validates :name, presence: true, uniqueness: { scope: :family }
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
 
-  scope :alphabetically, -> { order(:name) }
+  scope :alphabetically, -> { order(:name, :id) }
 
   COLORS = %w[#e99537 #4da568 #6471eb #db5a54 #df4e92 #c44fe9 #eb5429 #61c9ea #805dee #6ad28a]
 
