@@ -58,6 +58,53 @@ class RecurringTransaction::AllocatorConcurrencyTest < ActiveSupport::TestCase
     assert_includes outcomes, :rejected, "the second writer should have been rejected"
   end
 
+  # The two sides use different write paths, so the guard has to sit on the
+  # entry rather than on either path.
+  test "a manual attach and the matcher cannot both spend the same transaction" do
+    latch = Concurrent::CountDownLatch.new(2)
+
+    [
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          latch.count_down
+          latch.wait(5)
+          RecurringTransaction::Allocator.new(@first).allocate!(entry: @entry, amount: 700)
+        rescue RecurringTransaction::Allocator::OverAllocationError
+          nil
+        end
+      end,
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          latch.count_down
+          latch.wait(5)
+          RecurringTransaction::Allocator.new(@second).allocate_matched!(
+            entry: @entry, state: "confirmed", confidence: 0.9, signals: {})
+        rescue RecurringTransaction::Allocator::OverAllocationError
+          nil
+        end
+      end
+    ].each(&:join)
+
+    allocated = RecurringAllocation.where(entry_id: @entry.id)
+                                   .sum("COALESCE(source_amount, allocated_amount)")
+
+    assert_operator allocated, :<=, @entry.amount.abs,
+      "a 1000 transaction cannot fund more than 1000 of bills"
+  end
+
+  # Deleting a transaction must not take the payment record with it, and must
+  # never leave an allocation pointing at a row that is gone.
+  test "deleting a linked transaction leaves the payment intact and unlinked" do
+    RecurringTransaction::Allocator.new(@first).allocate!(entry: @entry, amount: 400)
+    allocation = RecurringAllocation.find_by!(entry_id: @entry.id)
+
+    @entry.destroy
+
+    allocation.reload
+    assert_nil allocation.entry_id
+    assert_equal 400, allocation.allocated_amount.to_f
+  end
+
   test "an exhausted entry allocates nothing rather than the occurrence balance" do
     RecurringTransaction::Allocator.new(@first).allocate!(entry: @entry, amount: 1000)
 

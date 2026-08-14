@@ -10,6 +10,24 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     @matcher = Matcher.new(@family)
   end
 
+  # Candidate collection excludes entries that already have a CONFIRMED
+  # allocation, not a suggested one, so an unreviewed suggestion leaves its
+  # charge eligible. With two series competing for it, a second run could stack
+  # a second allocation on the same charge. What stops it is that the first
+  # suggestion has already spoken for the entry's whole amount.
+  test "repeat runs never stack a second allocation on one charge" do
+    create_series(name: "Streaming Service", amount: 15.99, day_offset: 0, dedup_scope: "a")
+    create_series(name: "Streaming Service", amount: 15.99, day_offset: 0, dedup_scope: "b")
+    entry = create_entry(amount: 15.99, date: Date.current, name: "Streaming Service")
+
+    3.times { Matcher.new(@family).run! }
+
+    allocations = RecurringAllocation.where(entry_id: entry.id)
+    assert_equal 1, allocations.count,
+      "one charge must not fund two bills just because the first link is unreviewed"
+    assert_equal 15.99, allocations.sum(:allocated_amount).to_f
+  end
+
   test "a merchant charge near the expected amount auto-links and settles the bill" do
     # The mission's own example: Comcast expected at $119.99, charged $121.74.
     series = create_series(name: nil, merchant: merchants(:netflix), amount: 119.99, day_offset: 2)
