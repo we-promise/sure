@@ -241,9 +241,7 @@
                         <span class="text-primary font-medium"><%= recurring_transaction.name %></span>
                       <% end %>
                       <% if recurring_transaction.manual? %>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-tint-10 text-link">
-                          <%= t("recurring_transactions.badges.manual") %>
-                        </span>
+                        <%= render DS::Pill.new(label: t("recurring_transactions.badges.manual"), tone: :info, marker: false) %>
                       <% end %>
                     </div>
                   </td>
