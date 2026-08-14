@@ -64,6 +64,7 @@ en:
       payment_url_hint: Where you go to pay this bill. Opens in a new tab from your recurring and upcoming lists.
       autopay_label: Pays automatically
       autopay_hint: Keep it on your bills list, but stop treating it as something to do.
+      more_options: More options
       notes_label: Notes
       notes_placeholder: Account 4821, charged to the Amex
       notes_hint: Anything you want in front of you when paying. Shown on the bill.

@@ -45,25 +45,10 @@
       <% end %>
     <% end %>
 
-    <% unless income %>
-      <div class="space-y-2">
-        <%= f.text_field :payment_url,
-              label: t(".payment_url_label"),
-              placeholder: t(".payment_url_placeholder"),
-              autofocus: recurring_transaction.persisted?,
-              inputmode: "url" %>
-        <p class="text-xs text-secondary"><%= t(".payment_url_hint") %></p>
-      </div>
-
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <p class="text-sm font-medium text-primary"><%= t(".autopay_label") %></p>
-          <p class="text-xs text-secondary"><%= t(".autopay_hint") %></p>
-        </div>
-        <%= f.toggle :autopay %>
-      </div>
-    <% end %>
-
+    <%# Name, amount, due date and how often are the whole job for most
+        bills. How often used to render below the payment link and the
+        autopay toggle, so the fourth thing anyone needs sat under two
+        things most people never set. %>
     <div class="space-y-2" data-controller="frequency-fields">
       <%= f.select :frequency_preset,
             frequency_preset_options(recurring_transaction),
@@ -121,13 +106,36 @@
       <% end %>
     <% end %>
 
-    <div class="space-y-2">
-      <%= f.text_area :notes,
-            label: t(".notes_label"),
-            placeholder: income ? t(".income_notes_placeholder") : t(".notes_placeholder"),
-            rows: 2 %>
-      <p class="text-xs text-secondary"><%= income ? t(".income_notes_hint") : t(".notes_hint") %></p>
-    </div>
+
+    <%= render DS::Disclosure.new(title: t(".more_options"), align: "left") do %>
+      <div class="space-y-4 pt-2">
+      <% unless income %>
+        <div class="space-y-2">
+          <%= f.text_field :payment_url,
+                label: t(".payment_url_label"),
+                placeholder: t(".payment_url_placeholder"),
+                autofocus: recurring_transaction.persisted?,
+                inputmode: "url" %>
+          <p class="text-xs text-secondary"><%= t(".payment_url_hint") %></p>
+        </div>
+  
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-sm font-medium text-primary"><%= t(".autopay_label") %></p>
+            <p class="text-xs text-secondary"><%= t(".autopay_hint") %></p>
+          </div>
+          <%= f.toggle :autopay %>
+        </div>
+      <% end %>
+      <div class="space-y-2">
+        <%= f.text_area :notes,
+              label: t(".notes_label"),
+              placeholder: income ? t(".income_notes_placeholder") : t(".notes_placeholder"),
+              rows: 2 %>
+        <p class="text-xs text-secondary"><%= income ? t(".income_notes_hint") : t(".notes_hint") %></p>
+      </div>
+      </div>
+    <% end %>
 
     <% if sibling_count.positive? %>
       <label class="flex items-start gap-2 cursor-pointer">

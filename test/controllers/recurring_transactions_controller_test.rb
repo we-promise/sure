@@ -8,6 +8,33 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     ensure_tailwind_build
   end
 
+  # How often is one of the four things anyone needs to add a bill, and it used
+  # to render below the payment link and the autopay toggle: the fourth
+  # essential field sat under two most people never set.
+  test "the add form leads with the essentials and tucks the rest away" do
+    get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    body = response.body
+
+    name_at = body.index("recurring_transaction[name]")
+    amount_at = body.index("recurring_transaction[amount]")
+    due_at = body.index("recurring_transaction[first_due_on]")
+    often_at = body.index("recurring_transaction[frequency_preset]")
+    url_at = body.index("recurring_transaction[payment_url]")
+
+    assert name_at && amount_at && due_at && often_at && url_at
+    assert_operator name_at, :<, amount_at
+    assert_operator amount_at, :<, due_at
+    assert_operator due_at, :<, often_at, "how often belongs with the essentials"
+    assert_operator often_at, :<, url_at, "and above the advanced fields, not below them"
+
+    # Tucked away is not the same as gone.
+    assert_match "recurring_transaction[autopay]", body
+    assert_match "recurring_transaction[notes]", body
+    assert_match I18n.t("recurring_transactions.form.more_options"), body
+  end
+
   test "edit renders the form" do
     get edit_recurring_transaction_url(@recurring_transaction)
 
