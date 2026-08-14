@@ -133,11 +133,21 @@ class RecurringTransaction
 
       # Each obligation spreads its remaining amount evenly across every period
       # up to the one it falls due in; the last share absorbs rounding.
+      #
+      # A reserve has to come out of a paycheck, so only periods that receive
+      # income can carry one. The leading window is the gap before the next
+      # payday and has no income by definition: charging it a share of a bill
+      # due after that payday would report it as short by money it was never
+      # going to see. It carries only what genuinely falls due inside it.
       def apportion_bills(periods)
         horizon_end = periods.last[:ends_on]
 
         open_payable_occurrences(horizon_end).each do |occurrence|
-          eligible = periods.select { |period| period[:starts_on] <= occurrence.due_on }
+          eligible = periods.select do |period|
+            next false unless period[:starts_on] <= occurrence.due_on
+
+            period[:income].positive? || occurrence.due_on.between?(period[:starts_on], period[:ends_on])
+          end
           next if eligible.empty?
 
           remaining = to_family_currency(occurrence.remaining_amount_money)

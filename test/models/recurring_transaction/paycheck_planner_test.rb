@@ -40,8 +40,13 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_equal 1840, plan[1].income
 
     rent_shares = plan.flat_map(&:items).select { |item| item.occurrence.recurring_transaction_id == rent.id }
-    eligible = plan.count { |period| period.starts_on <= rent_due }
-    assert_equal eligible, rent_shares.size, "rent spreads across every period before its due date"
+    # Only periods that receive income can carry a reserve, plus whichever one
+    # the bill actually falls due in.
+    eligible = plan.count do |period|
+      period.starts_on <= rent_due &&
+        (period.income.positive? || rent_due.between?(period.starts_on, period.ends_on))
+    end
+    assert_equal eligible, rent_shares.size, "rent spreads across every paycheck before its due date"
     assert_equal 2150, rent_shares.sum(&:share), "shares reassemble the full obligation exactly"
     assert_equal 1, rent_shares.count(&:due_in_period)
 
@@ -99,6 +104,56 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert plan.drop(1).none?(&:bridge?), "a window that pays is never a bridge"
   end
 
+  # A reserve has to come out of a paycheck. The leading window has no income by
+  # definition, so charging it a share of a bill due after the next payday
+  # reported it short by money it was never going to see, while telling the user
+  # nothing was due in that window. Both figures were right; the model was not.
+  test "the window before the first payday reserves nothing for later bills" do
+    payday = Date.current + 3
+    create_series(name: "Paycheck", amount: -1840, due: payday, preset: "weekly", income: true)
+    create_series(name: "Rent", amount: 1450, due: payday + 3)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+    bridge = plan.first
+
+    assert bridge.bridge?
+    assert_equal 0, bridge.reserved_total,
+      "nothing is reserved out of a window that receives no income"
+    assert_equal 0, bridge.due_total, "and nothing falls due in it either"
+    assert_not bridge.short?,
+      "so it cannot be short: a window owing nothing is not a shortfall"
+  end
+
+  # The flip side: a bill that really does fall due before the first payday is
+  # still the leading window's problem, because it is paid from cash in hand.
+  test "the window before the first payday still carries what is due inside it" do
+    payday = Date.current + 5
+    create_series(name: "Paycheck", amount: -1840, due: payday, preset: "weekly", income: true)
+    create_series(name: "Water", amount: 64, due: Date.current + 2)
+
+    bridge = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+
+    assert_equal 64, bridge.due_total
+    assert_equal 0, bridge.reserved_total
+    assert bridge.short?, "nothing arrives to cover it"
+    assert_equal 64, bridge.shortfall
+  end
+
+  # The reserve does not vanish, it moves to the paychecks that precede the bill.
+  test "reserves land on the paychecks before the bill, and still reassemble it" do
+    payday = Date.current + 3
+    create_series(name: "Paycheck", amount: -1840, due: payday, preset: "weekly", income: true)
+    rent = create_series(name: "Rent", amount: 1450, due: payday + 10)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+    shares = plan.flat_map(&:items).select { |item| item.occurrence.recurring_transaction_id == rent.id }
+
+    assert_equal 1450, shares.sum(&:share), "the shares still reassemble the bill"
+    assert plan.first.items.none? { |item| item.occurrence.recurring_transaction_id == rent.id },
+      "and none of it is charged to the window before the first payday"
+    assert plan.drop(1).any? { |period| period.reserved_total.positive? }
+  end
+
   # A paycheck arriving today makes the leading window a real pay period, so
   # bridge? has to read income rather than position.
   test "income landing today makes the leading window a paycheck" do
@@ -118,7 +173,8 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     create_series(name: "Rent", amount: 2150, due: Date.current + 20)
     create_series(name: "Insurance", amount: 300, due: Date.current + 3)
 
-    period = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+    # The first paycheck, not the leading window: that one reserves nothing.
+    period = Planner.new(@family, user: @user).plan(periods_limit: 3)[1]
     largest = period.largest_obligation
 
     assert_equal "Rent", largest.occurrence.recurring_transaction.name

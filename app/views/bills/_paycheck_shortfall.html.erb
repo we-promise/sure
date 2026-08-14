@@ -14,11 +14,8 @@
           class: "text-xs text-secondary hover:text-primary shrink-0" %>
   </div>
 
-  <p class="text-xs text-secondary tabular-nums privacy-sensitive">
-    <%= t("bills.paycheck.shortfall_split",
-          due: format_money(Money.new(period.due_total, currency)),
-          date: l(period.ends_on + 1, format: :short),
-          reserved: format_money(Money.new(period.reserved_total, currency))) %>
+  <p class="text-xs text-secondary">
+    <%= t("bills.paycheck.shortfall_split", date: l(period.ends_on + 1, format: :short)) %>
   </p>
 
   <% if largest.present? %>
