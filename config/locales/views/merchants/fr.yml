@@ -9,63 +9,66 @@ fr:
       unlinked_success: Marchand retiré de vos transactions
     edit:
       title: Modifier le marchand
+    enhance:
+      already_running: Une amélioration est déjà en cours. Veuillez attendre qu'elle se termine.
+      success: L'amélioration des marchands du fournisseur a démarré. Les marchands seront améliorés et les doublons fusionnés sous peu.
+    family_merchant:
+      delete: Supprimer
+      edit: Modifier
     form:
       name_placeholder: Nom du marchand
-      website_placeholder: "Site web (ex. : starbucks.com)"
       website_hint: Saisissez le site web du marchand pour afficher automatiquement son logo
+      website_placeholder: 'Site web (ex. : starbucks.com)'
     index:
       empty: Aucun marchand pour l'instant
-      new: Nouveau marchand
-      merge: Fusionner des marchands
-      title: Marchands
-      family_title: "Marchands %{moniker}"
-      family_empty: "Aucun marchand %{moniker} pour l'instant"
-      provider_title: Marchands du fournisseur
-      provider_empty: "Aucun marchand du fournisseur lié à ce %{moniker} pour l'instant"
-      provider_read_only: Les marchands du fournisseur sont synchronisés depuis vos institutions connectées. Ils ne peuvent pas être modifiés ici.
-      provider_info: Ces marchands ont été détectés automatiquement par vos connexions bancaires ou par l'IA. Vous pouvez les modifier pour créer votre propre copie, ou les retirer pour les dissocier de vos transactions.
+      enhance_button: Améliorer avec l'IA
       enhance_info:
         one: "%{count} marchand du fournisseur n'a pas d'informations de site web. Améliorez avec l'IA pour détecter les sites web, afficher les logos et fusionner les marchands en double."
         other: "%{count} marchands du fournisseur n'ont pas d'informations de site web. Améliorez avec l'IA pour détecter les sites web, afficher les logos et fusionner les marchands en double."
-      enhance_button: Améliorer avec l'IA
-      unlinked_title: Récemment dissociés
-      unlinked_info: Ces marchands ont été récemment retirés de vos transactions. Ils disparaîtront de cette liste après 30 jours s'ils ne sont pas réaffectés à une transaction.
+      family_empty: Aucun marchand %{moniker} pour l'instant
+      family_title: Marchands %{moniker}
+      import: Importer des commerçants
+      merge: Fusionner des marchands
+      new: Nouveau marchand
+      provider_empty: Aucun marchand du fournisseur lié à ce %{moniker} pour l'instant
+      provider_info: Ces marchands ont été détectés automatiquement par vos connexions bancaires ou par l'IA. Vous pouvez les modifier pour créer votre propre copie, ou les retirer pour les dissocier de vos transactions.
+      provider_read_only: Les marchands du fournisseur sont synchronisés depuis vos institutions connectées. Ils ne peuvent pas être modifiés ici.
+      provider_title: Marchands du fournisseur
       table:
-        merchant: Marchand
         actions: Actions
+        merchant: Marchand
         source: Source
+      title: Marchands
+      unlinked_info: Ces marchands ont été récemment retirés de vos transactions. Ils disparaîtront de cette liste après 30 jours s'ils ne sont pas réaffectés à une transaction.
+      unlinked_title: Récemment dissociés
     merchant:
       confirm_accept: Supprimer le marchand
-      confirm_body: Êtes-vous sûr de vouloir supprimer ce marchand ? La suppression de ce marchand
-        dissocierait toutes les transactions associées et pourrait affecter vos rapports.
+      confirm_body: Êtes-vous sûr de vouloir supprimer ce marchand ? La suppression de ce marchand dissocierait toutes les transactions associées et pourrait affecter vos rapports.
       confirm_title: Supprimer le marchand ?
       delete: Supprimer le marchand
       edit: Modifier le marchand
     merge:
-      title: Fusionner des marchands
       description: Sélectionnez un marchand cible et les marchands à fusionner avec lui. Toutes les transactions des marchands fusionnés seront réaffectées à la cible.
-      target_label: Fusionner vers (cible)
       select_target: Sélectionnez le marchand cible…
-      sources_label: Marchands à fusionner
       sources_hint: Les marchands sélectionnés seront fusionnés avec la cible. Les marchands de la famille seront supprimés, les marchands du fournisseur seront dissociés.
+      sources_label: Marchands à fusionner
       submit: Fusionner la sélection
+      target_label: Fusionner vers (cible)
+      title: Fusionner des marchands
     new:
       title: Nouveau marchand
     perform_merge:
+      invalid_merchants: Marchands sélectionnés invalides
+      no_merchants_selected: Aucun marchand sélectionné à fusionner
       success:
         one: "%{count} marchand fusionné avec succès"
         other: "%{count} marchands fusionnés avec succès"
-      no_merchants_selected: Aucun marchand sélectionné à fusionner
       target_not_found: Marchand cible introuvable
-      invalid_merchants: Marchands sélectionnés invalides
     provider_merchant:
       edit: Modifier
       remove: Retirer
-      remove_confirm_title: Retirer le marchand ?
       remove_confirm_body: Êtes-vous sûr de vouloir retirer %{name} ? Cela dissociera toutes les transactions associées à ce marchand, mais ne supprimera pas le marchand lui-même.
-    enhance:
-      success: L'amélioration des marchands du fournisseur a démarré. Les marchands seront améliorés et les doublons fusionnés sous peu.
-      already_running: Une amélioration est déjà en cours. Veuillez attendre qu'elle se termine.
+      remove_confirm_title: Retirer le marchand ?
     update:
-      success: Marchand mis à jour avec succès
       converted_success: Marchand converti et mis à jour avec succès
+      success: Marchand mis à jour avec succès

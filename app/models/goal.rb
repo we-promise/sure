@@ -33,6 +33,13 @@ class Goal < ApplicationRecord
 
   monetize :target_amount
 
+  # Account types that can back a goal (see linked_accounts_must_be_fundable).
+  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment].freeze
+
+  # Display order for active (non-completed/non-archived) goals: behind
+  # first, then on-track, then open-ended. Paused sorts after all of these.
+  ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, on_track: 1, no_target_date: 2 }.freeze
+
   scope :alphabetically, -> { order(Arel.sql("LOWER(name) ASC")) }
   scope :active_first, lambda {
     order(Arel.sql("CASE state WHEN 'active' THEN 0 WHEN 'paused' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END"))
@@ -72,6 +79,81 @@ class Goal < ApplicationRecord
   end
 
   attr_writer :market_flows
+
+  # Family-wide map of each linked account's net inflow over the trailing
+  # 90 days (account_id => net Entry#amount sum) — the same aggregate #pace
+  # computes per goal. Injected alongside pooled_allocations/market_flows so
+  # sorting/rendering N goals (active_display_sort calls goal.status, which
+  # reaches #pace for any goal with a target_date) fires one grouped query
+  # instead of one Entry.sum per goal.
+  def self.pace_for(family)
+    account_ids = GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+    return {} if account_ids.empty?
+
+    Entry
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(account_id: account_ids, date: 90.days.ago.to_date..Date.current)
+      .where(excluded: false)
+      .merge(Transaction.excluding_pending)
+      .group(:account_id)
+      .sum(:amount)
+  end
+
+  attr_writer :pooled_pace
+
+  # Goals loaded ready to render: association preloads for the card/row
+  # partials plus the family-wide pooled-allocations + market-flows injection
+  # so the per-goal backing math doesn't fire a query per row (N+1). Pass a
+  # narrower scope to limit which of the family's goals are loaded.
+  def self.prepared_for(family, scope: family.goals)
+    goals = scope.alphabetically
+                 .includes(:open_pledges, :goal_accounts, linked_accounts: :account_providers)
+                 .to_a
+    inject_backing_math!(goals, family)
+    goals
+  end
+
+  # One family-wide earmark-pool + market-flows + pace read shared across
+  # every goal in the list (see pooled_allocations_for / market_flows_for /
+  # pace_for).
+  def self.inject_backing_math!(goals, family)
+    pooled = pooled_allocations_for(family)
+    flows = market_flows_for(family)
+    pace_map = pace_for(family)
+    goals.each do |goal|
+      goal.pooled_allocations = pooled
+      goal.market_flows = flows
+      goal.pooled_pace = pace_map
+    end
+  end
+
+  # Display order shared by the goals index and the Plan hub: behind first,
+  # then on-track, then open-ended, paused last, name as tie-breaker.
+  def self.active_display_sort(goals)
+    goals.sort_by { |goal| [ goal.paused? ? 3 : ACTIVE_DISPLAY_STATUS_RANK.fetch(goal.status, 4), goal.name.downcase ] }
+  end
+
+  # Active goals ready to render outside the goals index (e.g. the Plan hub).
+  def self.active_prepared_for(family)
+    active_display_sort(
+      prepared_for(family, scope: family.goals.where.not(state: %w[completed archived]))
+    )
+  end
+
+  # Aggregates for a summary card over an already-prepared goal list. Money
+  # sums only make sense in one currency, so goals denominated differently
+  # stay in the caller's row list but out of the totals.
+  def self.summary_for(goals, currency:)
+    summable = goals.select { |goal| goal.currency == currency }
+    targeted = summable.select { |goal| goal.target_amount.to_d.positive? }
+
+    {
+      saved_money: Money.new(summable.sum { |goal| goal.current_balance.to_d }, currency),
+      target_money: Money.new(targeted.sum { |goal| goal.target_amount.to_d }, currency),
+      behind_count: goals.count(&:behind_pace?),
+      pending_count: goals.sum { |goal| goal.open_pledges.size }
+    }
+  end
 
   aasm column: :state do
     after_all_transitions :reset_state_dependent_caches!
@@ -212,13 +294,7 @@ class Goal < ApplicationRecord
     @pace = if linked_accounts.empty?
       0
     else
-      account_ids = linked_accounts.map(&:id)
-      net = Entry
-        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-        .where(account_id: account_ids, date: 90.days.ago.to_date..Date.current)
-        .where(excluded: false)
-        .merge(Transaction.excluding_pending)
-        .sum(:amount)
+      net = linked_accounts.sum { |account| pooled_pace.fetch(account.id, 0).to_d }
       (-net.to_d / 3).round(2)
     end
   end
@@ -334,6 +410,14 @@ class Goal < ApplicationRecord
     end
   end
 
+  # The single definition of "behind pace" for counts and copy. Paused goals
+  # are excluded even when their raw status computes :behind — pausing stops
+  # the pace clock on purpose, so surfacing them as behind (or summing them
+  # into "needs this month") would nag the user about a goal they shelved.
+  def behind_pace?
+    !paused? && status == :behind
+  end
+
   # Date of the most-recently-matched pledge's underlying entry. Used by the
   # show header to display "Last saved N days ago". Anchoring on the entry's
   # date keeps the readout stable under sync re-runs (which would bump
@@ -423,7 +507,11 @@ class Goal < ApplicationRecord
   # Header copy under the goal title on show. Used to live as a multi-line
   # if/elsif block in show.html.erb. Keeps the view template free of date
   # math + i18n key picking.
-  def header_summary
+  # The dot-separated segments of the header line, kept as separate strings so
+  # the view can stop a short one breaking mid-phrase. Joined into a single
+  # string, "184 days left" could wrap after "days" and orphan "left" on the
+  # next line — which is what a phone did.
+  def header_summary_parts
     parts = []
     if target_date
       days = (target_date - Date.current).to_i
@@ -444,7 +532,7 @@ class Goal < ApplicationRecord
       parts << I18n.t("goals.show.header.target",
                       amount: target_amount_money.format(precision: 0))
     end
-    parts.join(" · ")
+    parts
   end
 
   # Single source of truth for the projection-chart subtitle / chart-aria
@@ -550,6 +638,10 @@ class Goal < ApplicationRecord
 
     def market_flows
       @market_flows ||= self.class.market_flows_for(family)
+    end
+
+    def pooled_pace
+      @pooled_pace ||= self.class.pace_for(family)
     end
 
     # Cleared after every AASM transition. The state column drives the

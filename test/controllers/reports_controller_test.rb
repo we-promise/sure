@@ -348,6 +348,40 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "text/csv", @response.media_type
   end
 
+  test "export transactions excludes tax-advantaged account transactions" do
+    taxable_category = @family.categories.create!(name: "Export Taxable Income", color: "#111111")
+    retirement_category = @family.categories.create!(name: "Export Retirement Income", color: "#222222")
+    taxable_account = @family.accounts.create!(
+      owner: @user,
+      name: "Export Taxable Brokerage",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "brokerage")
+    )
+    retirement_account = @family.accounts.create!(
+      owner: @user,
+      name: "Export 401k",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "401k")
+    )
+
+    create_transaction(account: taxable_account, name: "Taxable export dividend", amount: -100, category: taxable_category)
+    create_transaction(account: retirement_account, name: "401k export dividend", amount: -200, category: retirement_category)
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :monthly,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month
+    )
+
+    assert_response :ok
+    assert_equal "text/csv", @response.media_type
+    assert_match /Export Taxable Income/, @response.body
+    assert_no_match /Export Retirement Income/, @response.body
+  end
+
   test "export transactions swaps dates when end_date is before start_date" do
     start_date = Date.current
     end_date = 1.month.ago.to_date
@@ -384,6 +418,44 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     # Subcategories
     assert_select "tr[data-category='category-#{subcategory_movies.id}']", text: /^Movies/
     assert_select "tr[data-category='category-#{subcategory_games.id}']", text: /^Games/
+  end
+
+  test "index excludes tax-advantaged account transactions from activity breakdown" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+
+    taxable_category = @family.categories.create!(name: "Reports Taxable Income", color: "#111111")
+    retirement_category = @family.categories.create!(name: "Reports Retirement Income", color: "#222222")
+    taxable_account = @family.accounts.create!(
+      owner: @user,
+      name: "Reports Taxable Brokerage",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "brokerage")
+    )
+    retirement_account = @family.accounts.create!(
+      owner: @user,
+      name: "Reports 401k",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "401k")
+    )
+
+    create_transaction(account: taxable_account, name: "Taxable dividend", amount: -100, category: taxable_category)
+    create_transaction(account: retirement_account, name: "401k dividend", amount: -200, category: retirement_category)
+    create_trade(securities(:aapl), account: taxable_account, qty: 1, date: Date.current, price: 100)
+    create_trade(securities(:aapl), account: retirement_account, qty: 1, date: Date.current, price: 200)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "tr[data-category='category-#{taxable_category.id}']", text: /Reports Taxable Income/
+    assert_select "tr[data-category='category-#{retirement_category.id}']", count: 0
+
+    other_investments_row = css_select("tr[data-category='category-other_investments']").first
+    assert_not_nil other_investments_row
+    assert_match(/#{Regexp.escape(Category.other_investments.name)}/, other_investments_row.text)
+    assert_match(/#{Regexp.escape(I18n.t("reports.transactions_breakdown.table.entries", count: 1))}/, other_investments_row.text)
+    assert_match(/\$100\.00/, other_investments_row.text)
   end
 
   test "monthly period navigation shows previous month link" do

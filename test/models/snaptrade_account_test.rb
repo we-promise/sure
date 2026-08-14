@@ -74,6 +74,28 @@ class SnaptradeAccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "suggested_account_type maps SnapTrade account categories" do
+    account = SnaptradeAccount.new(snaptrade_item: @item_a, name: "Account", currency: "USD")
+
+    account.raw_payload = { "account_category" => "DEPOSIT" }
+    assert_equal "Depository", account.suggested_account_type
+
+    account.raw_payload = { "account_category" => "LOC", "raw_type" => "line_of_credit" }
+    assert_equal "Loan", account.suggested_account_type
+
+    account.raw_payload = { "account_category" => "LOC", "raw_type" => "CREDIT_CARD" }
+    assert_equal "CreditCard", account.suggested_account_type
+
+    account.raw_payload = { "account_category" => "INVESTMENT" }
+    assert_equal "Investment", account.suggested_account_type
+
+    account.raw_payload = { "account_category" => "INVESTMENT", "raw_type" => "CRYPTOCURRENCY" }
+    assert_equal "Crypto", account.suggested_account_type
+
+    account.raw_payload = {}
+    assert_equal "Investment", account.suggested_account_type
+  end
+
   # Regression: the after_destroy callback enqueues SnaptradeConnectionCleanupJob,
   # which references the account/item by id. If it is enqueued before the destroy
   # transaction commits (Rails 8.1's immediate-enqueue default), a worker can run

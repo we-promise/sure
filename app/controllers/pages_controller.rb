@@ -8,12 +8,22 @@ class PagesController < ApplicationController
   #               false for content-sized widgets (tables, stat grids)
   #   min_height: floor in px
   DASHBOARD_SECTION_LAYOUTS = {
+    # Width-toggleable but full by default: the feed is much shorter than any
+    # other single-width widget, so defaulting to half leaves a grid hole the
+    # masonry can't backfill (dense placement needs a later card short enough
+    # to fit beside it, and none is). Users who pair it manually can go half.
+    "insights_feed"      => { col_span: "full",   grow: false, min_height: 0, width_toggle: true },
     "cashflow_sankey"    => { col_span: "full",   grow: false, min_height: 384, width_toggle: true },
+    "money_flow"         => { col_span: "single", grow: false, min_height: 0,   width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
     "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
   }.freeze
+
+  # Number of consecutive months (ending at the selected month) shown as
+  # bars in the "money_flow" dashboard widget.
+  MONEY_FLOW_CHART_MONTHS = 6
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -41,6 +51,14 @@ class PagesController < ApplicationController
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(net_totals)
+    # Preview-gated: skip the query outright rather than loading rows the
+    # section won't be built from.
+    @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT) : Insight.none
+
+    @money_flow_accounts = income_statement.eligible_accounts
+    @money_flow_month = money_flow_month_param
+    @money_flow_account_ids = money_flow_account_ids_param
+    @money_flow_data = build_money_flow_data(income_statement, @money_flow_month, @money_flow_account_ids)
 
     @dashboard_sections = build_dashboard_sections
 
@@ -60,6 +78,7 @@ class PagesController < ApplicationController
   end
 
   def changelog
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.changelog"), nil ] ]
     @release_notes = github_provider.fetch_latest_release_notes
 
     # Fallback if no release notes are available
@@ -77,6 +96,7 @@ class PagesController < ApplicationController
   end
 
   def feedback
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.feedback"), nil ] ]
     render layout: "settings"
   end
 
@@ -102,14 +122,42 @@ class PagesController < ApplicationController
       end
     end
 
+    # Preview-gated, and omitted from the section list entirely rather than
+    # left in it with `visible: false`. Dropping it here means the two
+    # downstream behaviors fall out for free: the saved-order lookup finds
+    # nothing to map, and the insights_feed unshift special-case never fires.
+    def insights_feed_section
+      return nil unless preview_features_enabled?
+
+      {
+        key: "insights_feed",
+        title: "pages.dashboard.insights_feed.title",
+        partial: "pages/dashboard/insights_feed",
+        layout: section_layout("insights_feed"),
+        locals: { insights: @feed_insights },
+        visible: @feed_insights.any?,
+        collapsible: true
+      }
+    end
+
     def build_dashboard_sections
       all_sections = [
+        insights_feed_section,
         {
           key: "cashflow_sankey",
           title: "pages.dashboard.cashflow_sankey.title",
           partial: "pages/dashboard/cashflow_sankey",
           layout: section_layout("cashflow_sankey"),
           locals: { sankey_data: @cashflow_sankey_data, period: @period },
+          visible: @accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "money_flow",
+          title: "pages.dashboard.money_flow.title",
+          partial: "pages/dashboard/money_flow",
+          layout: section_layout("money_flow"),
+          locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts, col_span: section_layout("money_flow")[:col_span] },
           visible: @accounts.any?,
           collapsible: true
         },
@@ -149,7 +197,7 @@ class PagesController < ApplicationController
           visible: @accounts.any?,
           collapsible: true
         }
-      ]
+      ].compact
 
       # Order sections according to user preference
       section_order = Current.user.dashboard_section_order
@@ -157,9 +205,18 @@ class PagesController < ApplicationController
         all_sections.find { |s| s[:key] == key }
       end.compact
 
-      # Add any new sections that aren't in the saved order (future-proofing)
+      # Add any new sections that aren't in the saved order (future-proofing).
+      # The insights feed leads instead of appending: it's a proactive surface,
+      # and appending would bury it below the fold for every family with a
+      # saved order. Users can still drag it back down — that choice persists.
       all_sections.each do |section|
-        ordered_sections << section unless ordered_sections.include?(section)
+        next if ordered_sections.include?(section)
+
+        if section[:key] == "insights_feed"
+          ordered_sections.unshift(section)
+        else
+          ordered_sections << section
+        end
       end
 
       ordered_sections
@@ -374,6 +431,70 @@ class PagesController < ApplicationController
         end
 
       { categories: categories, total: total.to_f.round(2), currency: net_totals.currency, currency_symbol: currency_symbol }
+    end
+
+    def money_flow_month_param
+      current_month = Date.current.beginning_of_month
+      month = Date.strptime(params[:money_flow_month], "%Y-%m-%d").beginning_of_month
+      # Clamp future months: build_money_flow_data caps each bar's end_date at
+      # Date.current, which would otherwise be earlier than a future month's
+      # start_date and blow up Period.custom's date-range validation.
+      month > current_month ? current_month : month
+    rescue ArgumentError, TypeError
+      current_month
+    end
+
+    # nil means "all accessible accounts" (the widget's default, unfiltered state)
+    def money_flow_account_ids_param
+      ids = Array(params[:money_flow_account_ids]).reject(&:blank?)
+      eligible_ids = @money_flow_accounts.map { |a| a.id.to_s }
+      ids &= eligible_ids
+      ids.presence
+    end
+
+    def build_money_flow_data(income_statement, selected_month, account_ids)
+      months = (MONEY_FLOW_CHART_MONTHS - 1).downto(0).map { |i| selected_month - i.months }
+
+      selected_period = nil
+      selected_totals = nil
+
+      bars = months.map do |month_start|
+        # Cap at today so an in-progress month (most commonly the current one)
+        # doesn't report totals for its not-yet-arrived days.
+        end_date = [ month_start.end_of_month, Date.current ].min
+        period = Period.custom(start_date: month_start, end_date: end_date)
+        totals = income_statement.totals_for(period, account_ids: account_ids)
+
+        if month_start == selected_month
+          selected_period = period
+          selected_totals = totals
+        end
+
+        {
+          date: month_start,
+          label: I18n.l(month_start, format: :short_month_year),
+          # Fallback for the axis when the full label does not fit its band.
+          # `short_month_year` is only short in some locales — "Mar 2026" in
+          # English, but "Mar de 2026" in ca/es/pt, which is wide enough to
+          # collide with its neighbours on a phone. The bar chart measures the
+          # rendered labels and drops to this when they overlap.
+          short_label: I18n.l(month_start, format: "%b"),
+          income: totals.income_money.amount.to_f.round(2),
+          expense: totals.expense_money.amount.to_f.round(2),
+          highlighted: month_start == selected_month,
+          partial: end_date < month_start.end_of_month
+        }
+      end
+
+      {
+        bars: bars,
+        period: selected_period,
+        month: selected_month,
+        income: selected_totals.income_money,
+        expense: selected_totals.expense_money,
+        balance: selected_totals.income_money - selected_totals.expense_money,
+        account_ids: account_ids
+      }
     end
 
     def ensure_intro_guest!

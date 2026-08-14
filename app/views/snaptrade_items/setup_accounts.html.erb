@@ -71,16 +71,20 @@
         </div>
         <div class="flex gap-3 justify-center">
           <%
-            brokerage_connect_href = if @snaptrade_item.user_registered?
-              connect_snaptrade_item_path(@snaptrade_item)
+            brokerage_connect_href = if @snaptrade_item.oauth_configured?
+              connect_snaptrade_item_path(
+                @snaptrade_item,
+                return_to: "setup_accounts",
+                accountable_type: params[:accountable_type]
+              )
             else
-              oauth_connect_snaptrade_items_path(
+              oauth_authorize_snaptrade_items_path(
                 item_id: @snaptrade_item.id,
                 accountable_type: params[:accountable_type],
                 return_to: params[:return_to]
               )
             end
-            brokerage_connect_frame = @snaptrade_item.user_registered? ? "_top" : "drawer"
+            brokerage_connect_frame = @snaptrade_item.oauth_configured? ? "_top" : "drawer"
           %>
           <%= render DS::Link.new(
             text: t("snaptrade_items.setup_accounts.try_again", default: "Connect Brokerage"),
@@ -136,6 +140,13 @@
                     </label>
                   </div>
                   <div class="mt-3 pl-7" onclick="event.stopPropagation();">
+                    <%= render DS::Select.new(
+                      form: form,
+                      method: "account_types[#{snaptrade_account.id}]",
+                      items: @account_type_options.map { |label, value| { label: label, value: value } },
+                      selected: snaptrade_account.suggested_account_type,
+                      label: t("snaptrade_items.setup_accounts.account_type_label")
+                    ) %>
                     <label for="sync_start_<%= snaptrade_account.id %>" class="block text-xs text-secondary mb-1">
                       <%= t("snaptrade_items.setup_accounts.sync_start_date_label", default: "Import transactions from:") %>
                     </label>

@@ -180,6 +180,16 @@ The first time you run the app, you will need to register a new account by hitti
 1. Enter your email
 2. Enter a password
 
+### Step 5a: Restrict future signups (optional)
+
+After creating your initial admin account, you can control how other people join your self-hosted instance from **Settings > Self-Hosting > Onboarding**.
+
+- **Open**: Anyone can create an account from the registration page.
+- **Invite-only**: New account creation stays enabled, but signups require a valid invite code.
+- **Closed**: The registration page is disabled for new signups.
+
+If you do not want additional self-service registrations, switch the instance to **Closed** after the initial setup.
+
 ### Step 6: Run the app in the background
 
 Most self-hosting users will want the Sure app to run in the background on their computer so they can access it at all times. To do this, hit `Ctrl+C` to stop the running process, and then run the following command:
@@ -317,3 +327,12 @@ docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # Th
 ### Slow `.csv` import (processing rows taking longer than expected)
 
 Importing comma-separated-value file(s) requires the `sure-worker` container to communicate with Redis. Check your worker logs for any unexpected errors, such as connection timeouts or Redis communication failures.
+
+### Inspecting background jobs (`/sidekiq`)
+
+Sure ships the Sidekiq Web dashboard at `/sidekiq`. The route only exists for a signed-in **super admin** — the first user created on your instance. Anyone else (including logged-out visitors) gets a 404, so there is nothing to configure to keep it safe. If you want a second layer of protection anyway, set both `SIDEKIQ_WEB_USERNAME` and `SIDEKIQ_WEB_PASSWORD` in your environment file to additionally require basic-auth credentials; there are no default credentials.
+
+For day-to-day triage of stuck syncs, imports, and exports, prefer **Settings → Background jobs** — it maps queue state onto the actual records and offers safe recovery actions. The Sidekiq dashboard is a break-glass tool; two warnings when using it directly:
+
+- Never manually retry `SimplefinConnectionUpdateJob` — it consumes a single-use setup token, and a retry permanently breaks that connection attempt.
+- Deleting or retrying jobs does **not** update the corresponding Sure record (a deleted `ImportJob` leaves its import stuck in `importing`) — use Settings → Background jobs for record-level recovery.

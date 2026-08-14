@@ -187,6 +187,36 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal new_user_auth["uid"], oidc_identity.uid
   end
 
+  test "create_user makes new family creator admin even when provider default role is member" do
+    session[:pending_oidc_auth] = new_user_auth
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: new_user_auth["provider"], settings: { default_role: "member" } }
+    ])
+
+    assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
+      post :create_user
+    end
+
+    new_user = User.find_by!(email: new_user_auth["email"])
+    assert_equal "admin", new_user.role
+    assert new_user.admin?
+  end
+
+  test "create_user preserves super admin provider default for new family creator" do
+    session[:pending_oidc_auth] = new_user_auth
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: new_user_auth["provider"], settings: { default_role: "super_admin" } }
+    ])
+
+    assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
+      post :create_user
+    end
+
+    new_user = User.find_by!(email: new_user_auth["email"])
+    assert_equal "super_admin", new_user.role
+    assert new_user.admin?
+  end
+
   test "create_user uses form params for name when provided" do
     session[:pending_oidc_auth] = new_user_auth
 
@@ -213,6 +243,22 @@ class OidcAccountsControllerTest < ActionController::TestCase
     new_user = User.find_by(email: new_user_auth["email"])
     assert_equal new_user_auth["first_name"], new_user.first_name
     assert_equal new_user_auth["last_name"], new_user.last_name
+  end
+
+  test "create_user rolls back user when OIDC identity creation fails" do
+    auth = new_user_auth.merge(
+      "email" => "oidc-rollback@example.com",
+      "uid" => "oidc-rollback-uid"
+    )
+    session[:pending_oidc_auth] = auth
+    OidcIdentity.stubs(:create_from_omniauth).raises(ActiveRecord::RecordNotUnique, "duplicate identity")
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+      post :create_user
+    end
+
+    assert_response :unprocessable_entity
+    assert_nil User.find_by(email: auth["email"])
   end
 
   test "should create session after OIDC registration" do
@@ -256,5 +302,43 @@ class OidcAccountsControllerTest < ActionController::TestCase
       email: new_user.email,
       password: "anypassword"
     ), "SSO-only user should not authenticate with password"
+  end
+
+  test "create_user via invitation shares existing family accounts when family shares by default" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    family.invitations.create!(email: "invitee@example.com", role: "member", inviter: users(:family_admin))
+
+    session[:pending_oidc_auth] = {
+      "provider" => "openid_connect", "uid" => "invite-uid-1",
+      "email" => "invitee@example.com", "first_name" => "In", "last_name" => "Vitee"
+    }
+
+    post :create_user
+    assert_redirected_to root_path
+
+    invitee = User.find_by(email: "invitee@example.com")
+    assert_not_nil invitee
+    assert_equal family.id, invitee.family_id
+    assert_equal family.accounts.pluck(:id).sort,
+      AccountShare.where(user: invitee).pluck(:account_id).sort
+  end
+
+  test "create_user via invitation shares nothing when family sharing is private" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "private")
+    family.invitations.create!(email: "invitee2@example.com", role: "member", inviter: users(:family_admin))
+
+    session[:pending_oidc_auth] = {
+      "provider" => "openid_connect", "uid" => "invite-uid-2",
+      "email" => "invitee2@example.com", "first_name" => "In", "last_name" => "Vitee"
+    }
+
+    post :create_user
+    assert_redirected_to root_path
+
+    invitee = User.find_by(email: "invitee2@example.com")
+    assert_equal family.id, invitee.family_id
+    assert_equal 0, AccountShare.where(user: invitee).count
   end
 end

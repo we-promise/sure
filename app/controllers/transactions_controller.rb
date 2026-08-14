@@ -14,15 +14,31 @@ class TransactionsController < ApplicationController
 
   def index
     @q = search_params
-    accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
-    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: accessible_account_ids)
+    @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
+    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: @accessible_account_ids)
 
     base_scope = @search.transactions_scope
                        .reverse_chronological
                        .includes(
                          { entry: :account },
                          :category, :merchant, :tags,
-                         :transfer_as_inflow, :transfer_as_outflow
+                         # Union of #2643 counterpart UI + Skylight category-menu N+1:
+                         # - outflow rows need inflow_transaction (to_account) for both
+                         #   counterpart display and Transfer#categorizable?/#payment?
+                         # - inflow rows need outflow_transaction (from_account) for
+                         #   counterpart display, and inflow_transaction (to_account)
+                         #   for the category menu on the same row
+                         {
+                           transfer_as_outflow: {
+                             inflow_transaction: { entry: :account }
+                           }
+                         },
+                         {
+                           transfer_as_inflow: {
+                             inflow_transaction: { entry: :account },
+                             outflow_transaction: { entry: :account }
+                           }
+                         }
                        )
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
@@ -123,6 +139,7 @@ class TransactionsController < ApplicationController
   def update
     if @entry.update(permitted_entry_params)
       transaction = @entry.transaction
+      transaction.record_category_usage!
 
       if needs_rule_notification?(transaction)
         flash[:cta] = {
@@ -377,13 +394,6 @@ class TransactionsController < ApplicationController
     end
   end
 
-  def update_preferences
-    Current.user.update_transactions_preferences(preferences_params)
-    head :ok
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
-    head :unprocessable_entity
-  end
-
   def exchange_rate
     account = Current.family.accounts.find(params[:account_id])
     currency_from = params[:currency]
@@ -565,10 +575,6 @@ class TransactionsController < ApplicationController
 
     def stored_params
       Current.session.prev_transaction_page_params
-    end
-
-    def preferences_params
-      params.require(:preferences).permit(collapsed_sections: {})
     end
 
     # Helper methods for convert_to_trade

@@ -33,11 +33,10 @@ class SnaptradeConnectionCleanupJob < ApplicationJob
     end
 
     provider = snaptrade_item.snaptrade_provider
-    credentials = snaptrade_item.snaptrade_credentials
 
-    unless provider && credentials
+    unless provider
       Rails.logger.warn(
-        "SnaptradeConnectionCleanupJob - No provider/credentials for item #{snaptrade_item_id}"
+        "SnaptradeConnectionCleanupJob - Item #{snaptrade_item_id} not authorized, skipping API deletion"
       )
       return
     end
@@ -46,11 +45,7 @@ class SnaptradeConnectionCleanupJob < ApplicationJob
       "SnaptradeConnectionCleanupJob - Deleting SnapTrade connection #{authorization_id}"
     )
 
-    provider.delete_connection(
-      user_id: credentials[:user_id],
-      user_secret: credentials[:user_secret],
-      authorization_id: authorization_id
-    )
+    provider.delete_connection(authorization_id: authorization_id)
 
     Rails.logger.info(
       "SnaptradeConnectionCleanupJob - Successfully deleted connection #{authorization_id}"

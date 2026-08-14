@@ -49,4 +49,29 @@ class SimplefinAccount::Transactions::Processor
 
     Rails.logger.info "SimplefinAccount::Transactions::Processor - Completed for simplefin_account #{simplefin_account.id}: #{processed_count} processed, #{error_count} errors, #{@skipped_entries.size} skipped (protected)"
   end
+
+  private
+
+    # TODO: When SimpleFIN category matching is wired up (SimplefinAccount::Transactions::CategoryMatcher
+    # does not exist yet and this method is currently unused), apply the same
+    # `account&.enable_category_matcher?` guard used in PlaidEntry::Processor#matched_category,
+    # and include SimpleFIN in Account::Linkable#supports_category_matcher? so the toggle
+    # appears for SimpleFIN-linked accounts.
+    def category_matcher
+      @category_matcher ||= SimplefinAccount::Transactions::CategoryMatcher.new(family_categories)
+    end
+
+    def family_categories
+      @family_categories ||= begin
+        if account.family.categories.none?
+          account.family.categories.bootstrap!
+        end
+
+        account.family.categories
+      end
+    end
+
+    def account
+      simplefin_account.current_account
+    end
 end

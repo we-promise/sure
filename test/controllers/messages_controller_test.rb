@@ -12,6 +12,15 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to chat_path(@chat, thinking: true)
   end
 
+  test "redirects to chats when message save races with chat deletion" do
+    UserMessage.any_instance.stubs(:save).raises(ActiveRecord::InvalidForeignKey)
+
+    post chat_messages_url(@chat), params: { message: { content: "Hello", ai_model: "gpt-4.1" } }
+
+    assert_redirected_to chats_path
+    assert_equal I18n.t("messages.create.chat_not_found"), flash[:alert]
+  end
+
   test "cannot create a message if AI is disabled" do
     @user.update!(ai_enabled: false)
 

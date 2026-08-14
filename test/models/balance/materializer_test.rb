@@ -268,6 +268,59 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_balance_fields_persisted(expected_balances)
   end
 
+  test "reverse materialization persists opening boundary adjustment" do
+    account = families(:empty).accounts.create!(
+      name: "Linked Depository",
+      balance: 1000,
+      cash_balance: 1000,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    opening_date = Date.new(2024, 1, 1)
+    boundary_date = opening_date + 1.day
+    transaction_date = opening_date + 2.days
+    current_anchor_date = opening_date + 3.days
+
+    account.entries.create!(
+      name: "Current Balance",
+      date: current_anchor_date,
+      amount: 1000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "current_anchor")
+    )
+    account.entries.create!(
+      name: "Transaction",
+      date: transaction_date,
+      amount: 200,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+    account.entries.create!(
+      name: "Opening Balance",
+      date: opening_date,
+      amount: 1000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    Holding::Materializer.any_instance.expects(:materialize_holdings).returns([]).once
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    opening_balance = account.balances.find_by!(date: opening_date)
+    boundary_balance = account.balances.find_by!(date: boundary_date)
+    transaction_balance = account.balances.find_by!(date: transaction_date)
+
+    assert_equal 1000, opening_balance.end_balance
+    assert_equal 1000, boundary_balance.start_balance
+    assert_equal 1200, boundary_balance.end_balance
+    assert_equal 200, boundary_balance.cash_adjustments
+    assert_equal 0, boundary_balance.cash_inflows
+    assert_equal 0, boundary_balance.cash_outflows
+    assert_equal 1200, transaction_balance.start_balance
+    assert_equal 1000, transaction_balance.end_balance
+  end
+
   private
 
     def assert_balance_fields_persisted(expected_balances)

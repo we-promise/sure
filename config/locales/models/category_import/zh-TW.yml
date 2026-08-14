@@ -1,0 +1,8 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: 分類「%{name}」不能把自己當成上層分類
+          missing_columns: 缺少必要的欄位：%{columns}

@@ -21,11 +21,12 @@ class Category < ApplicationRecord
   before_save :inherit_color_from_parent
 
   scope :alphabetically, -> { order(:name) }
+  scope :recently_used, -> { where.not(last_used_at: nil).order(last_used_at: :desc) }
   scope :alphabetically_by_hierarchy, -> {
     left_joins(:parent)
       .order(Arel.sql("COALESCE(parents_categories.name, categories.name)"))
       .order(Arel.sql("parents_categories.name IS NOT NULL"))
-      .order(:name)
+      .order(:name, :id)
   }
   scope :roots, -> { where(parent_id: nil) }
   # Legacy scopes - classification removed; these now return all categories
@@ -93,6 +94,29 @@ class Category < ApplicationRecord
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
   OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
   INVESTMENT_CONTRIBUTIONS_NAME_KEY = "models.category.investment_contributions"
+  DEFAULT_CATEGORY_TRANSLATION_KEYS = %w[
+    income
+    food_and_drink
+    groceries
+    shopping
+    transportation
+    travel
+    entertainment
+    healthcare
+    personal_care
+    home_improvement
+    mortgage_rent
+    utilities
+    subscriptions
+    insurance
+    sports_and_fitness
+    gifts_and_donations
+    taxes
+    loan_payments
+    services
+    fees
+    savings_and_investments
+  ].freeze
 
   class Group
     attr_reader :category, :subcategories
@@ -114,6 +138,28 @@ class Category < ApplicationRecord
   end
 
   class << self
+    def ids_with_transactions(family:, category_ids:)
+      category_ids = Array(category_ids).compact
+      return {} if category_ids.empty?
+
+      family.transactions
+            .where(category_id: category_ids)
+            .distinct
+            .pluck(:category_id)
+            .index_with(true)
+    end
+
+    # Categories a family has manually assigned recently — a shortcut above the
+    # alphabetical list, not a replacement for it. See Transaction#record_category_usage!
+    # for where last_used_at is touched (only on a real human pick via one of the
+    # manual assignment controllers, not rule/import auto-assignment).
+    def recently_used_for(family:, excluding: [], limit: 4)
+      family.categories
+            .recently_used
+            .excluding(Array(excluding).compact)
+            .limit(limit)
+    end
+
     def suggested_icon(name)
       name_down = name.to_s.downcase
 
@@ -200,7 +246,38 @@ class Category < ApplicationRecord
       end.uniq
     end
 
+    def localized_default_name_for(name)
+      i18n_key = default_category_translation_key_for(name)
+
+      i18n_key ? I18n.t(i18n_key, default: name) : name
+    end
+
     private
+      def default_category_translation_key_for(name)
+        default_category_translation_keys_by_name[name.to_s]
+      end
+
+      def default_category_translation_keys_by_name
+        @default_category_translation_keys_by_name ||= begin
+          # Default categories store the translated name in the `name` column, so
+          # older families may have default names from any supported locale. This
+          # display-layer bridge maps those known labels back to their i18n key
+          # before rendering in the current locale. A future schema-level
+          # default_key would remove the ambiguity with user-created categories.
+          i18n_keys = DEFAULT_CATEGORY_TRANSLATION_KEYS.index_with { |key| "models.category.defaults.#{key}" }
+          i18n_keys["uncategorized"] = UNCATEGORIZED_NAME_KEY
+          i18n_keys["other_investments"] = OTHER_INVESTMENTS_NAME_KEY
+          i18n_keys["investment_contributions"] = INVESTMENT_CONTRIBUTIONS_NAME_KEY
+
+          LanguagesHelper::SUPPORTED_LOCALES.each_with_object({}) do |locale, mapping|
+            i18n_keys.each_value do |i18n_key|
+              translated_name = I18n.t(i18n_key, locale: locale, default: nil)
+              mapping[translated_name.to_s] ||= i18n_key if translated_name.present?
+            end
+          end
+        end
+      end
+
       def default_categories
         [
           [ I18n.t("models.category.defaults.income"),                "#22c55e", "circle-dollar-sign" ],
@@ -230,9 +307,7 @@ class Category < ApplicationRecord
   end
 
   def inherit_color_from_parent
-    if subcategory?
-      self.color = parent.color
-    end
+    self.color = parent.color if subcategory? && parent
   end
 
   def replace_and_destroy!(replacement)
@@ -243,15 +318,30 @@ class Category < ApplicationRecord
   end
 
   def parent?
-    subcategories.any?
+    if association(:subcategories).loaded?
+      subcategories.any?
+    else
+      subcategories.exists?
+    end
   end
 
   def subcategory?
-    parent.present?
+    parent_id.present? && parent.present?
   end
 
   def name_with_parent
-    subcategory? ? "#{parent.name} > #{name}" : name
+    return name unless subcategory?
+
+    parent_name = parent&.name
+    parent_name.present? ? "#{parent_name} > #{name}" : name
+  end
+
+  def display_name
+    self.class.localized_default_name_for(name)
+  end
+
+  def display_name_with_parent
+    subcategory? ? "#{parent.display_name} > #{display_name}" : display_name
   end
 
   # Predicate: is this the synthetic "Uncategorized" category?
@@ -271,7 +361,7 @@ class Category < ApplicationRecord
 
   private
     def category_level_limit
-      if (subcategory? && parent.subcategory?) || (parent? && subcategory?)
+      if (subcategory? && parent&.subcategory?) || (parent? && subcategory?)
         errors.add(:parent, "can't have more than 2 levels of subcategories")
       end
     end

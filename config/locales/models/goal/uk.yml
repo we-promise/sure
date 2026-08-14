@@ -1,0 +1,25 @@
+---
+uk:
+  activerecord:
+    attributes:
+      goal:
+        name: "Назва"
+        target_amount: "Цільова сума"
+        currency: "Валюта"
+        target_date: "Цільова дата"
+        color: "Колір"
+        notes: "Нотатки"
+        state: "Стан"
+        linked_accounts: "Прив'язані рахунки"
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: "Виберіть принаймні один рахунок для фінансування цієї цілі."
+            linked_accounts:
+              must_be_fundable: "Всі прив'язані рахунки мають бути готівковими або інвестиційними."
+              currency_mismatch: "Всі прив'язані рахунки повинні мати однакову валюту."
+              must_belong_to_family: "Прив'язані рахунки повинні належати до тієї ж сім'ї, що й ціль."
+            currency:
+              locked_after_linked: "Неможливо змінити валюту після прив'язки цілі до рахунків."

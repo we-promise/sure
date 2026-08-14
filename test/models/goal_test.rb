@@ -14,6 +14,38 @@ class GoalTest < ActiveSupport::TestCase
     assert @goal.valid?
   end
 
+  # The days-left segment is returned separately so the view can keep it
+  # unbroken; joined into one string it wrapped after "days" on a phone.
+  test "header_summary_parts keeps the days-left phrase in its own segment" do
+    # Pinned: the count is `target_date - Date.current`, so a suite that crossed
+    # midnight between setting the date and reading it would report 183.
+    travel_to Date.new(2026, 6, 1) do
+      # Target well above the linked account's balance, or the goal reads as
+      # :reached and drops the days-left segment on purpose.
+      @goal.target_amount = 1_000_000
+      @goal.target_date = Date.current + 184
+
+      parts = @goal.header_summary_parts
+
+      assert_equal 2, parts.size
+      assert_match(/184 days left/, parts.last)
+      assert_no_match(/days left/, parts.first)
+    end
+  end
+
+  test "header_summary_parts omits days left once the target is reached" do
+    @goal.target_date = 184.days.from_now.to_date
+    @goal.complete!
+
+    assert_equal 1, @goal.header_summary_parts.size
+  end
+
+  test "header_summary_parts is a single segment without a target date" do
+    @goal.target_date = nil
+
+    assert_equal 1, @goal.header_summary_parts.size
+  end
+
   test "name is required" do
     @goal.name = ""
     assert_not @goal.valid?
@@ -453,5 +485,30 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal "contributions", goal.progress_basis
     # net contributed = 10,000 − 2,000 = 8,000; earmark 1,000 ≤ 8,000 → 1,000.
     assert_equal BigDecimal("1000"), goal.current_balance.to_d
+  end
+
+  test "behind_pace? excludes paused goals even when their raw status is behind" do
+    goal = goals(:vacation_italy)
+    goal.stubs(:status).returns(:behind)
+
+    assert goal.behind_pace?
+
+    goal.update!(state: "paused")
+
+    assert goal.paused?
+    assert_not goal.behind_pace?
+  end
+
+  test "summary_for counts behind goals via behind_pace? and sums one currency" do
+    behind = goals(:vacation_italy)
+    behind.stubs(:status).returns(:behind)
+    paused_behind = goals(:emergency_fund)
+    paused_behind.update!(state: "paused")
+    paused_behind.stubs(:status).returns(:behind)
+
+    summary = Goal.summary_for([ behind, paused_behind ], currency: "USD")
+
+    assert_equal 1, summary[:behind_count]
+    assert_kind_of Money, summary[:saved_money]
   end
 end

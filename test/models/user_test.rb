@@ -557,7 +557,7 @@ class UserTest < ActiveSupport::TestCase
       "Should return false when collapsed_sections key is missing"
 
     # dashboard_section_order should return default order when key is missing
-    assert_equal %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet],
+    assert_equal %w[insights_feed cashflow_sankey outflows_donut net_worth_chart balance_sheet],
       @user.dashboard_section_order,
       "Should return default order when section_order key is missing"
 
@@ -690,13 +690,15 @@ class UserTest < ActiveSupport::TestCase
     assert_equal :super_admin, User.role_for_new_family_creator
   end
 
-  test "role_for_new_family_creator returns fallback role when users exist" do
+  test "role_for_new_family_creator returns admin-capable fallback role when users exist" do
     # Users exist from fixtures
     assert User.exists?
 
     assert_equal :admin, User.role_for_new_family_creator
-    assert_equal :member, User.role_for_new_family_creator(fallback_role: :member)
-    assert_equal "custom_role", User.role_for_new_family_creator(fallback_role: "custom_role")
+    assert_equal :admin, User.role_for_new_family_creator(fallback_role: :member)
+    assert_equal :admin, User.role_for_new_family_creator(fallback_role: :guest)
+    assert_equal :admin, User.role_for_new_family_creator(fallback_role: "custom_role")
+    assert_equal "super_admin", User.role_for_new_family_creator(fallback_role: "super_admin")
   end
 
   # Preview features preference tests

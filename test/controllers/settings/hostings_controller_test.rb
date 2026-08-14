@@ -10,8 +10,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     @provider = mock
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(@provider)
 
-    @provider.stubs(:healthy?).returns(true)
+    @provider.stubs(:health_status).returns(:healthy)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(@provider)
+    Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
     @provider.stubs(:usage).returns(provider_success_response(
       OpenStruct.new(
         used: 10,
@@ -25,7 +27,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token external_assistant_token rentcast_api_key realie_api_key].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -50,10 +52,119 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can update rentcast api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { rentcast_api_key: "rentcast-token" } }
+
+      assert_equal "rentcast-token", Setting.rentcast_api_key
+    end
+  end
+
+  test "can update realie api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { realie_api_key: "realie-token" } }
+
+      assert_equal "realie-token", Setting.realie_api_key
+    end
+  end
+
+  test "shows Yahoo Finance rate limiting as a warning" do
+    @provider.stubs(:health_status).returns(:rate_limited)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "div[class~=?]", "bg-warning/10"
+        assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
+        assert_includes response.body, "Yahoo Finance rate limit reached."
+        assert_includes response.body, "No action is required."
+        assert_not_includes response.body, "firewall"
+      end
+    end
+  end
+
+  test "renders healthy unavailable and unknown Yahoo Finance states" do
+    @provider.stubs(:health_status).returns(:healthy, :unavailable, :unknown)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance is active and working."
+        assert_select "div[class~=?]", "bg-success"
+
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance is currently unavailable."
+        assert_includes response.body, "Could not verify Yahoo Finance."
+        assert_includes response.body, "Check your internet connection and try again later."
+        assert_not_includes response.body, "firewall"
+        assert_select "div[class~=?]", "bg-destructive"
+
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance status is being checked."
+        assert_not_includes response.body, "Could not verify Yahoo Finance."
+        assert_not_includes response.body, "Yahoo Finance rate limit reached."
+        assert_select "div[class~=?]", "bg-surface-inset"
+      end
+    end
+  end
+
+  test "renders Spanish Yahoo Finance health guidance" do
+    @provider.stubs(:health_status).returns(:rate_limited, :unavailable, :unknown)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Yahoo Finance está limitando temporalmente las solicitudes."
+        assert_includes response.body, "No es necesario realizar ninguna acción."
+
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Yahoo Finance no está disponible en este momento."
+        assert_includes response.body, "Comprueba tu conexión a internet"
+
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Se está comprobando el estado de Yahoo Finance."
+      end
+    end
+  end
+
+  test "falls back to English for untranslated Yahoo Finance health guidance" do
+    @provider.stubs(:health_status).returns(:rate_limited)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url(locale: :fr)
+
+        assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
+        assert_not_includes response.body, "translation missing"
+      end
+    end
+  end
+
   test "can update settings when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
 
+      assert_equal "1234567890", Setting.twelve_data_api_key
+    end
+  end
+
+  test "can clear an encrypted api key by submitting a blank value" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+      assert_equal "1234567890", Setting.twelve_data_api_key
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "" } }
+      assert_nil Setting.twelve_data_api_key
+    end
+  end
+
+  test "submitting the masked placeholder leaves an encrypted api key unchanged" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "********" } }
       assert_equal "1234567890", Setting.twelve_data_api_key
     end
   end
@@ -82,11 +193,45 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Regression: issue #2465 symptom for the OpenAI token. Blanking the field
+  # (the form auto-submits on blur) must clear the stored value, not silently
+  # keep the old one.
+  test "can clear openai access token by submitting a blank value" do
+    with_self_hosting do
+      Setting.openai_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { openai_access_token: "" } }
+
+      assert_nil Setting.openai_access_token
+    end
+  end
+
+  test "ignores redacted openai token placeholder" do
+    with_self_hosting do
+      Setting.openai_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { openai_access_token: "********" } }
+
+      assert_equal "previous-token", Setting.openai_access_token
+    end
+  end
+
   test "can update anthropic access token when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { anthropic_access_token: "fake-anthropic-key-for-tests" } }
 
       assert_equal "fake-anthropic-key-for-tests", Setting.anthropic_access_token
+    end
+  end
+
+  # Regression: issue #2465 symptom for the Anthropic token.
+  test "can clear anthropic access token by submitting a blank value" do
+    with_self_hosting do
+      Setting.anthropic_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { anthropic_access_token: "" } }
+
+      assert_nil Setting.anthropic_access_token
     end
   end
 
@@ -348,6 +493,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { external_assistant_token: "********" } }
 
       assert_equal "real-secret", Setting.external_assistant_token
+    end
+  ensure
+    Setting.external_assistant_token = nil
+  end
+
+  # Regression: issue #2465 symptom for the external assistant token.
+  test "can clear external assistant token by submitting a blank value" do
+    with_self_hosting do
+      Setting.external_assistant_token = "real-secret"
+
+      patch settings_hosting_url, params: { setting: { external_assistant_token: "" } }
+
+      assert_nil Setting.external_assistant_token
     end
   ensure
     Setting.external_assistant_token = nil

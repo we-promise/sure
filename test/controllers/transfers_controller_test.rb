@@ -150,6 +150,123 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "can create transfer with source fee" do
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          source_fee_amount: 3
+        }
+      }
+    end
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal 100, transfer.amount
+    assert_equal 3, transfer.derived_source_fee_amount
+    assert_equal 0, transfer.derived_destination_fee_amount
+    # Outflow should be principal only (no fee baked in)
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    # Inflow should be -(converted_principal)
+    assert_equal(-100, transfer.inflow_transaction.entry.amount)
+    # Fee transaction should be created
+    assert_equal 1, transfer.fee_transactions.count
+    fee_tx = transfer.fee_transactions.first
+    assert_equal "standard", fee_tx.kind
+    assert_equal 3, fee_tx.entry.amount
+    assert_equal accounts(:depository).id, fee_tx.entry.account_id
+    assert transfer.has_source_fee?
+    assert_not transfer.has_destination_fee?
+  end
+
+  test "can create transfer with destination fee" do
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          destination_fee_amount: 3
+        }
+      }
+    end
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal 100, transfer.amount
+    assert_equal 0, transfer.derived_source_fee_amount
+    assert_equal 3, transfer.derived_destination_fee_amount
+    # Outflow should be principal only
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    # Inflow should be -(converted_principal)
+    assert_equal(-100, transfer.inflow_transaction.entry.amount)
+    # Fee transaction should be created
+    assert_equal 1, transfer.fee_transactions.count
+    fee_tx = transfer.fee_transactions.first
+    assert_equal "standard", fee_tx.kind
+    assert_equal 3, fee_tx.entry.amount
+    assert_equal accounts(:credit_card).id, fee_tx.entry.account_id
+    assert_not transfer.has_source_fee?
+    assert transfer.has_destination_fee?
+  end
+
+  test "can create transfer with both source and destination fees" do
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          source_fee_amount: 2,
+          destination_fee_amount: 3
+        }
+      }
+    end
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal 100, transfer.amount
+    assert_equal 2, transfer.derived_source_fee_amount
+    assert_equal 3, transfer.derived_destination_fee_amount
+    # Outflow should be principal only
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    # Inflow should be -(converted_principal)
+    assert_equal(-100, transfer.inflow_transaction.entry.amount)
+    # Two fee transactions should be created
+    assert_equal 2, transfer.fee_transactions.count
+    source_fee_tx = transfer.fee_transactions.find { |t| t.entry.account_id == accounts(:depository).id }
+    dest_fee_tx = transfer.fee_transactions.find { |t| t.entry.account_id == accounts(:credit_card).id }
+    assert_equal 2, source_fee_tx.entry.amount
+    assert_equal 3, dest_fee_tx.entry.amount
+    assert transfer.has_fees?
+  end
+
+  test "derived fee methods reflect fee transaction entry edits" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        source_fee_amount: 3
+      }
+    }
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal 3, transfer.derived_source_fee_amount
+
+    # Simulate an independent edit of the fee transaction entry
+    fee_tx = transfer.fee_transactions.first
+    fee_tx.entry.update!(amount: 5)
+
+    # Derived fee should reflect the updated entry
+    transfer.reload
+    assert_equal 5, transfer.derived_source_fee_amount
+    assert transfer.has_source_fee?
+  end
+
   test "exchange_rate endpoint returns same_currency for matching currencies" do
     get exchange_rate_url, params: {
       from: "USD",
@@ -166,6 +283,82 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_difference -> { Transfer.count }, -1 do
       delete transfer_url(transfers(:one))
     end
+  end
+
+  test "can create transfer with tags on both sides" do
+    tag = tags(:one)
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          tag_ids: [ tag.id ]
+        }
+      }
+    end
+
+    transfer = Transfer.order(:created_at).last
+    assert_equal [ tag.id ], transfer.outflow_transaction.tag_ids
+    assert_equal [ tag.id ], transfer.inflow_transaction.tag_ids
+  end
+
+  test "can update transfer tags on both sides" do
+    transfer = transfers(:one)
+    tag = tags(:one)
+
+    patch tags_transfer_url(transfer), params: { tag_ids: [ tag.id ] }, as: :json
+
+    assert_response :success
+    assert_equal [ tag.id ], transfer.outflow_transaction.reload.tag_ids
+    assert_equal [ tag.id ], transfer.inflow_transaction.reload.tag_ids
+    assert_equal [ tag.id ], JSON.parse(response.body)["tag_ids"]
+  end
+
+  test "update transfer tags ignores tags from other families" do
+    transfer = transfers(:one)
+    family_tag = tags(:one)
+    other_family = Family.create!(name: "Other Family", currency: "USD")
+    other_tag = other_family.tags.create!(name: "Foreign")
+
+    patch tags_transfer_url(transfer), params: {
+      tag_ids: [ family_tag.id, other_tag.id ]
+    }, as: :json
+
+    assert_response :success
+    assert_equal [ family_tag.id ], transfer.outflow_transaction.reload.tag_ids
+    assert_equal [ family_tag.id ], transfer.inflow_transaction.reload.tag_ids
+  end
+
+  test "can clear transfer tags" do
+    transfer = transfers(:one)
+    tag = tags(:one)
+    transfer.outflow_transaction.update!(tag_ids: [ tag.id ])
+    transfer.inflow_transaction.update!(tag_ids: [ tag.id ])
+
+    patch tags_transfer_url(transfer), params: { tag_ids: [] }, as: :json
+
+    assert_response :success
+    assert_empty transfer.outflow_transaction.reload.tag_ids
+    assert_empty transfer.inflow_transaction.reload.tag_ids
+  end
+
+  test "update tags requires annotate permission on both transfer sides" do
+    # family_member: full_control on depository (outflow), read_only on credit_card (inflow)
+    sign_in users(:family_member)
+    transfer = transfers(:one)
+    tag = tags(:one)
+    original_outflow_tags = transfer.outflow_transaction.tag_ids
+    original_inflow_tags = transfer.inflow_transaction.tag_ids
+
+    patch tags_transfer_url(transfer), params: { tag_ids: [ tag.id ] }, as: :json
+
+    assert_response :forbidden
+    assert_equal I18n.t("accounts.not_authorized"), JSON.parse(response.body)["error"]
+    assert_equal original_outflow_tags, transfer.outflow_transaction.reload.tag_ids
+    assert_equal original_inflow_tags, transfer.inflow_transaction.reload.tag_ids
   end
 
   test "can add notes to transfer" do

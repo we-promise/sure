@@ -6,7 +6,10 @@ class CategoriesController < ApplicationController
   def index
     @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
     @category_groups = Category::Group.for(@categories)
-    @category_ids_with_transactions = category_ids_with_transactions(@categories)
+    @category_ids_with_transactions = Category.ids_with_transactions(
+      family: Current.family,
+      category_ids: @categories.map(&:id)
+    )
 
     render layout: "settings"
   end
@@ -26,7 +29,10 @@ class CategoriesController < ApplicationController
     @category = Current.family.categories.new(category_params)
 
     if @category.save
-      @transaction.update(category_id: @category.id) if @transaction
+      if @transaction
+        @transaction.update(category_id: @category.id)
+        @transaction.record_category_usage!
+      end
 
       flash[:notice] = t(".success")
 
@@ -123,17 +129,6 @@ class CategoriesController < ApplicationController
 
     def category_merge_params
       params.permit(:target_id, source_ids: [])
-    end
-
-    def category_ids_with_transactions(categories)
-      category_ids = categories.map(&:id)
-      return {} if category_ids.empty?
-
-      Current.family.transactions
-                    .where(category_id: category_ids)
-                    .distinct
-                    .pluck(:category_id)
-                    .index_with(true)
     end
 
     def record_error_message(error)

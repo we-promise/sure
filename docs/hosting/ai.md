@@ -216,6 +216,13 @@ OPENAI_URI_BASE=http://localhost:11434/v1
 # Model you pulled
 OPENAI_MODEL=llama3.1:13b
 
+# Raise this for large-context local models so auto-categorize and merchant detection
+# have enough prompt budget for categories + schemas before transaction rows are added.
+LLM_CONTEXT_WINDOW=8192
+
+# Slow local models often need a longer HTTP timeout once the prompt budget issue is fixed.
+OPENAI_REQUEST_TIMEOUT=180
+
 # Optional: enable debug logging in the AI chat
 AI_DEBUG_MODE=true 
 ```
@@ -224,6 +231,8 @@ AI_DEBUG_MODE=true
 - You **must** set `OPENAI_MODEL` - the system cannot default to `gpt-4.1` as that model won't exist in Ollama
 - The `OPENAI_ACCESS_TOKEN` can be any non-empty value (Ollama ignores it)
 - If you don't set a model, chats will fail with a validation error
+- Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
+- If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits
 
 ### Docker Compose Example
 
@@ -234,6 +243,8 @@ services:
       - OPENAI_ACCESS_TOKEN=ollama-local
       - OPENAI_URI_BASE=http://ollama:11434/v1
       - OPENAI_MODEL=llama3.1:13b
+      - LLM_CONTEXT_WINDOW=8192
+      - OPENAI_REQUEST_TIMEOUT=180
       - AI_DEBUG_MODE=true # Optional: enable debug logging in the AI chat
     depends_on:
       - ollama
@@ -438,6 +449,21 @@ EXTERNAL_ASSISTANT_AGENT_ID=your-agent-name
 # URL uses Kubernetes DNS: <service>.<namespace>.svc.cluster.local:<port>
 EXTERNAL_ASSISTANT_URL=http://my-agent.my-namespace.svc.cluster.local:18789/v1/chat/completions
 ```
+
+#### Giving the agent a long-term memory of its own
+
+An external agent can do more than answer questions about the current balance:
+with its own repository behind it, it can maintain a document-backed history of
+a family's wealth, where every figure traces back to the statement it came from.
+
+That is a two-install shape — Sure as the system of record, the agent harness as
+the model and the compiler — rather than a feature inside Sure. Sure exposes a
+set of preview MCP tools for it (the Statement Vault, coverage gaps, and
+valuations that require a source citation).
+
+See [Wealth history with an external agent harness](../llm-guides/wealth-agent-harness.md)
+for which side owns what, and [the blueprint](../llm-guides/wealth-blueprint.md)
+it implements.
 
 ### Security with Pipelock
 
@@ -1024,6 +1050,34 @@ ollama list  # See what's installed
 ollama pull model-name  # Install a model
 ```
 
+### "Fixed prompt tokens exceed context budget"
+
+**Symptom:** Auto-categorization or merchant detection fails immediately with an error like:
+
+```text
+Fixed prompt tokens (2108) exceed context budget (1280)
+```
+
+**Cause:** Sure computes the usable prompt budget as:
+
+```text
+context_window - max_response_tokens - system_prompt_reserve
+```
+
+The defaults are conservative:
+- `LLM_CONTEXT_WINDOW=2048`
+- `LLM_MAX_RESPONSE_TOKENS=512`
+- `LLM_SYSTEM_PROMPT_RESERVE=256`
+
+That leaves `1280` input tokens. On local or custom models, the fixed prompt can already exceed that budget once you include Sure's instructions, category taxonomy, and schema payloads.
+
+**Fix:**
+```bash
+LLM_CONTEXT_WINDOW=8192
+```
+
+Then restart both `web` and `worker` so the new env var is loaded. If you are using Docker Compose, make sure your compose file forwards `LLM_CONTEXT_WINDOW` into the containers.
+
 ### Slow Responses
 
 **Symptom:** Long wait times for AI responses
@@ -1038,6 +1092,7 @@ ollama pull model-name  # Install a model
 - Try a smaller model
 - Ensure you're using GPU, not CPU
 - Check for thermal throttling
+- If you see `Net::ReadTimeout` after fixing the context budget, raise `OPENAI_REQUEST_TIMEOUT` (for example `180`)
 
 ### No Provider Available
 

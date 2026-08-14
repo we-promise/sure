@@ -1,0 +1,155 @@
+---
+de:
+  wise_items:
+    activities:
+      asset_fee: Gebühr für Wise Assets
+      default_name: Wise-Vorgang
+      interest: Wise-Zinsen
+      jar_deposit: Einzahlung in Jar
+      jar_withdrawal: Auszahlung aus Jar
+      transfer_from_jar: Überweisung von %{jar}
+      transfer_to_jar: Überweisung an %{jar}
+    complete_account_setup:
+      failed: Das Konto ließ sich nicht anlegen. Versuch es noch einmal.
+      not_found: Wise-Guthaben nicht gefunden.
+      success: Konto angelegt und verknüpft.
+    create:
+      connection_failed: Die Verbindung zu Wise kam nicht zustande. Versuch es später noch einmal.
+      invalid_token: Ungültiger API-Token. Prüf ihn und versuch es noch einmal.
+      no_profiles_found: Keine Wise-Profile gefunden. Prüf deinen API-Token.
+    destroy:
+      success: Wise-Verbindung entfernt
+    entries:
+      default_name: Wise-Transaktion
+      fee_name: Wise-Gebühr
+    link_accounts:
+      failed: Das Wise-Guthaben ließ sich nicht verknüpfen. Versuch es noch einmal.
+      not_found: Wise-Guthaben nicht gefunden.
+      success: Wise-Guthaben mit dem Konto verknüpft.
+    link_existing_account:
+      failed: Das Konto ließ sich nicht verknüpfen. Versuch es noch einmal.
+      not_found: Konto oder Wise-Guthaben nicht gefunden.
+      success: "%{account_name} mit Wise verknüpft"
+    link_profiles:
+      already_connected: Alle gewählten Profile sind bereits verbunden.
+      no_profiles_selected: Wähl mindestens ein Profil.
+      session_expired: Sitzung abgelaufen. Versuch die Verbindung noch einmal.
+      success:
+        one: "%{count} Wise-Profil verbunden"
+        other: "%{count} Wise-Profile verbunden"
+    profile_types:
+      business: Geschäftlich
+      personal: Privat
+    provider_connection:
+      default_description: Verbinde dein Wise-Konto mit mehreren Währungen
+      default_name: Wise
+      description: Über %{name} verbinden
+      name: Wise – %{name}
+    provider_panel:
+      accounts_link: Konten
+      add_connection: Wise-Verbindung hinzufügen
+      configured_html: Verbunden und im Abgleich. Im Reiter %{accounts_link} verwaltest du deine Konten.
+      connect: Wise verbinden
+      connection_name_label: Name der Verbindung
+      connection_name_placeholder: Wise Privat
+      disconnect: Trennen
+      disconnect_confirm: "%{name} wirklich trennen? Damit verschwinden alle synchronisierten Kontodaten."
+      disconnect_label: "%{name} trennen"
+      encryption_warning:
+        message: Richte die Active-Record-Verschlüsselungsschlüssel ein, bevor du im Produktivbetrieb Wise-Tokens hinterlegst. Ohne Verschlüsselung liegen die Tokens im Klartext.
+        title: Datenbankverschlüsselung ist nicht eingerichtet
+      instructions:
+        copy_token_html: Kopier den Token und füg ihn unten ein. Sure nutzt ihn ausschließlich, um deine Guthaben und Transaktionen abzugleichen.
+        create_token: Leg einen neuen persönlichen API-Token mit reinem Lesezugriff an
+        open_tokens: Gehe zu Settings → Connect and manage apps → Developer tools → API tokens
+        sign_in_html: Öffne %{link} und melde dich in deinem Konto an
+      import_all_history_help: Holt alle historischen Wise-Kontoauszüge statt nur das letzte Jahr.
+      import_all_history_label: Vollständige Transaktionshistorie importieren
+      keep_token_placeholder: Leer lassen, um den bisherigen Token zu behalten
+      not_configured: Nicht eingerichtet
+      sandbox_note_html: Nutz zum Testen die <strong>Sandbox</strong>-Basis-URL (<code>https://api.sandbox.transferwise.tech</code>). Setz dafür <code>WISE_BASE_URL</code> in deiner Umgebung.
+      setup_accounts: Konten einrichten
+      setup_title: 'So richtest du es ein:'
+      sync: Sync
+      sync_start_date_help: Wise-Kontoauszüge werden ab diesem Datum importiert. Lass die Vorgabe stehen, um bis zu ein Jahr Historie zu importieren.
+      sync_start_date_label: Transaktionen importieren ab
+      token_label: API-Token
+      token_placeholder: Persönlichen Wise-API-Token einfügen
+      update_connection: Verbindung aktualisieren
+    select_accounts:
+      cancel: Abbrechen
+      description: Wähl das Wise-Währungsguthaben, das du mit deinem %{product_name}-Konto verknüpfen willst.
+      link_account: Guthaben verknüpfen
+      no_accounts_found: Alle Wise-Guthaben sind bereits mit Sure-Konten verknüpft.
+      no_connection: Keine Wise-Verbindung gefunden. Verbinde Wise zuerst in den Anbietereinstellungen.
+      title: Wise-Guthaben wählen
+    select_existing_account:
+      cancel: Abbrechen
+      description: Wähl das Wise-Währungsguthaben, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch abgeglichen.
+      link_account: Guthaben verknüpfen
+      no_accounts_found: Keine unverknüpften Wise-Guthaben gefunden.
+      not_found: Wise-Guthaben nicht gefunden.
+      title: "%{account_name} mit Wise verknüpfen"
+    select_profiles:
+      already_connected_label: Bereits verbunden
+      cancel: Abbrechen
+      connect: Gewählte Profile verbinden
+      description: Dein Wise-Konto hat mehrere Profile. Wähl die aus, die du mit Sure abgleichen willst.
+      session_expired: Sitzung abgelaufen. Versuch die Verbindung noch einmal.
+      subtitle: Wähl, welche Profile verbunden werden sollen
+      title: Wise-Profile wählen
+      unnamed_profile: "(Profil ohne Namen)"
+    setup_accounts:
+      all_accounts_linked: Alle deine Wise-Währungsguthaben sind mit Sure-Konten verknüpft.
+      create_account: Konto anlegen
+      description: Leg für jedes Wise-Währungsguthaben, das du verfolgen willst, ein Sure-Konto an. Jede Währung wird ein eigenes Konto.
+      done: Fertig
+      no_accounts_to_setup: Alle Konten sind eingerichtet
+      subtitle: Verknüpf deine Wise-Währungsguthaben
+      title: Wise-Konten einrichten
+    sync:
+      success: Sync gestartet
+    sync_status:
+      all_synced:
+        one: "%{count} Konto synchronisiert"
+        other: "%{count} Konten synchronisiert"
+      no_accounts: Keine Konten gefunden
+      partial_setup: "%{synced} synchronisiert, %{pending} müssen eingerichtet werden"
+    syncer:
+      account_processing_failed:
+        one: "%{count} Wise-Konto ließ sich nicht verarbeiten."
+        other: "%{count} Wise-Konten ließen sich nicht verarbeiten."
+      account_sync_failed:
+        one: "%{count} Wise-Konto-Sync ließ sich nicht einplanen."
+        other: "%{count} Wise-Konto-Syncs ließen sich nicht einplanen."
+      accounts_failed:
+        one: "%{count} Guthaben ließ sich nicht importieren."
+        other: "%{count} Guthaben ließen sich nicht importieren."
+      accounts_need_setup:
+        one: "%{count} Konto muss eingerichtet werden …"
+        other: "%{count} Konten müssen eingerichtet werden …"
+      calculating_balances: Salden werden berechnet …
+      checking_account_configuration: Kontokonfiguration wird geprüft …
+      credentials_invalid: Ungültiger Wise-API-Token oder fehlende Berechtigungen
+      failed: Der Sync ist fehlgeschlagen. Versuch es noch einmal oder wende dich an den Support.
+      import_failed: Der Wise-Import ist fehlgeschlagen.
+      importing_accounts: Konten werden aus Wise importiert …
+      processing_transactions: Transaktionen werden verarbeitet …
+      transactions_failed:
+        one: Bei %{count} Guthaben schlug der Transaktionsimport fehl.
+        other: Bei %{count} Guthaben schlug der Transaktionsimport fehl.
+    update:
+      success: Wise-Verbindung aktualisiert
+    wise_item:
+      delete: Trennen
+      deletion_in_progress: wird gelöscht …
+      error: Sync-Fehler
+      no_accounts_description: Starte einen Sync, um deine Wise-Guthaben zu finden, und verknüpf sie dann mit Sure-Konten.
+      no_accounts_title: Noch keine Konten verknüpft
+      setup_action: Konten einrichten
+      setup_description: "%{linked} von %{total} Konten verknüpft. Leg Sure-Konten für deine Wise-Währungsguthaben an."
+      setup_needed: Neue Konten bereit zum Einrichten
+      status: Synchronisiert vor %{timestamp}
+      status_never: Noch nie synchronisiert
+      status_with_summary: Letzter Sync vor %{timestamp} – %{summary}
+      syncing: Sync läuft …
