@@ -70,10 +70,13 @@ class RecurringAllocationsController < ApplicationController
              .find(id)
     end
 
+    # Scoped to what this user can actually see, like every other lookup here:
+    # sharing is per account, so a family scope alone would let a member pay a
+    # bill with a transaction from an account they were never given.
     def find_entry(occurrence, entry_id)
       return nil if entry_id.blank?
 
-      Current.family.entries.find(entry_id)
+      Current.accessible_entries.find(entry_id)
     end
 
     def allocation_error_message(error)

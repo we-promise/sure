@@ -89,7 +89,9 @@ class RecurringTransactionsController < ApplicationController
     )
     @recurring_transaction.is_income = income
 
-    if (entry = Current.family.entries.find_by(id: params[:entry_id]))
+    # Accessible, not merely same-family: prefilling reads the entry's name,
+    # amount and account straight back to the user.
+    if (entry = Current.accessible_entries.find_by(id: params[:entry_id]))
       @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
       @recurring_transaction.amount = entry.amount.abs
       @recurring_transaction.account_id = entry.account_id

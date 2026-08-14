@@ -132,6 +132,22 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match "184.37", response.body
   end
 
+  # Sharing is per account, so a family scope is not an access check. Prefilling
+  # reads the entry's name, amount and account straight back into the form.
+  test "new ignores a transaction from an account the user was never given" do
+    hidden = accounts(:investment).entries.create!(
+      date: Date.current - 3, amount: 622.41, currency: "USD", name: "PRIVATE BROKERAGE FEE",
+      entryable: Transaction.new
+    )
+    sign_in users(:family_member)
+
+    get new_recurring_transaction_url(entry_id: hidden.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_no_match "PRIVATE BROKERAGE FEE", response.body
+    assert_no_match "622.41", response.body
+  end
+
   test "prefilling from an inflow pre-selects income" do
     entry = accounts(:depository).entries.create!(
       date: Date.current - 10, amount: -1840, currency: "USD", name: "ACME PAYROLL",

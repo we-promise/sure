@@ -105,6 +105,22 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("recurring_allocations.over_allocation"), flash[:alert]
   end
 
+  # Sharing is per account. A member with no share on the brokerage must not be
+  # able to settle a bill with a transaction from it, which would both spend an
+  # obligation against money they cannot see and echo the charge back to them.
+  test "a member cannot pay a bill with a transaction from an account they were never given" do
+    hidden = accounts(:investment).entries.create!(
+      date: Date.current, amount: 15.99, currency: "USD", name: "PRIVATE BROKERAGE FEE",
+      entryable: Transaction.new
+    )
+    sign_in users(:family_member)
+
+    post recurring_occurrence_allocations_url(@occurrence, entry_id: hidden.id), params: { amount: "15.99" }
+
+    assert_response :not_found
+    assert_equal 0, @occurrence.reload.allocations.count
+  end
+
   test "confirming and rejecting suggestions from the queue" do
     entry = accounts(:depository).entries.create!(
       date: Date.current, amount: 15.99, currency: "USD", name: "Netflix charge",
