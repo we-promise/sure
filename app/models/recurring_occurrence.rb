@@ -1,13 +1,12 @@
 # One expected instance of a recurring obligation: the August rent, this
-# month's electric bill. Occurrences hold what is specific to the instance
-# (due date, per-instance amount override, skip/snooze state, payments via
-# allocations); everything else inherits from the series.
+# month's electric bill. Holds what is specific to the instance (due date,
+# amount override, skip/snooze, payments via allocations); the rest inherits
+# from the series.
 #
-# Stored status is deliberately minimal -- scheduled, and the three terminal
-# states paid / skipped / missed. Everything else (upcoming, due, overdue,
-# partially paid) derives from dates and allocation sums, so it can never
-# drift stale. `missed` is only ever set by the user: the system leaves an
-# unpaid bill `overdue` forever rather than fabricating "you missed rent".
+# Stored status is minimal -- scheduled, plus the terminal paid / skipped /
+# missed. Upcoming, due, overdue and partially paid all derive from dates and
+# allocation sums, so they cannot drift stale. `missed` is only ever set by the
+# user.
 class RecurringOccurrence < ApplicationRecord
   include Monetizable
 
@@ -36,11 +35,9 @@ class RecurringOccurrence < ApplicationRecord
   scope :due_between, ->(from, to) { where(due_on: from..to) }
 
   # The amount this occurrence expects, resolving NULL through the series'
-  # amount strategy. NULL-until-frozen is what lets a series price edit
-  # update every open occurrence with zero sweeps.
-  # series_amount overrides what the series currently says it costs, so a
-  # price change can pin what an occurrence claimed *before* the edit without
-  # a second copy of this resolution order.
+  # amount strategy, which is what lets a price edit update every open
+  # occurrence with no sweep. `series_amount` overrides what the series says it
+  # costs now, so a price change can pin what a row claimed before the edit.
   def resolved_expected_amount(series_amount: nil)
     return expected_amount if expected_amount.present?
 
@@ -118,9 +115,8 @@ class RecurringOccurrence < ApplicationRecord
   end
 
   # --- Lifecycle actions. Closing freezes the resolved amount so the row is
-  # immutable, self-contained history whatever later happens to the series;
-  # reopening keeps the frozen value as an explicit override rather than
-  # un-freezing, which is the least surprising reading. ---
+  # self-contained history; reopening keeps that value as an explicit override
+  # rather than un-freezing it. ---
 
   def close!(new_status, source:)
     update!(
@@ -160,9 +156,8 @@ class RecurringOccurrence < ApplicationRecord
       recurring_transaction.overdue_grace_days || DEFAULT_GRACE_DAYS
     end
 
-    # What the last settled cycle actually cost, not what it was expected to
-    # cost. `expected_amount` on a closed row is the frozen ESTIMATE, so
-    # reading it here would re-propose the original guess forever and the
+    # What the last settled cycle actually cost. `expected_amount` on a closed
+    # row is the frozen estimate, so reading it would re-propose the guess and
     # strategy could never converge on a variable bill's real amount.
     def last_paid_total
       previous = recurring_transaction.recurring_occurrences

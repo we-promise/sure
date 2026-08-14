@@ -1,13 +1,10 @@
 class RecurringTransaction
-  # Materializes Schedule output into recurring_occurrences rows. Generation
-  # is an idempotent upsert keyed on (series, original_due_on): re-running it
-  # can only add missing rows, never duplicate or touch existing ones -- the
-  # property that keeps materialization safe (the failure mode it exists to
-  # avoid is eagerly-materialized rows drifting from their schedule).
+  # Materializes Schedule output into recurring_occurrences rows. An idempotent
+  # upsert keyed on (series, original_due_on), so re-running only adds missing
+  # rows and never duplicates or touches existing ones.
   #
-  # Mutation rules: only scheduled, allocation-free, not-yet-due rows are ever
-  # deleted (regenerate_future!, pausing). Anything closed or carrying a
-  # payment is immutable history whatever happens to the series definition.
+  # Only scheduled, allocation-free, not-yet-due rows are ever deleted. Anything
+  # closed or carrying a payment is immutable history.
   class OccurrenceGenerator
     HORIZON_DAYS = 90
 
@@ -17,20 +14,18 @@ class RecurringTransaction
       @series = series
     end
 
-    # Generates from the start of the current cycle (so a recently-due unpaid
-    # occurrence exists, not just future ones) through the horizon -- extended
-    # far enough to always include the NEXT occurrence, so slow cadences
-    # (annual bills) have their upcoming obligation materialized too.
+    # From the start of the current cycle, so a recently-due unpaid occurrence
+    # exists and not just future ones, through a horizon always extended far
+    # enough to include the next occurrence even on annual cadences.
     def generate!(through: nil)
       return 0 unless series.active?
 
       schedule = series.schedule
       from = schedule.cycle_for(Date.current)&.begin || Date.current
 
-      # A declared bill's anchor IS its first obligation: nothing is owed
-      # before it, so the current-cycle lookback must not fabricate a
-      # previous-cycle debt. Auto-detected series keep the cycle start --
-      # their history predates the row.
+      # A declared bill's anchor is its first obligation, so the cycle lookback
+      # must not fabricate a previous-cycle debt. Auto-detected series keep the
+      # cycle start, since their history predates the row.
       from = [ from, series.anchor_date ].compact.max if series.manual?
 
       through ||= default_horizon(schedule)
@@ -38,9 +33,8 @@ class RecurringTransaction
       upsert_window(from, through)
     end
 
-    # After a schedule edit: drop the re-generatable future (scheduled, no
-    # allocations, not yet due) and regenerate it under the new rules. Rows
-    # with payments or closed state are kept exactly as they were.
+    # After a schedule edit: drop the re-generatable future and rebuild it under
+    # the new rules. Rows with payments or closed state are kept as they were.
     def regenerate_future!(through: nil)
       series.recurring_occurrences
             .open_status

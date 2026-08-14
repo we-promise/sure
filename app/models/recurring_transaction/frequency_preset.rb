@@ -28,11 +28,9 @@ class RecurringTransaction
         end
       end
 
-      # Replaces the series' rules with the preset's shape. Assigns only --
-      # the caller's save persists everything atomically, and invalid input
-      # surfaces as normal validation errors on the built rules. A submitted
-      # cadence identical to the current one is a no-op, so unrelated edits
-      # never churn rule rows (or, later, regenerate occurrences).
+      # Replaces the series' rules with the preset's shape. Assigns only, so the
+      # caller's save persists atomically and invalid input surfaces as normal
+      # validation errors. An unchanged cadence is a no-op.
       #
       # Returns true only when it actually rewrote the cadence, so a caller can
       # tell a deliberate schedule change from an unrelated edit.
@@ -168,9 +166,8 @@ class RecurringTransaction
           recurring.recurrence_rules.build(position: position, **attrs)
         end
 
-        # expected_day_of_month stays NOT NULL and authoritative for the
-        # monthly family; for other cadences it is populated (from the day
-        # spec or the anchor) but no longer drives scheduling.
+        # expected_day_of_month stays NOT NULL and authoritative for monthly
+        # cadences; other cadences populate it but do not schedule from it.
         def authoritative_day(preset, day, reference)
           case preset
           when "monthly", "semimonthly", "quarterly", "semiannual", "annual"

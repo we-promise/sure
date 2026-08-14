@@ -1,14 +1,12 @@
 class RecurringTransaction
-  # Rule-based first guess at what a detected recurring charge IS: a
-  # subscription (a service auto-charging a card on file) or a bill (an
-  # obligation you push money at). Deliberately transparent -- named keyword
-  # lists and three documented heuristics, no opaque scoring -- and only a
-  # DEFAULT: the Kind field on every bill stays user-editable, and detection
-  # never reclassifies a series after creation.
+  # Rule-based first guess at what a detected charge is: a subscription (a
+  # service auto-charging a card on file) or a bill (an obligation you push
+  # money at). Transparent by design -- keyword lists and three heuristics, no
+  # scoring -- and only a default, since Kind stays user-editable and detection
+  # never reclassifies after creation.
   #
-  # The category comes along for free: a cluster's entries usually already
-  # carry one (from enrichment or the user's own rules), so the series
-  # inherits the most common one.
+  # Category is inherited from the most common one across the cluster's
+  # entries.
   class Classifier
     # Services that are subscriptions essentially always.
     SUBSCRIPTION_KEYWORDS = %w[
@@ -68,8 +66,8 @@ class RecurringTransaction
       Result.new(
         bill_type: kind,
         category_id: modal_category_id,
-        # Subscriptions and BNPL plans ARE auto-charges: on the list, not a
-        # task. User-editable like everything else here.
+        # Subscriptions and BNPL plans are auto-charges: on the list, not a
+        # task.
         autopay: kind != "bill"
       )
     end
@@ -79,8 +77,8 @@ class RecurringTransaction
         return false if matches?(BILL_KEYWORDS) || matches?(ACH_MARKERS)
         return true if matches?(SUBSCRIPTION_KEYWORDS)
 
-        # No name signal: a to-the-cent identical charge, modest in size,
-        # hitting a credit card, is the shape of a card-on-file service.
+        # No name signal: an identical-to-the-cent modest charge on a credit
+        # card is the shape of a card-on-file service.
         flat_amounts? && modest_amount? && credit_card_account?
       end
 

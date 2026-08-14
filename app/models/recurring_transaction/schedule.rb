@@ -1,21 +1,14 @@
 class RecurringTransaction
-  # All date math for a recurring transaction lives here, driven by the
-  # series' recurrence_rules. A series with zero rules gets an implicit
-  # "monthly on expected_day_of_month" rule, so legacy rows behave exactly as
-  # they always have.
+  # All date math for a recurring transaction, driven by its recurrence_rules.
+  # A series with no rules gets an implicit "monthly on expected_day_of_month".
   #
-  # Two families of methods coexist during the migration to occurrence-based
-  # scheduling:
+  # Two families of methods coexist:
   #
   #   * first_occurrence_after / occurrences_between / cycle_for -- the
-  #     correct, rules-based engine. New code uses these.
-  #   * next_occurrence_after / next_occurrence_from_today -- legacy shims
-  #     preserving the exact quirks of the code they replaced (always jumping
-  #     a month past the last occurrence, skipping short months instead of
-  #     clamping "from today"). They keep next_expected_date persistence
-  #     byte-identical for every existing series and fall through to the
-  #     correct engine for any rule shape the legacy math cannot express.
-  #     The occurrence work replaces their callers and deletes them.
+  #     rules-based engine. New code uses these.
+  #   * next_occurrence_after / next_occurrence_from_today -- shims that keep
+  #     next_expected_date persistence byte-identical for existing series, and
+  #     fall through to the engine for rule shapes they cannot express.
   class Schedule
     # How far an entry's day-of-month may drift from the expected day and
     # still count as the same occurrence.
@@ -25,9 +18,8 @@ class RecurringTransaction
     # its range by this much so adjusted dates cannot escape a query window.
     WEEKEND_MARGIN = 3
 
-    # first_occurrence_after gives up after this many days without a hit
-    # (weekend-skip can drop many consecutive occurrences, so the search must
-    # be a loop, but a bounded one).
+    # first_occurrence_after gives up after this many days: weekend-skip can
+    # drop consecutive occurrences, so the search loops, but boundedly.
     SEARCH_CAP_DAYS = 366 * 10
 
     Rule = Data.define(:frequency, :interval, :day_of_month, :weekday, :weekday_ordinal, :month_of_year)
@@ -103,10 +95,9 @@ class RecurringTransaction
     # permanent identity) and the weekend-adjusted date it is actually due.
     Pair = Data.define(:original_due_on, :due_on)
 
-    # Every occurrence whose DUE date falls in the range, as (original, due)
-    # pairs. The original date is what occurrence rows key on, so an
-    # occurrence's identity survives weekend adjustment and later rule edits
-    # that do not move its raw date.
+    # Every occurrence whose due date falls in the range, as (original, due)
+    # pairs. Occurrence rows key on the original, so identity survives weekend
+    # adjustment and rule edits that do not move the raw date.
     def occurrence_pairs_between(start_date, end_date)
       return [] if start_date > end_date
 
@@ -123,9 +114,8 @@ class RecurringTransaction
       occurrence_pairs_between(start_date, end_date).map(&:due_on).uniq.sort
     end
 
-    # First occurrence strictly after `date`, or nil when the series has
-    # ended. This is the CORRECT next-date semantics; contrast the legacy
-    # next_occurrence_after below.
+    # First occurrence strictly after `date`, or nil once the series has ended.
+    # Contrast the shim next_occurrence_after below.
     def first_occurrence_after(date)
       window = longest_period_days
       cursor = date + 1

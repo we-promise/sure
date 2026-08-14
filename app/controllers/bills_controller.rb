@@ -1,13 +1,10 @@
 class BillsController < ApplicationController
-  # What the All-bills status filter offers. Payment state is what people ask
-  # for here; paused and ended are the only lifecycle values worth surfacing
-  # beside it. suggested and inactive stay out of the filter: they are
-  # detection plumbing, not a way anyone describes a bill.
+  # What the All-bills status filter offers: payment state, plus the two
+  # lifecycle values people actually use. suggested and inactive are detection
+  # plumbing and stay out.
   PAYMENT_FILTERS = %w[overdue due partial paid].freeze
-  # The Pause button calls mark_inactive!, so a paused bill is stored as
-  # `inactive` and a filter asking for `paused` matched nothing at all. The
-  # `paused` value rides along for rows arriving by import or by the v1 API,
-  # and `ended` is only ever written by dismissing a suggestion.
+  # Pause stores `inactive`, so the filter has to accept both. `paused` arrives
+  # only by import or the v1 API; `ended` only by dismissing a suggestion.
   LIFECYCLE_STATUSES = { "paused" => %w[inactive paused], "ended" => %w[ended] }.freeze
   LIFECYCLE_FILTERS = LIFECYCLE_STATUSES.keys.freeze
   STATUS_FILTERS = (PAYMENT_FILTERS + LIFECYCLE_FILTERS).freeze
@@ -16,9 +13,7 @@ class BillsController < ApplicationController
   before_action :ensure_recurring_enabled
 
   # The pay-run workspace, built on occurrence rows rather than series
-  # projections: every row is a specific obligation instance with a real due
-  # date and a real payment state, which is what lets overdue and partially
-  # paid render at all.
+  # projections, so every row has a real due date and payment state.
   def index
     if params[:view] == "subscriptions"
       redirect_to bills_path(view: "all", q: { bill_type: "subscription" })
@@ -57,8 +52,8 @@ class BillsController < ApplicationController
     @overdue = @overdue.sort_by(&:due_on)
     @dormant = @dormant.sort_by(&:due_on)
 
-    # Beyond this month, one row per series is plenty -- a weekly bill's next
-    # six occurrences are not six separate things to think about yet.
+    # Beyond this month, one row per series: a weekly bill's next six
+    # occurrences are not six separate things to think about yet.
     @later = later.group_by(&:recurring_transaction_id)
                   .values
                   .map { |group| group.min_by(&:due_on) }
@@ -70,26 +65,18 @@ class BillsController < ApplicationController
     compute_kpis(today, month_end)
 
     @suggested_allocations = suggested_allocations
-    # A row whose match is waiting on a decision needs to say so, and needs to
-    # offer Review rather than Find. Already loaded for the queue above, so
-    # indexing it costs nothing.
+    # A row waiting on a match decision offers Review rather than Find.
+    # Already loaded for the queue above, so indexing is free.
     @suggestions_by_occurrence = @suggested_allocations.index_by(&:recurring_occurrence_id)
     @notices = collect_notices
 
-    # The month reads as one chronological list, with paid rows in place under a
-    # check. Overdue rows are NOT in it: they get their own section, because
-    # inside the run they were marked only by a word in the date column, which
-    # made the most urgent rows the easiest to scroll past.
+    # The month as one chronological list, paid rows in place under a check.
+    # Overdue rows are excluded: they get their own section.
     @month_rows = (@this_month + @paid_this_month).sort_by(&:due_on)
 
-    # What the month is made of, and what happens next.
-    #
-    # Next up is filtered on the DATE, not on derived_state. Those are not the
-    # same question: derived_state only says :overdue once a bill is past its
-    # grace period (3 days by default), so a bill two days late is still :due
-    # and would sail into a strip headed "what happens next" -- where the date
-    # column then had to render it as "2 days late". Anything already past its
-    # due date belongs to the list below, never to what is coming.
+    # Next up filters on the DATE, not derived_state: a bill two days late is
+    # still :due within its grace period, and nothing already past its due date
+    # belongs under "what happens next".
     @month_bill_count = @overdue.size + @month_rows.size
     @next_up = (@this_month + @later)
                  .select { |occurrence| occurrence.effective_due_on >= today }
@@ -97,8 +84,7 @@ class BillsController < ApplicationController
                  .first(NEXT_UP_LIMIT)
   end
 
-  # One bill's complete story: current state, payment history, what is
-  # coming, and what it has cost.
+  # One bill's complete story: current state, history, what is coming, cost.
   def show
     @series = Current.family.recurring_transactions
                      .accessible_by(Current.user)
@@ -109,8 +95,8 @@ class BillsController < ApplicationController
     @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(:allocations)
     @upcoming = @series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3)
 
-    # What each settled cycle actually cost. Reading the frozen
-    # `expected_amount` here would report averages of estimates beside the
+    # What each settled cycle actually cost. The frozen `expected_amount` is an
+    # estimate, so reading it here would report averages of estimates beside the
     # per-year totals below, which are sums of real payments.
     paid_amounts = RecurringAllocation.confirmed
                                       .joins(:recurring_occurrence)

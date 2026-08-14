@@ -22,22 +22,18 @@
     elsif occurrence.partially_paid?
       { key: "add_payment", icon: "plus" }
     elsif !occurrence.scheduled?
-      # Settled, skipped or missed. There is nothing to chase, but unlinking a
-      # payment and reopening a cycle both live behind this door and nowhere
-      # else in the app.
+      # Settled, skipped or missed. Nothing to chase, but unlinking a payment
+      # and reopening a cycle live behind this door and nowhere else.
       { key: "manage_payments", icon: "receipt-text" }
     elsif series.autopay?
       nil
     elsif occurrence.derived_state.in?(%i[overdue due])
-      # An externally payable bill that is due wants paying, not reconciling.
-      # The transaction shows up afterwards and matches itself.
+      # A due bill with a payment portal wants paying, not reconciling.
       RecurringTransaction.valid_payment_url?(series.payment_url) ? nil : { key: "find_payment", icon: "search" }
     end
 
-  # A row that needs nothing stays silent, but the expansion never does: it is
-  # the surface someone opened deliberately, and leaving it without a way
-  # through to the drawer would strand unlinking, reopening and manual payment
-  # behind the bill's page.
+  # A row that needs nothing stays silent; the expansion never does, or
+  # unlinking, reopening and manual payment would be stranded.
   action ||= { key: "find_payment", icon: "search" } if labelled && occurrence.scheduled?
 %>
 

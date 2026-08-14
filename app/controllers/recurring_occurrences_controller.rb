@@ -10,9 +10,8 @@ class RecurringOccurrencesController < ApplicationController
     @pending_suggestion = @occurrence.allocations.suggested.includes(:entry).first
     @ranked_candidates = ranked_candidates
     ranked_ids = @ranked_candidates.map { |entry, _| entry.id }
-    # The amount-nearness list is the fallback now, so it must not repeat what
-    # the ranked list already promoted. Fetching a few extra keeps it fifteen
-    # long after the subtraction rather than silently shorter.
+    # The amount-nearness list is the fallback, so it must not repeat what the
+    # ranked list promoted. The extra fetch keeps it full after subtraction.
     @other_entries = candidate_entries.reject { |entry| ranked_ids.include?(entry.id) }.first(FALLBACK_SHOWN)
 
     render layout: dialog_layout
@@ -78,13 +77,12 @@ class RecurringOccurrencesController < ApplicationController
     RANKED_SHOWN = 6
     FALLBACK_SHOWN = 15
 
-    # The hard filters both lists share: right account, right sign, right
-    # currency, a real transaction, not already allocated to THIS occurrence.
-    # Same-currency only -- a cross-currency attach goes through an explicit
-    # amount.
+    # Hard filters both lists share: right account, sign, currency, a real
+    # transaction, not already allocated to THIS occurrence. Cross-currency
+    # attaches go through an explicit amount instead.
     #
-    # The raw join is load-bearing, not decoration: every `where(transactions:
-    # {...})` below is only legal because this puts that table in the query.
+    # The raw join is load-bearing: every `where(transactions: {...})` below is
+    # only legal because it puts that table in the query.
     def candidate_scope
       series = @occurrence.recurring_transaction
       base = series.account.present? ? series.account.entries : Current.family.entries
@@ -107,21 +105,13 @@ class RecurringOccurrencesController < ApplicationController
       (@occurrence.due_on - 40)..[ @occurrence.due_on + 40, Date.current ].min
     end
 
-    # The matcher's answer, not the picker's.
+    # Ranked by the same engine that decides auto-links, so the picker and the
+    # pipeline agree on what a match is, and the rejection table is honoured.
     #
-    # The picker used to sort by how near an amount was and nothing else, so a
-    # $6.44 Twitch charge ranked exactly as highly as the $6.44 7-Eleven charge
-    # for a 7-Eleven bill. Merchant was never consulted, and neither was the
-    # rejection table, so a transaction the user had already dismissed could
-    # come straight back to the top of the list.
-    #
-    # This asks the engine that decides auto-links, which means the app finally
-    # agrees with itself about what a match is.
-    #
-    # Entries already allocated to some OTHER occurrence are deliberately not
-    # excluded: one charge can legitimately pay two of them, which is the whole
-    # reason Allocator#guard_entry_capacity! exists. Over-allocation is refused
-    # at write time rather than hidden at read time.
+    # Entries already allocated to another occurrence are deliberately kept: one
+    # charge can legitimately pay two bills, which is why
+    # Allocator#guard_entry_capacity! exists. Over-allocation is refused at
+    # write time, never hidden at read time.
     def ranked_candidates
       series = @occurrence.recurring_transaction
       matcher = RecurringTransaction::Matcher.new(Current.family)
@@ -130,10 +120,9 @@ class RecurringOccurrencesController < ApplicationController
         .where(date: candidate_window)
         .where(excluded: false)
         .where.not(id: RecurringMatchRejection.where(recurring_transaction: series).select(:entry_id))
-        # preload, not includes: identity_matches? reads entry.entryable.merchant_id
-        # on every candidate, and entryable is polymorphic so it can never be
-        # joined anyway. Naming it explicitly keeps the raw transactions join
-        # above out of Rails' eager-load machinery.
+        # preload, not includes: entryable is polymorphic so it can never be
+        # joined, and naming it keeps the raw transactions join above out of
+        # Rails' eager-load machinery.
         .preload(:entryable)
         .limit(RANKED_SCAN_LIMIT)
 

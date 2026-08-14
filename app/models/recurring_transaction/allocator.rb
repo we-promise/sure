@@ -1,32 +1,25 @@
 class RecurringTransaction
-  # Writes allocations against an occurrence and keeps its close state honest.
-  # All writes take the occurrence row lock, so a user clicking and a
-  # background job reconciling cannot race each other into a double payment.
+  # The only supported write path for allocations: it holds the locks, freezes
+  # the amount, and refreshes close state. A direct RecurringAllocation.create!
+  # bypasses all three.
   #
-  # Writes that touch an entry additionally take an advisory lock on the ENTRY.
-  # The row lock alone cannot protect the "an entry is never allocated beyond
-  # its own amount" invariant: two allocations of one transaction against two
-  # DIFFERENT occurrences take two different row locks, so they never meet, and
-  # both read the same stale capacity before either inserts. Locking the entry
-  # serializes every write against that transaction wherever it lands.
+  # Every write takes the occurrence row lock. Writes touching an entry also
+  # take an advisory lock on the ENTRY, because two allocations of one
+  # transaction against two different occurrences take different row locks,
+  # never meet, and would both read the same stale capacity.
   #
-  # Closing has two deliberately different modes (they answer different
-  # questions and conflating them marks half-paid rent as settled):
+  # Closing has two modes, and conflating them marks half-paid rent as settled:
   #
-  #   * Actual-replaces-estimate: a SINGLE payment landing within the series'
-  #     tolerance of the expected amount IS the bill -- the expectation was an
-  #     estimate and the charge is the actual (Comcast expected ~$119.99,
-  #     charged $121.74). Close paid.
-  #   * Accumulation: multiple payments (or a single one below the band) close
-  #     only when they sum to the full expected amount, give or take a cent.
-  #     $1,850 allocated against $2,000 rent stays partially paid, always.
+  #   * Actual-replaces-estimate: a SINGLE payment within the series' tolerance
+  #     of the expected amount is the bill. Close paid.
+  #   * Accumulation: multiple payments, or one below the band, close only when
+  #     they sum to the full expected amount.
   class Allocator
     class OverAllocationError < StandardError; end
     class MissingRateError < StandardError; end
 
     # Postgres keeps single-key and two-key advisory locks in separate spaces,
-    # so this namespace can never collide with the single-key family locks the
-    # recurring jobs take.
+    # so this cannot collide with the single-key family locks the jobs take.
     ENTRY_LOCK_NAMESPACE = 8311
 
     attr_reader :occurrence
@@ -73,9 +66,8 @@ class RecurringTransaction
       end
     end
 
-    # The Matcher's write path: a scored allocation, confirmed (exact tier)
-    # or suggested (high tier, awaiting review). Suggested allocations never
-    # move close state -- they are questions, not payments.
+    # The Matcher's write path: confirmed at the exact tier, suggested at the
+    # high tier. Suggestions never move close state.
     def allocate_matched!(entry:, state:, confidence:, signals:)
       occurrence.with_lock do
         with_entry_lock(entry) do
@@ -115,8 +107,7 @@ class RecurringTransaction
       end
     end
 
-    # Rejecting one records the (series, entry) pair so the matcher never
-    # proposes it again -- corrections are permanently sticky.
+    # Records the (series, entry) pair so the matcher never proposes it again.
     def reject_suggestion!(allocation)
       occurrence.with_lock do
         with_entry_lock(allocation.entry) do
@@ -132,8 +123,8 @@ class RecurringTransaction
       end
     end
 
-    # Settles the remainder without a transaction -- the keystone manual-first
-    # action. Closes as a USER decision, so it never auto-reopens.
+    # Settles the remainder with no transaction, as a user decision, so it
+    # never auto-reopens.
     def mark_paid!
       occurrence.with_lock do
         freeze_expected_amount!
@@ -167,10 +158,9 @@ class RecurringTransaction
     end
 
     private
-      # Serializes every write touching this entry for the rest of the
-      # surrounding transaction, whichever occurrence it targets. Taken inside
-      # the occurrence row lock, so the acquisition order is always
-      # occurrence then entry and no pair of these can deadlock.
+      # Serializes every write touching this entry, whichever occurrence it
+      # targets. Always taken inside the occurrence row lock, so the ordering is
+      # occurrence then entry and no pair can deadlock.
       def with_entry_lock(entry)
         return yield if entry.nil?
 
@@ -187,12 +177,10 @@ class RecurringTransaction
         Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
       end
 
-      # A confirmed payment pins the obligation it was made against. Open
-      # occurrences otherwise inherit their amount from the series, which is
-      # what a price edit should do to an untouched future row -- but once
-      # money has moved, re-resolving would silently re-target payments the
-      # user already made, moving the remaining balance under them.
-      # Suggestions never pin anything: they are questions, not payments.
+      # A confirmed payment pins the obligation it was made against. Open rows
+      # otherwise inherit their amount from the series, which is correct until
+      # money has moved: after that, re-resolving would re-target a payment the
+      # user already made. Suggestions pin nothing.
       def freeze_expected_amount!
         return if occurrence.expected_amount.present?
 

@@ -6,9 +6,8 @@ class RecurringAllocationsController < ApplicationController
     RecurringTransaction::Allocator.new(occurrence).allocate!(
       entry: entry,
       amount: params[:amount].presence,
-      # A manual payment already defaults to today (RecurringAllocation's
-      # default_paid_on callback). Accepting a date lets someone record the
-      # payment they made last Tuesday as last Tuesday.
+      # Defaults to today via RecurringAllocation's callback; accepting a date
+      # lets someone record last Tuesday's payment as last Tuesday.
       paid_on: params[:paid_on].presence
     )
 
@@ -74,9 +73,8 @@ class RecurringAllocationsController < ApplicationController
              .find(id)
     end
 
-    # Scoped to what this user can actually see, like every other lookup here:
-    # sharing is per account, so a family scope alone would let a member pay a
-    # bill with a transaction from an account they were never given.
+    # Scoped to what this user can see: sharing is per account, so a family
+    # scope alone would let a member pay with another account's transaction.
     def find_entry(occurrence, entry_id)
       return nil if entry_id.blank?
 
@@ -92,18 +90,11 @@ class RecurringAllocationsController < ApplicationController
       end
     end
 
-    # Back to the worklist, not back to the occurrence.
-    #
-    # A plain GET of recurring_occurrence_path renders the "settings" layout,
-    # and that layout renders layouts/shared/_htmldoc, which already emits an
-    # empty <turbo-frame id="drawer">. The dialog then emits its own frame with
-    # the same id, so the page carries two elements sharing one id and the next
-    # navigation into that frame lands in the empty one. This is the two-frames
-    # trap RecurringTransactionsController#edit documents.
-    #
-    # The worklist row already shows the new state, which is what "see the
-    # result" means here, so there is nothing to gain by going back to a dialog
-    # floating over an otherwise empty page.
+    # Back to the worklist, not the occurrence: a plain GET of
+    # recurring_occurrence_path renders the settings layout, which already emits
+    # an empty <turbo-frame id="drawer">, so the page would carry two frames
+    # sharing one id. See the two-frames trap in
+    # RecurringTransactionsController#edit.
     def redirect_with(notice: nil, alert: nil)
       flash[:notice] = notice if notice
       flash[:alert] = alert if alert

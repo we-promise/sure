@@ -1,14 +1,12 @@
 class RecurringTransaction
   # Scores candidate entries against a family's open occurrences and writes
-  # allocations through the Allocator: confirmed for the exact tier,
-  # suggested for the high tier, nothing below that. Every signal that went
-  # into a score is stored on the allocation (match_signals) so the user can
-  # always see WHY something matched.
+  # allocations through the Allocator: confirmed at the exact tier, suggested
+  # at the high tier, nothing below. Every signal behind a score is stored on
+  # the allocation so the user can see why something matched.
   #
-  # The engine is deliberately conservative: auto-linking requires both a
-  # high score and an unambiguous winner, user corrections are permanently
-  # sticky (rejected pairs never resurface, learned hints only widen), and a
-  # pending entry is never auto-linked -- its amount can still change.
+  # Conservative by design: auto-linking needs both a high score and an
+  # unambiguous winner, user corrections are permanently sticky, and a pending
+  # entry is never auto-linked.
   class Matcher
     # Tier thresholds over a maximum score of ~1.0.
     EXACT_TIER = BigDecimal("0.85")
@@ -40,16 +38,15 @@ class RecurringTransaction
     end
 
     # Backfill mode: only unambiguous exact-tier matches are written, as
-    # confirmed history -- a wall of historical suggestions would bury the
-    # review queue in noise nobody can adjudicate months later.
+    # confirmed history. Historical suggestions would bury the review queue.
     def run_backfill!
       apply(collect_candidates(include_closed_window: true), suggest: false)
     end
 
     # Re-attaches allocations whose entry was replaced under them: some
-    # providers post a pending transaction as a NEW row and delete the old
-    # one, nullifying our FK. The amount and date survive on the allocation,
-    # so an exact re-match restores the link.
+    # providers post a pending transaction as a new row and delete the old one,
+    # nullifying the FK. Amount and date survive, so an exact re-match restores
+    # the link.
     def repair_orphans!
       orphans = RecurringAllocation
                   .joins(:recurring_occurrence)
@@ -70,15 +67,14 @@ class RecurringTransaction
       end
     end
 
-    # Scores one entry against one occurrence, for a surface that wants to show
-    # a person why something matches. The payment picker asks the same question
-    # the auto-pipeline asks, so it has to get the same answer.
+    # Scores one entry against one occurrence for a surface that shows a person
+    # why something matches, so the picker and the auto-pipeline give the same
+    # answer.
     #
-    # nil means "this entry could never belong to this series", which is the
-    # filter the picker never had: a $6.44 Twitch charge is not a weak match for
-    # a $6.44 7-Eleven bill, it is not a match at all.
+    # nil means the entry could never belong to this series: a $6.44 charge from
+    # another merchant is not a weak match, it is not a match at all.
     #
-    # Read-only. Nothing here writes, so it is safe on a GET.
+    # Read-only, so it is safe on a GET.
     Explanation = Data.define(:confidence, :signals)
 
     def explain(occurrence, entry)
@@ -87,9 +83,8 @@ class RecurringTransaction
       return nil unless within_window?(occurrence, entry)
 
       confidence, signals = score(occurrence, series, entry)
-      # score returns a flat zero when the amount falls outside tolerance, and
-      # that zero is the real gate: anything surviving the hard filters above
-      # already scores at least 0.65, so a tier comparison here would be dead.
+      # A flat zero from `score` means the amount fell outside tolerance, and
+      # that zero is the real gate: anything past the hard filters scores 0.65+.
       return nil unless confidence.positive?
 
       Explanation.new(confidence: confidence, signals: signals)
@@ -101,11 +96,9 @@ class RecurringTransaction
         taken_occurrences = Set.new
         written = 0
 
-        # Highest confidence claims first; each entry and each occurrence is
-        # assigned at most once per run. The id tiebreak is not meaningful in
-        # itself, it just makes two equally confident candidates resolve the
-        # same way every run: sort_by is not stable, so without it the winner
-        # could depend on the order candidates happened to be collected in.
+        # Highest confidence claims first; each entry and occurrence is assigned
+        # at most once per run. The id tiebreak only makes equally confident
+        # candidates resolve deterministically, since sort_by is not stable.
         ordered = candidates.sort_by do |candidate|
           [ -candidate.confidence, candidate.occurrence.id, candidate.entry.id ]
         end
@@ -135,15 +128,14 @@ class RecurringTransaction
         end
       end
 
-      # A pending charge's amount can still change when it posts, so it is
-      # never auto-linked -- suggested at most.
+      # A pending charge's amount can still change when it posts: suggested at
+      # most, never auto-linked.
       def pending_entry?(entry)
         entry.entryable.respond_to?(:pending?) && entry.entryable.pending?
       end
 
-      # Ambiguous when the same entry scores nearly as well against another
-      # occurrence (two Twitch tiers both wanting one charge): suggest, never
-      # silently pick.
+      # Ambiguous when the entry scores nearly as well against another
+      # occurrence: suggest rather than silently pick.
       def unambiguous?(candidate, ordered)
         runner_up = ordered.find do |other|
           other.entry.id == candidate.entry.id && other.occurrence.id != candidate.occurrence.id
@@ -165,17 +157,13 @@ class RecurringTransaction
       rescue ActiveRecord::RecordNotUnique
         # Already allocated (a previous run wrote it); nothing to do.
       rescue Allocator::OverAllocationError
-        # The entry has nothing left to give -- another occurrence already
-        # claimed it. Skipping this candidate is the right answer, and it is
-        # never worth aborting the rest of the run over.
+        # Another occurrence already claimed the entry's capacity. Skip the
+        # candidate rather than aborting the run.
       end
 
-      # The hard filters -- rejection and identity -- depend on the SERIES and
-      # the entry, not on the individual occurrence. Running them per
-      # occurrence re-asks the same question once per cycle a bill has ever
-      # had, so the work grows with history rather than with the number of
-      # bills. Grouping by series asks each question once and only walks
-      # occurrences for the few series an entry could possibly belong to.
+      # The hard filters depend on the series and the entry, not the individual
+      # occurrence, so they are asked once per series rather than once per cycle
+      # the bill has ever had.
       def collect_candidates(include_closed_window: false)
         occurrences = open_occurrences
         return [] if occurrences.empty?
@@ -206,11 +194,9 @@ class RecurringTransaction
         prune_to_nearest_per_series(candidates)
       end
 
-      # Within ONE series, an entry pairs only with its nearest open
-      # occurrence. Without this, the overdue window extension makes months
-      # of backlogged occurrences all reach "today", every payment gains
-      # same-series runner-ups inside the ambiguity margin, and a perfect
-      # July-25th-for-the-July-25th-bill match gets demoted to a suggestion.
+      # Within one series an entry pairs only with its nearest open occurrence.
+      # The cross-series ambiguity guard still applies; this stops a backlog of
+      # overdue cycles from making every payment look ambiguous against itself.
       # The ambiguity guard exists for CROSS-series twins; same-series
       # assignment is date arithmetic, not a judgment call.
       def prune_to_nearest_per_series(candidates)
