@@ -6,8 +6,9 @@ de:
     actions:
       value_placeholder: Wert eingeben
       split:
-        mode_fixed: Fester Betrag
-        mode_percentage: Prozent
+        type_fixed: Fester Betrag
+        type_percentage: Prozent
+        type_label: Split-Typ
         add_split: Split hinzufügen
         name_placeholder: Name des Splits
         share_label: Betrag oder Prozentsatz des Splits
@@ -15,10 +16,11 @@ de:
         merchant_label: Händler des Splits
         no_merchant: Kein Händler
         tags_hint: "Strg/Cmd gedrückt halten, um mehrere Tags auszuwählen"
-        fixed_mode_hint: "Feste Beträge funktionieren nur zuverlässig, wenn du zusätzlich eine Bedingung mit einem exakten Transaktionsbetrag hinzufügst (z. B. Betrag = 42,00), da jede passende Transaktion denselben Gesamtbetrag haben muss, damit die Anteile aufgehen."
+        hint: "Feste Beträge werden zuerst als exakte Summen abgezogen. Prozent-Splits verteilen anschließend den verbleibenden Betrag. Wenn hier ausschließlich feste Beträge verwendet werden, füge zusätzlich eine Bedingung mit einem exakten Transaktionsbetrag hinzu (z. B. Betrag = 42,00), da jede passende Transaktion denselben Gesamtbetrag haben muss, damit die festen Beträge aufgehen."
+        fixed_summary_label: fest
         summary:
-          one: "%{count} Split (%{mode})"
-          other: "%{count} Splits (%{mode})"
+          one: "%{count} Split"
+          other: "%{count} Splits"
     apply_all:
       button: Alle anwenden
       confirm_title: Alle Regeln anwenden

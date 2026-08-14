@@ -1,5 +1,8 @@
 class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
-  MODES = [ "fixed", "percentage" ].freeze
+  # Per-split type, not a single mode for the whole action: a fixed split takes a literal
+  # amount off the top, a percentage split takes a share of whatever's left after all fixed
+  # splits are subtracted. Fixed splits are always resolved first, regardless of row order.
+  TYPES = [ "fixed", "percentage" ].freeze
   MIN_SPLITS = 2
   MAX_SPLITS = 20
   PERCENTAGE_TOTAL_TOLERANCE = 0.01
@@ -31,9 +34,7 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     config = self.class.parse_config(value)
     return nil unless config
 
-    mode_key = config["mode"] == "percentage" ? "mode_percentage" : "mode_fixed"
-    mode_label = I18n.t("rules.actions.split.#{mode_key}")
-    I18n.t("rules.actions.split.summary", count: config["splits"].size, mode: mode_label)
+    I18n.t("rules.actions.split.summary", count: config["splits"].size)
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
@@ -83,10 +84,7 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       return [ [ :invalid_config, {} ] ] unless config
 
       errors = []
-      mode = config["mode"]
       splits = config["splits"]
-
-      errors << [ :invalid_mode, {} ] unless MODES.include?(mode)
 
       unless splits.is_a?(Array) && splits.size.between?(MIN_SPLITS, MAX_SPLITS)
         errors << [ :invalid_split_count, { min: MIN_SPLITS, max: MAX_SPLITS } ]
@@ -97,9 +95,12 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       family_merchant_ids = family.merchants.pluck(:id).to_set
       family_tag_ids = family.tags.pluck(:id).to_set
 
-      total_share = 0
+      total_percentage = 0
+      has_percentage = false
+
       splits.each_with_index do |split, index|
         name = split["name"]
+        type = split["type"]
         share = parse_decimal(split["share"])
         category_id = split["category_id"].presence
         merchant_id = split["merchant_id"].presence
@@ -108,11 +109,13 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
 
         errors << [ :split_name_required, { index: position } ] if name.blank?
         errors << [ :split_name_too_long, { index: position } ] if name.to_s.length > 255
+        errors << [ :split_type_invalid, { index: position } ] unless TYPES.include?(type)
 
         if share.nil? || share <= 0
           errors << [ :split_share_invalid, { index: position } ]
-        else
-          total_share += share
+        elsif type == "percentage"
+          has_percentage = true
+          total_percentage += share
         end
 
         if category_id && !family_category_ids.include?(category_id)
@@ -128,8 +131,8 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
         end
       end
 
-      if mode == "percentage" && errors.empty? && (total_share - 100).abs > PERCENTAGE_TOTAL_TOLERANCE
-        errors << [ :percentages_must_total_100, { total: total_share } ]
+      if has_percentage && errors.empty? && (total_percentage - 100).abs > PERCENTAGE_TOTAL_TOLERANCE
+        errors << [ :percentages_must_total_100, { total: total_percentage } ]
       end
 
       errors
@@ -139,18 +142,25 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     def parse_config(value)
       config = parse_config_strict(value)
       return nil unless config
-      return nil unless MODES.include?(config["mode"])
       return nil unless config["splits"].is_a?(Array) && config["splits"].size >= MIN_SPLITS
 
       config
     end
 
+    # True if the config has at least one percentage-type split. Pure-fixed configs need an
+    # exact-amount rule condition (see Rule::Action#split_config_valid); configs with a
+    # percentage split don't, since the percentage share(s) always absorb whatever's left after
+    # fixed splits, adapting automatically to any matching transaction's amount.
+    def has_percentage_split?(config)
+      config["splits"].any? { |split| split["type"] == "percentage" }
+    end
+
     # Stage 2: translates the rule's static config into concrete Entry#split! input for one
     # specific matching transaction. Returns nil if the config can't be applied to this amount
-    # (e.g. fixed amounts don't sum to this transaction's total) rather than raising, so the
-    # caller can skip just this transaction and keep processing the rest of the scope.
+    # (e.g. fixed splits don't leave a positive remainder for the percentage splits to divide)
+    # rather than raising, so the caller can skip just this transaction and keep processing the
+    # rest of the scope.
     def build_splits(config, entry_amount, family_ids)
-      mode = config["mode"]
       raw_splits = config["splits"]
       sign = entry_amount.negative? ? -1 : 1
       total_magnitude = entry_amount.abs
@@ -162,33 +172,57 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       family_merchant_ids = family_ids[:merchants]
       family_tag_ids = family_ids[:tags]
 
-      case mode
-      when "fixed"
-        amounts = raw_splits.map { |s| parse_decimal(s["share"]) }
-        return nil if amounts.any?(&:nil?)
-        return nil unless amounts.sum == total_magnitude
-      when "percentage"
-        percentages = raw_splits.map { |s| parse_decimal(s["share"]) }
+      fixed_indices = []
+      percentage_indices = []
+      raw_splits.each_with_index do |split, index|
+        case split["type"]
+        when "fixed" then fixed_indices << index
+        when "percentage" then percentage_indices << index
+        else return nil
+        end
+      end
+
+      amounts = Array.new(raw_splits.size)
+
+      fixed_total = 0
+      fixed_indices.each do |index|
+        amount = parse_decimal(raw_splits[index]["share"])
+        return nil if amount.nil?
+        amounts[index] = amount
+        fixed_total += amount
+      end
+
+      remaining = total_magnitude - fixed_total
+
+      if percentage_indices.empty?
+        # Pure fixed splits only make sense if this transaction's total is exactly the fixed
+        # splits' sum — there's nothing dynamic to absorb a mismatch (enforced at save time by
+        # requiring a matching exact-amount rule condition, see Rule::Action).
+        return nil unless fixed_total == total_magnitude
+      else
+        # Fixed splits ate more than (or all of) the transaction total, leaving nothing for the
+        # percentage splits to divide.
+        return nil if remaining <= 0
+
+        percentages = percentage_indices.map { |index| parse_decimal(raw_splits[index]["share"]) }
         return nil if percentages.any?(&:nil?)
 
-        amounts = []
-        remaining = total_magnitude
-        percentages.each_with_index do |pct, index|
-          if index == percentages.size - 1
-            amounts << remaining
+        running_remaining = remaining
+        percentage_indices.each_with_index do |split_index, position|
+          if position == percentage_indices.size - 1
+            amounts[split_index] = running_remaining
           else
-            share_amount = (total_magnitude * pct / 100).round(2)
-            amounts << share_amount
-            remaining -= share_amount
+            share_amount = (remaining * percentages[position] / 100).round(2)
+            amounts[split_index] = share_amount
+            running_remaining -= share_amount
           end
         end
 
-        # The last split absorbs whatever's left after rounding the others to cents, which can
-        # go non-positive if per-row rounding drift stacks up (many splits, large amount, tiny
-        # trailing percentage). Bail rather than create a zero/negative-amount child entry.
-        return nil if amounts.any? { |amount| amount <= 0 }
-      else
-        return nil
+        # The last percentage split absorbs whatever's left after rounding the others to cents,
+        # which can go non-positive if per-row rounding drift stacks up (many splits, large
+        # amount, tiny trailing percentage). Bail rather than create a zero/negative-amount
+        # child entry.
+        return nil if percentage_indices.any? { |index| amounts[index] <= 0 }
       end
 
       raw_splits.each_with_index.map do |split, index|
