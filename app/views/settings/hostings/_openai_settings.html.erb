@@ -19,7 +19,7 @@
   <%= form.password_field :openai_access_token,
                           label: t(".access_token_label"),
                           placeholder: t(".access_token_placeholder"),
-                          value: (Setting.openai_access_token.present? ? "********" : nil),
+                          value: (ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present? ? "********" : nil),
                           autocomplete: "off",
                           autocapitalize: "none",
                           spellcheck: "false",
@@ -30,7 +30,7 @@
   <%= form.text_field :openai_uri_base,
                       label: t(".uri_base_label"),
                       placeholder: t(".uri_base_placeholder"),
-                      value: @openai_uri_base_input || Setting.openai_uri_base,
+                      value: ENV["OPENAI_URI_BASE"].presence || @openai_uri_base_input || Setting.openai_uri_base,
                       autocomplete: "off",
                       autocapitalize: "none",
                       spellcheck: "false",
@@ -41,7 +41,7 @@
   <%= form.text_field :openai_model,
                       label: t(".model_label"),
                       placeholder: t(".model_placeholder"),
-                      value: @openai_model_input || Setting.openai_model,
+                      value: ENV["OPENAI_MODEL"].presence || @openai_model_input || Setting.openai_model,
                       autocomplete: "off",
                       autocapitalize: "none",
                       spellcheck: "false",
@@ -57,7 +57,7 @@
                       [t(".json_mode_none"), "none"],
                       [t(".json_mode_json_object"), "json_object"]
                     ],
-                    Setting.openai_json_mode
+                    Provider::Openai.effective_json_mode
                   ),
                   { label: t(".json_mode_label") },
                   { disabled: ENV["LLM_JSON_MODE"].present?,
@@ -71,7 +71,7 @@
     <%= form.number_field :llm_context_window,
                           label: t(".context_window_label"),
                           placeholder: "2048",
-                          value: Setting.llm_context_window,
+                          value: Provider::Openai.effective_context_window,
                           min: 256,
                           disabled: ENV["LLM_CONTEXT_WINDOW"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
@@ -80,7 +80,7 @@
     <%= form.number_field :llm_max_response_tokens,
                           label: t(".max_response_tokens_label"),
                           placeholder: "512",
-                          value: Setting.llm_max_response_tokens,
+                          value: Provider::Openai.effective_max_response_tokens,
                           min: 64,
                           disabled: ENV["LLM_MAX_RESPONSE_TOKENS"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
@@ -89,7 +89,7 @@
     <%= form.number_field :llm_max_items_per_call,
                           label: t(".max_items_per_call_label"),
                           placeholder: "25",
-                          value: Setting.llm_max_items_per_call,
+                          value: Provider::Openai.effective_max_items_per_call,
                           min: 1,
                           disabled: ENV["LLM_MAX_ITEMS_PER_CALL"].present?,
                           data: { "auto-submit-form-target": "auto" } %>

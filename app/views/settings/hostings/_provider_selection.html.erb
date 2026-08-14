@@ -12,15 +12,14 @@
                            "auto-submit-form-trigger-event-value": "change"
                          } do |form| %>
       <%= form.select :exchange_rate_provider,
-                      [
+                      options_for_select([
                         [t(".providers.twelve_data"), "twelve_data"],
                         [t(".providers.yahoo_finance"), "yahoo_finance"],
                         [t(".providers.moex_public"), "moex_public"],
                         [t(".providers.frankfurter"), "frankfurter"]
-                      ],
+                      ], ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider),
                       { label: t(".exchange_rate_provider_label") },
                       {
-                        value: ENV.fetch("EXCHANGE_RATE_PROVIDER", Setting.exchange_rate_provider),
                         disabled: ENV["EXCHANGE_RATE_PROVIDER"].present?,
                         data: { "auto-submit-form-target": "auto" }
                       } %>

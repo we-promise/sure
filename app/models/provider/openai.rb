@@ -11,7 +11,43 @@ class Provider::Openai < Provider
   # Returns the effective model that would be used by the provider.
   # Priority: explicit ENV > Setting > DEFAULT_MODEL.
   def self.effective_model
-    ENV.fetch("OPENAI_MODEL") { Setting.openai_model }.presence || DEFAULT_MODEL
+    ENV["OPENAI_MODEL"].presence || Setting.openai_model.presence || DEFAULT_MODEL
+  end
+
+  def self.effective_json_mode
+    env_mode = ENV["LLM_JSON_MODE"]
+    return env_mode if valid_json_mode?(env_mode)
+
+    setting_mode = Setting.openai_json_mode
+    return setting_mode if valid_json_mode?(setting_mode)
+
+    AutoCategorizer::JSON_MODE_AUTO
+  end
+
+  def self.effective_context_window
+    positive_budget(ENV["LLM_CONTEXT_WINDOW"], Setting.llm_context_window, 2048)
+  end
+
+  def self.effective_max_response_tokens
+    positive_budget(ENV["LLM_MAX_RESPONSE_TOKENS"], Setting.llm_max_response_tokens, 512)
+  end
+
+  def self.effective_max_items_per_call
+    positive_budget(ENV["LLM_MAX_ITEMS_PER_CALL"], Setting.llm_max_items_per_call, 25)
+  end
+
+  def self.valid_json_mode?(mode)
+    mode.present? && AutoCategorizer::VALID_JSON_MODES.include?(mode)
+  end
+
+  # Returns the first positive integer among env, setting, default. Treats
+  # zero or negative values as "unset" and falls through — a 0-token budget
+  # is never what the user meant.
+  def self.positive_budget(env_value, setting_value, default)
+    from_env = env_value.to_s.strip.to_i
+    return from_env if from_env.positive?
+    return setting_value.to_i if setting_value.to_i.positive?
+    default
   end
 
   def self.configured?
@@ -73,15 +109,15 @@ class Provider::Openai < Provider
   # out of the box. Users on larger-context cloud models can raise via ENV or
   # via the Self-Hosting settings page.
   def context_window
-    positive_budget(ENV["LLM_CONTEXT_WINDOW"], Setting.llm_context_window, 2048)
+    self.class.effective_context_window
   end
 
   def max_response_tokens
-    positive_budget(ENV["LLM_MAX_RESPONSE_TOKENS"], Setting.llm_max_response_tokens, 512)
+    self.class.effective_max_response_tokens
   end
 
   def system_prompt_reserve
-    positive_budget(ENV["LLM_SYSTEM_PROMPT_RESERVE"], nil, 256)
+    self.class.positive_budget(ENV["LLM_SYSTEM_PROMPT_RESERVE"], nil, 256)
   end
 
   def max_history_tokens
@@ -100,7 +136,7 @@ class Provider::Openai < Provider
   end
 
   def max_items_per_call
-    positive_budget(ENV["LLM_MAX_ITEMS_PER_CALL"], Setting.llm_max_items_per_call, 25)
+    self.class.effective_max_items_per_call
   end
 
   def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
@@ -305,16 +341,6 @@ class Provider::Openai < Provider
 
   private
     attr_reader :client
-
-    # Returns the first positive integer among env, setting, default. Treats
-    # zero or negative values as "unset" and falls through — a 0-token budget
-    # is never what the user meant.
-    def positive_budget(env_value, setting_value, default)
-      from_env = env_value.to_s.strip.to_i
-      return from_env if from_env.positive?
-      return setting_value.to_i if setting_value.to_i.positive?
-      default
-    end
 
     # Routes one-shot (non-chat) inputs through the BatchSlicer so large
     # caller batches are split to fit the model's context window. `fixed` is
