@@ -542,6 +542,56 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("recurring_transactions.new.income_title"), response.body
   end
 
+  # The expansion is opened from one row, so it has to describe that row's
+  # cycle. It used to ask the series for its current occurrence, which is the
+  # earliest still-open one, so expanding a settled row reported the NEXT cycle
+  # as unpaid directly underneath a row marked Paid.
+  test "expanding a row describes that row's cycle, not the series' next one" do
+    bill = create_bill(name: "Streaming Plus", amount: 15.99)
+    settled = bill.recurring_occurrences.order(:due_on).first
+    entry = accounts(:depository).entries.create!(
+      date: settled.due_on, amount: 15.99, currency: "USD",
+      name: "STREAMING PLUS", entryable: Transaction.new
+    )
+    RecurringTransaction::Allocator.new(settled).allocate!(amount: "15.99", entry: entry)
+    assert settled.reload.paid?
+
+    later = bill.recurring_occurrences.open_status.order(:due_on).first
+    assert_not_nil later, "the series has a later, unpaid cycle to be confused with"
+    assert_not_equal settled.id, later.id
+
+    get bill_url(bill, display: "pane", frame: "pane_x", occurrence: settled.id)
+
+    assert_response :success
+    assert_match I18n.t("bills.summary.paid_headline", amount: "$15.99"), response.body
+    assert_no_match I18n.t("bills.summary.remaining", amount: "$15.99"), response.body,
+      "the settled row must not report itself as still owing"
+  end
+
+  # Without an occurrence the page has no cycle in mind, so the series answers.
+  test "the bill page with no occurrence falls back to the series" do
+    bill = create_bill(name: "Streaming Plus", amount: 15.99)
+
+    get bill_url(bill, display: "pane", frame: "pane_x")
+
+    assert_response :success
+    assert_match I18n.t("bills.summary.remaining", amount: "$15.99"), response.body
+  end
+
+  # The id is resolved through the series, so one from another bill cannot be
+  # borrowed to render someone else's cycle.
+  test "an occurrence id from another bill is ignored" do
+    mine = create_bill(name: "Streaming Plus", amount: 15.99)
+    other = create_bill(name: "Gym", amount: 40)
+    stranger = other.recurring_occurrences.order(:due_on).first
+
+    get bill_url(mine, display: "pane", frame: "pane_x", occurrence: stranger.id)
+
+    assert_response :success
+    assert_match I18n.t("bills.summary.remaining", amount: "$15.99"), response.body
+    assert_no_match(/\$40\.00/, response.body)
+  end
+
   # Detection has been creating recurring rows from bank data since long before
   # Bills existed, so anyone upgrading meets a page of bills nobody confirmed.
   test "a family that has never worked with Bills is told where its bills came from" do

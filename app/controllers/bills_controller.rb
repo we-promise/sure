@@ -92,7 +92,17 @@ class BillsController < ApplicationController
                      .includes(:merchant)
                      .find(params[:id])
 
-    @current_occurrence = @series.current_occurrence
+    # A row expansion names the cycle it was opened from; the bill's own page
+    # has no cycle in mind and asks the series. Looked up through the series, so
+    # an id from another bill resolves to nothing rather than to someone else's
+    # occurrence.
+    @current_occurrence =
+      if params[:occurrence].present?
+        @series.recurring_occurrences.find_by(id: params[:occurrence]) || @series.current_occurrence
+      else
+        @series.current_occurrence
+      end
+
     @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(:allocations)
     @upcoming = @series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3)
 

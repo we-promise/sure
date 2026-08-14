@@ -15,7 +15,10 @@
 <div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 transition-colors group-hover/row:bg-surface-hover <%= "opacity-70" if series.autopay? %>">
   <%# The bulk of the row is the inspect control. Only the trailing verb sits
       outside it, so there are no anchors inside anchors. %>
-  <%= link_to bill_path(series, display: "pane", frame: pane_frame),
+  <%# Names the cycle it was opened from. Without it the expansion falls back to
+      the series' current occurrence, so expanding a settled row described the
+      NEXT one and reported it unpaid. %>
+  <%= link_to bill_path(series, display: "pane", frame: pane_frame, occurrence: occurrence.id),
         data: { turbo_frame: pane_frame, turbo_prefetch: false },
         class: "flex items-center gap-3 lg:gap-4 min-w-0 flex-1 group" do %>
     <%# A date rail, and only a date. It used to print "Overdue" beside a
