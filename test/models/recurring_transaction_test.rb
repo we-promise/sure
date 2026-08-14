@@ -25,6 +25,43 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_includes recurring.errors[:status], "can't be blank"
   end
 
+  # end_after_count is a permitted parameter and the generator materialises a
+  # finite plan whole, so an absurd value is not a silly setting: it is one
+  # request deciding how far the table grows. 100,000 wrote 100,000 rows.
+  test "an absurd installment plan length is refused before any row is written" do
+    plan = build_recurring(bill_type: "installment", end_mode: "after_count",
+                                  end_after_count: 100_000)
+
+    assert_not plan.valid?
+    assert_includes plan.errors.attribute_names, :end_after_count
+  end
+
+  test "a realistic installment plan length is accepted" do
+    plan = build_recurring(bill_type: "installment", end_mode: "after_count",
+                                  end_after_count: 24, anchor_date: Date.current)
+
+    assert plan.valid?, plan.errors.full_messages.to_sentence
+  end
+
+  # category_id is permitted too, and nothing checked whose category it was.
+  test "a category belonging to another family is refused" do
+    other = Family.create!(name: "Other Household", currency: "USD")
+    foreign = Category.create!(family: other, name: "Their Groceries", color: "#ff0000")
+
+    bill = build_recurring(category_id: foreign.id)
+
+    assert_not bill.valid?
+    assert_includes bill.errors.attribute_names, :category_id
+  end
+
+  test "a category belonging to this family is accepted" do
+    own = Category.create!(family: @family, name: "Our Groceries", color: "#00ff00")
+
+    bill = build_recurring(category_id: own.id)
+
+    assert bill.valid?, bill.errors.full_messages.to_sentence
+  end
+
   test "occurrence count cannot be negative" do
     recurring = @family.recurring_transactions.build(
       account: @account,

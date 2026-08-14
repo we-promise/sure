@@ -1,6 +1,11 @@
 class RecurringTransaction < ApplicationRecord
   include Monetizable
 
+  # Upper bound on a declared installment run. The generator materialises a
+  # finite plan whole, so this is the ceiling on how many occurrence rows a
+  # single save can create.
+  MAX_END_AFTER_COUNT = 600
+
   belongs_to :family
   belongs_to :account, optional: true
   belongs_to :destination_account, optional: true, class_name: "Account"
@@ -39,7 +44,14 @@ class RecurringTransaction < ApplicationRecord
   validates :expected_day_of_month, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: 31 }
   validates :status, presence: true, inclusion: { in: statuses.keys }
   validates :occurrence_count, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  # A finite plan materialises its whole run, so this number decides how many
+  # rows one save writes. 600 covers a 50-year monthly plan and a 10-year
+  # weekly one, well past anything a person enters by hand.
+  validates :end_after_count,
+            numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_END_AFTER_COUNT },
+            allow_nil: true
   validate :merchant_or_name_present
+  validate :category_belongs_to_family
   validate :amount_variance_consistency
   validate :transfer_endpoints_consistent
   validate :payment_url_is_http
@@ -115,6 +127,17 @@ class RecurringTransaction < ApplicationRecord
   def merchant_or_name_present
     if merchant_id.blank? && name.blank?
       errors.add(:base, :merchant_or_name_required)
+    end
+  end
+
+  # category_id is a permitted parameter, and nothing else checks whose
+  # category it is. Without this a crafted id attaches another household's
+  # category to this bill, which then renders its name and colour.
+  def category_belongs_to_family
+    return if category_id.blank? || family_id.blank?
+
+    unless Category.where(id: category_id, family_id: family_id).exists?
+      errors.add(:category_id, :invalid)
     end
   end
 
