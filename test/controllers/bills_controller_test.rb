@@ -188,8 +188,12 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/>\s*#{I18n.t("recurring_transactions.pay_action.pay")}\s*</, response.body)
   end
 
+  # The paid-from account still shows; it just waits until there is more than
+  # one account for it to distinguish between. The single-account case is
+  # covered below, where showing it is nineteen copies of one fact.
   test "index shows the account a bill is paid from and its notes" do
     create_bill(name: "Annotated bill", amount: 60, notes: "Account 4821, on the Amex")
+    create_bill(name: "Card bill", amount: 25, account: accounts(:credit_card))
 
     get bills_url
 
@@ -513,6 +517,41 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     refute_includes response.body,
       I18n.t("bills.cancelled_still_scheduled", date: I18n.l(bill.cancelled_on, format: :short))
+  end
+
+  # The row carries one line of context, so anything on it has to earn the
+  # space. These pin the three things that were not earning it.
+  test "the paid-from account is quiet when every bill uses the same one" do
+    create_bill(name: "Netflix", amount: 15.99)
+    create_bill(name: "Spotify", amount: 11.99)
+    assert_equal 1, @family.recurring_transactions.distinct.count(:account_id),
+      "premise: a single account across all bills"
+
+    get bills_url
+    refute_includes response.body, I18n.t("bills.paid_from", account: accounts(:depository).name),
+      "repeating one account name down every row says nothing"
+  end
+
+  test "the paid-from account returns as soon as it tells rows apart" do
+    create_bill(name: "Netflix", amount: 15.99)
+    create_bill(name: "Amex bill", amount: 40, account: accounts(:credit_card))
+    assert_operator @family.recurring_transactions.distinct.count(:account_id), :>, 1
+
+    get bills_url
+    assert_includes response.body, I18n.t("bills.paid_from", account: accounts(:depository).name)
+    assert_includes response.body, I18n.t("bills.paid_from", account: accounts(:credit_card).name)
+  end
+
+  test "autopay reads on the bill's line rather than in the action slot" do
+    create_bill(name: "Netflix", amount: 15.99, autopay: true,
+                payment_url: "https://example.com/pay")
+
+    get bills_url
+    assert_includes response.body, I18n.t("recurring_transactions.pay_action.autopay")
+    refute_includes response.body, "refresh-cw",
+      "autopay is a state; the row's one action position belongs to a verb"
+    assert_includes response.body, "https://example.com/pay",
+      "the portal stays reachable, just not as the row's headline action"
   end
 
   private

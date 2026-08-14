@@ -42,7 +42,7 @@
         <% end %>
       </p>
       <p class="text-xs <%= !date_label && occurrence.derived_state == :overdue ? "text-destructive" : "text-secondary" %>">
-        <%= date_label ? frequency_label(series) : occurrence_due_label(occurrence) %><%= bills_paid_from_label(series) %>
+        <%= date_label ? frequency_label(series) : occurrence_due_label(occurrence) %><%= bills_paid_from_label(series) %><%= bills_autopay_label(series) %>
         <% if (progress = series.installment_progress) %>
           &middot; <%= t("bills.installment_progress", done_plus_one: progress.first + 1, total: progress.last) %>
         <% end %>
@@ -98,7 +98,7 @@
           href: recurring_occurrence_path(occurrence),
           frame: :modal
         ) %>
-    <%= render "recurring_transactions/pay_action", recurring_transaction: series %>
+    <%= render "recurring_transactions/pay_action", recurring_transaction: series, show_state: false %>
   </div>
 </div>
 

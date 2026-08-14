@@ -1,4 +1,4 @@
-<%# locals: (recurring_transaction:, show_add: true) %>
+<%# locals: (recurring_transaction:, show_add: true, show_state: true) %>
 
 <%#
   The row's primary action, which depends on state rather than being the same
@@ -17,8 +17,20 @@
 <% if recurring_transaction.autopay? %>
   <%# Autopay is information, not a task, so it never renders as a call to action. The
       portal stays reachable when a link exists -- you still want to check a charge --
-      but demoted to a quiet control rather than something demanding to be clicked. %>
-  <% if has_link %>
+      but demoted to a quiet control rather than something demanding to be clicked.
+
+      show_state: false is passed by surfaces that already say "Autopay" on the
+      bill's own line. Repeating it in the action slot spends the row's one verb
+      position on a state, so there it shrinks to the portal link alone. %>
+  <% if has_link && !show_state %>
+    <%= render DS::Link.new(
+          icon: "external-link",
+          variant: "icon",
+          href: recurring_transaction.payment_url,
+          target: "_blank",
+          aria: { label: t(".autopay_aria", name: recurring_transaction.display_name) }
+        ) %>
+  <% elsif has_link %>
     <%= render DS::Link.new(
           text: t(".autopay"),
           href: recurring_transaction.payment_url,
@@ -28,7 +40,7 @@
           target: "_blank",
           aria: { label: t(".autopay_aria", name: recurring_transaction.display_name) }
         ) %>
-  <% else %>
+  <% elsif show_state %>
     <span class="inline-flex items-center gap-1 px-2 py-1 text-sm text-secondary">
       <%= icon "refresh-cw", size: "sm", color: "current" %>
       <%= t(".autopay") %>

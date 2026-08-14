@@ -70,8 +70,15 @@
               <td class="py-3 px-2 text-sm text-secondary"><%= t(".types.#{series.bill_type}") %></td>
               <td class="py-3 px-2 text-sm text-secondary"><%= frequency_label(series) %></td>
               <td class="py-3 px-2 text-sm text-primary text-right privacy-sensitive">
-                <%= format_money(Money.new(series.amount.abs, series.currency)) %>
-                <p class="text-xs text-secondary"><%= t(".monthly_equivalent", amount: format_money(series.monthly_equivalent_amount.abs)) %></p>
+                <% amount = Money.new(series.amount.abs, series.currency) %>
+                <% monthly = series.monthly_equivalent_amount.abs %>
+                <%= format_money(amount) %>
+                <%# A monthly bill's monthly equivalent is its own amount, so the
+                    second line said "$5.99" under "$5.99". It only carries
+                    information for the other cadences. %>
+                <% if monthly != amount %>
+                  <p class="text-xs text-secondary"><%= t(".monthly_equivalent", amount: format_money(monthly)) %></p>
+                <% end %>
               </td>
               <td class="py-3 px-2 text-sm text-secondary"><%= l(series.next_expected_date, format: :short) %></td>
               <td class="py-3 px-2 text-sm">

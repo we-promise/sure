@@ -17,12 +17,33 @@ module BillsHelper
     end
   end
 
-  # Which account the charge lands on. Sure already knows this and has never shown it,
-  # and it is exactly what you check when deciding whether a bill is covered.
+  # Which account the charge lands on. Worth showing only when it tells the rows
+  # apart: on a single-account family it repeated the same name down every line,
+  # which is nineteen copies of a fact carrying no information. The bill's
+  # expansion names the account regardless, so nothing is lost when it is quiet
+  # here.
   def bills_paid_from_label(bill)
     return "" if bill.account.blank?
+    return "" unless bills_span_multiple_accounts?
 
     " · #{t('bills.paid_from', account: bill.account.name)}"
+  end
+
+  # Autopay is a state, not a task, so it reads on the bill's own line rather
+  # than in the slot where the row keeps its verb.
+  def bills_autopay_label(bill)
+    return "" unless bill.autopay?
+
+    " · #{t('recurring_transactions.pay_action.autopay')}"
+  end
+
+  # Memoized so this costs one query per request rather than one per row.
+  def bills_span_multiple_accounts?
+    return @bills_span_multiple_accounts if defined?(@bills_span_multiple_accounts)
+
+    @bills_span_multiple_accounts =
+      Current.family.recurring_transactions.where.not(account_id: nil)
+             .distinct.count(:account_id) > 1
   end
 
   # The occurrence-level twin of bills_due_label: relative-first, snooze-aware.
