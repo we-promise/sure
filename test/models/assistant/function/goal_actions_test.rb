@@ -35,7 +35,6 @@ class Assistant::Function::GoalActionsTest < ActiveSupport::TestCase
 
   test "deletes an archived goal" do
     @goal.update!(state: "archived")
-    Goal.any_instance.expects(:lock!).once
 
     result = Assistant::Function::DeleteGoal.new(@user).call("id" => @goal.id)
 

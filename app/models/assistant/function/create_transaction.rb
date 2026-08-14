@@ -83,36 +83,44 @@ class Assistant::Function::CreateTransaction < Assistant::Function
 
     fingerprint = fingerprint_for(account, attrs, params)
 
-    existing_entry = account.entries.find_by(source: "mcp", external_id: attrs[:external_id])
-    return existing_response(existing_entry, fingerprint) if existing_entry
+    # Serialize lookup + create across the family's accounts. Replace with a
+    # per-key advisory lock only if family-level MCP write contention is measured.
+    family.with_lock do
+      existing_entry = family.entries.find_by(source: "mcp", external_id: attrs[:external_id])
 
-    entry = account.entries.new(
-      name: attrs[:name],
-      amount: attrs[:amount],
-      date: attrs[:date],
-      currency: account.currency,
-      notes: params["notes"],
-      external_id: attrs[:external_id],
-      source: "mcp",
-      entryable: Transaction.new(
-        category: attrs[:category],
-        merchant: attrs[:merchant],
-        tags: attrs[:tags],
-        extra: { "mcp" => { "idempotency_fingerprint" => fingerprint } }
-      )
-    )
+      if existing_entry
+        existing_response(existing_entry, fingerprint)
+      else
+        entry = account.entries.new(
+          name: attrs[:name],
+          amount: attrs[:amount],
+          date: attrs[:date],
+          currency: account.currency,
+          notes: params["notes"],
+          external_id: attrs[:external_id],
+          source: "mcp",
+          entryable: Transaction.new(
+            category: attrs[:category],
+            merchant: attrs[:merchant],
+            tags: attrs[:tags],
+            extra: { "mcp" => { "idempotency_fingerprint" => fingerprint } }
+          )
+        )
 
-    if entry.save
-      entry.sync_account_later
-      entry.lock_saved_attributes!
-      entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+        if entry.save
+          entry.sync_account_later
+          entry.lock_saved_attributes!
+          entry.mark_user_modified!
+          entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
 
-      success_response(entry, created: true)
-    else
-      error("validation_failed", entry.errors.full_messages.join("; "))
+          success_response(entry, created: true)
+        else
+          error("validation_failed", entry.errors.full_messages.join("; "))
+        end
+      end
     end
   rescue ActiveRecord::RecordNotUnique
-    existing_entry = account&.entries&.find_by(source: "mcp", external_id: attrs[:external_id])
+    existing_entry = family&.entries&.find_by(source: "mcp", external_id: attrs[:external_id])
     existing_entry ? existing_response(existing_entry, fingerprint) : raise
   end
 
@@ -220,13 +228,13 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       {
         success: true,
         created: created,
-        transaction: serialize(entry.transaction),
+        transaction: serialize(entry),
         message: created ? "Transaction '#{entry.name}' created." : "Transaction '#{entry.name}' already exists."
       }
     end
 
-    def serialize(transaction)
-      entry = transaction.entry
+    def serialize(entry)
+      transaction = entry.transaction
       {
         id: transaction.id,
         account_id: entry.account_id,

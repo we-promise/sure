@@ -30,13 +30,18 @@ class Assistant::Function::UpdateAccount < Assistant::Function
     changed_fields = params.keys & %w[name balance currency notes exclude_from_reports]
     return error("no_changes", "Provide at least one field to update.") if changed_fields.empty?
 
+    balance_error = nil
+
     Account.transaction do
       account.lock!
 
       if params.key?("balance")
         balance = BigDecimal(params["balance"].to_s)
         result = account.set_current_balance(balance)
-        return error("balance_update_failed", result.error_message) unless result.success?
+        unless result.success?
+          balance_error = result.error
+          raise ActiveRecord::Rollback
+        end
       end
 
       attrs = {}
@@ -47,6 +52,8 @@ class Assistant::Function::UpdateAccount < Assistant::Function
       account.update!(attrs) if attrs.any?
       account.lock_saved_attributes!
     end
+
+    return error("balance_update_failed", balance_error) if balance_error
 
     account.reload
     {

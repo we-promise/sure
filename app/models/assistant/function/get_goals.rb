@@ -1,3 +1,5 @@
+require "set"
+
 class Assistant::Function::GetGoals < Assistant::Function
   class << self
     def name = "get_goals"
@@ -8,9 +10,9 @@ class Assistant::Function::GetGoals < Assistant::Function
   end
 
   def call(_params = {})
-    accessible_ids = user.accessible_accounts.visible.select(:id)
+    accessible_ids = Set.new(user.accessible_accounts.visible.ids)
     goals = family.goals.includes(:goal_accounts, :linked_accounts).alphabetically.map do |goal|
-      linked_accounts = goal.linked_accounts.select { |account| accessible_ids.exists?(id: account.id) }
+      linked_accounts = goal.linked_accounts.select { |account| accessible_ids.include?(account.id) }
       {
         id: goal.id,
         name: goal.name,

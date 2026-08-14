@@ -1,10 +1,26 @@
 class Assistant::Function::GetTransfers < Assistant::Function
+  DEFAULT_LIMIT = 100
+  MAX_LIMIT = 200
+
   class << self
     def name = "get_transfers"
     def description = "Lists transfers between accounts accessible to the user, including ids for update_transfer and delete_transfer."
   end
 
-  def call(_params = {})
+  def params_schema
+    build_schema(
+      properties: {
+        limit: { type: "integer", minimum: 1, maximum: MAX_LIMIT, description: "Maximum transfers to return (default: #{DEFAULT_LIMIT})." }
+      }
+    )
+  end
+
+  def strict_mode? = false
+
+  def call(params = {})
+    limit = Integer(params.fetch("limit", DEFAULT_LIMIT), exception: false)
+    return { success: false, error: "invalid_parameters", message: "limit must be between 1 and #{MAX_LIMIT}." } unless limit&.between?(1, MAX_LIMIT)
+
     transaction_ids = family.transactions
       .joins(:entry)
       .where(entries: { account_id: user.accessible_accounts.visible.select(:id) })
@@ -14,6 +30,7 @@ class Assistant::Function::GetTransfers < Assistant::Function
       .where(inflow_transaction_id: transaction_ids, outflow_transaction_id: transaction_ids)
       .includes(inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account })
       .order(created_at: :desc)
+      .limit(limit)
       .map do |transfer|
         {
           id: transfer.id,

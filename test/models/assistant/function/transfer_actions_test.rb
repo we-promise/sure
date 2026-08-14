@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Assistant::Function::TransferActionsTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @user = users(:family_admin)
     @family = @user.family
@@ -19,6 +21,9 @@ class Assistant::Function::TransferActionsTest < ActiveSupport::TestCase
 
     assert_equal true, create_result[:success]
     transfer_id = create_result.dig(:transfer, :id)
+    transfer = Transfer.find(transfer_id)
+    transfer.outflow_transaction.entry.update_column(:user_modified, false)
+    transfer.inflow_transaction.entry.update_column(:user_modified, false)
 
     listed = Assistant::Function::GetTransfers.new(@user).call
     assert_includes listed[:transfers].pluck(:id), transfer_id
@@ -31,7 +36,7 @@ class Assistant::Function::TransferActionsTest < ActiveSupport::TestCase
     )
 
     assert_equal true, update_result[:success]
-    transfer = Transfer.find(transfer_id)
+    transfer.reload
     assert_equal 150, transfer.outflow_transaction.entry.amount
     assert_equal(-150, transfer.inflow_transaction.entry.amount)
     assert_equal Date.current - 1.day, transfer.date
@@ -43,6 +48,7 @@ class Assistant::Function::TransferActionsTest < ActiveSupport::TestCase
 
     outflow_id = transfer.outflow_transaction_id
     inflow_id = transfer.inflow_transaction_id
+    Account.any_instance.expects(:sync_later).twice
     delete_result = Assistant::Function::DeleteTransfer.new(@user).call("id" => transfer_id)
 
     assert_equal true, delete_result[:success]
@@ -76,6 +82,58 @@ class Assistant::Function::TransferActionsTest < ActiveSupport::TestCase
     assert_equal true, result[:success]
     assert_equal original_outflow, transfer.outflow_transaction.entry.reload.amount
     assert_equal original_inflow, transfer.inflow_transaction.entry.reload.amount
+  end
+
+  test "rejects invalid custom exchange rates without changing transfer entries" do
+    euro_account = @family.accounts.create!(
+      owner: @user,
+      name: "MCP Euro account",
+      accountable: Depository.new(subtype: "savings"),
+      balance: 0,
+      currency: "EUR"
+    )
+    created = Assistant::Function::CreateTransfer.new(@user).call(
+      "from_account_id" => @source.id,
+      "to_account_id" => euro_account.id,
+      "amount" => 100,
+      "date" => Date.current.iso8601,
+      "exchange_rate" => 0.8,
+      "external_id" => "invalid-rate-#{SecureRandom.uuid}"
+    )
+    transfer = Transfer.find(created.dig(:transfer, :id))
+    original_amounts = [ transfer.outflow_transaction.entry.amount, transfer.inflow_transaction.entry.amount ]
+
+    [ 0, -1, "not-a-rate" ].each do |rate|
+      result = Assistant::Function::UpdateTransfer.new(@user).call(
+        "id" => transfer.id,
+        "amount" => 120,
+        "exchange_rate" => rate
+      )
+
+      assert_equal false, result[:success]
+      assert_equal "invalid_parameters", result[:error]
+      assert_equal original_amounts, [ transfer.outflow_transaction.entry.reload.amount, transfer.inflow_transaction.entry.reload.amount ]
+    end
+  end
+
+  test "limits transfer listings" do
+    2.times do |index|
+      Assistant::Function::CreateTransfer.new(@user).call(
+        "from_account_id" => @source.id,
+        "to_account_id" => @destination.id,
+        "amount" => index + 1,
+        "date" => Date.current.iso8601,
+        "external_id" => "listing-limit-#{index}-#{SecureRandom.uuid}"
+      )
+    end
+
+    result = Assistant::Function::GetTransfers.new(@user).call("limit" => 1)
+
+    assert_equal 1, result[:transfers].size
+  end
+
+  test "get transfers disables strict mode for its optional limit" do
+    refute Assistant::Function::GetTransfers.new(@user).strict_mode?
   end
 
   test "create is idempotent and rejects divergent reuse" do

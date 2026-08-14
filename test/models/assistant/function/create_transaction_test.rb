@@ -4,7 +4,7 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
   setup do
     @user = users(:family_admin)
     @family = @user.family
-    @account = @family.accounts.first
+    @account = accounts(:depository)
     @function = Assistant::Function::CreateTransaction.new(@user)
   end
 
@@ -47,6 +47,7 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
     assert_equal merchant, entry.transaction.merchant
     assert_equal [ tag.id ], entry.transaction.tag_ids
     assert_equal "Created through MCP", entry.notes
+    assert entry.user_modified?
   end
 
   test "returns the existing transaction when the same payload is retried" do
@@ -73,6 +74,25 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
       assert_equal false, second_result[:success]
       assert_equal "idempotency_conflict", second_result[:error]
       assert_equal 25, @account.entries.find_by!(source: "mcp", external_id: "conflict-key").amount
+    end
+  end
+
+  test "rejects an idempotency key reused on another account in the same family" do
+    other_account = @family.accounts.create!(
+      owner: @user,
+      name: "Other MCP account",
+      accountable: Depository.new(subtype: "savings"),
+      balance: 0,
+      currency: "USD"
+    )
+    params = required_params("external_id" => "cross-account-key")
+
+    assert @function.call(params)[:success]
+    assert_no_difference "@family.entries.count" do
+      result = @function.call(params.merge("account_id" => other_account.id))
+
+      assert_equal false, result[:success]
+      assert_equal "idempotency_conflict", result[:error]
     end
   end
 

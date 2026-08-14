@@ -44,6 +44,8 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
         inflow_entry.update!(amount: -converted, date: date)
         outflow_entry.lock_saved_attributes!
         inflow_entry.lock_saved_attributes!
+        outflow_entry.mark_user_modified!
+        inflow_entry.mark_user_modified!
         attrs[:amount] = amount
       end
 
@@ -65,8 +67,11 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
       return amount if transfer.from_account.currency == transfer.to_account.currency
 
       if params.key?("exchange_rate")
+        exchange_rate = BigDecimal(params["exchange_rate"].to_s)
+        raise ArgumentError, "exchange_rate must be a finite number greater than 0." unless exchange_rate.positive? && exchange_rate.finite?
+
         return Money.new(amount, transfer.from_account.currency)
-          .exchange_to(transfer.to_account.currency, date: date, custom_rate: params["exchange_rate"]).amount
+          .exchange_to(transfer.to_account.currency, date: date, custom_rate: exchange_rate).amount
       end
 
       original_destination_amount = transfer.inflow_transaction.entry.amount.abs

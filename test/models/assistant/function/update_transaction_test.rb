@@ -22,8 +22,10 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     entry = @transaction.reload.entry
     assert_equal(-42.5, entry.amount)
     assert_equal target_date, entry.date
+    assert entry.user_modified?
     assert_equal "income", result.dig(:transaction, :nature)
     assert_equal 42.5, result.dig(:transaction, :amount)
+    assert_equal entry.currency, result.dig(:transaction, :currency)
   end
 
   test "updates category notes and tags" do
@@ -108,5 +110,12 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     assert_equal false, rename_result[:success]
     assert_equal "not_authorized", rename_result[:error]
     assert_equal "Payment received from checking account", transaction.reload.entry.name
+  end
+
+  test "rejects malformed dates" do
+    result = @function.call("id" => @transaction.id, "date" => "tomorrow")
+
+    assert_equal false, result[:success]
+    assert_equal "invalid_date", result[:error]
   end
 end

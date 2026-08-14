@@ -18,7 +18,9 @@ class Assistant::Function::DeleteTransfer < Assistant::Function
     id = transfer.id
     outflow_id = transfer.outflow_transaction_id
     inflow_id = transfer.inflow_transaction_id
+    accounts = [ transfer.from_account, transfer.to_account ]
     transfer.destroy!
+    accounts.each(&:sync_later)
 
     {
       success: true,

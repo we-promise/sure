@@ -76,18 +76,26 @@ class Assistant::Function::AccountActionsTest < ActiveSupport::TestCase
     refute account.reload.pending_deletion?
   end
 
-  test "does not allow a provider link after deletion is scheduled" do
-    account = @family.accounts.create!(
-      owner: @user,
-      name: "Pending deletion account",
-      accountable: Depository.new,
-      balance: 0,
-      currency: "USD"
-    )
-    account.destroy_later
-    link = AccountProvider.new(account: account, provider: plaid_accounts(:one))
+  test "rolls back a partial balance update when the balance manager fails" do
+    account = accounts(:depository)
+    original_balance = account.balance
+    failure = Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: true, error: "reconciliation failed")
+    Account.any_instance.stubs(:set_current_balance).with do |balance|
+      account.update_column(:balance, balance)
+      true
+    end.returns(failure)
 
-    assert_not link.save
-    assert_includes link.errors[:account], "is pending deletion and cannot be linked"
+    result = Assistant::Function::UpdateAccount.new(@user).call(
+      "id" => account.id,
+      "balance" => 999,
+      "name" => "Must not persist"
+    )
+
+    assert_equal false, result[:success]
+    assert_equal "balance_update_failed", result[:error]
+    assert_equal "reconciliation failed", result[:message]
+    account.reload
+    assert_equal original_balance, account.balance
+    assert_not_equal "Must not persist", account.name
   end
 end

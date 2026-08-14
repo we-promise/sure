@@ -119,6 +119,7 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
 
       entry.sync_account_later
       entry.lock_saved_attributes!
+      entry.mark_user_modified!
       transaction.reload.lock_attr!(:tag_ids) if params.key?("tag_ids")
     end
     return result if result
@@ -233,6 +234,7 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
         name: entry.name,
         date: entry.date,
         amount: entry.amount.abs,
+        currency: entry.currency,
         nature: entry.amount.negative? ? "income" : "expense",
         notes: entry.notes,
         category: transaction.category && {

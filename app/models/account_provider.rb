@@ -26,8 +26,10 @@ class AccountProvider < ApplicationRecord
 
   private
     def account_accepts_provider_link
+      return if account.nil?
+
       account.with_lock do
-        errors.add(:account, "is pending deletion and cannot be linked") if account.pending_deletion?
+        errors.add(:account, :pending_deletion) if account.pending_deletion?
       end
     end
 

@@ -36,4 +36,11 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     assert_equal false, result[:success]
     assert_equal "transfer_transaction", result[:error]
   end
+
+  test "returns not found for an invalid id" do
+    result = @function.call("id" => "not-a-uuid")
+
+    assert_equal false, result[:success]
+    assert_equal "not_found", result[:error]
+  end
 end
