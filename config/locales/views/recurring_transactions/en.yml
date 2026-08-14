@@ -131,8 +131,8 @@ en:
         - Any provider sync completes ( Plaid, SimpleFIN, etc. )
     identified: Identified %{count} recurring transaction patterns
     cleaned_up: Cleaned up %{count} stale recurring transactions
-    marked_inactive: Recurring transaction marked as inactive
-    marked_active: Recurring transaction marked as active
+    marked_inactive: Paused. It won't appear again until you resume it.
+    marked_active: Resumed.
     deleted: Bill removed. Your transactions were not touched.
     deleted_income: Income removed. Your transactions were not touched.
     confirm_delete: "Remove %{name} from your bills? Your transactions stay exactly as they are. This only removes the bill and its payment schedule."
@@ -155,10 +155,10 @@ en:
       actions: Actions
     status:
       active: Active
-      inactive: Inactive
-      suggested: Suggested
+      inactive: Paused
+      suggested: Possible bill
       paused: Paused
-      ended: Ended
+      ended: Dismissed
     suggested:
       title: Possible new bills
       seen_count:

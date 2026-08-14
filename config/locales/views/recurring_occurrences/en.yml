@@ -21,7 +21,7 @@ en:
       search_placeholder: Search transactions
       no_candidates: No nearby transactions to link.
       no_search_results: "Nothing matching %{query}."
-      allocate: Allocate
+      allocate: Use this
       custom_amount_placeholder: Record a payment amount
       record_payment: Record payment
       mark_paid: Mark paid
@@ -32,9 +32,9 @@ en:
     mark_paid:
       success: Bill marked paid
     skip:
-      success: Occurrence skipped
+      success: Bill skipped
     reopen:
-      success: Occurrence reopened
+      success: Bill reopened
     snooze:
       success: "Snoozed until %{date}"
       invalid_date: That date could not be read

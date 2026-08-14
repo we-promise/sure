@@ -104,7 +104,7 @@ en:
         partial: Partly paid
         paid: Paid
         paused: Paused
-        ended: Ended
+        ended: Dismissed
       any_type: Any type
       sort_due: By next due
       sort_name: By name

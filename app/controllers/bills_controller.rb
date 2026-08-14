@@ -4,7 +4,12 @@ class BillsController < ApplicationController
   # beside it. suggested and inactive stay out of the filter: they are
   # detection plumbing, not a way anyone describes a bill.
   PAYMENT_FILTERS = %w[overdue due partial paid].freeze
-  LIFECYCLE_FILTERS = %w[paused ended].freeze
+  # The Pause button calls mark_inactive!, so a paused bill is stored as
+  # `inactive` and a filter asking for `paused` matched nothing at all. The
+  # `paused` value rides along for rows arriving by import or by the v1 API,
+  # and `ended` is only ever written by dismissing a suggestion.
+  LIFECYCLE_STATUSES = { "paused" => %w[inactive paused], "ended" => %w[ended] }.freeze
+  LIFECYCLE_FILTERS = LIFECYCLE_STATUSES.keys.freeze
   STATUS_FILTERS = (PAYMENT_FILTERS + LIFECYCLE_FILTERS).freeze
   before_action :ensure_recurring_enabled
 
@@ -186,7 +191,7 @@ class BillsController < ApplicationController
       status = params.dig(:q, :status)
 
       if status.presence_in(LIFECYCLE_FILTERS)
-        scope = scope.where(status: status)
+        scope = scope.where(status: LIFECYCLE_STATUSES.fetch(status))
       end
 
       if (bill_type = params.dig(:q, :bill_type)).presence_in(RecurringTransaction.bill_types.keys)

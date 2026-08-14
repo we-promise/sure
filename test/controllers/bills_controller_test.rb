@@ -554,6 +554,47 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "the portal stays reachable, just not as the row's headline action"
   end
 
+  # Pause, inactive and paused were three words for one thing, and the filter
+  # asked for the one the button never writes.
+  test "a bill you paused is findable under Paused" do
+    bill = create_bill(name: "Gym", amount: 40)
+    post toggle_status_recurring_transaction_path(bill)
+    assert_equal "inactive", bill.reload.status,
+      "premise: the Pause button stores inactive, not paused"
+
+    get bills_url(view: "all", q: { status: "paused" })
+    assert_includes response.body, "Gym",
+      "the filter has to ask for what the button actually writes"
+  end
+
+  test "the word for a paused bill is the same everywhere the user sees it" do
+    bill = create_bill(name: "Gym", amount: 40)
+    post toggle_status_recurring_transaction_path(bill)
+
+    # The badge, the filter option and the confirmation all have to agree.
+    # "Pause" stays the verb on the button; "Paused" is the state.
+    state = I18n.t("recurring_transactions.status.#{bill.reload.status}")
+    assert_equal "Paused", state
+    assert_equal state, I18n.t("bills.all.status_filters.paused")
+    assert_match(/#{state}/, I18n.t("recurring_transactions.marked_inactive"))
+  end
+
+  # toggle_status is shared with Settings > Recurring, which manages income and
+  # transfers too, so its confirmation must not talk about bills.
+  test "the pause confirmation does not assume the record is a bill" do
+    [ "recurring_transactions.marked_inactive", "recurring_transactions.marked_active" ].each do |key|
+      refute_match(/bills?/i, I18n.t(key),
+        "#{key} is shown on the shared Recurring surface as well as Bills")
+    end
+  end
+
+  test "the status filter does not offer words for states nobody can reach" do
+    # `ended` only ever comes from dismissing a suggestion, so it is labelled
+    # for what produced it rather than as a bill lifecycle.
+    assert_equal "Dismissed", I18n.t("bills.all.status_filters.ended")
+    assert_equal "Dismissed", I18n.t("recurring_transactions.status.ended")
+  end
+
   private
 
     def create_bill(name:, amount:, **overrides)
