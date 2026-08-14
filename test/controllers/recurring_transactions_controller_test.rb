@@ -14,6 +14,47 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # These three mutate: identify runs the whole detection and matching
+  # pipeline, cleanup destroys stale series, and toggle_status pauses a bill,
+  # which deletes its future occurrences. A GET route puts all of that behind a
+  # plain URL, outside CSRF protection, where an image tag on any page a signed
+  # in user visits is enough to fire it.
+  test "the mutating actions refuse GET" do
+    paths = {
+      "/recurring_transactions/identify" => :get,
+      "/recurring_transactions/cleanup" => :get,
+      "/recurring_transactions/#{@recurring_transaction.id}/toggle_status" => :get
+    }
+
+    paths.each do |path, verb|
+      assert_raises(ActionController::RoutingError, "#{path} must not answer #{verb.to_s.upcase}") do
+        Rails.application.routes.recognize_path(path, method: verb)
+      end
+    end
+  end
+
+  test "identify runs the pipeline over POST" do
+    post identify_recurring_transactions_url
+
+    assert_redirected_to recurring_transactions_url
+  end
+
+  test "cleanup retires stale series over POST" do
+    post cleanup_recurring_transactions_url
+
+    assert_redirected_to recurring_transactions_url
+  end
+
+  test "toggle_status pauses and resumes over POST" do
+    assert @recurring_transaction.active?
+
+    post toggle_status_recurring_transaction_url(@recurring_transaction)
+    assert_not @recurring_transaction.reload.active?
+
+    post toggle_status_recurring_transaction_url(@recurring_transaction)
+    assert @recurring_transaction.reload.active?
+  end
+
   # The dialog is delivered into the shared <turbo-frame id="modal"> that every page
   # layout already renders empty. If this action responds with a full page layout,
   # the response carries two frames with that id, Turbo matches the empty one first,

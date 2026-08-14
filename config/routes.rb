@@ -519,13 +519,16 @@ Rails.application.routes.draw do
 
   resources :recurring_transactions, only: %i[index new create edit update destroy] do
     collection do
-      match :identify, via: [ :get, :post ]
-      match :cleanup, via: [ :get, :post ]
+      # POST only: all three mutate. They accepted GET while DS::Link's method
+      # option was inert, which left destructive work sitting behind a plain
+      # URL and outside CSRF protection. Every call site passes method: :post.
+      post :identify
+      post :cleanup
       patch :update_settings
     end
 
     member do
-      match :toggle_status, via: [ :get, :post ]
+      post :toggle_status
       post :confirm
       post :dismiss
     end
