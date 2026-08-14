@@ -81,7 +81,18 @@ class BillsController < ApplicationController
     @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(:allocations)
     @upcoming = @series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3)
 
-    paid_amounts = @series.recurring_occurrences.paid.pluck(:expected_amount).compact
+    # What each settled cycle actually cost. Reading the frozen
+    # `expected_amount` here would report averages of estimates beside the
+    # per-year totals below, which are sums of real payments.
+    paid_amounts = RecurringAllocation.confirmed
+                                      .joins(:recurring_occurrence)
+                                      .where(recurring_occurrences: {
+                                               recurring_transaction_id: @series.id,
+                                               status: "paid"
+                                             })
+                                      .group(:recurring_occurrence_id)
+                                      .sum(:allocated_amount)
+                                      .values
     @analytics = if paid_amounts.any?
       {
         average: Money.new(paid_amounts.sum / paid_amounts.size, @series.currency),

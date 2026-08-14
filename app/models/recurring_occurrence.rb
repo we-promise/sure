@@ -156,12 +156,19 @@ class RecurringOccurrence < ApplicationRecord
       recurring_transaction.overdue_grace_days || DEFAULT_GRACE_DAYS
     end
 
+    # What the last settled cycle actually cost, not what it was expected to
+    # cost. `expected_amount` on a closed row is the frozen ESTIMATE, so
+    # reading it here would re-propose the original guess forever and the
+    # strategy could never converge on a variable bill's real amount.
     def last_paid_total
       previous = recurring_transaction.recurring_occurrences
                                       .paid
                                       .where("due_on < ?", due_on)
                                       .order(due_on: :desc)
                                       .first
-      previous&.expected_amount
+      return nil if previous.nil?
+
+      total = previous.allocations.confirmed.sum(:allocated_amount)
+      total.positive? ? total : nil
     end
 end

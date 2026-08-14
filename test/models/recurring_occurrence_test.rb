@@ -68,6 +68,29 @@ class RecurringOccurrenceTest < ActiveSupport::TestCase
     assert_equal 5.99, occurrence.remaining_amount
   end
 
+  test "last strategy resolves to what the previous cycle actually cost" do
+    @series.update!(amount_strategy: "last")
+
+    # Expected 15.99, really charged 17.25: inside tolerance, so it closes as
+    # actual-replaces-estimate and the frozen expected stays at the estimate.
+    settled = create_occurrence(due_on: Date.current - 30, original: Date.current - 30)
+    settled.allocations.create!(allocated_amount: 17.25, currency: "USD",
+                                state: "confirmed", source: "user_created")
+    settled.close!("paid", source: "auto")
+
+    assert_equal 15.99, settled.reload.expected_amount, "the frozen value is the estimate"
+    assert_equal 17.25, create_occurrence.resolved_expected_amount,
+      "'last' must propose the real charge, not the old estimate"
+  end
+
+  test "last strategy ignores a paid cycle that carries no payments" do
+    @series.update!(amount_strategy: "last")
+    create_occurrence(due_on: Date.current - 30, original: Date.current - 30)
+      .close!("paid", source: "user")
+
+    assert_equal 15.99, create_occurrence.resolved_expected_amount
+  end
+
   test "the system never sets missed" do
     occurrence = create_occurrence(due_on: 3.months.ago.to_date, original: 3.months.ago.to_date)
     assert_equal :overdue, occurrence.derived_state

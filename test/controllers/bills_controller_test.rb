@@ -184,6 +184,27 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "$78.50", response.body
   end
 
+  # The average sat beside per-year totals that are sums of real payments, so
+  # reading estimates here put two disagreeing numbers about the same money in
+  # one panel. Expected $80 twice, really charged $76 and $78: the average is
+  # $77, a figure that appears nowhere if the estimates are averaged instead.
+  test "drawer analytics average what was charged, not what was expected" do
+    bill = create_bill(name: "Power Co", amount: 80)
+
+    [ [ 3, 76 ], [ 2, 78 ] ].each do |months_ago, charged|
+      due = months_ago.months.ago.to_date
+      occurrence = bill.recurring_occurrences.create!(
+        family: @family, original_due_on: due, due_on: due, currency: "USD")
+      RecurringTransaction::Allocator.new(occurrence).allocate!(amount: charged.to_s)
+      assert occurrence.reload.paid?, "each charge is inside tolerance and should settle the cycle"
+    end
+
+    get bill_url(bill), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match "$77.00", response.body
+  end
+
   test "the all view lists every series and filters compose" do
     create_bill(name: "Alpha bill", amount: 10)
     create_bill(name: "Beta paused", amount: 20, status: "paused")
