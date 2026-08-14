@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_13_220000) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_14_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1649,6 +1649,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_13_220000) do
     t.index ["recurring_occurrence_id", "entry_id"], name: "idx_recurring_allocations_entry_once", unique: true, where: "(entry_id IS NOT NULL)"
     t.index ["recurring_occurrence_id"], name: "index_recurring_allocations_on_recurring_occurrence_id"
     t.check_constraint "allocated_amount > 0::numeric", name: "chk_recurring_allocations_amount_positive"
+    t.check_constraint "source::text = ANY (ARRAY['auto_matched'::character varying, 'user_confirmed'::character varying, 'user_created'::character varying]::text[])", name: "chk_recurring_allocations_source"
+    t.check_constraint "state::text = ANY (ARRAY['suggested'::character varying, 'confirmed'::character varying]::text[])", name: "chk_recurring_allocations_state"
   end
 
   create_table "recurring_match_rejections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1675,8 +1677,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_13_220000) do
     t.datetime "updated_at", null: false
     t.index ["family_id", "due_on"], name: "index_recurring_occurrences_on_family_id_and_due_on"
     t.index ["family_id", "status", "due_on"], name: "index_recurring_occurrences_on_family_id_and_status_and_due_on"
+    t.index ["id", "currency"], name: "idx_recurring_occurrences_id_currency", unique: true
     t.index ["recurring_transaction_id", "original_due_on"], name: "idx_recurring_occurrences_identity", unique: true
     t.check_constraint "(status::text = 'scheduled'::text) = (closed_at IS NULL)", name: "chk_recurring_occurrences_closed_state"
+    t.check_constraint "closed_source IS NULL OR (closed_source::text = ANY (ARRAY['auto'::character varying, 'user'::character varying]::text[]))", name: "chk_recurring_occurrences_closed_source"
+    t.check_constraint "status::text = ANY (ARRAY['scheduled'::character varying, 'paid'::character varying, 'skipped'::character varying, 'missed'::character varying]::text[])", name: "chk_recurring_occurrences_status"
   end
 
   create_table "recurring_price_changes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2524,6 +2529,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_13_220000) do
   add_foreign_key "recurrence_rules", "recurring_transactions", on_delete: :cascade
   add_foreign_key "recurring_allocations", "entries", on_delete: :nullify
   add_foreign_key "recurring_allocations", "recurring_occurrences", on_delete: :cascade
+  add_foreign_key "recurring_allocations", "recurring_occurrences", column: ["recurring_occurrence_id", "currency"], primary_key: ["id", "currency"], name: "fk_recurring_allocations_currency_matches_occurrence", on_delete: :cascade
   add_foreign_key "recurring_match_rejections", "entries", on_delete: :cascade
   add_foreign_key "recurring_match_rejections", "recurring_transactions", on_delete: :cascade
   add_foreign_key "recurring_occurrences", "families", on_delete: :cascade
