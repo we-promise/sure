@@ -9,6 +9,7 @@ en:
       rules: Rules
       rule_named: "named %{name}"
       rule_amount_range: "from %{min} to %{max}"
+      history_title: Last 12 months
       history_aria: Payments over the last twelve months
       key_metrics: Key metrics
       spent_per_year: Spent per year

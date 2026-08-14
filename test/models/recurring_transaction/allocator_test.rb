@@ -18,8 +18,10 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
       manual: true
     )
     @occurrence = @rent.recurring_occurrences.order(:due_on).last ||
-                  @rent.recurring_occurrences.create!(family: @family, original_due_on: Date.current + 16,
-                                                      due_on: Date.current + 16, currency: "USD")
+                  @rent.recurring_occurrences.create!(family: @family,
+                                                      original_due_on: (Date.current + 1.month).beginning_of_month + 9,
+                                                      due_on: (Date.current + 1.month).beginning_of_month + 9,
+                                                      currency: "USD")
     @allocator = Allocator.new(@occurrence)
   end
 
@@ -103,8 +105,12 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
 
   test "one entry can pay several occurrences but never more than itself" do
     lump = entry_for(1612.50)
+    # A mid-month date the day-29 series never generates, so this manual
+    # row can never collide with the generator's rows regardless of what
+    # Date.current is when the suite runs.
+    free_date = (Date.current + 2.months).beginning_of_month + 9
     september = @rent.recurring_occurrences.create!(
-      family: @family, original_due_on: Date.current + 46, due_on: Date.current + 46, currency: "USD"
+      family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
     )
 
     @allocator.allocate!(entry: lump, amount: 1000)

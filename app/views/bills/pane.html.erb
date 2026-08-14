@@ -56,8 +56,10 @@
     <%# Twelve months of what this bill actually cost. %>
     <% amounts = @payment_history.map(&:last) %>
     <% peak = [ amounts.max, 1 ].max %>
-    <div class="border-t border-divider px-4 py-3">
-      <svg viewBox="0 0 336 84" class="w-full text-success" role="img" aria-label="<%= t(".history_aria") %>">
+    <div class="border-t border-divider grid md:grid-cols-2 md:divide-x divide-y md:divide-y-0 divide-divider">
+    <div class="px-4 py-3 flex flex-col justify-center">
+      <p class="text-xs font-medium text-secondary uppercase pb-1"><%= t(".history_title") %></p>
+      <svg viewBox="0 0 336 84" class="w-full max-w-xs text-success" role="img" aria-label="<%= t(".history_aria") %>">
         <% points = @payment_history.each_with_index.map do |(_month, amount), index|
              x = 10 + index * (316.0 / 11)
              y = 62 - (amount.to_f / peak.to_f) * 48
@@ -78,8 +80,9 @@
       </svg>
     </div>
 
+    <div class="px-4 py-3">
     <% if @yearly_metrics.any? %>
-      <div class="border-t border-divider px-4 py-3">
+      <div>
         <div class="grid grid-cols-3 text-xs text-secondary pb-1">
           <p class="font-medium uppercase"><%= t(".key_metrics") %></p>
           <p class="text-right"><%= t(".spent_per_year") %></p>
@@ -96,20 +99,21 @@
         </div>
       </div>
     <% end %>
-
     <% if @last_account %>
-      <div class="border-t border-divider px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center justify-between gap-3 pt-2 <%= "border-t border-divider mt-2" if @yearly_metrics.any? %>">
         <p class="text-xs text-secondary"><%= t(".last_account") %></p>
         <p class="text-sm text-primary truncate"><%= @last_account.name %></p>
       </div>
     <% end %>
+    </div>
+    </div>
 
     <% if @recent_allocations.any? %>
       <div class="border-t border-divider px-4 py-3 space-y-1">
         <p class="text-xs font-medium text-secondary uppercase"><%= t(".recent_payments") %></p>
-        <div class="divide-y divide-divider">
+        <div class="grid md:grid-cols-2 md:gap-x-6">
           <% @recent_allocations.each do |allocation| %>
-            <div class="flex items-center justify-between gap-3 py-1.5">
+            <div class="flex items-center justify-between gap-3 py-1.5 border-b border-divider last:border-b-0 md:[&:nth-last-child(2)]:border-b-0">
               <div class="min-w-0">
                 <p class="text-sm text-primary truncate"><%= allocation.entry&.name.presence || t(".manual_payment") %></p>
                 <% if allocation.paid_on %>
