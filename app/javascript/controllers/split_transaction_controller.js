@@ -1,7 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 
+// Split rows are real, individually-named form fields rendered server-side (via the
+// "splits/row" partial) and cloned from a <template> for new rows — mirrors
+// rule--split-action, which took the same approach after a hand-rolled JS-serialized
+// blob proved fragile in practice. Cloning from the template means new rows automatically
+// pick up whatever fields the partial renders (category/merchant/tag selects included)
+// without this controller needing to know about them.
 export default class extends Controller {
-  static targets = ["rowsContainer", "row", "amountInput", "remaining", "remainingContainer", "error", "submitButton", "nameInput"]
+  static targets = ["rowsContainer", "row", "rowTemplate", "amountInput", "remaining", "remainingContainer", "error", "submitButton", "nameInput"]
   static values = { total: Number, currency: String }
 
   connect() {
@@ -13,96 +19,8 @@ export default class extends Controller {
   }
 
   addRow() {
-    const index = this.rowCount
-    const container = this.rowsContainerTarget
-
-    const row = document.createElement("div")
-    row.classList.add("p-3", "rounded-lg", "border", "border-secondary", "bg-container")
-    row.dataset.splitTransactionTarget = "row"
-
-    // Clone category select from the first row
-    const existingCategorySelect = container.querySelector(".category-select-container")
-    let categorySelectHTML = ""
-    if (existingCategorySelect) {
-      const cloned = existingCategorySelect.cloneNode(true)
-
-      // Reset hidden input value and update name
-      const hiddenInput = cloned.querySelector("input[type='hidden']")
-      if (hiddenInput) {
-        hiddenInput.value = ""
-        hiddenInput.name = `split[splits][${index}][category_id]`
-      }
-
-      // Reset button to show placeholder text (uncategorized)
-      const button = cloned.querySelector("[data-select-target='button']")
-      if (button) {
-        // Find the uncategorized option text from the menu
-        const uncategorizedOption = cloned.querySelector("[data-value='']")
-        const placeholderText = uncategorizedOption ? uncategorizedOption.dataset.filterName : "(uncategorized)"
-        button.innerHTML = placeholderText
-        button.setAttribute("aria-expanded", "false")
-      }
-
-      // Reset selected states in menu
-      cloned.querySelectorAll("[role='option']").forEach(option => {
-        option.setAttribute("aria-selected", "false")
-        option.classList.remove("bg-container-inset")
-        const checkIcon = option.querySelector(".check-icon")
-        if (checkIcon) checkIcon.classList.add("hidden")
-      })
-
-      // Select the blank/uncategorized option
-      const blankOption = cloned.querySelector("[data-value='']")
-      if (blankOption) {
-        blankOption.setAttribute("aria-selected", "true")
-        blankOption.classList.add("bg-container-inset")
-        const checkIcon = blankOption.querySelector(".check-icon")
-        if (checkIcon) checkIcon.classList.remove("hidden")
-      }
-
-      // Ensure menu is hidden
-      const menu = cloned.querySelector("[data-select-target='menu']")
-      if (menu && !menu.classList.contains("hidden")) {
-        menu.classList.add("hidden")
-      }
-
-      categorySelectHTML = cloned.outerHTML
-    }
-
-    row.innerHTML = `
-      <div class="flex flex-wrap md:flex-nowrap items-end gap-2">
-        <div class="w-full md:flex-1 md:w-auto min-w-0 md:min-w-28">
-          <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Name</label>
-          <input type="text"
-                 name="split[splits][${index}][name]"
-                 placeholder="Split name"
-                 class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
-                 required
-                 autocomplete="off"
-                 data-split-transaction-target="nameInput">
-        </div>
-        <div class="flex-1 md:flex-none md:w-28">
-          <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Amount</label>
-          <input type="number"
-                 name="split[splits][${index}][amount]"
-                 placeholder="0.00"
-                 step="0.01"
-                 class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
-                 required
-                 autocomplete="off"
-                 data-split-transaction-target="amountInput"
-                 data-action="input->split-transaction#updateRemaining">
-        </div>
-        ${categorySelectHTML}
-        <button type="button"
-                class="w-8 h-8 shrink-0 flex items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
-                data-action="click->split-transaction#removeRow">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
-      </div>
-    `
-
-    container.appendChild(row)
+    const html = this.rowTemplateTarget.innerHTML.replaceAll("ROW_IDX_PLACEHOLDER", Date.now())
+    this.rowsContainerTarget.insertAdjacentHTML("beforeend", html)
     this.updateRemaining()
   }
 
@@ -111,18 +29,8 @@ export default class extends Controller {
     const row = event.target.closest("[data-split-transaction-target='row']")
     if (row && this.rowCount > 1) {
       row.remove()
-      this.reindexRows()
       this.updateRemaining()
     }
-  }
-
-  reindexRows() {
-    this.rowTargets.forEach((row, index) => {
-      // Update input names (including hidden inputs inside category select)
-      row.querySelectorAll("[name]").forEach(input => {
-        input.name = input.name.replace(/splits\[\d+\]/, `splits[${index}]`)
-      })
-    })
   }
 
   updateRemaining() {

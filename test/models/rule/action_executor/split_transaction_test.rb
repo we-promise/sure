@@ -134,6 +134,26 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     refute mismatched.reload.split_parent?
   end
 
+  test "percentage split skips a transaction when rounding drift would create a non-positive amount" do
+    entry = create_transaction(amount: 0.01, name: "Tiny bundle", account: @account)
+
+    # First two shares round up to $0.01 each against a $0.01 total, leaving nothing (and then
+    # negative) for the third split, which absorbs whatever's left.
+    action = build_action(
+      mode: "percentage",
+      splits: [
+        { name: "Part 1", share: "70" },
+        { name: "Part 2", share: "70" },
+        { name: "Part 3", share: "10" }
+      ]
+    )
+
+    modified = action.apply(@rule_scope)
+
+    assert_equal 0, modified
+    refute entry.reload.split_parent?
+  end
+
   test "skips transactions that are not splittable" do
     transfer = create_transfer(from_account: @account, to_account: accounts(:credit_card), amount: 40)
     pending = create_transaction(amount: 40, name: "Pending", account: @account)

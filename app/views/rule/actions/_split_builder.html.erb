@@ -4,14 +4,13 @@
   config = blank ? nil : Rule::ActionExecutor::SplitTransaction.parse_config(action.value)
   config ||= { "mode" => "percentage", "splits" => [ {}, {} ] }
   split_executor = action.rule.registry.get_executor!("split_transaction")
-  categories = split_executor.options
+  categories = split_executor.category_options
   merchants = split_executor.merchant_options
   tags = split_executor.tag_options
 %>
 
 <div class="flex flex-col gap-2 w-full min-w-0"
-     data-controller="rule--split-action"
-     data-action="input@document->rule--split-action#updateSummary change@document->rule--split-action#updateSummary">
+     data-controller="rule--split-action">
   <div class="flex items-center gap-3">
     <label class="flex items-center gap-1 text-xs text-secondary">
       <%= form.radio_button :split_mode, "fixed", checked: config["mode"] == "fixed", data: { rule__split_action_target: "modeRadio", action: "change->rule--split-action#updateSummary" } %>
