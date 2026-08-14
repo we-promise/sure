@@ -25,6 +25,38 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     @allocator = Allocator.new(@occurrence)
   end
 
+  test "a price rise does not re-target an occurrence that has already been paid against" do
+    @occurrence.update!(expected_amount: nil) # inheriting from the series
+    @allocator.allocate!(entry: entry_for(500))
+
+    assert_equal 1500, @occurrence.reload.remaining_amount
+
+    @rent.update!(amount: 2500)
+
+    occurrence = @occurrence.reload
+    assert_equal 2000, occurrence.resolved_expected_amount,
+      "the $500 was paid against a $2,000 obligation and must stay against it"
+    assert_equal 1500, occurrence.remaining_amount
+  end
+
+  test "a price rise still updates an open occurrence nobody has paid against" do
+    @occurrence.update!(expected_amount: nil)
+
+    @rent.update!(amount: 2500)
+
+    assert_equal 2500, @occurrence.reload.resolved_expected_amount
+  end
+
+  test "a suggestion does not pin the amount" do
+    @occurrence.update!(expected_amount: nil)
+    @allocator.allocate_matched!(entry: entry_for(500), state: "suggested", confidence: 0.7, signals: {})
+
+    @rent.update!(amount: 2500)
+
+    assert_nil @occurrence.reload.expected_amount
+    assert_equal 2500, @occurrence.resolved_expected_amount
+  end
+
   test "partial payments accumulate and close only at the exact sum" do
     @allocator.allocate!(entry: entry_for(750))
     @allocator.allocate!(entry: entry_for(500))

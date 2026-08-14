@@ -44,6 +44,7 @@ class RecurringTransaction
         with_entry_lock(entry) do
           allocated, source_amount, source_currency = resolve_amounts(amount, entry)
           guard_entry_capacity!(entry, source_amount) if entry
+          freeze_expected_amount!
 
           allocation = occurrence.allocations.create!(
             entry: entry,
@@ -82,6 +83,7 @@ class RecurringTransaction
           return nil unless allocated.positive?
 
           guard_entry_capacity!(entry, source_amount)
+          freeze_expected_amount! if state == "confirmed"
 
           allocation = occurrence.allocations.create!(
             entry: entry,
@@ -106,6 +108,7 @@ class RecurringTransaction
     def confirm_suggestion!(allocation)
       occurrence.with_lock do
         with_entry_lock(allocation.entry) do
+          freeze_expected_amount!
           allocation.update!(state: "confirmed", source: "user_confirmed")
           refresh_close_state!
         end
@@ -133,6 +136,7 @@ class RecurringTransaction
     # action. Closes as a USER decision, so it never auto-reopens.
     def mark_paid!
       occurrence.with_lock do
+        freeze_expected_amount!
         remaining = occurrence.remaining_amount
 
         if remaining.positive?
@@ -181,6 +185,18 @@ class RecurringTransaction
 
       def entry_lock_id(entry)
         Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
+      end
+
+      # A confirmed payment pins the obligation it was made against. Open
+      # occurrences otherwise inherit their amount from the series, which is
+      # what a price edit should do to an untouched future row -- but once
+      # money has moved, re-resolving would silently re-target payments the
+      # user already made, moving the remaining balance under them.
+      # Suggestions never pin anything: they are questions, not payments.
+      def freeze_expected_amount!
+        return if occurrence.expected_amount.present?
+
+        occurrence.update!(expected_amount: occurrence.resolved_expected_amount)
       end
 
       def close_worthy?
