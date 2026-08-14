@@ -79,23 +79,46 @@ class Rule::Action < ApplicationRecord
       return unless config_errors.empty?
 
       config = Rule::ActionExecutor::SplitTransaction.parse_config(value)
-      if config["mode"] == "fixed" && !exact_amount_condition_present?
-        errors.add(:value, :fixed_requires_exact_amount_condition)
+      if config["mode"] == "fixed"
+        exact_amount = exact_amount_condition_value
+        if exact_amount.nil?
+          errors.add(:value, :fixed_requires_exact_amount_condition)
+        else
+          total_share = config["splits"].sum { |split| BigDecimal(split["share"].to_s) }
+          if total_share != exact_amount
+            errors.add(:value, :fixed_shares_must_equal_condition_amount, amount: exact_amount)
+          end
+        end
       end
     end
 
     # Fixed-amount splits only make sense if every matching transaction has the same total —
     # otherwise the configured shares can never sum correctly for most matches (rule.apply
-    # would just silently skip them one by one). Require an exact "Amount =" condition,
-    # ANDed in (an "any"/OR compound doesn't guarantee it for every match).
-    def exact_amount_condition_present?(conditions = rule.conditions)
-      conditions.reject(&:marked_for_destruction?).any? do |condition|
+    # would just silently skip them one by one). Require an exact "Amount =" condition, ANDed
+    # in (an "any"/OR compound doesn't guarantee it for every match), and return its numeric
+    # value so callers can also check the shares actually sum to it. Returns nil if no such
+    # condition exists.
+    def exact_amount_condition_value(conditions = rule.conditions)
+      conditions.reject(&:marked_for_destruction?).each do |condition|
         if condition.compound?
-          condition.operator == "and" && exact_amount_condition_present?(condition.sub_conditions)
-        else
-          condition.condition_type == "transaction_amount" && condition.operator == "="
+          next unless condition.operator == "and"
+          found = exact_amount_condition_value(condition.sub_conditions)
+          return found if found
+        elsif condition.condition_type == "transaction_amount" && condition.operator == "="
+          parsed = parse_condition_amount(condition.value)
+          return parsed if parsed
         end
       end
+
+      nil
+    end
+
+    def parse_condition_amount(value)
+      return nil if value.blank?
+
+      BigDecimal(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
     end
 
     def seed_notification_baseline

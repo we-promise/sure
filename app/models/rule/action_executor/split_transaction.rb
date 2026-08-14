@@ -8,7 +8,14 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     "split"
   end
 
+  # Overrides the base class's nil (the `options` contract is for "select"-type executors,
+  # which the split type isn't). Keeping it nil avoids duplicating the full category list into
+  # every action row's data-rule--actions-action-executors-value attribute.
   def options
+    nil
+  end
+
+  def category_options
     family.categories.alphabetically.pluck(:name, :id)
   end
 
@@ -94,11 +101,9 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       splits.each_with_index do |split, index|
         name = split["name"]
         share = parse_decimal(split["share"])
-        # Form/JSON ids arrive as strings; family id sets are plucked as integers. Normalize
-        # to integers before comparing, otherwise every valid selection looks invalid.
-        category_id = split["category_id"].presence&.to_i
-        merchant_id = split["merchant_id"].presence&.to_i
-        tag_ids = Array(split["tag_ids"]).reject(&:blank?).map(&:to_i)
+        category_id = split["category_id"].presence
+        merchant_id = split["merchant_id"].presence
+        tag_ids = Array(split["tag_ids"]).reject(&:blank?)
         position = index + 1
 
         errors << [ :split_name_required, { index: position } ] if name.blank?
@@ -177,18 +182,23 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
             remaining -= share_amount
           end
         end
+
+        # The last split absorbs whatever's left after rounding the others to cents, which can
+        # go non-positive if per-row rounding drift stacks up (many splits, large amount, tiny
+        # trailing percentage). Bail rather than create a zero/negative-amount child entry.
+        return nil if amounts.any? { |amount| amount <= 0 }
       else
         return nil
       end
 
       raw_splits.each_with_index.map do |split, index|
-        category_id = split["category_id"].presence&.to_i
+        category_id = split["category_id"].presence
         category_id = nil unless category_id && family_category_ids.include?(category_id)
 
-        merchant_id = split["merchant_id"].presence&.to_i
+        merchant_id = split["merchant_id"].presence
         merchant_id = nil unless merchant_id && family_merchant_ids.include?(merchant_id)
 
-        tag_ids = Array(split["tag_ids"]).reject(&:blank?).map(&:to_i) & family_tag_ids.to_a
+        tag_ids = Array(split["tag_ids"]).reject(&:blank?) & family_tag_ids.to_a
 
         {
           name: split["name"],

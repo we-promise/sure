@@ -420,6 +420,30 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert action.valid?
   end
 
+  test "split_transaction fixed mode requires shares to sum to the exact amount condition's value" do
+    rule_with_amount_condition = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_amount", operator: "=", value: 100) ]
+    )
+
+    action = Rule::Action.new(
+      rule: rule_with_amount_condition,
+      action_type: "split_transaction",
+      value: {
+        mode: "fixed",
+        splits: [
+          { name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { name: "Household", share: "20" }
+        ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value],
+      "split shares must add up to 100.0, the exact amount required by this rule's condition"
+  end
+
   test "split_transaction fixed mode is not satisfied by an exact amount condition inside an OR group" do
     rule_with_or_amount_condition = Rule.new(
       family: @family,
