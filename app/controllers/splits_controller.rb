@@ -4,6 +4,8 @@ class SplitsController < ApplicationController
 
   def new
     @categories = Current.family.categories.alphabetically
+    @merchants = Current.family.available_merchants_for(Current.user).alphabetically
+    @tags = Current.family.tags.alphabetically
   end
 
   def create
@@ -12,12 +14,7 @@ class SplitsController < ApplicationController
       return
     end
 
-    raw_splits = split_params[:splits]
-    raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
-
-    splits = raw_splits.map do |s|
-      { name: s[:name], amount: s[:amount].to_d * -1, category_id: s[:category_id].presence, excluded: s[:excluded] }
-    end
+    splits = build_splits(split_params[:splits])
 
     @entry.split!(splits)
     @entry.sync_account_later
@@ -36,6 +33,8 @@ class SplitsController < ApplicationController
     end
 
     @categories = Current.family.categories.alphabetically
+    @merchants = Current.family.available_merchants_for(Current.user).alphabetically
+    @tags = Current.family.tags.alphabetically
     @children = @entry.child_entries.includes(:entryable)
   end
 
@@ -47,12 +46,7 @@ class SplitsController < ApplicationController
       return
     end
 
-    raw_splits = split_params[:splits]
-    raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
-
-    splits = raw_splits.map do |s|
-      { name: s[:name], amount: s[:amount].to_d * -1, category_id: s[:category_id].presence, excluded: s[:excluded] }
-    end
+    splits = build_splits(split_params[:splits])
 
     Entry.transaction do
       @entry.unsplit!
@@ -95,6 +89,29 @@ class SplitsController < ApplicationController
     end
 
     def split_params
-      params.require(:split).permit(splits: [ :name, :amount, :category_id, :excluded ])
+      params.require(:split).permit(splits: [ :name, :amount, :category_id, :merchant_id, :excluded, tag_ids: [] ])
+    end
+
+    # Maps raw split params into `Entry#split!` input, scoping merchant_id and
+    # tag_ids to the current family so a crafted request can't attribute a
+    # split to another family's merchant or tag.
+    def build_splits(raw_splits)
+      raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
+      family_merchant_ids = Current.family.available_merchants_for(Current.user).ids.map(&:to_s)
+
+      raw_splits.map do |s|
+        tag_ids = Current.family.tags.where(id: Array(s[:tag_ids]).reject(&:blank?)).ids
+        merchant_id = s[:merchant_id].presence
+        merchant_id = nil unless family_merchant_ids.include?(merchant_id.to_s)
+
+        {
+          name: s[:name],
+          amount: s[:amount].to_d * -1,
+          category_id: s[:category_id].presence,
+          merchant_id: merchant_id,
+          tag_ids: tag_ids,
+          excluded: s[:excluded]
+        }
+      end
     end
 end

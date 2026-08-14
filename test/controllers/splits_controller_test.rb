@@ -140,6 +140,47 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert children.last.excluded?
   end
 
+  test "create with merchant_id and tag_ids assigns them to the split" do
+    assert_difference "Entry.count", 2 do
+      post transaction_split_path(@entry), params: {
+        split: {
+          splits: [
+            { name: "Groceries", amount: "-70", category_id: "", merchant_id: merchants(:netflix).id, tag_ids: [ tags(:one).id, tags(:two).id ] },
+            { name: "Household", amount: "-30", category_id: "" }
+          ]
+        }
+      }
+    end
+
+    children = @entry.child_entries.includes(:entryable).order(:amount)
+    household, groceries = children
+    assert_equal merchants(:netflix).id, groceries.entryable.merchant_id
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, groceries.entryable.tag_ids.sort
+    assert_nil household.entryable.merchant_id
+    assert_empty household.entryable.tag_ids
+  end
+
+  test "create ignores merchant_id and tag_ids belonging to another family" do
+    other_family = families(:empty)
+    other_merchant = FamilyMerchant.create!(name: "Other Family Merchant", family: other_family)
+    other_tag = Tag.create!(name: "Other Family Tag", family: other_family)
+
+    assert_difference "Entry.count", 2 do
+      post transaction_split_path(@entry), params: {
+        split: {
+          splits: [
+            { name: "Groceries", amount: "-70", category_id: "", merchant_id: other_merchant.id, tag_ids: [ other_tag.id ] },
+            { name: "Household", amount: "-30", category_id: "" }
+          ]
+        }
+      }
+    end
+
+    groceries = @entry.child_entries.includes(:entryable).order(:amount).last
+    assert_nil groceries.entryable.merchant_id
+    assert_empty groceries.entryable.tag_ids
+  end
+
   # Edit action tests
   test "edit renders with existing children pre-filled" do
     @entry.split!([

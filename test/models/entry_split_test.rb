@@ -165,6 +165,32 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert @entry.split_parent?
   end
 
+  test "split! assigns per-row merchant, falling back to parent's merchant when blank" do
+    @entry.entryable.update!(merchant: merchants(:netflix))
+
+    splits = [
+      { name: "Part 1", amount: 60, category_id: nil, merchant_id: merchants(:amazon).id },
+      { name: "Part 2", amount: 40, category_id: nil, merchant_id: nil }
+    ]
+
+    children = @entry.split!(splits)
+
+    assert_equal merchants(:amazon).id, children.first.entryable.merchant_id
+    assert_equal merchants(:netflix).id, children.last.entryable.merchant_id
+  end
+
+  test "split! assigns per-row tags" do
+    splits = [
+      { name: "Part 1", amount: 60, category_id: nil, tag_ids: [ tags(:one).id, tags(:two).id ] },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ]
+
+    children = @entry.split!(splits)
+
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, children.first.entryable.tag_ids.sort
+    assert_empty children.last.entryable.tag_ids
+  end
+
   test "split_child? returns true for child entries" do
     children = @entry.split!([
       { name: "Part 1", amount: 50, category_id: nil },

@@ -390,7 +390,7 @@ class Entry < ApplicationRecord
 
   # Splits this entry into child entries. Marks parent as excluded.
   #
-  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
+  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, merchant_id:, tag_ids:, excluded: } hashes
   # @return [Array<Entry>] the created child entries
   def split!(splits)
     total = splits.sum { |s| s[:amount].to_d }
@@ -402,11 +402,13 @@ class Entry < ApplicationRecord
       children = splits.map do |split_attrs|
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],
-          merchant_id: entryable.try(:merchant_id),
+          # Falls back to the parent's merchant when a row doesn't set its own,
+          # preserving pre-#2958 behavior for rows that leave merchant blank.
+          merchant_id: split_attrs[:merchant_id].presence || entryable.try(:merchant_id),
           kind: entryable.try(:kind)
         )
 
-        child_entries.create!(
+        child = child_entries.create!(
           account: account,
           date: date,
           name: split_attrs[:name],
@@ -415,6 +417,10 @@ class Entry < ApplicationRecord
           excluded: TRUTHY_VALUES.include?(split_attrs[:excluded]),
           entryable: child_transaction
         )
+
+        child_transaction.tag_ids = split_attrs[:tag_ids] if split_attrs[:tag_ids].present?
+
+        child
       end
 
       update!(excluded: true)
