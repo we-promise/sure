@@ -57,6 +57,24 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal 2500, @occurrence.resolved_expected_amount
   end
 
+  test "a partial payment teaches the matcher nothing about tolerance" do
+    # $1,625 against $2,000 rent is an installment, not evidence rent varies.
+    # It is the only allocation, which is what used to be mistaken for proof.
+    @allocator.allocate!(entry: entry_for(1625))
+
+    assert @occurrence.reload.partially_paid?
+    assert_nil @rent.reload.matcher_hints["learned_tolerance_pct"]
+  end
+
+  test "a single payment that settles the bill above the band does widen tolerance" do
+    # $2,200 settles a $2,000 obligation and sits outside the 7.5% band, so the
+    # band really was too tight.
+    @allocator.allocate!(entry: entry_for(2200))
+
+    assert @occurrence.reload.paid?
+    assert_equal 10.0, @rent.reload.matcher_hints["learned_tolerance_pct"]
+  end
+
   test "partial payments accumulate and close only at the exact sum" do
     @allocator.allocate!(entry: entry_for(750))
     @allocator.allocate!(entry: entry_for(500))

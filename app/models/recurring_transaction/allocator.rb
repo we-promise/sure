@@ -272,9 +272,10 @@ class RecurringTransaction
       #     have recognized -- next time the matcher will.
       #   * A wider tolerance: when this SINGLE entry essentially is the bill
       #     and its amount sits outside the band, the band was too tight.
-      #     Partial payments teach nothing (a $537.50 installment against
-      #     $2,150 rent is not evidence rent varies), enforced by the
-      #     only-allocation check and the learning cap.
+      #     Partial payments teach nothing -- a $537.50 installment against
+      #     $2,150 rent is not evidence that rent varies. Being the only
+      #     allocation does not make a payment the bill, so the test is
+      #     whether it actually SETTLES the occurrence.
       def learn_from_manual_attach!(allocation)
         series = occurrence.recurring_transaction
         entry = allocation.entry
@@ -290,7 +291,7 @@ class RecurringTransaction
         end
 
         expected = occurrence.resolved_expected_amount
-        if expected.positive? && occurrence.allocations.confirmed.count == 1
+        if expected.positive? && occurrence.allocations.confirmed.count == 1 && close_worthy?
           deviation_pct = (entry.amount.abs - expected).abs / expected * 100
           current = BigDecimal((hints["learned_tolerance_pct"] || 0).to_s)
 
