@@ -30,13 +30,13 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     assert_operator confirmed_outflow.reload.updated_at, :>, updated_at
   end
 
-  test "does not create a category when only an unconfirmed match exists" do
+  test "does not create a category when a confirmed match has no existing category" do
     family = Family.create!(name: "Migration without category")
     source = family.accounts.create!(name: "Migration source", currency: "USD", balance: 0, accountable: Depository.new)
     destination = family.accounts.create!(name: "Migration destination", currency: "USD", balance: 0, accountable: Investment.new)
     outflow = create_transaction(account: source, amount: 100, kind: "investment_contribution")
     inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
-    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "pending")
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
 
     assert_no_difference -> { family.categories.count } do
       CategorizeMatchedInvestmentContributions.new.up
