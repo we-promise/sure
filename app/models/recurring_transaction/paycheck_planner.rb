@@ -13,11 +13,12 @@ class RecurringTransaction
     Item = Data.define(:occurrence, :share, :due_in_period)
     Period = Data.define(:starts_on, :ends_on, :income, :items, :obligation_total, :remaining, :final)
 
-    attr_reader :family, :user
+    attr_reader :family, :user, :unconvertible_count
 
     def initialize(family, user:)
       @family = family
       @user = user
+      @unconvertible_count = 0
     end
 
     # nil when no income schedule is declared (the view prompts for one).
@@ -133,9 +134,14 @@ class RecurringTransaction
               .to_a
       end
 
+      # An obligation with no rate into the family currency is counted and
+      # reported, never folded in as zero. Folding it in would quietly inflate
+      # what the plan says is left to spend, which is the one number this view
+      # exists to get right.
       def to_family_currency(money)
         money.exchange_to(family.currency).amount
       rescue Money::ConversionError
+        @unconvertible_count += 1
         BigDecimal("0")
       end
   end

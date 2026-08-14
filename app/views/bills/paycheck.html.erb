@@ -92,6 +92,10 @@
       </div>
     <% end %>
 
+    <% if @plan_unconvertible.to_i.positive? %>
+      <p class="text-xs text-warning"><%= t(".unconvertible", count: @plan_unconvertible) %></p>
+    <% end %>
+
     <div class="space-y-3">
       <% @plan.each_with_index do |period, index| %>
         <% due_items = period.items.select(&:due_in_period) %>

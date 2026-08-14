@@ -4,24 +4,14 @@ class BudgetCategory < ApplicationRecord
   # posted entries, and debt-payment transfers never reach here because
   # transfer series carry no category.
   def bills_reserved
-    occurrences = RecurringOccurrence
-                    .open_status
-                    .joins(:recurring_transaction)
-                    .where(recurring_transactions: {
-                             family_id: budget.family_id,
-                             category_id: category_id,
-                             status: :active,
-                             destination_account_id: nil
-                           })
-                    .where("recurring_transactions.amount > 0")
-                    .where(due_on: budget.start_date..budget.end_date)
-                    .includes(:recurring_transaction, :allocations)
+    bills_reservation.first
+  end
 
-    total = occurrences.sum do |occurrence|
-      occurrence.currency == currency ? occurrence.remaining_amount : 0
-    end
-
-    Money.new(total, currency)
+  # Obligations in this period with no rate into the budget currency. Counted
+  # and reported rather than dropped: a reservation that silently omits money
+  # reads as money the user still has free to spend.
+  def bills_reserved_unconvertible_count
+    bills_reservation.last
   end
 
   include Monetizable
@@ -265,6 +255,39 @@ class BudgetCategory < ApplicationRecord
   end
 
   private
+    # A foreign-currency obligation is converted, not skipped: it is still owed
+    # out of this category. Only one with no rate at all falls out, and that one
+    # is counted.
+    def bills_reservation
+      @bills_reservation ||= begin
+        occurrences = RecurringOccurrence
+                        .open_status
+                        .joins(:recurring_transaction)
+                        .where(recurring_transactions: {
+                                 family_id: budget.family_id,
+                                 category_id: category_id,
+                                 status: :active,
+                                 destination_account_id: nil
+                               })
+                        .where("recurring_transactions.amount > 0")
+                        .where(due_on: budget.start_date..budget.end_date)
+                        .includes(:recurring_transaction, :allocations)
+
+        unconvertible = 0
+
+        total = occurrences.reduce(Money.new(0, currency)) do |sum, occurrence|
+          begin
+            sum + occurrence.remaining_amount_money.exchange_to(currency)
+          rescue Money::ConversionError
+            unconvertible += 1
+            sum
+          end
+        end
+
+        [ total, unconvertible ]
+      end
+    end
+
     def sync_parent_budgeted_spending!(previous_budgeted_spending:)
       parent_budget_category = budget.budget_categories.where(category_id: category.parent_id).lock.first
       return unless parent_budget_category

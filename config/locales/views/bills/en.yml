@@ -60,6 +60,9 @@ en:
       price_changes: Price changes this year
       price_change_line: "%{from} → %{to} (%{percent}%)"
     paycheck:
+      unconvertible:
+        one: "1 obligation is not included, no exchange rate available"
+        other: "%{count} obligations are not included, no exchange rate available"
       income_section_title: Your income
       add_income: Add income
       income_paused: Paused

@@ -18,7 +18,9 @@ class BillsController < ApplicationController
       render :calendar
       return
     when "paycheck"
-      @plan = RecurringTransaction::PaycheckPlanner.new(Current.family, user: Current.user).plan
+      planner = RecurringTransaction::PaycheckPlanner.new(Current.family, user: Current.user)
+      @plan = planner.plan
+      @plan_unconvertible = planner.unconvertible_count
       # The paycheck view is where declared income lives: without this list
       # an added income series has no visible edit surface anywhere.
       @income_series = Current.family.recurring_transactions

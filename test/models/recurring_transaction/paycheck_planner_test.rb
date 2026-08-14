@@ -64,6 +64,28 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_equal 1075, rent_total, "only the remaining balance needs setting aside"
   end
 
+  # Folding an unconvertible obligation in as zero inflates what the plan says
+  # is safe to spend by exactly the amount the user cannot see.
+  test "an obligation with no exchange rate is counted, not dropped" do
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 3, preset: "weekly", income: true)
+    foreign = @family.recurring_transactions.create!(
+      name: "Tokyo storage", account: @account, amount: 50_000, currency: "JPY",
+      bill_type: "bill", expected_day_of_month: (Date.current + 5).day,
+      anchor_date: Date.current + 5, last_occurrence_date: Date.current + 5,
+      next_expected_date: Date.current + 5, status: "active", manual: true
+    )
+    assert_equal 0, ExchangeRate.where(from_currency: "JPY", to_currency: "USD").count,
+      "the scenario depends on there being no rate to find"
+
+    planner = Planner.new(@family, user: @user)
+    plan = planner.plan(periods_limit: 3)
+
+    assert plan.present?
+    assert foreign.recurring_occurrences.any?, "the obligation really was inside the window"
+    assert planner.unconvertible_count.positive?,
+      "the JPY obligation must be reported, not silently valued at zero"
+  end
+
   private
     def create_series(name:, amount:, due:, preset: "monthly", income: false)
       series = @family.recurring_transactions.create!(
