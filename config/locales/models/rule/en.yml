@@ -21,3 +21,4 @@ en:
               split_tags_invalid: "split #%{index} has a tag that does not belong to this family"
               percentages_must_total_100: "percentages must add up to 100 (got %{total})"
               fixed_requires_exact_amount_condition: "fixed-amount splits require a rule condition that matches an exact transaction amount (e.g. Amount = 42.00), otherwise the shares can't reliably sum to every matching transaction's total"
+              fixed_shares_must_equal_condition_amount: "split shares must add up to %{amount}, the exact amount required by this rule's condition"

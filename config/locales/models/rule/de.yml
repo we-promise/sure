@@ -21,3 +21,4 @@ de:
               split_tags_invalid: "Split #%{index}: enthält einen Tag, der nicht zu dieser Familie gehört"
               percentages_must_total_100: "Prozentwerte müssen in Summe 100 ergeben (aktuell %{total})"
               fixed_requires_exact_amount_condition: "Splits mit festen Beträgen benötigen eine Regel-Bedingung mit exaktem Transaktionsbetrag (z. B. Betrag = 42,00), sonst können die Anteile nicht zuverlässig für jede passende Transaktion aufgehen"
+              fixed_shares_must_equal_condition_amount: "Die Split-Anteile müssen in Summe %{amount} ergeben – den exakten Betrag, den die Bedingung dieser Regel vorgibt"
