@@ -2,13 +2,8 @@
 <%# Page title and primary action in the header, view switcher beneath, matching
     transactions/index. Bills was the only top-level destination in the app with
     no heading at all, which also left screen readers with no outline to navigate. %>
-<%# Bills and income are the two halves of every question this section
-    answers, so both are addable from every view. Income used to be reachable
-    only from inside the Income plan tab, which meant a family that had not
-    declared any never found out that the planning half of Bills existed.
-
-    Add bill keeps the primary weight everywhere except the Income plan,
-    where the reason you are on the page is the other one. %>
+<%# Both halves are addable from every view. Add bill carries the primary
+    weight everywhere except the Income plan, where the other one does. %>
 <header class="flex justify-between items-center gap-2 text-primary font-medium">
   <h1 class="text-xl"><%= t("bills.index.title") %></h1>
 

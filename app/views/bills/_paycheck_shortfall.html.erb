@@ -1,11 +1,6 @@
-<%# The gap between today and the next payday. It is the leading window of the
-    plan, said as news rather than drawn as a pay period, because nothing
-    arrives in it and there is nothing to allocate.
-
-    Red arrives as a wash and one word, not as a block: the amount is what
-    makes this noticeable, and the amount is already the loudest thing in the
-    sentence. What is due here gets paid on the Bills run, so that is where
-    the action points rather than inventing a destination. %>
+<%# The gap between today and the next payday, when what is owed in it exceeds
+    what is on hand. Reports the shortfall, how it splits between due and
+    reserved, and the largest obligation behind it. %>
 
 <% largest = period.largest_obligation %>
 

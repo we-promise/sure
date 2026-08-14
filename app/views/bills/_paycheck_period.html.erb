@@ -1,20 +1,9 @@
-<%# One stop on the paycheck runway.
-
-    The gutter carries the timeline: a node per paycheck, joined by a hairline
-    to the next, so the periods read as one run of money over time rather than
-    as summaries that happen to be stacked. The rule between them is inset
-    past the gutter so the connector never breaks.
-
-    The header answers the whole question on its own -- which paycheck, what
-    it is worth, what is left of it. Everything under it is the working out:
-    the three parts side by side, the bar showing their proportion, then the
-    bills the committed part is made of. %>
+<%# One period in the paycheck timeline: when money arrives and what is left
+    of it, the due / reserved / safe split with its allocation bar, the bills
+    due in the window, and an expandable footer for what is held for later. %>
 
 <%
   segments = paycheck_allocation_segments(period)
-  # Committed money separates by weight, not by hue: what leaves now is the
-  # strongest tone, what stands by is muted. Only money that is actually
-  # yours, or actually missing, gets a colour.
   segment_class = {
     due: "bg-inverse",
     reserved: "bg-subdued",
@@ -28,8 +17,6 @@
 %>
 
 <section class="flex gap-3 px-4 sm:px-5">
-  <%# The node centres itself on the header's line box rather than on a
-      hand-tuned offset, so it stays put if the type scale ever moves. %>
   <div class="shrink-0 flex flex-col items-center py-4 <%= "border-t border-transparent" unless first %>" aria-hidden="true">
     <span class="h-7 flex items-center">
       <span class="w-1.5 h-1.5 rounded-full <%= period.short? ? "bg-destructive" : "bg-subdued" %>"></span>
@@ -60,8 +47,6 @@
       </div>
     </div>
 
-    <%# The bar's key, directly above it, so a segment and its figure are read
-        as one thing. %>
     <div>
       <div class="grid grid-cols-3 gap-3">
         <div class="min-w-0">
@@ -106,8 +91,6 @@
       </div>
     <% end %>
 
-    <%# A footer, not a section: the amount is already stated above, so this
-        only has to say what the reserve is being held for. %>
     <% if period.items_reserved.any? %>
       <%= render DS::Disclosure.new(variant: :inline, body_class: "mt-1") do |disclosure| %>
         <% disclosure.with_summary_content do %>

@@ -1,14 +1,7 @@
 module BillsHelper
-  # A paycheck drawn as what it is spoken for: due inside the window, held
-  # back for something later, and whatever is left.
-  #
-  # Explicitly not a progress bar. A future pay period cannot be partly
-  # complete, so a single filled track reading "72%" states a fact about
-  # nothing. Returns `[key, percent]` pairs; the caller owns the colours.
-  #
-  # A short period gets a different bar with two segments, because dividing
-  # income three ways when it does not cover even the first two would draw a
-  # safe slice that does not exist.
+  # The paycheck split into `[key, percent]` pairs; the caller owns the colours.
+  # A short period gets two segments (covered / short) rather than three, since
+  # there is no safe slice to draw.
   def paycheck_allocation_segments(period)
     return [] unless period.income.positive?
 
@@ -26,9 +19,8 @@ module BillsHelper
     end
   end
 
-  # Percentages that add up to exactly 100, so the track never shows a
-  # rounding sliver at the end of a fully allocated bar. The last segment
-  # absorbs the remainder, same as the planner's last share does.
+  # Percentages summing to exactly 100; the last segment absorbs the remainder
+  # so a fully allocated bar never leaves a rounding sliver.
   def normalize_segments(parts, total)
     return [] unless total.positive?
 
@@ -47,9 +39,7 @@ module BillsHelper
     end
   end
 
-  # Spelled out for anyone who cannot see the bar, in the same three terms the
-  # card uses in text. A bar labelled only with a percentage tells a screen
-  # reader nothing about what was divided.
+  # The bar in words, in the same terms the card states in text.
   def paycheck_allocation_aria(period, currency)
     if period.short?
       t("bills.paycheck.allocation_aria_short",
@@ -64,10 +54,8 @@ module BillsHelper
     end
   end
 
-  # A period is named by the income that opens it, because "paycheck" is an
-  # assumption. A declared income series can be a pension, a client invoice or
-  # a benefit payment, and calling every one of them a paycheck puts a word in
-  # the user's mouth that their own setup already contradicts.
+  # Named by the income that opens it: a declared series can be a pension or an
+  # invoice, so "paycheck" would be an assumption.
   def paycheck_period_heading(period)
     date = l(period.starts_on, format: :short)
 
@@ -76,9 +64,7 @@ module BillsHelper
     "#{date}#{paycheck_period_source(period)}"
   end
 
-  # The trailing half of the heading, so the date can carry the weight and the
-  # source can stay quiet inside one line without two translated fragments
-  # fighting over the separator.
+  # The trailing half of the heading, so the date carries the visual weight.
   def paycheck_period_source(period)
     return "" if period.bridge?
 
@@ -89,13 +75,8 @@ module BillsHelper
     end
   end
 
-  # The pay schedule in one line: who pays, how often, when next, how much.
-  # Everything else about income configuration lives behind Manage, because
-  # setting income up is not why anyone opens this page.
-  #
-  # Two sources landing on one day are counted as two, never summed under one
-  # name -- and then the cadence is dropped, because two schedules do not have
-  # one.
+  # The pay schedule in one line: who pays, how often, when next, how much. Two
+  # sources landing on one day are counted, never summed under one name.
   def paycheck_income_headline(next_income)
     occurrences = next_income[:occurrences]
     single = occurrences.one? ? occurrences.first.recurring_transaction : nil
@@ -110,10 +91,7 @@ module BillsHelper
     parts.compact.join(" · ")
   end
 
-  # Why a declared income series is in the list but not in the plan. Silence
-  # here is what made an auto-detected one-cent deposit look like a payday
-  # source: it sat in the list looking exactly like the real one and moved no
-  # number on the page.
+  # Why an income series is listed but not planned around.
   def paycheck_income_excluded_reason(series)
     return t("bills.paycheck.income_paused") unless series.active?
 

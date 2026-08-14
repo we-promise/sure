@@ -620,24 +620,15 @@ class RecurringTransaction < ApplicationRecord
     last_occurrence_date < staleness_threshold_date
   end
 
-  # A cadence the user typed is INTENT; the dates the charges happen to land on
-  # are observation. Detection is free to keep refreshing what it observed, but
-  # once someone has set the schedule by hand it must stop moving it back.
-  #
-  # Only `manual` rows were protected before, and `manual` is set at creation
-  # and never flipped by an edit -- so correcting the due day on a detected
-  # bill was silently reverted by the next sync, which also regenerated its
-  # future occurrences on the wrong day.
-  #
-  # Rides in matcher_hints, the existing per-series jsonb of things the user
-  # has taught this bill, rather than costing a column of its own.
+  # A cadence the user typed is intent; the dates charges land on are
+  # observation. Detection keeps refreshing the latter but must not move a
+  # schedule someone set by hand. `manual` cannot carry this: it is set at
+  # creation and no edit flips it.
   def schedule_pinned?
     matcher_hints.to_h["schedule_pinned_at"].present?
   end
 
-  # Assigns rather than saves: every caller is mid-edit and persists the whole
-  # record itself, so writing here would be a second trip that could land
-  # while the rest of the edit is still invalid.
+  # Assigns rather than saves: callers are mid-edit and persist the record.
   def pin_schedule
     self.matcher_hints = matcher_hints.to_h.merge("schedule_pinned_at" => Time.current.iso8601)
   end

@@ -160,21 +160,13 @@ class BillsController < ApplicationController
   end
 
   private
-    # The plan, plus everything the page needs to talk about income without
-    # contradicting it.
-    #
-    # One planner instance answers both questions, so the income list and the
-    # periods are derived from the same set of occurrences. They used to come
-    # from different places -- the list from the `next_expected_date` column,
-    # the periods from occurrences -- which is how one series could name two
-    # different next paydays on one screen.
+    # The plan plus the income facts the page states alongside it. One planner
+    # instance answers both, so the income list and the periods always agree.
     def load_paycheck_plan
       planner = RecurringTransaction::PaycheckPlanner.new(Current.family, user: Current.user)
       @plan = planner.plan
       @plan_unconvertible = planner.unconvertible_count
 
-      # The paycheck view is where declared income lives: without this list
-      # an added income series has no visible edit surface anywhere.
       @income_series = Current.family.recurring_transactions
                               .accessible_by(Current.user)
                               .where(bill_type: :income)
@@ -183,9 +175,8 @@ class BillsController < ApplicationController
                               .to_a
       @next_income_by_series = planner.next_income_by_series
 
-      # The next income EVENT, which is a different fact from any one series'
-      # next payday: two sources can land on one day, and the page has to be
-      # able to say so rather than presenting a sum under one name.
+      # The next income EVENT, which is not the same fact as any one series'
+      # next payday: two sources can land on the same day.
       arrivals = @next_income_by_series.values
       first_arrival = arrivals.min_by(&:due_on)
       if first_arrival
@@ -194,15 +185,10 @@ class BillsController < ApplicationController
         @next_income = { date: first_arrival.due_on, occurrences: same_day, total: total, unconvertible: unconvertible }
       end
 
-      # Income the planner cannot use is the difference between "no plan yet"
-      # and "a plan that quietly leaves something out", and the page has to
-      # tell them apart.
       @income_needs_attention = @income_series.any? { |series| !paycheck_income_plans?(series) }
     end
 
-    # A series only defines paydays when it is active and manually declared.
-    # Anything else in the income list is there to be reachable, not to be
-    # planned around.
+    # Only active, manually declared income defines paydays.
     def paycheck_income_plans?(series)
       series.active? && series.manual?
     end

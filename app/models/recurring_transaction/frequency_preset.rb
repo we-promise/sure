@@ -34,9 +34,8 @@ class RecurringTransaction
       # cadence identical to the current one is a no-op, so unrelated edits
       # never churn rule rows (or, later, regenerate occurrences).
       #
-      # Returns true only when it actually rewrote the cadence, which is how a
-      # caller tells a deliberate schedule change from an unrelated edit that
-      # merely resubmitted the same preset.
+      # Returns true only when it actually rewrote the cadence, so a caller can
+      # tell a deliberate schedule change from an unrelated edit.
       def apply(recurring, preset:, day_of_month: nil, second_day_of_month: nil, weekday: nil, month_of_year: nil)
         return false if preset.blank? || preset == CUSTOM
         return false unless PRESETS.include?(preset)

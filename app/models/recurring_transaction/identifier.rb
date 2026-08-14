@@ -311,15 +311,9 @@ class RecurringTransaction
       end
 
       # Refreshes a claimed series' cadence bookkeeping and variance band.
-      # Its amount and status are left alone: price changes are a
-      # PriceChangeDetector decision, and a paused or inactive series stays
-      # that way until the user or the Cleaner says otherwise.
-      #
-      # The due day is left alone as well once the user has pinned the
-      # schedule. `manual` is set at creation and no edit ever flips it, so a
-      # detected bill whose day someone corrected by hand was reverted here on
-      # the next sync -- and sync_monthly_rule_day then regenerated its future
-      # occurrences on the very day the user had just rejected.
+      # Amount and status are left alone (price changes belong to
+      # PriceChangeDetector), and so is the due day once the user has pinned
+      # the schedule.
       def update_claimed_series(recurring, pattern)
         attributes = {
           last_occurrence_date: pattern[:last_occurrence_date],
@@ -337,8 +331,7 @@ class RecurringTransaction
       end
 
       # Scheduling reads recurrence_rules, not expected_day_of_month, so a
-      # detected day shift on a plain monthly series must move the rule too --
-      # and regenerate the future occurrences the old day produced.
+      # detected day shift must move the rule and regenerate future occurrences.
       def sync_monthly_rule_day(recurring, day)
         rules = recurring.recurrence_rules
         return unless rules.size == 1

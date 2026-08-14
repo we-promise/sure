@@ -1,10 +1,6 @@
-<%# A ledger line: when, what, how much. One line, with the date in a fixed
-    column so a run of bills reads down the page as dates rather than as
-    sentences -- and so the date survives at 375px, which it does not if it
-    hangs off the end of a truncating name.
-
-    A reserved line names the bill it is a slice of, because the amount on the
-    right is a share and would otherwise read as the whole thing. %>
+<%# One bill as a ledger line: due date in a fixed column, name, amount. A
+    reserved line also names the obligation it is a slice of, since the amount
+    on the right is a share rather than the whole bill. %>
 
 <% series = item.occurrence.recurring_transaction %>
 

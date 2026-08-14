@@ -1,10 +1,6 @@
-<%# Paycheck reads top to bottom as: here is your schedule, here is the gap
-    before the next one if there is a gap, and here is each paycheck in turn
-    with what it must cover and what is left.
-
-    One surface holds the whole timeline. Giving every period its own card is
-    what made a sequence of related paychecks look like a set of unrelated
-    dashboard tiles. %>
+<%# The Income plan page: the income schedule, a warning if there is a gap
+    before the next payday, then one surface holding every upcoming pay
+    period in turn. %>
 
 <%= content_for :page_title, t("bills.index.title") %>
 
@@ -12,10 +8,9 @@
   currency = Current.family.currency
 
   if @plan
-    # The leading window has no income to allocate, so it is reported above
-    # the timeline as a warning rather than drawn as a pay period with an
-    # empty paycheck. A plan holding only that window (a single scheduled
-    # income occurrence) keeps it, or the page would have nothing to show.
+    # The leading window has no income to allocate, so it is reported above the
+    # timeline as a warning. A plan holding only that window keeps it, or the
+    # page would have nothing to show.
     bridge = @plan.find(&:bridge?)
     periods = @plan.reject(&:bridge?)
     shortfall = bridge if bridge&.short? && periods.any?
@@ -49,9 +44,6 @@
       <% end %>
     </div>
   <% elsif @plan.none? { |period| period.items.any? } %>
-    <%# An income schedule with nothing to cover is a real, healthy answer.
-        A run of periods each saying "nothing due" is not a better way to
-        give it. %>
     <div class="bg-container rounded-xl shadow-border-xs p-4">
       <%= render DS::EmptyState.new(
             icon: "circle-check",
