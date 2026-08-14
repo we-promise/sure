@@ -3,15 +3,24 @@
 <% base_name = "#{form.object_name}[split_rows][#{idx}]" %>
 <% split_tag_ids = Array(split["tag_ids"]) %>
 
-<div class="p-2 rounded-md border border-secondary bg-container flex flex-col gap-1.5" data-rule--split-action-target="row">
-  <div class="flex items-center gap-1.5">
-    <input type="text"
-           name="<%= base_name %>[name]"
-           placeholder="<%= t("rules.actions.split.name_placeholder") %>"
-           aria-label="<%= t("rules.actions.split.name_placeholder") %>"
-           value="<%= split["name"] %>"
-           class="form-field__input border border-secondary rounded-md px-2 py-1 text-sm text-primary bg-container flex-1 min-w-0"
-           autocomplete="off">
+<div class="p-2 rounded-md border border-secondary bg-container flex flex-col gap-1.5 overflow-hidden" data-rule--split-action-target="row">
+  <input type="text"
+         name="<%= base_name %>[name]"
+         placeholder="<%= t("rules.actions.split.name_placeholder") %>"
+         aria-label="<%= t("rules.actions.split.name_placeholder") %>"
+         value="<%= split["name"] %>"
+         class="form-field__input border border-secondary rounded-md px-2 py-1 text-sm text-primary bg-container w-full"
+         autocomplete="off">
+
+  <div class="flex flex-wrap items-center gap-1.5">
+    <select name="<%= base_name %>[type]"
+            aria-label="<%= t("rules.actions.split.type_label") %>"
+            class="form-field__input border border-secondary rounded-md px-1.5 py-1 text-xs text-primary bg-container shrink-0"
+            data-rule--split-action-target="typeSelect"
+            data-action="change->rule--split-action#updateSummary">
+      <option value="fixed" <%= "selected" if split["type"] == "fixed" %>><%= t("rules.actions.split.type_fixed") %></option>
+      <option value="percentage" <%= "selected" if split["type"] != "fixed" %>><%= t("rules.actions.split.type_percentage") %></option>
+    </select>
 
     <input type="number"
            name="<%= base_name %>[share]"

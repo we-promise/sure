@@ -1,13 +1,15 @@
 class Rule::Action < ApplicationRecord
   belongs_to :rule, touch: true
 
-  # Virtual attributes for the split_transaction form: `value` is a single string column, so the
+  # Virtual attribute for the split_transaction form: `value` is a single string column, so the
   # split builder UI posts real, individually-named fields here instead of driving a JSON blob
   # through custom JS. build_split_value assembles them into `value` before validation runs.
-  attr_accessor :split_mode, :split_rows
+  # Each row carries its own "type" (fixed or percentage) rather than the action having a single
+  # mode — see Rule::ActionExecutor::SplitTransaction for how the two types combine.
+  attr_accessor :split_rows
 
   validates :action_type, presence: true
-  before_validation :build_split_value, if: -> { action_type == "split_transaction" && (split_mode.present? || split_rows.present?) }
+  before_validation :build_split_value, if: -> { action_type == "split_transaction" && split_rows.present? }
   validate :split_config_valid, if: -> { action_type == "split_transaction" }
 
   # Pre-seed (watermark): when a send_email_notification action is created — on a
@@ -59,6 +61,7 @@ class Rule::Action < ApplicationRecord
       rows = split_rows.respond_to?(:values) ? split_rows.values : Array(split_rows)
       splits = rows.map do |row|
         {
+          type: row[:type],
           name: row[:name],
           share: row[:share],
           category_id: row[:category_id].presence,
@@ -67,7 +70,7 @@ class Rule::Action < ApplicationRecord
         }
       end
 
-      self.value = { mode: split_mode, splits: splits }.to_json
+      self.value = { splits: splits }.to_json
     end
 
     def split_config_valid
@@ -79,15 +82,18 @@ class Rule::Action < ApplicationRecord
       return unless config_errors.empty?
 
       config = Rule::ActionExecutor::SplitTransaction.parse_config(value)
-      if config["mode"] == "fixed"
-        exact_amount = exact_amount_condition_value
-        if exact_amount.nil?
-          errors.add(:value, :fixed_requires_exact_amount_condition)
-        else
-          total_share = config["splits"].sum { |split| BigDecimal(split["share"].to_s) }
-          if total_share != exact_amount
-            errors.add(:value, :fixed_shares_must_equal_condition_amount, amount: exact_amount)
-          end
+      return if Rule::ActionExecutor::SplitTransaction.has_percentage_split?(config)
+
+      # Pure fixed splits (no percentage row to absorb whatever's left) only make sense if every
+      # matching transaction has the same total, since there's nothing dynamic to cover a
+      # mismatch — require an exact "Amount =" condition whose value the fixed shares sum to.
+      exact_amount = exact_amount_condition_value
+      if exact_amount.nil?
+        errors.add(:value, :fixed_requires_exact_amount_condition)
+      else
+        total_share = config["splits"].sum { |split| BigDecimal(split["share"].to_s) }
+        if total_share != exact_amount
+          errors.add(:value, :fixed_shares_must_equal_condition_amount, amount: exact_amount)
         end
       end
     end
