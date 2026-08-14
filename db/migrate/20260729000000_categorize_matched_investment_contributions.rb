@@ -56,7 +56,10 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
           RETURNING transactions.id
         )
         UPDATE entries
-        SET updated_at = CURRENT_TIMESTAMP
+        -- CURRENT_TIMESTAMP is fixed at the surrounding transaction's start,
+        -- which can leave cache keys stale when this runs inside a long-lived
+        -- migration or a test transaction.
+        SET updated_at = statement_timestamp()
         WHERE entries.entryable_type = 'Transaction'
           AND entries.entryable_id IN (SELECT id FROM updated_transactions)
       SQL
