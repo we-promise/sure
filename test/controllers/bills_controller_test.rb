@@ -205,6 +205,33 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "$1,250", response.body
   end
 
+  # The row expansion described the SERIES definition while the drawer described
+  # the current occurrence, so an overdue bill greeted you with "Next payment"
+  # in one surface and "Overdue" in the other, at the same moment.
+  test "the row expansion and the drawer tell the same story about an overdue bill" do
+    overdue_day = 6.days.ago.to_date
+    bill = create_bill(name: "Late Co", amount: 5.99,
+                       expected_day_of_month: overdue_day.day,
+                       last_occurrence_date: 2.months.ago.to_date,
+                       next_expected_date: overdue_day)
+    occurrence = bill.recurring_occurrences.order(:due_on).detect(&:overdue?)
+    assert occurrence, "the fixture must actually be overdue"
+
+    days = (Date.current - occurrence.effective_due_on).to_i
+    overdue_phrase = I18n.t("bills.due_label.overdue", count: days,
+                            date: I18n.l(occurrence.effective_due_on, format: :short))
+
+    get bill_url(bill), headers: { "Turbo-Frame" => "drawer" }
+    assert_response :success
+    assert_match overdue_phrase, response.body, "the drawer states the status"
+
+    get bill_url(bill, display: "pane", frame: "x"), headers: { "Turbo-Frame" => "x" }
+    assert_response :success
+    assert_match overdue_phrase, response.body, "and the expansion must state the same one"
+    assert_no_match I18n.t("bills.pane.next_payment"), response.body,
+      "an overdue bill is not a next payment"
+  end
+
   test "show renders the bill drawer with history and analytics" do
     bill = create_bill(name: "Power Co", amount: 80)
     past = bill.recurring_occurrences.create!(

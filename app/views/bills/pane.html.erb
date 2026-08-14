@@ -9,13 +9,33 @@
           <h3 class="text-lg font-medium text-primary truncate"><%= @series.display_name %></h3>
         </div>
         <div class="flex items-start gap-2 shrink-0">
+        <%# Read from the current occurrence, exactly as the drawer does. This
+            block used to describe the SERIES definition, so an overdue bill
+            greeted you with "Next payment" here while the drawer called the
+            same bill overdue at the same moment. %>
         <div class="text-right shrink-0">
-          <p class="text-xs text-secondary"><%= t(".next_payment") %></p>
-          <p class="text-lg font-medium text-primary privacy-sensitive">
-            <%= "~" if @series.has_amount_variance? %><%= format_money(Money.new(@series.amount.abs, @series.currency)) %>
-          </p>
-          <% if @series.next_expected_date.present? %>
-            <p class="text-xs text-secondary"><%= t(".around", date: l(@series.next_expected_date, format: :short)) %></p>
+          <% if @current_occurrence %>
+            <p class="text-xs <%= @current_occurrence.overdue? ? "text-destructive font-medium" : "text-secondary" %>">
+              <%= occurrence_due_label(@current_occurrence) %>
+            </p>
+            <p class="text-lg font-medium text-primary privacy-sensitive">
+              <%= format_money(@current_occurrence.remaining_amount.positive? ? @current_occurrence.remaining_amount_money : @current_occurrence.resolved_expected_amount_money) %>
+            </p>
+            <% if @current_occurrence.confirmed_allocated.positive? %>
+              <p class="text-xs text-secondary privacy-sensitive">
+                <%= t("bills.partial_progress",
+                      paid: format_money(@current_occurrence.confirmed_allocated_money),
+                      expected: format_money(@current_occurrence.resolved_expected_amount_money)) %>
+              </p>
+            <% end %>
+          <% else %>
+            <p class="text-xs text-secondary"><%= t(".next_payment") %></p>
+            <p class="text-lg font-medium text-primary privacy-sensitive">
+              <%= "~" if @series.has_amount_variance? %><%= format_money(Money.new(@series.amount.abs, @series.currency)) %>
+            </p>
+            <% if @series.next_expected_date.present? %>
+              <p class="text-xs text-secondary"><%= t(".around", date: l(@series.next_expected_date, format: :short)) %></p>
+            <% end %>
           <% end %>
         </div>
         <%= link_to bill_path(@series, display: "pane", frame: @pane_frame_id, close: 1),
