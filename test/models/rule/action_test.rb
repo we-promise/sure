@@ -233,24 +233,23 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_nil @txn1.reload.investment_activity_label
   end
 
-  test "split_transaction builds value from split_mode and split_rows form fields" do
+  test "split_transaction builds value from split_rows form fields" do
     tag = @family.tags.create!(name: "Split test tag")
 
     action = Rule::Action.new(
       rule: @transaction_rule,
       action_type: "split_transaction",
-      split_mode: "percentage",
       split_rows: {
-        "0" => { name: "Groceries", share: "70", category_id: @grocery_category.id, merchant_id: @whole_foods_merchant.id, tag_ids: [ tag.id, "" ] },
-        "1" => { name: "Household", share: "30", category_id: "", merchant_id: "", tag_ids: [ "" ] }
+        "0" => { type: "percentage", name: "Groceries", share: "70", category_id: @grocery_category.id, merchant_id: @whole_foods_merchant.id, tag_ids: [ tag.id, "" ] },
+        "1" => { type: "percentage", name: "Household", share: "30", category_id: "", merchant_id: "", tag_ids: [ "" ] }
       }
     )
 
     assert action.valid?, action.errors.full_messages.to_sentence
 
     parsed = JSON.parse(action.value)
-    assert_equal "percentage", parsed["mode"]
     assert_equal [ "Groceries", "Household" ], parsed["splits"].map { |s| s["name"] }
+    assert_equal [ "percentage", "percentage" ], parsed["splits"].map { |s| s["type"] }
     assert_equal @grocery_category.id, parsed["splits"].first["category_id"]
     assert_nil parsed["splits"].last["category_id"]
     assert_equal @whole_foods_merchant.id, parsed["splits"].first["merchant_id"]
@@ -270,11 +269,24 @@ class Rule::ActionTest < ActiveSupport::TestCase
     action = Rule::Action.new(
       rule: @transaction_rule,
       action_type: "split_transaction",
-      value: { mode: "fixed", splits: [ { name: "Only one", share: "10" } ] }.to_json
+      value: { splits: [ { type: "fixed", name: "Only one", share: "10" } ] }.to_json
     )
 
     assert_not action.valid?
     assert_includes action.errors[:value], "must have between 2 and 20 splits"
+  end
+
+  test "split_transaction rejects an invalid split type" do
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: {
+        splits: [ { type: "bogus", name: "A", share: "50" }, { type: "percentage", name: "B", share: "50" } ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "split #1 type must be fixed or percentage"
   end
 
   test "split_transaction rejects percentages that don't add up to 100" do
@@ -282,8 +294,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
       rule: @transaction_rule,
       action_type: "split_transaction",
       value: {
-        mode: "percentage",
-        splits: [ { name: "A", share: "50" }, { name: "B", share: "40" } ]
+        splits: [ { type: "percentage", name: "A", share: "50" }, { type: "percentage", name: "B", share: "40" } ]
       }.to_json
     )
 
@@ -296,8 +307,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
       rule: @transaction_rule,
       action_type: "split_transaction",
       value: {
-        mode: "fixed",
-        splits: [ { name: "A", share: "0" }, { name: "B", share: "10" } ]
+        splits: [ { type: "fixed", name: "A", share: "0" }, { type: "fixed", name: "B", share: "10" } ]
       }.to_json
     )
 
@@ -312,10 +322,9 @@ class Rule::ActionTest < ActiveSupport::TestCase
       rule: @transaction_rule,
       action_type: "split_transaction",
       value: {
-        mode: "fixed",
         splits: [
-          { name: "A", share: "10", category_id: other_category.id },
-          { name: "B", share: "10" }
+          { type: "fixed", name: "A", share: "10", category_id: other_category.id },
+          { type: "fixed", name: "B", share: "10" }
         ]
       }.to_json
     )
@@ -331,10 +340,9 @@ class Rule::ActionTest < ActiveSupport::TestCase
       rule: @transaction_rule,
       action_type: "split_transaction",
       value: {
-        mode: "fixed",
         splits: [
-          { name: "A", share: "10", merchant_id: other_merchant.id },
-          { name: "B", share: "10" }
+          { type: "fixed", name: "A", share: "10", merchant_id: other_merchant.id },
+          { type: "fixed", name: "B", share: "10" }
         ]
       }.to_json
     )
@@ -350,10 +358,9 @@ class Rule::ActionTest < ActiveSupport::TestCase
       rule: @transaction_rule,
       action_type: "split_transaction",
       value: {
-        mode: "fixed",
         splits: [
-          { name: "A", share: "10", tag_ids: [ other_tag.id ] },
-          { name: "B", share: "10" }
+          { type: "fixed", name: "A", share: "10", tag_ids: [ other_tag.id ] },
+          { type: "fixed", name: "B", share: "10" }
         ]
       }.to_json
     )
@@ -367,10 +374,9 @@ class Rule::ActionTest < ActiveSupport::TestCase
       rule: @transaction_rule,
       action_type: "split_transaction",
       value: {
-        mode: "percentage",
         splits: [
-          { name: "Groceries", share: "70", category_id: @grocery_category.id },
-          { name: "Household", share: "30" }
+          { type: "percentage", name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { type: "percentage", name: "Household", share: "30" }
         ]
       }.to_json
     )
@@ -378,17 +384,16 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert action.valid?
   end
 
-  test "split_transaction fixed mode requires an exact amount condition on the rule" do
+  test "split_transaction with only fixed splits requires an exact amount condition on the rule" do
     rule_without_amount_condition = Rule.new(family: @family, resource_type: "transaction")
 
     action = Rule::Action.new(
       rule: rule_without_amount_condition,
       action_type: "split_transaction",
       value: {
-        mode: "fixed",
         splits: [
-          { name: "Groceries", share: "70", category_id: @grocery_category.id },
-          { name: "Household", share: "30" }
+          { type: "fixed", name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { type: "fixed", name: "Household", share: "30" }
         ]
       }.to_json
     )
@@ -398,7 +403,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
       "fixed-amount splits require a rule condition that matches an exact transaction amount (e.g. Amount = 42.00), otherwise the shares can't reliably sum to every matching transaction's total"
   end
 
-  test "split_transaction fixed mode is valid with an exact amount condition on the rule" do
+  test "split_transaction with only fixed splits is valid with an exact amount condition on the rule" do
     rule_with_amount_condition = Rule.new(
       family: @family,
       resource_type: "transaction",
@@ -409,10 +414,9 @@ class Rule::ActionTest < ActiveSupport::TestCase
       rule: rule_with_amount_condition,
       action_type: "split_transaction",
       value: {
-        mode: "fixed",
         splits: [
-          { name: "Groceries", share: "70", category_id: @grocery_category.id },
-          { name: "Household", share: "30" }
+          { type: "fixed", name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { type: "fixed", name: "Household", share: "30" }
         ]
       }.to_json
     )
@@ -420,7 +424,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert action.valid?
   end
 
-  test "split_transaction fixed mode requires shares to sum to the exact amount condition's value" do
+  test "split_transaction with only fixed splits requires shares to sum to the exact amount condition's value" do
     rule_with_amount_condition = Rule.new(
       family: @family,
       resource_type: "transaction",
@@ -431,10 +435,9 @@ class Rule::ActionTest < ActiveSupport::TestCase
       rule: rule_with_amount_condition,
       action_type: "split_transaction",
       value: {
-        mode: "fixed",
         splits: [
-          { name: "Groceries", share: "70", category_id: @grocery_category.id },
-          { name: "Household", share: "20" }
+          { type: "fixed", name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { type: "fixed", name: "Household", share: "20" }
         ]
       }.to_json
     )
@@ -444,7 +447,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
       "split shares must add up to 100.0, the exact amount required by this rule's condition"
   end
 
-  test "split_transaction fixed mode is not satisfied by an exact amount condition inside an OR group" do
+  test "split_transaction with only fixed splits is not satisfied by an exact amount condition inside an OR group" do
     rule_with_or_amount_condition = Rule.new(
       family: @family,
       resource_type: "transaction",
@@ -460,14 +463,30 @@ class Rule::ActionTest < ActiveSupport::TestCase
       rule: rule_with_or_amount_condition,
       action_type: "split_transaction",
       value: {
-        mode: "fixed",
         splits: [
-          { name: "Groceries", share: "70", category_id: @grocery_category.id },
-          { name: "Household", share: "30" }
+          { type: "fixed", name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { type: "fixed", name: "Household", share: "30" }
         ]
       }.to_json
     )
 
     assert_not action.valid?
+  end
+
+  test "split_transaction with a percentage split does not require an exact amount condition" do
+    rule_without_amount_condition = Rule.new(family: @family, resource_type: "transaction")
+
+    action = Rule::Action.new(
+      rule: rule_without_amount_condition,
+      action_type: "split_transaction",
+      value: {
+        splits: [
+          { type: "fixed", name: "Fee", share: "5" },
+          { type: "percentage", name: "Rest", share: "100" }
+        ]
+      }.to_json
+    )
+
+    assert action.valid?, action.errors.full_messages.to_sentence
   end
 end

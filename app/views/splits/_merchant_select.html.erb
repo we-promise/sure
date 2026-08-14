@@ -13,6 +13,7 @@
           class="form-field__input w-full overflow-hidden border border-secondary rounded-md pl-2.5 pr-7 py-1.5 text-sm text-primary bg-container truncate"
           data-select-target="button"
           data-action="click->select#toggle"
+          aria-label="<%= t("splits.new.merchant_label") %>"
           aria-haspopup="listbox"
           aria-expanded="false">
     <%= selected_merchant ? selected_merchant.name : t("splits.new.no_merchant") %>

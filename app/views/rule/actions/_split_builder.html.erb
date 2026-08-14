@@ -2,7 +2,7 @@
 
 <%
   config = blank ? nil : Rule::ActionExecutor::SplitTransaction.parse_config(action.value)
-  config ||= { "mode" => "percentage", "splits" => [ {}, {} ] }
+  config ||= { "splits" => [ { "type" => "percentage" }, { "type" => "percentage" } ] }
   split_executor = action.rule.registry.get_executor!("split_transaction")
   categories = split_executor.category_options
   merchants = split_executor.merchant_options
@@ -10,20 +10,10 @@
 %>
 
 <div class="flex flex-col gap-2 w-full min-w-0"
-     data-controller="rule--split-action">
-  <div class="flex items-center gap-3">
-    <label class="flex items-center gap-1 text-xs text-secondary">
-      <%= form.radio_button :split_mode, "fixed", checked: config["mode"] == "fixed", data: { rule__split_action_target: "modeRadio", action: "change->rule--split-action#updateSummary" } %>
-      <%= t("rules.actions.split.mode_fixed") %>
-    </label>
-    <label class="flex items-center gap-1 text-xs text-secondary">
-      <%= form.radio_button :split_mode, "percentage", checked: config["mode"] != "fixed", data: { rule__split_action_target: "modeRadio", action: "change->rule--split-action#updateSummary" } %>
-      <%= t("rules.actions.split.mode_percentage") %>
-    </label>
-  </div>
-
-  <p class="text-xs text-secondary <%= "hidden" unless config["mode"] == "fixed" %>" data-rule--split-action-target="fixedModeHint">
-    <%= t("rules.actions.split.fixed_mode_hint") %>
+     data-controller="rule--split-action"
+     data-rule--split-action-fixed-label-value="<%= t("rules.actions.split.fixed_summary_label") %>">
+  <p class="text-xs text-secondary">
+    <%= t("rules.actions.split.hint") %>
   </p>
 
   <div data-rule--split-action-target="rowsContainer" class="flex flex-col gap-1.5">
@@ -46,6 +36,11 @@
   </div>
 
   <template data-rule--split-action-target="rowTemplate">
-    <%= render "rule/actions/split_row", form: form, idx: "ROW_IDX_PLACEHOLDER", split: {}, categories: categories, merchants: merchants, tags: tags %>
+    <%# Deliberately NOT "ROW_IDX_PLACEHOLDER": this template lives inside the action template
+        that rules_controller.js#addAction() clones for a new action, replacing every
+        occurrence of "IDX_PLACEHOLDER" with the new action's index — including inside the
+        substring "ROW_IDX_PLACEHOLDER", which corrupted this row placeholder into a
+        non-numeric key that Rails silently strips from split_rows params. %>
+    <%= render "rule/actions/split_row", form: form, idx: "SPLIT_ROW_PLACEHOLDER", split: { "type" => "percentage" }, categories: categories, merchants: merchants, tags: tags %>
   </template>
 </div>
