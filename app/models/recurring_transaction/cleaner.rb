@@ -1,4 +1,6 @@
 class RecurringTransaction
+  # Bills subsystem: staleness is measured in the series' own cycles, so
+  # quarterly and annual bills survive the gaps between normal occurrences.
   class Cleaner
     attr_reader :family
 

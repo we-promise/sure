@@ -1,3 +1,6 @@
+# Bills subsystem: this controller gained the declared-bill and declared-income
+# create paths, editable identity and frequency, suggestion confirm/dismiss, and
+# schedule pinning on a hand-set cadence.
 class RecurringTransactionsController < ApplicationController
   layout "settings"
 

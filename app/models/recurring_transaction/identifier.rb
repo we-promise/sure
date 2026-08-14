@@ -1,4 +1,8 @@
 class RecurringTransaction
+  # Bills subsystem: detection now clusters amounts within a tolerance rather
+  # than requiring an exact match, claims existing series instead of duplicating
+  # them, lands unclaimed patterns as `suggested`, and offers candidate patterns
+  # to the add-bill pickers.
   class Identifier
     attr_reader :family
 

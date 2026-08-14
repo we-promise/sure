@@ -1,3 +1,6 @@
+# Bills subsystem: adds the `accent` and `outline_muted` variants, with their
+# colours declared in design/tokens/sure.tokens.json alongside every other
+# button colour.
 class DS::Buttonish < DesignSystemComponent
   VARIANTS = {
     primary: {

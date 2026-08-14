@@ -1,3 +1,6 @@
+# Bills subsystem: this model gained recurrence rules, bill typing
+# (bill / subscription / installment / income), payment and pay-run attributes,
+# schedule pinning, and the payable scopes the Bills pages read.
 class RecurringTransaction < ApplicationRecord
   include Monetizable
 

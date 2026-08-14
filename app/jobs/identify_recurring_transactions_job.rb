@@ -1,3 +1,5 @@
+# Bills subsystem: after detecting patterns this now runs the rest of the
+# pipeline -- materialize occurrences, repair provider-replaced entries, match.
 class IdentifyRecurringTransactionsJob < ApplicationJob
   queue_as :default
 

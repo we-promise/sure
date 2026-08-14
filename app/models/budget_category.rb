@@ -1,3 +1,5 @@
+# Bills subsystem: exposes what this category's bills have already committed
+# inside the budget period, as a read-side hook only.
 class BudgetCategory < ApplicationRecord
   # Money this category's bills still expect inside the budget period --
   # committed but not yet spent. Read-side only: budgets stay derived from

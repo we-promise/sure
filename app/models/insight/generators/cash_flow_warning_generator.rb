@@ -1,6 +1,9 @@
 # Projects the family's combined cash (Depository) balance forward 30 days by
 # layering known recurring transactions on top of a statistical daily-spend
 # baseline, and warns when the projected balance dips below the threshold.
+# Bills subsystem: projects from materialized occurrences rather than one
+# projected entry per series, so non-monthly bills are counted at their real
+# frequency and partial payments shrink the projection.
 class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
   produces "cash_flow_warning"
 

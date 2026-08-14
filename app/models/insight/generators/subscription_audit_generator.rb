@@ -1,6 +1,8 @@
 # Surfaces recurring expenses that are well past their expected date — the
 # provider may have raised the price, the charge may have moved, or the user
 # may be paying for something that quietly stopped (or should stop).
+# Bills subsystem: the overdue threshold is now measured in the series' own
+# cycles, so quarterly and annual bills are no longer judged by a flat 45 days.
 class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
   produces "subscription_audit"
 
