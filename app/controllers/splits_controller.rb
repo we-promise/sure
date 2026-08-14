@@ -102,7 +102,7 @@ class SplitsController < ApplicationController
       family_merchant_ids = Current.family.available_merchants_for(Current.user).pluck(:id).to_set
       family_tag_ids = Current.family.tags.pluck(:id).to_set
 
-      raw_splits = split_params[:splits]
+      raw_splits = split_params[:splits] || []
       raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
 
       raw_splits.map do |s|

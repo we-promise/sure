@@ -19,7 +19,12 @@ export default class extends Controller {
   }
 
   addRow() {
-    const html = this.rowTemplateTarget.innerHTML.replaceAll("ROW_IDX_PLACEHOLDER", Date.now())
+    // Seeded from Date.now() (so it can't collide with existing server-rendered row indices,
+    // e.g. 0/1/2 for an already-split transaction's children) but incremented monotonically
+    // from there — two rows added within the same millisecond would otherwise get the same
+    // index, producing duplicate field names that silently drop one row.
+    this.nextRowIndex ??= Date.now()
+    const html = this.rowTemplateTarget.innerHTML.replaceAll("ROW_IDX_PLACEHOLDER", this.nextRowIndex++)
     this.rowsContainerTarget.insertAdjacentHTML("beforeend", html)
     this.updateRemaining()
   }

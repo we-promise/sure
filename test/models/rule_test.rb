@@ -50,10 +50,9 @@ class RuleTest < ActiveSupport::TestCase
         Rule::Action.new(
           action_type: "split_transaction",
           value: {
-            mode: "fixed",
             splits: [
-              { name: "Netflix", share: "70", category_id: @groceries_category.id },
-              { name: "Hulu", share: "30", category_id: hulu_category.id }
+              { type: "fixed", name: "Netflix", share: "70", category_id: @groceries_category.id },
+              { type: "fixed", name: "Hulu", share: "30", category_id: hulu_category.id }
             ]
           }.to_json
         )

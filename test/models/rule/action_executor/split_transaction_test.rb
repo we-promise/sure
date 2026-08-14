@@ -14,8 +14,11 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     @rule_scope = @account.transactions
   end
 
-  def build_action(config)
-    Rule::Action.new(rule: @rule, action_type: "split_transaction", value: config.to_json)
+  # `type:` sets a shared split type on every row that doesn't declare its own (most tests use
+  # one type throughout); pass per-row `type:` in `splits` directly to test a mixed config.
+  def build_action(splits:, type: nil)
+    splits = splits.map { |split| split[:type] ? split : split.merge(type: type) } if type
+    Rule::Action.new(rule: @rule, action_type: "split_transaction", value: { splits: splits }.to_json)
   end
 
   test "fixed split applies per-split merchant and tags" do
@@ -24,7 +27,7 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     entry = create_transaction(amount: 100, name: "Bundle", account: @account)
 
     action = build_action(
-      mode: "fixed",
+      type: "fixed",
       splits: [
         { name: "Groceries", share: "70", merchant_id: merchant.id, tag_ids: [ tag.id ] },
         { name: "Household", share: "30" }
@@ -48,7 +51,7 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     entry = create_transaction(amount: 100, name: "Bundle", account: @account)
 
     action = build_action(
-      mode: "fixed",
+      type: "fixed",
       splits: [
         { name: "Part 1", share: "70", merchant_id: other_family_merchant.id, tag_ids: [ other_family_tag.id ] },
         { name: "Part 2", share: "30" }
@@ -65,18 +68,18 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
 
   test "value_display summarizes the split configuration" do
     action = build_action(
-      mode: "percentage",
+      type: "percentage",
       splits: [ { name: "A", share: "60" }, { name: "B", share: "40" } ]
     )
 
-    assert_equal "2 splits (Percentage)", action.value_display
+    assert_equal "2 splits", action.value_display
   end
 
   test "fixed split creates children with correct amounts and categories" do
     entry = create_transaction(amount: 100, name: "Bundle", account: @account)
 
     action = build_action(
-      mode: "fixed",
+      type: "fixed",
       splits: [
         { name: "Groceries", share: "70", category_id: @groceries.id },
         { name: "Household", share: "30", category_id: @household.id }
@@ -99,7 +102,7 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     entry = create_transaction(amount: 100.01, name: "Bundle", account: @account)
 
     action = build_action(
-      mode: "percentage",
+      type: "percentage",
       splits: [
         { name: "Part 1", share: "33.33" },
         { name: "Part 2", share: "33.33" },
@@ -120,7 +123,7 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     mismatched = create_transaction(amount: 55, name: "Bundle B", account: @account)
 
     action = build_action(
-      mode: "fixed",
+      type: "fixed",
       splits: [
         { name: "Part 1", share: "70" },
         { name: "Part 2", share: "30" }
@@ -135,16 +138,17 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
   end
 
   test "percentage split skips a transaction when rounding drift would create a non-positive amount" do
-    entry = create_transaction(amount: 0.01, name: "Tiny bundle", account: @account)
+    entry = create_transaction(amount: 0.02, name: "Tiny bundle", account: @account)
 
-    # First two shares round up to $0.01 each against a $0.01 total, leaving nothing (and then
-    # negative) for the third split, which absorbs whatever's left.
+    # A valid 100% split (unlike a mismatched total, this could actually pass save-time
+    # validation): the first two shares round up to $0.01 each against a $0.02 total, leaving
+    # $0.00 for the third split, which absorbs whatever's left.
     action = build_action(
-      mode: "percentage",
+      type: "percentage",
       splits: [
-        { name: "Part 1", share: "70" },
-        { name: "Part 2", share: "70" },
-        { name: "Part 3", share: "10" }
+        { name: "Part 1", share: "33.33" },
+        { name: "Part 2", share: "33.33" },
+        { name: "Part 3", share: "33.34" }
       ]
     )
 
@@ -163,7 +167,7 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     already_split.split!([ { name: "A", amount: 20 }, { name: "B", amount: 20 } ])
 
     action = build_action(
-      mode: "fixed",
+      type: "fixed",
       splits: [
         { name: "Part 1", share: "20" },
         { name: "Part 2", share: "20" }
@@ -184,7 +188,7 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     entry = create_transaction(amount: 100, name: "Bundle", account: @account)
 
     action = build_action(
-      mode: "fixed",
+      type: "fixed",
       splits: [
         { name: "Part 1", share: "70", category_id: other_family_category.id },
         { name: "Part 2", share: "30" }
@@ -202,7 +206,7 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     entry = create_transaction(amount: -100, name: "Refund bundle", account: @account)
 
     action = build_action(
-      mode: "percentage",
+      type: "percentage",
       splits: [
         { name: "Part 1", share: "60" },
         { name: "Part 2", share: "40" }
@@ -220,7 +224,7 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     entry = create_transaction(amount: 100, name: "Bundle", account: @account)
 
     action = build_action(
-      mode: "fixed",
+      type: "fixed",
       splits: [
         { name: "Part 1", share: "70" },
         { name: "Part 2", share: "30" }
@@ -234,5 +238,60 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
 
     assert_equal 0, second_pass
     assert_equal 2, entry.reload.child_entries.count
+  end
+
+  test "mixed split takes fixed amounts off the top, then divides the remainder by percentage" do
+    entry = create_transaction(amount: 100, name: "Bundle", account: @account)
+
+    action = build_action(
+      splits: [
+        { type: "fixed", name: "Processing fee", share: "5", category_id: @household.id },
+        { type: "percentage", name: "Groceries", share: "100", category_id: @groceries.id }
+      ]
+    )
+
+    action.apply(@rule_scope)
+
+    entry.reload
+    fee = entry.child_entries.find_by(amount: 5)
+    rest = entry.child_entries.find_by(amount: 95)
+
+    assert_equal @household.id, fee.transaction.category_id
+    assert_equal @groceries.id, rest.transaction.category_id
+  end
+
+  test "mixed split divides the post-fixed remainder proportionally across multiple percentage rows" do
+    entry = create_transaction(amount: 110, name: "Bundle", account: @account)
+
+    action = build_action(
+      splits: [
+        { type: "fixed", name: "Fee", share: "10" },
+        { type: "percentage", name: "Part A", share: "60" },
+        { type: "percentage", name: "Part B", share: "40" }
+      ]
+    )
+
+    action.apply(@rule_scope)
+
+    entry.reload
+    children = entry.child_entries.order(:amount)
+    # $100 remains after the $10 fee; 60/40 of that is $60/$40.
+    assert_equal [ 10, 40, 60 ], children.map(&:amount)
+  end
+
+  test "mixed split skips a transaction where fixed amounts exceed the total, leaving nothing for percentages" do
+    entry = create_transaction(amount: 10, name: "Small bundle", account: @account)
+
+    action = build_action(
+      splits: [
+        { type: "fixed", name: "Fee", share: "20" },
+        { type: "percentage", name: "Rest", share: "100" }
+      ]
+    )
+
+    modified = action.apply(@rule_scope)
+
+    assert_equal 0, modified
+    refute entry.reload.split_parent?
   end
 end

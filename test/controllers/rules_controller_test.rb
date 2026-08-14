@@ -91,7 +91,7 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
   end
 
-  test "creates rule with a split_transaction action from split_mode and split_rows params" do
+  test "creates rule with a split_transaction action from split_rows params" do
     category = categories(:food_and_drink)
 
     post rules_url, params: {
@@ -108,10 +108,9 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
         actions_attributes: {
           "0" => {
             action_type: "split_transaction",
-            split_mode: "percentage",
             split_rows: {
-              "0" => { name: "Netflix", share: "70", category_id: category.id },
-              "1" => { name: "Hulu", share: "30", category_id: "" }
+              "0" => { type: "percentage", name: "Netflix", share: "70", category_id: category.id },
+              "1" => { type: "percentage", name: "Hulu", share: "30", category_id: "" }
             }
           }
         }
@@ -125,8 +124,8 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "split_transaction", action.action_type
 
     parsed_value = JSON.parse(action.value)
-    assert_equal "percentage", parsed_value["mode"]
     assert_equal [ "Netflix", "Hulu" ], parsed_value["splits"].map { |s| s["name"] }
+    assert_equal [ "percentage", "percentage" ], parsed_value["splits"].map { |s| s["type"] }
     assert_equal category.id, parsed_value["splits"].first["category_id"]
     assert_nil parsed_value["splits"].last["category_id"]
 

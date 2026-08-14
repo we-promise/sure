@@ -11,10 +11,10 @@ de:
           attributes:
             value:
               invalid_config: "muss eine gültige Split-Konfiguration sein"
-              invalid_mode: "Modus muss „fixed“ oder „percentage“ sein"
               invalid_split_count: "muss zwischen %{min} und %{max} Splits enthalten"
               split_name_required: "Split #%{index} hat keinen Namen"
               split_name_too_long: "Split #%{index}: Name ist zu lang (max. 255 Zeichen)"
+              split_type_invalid: "Split #%{index}: Typ muss „fixed“ oder „percentage“ sein"
               split_share_invalid: "Split #%{index}: Anteil muss eine positive Zahl sein"
               split_category_invalid: "Split #%{index}: Kategorie gehört nicht zu dieser Familie"
               split_merchant_invalid: "Split #%{index}: Händler gehört nicht zu dieser Familie"
