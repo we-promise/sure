@@ -74,8 +74,10 @@ class User < ApplicationRecord
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
-  # get the specified fallback role (typically :admin for family creators).
+  # get the specified admin-capable fallback role.
   def self.role_for_new_family_creator(fallback_role: :admin)
+    fallback_role = fallback_role.to_s.in?(%w[admin super_admin]) ? fallback_role : :admin
+
     User.exists? ? fallback_role : :super_admin
   end
 
