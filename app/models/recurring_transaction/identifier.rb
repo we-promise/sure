@@ -314,18 +314,26 @@ class RecurringTransaction
       # Its amount and status are left alone: price changes are a
       # PriceChangeDetector decision, and a paused or inactive series stays
       # that way until the user or the Cleaner says otherwise.
+      #
+      # The due day is left alone as well once the user has pinned the
+      # schedule. `manual` is set at creation and no edit ever flips it, so a
+      # detected bill whose day someone corrected by hand was reverted here on
+      # the next sync -- and sync_monthly_rule_day then regenerated its future
+      # occurrences on the very day the user had just rejected.
       def update_claimed_series(recurring, pattern)
-        recurring.update!(
-          expected_day_of_month: pattern[:expected_day_of_month],
+        attributes = {
           last_occurrence_date: pattern[:last_occurrence_date],
           next_expected_date: recurring.schedule.next_occurrence_after(pattern[:last_occurrence_date]),
           occurrence_count: pattern[:occurrence_count],
           expected_amount_min: pattern[:expected_amount_min],
           expected_amount_max: pattern[:expected_amount_max],
           expected_amount_avg: pattern[:expected_amount_avg]
-        )
+        }
+        attributes[:expected_day_of_month] = pattern[:expected_day_of_month] unless recurring.schedule_pinned?
 
-        sync_monthly_rule_day(recurring, pattern[:expected_day_of_month])
+        recurring.update!(attributes)
+
+        sync_monthly_rule_day(recurring, pattern[:expected_day_of_month]) unless recurring.schedule_pinned?
       end
 
       # Scheduling reads recurrence_rules, not expected_day_of_month, so a

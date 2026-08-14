@@ -33,9 +33,13 @@ class RecurringTransaction
       # surfaces as normal validation errors on the built rules. A submitted
       # cadence identical to the current one is a no-op, so unrelated edits
       # never churn rule rows (or, later, regenerate occurrences).
+      #
+      # Returns true only when it actually rewrote the cadence, which is how a
+      # caller tells a deliberate schedule change from an unrelated edit that
+      # merely resubmitted the same preset.
       def apply(recurring, preset:, day_of_month: nil, second_day_of_month: nil, weekday: nil, month_of_year: nil)
-        return if preset.blank? || preset == CUSTOM
-        return unless PRESETS.include?(preset)
+        return false if preset.blank? || preset == CUSTOM
+        return false unless PRESETS.include?(preset)
 
         reference = recurring.anchor_date || recurring.last_occurrence_date || Date.current
         target = target_detection(recurring, reference, preset,
@@ -43,9 +47,10 @@ class RecurringTransaction
                                   second_day_of_month: presence_int(second_day_of_month),
                                   weekday: presence_int(weekday),
                                   month_of_year: presence_int(month_of_year))
-        return if target == detect(recurring)
+        return false if target == detect(recurring)
 
         write(recurring, target, reference)
+        true
       end
 
       # Human-readable cadence, e.g. "Every 2 weeks on Friday".

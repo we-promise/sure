@@ -775,4 +775,64 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
 
       queries
     end
+
+    # `manual` is set at creation and no edit flips it, so a detected bill whose
+    # due day the user corrected by hand was reverted by the next sync, which
+    # also regenerated its future occurrences on the rejected day.
+    test "detection leaves a hand-pinned schedule alone" do
+      series = detected_monthly_series
+
+      RecurringTransaction::FrequencyPreset.apply(series, preset: "monthly", day_of_month: 20)
+      series.pin_schedule
+      series.save!
+
+      RecurringTransaction::Identifier.new(Family.find(@family.id)).identify_recurring_patterns
+      series = RecurringTransaction.find(series.id)
+
+      assert_equal 20, series.recurrence_rules.first.day_of_month,
+        "the day the user set survives the next sync"
+      assert_equal 20, series.expected_day_of_month,
+        "and the series reports the day the user set, not the observed one"
+    end
+
+    # Negative control: without the pin, detection still corrects the due day to
+    # the day the charges actually land on. Without this the guard above could
+    # pass by simply switching the feature off.
+    test "detection still tracks the observed day when nothing is pinned" do
+      series = detected_monthly_series
+      observed_day = series.expected_day_of_month
+
+      RecurringTransaction::FrequencyPreset.apply(series, preset: "monthly", day_of_month: 20)
+      series.save!
+      assert_equal 20, RecurringTransaction.find(series.id).expected_day_of_month
+
+      RecurringTransaction::Identifier.new(Family.find(@family.id)).identify_recurring_patterns
+      series = RecurringTransaction.find(series.id)
+
+      assert_not series.schedule_pinned?
+      assert_equal observed_day, series.expected_day_of_month,
+        "an unpinned series is still corrected to the day its charges land on"
+    end
+
+  private
+    # Three same-day charges inside the detection window: the smallest thing
+    # the Identifier will turn into a monthly series.
+    def detected_monthly_series
+      account = @family.accounts.first
+      anchor = Date.current.beginning_of_month + 8
+
+      3.times do |i|
+        account.entries.create!(
+          date: anchor - i.months,
+          amount: 45.00, currency: "USD", name: "City Water",
+          entryable: Transaction.create!(category: categories(:food_and_drink))
+        )
+      end
+
+      RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
+      @family.recurring_transactions.find_by(name: "City Water").tap do |series|
+        raise "fixture did not produce a detected series" if series.nil?
+        raise "fixture produced a manual series" if series.manual?
+      end
+    end
 end

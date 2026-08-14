@@ -360,7 +360,7 @@ class RecurringTransactionsController < ApplicationController
     end
 
     def apply_frequency_preset
-      RecurringTransaction::FrequencyPreset.apply(
+      changed = RecurringTransaction::FrequencyPreset.apply(
         @recurring_transaction,
         preset: @recurring_transaction.frequency_preset,
         day_of_month: @recurring_transaction.frequency_day_of_month,
@@ -368,6 +368,11 @@ class RecurringTransactionsController < ApplicationController
         weekday: @recurring_transaction.frequency_weekday,
         month_of_year: @recurring_transaction.frequency_month_of_year
       )
+
+      # Setting a cadence by hand states when the bill is due; it is not a
+      # guess for detection to correct. Without this, the next sync moves a
+      # detected bill's day back to whatever the charges happen to look like.
+      @recurring_transaction.pin_schedule if changed
     end
 
     # One merchant routinely owns several bills (three separate Twitch subscriptions,
