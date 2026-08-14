@@ -271,11 +271,22 @@ class BudgetCategory < ApplicationRecord
                                })
                         .where("recurring_transactions.amount > 0")
                         .where(due_on: budget.start_date..budget.end_date)
-                        .includes(:recurring_transaction, :allocations)
+                        .includes(:recurring_transaction)
+                        .to_a
+
+        # One grouped sum for the whole set. Reading remaining_amount straight
+        # off each row issues a SUM per occurrence, which is a query count that
+        # grows with the number of bills the user has.
+        sums = RecurringAllocation.confirmed
+                                  .where(recurring_occurrence_id: occurrences.map(&:id))
+                                  .group(:recurring_occurrence_id)
+                                  .sum(:allocated_amount)
 
         unconvertible = 0
 
         total = occurrences.reduce(Money.new(0, currency)) do |sum, occurrence|
+          occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
+
           begin
             sum + occurrence.remaining_amount_money.exchange_to(currency)
           rescue Money::ConversionError
