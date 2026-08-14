@@ -677,6 +677,79 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # "Something changed" is only useful if the thing you can still act on is
+  # the thing you see first. Notices used to sort by date ascending, so a
+  # month-old one-dollar rise outranked a trial converting tomorrow.
+  test "notices lead with what is still actionable, not with what is oldest" do
+    trial = create_bill(name: "Streamflix", amount: 20)
+    trial.update!(bill_type: "subscription", trial_ends_on: Date.current + 1)
+
+    big = create_bill(name: "Gym", amount: 90)
+    big.recurring_price_changes.create!(effective_on: 20.days.ago.to_date,
+      previous_amount: 90, new_amount: 200, currency: "USD", source: "detected")
+
+    small = create_bill(name: "Power", amount: 60)
+    small.recurring_price_changes.create!(effective_on: 30.days.ago.to_date,
+      previous_amount: 60, new_amount: 61, currency: "USD", source: "detected")
+
+    get bills_url
+    assert_response :success
+    body = response.body
+
+    trial_at = body.index("Streamflix")
+    big_at   = body.index("Gym changed price")
+    small_at = body.index("Power changed price")
+
+    assert trial_at < small_at, "a trial converting tomorrow must outrank a month-old $1 rise"
+    assert big_at < small_at, "a 122% rise must outrank a 2% one"
+  end
+
+  test "small changes collapse rather than pushing the worklist down" do
+    urgent = create_bill(name: "Streamflix", amount: 20)
+    urgent.update!(bill_type: "subscription", trial_ends_on: Date.current + 1)
+
+    3.times do |i|
+      quiet = create_bill(name: "Utility #{i}", amount: 60 + i)
+      quiet.recurring_price_changes.create!(effective_on: (20 + i).days.ago.to_date,
+        previous_amount: 60 + i, new_amount: 61 + i, currency: "USD", source: "detected")
+    end
+
+    get bills_url
+    assert_response :success
+    assert_match I18n.t("bills.index.notices_routine", count: 3), response.body,
+      "the quiet ones collapse behind a count"
+    # Collapsed, not dropped: a hidden notice is still a dead end.
+    3.times { |i| assert_match "Utility #{i}", response.body }
+  end
+
+  test "a price notice says how big the change was" do
+    bill = create_bill(name: "Gym", amount: 90)
+    bill.recurring_price_changes.create!(effective_on: 5.days.ago.to_date,
+      previous_amount: 90, new_amount: 200, currency: "USD", source: "detected")
+
+    get bills_url
+    assert_response :success
+    assert_match "+122%", response.body,
+      "from-and-to alone never said whether a change was worth caring about"
+  end
+
+  # Within a group the order still has to mean something: the partition
+  # separates urgent from routine, but only the sort decides what leads
+  # inside each half.
+  test "among changes of equal weight the most recent leads" do
+    [ [ "Oldest", 30 ], [ "Middle", 20 ], [ "Newest", 5 ] ].each do |name, days|
+      bill = create_bill(name: name, amount: 60)
+      bill.recurring_price_changes.create!(effective_on: days.days.ago.to_date,
+        previous_amount: 60, new_amount: 61, currency: "USD", source: "detected")
+    end
+
+    get bills_url
+    assert_response :success
+    positions = %w[Newest Middle Oldest].map { |n| response.body.index("#{n} changed price") }
+    assert_equal positions.sort, positions,
+      "equally small changes should read newest first, not oldest first"
+  end
+
   private
 
     def create_bill(name:, amount:, **overrides)

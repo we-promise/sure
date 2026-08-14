@@ -145,7 +145,10 @@ en:
       needs_review: Needs review
       notice_trial: "%{name}'s trial ends %{date}"
       notice_renewal: "%{name} renews %{date}"
-      notice_price: "%{name} changed price: %{from} → %{to}"
+      notice_price: "%{name} changed price: %{from} → %{to} (%{percent})"
+      notices_routine:
+        one: "1 smaller change"
+        other: "%{count} smaller changes"
       suggestion_line: "%{entry} looks like a payment of %{bill}"
       suggestion_unknown_entry: A transaction
       confidence: "%{percent}% match"

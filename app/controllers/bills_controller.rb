@@ -383,7 +383,41 @@ class BillsController < ApplicationController
       @needs_action_count = owed_now.count { |occurrence| !occurrence.recurring_transaction.autopay? }
     end
 
-    Notice = Data.define(:kind, :series, :date, :detail)
+    # A trial converting tomorrow and a month-old one-dollar price rise are not
+    # the same news. Notices used to sort by date ascending, which put the
+    # oldest and smallest first and buried the one thing you could still act on.
+    TRIAL_URGENT_DAYS = 3
+    MATERIAL_PRICE_SHIFT = 0.10
+
+    Notice = Data.define(:kind, :series, :date, :detail) do
+      def urgent?
+        case kind
+        when :trial then date <= Date.current + TRIAL_URGENT_DAYS
+        when :price then price_shift >= MATERIAL_PRICE_SHIFT
+        else false
+        end
+      end
+
+      # How far a price moved, as a fraction of what it was. A dollar on a
+      # ten-dollar subscription is worth saying; a dollar on the rent is not.
+      def price_shift
+        return 0 unless kind == :price && detail&.previous_amount.to_d.positive?
+
+        ((detail.new_amount - detail.previous_amount).abs / detail.previous_amount).to_f
+      end
+
+      def price_percent
+        return 0 unless kind == :price && detail&.previous_amount.to_d.positive?
+
+        ((detail.new_amount - detail.previous_amount) / detail.previous_amount * 100).round
+      end
+
+      # Nearness to today in either direction: a change three days ago and a
+      # renewal in three days are both current news.
+      def distance
+        (date - Date.current).to_i.abs
+      end
+    end
 
     # Lightweight, page-native reminders: the Insights pipeline is
     # preview-gated, so anything that must reach EVERY user renders here.
@@ -407,7 +441,7 @@ class BillsController < ApplicationController
         notices << Notice.new(kind: :price, series: change.recurring_transaction, date: change.effective_on, detail: change)
       end
 
-      notices.sort_by(&:date)
+      notices.sort_by { |notice| [ notice.urgent? ? 0 : 1, notice.distance ] }
     end
 
     def suggested_allocations

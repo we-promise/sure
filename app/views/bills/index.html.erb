@@ -47,27 +47,34 @@
   </div>
 
 
+  <%# Changes worth knowing about, ranked by whether you can still do anything.
+      Everything stays on the page: the quieter half collapses rather than
+      being capped, so nothing becomes a dead end and nothing pushes the
+      worklist off screen. %>
   <% if @notices.any? %>
+    <% urgent, routine = @notices.partition(&:urgent?) %>
     <div class="bg-container rounded-xl shadow-border-xs divide-y divide-divider">
-      <% @notices.each do |notice| %>
-        <div class="flex items-center justify-between gap-3 px-4 py-2">
-          <p class="text-sm text-primary">
-            <% case notice.kind %>
-            <% when :trial %>
-              <%= t(".notice_trial", name: notice.series.display_name, date: l(notice.date, format: :long)) %>
-            <% when :renewal %>
-              <%= t(".notice_renewal", name: notice.series.display_name, date: l(notice.date, format: :long)) %>
-            <% when :price %>
-              <span class="privacy-sensitive">
-                <%= t(".notice_price",
-                      name: notice.series.display_name,
-                      from: format_money(notice.detail.previous_amount_money),
-                      to: format_money(notice.detail.new_amount_money)) %>
-              </span>
+      <% urgent.each do |notice| %>
+        <%= render "bills/notice", notice: notice, urgent: true %>
+      <% end %>
+
+      <% if routine.any? %>
+        <div class="px-4 py-2">
+          <% if urgent.any? %>
+            <%= render DS::Disclosure.new(title: t(".notices_routine", count: routine.size), align: "left") do %>
+              <div class="divide-y divide-divider">
+                <% routine.each do |notice| %>
+                  <%= render "bills/notice", notice: notice, urgent: false %>
+                <% end %>
+              </div>
             <% end %>
-          </p>
-          <%= link_to t("bills.details"), bill_path(notice.series),
-                data: { turbo_frame: "drawer" }, class: "text-xs text-link hover:underline shrink-0" %>
+          <% else %>
+            <div class="divide-y divide-divider">
+              <% routine.each do |notice| %>
+                <%= render "bills/notice", notice: notice, urgent: false %>
+              <% end %>
+            </div>
+          <% end %>
         </div>
       <% end %>
     </div>
