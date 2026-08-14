@@ -4,14 +4,22 @@ class Import::AccountMapping < Import::Mapping
   class << self
     def mappables_by_key(import)
       unique_values = import.rows.map(&:account).uniq
-      accounts = import.family.accounts.where(name: unique_values).index_by(&:name)
+      accounts = writable_accounts(import).where(name: unique_values).index_by(&:name)
 
       unique_values.index_with { |value| accounts[value] }
     end
+
+    private
+
+      def writable_accounts(import)
+        return import.family.accounts.none unless Current.user
+
+        import.family.accounts.writable_by(Current.user)
+      end
   end
 
   def selectable_values
-    family_accounts = Current.user.accessible_accounts.visible.alphabetically.map { |account| [ account.name, account.id ] }
+    family_accounts = self.class.writable_accounts(import).visible.alphabetically.map { |account| [ account.name, account.id ] }
 
     unless key.blank?
       family_accounts.unshift [ "Add as new account", CREATE_NEW_KEY ]

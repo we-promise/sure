@@ -46,4 +46,26 @@ class Import::MappingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "select option", text: "Plaid Depository Account"
   end
+
+  test "account mapping excludes accounts the user cannot write" do
+    sign_in users(:family_member)
+
+    @import.update!(
+      raw_file_str: <<~CSV,
+        date,amount,account
+        #{Date.current.iso8601},25,Credit Card
+      CSV
+      date_col_label: "date",
+      amount_col_label: "amount",
+      account_col_label: "account",
+      date_format: "%Y-%m-%d"
+    )
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    get import_confirm_path(@import)
+
+    assert_response :success
+    assert_select "select option", text: "Credit Card", count: 0
+  end
 end
