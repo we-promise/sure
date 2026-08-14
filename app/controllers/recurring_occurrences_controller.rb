@@ -6,6 +6,7 @@ class RecurringOccurrencesController < ApplicationController
   # The dialog is delivered into the shared <turbo-frame id="modal"> (see
   # RecurringTransactionsController#edit for the two-frames trap).
   def show
+    @candidate_query = params[:q].to_s.strip
     @candidates = candidate_entries
 
     render layout: dialog_layout
@@ -65,9 +66,17 @@ class RecurringOccurrencesController < ApplicationController
       end
     end
 
-    # Entries a user would plausibly attach by hand: right account, right
-    # sign, near the due date, not already allocated here. Same-currency only
-    # in this list -- a cross-currency attach goes through an explicit amount.
+    # Entries a user would plausibly attach by hand: right account, right sign,
+    # not already allocated here. Same-currency only in this list -- a
+    # cross-currency attach goes through an explicit amount.
+    #
+    # Ordered by how close the amount is, not by how recent the transaction is.
+    # A bill is nearly always settled by a charge for its own amount, so date
+    # order buried the right answer: on a $6.44 bill with 77 candidates in the
+    # window, all four near-amount matches sat outside the fifteen shown.
+    #
+    # A search looks past the date window entirely, because the payment being
+    # hunted for is usually the one the window already excluded.
     def candidate_entries
       series = @occurrence.recurring_transaction
       base = series.account.present? ? series.account.entries : Current.family.entries
@@ -77,7 +86,6 @@ class RecurringOccurrencesController < ApplicationController
         .where(entryable_type: "Transaction")
         .where(currency: @occurrence.currency)
         .where(sign)
-        .where(date: (@occurrence.due_on - 40)..[ @occurrence.due_on + 40, Date.current ].min)
         .where.not(id: @occurrence.allocations.where.not(entry_id: nil).select(:entry_id))
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
 
@@ -85,6 +93,24 @@ class RecurringOccurrencesController < ApplicationController
         scope = scope.where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
       end
 
-      scope.order(date: :desc).limit(15)
+      scope = if @candidate_query.present?
+        scope.where("entries.name ILIKE :q", q: "%#{ActiveRecord::Base.sanitize_sql_like(@candidate_query)}%")
+      else
+        scope.where(date: (@occurrence.due_on - 40)..[ @occurrence.due_on + 40, Date.current ].min)
+      end
+
+      scope.order(candidate_relevance_sql).limit(15)
+    end
+
+    def candidate_relevance_sql
+      remaining = @occurrence.remaining_amount
+      target = remaining.positive? ? remaining : @occurrence.resolved_expected_amount
+
+      Arel.sql(
+        ActiveRecord::Base.sanitize_sql_array([
+          "ABS(ABS(entries.amount) - ?) ASC, ABS(entries.date - ?) ASC, entries.date DESC",
+          target, @occurrence.due_on
+        ])
+      )
     end
 end

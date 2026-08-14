@@ -17,7 +17,10 @@ en:
       payments: Payments
       manual_payment: Manual payment
       unlink: Unlink
-      candidates: Recent transactions
+      candidates: Link a transaction
+      search_placeholder: Search transactions
+      no_candidates: No nearby transactions to link.
+      no_search_results: "Nothing matching %{query}."
       allocate: Allocate
       custom_amount_placeholder: Record a payment amount
       record_payment: Record payment

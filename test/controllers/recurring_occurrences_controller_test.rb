@@ -21,6 +21,43 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="modal"/).size
   end
 
+  # The dialog used to list the fifteen most RECENT transactions in the window.
+  # On a real bill that hid every plausible match behind unrelated larger
+  # charges, so the exact payment was invisible.
+  test "the transaction list leads with the closest amount, not the most recent" do
+    # Older than every distractor, so date order pushes it past the fifteen-row
+    # cut. Everything sits in the past, because the window is clipped at today.
+    exact = accounts(:depository).entries.create!(
+      date: @occurrence.due_on - 35, amount: 15.99, currency: "USD",
+      name: "Netflix charge", entryable: Transaction.new
+    )
+    20.times do |i|
+      accounts(:depository).entries.create!(
+        date: @occurrence.due_on - 6 - i, amount: 500 + i, currency: "USD",
+        name: "Unrelated big charge #{i}", entryable: Transaction.new
+      )
+    end
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match exact.name, response.body,
+      "the transaction matching the bill amount must survive the fifteen-row cut"
+  end
+
+  test "searching looks past the date window" do
+    old = accounts(:depository).entries.create!(
+      date: @occurrence.due_on - 300, amount: 15.99, currency: "USD",
+      name: "Ancient Netflix charge", entryable: Transaction.new
+    )
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "modal" }
+    assert_no_match old.name, response.body, "outside the window it is not offered by default"
+
+    get recurring_occurrence_url(@occurrence, q: "Ancient"), headers: { "Turbo-Frame" => "modal" }
+    assert_match old.name, response.body, "a search must be able to reach it"
+  end
+
   test "mark_paid settles the occurrence" do
     post mark_paid_recurring_occurrence_url(@occurrence)
 

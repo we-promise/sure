@@ -58,28 +58,47 @@
         </div>
       <% end %>
 
-      <% if @occurrence.scheduled? && @candidates.any? %>
-        <div class="space-y-1">
+      <% if @occurrence.scheduled? %>
+        <div class="space-y-2">
           <p class="text-xs font-medium text-secondary uppercase"><%= t(".candidates") %></p>
-          <div class="bg-container-inset rounded-lg divide-y divide-divider">
-            <% @candidates.each do |entry| %>
-              <div class="flex items-center justify-between gap-3 px-3 py-2">
-                <div class="min-w-0">
-                  <p class="text-sm text-primary truncate"><%= entry.name %></p>
-                  <p class="text-xs text-secondary"><%= l(entry.date, format: :short) %></p>
+
+          <%# Nearest amount first, and a search that looks past the date window,
+              because the payment being hunted for is usually the older one. %>
+          <%= form_with url: recurring_occurrence_path(@occurrence), method: :get,
+                        data: { turbo_frame: "modal" } do %>
+            <%= render DS::SearchInput.new(
+              name: "q",
+              value: @candidate_query,
+              placeholder: t(".search_placeholder"),
+              aria_label: t(".search_placeholder")
+            ) %>
+          <% end %>
+
+          <% if @candidates.any? %>
+            <div class="bg-container-inset rounded-lg divide-y divide-divider">
+              <% @candidates.each do |entry| %>
+                <div class="flex items-center justify-between gap-3 px-3 py-2">
+                  <div class="min-w-0">
+                    <p class="text-sm text-primary truncate"><%= entry.name %></p>
+                    <p class="text-xs text-secondary"><%= l(entry.date, format: :short) %></p>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-sm text-primary privacy-sensitive"><%= format_money(entry.amount_money.abs) %></span>
+                    <%= render DS::Button.new(
+                      text: t(".allocate"),
+                      variant: "outline",
+                      href: recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id),
+                      method: :post
+                    ) %>
+                  </div>
                 </div>
-                <div class="flex items-center gap-2 shrink-0">
-                  <span class="text-sm text-primary privacy-sensitive"><%= format_money(entry.amount_money.abs) %></span>
-                  <%= render DS::Link.new(
-                    text: t(".allocate"),
-                    variant: "ghost",
-                    href: recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id),
-                    method: :post
-                  ) %>
-                </div>
-              </div>
-            <% end %>
-          </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-sm text-secondary px-1">
+              <%= @candidate_query.present? ? t(".no_search_results", query: @candidate_query) : t(".no_candidates") %>
+            </p>
+          <% end %>
         </div>
       <% end %>
 
