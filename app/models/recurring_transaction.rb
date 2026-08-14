@@ -4,9 +4,8 @@
 class RecurringTransaction < ApplicationRecord
   include Monetizable
 
-  # Upper bound on a declared installment run. The generator materialises a
-  # finite plan whole, so this is the ceiling on how many occurrence rows a
-  # single save can create.
+  # Ceiling on how many occurrence rows one save can create: the generator
+  # materialises a finite plan whole.
   MAX_END_AFTER_COUNT = 600
 
   belongs_to :family
@@ -15,9 +14,8 @@ class RecurringTransaction < ApplicationRecord
   belongs_to :merchant, optional: true
   belongs_to :category, optional: true
   belongs_to :replaced_by, optional: true, class_name: "RecurringTransaction"
-  # autosave so rule rewrites are atomic with the parent save: FrequencyPreset
-  # marks old rules for destruction and builds replacements in one assignment,
-  # and only autosave honors mark_for_destruction on save.
+  # autosave: FrequencyPreset marks old rules for destruction and builds
+  # replacements in one assignment, and only autosave honors that on save.
   has_many :recurrence_rules, -> { order(:position) }, dependent: :destroy, autosave: true
   has_many :recurring_occurrences, dependent: :destroy
   has_many :recurring_match_rejections, dependent: :destroy
@@ -47,9 +45,7 @@ class RecurringTransaction < ApplicationRecord
   validates :expected_day_of_month, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: 31 }
   validates :status, presence: true, inclusion: { in: statuses.keys }
   validates :occurrence_count, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
-  # A finite plan materialises its whole run, so this number decides how many
-  # rows one save writes. 600 covers a 50-year monthly plan and a 10-year
-  # weekly one, well past anything a person enters by hand.
+  # 600 covers a 50-year monthly plan and a 10-year weekly one.
   validates :end_after_count,
             numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_END_AFTER_COUNT },
             allow_nil: true
@@ -67,8 +63,7 @@ class RecurringTransaction < ApplicationRecord
   before_validation :derive_transfer_bill_type
 
   # Columns whose change reshapes the occurrence stream. Amount is absent on
-  # purpose: open occurrences inherit their expected amount at read time, so a
-  # price edit needs no regeneration at all.
+  # purpose: open occurrences inherit it at read time.
   SCHEDULE_SHAPING_ATTRIBUTES = %w[
     expected_day_of_month anchor_date end_mode end_on end_after_count weekend_adjust status currency
   ].freeze
@@ -90,13 +85,9 @@ class RecurringTransaction < ApplicationRecord
   # "example.com:8080" is a host and port, not a scheme, so it does not match.
   EXPLICIT_SCHEME = %r{\A[a-zA-Z][a-zA-Z0-9+.\-]*:(?://|(?!\d))}
 
-  # Users paste "verizon.com" as often as "https://verizon.com", so a bare host is
-  # promoted to https rather than rejected. Mirrors FamilyMerchant#extract_domain.
-  #
-  # Anything carrying an explicit scheme is left exactly as typed so that validation
-  # can reject it on the merits. Prefixing "javascript:alert(1)" into
-  # "https://javascript:alert(1)" would both hide what the user entered and make the
-  # rejection an accident of URI parsing rather than a decision.
+  # A bare host is promoted to https; anything with an explicit scheme is left
+  # exactly as typed so validation rejects it on the merits rather than by
+  # accident of URI parsing. Mirrors FamilyMerchant#extract_domain.
   def self.normalize_payment_url(url)
     stripped = url.to_s.strip
     return nil if stripped.blank?
@@ -122,12 +113,9 @@ class RecurringTransaction < ApplicationRecord
     payment_url.present?
   end
 
-  # A recurring transaction is identified by its merchant when it has one and by its
-  # free-text name otherwise; `merchant_or_name_present` guarantees one of the two.
-  # What the user calls this bill, which is not the same question as what it
-  # matches on. A name they typed wins over the detected merchant, otherwise
-  # renaming a detected bill would silently do nothing. The matcher keeps
-  # reading the merchant directly, because matching really is by merchant.
+  # What the user calls this bill, which is a different question from what it
+  # matches on: a typed name wins over the detected merchant, while the matcher
+  # keeps reading the merchant directly.
   def display_name
     name.presence || merchant&.name
   end
@@ -138,9 +126,8 @@ class RecurringTransaction < ApplicationRecord
     end
   end
 
-  # category_id is a permitted parameter, and nothing else checks whose
-  # category it is. Without this a crafted id attaches another household's
-  # category to this bill, which then renders its name and colour.
+  # category_id is mass-assignable and nothing else checks ownership, so a
+  # crafted id would attach another family's category to this bill.
   def category_belongs_to_family
     return if category_id.blank? || family_id.blank?
 
@@ -159,10 +146,8 @@ class RecurringTransaction < ApplicationRecord
     OccurrenceGenerator.new(self).generate!
   end
 
-  # Regenerating deletes only scheduled, allocation-free, not-yet-due rows and
-  # rebuilds them under the new shape; anything closed or carrying payments is
-  # untouched. Pausing/ending a series prunes its re-generatable future the
-  # same way, because generate! refuses non-active series.
+  # Regenerating rebuilds only scheduled, allocation-free, not-yet-due rows;
+  # anything closed or carrying payments is untouched.
   def regenerate_future_occurrences
     self.rules_rewritten = false
     OccurrenceGenerator.new(self).regenerate_future!
@@ -172,15 +157,10 @@ class RecurringTransaction < ApplicationRecord
     rules_rewritten || (previous_changes.keys & SCHEDULE_SHAPING_ATTRIBUTES).any?
   end
 
-  # A price change means "it costs this much from now on", not "it always cost
-  # this much". Occurrences resolve their amount from the series live, so
-  # without this, raising the rent rewrites what last month's unpaid rent
-  # claims you owe, and the past-due total on the Overview with it.
-  #
-  # Dates already due keep what they claimed; future dates pick up the new
-  # amount. Rows carrying a payment are already pinned by the allocator, and
-  # closed rows are out of scope, so only open, unpinned, on-or-before-today
-  # rows need stamping.
+  # A price change applies from now on, not retroactively. Occurrences resolve
+  # their amount from the series live, so dates already due are stamped with what
+  # they claimed while future ones pick up the new amount. Rows carrying a
+  # payment are already pinned by the allocator.
   def pin_amount_on_dates_already_due
     was = previous_changes["amount"]&.first
     return if was.blank?
@@ -194,11 +174,8 @@ class RecurringTransaction < ApplicationRecord
       end
   end
 
-  # A destination account IS the definition of a transfer, so the
-  # classification derives from the shape rather than asking every creation
-  # path to remember it. The validation guards only the reverse: a row
-  # claiming to be a transfer without the shape would route through pair
-  # matching with no pair to match.
+  # A destination account is the definition of a transfer, so the type derives
+  # from the shape rather than every creation path remembering to set it.
   def derive_transfer_bill_type
     self.bill_type = "transfer" if transfer?
   end
@@ -268,14 +245,9 @@ class RecurringTransaction < ApplicationRecord
   scope :for_family, ->(family) { where(family: family) }
   scope :expected_soon, -> { active.where("next_expected_date <= ?", 1.month.from_now) }
 
-  # A bill is an active recurring *expense* you owe someone. Transfers are internal
-  # moves between your own accounts, and income is not owed, so neither belongs on a
-  # list of things to pay. Expenses are stored positive, matching the convention
-  # `Insight::Generators::SubscriptionAuditGenerator` already relies on.
-  #
-  # Deliberately no minimum amount: a threshold would be an arbitrary number that is
-  # wrong in some currency. A trivial row the user does not consider a bill is
-  # handled by the existing pause action, which is what it is for.
+  # An active recurring expense you owe someone: transfers are internal moves and
+  # income is not owed, so neither belongs on a list of things to pay. No minimum
+  # amount, since any threshold is wrong in some currency; pause handles the rest.
   scope :bills, -> { active.where(destination_account_id: nil).where("amount > 0") }
 
   # Everything the Bills page owes an answer for: expense bills and
@@ -290,23 +262,12 @@ class RecurringTransaction < ApplicationRecord
           .merge(where(destination_account_id: nil).or(where(destination_account_id: debt_accounts)))
   }
 
-  # The bills that actually want something from you. A bill on autopay still belongs on
-  # the list -- you want to know it is coming and what it will cost -- but it is not a
-  # task, and a list that cannot tell the two apart makes the user re-derive that every
-  # month from memory.
+  # The bills that want an action from you. Autopay bills still belong on the
+  # list, but they are not tasks.
   scope :needs_action, -> { where(autopay: false) }
 
-  # The stored `next_expected_date` can sit a whole cycle too far out.
-  # `calculate_next_expected_date` always jumps to `last_occurrence_date.next_month`, so
-  # a payment that posts earlier in the month than the bill's expected day skips the
-  # occurrence still ahead in the current month: a rent bill due on the 29th, last paid
-  # on the 6th, is recorded as due *next* month. Compare
-  # `calculate_next_expected_date_from_today` a few lines up, which handles exactly that
-  # case correctly.
-  #
-  # Bills has to answer "what do I owe now", so it derives the date instead of trusting
-  # the stored one. Correcting what gets persisted changes what the Identifier and the
-  # Cleaner write, so it belongs with the scheduling work rather than here.
+  # Derived rather than read from the stored `next_expected_date`, which can sit
+  # a cycle too far out when a payment posts earlier than the expected day.
   # For installment plans: how many payments are done, out of how many.
   # nil when the series has no declared payment count.
   def installment_progress
@@ -341,12 +302,9 @@ class RecurringTransaction < ApplicationRecord
     amount_money * (schedule.occurrences_per_year / 12.0)
   end
 
-  # Deliberately strict: same name ignoring case and spacing, same amount, *and* same
-  # expected day. Loosening any one of those starts flagging genuinely separate
-  # subscriptions to one merchant -- three concurrent Twitch tiers at different prices
-  # on different days are three real bills, and telling someone to merge them is worse
-  # than saying nothing. The pairs this does catch are the ones detection split by
-  # casing, which are unambiguous.
+  # Deliberately strict -- same name ignoring case and spacing, same amount AND
+  # same expected day -- so concurrent subscription tiers to one merchant are
+  # never flagged as duplicates of each other.
   def duplicate_key
     [ display_name.to_s.downcase.gsub(/\s+/, " ").strip, amount, expected_day_of_month ]
   end
@@ -503,11 +461,9 @@ class RecurringTransaction < ApplicationRecord
 
     create!(attributes)
   rescue ActiveRecord::RecordNotUnique
-    # A series for this identifier already exists (identity no longer includes
-    # amount). A second legitimate series for one merchant -- another
-    # subscription tier, say -- is distinguished by stamping its amount into
-    # dedup_scope. Retried once; a true duplicate (same amount too) re-raises
-    # for the caller's existing already-exists handling.
+    # Identity no longer includes amount, so a second legitimate series for one
+    # merchant is distinguished by stamping its amount into dedup_scope. Retried
+    # once; a true duplicate re-raises.
     scoped = attributes.merge(dedup_scope: entry.amount.to_d.to_s("F"))
     raise if where(scoped.slice(:family, :account, :merchant_id, :name, :currency, :dedup_scope)).exists?
 
@@ -594,21 +550,17 @@ class RecurringTransaction < ApplicationRecord
     end
   end
 
-  # True only when the observed amounts actually SPREAD. Detection records a
-  # band for every cluster, so a perfectly stable bill carries a degenerate
-  # band (min == max) -- displaying that as "~amount" would claim an
-  # approximation where there is none, and matching against it is identical
-  # to an exact match anyway.
+  # True only when the observed amounts actually spread. Detection records a band
+  # for every cluster, so a stable bill carries a degenerate one (min == max) that
+  # must not render as "~amount".
   def has_amount_variance?
     expected_amount_min.present? && expected_amount_max.present? &&
       expected_amount_min < expected_amount_max
   end
 
-  # A series is stale after two missed cycles of ITS OWN cadence, floored at
-  # the old flat thresholds (2 months auto, 6 months manual) so a weekly bill
-  # is not retired after a fortnight's gap. The cycle term is what stops a
-  # quarterly or annual bill being auto-retired between its perfectly normal
-  # occurrences -- under the flat threshold every non-monthly bill died.
+  # Stale after two missed cycles of the series' own cadence, floored at 2 months
+  # (auto) / 6 months (manual), so quarterly and annual bills survive the gaps
+  # between their normal occurrences.
   def staleness_threshold_date
     calendar_floor = (manual? ? 6 : 2).months.ago.to_date
     cycle_days = (2 * 365.25 / schedule.occurrences_per_year).ceil
@@ -750,9 +702,7 @@ class RecurringTransaction < ApplicationRecord
     end
 
     # Transaction entries whose amount fits the pattern: exact, or within the
-    # observed variance band when one has been recorded. Auto-detected rows
-    # carry a band too now that detection clusters within tolerance instead of
-    # requiring exact amounts.
+    # observed variance band when one has been recorded.
     def amount_window_scope(relation)
       if has_amount_variance?
         relation.where("entries.amount BETWEEN ? AND ?", expected_amount_min, expected_amount_max)
@@ -761,10 +711,8 @@ class RecurringTransaction < ApplicationRecord
       end
     end
 
-    # Entries whose day-of-month lands within the schedule's tolerance of the
-    # expected day, on the circular calendar with short-month clamping. This is
-    # the same matcher the Identifier applies to manual rows; the two disagreed
-    # for bills on the 1st and the 31st before being unified here.
+    # Entries landing within the schedule's day tolerance, on the circular
+    # calendar with short-month clamping.
     def day_of_month_scope(relation)
       relation.where(Schedule.day_window_sql,
                      expected_day: expected_day_of_month,
