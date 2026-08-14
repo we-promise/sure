@@ -3,6 +3,13 @@ class RecurringTransaction
   # All writes take the occurrence row lock, so a user clicking and a
   # background job reconciling cannot race each other into a double payment.
   #
+  # Writes that touch an entry additionally take an advisory lock on the ENTRY.
+  # The row lock alone cannot protect the "an entry is never allocated beyond
+  # its own amount" invariant: two allocations of one transaction against two
+  # DIFFERENT occurrences take two different row locks, so they never meet, and
+  # both read the same stale capacity before either inserts. Locking the entry
+  # serializes every write against that transaction wherever it lands.
+  #
   # Closing has two deliberately different modes (they answer different
   # questions and conflating them marks half-paid rent as settled):
   #
@@ -17,6 +24,11 @@ class RecurringTransaction
     class OverAllocationError < StandardError; end
     class MissingRateError < StandardError; end
 
+    # Postgres keeps single-key and two-key advisory locks in separate spaces,
+    # so this namespace can never collide with the single-key family locks the
+    # recurring jobs take.
+    ENTRY_LOCK_NAMESPACE = 8311
+
     attr_reader :occurrence
 
     def initialize(occurrence)
@@ -29,30 +41,34 @@ class RecurringTransaction
     # explicit amount when no rate exists.
     def allocate!(amount: nil, entry: nil, paid_on: nil, source: nil)
       occurrence.with_lock do
-        allocated, source_amount, source_currency = resolve_amounts(amount, entry)
-        guard_entry_capacity!(entry, source_amount) if entry
+        with_entry_lock(entry) do
+          allocated, source_amount, source_currency = resolve_amounts(amount, entry)
+          guard_entry_capacity!(entry, source_amount) if entry
 
-        allocation = occurrence.allocations.create!(
-          entry: entry,
-          allocated_amount: allocated,
-          currency: occurrence.currency,
-          source_amount: source_amount,
-          source_currency: source_currency,
-          state: "confirmed",
-          source: source || (entry ? "user_confirmed" : "user_created"),
-          paid_on: paid_on
-        )
+          allocation = occurrence.allocations.create!(
+            entry: entry,
+            allocated_amount: allocated,
+            currency: occurrence.currency,
+            source_amount: source_amount,
+            source_currency: source_currency,
+            state: "confirmed",
+            source: source || (entry ? "user_confirmed" : "user_created"),
+            paid_on: paid_on
+          )
 
-        learn_from_manual_attach!(allocation) if entry
-        refresh_close_state!
-        allocation
+          learn_from_manual_attach!(allocation) if entry
+          refresh_close_state!
+          allocation
+        end
       end
     end
 
     def unallocate!(allocation)
       occurrence.with_lock do
-        allocation.destroy!
-        refresh_close_state!
+        with_entry_lock(allocation.entry) do
+          allocation.destroy!
+          refresh_close_state!
+        end
       end
     end
 
@@ -61,32 +77,38 @@ class RecurringTransaction
     # move close state -- they are questions, not payments.
     def allocate_matched!(entry:, state:, confidence:, signals:)
       occurrence.with_lock do
-        allocated, source_amount, source_currency = resolve_amounts(nil, entry)
-        return nil unless allocated.positive?
+        with_entry_lock(entry) do
+          allocated, source_amount, source_currency = resolve_amounts(nil, entry)
+          return nil unless allocated.positive?
 
-        allocation = occurrence.allocations.create!(
-          entry: entry,
-          allocated_amount: allocated,
-          currency: occurrence.currency,
-          source_amount: source_amount,
-          source_currency: source_currency,
-          state: state,
-          source: "auto_matched",
-          match_confidence: confidence,
-          match_signals: signals,
-          paid_on: entry.date
-        )
+          guard_entry_capacity!(entry, source_amount)
 
-        refresh_close_state! if state == "confirmed"
-        allocation
+          allocation = occurrence.allocations.create!(
+            entry: entry,
+            allocated_amount: allocated,
+            currency: occurrence.currency,
+            source_amount: source_amount,
+            source_currency: source_currency,
+            state: state,
+            source: "auto_matched",
+            match_confidence: confidence,
+            match_signals: signals,
+            paid_on: entry.date
+          )
+
+          refresh_close_state! if state == "confirmed"
+          allocation
+        end
       end
     end
 
     # Accepting a suggestion makes it a real payment.
     def confirm_suggestion!(allocation)
       occurrence.with_lock do
-        allocation.update!(state: "confirmed", source: "user_confirmed")
-        refresh_close_state!
+        with_entry_lock(allocation.entry) do
+          allocation.update!(state: "confirmed", source: "user_confirmed")
+          refresh_close_state!
+        end
       end
     end
 
@@ -94,14 +116,16 @@ class RecurringTransaction
     # proposes it again -- corrections are permanently sticky.
     def reject_suggestion!(allocation)
       occurrence.with_lock do
-        if allocation.entry
-          RecurringMatchRejection.find_or_create_by!(
-            recurring_transaction: occurrence.recurring_transaction,
-            entry: allocation.entry
-          )
-        end
+        with_entry_lock(allocation.entry) do
+          if allocation.entry
+            RecurringMatchRejection.find_or_create_by!(
+              recurring_transaction: occurrence.recurring_transaction,
+              entry: allocation.entry
+            )
+          end
 
-        allocation.destroy!
+          allocation.destroy!
+        end
       end
     end
 
@@ -139,6 +163,26 @@ class RecurringTransaction
     end
 
     private
+      # Serializes every write touching this entry for the rest of the
+      # surrounding transaction, whichever occurrence it targets. Taken inside
+      # the occurrence row lock, so the acquisition order is always
+      # occurrence then entry and no pair of these can deadlock.
+      def with_entry_lock(entry)
+        return yield if entry.nil?
+
+        occurrence.class.connection.execute(
+          ActiveRecord::Base.sanitize_sql_array(
+            [ "SELECT pg_advisory_xact_lock(?::int, ?::int)", ENTRY_LOCK_NAMESPACE, entry_lock_id(entry) ]
+          )
+        )
+
+        yield
+      end
+
+      def entry_lock_id(entry)
+        Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
+      end
+
       def close_worthy?
         expected = occurrence.resolved_expected_amount
         return false unless expected.positive?
@@ -171,9 +215,12 @@ class RecurringTransaction
           else
             # Default: as much of the entry as this occurrence still needs --
             # or, when the occurrence is already covered, the entry's whole
-            # unspoken-for amount (an explicit overpay attach).
+            # unspoken-for amount (an explicit overpay attach). Either way it
+            # is bounded by what the entry has left: an exhausted entry
+            # allocates nothing, never the occurrence's outstanding balance.
             capacity = entry_capacity(entry, entry_total)
-            [ capacity, occurrence.remaining_amount ].select(&:positive?).min || capacity
+            remaining = occurrence.remaining_amount
+            remaining.positive? ? [ capacity, remaining ].min : capacity
           end
 
           [ allocated, allocated, entry.currency ]

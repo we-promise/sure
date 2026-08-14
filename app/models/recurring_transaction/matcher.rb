@@ -134,6 +134,10 @@ class RecurringTransaction
         )
       rescue ActiveRecord::RecordNotUnique
         # Already allocated (a previous run wrote it); nothing to do.
+      rescue Allocator::OverAllocationError
+        # The entry has nothing left to give -- another occurrence already
+        # claimed it. Skipping this candidate is the right answer, and it is
+        # never worth aborting the rest of the run over.
       end
 
       def collect_candidates(include_closed_window: false)
