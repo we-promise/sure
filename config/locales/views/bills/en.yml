@@ -162,6 +162,7 @@ en:
         one: "1 bill is not included, no exchange rate available"
         other: "%{count} bills are not included, no exchange rate available"
       overdue: Overdue
+      needs_attention: Needs attention
       this_month: This month
       later: Later
       paid_this_month: Paid this month

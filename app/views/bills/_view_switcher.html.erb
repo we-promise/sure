@@ -1,12 +1,9 @@
 <%# locals: (active:) %>
-<div class="flex items-center justify-between gap-2">
-  <%= render DS::SegmentedControl.new(aria_label: t("bills.views.aria_label")) do |control| %>
-    <% control.with_segment(t("bills.views.overview"), active: active == "overview", href: bills_path) %>
-    <% control.with_segment(t("bills.views.calendar"), active: active == "calendar", href: bills_path(view: "calendar")) %>
-    <% control.with_segment(t("bills.views.paycheck"), active: active == "paycheck", href: bills_path(view: "paycheck")) %>
-    <% control.with_segment(t("bills.views.subscriptions"), active: active == "subscriptions", href: bills_path(view: "subscriptions")) %>
-    <% control.with_segment(t("bills.views.all"), active: active == "all", href: bills_path(view: "all")) %>
-  <% end %>
+<%# Page title and primary action in the header, view switcher beneath, matching
+    transactions/index. Bills was the only top-level destination in the app with
+    no heading at all, which also left screen readers with no outline to navigate. %>
+<header class="flex justify-between items-center gap-2 text-primary font-medium">
+  <h1 class="text-xl"><%= t("bills.index.title") %></h1>
 
   <%= render DS::Link.new(
         text: t("bills.index.add_bill"),
@@ -15,4 +12,12 @@
         href: new_recurring_transaction_path,
         frame: :modal
       ) %>
-</div>
+</header>
+
+<%= render DS::SegmentedControl.new(aria_label: t("bills.views.aria_label")) do |control| %>
+  <% control.with_segment(t("bills.views.overview"), active: active == "overview", href: bills_path) %>
+  <% control.with_segment(t("bills.views.calendar"), active: active == "calendar", href: bills_path(view: "calendar")) %>
+  <% control.with_segment(t("bills.views.paycheck"), active: active == "paycheck", href: bills_path(view: "paycheck")) %>
+  <% control.with_segment(t("bills.views.subscriptions"), active: active == "subscriptions", href: bills_path(view: "subscriptions")) %>
+  <% control.with_segment(t("bills.views.all"), active: active == "all", href: bills_path(view: "all")) %>
+<% end %>

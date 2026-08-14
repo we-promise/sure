@@ -66,9 +66,11 @@ class BillsController < ApplicationController
     @suggested_allocations = suggested_allocations
     @notices = collect_notices
 
-    # The month reads as one chronological list: paid rows stay in place
-    # with a check, overdue rows carry "Overdue" where their date would be.
-    @month_rows = (@overdue + @this_month + @paid_this_month).sort_by(&:due_on)
+    # The month reads as one chronological list, with paid rows in place under a
+    # check. Overdue rows are NOT in it: they get their own section, because
+    # inside the run they were marked only by a word in the date column, which
+    # made the most urgent rows the easiest to scroll past.
+    @month_rows = (@this_month + @paid_this_month).sort_by(&:due_on)
   end
 
   # One bill's complete story: current state, payment history, what is

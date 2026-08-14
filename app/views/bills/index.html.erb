@@ -10,21 +10,35 @@
   <% month_total = paid_amount + remaining_amount %>
   <% hero_percent = month_total.positive? ? (paid_amount / month_total * 100).round : 0 %>
   <div class="bg-container rounded-xl shadow-border-xs p-5">
-    <div class="flex items-center justify-center gap-10 lg:gap-14">
-      <div class="text-right space-y-0.5">
-        <p class="text-2xl font-medium text-primary privacy-sensitive"><%= @remaining_this_month ? format_money(@remaining_this_month) : "–" %></p>
+    <%# What is owed leads. Past due and due-this-week are the numbers a person
+        acts on, and they used to be the smallest text on the page while a ring
+        reading 0% held the centre. Progress moved to the side: it reports, it
+        does not prompt. %>
+    <div class="flex items-center justify-between gap-6">
+      <div class="space-y-1 min-w-0">
         <p class="text-sm text-secondary"><%= t(".left_to_pay") %></p>
-        <% if @past_due_total %>
-          <p class="text-xs text-destructive privacy-sensitive"><%= t(".hero_past_due", amount: format_money(@past_due_total)) %></p>
-        <% end %>
+        <p class="text-3xl font-medium text-primary privacy-sensitive"><%= @remaining_this_month ? format_money(@remaining_this_month) : "–" %></p>
+
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+          <% if @past_due_total && @past_due_total.amount.positive? %>
+            <p class="text-sm font-medium text-destructive privacy-sensitive">
+              <%= t(".hero_past_due", amount: format_money(@past_due_total)) %>
+            </p>
+          <% end %>
+          <% if @due_next_seven && @due_next_seven.amount.positive? %>
+            <p class="text-sm text-secondary privacy-sensitive">
+              <%= t(".hero_next_seven", amount: format_money(@due_next_seven)) %>
+            </p>
+          <% end %>
+        </div>
       </div>
-      <%= render DS::ProgressRing.new(percent: hero_percent, size: 72, stroke_width: 7) %>
-      <div class="space-y-0.5">
-        <p class="text-2xl font-medium text-primary privacy-sensitive"><%= @paid_this_month_total ? format_money(@paid_this_month_total) : "–" %></p>
-        <p class="text-sm text-secondary"><%= t(".paid_so_far") %></p>
-        <% if @due_next_seven %>
-          <p class="text-xs text-secondary privacy-sensitive"><%= t(".hero_next_seven", amount: format_money(@due_next_seven)) %></p>
-        <% end %>
+
+      <div class="flex items-center gap-3 shrink-0">
+        <div class="text-right space-y-0.5">
+          <p class="text-sm text-secondary"><%= t(".paid_so_far") %></p>
+          <p class="text-lg font-medium text-primary privacy-sensitive"><%= @paid_this_month_total ? format_money(@paid_this_month_total) : "–" %></p>
+        </div>
+        <%= render DS::ProgressRing.new(percent: hero_percent, size: 56, stroke_width: 6) %>
       </div>
     </div>
     <% if @unconvertible_count.positive? %>
@@ -124,6 +138,18 @@
       <% end %>
     </div>
   <% else %>
+    <%# Anything late is pulled out of the chronological run. Inside it, an
+        overdue bill was distinguishable only by a word in the date column, so
+        the most urgent rows were the easiest ones to scroll past. %>
+    <% if @overdue.any? %>
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <%= render "bills/occurrence_section",
+                   title: t(".needs_attention"),
+                   occurrences: @overdue,
+                   date_labels: true %>
+      </div>
+    <% end %>
+
     <div class="rounded-xl bg-container-inset space-y-1 p-1">
       <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @month_rows, date_labels: true %>
       <%= render "bills/occurrence_section", title: t(".later"), occurrences: @later %>

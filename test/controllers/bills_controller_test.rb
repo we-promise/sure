@@ -8,6 +8,20 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     ensure_tailwind_build
   end
 
+  # Bills was the only top-level destination with no heading, so screen readers
+  # got no outline and it broke the page-header pattern every other page follows.
+  test "every bills view has a page heading" do
+    create_bill(name: "Rent", amount: 1200)
+
+    %w[overview calendar paycheck subscriptions all].each do |view|
+      get view == "overview" ? bills_url : bills_url(view: view)
+
+      assert_response :success
+      assert_select "main h1", text: I18n.t("bills.index.title"),
+        message: "the #{view} view is missing its page heading"
+    end
+  end
+
   test "index lists a bill" do
     bill = create_bill(name: "Rent", amount: 1200)
 
@@ -55,6 +69,31 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Late bill", response.body
     assert_match I18n.t("bills.row_overdue"), response.body
     assert_match "past due", response.body
+  end
+
+  # Overdue rows used to sit inside the chronological month list, marked only by
+  # a word where their date would be, which made the most urgent rows the
+  # easiest to scroll past.
+  test "overdue bills are lifted out of the month list into their own section" do
+    overdue_day = 10.days.ago.to_date
+    create_bill(name: "Late bill", amount: 75,
+                expected_day_of_month: overdue_day.day,
+                last_occurrence_date: 2.months.ago.to_date,
+                next_expected_date: overdue_day)
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.index.needs_attention"), response.body
+
+    body = response.body
+    attention_at = body.index(I18n.t("bills.index.needs_attention"))
+    month_at = body.index(I18n.t("bills.index.this_month"))
+    late_at = body.index("Late bill")
+
+    assert_not_nil attention_at
+    assert_operator attention_at, :<, late_at, "the late bill belongs under Needs attention"
+    assert_operator late_at, :<, month_at, "and above This month, not inside it" if month_at
   end
 
   test "index cannot see another family's bills" do
