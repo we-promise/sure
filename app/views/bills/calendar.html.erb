@@ -3,8 +3,10 @@
 <div class="space-y-4 pb-6 lg:pb-12">
   <%= render "bills/view_switcher", active: "calendar" %>
 
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-1">
+  <%# The nav group and a totals line carrying two money values do not share
+      375px, and neither had anywhere to wrap. %>
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-1 min-w-0">
       <%= render DS::Link.new(
             icon: "chevron-left",
             variant: "ghost",
@@ -19,7 +21,7 @@
               "aria-label": t(".next_month")
             ) %>
       <% end %>
-      <h2 class="text-lg font-medium text-primary ml-2"><%= l(@month, format: "%B %Y") %></h2>
+      <h2 class="text-lg font-medium text-primary ml-2 truncate"><%= l(@month, format: "%B %Y") %></h2>
       <% unless @month == Date.current.beginning_of_month %>
         <%= render DS::Link.new(text: t(".today"), variant: "ghost", href: bills_path(view: "calendar")) %>
       <% end %>

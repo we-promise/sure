@@ -7,7 +7,6 @@
             <%= render "categories/badge", category: @series.category %>
           <% end %>
           <h3 class="text-lg font-medium text-primary truncate"><%= @series.display_name %></h3>
-          <p class="text-xs text-secondary"><%= frequency_label(@series) %></p>
         </div>
         <%= link_to bill_path(@series, display: "pane", frame: @pane_frame_id, close: 1),
               data: { turbo_frame: @pane_frame_id },
@@ -17,24 +16,15 @@
         <% end %>
       </div>
 
-      <%# One definition of what a bill's detail is, shared with the drawer.
-          The expansion has a full row to work with, so it lays the figures
-          out in two columns. %>
-      <%= render "bills/detail",
+      <%# What is going on with this bill, and what to do about it. Everything
+          deeper -- the chart, the per-year totals, the price history, the
+          upcoming dates, the settled cycles -- lives on the bill's page. %>
+      <%= render "bills/summary",
             series: @series,
             current_occurrence: @current_occurrence,
-            history: @history,
-            upcoming: @upcoming,
             analytics: @analytics,
-            payment_history: @payment_history,
-            yearly_metrics: @yearly_metrics,
-            last_account: @last_account,
             recent_allocations: @recent_allocations,
-            dense: false %>
-    </div>
-
-    <div class="border-t border-divider p-3">
-      <%= render "bills/detail_actions", series: @series, frame: "_top" %>
+            suggestion: @pane_suggestion %>
     </div>
   </div>
 <% end %>

@@ -212,6 +212,50 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert occurrence.allocations.sole.from_user_confirmed?
   end
 
+  # explain is what lets a surface show a person WHY something matched. The
+  # payment picker used to rank by amount distance alone and never consult the
+  # engine, which is how a Twitch charge could outrank the 7-Eleven charge for
+  # a 7-Eleven bill.
+  test "explain returns the signals behind a strong match" do
+    series = create_series(name: nil, merchant: merchants(:netflix), amount: 15.99, day_offset: 0)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 15.99, date: occurrence.due_on, merchant: merchants(:netflix))
+
+    explanation = @matcher.explain(occurrence, entry)
+
+    assert_not_nil explanation
+    assert_equal 0.40, explanation.signals[:merchant]
+    assert_equal 0.30, explanation.signals[:amount], "an exact amount scores the full 0.30"
+    assert_equal 0.20, explanation.signals[:date], "landing on the due date scores the full 0.20"
+    assert_operator explanation.confidence, :>=, Matcher::EXACT_TIER
+  end
+
+  test "explain refuses an entry from another merchant outright" do
+    series = create_series(name: nil, merchant: merchants(:netflix), amount: 15.99, day_offset: 0)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    other = create_entry(amount: 15.99, date: occurrence.due_on, merchant: merchants(:amazon))
+
+    assert_nil @matcher.explain(occurrence, other),
+      "a same-amount same-day charge from a different merchant is not a weak match, it is not a match"
+  end
+
+  test "explain refuses an entry outside the date window" do
+    series = create_series(name: "CITY WATER", amount: 80, day_offset: 0)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 80, date: occurrence.due_on - 60, name: "CITY WATER")
+
+    assert_nil @matcher.explain(occurrence, entry)
+  end
+
+  test "explain refuses an amount outside the tolerance band" do
+    series = create_series(name: "CITY WATER", amount: 80, day_offset: 0)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 400, date: occurrence.due_on, name: "CITY WATER")
+
+    assert_nil @matcher.explain(occurrence, entry),
+      "outside tolerance the score is a flat zero, and zero must not reach a picker"
+  end
+
   private
     def create_series(amount:, day_offset:, name: nil, merchant: nil, dedup_scope: "", preset: "monthly")
       due = Date.current + day_offset

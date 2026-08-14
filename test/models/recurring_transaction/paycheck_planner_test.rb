@@ -50,6 +50,110 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     end
   end
 
+  # The page states due and reserved separately and never their sum, so the
+  # planner has to hand over both. Adding them back together must reproduce
+  # obligation_total exactly, or the card's arithmetic stops reconciling.
+  test "every period splits its obligations into due here and reserved for later" do
+    first_payday = Date.current + 3
+    create_series(name: "Paycheck", amount: -1840, due: first_payday, preset: "weekly", income: true)
+    create_series(name: "Internet", amount: 90, due: first_payday + 2)
+    create_series(name: "Rent", amount: 2150, due: Date.current + 17)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    plan.each do |period|
+      assert_equal period.items_due.sum(&:share), period.due_total
+      assert_equal period.items_reserved.sum(&:share), period.reserved_total
+      assert_equal period.due_total + period.reserved_total, period.obligation_total
+      assert_equal period.income - period.due_total - period.reserved_total, period.remaining
+    end
+
+    internet_shares = plan.flat_map(&:items).select { |item| item.occurrence.recurring_transaction.name == "Internet" }
+    assert_equal 90, internet_shares.sum(&:share), "the shares reassemble the bill"
+    assert_equal 1, internet_shares.count(&:due_in_period),
+      "a bill counts as due in exactly one window, and is reserved in the ones before it"
+    assert plan.any? { |period| period.due_total.positive? }
+    assert plan.any? { |period| period.reserved_total.positive? }
+
+    # Both lists render as a ledger with the date in a fixed left column, so
+    # they have to descend in date order.
+    plan.each do |period|
+      [ period.items_due, period.items_reserved ].each do |list|
+        dates = list.map { |item| item.occurrence.due_on }
+        assert_equal dates.sort, dates
+      end
+    end
+  end
+
+  # The leading window is funded by cash already in hand, not by a paycheck,
+  # and the page has to be able to say so instead of reporting "remaining".
+  test "the window before the first paycheck is a bridge, not a paycheck" do
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 3, preset: "weekly", income: true)
+    create_series(name: "Streaming", amount: 20, due: Date.current + 1)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert plan.first.bridge?
+    assert plan.first.short?, "nothing arrives, so anything due is a shortfall"
+    assert_equal plan.first.shortfall, -plan.first.remaining
+    assert plan.drop(1).none?(&:bridge?), "a window that pays is never a bridge"
+  end
+
+  # A paycheck arriving today makes the leading window a real pay period, so
+  # bridge? has to read income rather than position.
+  test "income landing today makes the leading window a paycheck" do
+    create_series(name: "Paycheck", amount: -1840, due: Date.current, preset: "weekly", income: true)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_not plan.first.bridge?
+    assert_equal 1840, plan.first.income
+  end
+
+  # "Which bill is making me short" has to answer with the obligation. The
+  # slice a period carries is an artifact of how many paychecks the plan had
+  # to spread it over.
+  test "the largest obligation is named by what it costs, not by its slice" do
+    create_series(name: "Paycheck", amount: -400, due: Date.current + 2, preset: "weekly", income: true)
+    create_series(name: "Rent", amount: 2150, due: Date.current + 20)
+    create_series(name: "Insurance", amount: 300, due: Date.current + 3)
+
+    period = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+    largest = period.largest_obligation
+
+    assert_equal "Rent", largest.occurrence.recurring_transaction.name
+    assert_equal 2150, largest.remaining_total
+    assert largest.share < largest.remaining_total, "the slice is smaller than the bill it belongs to"
+  end
+
+  # The period is named by the income that opens it, because calling a pension
+  # or an invoice a "paycheck" contradicts the user's own setup.
+  test "a period carries the names of the income that opens it" do
+    payday = Date.current + 2
+    create_series(name: "Frito Lay", amount: -1200, due: payday, preset: "weekly", income: true)
+    create_series(name: "Side work", amount: -300, due: payday, preset: "weekly", income: true)
+
+    period = Planner.new(@family, user: @user).plan(periods_limit: 3)[1]
+
+    assert_equal 1500, period.income
+    assert_equal [ "Frito Lay", "Side work" ], period.income_sources.sort
+  end
+
+  # The income list and the plan used to read different sources for one fact,
+  # so a series could name two different next paydays on one screen.
+  test "next income per series comes from occurrences, not the stored column" do
+    payday = Date.current + 5
+    series = create_series(name: "Paycheck", amount: -1840, due: payday, preset: "weekly", income: true)
+    series.update_columns(next_expected_date: Date.current - 1)
+
+    planner = Planner.new(@family, user: @user)
+    next_income = planner.next_income_by_series[series.id]
+
+    assert_equal payday, next_income.due_on
+    assert_equal planner.plan.find { |period| period.income.positive? }.starts_on, next_income.due_on,
+      "the strip and the plan have to name the same day"
+  end
+
   test "partial payments shrink the apportioned obligation" do
     create_series(name: "Paycheck", amount: -2000, due: Date.current + 2, preset: "weekly", income: true)
     rent = create_series(name: "Rent", amount: 2150, due: Date.current + 9)

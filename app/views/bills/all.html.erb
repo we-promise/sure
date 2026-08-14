@@ -41,7 +41,9 @@
       for a filter All bills already had, so the rollup now appears when that
       filter is on rather than living behind its own tab. %>
   <% if @subscription_rollup %>
-    <div class="grid grid-cols-3 bg-container rounded-xl shadow-border-xs divide-x divide-alpha-black-100 theme-dark:divide-alpha-white-200">
+    <%# A text-xl currency figure does not fit an 85px cell, which is what three
+        columns leaves at 375px. %>
+    <div class="grid grid-cols-1 sm:grid-cols-3 bg-container rounded-xl shadow-border-xs divide-y sm:divide-y-0 sm:divide-x divide-alpha-black-100 theme-dark:divide-alpha-white-200">
       <div class="p-4 space-y-1">
         <p class="text-sm text-secondary"><%= t(".subscription_monthly") %></p>
         <p class="text-primary font-medium text-xl privacy-sensitive">
@@ -73,9 +75,70 @@
           ) %>
     </div>
   <% else %>
-    <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+    <%# A seven-column table on a phone is a table you scroll sideways to read.
+        The same rows, the same filters, laid out the way the Calendar already
+        does it: a purpose-built small-screen list rather than a squeezed
+        desktop one. %>
+    <div class="md:hidden bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+      <% @all_series.each do |series| %>
+        <div class="flex items-center gap-3 p-3">
+          <%= link_to bill_path(series), class: "flex items-center gap-3 min-w-0 flex-1 group" do %>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-primary truncate group-hover:underline"><%= series.display_name %></p>
+              <p class="text-xs text-secondary truncate">
+                <%= frequency_label(series) %>
+                <% if series.next_expected_date %>
+                  &middot; <%= t(".next_short", date: l(series.next_expected_date, format: :short)) %>
+                <% end %>
+              </p>
+            </div>
+            <div class="shrink-0 text-right">
+              <p class="text-sm font-medium text-primary privacy-sensitive">
+                <%= format_money(Money.new(series.amount.abs, series.currency)) %>
+              </p>
+              <p class="text-xs">
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded <%= recurring_status_badge_classes(series.status) %>">
+                  <%= t("recurring_transactions.status.#{series.status}") %>
+                </span>
+              </p>
+            </div>
+          <% end %>
+
+          <div class="shrink-0">
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                  variant: "link",
+                  text: t("recurring_transactions.edit.trigger_label"),
+                  icon: "pencil",
+                  href: edit_recurring_transaction_path(series),
+                  data: { turbo_frame: :modal }) %>
+              <% menu.with_item(
+                  variant: "button",
+                  text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+                  icon: series.active? ? "pause" : "play",
+                  href: toggle_status_recurring_transaction_path(series),
+                  method: :post) %>
+              <% menu.with_item(
+                  variant: "button",
+                  text: t("recurring_transactions.actions.delete"),
+                  icon: "trash-2",
+                  href: recurring_transaction_path(series),
+                  method: :delete,
+                  destructive: true,
+                  confirm: t(series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: series.display_name)) %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="hidden md:block bg-container rounded-lg shadow-border-xs overflow-x-auto">
       <table class="w-full">
         <thead>
+          <%# The one rule on these pages that stays at full weight. Row
+              dividers dropped to `subdued` so the content carries the
+              structure, which leaves the header rule free to do the one job a
+              line is actually good at: separating the labels from the data. %>
           <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
             <th class="text-left py-3 px-3"><%= t(".col_name") %></th>
             <th class="text-left py-3 px-2"><%= t(".col_type") %></th>
@@ -86,12 +149,11 @@
             <th class="text-right py-3 px-3"><%= t(".col_actions") %></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-divider">
+        <tbody class="divide-y divide-subdued">
           <% @all_series.each do |series| %>
             <tr>
               <td class="py-3 px-3">
                 <%= link_to series.display_name, bill_path(series),
-                      data: { turbo_frame: "drawer" },
                       class: "text-sm font-medium text-primary hover:underline" %>
               </td>
               <td class="py-3 px-2 text-sm text-secondary"><%= t(".types.#{series.bill_type}") %></td>
@@ -151,7 +213,7 @@
       <div class="px-4 py-2 text-xs font-medium text-secondary uppercase">
         <p><%= t(".subscription_price_changes") %></p>
       </div>
-      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
+      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
         <% @recent_price_changes.each do |change| %>
           <div class="flex items-center justify-between gap-3 px-4 py-2">
             <div>

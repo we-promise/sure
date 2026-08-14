@@ -23,11 +23,15 @@
       bill's own line. Repeating it in the action slot spends the row's one verb
       position on a state, so there it shrinks to the portal link alone. %>
   <% if has_link && !show_state %>
+    <%# Deliberately NOT labelled "Pay": autopay means the charge is already
+        handled, so the only thing left to offer is the door to the provider --
+        for checking a charge, not for making one. The label says so. %>
     <%= render DS::Link.new(
           icon: "external-link",
           variant: "icon",
           href: recurring_transaction.payment_url,
           target: "_blank",
+          title: t(".open_site"),
           aria: { label: t(".autopay_aria", name: recurring_transaction.display_name) }
         ) %>
   <% elsif has_link %>

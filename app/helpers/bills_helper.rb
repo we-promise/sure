@@ -1,4 +1,125 @@
 module BillsHelper
+  # A paycheck drawn as what it is spoken for: due inside the window, held
+  # back for something later, and whatever is left.
+  #
+  # Explicitly not a progress bar. A future pay period cannot be partly
+  # complete, so a single filled track reading "72%" states a fact about
+  # nothing. Returns `[key, percent]` pairs; the caller owns the colours.
+  #
+  # A short period gets a different bar with two segments, because dividing
+  # income three ways when it does not cover even the first two would draw a
+  # safe slice that does not exist.
+  def paycheck_allocation_segments(period)
+    return [] unless period.income.positive?
+
+    if period.short?
+      normalize_segments([
+        [ :covered, period.income ],
+        [ :short, period.shortfall ]
+      ], period.obligation_total)
+    else
+      normalize_segments([
+        [ :due, period.due_total ],
+        [ :reserved, period.reserved_total ],
+        [ :safe, period.remaining ]
+      ], period.income)
+    end
+  end
+
+  # Percentages that add up to exactly 100, so the track never shows a
+  # rounding sliver at the end of a fully allocated bar. The last segment
+  # absorbs the remainder, same as the planner's last share does.
+  def normalize_segments(parts, total)
+    return [] unless total.positive?
+
+    present = parts.reject { |_key, amount| amount.round(2).zero? }
+    return [] if present.empty?
+
+    running = 0
+    present.each_with_index.map do |(key, amount), index|
+      percent = if index == present.size - 1
+        (100 - running).round(2)
+      else
+        ((amount / total) * 100).round(2).tap { |value| running += value }
+      end
+
+      [ key, percent ]
+    end
+  end
+
+  # Spelled out for anyone who cannot see the bar, in the same three terms the
+  # card uses in text. A bar labelled only with a percentage tells a screen
+  # reader nothing about what was divided.
+  def paycheck_allocation_aria(period, currency)
+    if period.short?
+      t("bills.paycheck.allocation_aria_short",
+        income: format_money(Money.new(period.income, currency)),
+        short: format_money(Money.new(period.shortfall, currency)))
+    else
+      t("bills.paycheck.allocation_aria",
+        income: format_money(Money.new(period.income, currency)),
+        due: format_money(Money.new(period.due_total, currency)),
+        reserved: format_money(Money.new(period.reserved_total, currency)),
+        safe: format_money(Money.new(period.remaining, currency)))
+    end
+  end
+
+  # A period is named by the income that opens it, because "paycheck" is an
+  # assumption. A declared income series can be a pension, a client invoice or
+  # a benefit payment, and calling every one of them a paycheck puts a word in
+  # the user's mouth that their own setup already contradicts.
+  def paycheck_period_heading(period)
+    date = l(period.starts_on, format: :short)
+
+    return t("bills.paycheck.before_next_paycheck", date: l(period.ends_on + 1, format: :short)) if period.bridge?
+
+    "#{date}#{paycheck_period_source(period)}"
+  end
+
+  # The trailing half of the heading, so the date can carry the weight and the
+  # source can stay quiet inside one line without two translated fragments
+  # fighting over the separator.
+  def paycheck_period_source(period)
+    return "" if period.bridge?
+
+    case period.income_sources.size
+    when 0 then ""
+    when 1 then t("bills.paycheck.period_source", source: period.income_sources.first)
+    else t("bills.paycheck.period_source_multiple", count: period.income_sources.size)
+    end
+  end
+
+  # The pay schedule in one line: who pays, how often, when next, how much.
+  # Everything else about income configuration lives behind Manage, because
+  # setting income up is not why anyone opens this page.
+  #
+  # Two sources landing on one day are counted as two, never summed under one
+  # name -- and then the cadence is dropped, because two schedules do not have
+  # one.
+  def paycheck_income_headline(next_income)
+    occurrences = next_income[:occurrences]
+    single = occurrences.one? ? occurrences.first.recurring_transaction : nil
+
+    parts = [
+      single ? single.display_name : t("bills.paycheck.income_source_count", count: occurrences.size),
+      single ? frequency_label(single) : nil,
+      t("bills.paycheck.next_on", date: l(next_income[:date], format: :short)),
+      next_income[:total] ? format_money(next_income[:total]) : nil
+    ]
+
+    parts.compact.join(" · ")
+  end
+
+  # Why a declared income series is in the list but not in the plan. Silence
+  # here is what made an auto-detected one-cent deposit look like a payday
+  # source: it sat in the list looking exactly like the real one and moved no
+  # number on the page.
+  def paycheck_income_excluded_reason(series)
+    return t("bills.paycheck.income_paused") unless series.active?
+
+    t("bills.paycheck.income_detected")
+  end
+
   # Leads with the relative distance, which is what tells you whether to act, and
   # keeps the absolute date alongside it for anything further out than a few days.
   #
@@ -61,6 +182,86 @@ module BillsHelper
     else
       t("bills.due_label.upcoming", count: days, date: date)
     end
+  end
+
+  # Short enough for a column in the Next up strip: relative while that still
+  # means something, absolute once it does not.
+  #
+  # There is deliberately no "late" case. The strip only ever holds bills due
+  # today or later, because something already past its due date is not part of
+  # what is coming up -- it is the thing the list below is for.
+  def bills_next_up_date(occurrence)
+    case (occurrence.effective_due_on - Date.current).to_i
+    when 0 then t("bills.month_pulse.date_today")
+    when 1 then t("bills.month_pulse.date_tomorrow")
+    else l(occurrence.effective_due_on, format: "%b %-d")
+    end
+  end
+
+  # Why this row is in the Needs attention section.
+  #
+  # The section used to say "Overdue" against every row, which is alarming
+  # without being actionable: it names the symptom every row already shares
+  # instead of the thing that differs. First true wins, most specific first.
+  def bills_attention_reason(occurrence, suggestion: nil)
+    return t("bills.attention.needs_review") if suggestion.present?
+
+    if occurrence.partially_paid?
+      return t("bills.attention.partial", amount: format_money(occurrence.remaining_amount_money))
+    end
+
+    if occurrence.recurring_transaction.recurring_price_changes.any? { |change| change.effective_on >= 30.days.ago.to_date }
+      return t("bills.attention.amount_changed")
+    end
+
+    return nil unless occurrence.derived_state == :overdue
+
+    t("bills.attention.overdue", count: (Date.current - occurrence.effective_due_on).to_i)
+  end
+
+  # The match score's own components, said in words.
+  #
+  # Deterministic: every phrase here corresponds to a key the matcher actually
+  # wrote, so nothing is inferred and nothing is invented. Works for both
+  # callers -- a live candidate scored by Matcher#explain (symbol keys) and a
+  # persisted allocation's match_signals (string keys out of jsonb).
+  #
+  # The account signal is deliberately never rendered. It is a constant 0.10 on
+  # every candidate, because identity_matches? has already rejected everything
+  # on another account, so "same account" is a reason that never once
+  # distinguishes one candidate from another.
+  def bills_match_reasons(signals, currency:, expected: nil, actual: nil, due_on: nil, paid_on: nil)
+    signals = (signals || {}).symbolize_keys
+    reasons = []
+
+    reasons << t("bills.match.same_merchant") if signals[:merchant]
+    reasons << t("bills.match.name_matches") if signals[:name]
+
+    # Guarded: the review queue can hold an allocation whose entry has been
+    # nullified out from under it, so neither figure is guaranteed.
+    if signals[:amount] && expected.present? && actual.present?
+      difference = (actual - expected).abs
+
+      reasons << if difference < BigDecimal("0.01")
+        t("bills.match.exact_amount")
+      else
+        t("bills.match.amount_off", amount: format_money(Money.new(difference, currency)))
+      end
+    end
+
+    if signals[:date] && due_on.present? && paid_on.present?
+      days = (paid_on - due_on).to_i
+
+      reasons << if days.zero?
+        t("bills.match.due_date")
+      elsif days.negative?
+        t("bills.match.days_before", count: days.abs)
+      else
+        t("bills.match.days_after", count: days)
+      end
+    end
+
+    reasons
   end
 
   # An amount whose expectation is derived (average strategy, or an observed

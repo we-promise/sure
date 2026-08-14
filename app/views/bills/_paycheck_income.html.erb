@@ -1,0 +1,64 @@
+<%# The pay schedule as one line. Setting income up is not why anyone opens
+    this page, so configuration sits behind Manage rather than occupying the
+    top of the screen. No surface of its own: the timeline below is the page's
+    one card, and this reads as its caption.
+
+    Every date here comes from the same occurrences the plan reads. Reading
+    the stored `next_expected_date` column instead is what let one series name
+    two different next paydays on one screen. %>
+
+<%= render DS::Disclosure.new(variant: :bare) do |disclosure| %>
+  <% disclosure.with_summary_content do %>
+    <div class="flex items-baseline justify-between gap-3">
+      <div class="min-w-0">
+        <p class="text-xs font-medium uppercase tracking-wide text-secondary">
+          <%= t("bills.paycheck.income_section_title") %>
+        </p>
+        <% if @next_income %>
+          <p class="text-sm text-primary truncate mt-0.5 tabular-nums privacy-sensitive">
+            <%= paycheck_income_headline(@next_income) %>
+          </p>
+        <% else %>
+          <p class="text-sm text-secondary mt-0.5"><%= t("bills.paycheck.no_upcoming_income") %></p>
+        <% end %>
+      </div>
+      <span class="flex items-center gap-1 text-xs text-secondary shrink-0 hover:text-primary">
+        <%= t("bills.paycheck.manage") %>
+        <%= icon "chevron-down", size: "sm", class: "group-open:rotate-180 motion-safe:transition-transform motion-safe:duration-150" %>
+      </span>
+    </div>
+  <% end %>
+
+  <%# Detected inflows live here rather than beside the real paycheck: the
+      planner does not use them, so they have no business competing with it. %>
+  <div class="bg-container rounded-xl shadow-border-xs mt-3 px-4 py-2">
+    <% @income_series.each do |series| %>
+      <% occurrence = @next_income_by_series[series.id] %>
+      <div class="flex items-center justify-between gap-3 py-2">
+        <div class="min-w-0">
+          <p class="text-sm text-primary truncate">
+            <%= link_to series.display_name, bill_path(series), class: "hover:underline" %>
+          </p>
+          <p class="text-xs text-secondary truncate">
+            <%= frequency_label(series) %>
+            <% if occurrence %>
+              &middot; <%= t("bills.paycheck.income_next_payday", date: l(occurrence.due_on, format: :short)) %>
+            <% end %>
+            <% unless paycheck_income_plans?(series) %>
+              &middot; <%= paycheck_income_excluded_reason(series) %>
+            <% end %>
+          </p>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <p class="text-sm text-primary tabular-nums privacy-sensitive"><%= format_money(occurrence&.resolved_expected_amount_money || Money.new(series.amount.abs, series.currency)) %></p>
+          <%= render DS::Link.new(
+                icon: "pencil",
+                variant: "icon",
+                href: edit_recurring_transaction_path(series),
+                frame: :modal
+              ) %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

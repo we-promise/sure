@@ -70,6 +70,31 @@ class RecurringTransaction
       end
     end
 
+    # Scores one entry against one occurrence, for a surface that wants to show
+    # a person why something matches. The payment picker asks the same question
+    # the auto-pipeline asks, so it has to get the same answer.
+    #
+    # nil means "this entry could never belong to this series", which is the
+    # filter the picker never had: a $6.44 Twitch charge is not a weak match for
+    # a $6.44 7-Eleven bill, it is not a match at all.
+    #
+    # Read-only. Nothing here writes, so it is safe on a GET.
+    Explanation = Data.define(:confidence, :signals)
+
+    def explain(occurrence, entry)
+      series = occurrence.recurring_transaction
+      return nil unless identity_matches?(series, entry)
+      return nil unless within_window?(occurrence, entry)
+
+      confidence, signals = score(occurrence, series, entry)
+      # score returns a flat zero when the amount falls outside tolerance, and
+      # that zero is the real gate: anything surviving the hard filters above
+      # already scores at least 0.65, so a tier comparison here would be dead.
+      return nil unless confidence.positive?
+
+      Explanation.new(confidence: confidence, signals: signals)
+    end
+
     private
       def apply(candidates, suggest:)
         taken_entries = Set.new
@@ -290,9 +315,18 @@ class RecurringTransaction
         self.class.normalize_name(name)
       end
 
+      # Memoized per occurrence: resolved_expected_amount is not cached on the
+      # model, and under the "last" amount strategy it runs an ordered LIMIT 1
+      # plus a SUM. Scoring a list of candidates against one occurrence would
+      # otherwise re-ask that question once per candidate.
+      def expected_for(occurrence)
+        @expected ||= {}
+        @expected[occurrence.id] ||= occurrence.resolved_expected_amount
+      end
+
       def score(occurrence, series, entry)
         signals = {}
-        expected = occurrence.resolved_expected_amount
+        expected = expected_for(occurrence)
 
         if series.merchant_id.present?
           signals[:merchant] = 0.40

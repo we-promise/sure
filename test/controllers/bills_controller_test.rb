@@ -67,8 +67,115 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "Late bill", response.body
-    assert_match I18n.t("bills.row_overdue"), response.body
-    assert_match "past due", response.body
+
+    # The row says HOW late, once. It used to print "Overdue" in the date rail
+    # beside a subline already reading "10 days overdue", spending its one
+    # piece of temporal context on saying the same word twice.
+    assert_match I18n.t("bills.attention.overdue", count: 10), response.body
+    assert_no_match(/>\s*#{I18n.t("bills.row_overdue")}\s*</, response.body,
+      "the date rail carries the date, not the word the subline already said")
+
+    # And the summary states what is at stake.
+    assert_match I18n.t("bills.month_pulse.pulse_overdue"), response.body
+  end
+
+  # The summary answers one question in order: where am I this month, what is
+  # late, what is due soon, what happens next. It used to be a big number, two
+  # small ones and a ring reading 0%.
+  test "the month summary reads as one story, not a row of statistics" do
+    overdue_day = 10.days.ago.to_date
+    create_bill(name: "Late Co", amount: 49.41,
+                expected_day_of_month: overdue_day.day,
+                last_occurrence_date: 2.months.ago.to_date,
+                next_expected_date: overdue_day)
+    soon = 3.days.from_now.to_date
+    create_bill(name: "Amazon Prime", amount: 16.23, manual: true,
+                anchor_date: soon, expected_day_of_month: soon.day,
+                last_occurrence_date: Date.current, next_expected_date: soon)
+
+    get bills_url
+    assert_response :success
+    body = response.body
+
+    # The month frames it, and the count says how much month there is.
+    assert_match I18n.l(Date.current, format: "%B"), body
+    assert_match I18n.t("bills.month_pulse.left_to_pay"), body
+
+    # Paid / overdue / next-7 support the headline rather than becoming three
+    # KPI cards of their own.
+    assert_match I18n.t("bills.month_pulse.pulse_paid"), body
+    assert_match I18n.t("bills.month_pulse.pulse_overdue"), body
+    assert_match I18n.t("bills.month_pulse.pulse_next_seven"), body
+
+    # And it ends by saying what actually happens next.
+    assert_match I18n.t("bills.month_pulse.next_up"), body
+    assert_match "Amazon Prime", body
+
+    assert_match I18n.t("bills.month_pulse.left_to_pay"), body
+    assert_no_match(/ProgressRing|rounded-full[^"]*stroke/, body,
+      "the donut is gone; progress is a rule, not a centrepiece")
+  end
+
+  # Something already past its due date is not "coming up" -- it is the thing
+  # the list below is for, and putting it in Next up makes the summary argue
+  # with the worklist under it.
+  #
+  # The filter is on the DATE, not on derived_state, and this test asserts the
+  # same. An earlier version checked `derived_state == :overdue` and passed
+  # while the bug was plainly visible on screen: derived_state only turns
+  # :overdue after the 3-day grace period, so a bill two days late was still
+  # :due, sailed into the strip, and the date column rendered it "2 days late".
+  test "next up holds nothing that is already past due, grace period included" do
+    # Two days late is INSIDE the grace period, so derived_state still reads
+    # :due. That is the case that slipped through.
+    just_late = 2.days.ago.to_date
+    create_bill(name: "Barely Late Co", amount: 12, manual: true, dedup_scope: "bl",
+                anchor_date: just_late, expected_day_of_month: just_late.day,
+                last_occurrence_date: just_late, next_expected_date: just_late)
+
+    long_late = 10.days.ago.to_date
+    create_bill(name: "Very Late Co", amount: 49.41, manual: true, dedup_scope: "vl",
+                anchor_date: long_late, expected_day_of_month: long_late.day,
+                last_occurrence_date: long_late, next_expected_date: long_late)
+
+    soon = 4.days.from_now.to_date
+    create_bill(name: "Soon Co", amount: 30, manual: true, dedup_scope: "sc",
+                anchor_date: soon, expected_day_of_month: soon.day,
+                last_occurrence_date: Date.current, next_expected_date: soon)
+
+    get bills_url
+    assert_response :success
+
+    next_up = @controller.view_assigns["next_up"]
+    assert next_up.any?, "the fixture must actually produce a Next up strip"
+
+    past = next_up.select { |occurrence| occurrence.effective_due_on < Date.current }
+    assert_empty past.map { |occurrence| occurrence.recurring_transaction.display_name },
+      "a bill inside its grace period is still late, and late is not next"
+
+    assert_includes next_up.map { |o| o.recurring_transaction.display_name }, "Soon Co"
+  end
+
+  # Three tiers of one subscription are three real bills that render as three
+  # identical rows. Only then does a row earn a second fact.
+  test "bills that would render identically gain something that tells them apart" do
+    day = 12.days.from_now.to_date
+    2.times do |i|
+      create_bill(name: "TWITCH", amount: 11.99, manual: true, dedup_scope: "tier#{i}",
+                  anchor_date: day, expected_day_of_month: day.day,
+                  last_occurrence_date: Date.current, next_expected_date: day)
+    end
+    create_bill(name: "Distinct Co", amount: 30, manual: true,
+                anchor_date: day, expected_day_of_month: day.day,
+                last_occurrence_date: Date.current, next_expected_date: day)
+
+    get bills_url
+    assert_response :success
+
+    # The pair carries its schedule; the bill nobody could confuse does not
+    # pay for their ambiguity.
+    twitch_rows = response.body.scan(/TWITCH/).size
+    assert_operator twitch_rows, :>=, 2
   end
 
   # Overdue rows used to sit inside the chronological month list, marked only by
@@ -89,7 +196,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     body = response.body
     attention_at = body.index(I18n.t("bills.index.needs_attention"))
     month_at = body.index(I18n.t("bills.index.this_month"))
-    late_at = body.index("Late bill")
+    # Measured from the section headings down, not from the top of the page:
+    # this series' NEXT cycle legitimately appears in the Next up strip above,
+    # which is a different occurrence of the same bill.
+    late_at = body.index("Late bill", attention_at)
 
     assert_not_nil attention_at
     assert_operator attention_at, :<, late_at, "the late bill belongs under Needs attention"
@@ -234,8 +344,13 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    assert_match I18n.t("bills.partial_progress", paid: "$750.00", expected: "$2,000.00"), response.body
+    # What is left leads, and the row says it once. The subline carries the
+    # state and the figure; printing "$750.00 of $2,000.00 paid" again on the
+    # right was the same arithmetic twice, and it was squeezing the bill's own
+    # name out of the row.
+    assert_match I18n.t("bills.attention.partial", amount: "$1,250.00"), response.body
     assert_match "$1,250", response.body
+    assert_no_match I18n.t("bills.partial_progress", paid: "$750.00", expected: "$2,000.00"), response.body
   end
 
   # The row expansion described the SERIES definition while the drawer described
@@ -265,7 +380,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "an overdue bill is not a next payment"
   end
 
-  test "show renders the bill drawer with history and analytics" do
+  # A bill's own page is where the depth lives now. It used to be a drawer
+  # dialog rendered over an empty settings layout, which is how the app ended
+  # up with three renderings of a bill's detail and no page at all.
+  test "show renders the bill page with history and analytics" do
     bill = create_bill(name: "Power Co", amount: 80)
     past = bill.recurring_occurrences.create!(
       family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
@@ -274,13 +392,28 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     RecurringTransaction::Allocator.new(past).allocate!(amount: "78.50")
     past.reload
 
-    get bill_url(bill), headers: { "Turbo-Frame" => "drawer" }
+    get bill_url(bill)
 
     assert_response :success
-    assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
+    assert_select "main h1", text: "Power Co"
     assert_match I18n.t("bills.detail.history"), response.body
     assert_match I18n.t("bills.detail.ytd"), response.body
     assert_match "$78.50", response.body
+  end
+
+  # The drawer slot belongs to resolving a payment. If a bill's page claimed it
+  # too, the page and the payment surface would compete for one frame id and
+  # whichever lost would render nothing at all.
+  test "the bill page leaves the drawer frame to the payment surface" do
+    bill = create_bill(name: "Power Co", amount: 80)
+
+    get bill_url(bill)
+
+    assert_response :success
+    assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size,
+      "only the layout's own empty drawer frame"
+    assert_match recurring_occurrence_path(bill.recurring_occurrences.order(:due_on).first), response.body,
+      "and the page still offers the way in to it"
   end
 
   # The average sat beside per-year totals that are sums of real payments, so
@@ -380,9 +513,143 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     get bills_url(view: "paycheck")
     assert_response :success
-    assert_match I18n.t("bills.paycheck.paycheck_of", date: I18n.l(payday, format: :long)), response.body
+    assert_match I18n.l(payday, format: :short), response.body
+    assert_match I18n.t("bills.paycheck.period_source", source: "Paycheck"), response.body
     assert_match "Rent", response.body
-    assert_match I18n.t("bills.paycheck.remaining_after_bills"), response.body
+    assert_match I18n.t("bills.paycheck.safe_after_bills"), response.body
+  end
+
+  # Income was addable only from inside the Income plan tab, so a family that
+  # had declared none had no way to discover the planning half of Bills
+  # existed. Both halves are now addable from every view.
+  test "every bills view offers both add actions, and income opens an income dialog" do
+    %w[overview calendar paycheck all].each do |view|
+      get view == "overview" ? bills_url : bills_url(view: view)
+
+      assert_response :success
+      assert_select "header" do
+        assert_select "a[href=?]", new_recurring_transaction_path, text: /#{I18n.t("bills.index.add_bill")}/
+        assert_select "a[href=?]", new_recurring_transaction_path(income: true),
+          text: /#{I18n.t("bills.index.add_income")}/
+      end
+    end
+
+    # A CTA that says income has to deliver an income form, not a bill form
+    # wearing a different title.
+    get new_recurring_transaction_url(income: true), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.income_title"), response.body
+  end
+
+  # The page's whole job. A single "Bills $695.60" against $357.48 of visible
+  # rows is a number nothing on screen can account for, so due and reserved
+  # are stated apart and their sum is never shown at all.
+  test "the paycheck view states due and reserved separately and never their sum" do
+    payday = Date.current + 3
+    declare_income(name: "Frito Lay", amount: -1200, payday: payday)
+    declare_bill(name: "Streaming", amount: 20, due: Date.current + 5)
+    declare_bill(name: "Insurance", amount: 300, due: Date.current + 12)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_match I18n.t("bills.paycheck.due_this_period"), response.body
+    assert_match I18n.t("bills.paycheck.reserved_ahead"), response.body
+    assert_match I18n.t("bills.paycheck.safe_after_bills"), response.body
+
+    paycheck = RecurringTransaction::PaycheckPlanner.new(@family, user: @user).plan
+                 .find { |period| period.income.positive? }
+    assert paycheck.due_total.positive?
+    assert paycheck.reserved_total.positive?
+    assert_match money_string(paycheck.due_total), response.body
+    assert_match money_string(paycheck.reserved_total), response.body
+
+    # Asserting the combined figure is simply ABSENT does not work: the
+    # planner's even splits make totals collide across periods by arithmetic,
+    # so the test would pass or fail on a coincidence. What is actually being
+    # pinned is that no label survives for a combined bills figure to render
+    # under -- which fails the moment one is reintroduced.
+    assert_nil I18n.t("bills.paycheck.bills_that_period", default: nil)
+    assert_nil I18n.t("bills.paycheck.obligations_line", default: nil)
+  end
+
+  # The window before the first payday has no income to allocate, so it is
+  # reported above the timeline as a warning rather than drawn as a pay period
+  # with an empty paycheck. The shortfall names the obligation, not the slice
+  # the planner parked in this window, and never asks the user to operate on
+  # the allocation itself.
+  test "the gap before the first payday is a banner, not a period in the timeline" do
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 4)
+    declare_bill(name: "Watson Property", amount: 2150, due: Date.current + 3)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    plan = RecurringTransaction::PaycheckPlanner.new(@family, user: @user).plan
+    bridge = plan.find(&:bridge?)
+
+    assert_match I18n.t("bills.paycheck.shortfall_label"), response.body
+    assert_match I18n.t("bills.paycheck.shortfall_amount", amount: money_string(bridge.shortfall)), response.body
+    assert_match I18n.t("bills.paycheck.shortfall_largest"), response.body
+    assert_match "Watson Property", response.body
+    assert_match I18n.t("bills.paycheck.review_plan"), response.body
+
+    # The banner is the whole report on that window, so the timeline holds one
+    # entry per real paycheck and no empty-paycheck row.
+    assert plan.count { |period| !period.bridge? }.positive?
+    assert_no_match I18n.t("bills.paycheck.before_next_paycheck", date: I18n.l(bridge.ends_on + 1, format: :short)),
+      response.body, "the leading window is reported by the banner, not drawn as a pay period"
+
+    assert_no_match(/set-aside|set aside/i, response.body,
+      "nothing on this page asks the user to perform the planner's own bookkeeping")
+  end
+
+  # The strip read the stored next_expected_date column while the plan read
+  # occurrences, so one series could name two different next paydays on one
+  # screen.
+  test "the income strip names the same payday the plan does" do
+    payday = Date.current + 6
+    income = declare_income(name: "Frito Lay", amount: -1200, payday: payday)
+    income.update_columns(next_expected_date: Date.current - 1)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_match I18n.t("bills.paycheck.income_next_payday", date: I18n.l(payday, format: :short)), response.body
+    assert_no_match(/#{Regexp.escape(I18n.l(Date.current - 1, format: :short))}/, response.body,
+      "the stale column date must not appear anywhere on the page")
+  end
+
+  # An auto-detected inflow sat in the list looking exactly like a real payday
+  # source while moving no number on the page.
+  test "income the planner cannot use says so" do
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 3)
+    detected = declare_income(name: "To Car Vault", amount: -0.01, payday: Date.current + 2)
+    detected.update!(manual: false)
+    # Something to cover, or the page is the all-clear state and no period
+    # renders a heading at all.
+    declare_bill(name: "Streaming", amount: 20, due: Date.current + 5)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_match I18n.t("bills.paycheck.income_detected"), response.body
+    assert_match I18n.l(Date.current + 3, format: :short), response.body
+    assert_match I18n.t("bills.paycheck.period_source", source: "Frito Lay"), response.body,
+      "the declared source heads the period, so the detected one two days earlier cannot have sliced it"
+  end
+
+  # Four cards each saying "nothing due" is not a better way to say that
+  # everything is covered.
+  test "an income schedule with nothing to cover renders one state, not empty cards" do
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 3)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_match I18n.t("bills.paycheck.all_clear.title"), response.body
+    assert_no_match I18n.t("bills.paycheck.reserved_ahead"), response.body
   end
 
   test "every overview row carries its own empty expansion frame" do
@@ -421,10 +688,15 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match(/<turbo-frame[^>]*id="bill_detail"/, response.body, "no frame param falls back to a stable id")
-    assert_match I18n.t("bills.detail.rules"), response.body
-    assert_match I18n.t("bills.detail.key_metrics"), response.body
     assert_match I18n.t("bills.detail.recent_payments"), response.body
     assert_match "WATSON PROPERTY", response.body
+
+    # The expansion answers "what is going on with this bill" and stops there.
+    # The matching rules and the per-year table are configuration and
+    # reference material, and they belong to the bill's page.
+    assert_no_match I18n.t("bills.detail.rules"), response.body,
+      "the expansion is not a second detail view"
+    assert_no_match I18n.t("bills.detail.key_metrics"), response.body
     assert_no_match(/<html/, response.body, "the pane renders frame-only, no layout")
   end
 
@@ -489,8 +761,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD", source: "detected"
     )
 
-    # Both routes to the bill, since the tab that used to own these is gone.
-    { "drawer" => bill_url(sub),
+    # Trial and renewal are STATE: they change what you might do about the bill
+    # today, so both routes to it must say so. Price history is the record of
+    # how it got here, which is the page's job.
+    { "page" => bill_url(sub),
       "expansion" => bill_url(sub, display: "pane", frame: "x") }.each do |label, url|
       get url
       assert_response :success
@@ -498,9 +772,11 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
         response.body, "the #{label} lost the trial chip"
       assert_match I18n.t("bills.detail.renews_chip", date: I18n.l(Date.current + 30, format: :short)),
         response.body, "the #{label} lost the renewal date"
-      assert_match I18n.t("bills.detail.price_changes"), response.body,
-        "the #{label} lost the price history"
     end
+
+    get bill_url(sub)
+    assert_match I18n.t("bills.detail.price_changes"), response.body,
+      "the bill's page keeps the price history"
   end
 
   test "notices surface trials, renewals and price changes" do
@@ -637,11 +913,15 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Dismissed", I18n.t("recurring_transactions.status.ended")
   end
 
-  # The expansion and the drawer were two templates over one controller action,
-  # so they drifted: same bill, different facts, decided by which list you
-  # clicked from. They now render one partial, and this fails the moment a
-  # section is added to one and not the other.
-  test "the expansion and the drawer describe a bill identically" do
+  # The expansion and the drawer used to be two templates over one action, so
+  # they drifted, and the fix made them render the SAME partial -- which traded
+  # a disagreement for a duplication: two surfaces answering one question.
+  #
+  # They now answer different ones. What has to stay true is that nothing was
+  # lost on the way, and that the shallower surface never quietly grows into
+  # the deeper one again. So: the expansion is a strict subset of the page, and
+  # every section the old shared partial rendered still exists somewhere.
+  test "the expansion is a subset of the bill's page, and nothing was dropped" do
     bill = create_bill(name: "Power Co", amount: 80, notes: "Account 4821")
     past = bill.recurring_occurrences.create!(
       family: @family, original_due_on: 2.months.ago.to_date,
@@ -652,29 +932,36 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       name: "POWER CO AUTOPAY", entryable: Transaction.new
     )
     RecurringTransaction::Allocator.new(past).allocate!(amount: "78.50", entry: entry)
+    bill.recurring_price_changes.create!(
+      effective_on: 3.months.ago.to_date, previous_amount: 70, new_amount: 80,
+      currency: "USD", source: "detected"
+    )
 
-    get bill_url(bill), headers: { "Turbo-Frame" => "drawer" }
+    get bill_url(bill)
     assert_response :success
-    drawer = response.body
+    page = response.body
 
     get bill_url(bill, display: "pane", frame: "x"), headers: { "Turbo-Frame" => "x" }
     assert_response :success
     pane = response.body
 
-    sections = %w[rules history_title average annualized ytd upcoming
-                  recent_payments history notes last_account].map do |key|
-      [ key, I18n.t("bills.detail.#{key}") ]
-    end
+    # Every section the shared partial used to render still has a home.
+    everything = %w[rules history_title average annualized ytd upcoming
+                    recent_payments history notes last_account key_metrics
+                    price_changes]
+    homeless = everything.reject { |key| page.include?(I18n.t("bills.detail.#{key}")) }
+    assert_empty homeless, "relocating the detail must not delete any of it"
 
-    missing = sections.reject { |_, label| drawer.include?(label) && pane.include?(label) }
-    assert_empty missing.map(&:first),
-      "both detail surfaces must show every section, not a subset each"
+    # And the expansion adds nothing of its own that the page lacks.
+    shown_in_pane = everything.select { |key| pane.include?(I18n.t("bills.detail.#{key}")) }
+    assert_equal shown_in_pane, shown_in_pane & everything.select { |key| page.include?(I18n.t("bills.detail.#{key}")) },
+      "the expansion must stay a subset, never a second detail view"
 
-    # And the facts themselves, not just the headings.
-    [ "POWER CO AUTOPAY", "$78.50", "Account 4821" ].each do |fact|
-      assert_includes drawer, fact, "the drawer is missing #{fact}"
+    [ "POWER CO AUTOPAY", "$78.50" ].each do |fact|
+      assert_includes page, fact, "the page is missing #{fact}"
       assert_includes pane, fact, "the expansion is missing #{fact}"
     end
+    assert_includes page, "Account 4821", "notes belong to the page"
   end
 
   # "Something changed" is only useful if the thing you can still act on is
@@ -751,6 +1038,32 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    # A declared income series anchored to a specific payday, which is what the
+    # planner slices periods by.
+    def declare_income(name:, amount:, payday:)
+      @family.recurring_transactions.create!(
+        name: name, account: accounts(:depository), amount: amount, currency: "USD",
+        bill_type: "income", expected_day_of_month: payday.day, anchor_date: payday,
+        last_occurrence_date: payday, next_expected_date: payday, status: "active", manual: true
+      )
+    end
+
+    # A declared bill anchored to a specific due date. create_bill defaults to
+    # today, which is fine for the overview but puts every bill in the leading
+    # window here, where the whole point is which period a bill lands in.
+    def declare_bill(name:, amount:, due:)
+      @family.recurring_transactions.create!(
+        name: name, account: accounts(:depository), amount: amount, currency: "USD",
+        dedup_scope: amount.to_s, bill_type: "bill",
+        expected_day_of_month: due.day, anchor_date: due,
+        last_occurrence_date: due, next_expected_date: due, status: "active", manual: true
+      )
+    end
+
+    def money_string(amount)
+      ApplicationController.helpers.format_money(Money.new(amount, @family.currency))
+    end
 
     def create_bill(name:, amount:, **overrides)
       @family.recurring_transactions.create!({

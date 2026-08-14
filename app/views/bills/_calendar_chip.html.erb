@@ -20,7 +20,7 @@
     end
 %>
 <%= link_to recurring_occurrence_path(occurrence),
-      data: { turbo_frame: :modal },
+      data: { turbo_frame: :drawer },
       class: "block rounded px-1.5 py-0.5 text-xs truncate hover:opacity-80 #{chip_classes}",
       title: series.display_name do %>
   <span class="privacy-sensitive"><%= format_money(occurrence.resolved_expected_amount_money) %></span>

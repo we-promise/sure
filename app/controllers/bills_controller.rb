@@ -11,6 +11,8 @@ class BillsController < ApplicationController
   LIFECYCLE_STATUSES = { "paused" => %w[inactive paused], "ended" => %w[ended] }.freeze
   LIFECYCLE_FILTERS = LIFECYCLE_STATUSES.keys.freeze
   STATUS_FILTERS = (PAYMENT_FILTERS + LIFECYCLE_FILTERS).freeze
+  # Enough to answer "what happens next" without becoming a second bill list.
+  NEXT_UP_LIMIT = 4
   before_action :ensure_recurring_enabled
 
   # The pay-run workspace, built on occurrence rows rather than series
@@ -35,16 +37,7 @@ class BillsController < ApplicationController
       render :calendar
       return
     when "paycheck"
-      planner = RecurringTransaction::PaycheckPlanner.new(Current.family, user: Current.user)
-      @plan = planner.plan
-      @plan_unconvertible = planner.unconvertible_count
-      # The paycheck view is where declared income lives: without this list
-      # an added income series has no visible edit surface anywhere.
-      @income_series = Current.family.recurring_transactions
-                              .accessible_by(Current.user)
-                              .where(bill_type: :income)
-                              .where.not(status: %i[suggested ended])
-                              .order(:name)
+      load_paycheck_plan
       render :paycheck
       return
     end
@@ -77,6 +70,10 @@ class BillsController < ApplicationController
     compute_kpis(today, month_end)
 
     @suggested_allocations = suggested_allocations
+    # A row whose match is waiting on a decision needs to say so, and needs to
+    # offer Review rather than Find. Already loaded for the queue above, so
+    # indexing it costs nothing.
+    @suggestions_by_occurrence = @suggested_allocations.index_by(&:recurring_occurrence_id)
     @notices = collect_notices
 
     # The month reads as one chronological list, with paid rows in place under a
@@ -84,6 +81,20 @@ class BillsController < ApplicationController
     # inside the run they were marked only by a word in the date column, which
     # made the most urgent rows the easiest to scroll past.
     @month_rows = (@this_month + @paid_this_month).sort_by(&:due_on)
+
+    # What the month is made of, and what happens next.
+    #
+    # Next up is filtered on the DATE, not on derived_state. Those are not the
+    # same question: derived_state only says :overdue once a bill is past its
+    # grace period (3 days by default), so a bill two days late is still :due
+    # and would sail into a strip headed "what happens next" -- where the date
+    # column then had to render it as "2 days late". Anything already past its
+    # due date belongs to the list below, never to what is coming.
+    @month_bill_count = @overdue.size + @month_rows.size
+    @next_up = (@this_month + @later)
+                 .select { |occurrence| occurrence.effective_due_on >= today }
+                 .sort_by(&:effective_due_on)
+                 .first(NEXT_UP_LIMIT)
   end
 
   # One bill's complete story: current state, payment history, what is
@@ -131,26 +142,83 @@ class BillsController < ApplicationController
       end
     end
 
-    # Both detail surfaces render the same partial, so both need the same
-    # figures. This used to load only for the expansion, which is how the two
-    # ended up describing the same bill differently.
-    load_detail_extras
+    load_summary_extras
 
     if params[:display] == "pane"
+      # A pending suggestion is the one thing that changes what the expansion
+      # should offer, so it is worth the one query.
+      @pane_suggestion = @current_occurrence && RecurringAllocation.suggested
+        .where(recurring_occurrence_id: @current_occurrence.id).first
       render :pane, layout: false
       return
     end
 
-    render layout: dialog_layout
+    # Only the bill's own page carries the deep material, so only it pays for
+    # the aggregates behind it.
+    load_deep_extras
+    render
   end
 
   private
-    # The pane tells the series' financial story: a year of payments by
-    # month, per-year totals, and where the money last came from.
-    def load_detail_extras
-      confirmed = RecurringAllocation.confirmed
-        .joins(:recurring_occurrence)
-        .where(recurring_occurrences: { recurring_transaction_id: @series.id })
+    # The plan, plus everything the page needs to talk about income without
+    # contradicting it.
+    #
+    # One planner instance answers both questions, so the income list and the
+    # periods are derived from the same set of occurrences. They used to come
+    # from different places -- the list from the `next_expected_date` column,
+    # the periods from occurrences -- which is how one series could name two
+    # different next paydays on one screen.
+    def load_paycheck_plan
+      planner = RecurringTransaction::PaycheckPlanner.new(Current.family, user: Current.user)
+      @plan = planner.plan
+      @plan_unconvertible = planner.unconvertible_count
+
+      # The paycheck view is where declared income lives: without this list
+      # an added income series has no visible edit surface anywhere.
+      @income_series = Current.family.recurring_transactions
+                              .accessible_by(Current.user)
+                              .where(bill_type: :income)
+                              .where.not(status: %i[suggested ended])
+                              .order(:name)
+                              .to_a
+      @next_income_by_series = planner.next_income_by_series
+
+      # The next income EVENT, which is a different fact from any one series'
+      # next payday: two sources can land on one day, and the page has to be
+      # able to say so rather than presenting a sum under one name.
+      arrivals = @next_income_by_series.values
+      first_arrival = arrivals.min_by(&:due_on)
+      if first_arrival
+        same_day = arrivals.select { |occurrence| occurrence.due_on == first_arrival.due_on }
+        total, unconvertible = total_of(same_day) { |occurrence| occurrence.resolved_expected_amount_money }
+        @next_income = { date: first_arrival.due_on, occurrences: same_day, total: total, unconvertible: unconvertible }
+      end
+
+      # Income the planner cannot use is the difference between "no plan yet"
+      # and "a plan that quietly leaves something out", and the page has to
+      # tell them apart.
+      @income_needs_attention = @income_series.any? { |series| !paycheck_income_plans?(series) }
+    end
+
+    # A series only defines paydays when it is active and manually declared.
+    # Anything else in the income list is there to be reachable, not to be
+    # planned around.
+    def paycheck_income_plans?(series)
+      series.active? && series.manual?
+    end
+    helper_method :paycheck_income_plans?
+
+    # What the expansion needs: the handful of payments that actually settled
+    # this bill lately. Cheap enough to run on every row someone opens.
+    def load_summary_extras
+      @recent_allocations = confirmed_allocations.includes(:entry).order(paid_on: :desc, created_at: :desc).limit(6)
+    end
+
+    # The bill's financial story: a year of payments by month, per-year totals,
+    # and where the money last came from. Three grouped aggregates, which is
+    # why they no longer run every time a row is expanded.
+    def load_deep_extras
+      confirmed = confirmed_allocations
 
       window_start = 11.months.ago.beginning_of_month.to_date
       by_month = confirmed
@@ -173,7 +241,12 @@ class BillsController < ApplicationController
 
       last_allocation = confirmed.where.not(entry_id: nil).includes(entry: :account).order(paid_on: :desc, created_at: :desc).first
       @last_account = last_allocation&.entry&.account
-      @recent_allocations = confirmed.includes(:entry).order(paid_on: :desc, created_at: :desc).limit(6)
+    end
+
+    def confirmed_allocations
+      RecurringAllocation.confirmed
+        .joins(:recurring_occurrence)
+        .where(recurring_occurrences: { recurring_transaction_id: @series.id })
     end
 
     # The management table: every series of every type and status, filterable
@@ -234,10 +307,6 @@ class BillsController < ApplicationController
         else false
         end
       end
-    end
-
-    def dialog_layout
-      turbo_frame_request? ? false : "settings"
     end
 
     # What the Subscriptions tab existed to answer. It was a filter promoted to
@@ -451,7 +520,10 @@ class BillsController < ApplicationController
         .where(recurring_occurrences: { family_id: Current.family.id })
         .merge(RecurringTransaction.accessible_by(Current.user))
         .includes(:entry, recurring_occurrence: { recurring_transaction: :merchant })
-        .order(:created_at)
+        # The confidence the matcher scored these with was sitting unused on
+        # the row while the queue ordered itself by when the job happened to
+        # run. Most-certain question first.
+        .order(match_confidence: :desc, created_at: :asc)
     end
 
     # Converted into the family currency because the headline answers "how

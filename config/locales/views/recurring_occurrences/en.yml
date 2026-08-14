@@ -8,27 +8,38 @@ en:
       scheduled: Open
     show:
       due_on: "Due %{date}"
-      paid_of: "%{paid} of %{expected}"
+      paid_of: "%{paid} of %{expected} paid"
+      paid_headline: "%{amount} paid"
       remaining: "%{amount} remaining"
       settled: Paid in full
-      overpaid: Paid, more than expected
+      overpaid: more than expected
       skipped: Skipped
       missed: Marked missed
       payments: Payments
       manual_payment: Manual payment
       unlink: Unlink
-      candidates: Link a transaction
+      review_heading: Review payment
+      find_heading: Find a payment
+      add_heading: Add another payment
+      other_matches: Other likely matches
+      no_ranked_candidates: Nothing here looks like a payment for this bill yet.
+      search_all: Search all transactions
       search_placeholder: Search transactions
       no_candidates: No nearby transactions to link.
       no_search_results: "Nothing matching %{query}."
-      allocate: Use this
-      custom_amount_placeholder: Record a payment amount
+      link_payment: Link payment
+      not_this_one: Not this one
+      cant_find: Can't find the transaction?
+      manual_explainer: Record a payment you know happened when no transaction here matches it.
+      manual_amount_label: Amount
+      manual_date_label: Date
       record_payment: Record payment
       mark_paid: Mark paid
+      mark_paid_hint: Settles the rest without recording a transaction.
       skip: Skip
       snooze_week: Snooze a week
       reopen: Reopen
-      view_bill: View bill
+      view_bill: View full bill
     mark_paid:
       success: Bill marked paid
     skip:

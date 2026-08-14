@@ -4,47 +4,7 @@
   <%= render "bills/view_switcher", active: "overview" %>
 
   <div class="space-y-4 min-w-0">
-  <%# The month at a glance: what is left, how far along, what is done. %>
-  <% paid_amount = @paid_this_month_total ? @paid_this_month_total.amount.to_f : 0.0 %>
-  <% remaining_amount = @remaining_this_month ? @remaining_this_month.amount.to_f : 0.0 %>
-  <% month_total = paid_amount + remaining_amount %>
-  <% hero_percent = month_total.positive? ? (paid_amount / month_total * 100).round : 0 %>
-  <div class="bg-container rounded-xl shadow-border-xs p-5">
-    <%# What is owed leads. Past due and due-this-week are the numbers a person
-        acts on, and they used to be the smallest text on the page while a ring
-        reading 0% held the centre. Progress moved to the side: it reports, it
-        does not prompt. %>
-    <div class="flex items-center justify-between gap-6">
-      <div class="space-y-1 min-w-0">
-        <p class="text-sm text-secondary"><%= t(".left_to_pay") %></p>
-        <p class="text-3xl font-medium text-primary privacy-sensitive"><%= @remaining_this_month ? format_money(@remaining_this_month) : "–" %></p>
-
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
-          <% if @past_due_total && @past_due_total.amount.positive? %>
-            <p class="text-sm font-medium text-destructive privacy-sensitive">
-              <%= t(".hero_past_due", amount: format_money(@past_due_total)) %>
-            </p>
-          <% end %>
-          <% if @due_next_seven && @due_next_seven.amount.positive? %>
-            <p class="text-sm text-secondary privacy-sensitive">
-              <%= t(".hero_next_seven", amount: format_money(@due_next_seven)) %>
-            </p>
-          <% end %>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-3 shrink-0">
-        <div class="text-right space-y-0.5">
-          <p class="text-sm text-secondary"><%= t(".paid_so_far") %></p>
-          <p class="text-lg font-medium text-primary privacy-sensitive"><%= @paid_this_month_total ? format_money(@paid_this_month_total) : "–" %></p>
-        </div>
-        <%= render DS::ProgressRing.new(percent: hero_percent, size: 56, stroke_width: 6) %>
-      </div>
-    </div>
-    <% if @unconvertible_count.positive? %>
-      <p class="text-xs text-warning text-center mt-2"><%= t(".unconvertible", count: @unconvertible_count) %></p>
-    <% end %>
-  </div>
+  <%= render "bills/month_pulse" %>
 
 
   <%# Changes worth knowing about, ranked by whether you can still do anything.
@@ -53,7 +13,7 @@
       worklist off screen. %>
   <% if @notices.any? %>
     <% urgent, routine = @notices.partition(&:urgent?) %>
-    <div class="bg-container rounded-xl shadow-border-xs divide-y divide-divider">
+    <div class="bg-container rounded-xl shadow-border-xs divide-y divide-subdued">
       <% urgent.each do |notice| %>
         <%= render "bills/notice", notice: notice, urgent: true %>
       <% end %>
@@ -62,14 +22,14 @@
         <div class="px-4 py-2">
           <% if urgent.any? %>
             <%= render DS::Disclosure.new(title: t(".notices_routine", count: routine.size), align: "left") do %>
-              <div class="divide-y divide-divider">
+              <div class="divide-y divide-subdued">
                 <% routine.each do |notice| %>
                   <%= render "bills/notice", notice: notice, urgent: false %>
                 <% end %>
               </div>
             <% end %>
           <% else %>
-            <div class="divide-y divide-divider">
+            <div class="divide-y divide-subdued">
               <% routine.each do |notice| %>
                 <%= render "bills/notice", notice: notice, urgent: false %>
               <% end %>
@@ -88,7 +48,7 @@
         <p><%= @suggested_allocations.size %></p>
       </div>
 
-      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
+      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
         <% @suggested_allocations.each do |suggestion| %>
           <% series = suggestion.recurring_occurrence.recurring_transaction %>
           <div class="flex items-center justify-between gap-4 px-4 py-3">
@@ -98,23 +58,31 @@
                       entry: suggestion.entry&.name.presence || t(".suggestion_unknown_entry"),
                       bill: series.display_name) %>
               </p>
+              <%# The matcher stores WHY it proposed each of these. This line
+                  used to show a bare percentage of that reasoning instead of
+                  the reasoning, which told nobody anything they could judge. %>
+              <% reasons = bills_match_reasons(
+                   suggestion.match_signals,
+                   currency: suggestion.recurring_occurrence.currency,
+                   expected: suggestion.recurring_occurrence.resolved_expected_amount,
+                   actual: suggestion.entry&.amount&.abs,
+                   due_on: suggestion.recurring_occurrence.effective_due_on,
+                   paid_on: suggestion.paid_on
+                 ) %>
               <p class="text-xs text-secondary privacy-sensitive">
                 <%= format_money(suggestion.allocated_amount_money) %>
-                &middot; <%= l(suggestion.paid_on, format: :short) %>
-                <% if suggestion.match_confidence.present? %>
-                  &middot; <%= t(".confidence", percent: (suggestion.match_confidence * 100).round) %>
-                <% end %>
+                &middot; <%= l(suggestion.paid_on, format: :short) %><%= " · #{reasons.join(" · ")}" if reasons.any? %>
               </p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <%= render DS::Link.new(
-                    text: t(".accept"),
+                    text: t("recurring_occurrences.show.link_payment"),
                     variant: "primary",
                     href: confirm_recurring_allocation_path(suggestion),
                     method: :post
                   ) %>
               <%= render DS::Link.new(
-                    text: t(".reject"),
+                    text: t("recurring_occurrences.show.not_this_one"),
                     variant: "ghost",
                     href: reject_recurring_allocation_path(suggestion),
                     method: :post
@@ -150,17 +118,21 @@
         the most urgent rows were the easiest ones to scroll past. %>
     <% if @overdue.any? %>
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <%# The section says how much is at stake, not just how many rows: a
+            count alone is alarming without being informative. %>
         <%= render "bills/occurrence_section",
                    title: t(".needs_attention"),
                    occurrences: @overdue,
-                   date_labels: true %>
+                   date_labels: true,
+                   suggestions: @suggestions_by_occurrence,
+                   meta: (@past_due_total && @past_due_total.amount.positive? ? t(".attention_overdue_total", amount: format_money(@past_due_total)) : nil) %>
       </div>
     <% end %>
 
     <div class="rounded-xl bg-container-inset space-y-1 p-1">
-      <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @month_rows, date_labels: true %>
-      <%= render "bills/occurrence_section", title: t(".later"), occurrences: @later %>
-      <%= render "bills/occurrence_section", title: t(".dormant"), occurrences: @dormant %>
+      <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @month_rows, date_labels: true, suggestions: @suggestions_by_occurrence %>
+      <%= render "bills/occurrence_section", title: t(".later"), occurrences: @later, suggestions: @suggestions_by_occurrence %>
+      <%= render "bills/occurrence_section", title: t(".dormant"), occurrences: @dormant, suggestions: @suggestions_by_occurrence %>
     </div>
   <% end %>
   </div>

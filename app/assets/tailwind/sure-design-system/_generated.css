@@ -402,6 +402,14 @@
   }
 }
 
+@utility divide-subdued {
+  @apply divide-alpha-black-50;
+
+  @variant theme-dark {
+    @apply divide-alpha-white-200;
+  }
+}
+
 @utility button-bg-primary {
   @apply bg-gray-900;
 

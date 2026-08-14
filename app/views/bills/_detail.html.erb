@@ -20,30 +20,10 @@
 <div class="space-y-4">
   <%= render "bills/cancelled_notice", series: series %>
 
-  <%# What is owed right now, which is the reason anyone opens a bill. %>
-  <% if current_occurrence %>
-    <div class="bg-container-inset rounded-lg p-3 space-y-1">
-      <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.current") %></p>
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <p class="text-sm <%= current_occurrence.overdue? ? "text-destructive font-medium" : "text-primary" %>">
-            <%= occurrence_due_label(current_occurrence) %>
-          </p>
-          <p class="text-xs text-secondary privacy-sensitive">
-            <%= t("bills.partial_progress",
-                  paid: format_money(current_occurrence.confirmed_allocated_money),
-                  expected: format_money(current_occurrence.resolved_expected_amount_money)) %>
-          </p>
-        </div>
-        <%= render DS::Link.new(
-              text: t("bills.details"),
-              variant: "outline",
-              href: recurring_occurrence_path(current_occurrence),
-              frame: :modal
-            ) %>
-      </div>
-    </div>
-  <% else %>
+  <%# What is owed right now leads the page above this partial. With no open
+      cycle there is nothing for that card to say, so the expectation is
+      stated here instead. %>
+  <% unless current_occurrence %>
     <div class="bg-container-inset rounded-lg p-3">
       <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.next_payment") %></p>
       <p class="text-lg font-medium text-primary privacy-sensitive">
@@ -104,10 +84,27 @@
         </span>
       <% end %>
     </div>
+
+    <%# What the app has learned from corrections. Both of these are written by
+        Allocator#learn_from_manual_attach! every time someone attaches a
+        payment by hand, and until now neither was visible anywhere: the bill
+        quietly widened what it would match and never said so. %>
+    <% aliases = Array(series.matcher_hints["name_aliases"]).compact_blank %>
+    <% learned = series.matcher_hints["learned_tolerance_pct"].to_f %>
+    <% if aliases.any? %>
+      <p class="text-xs text-secondary">
+        <%= t("bills.detail.rule_aliases", names: aliases.to_sentence) %>
+      </p>
+    <% end %>
+    <% if learned.positive? %>
+      <p class="text-xs text-secondary">
+        <%= t("bills.detail.rule_learned_tolerance", percent: number_to_percentage(learned, precision: 1, format: "%n%")) %>
+      </p>
+    <% end %>
   </div>
 
   <%# What it has actually cost: the shape over twelve months, then the figures. %>
-  <div class="border border-divider rounded-lg grid <%= columns %> divide-y divide-divider">
+  <div class="border border-subdued rounded-lg grid <%= columns %> divide-y divide-subdued">
     <div class="px-3 py-3 flex flex-col justify-center">
       <p class="text-xs font-medium text-secondary uppercase pb-1"><%= t("bills.detail.history_title") %></p>
       <% amounts = payment_history.map(&:last) %>
@@ -157,7 +154,7 @@
           every bill you open. %>
       <% if yearly_metrics.any? %>
         <%= render DS::Disclosure.new(title: t("bills.detail.key_metrics"), align: "left") do %>
-          <div class="divide-y divide-divider pt-1">
+          <div class="divide-y divide-subdued pt-1">
             <div class="grid grid-cols-3 text-xs text-secondary pb-1">
               <p><%= t("bills.detail.year") %></p>
               <p class="text-right"><%= t("bills.detail.spent_per_year") %></p>
@@ -189,7 +186,7 @@
   <% if changes.any? %>
     <div class="space-y-1">
       <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.price_changes") %></p>
-      <div class="bg-container-inset rounded-lg divide-y divide-divider">
+      <div class="bg-container-inset rounded-lg divide-y divide-subdued">
         <% changes.each do |change| %>
           <div class="flex items-center justify-between gap-3 px-3 py-2">
             <p class="text-sm text-primary"><%= l(change.effective_on, format: :long) %></p>
@@ -207,7 +204,7 @@
   <% if upcoming.any? %>
     <div class="space-y-1">
       <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.upcoming") %></p>
-      <div class="bg-container-inset rounded-lg divide-y divide-divider">
+      <div class="bg-container-inset rounded-lg divide-y divide-subdued">
         <% upcoming.each do |date| %>
           <div class="flex items-center justify-between px-3 py-2">
             <p class="text-sm text-primary"><%= l(date, format: :long) %></p>
@@ -224,7 +221,7 @@
   <% if recent_allocations.any? %>
     <div class="space-y-1">
       <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.recent_payments") %></p>
-      <div class="bg-container-inset rounded-lg divide-y divide-divider">
+      <div class="bg-container-inset rounded-lg divide-y divide-subdued">
         <% recent_allocations.each do |allocation| %>
           <div class="flex items-center justify-between gap-3 px-3 py-2">
             <div class="min-w-0">
@@ -245,7 +242,7 @@
   <% if history.any? %>
     <div class="space-y-1">
       <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.history") %></p>
-      <div class="bg-container-inset rounded-lg divide-y divide-divider">
+      <div class="bg-container-inset rounded-lg divide-y divide-subdued">
         <% history.each do |occurrence| %>
           <div class="flex items-center justify-between px-3 py-2">
             <div>

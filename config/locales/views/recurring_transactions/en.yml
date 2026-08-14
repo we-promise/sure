@@ -43,6 +43,7 @@ en:
       add_link_aria: "Add a payment link for %{name}"
       autopay: Autopay
       autopay_aria: "%{name} pays automatically, open its portal in a new tab"
+      open_site: Open bill site
     new:
       title: Add a bill
       income_title: Add income

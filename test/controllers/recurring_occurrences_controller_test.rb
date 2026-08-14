@@ -14,11 +14,14 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     ensure_tailwind_build
   end
 
-  test "show renders the occurrence dialog in a single modal frame" do
-    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "modal" }
+  # Resolving a payment is the ACT surface, so it owns the drawer slot -- the
+  # same one transactions, trades and transfers use. The bill's own story moved
+  # to its own page, so nothing competes for it.
+  test "show renders the occurrence dialog in a single drawer frame" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
 
     assert_response :success
-    assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="modal"/).size
+    assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
   end
 
   # The dialog used to list the fifteen most RECENT transactions in the window.
@@ -38,11 +41,103 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
-    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "modal" }
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
 
     assert_response :success
     assert_match exact.name, response.body,
       "the transaction matching the bill amount must survive the fifteen-row cut"
+  end
+
+  # The mission's own example. The picker ranked by amount distance and nothing
+  # else, so a $6.44 Twitch charge scored exactly as well as the $6.44 7-Eleven
+  # charge for a 7-Eleven bill. It now asks the matcher, whose identity filter
+  # rules the others out entirely rather than merely ranking them lower.
+  test "the suggested payment is the one the matcher would have picked" do
+    seven_eleven = merchants(:netflix)
+    series = @family.recurring_transactions.create!(
+      name: "7-Eleven Gold Pass", merchant: seven_eleven, account: accounts(:depository),
+      amount: 6.44, currency: "USD", expected_day_of_month: Date.current.day,
+      anchor_date: Date.current, last_occurrence_date: Date.current,
+      next_expected_date: Date.current, status: "active", manual: true,
+      dedup_scope: "gold-pass"
+    )
+    occurrence = series.recurring_occurrences.order(:due_on).first
+
+    match = accounts(:depository).entries.create!(
+      date: occurrence.due_on, amount: 6.44, currency: "USD",
+      name: "7-ELEVEN GOLD PASS TM", entryable: Transaction.new(merchant: seven_eleven)
+    )
+    decoys = [ "Twitch", "Grok", "Steam" ].map do |name|
+      accounts(:depository).entries.create!(
+        date: occurrence.due_on, amount: 6.44, currency: "USD",
+        name: "#{name} subscription", entryable: Transaction.new
+      )
+    end
+
+    get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+    assert_response :success
+
+    ranked = @controller.view_assigns["ranked_candidates"]
+    assert_equal [ match.id ], ranked.map { |entry, _| entry.id },
+      "only the 7-Eleven charge belongs to a 7-Eleven bill"
+
+    fallback = @controller.view_assigns["other_entries"].map(&:id)
+    decoys.each { |decoy| assert_includes fallback, decoy.id, "unrelated charges stay browsable, just not suggested" }
+
+    # And the reasons are the matcher's own, not a percentage.
+    assert_match I18n.t("bills.match.same_merchant"), response.body
+    assert_match I18n.t("bills.match.exact_amount"), response.body
+  end
+
+  # Corrections are permanently sticky in the matcher. The picker never checked
+  # the rejection table, so a transaction the user had already dismissed could
+  # come straight back to the top of the list.
+  test "a rejected pairing never returns as a suggestion" do
+    series = @family.recurring_transactions.create!(
+      name: "CITY WATER", account: accounts(:depository), amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    entry = accounts(:depository).entries.create!(
+      date: occurrence.due_on, amount: 80, currency: "USD",
+      name: "CITY WATER", entryable: Transaction.new
+    )
+
+    get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+    assert_equal [ entry.id ], @controller.view_assigns["ranked_candidates"].map { |candidate, _| candidate.id }
+
+    RecurringMatchRejection.create!(recurring_transaction: series, entry: entry)
+
+    get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+    assert_empty @controller.view_assigns["ranked_candidates"]
+  end
+
+  # One transaction can legitimately pay more than one bill, which is why the
+  # Allocator guards capacity at write time rather than at read time. Excluding
+  # every entry that already has a confirmed allocation would have quietly
+  # deleted split payments from the picker.
+  test "an entry already allocated to another bill is still offered here" do
+    first, second = [ "a", "b" ].map do |scope|
+      @family.recurring_transactions.create!(
+        name: "WATSON PROPERTY", account: accounts(:depository), amount: 500, currency: "USD",
+        expected_day_of_month: Date.current.day, anchor_date: Date.current,
+        last_occurrence_date: Date.current, next_expected_date: Date.current,
+        status: "active", manual: true, dedup_scope: scope
+      ).recurring_occurrences.order(:due_on).first
+    end
+
+    entry = accounts(:depository).entries.create!(
+      date: first.due_on, amount: 500, currency: "USD",
+      name: "WATSON PROPERTY", entryable: Transaction.new
+    )
+    RecurringTransaction::Allocator.new(first).allocate!(entry: entry, amount: 200)
+
+    get recurring_occurrence_url(second), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_includes @controller.view_assigns["ranked_candidates"].map { |candidate, _| candidate.id }, entry.id,
+      "the rest of that charge can still pay another bill; over-allocation is refused when it is written"
   end
 
   test "searching looks past the date window" do
@@ -51,10 +146,10 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       name: "Ancient Netflix charge", entryable: Transaction.new
     )
 
-    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "modal" }
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
     assert_no_match old.name, response.body, "outside the window it is not offered by default"
 
-    get recurring_occurrence_url(@occurrence, q: "Ancient"), headers: { "Turbo-Frame" => "modal" }
+    get recurring_occurrence_url(@occurrence, q: "Ancient"), headers: { "Turbo-Frame" => "drawer" }
     assert_match old.name, response.body, "a search must be able to reach it"
   end
 

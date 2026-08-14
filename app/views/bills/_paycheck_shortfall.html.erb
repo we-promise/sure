@@ -1,0 +1,38 @@
+<%# The gap between today and the next payday. It is the leading window of the
+    plan, said as news rather than drawn as a pay period, because nothing
+    arrives in it and there is nothing to allocate.
+
+    Red arrives as a wash and one word, not as a block: the amount is what
+    makes this noticeable, and the amount is already the loudest thing in the
+    sentence. What is due here gets paid on the Bills run, so that is where
+    the action points rather than inventing a destination. %>
+
+<% largest = period.largest_obligation %>
+
+<div class="rounded-lg bg-destructive/5 px-4 py-3 space-y-1" role="status">
+  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <p class="text-sm text-primary tabular-nums privacy-sensitive">
+      <span class="font-medium text-destructive"><%= t("bills.paycheck.shortfall_label") %></span>
+      <%= t("bills.paycheck.shortfall_amount", amount: format_money(Money.new(period.shortfall, currency))) %>
+    </p>
+    <%= link_to t("bills.paycheck.review_plan"), bills_path,
+          class: "text-xs text-secondary hover:text-primary shrink-0" %>
+  </div>
+
+  <p class="text-xs text-secondary tabular-nums privacy-sensitive">
+    <%= t("bills.paycheck.shortfall_split",
+          due: format_money(Money.new(period.due_total, currency)),
+          date: l(period.ends_on + 1, format: :short),
+          reserved: format_money(Money.new(period.reserved_total, currency))) %>
+  </p>
+
+  <% if largest.present? %>
+    <p class="text-xs text-secondary">
+      <%= t("bills.paycheck.shortfall_largest") %>
+      <%= link_to bill_path(largest.occurrence.recurring_transaction), class: "text-primary hover:underline" do %>
+        <%= largest.occurrence.recurring_transaction.display_name %>
+        &middot; <span class="tabular-nums privacy-sensitive"><%= format_money(Money.new(largest.remaining_total, currency)) %></span>
+      <% end %>
+    </p>
+  <% end %>
+</div>

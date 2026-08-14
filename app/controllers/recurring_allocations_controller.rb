@@ -5,16 +5,20 @@ class RecurringAllocationsController < ApplicationController
 
     RecurringTransaction::Allocator.new(occurrence).allocate!(
       entry: entry,
-      amount: params[:amount].presence
+      amount: params[:amount].presence,
+      # A manual payment already defaults to today (RecurringAllocation's
+      # default_paid_on callback). Accepting a date lets someone record the
+      # payment they made last Tuesday as last Tuesday.
+      paid_on: params[:paid_on].presence
     )
 
-    redirect_with occurrence, notice: t(".success")
+    redirect_with notice: t(".success")
   rescue RecurringTransaction::Allocator::OverAllocationError,
          RecurringTransaction::Allocator::MissingRateError,
          ActiveRecord::RecordInvalid,
          ActiveRecord::RecordNotUnique,
          ArgumentError => e
-    redirect_with occurrence, alert: allocation_error_message(e)
+    redirect_with alert: allocation_error_message(e)
   end
 
   def destroy
@@ -23,7 +27,7 @@ class RecurringAllocationsController < ApplicationController
 
     RecurringTransaction::Allocator.new(occurrence).unallocate!(allocation)
 
-    redirect_with occurrence, notice: t(".success")
+    redirect_with notice: t(".success")
   end
 
   def confirm
@@ -88,10 +92,22 @@ class RecurringAllocationsController < ApplicationController
       end
     end
 
-    def redirect_with(occurrence, notice: nil, alert: nil)
+    # Back to the worklist, not back to the occurrence.
+    #
+    # A plain GET of recurring_occurrence_path renders the "settings" layout,
+    # and that layout renders layouts/shared/_htmldoc, which already emits an
+    # empty <turbo-frame id="drawer">. The dialog then emits its own frame with
+    # the same id, so the page carries two elements sharing one id and the next
+    # navigation into that frame lands in the empty one. This is the two-frames
+    # trap RecurringTransactionsController#edit documents.
+    #
+    # The worklist row already shows the new state, which is what "see the
+    # result" means here, so there is nothing to gain by going back to a dialog
+    # floating over an otherwise empty page.
+    def redirect_with(notice: nil, alert: nil)
       flash[:notice] = notice if notice
       flash[:alert] = alert if alert
-      target = occurrence ? recurring_occurrence_path(occurrence) : bills_path
+      target = bills_path
 
       respond_to do |format|
         format.html { redirect_to target }

@@ -20,6 +20,6 @@
       </span>
     <% end %>
   </p>
-  <%= link_to t("bills.details"), bill_path(notice.series),
-        data: { turbo_frame: "drawer" }, class: "text-xs text-link hover:underline shrink-0" %>
+  <%= link_to t("bills.manage"), bill_path(notice.series),
+        class: "text-xs text-link hover:underline shrink-0" %>
 </div>

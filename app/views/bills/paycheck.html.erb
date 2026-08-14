@@ -1,53 +1,33 @@
+<%# Paycheck reads top to bottom as: here is your schedule, here is the gap
+    before the next one if there is a gap, and here is each paycheck in turn
+    with what it must cover and what is left.
+
+    One surface holds the whole timeline. Giving every period its own card is
+    what made a sequence of related paychecks look like a set of unrelated
+    dashboard tiles. %>
+
 <%= content_for :page_title, t("bills.index.title") %>
+
+<%
+  currency = Current.family.currency
+
+  if @plan
+    # The leading window has no income to allocate, so it is reported above
+    # the timeline as a warning rather than drawn as a pay period with an
+    # empty paycheck. A plan holding only that window (a single scheduled
+    # income occurrence) keeps it, or the page would have nothing to show.
+    bridge = @plan.find(&:bridge?)
+    periods = @plan.reject(&:bridge?)
+    shortfall = bridge if bridge&.short? && periods.any?
+    periods = @plan if periods.empty?
+  end
+%>
 
 <div class="space-y-4 pb-6 lg:pb-12">
   <%= render "bills/view_switcher", active: "paycheck" %>
 
-  <% if @income_series.present? %>
-    <div class="bg-container rounded-xl shadow-border-xs overflow-hidden">
-      <div class="flex items-center justify-between gap-3 px-4 py-3">
-        <p class="text-sm font-medium text-primary"><%= t(".income_section_title") %></p>
-        <%= render DS::Link.new(
-              text: t(".add_income"),
-              icon: "plus",
-              variant: "outline",
-              href: new_recurring_transaction_path(income: true),
-              frame: :modal
-            ) %>
-      </div>
-      <div class="border-t border-divider divide-y divide-divider">
-        <% @income_series.each do |series| %>
-          <div class="flex items-center justify-between gap-3 px-4 py-2">
-            <div class="min-w-0">
-              <p class="text-sm text-primary truncate">
-                <%= link_to series.display_name, bill_path(series),
-                      data: { turbo_frame: "drawer" }, class: "hover:underline" %>
-                <% unless series.active? %>
-                  <span class="text-xs text-secondary font-normal"><%= t(".income_paused") %></span>
-                <% end %>
-              </p>
-              <p class="text-xs text-secondary">
-                <%= frequency_label(series) %>
-                <% if series.next_expected_date.present? %>
-                  &middot; <%= t(".income_next_payday", date: l(series.next_expected_date, format: :short)) %>
-                <% end %>
-              </p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <p class="text-sm text-success privacy-sensitive">
-                +<%= format_money(Money.new(series.amount.abs, series.currency)) %>
-              </p>
-              <%= render DS::Link.new(
-                    icon: "pencil",
-                    variant: "icon",
-                    href: edit_recurring_transaction_path(series),
-                    frame: :modal
-                  ) %>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    </div>
+  <% if @income_series.any? %>
+    <%= render "bills/paycheck_income" %>
   <% end %>
 
   <% if @plan.nil? %>
@@ -68,137 +48,34 @@
         <% end %>
       <% end %>
     </div>
+  <% elsif @plan.none? { |period| period.items.any? } %>
+    <%# An income schedule with nothing to cover is a real, healthy answer.
+        A run of periods each saying "nothing due" is not a better way to
+        give it. %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <%= render DS::EmptyState.new(
+            icon: "circle-check",
+            title: t(".all_clear.title"),
+            description: t(".all_clear.description", date: l(@plan.last.ends_on, format: :long))
+          ) %>
+    </div>
   <% else %>
-    <%# The headline: the next paycheck and what is safe after bills. %>
-    <% headline = @plan.find { |period| period.income.positive? } %>
-    <% currency = Current.family.currency %>
-    <% if headline %>
-      <div class="grid grid-cols-3 bg-container rounded-xl shadow-border-xs divide-x divide-alpha-black-100 theme-dark:divide-alpha-white-200">
-        <div class="p-4 space-y-1">
-          <p class="text-sm text-secondary"><%= t(".next_paycheck") %></p>
-          <p class="text-primary font-medium text-xl"><%= l(headline.starts_on, format: :long) %></p>
-          <p class="text-xs text-success privacy-sensitive">+<%= format_money(Money.new(headline.income, currency)) %></p>
-        </div>
-        <div class="p-4 space-y-1">
-          <p class="text-sm text-secondary"><%= t(".bills_that_period") %></p>
-          <p class="text-primary font-medium text-xl privacy-sensitive"><%= format_money(Money.new(headline.obligation_total, currency)) %></p>
-        </div>
-        <div class="p-4 space-y-1">
-          <p class="text-sm text-secondary"><%= t(".safe_after_bills") %></p>
-          <p class="font-medium text-xl privacy-sensitive <%= headline.remaining.negative? ? "text-destructive" : "text-success" %>">
-            <%= format_money(Money.new(headline.remaining, currency)) %>
-          </p>
-        </div>
-      </div>
+    <% if shortfall %>
+      <%= render "bills/paycheck_shortfall", period: shortfall, currency: currency %>
     <% end %>
 
-    <% if @plan_unconvertible.to_i.positive? %>
-      <p class="text-xs text-warning"><%= t(".unconvertible", count: @plan_unconvertible) %></p>
-    <% end %>
-
-    <div class="space-y-3">
-      <% @plan.each_with_index do |period, index| %>
-        <% due_items = period.items.select(&:due_in_period) %>
-        <% set_aside_items = period.items.reject(&:due_in_period) %>
-        <% set_aside_total = set_aside_items.sum(&:share) %>
-        <% load_pct = period.income.positive? ? [ (period.obligation_total / period.income * 100).round, 100 ].min : (period.obligation_total.positive? ? 100 : 0) %>
-
-        <div class="bg-container rounded-xl shadow-border-xs overflow-hidden">
-          <div class="px-4 py-3 space-y-2">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="text-sm font-medium text-primary">
-                  <% if index.zero? && !period.income.positive? %>
-                    <%= t(".before_next_paycheck") %>
-                  <% else %>
-                    <%= t(".paycheck_of", date: l(period.starts_on, format: :long)) %>
-                  <% end %>
-                </p>
-                <p class="text-xs text-secondary">
-                  <%= t(".period_range", from: l(period.starts_on, format: :short), to: l(period.ends_on, format: :short)) %>
-                  <% if period.final %>&middot; <%= t(".and_beyond") %><% end %>
-                </p>
-              </div>
-              <div class="text-right">
-                <p class="text-sm font-medium privacy-sensitive <%= period.remaining.negative? ? "text-destructive" : "text-primary" %>">
-                  <%= format_money(Money.new(period.remaining, currency)) %>
-                </p>
-                <p class="text-xs text-secondary"><%= t(".remaining_after_bills") %></p>
-              </div>
-            </div>
-
-            <%# How much of this paycheck the bills consume. %>
-            <div class="h-1.5 rounded-full bg-surface-inset overflow-hidden"
-                 role="progressbar" aria-valuenow="<%= load_pct %>" aria-valuemin="0" aria-valuemax="100"
-                 aria-label="<%= t(".load_aria", percent: load_pct) %>">
-              <div class="h-full rounded-full <%= period.remaining.negative? ? "bg-destructive" : (load_pct > 75 ? "bg-warning" : "bg-success") %>"
-                   style="width: <%= load_pct %>%"></div>
-            </div>
-            <div class="flex items-center justify-between text-xs text-secondary privacy-sensitive">
-              <span><%= t(".income_line", amount: format_money(Money.new(period.income, currency))) %></span>
-              <span><%= t(".obligations_line", amount: format_money(Money.new(period.obligation_total, currency))) %></span>
-            </div>
-          </div>
-
-          <% if due_items.any? %>
-            <div class="border-t border-divider divide-y divide-divider">
-              <% due_items.each do |item| %>
-                <% series = item.occurrence.recurring_transaction %>
-                <div class="flex items-center justify-between gap-3 px-4 py-2">
-                  <div class="min-w-0 flex items-center gap-2">
-                    <%= icon "calendar-check", size: "sm", class: "text-secondary shrink-0" %>
-                    <div class="min-w-0">
-                      <p class="text-sm text-primary truncate">
-                        <%= link_to series.display_name, recurring_occurrence_path(item.occurrence),
-                              data: { turbo_frame: :modal }, class: "hover:underline" %>
-                      </p>
-                      <p class="text-xs text-secondary"><%= t(".due_here", date: l(item.occurrence.due_on, format: :short)) %></p>
-                    </div>
-                  </div>
-                  <p class="text-sm text-primary privacy-sensitive shrink-0">
-                    <%= format_money(Money.new(item.share, currency)) %>
-                  </p>
-                </div>
-              <% end %>
-            </div>
-          <% elsif period.items.empty? %>
-            <p class="px-4 py-3 border-t border-divider text-sm text-secondary"><%= t(".nothing_due") %></p>
-          <% end %>
-
-          <% if set_aside_items.any? %>
-            <div class="border-t border-divider px-4 py-2">
-              <%= render DS::Disclosure.new(title: t(".set_aside_disclosure", amount: format_money(Money.new(set_aside_total, currency)))) do %>
-                <div class="divide-y divide-divider">
-                  <% set_aside_items.each do |item| %>
-                    <% series = item.occurrence.recurring_transaction %>
-                    <div class="flex items-center justify-between gap-3 py-2">
-                      <div class="min-w-0 flex items-center gap-2">
-                        <%= icon "piggy-bank", size: "sm", class: "text-secondary shrink-0" %>
-                        <div class="min-w-0">
-                          <p class="text-sm text-primary truncate">
-                            <%= link_to series.display_name, recurring_occurrence_path(item.occurrence),
-                                  data: { turbo_frame: :modal }, class: "hover:underline" %>
-                          </p>
-                          <p class="text-xs text-secondary"><%= t(".set_aside_for", date: l(item.occurrence.due_on, format: :short)) %></p>
-                        </div>
-                      </div>
-                      <p class="text-sm text-primary privacy-sensitive shrink-0">
-                        <%= format_money(Money.new(item.share, currency)) %>
-                      </p>
-                    </div>
-                  <% end %>
-                </div>
-              <% end %>
-            </div>
-          <% end %>
-
-          <% if period.remaining.negative? && period.items.any? %>
-            <p class="px-4 py-2 border-t border-divider text-xs text-destructive">
-              <%= t(".trough_warning", bill: period.items.first.occurrence.recurring_transaction.display_name) %>
-            </p>
-          <% end %>
-        </div>
+    <div class="bg-container rounded-xl shadow-border-xs">
+      <% periods.each_with_index do |period, index| %>
+        <%= render "bills/paycheck_period",
+              period: period,
+              currency: currency,
+              first: index.zero?,
+              last: index == periods.size - 1 %>
       <% end %>
     </div>
+
+    <% if @plan_unconvertible.to_i.positive? %>
+      <p class="text-xs text-secondary"><%= t(".unconvertible", count: @plan_unconvertible) %></p>
+    <% end %>
   <% end %>
 </div>
