@@ -55,6 +55,32 @@
     </div>
   <% end %>
 
+  <%# Subscription state: a trial about to convert, a renewal date, a
+      cancellation already recorded. These lived only on the Subscriptions
+      tab, which meant they were invisible from every other route to the
+      same bill. %>
+  <% trial = series.trial_ends_on.present? && series.trial_ends_on >= Date.current %>
+  <% renews = series.renews_on.present? && series.renews_on >= Date.current %>
+  <% if trial || renews || series.cancelled_on.present? %>
+    <div class="flex flex-wrap items-center gap-2">
+      <% if trial %>
+        <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-warning/10 text-warning">
+          <%= t("bills.detail.trial_chip", date: l(series.trial_ends_on, format: :short)) %>
+        </span>
+      <% end %>
+      <% if renews %>
+        <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-surface-inset text-primary">
+          <%= t("bills.detail.renews_chip", date: l(series.renews_on, format: :short)) %>
+        </span>
+      <% end %>
+      <% if series.cancelled_on.present? %>
+        <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-surface-inset text-subdued">
+          <%= t("bills.detail.cancelled_chip", date: l(series.cancelled_on, format: :short)) %>
+        </span>
+      <% end %>
+    </div>
+  <% end %>
+
   <%# Why this bill matches what it matches, in words rather than engine terms. %>
   <div class="space-y-1.5">
     <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.rules") %></p>
@@ -156,6 +182,27 @@
       <% end %>
     </div>
   </div>
+
+  <%# What it used to cost. The twelve-month chart above shows the shape; this
+      names the moment it changed and by how much. %>
+  <% changes = series.recurring_price_changes.sort_by(&:effective_on).reverse.first(5) %>
+  <% if changes.any? %>
+    <div class="space-y-1">
+      <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.price_changes") %></p>
+      <div class="bg-container-inset rounded-lg divide-y divide-divider">
+        <% changes.each do |change| %>
+          <div class="flex items-center justify-between gap-3 px-3 py-2">
+            <p class="text-sm text-primary"><%= l(change.effective_on, format: :long) %></p>
+            <p class="text-sm privacy-sensitive <%= change.new_amount > change.previous_amount ? "text-warning" : "text-success" %>">
+              <%= t("bills.detail.price_change_line",
+                    from: format_money(change.previous_amount_money),
+                    to: format_money(change.new_amount_money)) %>
+            </p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
 
   <% if upcoming.any? %>
     <div class="space-y-1">

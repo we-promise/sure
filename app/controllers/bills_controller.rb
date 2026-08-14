@@ -18,7 +18,12 @@ class BillsController < ApplicationController
   # date and a real payment state, which is what lets overdue and partially
   # paid render at all.
   def index
-    @view = %w[all calendar paycheck subscriptions].include?(params[:view]) ? params[:view] : "overview"
+    if params[:view] == "subscriptions"
+      redirect_to bills_path(view: "all", q: { bill_type: "subscription" })
+      return
+    end
+
+    @view = %w[all calendar paycheck].include?(params[:view]) ? params[:view] : "overview"
 
     case @view
     when "all"
@@ -41,10 +46,6 @@ class BillsController < ApplicationController
                               .where.not(status: %i[suggested ended])
                               .order(:name)
       render :paycheck
-      return
-    when "subscriptions"
-      load_subscriptions
-      render :subscriptions
       return
     end
 
@@ -213,6 +214,8 @@ class BillsController < ApplicationController
       end
 
       @all_series = filter_by_payment_state(@all_series, status) if status.presence_in(PAYMENT_FILTERS)
+
+      load_subscription_rollup if bill_type == "subscription"
     end
 
     # Payment state lives on the occurrence and is derived from dates and
@@ -237,18 +240,20 @@ class BillsController < ApplicationController
       turbo_frame_request? ? false : "settings"
     end
 
-    def load_subscriptions
-      @subscriptions = Current.family.recurring_transactions
-                              .accessible_by(Current.user)
-                              .where(bill_type: "subscription")
-                              .where.not(status: %w[suggested])
-                              .includes(:merchant, :recurring_price_changes)
-                              .order(:name)
-                              .to_a
+    # What the Subscriptions tab existed to answer. It was a filter promoted to
+    # navigation -- bill_type: subscription, which All bills already offered --
+    # so the rollup now rides the filter instead of a destination of its own.
+    def load_subscription_rollup
+      subscriptions = @all_series.select { |series| series.bill_type == "subscription" }
+      active = subscriptions.select(&:active?)
+      monthly, unconvertible = total_of_series(active) { |series| series.monthly_equivalent_amount.abs }
 
-      active_subscriptions = @subscriptions.select(&:active?)
-      @monthly_cost, @sub_unconvertible = total_of_series(active_subscriptions) { |series| series.monthly_equivalent_amount.abs }
-      @annual_cost = @monthly_cost ? @monthly_cost * 12 : nil
+      @subscription_rollup = {
+        monthly: monthly,
+        annual: monthly ? monthly * 12 : nil,
+        active_count: active.size,
+        unconvertible: unconvertible
+      }
 
       @recent_price_changes = RecurringPriceChange
                                 .joins(:recurring_transaction)

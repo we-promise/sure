@@ -37,6 +37,33 @@
           { class: "form-field__input w-auto", "data-auto-submit-form-target": "auto" } %>
   <% end %>
 
+  <%# What the Subscriptions tab existed to answer. It was a whole destination
+      for a filter All bills already had, so the rollup now appears when that
+      filter is on rather than living behind its own tab. %>
+  <% if @subscription_rollup %>
+    <div class="grid grid-cols-3 bg-container rounded-xl shadow-border-xs divide-x divide-alpha-black-100 theme-dark:divide-alpha-white-200">
+      <div class="p-4 space-y-1">
+        <p class="text-sm text-secondary"><%= t(".subscription_monthly") %></p>
+        <p class="text-primary font-medium text-xl privacy-sensitive">
+          <%= @subscription_rollup[:monthly] ? format_money(@subscription_rollup[:monthly]) : "–" %>
+        </p>
+        <% if @subscription_rollup[:unconvertible].positive? %>
+          <p class="text-xs text-warning"><%= t("bills.index.unconvertible", count: @subscription_rollup[:unconvertible]) %></p>
+        <% end %>
+      </div>
+      <div class="p-4 space-y-1">
+        <p class="text-sm text-secondary"><%= t(".subscription_annual") %></p>
+        <p class="text-primary font-medium text-xl privacy-sensitive">
+          <%= @subscription_rollup[:annual] ? format_money(@subscription_rollup[:annual]) : "–" %>
+        </p>
+      </div>
+      <div class="p-4 space-y-1">
+        <p class="text-sm text-secondary"><%= t(".subscription_active") %></p>
+        <p class="text-primary font-medium text-xl"><%= @subscription_rollup[:active_count] %></p>
+      </div>
+    </div>
+  <% end %>
+
   <% if @all_series.empty? %>
     <div class="bg-container rounded-xl shadow-border-xs p-4">
       <%= render DS::EmptyState.new(
@@ -114,6 +141,32 @@
           <% end %>
         </tbody>
       </table>
+    </div>
+  <% end %>
+
+  <%# Across every bill, not just the one you have open. Per-bill history lives
+      in the bill's own detail. %>
+  <% if @recent_price_changes&.any? %>
+    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+      <div class="px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p><%= t(".subscription_price_changes") %></p>
+      </div>
+      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
+        <% @recent_price_changes.each do |change| %>
+          <div class="flex items-center justify-between gap-3 px-4 py-2">
+            <div>
+              <p class="text-sm text-primary"><%= change.recurring_transaction.display_name %></p>
+              <p class="text-xs text-secondary"><%= l(change.effective_on, format: :long) %></p>
+            </div>
+            <p class="text-sm privacy-sensitive <%= change.new_amount > change.previous_amount ? "text-warning" : "text-success" %>">
+              <%= t(".subscription_price_change_line",
+                    from: format_money(change.previous_amount_money),
+                    to: format_money(change.new_amount_money),
+                    percent: change.previous_amount.positive? ? ((change.new_amount - change.previous_amount) / change.previous_amount * 100).round(1) : 0) %>
+            </p>
+          </div>
+        <% end %>
+      </div>
     </div>
   <% end %>
 </div>

@@ -13,7 +13,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   test "every bills view has a page heading" do
     create_bill(name: "Rent", amount: 1200)
 
-    %w[overview calendar paycheck subscriptions all].each do |view|
+    %w[overview calendar paycheck all].each do |view|
       get view == "overview" ? bills_url : bills_url(view: view)
 
       assert_response :success
@@ -444,7 +444,14 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match bill_path(income), response.body, "income opens the same drawer as bills for pause and delete"
   end
 
-  test "the subscriptions view rolls up cost and surfaces price changes" do
+  # Subscriptions was a filter promoted to navigation. Everything it answered
+  # still has to be answerable, and its old links still have to work.
+  test "the old subscriptions link lands on All bills, filtered" do
+    get bills_url(view: "subscriptions")
+    assert_redirected_to bills_path(view: "all", q: { bill_type: "subscription" })
+  end
+
+  test "filtering All bills by subscription rolls up cost and lists price changes" do
     sub = create_bill(name: "STREAMFLIX", amount: 24.99)
     sub.update!(bill_type: "subscription", trial_ends_on: Date.current + 5)
     sub.recurring_price_changes.create!(
@@ -452,13 +459,48 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD", source: "detected"
     )
 
-    get bills_url(view: "subscriptions")
+    get bills_url(view: "all", q: { bill_type: "subscription" })
 
     assert_response :success
     assert_match "STREAMFLIX", response.body
-    assert_match I18n.t("bills.subscriptions.monthly_cost"), response.body
-    assert_match I18n.t("bills.subscriptions.trial_chip", date: I18n.l(Date.current + 5, format: :short)), response.body
-    assert_match I18n.t("bills.subscriptions.price_changes"), response.body
+    assert_match I18n.t("bills.all.subscription_monthly"), response.body
+    assert_match I18n.t("bills.all.subscription_annual"), response.body
+    assert_match I18n.t("bills.all.subscription_price_changes"), response.body
+  end
+
+  test "the rollup stays out of the way when the filter is not on subscriptions" do
+    sub = create_bill(name: "STREAMFLIX", amount: 24.99)
+    sub.update!(bill_type: "subscription")
+
+    get bills_url(view: "all")
+
+    assert_response :success
+    assert_match "STREAMFLIX", response.body
+    assert_no_match I18n.t("bills.all.subscription_monthly"), response.body,
+      "a subscription rollup on an unfiltered list would be answering a question nobody asked"
+  end
+
+  test "trial, renewal and price history follow the bill into its detail" do
+    sub = create_bill(name: "STREAMFLIX", amount: 24.99)
+    sub.update!(bill_type: "subscription", trial_ends_on: Date.current + 5,
+                renews_on: Date.current + 30)
+    sub.recurring_price_changes.create!(
+      effective_on: 2.months.ago.to_date, previous_amount: 19.99, new_amount: 24.99,
+      currency: "USD", source: "detected"
+    )
+
+    # Both routes to the bill, since the tab that used to own these is gone.
+    { "drawer" => bill_url(sub),
+      "expansion" => bill_url(sub, display: "pane", frame: "x") }.each do |label, url|
+      get url
+      assert_response :success
+      assert_match I18n.t("bills.detail.trial_chip", date: I18n.l(Date.current + 5, format: :short)),
+        response.body, "the #{label} lost the trial chip"
+      assert_match I18n.t("bills.detail.renews_chip", date: I18n.l(Date.current + 30, format: :short)),
+        response.body, "the #{label} lost the renewal date"
+      assert_match I18n.t("bills.detail.price_changes"), response.body,
+        "the #{label} lost the price history"
+    end
   end
 
   test "notices surface trials, renewals and price changes" do

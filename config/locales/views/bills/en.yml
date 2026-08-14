@@ -29,6 +29,11 @@ en:
         one: "1 payment"
         other: "%{count} payments"
       notes: Notes
+      trial_chip: "Trial ends %{date}"
+      renews_chip: "Renews %{date}"
+      cancelled_chip: "Cancelled %{date}"
+      price_changes: Price changes
+      price_change_line: "%{from} → %{to}"
     pane:
       close: Collapse details
     add_bill: Add bill
@@ -57,22 +62,7 @@ en:
       overview: Overview
       calendar: Calendar
       paycheck: Paycheck
-      subscriptions: Subscriptions
       all: All bills
-    subscriptions:
-      empty:
-        title: No subscriptions marked yet
-        description: Edit a bill and set its kind to Subscription to track it here, with monthly and annual costs, renewals, and price changes.
-      monthly_cost: A month
-      annual_cost: A year
-      active_count: Active
-      next_charge: "next %{date}"
-      cancelled_chip: "Cancelled %{date}"
-      trial_chip: "Trial ends %{date}"
-      renews_chip: "Renews %{date}"
-      price_change_chip: "%{from} → %{to}"
-      price_changes: Price changes this year
-      price_change_line: "%{from} → %{to} (%{percent}%)"
     paycheck:
       unconvertible:
         one: "1 obligation is not included, no exchange rate available"
@@ -118,6 +108,11 @@ en:
         paid: Paid
         paused: Paused
         ended: Dismissed
+      subscription_monthly: A month
+      subscription_annual: A year
+      subscription_active: Active
+      subscription_price_changes: Price changes this year
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
       any_type: Any type
       sort_due: By next due
       sort_name: By name
