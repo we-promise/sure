@@ -141,6 +141,7 @@ class RecurringTransactionsController < ApplicationController
 
   def update
     @recurring_transaction.assign_attributes(recurring_transaction_params)
+    apply_editable_identity
     apply_frequency_preset
 
     if @recurring_transaction.typed_installment? && @recurring_transaction.end_after_count.present?
@@ -237,6 +238,10 @@ class RecurringTransactionsController < ApplicationController
                                       .find(params[:id])
     end
 
+    # name, amount and account are handled by apply_editable_identity rather
+    # than listed here: the account has to be one this user can actually reach,
+    # and the amount carries the series' sign convention. Neither survives a
+    # raw permit.
     def recurring_transaction_params
       params.require(:recurring_transaction).permit(
         :payment_url, :autopay, :notes, :bill_type, :category_id,
@@ -318,6 +323,40 @@ class RecurringTransactionsController < ApplicationController
       @recurring_transaction.frequency_second_day_of_month = detection.second_day_of_month
       @recurring_transaction.frequency_weekday = detection.weekday
       @recurring_transaction.frequency_month_of_year = detection.month_of_year
+    end
+
+    # A bill outliving its own price is the normal case, and the only way to
+    # record a rise used to be delete-and-recreate, which takes the occurrences
+    # and allocations with it. So name, amount and account are editable, but
+    # resolved rather than mass-assigned:
+    #
+    #   account  must be one this user can reach, or a crafted account_id
+    #            would point a bill at another family's account
+    #   amount   is stored negative for income, so assigning the raw field
+    #            would flip a paycheck into a bill
+    #
+    # first_due_on stays create-only. It seeds the schedule and does nothing on
+    # a persisted series, so offering it would be a field that silently fails.
+    # The day a bill falls due is edited through the frequency picker.
+    #
+    # Currency deliberately does not follow the account: it shapes the schedule
+    # and is tied to existing allocations, and the allocator already converts
+    # cross-currency payments.
+    def apply_editable_identity
+      attrs = params.require(:recurring_transaction)
+
+      @recurring_transaction.name = attrs[:name] if attrs.key?(:name)
+
+      if attrs[:amount].present?
+        magnitude = attrs[:amount].to_d.abs
+        @recurring_transaction.amount =
+          @recurring_transaction.typed_income? ? -magnitude : magnitude
+      end
+
+      if attrs.key?(:account_id)
+        @recurring_transaction.account =
+          Current.user.accessible_accounts.find_by(id: attrs[:account_id])
+      end
     end
 
     def apply_frequency_preset

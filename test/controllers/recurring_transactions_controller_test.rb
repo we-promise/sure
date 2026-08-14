@@ -560,4 +560,80 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     assert_nil other_family_recurring.reload.payment_url
   end
+
+  # A bill outliving its own price is the normal case. These used to be
+  # create-only, so the only way to record a rise was delete-and-recreate,
+  # which takes the occurrences and allocations with it.
+  test "the edit dialog exposes name, amount and account" do
+    series = recurring_transactions(:netflix_subscription)
+    get edit_recurring_transaction_url(series)
+    assert_response :success
+
+    fields = response.body.scan(/name="recurring_transaction\[([a-z_]+)\]"/).flatten.uniq
+    %w[name amount account_id].each do |field|
+      assert_includes fields, field, "#{field} should be editable after creation"
+    end
+    refute_includes fields, "first_due_on",
+      "first_due_on is inert on a persisted series; the frequency picker owns the schedule"
+  end
+
+  test "updating name, amount and account persists all three" do
+    series = recurring_transactions(:netflix_subscription)
+    other  = accounts(:credit_card)
+
+    patch recurring_transaction_url(series), params: {
+      recurring_transaction: { name: "Netflix Premium", amount: 24.99, account_id: other.id }
+    }
+    series.reload
+
+    assert_equal "Netflix Premium", series.name
+    assert_equal 24.99, series.amount.to_f
+    assert_equal other.id, series.account_id
+  end
+  test "a bill cannot be pointed at an account the user cannot reach" do
+    series = recurring_transactions(:netflix_subscription)
+    foreign = families(:empty).accounts.create!(
+      name: "Someone else's checking", balance: 0, currency: "USD",
+      accountable: Depository.new
+    )
+    refute_equal series.family_id, foreign.family_id
+
+    patch recurring_transaction_url(series), params: {
+      recurring_transaction: { account_id: foreign.id }
+    }
+
+    refute_equal foreign.id, series.reload.account_id,
+      "a crafted account_id must not reach another family's account"
+  end
+
+  test "editing an income series keeps its negative sign" do
+    income = recurring_transactions(:netflix_subscription)
+    income.update!(bill_type: "income", amount: -2000)
+
+    patch recurring_transaction_url(income), params: {
+      recurring_transaction: { amount: 2500 }
+    }
+
+    assert_equal(-2500, income.reload.amount.to_f,
+      "income is stored negative; a raw assignment would flip it into a bill")
+  end
+  # Detected bills carry a merchant and no name of their own. The field has to
+  # arrive seeded, or it renders empty and, being required, browsers refuse to
+  # submit the whole form; and the rename has to actually show, or it is a
+  # control that silently does nothing.
+  test "renaming a detected bill seeds the field and takes effect" do
+    series = recurring_transactions(:netflix_subscription)
+    assert series.name.blank?, "premise: this bill is named by its merchant"
+    assert series.merchant.present?
+
+    get edit_recurring_transaction_url(series)
+    assert_select "input[name=?][value=?]", "recurring_transaction[name]", series.display_name
+
+    patch recurring_transaction_url(series), params: {
+      recurring_transaction: { name: "Netflix Premium" }
+    }
+
+    assert_equal "Netflix Premium", series.reload.display_name,
+      "a name the user typed should win over the detected merchant"
+  end
 end

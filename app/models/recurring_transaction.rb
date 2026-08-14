@@ -76,6 +76,7 @@ class RecurringTransaction < ApplicationRecord
 
   after_commit :generate_occurrences, on: :create
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
+  after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
 
   # Form state for the frequency picker and the create-bill dialog;
   # FrequencyPreset and the controller translate these on save. Not persisted.
@@ -120,8 +121,12 @@ class RecurringTransaction < ApplicationRecord
 
   # A recurring transaction is identified by its merchant when it has one and by its
   # free-text name otherwise; `merchant_or_name_present` guarantees one of the two.
+  # What the user calls this bill, which is not the same question as what it
+  # matches on. A name they typed wins over the detected merchant, otherwise
+  # renaming a detected bill would silently do nothing. The matcher keeps
+  # reading the merchant directly, because matching really is by merchant.
   def display_name
-    merchant&.name.presence || name
+    name.presence || merchant&.name
   end
 
   def merchant_or_name_present
@@ -162,6 +167,28 @@ class RecurringTransaction < ApplicationRecord
 
   def schedule_shape_changed?
     rules_rewritten || (previous_changes.keys & SCHEDULE_SHAPING_ATTRIBUTES).any?
+  end
+
+  # A price change means "it costs this much from now on", not "it always cost
+  # this much". Occurrences resolve their amount from the series live, so
+  # without this, raising the rent rewrites what last month's unpaid rent
+  # claims you owe, and the past-due total on the Overview with it.
+  #
+  # Dates already due keep what they claimed; future dates pick up the new
+  # amount. Rows carrying a payment are already pinned by the allocator, and
+  # closed rows are out of scope, so only open, unpinned, on-or-before-today
+  # rows need stamping.
+  def pin_amount_on_dates_already_due
+    was = previous_changes["amount"]&.first
+    return if was.blank?
+
+    recurring_occurrences
+      .open_status
+      .where(expected_amount: nil)
+      .where("due_on <= ?", Date.current)
+      .find_each do |occurrence|
+        occurrence.update!(expected_amount: occurrence.resolved_expected_amount(series_amount: was))
+      end
   end
 
   # A destination account IS the definition of a transfer, so the

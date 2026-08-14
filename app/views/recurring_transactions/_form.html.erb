@@ -10,13 +10,22 @@
       <%= render "shared/form_errors", model: recurring_transaction %>
     <% end %>
 
-    <% if recurring_transaction.new_record? %>
-      <%= f.text_field :name,
-            label: income ? t(".income_name_label") : t(".name_label"),
-            placeholder: income ? t(".income_name_placeholder") : t(".name_placeholder"),
-            autofocus: true,
-            required: true %>
+    <%# What a bill is called, what it costs and where it is paid from all
+        outlive their first version, so they are editable. They used to be
+        create-only, which left delete-and-recreate as the only way to record
+        a price rise, and that takes the payment history with it. %>
+    <%# Detected bills carry a merchant and no name of their own, so the field
+        is seeded from whatever the bill is currently called. Left as the bare
+        attribute it renders empty on most bills, and being required, browsers
+        then refuse to submit the form at all. %>
+    <%= f.text_field :name,
+          label: income ? t(".income_name_label") : t(".name_label"),
+          placeholder: income ? t(".income_name_placeholder") : t(".name_placeholder"),
+          value: recurring_transaction.display_name,
+          autofocus: true,
+          required: true %>
 
+    <% if recurring_transaction.new_record? %>
       <div class="grid grid-cols-2 gap-3">
         <%= f.number_field :amount,
               label: income ? t(".income_amount_label") : t(".amount_label"),
@@ -28,12 +37,26 @@
               value: recurring_transaction.first_due_on,
               required: true %>
       </div>
+    <% else %>
+      <%# first_due_on seeds the schedule and does nothing once the series
+          exists, so editing when a bill falls due happens in the frequency
+          picker below rather than here. %>
+      <div class="space-y-2">
+        <%= f.number_field :amount,
+              label: income ? t(".income_amount_label") : t(".amount_label"),
+              min: 0,
+              step: 0.01,
+              required: true %>
+        <p class="text-xs text-secondary"><%= income ? t(".income_amount_edit_hint") : t(".amount_edit_hint") %></p>
+      </div>
+    <% end %>
 
-      <%= f.collection_select :account_id,
-            Current.user.accessible_accounts.visible.alphabetically,
-            :id, :name,
-            { label: income ? t(".income_account_label") : t(".account_label"), include_blank: t(".account_blank") } %>
+    <%= f.collection_select :account_id,
+          Current.user.accessible_accounts.visible.alphabetically,
+          :id, :name,
+          { label: income ? t(".income_account_label") : t(".account_label"), include_blank: t(".account_blank") } %>
 
+    <% if recurring_transaction.new_record? %>
       <% if income %>
         <%= hidden_field_tag "recurring_transaction[is_income]", "1" %>
       <% else %>
@@ -117,7 +140,6 @@
           <%= f.text_field :payment_url,
                 label: t(".payment_url_label"),
                 placeholder: t(".payment_url_placeholder"),
-                autofocus: recurring_transaction.persisted?,
                 inputmode: "url" %>
           <p class="text-xs text-secondary"><%= t(".payment_url_hint") %></p>
         </div>

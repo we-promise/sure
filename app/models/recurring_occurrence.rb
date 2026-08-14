@@ -38,18 +38,22 @@ class RecurringOccurrence < ApplicationRecord
   # The amount this occurrence expects, resolving NULL through the series'
   # amount strategy. NULL-until-frozen is what lets a series price edit
   # update every open occurrence with zero sweeps.
-  def resolved_expected_amount
+  # series_amount overrides what the series currently says it costs, so a
+  # price change can pin what an occurrence claimed *before* the edit without
+  # a second copy of this resolution order.
+  def resolved_expected_amount(series_amount: nil)
     return expected_amount if expected_amount.present?
 
     series = recurring_transaction
+    fallback = series_amount || series.amount
 
     case series.amount_strategy
     when "average"
-      series.expected_amount_avg.presence || series.amount
+      series.expected_amount_avg.presence || fallback
     when "last"
-      last_paid_total.presence || series.amount
+      last_paid_total.presence || fallback
     else
-      series.amount
+      fallback
     end.abs
   end
 
