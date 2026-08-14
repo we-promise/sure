@@ -23,6 +23,7 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
 
   def up
     quoted_names = INVESTMENT_CONTRIBUTION_CATEGORY_NAMES.map { |name| connection.quote(name) }.join(", ")
+    quoted_updated_at = connection.quote(Time.current)
 
     say_with_time "Categorizing confirmed matched investment contributions" do
       execute <<~SQL.squish
@@ -56,10 +57,7 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
           RETURNING transactions.id
         )
         UPDATE entries
-        -- CURRENT_TIMESTAMP is fixed at the surrounding transaction's start,
-        -- which can leave cache keys stale when this runs inside a long-lived
-        -- migration or a test transaction.
-        SET updated_at = statement_timestamp()
+        SET updated_at = #{quoted_updated_at}
         WHERE entries.entryable_type = 'Transaction'
           AND entries.entryable_id IN (SELECT id FROM updated_transactions)
       SQL
