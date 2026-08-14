@@ -226,6 +226,10 @@ en:
       hero_next_seven: "%{amount} due in the next 7 days"
       add_bill: Add bill
       add_income: Add income
+      detected_review:
+        one: We found 1 recurring payment in your transactions. Check it over so the totals here match what you actually pay.
+        other: We found %{count} recurring payments in your transactions. Check them over so the totals here match what you actually pay.
+      detected_review_action: Review them
       needs_review: Needs review
       notice_trial: "%{name}'s trial ends %{date}"
       notice_renewal: "%{name} renews %{date}"

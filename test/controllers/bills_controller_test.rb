@@ -542,6 +542,48 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("recurring_transactions.new.income_title"), response.body
   end
 
+  # Detection has been creating recurring rows from bank data since long before
+  # Bills existed, so anyone upgrading meets a page of bills nobody confirmed.
+  test "a family that has never worked with Bills is told where its bills came from" do
+    create_bill(name: "Rent", amount: 2150)
+    create_bill(name: "Streaming", amount: 20)
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.index.detected_review", count: 2), response.body
+  end
+
+  # The prompt carries no stored state, so it has to clear itself off evidence
+  # that the user has worked with Bills. Each of these is sufficient on its own.
+  test "the prompt clears itself once the user has worked with Bills" do
+    detected = create_bill(name: "Rent", amount: 2150)
+
+    get bills_url
+    assert_match I18n.t("bills.index.detected_review", count: 1), response.body
+
+    # Declaring a bill by hand.
+    declared = declare_bill(name: "Water", amount: 45, due: Date.current + 3)
+    get bills_url
+    assert_no_match I18n.t("bills.index.detected_review", count: 1), response.body
+    assert_no_match I18n.t("bills.index.detected_review", count: 2), response.body
+    declared.destroy!
+
+    # Dismissing a suggestion.
+    detected.update!(status: :ended)
+    get bills_url
+    assert_no_match I18n.t("bills.index.detected_review", count: 1), response.body
+    detected.update!(status: :active)
+
+    # Recording a payment themselves.
+    occurrence = detected.recurring_occurrences.order(:due_on).first
+    RecurringTransaction::Allocator.new(occurrence).allocate!(amount: "10")
+    get bills_url
+
+    assert_response :success
+    assert_no_match I18n.t("bills.index.detected_review", count: 1), response.body
+  end
+
   # The page's whole job. A single "Bills $695.60" against $357.48 of visible
   # rows is a number nothing on screen can account for, so due and reserved
   # are stated apart and their sum is never shown at all.

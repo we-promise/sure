@@ -4,6 +4,18 @@
   <%= render "bills/view_switcher", active: "overview" %>
 
   <div class="space-y-4 min-w-0">
+  <%# Nothing here was confirmed by anyone: detection built it from bank data.
+      Says so once, and stops as soon as the user works with any of it. %>
+  <% if @detected_awaiting_review.positive? %>
+    <div class="bg-container rounded-xl shadow-border-xs px-4 py-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <p class="text-sm text-primary">
+        <%= t(".detected_review", count: @detected_awaiting_review) %>
+      </p>
+      <%= link_to t(".detected_review_action"), bills_path(view: "all"),
+            class: "text-xs text-secondary hover:text-primary shrink-0" %>
+    </div>
+  <% end %>
+
   <%= render "bills/month_pulse" %>
 
 

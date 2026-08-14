@@ -64,6 +64,7 @@ class BillsController < ApplicationController
 
     compute_kpis(today, month_end)
 
+    @detected_awaiting_review = detected_awaiting_review
     @suggested_allocations = suggested_allocations
     # A row waiting on a match decision offers Review rather than Find.
     # Already loaded for the queue above, so indexing is free.
@@ -483,6 +484,25 @@ class BillsController < ApplicationController
       end
 
       notices.sort_by { |notice| [ notice.urgent? ? 0 : 1, notice.distance ] }
+    end
+
+    # Detection has been creating recurring rows from bank data since long
+    # before this page existed, so a family arriving here for the first time
+    # meets bills nobody ever confirmed. Counts them, and returns zero the
+    # moment there is any sign the user has worked with Bills at all -- a
+    # declared bill, a dismissed suggestion, or a payment they recorded
+    # themselves -- so the prompt clears itself and needs no stored state.
+    def detected_awaiting_review
+      series = Current.family.recurring_transactions.accessible_by(Current.user)
+      return 0 if series.where(manual: true).exists?
+      return 0 if series.where(status: :ended).exists?
+
+      user_touched = RecurringAllocation.where.not(source: :auto_matched)
+                                        .joins(:recurring_occurrence)
+                                        .where(recurring_occurrences: { family_id: Current.family.id })
+      return 0 if user_touched.exists?
+
+      series.where(manual: false, status: :active).count
     end
 
     def suggested_allocations
