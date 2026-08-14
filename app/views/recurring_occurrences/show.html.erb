@@ -118,9 +118,9 @@
           <% if @occurrence.scheduled? %>
             <%= render DS::Link.new(text: t(".mark_paid"), variant: "primary",
                   href: mark_paid_recurring_occurrence_path(@occurrence), method: :post) %>
-            <%= render DS::Link.new(text: t(".skip"), variant: "ghost",
+            <%= render DS::Link.new(text: t(".skip"), variant: "outline",
                   href: skip_recurring_occurrence_path(@occurrence), method: :post) %>
-            <%= render DS::Link.new(text: t(".snooze_week"), variant: "ghost",
+            <%= render DS::Link.new(text: t(".snooze_week"), variant: "outline",
                   href: snooze_recurring_occurrence_path(@occurrence, until: Date.current + 7), method: :patch) %>
           <% else %>
             <%= render DS::Link.new(text: t(".reopen"), variant: "ghost",
