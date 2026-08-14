@@ -128,8 +128,14 @@ class BillsController < ApplicationController
         render :pane_close, layout: false
         return
       end
+    end
 
-      load_pane_extras
+    # Both detail surfaces render the same partial, so both need the same
+    # figures. This used to load only for the expansion, which is how the two
+    # ended up describing the same bill differently.
+    load_detail_extras
+
+    if params[:display] == "pane"
       render :pane, layout: false
       return
     end
@@ -140,7 +146,7 @@ class BillsController < ApplicationController
   private
     # The pane tells the series' financial story: a year of payments by
     # month, per-year totals, and where the money last came from.
-    def load_pane_extras
+    def load_detail_extras
       confirmed = RecurringAllocation.confirmed
         .joins(:recurring_occurrence)
         .where(recurring_occurrences: { recurring_transaction_id: @series.id })

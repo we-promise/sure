@@ -5,125 +5,23 @@
   <% end %>
   <% dialog.with_header(title: @series.display_name, subtitle: subtitle) %>
   <% dialog.with_body do %>
-    <div class="space-y-5">
-      <%= render "bills/cancelled_notice", series: @series %>
+    <div class="space-y-4">
+      <%# The same definition the inline expansion renders. The drawer is
+          narrow, so the figures stack rather than sitting side by side. %>
+      <%= render "bills/detail",
+            series: @series,
+            current_occurrence: @current_occurrence,
+            history: @history,
+            upcoming: @upcoming,
+            analytics: @analytics,
+            payment_history: @payment_history,
+            yearly_metrics: @yearly_metrics,
+            last_account: @last_account,
+            recent_allocations: @recent_allocations,
+            dense: true %>
 
-      <% if @current_occurrence %>
-        <div class="bg-container-inset rounded-lg p-3 space-y-1">
-          <p class="text-xs font-medium text-secondary uppercase"><%= t(".current") %></p>
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <p class="text-sm text-primary"><%= occurrence_due_label(@current_occurrence) %></p>
-              <p class="text-xs text-secondary privacy-sensitive">
-                <%= t("bills.partial_progress",
-                      paid: format_money(@current_occurrence.confirmed_allocated_money),
-                      expected: format_money(@current_occurrence.resolved_expected_amount_money)) %>
-              </p>
-            </div>
-            <%= render DS::Link.new(
-                  text: t("bills.details"),
-                  variant: "secondary",
-                  href: recurring_occurrence_path(@current_occurrence),
-                  frame: :modal
-                ) %>
-          </div>
-        </div>
-      <% end %>
-
-      <% if @analytics %>
-        <div class="grid grid-cols-3 gap-2">
-          <div class="bg-container-inset rounded-lg p-3">
-            <p class="text-xs text-secondary"><%= t(".average") %></p>
-            <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(@analytics[:average]) %></p>
-            <p class="text-xs text-subdued privacy-sensitive">
-              <%= t(".range", min: format_money(@analytics[:lowest]), max: format_money(@analytics[:highest])) %>
-            </p>
-          </div>
-          <div class="bg-container-inset rounded-lg p-3">
-            <p class="text-xs text-secondary"><%= t(".annualized") %></p>
-            <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(@analytics[:annualized]) %></p>
-          </div>
-          <div class="bg-container-inset rounded-lg p-3">
-            <p class="text-xs text-secondary"><%= t(".ytd") %></p>
-            <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(@analytics[:ytd]) %></p>
-          </div>
-        </div>
-      <% end %>
-
-      <% if @upcoming.any? %>
-        <div class="space-y-1">
-          <p class="text-xs font-medium text-secondary uppercase"><%= t(".upcoming") %></p>
-          <div class="bg-container-inset rounded-lg divide-y divide-divider">
-            <% @upcoming.each do |date| %>
-              <div class="flex items-center justify-between px-3 py-2">
-                <p class="text-sm text-primary"><%= l(date, format: :long) %></p>
-                <p class="text-sm text-secondary privacy-sensitive">
-                  ~<%= format_money(Money.new(@series.amount.abs, @series.currency)) %>
-                </p>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-
-      <% if @history.any? %>
-        <div class="space-y-1">
-          <p class="text-xs font-medium text-secondary uppercase"><%= t(".history") %></p>
-          <div class="bg-container-inset rounded-lg divide-y divide-divider">
-            <% @history.each do |occurrence| %>
-              <div class="flex items-center justify-between px-3 py-2">
-                <div>
-                  <p class="text-sm text-primary"><%= l(occurrence.due_on, format: :long) %></p>
-                  <p class="text-xs text-secondary">
-                    <%= t("recurring_occurrences.history_status.#{occurrence.status}") %>
-                    <% if occurrence.allocations.size > 1 %>
-                      &middot; <%= t(".payment_count", count: occurrence.allocations.size) %>
-                    <% end %>
-                  </p>
-                </div>
-                <p class="text-sm text-primary privacy-sensitive">
-                  <%= format_money(occurrence.confirmed_allocated_money) %>
-                </p>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-
-      <% if @series.notes.present? %>
-        <div class="space-y-1">
-          <p class="text-xs font-medium text-secondary uppercase"><%= t(".notes") %></p>
-          <p class="text-sm text-primary"><%= @series.notes %></p>
-        </div>
-      <% end %>
-
-      <div class="flex items-center justify-between pt-2 border-t border-divider">
-        <div class="flex items-center gap-1">
-          <%= render DS::Link.new(
-                text: t(".edit"),
-                icon: "pencil",
-                variant: "ghost",
-                href: edit_recurring_transaction_path(@series),
-                frame: :modal
-              ) %>
-          <%= render DS::Link.new(
-                text: @series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
-                icon: @series.active? ? "pause" : "play",
-                variant: "ghost",
-                href: toggle_status_recurring_transaction_path(@series),
-                method: :post
-              ) %>
-          <%= render DS::Link.new(
-                text: t("recurring_transactions.actions.delete"),
-                icon: "trash-2",
-                variant: "ghost",
-                class: "text-destructive",
-                href: recurring_transaction_path(@series),
-                method: :delete,
-                data: { turbo_confirm: t(@series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: @series.display_name) }
-              ) %>
-        </div>
-        <%= render "recurring_transactions/pay_action", recurring_transaction: @series, show_add: false %>
+      <div class="pt-2 border-t border-divider">
+        <%= render "bills/detail_actions", series: @series %>
       </div>
     </div>
   <% end %>

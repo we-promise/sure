@@ -261,7 +261,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bill_url(bill, display: "pane", frame: "x"), headers: { "Turbo-Frame" => "x" }
     assert_response :success
     assert_match overdue_phrase, response.body, "and the expansion must state the same one"
-    assert_no_match I18n.t("bills.pane.next_payment"), response.body,
+    assert_no_match I18n.t("bills.detail.next_payment"), response.body,
       "an overdue bill is not a next payment"
   end
 
@@ -278,8 +278,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
-    assert_match I18n.t("bills.show.history"), response.body
-    assert_match I18n.t("bills.show.ytd"), response.body
+    assert_match I18n.t("bills.detail.history"), response.body
+    assert_match I18n.t("bills.detail.ytd"), response.body
     assert_match "$78.50", response.body
   end
 
@@ -405,7 +405,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bill_url(bill, display: "pane", frame: "pane_recurring_occurrence_abc123", close: 1)
     assert_response :success
     assert_match(/<turbo-frame[^>]*id="pane_recurring_occurrence_abc123"><\/turbo-frame>/, response.body)
-    assert_no_match I18n.t("bills.pane.rules"), response.body
+    assert_no_match I18n.t("bills.detail.rules"), response.body
   end
 
   test "the detail pane tells the bill's story inside its frame" do
@@ -421,9 +421,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match(/<turbo-frame[^>]*id="bill_detail"/, response.body, "no frame param falls back to a stable id")
-    assert_match I18n.t("bills.pane.rules"), response.body
-    assert_match I18n.t("bills.pane.key_metrics"), response.body
-    assert_match I18n.t("bills.pane.recent_payments"), response.body
+    assert_match I18n.t("bills.detail.rules"), response.body
+    assert_match I18n.t("bills.detail.key_metrics"), response.body
+    assert_match I18n.t("bills.detail.recent_payments"), response.body
     assert_match "WATSON PROPERTY", response.body
     assert_no_match(/<html/, response.body, "the pane renders frame-only, no layout")
   end
@@ -593,6 +593,46 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # for what produced it rather than as a bill lifecycle.
     assert_equal "Dismissed", I18n.t("bills.all.status_filters.ended")
     assert_equal "Dismissed", I18n.t("recurring_transactions.status.ended")
+  end
+
+  # The expansion and the drawer were two templates over one controller action,
+  # so they drifted: same bill, different facts, decided by which list you
+  # clicked from. They now render one partial, and this fails the moment a
+  # section is added to one and not the other.
+  test "the expansion and the drawer describe a bill identically" do
+    bill = create_bill(name: "Power Co", amount: 80, notes: "Account 4821")
+    past = bill.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date,
+      due_on: 2.months.ago.to_date, currency: "USD"
+    )
+    entry = accounts(:depository).entries.create!(
+      date: 2.months.ago.to_date, amount: 78.50, currency: "USD",
+      name: "POWER CO AUTOPAY", entryable: Transaction.new
+    )
+    RecurringTransaction::Allocator.new(past).allocate!(amount: "78.50", entry: entry)
+
+    get bill_url(bill), headers: { "Turbo-Frame" => "drawer" }
+    assert_response :success
+    drawer = response.body
+
+    get bill_url(bill, display: "pane", frame: "x"), headers: { "Turbo-Frame" => "x" }
+    assert_response :success
+    pane = response.body
+
+    sections = %w[rules history_title average annualized ytd upcoming
+                  recent_payments history notes last_account].map do |key|
+      [ key, I18n.t("bills.detail.#{key}") ]
+    end
+
+    missing = sections.reject { |_, label| drawer.include?(label) && pane.include?(label) }
+    assert_empty missing.map(&:first),
+      "both detail surfaces must show every section, not a subset each"
+
+    # And the facts themselves, not just the headings.
+    [ "POWER CO AUTOPAY", "$78.50", "Account 4821" ].each do |fact|
+      assert_includes drawer, fact, "the drawer is missing #{fact}"
+      assert_includes pane, fact, "the expansion is missing #{fact}"
+    end
   end
 
   private

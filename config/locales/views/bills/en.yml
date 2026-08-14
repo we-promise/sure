@@ -3,7 +3,8 @@ en:
   bills:
     row_overdue: Overdue
     row_today: Today
-    pane:
+    detail:
+      current: Current
       next_payment: Next payment
       around: "around %{date}"
       rules: How this bill is matched
@@ -11,12 +12,24 @@ en:
       rule_amount_range: "from %{min} to %{max}"
       history_title: Last 12 months
       history_aria: Payments over the last twelve months
-      key_metrics: Key metrics
-      spent_per_year: Spent per year
+      key_metrics: Per year
+      year: Year
+      spent_per_year: Spent
       avg_payment: Avg payment
+      average: Average paid
+      range: "%{min} to %{max}"
+      annualized: A year
+      ytd: Paid this year
       last_account: Last account used
+      upcoming: Coming up
       recent_payments: Recent payments
       manual_payment: Manual payment
+      history: History
+      payment_count:
+        one: "1 payment"
+        other: "%{count} payments"
+      notes: Notes
+    pane:
       close: Collapse details
     add_bill: Add bill
     details: Details
@@ -127,17 +140,6 @@ en:
         transfer: Transfer
         other: Other
     show:
-      current: Current
-      average: Average paid
-      range: "%{min} to %{max}"
-      annualized: A year
-      ytd: Paid this year
-      upcoming: Coming up
-      history: History
-      payment_count:
-        one: "1 payment"
-        other: "%{count} payments"
-      notes: Notes
       edit: Edit bill
     index:
       left_to_pay: Left to pay
