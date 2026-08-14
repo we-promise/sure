@@ -77,8 +77,13 @@ class RecurringTransaction
         written = 0
 
         # Highest confidence claims first; each entry and each occurrence is
-        # assigned at most once per run.
-        ordered = candidates.sort_by { |candidate| -candidate.confidence }
+        # assigned at most once per run. The id tiebreak is not meaningful in
+        # itself, it just makes two equally confident candidates resolve the
+        # same way every run: sort_by is not stable, so without it the winner
+        # could depend on the order candidates happened to be collected in.
+        ordered = candidates.sort_by do |candidate|
+          [ -candidate.confidence, candidate.occurrence.id, candidate.entry.id ]
+        end
 
         ordered.each do |candidate|
           next if taken_entries.include?(candidate.entry.id)
@@ -140,25 +145,36 @@ class RecurringTransaction
         # never worth aborting the rest of the run over.
       end
 
+      # The hard filters -- rejection and identity -- depend on the SERIES and
+      # the entry, not on the individual occurrence. Running them per
+      # occurrence re-asks the same question once per cycle a bill has ever
+      # had, so the work grows with history rather than with the number of
+      # bills. Grouping by series asks each question once and only walks
+      # occurrences for the few series an entry could possibly belong to.
       def collect_candidates(include_closed_window: false)
         occurrences = open_occurrences
         return [] if occurrences.empty?
 
         rejected = rejected_pairs
         allocated_entry_ids = confirmed_entry_ids
+        occurrences_by_series = occurrences.group_by(&:recurring_transaction_id)
 
         candidates = entries_for(occurrences, include_closed_window).flat_map do |entry|
-          occurrences.filter_map do |occurrence|
-            series = occurrence.recurring_transaction
-            next if rejected.include?([ series.id, entry.id ])
-            next if allocated_entry_ids.include?(entry.id)
-            next unless within_window?(occurrence, entry)
-            next unless identity_matches?(series, entry)
+          next [] if allocated_entry_ids.include?(entry.id)
 
-            confidence, signals = score(occurrence, series, entry)
-            next if confidence < HIGH_TIER
+          occurrences_by_series.flat_map do |series_id, series_occurrences|
+            series = series_occurrences.first.recurring_transaction
+            next [] if rejected.include?([ series_id, entry.id ])
+            next [] unless identity_matches?(series, entry)
 
-            Candidate.new(occurrence: occurrence, entry: entry, confidence: confidence, signals: signals)
+            series_occurrences.filter_map do |occurrence|
+              next unless within_window?(occurrence, entry)
+
+              confidence, signals = score(occurrence, series, entry)
+              next if confidence < HIGH_TIER
+
+              Candidate.new(occurrence: occurrence, entry: entry, confidence: confidence, signals: signals)
+            end
           end
         end
 
