@@ -130,8 +130,11 @@ class OidcAccountsController < ApplicationController
       @user.family = Family.new
 
       # New family creators must be able to administer their own family.
-      # Provider default roles apply to joins, not brand-new family creation.
-      @user.role = User.role_for_new_family_creator(fallback_role: :admin)
+      # Lower provider defaults are promoted to admin by role_for_new_family_creator,
+      # while intentional super_admin defaults remain supported.
+      provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == @pending_auth["provider"] }
+      provider_default_role = provider_config&.dig(:settings, :default_role)
+      @user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
     end
 
     identity = nil
