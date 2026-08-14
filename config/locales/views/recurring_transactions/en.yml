@@ -97,6 +97,7 @@ en:
       renews_on_label: Renews
       trial_ends_on_label: Trial ends
       cancelled_on_label: Cancelled
+      cancelled_on_hint: Recording the date is for your own reference. Pause the bill to stop future ones appearing.
       category_label: Category
       category_blank: No category
       frequency_new_hint: The day details come from the due date above. You can refine the schedule after saving.

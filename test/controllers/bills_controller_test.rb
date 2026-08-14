@@ -491,6 +491,30 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.index.empty.title"), response.body
   end
 
+  # A cancellation date does not stop the schedule, so the same bill can read
+  # "Cancelled" on one surface and "Overdue" on another. The detail surfaces
+  # have to admit that rather than let the two claims sit apart.
+  test "a cancelled but still-scheduled bill says so, with the action that stops it" do
+    bill = create_bill(name: "Streamly", amount: 15, bill_type: "subscription",
+                       cancelled_on: 3.days.ago.to_date)
+    assert bill.cancelled_on.present? && bill.active?, "premise: cancelled yet still running"
+
+    get bill_url(bill)
+    assert_response :success
+    assert_includes response.body,
+      I18n.t("bills.cancelled_still_scheduled", date: I18n.l(bill.cancelled_on, format: :short))
+    assert_includes response.body, toggle_status_recurring_transaction_path(bill)
+  end
+
+  test "a paused bill does not repeat the cancellation notice" do
+    bill = create_bill(name: "Streamly", amount: 15, bill_type: "subscription",
+                       cancelled_on: 3.days.ago.to_date, status: "paused")
+    get bill_url(bill)
+    assert_response :success
+    refute_includes response.body,
+      I18n.t("bills.cancelled_still_scheduled", date: I18n.l(bill.cancelled_on, format: :short))
+  end
+
   private
 
     def create_bill(name:, amount:, **overrides)

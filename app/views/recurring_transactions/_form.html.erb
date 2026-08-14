@@ -98,10 +98,13 @@
       </div>
 
       <% if recurring_transaction.typed_subscription? %>
-        <div class="grid grid-cols-3 gap-3">
-          <%= f.date_field :renews_on, label: t(".renews_on_label") %>
-          <%= f.date_field :trial_ends_on, label: t(".trial_ends_on_label") %>
-          <%= f.date_field :cancelled_on, label: t(".cancelled_on_label") %>
+        <div class="space-y-2">
+          <div class="grid grid-cols-3 gap-3">
+            <%= f.date_field :renews_on, label: t(".renews_on_label") %>
+            <%= f.date_field :trial_ends_on, label: t(".trial_ends_on_label") %>
+            <%= f.date_field :cancelled_on, label: t(".cancelled_on_label") %>
+          </div>
+          <p class="text-xs text-secondary"><%= t(".cancelled_on_hint") %></p>
         </div>
       <% end %>
     <% end %>

@@ -23,6 +23,7 @@ en:
     paid_label: Paid
     installment_progress: "Payment %{done_plus_one} of %{total}"
     partial_progress: "%{paid} of %{expected} paid"
+    cancelled_still_scheduled: "You marked this cancelled on %{date}, but it is still scheduled, so future bills will keep appearing."
     paid_over: "Paid %{paid}, more than expected"
     remaining_label: remaining
     debt_payment: "· debt payment"

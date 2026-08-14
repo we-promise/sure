@@ -47,6 +47,8 @@
         </div>
       </div>
 
+      <%= render "bills/cancelled_notice", series: @series %>
+
       <%# The series' identity as the matcher sees it, as readable chips. %>
       <div class="space-y-1.5">
         <p class="text-xs font-medium text-secondary uppercase"><%= t(".rules") %></p>

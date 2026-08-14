@@ -6,6 +6,8 @@
   <% dialog.with_header(title: @series.display_name, subtitle: subtitle) %>
   <% dialog.with_body do %>
     <div class="space-y-5">
+      <%= render "bills/cancelled_notice", series: @series %>
+
       <% if @current_occurrence %>
         <div class="bg-container-inset rounded-lg p-3 space-y-1">
           <p class="text-xs font-medium text-secondary uppercase"><%= t(".current") %></p>
