@@ -117,7 +117,10 @@ class RecurringTransaction
       end
 
       def open_payable_occurrences(through)
-        debt_accounts = Account.where(accountable_type: %w[CreditCard Loan]).select(:id)
+        # Scoped to the family: the outer query is family-scoped anyway, but an
+        # unbounded subquery over every account in the installation is a table
+        # scan that grows with other people's data.
+        debt_accounts = Account.where(family_id: family.id, accountable_type: %w[CreditCard Loan]).select(:id)
 
         family.recurring_occurrences
               .open_status
