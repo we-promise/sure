@@ -1,0 +1,14 @@
+<%# locals: (name:, tags:, selected_ids: []) %>
+
+<div class="flex-1 md:flex-none md:w-44">
+  <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.tags_label") %></label>
+  <select name="<%= name %>"
+          multiple
+          title="<%= t("splits.new.tags_hint") %>"
+          aria-label="<%= t("splits.new.tags_label") %>"
+          class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container">
+    <% tags.each do |tag| %>
+      <option value="<%= tag.id %>" <%= "selected" if selected_ids.include?(tag.id) %>><%= tag.name %></option>
+    <% end %>
+  </select>
+</div>
