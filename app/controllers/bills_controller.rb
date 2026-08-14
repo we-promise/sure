@@ -1,4 +1,11 @@
 class BillsController < ApplicationController
+  # What the All-bills status filter offers. Payment state is what people ask
+  # for here; paused and ended are the only lifecycle values worth surfacing
+  # beside it. suggested and inactive stay out of the filter: they are
+  # detection plumbing, not a way anyone describes a bill.
+  PAYMENT_FILTERS = %w[overdue due partial paid].freeze
+  LIFECYCLE_FILTERS = %w[paused ended].freeze
+  STATUS_FILTERS = (PAYMENT_FILTERS + LIFECYCLE_FILTERS).freeze
   before_action :ensure_recurring_enabled
 
   # The pay-run workspace, built on occurrence rows rather than series
@@ -171,7 +178,14 @@ class BillsController < ApplicationController
                      .where("recurring_transactions.name ILIKE :p OR merchants.name ILIKE :p", p: pattern)
       end
 
-      if (status = params.dig(:q, :status)).presence_in(RecurringTransaction.statuses.keys)
+      # "Status" used to mean the SERIES lifecycle -- suggested, active, paused,
+      # inactive, ended -- so there was no way to ask the question people
+      # actually ask here, which is what is late and what is still owed. The
+      # filter now speaks payment state, with the lifecycle values that still
+      # matter (paused, ended) kept alongside.
+      status = params.dig(:q, :status)
+
+      if status.presence_in(LIFECYCLE_FILTERS)
         scope = scope.where(status: status)
       end
 
@@ -179,10 +193,32 @@ class BillsController < ApplicationController
         scope = scope.where(bill_type: bill_type)
       end
 
+      scope = scope.includes(:recurring_occurrences) if status.presence_in(PAYMENT_FILTERS)
+
       @all_series = case params.dig(:q, :sort)
       when "name" then scope.order(:name, :amount)
       when "amount" then scope.order(amount: :desc)
       else scope.order(status: :asc, next_expected_date: :asc)
+      end
+
+      @all_series = filter_by_payment_state(@all_series, status) if status.presence_in(PAYMENT_FILTERS)
+    end
+
+    # Payment state lives on the occurrence and is derived from dates and
+    # allocation sums, so it cannot be a WHERE clause. Occurrences are preloaded
+    # above, and this table is a management surface for a few hundred bills.
+    def filter_by_payment_state(series_list, status)
+      series_list.to_a.select do |series|
+        occurrence = series.current_occurrence
+        next false if occurrence.nil?
+
+        case status
+        when "overdue" then occurrence.overdue?
+        when "due"     then occurrence.derived_state == :due
+        when "partial" then occurrence.partially_paid?
+        when "paid"    then occurrence.paid?
+        else false
+        end
       end
     end
 

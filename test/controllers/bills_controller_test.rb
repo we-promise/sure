@@ -96,6 +96,35 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_operator late_at, :<, month_at, "and above This month, not inside it" if month_at
   end
 
+  # "Status" used to mean the series lifecycle, so the one question people
+  # actually bring to this table -- what is late -- could not be asked.
+  test "the all view filters by payment state, not just lifecycle" do
+    overdue_day = 10.days.ago.to_date
+    late = create_bill(name: "Late Co", amount: 75,
+                       expected_day_of_month: overdue_day.day,
+                       last_occurrence_date: 2.months.ago.to_date,
+                       next_expected_date: overdue_day)
+    upcoming = create_bill(name: "Future Co", amount: 40, manual: true,
+                           anchor_date: 20.days.from_now.to_date,
+                           expected_day_of_month: 20.days.from_now.to_date.day,
+                           last_occurrence_date: Date.current,
+                           next_expected_date: 20.days.from_now.to_date)
+
+    # The filter is only meaningful if the fixtures are in the states it sorts by.
+    assert late.current_occurrence.overdue?, "Late Co must actually be overdue"
+    assert_not upcoming.current_occurrence.overdue?, "Future Co must not be"
+
+    get bills_url(view: "all", q: { status: "overdue" })
+
+    assert_response :success
+    assert_match "Late Co", response.body
+    assert_no_match "Future Co", response.body
+
+    get bills_url(view: "all", q: { status: "paused" })
+    assert_response :success
+    assert_no_match "Late Co", response.body, "lifecycle filtering still works"
+  end
+
   test "index cannot see another family's bills" do
     families(:empty).recurring_transactions.create!(
       name: "Someone else's rent",

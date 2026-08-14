@@ -97,6 +97,13 @@ en:
     all:
       search_placeholder: Search bills
       any_status: Any status
+      status_filters:
+        overdue: Overdue
+        due: Due soon
+        partial: Partly paid
+        paid: Paid
+        paused: Paused
+        ended: Ended
       any_type: Any type
       sort_due: By next due
       sort_name: By name

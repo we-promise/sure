@@ -16,7 +16,7 @@
     </div>
     <%= form.select :status,
           options_for_select(
-            [ [ t(".any_status"), "" ] ] + RecurringTransaction.statuses.keys.map { |status| [ t("recurring_transactions.status.#{status}"), status ] },
+            [ [ t(".any_status"), "" ] ] + BillsController::STATUS_FILTERS.map { |status| [ t(".status_filters.#{status}"), status ] },
             params.dig(:q, :status)
           ),
           {},
