@@ -44,7 +44,7 @@ class Import::MappingsControllerTest < ActionDispatch::IntegrationTest
     get import_confirm_path(@import)
 
     assert_response :success
-    assert_select "select option", text: "Plaid Depository Account"
+    assert_select "select option[value='#{accounts(:connected).id}']", text: "Plaid Depository Account"
   end
 
   test "account mapping excludes accounts the user cannot write" do
