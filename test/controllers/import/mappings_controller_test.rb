@@ -41,7 +41,7 @@ class Import::MappingsControllerTest < ActionDispatch::IntegrationTest
     @import.generate_rows_from_csv
     @import.sync_mappings
 
-    get import_confirm_path(@import)
+    get import_confirm_path(@import, step: 3)
 
     assert_response :success
     assert_select "select option[value='#{accounts(:connected).id}']", text: "Plaid Depository Account"
@@ -63,7 +63,7 @@ class Import::MappingsControllerTest < ActionDispatch::IntegrationTest
     @import.generate_rows_from_csv
     @import.sync_mappings
 
-    get import_confirm_path(@import)
+    get import_confirm_path(@import, step: 3)
 
     assert_response :success
     assert_select "select option", text: "Credit Card", count: 0
