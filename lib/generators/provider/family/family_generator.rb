@@ -33,11 +33,19 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   # Columns the migration template already defines on the items table. A provider whose
   # API happens to use one of these names (institution_id is the obvious one) would
   # otherwise emit a duplicate t.string and abort db:migrate with
-  # "you can't define an already defined column". These are dropped from the
-  # provider-specific block instead, with a notice, since the standard column serves the
-  # same purpose.
+  # "you can't define an already defined column".
+  #
+  # Declaring one is rejected rather than silently dropped. parsed_fields feeds eight
+  # other templates (model validations and encryption, panel form inputs, controller
+  # params, locale strings, adapter, SDK), so filtering it out of the migration alone
+  # would leave the field generating a form input and a validation with no column of the
+  # declared type behind it: `institution_id:integer` would render a numeric input over
+  # the built-in string column. Rejecting keeps the generated code self-consistent.
+  #
+  # family_id is listed, family is NOT: the template writes `t.references :family`, which
+  # creates the family_id column, so a field literally named family is not a collision.
   RESERVED_ITEM_COLUMNS = %w[
-    family family_id name
+    family_id name
     institution_id institution_name institution_domain institution_url institution_color
     status scheduled_for_deletion pending_account_setup
     sync_start_date raw_payload raw_institution_payload
@@ -64,8 +72,11 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
 
     reserved = parsed_fields.map { |f| f[:name] } & RESERVED_ITEM_COLUMNS
     if reserved.any?
-      say "Note: #{reserved.join(', ')} already exist on the items table and will not be " \
-          "duplicated in the provider-specific block.", :yellow
+      raise Thor::Error,
+            "#{reserved.join(', ')} #{reserved.one? ? 'is' : 'are'} already provided by the " \
+            "items table. Remove #{reserved.one? ? 'it' : 'them'} from the command: the " \
+            "standard column serves the same purpose, and redeclaring would abort db:migrate " \
+            "with \"you can't define an already defined column\"."
     end
 
     # Validate field types
@@ -849,11 +860,6 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       options[:type] == "investment"
     end
 
-    # Fields destined for the provider-specific block of the migration: everything the
-    # user asked for that the standard column block does not already provide.
-    def custom_fields
-      @custom_fields ||= parsed_fields.reject { |f| RESERVED_ITEM_COLUMNS.include?(f[:name]) }
-    end
 
     def parsed_fields
       @parsed_fields ||= fields.map do |field_def|
