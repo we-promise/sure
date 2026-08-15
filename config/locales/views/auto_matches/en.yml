@@ -1,0 +1,16 @@
+---
+en:
+  auto_matches:
+    title: Auto Matches
+    settings:
+      enable_label: Enable Auto Match
+      enable_description: Automatically detect and suggest transfer matches between accounts on every sync. Suggestions are not applied until you confirm them below.
+    settings_updated: Auto match settings updated
+    empty:
+      title: No pending auto-match suggestions
+      description: When a sync detects a likely transfer between two of your accounts, it will show up here for review.
+    table:
+      from: From
+      to: To
+      date: Date
+      actions: Actions

@@ -160,7 +160,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
-  test "auto-matched cash to investment assigns investment contribution category" do
+  test "auto-matched cash to investment assigns investment contribution category once confirmed" do
     investment = accounts(:investment)
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500)
@@ -169,24 +169,35 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
     outflow_entry.reload
 
+    # Pending suggestion: kind/category not yet applied
+    assert_equal "standard", outflow_entry.entryable.kind
+    assert_nil outflow_entry.entryable.category
+
+    outflow_entry.entryable.transfer.confirm!
+    outflow_entry.reload
+
     category = @family.investment_contributions_category
     assert_equal category, outflow_entry.entryable.category
   end
 
-  test "auto-matched investment transfers reuse contribution category lookup" do
+  test "confirming auto-matched investment transfers reuses contribution category lookup" do
     investment = accounts(:investment)
     category = @family.investment_contributions_category
 
-    create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_1 = create_transaction(date: Date.current, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: investment, amount: -500)
-    create_transaction(date: Date.current, account: @depository, amount: 700)
+    outflow_2 = create_transaction(date: Date.current, account: @depository, amount: 700)
     create_transaction(date: Date.current, account: investment, amount: -700)
-
-    @family.expects(:investment_contributions_category).once.returns(category)
 
     assert_difference -> { Transfer.count }, 2 do
       @family.auto_match_transfers!
     end
+
+    outflow_1.reload.entryable.transfer.confirm!
+    outflow_2.reload.entryable.transfer.confirm!
+
+    assert_equal category, outflow_1.reload.entryable.category
+    assert_equal category, outflow_2.reload.entryable.category
   end
 
   test "does not match multi-currency transfer with missing exchange rate" do
@@ -247,14 +258,40 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "JOIN exchange_rates"
   end
 
+  test "auto-matched transfers stay kind 'standard' until confirmed" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    @family.auto_match_transfers!
+
+    outflow_entry.reload
+    inflow_entry.reload
+
+    assert_equal "standard", outflow_entry.entryable.kind
+    assert_equal "standard", inflow_entry.entryable.kind
+    assert outflow_entry.entryable.transfer.pending?
+  end
+
+  test "does not auto-match transfers when the family has disabled auto match" do
+    @family.update!(auto_match_transfers_disabled: true)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
   # Regression tests for loan transfer kind assignment bug
   # The kind should be determined by the DESTINATION account (inflow), not the source (outflow)
-  test "loan payment (cash to loan) assigns loan_payment kind to outflow" do
+  test "loan payment (cash to loan) assigns loan_payment kind to outflow once confirmed" do
     # Cash → Loan: outflow from depository, inflow to loan
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
 
     @family.auto_match_transfers!
+    outflow_entry.reload.entryable.transfer.confirm!
 
     outflow_entry.reload
     inflow_entry.reload
@@ -264,12 +301,13 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow_entry.entryable.kind
   end
 
-  test "loan disbursement (loan to cash) assigns funds_movement kind to outflow" do
+  test "loan disbursement (loan to cash) assigns funds_movement kind to outflow once confirmed" do
     # Loan → Cash: outflow from loan, inflow to depository
     outflow_entry = create_transaction(date: Date.current, account: @loan, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @depository, amount: -500)
 
     @family.auto_match_transfers!
+    outflow_entry.reload.entryable.transfer.confirm!
 
     outflow_entry.reload
     inflow_entry.reload
@@ -280,12 +318,13 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow_entry.entryable.kind
   end
 
-  test "credit card payment (cash to credit card) assigns cc_payment kind to outflow" do
+  test "credit card payment (cash to credit card) assigns cc_payment kind to outflow once confirmed" do
     # Cash → Credit Card: outflow from depository, inflow to credit card
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
     @family.auto_match_transfers!
+    outflow_entry.reload.entryable.transfer.confirm!
 
     outflow_entry.reload
     inflow_entry.reload

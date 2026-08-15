@@ -119,7 +119,10 @@ class Transfer < ApplicationRecord
   end
 
   def confirm!
-    update!(status: "confirmed")
+    Transfer.transaction do
+      apply_transfer_kind! if pending?
+      update!(status: "confirmed")
+    end
   end
 
   def date
@@ -141,6 +144,22 @@ class Transfer < ApplicationRecord
   end
 
   private
+    # Only ever needed for transfers coming out of auto-match, since manual
+    # creation paths (Transfer::Creator, TransferMatchesController) already
+    # set kind/category at creation time with status "confirmed".
+    def apply_transfer_kind!
+      return unless inflow_transaction && outflow_transaction
+
+      kind = self.class.kind_for_account(to_account)
+      inflow_transaction.update!(kind: "funds_movement")
+      outflow_transaction.update!(kind: kind)
+
+      if kind == "investment_contribution" && outflow_transaction.category_id.blank?
+        category = from_account.family.investment_contributions_category
+        outflow_transaction.update!(category: category) if category.present?
+      end
+    end
+
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
       errors.add(:base, :different_accounts) if to_account == from_account

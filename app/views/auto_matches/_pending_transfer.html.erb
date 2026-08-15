@@ -1,0 +1,34 @@
+<%# locals: (transfer:) %>
+
+<tr id="<%= dom_id(transfer) %>" class="border-b border-subdued hover:bg-surface-hover">
+  <td class="py-3 px-2 text-sm">
+    <div class="font-medium text-primary"><%= transfer.from_account&.name %></div>
+    <div class="text-xs text-secondary privacy-sensitive"><%= format_money(transfer.outflow_transaction.entry.amount_money) %></div>
+  </td>
+  <td class="py-3 px-2 text-sm">
+    <div class="font-medium text-primary"><%= transfer.to_account&.name %></div>
+    <div class="text-xs text-secondary privacy-sensitive"><%= format_money(transfer.inflow_transaction.entry.amount_money.abs) %></div>
+  </td>
+  <td class="py-3 px-2 text-sm text-secondary">
+    <%= l(transfer.date, format: :short) %>
+  </td>
+  <td class="py-3 px-2 text-sm text-right">
+    <div class="flex items-center justify-end gap-2">
+      <%= button_to transfer_path(transfer, transfer: { status: "confirmed" }),
+                    method: :patch,
+                    data: { turbo: false },
+                    class: "text-secondary flex items-center justify-center cursor-pointer",
+                    title: t("transactions.transfer_match.confirm_match") do %>
+        <%= icon "check", size: "sm", class: "text-secondary hover:text-primary" %>
+      <% end %>
+
+      <%= button_to transfer_path(transfer, transfer: { status: "rejected" }),
+                    method: :patch,
+                    data: { turbo: false },
+                    class: "text-secondary hover:text-primary flex items-center justify-center cursor-pointer",
+                    title: t("transactions.transfer_match.reject_match") do %>
+        <%= icon "x", size: "sm", class: "text-subdued hover:text-primary" %>
+      <% end %>
+    </div>
+  </td>
+</tr>

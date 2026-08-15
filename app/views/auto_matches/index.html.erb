@@ -1,0 +1,57 @@
+<%= content_for :page_title, t("auto_matches.title") %>
+
+<div class="space-y-4 flex flex-col">
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-primary"><%= t("auto_matches.settings.enable_label") %></p>
+        <p class="text-xs text-secondary"><%= t("auto_matches.settings.enable_description") %></p>
+      </div>
+      <%= form_with url: update_settings_auto_matches_path, method: :patch, data: { turbo_frame: "_top", controller: "auto-submit-form" } do |f| %>
+        <%= f.hidden_field :auto_match_transfers_disabled, value: @family.auto_match_transfers_disabled? ? "false" : "true" %>
+        <%= render DS::Toggle.new(
+          id: "auto_match_transfers_enabled",
+          name: "toggle_display",
+          checked: !@family.auto_match_transfers_disabled?,
+          data: { auto_submit_form_target: "auto" }
+        ) %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <% if @pending_transfers.empty? %>
+      <%= render DS::EmptyState.new(
+        icon: "link-2",
+        title: t("auto_matches.empty.title"),
+        description: t("auto_matches.empty.description")
+      ) %>
+    <% else %>
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+          <p><%= t("auto_matches.title") %></p>
+          <span class="text-subdued">&middot;</span>
+          <p><%= @pending_transfers.count %></p>
+        </div>
+
+        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                <th class="text-left py-3 px-2"><%= t("auto_matches.table.from") %></th>
+                <th class="text-left py-3 px-2"><%= t("auto_matches.table.to") %></th>
+                <th class="text-left py-3 px-2"><%= t("auto_matches.table.date") %></th>
+                <th class="text-right py-3 px-2"><%= t("auto_matches.table.actions") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @pending_transfers.each do |transfer| %>
+                <%= render "pending_transfer", transfer: transfer %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

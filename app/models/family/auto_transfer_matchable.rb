@@ -26,17 +26,13 @@ module Family::AutoTransferMatchable
   end
 
   def auto_match_transfers!(account: nil)
+    return if auto_match_transfers_disabled?
+
     # Exclude already matched transfers
     candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false)
-    transaction_ids = candidates_scope.flat_map do |match|
-      [ match.inflow_transaction_id, match.outflow_transaction_id ]
-    end.uniq
-    transactions_by_id = Transaction.includes(entry: :account).where(id: transaction_ids).index_by(&:id)
 
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
-    investment_category = nil
-    investment_category_loaded = false
 
     Transfer.transaction do
       candidates_scope.each do |match|
@@ -52,26 +48,10 @@ module Family::AutoTransferMatchable
           # Another concurrent job created the transfer; safe to ignore
         end
 
-        inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
-        outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
-        destination_account = inflow_transaction.entry.account
-        transfer_kind = Transfer.kind_for_account(destination_account)
-
-        # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
-        inflow_transaction.update!(kind: "funds_movement")
-        outflow_transaction.update!(kind: transfer_kind)
-
-        # Assign Investment Contributions category for transfers to investment accounts
-        if transfer_kind == "investment_contribution"
-          outflow_txn = outflow_transaction
-          if outflow_txn.category_id.blank?
-            unless investment_category_loaded
-              investment_category = investment_contributions_category
-              investment_category_loaded = true
-            end
-            outflow_txn.update!(category: investment_category) if investment_category.present?
-          end
-        end
+        # Auto-matched transfers start out "pending" and are purely a suggestion:
+        # the transaction `kind` (and any category assignment) is only applied
+        # once the user confirms the match, via Transfer#confirm!. This keeps
+        # budget/report totals and transaction display untouched until then.
 
         used_transaction_ids << match.inflow_transaction_id
         used_transaction_ids << match.outflow_transaction_id
