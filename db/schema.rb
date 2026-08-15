@@ -693,7 +693,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.date "sync_start_date"
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_enable_banking_items_on_family_id"
+    t.index ["session_expires_at"], name: "index_enable_banking_items_on_session_expires_at_for_stale_ip", where: "(last_psu_ip IS NOT NULL)"
     t.index ["status"], name: "index_enable_banking_items_on_status"
+    t.index ["updated_at"], name: "index_enable_banking_items_on_updated_at_for_stale_ip", where: "((last_psu_ip IS NOT NULL) AND (session_expires_at IS NULL))"
   end
 
   create_table "entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
