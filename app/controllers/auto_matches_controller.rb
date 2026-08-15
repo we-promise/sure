@@ -5,6 +5,7 @@ class AutoMatchesController < ApplicationController
     @family = Current.family
     @pending_transfers = Transfer.pending
       .where(inflow_transaction_id: accessible_transaction_ids)
+      .where(outflow_transaction_id: accessible_transaction_ids)
       .includes(inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account })
       .order(created_at: :desc)
   end
