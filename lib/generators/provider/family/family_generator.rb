@@ -644,6 +644,42 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     ActiveRecord::Generators::Base.next_migration_number(dirname)
   end
 
+  # Appends `name` as the final entry of the `enum :source, { ... }` hash in `content`.
+  # Returns the updated source, or nil when no such hash is present.
+  #
+  # Pure string transformation, extracted from the generator so the comma and
+  # indentation handling can be tested directly. Both are easy to get wrong and fail as
+  # a SyntaxError in an unrelated file rather than anything pointing back here:
+  #
+  #   - appending before the closing brace of a MULTI-LINE hash puts the entry on its own
+  #     line after Ruby has already ended the expression
+  #   - a hash written with a TRAILING COMMA already supplies the separator, so adding
+  #     another yields `redbark: "redbark",,`
+  def self.append_source_enum_entry(content, name)
+    match = content.match(/(enum :source, \{)([^}]*)(\})/m)
+    return nil unless match
+
+    prefix, body, suffix = match[1], match[2], match[3]
+
+    trailing = body[/\s*\z/] || ""
+    core = body[0...(body.length - trailing.length)]
+    entry = "#{name}: \"#{name}\""
+    separator = core.end_with?(",") ? "" : ","
+
+    new_body =
+      if trailing.include?("\n")
+        # Multi-line: indent to match the last entry, not the closing brace.
+        indent = core[/\n([ \t]*)[^\n]*\z/, 1] || "    "
+        "#{core}#{separator}\n#{indent}#{entry}#{trailing}"
+      else
+        "#{core}#{separator} #{entry}#{trailing}"
+      end
+
+    # Block form: a string replacement would interpret any backslash sequence in the
+    # captured hash body as a backreference.
+    content.sub(/(enum :source, \{)([^}]*)(\})/m) { prefix + new_body + suffix }
+  end
+
   private
 
     def update_source_enum(model_path)
@@ -658,33 +694,10 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
         return
       end
 
-      # Find the enum :source hash and append the new provider as its last entry.
-      #
-      # Appending immediately before the closing brace is wrong when the hash spans
-      # multiple lines: the last entry is followed by a newline, so ", foo: \"foo\"}"
-      # lands on its own line and Ruby has already ended the expression, producing a
-      # syntax error that only shows up later as an eager-load failure. Instead the
-      # comma is attached to the final entry and the new entry is placed on its own
-      # line, matching the surrounding indentation.
-      if content =~ /(enum :source, \{)([^}]*)(\})/m
-        prefix, body, suffix = ::Regexp.last_match(1), ::Regexp.last_match(2), ::Regexp.last_match(3)
+      updated = self.class.append_source_enum_entry(content, file_name)
 
-        trailing = body[/\s*\z/] || ""
-        core = body[0...(body.length - trailing.length)]
-        entry = "#{file_name}: \"#{file_name}\""
-
-        new_body =
-          if trailing.include?("\n")
-            # Multi-line: indent to match the last entry, not the closing brace.
-            indent = core[/\n([ \t]*)[^\n]*\z/, 1] || "    "
-            "#{core},\n#{indent}#{entry}#{trailing}"
-          else
-            "#{core}, #{entry}#{trailing}"
-          end
-
-        # Block form: a string replacement would interpret any backslash sequence in the
-        # captured hash body as a backreference.
-        write_file(model_path, content.sub(/(enum :source, \{)([^}]*)(\})/m) { prefix + new_body + suffix })
+      if updated
+        write_file(model_path, updated)
         say "Added #{file_name} to #{model_name} source enum", :green
       else
         say "Could not find source enum in #{model_name}", :yellow
