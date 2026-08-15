@@ -138,16 +138,7 @@ class RulesController < ApplicationController
     # lands looks exactly like a job that ran and found nothing. Logging the
     # request separately from the job's own "started" entry tells those apart.
     def enqueue_ai_cache_reset
-      attempted_job = nil
-      enqueued = ClearAiCacheJob.perform_later(Current.family) { |job| attempted_job = job }
-
-      # perform_later turns an ActiveJob::EnqueueError — or an enqueue aborted by
-      # a callback — into a false return rather than raising it, so the return
-      # value is the only signal that the reset never reached the queue. The
-      # yielded job carries the underlying error when there was one.
-      unless enqueued
-        raise attempted_job&.enqueue_error || ActiveJob::EnqueueError.new("ClearAiCacheJob was not enqueued")
-      end
+      perform_ai_cache_reset_later
 
       DebugLogEntry.capture(
         category: ClearAiCacheJob::DEBUG_CATEGORY,
@@ -157,6 +148,24 @@ class RulesController < ApplicationController
         family: Current.family,
         user: Current.user
       )
+    end
+
+    # Split out so the rescue below covers only the enqueue it reports on.
+    # Anything that runs after the job is safely queued — the request log above,
+    # the redirect — is then structurally incapable of being recorded as an
+    # enqueue failure and retried, without that resting on the internals of
+    # whatever those later steps happen to call.
+    def perform_ai_cache_reset_later
+      attempted_job = nil
+      enqueued = ClearAiCacheJob.perform_later(Current.family) { |job| attempted_job = job }
+
+      # perform_later turns an ActiveJob::EnqueueError — or an enqueue aborted by
+      # a callback — into a false return rather than raising it, so the return
+      # value is the only signal that the reset never reached the queue. The
+      # yielded job carries the underlying error when there was one.
+      return if enqueued
+
+      raise attempted_job&.enqueue_error || ActiveJob::EnqueueError.new("ClearAiCacheJob was not enqueued")
     rescue => e
       DebugLogEntry.capture(
         category: ClearAiCacheJob::DEBUG_CATEGORY,
