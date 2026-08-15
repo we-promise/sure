@@ -20,7 +20,7 @@
         href: transfer_path(transfer, transfer: { status: "confirmed" }),
         method: :patch,
         data: { turbo: false },
-        title: t("transactions.transfer_match.confirm_match")
+        aria: { label: t("transactions.transfer_match.confirm_match") }
       ) %>
 
       <%= render DS::Button.new(
@@ -29,7 +29,7 @@
         href: transfer_path(transfer, transfer: { status: "rejected" }),
         method: :patch,
         data: { turbo: false },
-        title: t("transactions.transfer_match.reject_match")
+        aria: { label: t("transactions.transfer_match.reject_match") }
       ) %>
     </div>
   </td>
