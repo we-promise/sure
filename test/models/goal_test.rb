@@ -25,13 +25,23 @@ class GoalTest < ActiveSupport::TestCase
     assert_no_match(/<img/, body)
   end
 
+  # Derived, not a hardcoded list: a locale added later ships a goals YAML
+  # without these keys otherwise. `fallback: false` carries as much weight —
+  # the backend has I18n::Backend::Fallbacks mixed in, so a missing German key
+  # resolves to the English string and a plain `.present?` assertion passes
+  # while a German family reads English in the dialog.
   test "confirm_delete copy resolves in every locale that ships goal translations" do
-    %i[en fr it pl ru tr zh-CN].each do |locale|
-      I18n.with_locale(locale) do
-        body = I18n.t("goals.show.confirm_delete_body", name: "Wedding", locale: locale)
-        assert_includes body, "Wedding", "#{locale} dropped the %{name} interpolation"
-        assert I18n.t("goals.show.confirm_delete_title", locale: locale).present?
-        assert I18n.t("goals.show.confirm_delete_cta", locale: locale).present?
+    locales = Rails.root.glob("config/locales/views/goals/*.yml").map { |f| f.basename(".yml").to_s.to_sym }
+    assert_operator locales.size, :>=, 7, "goal locale files disappeared — check the glob"
+
+    locales.each do |locale|
+      body = I18n.t("goals.show.confirm_delete_body", name: "Wedding", locale: locale, fallback: false, default: nil)
+      assert body, "#{locale} is missing goals.show.confirm_delete_body"
+      assert_includes body, "Wedding", "#{locale} dropped the %{name} interpolation"
+
+      %w[confirm_delete_title confirm_delete_cta].each do |key|
+        assert I18n.t("goals.show.#{key}", locale: locale, fallback: false, default: nil).present?,
+               "#{locale} is missing goals.show.#{key}"
       end
     end
   end
