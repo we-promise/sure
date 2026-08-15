@@ -285,6 +285,51 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/type="checkbox"[^>]*name="recurring_transaction\[is_income\]"/, response.body)
   end
 
+  # Reported upstream: a deleted auto-detected recurring transaction comes back
+  # on the next detection run, so users delete the same row over and over. The
+  # pattern is still in the bank data, so a hard delete only lasts until the
+  # next sync. Removing it leaves the same `ended` tombstone that dismissing a
+  # suggestion does, and the Identifier refuses to claim or recreate one.
+  test "a deleted detected bill does not come back on the next detection run" do
+    account = accounts(:depository)
+    anchor_day = Date.current.beginning_of_month + 8
+    3.times do |i|
+      account.entries.create!(
+        date: anchor_day - i.months, amount: 42.00, currency: "USD",
+        name: "City Water", entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+
+    RecurringTransaction::Identifier.new(@family).identify_recurring_patterns
+    detected = @family.recurring_transactions.find_by(name: "City Water")
+    assert_not_nil detected
+    assert_not detected.manual?
+
+    delete recurring_transaction_url(detected)
+
+    RecurringTransaction::Identifier.new(Family.find(@family.id)).identify_recurring_patterns
+
+    rows = @family.recurring_transactions.where(name: "City Water")
+    assert_equal 1, rows.count, "detection must not build a second row for a pattern the user removed"
+    assert_equal "ended", rows.first.status, "and the one that remains is a tombstone, not a live bill"
+    assert_empty @family.recurring_transactions.where(name: "City Water").where.not(status: "ended")
+  end
+
+  # A hand-declared bill has no pattern behind it, so nothing would bring it
+  # back and it is deleted outright rather than left lying around as ended.
+  test "a declared bill is deleted outright" do
+    bill = @family.recurring_transactions.create!(
+      name: "Typo Bill", account: accounts(:depository), amount: 10, currency: "USD",
+      dedup_scope: "typo", bill_type: "bill", expected_day_of_month: Date.current.day,
+      anchor_date: Date.current, last_occurrence_date: Date.current,
+      next_expected_date: Date.current, status: "active", manual: true
+    )
+
+    assert_difference "@family.recurring_transactions.count", -1 do
+      delete recurring_transaction_url(bill)
+    end
+  end
+
   test "creating income says income, not bill" do
     post recurring_transactions_url, params: {
       recurring_transaction: {

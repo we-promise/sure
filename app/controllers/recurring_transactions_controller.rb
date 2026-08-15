@@ -192,7 +192,19 @@ class RecurringTransactionsController < ApplicationController
 
   def destroy
     income = @recurring_transaction.typed_income?
-    @recurring_transaction.destroy!
+
+    # A detected row is removed by tombstoning it rather than deleting it: the
+    # pattern is still in the bank data, so a hard delete lasts only until the
+    # next sync rebuilds it. `ended` is the marker dismissing a suggestion
+    # already leaves, and the Identifier will not claim or recreate one.
+    #
+    # A hand-declared bill has no pattern behind it, so nothing would bring it
+    # back and it is deleted outright.
+    if @recurring_transaction.manual?
+      @recurring_transaction.destroy!
+    else
+      @recurring_transaction.update!(status: "ended")
+    end
 
     flash[:notice] = t(income ? "recurring_transactions.deleted_income" : "recurring_transactions.deleted")
     redirect_back_or_to bills_path
