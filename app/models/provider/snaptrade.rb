@@ -207,7 +207,8 @@ class Provider::Snaptrade
 
   # Returns Array<Hash> of positions
   def get_positions(account_id:)
-    get_json("/api/v1/accounts/#{account_id}/positions")
+    response = get_json("/api/v1/accounts/#{account_id}/positions/all")
+    response.is_a?(Hash) ? Array(response["results"]) : []
   end
 
   # Returns raw JSON: paginated form is {"data" => [...]}, may also be a plain Array

@@ -128,6 +128,40 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     assert_equal [ { "id" => "acct-1" } ], accounts
   end
 
+  test "get_positions calls /positions/all and unwraps results" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    request = OpenStruct.new(headers: {}, params: {})
+    body = {
+      results: [ { instrument: { kind: "stock", symbol: "AAPL" }, units: "10", price: "1.5" } ],
+      data_freshness: { as_of: "2026-08-14T18:12:18Z" }
+    }.to_json
+
+    connection = mock("faraday")
+    connection.expects(:get)
+      .with("#{Provider::Snaptrade::API_BASE_URL}/api/v1/accounts/acct-1/positions/all")
+      .yields(request).returns(faraday_response(status: 200, body: body))
+    provider.stubs(:api_connection).returns(connection)
+
+    positions = provider.get_positions(account_id: "acct-1")
+
+    assert_equal 1, positions.size
+    assert_equal "AAPL", positions.first.dig("instrument", "symbol")
+  end
+
+  test "get_positions returns an empty array when results are absent" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    connection = mock("faraday")
+    connection.expects(:get).yields(OpenStruct.new(headers: {}, params: {}))
+      .returns(faraday_response(status: 200, body: { data_freshness: {} }.to_json))
+    provider.stubs(:api_connection).returns(connection)
+
+    assert_equal [], provider.get_positions(account_id: "acct-1")
+  end
+
   test "expired token is refreshed before the data call and rotation persisted" do
     configure_oauth!
     item = fake_item(expires_at: 1.minute.ago)

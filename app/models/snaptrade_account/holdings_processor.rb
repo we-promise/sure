@@ -1,6 +1,11 @@
 class SnaptradeAccount::HoldingsProcessor
   include SnaptradeAccount::DataHelpers
 
+  # Units are per-contract and symbols OCC-style, neither of which this
+  # processor models. A denylist, so equity-like kinds added later still
+  # import rather than being silently dropped.
+  UNSUPPORTED_INSTRUMENT_KINDS = %w[option future cfd].freeze
+
   def initialize(snaptrade_account)
     @snaptrade_account = snaptrade_account
   end
@@ -84,18 +89,9 @@ class SnaptradeAccount::HoldingsProcessor
     end
 
     def process_holding(data)
-      # Extract security info from the holding
-      # SnapTrade has DEEPLY NESTED structure:
-      #   holding.symbol.symbol.symbol = ticker (e.g., "TSLA")
-      #   holding.symbol.symbol.description = name (e.g., "Tesla Inc")
-      raw_symbol_wrapper = data["symbol"] || data[:symbol] || {}
-      symbol_wrapper = raw_symbol_wrapper.is_a?(Hash) ? raw_symbol_wrapper.with_indifferent_access : {}
+      return if unsupported_instrument?(data)
 
-      # The actual security data is nested inside symbol.symbol
-      raw_symbol_data = symbol_wrapper["symbol"] || symbol_wrapper[:symbol] || {}
-      symbol_data = raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
-
-      # Get the ticker - it's at symbol.symbol.symbol
+      symbol_data = extract_symbol_data(data)
       ticker = symbol_data["symbol"] || symbol_data[:symbol]
 
       # If that's still a hash, we need to go deeper or use raw_symbol
@@ -122,15 +118,9 @@ class SnaptradeAccount::HoldingsProcessor
       # Get the holding date (use current date if not provided)
       holding_date = Date.current
 
-      # Extract currency - it can be at the holding level or in symbol_data
-      currency_data = data["currency"] || data[:currency] || symbol_data["currency"] || symbol_data[:currency]
-      currency = if currency_data.is_a?(Hash)
-        currency_data.with_indifferent_access["code"]
-      elsif currency_data.is_a?(String)
-        currency_data
-      else
-        account.currency
-      end
+      # Must resolve to the same bucket as cash_equivalent_position_value, or
+      # cash-equivalent positions stop cancelling out (#2729).
+      currency = extract_currency(data, symbol_data, account.currency)
 
       Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Importing holding: #{ticker} qty=#{quantity} price=#{price} currency=#{currency}"
 
@@ -147,11 +137,23 @@ class SnaptradeAccount::HoldingsProcessor
         delete_future_holdings: false
       )
 
-      # Store cost basis if available
-      avg_price = data["average_purchase_price"] || data[:average_purchase_price]
+      # Store cost basis if available. Both fields are per-share, which is
+      # what update_holding_cost_basis expects.
+      avg_price = data["average_purchase_price"] || data[:average_purchase_price] ||
+                  data["cost_basis"] || data[:cost_basis]
       if avg_price.present?
         update_holding_cost_basis(security, avg_price)
       end
+    end
+
+    def unsupported_instrument?(data)
+      instrument = data[:instrument] || data["instrument"]
+      return false unless instrument.is_a?(Hash)
+
+      kind = instrument.with_indifferent_access[:kind]
+      return false if kind.blank?
+
+      UNSUPPORTED_INSTRUMENT_KINDS.include?(kind.to_s.downcase)
     end
 
     def update_holding_cost_basis(security, avg_cost)
