@@ -265,4 +265,18 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_match "AI cache reset could not be enqueued", entry.message
     assert_equal "StandardError", entry.metadata["error_class"]
   end
+
+  # perform_later swallows ActiveJob::EnqueueError into a false return instead of
+  # raising it, which would otherwise log the reset as requested and redirect
+  # with a success notice while nothing was queued.
+  test "clear_ai_cache records an error when the job is silently not enqueued" do
+    ClearAiCacheJob.stubs(:perform_later).returns(false)
+
+    assert_raises(ActiveJob::EnqueueError) { post clear_ai_cache_rules_url }
+
+    entry = DebugLogEntry.where(category: ClearAiCacheJob::DEBUG_CATEGORY, level: "error").sole
+    assert_match "AI cache reset could not be enqueued", entry.message
+    assert_equal "ActiveJob::EnqueueError", entry.metadata["error_class"]
+    assert_empty DebugLogEntry.where(category: ClearAiCacheJob::DEBUG_CATEGORY, level: "info")
+  end
 end
