@@ -114,8 +114,12 @@
           <span class="w-2.5 h-2.5 rounded-full bg-success"></span>
           <%= t(".income") %>
         </span>
+        <%# text-sm to match the row's own label and the equivalent figure in the
+            outflows widget. Without it these inherited the 16px base, which is
+            off the scale the dashboard uses (sm for rows, lg for a total, 3xl
+            for a hero) and left the amount larger than the label beside it. %>
         <span class="flex items-center gap-2">
-          <span class="font-medium tabular-nums text-success privacy-sensitive"><%= format_money money_flow_data[:income] %></span>
+          <span class="text-sm font-medium tabular-nums text-success privacy-sensitive"><%= format_money money_flow_data[:income] %></span>
           <%= icon("chevron-right", size: "sm", class: "text-secondary group-hover:text-primary transition-colors") %>
         </span>
       <% end %>
@@ -128,7 +132,7 @@
           <%= t(".expenses") %>
         </span>
         <span class="flex items-center gap-2">
-          <span class="font-medium tabular-nums text-primary privacy-sensitive"><%= format_money money_flow_data[:expense] %></span>
+          <span class="text-sm font-medium tabular-nums text-primary privacy-sensitive"><%= format_money money_flow_data[:expense] %></span>
           <%= icon("chevron-right", size: "sm", class: "text-secondary group-hover:text-primary transition-colors") %>
         </span>
       <% end %>
