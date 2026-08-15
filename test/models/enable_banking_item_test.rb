@@ -117,6 +117,22 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     Rails.configuration.x.enable_banking.consent_days = original
   end
 
+  test "parse_session_expiry prefers the requested consent duration over the configured ceiling when valid_until is missing" do
+    original = Rails.configuration.x.enable_banking.consent_days
+    Rails.configuration.x.enable_banking.consent_days = 180
+
+    travel_to Time.zone.parse("2026-01-01 12:00:00") do
+      accepted_valid_until = 60.days.from_now
+      @item.requested_consent_valid_until = accepted_valid_until
+
+      expiry = @item.send(:parse_session_expiry, { access: {} })
+
+      assert_equal accepted_valid_until.to_i, expiry.to_i
+    end
+  ensure
+    Rails.configuration.x.enable_banking.consent_days = original
+  end
+
   test "with_stale_psu_ip matches items whose session has expired" do
     expired = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Expired", country_code: "DE",

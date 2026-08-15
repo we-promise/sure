@@ -125,7 +125,8 @@ class EnableBankingItem < ApplicationRecord
 
     attributes = {
       authorization_id: result[:authorization_id],
-      aspsp_name: aspsp_name
+      aspsp_name: aspsp_name,
+      requested_consent_valid_until: result[:requested_valid_until]
     }
     attributes[:psu_type] = validated_psu_type if validated_psu_type.present?
 
@@ -166,6 +167,7 @@ class EnableBankingItem < ApplicationRecord
       session_id: result[:session_id],
       session_expires_at: parse_session_expiry(result),
       authorization_id: nil,  # Clear the authorization ID
+      requested_consent_valid_until: nil,  # Only needed as a fallback until the session is established
       status: :good
     )
 
@@ -400,7 +402,10 @@ class EnableBankingItem < ApplicationRecord
     end
 
     def parse_session_expiry(session_result)
-      default_expiry = Rails.configuration.x.enable_banking.consent_days.days.from_now
+      # Prefer the duration actually accepted by the ASPSP during start_authorization
+      # (which may be shorter than the configured ceiling, e.g. after a fallback retry)
+      # over the global default, so session_valid? doesn't outlive the real consent.
+      default_expiry = requested_consent_valid_until || Rails.configuration.x.enable_banking.consent_days.days.from_now
 
       if session_result[:access].present? && session_result[:access][:valid_until].present?
         parsed = Time.zone.parse(session_result[:access][:valid_until])
@@ -410,7 +415,7 @@ class EnableBankingItem < ApplicationRecord
       end
     rescue ArgumentError, TypeError => e
       Rails.logger.warn "EnableBankingItem #{id} - Failed to parse session expiry: #{e.message}"
-      Rails.configuration.x.enable_banking.consent_days.days.from_now
+      default_expiry
     end
 
     def import_accounts_from_session(accounts_data)
