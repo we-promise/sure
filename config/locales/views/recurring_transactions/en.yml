@@ -90,8 +90,6 @@ en:
       first_due_on_label: Next due
       account_label: Paid from
       account_blank: Any account
-      is_income_label: This is income
-      is_income_hint: A paycheck or other money that arrives on a schedule. Powers the Paycheck view.
       bill_type_label: Kind
       installment_count_label: Number of payments
       installment_count_hint: The plan ends after this many payments and shows its progress until then.

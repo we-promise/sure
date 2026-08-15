@@ -267,6 +267,24 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert Entry.exists?(entry.id), "removing a bill must never delete ledger entries"
   end
 
+  # Which kind this is was settled by the entry point that opened the dialog.
+  # The checkbox asked it again, and ticking it reshaped nothing: you filled in
+  # bill-shaped labels, pressed Save bill, and got an income record.
+  test "the add-bill dialog does not offer to make it income" do
+    get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_no_match(/name="recurring_transaction\[is_income\]"/, response.body)
+  end
+
+  test "the add-income dialog carries the answer without asking" do
+    get new_recurring_transaction_url(income: true), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match(/type="hidden"[^>]*name="recurring_transaction\[is_income\]"/, response.body)
+    assert_no_match(/type="checkbox"[^>]*name="recurring_transaction\[is_income\]"/, response.body)
+  end
+
   test "creating income says income, not bill" do
     post recurring_transactions_url, params: {
       recurring_transaction: {

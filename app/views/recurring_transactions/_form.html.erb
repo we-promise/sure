@@ -56,16 +56,13 @@
           :id, :name,
           { label: income ? t(".income_account_label") : t(".account_label"), include_blank: t(".account_blank") } %>
 
-    <% if recurring_transaction.new_record? %>
-      <% if income %>
-        <%= hidden_field_tag "recurring_transaction[is_income]", "1" %>
-      <% else %>
-        <label class="flex items-start gap-2 cursor-pointer">
-          <%= check_box_tag "recurring_transaction[is_income]", "1", false, class: "checkbox checkbox--light mt-0.5" %>
-          <span class="text-sm text-primary"><%= t(".is_income_label") %></span>
-        </label>
-        <p class="text-xs text-secondary"><%= t(".is_income_hint") %></p>
-      <% end %>
+    <%# Which kind this is was decided by the entry point that opened the
+        dialog, so the form only has to carry the answer. Offering it as a
+        checkbox here asked a question the dialog had already answered in its
+        own title, and ticking it did not reshape anything: you filled in
+        bill-shaped labels, pressed Save bill, and got income. %>
+    <% if recurring_transaction.new_record? && income %>
+      <%= hidden_field_tag "recurring_transaction[is_income]", "1" %>
     <% end %>
 
     <%# Name, amount, due date and how often are the whole job for most
