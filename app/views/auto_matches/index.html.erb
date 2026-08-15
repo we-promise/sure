@@ -30,7 +30,7 @@
       <div class="rounded-xl bg-container-inset space-y-1 p-1">
         <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
           <p><%= t("auto_matches.title") %></p>
-          <span class="text-subdued">&middot;</span>
+          <span class="text-subdued"><%= t("auto_matches.table.separator") %></span>
           <p><%= @pending_transfers.count %></p>
         </div>
 

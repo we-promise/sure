@@ -14,21 +14,23 @@
   </td>
   <td class="py-3 px-2 text-sm text-right">
     <div class="flex items-center justify-end gap-2">
-      <%= button_to transfer_path(transfer, transfer: { status: "confirmed" }),
-                    method: :patch,
-                    data: { turbo: false },
-                    class: "text-secondary flex items-center justify-center cursor-pointer",
-                    title: t("transactions.transfer_match.confirm_match") do %>
-        <%= icon "check", size: "sm", class: "text-secondary hover:text-primary" %>
-      <% end %>
+      <%= render DS::Button.new(
+        variant: :icon,
+        icon: "check",
+        href: transfer_path(transfer, transfer: { status: "confirmed" }),
+        method: :patch,
+        data: { turbo: false },
+        title: t("transactions.transfer_match.confirm_match")
+      ) %>
 
-      <%= button_to transfer_path(transfer, transfer: { status: "rejected" }),
-                    method: :patch,
-                    data: { turbo: false },
-                    class: "text-secondary hover:text-primary flex items-center justify-center cursor-pointer",
-                    title: t("transactions.transfer_match.reject_match") do %>
-        <%= icon "x", size: "sm", class: "text-subdued hover:text-primary" %>
-      <% end %>
+      <%= render DS::Button.new(
+        variant: :icon,
+        icon: "x",
+        href: transfer_path(transfer, transfer: { status: "rejected" }),
+        method: :patch,
+        data: { turbo: false },
+        title: t("transactions.transfer_match.reject_match")
+      ) %>
     </div>
   </td>
 </tr>
