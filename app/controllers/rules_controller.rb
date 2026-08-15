@@ -129,11 +129,38 @@ class RulesController < ApplicationController
   end
 
   def clear_ai_cache
-    ClearAiCacheJob.perform_later(Current.family)
+    enqueue_ai_cache_reset
     redirect_to rules_path, notice: t("rules.clear_ai_cache.success")
   end
 
   private
+    # The reset itself happens in a background job, so an enqueue that never
+    # lands looks exactly like a job that ran and found nothing. Logging the
+    # request separately from the job's own "started" entry tells those apart.
+    def enqueue_ai_cache_reset
+      ClearAiCacheJob.perform_later(Current.family)
+
+      DebugLogEntry.capture(
+        category: ClearAiCacheJob::DEBUG_CATEGORY,
+        level: "info",
+        message: "AI cache reset requested from the rules page",
+        source: self.class.name,
+        family: Current.family,
+        user: Current.user
+      )
+    rescue => e
+      DebugLogEntry.capture(
+        category: ClearAiCacheJob::DEBUG_CATEGORY,
+        level: "error",
+        message: "AI cache reset could not be enqueued: #{e.class}: #{e.message}",
+        source: self.class.name,
+        family: Current.family,
+        user: Current.user,
+        metadata: { error_class: e.class.name, error_message: e.message }
+      )
+      raise
+    end
+
     def set_rule
       @rule = Current.family.rules.find(params[:id])
     end

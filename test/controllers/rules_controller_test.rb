@@ -242,4 +242,27 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to rules_url
   end
+
+  test "clear_ai_cache enqueues job and records the request in the debug log" do
+    assert_enqueued_with(job: ClearAiCacheJob) do
+      post clear_ai_cache_rules_url
+    end
+
+    assert_redirected_to rules_url
+
+    entry = DebugLogEntry.where(category: ClearAiCacheJob::DEBUG_CATEGORY, level: "info").sole
+    assert_equal "AI cache reset requested from the rules page", entry.message
+    assert_equal @user, entry.user
+    assert_equal @user.family, entry.family
+  end
+
+  test "clear_ai_cache records an error when the job cannot be enqueued" do
+    ClearAiCacheJob.expects(:perform_later).raises(StandardError, "queue is down")
+
+    assert_raises(StandardError) { post clear_ai_cache_rules_url }
+
+    entry = DebugLogEntry.where(category: ClearAiCacheJob::DEBUG_CATEGORY, level: "error").sole
+    assert_match "AI cache reset could not be enqueued", entry.message
+    assert_equal "StandardError", entry.metadata["error_class"]
+  end
 end
