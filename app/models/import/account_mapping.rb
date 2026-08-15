@@ -9,13 +9,11 @@ class Import::AccountMapping < Import::Mapping
       unique_values.index_with { |value| accounts[value] }
     end
 
-    private
+    def writable_accounts(import)
+      return import.family.accounts.none unless Current.user
 
-      def writable_accounts(import)
-        return import.family.accounts.none unless Current.user
-
-        import.family.accounts.writable_by(Current.user)
-      end
+      import.family.accounts.writable_by(Current.user)
+    end
   end
 
   def selectable_values
