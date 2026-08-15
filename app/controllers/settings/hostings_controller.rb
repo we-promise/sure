@@ -1,13 +1,14 @@
 class Settings::HostingsController < ApplicationController
   layout "settings"
 
-  # Minimum accepted value for each configurable LLM budget field. Mirrors the
+  # Minimum accepted value for each configurable numeric LLM field. Mirrors the
   # `min:` attribute on the form inputs in `_openai_settings.html.erb` so the
   # controller rejects what the browser-side validator would reject.
-  LLM_BUDGET_MINIMUMS = {
+  LLM_NUMERIC_MINIMUMS = {
     llm_context_window: 256,
     llm_max_response_tokens: 64,
-    llm_max_items_per_call: 1
+    llm_max_items_per_call: 1,
+    ai_response_timeout: Chat::MIN_RESPONSE_TIMEOUT.to_i
   }.freeze
 
   guard_feature unless: -> { self_hosted? }
@@ -211,7 +212,7 @@ class Settings::HostingsController < ApplicationController
       end
     end
 
-    LLM_BUDGET_MINIMUMS.each do |key, minimum|
+    LLM_NUMERIC_MINIMUMS.each do |key, minimum|
       next unless hosting_params.key?(key)
       raw = hosting_params[key].to_s.strip
       if raw.blank?
@@ -271,7 +272,7 @@ class Settings::HostingsController < ApplicationController
   private
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :ai_response_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type

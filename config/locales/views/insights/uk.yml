@@ -1,0 +1,92 @@
+uk:
+  insights:
+    index:
+      title: Аналітика
+      subtitle: Комплексний огляд ваших фінансів, оновлюється щоночі.
+      refresh: Перевірити наявність нових аналітичних даних
+      empty:
+        title: Аналітичних даних ще немає
+        description: Аналітичні дані з'являться тут, коли у ваших облікових записах буде достатньо активності. Вони автоматично оновлюються щоночі.
+    refresh:
+      queued: Ми генеруємо нові аналітичні дані. Перевірте через хвилину.
+      checking: Перевірка…
+    card:
+      dismiss: Відхилити
+      new: Нове
+      dismissed: Аналітичні дані відхилено
+      undo: Скасувати
+    feed:
+      view_all: Переглянути всі аналітичні дані
+      header: Останні
+      header_new: Нове
+    types:
+      spending_anomaly: Витрати
+      cash_flow_warning: Грошовий потік
+      net_worth_milestone: Чиста вартість
+      subscription_audit: Підписки
+      savings_rate_change: Рівень заощаджень
+      idle_cash: Неактивна готівка
+      budget_at_risk: Бюджет
+      budget_on_track: Бюджет
+    meta:
+      next_n_days:
+        one: Наступний день
+        other: Наступні %{count} днів
+      last_n_days:
+        one: Останній день
+        other: Останні %{count} днів
+      date_range: "З %{from} по %{to}"
+    figures:
+      vs_previous: порівняно з попереднім місяцем
+      today: сьогодні
+      on_pace: за планом
+      of_budget: бюджету
+      days_overdue:
+        one: "Прострочено на %{count} день"
+        other: "Прострочено на %{count} днів"
+      idle_days:
+        one: неактивний %{count} день
+        other: неактивний %{count} днів
+    actions:
+      spending_anomaly: Переглянути транзакції %{category}
+      cash_flow_warning: Переглянути повторювані транзакції
+      net_worth_milestone: Переглянути звіт про чисту вартість
+      subscription_audit: Переглянути повторювані транзакції
+      savings_rate_change: Переглянути транзакції за цей місяць
+      idle_cash: Перейти до рахунку
+      budget: Переглянути бюджет
+    titles:
+      spending_anomaly:
+        above: "Витрати на %{category} зростають"
+        below: "Витрати на %{category} зменшуються"
+      cash_flow_warning:
+        low: Ваш залишок готівки може зменшитися
+        negative: Ваш залишок готівки може стати від'ємним
+      net_worth_milestone: "Етап чистої вартості: %{milestone}"
+      subscription_audit: "Чи %{name} все ще активний?"
+      savings_rate_change:
+        up: Ваш рівень заощаджень покращився в %{month}
+        down: Ваш рівень заощаджень знизився в %{month}
+      idle_cash: Неактивна готівка на %{account}
+      budget_at_risk:
+        one: Одна категорія потребує уваги у вашому бюджеті
+        other: "%{count} категорій потребують уваги у вашому бюджеті"
+      budget_on_track: Ваш бюджет за планом
+    templates:
+      spending_anomaly:
+        above: Ви плануєте витратити %{projected_spend} на %{category} цього місяця, що приблизно на %{deviation_pct}% більше, ніж ваш середньомісячний показник %{baseline_spend}.
+        below: Ви плануєте витратити %{projected_spend} на %{category} цього місяця, що приблизно на %{deviation_pct}% менше, ніж ваш середньомісячний показник %{baseline_spend}.
+      cash_flow_warning:
+        low: Виходячи з ваших майбутніх повторюваних транзакцій та типових витрат, ваш залишок готівки може впасти до %{projected_low} приблизно %{projected_low_date}.
+        negative: Виходячи з ваших майбутніх повторюваних транзакцій та типових витрат, ваш залишок готівки може впасти до %{projected_low} приблизно %{projected_low_date}.
+      net_worth_milestone: Ваша чиста вартість перевищила %{milestone} і тепер становить %{net_worth}.
+      subscription_audit: "%{name} (%{amount}) не з'являвся з моменту очікуваної дати %{expected_on}. Можливо, його було скасовано, або платіж перенесено."
+      savings_rate_change:
+        up: Ви заощадили %{current_rate}% свого доходу в %{month}, що на %{change_pp} процентних пунктів більше, ніж %{previous_rate}% попереднього місяця.
+        down: Ви заощадили %{current_rate}% свого доходу в %{month}, що на %{change_pp} процентних пунктів менше, ніж %{previous_rate}% попереднього місяця.
+        down_negative: "Ви витратили більше, ніж заробили в %{month}: ваш рівень заощаджень впав до %{current_rate}%, з %{previous_rate}% попереднього місяця."
+      idle_cash: "%{account} містить %{balance} без активності протягом останніх %{idle_days} днів."
+      budget_at_risk:
+        over: "%{categories} перевищили бюджет цього місяця. Ви використали %{budget_spent_pct}% свого загального бюджету наразі."
+        near: "%{categories} близькі до своїх лімітів цього місяця. Ви використали %{budget_spent_pct}% свого загального бюджету наразі."
+      budget_on_track: Ви витратили %{spent} зі свого бюджету %{budgeted} (%{budget_spent_pct}%) і все в межах ліміту.
