@@ -31,7 +31,7 @@ class Import::MappingsControllerTest < ActionDispatch::IntegrationTest
     @import.update!(
       raw_file_str: <<~CSV,
         date,amount,account
-        #{Date.current.iso8601},25,Plaid Depository Account
+        #{Date.current.iso8601},25,Imported Checking
       CSV
       date_col_label: "date",
       amount_col_label: "amount",
