@@ -259,8 +259,10 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "active", orphan.reload.state
   end
 
-  test "destroy on non-archived is rejected" do
-    assert_no_difference "Goal.count" do
+  test "destroy deletes an active goal and cascades to its links and pledges" do
+    assert_difference -> { Goal.count } => -1,
+                      -> { GoalAccount.count } => -2,
+                      -> { GoalPledge.count } => -2 do
       delete goal_url(@goal)
     end
     assert_redirected_to goals_path
