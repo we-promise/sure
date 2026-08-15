@@ -116,6 +116,20 @@ en:
         instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
+        account_optional: Account (optional)
+        amount: Amount
+        apply_configuration: Apply configuration
+        category_optional: Category (optional)
+        currency: Currency
+        date: Date
+        format: Format
+        incomes_negative: Incomes are negative
+        incomes_positive: Incomes are positive
+        intro: We have pre-configured your Mint import for you. Please proceed to the next step.
+        leave_empty: Leave empty
+        name_optional: Name (optional)
+        select_format: Select format
+        tags_optional: Tags (optional)
       actual_import:
         preconfigured_notice: We have pre-configured your Actual Budget import for you. Please proceed to the next step.
         leave_empty: Leave empty

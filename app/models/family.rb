@@ -144,6 +144,7 @@ class Family < ApplicationRecord
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
+  validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
 
@@ -497,5 +498,29 @@ class Family < ApplicationRecord
       Money::Currency.new(value).iso_code
     rescue Money::Currency::UnknownCurrencyError, ArgumentError
       nil
+    end
+
+    # Not a plain `inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }`
+    # on purpose: the settings form submits `tz.tzinfo.identifier` (e.g.
+    # "America/New_York"), not `tz.name` (e.g. "Eastern Time (US & Canada)")
+    # -- see LanguagesHelper#timezone_options. For every zone Rails ships,
+    # those two differ, so an inclusion check against `.name` would reject
+    # every legitimate value the form actually submits. `ActiveSupport::TimeZone[]`
+    # resolves both forms, and is the same lookup `Localize#resolved_timezone`
+    # uses at request time, so "valid at save time" and "valid when rendering"
+    # can't drift apart.
+    #
+    # Only runs when timezone is actually being changed (see the `if:` on the
+    # `validate` call above). A family that already has a stale value from
+    # before this validation existed (the exact case in #390) must still be
+    # able to save unrelated changes -- e.g. a settings update, or any
+    # background job touching the record -- without being blocked by a field
+    # nobody is currently trying to set. That value still can't crash a
+    # request either way, since Localize#resolved_timezone falls back safely
+    # regardless of whether this validation ever ran.
+    def timezone_must_be_a_known_zone
+      return if timezone.blank?
+
+      errors.add(:timezone, :invalid) if ActiveSupport::TimeZone[timezone].blank?
     end
 end

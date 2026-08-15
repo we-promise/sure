@@ -53,6 +53,10 @@ tr:
       connect: Wise'ı Bağla
       connection_name_label: Bağlantı adı
       connection_name_placeholder: Wise Bireysel
+      sync_start_date_label: İşlemleri şu tarihten itibaren içe aktar
+      sync_start_date_help: Wise hesap özetleri bu tarihten itibaren içe aktarılır. Varsayılanı bırakırsanız bir yıla kadar geçmiş yüklenir.
+      import_all_history_label: Tüm işlem geçmişini içe aktar
+      import_all_history_help: Yalnızca son bir yıl yerine tüm geçmiş Wise hesap özetlerini getirir.
       disconnect: Bağlantıyı kes
       disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?
         Bu, tüm eşitlenmiş hesap verilerini kaldıracaktır."
@@ -65,7 +69,7 @@ tr:
         copy_token_html: Token'ı kopyalayın ve aşağıya yapıştırın. Sure bunu yalnızca
           bakiyelerinizi ve işlemlerinizi eşitlemek için kullanır.
         create_token: Salt okunur erişimle yeni bir kişisel API token'ı oluşturun
-        open_tokens: Ayarlar → API token'ları bölümüne gidin
+        open_tokens: Settings → Connect and manage apps → Developer tools → API tokens bölümüne gidin
         sign_in_html: "%{link} adresini ziyaret edin ve hesabınıza giriş yapın"
       keep_token_placeholder: Mevcut token'ı korumak için boş bırakın
       not_configured: Yapılandırılmamış

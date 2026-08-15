@@ -394,13 +394,6 @@ class TransactionsController < ApplicationController
     end
   end
 
-  def update_preferences
-    Current.user.update_transactions_preferences(preferences_params)
-    head :ok
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
-    head :unprocessable_entity
-  end
-
   def exchange_rate
     account = Current.family.accounts.find(params[:account_id])
     currency_from = params[:currency]
@@ -582,10 +575,6 @@ class TransactionsController < ApplicationController
 
     def stored_params
       Current.session.prev_transaction_page_params
-    end
-
-    def preferences_params
-      params.require(:preferences).permit(collapsed_sections: {})
     end
 
     # Helper methods for convert_to_trade
