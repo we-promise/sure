@@ -26,6 +26,10 @@ class YaxiAccount < ApplicationRecord
   validates :external_id, :name, :currency, presence: true
   validates :external_id, uniqueness: { scope: :yaxi_item_id }
 
+  def reference
+    { iban: iban.presence, number: number.presence, currency: currency }.compact
+  end
+
   def self.external_id_for(snapshot)
     data = snapshot.with_indifferent_access
     stable_value = data[:iban].presence || data[:number].presence
@@ -112,11 +116,14 @@ class YaxiAccount < ApplicationRecord
 
     def fallback_name(data)
       identifier = data[:iban].presence || data[:number].presence
-      identifier.present? ? "YAXI Account …#{identifier.last(4)}" : "YAXI Account"
+      key = identifier.present? ? "with_identifier" : "without_identifier"
+      I18n.t("yaxi_items.account.fallback_name.#{key}", identifier: identifier&.last(4))
     end
 
     def import_transaction!(data, adapter)
-      raw_amount = BigDecimal(data.dig(:amount, :amount).to_s)
+      raw_amount = BigDecimal(data.dig(:amount, :amount).to_s, exception: false)
+      return capture_unparsable_amount(data) if raw_amount.nil?
+
       status = data[:status].to_s
       return if status.in?(%w[Canceled])
 
@@ -140,13 +147,14 @@ class YaxiAccount < ApplicationRecord
     end
 
     def transaction_external_id(data)
-      identifier = data[:accountServicerReference].presence || data[:transactionId].presence ||
-                   data[:entryReference].presence || data[:endToEndId].presence || data[:paymentId].presence
+      identifier = [ data[:accountServicerReference], data[:transactionId], data[:entryReference] ]
+        .find { |value| stable_transaction_reference?(value) }
       return "yaxi_#{identifier}" if identifier
 
       digest_input = [
         transaction_date(data), data.dig(:amount, :amount), data.dig(:amount, :currency),
-        data.dig(:creditor, :name), data.dig(:debtor, :name), Array(data[:remittanceInformation]).join("|")
+        data[:endToEndId], data[:paymentId], data.dig(:creditor, :name), data.dig(:debtor, :name),
+        Array(data[:remittanceInformation]).join("|")
       ].join("\x1F")
       "yaxi_content_#{Digest::SHA256.hexdigest(digest_input)}"
     end
@@ -174,10 +182,27 @@ class YaxiAccount < ApplicationRecord
       )
     end
 
+    def capture_unparsable_amount(data)
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "warn",
+        message: "Skipped YAXI transaction with an unparsable amount",
+        source: "YaxiAccount#import_transaction!",
+        provider_key: "yaxi",
+        family: yaxi_item.family,
+        account_provider: account_provider,
+        metadata: { yaxi_account_id: id, amount: data.dig(:amount, :amount), status: data[:status] }
+      )
+    end
+
+    def stable_transaction_reference?(value)
+      value.present? && !value.to_s.casecmp("NOTPROVIDED").zero?
+    end
+
     def transaction_name(data, raw_amount)
       party = raw_amount.negative? ? data.dig(:creditor, :name) : data.dig(:debtor, :name)
       party.presence || Array(data[:remittanceInformation]).compact_blank.first.presence ||
-        (raw_amount.negative? ? "Outgoing transfer" : "Incoming transfer")
+        I18n.t("yaxi_items.transactions.#{raw_amount.negative? ? 'outgoing' : 'incoming'}")
     end
 
     def log_invalid_currency(value)

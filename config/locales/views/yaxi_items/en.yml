@@ -1,7 +1,21 @@
 ---
 en:
   yaxi_items:
+    connection_name: YAXI Connection
     not_configured: YAXI is not configured. Add the API key ID and secret in Provider Settings first.
+    provider_config:
+      name: YAXI
+      description: Connect European bank accounts through [YAXI](https://hub.yaxi.tech). Sure signs short-lived service tickets and verifies every result. Online-banking credentials stay encrypted in this browser and are never sent to Sure.
+      connection_description: Connect a European bank without sharing credentials with Sure
+      key_id:
+        label: API key ID
+        description: The ID of the YAXI API key (starts with api-key-)
+      secret:
+        label: API secret
+        description: The Base64 secret shown once when the API key is created
+      environment:
+        label: Environment
+        description: production or integration
     new:
       title: Connect YAXI
       description: You will choose your bank and authorize access in the next step.
@@ -26,6 +40,7 @@ en:
     interaction:
       working: Preparing secure connection…
       continue: Continue
+      field_label: Authorization response
     item:
       provider_name: YAXI
       last_refreshed: Refreshed %{time} ago
@@ -36,6 +51,14 @@ en:
       success: YAXI connection removed
     errors:
       unexpected: Sure could not process the YAXI result. Please try the refresh again.
+      invalid_result: Sure could not verify the YAXI result. Please restart the connection or refresh.
+    account:
+      fallback_name:
+        with_identifier: YAXI Account …%{identifier}
+        without_identifier: YAXI Account
+    transactions:
+      outgoing: Outgoing transfer
+      incoming: Incoming transfer
     javascript:
       searching: Searching for banks…
       no_bank: No matching bank found.

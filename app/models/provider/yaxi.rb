@@ -1,4 +1,5 @@
 class Provider::Yaxi
+  ENVIRONMENTS = %w[production integration].freeze
   Ticket = Data.define(:id, :token, :expires_at)
 
   Error = Class.new(Provider::Error)
@@ -17,6 +18,7 @@ class Provider::Yaxi
 
     raise InvalidConfigurationError, "YAXI key ID is missing" if @key_id.blank?
     raise InvalidConfigurationError, "YAXI secret must decode to at least 32 bytes" if @secret.bytesize < 32
+    raise InvalidConfigurationError, "Unsupported YAXI environment: #{@environment}" unless @environment.in?(ENVIRONMENTS)
   end
 
   def issue_ticket(ticket_id:, service:, data: nil, expires_at: TICKET_LIFETIME.from_now)

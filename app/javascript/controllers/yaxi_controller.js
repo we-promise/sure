@@ -1,49 +1,17 @@
 import { Controller } from "@hotwired/stimulus";
 import {
   AccountField,
-  Confirmation,
   Dialog,
-  Field,
   Redirect,
   RedirectHandle,
   Result,
   RoutexClient,
-  SecrecyLevel,
-  Selection,
   loadCredentials,
   storeCredentials,
 } from "routex-client";
 
 export default class extends Controller {
-  static targets = [
-    "searchSection",
-    "searchInput",
-    "results",
-    "credentialsSection",
-    "bankName",
-    "advice",
-    "userIdGroup",
-    "userIdLabel",
-    "userIdInput",
-    "passwordGroup",
-    "passwordLabel",
-    "passwordInput",
-    "refreshSection",
-    "progress",
-    "progressText",
-    "error",
-    "errorText",
-    "dialog",
-    "dialogMessage",
-    "dialogImage",
-    "dialogOptions",
-    "dialogFieldGroup",
-    "dialogField",
-    "dialogContinue",
-  ];
-
   static values = {
-    mode: String,
     ticket: String,
     ticketId: String,
     baseUrl: String,
@@ -68,93 +36,15 @@ export default class extends Controller {
     }
   }
 
-  async search(event) {
-    event.preventDefault();
-    const query = this.searchInputTarget.value.trim();
-    if (!query) return;
-
-    this.setBusy(this.message("searching"));
-    try {
-      const filters = query.split(/\s+/).map((term) => ({ term }));
-      const results = await this.client.search({
-        ticket: this.ticketValue,
-        filters,
-        ibanDetection: true,
-        limit: 20,
-      });
-      this.renderBanks(results);
-      this.clearBusy();
-    } catch (error) {
-      this.showError(error);
-    }
-  }
-
-  renderBanks(banks) {
-    this.resultsTarget.replaceChildren();
-    if (banks.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "text-sm text-secondary";
-      empty.textContent = this.message("no_bank");
-      this.resultsTarget.append(empty);
-      return;
-    }
-
-    for (const bank of banks) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className =
-        "w-full rounded-lg border border-primary p-3 text-left text-sm text-primary hover:bg-surface-hover";
-      button.textContent = bank.displayName;
-      button.addEventListener("click", () => this.selectBank(bank));
-      this.resultsTarget.append(button);
-    }
-  }
-
-  async selectBank(bank) {
-    this.selectedBank = bank;
-    this.bankNameTarget.textContent = bank.displayName;
-    this.adviceTarget.textContent = bank.advice || "";
-
-    const credentials = bank.credentials || {};
-    const credentialModels = Array.isArray(credentials)
-      ? credentials.map((value) => value.toString().toLowerCase())
-      : Object.entries(credentials)
-          .filter(([, enabled]) => enabled)
-          .map(([key]) => key.toLowerCase());
-    const needsUserId =
-      credentialModels.includes("full") ||
-      credentialModels.includes("userid") ||
-      credentialModels.includes("user_id");
-    const needsPassword = credentialModels.includes("full");
-    this.userIdGroupTarget.classList.toggle("hidden", !needsUserId);
-    this.passwordGroupTarget.classList.toggle("hidden", !needsPassword);
-    this.userIdLabelTarget.textContent = bank.userId || this.message("user_id");
-    this.passwordLabelTarget.textContent =
-      bank.password || this.message("password");
-    this.credentialsSectionTarget.classList.remove("hidden");
-    this.credentialsSectionTarget.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }
-
   async submitCredentials(event) {
-    event.preventDefault();
-    if (!this.selectedBank) return;
-
-    const credentials = { connectionId: this.selectedBank.id };
-    if (!this.userIdGroupTarget.classList.contains("hidden"))
-      credentials.userId = this.userIdInputTarget.value;
-    if (!this.passwordGroupTarget.classList.contains("hidden"))
-      credentials.password = this.passwordInputTarget.value;
-
+    const { credentials, connectionInfo } = event.detail;
     const state = {
       stage: "connect",
       operation: "accounts",
       ticket: this.ticketValue,
       ticketId: this.ticketIdValue,
       credentials,
-      connectionInfo: this.selectedBank,
+      connectionInfo,
     };
 
     this.setBusy(this.message("connecting"));
@@ -179,25 +69,26 @@ export default class extends Controller {
   }
 
   async startRefresh() {
-    const stored = loadCredentials(this.storageIdValue, this.secretBytes());
-    if (!stored?.credentials) {
-      this.showError(new Error(this.message("credentials_missing")));
-      return;
-    }
-
-    const state = {
-      stage: "refresh_balances",
-      operation: "balances",
-      ticket: this.balancesTicketValue,
-      ticketId: this.balancesTicketIdValue,
-      credentials: stored.credentials,
-      transactionTickets: this.transactionTicketsValue,
-      transactionIndex: 0,
-      transactionResults: [],
-    };
-
-    this.setBusy(this.message("refreshing_balances"));
     try {
+      const stored = loadCredentials(this.storageIdValue, this.secretBytes());
+      if (!stored?.credentials) {
+        this.showError(new Error(this.message("credentials_missing")));
+        return;
+      }
+
+      const state = {
+        stage: "refresh_balances",
+        operation: "balances",
+        ticket: this.balancesTicketValue,
+        ticketId: this.balancesTicketIdValue,
+        balancesTicketId: this.balancesTicketIdValue,
+        credentials: stored.credentials,
+        transactionTickets: this.transactionTicketsValue,
+        transactionIndex: 0,
+        transactionResults: [],
+      };
+
+      this.setBusy(this.message("refreshing_balances"));
       await this.invoke(state, { accounts: this.accountReferencesValue });
     } catch (error) {
       this.showError(error);
@@ -240,7 +131,13 @@ export default class extends Controller {
 
   async advance(response, state) {
     if (response instanceof Result) return this.handleResult(response, state);
-    if (response instanceof Dialog) return this.showDialog(response, state);
+    if (response instanceof Dialog) {
+      this.clearBusy();
+      this.pendingState = state;
+      this.pendingDialog = response;
+      window.dispatchEvent(new CustomEvent("yaxi-dialog:show", { detail: { response } }));
+      return;
+    }
     if (response instanceof Redirect || response instanceof RedirectHandle)
       return this.followRedirect(response, state);
     throw new Error(this.message("unsupported_response"));
@@ -283,7 +180,7 @@ export default class extends Controller {
     const next = state.transactionTickets[state.transactionIndex];
     if (!next) {
       return this.submitResult({
-        balances_ticket_id: this.balancesTicketIdValue,
+        balances_ticket_id: state.balancesTicketId,
         balances_result_jwt: state.balancesResultJwt,
         transaction_results: state.transactionResults,
       });
@@ -302,67 +199,8 @@ export default class extends Controller {
     return this.invoke(state);
   }
 
-  showDialog(response, state) {
-    this.clearBusy();
-    this.pendingState = state;
-    this.pendingDialog = response;
-    this.dialogTarget.classList.remove("hidden");
-    this.dialogMessageTarget.textContent =
-      response.message || this.message("confirm_request");
-    this.dialogOptionsTarget.replaceChildren();
-    this.dialogFieldGroupTarget.classList.add("hidden");
-    this.dialogContinueTarget.classList.remove("hidden");
-
-    if (response.image) this.showDialogImage(response.image);
-    else this.dialogImageTarget.classList.add("hidden");
-
-    if (response.input instanceof Selection) {
-      this.dialogContinueTarget.classList.add("hidden");
-      for (const option of response.input.options) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className =
-          "w-full rounded-lg border border-primary p-3 text-left text-sm text-primary hover:bg-surface-hover";
-        button.textContent = option.explanation
-          ? `${option.label} — ${option.explanation}`
-          : option.label;
-        button.addEventListener("click", () =>
-          this.respondToDialog(option.key),
-        );
-        this.dialogOptionsTarget.append(button);
-      }
-    } else if (response.input instanceof Field) {
-      this.dialogFieldGroupTarget.classList.remove("hidden");
-      this.dialogFieldTarget.value = "";
-      this.dialogFieldTarget.type =
-        response.input.secrecyLevel === SecrecyLevel.Password
-          ? "password"
-          : "text";
-      if (response.input.minLength)
-        this.dialogFieldTarget.minLength = response.input.minLength;
-      if (response.input.maxLength)
-        this.dialogFieldTarget.maxLength = response.input.maxLength;
-      this.dialogFieldTarget.focus();
-    } else if (
-      response.input instanceof Confirmation &&
-      response.input.pollingDelaySecs
-    ) {
-      this.dialogContinueTarget.classList.add("hidden");
-      window.setTimeout(
-        () => this.confirmDialog(),
-        response.input.pollingDelaySecs * 1000,
-      );
-    }
-  }
-
-  continueDialog() {
-    if (this.pendingDialog.input instanceof Field)
-      return this.respondToDialog(this.dialogFieldTarget.value);
-    return this.confirmDialog();
-  }
-
-  async respondToDialog(value) {
-    await this.continueService("respond", value);
+  async respondToDialog(event) {
+    await this.continueService("respond", event.detail.value);
   }
 
   async confirmDialog() {
@@ -370,7 +208,6 @@ export default class extends Controller {
   }
 
   async continueService(kind, value) {
-    this.dialogTarget.classList.add("hidden");
     this.setBusy(this.message("waiting"));
     try {
       const state = this.pendingState;
@@ -392,9 +229,13 @@ export default class extends Controller {
 
   async followRedirect(response, state) {
     const context = Array.from(response.context);
+    storeCredentials(this.storageIdValue, this.secretBytes(), {
+      credentials: state.credentials,
+    });
+    const { credentials, ...resumableState } = state;
     sessionStorage.setItem(
       this.redirectStorageKey(),
-      JSON.stringify({ ...state, redirectContext: context }),
+      JSON.stringify({ ...resumableState, redirectContext: context }),
     );
     const url =
       response instanceof RedirectHandle
@@ -415,6 +256,10 @@ export default class extends Controller {
 
     try {
       const state = JSON.parse(serialized);
+      const stored = loadCredentials(this.storageIdValue, this.secretBytes());
+      if (!stored?.credentials)
+        throw new Error(this.message("credentials_missing"));
+      state.credentials = stored.credentials;
       this.setBusy(this.message("completing_authorization"));
       const response = await this.callContinuation(state.operation, "confirm", {
         ticket: state.ticket,
@@ -489,30 +334,20 @@ export default class extends Controller {
     return this.messagesValue[key] || key;
   }
 
-  showDialogImage(image) {
-    if (this.dialogImageUrl) URL.revokeObjectURL(this.dialogImageUrl);
-    this.dialogImageUrl = URL.createObjectURL(
-      new Blob([image.data], { type: image.mimeType }),
-    );
-    this.dialogImageTarget.src = this.dialogImageUrl;
-    this.dialogImageTarget.classList.remove("hidden");
-  }
-
   setBusy(message) {
-    this.errorTarget.classList.add("hidden");
-    this.progressTextTarget.textContent = message;
-    this.progressTarget.classList.remove("hidden");
+    window.dispatchEvent(new CustomEvent("yaxi-status:busy", { detail: { value: message } }));
   }
 
   clearBusy() {
-    this.progressTarget.classList.add("hidden");
+    window.dispatchEvent(new CustomEvent("yaxi-status:clear"));
   }
 
   showError(error) {
     this.clearBusy();
-    this.dialogTarget.classList.add("hidden");
-    this.errorTextTarget.textContent =
-      error.userMessage || error.message || this.message("request_failed");
-    this.errorTarget.classList.remove("hidden");
+    window.dispatchEvent(new CustomEvent("yaxi-dialog:hide"));
+    const displayedError = error.userMessage || this.message("request_failed");
+    window.dispatchEvent(new CustomEvent("yaxi-status:error", {
+      detail: { value: displayedError },
+    }));
   }
 }

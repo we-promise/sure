@@ -24,7 +24,7 @@ class YaxiAccountTest < ActiveSupport::TestCase
       {
         "bookingDate" => "2026-08-01",
         "status" => "Booked",
-        "endToEndId" => "purchase-1",
+        "transactionId" => "purchase-1",
         "amount" => { "amount" => "-19.99", "currency" => "EUR" },
         "creditor" => { "name" => "Coffee Shop" },
         "remittanceInformation" => [ "Breakfast" ]
@@ -32,7 +32,7 @@ class YaxiAccountTest < ActiveSupport::TestCase
       {
         "bookingDate" => "2026-08-02",
         "status" => "Pending",
-        "endToEndId" => "salary-1",
+        "transactionId" => "salary-1",
         "amount" => { "amount" => "1000.00", "currency" => "EUR" },
         "debtor" => { "name" => "Employer" }
       }
@@ -82,5 +82,56 @@ class YaxiAccountTest < ActiveSupport::TestCase
     assert_equal "yaxi", log.provider_key
     assert_equal 1, log.metadata.fetch("skipped_count")
     assert_equal({ "Pending" => 1 }, log.metadata.fetch("statuses"))
+  end
+
+
+  test "does not treat repeated fallback references as unique transaction IDs" do
+    @yaxi_account.import_transactions!([
+      {
+        "bookingDate" => "2026-08-03",
+        "endToEndId" => "NOTPROVIDED",
+        "amount" => { "amount" => "-10.00", "currency" => "EUR" },
+        "creditor" => { "name" => "First merchant" }
+      },
+      {
+        "bookingDate" => "2026-08-04",
+        "endToEndId" => "NOTPROVIDED",
+        "amount" => { "amount" => "-20.00", "currency" => "EUR" },
+        "creditor" => { "name" => "Second merchant" }
+      }
+    ])
+
+    assert_equal 2, @account.entries.where(source: "yaxi").count
+    assert_equal 2, @account.entries.where(source: "yaxi").distinct.count(:external_id)
+  end
+
+  test "skips and records transactions with unparsable amounts" do
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_no_difference "@account.entries.count" do
+        @yaxi_account.import_transactions!([
+          {
+            "bookingDate" => "2026-08-05",
+            "transactionId" => "invalid-amount",
+            "amount" => { "amount" => "not-a-number", "currency" => "EUR" }
+          }
+        ])
+      end
+    end
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal "Skipped YAXI transaction with an unparsable amount", log.message
+    assert_equal "not-a-number", log.metadata.fetch("amount")
+  end
+
+  test "localizes fallback transaction names" do
+    I18n.with_locale(:de) do
+      @yaxi_account.import_transactions!([ {
+        "bookingDate" => "2026-08-06",
+        "transactionId" => "fallback-name",
+        "amount" => { "amount" => "-5.00", "currency" => "EUR" }
+      } ])
+    end
+
+    assert_equal "Ausgehende Überweisung", @account.entries.find_by!(external_id: "yaxi_fallback-name").name
   end
 end

@@ -2512,5 +2512,5 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_12_000000) do
   add_foreign_key "yaxi_accounts", "yaxi_items"
   add_foreign_key "yaxi_items", "families"
   add_foreign_key "yaxi_tickets", "families"
-  add_foreign_key "yaxi_tickets", "users"
+  add_foreign_key "yaxi_tickets", "users", on_delete: :cascade
 end

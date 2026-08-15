@@ -5,28 +5,26 @@ class Provider::YaxiAdapter < Provider::Base
   Provider::Factory.register("YaxiAccount", self)
 
   configure do
-    description <<~MARKDOWN
-      Connect European bank accounts through [YAXI](https://hub.yaxi.tech). Sure signs short-lived service tickets and verifies every result. Online-banking credentials stay encrypted in this browser and are never sent to Sure.
-    MARKDOWN
+    description -> { I18n.t("yaxi_items.provider_config.description") }
 
     field :key_id,
-          label: "API key ID",
+          label: -> { I18n.t("yaxi_items.provider_config.key_id.label") },
           required: true,
           env_key: "YAXI_KEY_ID",
-          description: "The ID of the YAXI API key (starts with api-key-)"
+          description: -> { I18n.t("yaxi_items.provider_config.key_id.description") }
 
     field :secret,
-          label: "API secret",
+          label: -> { I18n.t("yaxi_items.provider_config.secret.label") },
           required: true,
           secret: true,
           env_key: "YAXI_SECRET",
-          description: "The Base64 secret shown once when the API key is created"
+          description: -> { I18n.t("yaxi_items.provider_config.secret.description") }
 
     field :environment,
-          label: "Environment",
+          label: -> { I18n.t("yaxi_items.provider_config.environment.label") },
           env_key: "YAXI_ENVIRONMENT",
           default: "production",
-          description: "production or integration"
+          description: -> { I18n.t("yaxi_items.provider_config.environment.description") }
   end
 
   def self.supported_account_types
@@ -38,8 +36,8 @@ class Provider::YaxiAdapter < Provider::Base
 
     [ {
       key: "yaxi",
-      name: "YAXI",
-      description: "Connect a European bank without sharing credentials with Sure",
+      name: I18n.t("yaxi_items.provider_config.name"),
+      description: I18n.t("yaxi_items.provider_config.connection_description"),
       can_connect: true,
       new_account_path: ->(_accountable_type, return_to) {
         Rails.application.routes.url_helpers.new_yaxi_item_path(return_to: return_to)

@@ -51,6 +51,22 @@ class Provider::YaxiTest < ActiveSupport::TestCase
     assert_equal "https://integration.yaxi.tech/", @provider.base_url
   end
 
+  test "rejects an unsupported environment instead of falling back to production" do
+    assert_raises(Provider::Yaxi::InvalidConfigurationError) do
+      Provider::Yaxi.new(key_id: "api-key-test", secret: @secret, environment: "integation")
+    end
+  end
+
+  test "translates provider configuration for the current locale" do
+    configuration = Provider::YaxiAdapter.configuration
+    key_id = configuration.fields.find { |field| field.name == :key_id }
+
+    assert_equal "API key ID", I18n.with_locale(:en) { key_id.label }
+    assert_equal "API-Key-ID", I18n.with_locale(:de) { key_id.label }
+    assert_match "Connect European", I18n.with_locale(:en) { configuration.provider_description }
+    assert_match "Verbinde europäische", I18n.with_locale(:de) { configuration.provider_description }
+  end
+
   private
 
     def result_token(ticket_id:, data:)

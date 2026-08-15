@@ -1,8 +1,11 @@
 <%= content_for :page_title, t("yaxi_items.refresh.title") %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
 
 <div class="max-w-2xl mx-auto space-y-6"
      data-controller="yaxi"
-     data-yaxi-mode-value="refresh"
+     data-action="yaxi-dialog:respond->yaxi#respondToDialog yaxi-dialog:confirm->yaxi#confirmDialog"
      data-yaxi-base-url-value="<%= @base_url %>"
      data-yaxi-submit-url-value="<%= apply_refresh_yaxi_item_path(@yaxi_item) %>"
      data-yaxi-storage-id-value="<%= @yaxi_item.credential_storage_id %>"
@@ -17,7 +20,7 @@
     <p class="mt-1 text-sm text-secondary"><%= t("yaxi_items.refresh.description", bank: @yaxi_item.institution_name) %></p>
   </div>
 
-  <div class="bg-container shadow-border-xs rounded-xl p-5 space-y-4" data-yaxi-target="refreshSection">
+  <div class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
     <p class="text-sm text-secondary"><%= t("yaxi_items.refresh.browser_note") %></p>
     <%= render DS::Button.new(
           text: t("yaxi_items.refresh.start"),

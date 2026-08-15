@@ -66,6 +66,8 @@ class YaxiItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_nil ticket.reload.consumed_at
+    assert_equal I18n.t("yaxi_items.errors.invalid_result"), response.parsed_body.fetch("error")
+    assert_not_includes response.body, "another ticket"
   end
 
   test "applies the hash-shaped balances payload returned by YAXI" do
@@ -124,6 +126,83 @@ class YaxiItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal BigDecimal("123.45"), yaxi_account.reload.current_balance
     assert_predicate balances_ticket.reload, :consumed_at?
     assert_predicate transaction_ticket.reload, :consumed_at?
+  end
+
+  test "rejects a transaction ticket submitted for another linked account" do
+    item = @family.yaxi_items.create!(name: "YAXI Connection")
+    item.complete_connection!(
+      accounts_result: [
+        { iban: "DE111", currency: "EUR", displayName: "First", type: "Current" },
+        { iban: "DE222", currency: "EUR", displayName: "Second", type: "Current" }
+      ],
+      connection_info: { "id" => "connection-test", "displayName" => "Test Bank" }
+    )
+    first, second = item.yaxi_accounts.order(:iban).to_a
+    balances_ticket = @family.yaxi_tickets.create!(user: @user, service: "Balances", expires_at: 5.minutes.from_now)
+    transaction_ticket = @family.yaxi_tickets.create!(
+      user: @user,
+      service: "Transactions",
+      service_data: { account: { iban: first.iban, currency: first.currency } },
+      expires_at: 5.minutes.from_now
+    )
+
+    post apply_refresh_yaxi_item_path(item), params: {
+      balances_ticket_id: balances_ticket.id,
+      balances_result_jwt: sign_result(balances_ticket, []),
+      transaction_results: [
+        {
+          account_id: second.id,
+          ticket_id: transaction_ticket.id,
+          result_jwt: sign_result(transaction_ticket, [])
+        }
+      ]
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_nil transaction_ticket.reload.consumed_at
+    assert_nil balances_ticket.reload.consumed_at
+  end
+
+  test "refresh includes accounts identified only by account number" do
+    item = @family.yaxi_items.create!(name: "YAXI Connection")
+    item.complete_connection!(
+      accounts_result: [ { number: "CARD-123", currency: "EUR", displayName: "Card", type: "Card" } ],
+      connection_info: { "id" => "connection-test", "displayName" => "Test Bank" }
+    )
+
+    get refresh_yaxi_item_path(item)
+
+    assert_response :success
+    assert_includes response.body, "CARD-123"
+  end
+
+  test "applies balances to accounts identified only by account number" do
+    item = @family.yaxi_items.create!(name: "YAXI Connection")
+    item.complete_connection!(
+      accounts_result: [ { number: "CARD-456", currency: "EUR", displayName: "Card", type: "Card" } ],
+      connection_info: { "id" => "connection-test", "displayName" => "Test Bank" }
+    )
+    yaxi_account = item.yaxi_accounts.first
+    balances_ticket = @family.yaxi_tickets.create!(user: @user, service: "Balances", expires_at: 5.minutes.from_now)
+
+    post apply_refresh_yaxi_item_path(item), params: {
+      balances_ticket_id: balances_ticket.id,
+      balances_result_jwt: sign_result(
+        balances_ticket,
+        {
+          balances: [
+            {
+              account: { number: yaxi_account.number },
+              balances: [ { amount: "42.50", currency: "EUR", balanceType: "Booked" } ]
+            }
+          ]
+        }
+      ),
+      transaction_results: []
+    }, as: :json
+
+    assert_response :success
+    assert_equal BigDecimal("42.50"), yaxi_account.reload.current_balance
   end
 
   private

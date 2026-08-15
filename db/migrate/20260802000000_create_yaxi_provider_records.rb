@@ -36,7 +36,7 @@ class CreateYaxiProviderRecords < ActiveRecord::Migration[7.2]
 
     create_table :yaxi_tickets, id: :uuid do |t|
       t.references :family, null: false, foreign_key: true, type: :uuid
-      t.references :user, null: false, foreign_key: true, type: :uuid
+      t.references :user, null: false, foreign_key: { on_delete: :cascade }, type: :uuid
       t.string :service, null: false
       t.jsonb :service_data
       t.datetime :expires_at, null: false

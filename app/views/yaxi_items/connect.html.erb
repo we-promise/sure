@@ -1,8 +1,11 @@
 <%= content_for :page_title, t("yaxi_items.connect.title") %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
 
 <div class="max-w-2xl mx-auto space-y-6"
      data-controller="yaxi"
-     data-yaxi-mode-value="connect"
+     data-action="yaxi-credentials:submit->yaxi#submitCredentials yaxi-dialog:respond->yaxi#respondToDialog yaxi-dialog:confirm->yaxi#confirmDialog"
      data-yaxi-ticket-value="<%= @ticket.token %>"
      data-yaxi-ticket-id-value="<%= @ticket.id %>"
      data-yaxi-base-url-value="<%= @base_url %>"
@@ -21,31 +24,44 @@
         message: t("yaxi_items.connect.security_message")
       ) %>
 
-  <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4" data-yaxi-target="searchSection">
-    <form class="space-y-3" data-action="submit->yaxi#search">
+  <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4"
+           data-controller="yaxi-search"
+           data-yaxi-search-base-url-value="<%= @base_url %>"
+           data-yaxi-search-ticket-value="<%= @ticket.token %>"
+           data-yaxi-search-messages-value="<%= json_escape(t("yaxi_items.javascript").to_json) %>">
+    <form class="space-y-3" data-action="submit->yaxi-search#search">
       <label class="block text-sm font-medium text-primary" for="yaxi-bank-search"><%= t("yaxi_items.connect.bank_label") %></label>
-      <input id="yaxi-bank-search" class="form-field__input w-full" autocomplete="off"
-             placeholder="<%= t("yaxi_items.connect.bank_placeholder") %>" data-yaxi-target="searchInput">
+      <%= render DS::SearchInput.new(
+            id: "yaxi-bank-search",
+            placeholder: t("yaxi_items.connect.bank_placeholder"),
+            aria_label: t("yaxi_items.connect.bank_label"),
+            data: { yaxi_search_target: "input" }
+          ) %>
       <div class="flex justify-end">
         <%= render DS::Button.new(text: t("yaxi_items.connect.search"), type: "submit") %>
       </div>
     </form>
-    <div class="space-y-2" data-yaxi-target="results"></div>
+    <div class="space-y-2" data-yaxi-search-target="results"></div>
+    <template data-yaxi-search-target="choiceTemplate">
+      <%= render DS::Button.new(text: "", type: "button", variant: "outline", class: "w-full justify-start") %>
+    </template>
   </section>
 
-  <section class="hidden bg-container shadow-border-xs rounded-xl p-5 space-y-4" data-yaxi-target="credentialsSection">
+  <section class="hidden bg-container shadow-border-xs rounded-xl p-5 space-y-4"
+           data-controller="yaxi-credentials"
+           data-action="yaxi-search:selected@window->yaxi-credentials#selectBank">
     <div>
-      <h2 class="font-medium text-primary" data-yaxi-target="bankName"></h2>
-      <p class="mt-1 text-sm text-secondary" data-yaxi-target="advice"></p>
+      <h2 class="font-medium text-primary" data-yaxi-credentials-target="bankName"></h2>
+      <p class="mt-1 text-sm text-secondary" data-yaxi-credentials-target="advice"></p>
     </div>
-    <form class="space-y-3" data-action="submit->yaxi#submitCredentials">
-      <div data-yaxi-target="userIdGroup">
-        <label class="block text-sm font-medium text-primary" for="yaxi-user-id" data-yaxi-target="userIdLabel"></label>
-        <input id="yaxi-user-id" class="form-field__input w-full" autocomplete="username" data-yaxi-target="userIdInput">
+    <form class="space-y-3" data-action="submit->yaxi-credentials#submit">
+      <div data-yaxi-credentials-target="userIdGroup">
+        <label class="block text-sm font-medium text-primary" for="yaxi-user-id" data-default-label="<%= t("yaxi_items.javascript.user_id") %>"><%= t("yaxi_items.javascript.user_id") %></label>
+        <input id="yaxi-user-id" class="form-field__input w-full" autocomplete="username" data-yaxi-credentials-target="userId">
       </div>
-      <div data-yaxi-target="passwordGroup">
-        <label class="block text-sm font-medium text-primary" for="yaxi-password" data-yaxi-target="passwordLabel"></label>
-        <input id="yaxi-password" type="password" class="form-field__input w-full" autocomplete="current-password" data-yaxi-target="passwordInput">
+      <div data-yaxi-credentials-target="passwordGroup">
+        <label class="block text-sm font-medium text-primary" for="yaxi-password" data-default-label="<%= t("yaxi_items.javascript.password") %>"><%= t("yaxi_items.javascript.password") %></label>
+        <input id="yaxi-password" type="password" class="form-field__input w-full" autocomplete="current-password" data-yaxi-credentials-target="password">
       </div>
       <div class="flex justify-end">
         <%= render DS::Button.new(text: t("yaxi_items.connect.connect"), type: "submit") %>
