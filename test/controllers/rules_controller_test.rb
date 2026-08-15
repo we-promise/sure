@@ -244,7 +244,7 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "clear_ai_cache enqueues job and records the request in the debug log" do
-    assert_enqueued_with(job: ClearAiCacheJob) do
+    assert_enqueued_with(job: ClearAiCacheJob, args: [ @user.family ]) do
       post clear_ai_cache_rules_url
     end
 
@@ -257,7 +257,7 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "clear_ai_cache records an error when the job cannot be enqueued" do
-    ClearAiCacheJob.expects(:perform_later).raises(StandardError, "queue is down")
+    ClearAiCacheJob.expects(:perform_later).with(@user.family).raises(StandardError, "queue is down")
 
     assert_raises(StandardError) { post clear_ai_cache_rules_url }
 
@@ -270,7 +270,7 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
   # raising it, which would otherwise log the reset as requested and redirect
   # with a success notice while nothing was queued.
   test "clear_ai_cache records an error when the job is silently not enqueued" do
-    ClearAiCacheJob.stubs(:perform_later).returns(false)
+    ClearAiCacheJob.stubs(:perform_later).with(@user.family).returns(false)
 
     assert_raises(ActiveJob::EnqueueError) { post clear_ai_cache_rules_url }
 
@@ -278,5 +278,21 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_match "AI cache reset could not be enqueued", entry.message
     assert_equal "ActiveJob::EnqueueError", entry.metadata["error_class"]
     assert_empty DebugLogEntry.where(category: ClearAiCacheJob::DEBUG_CATEGORY, level: "info")
+  end
+
+  # When the adapter reports the failure, the yielded job carries the underlying
+  # cause — the detail an operator actually needs. The fallback above can only
+  # say that nothing was queued.
+  test "clear_ai_cache surfaces the queue adapter's error when the job carries one" do
+    failed_job = ClearAiCacheJob.new(@user.family)
+    failed_job.enqueue_error = ActiveJob::EnqueueError.new("connection refused")
+    ClearAiCacheJob.stubs(:perform_later).with(@user.family).yields(failed_job).returns(false)
+
+    error = assert_raises(ActiveJob::EnqueueError) { post clear_ai_cache_rules_url }
+    assert_equal "connection refused", error.message
+
+    entry = DebugLogEntry.where(category: ClearAiCacheJob::DEBUG_CATEGORY, level: "error").sole
+    assert_match "connection refused", entry.message
+    assert_equal "connection refused", entry.metadata["error_message"]
   end
 end
