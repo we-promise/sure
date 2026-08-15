@@ -60,10 +60,11 @@ class Provider::EnableBanking
     last_error = nil
 
     consent_seconds_ladder(maximum_consent_validity).each do |seconds|
+      valid_until = Time.current + seconds.seconds
       body = build_authorization_body(
         aspsp_name: aspsp_name, aspsp_country: aspsp_country, redirect_url: redirect_url,
         state: state, psu_type: psu_type, language: language, auth_method: auth_method,
-        valid_until: Time.current + seconds.seconds
+        valid_until: valid_until
       )
 
       response = self.class.post(
@@ -73,7 +74,7 @@ class Provider::EnableBanking
       )
 
       begin
-        return handle_response(response)
+        return handle_response(response).merge(requested_valid_until: valid_until)
       rescue EnableBankingError => e
         raise unless e.wrong_consent_validity?
         last_error = e

@@ -685,6 +685,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.string "psu_type"
     t.jsonb "raw_institution_payload"
     t.jsonb "raw_payload"
+    t.datetime "requested_consent_valid_until"
     t.boolean "scheduled_for_deletion", default: false
     t.datetime "session_expires_at"
     t.string "session_id"
