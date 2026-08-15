@@ -32,6 +32,7 @@ class AccountsController < ApplicationController
     @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
+    @yaxi_items = visible_provider_items(family.yaxi_items.ordered.includes(yaxi_accounts: :account_provider))
 
     preload_latest_sync_metadata_for_index!
 

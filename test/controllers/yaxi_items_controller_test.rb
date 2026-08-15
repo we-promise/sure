@@ -1,0 +1,139 @@
+require "test_helper"
+
+class YaxiItemsControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    @user = users(:family_admin)
+    @family = @user.family
+    @secret_bytes = "y" * 32
+    @provider = Provider::Yaxi.new(
+      key_id: "api-key-controller-test",
+      secret: Base64.strict_encode64(@secret_bytes),
+      environment: "integration"
+    )
+    Provider::YaxiAdapter.stubs(:configured?).returns(true)
+    Provider::YaxiAdapter.stubs(:build_provider).returns(@provider)
+    sign_in @user
+  end
+
+  test "accepts a verified accounts result and creates linked accounts" do
+    item = @family.yaxi_items.create!(name: "YAXI Connection")
+    ticket = @family.yaxi_tickets.create!(
+      user: @user,
+      service: "Accounts",
+      expires_at: 5.minutes.from_now
+    )
+    result_jwt = sign_result(
+      ticket,
+      [
+        {
+          iban: "DE89370400440532013000",
+          bic: "COBADEFFXXX",
+          currency: "EUR",
+          displayName: "Main account",
+          status: "Available",
+          type: "Current"
+        }
+      ]
+    )
+
+    assert_difference [ "YaxiAccount.count", "Account.count", "AccountProvider.count" ], 1 do
+      post complete_yaxi_item_path(item), params: {
+        ticket_id: ticket.id,
+        result_jwt: result_jwt,
+        connection_info: { id: "connection-test", displayName: "Test Bank" }
+      }, as: :json
+    end
+
+    assert_response :success
+    assert_equal refresh_yaxi_item_path(item), response.parsed_body.fetch("redirect_url")
+    assert_predicate ticket.reload, :consumed_at?
+    assert_equal "Test Bank", item.reload.institution_name
+  end
+
+  test "rejects a result signed for another ticket" do
+    item = @family.yaxi_items.create!(name: "YAXI Connection")
+    ticket = @family.yaxi_tickets.create!(
+      user: @user,
+      service: "Accounts",
+      expires_at: 5.minutes.from_now
+    )
+
+    post complete_yaxi_item_path(item), params: {
+      ticket_id: ticket.id,
+      result_jwt: sign_result(ticket, [], ticket_id: SecureRandom.uuid),
+      connection_info: { id: "connection-test", displayName: "Test Bank" }
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_nil ticket.reload.consumed_at
+  end
+
+  test "applies the hash-shaped balances payload returned by YAXI" do
+    item = @family.yaxi_items.create!(name: "YAXI Connection")
+    item.complete_connection!(
+      accounts_result: [
+        {
+          iban: "DE89370400440532013000",
+          currency: "EUR",
+          displayName: "Main account",
+          status: "Available",
+          type: "Current"
+        }
+      ],
+      connection_info: { "id" => "connection-test", "displayName" => "Test Bank" }
+    )
+    yaxi_account = item.yaxi_accounts.first
+    balances_ticket = @family.yaxi_tickets.create!(
+      user: @user,
+      service: "Balances",
+      expires_at: 5.minutes.from_now
+    )
+    transaction_ticket = @family.yaxi_tickets.create!(
+      user: @user,
+      service: "Transactions",
+      service_data: {
+        account: { iban: yaxi_account.iban, currency: yaxi_account.currency },
+        range: { from: 90.days.ago.to_date.iso8601 }
+      },
+      expires_at: 5.minutes.from_now
+    )
+
+    post apply_refresh_yaxi_item_path(item), params: {
+      balances_ticket_id: balances_ticket.id,
+      balances_result_jwt: sign_result(
+        balances_ticket,
+        {
+          balances: [
+            {
+              account: { iban: yaxi_account.iban },
+              balances: [ { amount: "123.45", currency: "EUR", balanceType: "Booked" } ]
+            }
+          ]
+        }
+      ),
+      transaction_results: [
+        {
+          account_id: yaxi_account.id,
+          ticket_id: transaction_ticket.id,
+          result_jwt: sign_result(transaction_ticket, [])
+        }
+      ]
+    }, as: :json
+
+    assert_response :success
+    assert_equal BigDecimal("123.45"), yaxi_account.reload.current_balance
+    assert_predicate balances_ticket.reload, :consumed_at?
+    assert_predicate transaction_ticket.reload, :consumed_at?
+  end
+
+  private
+
+    def sign_result(ticket, data, ticket_id: ticket.id)
+      JWT.encode(
+        { data: { data: data, ticketId: ticket_id, timestamp: Time.current.iso8601 }, exp: 5.minutes.from_now.to_i },
+        @secret_bytes,
+        "HS256",
+        { kid: "api-key-controller-test" }
+      )
+    end
+end

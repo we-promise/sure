@@ -1,0 +1,25 @@
+<div class="hidden" data-yaxi-target="progress">
+  <div class="flex items-center gap-2 text-sm text-secondary">
+    <%= icon "loader", size: "sm", class: "animate-spin" %>
+    <span data-yaxi-target="progressText"><%= t("yaxi_items.interaction.working") %></span>
+  </div>
+</div>
+
+<div class="hidden" data-yaxi-target="error">
+  <%= render DS::Alert.new(variant: :error, message: tag.span("", data: { yaxi_target: "errorText" })) %>
+</div>
+
+<section class="hidden bg-container shadow-border-xs rounded-xl p-5 space-y-4" data-yaxi-target="dialog">
+  <p class="text-sm text-primary whitespace-pre-line" data-yaxi-target="dialogMessage"></p>
+  <img class="hidden max-w-full mx-auto" alt="" data-yaxi-target="dialogImage">
+  <div class="space-y-2" data-yaxi-target="dialogOptions"></div>
+  <div class="hidden" data-yaxi-target="dialogFieldGroup">
+    <input class="form-field__input w-full" autocomplete="one-time-code" data-yaxi-target="dialogField">
+  </div>
+  <div class="flex justify-end">
+    <%= render DS::Button.new(
+          text: t("yaxi_items.interaction.continue"),
+          data: { action: "yaxi#continueDialog", yaxi_target: "dialogContinue" }
+        ) %>
+  </div>
+</section>

@@ -204,6 +204,16 @@ Rails.application.routes.draw do
       post :new_connection
     end
   end
+
+  resources :yaxi_items, only: [ :new, :create, :destroy ] do
+    member do
+      get :connect
+      post :complete
+      get :refresh
+      post :apply_refresh
+    end
+  end
+
   get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"

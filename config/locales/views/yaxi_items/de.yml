@@ -1,0 +1,55 @@
+---
+de:
+  yaxi_items:
+    not_configured: YAXI ist nicht konfiguriert. Hinterlege zuerst API-Key-ID und Secret in den Provider-Einstellungen.
+    new:
+      title: YAXI verbinden
+      description: Im nächsten Schritt wählst du deine Bank und autorisierst den Zugriff.
+      privacy_title: Datenschutz von Grund auf
+      privacy_message: Deine Online-Banking-Zugangsdaten werden in diesem Browser verschlüsselt und niemals an Sure gesendet.
+      start: Weiter
+    connect:
+      title: Bank über YAXI verbinden
+      description: Suche deine Bank und folge anschließend ihrem sicheren Autorisierungsablauf.
+      security_title: Deine Zugangsdaten bleiben privat
+      security_message: Bankzugangsdaten gehen direkt aus diesem Browser durch den verschlüsselten YAXI-Kanal. Sure erhält ausschließlich signierte Kontoergebnisse.
+      bank_label: Bank, BIC oder IBAN
+      bank_placeholder: Bank suchen
+      search: Suchen
+      connect: Sicher verbinden
+    refresh:
+      title: YAXI-Verbindung aktualisieren
+      description: Aktuelle Salden und Buchungen von %{bank} abrufen.
+      browser_note: Die Aktualisierung benötigt den Browser, in dem die Verbindung erstellt wurde, da die verschlüsselten Zugangsdaten lokal gespeichert sind.
+      start: Aktualisierung starten
+      not_connected: Verbinde diese YAXI-Verbindung erneut, bevor du sie aktualisierst.
+    interaction:
+      working: Sichere Verbindung wird vorbereitet…
+      continue: Weiter
+    item:
+      provider_name: YAXI
+      last_refreshed: Vor %{time} aktualisiert
+      not_refreshed: Noch nicht aktualisiert
+      refresh: Aktualisieren
+      delete: Verbindung löschen
+    destroy:
+      success: YAXI-Verbindung entfernt
+    errors:
+      unexpected: Sure konnte das YAXI-Ergebnis nicht verarbeiten. Bitte starte die Aktualisierung erneut.
+    javascript:
+      searching: Banken werden gesucht…
+      no_bank: Keine passende Bank gefunden.
+      user_id: Benutzerkennung
+      password: Passwort / PIN
+      connecting: Sichere Verbindung zur Bank wird aufgebaut…
+      credentials_missing: Die verschlüsselten Bankzugangsdaten sind in diesem Browser nicht verfügbar. Verbinde die Bank erneut.
+      refreshing_balances: Salden werden aktualisiert…
+      refreshing_transactions: Buchungen werden aktualisiert (__CURRENT__/__TOTAL__)…
+      unsupported_response: YAXI hat eine nicht unterstützte Antwort geliefert.
+      confirm_request: Bestätige diese Anfrage bei deiner Bank.
+      waiting: Auf deine Bank wird gewartet…
+      redirect_missing: Die YAXI-Weiterleitungssitzung konnte nicht wiederhergestellt werden.
+      completing_authorization: Bankautorisierung wird abgeschlossen…
+      saving: Verifizierte Bankdaten werden gespeichert…
+      save_failed: Sure konnte das YAXI-Ergebnis nicht speichern.
+      request_failed: Die YAXI-Anfrage ist fehlgeschlagen.
