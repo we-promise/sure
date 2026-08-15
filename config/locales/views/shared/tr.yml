@@ -5,6 +5,7 @@ tr:
       redis_configured: Redis artık düzgün şekilde yapılandırıldı! Artık Sure uygulamanızı
         kurabilirsiniz.
   shared:
+    dot_separator: "·"
     cancel: İptal
     confirm_modal:
       accept: Onayla

@@ -1,6 +1,7 @@
 ---
 es:
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Confirmar
       body_html: "<p>No podrás deshacer esta decisión</p>"

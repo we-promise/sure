@@ -4,6 +4,7 @@ zh-CN:
     self_hostable:
       redis_configured: Redis 现已正确配置！您现在可以设置您的 Sure 应用了。
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: 确认
       body_html: "<p>此决定无法撤销</p>"

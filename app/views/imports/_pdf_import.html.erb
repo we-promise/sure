@@ -26,6 +26,9 @@
         <div class="space-y-2">
           <h2 class="font-medium text-primary"><%= t("imports.pdf_import.document_type_label") %></h2>
           <p class="text-sm text-secondary px-3 py-2 bg-container-inset rounded-lg">
+            <%# PDF document_type is AI-derived and not constrained to Import::DOCUMENT_TYPES;
+                unknown values should be shown as the localized fallback rather
+                than exposing an untranslated/internal enum string. %>
             <%= t("imports.document_types.#{import.document_type}", default: t("imports.pdf_import.unknown_document_type")) %>
           </p>
         </div>

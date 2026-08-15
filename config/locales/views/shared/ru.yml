@@ -5,6 +5,7 @@ ru:
       redis_configured: Redis теперь настроен правильно! Вы можете настроить своё
         приложение Sure.
   shared:
+    dot_separator: "·"
     cancel: Отмена
     confirm_modal:
       accept: Подтвердить
