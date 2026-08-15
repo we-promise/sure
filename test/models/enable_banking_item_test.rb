@@ -103,4 +103,57 @@ class EnableBankingItemTest < ActiveSupport::TestCase
 
     assert_equal original.to_i, @item.reload.session_expires_at.to_i
   end
+
+  test "parse_session_expiry falls back to the configured consent_days when valid_until is missing" do
+    original = Rails.configuration.x.enable_banking.consent_days
+    Rails.configuration.x.enable_banking.consent_days = 120
+
+    travel_to Time.zone.parse("2026-01-01 12:00:00") do
+      expiry = @item.send(:parse_session_expiry, { access: {} })
+
+      assert_equal 120.days.from_now.to_i, expiry.to_i
+    end
+  ensure
+    Rails.configuration.x.enable_banking.consent_days = original
+  end
+
+  test "with_stale_psu_ip matches items whose session has expired" do
+    expired = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Expired", country_code: "DE",
+      application_id: "app", client_certificate: "cert",
+      last_psu_ip: "1.2.3.4", session_id: "sess", session_expires_at: 1.day.ago
+    )
+
+    assert_includes EnableBankingItem.with_stale_psu_ip, expired
+  end
+
+  test "with_stale_psu_ip excludes items with a still-valid session" do
+    active = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Active", country_code: "DE",
+      application_id: "app", client_certificate: "cert",
+      last_psu_ip: "1.2.3.4", session_id: "sess", session_expires_at: 1.day.from_now
+    )
+
+    assert_not_includes EnableBankingItem.with_stale_psu_ip, active
+  end
+
+  test "with_stale_psu_ip matches abandoned authorizations once the configured window elapses" do
+    abandoned = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Abandoned", country_code: "DE",
+      application_id: "app", client_certificate: "cert", last_psu_ip: "1.2.3.4"
+    )
+    abandoned.update_column(:updated_at, (Rails.configuration.x.enable_banking.consent_days + 1).days.ago)
+
+    assert_includes EnableBankingItem.with_stale_psu_ip, abandoned
+  end
+
+  test "with_stale_psu_ip excludes items without a stored last_psu_ip" do
+    clean = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Clean", country_code: "DE",
+      application_id: "app", client_certificate: "cert",
+      session_id: "sess", session_expires_at: 1.day.ago
+    )
+
+    assert_not_includes EnableBankingItem.with_stale_psu_ip, clean
+  end
 end

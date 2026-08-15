@@ -27,6 +27,20 @@ class EnableBankingItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  # Nullify last_psu_ip once it's no longer needed for provider sync — either the
+  # consent session has actually expired, or (for items that never completed
+  # authorization, so session_expires_at is nil) once the same window we'd
+  # request from an ASPSP has elapsed. Ties retention to the accepted/configured
+  # consent duration instead of an independent hardcoded constant.
+  scope :with_stale_psu_ip, -> {
+    fallback_cutoff = Rails.configuration.x.enable_banking.consent_days.days.ago
+    where.not(last_psu_ip: nil).where(
+      "(session_expires_at IS NOT NULL AND session_expires_at <= :now) OR " \
+      "(session_expires_at IS NULL AND updated_at <= :fallback_cutoff)",
+      now: Time.current, fallback_cutoff: fallback_cutoff
+    )
+  }
+
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
@@ -47,8 +61,6 @@ class EnableBankingItem < ApplicationRecord
   def needs_authorization?
     !session_valid?
   end
-
-  # TODO: implement data retention policy for last_psu_ip (GDPR/CCPA — nullify after session expiry or 90 days)
 
   validate :psu_type_in_aspsp_types
 
@@ -388,15 +400,17 @@ class EnableBankingItem < ApplicationRecord
     end
 
     def parse_session_expiry(session_result)
+      default_expiry = Rails.configuration.x.enable_banking.consent_days.days.from_now
+
       if session_result[:access].present? && session_result[:access][:valid_until].present?
         parsed = Time.zone.parse(session_result[:access][:valid_until])
-        parsed || 90.days.from_now
+        parsed || default_expiry
       else
-        90.days.from_now
+        default_expiry
       end
     rescue ArgumentError, TypeError => e
       Rails.logger.warn "EnableBankingItem #{id} - Failed to parse session expiry: #{e.message}"
-      90.days.from_now
+      Rails.configuration.x.enable_banking.consent_days.days.from_now
     end
 
     def import_accounts_from_session(accounts_data)

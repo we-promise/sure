@@ -11,6 +11,12 @@ class Provider::EnableBanking
   # suggesting a corrected date_from in the response payload.
   FALLBACK_TRANSACTIONS_DATE_FROM_DAYS = [ 89, 60, 30 ].freeze
 
+  # Progressive fallback windows (days) for retrying an authorization request when
+  # an ASPSP rejects the requested consent duration (e.g. Trade Republic caps at
+  # exactly 90 days). Mirrors FALLBACK_TRANSACTIONS_DATE_FROM_DAYS's proven pattern.
+  CONSENT_FALLBACK_DAYS = [ 180, 90, 45, 30 ].freeze
+  CONSENT_SAFETY_MARGIN_SECONDS = 60 # shaved off every attempt to guard against clock/network drift
+
   headers "User-Agent" => "Sure Finance Enable Banking Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
@@ -42,7 +48,8 @@ class Provider::EnableBanking
   # @param redirect_url [String] URL to redirect user back to after auth
   # @param state [String, nil] State parameter to pass through
   # @param psu_type [String] "personal" or "business"
-  # @param maximum_consent_validity [Integer, nil] Max consent duration in seconds from ASPSP (nil = use 90 days)
+  # @param maximum_consent_validity [Integer, nil] Max consent duration in seconds from ASPSP
+  #   (nil = use configured default, currently 180 days, see ENABLE_BANKING_CONSENT_DAYS)
   # @param language [String, nil] Two-letter language code (e.g. "fr", "en")
   # @param auth_method [String, nil] Name of a specific authentication method to use (from the ASPSP's
   #   auth_methods list). Required to drive DECOUPLED/EMBEDDED banks that expose several methods; when nil
@@ -50,34 +57,30 @@ class Provider::EnableBanking
   # @return [Hash] Contains :url and :authorization_id
   def start_authorization(aspsp_name:, aspsp_country:, redirect_url:, state: nil,
                           psu_type: "personal", maximum_consent_validity: nil, language: nil, auth_method: nil)
-    max_seconds = maximum_consent_validity ? [ maximum_consent_validity, 1 ].max : 90.days.to_i
-    valid_until = [ Time.current + max_seconds.seconds, Time.current + 90.days ].min
+    last_error = nil
 
-    body = {
-      access: {
-        valid_until: valid_until.iso8601,
-        balances: true,
-        transactions: true
-      },
-      aspsp: {
-        name: aspsp_name,
-        country: aspsp_country
-      },
-      state: state,
-      redirect_url: redirect_url,
-      psu_type: psu_type
-    }
-    body[:language] = language if language.present?
-    body[:auth_method] = auth_method if auth_method.present?
-    body = body.compact
+    consent_seconds_ladder(maximum_consent_validity).each do |seconds|
+      body = build_authorization_body(
+        aspsp_name: aspsp_name, aspsp_country: aspsp_country, redirect_url: redirect_url,
+        state: state, psu_type: psu_type, language: language, auth_method: auth_method,
+        valid_until: Time.current + seconds.seconds
+      )
 
-    response = self.class.post(
-      "#{BASE_URL}/auth",
-      headers: auth_headers.merge("Content-Type" => "application/json"),
-      body: body.to_json
-    )
+      response = self.class.post(
+        "#{BASE_URL}/auth",
+        headers: auth_headers.merge("Content-Type" => "application/json"),
+        body: body.to_json
+      )
 
-    handle_response(response)
+      begin
+        return handle_response(response)
+      rescue EnableBankingError => e
+        raise unless e.wrong_consent_validity?
+        last_error = e
+      end
+    end
+
+    raise last_error
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     raise EnableBankingError.new("Exception during POST request: #{e.message}", :request_failed)
   end
@@ -235,6 +238,55 @@ class Provider::EnableBanking
         .find { |candidate| current.nil? || candidate > current }
     end
 
+    # Builds the ladder of consent durations (seconds) to try, most-preferred first:
+    # 1. The ASPSP's own advertised limit (authoritative) if present and sane,
+    #    capped defensively at our own configured ceiling.
+    # 2. Progressively shorter fallback rungs (only ones strictly shorter than the
+    #    first, so the ladder always makes forward progress and terminates).
+    # Every rung is shaved by a small safety margin so client/server clock drift
+    # and network latency can never push the *actual* requested duration over the
+    # rung's exact boundary (root cause of #2857).
+    def consent_seconds_ladder(maximum_consent_validity)
+      cap_seconds = Rails.configuration.x.enable_banking.consent_days.days.to_i
+      aspsp_seconds = normalized_consent_seconds(maximum_consent_validity)
+
+      primary = [ aspsp_seconds || cap_seconds, cap_seconds ].min
+      fallback_seconds = CONSENT_FALLBACK_DAYS.map(&:days).map(&:to_i).select { |s| s < primary }
+
+      ([ primary ] + fallback_seconds).map { |s| s - consent_safety_margin(s) }.uniq
+    end
+
+    def consent_safety_margin(seconds)
+      [ CONSENT_SAFETY_MARGIN_SECONDS, seconds - 1 ].min
+    end
+
+    def normalized_consent_seconds(value)
+      seconds = Integer(value)
+      seconds.positive? ? seconds : nil
+    rescue TypeError, ArgumentError
+      nil
+    end
+
+    def build_authorization_body(aspsp_name:, aspsp_country:, redirect_url:, state:, psu_type:, language:, auth_method:, valid_until:)
+      body = {
+        access: {
+          valid_until: valid_until.iso8601,
+          balances: true,
+          transactions: true
+        },
+        aspsp: {
+          name: aspsp_name,
+          country: aspsp_country
+        },
+        state: state,
+        redirect_url: redirect_url,
+        psu_type: psu_type
+      }
+      body[:language] = language if language.present?
+      body[:auth_method] = auth_method if auth_method.present?
+      body.compact
+    end
+
     def safe_psu_headers(headers)
       headers.except("Authorization", :Authorization, "Accept", :Accept, "Content-Type", :"Content-Type")
     end
@@ -330,6 +382,17 @@ class Provider::EnableBanking
 
       def wrong_transactions_period?
         error_type == :validation_error && response_data.is_a?(Hash) && response_data[:error] == "WRONG_TRANSACTIONS_PERIOD"
+      end
+
+      # WRONG_REQUEST_PARAMETERS is a generic error code shared by several unrelated
+      # validation failures (e.g. a bad redirect_url, handled separately by the
+      # controller). Match on the message text so we only retry with a shorter
+      # consent window for the specific rejection this ladder is meant to recover
+      # from, instead of silently masking other validation errors.
+      def wrong_consent_validity?
+        error_type == :validation_error && response_data.is_a?(Hash) &&
+          response_data[:error] == "WRONG_REQUEST_PARAMETERS" &&
+          response_data[:message].to_s.match?(/consent validity/i)
       end
 
       def corrected_date_from
