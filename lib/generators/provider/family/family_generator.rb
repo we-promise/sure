@@ -30,6 +30,20 @@ require "rails/generators/active_record"
 class Provider::FamilyGenerator < Rails::Generators::NamedBase
   include Rails::Generators::Migration
 
+  # Columns the migration template already defines on the items table. A provider whose
+  # API happens to use one of these names (institution_id is the obvious one) would
+  # otherwise emit a duplicate t.string and abort db:migrate with
+  # "you can't define an already defined column". These are dropped from the
+  # provider-specific block instead, with a notice, since the standard column serves the
+  # same purpose.
+  RESERVED_ITEM_COLUMNS = %w[
+    family family_id name
+    institution_id institution_name institution_domain institution_url institution_color
+    status scheduled_for_deletion pending_account_setup
+    sync_start_date raw_payload raw_institution_payload
+    created_at updated_at id
+  ].freeze
+
   source_root File.expand_path("templates", __dir__)
 
   argument :fields, type: :array, default: [], banner: "field:type[:secret] field:type[:secret]"
@@ -46,6 +60,12 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   def validate_fields
     if parsed_fields.empty?
       say "Warning: No fields specified. You'll need to add them manually later.", :yellow
+    end
+
+    reserved = parsed_fields.map { |f| f[:name] } & RESERVED_ITEM_COLUMNS
+    if reserved.any?
+      say "Note: #{reserved.join(', ')} already exist on the items table and will not be " \
+          "duplicated in the provider-specific block.", :yellow
     end
 
     # Validate field types
@@ -627,15 +647,33 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
         return
       end
 
-      # Find the enum :source line and add the new provider
-      # Pattern: enum :source, { key: "value", ... }
-      if content =~ /(enum :source, \{[^}]+)(})/
-        # Insert the new provider before the closing brace
-        updated_content = content.sub(
-          /(enum :source, \{[^}]+)(})/,
-          "\\1, #{file_name}: \"#{file_name}\"\\2"
-        )
-        write_file(model_path, updated_content)
+      # Find the enum :source hash and append the new provider as its last entry.
+      #
+      # Appending immediately before the closing brace is wrong when the hash spans
+      # multiple lines: the last entry is followed by a newline, so ", foo: \"foo\"}"
+      # lands on its own line and Ruby has already ended the expression, producing a
+      # syntax error that only shows up later as an eager-load failure. Instead the
+      # comma is attached to the final entry and the new entry is placed on its own
+      # line, matching the surrounding indentation.
+      if content =~ /(enum :source, \{)([^}]*)(\})/m
+        prefix, body, suffix = ::Regexp.last_match(1), ::Regexp.last_match(2), ::Regexp.last_match(3)
+
+        trailing = body[/\s*\z/] || ""
+        core = body[0...(body.length - trailing.length)]
+        entry = "#{file_name}: \"#{file_name}\""
+
+        new_body =
+          if trailing.include?("\n")
+            # Multi-line: indent to match the last entry, not the closing brace.
+            indent = core[/\n([ \t]*)[^\n]*\z/, 1] || "    "
+            "#{core},\n#{indent}#{entry}#{trailing}"
+          else
+            "#{core}, #{entry}#{trailing}"
+          end
+
+        # Block form: a string replacement would interpret any backslash sequence in the
+        # captured hash body as a backreference.
+        write_file(model_path, content.sub(/(enum :source, \{)([^}]*)(\})/m) { prefix + new_body + suffix })
         say "Added #{file_name} to #{model_name} source enum", :green
       else
         say "Could not find source enum in #{model_name}", :yellow
@@ -809,6 +847,12 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
 
     def investment_provider?
       options[:type] == "investment"
+    end
+
+    # Fields destined for the provider-specific block of the migration: everything the
+    # user asked for that the standard column block does not already provide.
+    def custom_fields
+      @custom_fields ||= parsed_fields.reject { |f| RESERVED_ITEM_COLUMNS.include?(f[:name]) }
     end
 
     def parsed_fields

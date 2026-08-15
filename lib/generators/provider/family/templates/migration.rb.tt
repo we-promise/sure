@@ -27,7 +27,7 @@ class Create<%= class_name %>ItemsAndAccounts < ActiveRecord::Migration<%= migra
       t.jsonb :raw_institution_payload
 
       # Provider-specific credential fields
-<% parsed_fields.each do |field| -%>
+<% custom_fields.each do |field| -%>
       t.<%= field[:type] %> :<%= field[:name] %>
 <% end -%>
 
