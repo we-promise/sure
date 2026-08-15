@@ -42,8 +42,8 @@
             <% end %>
           <% end %>
         </span>
-        <% if rule.actions.count > 1 %>
-          <%= t(".and_more_actions", count: rule.actions.count - 1) %>
+        <% if rule.actions.size > 1 %>
+          <%= t(".and_more_actions", count: rule.actions.size - 1) %>
         <% end %>
       </p>
     </div>
