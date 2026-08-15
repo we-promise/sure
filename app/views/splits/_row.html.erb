@@ -27,12 +27,12 @@
              data-action="input->split-transaction#updateRemaining">
     </div>
     <% if removable %>
-      <button type="button"
-              class="w-8 h-8 shrink-0 flex items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
-              aria-label="<%= t("splits.new.remove_row") %>"
-              data-action="click->split-transaction#removeRow">
-        <%= icon "x", size: "sm" %>
-      </button>
+      <%= icon(
+        "x",
+        size: "sm",
+        as_button: true,
+        aria_label: t("splits.new.remove_row"),
+        data: { action: "split-transaction#removeRow" }) %>
     <% else %>
       <div class="w-8 shrink-0 hidden md:block"></div>
     <% end %>
