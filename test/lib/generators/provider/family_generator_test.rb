@@ -64,6 +64,27 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes result, 'gocardless: "gocardless"'
   end
 
+  test "does not emit a leading comma into an empty single-line enum" do
+    result = append("enum :source, {}")
+
+    assert_parses "x = #{result}"
+    assert_not_includes result, "{,"
+    assert_includes result, 'gocardless: "gocardless"'
+  end
+
+  test "does not emit a leading comma into an empty multiline enum" do
+    result = append(<<~RUBY)
+      class DataEnrichment < ApplicationRecord
+        enum :source, {
+        }
+      end
+    RUBY
+
+    assert_parses result
+    assert_not_includes result, "{,"
+    assert_includes result, 'gocardless: "gocardless"'
+  end
+
   test "returns nil when there is no source enum to update" do
     assert_nil append("class Foo < ApplicationRecord\nend\n")
   end
