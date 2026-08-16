@@ -111,9 +111,21 @@ class CoinbaseAccount::Processor
             elsif (rate = rates[holding.currency])
               holding.amount * rate
             else
-              Rails.logger.warn(
-                "CoinbaseAccount::Processor omitting holding #{holding.id} " \
-                "(#{holding.currency}→#{native_currency}): no exchange rate"
+              DebugLogEntry.capture(
+                category: "exchange_rate_conversion",
+                level: "warn",
+                message: "Cannot convert Coinbase holding into native currency",
+                source: self.class.name,
+                family: account.family,
+                account: account,
+                account_provider: coinbase_account.account_provider,
+                provider_key: "coinbase",
+                metadata: {
+                  holding_id: holding.id,
+                  date: Date.current,
+                  from_currency: holding.currency,
+                  to_currency: native_currency
+                }
               )
               0
             end

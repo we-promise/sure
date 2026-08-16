@@ -25,7 +25,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
           end_cash_balance = derive_cash_balance_on_date_from_total(
             total_balance: valuation.amount,
             date: date
-          )
+          ) || start_cash_balance
           end_non_cash_balance = valuation.amount - end_cash_balance
         else
           end_cash_balance = derive_end_cash_balance(start_cash_balance: start_cash_balance, date: date)
@@ -119,7 +119,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
       cash = derive_cash_balance_on_date_from_total(
         total_balance: account.opening_anchor_balance,
         date: account.opening_anchor_date
-      )
+      ) || 0
       [ cash, account.opening_anchor_balance - cash ]
     end
 

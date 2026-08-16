@@ -8,6 +8,8 @@ class Balance::SyncCache
   end
 
   def get_holdings_value(date)
+    return nil if unknown_holdings_value_dates.key?(date)
+
     holdings_value_by_date[date] || 0
   end
 
@@ -23,10 +25,13 @@ class Balance::SyncCache
     end
 
     # Converts holdings into account currency per date.
-    # Uses batched FX lookups (exact date, then nearest lookback) and omits any
-    # foreign-currency holding that still has no rate — never falls back to 1:1.
+    # Uses batched FX lookups (exact date, then nearest lookback). A date with
+    # any unconvertible foreign holding is unknown, rather than silently treating
+    # that holding as 1:1 or zero. Callers use nil to preserve existing balance
+    # components and avoid reclassifying unknown investments as cash.
     def holdings_value_by_date
       @holdings_value_by_date ||= begin
+        @unknown_holdings_value_dates = {}
         rows = account.holdings.pluck(:id, :date, :amount, :currency)
         rows.group_by { |(_id, date, _amount, _currency)| date }.each_with_object(Hash.new(0)) do |(date, day_rows), totals|
           foreign_currencies = day_rows
@@ -49,9 +54,21 @@ class Balance::SyncCache
 
             rate = rates[currency]
             if rate.nil?
-              Rails.logger.warn(
-                "Balance::SyncCache omitting holding #{id} " \
-                "(#{currency}→#{account.currency} on #{date}): no exchange rate"
+              @unknown_holdings_value_dates[date] = true
+              DebugLogEntry.capture(
+                category: "exchange_rate_conversion",
+                level: "warn",
+                message: "Cannot convert holding into account currency",
+                source: self.class.name,
+                family: account.family,
+                account: account,
+                account_provider: account_provider,
+                metadata: {
+                  holding_id: id,
+                  date: date,
+                  from_currency: currency,
+                  to_currency: account.currency
+                }
               )
               next
             end
@@ -60,6 +77,15 @@ class Balance::SyncCache
           end
         end
       end
+    end
+
+    def unknown_holdings_value_dates
+      holdings_value_by_date
+      @unknown_holdings_value_dates
+    end
+
+    def account_provider
+      @account_provider ||= account.account_providers.first
     end
 
     def converted_entries

@@ -187,11 +187,20 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal 150.0, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
-  test "omits foreign currency holdings when exchange rate is missing" do
+  test "returns unknown when a foreign holding cannot be converted" do
     security = Security.create!(ticker: "TST", name: "Test")
     @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
 
-    assert_equal 0, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+    DebugLogEntry.expects(:capture).with(
+      has_entries(
+        category: "exchange_rate_conversion",
+        account: @account,
+        family: @family,
+        metadata: has_entries(from_currency: "EUR", to_currency: "USD")
+      )
+    )
+
+    assert_nil Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
   test "batches FX lookups for foreign holdings on the same date" do

@@ -299,6 +299,32 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "unknown foreign holding values do not become derived cash or market flows" do
+    start_date = 2.days.ago.to_date
+    end_date = Date.current
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: start_date, balance: 1000 },
+        { type: "reconciliation", date: end_date, balance: 1000 }
+      ],
+      holdings: [
+        { ticker: "UNKNOWNFX", date: start_date, qty: 1, price: 100, amount: 100, currency: "EUR" },
+        { ticker: "UNKNOWNFX", date: start_date + 1.day, qty: 1, price: 100, amount: 100, currency: "EUR" },
+        { ticker: "UNKNOWNFX", date: end_date, qty: 1, price: 100, amount: 100, currency: "EUR" }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    calculated.each do |balance|
+      assert_equal 0, balance.cash_balance,
+        "An unconvertible holding must not be reclassified as derived cash on #{balance.date}"
+      assert_equal 0, balance.net_market_flows,
+        "Missing FX coverage must not create a phantom market move on #{balance.date}"
+    end
+  end
+
   test "depository account with transactions and balance reconciliations" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
