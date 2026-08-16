@@ -484,6 +484,26 @@ class HoldingTest < ActiveSupport::TestCase
     assert_nil @amzn.provider_security_id
   end
 
+  test "latest_security_order_sql quotes identifiers and allowlists partition columns" do
+    sql = Holding.latest_security_order_sql(
+      prefer_currency: "USD",
+      partition_columns: %w[account_id security_id]
+    )
+
+    assert_includes sql, %("holdings"."account_id")
+    assert_includes sql, %("holdings"."security_id")
+    assert_includes sql, %("holdings"."date" DESC)
+    assert_includes sql, %(("holdings"."currency" = 'USD') DESC)
+
+    empty_prefix = Holding.latest_security_order_sql(partition_columns: [])
+    refute_includes empty_prefix, "security_id"
+    assert_includes empty_prefix, %("holdings"."date" DESC)
+
+    assert_raises(ArgumentError) do
+      Holding.latest_security_order_sql(partition_columns: [ "security_id; DROP TABLE holdings--" ])
+    end
+  end
+
   private
 
     def load_holdings

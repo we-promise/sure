@@ -39,19 +39,39 @@ class Holding < ApplicationRecord
     account_provider_id.nil? && !cost_basis_locked? && cost_basis_source != "manual"
   end
 
+  # Columns allowed in DISTINCT ON / ORDER BY prefixes for +latest_security_order_sql+.
+  # Keep this allowlist tight — the fragment is wrapped in Arel.sql.
+  ALLOWED_LATEST_SECURITY_PARTITION_COLUMNS = %w[security_id account_id].freeze
+
   # Deterministic ORDER BY fragment for DISTINCT ON (... security_id) latest-row
   # selection when multiple currencies can exist on the same date.
   # Prefers non-zero qty (so neutralized orphan-currency cost-basis rows lose),
   # then provider rows, then a preferred currency (usually account currency),
   # then alphabetical currency for stability across syncs.
-  def self.latest_security_order_sql(prefer_currency: nil, table: table_name, partition_columns: %w[security_id])
+  #
+  # Identifiers are allowlisted/quoted. Pass partition_columns: [] when the caller
+  # already filtered to one security and only needs the date/currency tie-break
+  # (see Trade#realized_gain_loss).
+  def self.latest_security_order_sql(prefer_currency: nil, partition_columns: %w[security_id])
+    table = connection.quote_table_name(table_name)
+    columns = Array(partition_columns).map(&:to_s)
+    unknown = columns - ALLOWED_LATEST_SECURITY_PARTITION_COLUMNS
+    raise ArgumentError, "Unsupported partition_columns: #{unknown.join(', ')}" if unknown.any?
+
+    quoted_columns = columns.map { |column| "#{table}.#{connection.quote_column_name(column)}" }
+
     parts = []
-    parts.concat(partition_columns.map { |column| "#{table}.#{column}" }) if partition_columns.present?
-    parts << "#{table}.date DESC"
-    parts << "(#{table}.qty <> 0) DESC"
-    parts << "(#{table}.account_provider_id IS NOT NULL) DESC"
-    parts << sanitize_sql_array([ "(#{table}.currency = ?) DESC", prefer_currency ]) if prefer_currency.present?
-    parts << "#{table}.currency ASC"
+    parts.concat(quoted_columns)
+    parts << "#{table}.#{connection.quote_column_name('date')} DESC"
+    parts << "(#{table}.#{connection.quote_column_name('qty')} <> 0) DESC"
+    parts << "(#{table}.#{connection.quote_column_name('account_provider_id')} IS NOT NULL) DESC"
+    if prefer_currency.present?
+      parts << sanitize_sql_array([
+        "(#{table}.#{connection.quote_column_name('currency')} = ?) DESC",
+        prefer_currency
+      ])
+    end
+    parts << "#{table}.#{connection.quote_column_name('currency')} ASC"
     parts.join(", ")
   end
 
