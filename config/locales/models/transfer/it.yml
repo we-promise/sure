@@ -1,0 +1,22 @@
+---
+it:
+  activerecord:
+    errors:
+      models:
+        transfer:
+          attributes:
+            base:
+              inflow_cannot_be_in_multiple_transfers: La transazione in entrata non può far parte di più bonifici
+              must_be_from_different_accounts: Il bonifico deve avere conti diversi
+              must_be_from_same_family: Il bonifico deve essere dalla stessa famiglia
+              must_be_within_date_range: Le date delle transazioni del bonifico devono essere entro 4 giorni l'una dall'altra
+              must_have_opposite_amounts: Le transazioni del bonifico devono avere importi opposti
+              must_have_single_currency: Il bonifico deve avere una singola valuta
+              outflow_cannot_be_in_multiple_transfers: La transazione in uscita non può far parte di più bonifici
+          different_accounts: "Deve essere da conti diversi"
+          same_family: "Deve essere dalla stessa famiglia"
+          opposite_amounts: "Deve avere importi opposti"
+          within_days: "Deve essere entro %{count} giorni"
+  transfer:
+    name: Bonifico a %{to_account}
+    payment_name: Pagamento a %{to_account}

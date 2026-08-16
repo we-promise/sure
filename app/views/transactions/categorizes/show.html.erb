@@ -128,11 +128,11 @@
                         style="background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
                                border-color: color-mix(in oklab, <%= category.color %> 20%, transparent);
                                color: <%= category.color %>;"
-                        data-filter-name="<%= category.name %>">
+                        data-filter-name="<%= category.display_name %>">
                   <% if category.lucide_icon.present? %>
                     <%= icon(category.lucide_icon, size: "sm", color: "current") %>
                   <% end %>
-                  <%= category.name %>
+                  <%= category.display_name %>
                 </button>
               <% end %>
             </div>

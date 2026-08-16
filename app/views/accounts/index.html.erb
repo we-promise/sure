@@ -1,13 +1,6 @@
 <%= content_for :page_title, t(".accounts") %>
 <%= content_for :page_actions do %>
-  <%= icon(
-        "refresh-cw",
-        as_button: true,
-        size: "sm",
-        href: sync_all_accounts_path,
-        disabled: Current.family.syncing?,
-        frame: :_top
-      ) %>
+  <%= render "accounts/sync_controls", family: Current.family %>
   <%= render DS::Link.new(
     text: t(".new_account"),
     href: new_account_path(return_to: accounts_path),
@@ -17,7 +10,7 @@
   ) %>
 <% end %>
 
-<% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? && @lunchflow_items.empty? && @akahu_items.empty? && @up_items.empty? && @enable_banking_items.empty? && @coinstats_items.empty? && @coinbase_items.empty? && @mercury_items.empty? && @brex_items.empty? && @ibkr_items.empty? && @snaptrade_items.empty? && @indexa_capital_items.empty? && @sophtron_items.empty? && @binance_items.empty? && @questrade_items.empty? %>
+<% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? && @lunchflow_items.empty? && @redbark_items.empty? && @akahu_items.empty? && @up_items.empty? && @enable_banking_items.empty? && @coinstats_items.empty? && @coinbase_items.empty? && @mercury_items.empty? && @brex_items.empty? && @ibkr_items.empty? && @snaptrade_items.empty? && @indexa_capital_items.empty? && @sophtron_items.empty? && @binance_items.empty? && @kraken_items.empty? && @questrade_items.empty? && @wise_items.empty? %>
   <%= render "empty" %>
 <% else %>
   <div class="space-y-2">
@@ -31,6 +24,10 @@
 
     <% if @lunchflow_items.any? %>
       <%= render @lunchflow_items.sort_by(&:created_at) %>
+    <% end %>
+
+    <% if @redbark_items.any? %>
+      <%= render @redbark_items.sort_by(&:created_at) %>
     <% end %>
 
     <% if @akahu_items.any? %>
@@ -67,6 +64,14 @@
 
     <% if @binance_items.any? %>
       <%= render @binance_items.sort_by(&:created_at) %>
+    <% end %>
+
+    <% if @kraken_items.any? %>
+      <%= render @kraken_items.sort_by(&:created_at) %>
+    <% end %>
+
+    <% if @wise_items.any? %>
+      <%= render @wise_items.sort_by(&:created_at) %>
     <% end %>
 
     <% if @snaptrade_items.any? %>

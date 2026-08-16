@@ -10,7 +10,29 @@ class SimplefinEntry::Processor
     @shared_import_adapter = import_adapter
   end
 
+  # Pending detection: explicit flag OR inferred from posted=0 (epoch) + transacted_at.
+  # Public so callers like the prune_pending rake task share this definition instead of
+  # reimplementing it.
+  def self.pending?(simplefin_transaction)
+    data = simplefin_transaction.with_indifferent_access
+    return true if ActiveModel::Type::Boolean.new.cast(data[:pending])
+
+    posted_val = data[:posted]
+    transacted_val = data[:transacted_at]
+    # Compare against explicit zero representations (mirrors posted_date) rather than
+    # posted_val.to_i.zero?, which would also match non-numeric junk like "unavailable".
+    posted_is_epoch_zero = posted_val == 0 || posted_val == "0"
+    transacted_present = transacted_val.present? && transacted_val.to_i > 0
+    posted_is_epoch_zero && transacted_present
+  end
+
   def process
+    # Skip pending transactions when pending inclusion is disabled. Without this guard
+    # the SIMPLEFIN_INCLUDE_PENDING/syncs_include_pending setting only affects the API
+    # request, while pending rows already stored in raw_transactions_payload would still
+    # be (re)created here on every sync - including ones the user manually deleted.
+    return if pending? && !pending_enabled?
+
     import_adapter.import_transaction(
       external_id: external_id,
       amount: amount,
@@ -27,6 +49,23 @@ class SimplefinEntry::Processor
   private
     attr_reader :simplefin_transaction, :simplefin_account
 
+    # Whether pending transactions should be imported. Mirrors the resolution order used
+    # by SimplefinItem::Importer#fetch_accounts_data: env var (when set) over runtime Setting.
+    def pending_enabled?
+      if ENV["SIMPLEFIN_INCLUDE_PENDING"].present?
+        Rails.configuration.x.simplefin.include_pending
+      else
+        Setting.syncs_include_pending
+      end
+    end
+
+    # We only infer pending from posted=0, NOT from posted=nil/blank, because some
+    # providers omit posted dates even for settled transactions (which would cause
+    # false positives).
+    def pending?
+      self.class.pending?(data)
+    end
+
     def extra_metadata
       sf = {}
       # Preserve raw strings from provider so nothing is lost
@@ -36,27 +75,9 @@ class SimplefinEntry::Processor
       # Include provider-supplied extra hash if present
       sf["extra"] = data[:extra] if data[:extra].is_a?(Hash)
 
-      # Pending detection: explicit flag OR inferred from posted=0 + transacted_at
-      # SimpleFIN indicates pending via:
-      # 1. pending: true (explicit flag)
-      # 2. posted=0 (epoch zero) + transacted_at present (implicit - some banks use this pattern)
-      #
-      # Note: We only infer from posted=0, NOT from posted=nil/blank, because some providers
-      # don't supply posted dates even for settled transactions (would cause false positives).
-      # We always set the key (true or false) to ensure deep_merge overwrites any stale value
-      is_pending = if ActiveModel::Type::Boolean.new.cast(data[:pending])
-        true
-      else
-        # Infer pending ONLY when posted is explicitly 0 (epoch) AND transacted_at is present
-        # posted=nil/blank is NOT treated as pending (some providers omit posted for settled txns)
-        posted_val = data[:posted]
-        transacted_val = data[:transacted_at]
-        posted_is_epoch_zero = posted_val.present? && posted_val.to_i.zero?
-        transacted_present = transacted_val.present? && transacted_val.to_i > 0
-        posted_is_epoch_zero && transacted_present
-      end
-
-      if is_pending
+      # Pending detection handled by #pending?. We always set the key (true or false) to
+      # ensure deep_merge overwrites any stale value.
+      if pending?
         sf["pending"] = true
         Rails.logger.debug("SimpleFIN: flagged pending transaction #{external_id}")
       else

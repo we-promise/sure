@@ -2,6 +2,7 @@
 en:
   layouts:
     application:
+      insights: Insights
       privacy_mode: Toggle privacy mode
       resize_left_sidebar: Resize the accounts sidebar
       resize_right_sidebar: Resize the assistant sidebar
@@ -10,6 +11,7 @@ en:
         assistant: Assistant
         budgets: Budgets
         home: Home
+        plan: Plan
         reports: Reports
         goals: Goals
         transactions: Transactions

@@ -4,8 +4,39 @@ tr:
     securities:
       show:
         disable_mfa: 2FA'yı Devre Dışı Bırak
-        disable_mfa_confirm: İki faktörlü kimlik doğrulamayı devre dışı bırakmak istediğinizden emin misiniz?
-          Bu, hesabınızı daha az güvenli hale getirecektir.
+        disable_mfa_confirm: İki faktörlü kimlik doğrulamayı devre dışı bırakmak istediğinizden
+          emin misiniz? Bu işlem hesabınızı daha az güvenli hale getirecektir.
         enable_mfa: 2FA'yı Etkinleştir
-        mfa_description: Giriş yaparken kimlik doğrulama uygulamanızdan bir kod gerektirerek hesabınıza ekstra bir güvenlik katmanı ekleyin
+        mfa_description: Giriş yaparken kimlik doğrulama uygulamanızdan bir kod
+          isteyerek hesabınıza ekstra bir güvenlik katmanı ekleyin
+        mfa_disabled_description: Hesabınıza ekstra bir güvenlik katmanı eklemek için
+          2FA'yı etkinleştirin.
+        mfa_disabled_status_html: İki faktörlü kimlik doğrulama <span class="font-medium
+          text-red-600">devre dışı</span>
+        mfa_enabled_description: Hesabınız ek bir güvenlik katmanıyla korunmaktadır.
+        mfa_enabled_status_html: İki faktörlü kimlik doğrulama <span class="font-medium
+          text-green-600">etkin</span>
         mfa_title: İki Faktörlü Kimlik Doğrulama
+        webauthn_add: Geçiş anahtarı veya güvenlik anahtarı ekle
+        webauthn_added: "%{date} tarihinde eklendi"
+        webauthn_description: Giriş yaparken ikinci faktör olarak bir geçiş anahtarı,
+          Touch ID, Windows Hello veya donanım güvenlik anahtarı kullanın.
+        webauthn_empty: Henüz kayıtlı geçiş anahtarı veya güvenlik anahtarı yok.
+        webauthn_last_used: Son kullanım %{time_ago} önce
+        webauthn_name_label: Anahtar adı
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey vb.
+        webauthn_remove: Kaldır
+        webauthn_remove_confirm: Bu geçiş anahtarını veya güvenlik anahtarını kaldırmak
+          istediğinizden emin misiniz?
+        webauthn_remove_confirm_body: Giriş doğrulaması için kullanılabilmesi için
+          bu geçiş anahtarını veya güvenlik anahtarını yeniden kaydetmeniz gerekecektir.
+        webauthn_title: Geçiş anahtarları ve güvenlik anahtarları
+        webauthn_unsupported: Bu tarayıcı geçiş anahtarlarını veya güvenlik anahtarlarını
+          desteklemiyor.
+  webauthn_credentials:
+    default_name: Güvenlik anahtarı
+    failure: Bu geçiş anahtarı veya güvenlik anahtarı kaydedilemedi. Lütfen tekrar
+      deneyin.
+    mfa_required: Geçiş anahtarı veya güvenlik anahtarı eklemeden önce iki faktörlü
+      kimlik doğrulamayı etkinleştirin.
+    success: Geçiş anahtarı veya güvenlik anahtarı kaldırıldı.

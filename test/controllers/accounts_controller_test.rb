@@ -14,9 +14,41 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "index renders kraken items" do
+    kraken_item = kraken_items(:one)
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(kraken_item)}"
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success
+  end
+
+  test "show avoids N+1 transfer queries across paginated entries" do
+    queries = capture_sql_queries { get account_url(@account) }
+    assert_response :success
+
+    # Per-row transfer lookups (N+1 pattern) hit transfers with a single id
+    # Preloading batches them into IN(...) — assert no single-id lookups remain
+    per_row_transfer = queries.count { |q|
+      q.match?(/FROM "transfers".*WHERE.*"(inflow|outflow)_transaction_id"/) &&
+        !q.include?(" IN (")
+    }
+    assert_equal 0, per_row_transfer, "N+1 per-row transfer queries detected (#{per_row_transfer})"
+  end
+
+  test "show avoids N+1 split-parent queries across paginated entries" do
+    queries = capture_sql_queries { get account_url(@account) }
+    assert_response :success
+
+    # Per-row child-entry existence checks (N+1) hit entries with a single parent_entry_id
+    # @split_parent_entry_ids preloads this in one batch IN query
+    per_row_split = queries.count { |q|
+      q.match?(/FROM "entries".*WHERE.*"parent_entry_id"/) && !q.include?(" IN (")
+    }
+    assert_equal 0, per_row_split, "N+1 per-row split-parent queries detected (#{per_row_split})"
   end
 
   test "show lazily loads statement tab data unless statements tab is active" do
@@ -29,6 +61,39 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name='statement_year']", count: 0
     statements_path = account_path(@account, tab: "statements")
     assert_select "turbo-frame[src='#{statements_path}']"
+  end
+
+  test "statements tab links escape turbo frame for full-page navigation" do
+    # Upload a statement to ensure table rows render
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      file: uploaded_file(
+        filename: "test.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 test content"
+      ),
+      account: @account
+    )
+
+
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+
+    # Inbox link escapes frame
+    assert_select "a[href='#{account_statements_path}'][data-turbo-frame='_top']"
+
+    # Statement filename link escapes frame
+    assert_select "a[data-turbo-frame='_top']", text: statement.filename
+
+    # Eye/view icon escapes frame and opens in new tab
+    assert_select "a[target='_blank'][data-turbo-frame='_top'][aria-label='#{I18n.t("account_statements.table.view")}']"
+
+    # Edit icon escapes frame
+    assert_select "a[href='#{account_statement_path(statement)}'][data-turbo-frame='_top'][aria-label='#{I18n.t("account_statements.table.edit")}']"
+
+    # Unlink button escapes frame
+    assert_select "form[action='#{unlink_account_statement_path(statement)}'][data-turbo-frame='_top'] button"
   end
 
   test "statements tab shows coverage and upload for statement managers with account write access" do
@@ -106,6 +171,14 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
   end
 
+  test "renders investment account with gains chart view" do
+    get account_url(accounts(:investment), chart_view: "gains")
+
+    assert_response :success
+    assert_select "option[value=gains][selected]"
+    assert_select "p", text: I18n.t("UI.account.chart.title.total_gains")
+  end
+
   test "activity pagination keeps activity tab when loaded from holdings tab" do
     investment = accounts(:investment)
 
@@ -171,7 +244,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
   test "syncing linked account triggers sync for all provider items" do
     plaid_account = plaid_accounts(:one)
-    plaid_item = plaid_account.plaid_item
     AccountProvider.create!(account: @account, provider: plaid_account)
 
     # Reload to ensure the account has the provider association loaded
@@ -393,6 +465,32 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     holding.reload
 
     assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
+  end
+
+  # Regression for #2516: the account sidebar fragment cache renders DS::* view
+  # components, which Rails' ERB dependency tracker mis-parses as a bogus "Ds/D"
+  # template dependency. With automatic digesting enabled that logged
+  # "Couldn't find template for digesting: Ds/D" on every cache miss. The
+  # fragment is manually versioned and opts out of digesting via skip_digest.
+  test "sidebar fragment cache does not log a bogus template digest error" do
+    log = StringIO.new
+    logger = ActiveSupport::Logger.new(log)
+
+    original_perform_caching = ActionController::Base.perform_caching
+    original_view_logger = ActionView::Base.logger
+    original_rails_logger = Rails.logger
+
+    ActionController::Base.perform_caching = true
+    ActionView::Base.logger = logger
+    Rails.logger = logger
+
+    get accounts_path
+    assert_response :success
+    assert_no_match(/Couldn't find template for digesting/, log.string)
+  ensure
+    ActionController::Base.perform_caching = original_perform_caching
+    ActionView::Base.logger = original_view_logger
+    Rails.logger = original_rails_logger
   end
 end
 

@@ -95,7 +95,7 @@ class Transaction < ApplicationRecord
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
   # Providers that support pending transaction flags
-  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up mercury].freeze
+  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up mercury redbark].freeze
 
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
@@ -142,6 +142,16 @@ class Transaction < ApplicationRecord
     end
 
     update!(category: category)
+  end
+
+  # Marks a category as recently used. Called explicitly from the manual
+  # category-assignment controllers (picker, edit form, categorization
+  # wizard, create-and-assign) after a successful save — not wired to a
+  # blanket after_save callback because rule and import auto-assignment
+  # also go through `category_id=`, and those shouldn't count as a "recent"
+  # pick. See Category.recently_used_for.
+  def record_category_usage!
+    category.touch(:last_used_at) if saved_change_to_category_id? && category.present?
   end
 
   def pending?

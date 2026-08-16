@@ -20,6 +20,7 @@ es:
         general: Configuración General
         ai_assistant: Asistente de IA
         financial_data_providers: Proveedores de Datos Financieros
+        property_valuation_providers: Proveedores de valoración de propiedades
         sync_settings: Ajustes de Sincronización
         invites: Códigos de Invitación
         title: Autoalojamiento
@@ -55,6 +56,7 @@ es:
           binance_public: Binance
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
         title: Selección de Proveedores
         description: Elige qué servicio usar para obtener tipos de cambio y precios de acciones. Yahoo Finance es gratuito y no requiere clave API. Twelve Data requiere una clave API (gratuita disponible) pero ofrece mayor cobertura de datos.
         securities_provider_label: Proveedor de valores (Precios de acciones)
@@ -141,14 +143,36 @@ es:
         max_response_tokens_help: 'Tokens reservados para la respuesta del modelo. Predeterminado: 512. Bájalo para dejar sitio a un historial más largo.'
         max_items_per_call_label: Elementos máximos por lote (opcional)
         max_items_per_call_help: 'Límite superior para los lotes de categorización automática / detección de comercios. Predeterminado: 25. Los lotes más grandes se dividen automáticamente para caber en la ventana de contexto.'
+        ai_response_timeout_heading: Tiempo de espera de respuesta del chat
+        ai_response_timeout_description: Cuánto tiempo espera el chat al asistente antes de mostrar un error de "sin respuesta". Auméntalo si ejecutas un modelo local en hardware lento; las respuestas de proveedores compatibles con OpenAI no se transmiten por streaming, y las rondas de llamadas a herramientas no muestran nada, así que el chat puede quedarse en "Pensando..." durante todo el turno.
+        ai_response_timeout_label: Tiempo de espera de respuesta en segundos (opcional)
+        ai_response_timeout_help: 'Predeterminado: 90. Cubre todo el turno, así que dimensiona este valor como una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT, más el tiempo de ejecución de herramientas y cola. Reducir ASSISTANT_MAX_TOOL_CALL_ITERATIONS disminuye cuánto debe crecer este valor y suele ser la mejor palanca en hardware lento.'
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance proporciona acceso gratuito a precios de acciones, tipos de cambio y datos financieros sin necesidad de una clave API.
-        status_active: Yahoo Finance está activo y funcionando
-        status_inactive: La conexión con Yahoo Finance falló
-        connection_failed: No se pudo conectar con Yahoo Finance
-        troubleshooting: Verifica tu conexión a internet y la configuración del firewall. Yahoo Finance puede estar temporalmente no disponible.
+        status_healthy: Yahoo Finance está activo y funcionando.
+        status_rate_limited: Yahoo Finance está limitando temporalmente las solicitudes.
+        rate_limited_title: Se alcanzó el límite de solicitudes de Yahoo Finance.
+        rate_limited_message: No es necesario realizar ninguna acción. Sure evitará comprobaciones de estado adicionales durante 30 minutos. Las operaciones de precios y tipos de cambio continuarán de forma independiente.
+        status_unavailable: Yahoo Finance no está disponible en este momento.
+        unavailable_title: No se pudo verificar Yahoo Finance.
+        unavailable_message: No se pudo contactar con Yahoo Finance o se recibió una respuesta inesperada. Comprueba tu conexión a internet e inténtalo de nuevo más tarde.
+        status_unknown: Se está comprobando el estado de Yahoo Finance.
+      rentcast_settings:
+        title: RentCast
+        description: Introduce tu clave API de RentCast para consultar detalles de propiedades de EE. UU. y estimaciones de valor al añadir una propiedad. El nivel gratuito está limitado a 50 solicitudes API al mes, compartidas entre búsquedas de propiedades y actualizaciones diarias de valoración. En un plan de pago, aumenta el límite con la variable de entorno RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurado correctamente mediante la variable de entorno RENTCAST_API_KEY.
+        label: Clave API
+        placeholder: Introduce aquí tu clave API de RentCast
+        usage: "%{used} de %{limit} solicitudes mensuales utilizadas"
+      realie_settings:
+        title: Realie
+        description: Introduce tu clave API de Realie para consultar detalles de propiedades de EE. UU. y estimaciones de valor al añadir una propiedad. El nivel gratuito está limitado a 25 solicitudes API al mes, compartidas entre búsquedas de propiedades y actualizaciones diarias de valoración. En un plan de pago, aumenta el límite con la variable de entorno REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurado correctamente mediante la variable de entorno REALIE_API_KEY.
+        label: Clave API
+        placeholder: Introduce aquí tu clave API de Realie
+        usage: "%{used} de %{limit} solicitudes mensuales utilizadas"
       tiingo_settings:
         title: Tiingo
         description: Introduce el token de API proporcionado por Tiingo. El plan gratuito admite 50 símbolos únicos por hora con más de 30 años de datos históricos.

@@ -3,7 +3,7 @@ class Provider::Registry
 
   Error = Class.new(StandardError)
 
-  CONCEPTS = %i[exchange_rates securities llm]
+  CONCEPTS = %i[exchange_rates securities llm property_valuations]
 
   validates :concept, inclusion: { in: CONCEPTS }
 
@@ -145,12 +145,32 @@ class Provider::Registry
         Provider::MoexPublic.new
       end
 
+      def frankfurter
+        Provider::Frankfurter.new
+      end
+
       def tinkoff_invest
         api_key = ENV["TINKOFF_INVEST_API_KEY"].presence || Setting.tinkoff_invest_api_key # pipelock:ignore
 
         return nil unless api_key.present?
 
         Provider::TinkoffInvest.new(api_key)
+      end
+
+      def rentcast
+        api_key = ENV["RENTCAST_API_KEY"].presence || Setting.rentcast_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Rentcast.new(api_key)
+      end
+
+      def realie
+        api_key = ENV["REALIE_API_KEY"].presence || Setting.realie_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Realie.new(api_key)
       end
   end
 
@@ -182,11 +202,13 @@ class Provider::Registry
     def available_providers
       case concept
       when :exchange_rates
-        %i[twelve_data yahoo_finance moex_public]
+        %i[twelve_data yahoo_finance moex_public frankfurter]
       when :securities
         %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest]
       when :llm
         %i[openai anthropic]
+      when :property_valuations
+        %i[rentcast realie]
       else
         %i[plaid_us plaid_eu github openai anthropic]
       end

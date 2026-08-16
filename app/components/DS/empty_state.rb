@@ -10,11 +10,12 @@ class DS::EmptyState < DesignSystemComponent
   #   <% end %>
   renders_one :action
 
-  def initialize(icon:, title:, description: nil, icon_size: "xl", **opts)
+  def initialize(icon:, title:, description: nil, icon_size: "xl", icon_custom: false, **opts)
     @icon = icon
     @title = title
     @description = description
     @icon_size = icon_size
+    @icon_custom = icon_custom
     @opts = opts
   end
 
@@ -22,7 +23,7 @@ class DS::EmptyState < DesignSystemComponent
     <%= content_tag :div,
           class: class_names("flex flex-col items-center text-center px-4 py-12", @opts[:class]),
           **@opts.except(:class) do %>
-      <div class="mb-4"><%= helpers.icon(@icon, size: @icon_size) %></div>
+      <div class="mb-4"><%= helpers.icon(@icon, size: @icon_size, custom: @icon_custom) %></div>
       <p class="text-primary font-medium mb-2"><%= @title %></p>
       <% if @description.present? %>
         <p class="<%= class_names("text-secondary text-sm max-w-md", ("mb-4" if action?)) %>"><%= @description %></p>

@@ -200,7 +200,7 @@ class BudgetCategory < ApplicationRecord
     return nil unless available_to_spend > 0
     return nil unless budget.current?
 
-    days_remaining = (budget.end_date - Date.current).to_i + 1
+    days_remaining = budget.days_remaining
     return nil unless days_remaining > 0
 
     {

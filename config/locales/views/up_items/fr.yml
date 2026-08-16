@@ -55,7 +55,7 @@ fr:
       success: Compte Up lié à %{account_name}.
       up_account_already_linked: Ce compte Up est déjà lié.
     provider_panel:
-      access_token_label: Personal Access Token
+      access_token_label: Jeton d'accès personnel
       access_token_placeholder: Collez votre jeton d'accès personnel Up
       add_connection: Ajouter une connexion Up
       connection_name_label: Nom de la connexion

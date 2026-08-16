@@ -265,10 +265,16 @@ jobs:
     uses: ./.github/workflows/flutter-build.yml
     secrets: inherit
 
+  desktop:
+    name: Build macOS Desktop App
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/desktop-release.yml
+    secrets: inherit
+
   release:
     name: Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [merge, mobile, helm]
+    needs: [merge, mobile, desktop, helm]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -293,6 +299,12 @@ jobs:
         with:
           name: helm-chart-package
           path: ${{ runner.temp }}/helm-artifacts
+
+      - name: Download desktop DMG artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: desktop-release-dmg
+          path: ${{ runner.temp }}/desktop-artifacts
 
       - name: Prepare release assets
         env:
@@ -336,6 +348,12 @@ jobs:
           if compgen -G "${{ runner.temp }}/helm-artifacts/*.tgz" > /dev/null; then
             cp ${{ runner.temp }}/helm-artifacts/*.tgz "${{ runner.temp }}/release-assets/"
             echo "✓ Helm chart package prepared"
+          fi
+
+          # Copy the universal macOS desktop build.
+          if compgen -G "${{ runner.temp }}/desktop-artifacts/*.dmg" > /dev/null; then
+            cp ${{ runner.temp }}/desktop-artifacts/*.dmg "${{ runner.temp }}/release-assets/"
+            echo "✓ Desktop DMG prepared"
           fi
 
           echo "Release assets:"
@@ -408,6 +426,8 @@ jobs:
     steps:
       - name: Determine source branch for tag
         id: source_branch
+        env:
+          TAG_NAME: ${{ github.ref_name }}
         run: |
           # Fetch all branches to find which one contains this tag's commit
           git init --quiet
@@ -418,14 +438,26 @@ jobs:
           BRANCHES=$(git branch -r --contains ${{ github.sha }} | grep -v HEAD | sed 's/origin\///' | xargs)
           echo "Branches containing commit: $BRANCHES"
 
-          # Prefer non-main branches (release branches) over main
+          # Prefer the matching release branch over main. Do not select arbitrary
+          # feature or PR branches that happen to contain the tagged commit.
           SOURCE_BRANCH="main"
+          RELEASE_BRANCH="$(printf '%s\n' "$TAG_NAME" | sed -E 's/^v([0-9]+)\.([0-9]+)\..*/v\1.\2-release-branch/')"
+
           for branch in $BRANCHES; do
-            if [ "$branch" != "main" ] && [ "$branch" != "master" ]; then
+            if [ "$branch" = "$RELEASE_BRANCH" ]; then
               SOURCE_BRANCH="$branch"
               break
             fi
           done
+
+          if [ "$SOURCE_BRANCH" = "main" ]; then
+            for branch in $BRANCHES; do
+              if [[ "$branch" =~ ^v[0-9]+\.[0-9]+-release-branch$ ]]; then
+                SOURCE_BRANCH="$branch"
+                break
+              fi
+            done
+          fi
 
           echo "Selected source branch: $SOURCE_BRANCH"
           echo "branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
@@ -493,7 +525,7 @@ jobs:
       - name: Commit and push version bump
         env:
           SOURCE_BRANCH: ${{ steps.source_branch.outputs.branch }}
-          GH_TOKEN: ${{ secrets.VERSION_BUMP_PR_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
@@ -576,11 +608,11 @@ jobs:
           set -e
 
           if [[ $pr_create_status -ne 0 ]]; then
-            echo "::warning::Pushed ${BUMP_BRANCH}, but could not create the version bump PR: ${pr_create_output}"
+            echo "::error::Pushed ${BUMP_BRANCH}, but could not create the version bump PR: ${pr_create_output}"
             if grep -q "GitHub Actions is not permitted to create or approve pull requests" <<< "$pr_create_output"; then
-              echo "::notice::Enable the repository setting that allows GitHub Actions to create pull requests, or add a VERSION_BUMP_PR_TOKEN secret with contents, pull requests, and workflows permissions."
+              echo "::notice::Enable the organization setting that allows GitHub Actions to create and approve pull requests."
             fi
-            exit 0
+            exit 1
           fi
 
           PR_URL="$pr_create_output"

@@ -5,6 +5,7 @@ es:
       redis_configured: ¡Redis ya está configurado correctamente! Ahora puedes configurar tu aplicación Sure.
   shared:
     preview: Vista previa
+    dot_separator: "·"
     sync_toast:
       message: Nuevos datos disponibles
       refresh: Actualizar
@@ -28,6 +29,9 @@ es:
       default_title: ¿Estás seguro?
       default_body: Esto no es reversible.
       default_btn_text: Confirmar
+      resource_deletion_title: ¿Eliminar %{resource}?
+      resource_deletion_body: ¿Estás seguro de que deseas eliminar %{resource}? Esto no es reversible.
+      resource_deletion_btn_text: Eliminar %{resource}
     family_moniker:
       group_plural: Grupos
       group_singular: Grupo

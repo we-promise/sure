@@ -6,6 +6,11 @@ class Provider::EnableBanking
 
   BASE_URL = "https://api.enablebanking.com".freeze
 
+  # Progressive fallback windows (days) for retrying a transactions fetch when
+  # an ASPSP rejects the requested period (WRONG_TRANSACTIONS_PERIOD) without
+  # suggesting a corrected date_from in the response payload.
+  FALLBACK_TRANSACTIONS_DATE_FROM_DAYS = [ 89, 60, 30 ].freeze
+
   headers "User-Agent" => "Sure Finance Enable Banking Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
@@ -164,7 +169,7 @@ class Provider::EnableBanking
   # @param psu_headers [Hash] Optional PSU context headers required by some ASPSPs
   # @return [Hash] Transactions and continuation_key for pagination
   def get_account_transactions(account_id:, date_from: nil, date_to: nil,
-                               continuation_key: nil, transaction_status: nil, psu_headers: {}, retried_date_from: false)
+                               continuation_key: nil, transaction_status: nil, psu_headers: {}, retry_attempt: 0)
     encoded_id = CGI.escape(account_id.to_s)
     query_params = {}
     query_params[:transaction_status] = transaction_status if transaction_status.present?
@@ -180,17 +185,17 @@ class Provider::EnableBanking
 
     handle_response(response)
   rescue EnableBankingError => e
-    corrected_date_from = e.corrected_date_from
+    next_date_from = next_transactions_date_from(e, date_from, retry_attempt)
 
-    if !retried_date_from && e.wrong_transactions_period? && corrected_date_from.present? && corrected_date_from != date_from
+    if next_date_from
       get_account_transactions(
         account_id: account_id,
-        date_from: corrected_date_from,
+        date_from: next_date_from,
         date_to: date_to,
         continuation_key: continuation_key,
         transaction_status: transaction_status,
         psu_headers: psu_headers,
-        retried_date_from: true
+        retry_attempt: retry_attempt + 1
       )
     else
       raise
@@ -200,6 +205,35 @@ class Provider::EnableBanking
   end
 
   private
+
+    # Decides the next date_from to retry a transactions fetch with after an
+    # ASPSP rejects the requested window with WRONG_TRANSACTIONS_PERIOD.
+    #
+    # Some ASPSPs (e.g. certain PT banks) return this error WITHOUT a corrected
+    # date_from in the payload, which defeated the previous single-shot retry.
+    # In that case we step through progressively shorter windows so the sync can
+    # still succeed instead of surfacing a generic error. Returns nil when no
+    # further retry should be attempted.
+    def next_transactions_date_from(error, current_date_from, retry_attempt)
+      return nil unless error.wrong_transactions_period?
+      return nil if retry_attempt > FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.length
+
+      current = current_date_from&.to_date
+
+      # Prefer the ASPSP-suggested date on the first retry (original behaviour),
+      # but only when it actually moves the window forward.
+      if retry_attempt.zero?
+        corrected = error.corrected_date_from
+        return corrected if corrected.present? && (current.nil? || corrected > current)
+      end
+
+      # Otherwise pick the first progressively-shorter window that advances the
+      # window forward, skipping any window that is not newer than the current
+      # date_from. Moving strictly forward guarantees progress and termination.
+      FALLBACK_TRANSACTIONS_DATE_FROM_DAYS
+        .map { |days| days.days.ago.to_date }
+        .find { |candidate| current.nil? || candidate > current }
+    end
 
     def safe_psu_headers(headers)
       headers.except("Authorization", :Authorization, "Accept", :Accept, "Content-Type", :"Content-Type")
@@ -247,7 +281,8 @@ class Provider::EnableBanking
       when 204
         {}
       when 400
-        raise EnableBankingError.new("Bad request to Enable Banking API: #{response.body}", :bad_request)
+        response_data = parse_error_response_body(response)
+        raise EnableBankingError.new("Bad request to Enable Banking API: #{response.body}", :bad_request, response_data: response_data)
       when 401
         raise EnableBankingError.new("Invalid credentials or expired JWT", :unauthorized)
       when 403
@@ -262,8 +297,17 @@ class Provider::EnableBanking
       when 429
         raise EnableBankingError.new("Rate limit exceeded. Please try again later.", :rate_limited)
       else
-        raise EnableBankingError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
+        response_data = parse_error_response_body(response)
+        raise EnableBankingError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed, response_data: response_data)
       end
+    end
+
+    def parse_error_response_body(response)
+      return {} if response.body.blank?
+
+      JSON.parse(response.body, symbolize_names: true)
+    rescue JSON::ParserError
+      { raw_body: response.body.to_s }
     end
 
     def parse_response_body(response)

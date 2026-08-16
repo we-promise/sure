@@ -1,13 +1,7 @@
 ---
 es:
   snaptrade_items:
-    default_name: Conexión de SnapTrade
-    link_accounts:
-      use_setup_flow: Usa en su lugar el flujo de configuración de cuentas
-    create:
-      success: SnapTrade configurado correctamente.
-    update:
-      success: Configuración de SnapTrade actualizada correctamente.
+    default_name: "Conexión de SnapTrade"
     destroy:
       success: Conexión de SnapTrade programada para su eliminación.
     connect:
@@ -29,22 +23,13 @@ es:
       not_configured: SnapTrade no está configurado.
     select_accounts:
       not_configured: SnapTrade no está configurado.
-    oauth_device_flow:
-      title: Conectar SnapTrade
-      subtitle: Autoriza Sure en SnapTrade
-      instructions: Abre SnapTrade y confirma este código de dispositivo; luego vuelve aquí para completar la autorización.
-      code_label: Código de dispositivo
-      open_snaptrade: Abrir SnapTrade
-      start_button: Iniciar autorización
-      complete_button: He autorizado SnapTrade
-      cancel_button: Cancelar
-      missing_client_id: El client ID de OAuth de SnapTrade no está configurado. Añade SNAPTRADE_OAUTH_CLIENT_ID a .env.local, reinicia la aplicación y vuelve a intentarlo.
-    complete_oauth_device_flow:
+    oauth_authorize:
+      not_configured: SnapTrade OAuth no está configurado. Define SNAPTRADE_OAUTH_CLIENT_ID y SNAPTRADE_OAUTH_CLIENT_SECRET, reinicia la aplicación y vuelve a intentarlo.
+    oauth_callback:
       success: Autorización de SnapTrade completada.
-      setup_incomplete: La autorización de SnapTrade está completa, pero se necesitan credenciales de API antes de poder sincronizar cuentas.
-      failed: No se pudo completar la autorización de dispositivo OAuth de SnapTrade. Inténtalo de nuevo.
-    start_oauth_device_flow:
-      failed: No se pudo iniciar la autorización de dispositivo OAuth de SnapTrade. Inténtalo de nuevo.
+      access_denied: Se canceló la autorización de SnapTrade.
+      state_mismatch: La autorización de SnapTrade falló una comprobación de seguridad. Inténtalo de nuevo.
+      failed: No se pudo completar la autorización de SnapTrade. Inténtalo de nuevo.
     select_existing_account:
       not_found: No se ha encontrado la cuenta o la configuración de SnapTrade.
       title: Vincular a cuenta de SnapTrade
@@ -67,10 +52,7 @@ es:
       success: Conexión eliminada correctamente. Se ha liberado un espacio.
       failed: 'Error al eliminar la conexión: %{message}'
       missing_authorization_id: Falta el ID de autorización
-      api_deletion_failed: No se pudo eliminar la conexión de SnapTrade por falta de credenciales. Es posible que la conexión aún exista en tu cuenta de SnapTrade.
-    delete_orphaned_user:
-      success: Registro huérfano eliminado correctamente.
-      failed: Error al eliminar el registro huérfano.
+      api_deletion_failed: No se pudo eliminar la conexión de SnapTrade porque este elemento no está autorizado. Es posible que la conexión aún exista en tu cuenta de SnapTrade.
     setup_accounts:
       title: Configurar cuentas de SnapTrade
       header: Configura tus cuentas de SnapTrade
@@ -84,7 +66,7 @@ es:
       info_cost_basis: Base de costes por posición (cuando esté disponible)
       info_activities: Historial de operaciones con etiquetas de actividad (Compra, Venta, Dividendo, etc.)
       info_history: Hasta 3 años de historial de transacciones
-      free_tier_note: El nivel gratuito de SnapTrade permite 5 conexiones de bróker. Consulta tu panel de SnapTrade para ver el uso actual.
+      free_tier_note: El nivel gratuito de SnapTrade permite 20 conexiones de bróker.
       no_accounts_title: No se han encontrado cuentas
       no_accounts_message: No se han encontrado cuentas de bróker. Esto puede ocurrir si cancelaste la conexión o si tu bróker no es compatible.
       try_again: Conectar bróker
@@ -92,6 +74,14 @@ es:
       available_accounts: Cuentas disponibles
       balance_label: 'Saldo:'
       account_number: 'Cuenta:'
+      account_type_label: Tipo de cuenta
+      account_types:
+        depository: Cuenta corriente o de ahorro
+        credit_card: Tarjeta de crédito
+        investment: Cuenta de inversión
+        crypto: Cuenta cripto
+        loan: Préstamo o línea de crédito
+        other_asset: Otro activo
       sync_start_date_label: 'Importar transacciones desde:'
       sync_start_date_help: Déjalo en blanco para todo el historial disponible
       create_button: Crear cuentas seleccionadas
@@ -132,31 +122,18 @@ es:
       name: SnapTrade
       connection_description: Conecta con tu bróker a través de SnapTrade (más de 25 brókers compatibles)
       description: SnapTrade conecta con más de 25 brókers principales (Fidelity, Vanguard, Schwab, Robinhood, etc.) y proporciona un historial completo de operaciones con etiquetas de actividad y base de costes.
-      setup_title: 'Instrucciones de configuración:'
-      step_1_html: Crea una cuenta en <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="text-primary underline">dashboard.snaptrade.com</a>
-      step_2: Copia tu Client ID y tu Consumer Key desde el panel
-      step_3: Introduce tus credenciales a continuación y haz clic en Guardar
-      step_4: Ve a la página de Cuentas y usa 'Conectar otro bróker' para vincular tus cuentas de inversión
-      free_tier_warning: El nivel gratuito incluye 5 conexiones de bróker. Las conexiones adicionales requieren un plan de pago de SnapTrade.
+      oauth_setup_step_1_html: Registra una aplicación OAuth en <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: Añade la URL de callback de esta aplicación (<code>%{callback_url}</code>) como URI de redirección registrada
+      oauth_setup_step_3: Define SNAPTRADE_OAUTH_CLIENT_ID y SNAPTRADE_OAUTH_CLIENT_SECRET en tu entorno y reinicia
+      free_tier_warning: El nivel gratuito de SnapTrade cubre 20 conexiones de bróker.
       oauth_title: OAuth de SnapTrade
-      oauth_status_ready: Usa un código de dispositivo para autorizar Sure en SnapTrade.
+      oauth_status_ready: Autoriza a Sure para leer los datos de tu cuenta de SnapTrade.
       oauth_status_authorized: Autorizado con SnapTrade.
       oauth_connect_button: Conectar con SnapTrade
       oauth_reauthorize_button: Volver a autorizar
-      legacy_credentials_title: Usar credenciales de API antiguas
-      legacy_credentials_description: Usa la configuración con Client ID y Consumer Key si tu cuenta de SnapTrade no tiene OAuth habilitado.
-      client_id_label: Client ID
-      client_id_placeholder: Introduce tu Client ID de SnapTrade
-      client_id_update_placeholder: Introduce el nuevo Client ID para actualizar
-      consumer_key_label: Consumer Key
-      consumer_key_placeholder: Introduce tu Consumer Key de SnapTrade
-      consumer_key_update_placeholder: Introduce la nueva Consumer Key para actualizar
-      save_button: Guardar configuración
-      update_button: Actualizar configuración
       status_connected:
         one: '%{count} cuenta de SnapTrade'
         other: '%{count} cuentas de SnapTrade'
-      status_needs_registration: Credenciales guardadas. Termina la configuración para conectar un bróker.
       needs_setup:
         one: '%{count} necesita configuración'
         other: '%{count} necesitan configuración'
@@ -177,16 +154,7 @@ es:
       delete_connection_title: ¿Eliminar conexión del bróker?
       delete_connection_body: Esto eliminará permanentemente la conexión de %{brokerage} de SnapTrade. Todas las cuentas de este bróker se desvincularán. Deberás volver a conectar para sincronizar estas cuentas de nuevo.
       delete_connection_confirm: Eliminar conexión
-      orphaned_users_title:
-        one: '%{count} registro huérfano'
-        other: '%{count} registros huérfanos'
-      orphaned_users_description: Estos son registros de usuario de SnapTrade anteriores que están ocupando tus espacios de conexión. Elimínalos para liberar espacio.
-      orphaned_user: Registro huérfano
-      delete_orphaned_user: Eliminar
-      delete_orphaned_user_title: ¿Eliminar registro huérfano?
-      delete_orphaned_user_body: Esto eliminará permanentemente este usuario de SnapTrade huérfano y todas sus conexiones de bróker, liberando espacios de conexión.
-      delete_orphaned_user_confirm: Eliminar registro
-      connection_limit_info: El nivel gratuito de SnapTrade permite 5 conexiones de bróker. Elimina conexiones sin usar para liberar espacios.
+      manage_at_snaptrade: Gestionar conexiones en SnapTrade
   snaptrade_item:
     sync_status:
       no_accounts: No se han encontrado cuentas

@@ -159,6 +159,7 @@ module LanguagesHelper
     "fr",   # French
     "de",   # German
     "es",   # Spanish
+    "it",   # Italian
     "tr",   # Turkish
     "nb",   # Norwegian Bokmål
     "ca",   # Catalan
@@ -170,7 +171,8 @@ module LanguagesHelper
     "zh-TW",  # Chinese (Traditional)
     "nl",   # Dutch
     "hu",   # Hungarian
-    "vi"    # Vietnamese
+    "vi",   # Vietnamese
+    "uk"    # Ukrainian
   ].freeze
 
   COUNTRY_MAPPING = {

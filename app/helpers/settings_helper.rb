@@ -78,6 +78,9 @@ module SettingsHelper
     when "mercury"
       return { status: :off } unless @mercury_items&.any?
       sync_based_summary(key)
+    when "redbark"
+      return { status: :off } unless @redbark_items&.any?
+      sync_based_summary(key)
     when "brex"
       return { status: :off } unless @brex_items&.any?
       sync_based_summary(key)
@@ -91,12 +94,9 @@ module SettingsHelper
       return { status: :off } unless @kraken_items&.any?
       sync_based_summary(key)
     when "snaptrade"
-      configured_item = @snaptrade_items&.find { |item| item.credentials_configured? || item.oauth_configured? }
+      configured_item = @snaptrade_items&.find(&:oauth_configured?)
       return { status: :off } unless configured_item
 
-      unless configured_item.user_registered?
-        return { status: :warn, meta: t("settings.providers.meta.registration_needed") }
-      end
       sync_based_summary(key)
     when "ibkr"
       return { status: :off } unless @ibkr_items&.any?
@@ -133,6 +133,38 @@ module SettingsHelper
       concat(previous_setting)
       concat(next_setting)
     end
+  end
+
+  def yahoo_finance_health_presentation(status)
+    status = status.to_sym if status.respond_to?(:to_sym)
+    status = :unknown unless %i[healthy rate_limited unavailable unknown].include?(status)
+
+    presentation = {
+      status_class: {
+        healthy: "bg-success",
+        rate_limited: "bg-warning",
+        unavailable: "bg-destructive",
+        unknown: "bg-surface-inset"
+      }.fetch(status),
+      status_text: t("settings.hostings.yahoo_finance_settings.status_#{status}")
+    }
+
+    presentation[:alert] = case status
+    when :rate_limited
+      {
+        title: t("settings.hostings.yahoo_finance_settings.rate_limited_title"),
+        message: t("settings.hostings.yahoo_finance_settings.rate_limited_message"),
+        variant: :warning
+      }
+    when :unavailable
+      {
+        title: t("settings.hostings.yahoo_finance_settings.unavailable_title"),
+        message: t("settings.hostings.yahoo_finance_settings.unavailable_message"),
+        variant: :warning
+      }
+    end
+
+    presentation
   end
 
   # Below this many synced accounts, the per-row pills already give the user

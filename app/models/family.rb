@@ -2,9 +2,11 @@ class Family < ApplicationRecord
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable
   include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
-  include IndexaCapitalConnectable, IbkrConnectable
+  include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
+  include Trading212Connectable
   include QuestradeConnectable
+  include RedbarkConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -113,6 +115,28 @@ class Family < ApplicationRecord
 
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :insights, dependent: :destroy
+
+  # Families with at least one opted-in member. Lets a job filter in one
+  # indexed query rather than loading every family and asking each in Ruby.
+  scope :with_preview_features, -> { where(id: User.with_preview_features.select(:family_id)) }
+
+  # Family-level rollup of the per-user preview flag, for callers that run
+  # without a Current.user (the nightly insights job). Preview access is a
+  # personal preference but the data it produces is family-scoped, so one
+  # opted-in member is enough to generate for the family.
+  #
+  # EXISTS rather than `users.any?(&:preview_features_enabled?)`: the job asks
+  # this once per family, and the block form would load and instantiate every
+  # member just to answer a boolean.
+  #
+  # Never gate UI on this — visibility is per-user, and this answers "somebody
+  # in the household opted in", so a view using it would show the feature to a
+  # user who explicitly opted out. Use the PreviewGateable helper (Current.user)
+  # for anything a person sees.
+  def preview_features_enabled?
+    users.with_preview_features.exists?
+  end
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
@@ -120,6 +144,7 @@ class Family < ApplicationRecord
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
+  validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
 
@@ -174,6 +199,33 @@ class Family < ApplicationRecord
 
   def share_all_by_default?
     default_account_sharing == "shared"
+  end
+
+  # Shares every existing account in this family (except ones the user already
+  # owns) with the given user, honoring the family's default sharing policy and
+  # the user's role. Guests receive read_only; members/admins receive read_write.
+  #
+  # This is the single entry point for "a member just joined, give them the
+  # accounts the family shares by default." It self-guards on the sharing policy
+  # and family membership so every membership path (invitation accept, SSO JIT
+  # sign-up, token registration, mobile SSO) can call it without reintroducing
+  # the "member joined but sees nothing" bug. No-op when sharing is disabled or
+  # there is nothing to share, and idempotent on re-run.
+  def auto_share_existing_accounts_with(user)
+    return unless share_all_by_default?
+    # Load-bearing security guard: insert_all below bypasses AccountShare's
+    # user_in_same_family / cannot_share_with_owner validations, so this
+    # membership check is the ONLY thing preventing cross-family sharing.
+    # Do not drop it when refactoring.
+    return unless user&.persisted? && user.family_id == id
+
+    permission = user.guest? ? "read_only" : "read_write"
+    records = accounts.where.not(owner_id: user.id).pluck(:id).map do |account_id|
+      { account_id: account_id, user_id: user.id, permission: permission,
+        include_in_finances: true, created_at: Time.current, updated_at: Time.current }
+    end
+
+    AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
   end
 
   def uses_custom_month_start?
@@ -446,5 +498,29 @@ class Family < ApplicationRecord
       Money::Currency.new(value).iso_code
     rescue Money::Currency::UnknownCurrencyError, ArgumentError
       nil
+    end
+
+    # Not a plain `inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }`
+    # on purpose: the settings form submits `tz.tzinfo.identifier` (e.g.
+    # "America/New_York"), not `tz.name` (e.g. "Eastern Time (US & Canada)")
+    # -- see LanguagesHelper#timezone_options. For every zone Rails ships,
+    # those two differ, so an inclusion check against `.name` would reject
+    # every legitimate value the form actually submits. `ActiveSupport::TimeZone[]`
+    # resolves both forms, and is the same lookup `Localize#resolved_timezone`
+    # uses at request time, so "valid at save time" and "valid when rendering"
+    # can't drift apart.
+    #
+    # Only runs when timezone is actually being changed (see the `if:` on the
+    # `validate` call above). A family that already has a stale value from
+    # before this validation existed (the exact case in #390) must still be
+    # able to save unrelated changes -- e.g. a settings update, or any
+    # background job touching the record -- without being blocked by a field
+    # nobody is currently trying to set. That value still can't crash a
+    # request either way, since Localize#resolved_timezone falls back safely
+    # regardless of whether this validation ever ran.
+    def timezone_must_be_a_known_zone
+      return if timezone.blank?
+
+      errors.add(:timezone, :invalid) if ActiveSupport::TimeZone[timezone].blank?
     end
 end

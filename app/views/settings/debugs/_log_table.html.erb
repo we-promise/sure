@@ -1,0 +1,46 @@
+<%# Rendered twice: inline in the settings card, and again inside the expanded
+    dialog where it gets the full viewport width. The sticky header only has a
+    scroll container to stick to in the expanded copy; inline it is inert. %>
+<table class="w-full">
+  <thead class="bg-surface border-b border-primary sticky top-0 z-10">
+    <tr>
+      <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t("settings.debugs.show.table.time") %></th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t("settings.debugs.show.table.level") %></th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t("settings.debugs.show.table.category") %></th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t("settings.debugs.show.table.source") %></th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t("settings.debugs.show.table.message") %></th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t("settings.debugs.show.table.context") %></th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t("settings.debugs.show.table.metadata") %></th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
+    <% entries.each do |entry| %>
+      <tr>
+        <td class="px-4 py-3 text-sm text-primary whitespace-nowrap align-top"><%= l(entry.created_at, format: :long) %></td>
+        <td class="px-4 py-3 text-sm text-primary whitespace-nowrap align-top"><%= entry.level %></td>
+        <td class="px-4 py-3 text-sm text-primary whitespace-nowrap align-top"><%= entry.category %></td>
+        <td class="px-4 py-3 text-sm text-primary font-mono align-top"><%= entry.source %></td>
+        <td class="px-4 py-3 text-sm text-primary align-top"><%= entry.message %></td>
+        <td class="px-4 py-3 text-xs text-secondary font-mono whitespace-nowrap align-top">
+          <div><%= t("settings.debugs.show.context.provider", value: entry.provider_key.presence || t("settings.debugs.show.missing_value")) %></div>
+          <div><%= t("settings.debugs.show.context.family", value: entry.family_id || t("settings.debugs.show.missing_value")) %></div>
+          <div><%= t("settings.debugs.show.context.account", value: entry.account_id || t("settings.debugs.show.missing_value")) %></div>
+          <div><%= t("settings.debugs.show.context.user", value: entry.user_id || t("settings.debugs.show.missing_value")) %></div>
+          <div><%= t("settings.debugs.show.context.account_provider", value: entry.account_provider_id || t("settings.debugs.show.missing_value")) %></div>
+        </td>
+        <td class="px-4 py-3 text-xs text-secondary align-top">
+          <% if entry.metadata.present? %>
+            <%= render DS::Disclosure.new(variant: :inline) do |disclosure| %>
+              <% disclosure.with_summary_content do %>
+                <span class="text-xs text-secondary"><%= t("settings.debugs.show.table.view_metadata") %></span>
+              <% end %>
+              <pre class="whitespace-pre-wrap break-words"><%= JSON.pretty_generate(entry.metadata) %></pre>
+            <% end %>
+          <% else %>
+            <%= t("settings.debugs.show.missing_value") %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

@@ -56,6 +56,16 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
   enum :role, { guest: "guest", member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+
+  # SQL counterpart to #preview_features_enabled?, for callers that filter
+  # users (or their families) in one query instead of loading and iterating.
+  # The `@>` containment operator uses index_users_on_preferences (GIN) and
+  # matches only a JSON boolean true, so it agrees with that predicate's
+  # strict `== true` — a stray "yes" enables neither.
+  scope :with_preview_features, -> {
+    where("preferences @> ?", { preview_features_enabled: true }.to_json)
+  }
+
   attribute :ui_layout, :string
   enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
 
@@ -64,8 +74,10 @@ class User < ApplicationRecord
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
-  # get the specified fallback role (typically :admin for family creators).
+  # get the specified admin-capable fallback role.
   def self.role_for_new_family_creator(fallback_role: :admin)
+    fallback_role = fallback_role.to_s.in?(%w[admin super_admin]) ? fallback_role : :admin
+
     User.exists? ? fallback_role : :super_admin
   end
 
@@ -375,10 +387,6 @@ class User < ApplicationRecord
   end
 
   # Transactions preferences management
-  def transactions_section_collapsed?(section_key)
-    preferences&.dig("transactions_collapsed_sections", section_key) == true
-  end
-
   def show_split_grouped?
     preferences&.dig("show_split_grouped") != false
   end
@@ -393,24 +401,6 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
-  end
-
-  def update_transactions_preferences(prefs)
-    transaction do
-      lock!
-
-      updated_prefs = (preferences || {}).deep_dup
-      prefs.each do |key, value|
-        if value.is_a?(Hash)
-          updated_prefs["transactions_#{key}"] ||= {}
-          updated_prefs["transactions_#{key}"] = updated_prefs["transactions_#{key}"].merge(value)
-        else
-          updated_prefs["transactions_#{key}"] = value
-        end
-      end
-
-      update!(preferences: updated_prefs)
-    end
   end
 
   private
@@ -456,7 +446,7 @@ class User < ApplicationRecord
     end
 
     def default_dashboard_section_order
-      %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet]
+      %w[insights_feed cashflow_sankey outflows_donut net_worth_chart balance_sheet]
     end
 
     def default_reports_section_order
