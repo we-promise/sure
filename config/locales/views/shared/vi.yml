@@ -4,6 +4,7 @@ vi:
     self_hostable:
       redis_configured: "Redis đã được cấu hình đúng! Bây giờ bạn có thể thiết lập ứng dụng Sure của mình."
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Xác nhận
       body_html: "<p>Bạn sẽ không thể hoàn tác quyết định này</p>"

@@ -5,6 +5,7 @@ ca:
       redis_configured: Redis ja està configurat correctament! Ara pots configurar
         la teva aplicació Sure.
   shared:
+    dot_separator: "·"
     cancel: Cancel·la
     confirm_modal:
       accept: Confirma

@@ -4,6 +4,7 @@ fr:
     self_hostable:
       redis_configured: Redis est maintenant correctement configuré ! Vous pouvez maintenant configurer votre application Sure.
   shared:
+    dot_separator: "·"
     cancel: Annuler
     confirm_modal:
       accept: Confirmer

@@ -4,6 +4,7 @@ it:
     self_hostable:
       redis_configured: "Redis è ora configurato correttamente! Puoi procedere con la configurazione della tua applicazione."
   shared:
+    dot_separator: "·"
     preview: Anteprima
     sync_toast:
       message: "Nuovi dati disponibili"

@@ -4,6 +4,7 @@ hu:
     self_hostable:
       redis_configured: "A Redis most megfelelően van konfigurálva! Mostantól beállíthatod a Sure alkalmazásodat."
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Megerősítés
       body_html: "<p>Ezt a döntést nem tudod visszavonni</p>"
