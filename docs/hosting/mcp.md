@@ -129,7 +129,7 @@ Sure implements the following JSON-RPC 2.0 methods:
 
 ### Available Tools
 
-The MCP endpoint exposes the same tool registry used by Sure's builtin assistant. Clients should treat `tools/list` as the source of truth.
+The MCP endpoint exposes the same tool registry used by Sure's built-in assistant. Clients should treat `tools/list` as the source of truth.
 
 At the time of writing, `tools/list` includes:
 
@@ -153,7 +153,7 @@ At the time of writing, `tools/list` includes:
 | `update_transaction` | Update an existing transaction |
 | `update_budget` | Update a budget category allocation |
 
-These are the same tools used by Sure's builtin AI assistant.
+These are the same tools used by Sure's built-in AI assistant.
 
 ### Preview Tools
 
@@ -398,13 +398,13 @@ Any AI agent that supports JSON-RPC 2.0 can connect to the MCP endpoint. The age
 
 - The OAuth flow completed successfully and the client is sending the issued bearer token
 - The static token matches `MCP_API_TOKEN`
-- If you are using the static-token flow, `MCP_USER_EMAIL` matches an active Sure user
+- If you are using the static-token flow, `MCP_USER_EMAIL` matches an existing Sure user
 
 ### Static token works, but the user still gets rejected
 
 **Symptom:** Requests return HTTP 401 even though the bearer token matches `MCP_API_TOKEN`
 
-**Fix:** The `MCP_USER_EMAIL` probably does not match an existing active user. Check that:
+**Fix:** The `MCP_USER_EMAIL` probably does not match an existing user. Check that:
 - The email is correct
 - The user exists in the database
 - There are no typos or extra spaces

@@ -409,7 +409,7 @@ MCP_USER_EMAIL=user@example.com    # Email of the Sure user the agent acts as
 ```
 
 The agent must send requests to `https://your-sure-instance/mcp` with:
-```
+```http
 Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
@@ -1255,8 +1255,10 @@ The assistant uses OpenAI's function calling (tool use) to access user data:
 - `get_holdings` - Investment holdings data
 - `get_balance_sheet` - Current financial position
 - `get_income_statement` - Income and expenses
+- `get_budget` - Budget status and category breakdowns
 - `import_bank_statement` - Import bank statement data
 - `search_family_files` - Search uploaded documents
+- `create_goal` - Create a savings goal
 
 These are defined in `app/models/assistant/function/`.
 
