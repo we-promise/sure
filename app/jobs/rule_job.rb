@@ -63,6 +63,22 @@ class RuleJob < ApplicationJob
       error_message = "#{e.class}: #{e.message}"
       Rails.logger.error("RuleJob failed for rule #{rule.id}: #{error_message}")
 
+      DebugLogEntry.capture(
+        category: "rule_run",
+        level: "error",
+        message: "Rule run failed: #{error_message}",
+        source: self.class.name,
+        family: rule.family,
+        metadata: {
+          rule_id: rule.id,
+          rule_name: rule.name,
+          execution_type: execution_type,
+          error_class: e.class.name,
+          error_message: e.message,
+          backtrace: Array(e.backtrace).first(10)
+        }
+      )
+
       # Update the rule run as failed if it was created
       if rule_run
         rule_run.update(status: "failed", error_message: error_message)

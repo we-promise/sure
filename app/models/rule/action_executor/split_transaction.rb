@@ -57,21 +57,32 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       )
     end
 
-    count_modified_resources(scope) do |txn|
+    skipped = []
+
+    modified_count = count_modified_resources(scope) do |txn|
       next false unless txn.splittable?
 
       entry = txn.entry
       splits = self.class.build_splits(config, entry.amount, family_ids)
-      next false unless splits
+
+      if splits.nil?
+        skipped << { transaction_id: txn.id, entry_id: entry.id, reason: "unresolvable_split_amounts", entry_amount: entry.amount.to_s }
+        next false
+      end
 
       begin
         entry.split!(splits)
         entry.sync_account_later
         true
-      rescue ActiveRecord::RecordInvalid
+      rescue ActiveRecord::RecordInvalid => e
+        skipped << { transaction_id: txn.id, entry_id: entry.id, reason: "record_invalid", errors: e.record.errors.full_messages }
         false
       end
     end
+
+    log_skipped_transactions(skipped, rule_run:) if skipped.any?
+
+    modified_count
   end
 
   class << self
@@ -264,4 +275,23 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
         nil
       end
   end
+
+  private
+    # One summary entry per rule application (not one per skipped transaction) so a
+    # misconfigured split action against a large matching scope can't flood the debug log.
+    def log_skipped_transactions(skipped, rule_run:)
+      DebugLogEntry.capture(
+        category: "rule_run",
+        level: "warn",
+        message: "split_transaction skipped #{skipped.size} transaction(s)",
+        source: self.class.name,
+        family: family,
+        metadata: {
+          rule_id: rule.id,
+          rule_run_id: rule_run&.id,
+          skipped_count: skipped.size,
+          skipped: skipped.first(20)
+        }
+      )
+    end
 end
