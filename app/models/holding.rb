@@ -33,6 +33,30 @@ class Holding < ApplicationRecord
       .where("cost_basis_source IS DISTINCT FROM ?", "manual")
   }
 
+  def calculated?
+    account_provider_id.nil? && !cost_basis_locked? && cost_basis_source != "manual"
+  end
+
+  # Deterministic ORDER BY fragment for DISTINCT ON (... security_id) latest-row
+  # selection when multiple currencies can exist on the same date.
+  # Prefers provider rows, then a preferred currency (usually account currency),
+  # then alphabetical currency for stability across syncs.
+  def self.latest_security_order_sql(prefer_currency: nil, table: table_name, partition_columns: %w[security_id])
+    prefer_sql = if prefer_currency.present?
+      sanitize_sql_array([ "(#{table}.currency = ?) DESC", prefer_currency ])
+    else
+      "TRUE"
+    end
+
+    parts = []
+    parts.concat(partition_columns.map { |column| "#{table}.#{column}" }) if partition_columns.present?
+    parts << "#{table}.date DESC"
+    parts << "(#{table}.account_provider_id IS NOT NULL) DESC"
+    parts << prefer_sql
+    parts << "#{table}.currency ASC"
+    parts.join(", ")
+  end
+
   delegate :ticker, to: :security
 
   def name
@@ -285,17 +309,27 @@ class Holding < ApplicationRecord
 
     # Calculates weighted average cost from buy trades.
     # Returns nil if no trades exist or a cross-currency lot is missing an exchange rate.
+    # Uses the same nearest-rate lookback as Money#exchange_to / find_or_fetch_rate so
+    # weekend and holiday trade dates agree with calculator-stored cost_basis.
     def calculate_avg_cost
       holding_currency = currency
+      lookback_days = ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS
 
       trades = account.trades
         .with_entry
         .joins(ActiveRecord::Base.sanitize_sql_array([
-          "LEFT JOIN exchange_rates ON (
-            exchange_rates.date = entries.date AND
-            exchange_rates.from_currency = trades.currency AND
-            exchange_rates.to_currency = ?
-          )", holding_currency
+          "LEFT JOIN LATERAL (
+            SELECT exchange_rates.rate
+            FROM exchange_rates
+            WHERE exchange_rates.from_currency = trades.currency
+              AND exchange_rates.to_currency = ?
+              AND exchange_rates.date <= entries.date
+              AND exchange_rates.date >= (entries.date - ?)
+            ORDER BY exchange_rates.date DESC
+            LIMIT 1
+          ) exchange_rates ON TRUE",
+          holding_currency,
+          lookback_days
         ]))
         .where(security_id: security.id)
         .where("trades.qty > 0 AND entries.date <= ?", date)

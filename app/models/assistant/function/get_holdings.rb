@@ -83,13 +83,22 @@ class Assistant::Function::GetHoldings < Assistant::Function
   end
 
   def call(params = {})
-    holdings_query = build_holdings_query(params)
+    holdings = build_holdings_query(params).includes(:security, :account).to_a
+    rates = exchange_rates_for(holdings)
 
-    ordered_holdings = holdings_query.order(amount: :desc)
-    pagy = Pagy.new(count: ordered_holdings.count, page: params["page"] || 1, limit: default_page_size)
-    paginated_holdings = ordered_holdings.includes(:security, :account).offset(pagy.offset).limit(pagy.limit)
+    holdings_with_value = holdings.map do |holding|
+      [ holding, convert_to_family_currency(holding.amount, holding.currency, rates) ]
+    end
 
-    total_value = holdings_query.sum(:amount)
+    total_value = holdings_with_value.sum { |(_, value)| value }
+
+    # Sort by family-currency value so mixed-currency portfolios order correctly.
+    sorted_holdings = holdings_with_value
+      .sort_by { |(_, value)| -value }
+      .map(&:first)
+
+    pagy = Pagy.new(count: sorted_holdings.size, page: params["page"] || 1, limit: default_page_size)
+    paginated_holdings = sorted_holdings.slice(pagy.offset, pagy.limit) || []
 
     normalized_holdings = paginated_holdings.map do |holding|
       {
@@ -135,7 +144,11 @@ class Assistant::Function::GetHoldings < Assistant::Function
           id: Holding.where(account: accounts)
             .select("DISTINCT ON (account_id, security_id) id")
             .where.not(qty: 0)
-            .order(:account_id, :security_id, date: :desc)
+            .order(Arel.sql(
+              Holding.latest_security_order_sql(
+                partition_columns: %w[account_id security_id]
+              )
+            ))
         )
 
       if params["securities"].present?
@@ -144,6 +157,20 @@ class Assistant::Function::GetHoldings < Assistant::Function
       end
 
       holdings
+    end
+
+    def exchange_rates_for(holdings)
+      foreign = holdings.map(&:currency).uniq.reject { |currency| currency == family.currency }
+      ExchangeRate.rates_for(foreign, to: family.currency, date: Date.current, fallback: nil)
+    end
+
+    def convert_to_family_currency(amount, from_currency, rates)
+      return amount.to_d if from_currency == family.currency
+
+      rate = rates[from_currency]
+      return 0.to_d if rate.nil?
+
+      amount.to_d * rate
     end
 
     def investment_accounts

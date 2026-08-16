@@ -81,46 +81,88 @@ class Holding::ReverseCalculator
 
     def precompute_cost_basis
       @cost_basis_buys = Hash.new { |h, k| h[k] = [] }
+      # Snapshots keep binary search over buy dates; conversion stays currency-aware
+      # and is memoized by [security_id, currency, buy_count].
+      @cost_basis_snapshots = Hash.new { |h, k| h[k] = [] }
+      @cost_basis_memo = {}
+      @fx_rate_memo = {}
 
       portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
         trade = trade_entry.entryable
         next unless trade.qty > 0
 
-        @cost_basis_buys[trade.security_id] << {
+        security_id = trade.security_id
+        @cost_basis_buys[security_id] << {
           date: trade_entry.date,
           qty: trade.qty,
           price: trade.price,
           currency: trade.currency
         }
+
+        @cost_basis_snapshots[security_id] << [
+          trade_entry.date,
+          @cost_basis_buys[security_id].size
+        ]
       end
     end
 
     def cost_basis_for(security_id, date, currency)
-      buys = @cost_basis_buys[security_id]
-      return nil if buys.blank?
+      buy_count = buy_count_as_of(security_id, date)
+      return nil if buy_count.nil? || buy_count.zero?
 
-      applicable = buys.select { |buy| buy[:date] <= date }
-      return nil if applicable.empty?
+      memo_key = [ security_id, currency, buy_count ]
+      return @cost_basis_memo[memo_key] if @cost_basis_memo.key?(memo_key)
 
-      total_qty = applicable.sum { |buy| buy[:qty] }
+      applicable = @cost_basis_buys[security_id].first(buy_count)
+      @cost_basis_memo[memo_key] = weighted_average_cost(applicable, currency)
+    end
+
+    def buy_count_as_of(security_id, date)
+      snapshots = @cost_basis_snapshots[security_id]
+      return nil if snapshots.empty?
+
+      lo, hi, result = 0, snapshots.size - 1, nil
+      while lo <= hi
+        mid = (lo + hi) / 2
+        if snapshots[mid][0] <= date
+          result = snapshots[mid][1]
+          lo = mid + 1
+        else
+          hi = mid - 1
+        end
+      end
+      result
+    end
+
+    def weighted_average_cost(buys, currency)
+      total_qty = buys.sum { |buy| buy[:qty] }
       return nil if total_qty.zero?
 
       total_cost = BigDecimal("0")
 
-      applicable.each do |buy|
-        if buy[:currency] == currency
-          total_cost += buy[:price] * buy[:qty]
-        else
-          begin
-            converted_price = Money.new(buy[:price], buy[:currency]).exchange_to(currency, date: buy[:date]).amount
-          rescue Money::ConversionError
-            return nil
-          end
+      buys.each do |buy|
+        converted_price = convert_buy_price(buy, currency)
+        return nil if converted_price.nil?
 
-          total_cost += converted_price * buy[:qty]
-        end
+        total_cost += converted_price * buy[:qty]
       end
 
       total_cost / total_qty
+    end
+
+    def convert_buy_price(buy, currency)
+      return buy[:price] if buy[:currency] == currency
+
+      rate = fx_rate(from: buy[:currency], to: currency, date: buy[:date])
+      return nil if rate.nil?
+
+      buy[:price] * rate
+    end
+
+    def fx_rate(from:, to:, date:)
+      key = [ from, to, date ]
+      return @fx_rate_memo[key] if @fx_rate_memo.key?(key)
+
+      @fx_rate_memo[key] = ExchangeRate.find_or_fetch_rate(from: from, to: to, date: date)&.rate
     end
 end

@@ -187,11 +187,37 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal 150.0, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
-  test "falls back to 1:1 conversion rate when exchange rate is missing for a foreign currency holding" do
+  test "omits foreign currency holdings when exchange rate is missing" do
     security = Security.create!(ticker: "TST", name: "Test")
     @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
 
-    assert_equal 100, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+    assert_equal 0, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
+  test "batches FX lookups for foreign holdings on the same date" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+    ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: Date.current, rate: 1.25)
+
+    s1 = Security.create!(ticker: "S1", name: "Security 1")
+    s2 = Security.create!(ticker: "S2", name: "Security 2")
+    @account.holdings.create!(security: s1, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+    @account.holdings.create!(security: s2, date: Date.current, qty: 1, price: 80, amount: 80, currency: "GBP")
+
+    # One batched rates_for call for the date, not per-holding find_or_fetch_rate.
+    ExchangeRate.expects(:find_or_fetch_rate).never
+
+    assert_equal 250.0, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
+  test "uses nearest lookback rate for weekend holding dates" do
+    friday = Date.current.beginning_of_week(:monday) + 4.days
+    saturday = friday + 1.day
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: friday, rate: 1.4)
+
+    security = Security.create!(ticker: "WKND", name: "Weekend")
+    @account.holdings.create!(security: security, date: saturday, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    assert_equal 140.0, Balance::SyncCache.new(@account).get_holdings_value(saturday)
   end
 
   test "prioritizes custom rate over fetched rate" do

@@ -442,6 +442,88 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal BigDecimal("125.00"), stale.reload.cost_basis
   end
 
+  test "holdings value in account currency is unchanged when rows switch to native currency" do
+    account = @family.accounts.create!(
+      name: "CAD Brokerage Balance Parity",
+      balance: 20000,
+      cash_balance: 20000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "PARI", name: "Parity", exchange_operating_mic: "XNAS")
+    trade_date = 2.days.ago.to_date
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: trade_date, rate: 1.25)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: Date.current, rate: 1.30)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: trade_date, rate: 0.80)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 0.7692307692)
+
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+    Security::Price.create!(security: security, date: Date.current, price: 110, currency: "USD")
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 100, currency: "USD")
+
+    # Legacy account-currency representation of today's holding
+    account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 10,
+      price: 143,
+      amount: 1430,
+      currency: "CAD"
+    )
+
+    legacy_value = Balance::SyncCache.new(account).get_holdings_value(Date.current)
+
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    account.holdings.reload
+
+    native = account.holdings.find_by!(security: security, date: Date.current, currency: "USD")
+    assert_equal BigDecimal("1100"), native.amount
+
+    native_value = Balance::SyncCache.new(account).get_holdings_value(Date.current)
+    assert_equal legacy_value, native_value
+    assert_equal BigDecimal("1430"), native_value
+  end
+
+  test "reverse materialization without Security::Price rows keeps holding currency through history" do
+    account = @family.accounts.create!(
+      name: "EUR Provider No Market Prices",
+      balance: 20000,
+      cash_balance: 5000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "NOPX", name: "No Prices", exchange_operating_mic: "XNAS")
+    trade_date = 2.days.ago.to_date
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "CAD", date: trade_date, rate: 1.5)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "CAD", date: Date.current, rate: 1.5)
+
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 100, currency: "EUR")
+
+    # Provider snapshot only — no Security::Price rows exist for this security.
+    account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 10,
+      price: 120,
+      amount: 1200,
+      currency: "EUR",
+      account_provider_id: nil,
+      cost_basis: 100,
+      cost_basis_source: "provider"
+    )
+
+    assert_equal 0, Security::Price.where(security: security).count
+
+    Holding::Materializer.new(account, strategy: :reverse).materialize_holdings
+
+    currencies = account.holdings.where(security: security).distinct.pluck(:currency)
+    assert_equal [ "EUR" ], currencies
+    assert account.holdings.where(security: security).where("date < ?", Date.current).exists?,
+           "Historical reverse holdings should be gapfilled from the provider/holding price series"
+  end
+
   test "preserves same-day non-provider holdings for securities absent from the provider snapshot" do
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
 

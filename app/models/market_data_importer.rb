@@ -93,6 +93,38 @@ class MarketDataImporter
         pair_dates[key] = [ pair_dates[key], chosen_date ].compact.min
       end
 
+      # 3. HOLDING → ACCOUNT – native holding currencies for balance sync
+      Holding.joins(:account)
+             .where.not("holdings.currency = accounts.currency")
+             .group("holdings.currency", "accounts.currency")
+             .minimum("holdings.date")
+             .each do |(source, target), date|
+        key = [ source, target ]
+        pair_dates[key] = [ pair_dates[key], date ].compact.min
+      end
+
+      # 4. TRADE → HOLDING currency – cost basis conversion, scoped to the same account
+      #    (e.g. CAD-denominated trades into USD-priced holdings need CAD→USD).
+      Trade.with_entry
+           .joins("INNER JOIN holdings ON holdings.account_id = entries.account_id AND holdings.currency <> trades.currency")
+           .group("trades.currency", "holdings.currency")
+           .minimum("entries.date")
+           .each do |(trade_currency, holding_currency), trade_date|
+        key = [ trade_currency, holding_currency ]
+        pair_dates[key] = [ pair_dates[key], trade_date ].compact.min
+      end
+
+      # 5. SECURITY PRICE → ACCOUNT for prices whose currency differs from the account
+      Security::Price.joins("INNER JOIN holdings ON holdings.security_id = security_prices.security_id")
+                     .joins("INNER JOIN accounts ON accounts.id = holdings.account_id")
+                     .where("security_prices.currency <> accounts.currency")
+                     .group("security_prices.currency", "accounts.currency")
+                     .minimum("security_prices.date")
+                     .each do |(source, target), date|
+        key = [ source, target ]
+        pair_dates[key] = [ pair_dates[key], date ].compact.min
+      end
+
       # Convert to array of hashes for ease of use
       pair_dates.map do |(source, target), date|
         { source: source, target: target, start_date: date }

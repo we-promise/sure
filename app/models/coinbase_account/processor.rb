@@ -97,12 +97,27 @@ class CoinbaseAccount::Processor
         end
       end
 
-      # Fallback: Sum holdings values for this account
+      # Fallback: Sum holdings values for this account, converting into native currency
       account = coinbase_account.current_account
       if account.present?
-        today_holdings = account.holdings.where(date: Date.current)
+        today_holdings = account.holdings.where(date: Date.current).to_a
         if today_holdings.any?
-          return today_holdings.sum(:amount)
+          foreign = today_holdings.map(&:currency).uniq.reject { |currency| currency == native_currency }
+          rates = ExchangeRate.rates_for(foreign, to: native_currency, date: Date.current, fallback: nil)
+
+          return today_holdings.sum do |holding|
+            if holding.currency == native_currency
+              holding.amount
+            elsif (rate = rates[holding.currency])
+              holding.amount * rate
+            else
+              Rails.logger.warn(
+                "CoinbaseAccount::Processor omitting holding #{holding.id} " \
+                "(#{holding.currency}→#{native_currency}): no exchange rate"
+              )
+              0
+            end
+          end
         end
       end
 

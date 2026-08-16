@@ -94,9 +94,11 @@ class Holding::PortfolioCache
 
       security_ids = securities.map(&:id)
 
-      # Bulk-load all DB prices for all securities in one query, grouped by security_id
+      # Bulk-load all DB prices for all securities in one query, grouped by security_id.
+      # Explicit currency order keeps same-priority ties deterministic across syncs.
       db_prices_by_security_id = Security::Price
         .where(security_id: security_ids, date: account.start_date..Date.current)
+        .order(:security_id, :date, :currency)
         .group_by(&:security_id)
 
       securities.each do |security|
@@ -153,17 +155,30 @@ class Holding::PortfolioCache
 
         all_prices = db_prices + trade_prices + holding_prices
 
-        # Index by date for O(1) lookup in get_price instead of O(N) linear scan
+        # Index by date for O(1) lookup in get_price instead of O(N) linear scan.
+        # When priorities tie, prefer the account currency, then alphabetical currency
+        # so native-currency selection cannot flip between syncs.
         prices_by_date = all_prices.group_by { |p| p.price.date }
-          .transform_values { |ps| ps.min_by(&:priority) }
+          .transform_values { |ps| pick_preferred_price(ps) }
         prices_by_date_and_source = all_prices.group_by { |p| [ p.price.date, p.source ] }
-          .transform_values { |ps| ps.min_by(&:priority) }
+          .transform_values { |ps| pick_preferred_price(ps) }
 
         @security_cache[security.id] = {
           security: security,
           prices_by_date: prices_by_date,
           prices_by_date_and_source: prices_by_date_and_source
         }
+      end
+    end
+
+    def pick_preferred_price(price_with_priorities)
+      price_with_priorities.min_by do |candidate|
+        currency = candidate.price.currency.to_s
+        [
+          candidate.priority,
+          currency == account.currency ? 0 : 1,
+          currency
+        ]
       end
     end
 end

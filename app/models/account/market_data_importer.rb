@@ -32,6 +32,51 @@ class Account::MarketDataImporter
       pair_dates[key] = [ pair_dates[key], account.start_date ].compact.min
     end
 
+    # 3. HOLDING → ACCOUNT – native holding currencies for balance sync
+    account.holdings
+           .where.not(currency: account.currency)
+           .group(:currency)
+           .minimum(:date)
+           .each do |source_currency, date|
+      key = [ source_currency, account.currency ]
+      pair_dates[key] = [ pair_dates[key], date ].compact.min
+    end
+
+    # 4. TRADE/ENTRY → HOLDING currency – cost basis needs the inverse direction
+    #    (e.g. CAD trades into a USD-priced security need CAD→USD).
+    holding_currency_dates = account.holdings.group(:currency).minimum(:date)
+    trade_currency_dates = account.trades
+                                  .with_entry
+                                  .group("trades.currency")
+                                  .minimum("entries.date")
+
+    trade_currency_dates.each do |trade_currency, trade_date|
+      holding_currency_dates.each do |holding_currency, holding_date|
+        next if trade_currency == holding_currency
+
+        key = [ trade_currency, holding_currency ]
+        pair_dates[key] = [ pair_dates[key], trade_date, holding_date ].compact.min
+      end
+    end
+
+    # 5. SECURITY PRICE → ACCOUNT – DB prices may introduce currencies absent from entries
+    security_ids = (
+      account.holdings.distinct.pluck(:security_id) +
+      account.trades.distinct.pluck(:security_id)
+    ).uniq
+
+    if security_ids.any?
+      Security::Price
+        .where(security_id: security_ids)
+        .where.not(currency: account.currency)
+        .group(:currency)
+        .minimum(:date)
+        .each do |source_currency, date|
+          key = [ source_currency, account.currency ]
+          pair_dates[key] = [ pair_dates[key], date ].compact.min
+        end
+    end
+
     pair_dates.each do |(source, target), start_date|
       ExchangeRate.import_provider_rates(
         from: source,
@@ -113,11 +158,26 @@ class Account::MarketDataImporter
     end
 
     def needs_exchange_rates?
-      has_multi_currency_entries? || foreign_account?
+      has_multi_currency_entries? ||
+        foreign_account? ||
+        has_multi_currency_holdings? ||
+        has_trade_holding_currency_mismatch?
     end
 
     def has_multi_currency_entries?
       account.entries.where.not(currency: account.currency).exists?
+    end
+
+    def has_multi_currency_holdings?
+      account.holdings.where.not(currency: account.currency).exists?
+    end
+
+    def has_trade_holding_currency_mismatch?
+      trade_currencies = account.trades.distinct.pluck(:currency)
+      holding_currencies = account.holdings.distinct.pluck(:currency)
+      return false if trade_currencies.empty? || holding_currencies.empty?
+
+      trade_currencies.any? { |trade_currency| holding_currencies.any? { |holding_currency| trade_currency != holding_currency } }
     end
 
     def foreign_account?

@@ -71,6 +71,36 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_nil today.cost_basis
   end
 
+  test "memoizes FX lookups across days without new buys" do
+    account = families(:empty).accounts.create!(
+      name: "CAD Brokerage FX Memo",
+      balance: 10000,
+      cash_balance: 10000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "MEMO", name: "Memo FX")
+    trade_date = 5.days.ago.to_date
+
+    (0..5).each do |offset|
+      date = trade_date + offset.days
+      ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: date, rate: 0.75)
+      Security::Price.create!(security: security, date: date, price: 100 + offset, currency: "USD")
+    end
+
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 135, currency: "CAD")
+
+    # One buy lot on trade_date → find_or_fetch_rate should run once for CAD→USD on that date,
+    # not once per subsequent holding day.
+    ExchangeRate.expects(:find_or_fetch_rate)
+                .with(from: "CAD", to: "USD", date: trade_date)
+                .returns(OpenStruct.new(rate: BigDecimal("0.75")))
+                .once
+
+    holdings = Holding::ForwardCalculator.new(account).calculate
+    assert holdings.any? { |holding| holding.security_id == security.id && holding.cost_basis.present? }
+  end
+
   test "holding generation respects user timezone and last generated date is current user date" do
     # Simulate user in EST timezone
     Time.use_zone("America/New_York") do

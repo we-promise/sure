@@ -529,7 +529,7 @@ class Account < ApplicationRecord
         .where.not(qty: 0)
         .where(
           id: holdings.select("DISTINCT ON (security_id) id")
-                      .order(:security_id, date: :desc)
+                      .order(Arel.sql(Holding.latest_security_order_sql(prefer_currency: currency)))
         )
         .order(amount: :desc)
     end

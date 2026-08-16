@@ -95,16 +95,19 @@ class Trade < ApplicationRecord
       # Use preloaded holdings if available (set by reports controller to avoid N+1)
       # Treat defined-but-empty preload as authoritative to prevent DB fallback
       holding = if defined?(@preloaded_holdings)
-        # Use select + max_by for deterministic selection regardless of array order
+        # Prefer latest date, then account currency, then alphabetical currency.
         (@preloaded_holdings || [])
           .select { |h| h.security_id == security_id && h.date <= entry.date }
-          .max_by(&:date)
+          .max_by { |h| [ h.date, h.currency == entry.account.currency ? 1 : 0, h.currency.to_s ] }
       else
         # Fall back to database query only when not preloaded
         entry.account.holdings
           .where(security_id: security_id)
           .where("date <= ?", entry.date)
-          .order(date: :desc)
+          .order(Arel.sql(Holding.latest_security_order_sql(
+            prefer_currency: entry.account.currency,
+            partition_columns: []
+          )))
           .first
       end
 

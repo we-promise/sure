@@ -182,10 +182,11 @@ class Holding::Materializer
     end
 
     # Calculated holdings preserve native price currency. After rematerialization,
-    # delete non-provider rows for the same security/date that still use an older
-    # currency (orphaned from prior account-currency normalization).
+    # delete calculated non-provider rows for the same security/date that still use
+    # an older currency (orphaned from prior account-currency normalization).
     # Locked/manual cost-basis rows are migrated onto the kept currency first so
-    # user-entered basis is not lost with the stale account-currency row.
+    # user-entered basis is not lost with the stale account-currency row. Migration
+    # preserves the source row's cost_basis_source and cost_basis_locked flags.
     #
     # Batches the candidate lookup for all rematerialized (security, date) keys in
     # one query so reverse materialization does not N+1 over every day/security.
@@ -229,15 +230,14 @@ class Holding::Materializer
           date: date
         )
 
-        # Delete calculated orphans in memory (same rules as Holding.calculated).
-        # Successfully migrated manual/locked rows are also removed; failed
-        # migrations stay in preserve_ids.
+        # Only calculated orphans are deleted automatically. Manual/locked rows are
+        # deleted only after a successful migration onto the kept currency row.
         calculated_ids = stale_rows
-          .reject { |holding| holding.cost_basis_locked? || holding.cost_basis_source == "manual" }
+          .select(&:calculated?)
           .map(&:id)
 
         migrated_manual_ids = stale_rows
-          .select { |holding| holding.cost_basis_locked? || holding.cost_basis_source == "manual" }
+          .reject(&:calculated?)
           .map(&:id) - preserve_ids
 
         deletable_ids.concat(calculated_ids + migrated_manual_ids)
@@ -252,7 +252,7 @@ class Holding::Materializer
     # newly materialized native-currency row. Returns stale row IDs that must be kept
     # when migration is not possible (missing target or FX conversion failure).
     def migrate_manual_cost_basis_from_stale_rows(stale_rows:, target:, date:)
-      manual_rows = stale_rows.select { |holding| holding.cost_basis_locked? || holding.cost_basis_source == "manual" }
+      manual_rows = stale_rows.reject(&:calculated?)
       return [] if manual_rows.empty?
 
       source = manual_rows.max_by { |holding| [ holding.cost_basis_locked? ? 1 : 0, holding.updated_at || Time.at(0) ] }
@@ -268,8 +268,8 @@ class Holding::Materializer
 
       target.update!(
         cost_basis: converted,
-        cost_basis_source: "manual",
-        cost_basis_locked: true
+        cost_basis_source: source.cost_basis_source,
+        cost_basis_locked: source.cost_basis_locked?
       )
 
       []

@@ -7,6 +7,10 @@ class Holding::ForwardCalculator
     # Track buy lots per security so cost basis can be converted into the holding's
     # native price currency (not forced into account.currency).
     @cost_basis_tracker = Hash.new { |h, k| h[k] = [] }
+    # Memoize cost basis by [security_id, currency, lot_count] so days without new
+    # buys are O(1), and memoize FX rates by [from, to, date] across lots/days.
+    @cost_basis_memo = {}
+    @fx_rate_memo = {}
   end
 
   def calculate
@@ -100,25 +104,41 @@ class Holding::ForwardCalculator
       buys = @cost_basis_tracker[security_id]
       return nil if buys.empty?
 
+      memo_key = [ security_id, currency, buys.size ]
+      return @cost_basis_memo[memo_key] if @cost_basis_memo.key?(memo_key)
+
+      @cost_basis_memo[memo_key] = weighted_average_cost(buys, currency)
+    end
+
+    def weighted_average_cost(buys, currency)
       total_qty = buys.sum { |buy| buy[:qty] }
       return nil if total_qty.zero?
 
       total_cost = BigDecimal("0")
 
       buys.each do |buy|
-        if buy[:currency] == currency
-          total_cost += buy[:price] * buy[:qty]
-        else
-          begin
-            converted_price = Money.new(buy[:price], buy[:currency]).exchange_to(currency, date: buy[:date]).amount
-          rescue Money::ConversionError
-            return nil
-          end
+        converted_price = convert_buy_price(buy, currency)
+        return nil if converted_price.nil?
 
-          total_cost += converted_price * buy[:qty]
-        end
+        total_cost += converted_price * buy[:qty]
       end
 
       total_cost / total_qty
+    end
+
+    def convert_buy_price(buy, currency)
+      return buy[:price] if buy[:currency] == currency
+
+      rate = fx_rate(from: buy[:currency], to: currency, date: buy[:date])
+      return nil if rate.nil?
+
+      buy[:price] * rate
+    end
+
+    def fx_rate(from:, to:, date:)
+      key = [ from, to, date ]
+      return @fx_rate_memo[key] if @fx_rate_memo.key?(key)
+
+      @fx_rate_memo[key] = ExchangeRate.find_or_fetch_rate(from: from, to: to, date: date)&.rate
     end
 end
