@@ -205,25 +205,27 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   def split
     resolve_to_parent!
 
-    unless @entry.transaction.splittable? || @entry.split_parent?
-      render json: {
-        error: "validation_failed",
-        message: "Transaction cannot be split (transfers, pending, excluded, and already-split transactions are not splittable)"
-      }, status: :unprocessable_entity
-      return
-    end
-
-    splits = parsed_splits
-    if splits.blank?
-      render json: {
-        error: "validation_failed",
-        message: "At least one split part is required",
-        errors: [ "At least one split part is required" ]
-      }, status: :unprocessable_entity
-      return
-    end
-
     Entry.transaction do
+      @entry.lock!
+
+      unless @entry.transaction.splittable? || @entry.split_parent?
+        render json: {
+          error: "validation_failed",
+          message: "Transaction cannot be split (transfers, pending, excluded, and already-split transactions are not splittable)"
+        }, status: :unprocessable_entity
+        return
+      end
+
+      splits = parsed_splits
+      if splits.blank?
+        render json: {
+          error: "validation_failed",
+          message: "At least one split part is required",
+          errors: [ "At least one split part is required" ]
+        }, status: :unprocessable_entity
+        return
+      end
+
       @entry.unsplit! if @entry.split_parent?
       @entry.split!(splits)
     end
@@ -257,15 +259,19 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   def unsplit
     resolve_to_parent!
 
-    unless @entry.split_parent?
-      render json: {
-        error: "validation_failed",
-        message: "Transaction is not split"
-      }, status: :unprocessable_entity
-      return
-    end
+    Entry.transaction do
+      @entry.lock!
 
-    @entry.unsplit!
+      unless @entry.split_parent?
+        render json: {
+          error: "validation_failed",
+          message: "Transaction is not split"
+        }, status: :unprocessable_entity
+        return
+      end
+
+      @entry.unsplit!
+    end
     @entry.sync_account_later
 
     @transaction = @entry.transaction
@@ -471,9 +477,18 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
 
       raw_splits.map do |s|
+        unless s.is_a?(ActionController::Parameters) || s.is_a?(Hash)
+          raise ActionController::ParameterMissing, :splits
+        end
+
+        amount = s[:amount]
+        unless amount.is_a?(Numeric) || amount.is_a?(String)
+          raise ActionController::ParameterMissing, :amount
+        end
+
         {
           name: s[:name],
-          amount: s[:amount].to_d,
+          amount: amount.to_d,
           category_id: s[:category_id].presence,
           excluded: s[:excluded]
         }
@@ -481,7 +496,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     def split_params
-      split = params.require(:split).permit(splits: %i[name amount category_id excluded])
+      split = params.require(:split)
+      raise ActionController::ParameterMissing, :split unless split.is_a?(ActionController::Parameters)
+
+      split = split.permit(splits: %i[name amount category_id excluded])
       raise ActionController::ParameterMissing, :splits unless split.key?(:splits)
 
       split

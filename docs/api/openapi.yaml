@@ -7616,13 +7616,15 @@ paths:
         type: string
         format: uuid
       required: true
-      description: Transaction ID
+      description: Transaction ID. Passing a split child ID resolves to its parent.
     post:
       summary: Split a transaction into categorized parts
       tags:
       - Transactions
       security:
       - apiKeyAuth: []
+      description: Splitting replaces any existing split on the transaction with the
+        provided parts.
       parameters: []
       responses:
         '200':
@@ -7631,6 +7633,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: split parts do not sum to parent amount
           content:
@@ -7671,9 +7685,7 @@ paths:
                             type: number
                             description: Signed amount of the split part. Parts must
                               sum to the parent transaction amount (positive = expense,
-                              negative = income). Replaces an existing split when
-                              the parent is already split; resolves to the parent
-                              when a split child ID is given.
+                              negative = income).
                           category_id:
                             type: string
                             format: uuid
@@ -7688,6 +7700,8 @@ paths:
       - Transactions
       security:
       - apiKeyAuth: []
+      description: Removes the split parts and restores the parent transaction. Passing
+        a split child ID resolves to its parent.
       responses:
         '200':
           description: split removed and parent restored
@@ -7695,6 +7709,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
           content:

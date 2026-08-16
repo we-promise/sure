@@ -891,6 +891,58 @@ end
     assert_not entry.split_parent?
   end
 
+  test "should reject split with malformed split parameter shapes" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    [
+      { split: "not-an-object" },
+      { split: { splits: "not-an-array" } },
+      { split: { splits: [ "not-an-object" ] } },
+      { split: { splits: [ { name: "Part 1", amount: [ 100 ] } ] } },
+      { split: { splits: [ { name: "Part 1", amount: { value: 100 } } ] } }
+    ].each do |payload|
+      post split_api_v1_transaction_url(entry.transaction), params: payload, headers: api_headers(@api_key)
+      assert_includes [ 400, 422 ], response.status, "expected 400/422 for #{payload.inspect}"
+    end
+
+    entry.reload
+    assert_not entry.split_parent?
+  end
+
+  test "concurrent split replacements leave only the winning split set" do
+    entry = create_transaction(account: @account, name: "Concurrent", amount: 100)
+
+    barrier = Queue.new
+    results = Queue.new
+    threads = 2.times.map do |i|
+      Thread.new do
+        session = open_session
+        barrier.pop
+        session.post split_api_v1_transaction_url(entry.transaction),
+                     params: {
+                       split: {
+                         splits: [
+                           { name: "Set #{i} A", amount: 60 },
+                           { name: "Set #{i} B", amount: 40 }
+                         ]
+                       }
+                     },
+                     headers: api_headers(@api_key)
+        results << session.response.status
+      end
+    end
+    threads.each { barrier << true }
+    threads.each(&:join)
+
+    assert_equal [ 200, 200 ], [ results.pop, results.pop ].sort
+
+    entry.reload
+    children = entry.child_entries.to_a
+    assert_equal 2, children.size
+    names = children.map(&:name).sort
+    assert [ [ "Set 0 A", "Set 0 B" ].sort, [ "Set 1 A", "Set 1 B" ].sort ].include?(names)
+  end
+
   test "should not split a transaction on a read-only shared account" do
     member = users(:family_member)
     member.api_keys.active.destroy_all
