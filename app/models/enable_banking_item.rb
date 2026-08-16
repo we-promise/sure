@@ -29,14 +29,19 @@ class EnableBankingItem < ApplicationRecord
 
   # Nullify last_psu_ip once it's no longer needed for provider sync — either the
   # consent session has actually expired, or (for items that never completed
-  # authorization, so session_expires_at is nil) once the same window we'd
-  # request from an ASPSP has elapsed. Ties retention to the accepted/configured
-  # consent duration instead of an independent hardcoded constant.
+  # authorization, so session_expires_at is nil) once the ASPSP-accepted consent
+  # duration we stored at request time (requested_consent_valid_until) has
+  # elapsed, or — only if that wasn't recorded either — once the configured
+  # fallback window has elapsed since the record was last touched. Checking
+  # requested_consent_valid_until first prevents retaining the PSU IP past a
+  # shorter duration the ASPSP actually accepted (it can be less than the
+  # configured ceiling) for authorizations that never reached session creation.
   scope :with_stale_psu_ip, -> {
     fallback_cutoff = Rails.configuration.x.enable_banking.consent_days.days.ago
     where.not(last_psu_ip: nil).where(
       "(session_expires_at IS NOT NULL AND session_expires_at <= :now) OR " \
-      "(session_expires_at IS NULL AND updated_at <= :fallback_cutoff)",
+      "(session_expires_at IS NULL AND requested_consent_valid_until IS NOT NULL AND requested_consent_valid_until <= :now) OR " \
+      "(session_expires_at IS NULL AND requested_consent_valid_until IS NULL AND updated_at <= :fallback_cutoff)",
       now: Time.current, fallback_cutoff: fallback_cutoff
     )
   }
