@@ -50,27 +50,44 @@
     <% end %>
   <% end %>
 
-  <div class="bg-container rounded-xl shadow-border-xs overflow-hidden">
+  <%# Seven columns of long-form diagnostics stay cramped however wide the
+      settings page gets, so the whole table can be reopened in a near
+      full-width dialog — same pattern as the dashboard cashflow chart. %>
+  <div class="bg-container rounded-xl shadow-border-xs overflow-hidden group" data-controller="expandable">
     <% if @debug_log_entries.any? %>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-surface border-b border-primary">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.time") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.level") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.category") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.source") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.message") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.context") %></th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.metadata") %></th>
-              <th class="px-4 py-3 w-px"><span class="sr-only"><%= t(".table.actions") %></span></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
-            <%= render partial: "settings/debugs/log_entry", collection: @debug_log_entries, as: :entry %>
-          </tbody>
-        </table>
+      <%# Desktop reveals the expand affordance on card hover (and on keyboard
+          focus, since an opacity-0 button is still tabbable); touch devices
+          have no hover state, so it stays visible below `lg`. %>
+      <div class="flex items-center justify-end px-4 py-2 border-b border-primary">
+        <%= render DS::Button.new(
+              variant: "icon",
+              size: :sm,
+              icon: "maximize-2",
+              title: t("global.expand"),
+              aria_label: t("global.expand"),
+              class: "opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity",
+              data: { action: "click->expandable#open" }
+            ) %>
       </div>
+
+      <div class="overflow-x-auto">
+        <%= render "settings/debugs/log_table", entries: @debug_log_entries %>
+      </div>
+
+      <%= render DS::Dialog.new(
+            auto_open: false,
+            disable_frame: true,
+            width: "custom",
+            content_class: "!w-[96vw] max-w-[1650px]",
+            data: { expandable_target: "dialog" }
+          ) do |dialog| %>
+        <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle")) %>
+        <% dialog.with_body do %>
+          <div class="max-h-[75dvh] overflow-auto overscroll-contain">
+            <%= render "settings/debugs/log_table", entries: @debug_log_entries %>
+          </div>
+        <% end %>
+      <% end %>
     <% else %>
       <div class="p-8 text-center text-secondary"><%= t(".empty") %></div>
     <% end %>
