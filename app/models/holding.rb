@@ -28,11 +28,13 @@ class Holding < ApplicationRecord
   scope :with_locked_cost_basis, -> { where(cost_basis_locked: true) }
   scope :with_unlocked_cost_basis, -> { where(cost_basis_locked: false) }
   # Non-provider rows that are not user-entered/locked cost basis.
+  # Keep in sync with #calculated?
   scope :calculated, -> {
     where(account_provider_id: nil, cost_basis_locked: false)
       .where("cost_basis_source IS DISTINCT FROM ?", "manual")
   }
 
+  # In-memory counterpart of .calculated — used on already-loaded rows.
   def calculated?
     account_provider_id.nil? && !cost_basis_locked? && cost_basis_source != "manual"
   end

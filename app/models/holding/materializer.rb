@@ -224,19 +224,16 @@ class Holding::Materializer
 
       return if stale_by_key.empty?
 
-      deletable_ids = []
-
       stale_by_key.each do |(security_id, date), stale_rows|
         preserve_manual_cost_basis_from_stale_rows(
           stale_rows: stale_rows,
           target: targets_by_key[[ security_id, date ]],
           date: date
         )
-
-        deletable_ids.concat(stale_rows.select(&:calculated?).map(&:id))
       end
 
-      deleted_count = deletable_ids.any? ? account.holdings.where(id: deletable_ids.uniq).delete_all : 0
+      stale_ids = stale_by_key.values.flat_map { |rows| rows.map(&:id) }
+      deleted_count = stale_ids.any? ? account.holdings.calculated.where(id: stale_ids).delete_all : 0
 
       Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings with outdated currencies") if deleted_count > 0
     end
