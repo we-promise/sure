@@ -13,7 +13,7 @@ es:
     destroy:
       success: Conexión del proveedor CoinStats programada para su eliminación.
     link_wallet:
-      success: '%{count} cartera(s) de criptomonedas vinculada(s) correctamente.'
+      success: 'Carteras de criptomonedas vinculadas correctamente: %{count}.'
       missing_params: 'Faltan parámetros requeridos: dirección y blockchain.'
       failed: Error al vincular la cartera de criptomonedas.
       error: 'Error al vincular la cartera de criptomonedas: %{message}.'

@@ -53,13 +53,13 @@ es:
     new:
       new_transaction: Nueva transacción
     show:
-      keep_both: No, conservar ambas
+      keep_both: No, mantener ambas
       loan_payment: Pago de préstamo
       mark_recurring: Marcar como recurrente
       mark_recurring_subtitle: Haz seguimiento de esta transacción como recurrente. La variación del importe se calcula automáticamente a partir de transacciones similares de los últimos 6 meses.
       mark_recurring_title: Transacción recurrente
-      merge_duplicate: Sí, fusionarlas
-      potential_duplicate_description: Esta transacción pendiente puede ser la misma que la transacción contabilizada de abajo. Si es así, fusiónalas para evitar contarlas dos veces.
+      merge_duplicate: Sí, combinarlas
+      potential_duplicate_description: Esta transacción pendiente puede ser la misma que la transacción contabilizada de abajo. Si es así, combínalas para evitar contarlas dos veces.
       potential_duplicate_title: Posible duplicado detectado
       transfer: Transferencia
       account_label: Cuenta
@@ -84,7 +84,7 @@ es:
       pending_duplicate_merger_title: ¿Duplicado de una transacción contabilizada?
       pending_duplicate_merger_description: Fusiona manualmente esta transacción pendiente con su versión contabilizada.
       pending_duplicate_merger_button: Abrir fusionador
-      merchant_label: Comerciante
+      merchant_label: Comercio
       name_label: Nombre
       nature: Tipo
       none: (ninguno)
@@ -126,7 +126,7 @@ es:
     merge_duplicate:
       success: Transacciones combinadas correctamente
       failure: No se pudieron combinar las transacciones
-    keep_both: No, conservar ambas
+    keep_both: No, mantener ambas
     split_parent_row:
       split_label: Dividida
     transfer_match:
@@ -167,7 +167,7 @@ es:
     header:
       edit_categories: Editar categorías
       edit_imports: Editar importaciones
-      edit_merchants: Editar comerciantes
+      edit_merchants: Editar comercios
       edit_tags: Editar etiquetas
       import: Importar
     index:
@@ -233,7 +233,7 @@ es:
         amount: Importe
         category: Categoría
         tag: Etiqueta
-        merchant: Comerciante
+        merchant: Comercio
     convert_to_trade:
       title: Convertir en operación de valores
       description: Convierte esta transacción en una operación con detalles del valor
@@ -317,7 +317,7 @@ es:
         category_filter: Categoría
         clear_filters: Limpiar filtros
         date_filter: Fecha
-        merchant_filter: Comerciante
+        merchant_filter: Comercio
         status_filter: Estado
         tag_filter: Etiqueta
         type_filter: Tipo

@@ -104,6 +104,9 @@ es:
       unarchive: Restaurar
       reopen: Reabrir objetivo
       delete: Eliminar definitivamente
+      confirm_delete_title: ¿Eliminar este objetivo?
+      confirm_delete_body: "%{name} y su historial de aportaciones se eliminarán definitivamente. Tus cuentas vinculadas, saldos y transacciones no se verán afectados. Para conservarlo como registro, archívalo."
+      confirm_delete_cta: Eliminar objetivo
       record_pledge_cta: Registrar aportación
       pledge_just_transferred: Registra una transferencia que ya has hecho
       pledge_just_saved: Registra dinero que has apartado

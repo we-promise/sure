@@ -161,7 +161,7 @@ es:
       synced:
         one: '%{count} cuenta sincronizada'
         other: '%{count} cuentas sincronizadas'
-      synced_with_setup: '%{linked} sincronizadas, %{unlinked} necesitan configuración'
+      synced_with_setup: 'Sincronizadas: %{linked}; necesitan configuración: %{unlinked}'
     institution_summary:
       none: No hay instituciones conectadas
       count:

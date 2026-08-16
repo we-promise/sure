@@ -49,7 +49,7 @@ es:
         other: "%{count} días de retraso"
       idle_days:
         one: "%{count} día inactivo"
-        other: "%{count} días inactivo"
+        other: "%{count} días inactivos"
     actions:
       spending_anomaly: Ver transacciones de %{category}
       cash_flow_warning: Revisar transacciones recurrentes

@@ -4,4 +4,4 @@ es:
     errors:
       models:
         simplefin_account:
-          no_balance: La cuenta de SimpleFin debe tener saldo actual o disponible
+          no_balance: La cuenta de SimpleFIN debe tener saldo actual o disponible

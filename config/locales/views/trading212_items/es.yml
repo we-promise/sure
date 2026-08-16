@@ -71,7 +71,7 @@ es:
       all_linked:
         one: 1 cuenta vinculada
         other: "%{count} cuentas vinculadas"
-      partial: "%{linked} vinculadas, %{unlinked} necesitan configuración"
+      partial: "Con vínculo: %{linked}; necesitan configuración: %{unlinked}"
     select_existing_account:
       title: Vincular cuenta de Trading 212
       no_accounts_available: Aún no hay cuentas de Trading 212 sin vincular disponibles.

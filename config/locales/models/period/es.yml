@@ -24,7 +24,7 @@ es:
     last_30_days:
       label_short: 30D
       label: Últimos 30 días
-      comparison_label: vs. últimos 30 días
+      comparison_label: vs. los 30 días anteriores
     last_90_days:
       label_short: 90D
       label: Últimos 90 días

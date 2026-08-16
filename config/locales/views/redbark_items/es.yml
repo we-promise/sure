@@ -7,7 +7,7 @@ es:
       synced:
         one: "%{count} cuenta sincronizada"
         other: "%{count} cuentas sincronizadas"
-      synced_with_setup: "%{linked} sincronizadas, %{unlinked} necesitan configuración"
+      synced_with_setup: "Sincronizadas: %{linked}; necesitan configuración: %{unlinked}"
     institution_summary:
       none: "No hay instituciones conectadas"
       count:
@@ -184,6 +184,10 @@ es:
       all_skipped: "Se omitieron todas las cuentas. No se creó ninguna cuenta."
       creation_failed: "No se pudieron crear las cuentas: %{error}"
       creation_failed_generic: "No se pudieron crear las cuentas."
-      setup_failed: "No se pudieron crear %{count} cuenta(s). No se cambió nada más; corrige el problema e inténtalo de nuevo."
+      setup_failed:
+        one: "No se pudo crear %{count} cuenta. No se cambió nada más; corrige el problema e inténtalo de nuevo."
+        other: "No se pudieron crear %{count} cuentas. No se cambió nada más; corrige el problema e inténtalo de nuevo."
       no_accounts: "No hay cuentas para configurar."
-      success: "Se crearon correctamente %{count} cuenta(s)."
+      success:
+        one: "Se creó correctamente %{count} cuenta."
+        other: "Se crearon correctamente %{count} cuentas."

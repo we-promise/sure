@@ -143,7 +143,7 @@ es:
       other_asset: Otro activo
       credit_card: Tarjeta de crédito
       loan: Préstamo
-      other_liability: Otra deuda
+      other_liability: Otro pasivo
     types_plural:
       depository: Efectivo
       investment: Inversiones

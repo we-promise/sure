@@ -38,5 +38,5 @@ es:
       cancel: Cancelar
     create_user:
       no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
-      account_creation_disabled: La creación de cuentas por SSO está desactivada. Contacta con un administrador.
-      account_created: ¡Bienvenido! Tu cuenta se ha creado.
+      account_creation_disabled: La creación de cuentas mediante inicio de sesión único está desactivada. Contacte con un administrador.
+      account_created: ¡Bienvenido! Su cuenta se ha creado.
