@@ -1,6 +1,8 @@
 require "test_helper"
 
 class GoalsControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
@@ -210,6 +212,23 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert fresh.reload.active?
   end
 
+  # The reported bug: Delete rendered only when the goal was archived, so an
+  # active goal had no delete affordance anywhere in the UI. The kebab is the
+  # only route to it, so assert the form is actually in the markup per state —
+  # a 200 alone would not have caught the original miss.
+  test "show exposes delete for a goal in every state" do
+    delete_form = "form[action='#{goal_path(@goal)}'] input[name='_method'][value='delete']"
+
+    %w[active paused completed archived].each do |state|
+      @goal.update_column(:state, state)
+
+      get goal_url(@goal)
+
+      assert_response :success
+      assert_select delete_form, 1, "no delete affordance on a #{state} goal"
+    end
+  end
+
   # A goal whose last funding account is deleted survives with zero links and
   # fails `must_have_at_least_one_linked_account` from then on. Editing is the
   # only way back, so update must validate the accounts the user SUBMITTED,
@@ -240,19 +259,38 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "active", orphan.reload.state
   end
 
-  test "destroy on non-archived is rejected" do
-    assert_no_difference "Goal.count" do
+  test "destroy deletes an active goal and cascades to its links and pledges" do
+    assert_difference -> { Goal.count } => -1,
+                      -> { GoalAccount.count } => -2,
+                      -> { GoalPledge.count } => -2 do
       delete goal_url(@goal)
     end
-    assert_redirected_to goal_path(@goal)
+    assert_redirected_to goals_path
   end
 
-  test "destroy on archived deletes" do
+  test "destroy deletes an archived goal" do
     @goal.archive!
     assert_difference "Goal.count", -1 do
       delete goal_url(@goal)
     end
     assert_redirected_to goals_path
+  end
+
+  # The one thing a goal delete reaches outside its own tables: a matched
+  # pledge stamps `extra["goal"]["pledge_id"]` onto the transaction it claimed,
+  # and GoalPledge#clear_matched_transaction_extra must unstamp it on the way
+  # out. The transaction itself must survive untouched.
+  test "destroy unstamps the transaction a matched pledge claimed" do
+    txn = create_transaction(account: @connected, amount: -300).entryable
+    pledge = goal_pledges(:matched_transfer)
+    txn.update!(extra: { "goal" => { "pledge_id" => pledge.id } })
+    pledge.update_column(:matched_transaction_id, txn.id)
+
+    delete goal_url(@goal)
+
+    assert_redirected_to goals_path
+    assert Transaction.exists?(txn.id), "deleting a goal must not delete the transaction"
+    assert_nil txn.reload.extra.dig("goal", "pledge_id")
   end
 
   test "index KPI swaps to 'All caught up' when every tracked goal is reached" do

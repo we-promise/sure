@@ -1,0 +1,88 @@
+uk:
+  breadcrumbs:
+    account_sharings: Спільний доступ до рахунків
+    account_statements: Сховище виписок
+    accounts: Рахунки
+    ai_prompts: AI-промпти
+    api_key: API-ключ
+    api_keys: API-ключі
+    appearance: Зовнішній вигляд
+    appearances: Зовнішній вигляд
+    bank_sync: Синхронізація з банком
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Категорії бюджету
+    budgets: Бюджети
+    categories: Категорії
+    categorize: Класифікація
+    chats: Чати
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Кредитні картки
+    cryptos: Криптовалюта
+    dashboard: Дашборд
+    debug: Відладка
+    debugs: Відладка
+    depositories: Грошові рахунки
+    enable_banking_items: Enable Banking
+    exports: Експорт
+    family_exports: Експорт
+    family_merchants: Торговці
+    guides: Посібники
+    holdings: Портфель
+    home: Головна
+    hostings: Self-Hosting
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Імперсонація
+    imports: Імпорт
+    indexa_capital_items: Indexa Capital
+    intro: Вступ
+    investments: Інвестиції
+    invitations: Запрошення
+    invite_codes: Інвіт-коди
+    kraken_items: Kraken
+    llm_usage: Використання LLM
+    llm_usages: Використання LLM
+    loans: Позики
+    lunchflow_items: Lunch Flow
+    mcp: MCP-сервер
+    merchants: Торговці
+    mercury_items: Mercury
+    messages: Повідомлення
+    mfa: Двофакторна автентифікація
+    oidc_accounts: SSO-рахунки
+    onboardings: Онбординг
+    other_assets: Інші активи
+    other_liabilities: Інші зобов'язання
+    payments: Платежі
+    pending_duplicate_merges: Перевірка дублікатів
+    plaid_items: Plaid
+    preferences: Налаштування
+    profile: Профіль
+    profiles: Профіль
+    properties: Нерухомість
+    providers: Постачальники
+    questrade_items: Questrade
+    recurring_transactions: Рекурентні
+    registrations: Реєстрація
+    reports: Звіти
+    rules: Правила
+    securities: Цінні папери
+    security: Безпека
+    self_hosting: Self-Hosting
+    sessions: Вхід
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Розділення
+    sso_identities: SSO-з'єднання
+    sso_providers: SSO-провайдери
+    subscriptions: Підписка
+    tags: Теги
+    trades: Операції
+    transactions: Транзакції
+    transfer_matches: Співпадіння переказів
+    transfers: Перекази
+    users: Користувачі
+    valuations: Оцінки
+    vehicles: Транспорт

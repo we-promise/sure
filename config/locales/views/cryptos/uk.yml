@@ -1,0 +1,20 @@
+---
+uk:
+  cryptos:
+    edit:
+      edit: "Редагувати %{account}"
+    form:
+      subtype_label: "Тип рахунку"
+      subtype_prompt: "Вибрати тип рахунку"
+      subtype_none: "Немає"
+      tax_treatment_label: "Податковий режим"
+      tax_treatment_hint: "Більшість криптовалют зберігається на оподатковуваних рахунках. Виберіть інший варіант, якщо вони зберігаються на рахунку з пільговим оподаткуванням."
+    new:
+      title: "Введіть баланс рахунку"
+    subtypes:
+      wallet:
+        short: "Гаманець"
+        long: "Криптогаманець"
+      exchange:
+        short: "Біржа"
+        long: "Криптобіржа"

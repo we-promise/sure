@@ -476,6 +476,27 @@ class Goal < ApplicationRecord
     end
   end
 
+  # Confirm dialog for deleting this goal, shared by the show-page kebab and
+  # the index card kebab so the two can't drift. Spelled out rather than using
+  # CustomConfirm.for_resource_deletion, whose generic "This is not reversible"
+  # reads scarier than a goal delete is: only the goal, its account links and
+  # its pledge history go — the accounts, balances and transactions behind it
+  # are untouched.
+  def deletion_confirm
+    CustomConfirm.new(
+      destructive: true,
+      high_severity: true,
+      title: I18n.t("goals.show.confirm_delete_title"),
+      # Escaped: the dialog assigns `body` to innerHTML (so bodies like the
+      # accounts' confirm_body_html can carry <p>), so a goal named
+      # "<img src=x onerror=…>" would otherwise run when a family member opens
+      # the confirmation. Only `body` needs this — the dialog sets its title and
+      # button label with textContent.
+      body: I18n.t("goals.show.confirm_delete_body", name: ERB::Util.html_escape(name)),
+      btn_text: I18n.t("goals.show.confirm_delete_cta")
+    )
+  end
+
   # Single-line state summary rendered between the header and the ring on
   # the show page. Replaces the stacked catch-up alert + inline status pill;
   # carries the same actionable copy without owning a CTA. Returns nil when
@@ -507,7 +528,11 @@ class Goal < ApplicationRecord
   # Header copy under the goal title on show. Used to live as a multi-line
   # if/elsif block in show.html.erb. Keeps the view template free of date
   # math + i18n key picking.
-  def header_summary
+  # The dot-separated segments of the header line, kept as separate strings so
+  # the view can stop a short one breaking mid-phrase. Joined into a single
+  # string, "184 days left" could wrap after "days" and orphan "left" on the
+  # next line — which is what a phone did.
+  def header_summary_parts
     parts = []
     if target_date
       days = (target_date - Date.current).to_i
@@ -528,7 +553,7 @@ class Goal < ApplicationRecord
       parts << I18n.t("goals.show.header.target",
                       amount: target_amount_money.format(precision: 0))
     end
-    parts.join(" · ")
+    parts
   end
 
   # Single source of truth for the projection-chart subtitle / chart-aria
