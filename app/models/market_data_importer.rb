@@ -103,26 +103,71 @@ class MarketDataImporter
         pair_dates[key] = [ pair_dates[key], date ].compact.min
       end
 
-      # 4. TRADE → HOLDING currency – cost basis conversion, scoped to the same account
-      #    (e.g. CAD-denominated trades into USD-priced holdings need CAD→USD).
+      # 4. TRADE → HOLDING currency – cost basis conversion, scoped per account.
+      #    Derive distinct currencies + earliest dates, then combine in Ruby so we
+      #    never join every trade row to every holding row (nightly job blast radius).
+      trade_currencies_by_account = Hash.new { |h, k| h[k] = {} }
       Trade.with_entry
-           .joins("INNER JOIN holdings ON holdings.account_id = entries.account_id AND holdings.currency <> trades.currency")
-           .group("trades.currency", "holdings.currency")
+           .group("entries.account_id", "trades.currency")
            .minimum("entries.date")
-           .each do |(trade_currency, holding_currency), trade_date|
-        key = [ trade_currency, holding_currency ]
-        pair_dates[key] = [ pair_dates[key], trade_date ].compact.min
+           .each do |(account_id, currency), date|
+        trade_currencies_by_account[account_id][currency] = date
       end
 
-      # 5. SECURITY PRICE → ACCOUNT for prices whose currency differs from the account
-      Security::Price.joins("INNER JOIN holdings ON holdings.security_id = security_prices.security_id")
-                     .joins("INNER JOIN accounts ON accounts.id = holdings.account_id")
-                     .where("security_prices.currency <> accounts.currency")
-                     .group("security_prices.currency", "accounts.currency")
-                     .minimum("security_prices.date")
-                     .each do |(source, target), date|
-        key = [ source, target ]
-        pair_dates[key] = [ pair_dates[key], date ].compact.min
+      holding_currencies_by_account = Hash.new { |h, k| h[k] = {} }
+      Holding.group(:account_id, :currency)
+             .minimum(:date)
+             .each do |(account_id, currency), date|
+        holding_currencies_by_account[account_id][currency] = date
+      end
+
+      trade_currencies_by_account.each do |account_id, trade_currencies|
+        holding_currencies = holding_currencies_by_account[account_id]
+        next if holding_currencies.blank?
+
+        trade_currencies.each do |trade_currency, trade_date|
+          holding_currencies.each do |holding_currency, holding_date|
+            next if trade_currency == holding_currency
+
+            key = [ trade_currency, holding_currency ]
+            pair_dates[key] = [ pair_dates[key], trade_date, holding_date ].compact.min
+          end
+        end
+      end
+
+      # 5. SECURITY PRICE → ACCOUNT – prices whose currency differs from accounts that
+      #    hold/trade the security. Map security→account currencies first, then group
+      #    prices by (security, currency) — no price⋈holding row explosion.
+      security_account_currencies = Hash.new { |h, k| h[k] = Set.new }
+
+      Holding.joins(:account)
+             .distinct
+             .pluck("holdings.security_id", "accounts.currency")
+             .each do |security_id, account_currency|
+        security_account_currencies[security_id] << account_currency
+      end
+
+      Trade.with_entry
+           .joins("INNER JOIN accounts ON accounts.id = entries.account_id")
+           .distinct
+           .pluck("trades.security_id", "accounts.currency")
+           .each do |security_id, account_currency|
+        security_account_currencies[security_id] << account_currency
+      end
+
+      if security_account_currencies.any?
+        Security::Price
+          .where(security_id: security_account_currencies.keys)
+          .group(:security_id, :currency)
+          .minimum(:date)
+          .each do |(security_id, price_currency), date|
+            security_account_currencies[security_id].each do |account_currency|
+              next if price_currency == account_currency
+
+              key = [ price_currency, account_currency ]
+              pair_dates[key] = [ pair_dates[key], date ].compact.min
+            end
+          end
       end
 
       # Convert to array of hashes for ease of use
