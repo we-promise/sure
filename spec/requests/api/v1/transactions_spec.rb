@@ -39,6 +39,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       name: 'Checking Account',
       balance: 1000,
       currency: 'USD',
+      owner: user,
       accountable: Depository.create!
     )
   end
@@ -396,6 +397,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
+        required: %w[split],
         properties: {
           split: {
             type: :object,

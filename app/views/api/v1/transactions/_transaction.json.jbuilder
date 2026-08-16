@@ -93,11 +93,11 @@ json.created_at transaction.created_at.iso8601
 json.updated_at transaction.updated_at.iso8601
 
 # Split information (parent relation + child parts)
-json.parent_id transaction.entry.parent_entry_id
+json.parent_id transaction.entry.parent_entry&.transaction&.id
 child_parts = transaction.entry.child_entries.select(&:persisted?)
 if child_parts.any?
   json.splits child_parts do |child|
-    json.id child.id
+    json.id child.transaction.id
     json.date child.date
     json.name child.name
     json.amount child.amount_money.format
@@ -107,6 +107,7 @@ if child_parts.any?
         json.id child.transaction.category.id
         json.name child.transaction.category.name
         json.color child.transaction.category.color
+        json.icon child.transaction.category.lucide_icon
       end
     else
       json.category nil

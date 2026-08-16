@@ -5821,7 +5821,14 @@ paths:
         content:
           multipart/form-data:
             schema:
-              type: file
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 'CSV file with columns: name* (required), color, website_url'
         required: true
         description: 'CSV file with columns: name* (required), color, website_url'
   "/api/v1/merchants/{id}":
@@ -7641,6 +7648,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+              - split
               properties:
                 split:
                   type: object

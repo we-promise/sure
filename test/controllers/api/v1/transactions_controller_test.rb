@@ -847,6 +847,119 @@ end
     assert_equal 30, by_name["Household"].amount.to_i
   end
 
+  test "should expose transaction ids for split children and parent" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: {
+           split: {
+             splits: [
+               { name: "Groceries", amount: "70" },
+               { name: "Household", amount: "30" }
+             ]
+           }
+         },
+         headers: api_headers(@api_key)
+    assert_response :success
+
+    entry.reload
+    response_data = JSON.parse(response.body)
+    by_name = entry.child_entries.index_by(&:name)
+    response_data["splits"].each do |split|
+      assert_equal by_name.fetch(split["name"]).transaction.id, split["id"]
+    end
+
+    child = entry.child_entries.first
+    get api_v1_transaction_url(child.transaction), headers: api_headers(@api_key)
+    assert_response :success
+    child_data = JSON.parse(response.body)
+    assert_equal entry.transaction.id, child_data["parent_id"]
+  end
+
+  test "should reject split when splits key is missing" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: { split: {} },
+         headers: api_headers(@api_key)
+    assert_response :bad_request
+
+    response_data = JSON.parse(response.body)
+    assert_equal "bad_request", response_data["error"]
+
+    entry.reload
+    assert_not entry.split_parent?
+  end
+
+  test "should not split a transaction on a read-only shared account" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Test Member RW Key",
+      scopes: [ "read_write" ],
+      display_key: "test_mem_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+
+    entry = create_transaction(account: accounts(:credit_card), name: "Shared Purchase", amount: 50)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: { split: { splits: [ { name: "Part 1", amount: "50" } ] } },
+         headers: api_headers(member_key)
+    assert_response :not_found
+
+    entry.reload
+    assert_not entry.split_parent?
+  end
+
+  test "should split a transaction on a fully shared account" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Test Member RW Key",
+      scopes: [ "read_write" ],
+      display_key: "test_mem_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+
+    entry = create_transaction(account: accounts(:depository), name: "Shared Purchase", amount: 50)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: { split: { splits: [ { name: "Part 1", amount: "50" } ] } },
+         headers: api_headers(member_key)
+    assert_response :success
+  end
+
+  test "index avoids per-child category queries for split transactions" do
+    category = @family.categories.create!(name: "Split Food", color: "#4CAF50")
+
+    split_parent = create_transaction(account: @account, name: "Split Me", amount: 200)
+    split_parent.split!([
+      { name: "Part A", amount: 120, category_id: category.id },
+      { name: "Part B", amount: 80, category_id: category.id }
+    ])
+    baseline_queries = count_db_queries do
+      get api_v1_transactions_url, params: { per_page: 200 }, headers: api_headers(@api_key)
+      assert_response :success
+    end
+
+    3.times do |i|
+      parent = create_transaction(account: @account, name: "Split Me #{i}", amount: 300)
+      parent.split!([
+        { name: "Part C", amount: 100, category_id: category.id },
+        { name: "Part D", amount: 200, category_id: category.id }
+      ])
+    end
+    expanded_queries = count_db_queries do
+      get api_v1_transactions_url, params: { per_page: 200 }, headers: api_headers(@api_key)
+      assert_response :success
+    end
+
+    assert_equal baseline_queries, expanded_queries
+  end
+
   test "should split income transaction with negative parts" do
     entry = create_transaction(account: @account, name: "Reimbursement", amount: -100)
 

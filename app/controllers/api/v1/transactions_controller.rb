@@ -6,7 +6,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy, :split, :unsplit ]
-  before_action :set_transaction, only: [ :show, :update, :destroy, :split, :unsplit ]
+  before_action :set_transaction, only: [ :show, :update, :destroy ]
+  before_action :set_writable_transaction, only: [ :split, :unsplit ]
 
   def index
     family = current_resource_owner.family
@@ -25,7 +26,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     # Include necessary associations for efficient queries
     transactions_query = transactions_query.includes(
-      { entry: [ :account, { child_entries: :entryable } ] },
+      { entry: [ :account, { child_entries: { entryable: :category } }, { parent_entry: :entryable } ] },
       :category, :merchant, :tags,
       transfer_as_outflow: { inflow_transaction: { entry: :account } },
       transfer_as_inflow: { outflow_transaction: { entry: :account } }
@@ -282,13 +283,18 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
   private
 
-    def set_transaction
+    def set_writable_transaction
+      set_transaction(writable: true)
+    end
+
+    def set_transaction(writable: false)
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
       family = current_resource_owner.family
+      account_scope = writable ? Account.writable_by(current_resource_owner) : Account.accessible_by(current_resource_owner)
       @transaction = family.transactions
         .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
+        .merge(account_scope)
         .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
@@ -475,7 +481,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     def split_params
-      params.require(:split).permit(splits: %i[name amount category_id excluded])
+      split = params.require(:split).permit(splits: %i[name amount category_id excluded])
+      raise ActionController::ParameterMissing, :splits unless split.key?(:splits)
+
+      split
     end
 
     def idempotency_key_requested?
