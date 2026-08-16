@@ -372,4 +372,131 @@ RSpec.describe 'API V1 Transactions', type: :request do
       end
     end
   end
+
+  path '/api/v1/transactions/{id}/split' do
+    parameter name: :id, in: :path, schema: { type: :string, format: :uuid }, required: true, description: 'Transaction ID'
+
+    let(:split_entry) do
+      account.entries.create!(
+        name: 'Grocery shopping',
+        date: Date.current,
+        amount: 100,
+        currency: 'USD',
+        entryable: Transaction.new
+      )
+    end
+
+    post 'Split a transaction into categorized parts' do
+      tags 'Transactions'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+
+      let(:id) { split_entry.transaction.id }
+
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        properties: {
+          split: {
+            type: :object,
+            required: %w[splits],
+            properties: {
+              splits: {
+                type: :array,
+                items: {
+                  type: :object,
+                  required: %w[name amount],
+                  properties: {
+                    name: { type: :string, description: 'Name of the split part' },
+                    amount: {
+                      type: :number,
+                      description: 'Signed amount of the split part. Parts must sum to the parent transaction amount (positive = expense, negative = income). Replaces an existing split when the parent is already split; resolves to the parent when a split child ID is given.'
+                    },
+                    category_id: { type: :string, format: :uuid, description: 'Optional category ID for this part' },
+                    excluded: { type: :boolean, description: 'Exclude this part from cash flow and analytics' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      let(:body) do
+        {
+          split: {
+            splits: [
+              { name: 'Groceries', amount: 70, category_id: category.id },
+              { name: 'Household', amount: 30 }
+            ]
+          }
+        }
+      end
+
+      response '200', 'transaction split' do
+        schema '$ref' => '#/components/schemas/Transaction'
+
+        run_test!
+      end
+
+      response '422', 'split parts do not sum to parent amount' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            split: {
+              splits: [
+                { name: 'Groceries', amount: 50 },
+                { name: 'Household', amount: 30 }
+              ]
+            }
+          }
+        end
+
+        run_test!
+      end
+
+      response '404', 'transaction not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+    end
+
+    delete 'Remove a split and restore the parent transaction' do
+      tags 'Transactions'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+
+      let(:split_entry) do
+        entry = account.entries.create!(
+          name: 'Grocery shopping',
+          date: Date.current,
+          amount: 100,
+          currency: 'USD',
+          entryable: Transaction.new
+        )
+        entry.split!([ { name: 'Part 1', amount: 60 }, { name: 'Part 2', amount: 40 } ])
+        entry
+      end
+
+      let(:id) { split_entry.transaction.id }
+
+      response '200', 'split removed and parent restored' do
+        schema '$ref' => '#/components/schemas/Transaction'
+
+        run_test!
+      end
+
+      response '404', 'transaction not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+    end
+  end
 end

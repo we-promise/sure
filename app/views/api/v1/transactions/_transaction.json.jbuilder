@@ -91,3 +91,27 @@ end
 # Additional metadata
 json.created_at transaction.created_at.iso8601
 json.updated_at transaction.updated_at.iso8601
+
+# Split information (parent relation + child parts)
+json.parent_id transaction.entry.parent_entry_id
+child_parts = transaction.entry.child_entries.select(&:persisted?)
+if child_parts.any?
+  json.splits child_parts do |child|
+    json.id child.id
+    json.date child.date
+    json.name child.name
+    json.amount child.amount_money.format
+    json.excluded child.excluded
+    if child.transaction.category.present?
+      json.category do
+        json.id child.transaction.category.id
+        json.name child.transaction.category.name
+        json.color child.transaction.category.color
+      end
+    else
+      json.category nil
+    end
+  end
+else
+  json.splits []
+end

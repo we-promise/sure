@@ -809,8 +809,26 @@ RSpec.configure do |config|
                 items: { '$ref' => '#/components/schemas/Tag' }
               },
               transfer: { '$ref' => '#/components/schemas/Transfer', nullable: true },
+              parent_id: { type: :string, format: :uuid, nullable: true, description: 'ID of the parent transaction when this transaction is a split child' },
+              splits: {
+                type: :array,
+                description: 'Child parts when this transaction is a split parent; empty otherwise',
+                items: { '$ref' => '#/components/schemas/SplitPart' }
+              },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          SplitPart: {
+            type: :object,
+            required: %w[id date name amount excluded category],
+            properties: {
+              id: { type: :string, format: :uuid },
+              date: { type: :string, format: :date },
+              name: { type: :string },
+              amount: { type: :string },
+              excluded: { type: :boolean },
+              category: { '$ref' => '#/components/schemas/Category', nullable: true }
             }
           },
           TransactionCollection: {
