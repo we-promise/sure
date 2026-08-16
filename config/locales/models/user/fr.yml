@@ -4,8 +4,8 @@ fr:
     attributes:
       user:
         email: Adresse mail
-        family: Famille
-        family_id: Famille
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         first_name: Prénom
         last_name: Nom
         password: Mot de passe
