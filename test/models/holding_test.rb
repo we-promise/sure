@@ -96,6 +96,26 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(expected_nvda, "USD"), @nvda.avg_cost
   end
 
+  test "avg_cost uses nearest lookback rate for weekend trade dates" do
+    # Matches Money#exchange_to / find_or_fetch_rate: FX often has no weekend row.
+    friday = Date.current.prev_occurring(:friday)
+    saturday = friday + 1.day
+
+    create_trade(@amzn.security, account: @account, qty: 10, price: 200.00, date: saturday, currency: "CAD")
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: friday, rate: BigDecimal("0.80"))
+
+    holding = @account.holdings.create!(
+      security: @amzn.security,
+      date: saturday,
+      qty: 10,
+      price: 160,
+      amount: 1600,
+      currency: "USD"
+    )
+
+    assert_equal Money.new(BigDecimal("160.00"), "USD"), holding.avg_cost
+  end
+
   test "avg_cost returns nil when cross-currency exchange rate is missing" do
     cad_account = families(:empty).accounts.create!(
       name: "CAD Brokerage Avg Cost",
@@ -115,7 +135,9 @@ class HoldingTest < ActiveSupport::TestCase
     )
     create_trade(security, account: cad_account, qty: 10, price: 100.00, date: Date.current, currency: "USD")
 
-    # No USD→CAD rate exists for the trade date
+    # No USD→CAD rate exists for the trade date (or within lookback). Direct pair only —
+    # having CAD→USD does not satisfy this request.
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: BigDecimal("0.80"))
     assert_nil holding.avg_cost
   end
 
