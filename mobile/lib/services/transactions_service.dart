@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/transaction.dart';
 import 'api_config.dart';
+import 'api_http_client.dart';
 
 class TransactionsService {
   static const String mobileIdempotencySource = 'sure_mobile';
@@ -9,7 +10,7 @@ class TransactionsService {
   final http.Client _client;
 
   TransactionsService({http.Client? client})
-      : _client = client ?? http.Client();
+      : _client = client ?? ApiHttpClient.instance;
 
   Future<Map<String, dynamic>> createTransaction({
     required String accessToken,

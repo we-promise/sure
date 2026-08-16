@@ -5,6 +5,7 @@ import '../models/account_balance.dart';
 import '../models/account_holding.dart';
 import '../utils/json_parsing.dart';
 import 'api_config.dart';
+import 'api_http_client.dart';
 import 'log_service.dart';
 
 class AccountDetailService {
@@ -14,7 +15,7 @@ class AccountDetailService {
   final bool _ownsClient;
 
   AccountDetailService({http.Client? client})
-      : _client = client ?? http.Client(),
+      : _client = client ?? ApiHttpClient.instance,
         _ownsClient = client == null;
 
   void close() {
