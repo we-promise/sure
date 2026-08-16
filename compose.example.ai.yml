@@ -93,6 +93,24 @@ x-rails-env: &rails_env
   OPENAI_ACCESS_TOKEN: token-can-be-any-value-for-ollama
   OPENAI_MODEL: llama3.1:8b # Note: Use tool-enabled model
   OPENAI_URI_BASE: http://ollama:11434/v1
+  # Local models are not streamed, so the chat shows nothing until the whole reply
+  # is generated, and tool-call rounds display nothing at all. OPENAI_REQUEST_TIMEOUT
+  # bounds each call to the model on its own; AI_RESPONSE_TIMEOUT covers the whole
+  # turn, so it has to be sized as a sum rather than simply set higher:
+  #
+  #   (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) * OPENAI_REQUEST_TIMEOUT
+  #     + tool execution + queue wait
+  #
+  # Here that is (1 + 2) * 300 = 900s of model time, plus 300s of headroom for tool
+  # execution and queue wait, giving 1200.
+  #
+  # The cap is lowered to 2 rather than left at 5 so the bound is three model calls
+  # instead of six — at 300s each, leaving it at 5 would need a timeout beyond half
+  # an hour. The trade is that longer tool chains fail earlier, with an explicit
+  # tool-call limit error rather than a timeout.
+  OPENAI_REQUEST_TIMEOUT: ${OPENAI_REQUEST_TIMEOUT:-300}
+  ASSISTANT_MAX_TOOL_CALL_ITERATIONS: ${ASSISTANT_MAX_TOOL_CALL_ITERATIONS:-2}
+  AI_RESPONSE_TIMEOUT: ${AI_RESPONSE_TIMEOUT:-1200}
   # Vector store — pgvector keeps all data local (requires pgvector/pgvector Docker image for db)
   VECTOR_STORE_PROVIDER: pgvector
   EMBEDDING_MODEL: nomic-embed-text

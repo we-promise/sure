@@ -1,6 +1,7 @@
 ---
 nb:
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Bekreft
       body_html: "<p>Du vil ikke kunne angre denne beslutningen</p>"

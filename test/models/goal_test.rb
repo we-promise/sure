@@ -14,6 +14,70 @@ class GoalTest < ActiveSupport::TestCase
     assert @goal.valid?
   end
 
+  # The confirm dialog assigns `body` to innerHTML, so an unescaped goal name
+  # would execute when a family member opens the delete confirmation.
+  test "deletion_confirm escapes the goal name in the dialog body" do
+    @goal.name = "<img src=x onerror=alert(1)>"
+
+    body = @goal.deletion_confirm.to_data_attribute[:body]
+
+    assert_includes body, "&lt;img src=x onerror=alert(1)&gt;"
+    assert_no_match(/<img/, body)
+  end
+
+  # Derived, not a hardcoded list: a locale added later ships a goals YAML
+  # without these keys otherwise. `fallback: false` carries as much weight —
+  # the backend has I18n::Backend::Fallbacks mixed in, so a missing German key
+  # resolves to the English string and a plain `.present?` assertion passes
+  # while a German family reads English in the dialog.
+  test "confirm_delete copy resolves in every locale that ships goal translations" do
+    locales = Rails.root.glob("config/locales/views/goals/*.yml").map { |f| f.basename(".yml").to_s.to_sym }
+    assert_operator locales.size, :>=, 7, "goal locale files disappeared — check the glob"
+
+    locales.each do |locale|
+      body = I18n.t("goals.show.confirm_delete_body", name: "Wedding", locale: locale, fallback: false, default: nil)
+      assert body, "#{locale} is missing goals.show.confirm_delete_body"
+      assert_includes body, "Wedding", "#{locale} dropped the %{name} interpolation"
+
+      %w[confirm_delete_title confirm_delete_cta].each do |key|
+        assert I18n.t("goals.show.#{key}", locale: locale, fallback: false, default: nil).present?,
+               "#{locale} is missing goals.show.#{key}"
+      end
+    end
+  end
+
+  # The days-left segment is returned separately so the view can keep it
+  # unbroken; joined into one string it wrapped after "days" on a phone.
+  test "header_summary_parts keeps the days-left phrase in its own segment" do
+    # Pinned: the count is `target_date - Date.current`, so a suite that crossed
+    # midnight between setting the date and reading it would report 183.
+    travel_to Date.new(2026, 6, 1) do
+      # Target well above the linked account's balance, or the goal reads as
+      # :reached and drops the days-left segment on purpose.
+      @goal.target_amount = 1_000_000
+      @goal.target_date = Date.current + 184
+
+      parts = @goal.header_summary_parts
+
+      assert_equal 2, parts.size
+      assert_match(/184 days left/, parts.last)
+      assert_no_match(/days left/, parts.first)
+    end
+  end
+
+  test "header_summary_parts omits days left once the target is reached" do
+    @goal.target_date = 184.days.from_now.to_date
+    @goal.complete!
+
+    assert_equal 1, @goal.header_summary_parts.size
+  end
+
+  test "header_summary_parts is a single segment without a target date" do
+    @goal.target_date = nil
+
+    assert_equal 1, @goal.header_summary_parts.size
+  end
+
   test "name is required" do
     @goal.name = ""
     assert_not @goal.valid?

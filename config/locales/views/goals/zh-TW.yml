@@ -76,7 +76,6 @@ zh-TW:
       success: 目標已更新。
     destroy:
       success: 目標已刪除。
-      archive_first: 請先封存目標再刪除。
     pause:
       success: 目標已暫停。
       invalid_transition: 目標在目前的狀態下無法暫停。
@@ -103,7 +102,7 @@ zh-TW:
       archive: 封存
       unarchive: 還原
       reopen: 重新開啟目標
-      delete: 永久刪除
+      delete: 刪除
       record_pledge_cta: 記錄投入
       pledge_just_transferred: 記錄一筆您已完成的轉帳
       pledge_just_saved: 記錄一筆您已存起來的錢
@@ -171,6 +170,9 @@ zh-TW:
       confirm_archive_title: 要封存這個目標嗎？
       confirm_archive_body: 封存的目標不會出現在主清單中，您之後可以再還原。
       confirm_archive_cta: 封存
+      confirm_delete_title: 要刪除這個目標嗎？
+      confirm_delete_body: "%{name} 和它的投入紀錄會被永久移除。您已連結的帳戶、餘額與交易都不會受到影響。若想保留成紀錄，請改為封存。"
+      confirm_delete_cta: 刪除目標
       paused_banner:
         title: 這個目標已暫停
         body: 恢復它就能繼續追蹤您的進度。

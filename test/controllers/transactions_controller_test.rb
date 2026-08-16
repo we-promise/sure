@@ -400,6 +400,115 @@ end
     assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
   end
 
+  test "mark_as_recurring allows a second manual recurring transaction with same merchant but different amount" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 34, merchant: merchant)
+    transaction = entry.entryable
+
+    # Existing manual recurring row for the same merchant, but a different amount
+    family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 12,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1
+    )
+
+    assert_difference "family.recurring_transactions.count", 1 do
+      post mark_as_recurring_transaction_path(transaction)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "Transaction marked as recurring", flash[:notice]
+  end
+
+  test "mark_as_recurring allows a second manual recurring transaction with same name but different amount" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: account, name: "Example Payee", amount: 34)
+    transaction = entry.entryable
+
+    # Existing manual recurring row for the same payee name, but a different amount
+    family.recurring_transactions.create!(
+      account: account,
+      name: "Example Payee",
+      amount: 12,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1
+    )
+
+    assert_difference "family.recurring_transactions.count", 1 do
+      post mark_as_recurring_transaction_path(transaction)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "Transaction marked as recurring", flash[:notice]
+  end
+
+  test "mark_as_recurring shows alert if recurring transaction with same name and amount already exists" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: account, name: "Example Payee", amount: 100)
+    transaction = entry.entryable
+
+    family.recurring_transactions.create!(
+      account: account,
+      name: "Example Payee",
+      amount: entry.amount,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1
+    )
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(transaction)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+  end
+
+  test "mark_as_recurring shows already-exists alert when a concurrent request wins the race" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+    transaction = entry.entryable
+
+    # Simulate another request creating the identical pattern between our
+    # pre-check and our create call.
+    RecurringTransaction.expects(:create_from_transaction).raises(
+      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+    )
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(transaction)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+  end
+
   test "mark_as_recurring handles validation errors gracefully" do
     family = families(:empty)
     sign_in users(:empty)
