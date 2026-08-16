@@ -55,7 +55,7 @@ openssl rand -base64 32
 The `MCP_USER_EMAIL` must match an existing Sure user's email address. The AI assistant will have access to all financial data for that user's family.
 
 > [!CAUTION]
-> The AI assistant will have **read access to all financial data** for the specified user. Only set this for users you trust with your AI provider.
+> The AI assistant can call the MCP tools available to the specified user. This includes reading financial data and write-capable tools such as statement import, goal/category/tag changes, transaction updates, and budget updates. Only set this for users you trust with your AI provider.
 
 ## Configuration
 

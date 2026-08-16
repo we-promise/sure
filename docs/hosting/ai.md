@@ -410,9 +410,11 @@ MCP_USER_EMAIL=user@example.com    # Email of the Sure user the agent acts as
 
 The agent must send requests to `https://your-sure-instance/mcp` with:
 ```
-Authorization: Bearer <MCP_API_TOKEN>
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
+
+For OAuth clients, `<access-token>` is the issued Doorkeeper bearer token. For static-token clients, it is the configured `MCP_API_TOKEN`.
 
 **Supported methods:**
 
@@ -422,7 +424,7 @@ Content-Type: application/json
 | `tools/list` | Lists available tools with names, descriptions, and input schemas |
 | `tools/call` | Calls a specific tool by name with arguments |
 
-**Available tools** (exposed via `tools/list`; this list should be treated as dynamic):
+**Base tools** (exposed via `tools/list`; treat the live response as the source of truth):
 
 | Tool | Description |
 |------|-------------|
@@ -433,8 +435,18 @@ Content-Type: application/json
 | `get_income_statement` | Income and expenses |
 | `get_budget` | Budget status and category breakdowns |
 | `import_bank_statement` | Import bank statement data |
-| `search_family_files` | Search uploaded documents |
+| `search_family_files` | Search documents uploaded through the import flow |
 | `create_goal` | Create a savings goal |
+| `get_tags` | List family tags |
+| `create_tag` | Create a family tag |
+| `update_tag` | Update a family tag |
+| `get_categories` | List family categories |
+| `create_category` | Create a family category |
+| `update_category` | Update a family category |
+| `update_transaction` | Update an existing transaction |
+| `update_budget` | Update a budget category allocation |
+
+Preview users may also see Statement Vault tools in `tools/list`.
 
 **Example: list tools**
 ```bash
