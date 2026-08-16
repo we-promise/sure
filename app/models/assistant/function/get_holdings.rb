@@ -29,7 +29,11 @@ class Assistant::Function::GetHoldings < Assistant::Function
         - `page`: The current page of results
         - `page_size`: The number of results per page (this will always be #{default_page_size})
         - `total_results`: The total number of results for the given filters
-        - `total_value`: The total value of all holdings for the given filters
+        - `total_value`: The total value of convertible holdings in the family currency
+          (holdings that cannot be FX-converted are excluded from this total)
+        - Holdings that cannot be converted into the family currency include
+          `value_unavailable: true` and omit `weight` so you can disclose the gap
+          instead of treating the position as zero
 
         Simple example (all current holdings):
 
@@ -90,18 +94,19 @@ class Assistant::Function::GetHoldings < Assistant::Function
       [ holding, convert_to_family_currency(holding.amount, holding.currency, rates) ]
     end
 
-    total_value = holdings_with_value.sum { |(_, value)| value }
+    # Only sum convertible rows — nil is unknown FX, not a zero position.
+    total_value = holdings_with_value.filter_map { |(_, value)| value }.sum
 
-    # Sort by family-currency value so mixed-currency portfolios order correctly.
-    sorted_holdings = holdings_with_value
-      .sort_by { |(_, value)| -value }
-      .map(&:first)
+    # Convertible holdings first (by family-currency value); unknown FX last.
+    sorted_holdings = holdings_with_value.sort_by do |(_, value)|
+      [ value.nil? ? 1 : 0, -(value || 0) ]
+    end
 
     pagy = Pagy.new(count: sorted_holdings.size, page: params["page"] || 1, limit: default_page_size)
     paginated_holdings = sorted_holdings.slice(pagy.offset, pagy.limit) || []
 
-    normalized_holdings = paginated_holdings.map do |holding|
-      {
+    normalized_holdings = paginated_holdings.map do |holding, family_value|
+      payload = {
         ticker: holding.ticker,
         name: holding.name,
         quantity: holding.qty.to_f,
@@ -109,12 +114,19 @@ class Assistant::Function::GetHoldings < Assistant::Function
         currency: holding.currency,
         amount: holding.amount.to_f,
         formatted_amount: holding.amount_money.format,
-        weight: holding.weight&.round(2),
         average_cost: holding.avg_cost&.to_f,
         formatted_average_cost: holding.avg_cost&.format,
         account: holding.account.name,
         date: holding.date
       }
+
+      if family_value.nil?
+        payload[:value_unavailable] = true
+      else
+        payload[:weight] = holding.weight&.round(2)
+      end
+
+      payload
     end
 
     {
@@ -168,7 +180,8 @@ class Assistant::Function::GetHoldings < Assistant::Function
       return amount.to_d if from_currency == family.currency
 
       rate = rates[from_currency]
-      return 0.to_d if rate.nil?
+      # Match Money#exchange_to: missing/non-positive rates are unknown, not zero.
+      return nil unless rate&.positive?
 
       amount.to_d * rate
     end
