@@ -100,5 +100,22 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('requires HTTPS whenever custom trust is configured', () {
+      final client = ApiHttpClient.forTesting(
+        systemDelegate: MockClient((_) async => http.Response('', 200)),
+        customClientFactory: (_) => MockClient(
+          (_) async => http.Response('', 200),
+        ),
+      );
+
+      expect(
+        () => client.configure(
+          trustedCertificateBytes: [1],
+          trustedOrigin: Uri.parse('http://sure.example'),
+        ),
+        throwsArgumentError,
+      );
+    });
   });
 }

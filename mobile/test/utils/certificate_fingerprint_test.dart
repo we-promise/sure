@@ -36,4 +36,13 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('wraps DER bytes as a single PEM certificate', () {
+    expect(
+      utf8.decode(singleCertificatePemBytes([1, 2, 3])),
+      '-----BEGIN CERTIFICATE-----\n'
+      'AQID\n'
+      '-----END CERTIFICATE-----\n',
+    );
+  });
 }

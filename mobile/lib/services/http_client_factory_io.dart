@@ -9,7 +9,9 @@ http.Client createHttpClient(List<int>? trustedCertificateBytes) {
   final context = SecurityContext(withTrustedRoots: true);
   if (trustedCertificateBytes != null && trustedCertificateBytes.isNotEmpty) {
     context.setTrustedCertificatesBytes(
-      singleCertificateDerBytes(trustedCertificateBytes),
+      Platform.isIOS
+          ? singleCertificateDerBytes(trustedCertificateBytes)
+          : singleCertificatePemBytes(trustedCertificateBytes),
     );
   }
   return IOClient(HttpClient(context: context));

@@ -214,6 +214,12 @@ abstract class AppLocalizations {
   /// **'Sign in with Google'**
   String get loginSignInWithGoogle;
 
+  /// Explanation shown when SSO is disabled because a custom CA is configured only inside the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser sign-in cannot use an app-managed CA certificate. Install the CA on your device and remove it from the app to use Google sign-in.'**
+  String get loginSsoCustomCertificateUnsupported;
+
   /// Label for the MFA code input field.
   ///
   /// In en, this message translates to:
@@ -1905,6 +1911,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'URL must start with http:// or https://'**
   String get backendConfigUrlScheme;
+
+  /// Validation error when a custom CA is configured for a non-HTTPS backend.
+  ///
+  /// In en, this message translates to:
+  /// **'A custom CA certificate requires an https:// backend URL'**
+  String get backendConfigCertificateRequiresHttps;
 
   /// Validation error when the backend URL is malformed.
   ///

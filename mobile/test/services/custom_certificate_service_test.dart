@@ -53,8 +53,8 @@ void main() {
   });
 
   test('rejects oversized certificate storage', () async {
-    expect(
-      () => CustomCertificateService.instance.saveCertificate(
+    await expectLater(
+      CustomCertificateService.instance.saveCertificate(
         Uint8List(CustomCertificateService.maxCertificateBytes + 1),
         'root.crt',
       ),

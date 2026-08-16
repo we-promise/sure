@@ -30,10 +30,17 @@ class ApiHttpClient extends http.BaseClient {
     List<int>? trustedCertificateBytes,
     Uri? trustedOrigin,
   }) {
-    if (trustedCertificateBytes != null && trustedOrigin == null) {
-      throw ArgumentError(
-        'A trusted origin is required with a custom certificate.',
-      );
+    if (trustedCertificateBytes != null) {
+      if (trustedOrigin == null) {
+        throw ArgumentError(
+          'A trusted origin is required with a custom certificate.',
+        );
+      }
+      if (trustedOrigin.scheme.toLowerCase() != 'https') {
+        throw ArgumentError(
+          'Custom certificates can only be used with HTTPS origins.',
+        );
+      }
     }
 
     final replacement = trustedCertificateBytes == null

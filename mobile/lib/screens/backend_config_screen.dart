@@ -97,7 +97,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       // Building the client validates that Dart can parse the selected file.
       ApiHttpClient.instance.configure(
         trustedCertificateBytes: bytes,
-        trustedOrigin: Uri.parse(ApiConfig.baseUrl),
+        trustedOrigin: Uri.parse('https://certificate-validation.invalid'),
       );
       ApiHttpClient.instance.configure(
         trustedCertificateBytes: ApiConfig.customCertificateBytes,
@@ -169,7 +169,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       );
 
       if (sessionsResponse.statusCode >= 200 &&
-          sessionsResponse.statusCode < 400) {
+          sessionsResponse.statusCode < 300) {
         if (mounted) {
           setState(() {
             _successMessage = l.backendConfigSuccess;
@@ -221,29 +221,52 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
             '',
           );
 
-      // Save URL to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('backend_url', normalizedUrl);
+      final previousUrl = prefs.getString('backend_url');
+      final previousHeaders =
+          await CustomProxyHeadersService.instance.loadHeaders();
+      final previousCertificate =
+          await CustomCertificateService.instance.loadCertificate();
+      final previousCertificateName =
+          await CustomCertificateService.instance.loadCertificateName();
 
-      // Save custom proxy headers
-      await CustomProxyHeadersService.instance.saveHeaders(_customHeaders);
-      ApiConfig.setCustomProxyHeaders(_customHeaders);
+      try {
+        if (_certificateBytes == null) {
+          await CustomCertificateService.instance.clearCertificate();
+        } else {
+          await CustomCertificateService.instance.saveCertificate(
+            _certificateBytes!,
+            _certificateName ?? 'certificate',
+          );
+        }
+        await CustomProxyHeadersService.instance.saveHeaders(_customHeaders);
+        await prefs.setString('backend_url', normalizedUrl);
 
-      if (_certificateBytes == null) {
-        await CustomCertificateService.instance.clearCertificate();
-      } else {
-        await CustomCertificateService.instance.saveCertificate(
-          _certificateBytes!,
-          _certificateName ?? 'certificate',
+        ApiConfig.applyBackendConfiguration(
+          baseUrl: normalizedUrl,
+          customProxyHeaders: _customHeaders,
+          customCertificateBytes: _certificateBytes,
+          customCertificateName: _certificateName,
         );
+      } catch (error, stackTrace) {
+        // Restore the URL first so a restart cannot pair the new origin with
+        // trust material from an incomplete configuration update.
+        if (previousUrl == null) {
+          await prefs.remove('backend_url');
+        } else {
+          await prefs.setString('backend_url', previousUrl);
+        }
+        await CustomProxyHeadersService.instance.saveHeaders(previousHeaders);
+        if (previousCertificate == null) {
+          await CustomCertificateService.instance.clearCertificate();
+        } else {
+          await CustomCertificateService.instance.saveCertificate(
+            Uint8List.fromList(previousCertificate),
+            previousCertificateName ?? 'certificate',
+          );
+        }
+        Error.throwWithStackTrace(error, stackTrace);
       }
-      ApiConfig.setCustomCertificate(
-        _certificateBytes,
-        name: _certificateName,
-      );
-
-      // Update ApiConfig
-      ApiConfig.setBaseUrl(normalizedUrl);
 
       // Notify parent that config is saved
       if (mounted && widget.onConfigSaved != null) {
@@ -282,6 +305,9 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
       final uri = Uri.parse(trimmedValue);
       if (!uri.hasScheme || uri.host.isEmpty) {
         return l.backendConfigUrlInvalid;
+      }
+      if (_certificateBytes != null && uri.scheme.toLowerCase() != 'https') {
+        return l.backendConfigCertificateRequiresHttps;
       }
     } catch (e) {
       return l.backendConfigUrlInvalid;

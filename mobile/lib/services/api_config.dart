@@ -23,6 +23,25 @@ class ApiConfig {
   static List<int>? get customCertificateBytes => _customCertificateBytes;
   static String? get customCertificateName => _customCertificateName;
 
+  static void applyBackendConfiguration({
+    required String baseUrl,
+    required List<CustomProxyHeader> customProxyHeaders,
+    required List<int>? customCertificateBytes,
+    String? customCertificateName,
+  }) {
+    final origin = Uri.parse(baseUrl);
+    ApiHttpClient.instance.configure(
+      trustedCertificateBytes: customCertificateBytes,
+      trustedOrigin: customCertificateBytes == null ? null : origin,
+    );
+    _baseUrl = baseUrl;
+    _customProxyHeaders = CustomProxyHeader.sanitize(customProxyHeaders);
+    _customCertificateBytes = customCertificateBytes == null
+        ? null
+        : List.unmodifiable(customCertificateBytes);
+    _customCertificateName = customCertificateName;
+  }
+
   static void setCustomCertificate(List<int>? bytes, {String? name}) {
     // Validate and install the trust material before publishing it as the
     // active configuration.
@@ -114,30 +133,36 @@ class ApiConfig {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedUrl = prefs.getString(_backendUrlKey);
-      _baseUrl =
+      final baseUrl =
           savedUrl != null && savedUrl.isNotEmpty ? savedUrl : _defaultBaseUrl;
       final certificate =
           await CustomCertificateService.instance.loadCertificate();
       final certificateName =
           await CustomCertificateService.instance.loadCertificateName();
-      setCustomCertificate(certificate, name: certificateName);
+      final customProxyHeaders =
+          await CustomProxyHeadersService.instance.loadHeaders();
+      applyBackendConfiguration(
+        baseUrl: baseUrl,
+        customProxyHeaders: customProxyHeaders,
+        customCertificateBytes: certificate,
+        customCertificateName: certificateName,
+      );
 
       if (savedUrl != null && savedUrl.isNotEmpty) {
-        _customProxyHeaders =
-            await CustomProxyHeadersService.instance.loadHeaders();
         return true;
       }
 
       // Seed first launch with the active development backend so the app can
       // go straight to login while still letting users override it later.
-      _baseUrl = _defaultBaseUrl;
       await prefs.setString(_backendUrlKey, _defaultBaseUrl);
-      _customProxyHeaders =
-          await CustomProxyHeadersService.instance.loadHeaders();
       return true;
     } catch (e) {
       // If initialization fails, keep the default URL
-      _baseUrl = _defaultBaseUrl;
+      applyBackendConfiguration(
+        baseUrl: _defaultBaseUrl,
+        customProxyHeaders: const [],
+        customCertificateBytes: null,
+      );
       return true;
     }
   }

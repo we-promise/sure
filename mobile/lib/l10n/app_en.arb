@@ -61,6 +61,9 @@
   "loginSignInWithGoogle": "Sign in with Google",
   "@loginSignInWithGoogle": { "description": "Google SSO button label." },
 
+  "loginSsoCustomCertificateUnsupported": "Browser sign-in cannot use an app-managed CA certificate. Install the CA on your device and remove it from the app to use Google sign-in.",
+  "@loginSsoCustomCertificateUnsupported": { "description": "Explanation shown when SSO is disabled because a custom CA is configured only inside the app." },
+
   "loginMfaLabel": "Authentication Code",
   "@loginMfaLabel": { "description": "Label for the MFA code input field." },
 
@@ -959,6 +962,9 @@
 
   "backendConfigUrlScheme": "URL must start with http:// or https://",
   "@backendConfigUrlScheme": { "description": "Validation error when the backend URL is missing an http(s) scheme." },
+
+  "backendConfigCertificateRequiresHttps": "A custom CA certificate requires an https:// backend URL",
+  "@backendConfigCertificateRequiresHttps": { "description": "Validation error when a custom CA is configured for a non-HTTPS backend." },
 
   "backendConfigUrlInvalid": "Please enter a valid URL",
   "@backendConfigUrlInvalid": { "description": "Validation error when the backend URL is malformed." },
