@@ -20,6 +20,7 @@ de:
         other: "%{count} Konten mit leerem Namen können nicht verknüpft werden"
       link_failed: Konten konnten nicht verknüpft werden
       no_accounts_selected: Bitte wähle mindestens ein Konto aus
+      no_api_key: Der Lunch-Flow-API-Key ist nicht eingerichtet. Richte ihn in den Einstellungen ein.
       partial_invalid: "%{created_count} Konto/Konten verknüpft, %{already_linked_count} waren bereits verknüpft, %{invalid_count} hatten ungültige Namen"
       partial_success: "%{created_count} Konto/Konten erfolgreich verknüpft. %{already_linked_count} Konto/Konten waren bereits verknüpft: %{already_linked_names}"
       success:
@@ -50,6 +51,7 @@ de:
       link_accounts: Ausgewählte Konten verknüpfen
       no_accounts_found: Keine Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
       no_api_key: Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
+      no_credentials_configured: Richte zuerst deine Lunch-Flow-Zugangsdaten in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
       title: Lunch‑Flow-Konten auswählen
     select_existing_account:
@@ -63,6 +65,7 @@ de:
       no_account_specified: Kein Konto angegeben
       no_accounts_found: Keine Lunch‑Flow-Konten gefunden. Bitte überprüfe deine API-Key-Konfiguration.
       no_api_key: Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte konfiguriere ihn in den Einstellungen.
+      no_credentials_configured: Richte zuerst deine Lunch-Flow-Zugangsdaten in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
       title: "%{account_name} mit Lunch‑Flow verknüpfen"
     link_existing_account:
@@ -72,6 +75,7 @@ de:
       lunchflow_account_already_linked: Dieses Lunch‑Flow-Konto ist bereits mit einem anderen Konto verknüpft
       lunchflow_account_not_found: Lunch‑Flow-Konto nicht gefunden
       missing_parameters: Erforderliche Parameter fehlen
+      no_api_key: Der Lunch-Flow-API-Key ist nicht eingerichtet. Richte ihn in den Anbietereinstellungen ein.
       success: "%{account_name} erfolgreich mit Lunch‑Flow verknüpft"
     setup_accounts:
       account_type_label: "Kontotyp:"
@@ -143,3 +147,26 @@ de:
       success: Synchronisierung gestartet
     update:
       success: Lunch‑Flow-Verbindung aktualisiert
+    api_error:
+      check_provider_settings: Anbietereinstellungen prüfen
+      common_issues: 'Häufige Ursachen:'
+      expired_credentials_desc: Erzeug bei Lunch Flow einen neuen API-Key
+      expired_credentials_label: Abgelaufene Zugangsdaten
+      invalid_api_key_desc: Prüf deinen API-Key in den Anbietereinstellungen
+      invalid_api_key_label: Ungültiger API-Key
+      network_issue_desc: Prüf deine Internetverbindung
+      network_issue_label: Netzwerkproblem
+      service_down_desc: Die Lunch-Flow-API ist möglicherweise vorübergehend gestört
+      service_down_label: Dienst nicht erreichbar
+      title: Fehler bei der Lunch-Flow-Verbindung
+      unable_to_connect: Die Verbindung zu Lunch Flow kam nicht zustande
+    setup_required:
+      api_key_description: Bevor du Lunch-Flow-Konten verknüpfen kannst, musst du deinen Lunch-Flow-API-Key hinterlegen.
+      api_key_not_configured: API-Key nicht hinterlegt
+      go_to_provider_settings: Zu den Anbietereinstellungen
+      setup_step_1_html: Geh zu <strong>Einstellungen → Anbieter</strong>
+      setup_step_2_html: Such den Abschnitt <strong>Lunch Flow</strong>
+      setup_step_3: Trag deinen Lunch-Flow-API-Key ein
+      setup_step_4: Komm hierher zurück, um deine Konten zu verknüpfen
+      setup_steps_title: 'So richtest du es ein:'
+      title: Lunch Flow muss eingerichtet werden

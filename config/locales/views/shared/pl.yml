@@ -1,6 +1,7 @@
 ---
 pl:
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Potwierdź
       body_html: "<p>Nie będzie można cofnąć tej decyzji</p>"

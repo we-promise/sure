@@ -1,0 +1,149 @@
+uk:
+  wise_items:
+    profile_types:
+      personal: Особистий
+      business: Бізнес
+    entries:
+      default_name: Транзакція Wise
+      fee_name: Комісія Wise
+    activities:
+      jar_deposit: Переказ у банку
+      jar_withdrawal: Переказ з банки
+      transfer_to_jar: "Переказ у %{jar}"
+      transfer_from_jar: "Переказ з %{jar}"
+      interest: Відсотки Wise
+      asset_fee: Комісія Wise Assets
+      default_name: Діяльність Wise
+    sync_status:
+      no_accounts: Рахунки не знайдено
+      all_synced:
+        one: "%{count} рахунок синхронізовано"
+        other: "%{count} рахунків синхронізовано"
+      partial_setup: "%{synced} синхронізовано, %{pending} потребує налаштування"
+    create:
+      no_profiles_found: Профілі Wise не знайдено. Перевірте свій токен API.
+      invalid_token: Недійсний токен API. Перевірте та спробуйте ще раз.
+      connection_failed: Не вдалося підключитися до Wise. Спробуйте ще раз пізніше.
+    destroy:
+      success: З'єднання Wise видалено
+    update:
+      success: З'єднання Wise оновлено
+    sync:
+      success: Синхронізацію розпочато
+    syncer:
+      importing_accounts: Імпорт рахунків з Wise...
+      checking_account_configuration: Перевірка конфігурації рахунку...
+      accounts_need_setup:
+        one: "%{count} рахунок потребує налаштування..."
+        other: "%{count} рахунків потребують налаштування..."
+      processing_transactions: Обробка транзакцій...
+      calculating_balances: Розрахунок балансів...
+      credentials_invalid: Недійсний токен API Wise або недостатньо прав
+      failed: Синхронізація не вдалася. Спробуйте ще раз або зверніться до служби підтримки.
+      import_failed: Імпорт Wise не вдався.
+      accounts_failed:
+        one: "%{count} баланс не вдалося імпортувати."
+        other: "%{count} балансів не вдалося імпортувати."
+      transactions_failed:
+        one: "%{count} баланс мав помилки імпорту транзакцій."
+        other: "%{count} балансів мали помилки імпорту транзакцій."
+      account_processing_failed:
+        one: "%{count} рахунок Wise не вдалося обробити."
+        other: "%{count} рахунків Wise не вдалося обробити."
+      account_sync_failed:
+        one: "Синхронізацію %{count} рахунку Wise не вдалося запланувати."
+        other: "Синхронізацію %{count} рахунків Wise не вдалося запланувати."
+    provider_panel:
+      setup_title: "Інструкції з налаштування:"
+      add_connection: Додати з'єднання Wise
+      token_label: Токен API
+      token_placeholder: Вставте свій особистий токен API Wise
+      keep_token_placeholder: Залиште порожнім, щоб зберегти поточний токен
+      connection_name_label: Назва з'єднання
+      connection_name_placeholder: Wise Personal
+      connect: Підключити Wise
+      update_connection: Оновити з'єднання
+      setup_accounts: Налаштувати рахунки
+      sync: Синхронізувати
+      disconnect: Відключити
+      disconnect_label: "Відключити %{name}"
+      disconnect_confirm: "Ви впевнені, що хочете відключити %{name}? Це видалить усі синхронізовані дані рахунку."
+      accounts_link: Рахунки
+      configured_html: "Підключено та синхронізується. Перейдіть на вкладку %{accounts_link}, щоб керувати своїми рахунками."
+      not_configured: Не налаштовано
+      sandbox_note_html: "Використовуйте базову URL-адресу <strong>пісочниці</strong> (<code>https://api.sandbox.transferwise.tech</code>) для тестування. Встановіть <code>WISE_BASE_URL</code> у вашому середовищі."
+      encryption_warning:
+        title: Шифрування бази даних не налаштовано
+        message: Налаштуйте ключі шифрування Active Record перед додаванням токенів Wise у виробництві. Без шифрування токени зберігаються у вигляді звичайного тексту.
+      instructions:
+        sign_in_html: "Відвідайте %{link} та увійдіть до свого облікового запису"
+        open_tokens: "Перейдіть до Налаштування → Токени API"
+        create_token: "Створіть новий особистий токен API з доступом лише для читання"
+        copy_token_html: "Скопіюйте токен і вставте його нижче. Sure використовує його лише для синхронізації ваших балансів і транзакцій."
+    provider_connection:
+      default_name: Wise
+      default_description: Підключіть свій мультивалютний рахунок Wise
+      name: "Wise — %{name}"
+      description: "Підключитися за допомогою %{name}"
+    link_profiles:
+      session_expired: Сеанс закінчився. Спробуйте підключитися ще раз.
+      no_profiles_selected: Виберіть принаймні один профіль.
+      already_connected: Усі вибрані профілі вже підключено.
+      success:
+        one: "Успішно підключено %{count} профіль Wise"
+        other: "Успішно підключено %{count} профілів Wise"
+    select_profiles:
+      session_expired: Сеанс закінчився. Спробуйте підключитися ще раз.
+      title: Виберіть профілі Wise
+      subtitle: Виберіть, які профілі підключити
+      description: Ваш обліковий запис Wise має кілька профілів. Виберіть ті, які ви хочете синхронізувати з Sure.
+      unnamed_profile: "(Безіменний профіль)"
+      already_connected_label: Вже підключено
+      connect: Підключити вибрані профілі
+      cancel: Скасувати
+    wise_item:
+      deletion_in_progress: видалення триває...
+      syncing: Синхронізація...
+      error: Помилка синхронізації
+      status: "Синхронізовано %{timestamp} тому"
+      status_never: Ніколи не синхронізовано
+      status_with_summary: "Остання синхронізація %{timestamp} тому — %{summary}"
+      delete: Відключити
+      setup_needed: Нові рахунки готові до налаштування
+      setup_description: "%{linked} з %{total} рахунків пов'язано. Створіть рахунки Sure для ваших валютних балансів Wise."
+      setup_action: Налаштувати рахунки
+      no_accounts_title: Ще немає пов'язаних рахунків
+      no_accounts_description: Запустіть синхронізацію, щоб виявити ваші баланси Wise, а потім пов'яжіть їх з рахунками Sure.
+    setup_accounts:
+      title: Налаштувати рахунки Wise
+      subtitle: Пов'яжіть свої валютні баланси Wise
+      description: Створіть рахунок Sure для кожного валютного балансу Wise, який ви хочете відстежувати. Кожна валюта стає окремим рахунком.
+      no_accounts_to_setup: Усі рахунки налаштовано
+      all_accounts_linked: Усі ваші валютні баланси Wise пов'язано з рахунками Sure.
+      create_account: Створити рахунок
+      done: Готово
+    select_accounts:
+      title: Виберіть баланс Wise
+      description: Виберіть валютний баланс Wise, який ви хочете пов'язати зі своїм рахунком %{product_name}.
+      no_accounts_found: Усі баланси Wise вже пов'язано з рахунками Sure.
+      no_connection: З'єднання Wise не знайдено. Спочатку підключіть Wise у налаштуваннях провайдера.
+      link_account: Пов'язати баланс
+      cancel: Скасувати
+    select_existing_account:
+      title: "Пов'язати %{account_name} з Wise"
+      description: Виберіть валютний баланс Wise, щоб пов'язати з цим рахунком. Транзакції будуть синхронізуватися автоматично.
+      no_accounts_found: Не знайдено непов'язаних балансів Wise.
+      link_account: Пов'язати баланс
+      cancel: Скасувати
+    link_accounts:
+      not_found: Баланс Wise не знайдено.
+      success: Успішно пов'язано баланс Wise з рахунком.
+      failed: Не вдалося пов'язати баланс Wise. Спробуйте ще раз.
+    link_existing_account:
+      not_found: Рахунок або баланс Wise не знайдено.
+      success: "Успішно пов'язано %{account_name} з Wise"
+      failed: Не вдалося пов'язати рахунок. Спробуйте ще раз.
+    complete_account_setup:
+      not_found: Баланс Wise не знайдено.
+      success: Рахунок створено та успішно пов'язано.
+      failed: Не вдалося створити рахунок. Спробуйте ще раз.

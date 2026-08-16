@@ -1,11 +1,12 @@
-<%= turbo_stream.remove dom_id(@insight, :undo) %>
-
 <%= turbo_stream.replace "insights-list" do %>
   <%= render "insights/list", insights: @insights, unread_ids: @unread_ids %>
 <% end %>
 
-<%# Undo can be pressed from the dashboard, where the toast is the only part of
-    this flow on screen — so the well needs restoring there too. %>
+<%# Dashboard well, when it's still on screen. If acknowledging the last insight
+    removed the whole section, there is no target left to replace and the widget
+    comes back on the next dashboard render — this action has no UI entry point
+    since the undo toast was dropped, so it isn't worth rebuilding the section
+    shell from here. %>
 <%= turbo_stream.replace "insights-feed" do %>
   <%= render "pages/dashboard/insights_feed", insights: @feed_insights %>
 <% end %>

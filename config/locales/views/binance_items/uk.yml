@@ -1,0 +1,83 @@
+---
+uk:
+  binance_items:
+    create:
+      default_name: "Binance"
+      success: "Успішно підключено до Binance! Ваш рахунок синхронізується."
+    update:
+      success: "Конфігурацію Binance успішно оновлено."
+    destroy:
+      success: "Заплановано видалення підключення Binance."
+    setup_accounts:
+      title: "Імпортувати рахунок Binance"
+      subtitle: "Виберіть, які портфелі відстежувати"
+      instructions: "Виберіть портфелі Binance, які ви хочете імпортувати. Відображаються лише портфелі з балансами."
+      no_accounts: "Всі рахунки імпортовано."
+      accounts_count:
+        one: "%{count} рахунок доступний"
+        few: "%{count} рахунки доступні"
+        many: "%{count} рахунків доступні"
+        other: "%{count} рахунків доступні"
+      select_all: "Вибрати все"
+      import_selected: "Імпортувати вибране"
+      cancel: "Скасувати"
+      creating: "Імпортування..."
+    complete_account_setup:
+      success:
+        one: "Імпортовано %{count} рахунок"
+        few: "Імпортовано %{count} рахунки"
+        many: "Імпортовано %{count} рахунків"
+        other: "Імпортовано %{count} рахунків"
+      none_selected: "Не вибрано жодного рахунку"
+      no_accounts: "Немає рахунків для імпорту"
+    binance_item:
+      provider_name: "Binance"
+      syncing: "Синхронізація..."
+      reconnect: "Облікові дані потребують оновлення"
+      deletion_in_progress: "Видалення..."
+      sync_status:
+        no_accounts: "Рахунків не знайдено"
+        all_synced:
+          one: "%{count} рахунок синхронізовано"
+          few: "%{count} рахунки синхронізовано"
+          many: "%{count} рахунків синхронізовано"
+          other: "%{count} рахунків синхронізовано"
+        partial_sync: "%{linked_count} синхронізовано, %{unlinked_count} потребують налаштування"
+      status: "Остання синхронізація %{timestamp} тому"
+      status_with_summary: "Остання синхронізація %{timestamp} тому - %{summary}"
+      status_never: "Ніколи не синхронізовано"
+      update_credentials: "Оновити облікові дані"
+      delete: "Видалити"
+      no_accounts_title: "Рахунків не знайдено"
+      no_accounts_message: "Ваш портфель Binance з'явиться тут після синхронізації."
+      setup_needed: "Рахунок готовий до імпорту"
+      setup_description: "Виберіть, які портфелі Binance ви хочете відстежувати."
+      setup_action: "Імпортувати рахунок"
+      import_accounts_menu: "Імпортувати рахунок"
+      stale_rate_warning: "Баланс є приблизним — точний обмінний курс на %{date} був недоступний. Оновиться під час наступної синхронізації."
+    select_existing_account:
+      title: "Прив'язати рахунок Binance"
+      no_accounts_found: "Рахунків Binance не знайдено."
+      wait_for_sync: "Зачекайте, поки Binance завершить синхронізацію"
+      check_provider_health: "Перевірте, чи дійсні ваші облікові дані API Binance"
+      currently_linked_to: "Наразі прив'язано до: %{account_name}"
+      link: "Прив'язати"
+      cancel: "Скасувати"
+    link_existing_account:
+      success: "Успішно прив'язано до рахунку Binance"
+      errors:
+        only_manual: "Лише ручні рахунки можна прив'язати до Binance"
+        invalid_binance_account: "Недійсний рахунок Binance"
+  binance_item:
+    syncer:
+      checking_credentials: "Перевірка облікових даних..."
+      credentials_invalid: "Недійсні облікові дані API. Перевірте свій ключ API та секрет."
+      importing_accounts: "Імпортування рахунків з Binance..."
+      checking_configuration: "Перевірка конфігурації рахунку..."
+      accounts_need_setup:
+        one: "%{count} рахунок потребує налаштування"
+        few: "%{count} рахунки потребують налаштування"
+        many: "%{count} рахунків потребують налаштування"
+        other: "%{count} рахунків потребують налаштування"
+      processing_accounts: "Обробка даних рахунку..."
+      calculating_balances: "Розрахунок балансів..."
