@@ -16,7 +16,6 @@ tr:
     create:
       success: Hedef oluşturuldu.
     destroy:
-      archive_first: Hedefi silmeden önce arşivleyin.
       success: Hedef silindi.
     edit:
       heading: Hedefi düzenle
@@ -183,6 +182,9 @@ tr:
         geri yükleyebilirsiniz.
       confirm_archive_cta: Arşivle
       confirm_archive_title: Bu hedef arşivlensin mi?
+      confirm_delete_title: "Bu hedef silinsin mi?"
+      confirm_delete_body: "%{name} ve taahhüt geçmişi kalıcı olarak silinir. Bağlı hesaplarınız, bakiyeleriniz ve işlemleriniz etkilenmez. Kayıt olarak saklamak için bunun yerine arşivleyin."
+      confirm_delete_cta: "Hedefi sil"
       confirm_complete_body: Devam Eden listesinden çıkar. Daha sonra yine de arşivleyebilir
         veya geri yükleyebilirsiniz.
       confirm_complete_body_short: "%{progress}%'desiniz, %{target} hedefinin %{saved}
@@ -190,7 +192,7 @@ tr:
         yerine başarınız olarak kaydeder. Devam edin ya da bunu kapatıp hedefi ayarlayın."
       confirm_complete_cta: Tamamlandı olarak işaretle
       confirm_complete_title: Bu hedef tamamlandı olarak işaretlensin mi?
-      delete: Kalıcı olarak sil
+      delete: Sil
       edit: Düzenle
       empty:
         body: Bağlı hesabınıza bir transfer yapın. Sure bir sonraki eşitlemede bunu

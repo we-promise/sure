@@ -16,6 +16,9 @@ ru:
       default_body: Это действие необратимо.
       default_btn_text: Подтвердить
       default_title: Вы уверены?
+      resource_deletion_title: "Удалить %{resource}?"
+      resource_deletion_body: "Вы уверены, что хотите удалить %{resource}? Это действие необратимо."
+      resource_deletion_btn_text: "Удалить %{resource}"
     exchange_rate_tabs:
       calculate_rate_tab: Рассчитать курс
       convert_tab: Конвертировать по курсу
