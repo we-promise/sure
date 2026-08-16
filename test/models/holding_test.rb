@@ -100,12 +100,13 @@ class HoldingTest < ActiveSupport::TestCase
     # Matches Money#exchange_to / find_or_fetch_rate: FX often has no weekend row.
     friday = Date.current.prev_occurring(:friday)
     saturday = friday + 1.day
+    security = Security.create!(ticker: "WKND", name: "Weekend Trade")
 
-    create_trade(@amzn.security, account: @account, qty: 10, price: 200.00, date: saturday, currency: "CAD")
+    create_trade(security, account: @account, qty: 10, price: 200.00, date: saturday, currency: "CAD")
     ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: friday, rate: BigDecimal("0.80"))
 
     holding = @account.holdings.create!(
-      security: @amzn.security,
+      security: security,
       date: saturday,
       qty: 10,
       price: 160,

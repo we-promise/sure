@@ -128,6 +128,7 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     )
     date = Date.current
 
+    create_trade(@security, account: account, qty: 1, date: date - 1.day, price: 1)
     Security::Price.create!(security: @security, date: date, price: 90, currency: "EUR")
     Security::Price.create!(security: @security, date: date, price: 100, currency: "USD")
 
@@ -147,6 +148,7 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     )
     date = Date.current
 
+    create_trade(@security, account: account, qty: 1, date: date - 3.days, price: 1)
     # More USD observations than EUR → USD is the security's preferred currency
     # even though EUR sorts first alphabetically.
     Security::Price.create!(security: @security, date: date - 1.day, price: 95, currency: "USD")

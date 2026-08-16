@@ -45,18 +45,12 @@ class Holding < ApplicationRecord
   # then provider rows, then a preferred currency (usually account currency),
   # then alphabetical currency for stability across syncs.
   def self.latest_security_order_sql(prefer_currency: nil, table: table_name, partition_columns: %w[security_id])
-    prefer_sql = if prefer_currency.present?
-      sanitize_sql_array([ "(#{table}.currency = ?) DESC", prefer_currency ])
-    else
-      "TRUE"
-    end
-
     parts = []
     parts.concat(partition_columns.map { |column| "#{table}.#{column}" }) if partition_columns.present?
     parts << "#{table}.date DESC"
     parts << "(#{table}.qty <> 0) DESC"
     parts << "(#{table}.account_provider_id IS NOT NULL) DESC"
-    parts << prefer_sql
+    parts << sanitize_sql_array([ "(#{table}.currency = ?) DESC", prefer_currency ]) if prefer_currency.present?
     parts << "#{table}.currency ASC"
     parts.join(", ")
   end

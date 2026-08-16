@@ -836,6 +836,8 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     ExchangeRate.find_by!(date: holding_date, from_currency: "EUR", to_currency: "USD").update!(rate: 1.2)
 
     calculator = Balance::ForwardCalculator.new(account, window_start_date: 1.day.ago.to_date)
+    calculator.calculate
+
     assert_not calculator.incremental?, "Native foreign holdings must force full balance recalc"
   end
 
