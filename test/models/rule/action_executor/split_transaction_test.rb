@@ -130,11 +130,22 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
       ]
     )
 
-    modified = action.apply(@rule_scope)
+    modified = nil
+    assert_difference "DebugLogEntry.count", 1 do
+      modified = action.apply(@rule_scope)
+    end
 
     assert_equal 1, modified
     assert matching.reload.split_parent?
     refute mismatched.reload.split_parent?
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "rule_run", entry.category
+    assert_equal "warn", entry.level
+    assert_equal "Rule::ActionExecutor::SplitTransaction", entry.source
+    assert_equal @family, entry.family
+    assert_equal 1, entry.metadata["skipped_count"]
+    assert_equal "unresolvable_split_amounts", entry.metadata["skipped"].first["reason"]
   end
 
   test "percentage split skips a transaction when rounding drift would create a non-positive amount" do
@@ -152,7 +163,10 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
       ]
     )
 
-    modified = action.apply(@rule_scope)
+    modified = nil
+    assert_difference "DebugLogEntry.count", 1 do
+      modified = action.apply(@rule_scope)
+    end
 
     assert_equal 0, modified
     refute entry.reload.split_parent?
