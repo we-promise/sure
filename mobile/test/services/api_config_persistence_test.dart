@@ -87,6 +87,10 @@ void main() {
           isNull,
         );
         expect(
+          await CustomCertificateService.instance.loadCertificateName(),
+          isNull,
+        );
+        expect(
           await CustomProxyHeadersService.instance.loadHeaders(),
           isEmpty,
         );

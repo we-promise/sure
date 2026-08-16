@@ -34,7 +34,12 @@ class CustomCertificateService {
 
   Future<void> clearCertificate() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_certificateKey);
-    await prefs.remove(_certificateNameKey);
+    final certificateRemoved = !prefs.containsKey(_certificateKey) ||
+        await prefs.remove(_certificateKey);
+    final certificateNameRemoved = !prefs.containsKey(_certificateNameKey) ||
+        await prefs.remove(_certificateNameKey);
+    if (!certificateRemoved || !certificateNameRemoved) {
+      throw StateError('Failed to clear the custom CA certificate.');
+    }
   }
 }
