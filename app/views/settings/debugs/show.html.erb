@@ -55,9 +55,10 @@
       full-width dialog — same pattern as the dashboard cashflow chart. %>
   <div class="bg-container rounded-xl shadow-border-xs overflow-hidden group" data-controller="expandable">
     <% if @debug_log_entries.any? %>
-      <%# Desktop reveals the expand affordance on card hover (and on keyboard
-          focus, since an opacity-0 button is still tabbable); touch devices
-          have no hover state, so it stays visible below `lg`. %>
+      <%# Never hover-only: pointer hover, keyboard focus, and always shown on
+          coarse pointers, where there is no hover to reveal it. Viewport width
+          is the wrong proxy for that — a large tablet is touch-only well past
+          `lg`. Same shape as the dashboard insights feed's row controls. %>
       <div class="flex items-center justify-end px-4 py-2 border-b border-primary">
         <%= render DS::Button.new(
               variant: "icon",
@@ -65,7 +66,7 @@
               icon: "maximize-2",
               title: t("global.expand"),
               aria_label: t("global.expand"),
-              class: "opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity",
+              class: "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity",
               data: { action: "click->expandable#open" }
             ) %>
       </div>
@@ -77,8 +78,7 @@
       <%= render DS::Dialog.new(
             auto_open: false,
             disable_frame: true,
-            width: "custom",
-            content_class: "!w-[96vw] max-w-[1650px]",
+            width: "expanded",
             data: { expandable_target: "dialog" }
           ) do |dialog| %>
         <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle")) %>

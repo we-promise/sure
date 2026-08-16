@@ -40,11 +40,16 @@ class DS::Dialog < DesignSystemComponent
   attr_reader :variant, :auto_open, :reload_on_close, :width, :disable_frame, :content_class, :disable_click_outside, :opts, :responsive, :scrollable, :heading_level, :title_id
 
   VARIANTS = %w[modal drawer].freeze
+  # `expanded` is the "give this cramped thing the whole screen" shape used by
+  # expand-on-hover affordances (the dashboard cashflow chart, the debug log
+  # table). It keeps a sliver of viewport margin — unlike `full` — and caps out
+  # so wide tables and charts don't stretch unreadably on ultrawide displays.
   WIDTHS = {
     sm: "lg:max-w-[300px]",
     md: "lg:max-w-[550px]",
     lg: "lg:max-w-[700px]",
-    full: "lg:max-w-full"
+    full: "lg:max-w-full",
+    expanded: "!w-[96vw] max-w-[1650px]"
   }.freeze
   VALID_HEADING_LEVELS = (1..6).freeze
 
