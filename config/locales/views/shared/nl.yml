@@ -1,6 +1,7 @@
 ---
 nl:
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Bevestigen
       body_html: "<p>U kunt deze beslissing niet ongedaan maken</p>"
