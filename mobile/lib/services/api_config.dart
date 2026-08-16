@@ -12,6 +12,8 @@ class ApiConfig {
   // For production, use your actual server URL
   static const String _defaultBaseUrl = 'https://demo.sure.am';
   static const String _backendUrlKey = 'backend_url';
+  static const String backendConfigUpdatePendingKey =
+      'backend_config_update_pending';
   static String _baseUrl = _defaultBaseUrl;
 
   static String get baseUrl => _baseUrl;
@@ -54,12 +56,33 @@ class ApiConfig {
   }
 
   static void setBaseUrl(String url) {
-    _baseUrl = url;
+    final origin = Uri.parse(url);
     ApiHttpClient.instance.configure(
       trustedCertificateBytes: _customCertificateBytes,
-      trustedOrigin:
-          _customCertificateBytes == null ? null : Uri.parse(_baseUrl),
+      trustedOrigin: _customCertificateBytes == null ? null : origin,
     );
+    _baseUrl = url;
+  }
+
+  static Future<void> beginBackendConfigUpdate(
+    SharedPreferences prefs,
+  ) async {
+    final stored =
+        await prefs.setBool(backendConfigUpdatePendingKey, true);
+    if (!stored) {
+      throw StateError('Failed to start backend configuration update.');
+    }
+  }
+
+  static Future<void> completeBackendConfigUpdate(
+    SharedPreferences prefs,
+  ) async {
+    if (prefs.containsKey(backendConfigUpdatePendingKey)) {
+      final removed = await prefs.remove(backendConfigUpdatePendingKey);
+      if (!removed) {
+        throw StateError('Failed to complete backend configuration update.');
+      }
+    }
   }
 
   // API key authentication mode
@@ -132,6 +155,10 @@ class ApiConfig {
   static Future<bool> initialize() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(backendConfigUpdatePendingKey) == true) {
+        await _recoverInterruptedBackendConfigUpdate(prefs);
+        return true;
+      }
       final savedUrl = prefs.getString(_backendUrlKey);
       final baseUrl =
           savedUrl != null && savedUrl.isNotEmpty ? savedUrl : _defaultBaseUrl;
@@ -165,6 +192,26 @@ class ApiConfig {
       );
       return true;
     }
+  }
+
+  static Future<void> _recoverInterruptedBackendConfigUpdate(
+    SharedPreferences prefs,
+  ) async {
+    // An update marker survives abrupt process termination. Clear every
+    // independently persisted value before removing the marker so startup can
+    // never combine values from different backend configurations.
+    await CustomCertificateService.instance.clearCertificate();
+    await CustomProxyHeadersService.instance.saveHeaders(const []);
+    final stored = await prefs.setString(_backendUrlKey, _defaultBaseUrl);
+    if (!stored) {
+      throw StateError('Failed to recover backend configuration.');
+    }
+    await completeBackendConfigUpdate(prefs);
+    applyBackendConfiguration(
+      baseUrl: _defaultBaseUrl,
+      customProxyHeaders: const [],
+      customCertificateBytes: null,
+    );
   }
 
   // API timeout settings

@@ -231,6 +231,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
           await CustomCertificateService.instance.loadCertificateName();
 
       try {
+        await ApiConfig.beginBackendConfigUpdate(prefs);
         if (_certificateBytes == null) {
           await CustomCertificateService.instance.clearCertificate();
         } else {
@@ -248,6 +249,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
           customCertificateBytes: _certificateBytes,
           customCertificateName: _certificateName,
         );
+        await ApiConfig.completeBackendConfigUpdate(prefs);
       } catch (error, stackTrace) {
         // Restore the URL first so a restart cannot pair the new origin with
         // trust material from an incomplete configuration update.
@@ -265,6 +267,7 @@ class _BackendConfigScreenState extends State<BackendConfigScreen> {
             previousCertificateName ?? 'certificate',
           );
         }
+        await ApiConfig.completeBackendConfigUpdate(prefs);
         Error.throwWithStackTrace(error, stackTrace);
       }
 
