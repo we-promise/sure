@@ -27,10 +27,10 @@ class Balance::SyncCache
     # foreign-currency holding that still has no rate — never falls back to 1:1.
     def holdings_value_by_date
       @holdings_value_by_date ||= begin
-        holdings = account.holdings.to_a
-        holdings.group_by(&:date).each_with_object(Hash.new(0)) do |(date, day_holdings), totals|
-          foreign_currencies = day_holdings
-            .map(&:currency)
+        rows = account.holdings.pluck(:id, :date, :amount, :currency)
+        rows.group_by { |(_id, date, _amount, _currency)| date }.each_with_object(Hash.new(0)) do |(date, day_rows), totals|
+          foreign_currencies = day_rows
+            .map { |(_id, _date, _amount, currency)| currency }
             .uniq
             .reject { |currency| currency == account.currency }
 
@@ -41,22 +41,22 @@ class Balance::SyncCache
             fallback: nil
           )
 
-          day_holdings.each do |holding|
-            if holding.currency == account.currency
-              totals[date] += holding.amount
+          day_rows.each do |id, _date, amount, currency|
+            if currency == account.currency
+              totals[date] += amount
               next
             end
 
-            rate = rates[holding.currency]
+            rate = rates[currency]
             if rate.nil?
               Rails.logger.warn(
-                "Balance::SyncCache omitting holding #{holding.id} " \
-                "(#{holding.currency}→#{account.currency} on #{date}): no exchange rate"
+                "Balance::SyncCache omitting holding #{id} " \
+                "(#{currency}→#{account.currency} on #{date}): no exchange rate"
               )
               next
             end
 
-            totals[date] += holding.amount * rate
+            totals[date] += amount * rate
           end
         end
       end

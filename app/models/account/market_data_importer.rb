@@ -6,8 +6,10 @@ class Account::MarketDataImporter
   end
 
   def import_all
-    import_exchange_rates
+    # Prices first so newly imported security-price currencies are visible when
+    # selecting exchange-rate pairs for the same sync.
     import_security_prices
+    import_exchange_rates
   end
 
   def import_exchange_rates
@@ -90,7 +92,7 @@ class Account::MarketDataImporter
   def import_security_prices
     return unless Security.provider
 
-    current_security_ids = account.current_holdings.pluck(:security_id).to_set
+    current_security_ids = account.current_holdings.map(&:security_id).to_set
     traded_security_ids  = account.trades.pluck(:security_id).uniq
 
     all_security_ids = (current_security_ids | traded_security_ids)

@@ -517,13 +517,15 @@ class Account < ApplicationRecord
     raise e
   end
 
+  # Latest non-zero holdings for the account, ordered by account-currency value.
+  # Returns an Array (not a Relation) so mixed native currencies can be ranked
+  # after FX conversion — callers should not chain query methods on the result.
   def current_holdings
-    if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
+    scope = if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
       holdings
         .where.not(account_provider_id: nil)
         .where(date: provider_snapshot_date)
         .where.not(qty: 0)
-        .order(amount: :desc)
     else
       holdings
         .where.not(qty: 0)
@@ -531,8 +533,9 @@ class Account < ApplicationRecord
           id: holdings.select("DISTINCT ON (security_id) id")
                       .order(Arel.sql(Holding.latest_security_order_sql(prefer_currency: currency)))
         )
-        .order(amount: :desc)
     end
+
+    sort_holdings_by_account_currency_value(scope.to_a)
   end
 
   def latest_provider_holdings_snapshot_date
@@ -655,6 +658,23 @@ class Account < ApplicationRecord
   end
 
   private
+    def sort_holdings_by_account_currency_value(holdings)
+      return holdings if holdings.empty?
+
+      foreign = holdings.map(&:currency).uniq.reject { |holding_currency| holding_currency == currency }
+      rates = ExchangeRate.rates_for(foreign, to: currency, date: Date.current, fallback: nil)
+
+      holdings.sort_by do |holding|
+        value = if holding.currency == currency
+          holding.amount
+        elsif (rate = rates[holding.currency])
+          holding.amount * rate
+        else
+          BigDecimal("0")
+        end
+        -value
+      end
+    end
 
     def assign_default_owner
       return if owner.present?

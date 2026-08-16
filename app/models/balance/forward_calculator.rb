@@ -97,13 +97,13 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
       opening_starting_balances
     end
 
-    # Returns true when the account has entries in currencies other than the
-    # account currency, or when the account currency differs from the family
-    # currency. In either case, balance calculations depend on exchange rates
-    # that may have been missing (fallback_rate: 1) on a prior sync and later
-    # imported — so we must do a full recalculation to pick them up.
+    # Returns true when balance calculations depend on exchange rates that may
+    # have been missing on a prior sync and later imported — so we must do a
+    # full recalculation to pick them up. Includes native holding currencies
+    # (after manual/multi-currency holdings keep security-price FX).
     def multi_currency_account?
       account.entries.where.not(currency: account.currency).exists? ||
+        account.holdings.where.not(currency: account.currency).exists? ||
         account.currency != account.family.currency
     end
 
