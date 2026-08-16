@@ -63,37 +63,11 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.message") %></th>
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.context") %></th>
               <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.metadata") %></th>
+              <th class="px-4 py-3 w-px"><span class="sr-only"><%= t(".table.actions") %></span></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
-            <% @debug_log_entries.each do |entry| %>
-              <tr>
-                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= l(entry.created_at, format: :long) %></td>
-                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= entry.level %></td>
-                <td class="px-4 py-3 text-sm text-primary whitespace-nowrap"><%= entry.category %></td>
-                <td class="px-4 py-3 text-sm text-primary font-mono"><%= entry.source %></td>
-                <td class="px-4 py-3 text-sm text-primary"><%= entry.message %></td>
-                <td class="px-4 py-3 text-xs text-secondary font-mono whitespace-nowrap align-top">
-                  <div><%= t(".context.provider", value: entry.provider_key.presence || t(".missing_value")) %></div>
-                  <div><%= t(".context.family", value: entry.family_id || t(".missing_value")) %></div>
-                  <div><%= t(".context.account", value: entry.account_id || t(".missing_value")) %></div>
-                  <div><%= t(".context.user", value: entry.user_id || t(".missing_value")) %></div>
-                  <div><%= t(".context.account_provider", value: entry.account_provider_id || t(".missing_value")) %></div>
-                </td>
-                <td class="px-4 py-3 text-xs text-secondary align-top">
-                  <% if entry.metadata.present? %>
-                    <%= render DS::Disclosure.new(variant: :inline) do |disclosure| %>
-                      <% disclosure.with_summary_content do %>
-                        <span class="text-xs text-secondary"><%= t(".table.view_metadata") %></span>
-                      <% end %>
-                      <pre class="whitespace-pre-wrap break-words"><%= JSON.pretty_generate(entry.metadata) %></pre>
-                    <% end %>
-                  <% else %>
-                    <%= t(".missing_value") %>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
+            <%= render partial: "settings/debugs/log_entry", collection: @debug_log_entries, as: :entry %>
           </tbody>
         </table>
       </div>

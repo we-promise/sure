@@ -27,6 +27,22 @@ class Settings::DebugsControllerTest < ActionDispatch::IntegrationTest
     assert_match @entry.message, response.body
   end
 
+  test "each row renders an expand trigger and an expanded detail dialog" do
+    sign_in users(:sure_support_staff)
+
+    get settings_debug_url
+
+    assert_response :success
+    assert_select "tr[data-controller=expandable]", 1 do
+      assert_select "button[data-action=?]", "click->expandable#open", count: 1
+      assert_select "dialog[data-expandable-target=dialog]", 1 do
+        # The expanded view carries the full metadata payload, so support can
+        # read it without the table's cramped columns.
+        assert_select "pre", text: /"ticker": "AAPL"/
+      end
+    end
+  end
+
   test "non super admins are redirected" do
     sign_in users(:family_admin)
 

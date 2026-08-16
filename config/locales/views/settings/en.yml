@@ -79,12 +79,21 @@ en:
           context: "Context"
           metadata: "Metadata"
           view_metadata: "View"
+          actions: "Actions"
         context:
           provider: "provider=%{value}"
           family: "family=%{value}"
           account: "account=%{value}"
           user: "user=%{value}"
           account_provider: "account_provider=%{value}"
+        details:
+          title: "Event details"
+          provider: "Provider"
+          family_id: "Family ID"
+          account_id: "Account ID"
+          user_id: "User ID"
+          account_provider_id: "Account provider ID"
+          no_metadata: "No metadata recorded for this event."
     llm_usages:
       show:
         page_title: "LLM Usage & Costs"
