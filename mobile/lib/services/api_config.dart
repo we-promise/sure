@@ -1,6 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/custom_proxy_header.dart';
+import 'api_http_client.dart';
+import 'custom_certificate_service.dart';
 import 'custom_proxy_headers_service.dart';
 
 class ApiConfig {
@@ -15,8 +17,30 @@ class ApiConfig {
   static String get baseUrl => _baseUrl;
   static String get defaultBaseUrl => _defaultBaseUrl;
 
+  static List<int>? _customCertificateBytes;
+  static String? _customCertificateName;
+
+  static List<int>? get customCertificateBytes => _customCertificateBytes;
+  static String? get customCertificateName => _customCertificateName;
+
+  static void setCustomCertificate(List<int>? bytes, {String? name}) {
+    // Validate and install the trust material before publishing it as the
+    // active configuration.
+    ApiHttpClient.instance.configure(
+      trustedCertificateBytes: bytes,
+      trustedOrigin: bytes == null ? null : Uri.parse(_baseUrl),
+    );
+    _customCertificateBytes = bytes == null ? null : List.unmodifiable(bytes);
+    _customCertificateName = name;
+  }
+
   static void setBaseUrl(String url) {
     _baseUrl = url;
+    ApiHttpClient.instance.configure(
+      trustedCertificateBytes: _customCertificateBytes,
+      trustedOrigin:
+          _customCertificateBytes == null ? null : Uri.parse(_baseUrl),
+    );
   }
 
   // API key authentication mode
@@ -90,10 +114,17 @@ class ApiConfig {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedUrl = prefs.getString(_backendUrlKey);
+      _baseUrl =
+          savedUrl != null && savedUrl.isNotEmpty ? savedUrl : _defaultBaseUrl;
+      final certificate =
+          await CustomCertificateService.instance.loadCertificate();
+      final certificateName =
+          await CustomCertificateService.instance.loadCertificateName();
+      setCustomCertificate(certificate, name: certificateName);
 
       if (savedUrl != null && savedUrl.isNotEmpty) {
-        _baseUrl = savedUrl;
-        _customProxyHeaders = await CustomProxyHeadersService.instance.loadHeaders();
+        _customProxyHeaders =
+            await CustomProxyHeadersService.instance.loadHeaders();
         return true;
       }
 
@@ -101,7 +132,8 @@ class ApiConfig {
       // go straight to login while still letting users override it later.
       _baseUrl = _defaultBaseUrl;
       await prefs.setString(_backendUrlKey, _defaultBaseUrl);
-      _customProxyHeaders = await CustomProxyHeadersService.instance.loadHeaders();
+      _customProxyHeaders =
+          await CustomProxyHeadersService.instance.loadHeaders();
       return true;
     } catch (e) {
       // If initialization fails, keep the default URL

@@ -471,6 +471,23 @@
 
   "backendConfigChangeHint": "You can change this later in the settings.",
   "@backendConfigChangeHint": { "description": "Helper text below the config form." },
+  "backendConfigCertificateLabel": "Custom CA certificate",
+  "@backendConfigCertificateLabel": { "description": "Label for the custom CA certificate section." },
+  "backendConfigCertificateSubtitle": "Optional certificate for a private HTTPS server",
+  "@backendConfigCertificateSubtitle": { "description": "Subtitle when no custom CA certificate is selected." },
+  "backendConfigCertificateChoose": "Choose certificate",
+  "@backendConfigCertificateChoose": { "description": "Button label for selecting a CA certificate." },
+  "backendConfigCertificateRemove": "Remove certificate",
+  "@backendConfigCertificateRemove": { "description": "Tooltip for removing the selected CA certificate." },
+  "backendConfigCertificateHelp": "Select the root CA certificate used by your server (for example Caddy's root.crt). PEM and DER certificates are supported. Hostname verification remains enabled.",
+  "@backendConfigCertificateHelp": { "description": "Help text for custom CA certificate configuration." },
+  "backendConfigCertificateInvalid": "Select a file containing one valid X.509 certificate (maximum 64 KB).",
+  "@backendConfigCertificateInvalid": { "description": "Error shown when a selected certificate cannot be parsed." },
+  "backendConfigCertificateFingerprint": "SHA-256: {fingerprint}",
+  "@backendConfigCertificateFingerprint": {
+    "description": "SHA-256 fingerprint of the selected custom CA certificate.",
+    "placeholders": { "fingerprint": { "type": "String" } }
+  },
 
   "recentTransactionsTitle": "Recent Transactions",
   "@recentTransactionsTitle": { "description": "App bar title for the recent transactions screen." },

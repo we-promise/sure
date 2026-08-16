@@ -498,6 +498,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'You can change this later in the settings.';
 
   @override
+  String get backendConfigCertificateLabel => 'Custom CA certificate';
+
+  @override
+  String get backendConfigCertificateSubtitle =>
+      'Optional certificate for a private HTTPS server';
+
+  @override
+  String get backendConfigCertificateChoose => 'Choose certificate';
+
+  @override
+  String get backendConfigCertificateRemove => 'Remove certificate';
+
+  @override
+  String get backendConfigCertificateHelp =>
+      'Select the root CA certificate used by your server (for example Caddy\'s root.crt). PEM and DER certificates are supported. Hostname verification remains enabled.';
+
+  @override
+  String get backendConfigCertificateInvalid =>
+      'Select a file containing one valid X.509 certificate (maximum 64 KB).';
+
+  @override
+  String backendConfigCertificateFingerprint(String fingerprint) {
+    return 'SHA-256: $fingerprint';
+  }
+
+  @override
   String get recentTransactionsTitle => 'Recent Transactions';
 
   @override

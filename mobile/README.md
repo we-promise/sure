@@ -19,6 +19,7 @@ For more detailed technical documentation, see [docs/TECHNICAL_GUIDE.md](docs/TE
 - 🎨 Material Design 3 with light/dark theme support
 - 🔄 Token refresh for persistent sessions
 - 🔒 Two-factor authentication (MFA) support
+- 🛡️ Origin-scoped custom CA support for private HTTPS servers
 
 ## Requirements
 
