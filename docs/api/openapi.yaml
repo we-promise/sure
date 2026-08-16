@@ -10041,6 +10041,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+              - split
               properties:
                 split:
                   type: object
