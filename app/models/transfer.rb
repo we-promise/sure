@@ -97,6 +97,7 @@ class Transfer < ApplicationRecord
 
   def reject!
     with_lock do
+      raise ActiveRecord::RecordNotFound, "Transfer is no longer pending" unless pending?
       RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
       destroy!
     end

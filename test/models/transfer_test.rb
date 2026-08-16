@@ -224,4 +224,26 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "standard", inflow_entry.transaction.reload.kind
     assert_nil outflow_entry.transaction.reload.category
   end
+
+  test "reject! raises and does not revert kind when the transfer was concurrently confirmed" do
+    investment = accounts(:investment)
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "standard")
+    inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500, kind: "standard")
+
+    transfer = Transfer.create!(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction
+    )
+
+    # Simulate a confirm that completes on another connection between the
+    # reject request loading its in-memory @transfer and calling reject!.
+    Transfer.find(transfer.id).confirm!
+
+    assert_raises(ActiveRecord::RecordNotFound) { transfer.reject! }
+
+    assert transfer.reload.confirmed?
+    assert_equal "investment_contribution", outflow_entry.transaction.reload.kind
+    assert_equal "funds_movement", inflow_entry.transaction.reload.kind
+    assert_equal accounts(:depository).family.investment_contributions_category, outflow_entry.transaction.reload.category
+  end
 end
