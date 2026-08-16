@@ -39,7 +39,8 @@ class Holding < ApplicationRecord
 
   # Deterministic ORDER BY fragment for DISTINCT ON (... security_id) latest-row
   # selection when multiple currencies can exist on the same date.
-  # Prefers provider rows, then a preferred currency (usually account currency),
+  # Prefers non-zero qty (so neutralized orphan-currency cost-basis rows lose),
+  # then provider rows, then a preferred currency (usually account currency),
   # then alphabetical currency for stability across syncs.
   def self.latest_security_order_sql(prefer_currency: nil, table: table_name, partition_columns: %w[security_id])
     prefer_sql = if prefer_currency.present?
@@ -51,6 +52,7 @@ class Holding < ApplicationRecord
     parts = []
     parts.concat(partition_columns.map { |column| "#{table}.#{column}" }) if partition_columns.present?
     parts << "#{table}.date DESC"
+    parts << "(#{table}.qty <> 0) DESC"
     parts << "(#{table}.account_provider_id IS NOT NULL) DESC"
     parts << prefer_sql
     parts << "#{table}.currency ASC"

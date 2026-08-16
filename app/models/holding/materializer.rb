@@ -184,9 +184,12 @@ class Holding::Materializer
     # Calculated holdings preserve native price currency. After rematerialization,
     # delete calculated non-provider rows for the same security/date that still use
     # an older currency (orphaned from prior account-currency normalization).
-    # Locked/manual cost-basis rows are migrated onto the kept currency first so
-    # user-entered basis is not lost with the stale account-currency row. Migration
-    # preserves the source row's cost_basis_source and cost_basis_locked flags.
+    #
+    # Manual/locked rows are never deleted: their original amount + currency stay
+    # on a neutralized (qty/amount zero) row so a bad FX pin is recoverable. When
+    # conversion succeeds, the kept native-currency row also receives the converted
+    # basis with the source row's cost_basis_source / cost_basis_locked flags
+    # (never forced to "manual"/locked).
     #
     # Batches the candidate lookup for all rematerialized (security, date) keys in
     # one query so reverse materialization does not N+1 over every day/security.
@@ -224,23 +227,13 @@ class Holding::Materializer
       deletable_ids = []
 
       stale_by_key.each do |(security_id, date), stale_rows|
-        preserve_ids = migrate_manual_cost_basis_from_stale_rows(
+        preserve_manual_cost_basis_from_stale_rows(
           stale_rows: stale_rows,
           target: targets_by_key[[ security_id, date ]],
           date: date
         )
 
-        # Only calculated orphans are deleted automatically. Manual/locked rows are
-        # deleted only after a successful migration onto the kept currency row.
-        calculated_ids = stale_rows
-          .select(&:calculated?)
-          .map(&:id)
-
-        migrated_manual_ids = stale_rows
-          .reject(&:calculated?)
-          .map(&:id) - preserve_ids
-
-        deletable_ids.concat(calculated_ids + migrated_manual_ids)
+        deletable_ids.concat(stale_rows.select(&:calculated?).map(&:id))
       end
 
       deleted_count = deletable_ids.any? ? account.holdings.where(id: deletable_ids.uniq).delete_all : 0
@@ -248,31 +241,34 @@ class Holding::Materializer
       Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings with outdated currencies") if deleted_count > 0
     end
 
-    # Moves locked/manual cost basis from an orphaned account-currency row onto the
-    # newly materialized native-currency row. Returns stale row IDs that must be kept
-    # when migration is not possible (missing target or FX conversion failure).
-    def migrate_manual_cost_basis_from_stale_rows(stale_rows:, target:, date:)
+    # Keeps user-entered/locked basis recoverable on the orphaned currency row
+    # (qty/amount zeroed so balances and DISTINCT ON prefer the native row), and
+    # optionally mirrors a converted value onto the kept currency row.
+    def preserve_manual_cost_basis_from_stale_rows(stale_rows:, target:, date:)
       manual_rows = stale_rows.reject(&:calculated?)
-      return [] if manual_rows.empty?
+      return if manual_rows.empty?
 
       source = manual_rows.max_by { |holding| [ holding.cost_basis_locked? ? 1 : 0, holding.updated_at || Time.at(0) ] }
-      return manual_rows.map(&:id) unless source.cost_basis.present?
 
-      return manual_rows.map(&:id) unless target
+      if target && source.cost_basis.present? && !target.cost_basis_locked?
+        converted = convert_cost_basis_amount(source.cost_basis, from: source.currency, to: target.currency, date: date)
 
-      # Native-currency row already has a user-locked basis — keep it and drop stale copies.
-      return [] if target.cost_basis_locked?
+        if converted
+          target.update!(
+            cost_basis: converted,
+            cost_basis_source: source.cost_basis_source,
+            cost_basis_locked: source.cost_basis_locked?
+          )
+        end
+      end
 
-      converted = convert_cost_basis_amount(source.cost_basis, from: source.currency, to: target.currency, date: date)
-      return manual_rows.map(&:id) if converted.nil?
+      # Zero market exposure so SyncCache / current_holdings do not double-count,
+      # but leave cost_basis + currency intact as the recoverable original entry.
+      manual_rows.each do |row|
+        next if row.qty.zero? && row.amount.zero?
 
-      target.update!(
-        cost_basis: converted,
-        cost_basis_source: source.cost_basis_source,
-        cost_basis_locked: source.cost_basis_locked?
-      )
-
-      []
+        row.update!(qty: 0, amount: 0)
+      end
     end
 
     def convert_cost_basis_amount(amount, from:, to:, date:)

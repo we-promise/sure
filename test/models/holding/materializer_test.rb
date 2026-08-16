@@ -365,7 +365,7 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
       "Carry-forward should be skipped gracefully when currency conversion fails"
   end
 
-  test "migrates locked manual cost basis when cleaning stale account-currency holdings" do
+  test "preserves locked manual cost basis original currency while mirroring converted value" do
     account = @family.accounts.create!(
       name: "CAD Brokerage",
       balance: 20000,
@@ -399,16 +399,69 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
 
     Holding::Materializer.new(account, strategy: :forward).materialize_holdings
 
-    assert_nil Holding.find_by(id: stale.id), "Stale account-currency row should be removed after migration"
+    stale.reload
+    assert Holding.exists?(stale.id), "Original CAD entry must remain recoverable"
+    assert_equal BigDecimal("125.00"), stale.cost_basis
+    assert_equal "CAD", stale.currency
+    assert_equal "manual", stale.cost_basis_source
+    assert stale.cost_basis_locked?
+    assert_equal 0, stale.qty
+    assert_equal 0, stale.amount
 
     today = account.holdings.find_by!(security: security, date: Date.current, currency: "USD")
     assert today.cost_basis_locked?
     assert_equal "manual", today.cost_basis_source
-    # 125 CAD / 1.25 = 100 USD (CAD→USD via inverse of USD→CAD rate lookup)
+    # 125 CAD * 0.80 = 100 USD
     assert_in_delta BigDecimal("100.00"), today.cost_basis, BigDecimal("0.01")
   end
 
-  test "preserves locked manual cost basis row when FX migration is not possible" do
+  test "preserves locked calculated cost basis without relabeling as manual" do
+    account = @family.accounts.create!(
+      name: "CAD Brokerage Locked Calculated",
+      balance: 20000,
+      cash_balance: 20000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "MNLCALC", name: "Locked Calculated", exchange_operating_mic: "XNAS")
+    trade_date = 2.days.ago.to_date
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: trade_date, rate: 1.25)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 0.80)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: Date.current, rate: 1.25)
+
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+    Security::Price.create!(security: security, date: Date.current, price: 110, currency: "USD")
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 100, currency: "USD")
+
+    stale = Holding.create!(
+      account: account,
+      security: security,
+      date: Date.current,
+      qty: 10,
+      price: 137.5,
+      amount: 1375,
+      currency: "CAD",
+      cost_basis: BigDecimal("125.00"),
+      cost_basis_source: "calculated",
+      cost_basis_locked: true
+    )
+
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    stale.reload
+    assert Holding.exists?(stale.id)
+    assert_equal "calculated", stale.cost_basis_source
+    assert_equal BigDecimal("125.00"), stale.cost_basis
+    assert_equal 0, stale.qty
+
+    today = account.holdings.find_by!(security: security, date: Date.current, currency: "USD")
+    assert_equal "calculated", today.cost_basis_source
+    assert today.cost_basis_locked?
+    assert_in_delta BigDecimal("100.00"), today.cost_basis, BigDecimal("0.01")
+  end
+
+  test "preserves locked manual cost basis row when FX rates are absent" do
     account = @family.accounts.create!(
       name: "CAD Brokerage No FX",
       balance: 20000,
@@ -438,8 +491,15 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
 
     Holding::Materializer.new(account, strategy: :forward).materialize_holdings
 
-    assert Holding.exists?(stale.id), "Locked manual row must be kept when FX conversion fails"
-    assert_equal BigDecimal("125.00"), stale.reload.cost_basis
+    stale.reload
+    assert Holding.exists?(stale.id), "Locked manual row must be kept when FX conversion is unavailable"
+    assert_equal BigDecimal("125.00"), stale.cost_basis
+    assert_equal "CAD", stale.currency
+    assert_equal 0, stale.qty
+
+    today = account.holdings.find_by!(security: security, date: Date.current, currency: "USD")
+    assert_not today.cost_basis_locked?,
+      "Native row must not inherit a locked basis when FX conversion failed"
   end
 
   test "holdings value in account currency is unchanged when rows switch to native currency" do
