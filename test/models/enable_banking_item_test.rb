@@ -163,6 +163,27 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     assert_includes EnableBankingItem.with_stale_psu_ip, abandoned
   end
 
+  test "with_stale_psu_ip matches abandoned authorizations whose accepted consent duration has passed, even before the configured window elapses" do
+    abandoned = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Abandoned short consent", country_code: "DE",
+      application_id: "app", client_certificate: "cert", last_psu_ip: "1.2.3.4",
+      requested_consent_valid_until: 1.day.ago
+    )
+
+    assert_includes EnableBankingItem.with_stale_psu_ip, abandoned
+  end
+
+  test "with_stale_psu_ip excludes abandoned authorizations whose accepted consent duration hasn't passed yet" do
+    abandoned = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Abandoned still within consent", country_code: "DE",
+      application_id: "app", client_certificate: "cert", last_psu_ip: "1.2.3.4",
+      requested_consent_valid_until: 1.day.from_now
+    )
+    abandoned.update_column(:updated_at, (Rails.configuration.x.enable_banking.consent_days + 1).days.ago)
+
+    assert_not_includes EnableBankingItem.with_stale_psu_ip, abandoned
+  end
+
   test "with_stale_psu_ip excludes items without a stored last_psu_ip" do
     clean = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Clean", country_code: "DE",
@@ -185,6 +206,28 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     item.stubs(:enable_banking_provider).returns(provider)
 
     item.revoke_session
+    item.reload
+
+    assert_nil item.session_id
+    assert_nil item.session_expires_at
+    assert_nil item.authorization_id
+    assert_nil item.last_psu_ip
+  end
+
+  test "revoke_session clears last_psu_ip even when the provider raises" do
+    item = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Revoked despite provider error", country_code: "DE",
+      application_id: "app", client_certificate: "cert",
+      last_psu_ip: "1.2.3.4", session_id: "sess", session_expires_at: 1.day.from_now,
+      authorization_id: "auth"
+    )
+    provider = mock("enable_banking_provider")
+    provider.expects(:delete_session).with(session_id: "sess")
+      .raises(Provider::EnableBanking::EnableBankingError.new("boom"))
+    item.stubs(:enable_banking_provider).returns(provider)
+
+    item.revoke_session
+    item.reload
 
     assert_nil item.session_id
     assert_nil item.session_expires_at
