@@ -53,7 +53,7 @@
           <% pending_invitations = @invitations_by_family[family.id] || [] %>
           <%= render DS::Disclosure.new(
                 variant: :bare,
-                summary_class: "list-none flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-surface-hover",
+                summary_class: "list-none focus-ring flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-surface-hover",
                 class: "bg-container-inset rounded-lg overflow-hidden",
                 data: {
                   controller: "admin-invitation-delete",
