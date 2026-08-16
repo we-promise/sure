@@ -903,7 +903,7 @@ end
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 
     get transactions_url
-    initial_count = controller.instance_variable_get(:@uncategorized_count)
+    initial_count = rendered_uncategorized_count
 
     account = @user.family.accounts.visible.first
     account.entries.create!(
@@ -915,7 +915,7 @@ end
     )
 
     get transactions_url
-    updated_count = controller.instance_variable_get(:@uncategorized_count)
+    updated_count = rendered_uncategorized_count
 
     assert_equal initial_count + 1, updated_count,
       "a new uncategorized transaction must be reflected without a stale cache read"
@@ -923,23 +923,111 @@ end
     Rails.cache = original_cache
   end
 
-  test "index uncategorized_count cache key is scoped per user, not just per family" do
+  test "index uncategorized_count cache reflects categorizing a transaction immediately" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 
-    admin = users(:family_admin)
-    member = users(:family_member)
-    family = admin.family
-    entries_cache_version = family.entries_cache_version
+    entry = @user.family.accounts.visible.first.entries.create!(
+      name: "Needs a category",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
 
     get transactions_url
-    assert_response :success
+    initial_count = rendered_uncategorized_count
 
-    admin_key = "transactions_uncategorized_count/v1/#{family.id}/#{admin.id}/#{entries_cache_version}"
-    member_key = "transactions_uncategorized_count/v1/#{family.id}/#{member.id}/#{entries_cache_version}"
+    entry.entryable.update!(category: categories(:food_and_drink))
 
-    assert Rails.cache.exist?(admin_key), "expected the admin's request to populate a user-scoped cache entry"
-    assert_not Rails.cache.exist?(member_key), "the admin's request must not populate a cache entry keyed to a different user"
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count - 1, updated_count,
+      "categorizing a transaction must be reflected without a stale cache read"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache is invalidated when account-share access is revoked" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    member = users(:family_member)
+    share = account_shares(:depository_shared_with_member)
+    share.account.entries.create!(
+      name: "Uncategorized on shared account",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    sign_in member
+    get transactions_url
+    count_with_access = rendered_uncategorized_count
+    assert_operator count_with_access, :>, 0,
+      "the member should see the shared account's uncategorized transaction before revocation"
+
+    share.destroy!
+
+    get transactions_url
+    count_after_revocation = rendered_uncategorized_count
+
+    assert_operator count_after_revocation, :<, count_with_access,
+      "revoking account-share access must not leave a stale cached count that still includes the now-inaccessible account"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index projected_recurring cache is invalidated when account-share access is revoked" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    member = users(:family_member)
+    share = account_shares(:depository_shared_with_member)
+    recurring = recurring_transactions(:netflix_subscription)
+    assert_equal share.account_id, recurring.account_id,
+      "fixture assumption: the shared depository account has the netflix recurring charge"
+
+    sign_in member
+    get transactions_url
+    assert_includes @controller.instance_variable_get(:@projected_recurring).map(&:id), recurring.id,
+      "the member should see the shared account's recurring transaction before revocation"
+
+    share.destroy!
+
+    get transactions_url
+    assert_not_includes @controller.instance_variable_get(:@projected_recurring).map(&:id), recurring.id,
+      "revoking account-share access must not leave a stale cached projected-recurring list"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache is scoped per user, not just per family" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    # family_member has no share on this account (see test/fixtures/account_shares.yml),
+    # so only the admin can see its uncategorized transaction.
+    accounts(:other_asset).entries.create!(
+      name: "Admin-only uncategorized transaction",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    admin_count = rendered_uncategorized_count
+    assert_operator admin_count, :>, 0
+
+    sign_in users(:family_member)
+    get transactions_url
+    member_count = rendered_uncategorized_count
+
+    assert_not_equal admin_count, member_count,
+      "a member without access to the admin-only account must not reuse the admin's cached uncategorized count"
   ensure
     Rails.cache = original_cache
   end
@@ -951,6 +1039,13 @@ end
 
     def normalize_sql_query(sql)
       sql.to_s.squish.gsub(/[`"]/, "").downcase
+    end
+
+    # The "Categorize (N)" menu item only renders when @uncategorized_count
+    # is positive, so an absent match means the count is 0.
+    def rendered_uncategorized_count
+      match = response.body.match(/Categorize \((\d+)\)/)
+      match ? match[1].to_i : 0
     end
 
     # Per-row lazy loads use `column = ?`. Do not treat `IN (...)` as lazy

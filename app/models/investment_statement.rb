@@ -70,14 +70,16 @@ class InvestmentStatement
   # DISTINCT ON query up to 5x per dashboard/report request.
   def current_holdings
     @current_holdings ||= begin
-      if investment_accounts.any?
+      account_ids = investment_account_ids
+
+      if account_ids.any?
         # Get the latest holding for each security per account
         Holding
-          .where(account_id: investment_account_ids)
+          .where(account_id: account_ids)
           .where.not(qty: 0)
           .where(
             id: Holding
-              .where(account_id: investment_account_ids)
+              .where(account_id: account_ids)
               .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
               .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
           )
