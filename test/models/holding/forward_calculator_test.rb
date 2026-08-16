@@ -71,6 +71,30 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_nil today.cost_basis
   end
 
+  test "cost basis is nil when FX rate is zero or negative" do
+    account = families(:empty).accounts.create!(
+      name: "CAD Brokerage Bad FX",
+      balance: 10000,
+      cash_balance: 10000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "BADFX", name: "Bad FX Lot")
+    trade_date = 2.days.ago.to_date
+
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: trade_date, rate: 0)
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+    Security::Price.create!(security: security, date: Date.current, price: 110, currency: "USD")
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 135, currency: "CAD")
+
+    holdings = Holding::ForwardCalculator.new(account).calculate
+    today = holdings.find { |holding| holding.date == Date.current && holding.security_id == security.id }
+
+    assert_not_nil today
+    assert_nil today.cost_basis,
+               "Zero rates must not become a 0 cost basis (Money#exchange_to rejected rate <= 0)"
+  end
+
   test "memoizes FX lookups across days without new buys" do
     account = families(:empty).accounts.create!(
       name: "CAD Brokerage FX Memo",

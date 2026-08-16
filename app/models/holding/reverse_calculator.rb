@@ -154,7 +154,9 @@ class Holding::ReverseCalculator
       return buy[:price] if buy[:currency] == currency
 
       rate = fx_rate(from: buy[:currency], to: currency, date: buy[:date])
-      return nil if rate.nil?
+      # Match Money#exchange_to: absent or non-positive rates are unusable
+      # (ExchangeRate does not enforce positivity at the DB layer).
+      return nil unless rate&.positive?
 
       buy[:price] * rate
     end
