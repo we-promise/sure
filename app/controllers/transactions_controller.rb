@@ -68,16 +68,21 @@ class TransactionsController < ApplicationController
       Set.new
     end
 
-    @uncategorized_count = Current.accessible_entries.uncategorized_transactions.count
+    @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
+      Current.accessible_entries.uncategorized_transactions.count
+    end
 
     # Load projected recurring transactions for next 10 days
-    @projected_recurring = Current.family.recurring_transactions
-                                  .accessible_by(Current.user)
-                                  .active
-                                  .where("next_expected_date <= ? AND next_expected_date >= ?",
-                                         10.days.from_now.to_date,
-                                         Date.current)
-                                  .includes(:merchant)
+    @projected_recurring = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
+      Current.family.recurring_transactions
+                    .accessible_by(Current.user)
+                    .active
+                    .where("next_expected_date <= ? AND next_expected_date >= ?",
+                           10.days.from_now.to_date,
+                           Date.current)
+                    .includes(:merchant)
+                    .to_a
+    end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
   end
@@ -433,6 +438,20 @@ class TransactionsController < ApplicationController
   end
 
   private
+    # Scoped by user (not just family) because Current.accessible_entries is
+    # user-scoped for family sharing (see Current#accessible_entries).
+    def uncategorized_count_cache_key
+      "transactions_uncategorized_count/v1/#{Current.family.id}/#{Current.user.id}/#{Current.family.entries_cache_version}"
+    end
+
+    # Scoped additionally by Date.current since the "next 10 days" window is
+    # date-dependent and would otherwise return a stale window on a cache hit
+    # from an earlier day.
+    def projected_recurring_cache_key
+      recurring_version = Current.family.recurring_transactions.maximum(:updated_at)&.to_i
+      "transactions_projected_recurring/v1/#{Current.family.id}/#{Current.user.id}/#{Date.current}/#{recurring_version}"
+    end
+
     def accessible_transactions
       Current.family.transactions
         .joins(entry: :account)

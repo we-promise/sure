@@ -391,6 +391,34 @@ class FamilyTest < ActiveSupport::TestCase
     assert family.save
   end
 
+  test "balance_sheet memoizes per user for the same family instance" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    member = users(:family_member)
+
+    first_call_for_admin = family.balance_sheet(user: admin)
+
+    assert_same first_call_for_admin, family.balance_sheet(user: admin),
+      "repeated calls for the same user must reuse the same BalanceSheet instance"
+
+    refute_same first_call_for_admin, family.balance_sheet(user: member),
+      "different users must not share a memoized BalanceSheet (family sharing scoping)"
+  end
+
+  test "investment_statement memoizes per user for the same family instance" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    member = users(:family_member)
+
+    first_call_for_admin = family.investment_statement(user: admin)
+
+    assert_same first_call_for_admin, family.investment_statement(user: admin),
+      "repeated calls for the same user must reuse the same InvestmentStatement instance"
+
+    refute_same first_call_for_admin, family.investment_statement(user: member),
+      "different users must not share a memoized InvestmentStatement (family sharing scoping)"
+  end
+
   private
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))

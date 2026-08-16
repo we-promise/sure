@@ -878,6 +878,72 @@ end
                  "Expected transfer counterparty accounts to be preloaded"
   end
 
+  test "index caches uncategorized_count and projected_recurring across requests" do
+    # Test environment uses null_store; swap in a memory store so the cache
+    # actually persists between the two requests below.
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    get transactions_url
+    assert_response :success
+
+    queries = capture_sql_queries { get transactions_url }
+    assert_response :success
+
+    assert_empty queries.grep(/uncategorized/i),
+      "second request with unchanged data should reuse the cached uncategorized count"
+    assert_empty queries.grep(/recurring_transactions/i),
+      "second request with unchanged data should reuse the cached projected recurring lookup"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects new transactions immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    get transactions_url
+    initial_count = controller.instance_variable_get(:@uncategorized_count)
+
+    account = @user.family.accounts.visible.first
+    account.entries.create!(
+      name: "New uncategorized transaction",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    updated_count = controller.instance_variable_get(:@uncategorized_count)
+
+    assert_equal initial_count + 1, updated_count,
+      "a new uncategorized transaction must be reflected without a stale cache read"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache key is scoped per user, not just per family" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    admin = users(:family_admin)
+    member = users(:family_member)
+    family = admin.family
+    entries_cache_version = family.entries_cache_version
+
+    get transactions_url
+    assert_response :success
+
+    admin_key = "transactions_uncategorized_count/v1/#{family.id}/#{admin.id}/#{entries_cache_version}"
+    member_key = "transactions_uncategorized_count/v1/#{family.id}/#{member.id}/#{entries_cache_version}"
+
+    assert Rails.cache.exist?(admin_key), "expected the admin's request to populate a user-scoped cache entry"
+    assert_not Rails.cache.exist?(member_key), "the admin's request must not populate a cache entry keyed to a different user"
+  ensure
+    Rails.cache = original_cache
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }

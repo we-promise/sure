@@ -307,8 +307,13 @@ class Family < ApplicationRecord
     AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
   end
 
+  # Memoized per user: the layout renders the account sidebar on every page
+  # (mobile + desktop, each with 3 tabs), so a single request can ask for the
+  # balance sheet many times. Rebuilding it repeats the account/sync/exchange-
+  # rate queries it depends on.
   def balance_sheet(user: Current.user)
-    BalanceSheet.new(self, user: user)
+    @balance_sheets ||= {}
+    @balance_sheets[user&.id] ||= BalanceSheet.new(self, user: user)
   end
 
   def income_statement(user: Current.user)
@@ -382,8 +387,10 @@ class Family < ApplicationRecord
     end
   end
 
+  # Memoized per user for the same reason as #balance_sheet above.
   def investment_statement(user: Current.user)
-    InvestmentStatement.new(self, user: user)
+    @investment_statements ||= {}
+    @investment_statements[user&.id] ||= InvestmentStatement.new(self, user: user)
   end
 
   def eu?
