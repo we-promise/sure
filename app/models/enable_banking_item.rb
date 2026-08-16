@@ -349,7 +349,8 @@ class EnableBankingItem < ApplicationRecord
       update!(
         session_id: nil,
         session_expires_at: nil,
-        authorization_id: nil
+        authorization_id: nil,
+        last_psu_ip: nil
       )
     end
   end
