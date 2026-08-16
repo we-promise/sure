@@ -96,7 +96,7 @@ class Transfer < ApplicationRecord
   end
 
   def reject!
-    Transfer.transaction do
+    with_lock do
       RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
       destroy!
     end
@@ -119,7 +119,7 @@ class Transfer < ApplicationRecord
   end
 
   def confirm!
-    Transfer.transaction do
+    with_lock do
       apply_transfer_kind! if pending?
       update!(status: "confirmed")
     end

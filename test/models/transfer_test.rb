@@ -203,4 +203,25 @@ class TransferTest < ActiveSupport::TestCase
 
     assert_equal "standard", transfer.outflow_transaction.reload.kind
   end
+
+  test "confirm! raises and does not apply kind when the transfer was concurrently rejected" do
+    investment = accounts(:investment)
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "standard")
+    inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500, kind: "standard")
+
+    transfer = Transfer.create!(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction
+    )
+
+    # Simulate a reject that completes on another connection between the
+    # confirm request loading its in-memory @transfer and calling confirm!.
+    Transfer.find(transfer.id).reject!
+
+    assert_raises(ActiveRecord::RecordNotFound) { transfer.confirm! }
+
+    assert_equal "standard", outflow_entry.transaction.reload.kind
+    assert_equal "standard", inflow_entry.transaction.reload.kind
+    assert_nil outflow_entry.transaction.reload.category
+  end
 end
