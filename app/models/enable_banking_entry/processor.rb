@@ -6,16 +6,6 @@ class EnableBankingEntry::Processor
   # Small-merchant card terminal providers that prefix the payee with "KEYWORD *"
   PAYMENT_PROCESSOR_PREFIX = /\A(SUMUP|SQ|IZETTLE|ZETTLE|PAYPAL)\s*\*\s*/i
 
-  # Austrian/German retail POS terminals often include a "DANKT"/"DANKE" thank-you
-  # marker somewhere in the merchant line (e.g. "<CHAIN> DANKT ..." or
-  # "DANKE ... <CHAIN>"). It's never part of the retailer's actual name, so it's
-  # safe to remove -- but its position relative to the merchant name isn't fixed,
-  # so only the marker word itself is removed rather than truncating the line at
-  # it. Used as a last-resort fallback when no known merchant name matches (see
-  # matched_known_merchant_name) -- generalizes across retailers and phrasings
-  # without risking the real merchant name being cut off.
-  LOYALTY_MARKER_WORD = /\b(DANKT|DANKE)\b/i
-
   # Guard against spurious matches from very short known merchant names (e.g. a
   # 2-letter FamilyMerchant name matching inside unrelated text, like "IT" would
   # inside "NAME IT" -- a real chain name observed in this issue's own data).
@@ -247,12 +237,7 @@ class EnableBankingEntry::Processor
       descriptive = lines.find { |line| !technical_remittance_line?(line) } || lines.first
       return descriptive if descriptive.blank?
 
-      # Loyalty-marker removal before prefix stripping: PAYMENT_PROCESSOR_PREFIX is
-      # anchored at the start of the string (\A), so if a marker ever preceded it
-      # (unusual, but not impossible), stripping the prefix first would leave it
-      # unmatched. Order doesn't matter for any known real shape, but this way the
-      # result is correct regardless of input order.
-      matched_known_merchant_name(descriptive) || strip_payment_processor_prefix(strip_loyalty_marker(descriptive))
+      matched_known_merchant_name(descriptive) || strip_payment_processor_prefix(descriptive)
     end
 
     def remittance_information_lines
@@ -282,19 +267,9 @@ class EnableBankingEntry::Processor
       value.sub(PAYMENT_PROCESSOR_PREFIX, "").strip.presence || value
     end
 
-    def strip_loyalty_marker(value)
-      return value if value.blank?
-      # Only touch the string when the marker is actually present -- squeeze/strip
-      # would otherwise also collapse intentional multi-space formatting (e.g. the
-      # raw technical POS line) on lines that never had a marker to remove.
-      return value unless value.match?(LOYALTY_MARKER_WORD)
-      # gsub, not sub: remove every marker occurrence, not just the first.
-      value.gsub(LOYALTY_MARKER_WORD, "").squeeze(" ").strip.presence || value
-    end
-
     # Prefer a merchant name the family already knows over any text heuristic: it's
     # already clean/trusted, and sidesteps guessing which parts of a POS line are
-    # noise (store numbers, city, thank-you markers, ...) vs. part of the name.
+    # noise (store numbers, city, loyalty markers, ...) vs. part of the name.
     # Case-insensitive, whole-word match; the *stored* name (and its casing) wins,
     # so e.g. "BILLA DANKT 0007114" resolves to "Billa", not "BILLA". Longest match
     # wins when multiple known names match (prefer the more specific one).

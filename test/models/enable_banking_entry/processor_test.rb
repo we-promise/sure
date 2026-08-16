@@ -228,7 +228,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
     EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_pos_2935")
-    assert_equal "BILLA 0007114", entry.name
+    assert_equal "BILLA DANKT 0007114", entry.name
     assert_includes entry.notes, "POS          45,13 AT  D6   31.07. 10:27"
   end
 
@@ -302,7 +302,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     )
 
     # No known merchant match attempted ("IT" is below MIN_KNOWN_MERCHANT_MATCH_LENGTH),
-    # and no DANKT/DANKE marker present, so the line passes through unchanged.
+    # so the line passes through unchanged.
     assert_equal "NAME IT 1234", name
   end
 
@@ -580,7 +580,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       ]
     )
 
-    assert_equal "BILLA 0007114", name
+    assert_equal "BILLA DANKT 0007114", name
   end
 
   test "skips generic ATM terminal line and uses real merchant from remittance_information" do
@@ -608,7 +608,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       ]
     )
 
-    assert_equal "POS 45,13 BILLA 0007114", name
+    assert_equal "POS 45,13 BILLA DANKT 0007114", name
   end
 
   test "does not treat a legitimate line as technical just because it ends with a date+time stamp" do
@@ -637,40 +637,6 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     )
 
     assert_equal "HERR DR. EISENSTADT 7000", name
-  end
-
-  test "removes the DANKT/DANKE thank-you marker regardless of retailer chain or its position in the line" do
-    [
-      [ "BIPA DANKT 0001234", "BIPA 0001234" ],
-      [ "SPAR DANKT 0005678", "SPAR 0005678" ],
-      [ "HOFER DANKT 0009876", "HOFER 0009876" ],
-      [ "LIDL DANKT 0004321", "LIDL 0004321" ],
-      [ "PENNY DANKE 0002468", "PENNY 0002468" ],
-      [ "DANKE 0009999 PENNY", "0009999 PENNY" ]
-    ].each do |raw_line, expected_name|
-      name = build_name(
-        credit_debit_indicator: "DBIT",
-        creditor: { name: "" },
-        bank_transaction_code: nil,
-        remittance_information: [
-          "POS          12,34 AT  D6   01.01. 09:00",
-          raw_line
-        ]
-      )
-
-      assert_equal expected_name, name, "expected #{raw_line.inspect} to normalize to #{expected_name.inspect}"
-    end
-  end
-
-  test "does not alter a name that merely contains 'dank' as a substring" do
-    name = build_name(
-      credit_debit_indicator: "DBIT",
-      creditor: { name: "" },
-      bank_transaction_code: nil,
-      remittance_information: [ "STEFAN DANKL GMBH" ]
-    )
-
-    assert_equal "STEFAN DANKL GMBH", name
   end
 
   test "falls back to the technical line when remittance_information has no descriptive line" do
