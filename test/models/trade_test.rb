@@ -137,6 +137,62 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal Money.new(80, "CAD"), trend.value
   end
 
+  test "realized_gain_loss prefers non-zero native holding over same-date account-currency orphan" do
+    account = families(:empty).accounts.create!(
+      name: "CAD Brokerage Tie Break",
+      balance: 10000,
+      cash_balance: 10000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "RGTB", name: "Realized Gain Tie Break", exchange_operating_mic: "XNAS")
+    buy_date = 5.days.ago.to_date
+    sell_date = Date.current
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: sell_date, rate: 1.30)
+
+    create_trade(security, account: account, qty: 10, date: buy_date, price: 100, currency: "USD")
+    sell_entry = create_trade(security, account: account, qty: -4, date: sell_date, price: 150, currency: "CAD")
+
+    # Neutralized recoverability stub in account currency (would win a naive prefer-CAD pick).
+    orphan = account.holdings.create!(
+      security: security,
+      date: sell_date,
+      qty: 0,
+      price: 195,
+      amount: 0,
+      currency: "CAD",
+      cost_basis: 999,
+      cost_basis_source: "manual",
+      cost_basis_locked: true
+    )
+    native = account.holdings.create!(
+      security: security,
+      date: sell_date,
+      qty: 6,
+      price: 150,
+      amount: 900,
+      currency: "USD",
+      cost_basis: 100,
+      cost_basis_source: "calculated"
+    )
+
+    trade = sell_entry.trade
+
+    # DB path
+    trend = trade.realized_gain_loss
+    assert_not_nil trend
+    assert_equal Money.new(520, "CAD"), trend.previous
+
+    # Preloaded path must use the same tie-break (not max_by date alone / CAD-first).
+    trade.instance_variable_set(:@preloaded_holdings, [ orphan, native ])
+    trade.remove_instance_variable(:@realized_gain_loss) if trade.instance_variable_defined?(:@realized_gain_loss)
+
+    preloaded_trend = trade.realized_gain_loss
+    assert_not_nil preloaded_trend
+    assert_equal Money.new(520, "CAD"), preloaded_trend.previous
+  end
+
   test "realized_gain_loss returns nil when holding cost basis cannot be converted" do
     account = families(:empty).accounts.create!(
       name: "CAD Brokerage Missing FX",

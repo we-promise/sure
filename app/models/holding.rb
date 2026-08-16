@@ -61,6 +61,26 @@ class Holding < ApplicationRecord
     parts.join(", ")
   end
 
+  # In-memory twin of +latest_security_order_sql+ — pick one row from already-loaded
+  # holdings when multiple currencies share the same security/date.
+  def self.pick_latest_for_security(holdings, prefer_currency: nil)
+    Array(holdings).min_by { |holding| latest_security_sort_key(holding, prefer_currency:) }
+  end
+
+  # Ascending sort key matching +latest_security_order_sql+ (lowest wins / first in SQL).
+  def self.latest_security_sort_key(holding, prefer_currency: nil)
+    prefer = prefer_currency.to_s
+    currency = holding.currency.to_s
+
+    [
+      -holding.date.jd,
+      holding.qty.to_d.zero? ? 1 : 0,
+      holding.account_provider_id.present? ? 0 : 1,
+      prefer.present? && currency == prefer ? 0 : 1,
+      currency
+    ]
+  end
+
   delegate :ticker, to: :security
 
   def name

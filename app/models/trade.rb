@@ -92,20 +92,23 @@ class Trade < ApplicationRecord
     def calculate_realized_gain_loss
       return nil unless sell?
 
+      prefer_currency = entry.account.currency
+
       # Use preloaded holdings if available (set by reports controller to avoid N+1)
       # Treat defined-but-empty preload as authoritative to prevent DB fallback
       holding = if defined?(@preloaded_holdings)
-        # Prefer latest date, then account currency, then alphabetical currency.
-        (@preloaded_holdings || [])
-          .select { |h| h.security_id == security_id && h.date <= entry.date }
-          .max_by { |h| [ h.date, h.currency == entry.account.currency ? 1 : 0, h.currency.to_s ] }
+        Holding.pick_latest_for_security(
+          (@preloaded_holdings || []).select { |h| h.security_id == security_id && h.date <= entry.date },
+          prefer_currency: prefer_currency
+        )
       else
-        # Fall back to database query only when not preloaded
+        # Fall back to database query only when not preloaded — same tie-break as
+        # Holding.latest_security_order_sql / pick_latest_for_security.
         entry.account.holdings
           .where(security_id: security_id)
           .where("date <= ?", entry.date)
           .order(Arel.sql(Holding.latest_security_order_sql(
-            prefer_currency: entry.account.currency,
+            prefer_currency: prefer_currency,
             partition_columns: []
           )))
           .first
