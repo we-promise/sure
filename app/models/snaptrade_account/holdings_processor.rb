@@ -1,11 +1,6 @@
 class SnaptradeAccount::HoldingsProcessor
   include SnaptradeAccount::DataHelpers
 
-  # Units are per-contract and symbols OCC-style, neither of which this
-  # processor models. A denylist, so equity-like kinds added later still
-  # import rather than being silently dropped.
-  UNSUPPORTED_INSTRUMENT_KINDS = %w[option future cfd].freeze
-
   def initialize(snaptrade_account)
     @snaptrade_account = snaptrade_account
   end
@@ -89,8 +84,6 @@ class SnaptradeAccount::HoldingsProcessor
     end
 
     def process_holding(data)
-      return if unsupported_instrument?(data)
-
       symbol_data = extract_symbol_data(data)
       ticker = symbol_data["symbol"] || symbol_data[:symbol]
 
@@ -138,22 +131,13 @@ class SnaptradeAccount::HoldingsProcessor
       )
 
       # Store cost basis if available. Both fields are per-share, which is
-      # what update_holding_cost_basis expects.
+      # what update_holding_cost_basis expects — unlike the identically named
+      # tax_lots[].cost_basis, which SnapTrade documents as a whole-lot total.
       avg_price = data["average_purchase_price"] || data[:average_purchase_price] ||
                   data["cost_basis"] || data[:cost_basis]
       if avg_price.present?
         update_holding_cost_basis(security, avg_price)
       end
-    end
-
-    def unsupported_instrument?(data)
-      instrument = data[:instrument] || data["instrument"]
-      return false unless instrument.is_a?(Hash)
-
-      kind = instrument.with_indifferent_access[:kind]
-      return false if kind.blank?
-
-      UNSUPPORTED_INSTRUMENT_KINDS.include?(kind.to_s.downcase)
     end
 
     def update_holding_cost_basis(security, avg_cost)

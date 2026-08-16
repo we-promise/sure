@@ -214,47 +214,6 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "provider", holding.cost_basis_source
   end
 
-  test "holdings processor skips derivative positions from positions/all" do
-    @snaptrade_account.update!(
-      raw_holdings_payload: [
-        {
-          "instrument" => {
-            "kind" => "option",
-            "symbol" => "AAPL 240119C00150000",
-            "currency" => "USD"
-          },
-          "units" => "2",
-          "price" => "5.10",
-          "currency" => "USD"
-        }
-      ]
-    )
-
-    assert_nothing_raised do
-      SnaptradeAccount::HoldingsProcessor.new(@snaptrade_account).process
-    end
-    assert_equal 0, @account.holdings.count
-  end
-
-  test "holdings processor imports unrecognised instrument kinds" do
-    security = securities(:aapl)
-
-    @snaptrade_account.update!(
-      raw_holdings_payload: [
-        {
-          "instrument" => { "kind" => "somethingnew", "symbol" => security.ticker, "currency" => "USD" },
-          "units" => "5",
-          "price" => "100.00",
-          "currency" => "USD"
-        }
-      ]
-    )
-
-    SnaptradeAccount::HoldingsProcessor.new(@snaptrade_account).process
-
-    assert_not_nil @account.holdings.find_by(security: security)
-  end
-
   test "cash-equivalent positions are recognised in a positions/all payload" do
     security = securities(:aapl)
 
