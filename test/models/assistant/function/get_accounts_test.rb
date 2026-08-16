@@ -95,10 +95,25 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     assert_equal accounts(:depository).id, checking[:id]
     assert_equal true, checking[:writable]
     assert_equal "full_control", checking[:permission]
+    assert_equal({ financial: true, annotations: true }, checking[:transaction_editing])
 
     assert_equal accounts(:credit_card).id, credit_card[:id]
     assert_equal false, credit_card[:writable]
     assert_equal "read_only", credit_card[:permission]
+    assert_equal({ financial: false, annotations: false }, credit_card[:transaction_editing])
+  end
+
+  test "reports annotation-only transaction editing for read-write shared accounts" do
+    user = users(:family_member)
+    account = accounts(:depository)
+    account.account_shares.find_by!(user: user).update!(permission: "read_write")
+
+    result = Assistant::Function::GetAccounts.new(user).call
+
+    checking = result[:accounts].find { |item| item[:id] == account.id }
+    assert_equal false, checking[:writable]
+    assert_equal "read_write", checking[:permission]
+    assert_equal({ financial: false, annotations: true }, checking[:transaction_editing])
   end
   end
 end

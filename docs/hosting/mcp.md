@@ -164,9 +164,10 @@ At the time of writing, `tools/list` includes:
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
 
+`get_accounts`, `get_goals`, `get_transfers`, and the other list tools return the stable IDs needed by follow-up actions. In `get_accounts`, `writable` means the account can be used for account-level and balance-affecting write tools; `transaction_editing.annotations` separately reports whether the user can update transaction notes, categories, merchants, or tags on that account. Creation tools that accept an `external_id` require the caller to reuse the same key when retrying an operation.
+
 Destructive MCP-only tools are not automatically exposed to Sure's built-in
-assistant. List tools return stable ids for follow-up actions; creation tools
-that accept an `external_id` require callers to reuse it when retrying.
+assistant.
 
 ### Preview Tools
 
