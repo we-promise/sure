@@ -124,6 +124,30 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
   end
 
+  test "dashboard puts positive transactions on the expense side of the Sankey" do
+    expense_category = @family.categories.create!(name: "Sankey Expense", color: "#FF5733")
+    income_category = @family.categories.create!(name: "Sankey Income", color: "#33FF57")
+
+    create_transaction(account: @family.accounts.first, name: "Sankey purchase", amount: 125, category: expense_category)
+    create_transaction(account: @family.accounts.first, name: "Sankey deposit", amount: -300, category: income_category)
+
+    get root_path
+
+    assert_response :ok
+    chart = css_select("[data-controller='sankey-chart']").first
+    sankey_data = JSON.parse(chart["data-sankey-chart-data-value"])
+    nodes = sankey_data.fetch("nodes")
+    links = sankey_data.fetch("links")
+    cash_flow_index = nodes.index { |node| node.fetch("id") == "cash_flow_node" }
+    expense_index = nodes.index { |node| node.fetch("id") == "expense_#{expense_category.id}" }
+    income_index = nodes.index { |node| node.fetch("id") == "income_#{income_category.id}" }
+
+    assert_not_nil expense_index
+    assert_not_nil income_index
+    assert links.any? { |link| link["source"] == cash_flow_index && link["target"] == expense_index && link["value"] == 125.0 }
+    assert links.any? { |link| link["source"] == income_index && link["target"] == cash_flow_index && link["value"] == 300.0 }
+  end
+
   test "dashboard renders money flow widget" do
     get root_path
 
