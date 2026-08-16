@@ -890,7 +890,9 @@ end
     queries = capture_sql_queries { get transactions_url }
     assert_response :success
 
-    assert_empty queries.grep(/uncategorized/i),
+    # uncategorized_transactions is a scope (joins/wheres), so its name never
+    # appears in the generated SQL -- match the COUNT query it produces instead.
+    assert_empty queries.select { |q| q =~ /SELECT COUNT/i && q =~ /category_id.*IS NULL/i },
       "second request with unchanged data should reuse the cached uncategorized count"
     assert_empty queries.grep(/recurring_transactions/i),
       "second request with unchanged data should reuse the cached projected recurring lookup"
@@ -990,15 +992,17 @@ end
     assert_equal share.account_id, recurring.account_id,
       "fixture assumption: the shared depository account has the netflix recurring charge"
 
+    merchant_name_pattern = /#{Regexp.escape(recurring.merchant.name)}/
+
     sign_in member
     get transactions_url
-    assert_includes @controller.instance_variable_get(:@projected_recurring).map(&:id), recurring.id,
+    assert_match merchant_name_pattern, response.body,
       "the member should see the shared account's recurring transaction before revocation"
 
     share.destroy!
 
     get transactions_url
-    assert_not_includes @controller.instance_variable_get(:@projected_recurring).map(&:id), recurring.id,
+    assert_no_match merchant_name_pattern, response.body,
       "revoking account-share access must not leave a stale cached projected-recurring list"
   ensure
     Rails.cache = original_cache
