@@ -12,7 +12,14 @@ void main() {
     expect(theme.brightness, Brightness.light);
     expect(theme.textTheme.bodyMedium?.fontFamily, SureTokens.fontSans);
     expect(theme.colorScheme.primary, SureTokens.light.link);
+    expect(theme.colorScheme.onPrimary, SureTokens.light.textInverse);
+    expect(theme.colorScheme.primaryContainer, SureTokens.light.surfaceInset);
+    expect(theme.colorScheme.onPrimaryContainer, SureTokens.light.textPrimary);
     expect(theme.colorScheme.secondary, SureTokens.light.info);
+    expect(theme.colorScheme.onSecondary, SureTokens.light.textInverse);
+    expect(theme.colorScheme.secondaryContainer, SureTokens.light.surfaceInset);
+    expect(
+        theme.colorScheme.onSecondaryContainer, SureTokens.light.textPrimary);
     expect(theme.colorScheme.surface, SureTokens.light.surface);
     expect(theme.colorScheme.onSurface, SureTokens.light.textPrimary);
     expect(theme.colorScheme.error, SureTokens.light.destructive);
@@ -21,6 +28,10 @@ void main() {
     expect(theme.colorScheme.onErrorContainer, SureTokens.light.textPrimary);
     expect(theme.scaffoldBackgroundColor, SureTokens.light.surface);
     expect(theme.cardTheme.color, SureTokens.light.container);
+    expect(theme.floatingActionButtonTheme.backgroundColor,
+        SureTokens.light.buttonPrimary);
+    expect(theme.floatingActionButtonTheme.foregroundColor,
+        SureTokens.light.textInverse);
     expect(
       theme.elevatedButtonTheme.style?.minimumSize?.resolve({}),
       const Size(double.infinity, 50),
@@ -33,7 +44,13 @@ void main() {
     expect(theme.brightness, Brightness.dark);
     expect(theme.textTheme.bodyMedium?.fontFamily, SureTokens.fontSans);
     expect(theme.colorScheme.primary, SureTokens.dark.link);
+    expect(theme.colorScheme.onPrimary, SureTokens.dark.textInverse);
+    expect(theme.colorScheme.primaryContainer, SureTokens.dark.surfaceInset);
+    expect(theme.colorScheme.onPrimaryContainer, SureTokens.dark.textPrimary);
     expect(theme.colorScheme.secondary, SureTokens.dark.info);
+    expect(theme.colorScheme.onSecondary, SureTokens.dark.textInverse);
+    expect(theme.colorScheme.secondaryContainer, SureTokens.dark.surfaceInset);
+    expect(theme.colorScheme.onSecondaryContainer, SureTokens.dark.textPrimary);
     expect(theme.colorScheme.surface, SureTokens.dark.surface);
     expect(theme.colorScheme.onSurface, SureTokens.dark.textPrimary);
     expect(theme.colorScheme.error, SureTokens.dark.destructive);
@@ -41,6 +58,10 @@ void main() {
     expect(theme.colorScheme.onErrorContainer, SureTokens.dark.textPrimary);
     expect(theme.scaffoldBackgroundColor, SureTokens.dark.surface);
     expect(theme.cardTheme.color, SureTokens.dark.container);
+    expect(theme.floatingActionButtonTheme.backgroundColor,
+        SureTokens.dark.buttonPrimary);
+    expect(theme.floatingActionButtonTheme.foregroundColor,
+        SureTokens.dark.textInverse);
     expect(
       theme.elevatedButtonTheme.style?.minimumSize?.resolve({}),
       const Size(double.infinity, 50),

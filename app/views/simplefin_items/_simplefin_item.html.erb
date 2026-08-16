@@ -1,6 +1,7 @@
 <%# locals: (simplefin_item:) %>
 
 <%= tag.div id: dom_id(simplefin_item) do %>
+  <% accounts = simplefin_item.accounts %>
   <%# Compute unlinked count early so it's available for both menu and bottom section %>
   <% unlinked_count = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
        @simplefin_unlinked_count_map[simplefin_item.id] || 0
@@ -15,6 +16,7 @@
          0
        end
      end %>
+  <% setup_token_update_required = simplefin_item.setup_token_update_required? %>
 
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
@@ -39,7 +41,7 @@
                 <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
               <% end %>
             </div>
-            <% if simplefin_item.accounts.any? %>
+            <% if accounts.any? %>
               <p class="text-xs text-secondary">
                 <%= simplefin_item.institution_summary %>
               </p>
@@ -85,7 +87,7 @@
                 <%= icon "loader", size: "sm", class: "animate-spin" %>
                 <%= tag.span t(".syncing") %>
               </div>
-            <% elsif simplefin_item.requires_update? %>
+            <% elsif setup_token_update_required %>
               <div class="text-warning flex items-center gap-1">
                 <%= icon "alert-triangle", size: "sm", color: "warning" %>
                 <%= tag.span t(".requires_update") %>
@@ -147,7 +149,7 @@
 
         <% if Current.user&.admin? %>
           <div class="flex items-center gap-2">
-            <% if simplefin_item.requires_update? %>
+            <% if setup_token_update_required %>
               <%= render DS::Link.new(
                 text: t(".update"),
                 icon: "refresh-cw",
@@ -199,8 +201,8 @@
                      suggestions: suggestions %>
         <% end %>
 
-        <% if simplefin_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: simplefin_item.accounts %>
+        <% if accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component
@@ -218,7 +220,7 @@
           institutions_count: simplefin_item.connected_institutions.size
         ) %>
 
-        <% if unlinked_count.to_i > 0 && simplefin_item.accounts.empty? %>
+        <% if unlinked_count.to_i > 0 && accounts.empty? %>
           <%# No accounts imported yet - show prominent setup prompt %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
@@ -231,7 +233,7 @@
               frame: :modal
             ) %>
           </div>
-        <% elsif simplefin_item.accounts.empty? %>
+        <% elsif accounts.empty? %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
             <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>

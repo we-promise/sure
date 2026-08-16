@@ -133,9 +133,9 @@
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
           <% @recent_runs.each do |run| %>
-            <tr class="<%= "bg-red-50 theme-dark:bg-red-950/30" if run.failed? %>">
+            <tr class="<%= "bg-red-tint-5 theme-dark:bg-red-tint-10" if run.failed? %>">
               <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
                 <%= run.executed_at.strftime("%b %d, %Y %I:%M %p") %>
               </td>
@@ -155,7 +155,7 @@
                   <% end %>
                   <% if run.failed? && run.error_message.present? %>
                     <div data-controller="tooltip" data-tooltip-content-value="<%= run.error_message %>">
-                      <%= icon("info", size: "sm", class: "text-red-500") %>
+                      <%= icon("info", size: "sm", color: "destructive") %>
                     </div>
                   <% end %>
                 </div>

@@ -14,18 +14,40 @@ class Rack::Attack
     request.ip if request.post? && request.path == "/register"
   end
 
-  # Throttle unauthenticated WebAuthn MFA ceremonies similarly to sign-in
+  # Throttle unauthenticated WebAuthn ceremonies similarly to sign-in
   # endpoints; registration remains behind normal application authentication.
+  # Covers both the MFA step-up and passwordless passkey sign-in.
   throttle("mfa/webauthn", limit: 10, period: 1.minute) do |request|
-    if request.post? && request.path.in?(%w[/mfa/webauthn_options /mfa/verify_webauthn])
+    if request.post? && request.path.in?(%w[
+         /mfa/webauthn_options
+         /mfa/verify_webauthn
+         /sessions/passkey
+       ])
       request.ip
     end
+  end
+
+  # The passwordless challenge endpoint gets its own, looser budget: browsers
+  # that support conditional mediation call it automatically on every login
+  # page load, so sharing the limit above would let ordinary page views lock a
+  # shared NAT out of MFA. Minting a challenge touches no credential and
+  # reveals nothing, and the assertion it produces is still verified under the
+  # stricter limit.
+  throttle("passkey/options", limit: 30, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/sessions/passkey_options"
   end
 
   # Throttle admin endpoints to prevent brute-force attacks
   # More restrictive than general API limits since admin access is sensitive
   throttle("admin/ip", limit: 10, period: 1.minute) do |request|
     request.ip if request.path.start_with?("/admin/")
+  end
+
+  # The background jobs console lives under /settings (so its polling GET
+  # isn't throttled), but its mutation is destructive and super-admin only —
+  # rate limit it independently.
+  throttle("background_jobs_console/ip", limit: 30, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/settings/background_jobs/cancel"
   end
 
   # Determine limits based on self-hosted mode

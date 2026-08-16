@@ -1,6 +1,4 @@
 class Assistant::Function::GetTransactions < Assistant::Function
-  include Pagy::Backend
-
   class << self
     def default_page_size
       50
@@ -134,33 +132,37 @@ class Assistant::Function::GetTransactions < Assistant::Function
   def call(params = {})
     search_params = params.except("order", "page")
 
-    search = Transaction::Search.new(family, filters: search_params)
+    search = Transaction::Search.new(
+      family,
+      filters: search_params,
+      accessible_account_ids: user.accessible_accounts.visible.pluck(:id)
+    )
     transactions_query = search.transactions_scope
     pagy_query = params["order"] == "asc" ? transactions_query.chronological : transactions_query.reverse_chronological
 
     # By default, we give a small page size to force the AI to use filters effectively and save on tokens
-    pagy, paginated_transactions = pagy(
-      pagy_query.includes(
-        { entry: :account },
-        :category, :merchant, :tags,
-        transfer_as_outflow: { inflow_transaction: { entry: :account } },
-        transfer_as_inflow: { outflow_transaction: { entry: :account } }
-      ),
-      page: params["page"] || 1,
-      limit: default_page_size
-    )
+    pagy = Pagy.new(count: pagy_query.count, page: params["page"] || 1, limit: default_page_size)
+    paginated_transactions = pagy_query.includes(
+      { entry: :account },
+      :category, :merchant, :tags,
+      transfer_as_outflow: { inflow_transaction: { entry: :account } },
+      transfer_as_inflow: { outflow_transaction: { entry: :account } }
+    ).offset(pagy.offset).limit(pagy.limit)
 
     totals = search.totals
 
     normalized_transactions = paginated_transactions.map do |txn|
       entry = txn.entry
       {
+        id: txn.id,
+        name: entry.name,
         date: entry.date,
         amount: entry.amount.abs,
         currency: entry.currency,
         formatted_amount: entry.amount_money.abs.format,
         classification: entry.amount < 0 ? "income" : "expense",
         account: entry.account.name,
+        notes: entry.notes,
         category: txn.category&.name,
         merchant: txn.merchant&.name,
         tags: txn.tags.map(&:name),

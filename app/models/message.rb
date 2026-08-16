@@ -12,6 +12,8 @@ class Message < ApplicationRecord
 
   after_create_commit -> { broadcast_append_to chat, target: chat.messages_target }, if: :broadcast?
   after_update_commit -> { broadcast_update_to chat }, if: :broadcast?
+  # Clears the "Thinking…" bubble if the provider errors before any text streams.
+  after_destroy_commit -> { broadcast_remove_to chat }, if: :broadcast?
 
   scope :ordered, -> { order(created_at: :asc) }
 

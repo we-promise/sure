@@ -118,4 +118,58 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_not created_user.show_ai_sidebar?
     assert created_user.ai_enabled?
   end
+
+  test "creating account from invitation shares existing family accounts when family shares by default" do
+    invitation = invitations(:one)
+    invitation.family.update!(default_account_sharing: "shared")
+
+    post registration_url, params: { user: {
+      email: invitation.email,
+      password: "Password1!",
+      invitation: invitation.token
+    } }
+
+    created_user = User.find_by(email: invitation.email)
+    assert_not_nil created_user
+    assert_equal invitation.family_id, created_user.family_id
+    assert_equal invitation.family.accounts.pluck(:id).sort,
+      AccountShare.where(user: created_user).pluck(:account_id).sort
+  end
+
+  test "creating account in invite-only default family shares existing family accounts" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    Setting.onboarding_state = "invite_only"
+    Setting.invite_only_default_family_id = family.id
+
+    assert_difference "User.count", +1 do
+      post registration_url, params: { user: {
+        email: "default-family-signup@example.com",
+        password: "Password1!"
+      } }
+    end
+
+    created_user = User.find_by(email: "default-family-signup@example.com")
+    assert_not_nil created_user
+    assert_equal family.id, created_user.family_id
+    assert_equal "member", created_user.role
+    assert_equal family.accounts.pluck(:id).sort,
+      AccountShare.where(user: created_user).pluck(:account_id).sort
+    assert AccountShare.where(user: created_user).all?(&:read_write?)
+  end
+
+  test "creating account from invitation shares nothing when family sharing is private" do
+    invitation = invitations(:one)
+    invitation.family.update!(default_account_sharing: "private")
+
+    post registration_url, params: { user: {
+      email: invitation.email,
+      password: "Password1!",
+      invitation: invitation.token
+    } }
+
+    created_user = User.find_by(email: invitation.email)
+    assert_not_nil created_user
+    assert_equal 0, AccountShare.where(user: created_user).count
+  end
 end

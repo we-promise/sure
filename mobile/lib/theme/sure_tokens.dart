@@ -2,7 +2,7 @@
 // Source: design/tokens/sure.tokens.json
 // Build: node mobile/tool/generate_sure_tokens.mjs
 
-import 'dart:ui';
+import 'package:flutter/painting.dart';
 
 class SureTokens {
   const SureTokens._();
@@ -22,6 +22,9 @@ class SureTokens {
   static const double radiusMd = 8.0;
   static const double radiusLg = 10.0;
 
+  static const FontWeight weightMedium = FontWeight.w500;
+  static const FontWeight weightSemibold = FontWeight.w600;
+
   static const light = SureTokenPalette(
     surface: Color(0xFFF7F7F7),
     surfaceHover: Color(0xFFF0F0F0),
@@ -38,6 +41,8 @@ class SureTokens {
     info: Color(0xFF1570EF),
     link: Color(0xFF1570EF),
     shadow: Color(0x0F0B0B0B),
+    focusRing: Color(0x800B0B0B),
+    bgInverse: Color(0xFF242424),
     textPrimary: Color(0xFF171717),
     textInverse: Color(0xFFFFFFFF),
     textSecondary: Color(0xFF737373),
@@ -49,6 +54,11 @@ class SureTokens {
     buttonPrimaryHover: Color(0xFF242424),
     buttonDestructive: Color(0xFFEC2222),
     buttonDestructiveHover: Color(0xFFC91313),
+    shadowXs: [BoxShadow(color: Color(0x0F0B0B0B), offset: Offset(0.0, 1.0), blurRadius: 2.0, spreadRadius: 0.0)],
+    shadowSm: [BoxShadow(color: Color(0x0F0B0B0B), offset: Offset(0.0, 1.0), blurRadius: 6.0, spreadRadius: 0.0)],
+    shadowMd: [BoxShadow(color: Color(0x0F0B0B0B), offset: Offset(0.0, 4.0), blurRadius: 8.0, spreadRadius: -2.0)],
+    shadowLg: [BoxShadow(color: Color(0x0F0B0B0B), offset: Offset(0.0, 12.0), blurRadius: 16.0, spreadRadius: -4.0)],
+    shadowXl: [BoxShadow(color: Color(0x0F0B0B0B), offset: Offset(0.0, 20.0), blurRadius: 24.0, spreadRadius: -4.0)],
   );
 
   static const dark = SureTokenPalette(
@@ -67,6 +77,8 @@ class SureTokens {
     info: Color(0xFF2E90FA),
     link: Color(0xFF2E90FA),
     shadow: Color(0x14FFFFFF),
+    focusRing: Color(0x80FFFFFF),
+    bgInverse: Color(0xFFFFFFFF),
     textPrimary: Color(0xFFFFFFFF),
     textInverse: Color(0xFF171717),
     textSecondary: Color(0xFFCFCFCF),
@@ -78,6 +90,11 @@ class SureTokens {
     buttonPrimaryHover: Color(0xFFF7F7F7),
     buttonDestructive: Color(0xFFED4E4E),
     buttonDestructiveHover: Color(0xFFF13636),
+    shadowXs: [BoxShadow(color: Color(0x14FFFFFF), offset: Offset(0.0, 1.0), blurRadius: 2.0, spreadRadius: 0.0)],
+    shadowSm: [BoxShadow(color: Color(0x14FFFFFF), offset: Offset(0.0, 1.0), blurRadius: 6.0, spreadRadius: 0.0)],
+    shadowMd: [BoxShadow(color: Color(0x14FFFFFF), offset: Offset(0.0, 4.0), blurRadius: 8.0, spreadRadius: -2.0)],
+    shadowLg: [BoxShadow(color: Color(0x14FFFFFF), offset: Offset(0.0, 12.0), blurRadius: 16.0, spreadRadius: -4.0)],
+    shadowXl: [BoxShadow(color: Color(0x14FFFFFF), offset: Offset(0.0, 20.0), blurRadius: 24.0, spreadRadius: -4.0)],
   );
 }
 
@@ -98,6 +115,8 @@ class SureTokenPalette {
     required this.info,
     required this.link,
     required this.shadow,
+    required this.focusRing,
+    required this.bgInverse,
     required this.textPrimary,
     required this.textInverse,
     required this.textSecondary,
@@ -109,6 +128,11 @@ class SureTokenPalette {
     required this.buttonPrimaryHover,
     required this.buttonDestructive,
     required this.buttonDestructiveHover,
+    required this.shadowXs,
+    required this.shadowSm,
+    required this.shadowMd,
+    required this.shadowLg,
+    required this.shadowXl,
   });
 
   final Color surface;
@@ -126,6 +150,8 @@ class SureTokenPalette {
   final Color info;
   final Color link;
   final Color shadow;
+  final Color focusRing;
+  final Color bgInverse;
   final Color textPrimary;
   final Color textInverse;
   final Color textSecondary;
@@ -137,4 +163,9 @@ class SureTokenPalette {
   final Color buttonPrimaryHover;
   final Color buttonDestructive;
   final Color buttonDestructiveHover;
+  final List<BoxShadow> shadowXs;
+  final List<BoxShadow> shadowSm;
+  final List<BoxShadow> shadowMd;
+  final List<BoxShadow> shadowLg;
+  final List<BoxShadow> shadowXl;
 }

@@ -41,10 +41,12 @@ module ExchangeRate::Provided
         ) do |exchange_rate|
           exchange_rate.rate = rate.rate
         end if cache
-      rescue ActiveRecord::RecordNotUnique
-        # Race condition: another process inserted between our SELECT and INSERT
-        # Retry by finding the existing record
-        ExchangeRate.find_by!(
+      rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+        # Race condition: another process inserted between our SELECT and INSERT.
+        # RecordNotUnique = DB unique constraint; RecordInvalid = model uniqueness
+        # validation fired before the DB got a chance to reject it. Both are safe
+        # to handle by reading back the record that the other process just saved.
+        return ExchangeRate.find_by!(
           from_currency: rate.from,
           to_currency: rate.to,
           date: rate.date
@@ -56,14 +58,44 @@ module ExchangeRate::Provided
     # Batch-fetches exchange rates for multiple source currencies.
     # Returns a hash mapping each currency to its numeric rate, defaulting to 1 when unavailable.
     def rates_for(currencies, to:, date: Date.current)
-      currencies.uniq.each_with_object({}) do |currency, map|
+      unique_currencies = currencies.uniq
+      return {} if unique_currencies.empty?
+
+      # Batch-load exact-date matches in a single query
+      exact_rates = where(from_currency: unique_currencies, to_currency: to, date: date)
+                      .index_by(&:from_currency)
+
+      missing = unique_currencies - exact_rates.keys
+
+      # For currencies without an exact match, batch-load the nearest recent rate
+      nearest_rates = if missing.any?
+        where(from_currency: missing, to_currency: to)
+          .where(date: (date - NEAREST_RATE_LOOKBACK_DAYS)..date)
+          .order(date: :desc)
+          .to_a
+          .each_with_object({}) do |r, map|
+            map[r.from_currency] ||= r  # keep most-recent (first due to ORDER BY date DESC)
+          end
+      else
+        {}
+      end
+
+      still_missing = missing - nearest_rates.keys
+
+      # Only hit the provider for currencies with no cached rate at all
+      fetched_rates = still_missing.each_with_object({}) do |currency, map|
         rate = find_or_fetch_rate(from: currency, to: to, date: date)
+        map[currency] = rate if rate
+      end
+
+      unique_currencies.each_with_object({}) do |currency, result|
+        rate = exact_rates[currency] || nearest_rates[currency] || fetched_rates[currency]
         if rate.nil?
           Rails.logger.warn("No exchange rate found for #{currency}/#{to} on #{date}, using 1")
         elsif rate.date != date
           Rails.logger.debug("FX rate #{currency}/#{to}: using #{rate.date} for #{date} (gap=#{(date - rate.date).to_i}d)")
         end
-        map[currency] = rate&.rate || 1
+        result[currency] = rate&.rate || 1
       end
     end
 

@@ -1,6 +1,40 @@
 ---
 zh-TW:
   budgets:
+    budget_donut:
+      spent: 已支出
+      new_budget: 新增預算
+      of_budget: ／%{amount}
+      unused: 未使用
+    budget_header:
+      today: 今天
+    budget_nav:
+      categories: 分類
+      setup: 設定
+    over_allocation_warning:
+      over_allocated_message: 您的預算分配超額了，請調整您的分配。
+      fix_allocations: 修正分配
+    actuals_summary:
+      income: 收入
+      expenses: 支出
+    budgeted_summary:
+      expected_income: 預期收入
+      budgeted: 預算
+      earned: 已賺得 %{amount}
+      over: 超支 %{amount}
+      left: 剩餘 %{amount}
+      spent: 已花費 %{amount}
+    edit:
+      setup_title: 設定您的預算
+      setup_description: 在下方輸入您每月的收入與計畫支出，以完成預算設定。
+      budgeted_spending: 預算支出
+      expected_income: 預期收入
+      autosuggest_title: 自動建議收入與支出預算
+      autosuggest_description: 這會依據您的交易紀錄推算。AI 可能會出錯，請確認後再繼續。
+      continue: 繼續
+    name:
+      custom_range: '%{start} - %{end_date}'
+      month_year: '%{month}'
     show:
       categories:
         amount: 金額
@@ -14,8 +48,51 @@ zh-TW:
         title: 超預算
       filter:
         all: 全部
+        aria_label: 篩選預算分類
         on_track: 正常
         over_budget: 超預算
       tabs:
         actual: 實際
         budgeted: 預算
+    copy_previous_prompt:
+      title: 設定您的預算
+      description: 您可以從 %{source_name} 複製預算，或是從頭開始。
+      copy_button: 從 %{source_name} 複製
+      fresh_button: 從頭開始
+    copy_previous:
+      success: 已從 %{source_name} 複製預算
+      no_source: 找不到可以複製的先前預算
+      already_initialized: 這份預算已經設定過了
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: 預算超支 <span class="text-red-500 privacy-sensitive">%{amount}</span>
+      left_to_allocate: 尚待分配
+      over_set: 已設定 > 100%
+      percent_set: 已設定 %{percent}
+    budget_category_form:
+      monthly_average: 平均每月 %{amount}
+      shared_placeholder: 共享
+      shared_title: 留白即共用上層分類的預算
+    confirm_button:
+      confirm: 確認
+    no_categories:
+      oops: 糟糕！
+      no_categories_message: 您還沒有建立任何支出分類，也還沒把分類指定給任何交易。
+      use_defaults: 使用預設分類（推薦）
+      new_category: 新增分類
+    index:
+      title: 編輯您的分類預算
+      description: 調整各分類的預算來設定支出上限。未分配的金額會自動歸為未分類。
+    show:
+      category: 分類
+      overview: 概覽
+      spending: '%{date} 的支出'
+      status: 狀態
+      overspent: 已超出
+      left: 可用
+      budgeted: 預算
+      monthly_average_spending: 每月平均支出
+      monthly_median_spending: 每月支出中位數
+      recent_transactions: 近期交易
+      view_all_transactions: 查看這個分類的所有交易
+      no_transactions: 這個預算期間內沒有任何交易。

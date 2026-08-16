@@ -645,7 +645,7 @@ hpa:
 - **Forward proxy** (port 8888): Scans outbound HTTPS from Faraday-based AI clients. Auto-injected via `HTTPS_PROXY` env vars when enabled.
 - **MCP reverse proxy** (port 8889): Scans inbound MCP traffic from external AI assistants.
 
-Recent pipelock releases add the Audit Packet v0 schema and language-portable verifiers (Go, TypeScript, Rust), request-body prompt-injection blocking, SPIFFE-strict inbound mediation envelopes, scanner attribution on MCP block receipts, enhanced tool poisoning detection, per-read kill switch preemption, trusted domain allowlisting, MCP tool redirect profiles, signed action receipts, per-pattern DLP warn mode, learn-and-lock behavioural contracts, the wedge-detection health watchdog, and the `pipelock posture verify` / `pipelock session` / `pipelock doctor` CLIs. Browser Shield, process sandboxing, and attack simulation are available via `extraConfig` and CLI. See the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
+Recent Pipelock releases add default-on flight recorder receipts, safe-by-default receipt verification, MCP `defer` authorization, request-policy scoring, request-body prompt-injection blocking, SPIFFE-strict inbound mediation envelopes, scanner attribution on MCP block receipts, trusted domain allowlisting, MCP tool redirect profiles, learn-and-lock behavioural contracts, the wedge-detection health watchdog, `pipelock explain`, `pipelock keys status`, `pipelock support bundle`, verified `pipelock update`, and `pipelock doctor` checks for inert exemptions. Browser Shield, process sandboxing, request policy, redaction, and attack assessment are available via `extraConfig` and CLI. See the [Pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
 
 ### Enabling Pipelock
 
@@ -653,7 +653,7 @@ Recent pipelock releases add the Audit Packet v0 schema and language-portable ve
 pipelock:
   enabled: true
   image:
-    tag: "2.5.0"
+    tag: "2.8.0"
   mode: balanced   # strict, balanced, or audit
 ```
 
@@ -702,7 +702,7 @@ pipelock:
     headerMode: sensitive # "sensitive" or "all"
 ```
 
-Disabled by default. Roll out with `action: warn` first to observe findings in logs without blocking, then flip to `action: block` once the false-positive rate is acceptable.
+Enabled by default with `action: warn`, matching Pipelock's balanced preset. Review findings in logs before flipping to `action: block`.
 
 ### Health watchdog
 
@@ -716,19 +716,72 @@ pipelock:
     exposeSubsystems: true  # adds per-subsystem boolean map to /health
 ```
 
-### Validating your config
+### Signed action receipts
 
-Pipelock includes CLI tools for config validation:
+The flight recorder writes hash-chained, Ed25519-signed action receipts. The chart renders the `flight_recorder` config, but recording is inert until you mount a writable evidence directory and the signing key named by `signingKeyPath`.
+
+Generate the receipt key once:
 
 ```bash
-# Run 24 synthetic attack scenarios against your config
-pipelock simulate --config pipelock.yaml
+# --out must be an absolute path; "$PWD/..." writes the key into the current directory.
+pipelock signing key generate --purpose receipt-signing --out "$PWD/flight-recorder-signing.key" --id sure-k8s
+kubectl create secret generic sure-pipelock-receipts \
+  --namespace sure \
+  --from-file=flight-recorder-signing.key=./flight-recorder-signing.key
+```
+
+If you do not have the `pipelock` binary installed, generate the key with the image instead: `docker run --rm -v "$PWD:/out" ghcr.io/luckypipewrench/pipelock:2.8.0 signing key generate --purpose receipt-signing --out /out/flight-recorder-signing.key --id sure-k8s`.
+
+Then mount persistent evidence storage and the key:
+
+```yaml
+pipelock:
+  flightRecorder:
+    enabled: true
+    dir: /var/lib/pipelock/evidence
+    signingKeyPath: /run/secrets/pipelock/flight-recorder-signing.key
+    requireReceipts: false
+    redact: true
+  extraVolumes:
+    - name: pipelock-evidence
+      persistentVolumeClaim:
+        claimName: sure-pipelock-evidence
+    - name: pipelock-receipt-key
+      secret:
+        secretName: sure-pipelock-receipts
+        # 0440 (group-read), not 0400: the chart runs Pipelock as uid 1000 with
+        # fsGroup 1000, so the secret file is owned root:1000. A 0400 file would
+        # be unreadable by the non-root process and Pipelock would crash on
+        # startup with a key-load error. 0440 lets the fsGroup read it.
+        defaultMode: 0440
+  extraVolumeMounts:
+    - name: pipelock-evidence
+      mountPath: /var/lib/pipelock/evidence
+    - name: pipelock-receipt-key
+      # Do not mount this under /etc/pipelock; the chart already mounts the
+      # Pipelock ConfigMap there.
+      mountPath: /run/secrets/pipelock
+      readOnly: true
+```
+
+Only set `requireReceipts: true` after confirming receipts are being written. With it enabled, allow-path traffic fails closed if Pipelock cannot sign or persist the receipt.
+
+### Validating your config
+
+Pipelock includes CLI tools for config validation and deployment diagnostics:
+
+```bash
+# Create and run a broader assessment workspace
+pipelock assess init --config pipelock.yaml
 
 # Score your config's security posture (0-100)
 pipelock audit score --config pipelock.yaml
 
 # Report whether configured protections are actually enforceable
 pipelock doctor
+
+# Explain a block and the exact config knob that scanner reads
+pipelock explain --config pipelock.yaml "https://example.com/path"
 ```
 
 ### Exposing MCP to external AI assistants
@@ -795,7 +848,7 @@ pipelock:
 
 ### Extra config (escape hatch)
 
-For Pipelock config sections not covered by structured values (session profiling, data budgets, kill switch, sandbox, reverse proxy, adaptive enforcement, etc.), use `extraConfig`:
+For Pipelock config sections not covered by structured values (session profiling, data budgets, kill switch, sandbox, reverse proxy, adaptive enforcement, request policy, redaction, etc.), use `extraConfig`:
 
 ```yaml
 pipelock:
@@ -847,7 +900,7 @@ See `values.yaml` for the complete configuration surface, including:
 - `migrations.*`: strategy job or initContainer
 - `simplefin.encryption.*`: enable + backfill options
 - `cronjobs.*`: custom CronJobs
-- `pipelock.*`: AI agent security proxy (forward proxy, MCP reverse proxy, DLP, injection scanning, request-body scanning, health watchdog, trusted domains, tool redirect profiles, logging, serviceMonitor, ingress, PDB, extraConfig)
+- `pipelock.*`: AI agent security proxy (forward proxy, MCP reverse proxy, DLP, injection scanning, request-body scanning, health watchdog, signed receipts, trusted domains, tool redirect profiles, logging, serviceMonitor, ingress, PDB, extraVolumes, extraVolumeMounts, extraConfig)
 - `service.*`, `ingress.*`, `serviceMonitor.*`, `hpa.*`
 
 ## Helm tests

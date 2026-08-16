@@ -1,0 +1,121 @@
+---
+tr:
+  account_statements:
+    account_tab:
+      coverage_description: Yüklenen ekstreler ve bakiye kontrolleriyle desteklenen
+        geçmiş aylar.
+      coverage_range: "%{start} - %{end}"
+      coverage_title: Ekstre kapsamı
+      empty: Bu hesaba henüz bağlı ekstre yok.
+      open_inbox: Gelen kutusu
+      statements_title: Ekstreler
+      year_label: Kapsam yılı
+    balance:
+      unknown: Bilinmiyor
+    coverage:
+      status:
+        ambiguous: Belirsiz
+        covered: Kapsandı
+        duplicate: Kopya
+        mismatched: Uyuşmuyor
+        missing: Eksik
+        not_expected: Beklenmiyor
+    create:
+      duplicates:
+        one: 1 kopya ekstre atlandı.
+        other: "%{count} kopya ekstre atlandı."
+      invalid_file_type: Boyut sınırının altında bir PDF, CSV veya XLSX ekstre yükleyin.
+      no_files: En az bir ekstre dosyası seçin.
+      success:
+        one: 1 ekstre yüklendi.
+        other: "%{count} ekstre yüklendi."
+    destroy:
+      failure: Ekstre silinemedi.
+      success: Ekstre silindi.
+    form:
+      account_upload: Ekstre yükle
+      files_hint: PDF, CSV veya XLSX. Dosya başına en fazla %{max_size}MB.
+      files_label: Ekstre dosyaları
+      inbox_upload: Yükle
+    index:
+      account_label: Hesap
+      confidence: "%{confidence} eşleşme"
+      empty_linked: Henüz bağlı ekstre yok.
+      empty_unmatched: Ekstre gelen kutusu temiz.
+      leave_unmatched: Eşleşmemiş bırak
+      linked_title: Bağlı ekstreler
+      no_suggestion: Öneri yok
+      storage_used: Kullanılan depolama
+      title: Ekstre Kasası
+      unmatched_title: Eşleşmemiş gelen kutusu
+      upload_description: Ekstreleri gelen kutusuna yükleyin veya hemen bağlamak için
+        bir hesap seçin.
+      upload_title: Ekstreleri yükle
+    link:
+      no_account: Bu ekstreyi bağlamadan önce bir hesap seçin.
+      success: Ekstre %{account} hesabına bağlandı.
+    period:
+      unknown: Dönem bilinmiyor
+    reconciliation:
+      checks:
+        closing_balance: Kapanış bakiyesi
+        opening_balance: Açılış bakiyesi
+        period_movement: Dönem hareketi
+        unknown_check: Bilinmeyen kontrol
+      matched: Eşleşti
+      mismatched: Uyuşmuyor
+      unavailable: Kontrol edilmedi
+    reject:
+      success: Ekstre eşleşmesi reddedildi.
+    show:
+      account_label: Hesap
+      account_last4_hint: Hesabın son dört hanesi
+      account_name_hint: Hesap adı ipucu
+      closing_balance: Kapanış bakiyesi
+      currency: Para Birimi
+      delete: Sil
+      difference: Fark
+      download: İndir
+      institution_name_hint: Kurum ipucu
+      ledger_amount: Sure defteri
+      link_suggestion: Bağlama önerisi
+      linked_to: "%{account} hesabına bağlandı."
+      linking_title: Hesap bağlantısı
+      metadata_title: Ekstre meta verisi
+      no_suggestion: Henüz hesap önerisi yok.
+      opening_balance: Açılış bakiyesi
+      period_end_on: Dönem bitişi
+      period_start_on: Dönem başlangıcı
+      reconciliation_title: Mutabakat
+      reconciliation_unavailable: Bir ekstre dönemi ile açılış veya kapanış bakiyesi
+        ekleyin, ardından Sure'un bu tarihler için bakiye geçmişine sahip olduğundan
+        emin olun.
+      reject: Reddet
+      save: Ekstreyi kaydet
+      statement_amount: Ekstre
+      suggested_account: Önerilen hesap %{account} (%{confidence} güven).
+      title: Ekstre
+      unknown_value: Bilinmiyor
+      unlink: Bağlantıyı kaldır
+      unmatched_account: Eşleşmemiş gelen kutusu
+    status:
+      linked: Bağlı
+      rejected: Reddedildi
+      unmatched: Eşleşmemiş
+    table:
+      account: Hesap
+      actions: İşlemler
+      download: İndir
+      edit: Düzenle
+      file: Dosya
+      link_suggestion: Bağlama önerisi
+      period: Dönem
+      reconciliation: Mutabakat
+      reject: Öneriyi reddet
+      suggestion: Öneri
+      unlink: Bağlantıyı kaldır
+      view: Görüntüle
+    unlink:
+      success: Ekstre eşleşmemiş gelen kutusuna geri taşındı.
+    update:
+      success: Ekstre güncellendi.

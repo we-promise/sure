@@ -705,6 +705,66 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
   end
 
+  test "sso_create_account makes new family creator admin even when provider default role is member" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", settings: { default_role: "member" } }
+    ])
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-member-default",
+      email: "member-default@example.com",
+      first_name: "Member",
+      last_name: "Default",
+      name: "Member Default",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_difference([ "User.count", "OidcIdentity.count", "Family.count" ], 1) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Member",
+        last_name: "Default"
+      }
+    end
+
+    assert_response :success
+    new_user = User.find_by!(email: "member-default@example.com")
+    assert_equal "admin", new_user.role
+    assert new_user.admin?
+  end
+
+  test "sso_create_account preserves super admin provider default for new family creator" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", settings: { default_role: "super_admin" } }
+    ])
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-super-admin-default",
+      email: "super-admin-default@example.com",
+      first_name: "Super",
+      last_name: "Default",
+      name: "Super Default",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_difference([ "User.count", "OidcIdentity.count", "Family.count" ], 1) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Super",
+        last_name: "Default"
+      }
+    end
+
+    assert_response :success
+    new_user = User.find_by!(email: "super-admin-default@example.com")
+    assert_equal "super_admin", new_user.role
+    assert new_user.admin?
+  end
+
   test "should reject SSO create account when not allowed" do
     linking_code = SecureRandom.urlsafe_base64(32)
     Rails.cache.write("mobile_sso_link:#{linking_code}", {
@@ -784,6 +844,33 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert response_data["errors"].any? { |e| e.match?(/email/i) }, "Expected email validation error in: #{response_data["errors"]}"
   end
 
+  test "sso_create_account rolls back user when OIDC identity creation fails" do
+    email = "mobile-rollback@example.com"
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-rollback",
+      email: email,
+      first_name: "Mobile",
+      last_name: "Rollback",
+      name: "Mobile Rollback",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+    OidcIdentity.stubs(:create_from_omniauth).raises(ActiveRecord::RecordNotUnique, "duplicate identity")
+
+    assert_no_difference([ "User.count", "OidcIdentity.count", "Family.count" ]) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Mobile",
+        last_name: "Rollback"
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_nil User.find_by(email: email)
+  end
+
   test "sso_create_account linking_code single-use under race" do
     linking_code = SecureRandom.urlsafe_base64(32)
     Rails.cache.write("mobile_sso_link:#{linking_code}", {
@@ -836,5 +923,72 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     assert_equal "AI is not available for your account", response_data["error"]
     assert_not user.reload.ai_enabled
+  end
+
+  test "mobile SSO onboarding via invitation shares existing family accounts when family shares by default" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    invitation = family.invitations.create!(
+      email: "mobile-invitee@example.com", role: "member", inviter: users(:family_admin)
+    )
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "openid_connect",
+      uid: "mobile-invite-uid-1",
+      email: invitation.email,
+      first_name: "Mobile",
+      last_name: "Invitee",
+      name: "Mobile Invitee",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_difference("User.count", 1) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Mobile",
+        last_name: "Invitee"
+      }
+    end
+
+    assert_response :success
+    invitee = User.find_by(email: invitation.email)
+    assert_not_nil invitee
+    assert_equal family.id, invitee.family_id
+    assert_equal family.accounts.pluck(:id).sort,
+      AccountShare.where(user: invitee).pluck(:account_id).sort
+  end
+
+  test "mobile SSO onboarding via invitation shares nothing when family sharing is private" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "private")
+    invitation = family.invitations.create!(
+      email: "mobile-private@example.com", role: "member", inviter: users(:family_admin)
+    )
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "openid_connect",
+      uid: "mobile-private-uid-1",
+      email: invitation.email,
+      first_name: "Mobile",
+      last_name: "Private",
+      name: "Mobile Private",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    post "/api/v1/auth/sso_create_account", params: {
+      linking_code: linking_code,
+      first_name: "Mobile",
+      last_name: "Private"
+    }
+
+    assert_response :success
+    invitee = User.find_by(email: invitation.email)
+    assert_not_nil invitee
+    assert_equal family.id, invitee.family_id
+    assert_equal 0, AccountShare.where(user: invitee).count
   end
 end

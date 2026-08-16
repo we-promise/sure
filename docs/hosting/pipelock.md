@@ -48,6 +48,38 @@ The `compose.example.ai.yml` file includes Pipelock. To use it:
    # Should show "healthy"
    ```
 
+4. Optional: enable signed action receipts.
+
+   Pipelock's flight recorder is on by default, but it writes nothing until it has a writable evidence directory and a receipt-signing key. Create the directories yourself first (so they are owned by your host user, not root), then generate the key with the Pipelock image so you do not need the binary installed locally:
+
+   ```bash
+   mkdir -p pipelock-evidence pipelock-keys
+   # --out must be an absolute path inside the container. The key is written
+   # 0600 owned by uid 1000, which is the user the Pipelock proxy runs as.
+   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:2.8.0 \
+     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
+   ```
+
+   If your host user is not uid 1000, use this variant instead so the mounted key and evidence directory are readable and writable by the same user that runs the Pipelock service. `compose.example.ai.yml` already has `user: "${PIPELOCK_UID:-1000}:${PIPELOCK_GID:-1000}"` on the `pipelock` service, so export those variables in the same shell before restarting, or put them in your `.env` file:
+
+   ```bash
+   export PIPELOCK_UID="$(id -u)" PIPELOCK_GID="$(id -g)"
+   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:2.8.0 \
+     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
+   ```
+
+   Then uncomment the `pipelock-evidence` and `pipelock-keys` volume mounts in `compose.example.ai.yml`, uncomment `flight_recorder.dir` and `flight_recorder.signing_key_path` in `pipelock.example.yaml`, and restart Pipelock from the same shell if you exported `PIPELOCK_UID` and `PIPELOCK_GID`:
+
+   ```bash
+   docker compose -f compose.ai.yml restart pipelock
+   ```
+
+   Print the public verifier key when you need to hand receipts to another system:
+
+   ```bash
+   docker compose -f compose.ai.yml exec pipelock /pipelock signing pubkey --config /etc/pipelock/pipelock.yaml
+   ```
+
 ### Connecting external AI agents
 
 External agents should use the MCP reverse proxy port:
@@ -77,13 +109,65 @@ Enable Pipelock in your Helm values:
 pipelock:
   enabled: true
   image:
-    tag: "2.5.0"
+    tag: "2.8.0"
   mode: balanced
 ```
 
 This creates a separate Deployment, Service, and ConfigMap. The chart auto-injects `HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY` into web and worker pods.
 
-Recent pipelock releases add the Audit Packet v0 schema and language-portable verifiers (Go/TypeScript/Rust), request-body prompt-injection blocking, SPIFFE-strict inbound mediation envelopes, scanner attribution on MCP block receipts, trusted domain allowlisting, MCP tool redirect profiles, enhanced tool poisoning detection, per-read kill switch preemption, signed action receipts, per-pattern DLP warn mode, learn-and-lock behavioural contracts, the wedge-detection health watchdog, and the `pipelock posture verify` / `pipelock session` / `pipelock doctor` CLI commands. See the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
+Recent Pipelock releases add default-on flight recorder receipts, safe-by-default receipt verification, MCP `defer` authorization, request-policy scoring, request-body prompt-injection blocking, SPIFFE-strict inbound mediation envelopes, scanner attribution on MCP block receipts, trusted domain allowlisting, MCP tool redirect profiles, learn-and-lock behavioural contracts, the wedge-detection health watchdog, `pipelock explain`, `pipelock keys status`, `pipelock support bundle`, verified `pipelock update`, and `pipelock doctor` checks for inert exemptions. See the [Pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
+
+### Signed action receipts
+
+Pipelock can write hash-chained, Ed25519-signed receipts for proxied decisions. This is the audit trail that proves what crossed the Pipelock boundary and what policy verdict was applied.
+
+The chart exposes `pipelock.flightRecorder`, but recording is inert until you mount both storage and a signing key:
+
+```bash
+# --out must be an absolute path; "$PWD/..." writes the key into the current directory.
+pipelock signing key generate --purpose receipt-signing --out "$PWD/flight-recorder-signing.key" --id sure-k8s
+kubectl create namespace sure
+kubectl create secret generic sure-pipelock-receipts \
+  --namespace sure \
+  --from-file=flight-recorder-signing.key=./flight-recorder-signing.key
+```
+
+If you do not have the `pipelock` binary installed, generate the key with the image instead: `docker run --rm -v "$PWD:/out" ghcr.io/luckypipewrench/pipelock:2.8.0 signing key generate --purpose receipt-signing --out /out/flight-recorder-signing.key --id sure-k8s`.
+
+Example Helm values using an existing PVC named `sure-pipelock-evidence`:
+
+```yaml
+pipelock:
+  enabled: true
+  flightRecorder:
+    enabled: true
+    dir: /var/lib/pipelock/evidence
+    signingKeyPath: /run/secrets/pipelock/flight-recorder-signing.key
+    requireReceipts: false
+    redact: true
+  extraVolumes:
+    - name: pipelock-evidence
+      persistentVolumeClaim:
+        claimName: sure-pipelock-evidence
+    - name: pipelock-receipt-key
+      secret:
+        secretName: sure-pipelock-receipts
+        # 0440 (group-read), not 0400: the chart runs Pipelock as uid 1000 with
+        # fsGroup 1000, so the secret file is owned root:1000. A 0400 file would
+        # be unreadable by the non-root process and Pipelock would crash on
+        # startup with a key-load error. 0440 lets the fsGroup read it.
+        defaultMode: 0440
+  extraVolumeMounts:
+    - name: pipelock-evidence
+      mountPath: /var/lib/pipelock/evidence
+    - name: pipelock-receipt-key
+      # Do not mount this under /etc/pipelock; the chart already mounts the
+      # Pipelock ConfigMap there.
+      mountPath: /run/secrets/pipelock
+      readOnly: true
+```
+
+Keep `requireReceipts: false` until you have confirmed receipts are being written. Turning it on makes allow-path receipt emission fail closed: if Pipelock cannot sign or write the receipt, the request is blocked before egress.
 
 ### Exposing MCP to external agents (Kubernetes)
 
@@ -158,9 +242,10 @@ The `pipelock.example.yaml` file (Docker Compose) or ConfigMap (Helm) controls s
 | `tool_chain_detection` | Multi-step attack patterns |
 | `websocket_proxy` | WebSocket frame scanning (disabled by default) |
 | `health_watchdog` | Wedge-detection on subsystem heartbeats, returns 503 on stall (pipelock 2.4+) |
+| `flight_recorder` | Signed action receipts and hash-chained evidence (inert until storage + signing key are mounted) |
 | `logging` | Output format (json/text), verbosity |
 
-For the Helm chart, most sections are configurable via `values.yaml`. For additional sections not covered by structured values (session profiling, data budgets, kill switch, sandbox, reverse proxy, adaptive enforcement), use the `extraConfig` escape hatch:
+For the Helm chart, most sections are configurable via `values.yaml`. For additional sections not covered by structured values (session profiling, data budgets, kill switch, sandbox, reverse proxy, adaptive enforcement, request policy, redaction), use the `extraConfig` escape hatch:
 
 ```yaml
 pipelock:
@@ -185,6 +270,7 @@ Start with `audit` mode to see what Pipelock detects without blocking anything. 
 - Forward proxy only covers Faraday-based HTTP clients. Net::HTTP, HTTParty, and other libraries ignore `HTTPS_PROXY`.
 - Docker Compose has no egress network policies. The `/mcp` endpoint on port 3000 is still reachable directly (auth token required). For enforcement, use Kubernetes NetworkPolicies.
 - Pipelock scans text content. Binary payloads (images, file uploads) are passed through by default.
+- Signed receipts prove traffic that traversed Pipelock. They do not prove traffic could not bypass Pipelock; pair them with NetworkPolicies, containment, or firewall rules for non-bypass claims.
 
 ## Troubleshooting
 
@@ -222,3 +308,14 @@ docker compose -f compose.ai.yml exec pipelock /pipelock healthcheck --addr 127.
 ```
 
 Check that `MCP_API_TOKEN` and `MCP_USER_EMAIL` are set in your `.env` file and that the email matches an existing Sure user.
+
+### Receipts are not being written
+
+Run:
+
+```bash
+docker compose -f compose.ai.yml exec pipelock /pipelock keys status --config /etc/pipelock/pipelock.yaml
+docker compose -f compose.ai.yml exec pipelock /pipelock doctor --config /etc/pipelock/pipelock.yaml
+```
+
+The `receipt-signing` key must be present, readable by the Pipelock process, and valid. The `flight_recorder.dir` path must be writable.

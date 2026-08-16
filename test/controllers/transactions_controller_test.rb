@@ -239,6 +239,43 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   assert_operator overflow_count, :>, 0, "Overflow should show some transactions"
 end
 
+  test "pagination does not duplicate or skip transactions with same date and timestamp" do
+    family = families(:empty)
+    user = users(:empty)
+    sign_in user
+
+    family.accounts.each { |account| account.entries.delete_all }
+
+    account = family.accounts.create! name: "Same day", balance: 0, currency: "USD", accountable: Depository.new
+    timestamp = Time.zone.parse("2026-05-05 12:00:00")
+
+    entries = 13.times.map do |index|
+      create_transaction(
+        account: account,
+        name: "May 05 Transaction #{index + 1}",
+        amount: 100 + index,
+        date: Date.new(2026, 5, 5),
+        created_at: timestamp,
+        updated_at: timestamp
+      )
+    end
+
+    expected_entry_ids = Entry.where(id: entries.map(&:id)).reverse_chronological.pluck(:id).map(&:to_s)
+
+    get transactions_url(page: 1, per_page: 10)
+    assert_response :success
+    page_1_entry_ids = rendered_entry_ids
+
+    get transactions_url(page: 2, per_page: 10)
+    assert_response :success
+    page_2_entry_ids = rendered_entry_ids
+
+    assert_equal expected_entry_ids.first(10), page_1_entry_ids
+    assert_equal expected_entry_ids.drop(10), page_2_entry_ids
+    assert_empty page_1_entry_ids & page_2_entry_ids
+    assert_equal expected_entry_ids, page_1_entry_ids + page_2_entry_ids
+  end
+
   test "calls Transaction::Search totals method with correct search parameters" do
     family = families(:empty)
     sign_in users(:empty)
@@ -685,7 +722,74 @@ end
     assert_nil created_entry.transaction.extra["exchange_rate"]
   end
 
+  test "index preloads transfer counterparty entry and account to avoid N+1" do
+    family = @user.family
+    from_account = family.accounts.visible.first
+    to_account = family.accounts.create!(
+      name: "Transfer Counterparty",
+      currency: family.currency,
+      balance: 0,
+      accountable: Depository.new
+    )
+
+    transfers = 6.times.map do |i|
+      create_transfer(
+        from_account: from_account,
+        to_account: to_account,
+        amount: 25 + i,
+        date: Date.current - i.days
+      )
+    end
+
+    queries = capture_sql_queries do
+      # per_page must fit all transfer legs + fixtures so assertions below
+      # actually exercise the transfer render path this preload protects.
+      get transactions_url(per_page: 50)
+    end
+
+    assert_response :success
+
+    # Index dedupes transfers to the outflow side; assert those rows rendered so
+    # the SQL assertions below actually exercise Transfer#to_account.
+    rendered_ids = rendered_entry_ids
+    transfers.each do |transfer|
+      assert_includes rendered_ids, transfer.outflow_transaction.entry.id.to_s,
+                      "Expected transfer outflow entry to render on the index"
+    end
+
+    # Transfer#categorizable? / #payment? walk to_account via
+    # transfer.inflow_transaction.entry.account. Without nested includes those
+    # become one lookup triad per transfer row during list render.
+    normalized_queries = queries.map { |sql| normalize_sql_query(sql) }
+    assert_empty single_record_lookups(normalized_queries, table: "transactions", column: "id"),
+                 "Expected transfer counterparty transactions to be preloaded"
+    assert_empty single_record_lookups(normalized_queries, table: "entries", column: "entryable_id"),
+                 "Expected transfer counterparty entries to be preloaded"
+    assert_empty single_record_lookups(normalized_queries, table: "accounts", column: "id"),
+                 "Expected transfer counterparty accounts to be preloaded"
+  end
+
   private
+    def rendered_entry_ids
+      css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
+    end
+
+    def normalize_sql_query(sql)
+      sql.to_s.squish.gsub(/[`"]/, "").downcase
+    end
+
+    # Per-row lazy loads use `column = ?`. Do not treat `IN (...)` as lazy
+    # loads — ActiveRecord nested preloads also use single-value IN when only
+    # one associated record is needed (e.g. one counterparty account).
+    def single_record_lookups(normalized_queries, table:, column:)
+      pattern = /
+        from\s+#{Regexp.escape(table)}\s+
+        where\s+#{Regexp.escape(table)}\.#{Regexp.escape(column)}\s*=
+      /x
+
+      normalized_queries.grep(pattern)
+    end
+
     def capture_sql_queries
       queries = []
       callback = lambda do |_name, _started, _finished, _unique_id, payload|
