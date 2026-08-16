@@ -1,6 +1,7 @@
 ---
 ro:
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Confirmă
       body_html: "<p>Nu vei putea anula această decizie</p>"

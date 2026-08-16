@@ -122,12 +122,13 @@ class GoalsController < ApplicationController
     render :edit, status: :unprocessable_entity
   end
 
+  # Deletable from any state. Destroying a goal cascades only to its own
+  # goal_accounts / goal_pledges — and GoalPledge#clear_matched_transaction_extra
+  # unstamps the pledge id it wrote onto a matched transaction. No account,
+  # balance, entry or transaction is removed, so the archive-first gate this
+  # used to enforce bought no safety; it only hid the action behind a two-step
+  # flow no other Sure resource requires.
   def destroy
-    unless @goal.archived?
-      redirect_to goal_path(@goal), alert: t(".archive_first")
-      return
-    end
-
     @goal.destroy!
     redirect_to goals_path, notice: t(".success")
   end

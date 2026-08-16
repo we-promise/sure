@@ -1,0 +1,10 @@
+---
+uk:
+  models:
+    coinstats_item:
+      syncer:
+        importing_wallets: "Імпортування крипторахунків з CoinStats..."
+        checking_configuration: "Перевірка конфігурації рахунку CoinStats..."
+        wallets_need_setup: "%{count} крипторахунків потребують налаштування..."
+        processing_holdings: "Обробка активів..."
+        calculating_balances: "Розрахунок балансів..."

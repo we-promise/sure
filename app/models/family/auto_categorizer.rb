@@ -30,8 +30,7 @@ class Family::AutoCategorizer
     )
 
     unless result.success?
-      Rails.logger.error("Failed to auto-categorize transactions for family #{family.id}: #{result.error.message}")
-      return 0
+      raise Error, "Failed to auto-categorize transactions: #{result.error.message}"
     end
 
     modified_count = 0

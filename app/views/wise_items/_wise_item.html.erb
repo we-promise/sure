@@ -45,6 +45,13 @@
 
         <% if Current.user&.admin? %>
           <div class="flex items-center gap-2">
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_wise_item_path(wise_item),
+              disabled: wise_item.syncing?
+            ) %>
+
             <%= render DS::Menu.new do |menu| %>
               <% menu.with_item(
                 variant: "button",

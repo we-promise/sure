@@ -23,7 +23,7 @@ zh-TW:
           retries: 重試
           scheduled: 已排程
           dead: 失效
-          latency: 延遲 %{value} 秒
+          queue_label: "%{name}: %{size} · 延遲 %{latency} 秒"
         table:
           type: 作業
           family: 家庭
