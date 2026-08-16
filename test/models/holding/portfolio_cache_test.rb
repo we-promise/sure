@@ -118,4 +118,46 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     assert_equal BigDecimal("100.0"), price.price
     assert_equal "USD", price.currency
   end
+
+  test "picks account currency deterministically when same-date DB prices tie" do
+    account = families(:empty).accounts.create!(
+      name: "USD Brokerage",
+      balance: 10000,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    date = Date.current
+
+    Security::Price.create!(security: @security, date: date, price: 90, currency: "EUR")
+    Security::Price.create!(security: @security, date: date, price: 100, currency: "USD")
+
+    cache = Holding::PortfolioCache.new(account)
+    price = cache.get_price(@security.id, date)
+
+    assert_equal "USD", price.currency
+    assert_equal BigDecimal("100"), price.price
+  end
+
+  test "prefers security's dominant currency over alphabetical when account currency absent" do
+    account = families(:empty).accounts.create!(
+      name: "CAD Brokerage Dual Prices",
+      balance: 10000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    date = Date.current
+
+    # More USD observations than EUR → USD is the security's preferred currency
+    # even though EUR sorts first alphabetically.
+    Security::Price.create!(security: @security, date: date - 1.day, price: 95, currency: "USD")
+    Security::Price.create!(security: @security, date: date - 2.days, price: 94, currency: "USD")
+    Security::Price.create!(security: @security, date: date, price: 90, currency: "EUR")
+    Security::Price.create!(security: @security, date: date, price: 100, currency: "USD")
+
+    cache = Holding::PortfolioCache.new(account)
+    price = cache.get_price(@security.id, date)
+
+    assert_equal "USD", price.currency
+    assert_equal BigDecimal("100"), price.price
+  end
 end

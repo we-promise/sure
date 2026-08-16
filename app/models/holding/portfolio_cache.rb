@@ -155,13 +155,17 @@ class Holding::PortfolioCache
 
         all_prices = db_prices + trade_prices + holding_prices
 
+        # Prefer the security's most common observed currency (usually its listing /
+        # provider currency) when account currency is absent among tied prices.
+        preferred_security_currency = preferred_currency_for(all_prices)
+
         # Index by date for O(1) lookup in get_price instead of O(N) linear scan.
-        # When priorities tie, prefer the account currency, then alphabetical currency
-        # so native-currency selection cannot flip between syncs.
+        # When priorities tie: account currency → security's preferred currency →
+        # alphabetical, so native-currency selection cannot flip between syncs.
         prices_by_date = all_prices.group_by { |p| p.price.date }
-          .transform_values { |ps| pick_preferred_price(ps) }
+          .transform_values { |ps| pick_preferred_price(ps, preferred_security_currency:) }
         prices_by_date_and_source = all_prices.group_by { |p| [ p.price.date, p.source ] }
-          .transform_values { |ps| pick_preferred_price(ps) }
+          .transform_values { |ps| pick_preferred_price(ps, preferred_security_currency:) }
 
         @security_cache[security.id] = {
           security: security,
@@ -171,12 +175,22 @@ class Holding::PortfolioCache
       end
     end
 
-    def pick_preferred_price(price_with_priorities)
+    def preferred_currency_for(price_with_priorities)
+      counts = Hash.new(0)
+      price_with_priorities.each { |candidate| counts[candidate.price.currency.to_s] += 1 }
+      return nil if counts.empty?
+
+      # Highest frequency, then alphabetical for a stable secondary key.
+      counts.min_by { |currency, count| [ -count, currency ] }.first
+    end
+
+    def pick_preferred_price(price_with_priorities, preferred_security_currency: nil)
       price_with_priorities.min_by do |candidate|
         currency = candidate.price.currency.to_s
         [
           candidate.priority,
           currency == account.currency ? 0 : 1,
+          preferred_security_currency && currency == preferred_security_currency ? 0 : 1,
           currency
         ]
       end
