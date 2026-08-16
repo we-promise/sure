@@ -172,4 +172,23 @@ class EnableBankingItemTest < ActiveSupport::TestCase
 
     assert_not_includes EnableBankingItem.with_stale_psu_ip, clean
   end
+
+  test "revoke_session clears last_psu_ip along with the session" do
+    item = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Revoked", country_code: "DE",
+      application_id: "app", client_certificate: "cert",
+      last_psu_ip: "1.2.3.4", session_id: "sess", session_expires_at: 1.day.from_now,
+      authorization_id: "auth"
+    )
+    provider = mock("enable_banking_provider")
+    provider.expects(:delete_session).with(session_id: "sess")
+    item.stubs(:enable_banking_provider).returns(provider)
+
+    item.revoke_session
+
+    assert_nil item.session_id
+    assert_nil item.session_expires_at
+    assert_nil item.authorization_id
+    assert_nil item.last_psu_ip
+  end
 end
