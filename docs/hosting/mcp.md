@@ -122,7 +122,7 @@ The MCP endpoint exposes 31 financial tools:
 | Reports and holdings | `get_holdings`, `get_balance_sheet`, `get_income_statement` |
 | Files and imports | `search_family_files`, `import_bank_statement` |
 
-`get_accounts`, `get_goals`, `get_transfers`, and the other list tools return the stable IDs needed by follow-up actions. Creation tools that accept an `external_id` require the caller to reuse the same key when retrying an operation.
+`get_accounts`, `get_goals`, `get_transfers`, and the other list tools return the stable IDs needed by follow-up actions. In `get_accounts`, `writable` means the account can be used for account-level and balance-affecting write tools; `transaction_editing.annotations` separately reports whether the user can update transaction notes, categories, merchants, or tags on that account. Creation tools that accept an `external_id` require the caller to reuse the same key when retrying an operation.
 
 The MCP registry is separate from the builtin AI assistant registry. Destructive MCP-only tools are not automatically exposed to Sure's builtin assistant.
 

@@ -20,6 +20,10 @@ class Assistant::Function::GetAccounts < Assistant::Function
           name: account.name,
           permission: permission.to_s,
           writable: permission.in?([ :owner, :full_control ]),
+          transaction_editing: {
+            financial: permission.in?([ :owner, :full_control ]),
+            annotations: permission.in?([ :owner, :full_control, :read_write ])
+          },
           balance: account.balance,
           currency: account.currency,
           balance_formatted: account.balance_money.format,
