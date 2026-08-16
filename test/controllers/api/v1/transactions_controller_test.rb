@@ -891,6 +891,22 @@ end
     assert_not entry.split_parent?
   end
 
+  test "should reject split request without API key" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: { split: { splits: [ { name: "Part 1", amount: "100" } ] } }
+    assert_response :unauthorized
+  end
+
+  test "should reject unsplit request without API key" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+    entry.split!([ { name: "Part 1", amount: 100 } ])
+
+    delete split_api_v1_transaction_url(entry.transaction)
+    assert_response :unauthorized
+  end
+
   test "should reject split with malformed split parameter shapes" do
     entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
 

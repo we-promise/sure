@@ -7645,8 +7645,14 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: missing or malformed split parameters
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: split parts do not sum to parent amount
+          description: validation failed
           content:
             application/json:
               schema:
@@ -7717,6 +7723,12 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
           description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: transaction is not split
           content:
             application/json:
               schema:

@@ -467,7 +467,15 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'split parts do not sum to parent amount' do
+      response '400', 'missing or malformed split parameters' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { split: {} } }
+
+        run_test!
+      end
+
+      response '422', 'validation failed' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -528,6 +536,18 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '403', 'insufficient scope' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
+        run_test!
+      end
+
+      response '422', 'transaction is not split' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { split_entry.transaction.id }
+
+        before do
+          split_entry.unsplit!
+        end
+
         run_test!
       end
 
