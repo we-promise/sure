@@ -45,7 +45,7 @@ class Assistant::Function::GetCategories < Assistant::Function
         page_size: {
           type: "integer",
           minimum: 1,
-          maximum: 100,
+          maximum: MAX_PAGE_SIZE,
           description: "Results per page (defaults to #{self.class.default_page_size})"
         }
       }
@@ -76,15 +76,4 @@ class Assistant::Function::GetCategories < Assistant::Function
       total_pages: pagy.pages
     }
   end
-
-  private
-    def default_page_size
-      self.class.default_page_size
-    end
-
-    def resolved_page_size(params)
-      return default_page_size if params["page_size"].blank?
-
-      params["page_size"].to_i.clamp(1, 100)
-    end
 end

@@ -60,20 +60,18 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
       end
     end
 
-    result = account_ids ? scoped_result(period, account_ids) : full_result(period)
+    # Validate the bucket count before running any aggregation work
+    buckets = params["group_by"] == "month" ? month_buckets(period) : nil
 
-    if params["group_by"] == "month"
-      buckets = month_buckets(period)
-
-      if buckets.size > MAX_MONTH_BUCKETS
-        return {
-          error: "too_many_periods",
-          message: "That range produces more than #{MAX_MONTH_BUCKETS} monthly buckets. Use a shorter range."
-        }
-      end
-
-      result[:monthly_series] = buckets.map { |bucket| bucket_totals(bucket, account_ids) }
+    if buckets && buckets.size > MAX_MONTH_BUCKETS
+      return {
+        error: "too_many_periods",
+        message: "That range produces more than #{MAX_MONTH_BUCKETS} monthly buckets. Use a shorter range."
+      }
     end
+
+    result = account_ids ? scoped_result(period, account_ids) : full_result(period)
+    result[:monthly_series] = buckets.map { |bucket| bucket_totals(bucket, account_ids) } if buckets
 
     result[:previous_period] = previous_period_comparison(period, account_ids) if params["compare_previous_period"]
 

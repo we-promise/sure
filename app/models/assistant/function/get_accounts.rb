@@ -43,7 +43,7 @@ class Assistant::Function::GetAccounts < Assistant::Function
 
     {
       as_of_date: Date.current,
-      accounts: user.accessible_accounts.visible.includes(:balances, :account_providers).map do |account|
+      accounts: accounts_scope(include_series).map do |account|
         payload = {
           id: account.id,
           name: account.name,
@@ -65,6 +65,13 @@ class Assistant::Function::GetAccounts < Assistant::Function
   end
 
   private
+    # Balance rows are only needed for the opt-in series; the default path
+    # answers from the accounts table alone.
+    def accounts_scope(include_series)
+      scope = user.accessible_accounts.visible.includes(:account_providers)
+      include_series ? scope.includes(:balances) : scope
+    end
+
     def historical_balances(account, period)
       effective = Period.custom(
         start_date: [ account.start_date, period.start_date ].max,
