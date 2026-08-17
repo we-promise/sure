@@ -139,7 +139,12 @@ class Transaction < ApplicationRecord
     sanitized_query = query.to_s.strip
     return [] if sanitized_query.length < MIN_LENGTH_FOR_NAME_SUGGESTION
 
+    # distinct(false) cancels any DISTINCT inherited from the caller's scope (e.g.
+    # Account.accessible_by's left_joins(:account_shares).distinct) — Postgres rejects
+    # SELECT DISTINCT combined with an ORDER BY expression absent from the select list,
+    # and GROUP BY already yields one row per name here, so DISTINCT is redundant anyway.
     matching_names = with_entry
+      .distinct(false)
       .where("entries.name ILIKE ?", "%#{sanitize_sql_like(sanitized_query)}%")
       .group("entries.name")
       .order(Arel.sql("COUNT(*) DESC"))
@@ -148,6 +153,7 @@ class Transaction < ApplicationRecord
 
     matching_names.map do |name|
       category_id = with_entry
+        .distinct(false)
         .where(entries: { name: name })
         .where.not(category_id: nil)
         .group(:category_id)

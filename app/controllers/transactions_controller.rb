@@ -451,7 +451,9 @@ class TransactionsController < ApplicationController
   end
 
   def name_suggestions
-    @suggestions = Current.family.transactions.name_suggestions_for(params[:q])
+    @suggestions = Current.family.transactions
+      .merge(Account.accessible_by(Current.user))
+      .name_suggestions_for(params[:q])
   end
 
   private
