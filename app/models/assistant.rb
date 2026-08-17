@@ -38,6 +38,7 @@ module Assistant
     def function_classes(user = nil)
       classes = [
         Function::GetTransactions,
+        Function::GetRecurringTransactions,
         Function::GetAccounts,
         Function::GetHoldings,
         Function::GetBalanceSheet,
@@ -52,6 +53,7 @@ module Assistant
         Function::GetCategories,
         Function::CreateCategory,
         Function::UpdateCategory,
+        Function::GetMerchants,
         Function::UpdateTransaction,
         Function::UpdateBudget
       ]
