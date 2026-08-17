@@ -307,4 +307,28 @@ class TransactionTest < ActiveSupport::TestCase
 
     assert_nil category.reload.last_used_at
   end
+
+  test "name_suggestions_for returns matching past transaction names with their usual category" do
+    family = families(:dylan_family)
+    # entries(:transaction) is named "Starbucks" and its transaction (transactions(:one)) is categorized as food_and_drink
+
+    [ "Starbucks", "star" ].each do |query|
+      suggestions = family.transactions.name_suggestions_for(query)
+
+      assert_equal 1, suggestions.size
+      assert_equal "Starbucks", suggestions.first.name
+      assert_equal categories(:food_and_drink), suggestions.first.category
+    end
+  end
+
+  test "name_suggestions_for returns an empty array when the query is too short" do
+    family = families(:dylan_family)
+    assert_equal [], family.transactions.name_suggestions_for("st")
+    assert_equal [], family.transactions.name_suggestions_for("  ")
+  end
+
+  test "name_suggestions_for returns an empty array when no past transaction matches" do
+    family = families(:dylan_family)
+    assert_equal [], family.transactions.name_suggestions_for("no such merchant")
+  end
 end
