@@ -15,6 +15,13 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         - What are the user's spending habits?
         - How much income or spending did the user have over a specific time period?
 
+        Spending trends and comparisons:
+        - Month over month: pass group_by: "month" for a monthly_series
+          (calendar months, unlike get_budget which honors a custom month start)
+        - Versus the prior period: pass compare_previous_period: true
+        - Per account: pass account_ids from get_accounts (totals only; the
+          category breakdown is family-wide and is omitted with this filter)
+
         Simple example:
 
         ```
@@ -27,27 +34,49 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
     end
   end
 
+  MAX_MONTH_BUCKETS = 36
+
+  def strict_mode?
+    false
+  end
+
   def call(params = {})
     period = Period.custom(start_date: Date.parse(params["start_date"]), end_date: Date.parse(params["end_date"]))
-    income_data = family.income_statement.income_totals(period: period)
-    expense_data = family.income_statement.expense_totals(period: period)
 
-    {
-      currency: family.currency,
-      period: {
-        start_date: period.start_date,
-        end_date: period.end_date
-      },
-      income: {
-        total: format_money(income_data.total),
-        by_category: to_ai_category_totals(income_data.category_totals)
-      },
-      expense: {
-        total: format_money(expense_data.total),
-        by_category: to_ai_category_totals(expense_data.category_totals)
-      },
-      insights: get_insights(income_data, expense_data)
-    }
+    account_ids = params["account_ids"].presence
+    if account_ids
+      resolved = user.accessible_accounts.visible.where(id: account_ids)
+      unknown_ids = account_ids.uniq - resolved.pluck(:id)
+
+      if unknown_ids.any?
+        return {
+          error: "unknown_account_ids",
+          message: "Some account ids were not found. Call get_accounts for valid ids and retry once.",
+          unknown_ids: unknown_ids
+        }
+      end
+    end
+
+    result = account_ids ? scoped_result(period, account_ids) : full_result(period)
+
+    if params["group_by"] == "month"
+      buckets = month_buckets(period)
+
+      if buckets.size > MAX_MONTH_BUCKETS
+        return {
+          error: "too_many_periods",
+          message: "That range produces more than #{MAX_MONTH_BUCKETS} monthly buckets. Use a shorter range."
+        }
+      end
+
+      result[:monthly_series] = buckets.map { |bucket| bucket_totals(bucket, account_ids) }
+    end
+
+    result[:previous_period] = previous_period_comparison(period, account_ids) if params["compare_previous_period"]
+
+    result
+  rescue Date::Error
+    { error: "invalid_date", message: "Dates must be valid and in YYYY-MM-DD format." }
   end
 
   def params_schema
@@ -61,12 +90,124 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         end_date: {
           type: "string",
           description: "End date for aggregation period in YYYY-MM-DD format"
+        },
+        account_ids: {
+          type: "array",
+          description: "Account UUIDs from get_accounts; scopes totals to those accounts and omits the category breakdown",
+          items: { type: "string" },
+          minItems: 1,
+          uniqueItems: true
+        },
+        group_by: {
+          type: "string",
+          enum: [ "none", "month" ],
+          description: "Pass \"month\" to add a monthly_series of income/expenses/net per calendar month"
+        },
+        compare_previous_period: {
+          type: "boolean",
+          description: "Adds totals for the equal-length period immediately before start_date, with deltas"
         }
       }
     )
   end
 
   private
+    def full_result(period)
+      income_data = family.income_statement.income_totals(period: period)
+      expense_data = family.income_statement.expense_totals(period: period)
+
+      {
+        currency: family.currency,
+        period: {
+          start_date: period.start_date,
+          end_date: period.end_date
+        },
+        income: {
+          total: format_money(income_data.total),
+          by_category: to_ai_category_totals(income_data.category_totals)
+        },
+        expense: {
+          total: format_money(expense_data.total),
+          by_category: to_ai_category_totals(expense_data.category_totals)
+        },
+        insights: get_insights(income_data, expense_data)
+      }
+    end
+
+    # Category rollups and family stats are family-wide by construction, so a
+    # per-account view reports totals only and says why the breakdown is gone.
+    def scoped_result(period, account_ids)
+      totals = family.income_statement.totals_for(period, account_ids: account_ids)
+
+      {
+        currency: family.currency,
+        period: {
+          start_date: period.start_date,
+          end_date: period.end_date
+        },
+        account_ids: account_ids,
+        income: { total: format_money(totals.income_money.amount), by_category: nil },
+        expense: { total: format_money(totals.expense_money.amount), by_category: nil },
+        net: format_money(totals.income_money.amount - totals.expense_money.amount),
+        breakdown_omitted_reason: "category breakdown is not available with an account filter"
+      }
+    end
+
+    def month_buckets(period)
+      cursor = period.start_date
+
+      [].tap do |buckets|
+        while cursor <= period.end_date
+          bucket_end = [ cursor.end_of_month, period.end_date ].min
+          buckets << Period.custom(start_date: cursor, end_date: bucket_end)
+          cursor = bucket_end + 1.day
+        end
+      end
+    end
+
+    def bucket_totals(bucket, account_ids)
+      totals = family.income_statement.totals_for(bucket, account_ids: account_ids)
+      income = totals.income_money.amount
+      expenses = totals.expense_money.amount
+
+      {
+        start_date: bucket.start_date,
+        end_date: bucket.end_date,
+        income: format_money(income),
+        expenses: format_money(expenses),
+        net: format_money(income - expenses)
+      }
+    end
+
+    def previous_period_comparison(period, account_ids)
+      previous = Period.custom(
+        start_date: period.start_date - period.days.days,
+        end_date: period.start_date - 1.day
+      )
+      current_totals = family.income_statement.totals_for(period, account_ids: account_ids)
+      previous_totals = family.income_statement.totals_for(previous, account_ids: account_ids)
+
+      {
+        start_date: previous.start_date,
+        end_date: previous.end_date,
+        income: format_money(previous_totals.income_money.amount),
+        expenses: format_money(previous_totals.expense_money.amount),
+        net: format_money(previous_totals.income_money.amount - previous_totals.expense_money.amount),
+        income_change: change_stats(previous_totals.income_money.amount, current_totals.income_money.amount),
+        expenses_change: change_stats(previous_totals.expense_money.amount, current_totals.expense_money.amount)
+      }
+    end
+
+    def change_stats(previous_amount, current_amount)
+      delta = current_amount - previous_amount
+      percent = previous_amount.zero? ? nil : ((delta / previous_amount.to_f) * 100).round(1)
+
+      {
+        amount: format_money(delta),
+        percent: percent
+      }
+    end
+
     def format_money(value)
       Money.new(value, family.currency).format
     end

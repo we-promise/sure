@@ -1,0 +1,110 @@
+require "test_helper"
+
+class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
+  setup do
+    @user = users(:family_admin)
+    @family = @user.family
+    @fn = Assistant::Function::GetIncomeStatement.new(@user)
+    @params = {
+      "start_date" => 1.year.ago.to_date.to_s,
+      "end_date" => Date.current.to_s
+    }
+  end
+
+  test "has correct name" do
+    assert_equal "get_income_statement", @fn.name
+  end
+
+  test "is not in strict mode" do
+    refute @fn.to_definition[:strict]
+  end
+
+  test "happy path shape is unchanged" do
+    result = @fn.call(@params)
+
+    assert result[:income][:total].present?
+    assert result[:expense][:total].present?
+    assert result[:income].key?(:by_category)
+    assert result[:insights][:net_income].present?
+    assert_not result.key?(:monthly_series)
+    assert_not result.key?(:previous_period)
+  end
+
+  test "group_by month returns one bucket per calendar month" do
+    result = @fn.call(@params.merge(
+      "start_date" => "2025-01-15",
+      "end_date" => "2025-03-10",
+      "group_by" => "month"
+    ))
+
+    series = result[:monthly_series]
+
+    assert_equal 3, series.size
+    assert_equal Date.parse("2025-01-15"), series.first[:start_date]
+    assert_equal Date.parse("2025-01-31"), series.first[:end_date]
+    assert_equal Date.parse("2025-03-10"), series.last[:end_date]
+    series.each do |bucket|
+      assert bucket[:income].present?
+      assert bucket[:expenses].present?
+      assert bucket[:net].present?
+    end
+  end
+
+  test "group_by month caps the bucket count" do
+    result = @fn.call(
+      "start_date" => "2020-01-01",
+      "end_date" => "2025-12-31",
+      "group_by" => "month"
+    )
+
+    assert_equal "too_many_periods", result[:error]
+  end
+
+  test "compare_previous_period returns an equal-length prior window with deltas" do
+    result = @fn.call(@params.merge(
+      "start_date" => "2025-06-01",
+      "end_date" => "2025-06-30",
+      "compare_previous_period" => true
+    ))
+
+    previous = result[:previous_period]
+
+    assert_equal Date.parse("2025-05-02"), previous[:start_date]
+    assert_equal Date.parse("2025-05-31"), previous[:end_date]
+    assert previous[:income_change].key?(:amount)
+    assert previous[:expenses_change].key?(:percent)
+  end
+
+  test "account_ids scopes totals and omits the category breakdown" do
+    account = @family.accounts.visible.first
+
+    result = @fn.call(@params.merge("account_ids" => [ account.id ]))
+
+    assert_nil result[:income][:by_category]
+    assert result[:breakdown_omitted_reason].present?
+    assert result[:net].present?
+  end
+
+  test "unknown account ids return a soft failure naming them" do
+    bogus = SecureRandom.uuid
+
+    result = @fn.call(@params.merge("account_ids" => [ bogus ]))
+
+    assert_equal "unknown_account_ids", result[:error]
+    assert_equal [ bogus ], result[:unknown_ids]
+  end
+
+  test "inaccessible account ids are treated as unknown" do
+    result = Assistant::Function::GetIncomeStatement.new(users(:family_member)).call(
+      @params.merge("account_ids" => [ accounts(:investment).id ])
+    )
+
+    assert_equal "unknown_account_ids", result[:error]
+  end
+
+  test "invalid dates return an invalid_date error" do
+    result = @fn.call("start_date" => "bogus", "end_date" => "2024-01-01")
+
+    assert_equal "invalid_date", result[:error]
+  end
+end
