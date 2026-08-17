@@ -308,17 +308,22 @@ class TransactionTest < ActiveSupport::TestCase
     assert_nil category.reload.last_used_at
   end
 
-  test "name_suggestions_for returns matching past transaction names with their usual category" do
+  test "name_suggestions_for ranks names and each name's category by frequency" do
     family = families(:dylan_family)
+    account = accounts(:depository)
     # entries(:transaction) is named "Starbucks" and its transaction (transactions(:one)) is categorized as food_and_drink
 
-    [ "Starbucks", "star" ].each do |query|
-      suggestions = family.transactions.name_suggestions_for(query)
+    # "Starbucks" ends up more frequent than "Star Market", and within "Starbucks",
+    # food_and_drink ends up more frequent than its one-off income-categorized occurrence.
+    2.times { create_transaction(name: "Starbucks", account: account, category: categories(:food_and_drink)) }
+    create_transaction(name: "Starbucks", account: account, category: categories(:income))
+    create_transaction(name: "Star Market", account: account, category: categories(:income))
 
-      assert_equal 1, suggestions.size
-      assert_equal "Starbucks", suggestions.first.name
-      assert_equal categories(:food_and_drink), suggestions.first.category
-    end
+    suggestions = family.transactions.name_suggestions_for("star")
+
+    assert_equal [ "Starbucks", "Star Market" ], suggestions.map(&:name)
+    assert_equal categories(:food_and_drink), suggestions.first.category
+    assert_equal categories(:income), suggestions.second.category
   end
 
   test "name_suggestions_for returns an empty array when the query is too short" do
@@ -330,5 +335,16 @@ class TransactionTest < ActiveSupport::TestCase
   test "name_suggestions_for returns an empty array when no past transaction matches" do
     family = families(:dylan_family)
     assert_equal [], family.transactions.name_suggestions_for("no such merchant")
+  end
+
+  test "name_suggestions_for caps results at 8" do
+    family = families(:dylan_family)
+    account = accounts(:depository)
+
+    9.times { |i| create_transaction(name: "Merchant #{i}", account: account) }
+
+    suggestions = family.transactions.name_suggestions_for("Merchant")
+
+    assert_equal 8, suggestions.size
   end
 end
