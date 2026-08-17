@@ -27,20 +27,29 @@ de:
       blockchain_select_blank: Blockchain auswählen
       link: Krypto-Wallet verknüpfen
       not_configured_title: CoinStats-Provider-Verbindung nicht konfiguriert
-      not_configured_message: Zum Verknüpfen eines Krypto-Wallets müssen Sie zuerst die CoinStats-Provider-Verbindung konfigurieren.
-      not_configured_step1_html: Gehen Sie zu <strong>Einstellungen → Provider</strong>
-      not_configured_step2_html: Suchen Sie den <strong>CoinStats</strong>-Provider
-      not_configured_step3_html: Folgen Sie den <strong>Einrichtungsanweisungen</strong> zur Konfiguration
+      not_configured_message: Zum Verknüpfen eines Krypto-Wallets musst du zuerst die CoinStats-Provider-Verbindung konfigurieren.
+      not_configured_step1_html: Geh zu <strong>Einstellungen → Provider</strong>
+      not_configured_step2_html: Such den <strong>CoinStats</strong>-Provider
+      not_configured_step3_html: Folg den <strong>Einrichtungsanweisungen</strong> zur Konfiguration
       go_to_settings: Zu den Provider-Einstellungen
       setup_instructions: "Einrichtungsanleitung:"
-      step1_html: Besuchen Sie das <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a>, um einen API-Key zu erhalten.
-      step2: Tragen Sie Ihren API-Key unten ein und klicken Sie auf Konfigurieren.
-      step3_html: Nach erfolgreicher Verbindung gehen Sie zum <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Konten</a>-Tab, um Krypto-Wallets einzurichten.
+      step1_html: Öffne das <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a>, um einen API-Key zu erhalten.
+      step2: Trag deinen API-Key unten ein und klick auf Konfigurieren.
+      step3_html: Nach erfolgreicher Verbindung geh zum <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Konten</a>-Tab, um Krypto-Wallets einzurichten.
       api_key_label: API-Key
       api_key_placeholder: Erforderlich
       configure: Konfigurieren
       update_configuration: Neu konfigurieren
       default_name: CoinStats-Verbindung
+      exchange_label: Börse
+      exchange_select_blank: Börse wählen
+      link_exchange_description: Nutz einen API-Key mit Lesezugriff, damit CoinStats Guthaben und Transaktionen von Bitvavo, Binance und weiteren unterstützten Börsen abgleichen kann.
+      link_exchange_note: Wenn deine Börse den API-Key erst freischalten oder per E-Mail bestätigen lässt, erledige das, bevor du hier verknüpfst.
+      link_exchange_submit: Börse verknüpfen
+      link_exchange_title: Börsen-API verknüpfen
+      link_wallet_description: Verfolge über CoinStats eine selbst verwahrte Wallet oder eine einzelne On-Chain-Adresse.
+      link_wallet_submit: Krypto-Wallet verknüpfen
+      link_wallet_title: Wallet-Adresse verknüpfen
     coinstats_item:
       deletion_in_progress: Krypto-Wallet-Daten werden gelöscht…
       provider_name: CoinStats
@@ -59,3 +68,9 @@ de:
       delete: Löschen
       no_wallets_title: Keine Krypto-Wallets verbunden
       no_wallets_message: Derzeit sind keine Krypto-Wallets mit CoinStats verbunden.
+    link_exchange:
+      error: 'Die Börse ließ sich nicht verknüpfen: %{message}.'
+      failed: Die Börse ließ sich nicht verknüpfen.
+      invalid_exchange: Die gewählte Börse wird nicht mehr unterstützt.
+      missing_params: Börse und Zugangsdaten sind erforderlich.
+      success: Börse %{name} verknüpft.

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_12_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -409,8 +409,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
     t.uuid "parent_id"
     t.datetime "updated_at", null: false
     t.datetime "last_used_at"
-    t.index ["family_id"], name: "index_categories_on_family_id"
     t.index ["family_id", "last_used_at"], name: "index_categories_on_family_id_and_last_used_at"
+    t.index ["family_id", "name"], name: "index_categories_on_family_id_and_name", unique: true
+    t.index ["family_id"], name: "index_categories_on_family_id"
   end
 
   create_table "chats", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2098,6 +2099,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
     t.string "name"
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_tags_on_family_id"
+    t.index ["family_id", "name"], name: "index_tags_on_family_id_and_name", unique: true
   end
 
   create_table "tool_calls", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2349,6 +2351,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_140100) do
     t.datetime "sync_start_date"
     t.text "token", null: false
     t.datetime "updated_at", null: false
+    t.boolean "import_all_history", default: false, null: false
     t.index ["family_id", "profile_id"], name: "index_wise_items_on_family_id_and_profile_id", unique: true
     t.index ["family_id"], name: "index_wise_items_on_family_id"
     t.index ["status"], name: "index_wise_items_on_status"

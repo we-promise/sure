@@ -23,7 +23,7 @@ en:
           retries: "Retries"
           scheduled: "Scheduled"
           dead: "Dead"
-          latency: "%{value}s latency"
+          queue_label: "%{name}: %{size} · %{latency}s latency"
         table:
           type: "Operation"
           family: "Family"
@@ -377,7 +377,7 @@ en:
         ok: Connected
         warn: Action needed
         err: Error
-        off: Not configured
+        "off": Not configured
       maturity:
         beta: Beta
         alpha: Alpha

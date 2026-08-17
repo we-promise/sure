@@ -5,7 +5,18 @@
     </div>
     <div class="min-w-0 flex-1">
       <h1 class="text-2xl font-semibold text-primary break-words"><%= @goal.name %></h1>
-      <p class="text-sm text-secondary mt-1 privacy-sensitive"><%= @goal.header_summary %></p>
+      <%# Each segment is its own nowrap span so a short trailing one — "184 days
+          left" — moves to the next line whole instead of breaking after "days".
+          The first segment carries the target and a long-format date, so it is
+          left free to wrap; pinning it would overflow a narrow screen. %>
+      <p class="text-sm text-secondary mt-1 privacy-sensitive">
+        <%= safe_join(
+              @goal.header_summary_parts.map.with_index { |part, i|
+                tag.span(part, class: ("whitespace-nowrap" unless i.zero?))
+              },
+              " · "
+            ) %>
+      </p>
       <% last_days = @goal.last_matched_pledge_days_ago %>
       <% unless last_days.nil? %>
         <p class="text-xs text-subdued mt-0.5">
@@ -68,17 +79,17 @@
         <% if @goal.may_reopen? %>
           <% menu.with_item(variant: "button", text: t(".reopen"), icon: "rotate-ccw", href: reopen_goal_path(@goal), method: :patch) %>
         <% end %>
-        <% if @goal.archived? %>
-          <% menu.with_item(
-               variant: "button",
-               text: t(".delete"),
-               icon: "trash-2",
-               href: goal_path(@goal),
-               method: :delete,
-               destructive: true,
-               confirm: CustomConfirm.for_resource_deletion(@goal.name, high_severity: true)
-             ) %>
-        <% end %>
+        <%# Available in any state — see GoalsController#destroy for why there's
+            no archive-first gate. %>
+        <% menu.with_item(
+             variant: "button",
+             text: t(".delete"),
+             icon: "trash-2",
+             href: goal_path(@goal),
+             method: :delete,
+             destructive: true,
+             confirm: @goal.deletion_confirm
+           ) %>
       <% end %>
     </div>
   </header>

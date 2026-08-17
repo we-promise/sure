@@ -1,0 +1,12 @@
+---
+es:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              saml_url_required: Se requiere la URL de metadatos del IdP o la URL de SSO del IdP para los proveedores SAML
+              saml_cert_required: Se requiere el certificado del IdP o la huella del certificado cuando no se usa la URL de metadatos
+              metadata_url_invalid: La URL de metadatos del IdP debe ser una URL válida
+              sso_url_invalid: La URL de SSO del IdP debe ser una URL válida
