@@ -326,6 +326,39 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal categories(:income), suggestions.second.category
   end
 
+  test "name_suggestions_for counts each transaction once when the caller scope joins account_shares" do
+    # TransactionsController#name_suggestions calls this via
+    # `family.transactions.merge(Account.accessible_by(user))`. Account.accessible_by does
+    # left_joins(:account_shares), and for an account the user owns, its WHERE predicate
+    # matches every joined share row regardless of which share it is — so an owned account
+    # shared with multiple family members fans out to multiple rows per transaction. Without
+    # counting distinct transaction ids, that inflates a name's frequency by however many
+    # times its account is shared, letting a rarely-used name outrank a genuinely common one.
+    family = families(:dylan_family)
+    owner = users(:family_admin)
+    shared_account = accounts(:depository) # owned by family_admin; already shared with family_member (fixture)
+    unshared_account = accounts(:investment) # owned by family_admin; not shared with anyone
+
+    2.times do |i|
+      extra_member = User.create!(
+        family: family, email: "extra_member_#{i}@example.com", password: "password123456",
+        first_name: "Extra", last_name: "Member #{i}", role: "member"
+      )
+      AccountShare.create!(account: shared_account, user: extra_member, permission: "read_only", include_in_finances: true)
+    end
+    # shared_account now has 3 account_shares rows (1 fixture + 2 created above), so its
+    # accessible_by join fans out 3x — a single real transaction would inflate to a count of 3.
+
+    create_transaction(name: "Fanout Rare", account: shared_account, category: categories(:food_and_drink))
+    2.times { create_transaction(name: "Fanout Common", account: unshared_account, category: categories(:income)) }
+
+    suggestions = family.transactions
+      .merge(Account.accessible_by(owner))
+      .name_suggestions_for("Fanout")
+
+    assert_equal [ "Fanout Common", "Fanout Rare" ], suggestions.map(&:name)
+  end
+
   test "name_suggestions_for returns an empty array when the query is too short" do
     family = families(:dylan_family)
     assert_equal [], family.transactions.name_suggestions_for("st")

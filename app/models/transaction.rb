@@ -141,13 +141,18 @@ class Transaction < ApplicationRecord
 
     # distinct(false) cancels any DISTINCT inherited from the caller's scope (e.g.
     # Account.accessible_by's left_joins(:account_shares).distinct) — Postgres rejects
-    # SELECT DISTINCT combined with an ORDER BY expression absent from the select list,
-    # and GROUP BY already yields one row per name here, so DISTINCT is redundant anyway.
+    # SELECT DISTINCT combined with an ORDER BY expression absent from the select list.
+    # Callers such as TransactionsController#name_suggestions merge in
+    # Account.accessible_by, whose left_joins(:account_shares) fans out to one row per
+    # share for accounts the current user owns (the owner predicate matches regardless of
+    # which share row it's paired with) — so COUNT(*) below would over-count transactions
+    # on any owned account shared with multiple family members. COUNT(DISTINCT
+    # transactions.id) counts each transaction once no matter how the caller's scope joins.
     matching_names = with_entry
       .distinct(false)
       .where("entries.name ILIKE ?", "%#{sanitize_sql_like(sanitized_query)}%")
       .group("entries.name")
-      .order(Arel.sql("COUNT(*) DESC"))
+      .order(Arel.sql("COUNT(DISTINCT transactions.id) DESC"))
       .limit(limit)
       .pluck(Arel.sql("entries.name"))
 
@@ -162,7 +167,7 @@ class Transaction < ApplicationRecord
       .where(entries: { name: matching_names })
       .where.not(category_id: nil)
       .group("entries.name", :category_id)
-      .order(Arel.sql("entries.name ASC, COUNT(*) DESC"))
+      .order(Arel.sql("entries.name ASC, COUNT(DISTINCT transactions.id) DESC"))
       .pluck(Arel.sql("entries.name"), :category_id)
       .each { |name, category_id| category_id_by_name[name] ||= category_id }
 
