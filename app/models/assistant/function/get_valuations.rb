@@ -40,6 +40,7 @@ class Assistant::Function::GetValuations < Assistant::Function
         },
         page: {
           type: "integer",
+          minimum: 1,
           description: "Page number (defaults to 1)"
         }
       }
@@ -67,11 +68,15 @@ class Assistant::Function::GetValuations < Assistant::Function
       return error("invalid_date", "Dates must be valid and in YYYY-MM-DD format.")
     end
 
+    if start_date && end_date && start_date > end_date
+      return error("invalid_date", "start_date must be on or before end_date.")
+    end
+
     scope = scope.where(date: start_date..) if start_date
     scope = scope.where(date: ..end_date) if end_date
 
     ordered = scope.reverse_chronological
-    pagy = Pagy.new(count: ordered.count, page: params["page"] || 1, limit: self.class.default_page_size)
+    pagy = Pagy.new(count: ordered.count, page: resolved_page(params), limit: self.class.default_page_size)
 
     {
       valuations: ordered.offset(pagy.offset).limit(pagy.limit).map { |entry|

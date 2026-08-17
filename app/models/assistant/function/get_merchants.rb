@@ -30,6 +30,7 @@ class Assistant::Function::GetMerchants < Assistant::Function
       properties: {
         page: {
           type: "integer",
+          minimum: 1,
           description: "Page number (defaults to 1)"
         },
         page_size: {
@@ -57,7 +58,7 @@ class Assistant::Function::GetMerchants < Assistant::Function
     end
 
     page_size = resolved_page_size(params)
-    pagy = Pagy.new(count: scope.count, page: params["page"] || 1, limit: page_size)
+    pagy = Pagy.new(count: scope.count, page: resolved_page(params), limit: page_size)
     merchants = scope.offset(pagy.offset).limit(pagy.limit)
 
     {

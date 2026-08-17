@@ -62,6 +62,19 @@ class Assistant::Function::GetValuationsTest < ActiveSupport::TestCase
     assert_equal "invalid_date", result[:error]
   end
 
+  test "a reversed date range returns the structured error" do
+    result = @fn.call("start_date" => Date.current.to_s, "end_date" => 1.year.ago.to_date.to_s)
+
+    assert_equal "invalid_date", result[:error]
+  end
+
+  test "invalid page numbers normalize to the first page" do
+    result = @fn.call("page" => 0)
+
+    assert_equal 1, result[:page]
+    assert_includes result[:valuations].map { |v| v[:entry_id] }, @entry.id
+  end
+
   test "excludes valuations on accounts the user cannot access" do
     member_fn = Assistant::Function::GetValuations.new(users(:family_member))
     investment_entry = accounts(:investment).entries.create!(

@@ -107,6 +107,13 @@ class Assistant::Function
       params["page_size"].to_i.clamp(1, MAX_PAGE_SIZE)
     end
 
+    # Pagy raises on zero, negative or non-numeric pages; normalize anything
+    # invalid to the first page instead of failing the call.
+    def resolved_page(params)
+      page = params["page"].to_i
+      page.positive? ? page : 1
+    end
+
     def family
       user.family
     end

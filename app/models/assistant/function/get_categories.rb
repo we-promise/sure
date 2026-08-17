@@ -40,6 +40,7 @@ class Assistant::Function::GetCategories < Assistant::Function
       properties: {
         page: {
           type: "integer",
+          minimum: 1,
           description: "Page number (defaults to 1)"
         },
         page_size: {
@@ -55,7 +56,7 @@ class Assistant::Function::GetCategories < Assistant::Function
   def call(params = {})
     categories_scope = family.categories.alphabetically_by_hierarchy
     page_size = resolved_page_size(params)
-    pagy = Pagy.new(count: categories_scope.count, page: params["page"] || 1, limit: page_size)
+    pagy = Pagy.new(count: categories_scope.count, page: resolved_page(params), limit: page_size)
     categories = categories_scope.offset(pagy.offset).limit(pagy.limit)
 
     {

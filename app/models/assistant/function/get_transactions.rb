@@ -48,6 +48,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
       properties: {
         page: {
           type: "integer",
+          minimum: 1,
           description: "Page number (defaults to 1)"
         },
         page_size: {
@@ -154,7 +155,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
 
     # By default, we give a small page size to force the AI to use filters effectively and save on tokens
     page_size = resolved_page_size(params)
-    pagy = Pagy.new(count: pagy_query.count, page: params["page"] || 1, limit: page_size)
+    pagy = Pagy.new(count: pagy_query.count, page: resolved_page(params), limit: page_size)
     paginated_transactions = pagy_query.includes(
       { entry: :account },
       :category, :merchant, :tags,
