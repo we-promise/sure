@@ -91,22 +91,9 @@ class Assistant::Function
       end
     end
 
-    def family_account_names
-      @family_account_names ||= user.accessible_accounts.visible.pluck(:name)
-    end
-
-    def family_category_names
-      @family_category_names ||= begin
-        names = family.categories.pluck(:name)
-        names << "Uncategorized"
-        names
-      end
-    end
-
-    def family_merchant_names
-      @family_merchant_names ||= family.merchants.pluck(:name)
-    end
-
+    # Still used by update_tag, which identifies tags by name. Tag lists are
+    # small; the large data-driven enums (accounts, categories, merchants)
+    # are gone from schemas in favor of exact-name params.
     def family_tag_names
       @family_tag_names ||= family.tags.pluck(:name)
     end
