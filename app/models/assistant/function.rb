@@ -136,7 +136,7 @@ class Assistant::Function
         end_date: series.end_date,
         interval: series.interval,
         currency: currency&.iso_code,
-        values: series.values.map { |v| v.trend.current.amount.to_f.round(precision) }
+        values: series.values.map { |v| v.trend.current.amount.round(precision).to_f }
       }.compact
     end
 end
