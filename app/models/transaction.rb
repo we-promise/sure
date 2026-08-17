@@ -151,17 +151,25 @@ class Transaction < ApplicationRecord
       .limit(limit)
       .pluck(Arel.sql("entries.name"))
 
-    matching_names.map do |name|
-      category_id = with_entry
-        .distinct(false)
-        .where(entries: { name: name })
-        .where.not(category_id: nil)
-        .group(:category_id)
-        .order(Arel.sql("COUNT(*) DESC"))
-        .limit(1)
-        .pick(:category_id)
+    return [] if matching_names.empty?
 
-      Transaction::NameSuggestion.new(name: name, category: Category.find_by(id: category_id))
+    # Winning (most-used) category_id per name, in one grouped query. Rows are ordered so
+    # that for each name, its highest-count category_id comes first — the `||=` below then
+    # keeps only that first (winning) row per name, avoiding a query per name.
+    category_id_by_name = {}
+    with_entry
+      .distinct(false)
+      .where(entries: { name: matching_names })
+      .where.not(category_id: nil)
+      .group("entries.name", :category_id)
+      .order(Arel.sql("entries.name ASC, COUNT(*) DESC"))
+      .pluck(Arel.sql("entries.name"), :category_id)
+      .each { |name, category_id| category_id_by_name[name] ||= category_id }
+
+    categories_by_id = Category.where(id: category_id_by_name.values.uniq).index_by(&:id)
+
+    matching_names.map do |name|
+      Transaction::NameSuggestion.new(name: name, category: categories_by_id[category_id_by_name[name]])
     end
   end
 
