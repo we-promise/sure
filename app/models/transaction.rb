@@ -129,6 +129,36 @@ class Transaction < ApplicationRecord
     joins(entry: :account).where(accounts: { family_id: family.id })
   end
 
+  # Minimum characters typed before searching past transactions for name suggestions.
+  MIN_LENGTH_FOR_NAME_SUGGESTION = 3
+
+  # Past transaction names resembling the given query, each paired with the category most
+  # commonly used for that exact name. Powers the "Libellé" autocomplete in the new
+  # transaction form — call on a family-scoped relation, e.g. `family.transactions.name_suggestions_for(query)`.
+  def self.name_suggestions_for(query, limit: 8)
+    sanitized_query = query.to_s.strip
+    return [] if sanitized_query.length < MIN_LENGTH_FOR_NAME_SUGGESTION
+
+    matching_names = with_entry
+      .where("entries.name ILIKE ?", "%#{sanitize_sql_like(sanitized_query)}%")
+      .group("entries.name")
+      .order(Arel.sql("COUNT(*) DESC"))
+      .limit(limit)
+      .pluck(Arel.sql("entries.name"))
+
+    matching_names.map do |name|
+      category_id = with_entry
+        .where(entries: { name: name })
+        .where.not(category_id: nil)
+        .group(:category_id)
+        .order(Arel.sql("COUNT(*) DESC"))
+        .limit(1)
+        .pick(:category_id)
+
+      Transaction::NameSuggestion.new(name: name, category: Category.find_by(id: category_id))
+    end
+  end
+
   # Overarching grouping method for all transfer-type transactions
   def transfer?
     TRANSFER_KINDS.include?(kind)

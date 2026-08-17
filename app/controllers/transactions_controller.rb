@@ -425,6 +425,10 @@ class TransactionsController < ApplicationController
     end
   end
 
+  def name_suggestions
+    @suggestions = Current.family.transactions.name_suggestions_for(params[:q])
+  end
+
   private
     def accessible_transactions
       Current.family.transactions
