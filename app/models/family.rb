@@ -28,6 +28,16 @@ class Family < ApplicationRecord
   ASSISTANT_TYPES = %w[builtin external].freeze
   SHARING_DEFAULTS = %w[shared private].freeze
 
+  DEFAULT_CURRENCY_BY_COUNTRY = {
+    "AU" => "AUD", "CA" => "CAD", "CH" => "CHF", "CN" => "CNY",
+    "CZ" => "CZK", "DK" => "DKK", "GB" => "GBP", "HK" => "HKD",
+    "HU" => "HUF", "ID" => "IDR", "IL" => "ILS", "IN" => "INR",
+    "JP" => "JPY", "KR" => "KRW", "MX" => "MXN", "MY" => "MYR",
+    "NO" => "NOK", "NZ" => "NZD", "PH" => "PHP", "PL" => "PLN",
+    "SE" => "SEK", "SG" => "SGD", "TH" => "THB", "TR" => "TRY",
+    "TW" => "TWD", "US" => "USD", "ZA" => "ZAR"
+  }.freeze
+
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
@@ -152,6 +162,10 @@ class Family < ApplicationRecord
 
   def primary_currency_code
     normalize_currency_code(currency) || "USD"
+  end
+
+  def default_currency_for_country
+    DEFAULT_CURRENCY_BY_COUNTRY.fetch(country.to_s.upcase, "USD")
   end
 
   def custom_enabled_currencies?

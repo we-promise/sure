@@ -109,6 +109,24 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "span", text: /\+\$78\.90/
   end
 
+  test "preferences page derives currency from the onboarding country" do
+    @family.update!(country: "CA", currency: "USD")
+
+    get preferences_onboarding_url
+
+    assert_response :success
+    assert_select "select[name='user[family_attributes][currency]'] option[selected][value='CAD']"
+  end
+
+  test "preferences page preserves an explicit currency override" do
+    @family.update!(country: "CA", currency: "USD")
+
+    get preferences_onboarding_url, params: { currency: "USD" }
+
+    assert_response :success
+    assert_select "select[name='user[family_attributes][currency]'] option[selected][value='USD']"
+  end
+
   test "preferences page shows date formatting example" do
   get preferences_onboarding_url
   assert_response :success
