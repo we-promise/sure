@@ -4,6 +4,7 @@ vi:
     self_hostable:
       redis_configured: "Redis đã được cấu hình đúng! Bây giờ bạn có thể thiết lập ứng dụng Sure của mình."
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Xác nhận
       body_html: "<p>Bạn sẽ không thể hoàn tác quyết định này</p>"
@@ -24,6 +25,9 @@ vi:
       default_title: "Bạn có chắc không?"
       default_body: "Thao tác này không thể hoàn tác."
       default_btn_text: "Xác nhận"
+      resource_deletion_title: "Xóa %{resource}?"
+      resource_deletion_body: "Bạn có chắc muốn xóa %{resource} không? Thao tác này không thể hoàn tác."
+      resource_deletion_btn_text: "Xóa %{resource}"
     family_moniker:
       group_plural: Nhóm
       group_singular: Nhóm

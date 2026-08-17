@@ -3,5 +3,18 @@ zh-TW:
   cryptos:
     edit:
       edit: 編輯 %{account}
+    form:
+      subtype_label: 帳戶類型
+      subtype_prompt: 選擇帳戶類型
+      subtype_none: 無
+      tax_treatment_label: 稅務處理方式
+      tax_treatment_hint: 多數加密貨幣是放在應稅帳戶中。如果是放在有稅務優惠的帳戶，請選擇其他選項。
     new:
-      title: 請輸入帳戶餘額
+      title: 輸入帳戶餘額
+    subtypes:
+      wallet:
+        short: 錢包
+        long: 加密貨幣錢包
+      exchange:
+        short: 交易所
+        long: 加密貨幣交易所

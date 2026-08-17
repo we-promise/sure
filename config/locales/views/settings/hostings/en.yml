@@ -141,6 +141,10 @@ en:
         max_response_tokens_help: "Tokens reserved for the model's reply. Default: 512. Lower to free up room for longer history."
         max_items_per_call_label: Max Items Per Batch (Optional)
         max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. Larger batches are auto-sliced to fit the context window."
+        ai_response_timeout_heading: Chat Response Timeout
+        ai_response_timeout_description: How long the chat waits for the assistant before showing a "no response" error. Raise this if you run a local model on slow hardware — responses from OpenAI-compatible providers are not streamed, and tool-call rounds display nothing, so the chat can sit on "Thinking…" for the whole turn.
+        ai_response_timeout_label: Response Timeout in Seconds (Optional)
+        ai_response_timeout_help: "Default: 90. This covers the whole turn, so size it as a sum: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT, plus tool execution and queue time. Lowering ASSISTANT_MAX_TOOL_CALL_ITERATIONS reduces how large this needs to be, and is often the better lever on slow hardware."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

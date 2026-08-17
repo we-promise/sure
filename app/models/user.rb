@@ -74,9 +74,26 @@ class User < ApplicationRecord
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
-  # get the specified fallback role (typically :admin for family creators).
+  # get the specified admin-capable fallback role.
   def self.role_for_new_family_creator(fallback_role: :admin)
+    fallback_role = fallback_role.to_s.in?(%w[admin super_admin]) ? fallback_role : :admin
+
     User.exists? ? fallback_role : :super_admin
+  end
+
+  class << self
+    def human_attribute_name(attribute, options = {})
+      locale = options[:locale] || I18n.locale
+      moniker = I18n.with_locale(locale) do
+        Current.family&.moniker_label || I18n.t("shared.family_moniker.singular", default: "Family")
+      end
+
+      options = {
+        moniker: moniker
+      }.merge(options)
+
+      super(attribute, options)
+    end
   end
 
   has_one_attached :profile_image, dependent: :purge_later do |attachable|
@@ -385,10 +402,6 @@ class User < ApplicationRecord
   end
 
   # Transactions preferences management
-  def transactions_section_collapsed?(section_key)
-    preferences&.dig("transactions_collapsed_sections", section_key) == true
-  end
-
   def show_split_grouped?
     preferences&.dig("show_split_grouped") != false
   end
@@ -403,24 +416,6 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
-  end
-
-  def update_transactions_preferences(prefs)
-    transaction do
-      lock!
-
-      updated_prefs = (preferences || {}).deep_dup
-      prefs.each do |key, value|
-        if value.is_a?(Hash)
-          updated_prefs["transactions_#{key}"] ||= {}
-          updated_prefs["transactions_#{key}"] = updated_prefs["transactions_#{key}"].merge(value)
-        else
-          updated_prefs["transactions_#{key}"] = value
-        end
-      end
-
-      update!(preferences: updated_prefs)
-    end
   end
 
   private
