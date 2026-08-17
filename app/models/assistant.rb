@@ -8,13 +8,17 @@ module Assistant
 
   # Statement Vault + provenance tools, for users who opted into preview features
   # in Settings -> Preferences. They back the wealth agent-harness workflow
-  # documented in docs/llm-guides/wealth-agent-harness.md.
+  # documented in docs/llm-guides/wealth-agent-harness.md. GetValuations is the
+  # read pair for RecordValuation; GetInsights reads the Insights feed, which is
+  # itself preview-gated app-wide.
   PREVIEW_FUNCTION_CLASSES = [
     Function::UploadAccountStatement,
     Function::ListAccountStatements,
     Function::GetAccountStatement,
     Function::GetStatementCoverage,
-    Function::RecordValuation
+    Function::RecordValuation,
+    Function::GetValuations,
+    Function::GetInsights
   ].freeze
 
   class << self
