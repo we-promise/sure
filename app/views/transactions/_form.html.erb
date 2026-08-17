@@ -23,7 +23,7 @@
     <%= hidden_field_tag "entry[idempotency_key]", new_transaction_idempotency_key, data: { "transaction-form-target": "idempotencyKey" } %>
   </section>
 
-  <section class="space-y-2" data-controller="category-suggestion" data-action="dropdown:select->category-suggestion#onCategorySelected hw-combobox:selection->category-suggestion#onNameSuggestionSelected">
+  <section class="space-y-2" data-controller="category-suggestion" data-action="hw-combobox:selection->category-suggestion#onNameSuggestionSelected">
     <div class="form-field combobox">
       <%= f.combobox :name,
             name_suggestions_transactions_path,
@@ -46,7 +46,7 @@
       amount_data: { transaction_form_target: "amount", action: "input->transaction-form#onAmountChange" },
       currency_data: { transaction_form_target: "currency", action: "change->transaction-form#onCurrencyChange" } %>
 
-    <div data-category-suggestion-target="categoryField">
+    <div data-category-suggestion-target="categoryField" data-action="dropdown:select->category-suggestion#onCategorySelected">
       <%= f.fields_for :entryable do |ef| %>
         <%= render DS::CategorySelect.new(
         form: ef,

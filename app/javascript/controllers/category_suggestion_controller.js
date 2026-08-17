@@ -7,7 +7,10 @@ export default class extends Controller {
   static targets = ["categoryField"]
 
   connect() {
-    this.userPickedCategory = false
+    // A category already present when the controller connects (e.g. prefilled from
+    // duplicating an existing transaction) is a deliberate default — treat it the same
+    // as a manual pick so suggestions never clobber it.
+    this.userPickedCategory = this.hasCategorySelection()
     this.applyingSuggestion = false
   }
 
@@ -36,7 +39,7 @@ export default class extends Controller {
   }
 
   applySuggestion(categoryId) {
-    if (this.userPickedCategory || this.hasCategorySelection() || !this.hasCategoryFieldTarget) return
+    if (this.userPickedCategory || !this.hasCategoryFieldTarget) return
 
     const option = this.categoryFieldTarget.querySelector(
       `[data-select-target="option"][data-value="${CSS.escape(String(categoryId))}"]`
