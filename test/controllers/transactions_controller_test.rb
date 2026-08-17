@@ -1008,6 +1008,60 @@ end
     Rails.cache = original_cache
   end
 
+  test "index uncategorized_count cache reflects deleting an uncategorized transaction immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    entry = @user.family.accounts.visible.first.entries.create!(
+      name: "Deleted while uncategorized",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+
+    entry.destroy!
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count - 1, updated_count,
+      "deleting an uncategorized transaction must not leave a stale cached count"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects disabling an account immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    account = @user.family.accounts.visible.first
+    account.entries.create!(
+      name: "Uncategorized on account about to be disabled",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+    assert_operator initial_count, :>, 0
+
+    account.disable!
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_operator updated_count, :<, initial_count,
+      "disabling an account must not leave a stale cached count that still includes its transactions"
+  ensure
+    Rails.cache = original_cache
+  end
+
   test "index uncategorized_count cache is scoped per user, not just per family" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new

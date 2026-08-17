@@ -466,6 +466,30 @@ class Family < ApplicationRecord
     end
   end
 
+  # Used for invalidating caches keyed on entries (e.g. the transactions
+  # index's uncategorized count). Unlike #entries_cache_version, includes
+  # .count so a hard-deleted entry busts the cache even when it didn't hold
+  # the current max updated_at, and uses full-precision timestamps so two
+  # updates within the same second still produce distinct versions.
+  def entries_version
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}"
+  end
+
+  # Used for invalidating caches keyed on recurring transactions (e.g. the
+  # transactions index's projected recurring list). See #entries_version for
+  # why .count is included alongside the timestamp.
+  def recurring_transactions_version
+    "#{recurring_transactions.count}-#{recurring_transactions.maximum(:updated_at)&.to_f}"
+  end
+
+  # Used for invalidating caches whose results depend on which accounts are
+  # active/draft vs. disabled (e.g. AccountsController#toggle_active changes
+  # nothing on entries, but changes which entries `uncategorized_transactions`
+  # considers accessible).
+  def accounts_status_version
+    "#{accounts.count}-#{accounts.maximum(:updated_at)&.to_f}"
+  end
+
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
   end

@@ -440,29 +440,22 @@ class TransactionsController < ApplicationController
   private
     # Scoped by user (not just family) because Current.accessible_entries is
     # user-scoped for family sharing (see Current#accessible_entries).
+    #
+    # Includes Family#accounts_status_version because `uncategorized_transactions`
+    # filters on account status (draft/active), and toggling an account's
+    # active status (AccountsController#toggle_active) doesn't touch `entries`
+    # or `AccountShare`, so it wouldn't otherwise bust this cache.
     def uncategorized_count_cache_key
-      # Uses a full-precision timestamp (not Family#entries_cache_version's
-      # to_i) so two entry updates within the same second still bust this
-      # cache, which has no expiry of its own.
-      entries_version = Current.family.entries.maximum(:updated_at)&.to_f
-      "transactions_uncategorized_count/v2/#{Current.family.id}/#{Current.user.id}/#{entries_version}/#{account_share_version}"
+      "transactions_uncategorized_count/v3/#{Current.family.id}/#{Current.user.id}/" \
+        "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 
     # Scoped additionally by Date.current since the "next 10 days" window is
     # date-dependent and would otherwise return a stale window on a cache hit
     # from an earlier day.
     def projected_recurring_cache_key
-      recurring_version = Current.family.recurring_transactions.maximum(:updated_at)&.to_f
-      "transactions_projected_recurring/v2/#{Current.family.id}/#{Current.user.id}/#{Date.current}/#{recurring_version}/#{account_share_version}"
-    end
-
-    # Changes whenever an AccountShare granting/revoking the current user's
-    # access is created, updated, or destroyed, so the caches above don't
-    # keep serving a stale uncategorized count / recurring list after the
-    # user's account visibility changes.
-    def account_share_version
-      shares = AccountShare.where(user: Current.user)
-      "#{shares.count}-#{shares.maximum(:updated_at)&.to_f}"
+      "transactions_projected_recurring/v3/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
+        "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 
     def accessible_transactions
