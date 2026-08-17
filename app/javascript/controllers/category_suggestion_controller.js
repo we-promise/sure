@@ -10,7 +10,7 @@ export default class extends Controller {
     // A category already present when the controller connects (e.g. prefilled from
     // duplicating an existing transaction) is a deliberate default — treat it the same
     // as a manual pick so suggestions never clobber it.
-    this.userPickedCategory = this.hasCategorySelection()
+    this.userPickedCategory = this.#hasCategorySelection()
     this.applyingSuggestion = false
   }
 
@@ -25,20 +25,20 @@ export default class extends Controller {
 
     const option = event.target.querySelector(`[role="option"][data-value="${CSS.escape(value)}"]`)
     const categoryId = option?.querySelector("[data-category-id]")?.dataset.categoryId
-    if (categoryId) this.applySuggestion(categoryId)
+    if (categoryId) this.#applySuggestion(categoryId)
   }
 
-  hasCategorySelection() {
-    return !!this.categoryHiddenInput()?.value
+  #hasCategorySelection() {
+    return !!this.#categoryHiddenInput()?.value
   }
 
-  categoryHiddenInput() {
+  #categoryHiddenInput() {
     return this.hasCategoryFieldTarget
       ? this.categoryFieldTarget.querySelector('[data-form-dropdown-target="input"]')
       : null
   }
 
-  applySuggestion(categoryId) {
+  #applySuggestion(categoryId) {
     if (this.userPickedCategory || !this.hasCategoryFieldTarget) return
 
     const option = this.categoryFieldTarget.querySelector(
