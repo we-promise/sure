@@ -103,6 +103,9 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
       end
     rescue Date::Error
       error("invalid_date", "Dates must be valid and in YYYY-MM-DD format.")
+    rescue ActiveModel::ValidationError
+      # Period validates the range itself (e.g. start after end)
+      error("invalid_date", "start_date must be on or before end_date.")
     end
 
     def series_points(period, interval)

@@ -109,16 +109,18 @@ class Assistant::Function
     # To save tokens, we provide the AI metadata about the series and a flat
     # array of raw numeric values it can infer dates from. Currency is stated
     # once here instead of formatting every value; the system prompt's
-    # formatting rules cover rendering.
+    # formatting rules cover rendering. Values round to the currency's own
+    # precision (BTC carries 8 decimals, OMR 3), never a flat 2.
     def to_ai_time_series(series)
-      currency = series.values.first&.trend&.current&.currency&.iso_code
+      currency = series.values.first&.trend&.current&.currency
+      precision = currency&.default_precision || 2
 
       {
         start_date: series.start_date,
         end_date: series.end_date,
         interval: series.interval,
-        currency: currency,
-        values: series.values.map { |v| v.trend.current.amount.to_f.round(2) }
+        currency: currency&.iso_code,
+        values: series.values.map { |v| v.trend.current.amount.to_f.round(precision) }
       }.compact
     end
 end

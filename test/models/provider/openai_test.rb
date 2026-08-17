@@ -378,6 +378,8 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
   end
 
   test "history budget subtracts the real instructions estimate when given" do
+    Setting.stubs(:llm_max_response_tokens).returns(nil)
+
     with_env_overrides(
       "LLM_CONTEXT_WINDOW" => "8192",
       "LLM_MAX_RESPONSE_TOKENS" => nil,
@@ -396,9 +398,17 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
 
   test "response cap is only sent when explicitly configured" do
     with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(nil)
       subject = Provider::Openai.new("test-token")
 
       assert_nil subject.explicit_max_response_tokens
+    end
+
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(768)
+      subject = Provider::Openai.new("test-token")
+
+      assert_equal 768, subject.explicit_max_response_tokens
     end
 
     with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "900") do

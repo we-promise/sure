@@ -56,6 +56,12 @@ class Assistant::Function::GetValuationsTest < ActiveSupport::TestCase
     assert_not_includes earlier[:valuations].map { |v| v[:entry_id] }, @entry.id
   end
 
+  test "malformed dates fail loudly instead of silently dropping the filter" do
+    result = @fn.call("start_date" => "not-a-date")
+
+    assert_equal "invalid_date", result[:error]
+  end
+
   test "excludes valuations on accounts the user cannot access" do
     member_fn = Assistant::Function::GetValuations.new(users(:family_member))
     investment_entry = accounts(:investment).entries.create!(

@@ -46,6 +46,27 @@ class Assistant::Function::GetInsightsTest < ActiveSupport::TestCase
     assert result[:insights].all? { |i| i[:type] == "cash_flow_warning" }
   end
 
+  test "limit clamps to the maximum with more matching insights than the cap" do
+    (Assistant::Function::GetInsights::MAX_LIMIT + 5).times do |i|
+      @family.insights.create!(
+        insight_type: "spending_anomaly",
+        priority: "low",
+        status: "active",
+        title: "Clamp insight #{i}",
+        body: "Body #{i}",
+        currency: "USD",
+        period_start: Date.current.beginning_of_month,
+        period_end: Date.current.end_of_month,
+        generated_at: Time.current,
+        dedup_key: "clamp-test-#{i}"
+      )
+    end
+
+    result = @fn.call("limit" => 999)
+
+    assert_equal Assistant::Function::GetInsights::MAX_LIMIT, result[:insights].size
+  end
+
   test "does not mutate insight status" do
     assert_no_changes -> { @family.insights.order(:id).pluck(:status) } do
       @fn.call

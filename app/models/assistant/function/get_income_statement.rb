@@ -45,13 +45,16 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
 
     account_ids = params["account_ids"].presence
     if account_ids
-      resolved = user.accessible_accounts.visible.where(id: account_ids)
-      unknown_ids = account_ids.uniq - resolved.pluck(:id)
+      # Validated against the accounts income/expense totals actually reflect:
+      # hidden, excluded-from-reports and tax-advantaged accounts would come
+      # back as silent zeros if accepted here.
+      eligible = family.income_statement(user: user).eligible_accounts.where(id: account_ids)
+      unknown_ids = account_ids.uniq - eligible.pluck(:id)
 
       if unknown_ids.any?
         return {
           error: "unknown_account_ids",
-          message: "Some account ids were not found. Call get_accounts for valid ids and retry once.",
+          message: "Some account ids were not found or are not part of income and expense reporting (hidden, excluded-from-reports and tax-advantaged accounts are not eligible). Call get_accounts for ids and retry once with eligible accounts.",
           unknown_ids: unknown_ids
         }
       end

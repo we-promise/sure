@@ -60,6 +60,13 @@ class Assistant::Function::GetValuations < Assistant::Function
 
     start_date = parse_date(params["start_date"])
     end_date = parse_date(params["end_date"])
+
+    # A malformed date must fail loudly; silently dropping the filter would
+    # present unfiltered data as though the requested range was honored.
+    if start_date == :invalid || end_date == :invalid
+      return error("invalid_date", "Dates must be valid and in YYYY-MM-DD format.")
+    end
+
     scope = scope.where(date: start_date..) if start_date
     scope = scope.where(date: ..end_date) if end_date
 
@@ -91,7 +98,7 @@ class Assistant::Function::GetValuations < Assistant::Function
 
       Date.iso8601(value.to_s)
     rescue Date::Error
-      nil
+      :invalid
     end
 
     def error(key, message)

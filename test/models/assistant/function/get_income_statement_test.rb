@@ -102,6 +102,16 @@ class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
     assert_equal "unknown_account_ids", result[:error]
   end
 
+  test "accounts excluded from reports are rejected instead of returning silent zeros" do
+    excluded = @family.accounts.visible.first
+    excluded.update!(exclude_from_reports: true)
+
+    result = @fn.call(@params.merge("account_ids" => [ excluded.id ]))
+
+    assert_equal "unknown_account_ids", result[:error]
+    assert_includes result[:unknown_ids], excluded.id
+  end
+
   test "invalid dates return an invalid_date error" do
     result = @fn.call("start_date" => "bogus", "end_date" => "2024-01-01")
 

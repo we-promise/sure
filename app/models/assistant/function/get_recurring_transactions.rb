@@ -15,8 +15,9 @@ class Assistant::Function::GetRecurringTransactions < Assistant::Function
         coming up this month? How much recurring spend do I have?
 
         `status` defaults to "active". Pass `upcoming_within_days` to only see items
-        expected soon. totals_by_currency sums active items excluding transfers,
-        which move money between the user's own accounts.
+        expected between today and that many days from now (overdue items appear
+        when no window is given). totals_by_currency sums active items excluding
+        transfers, which move money between the user's own accounts.
       INSTRUCTIONS
     end
   end
@@ -54,15 +55,20 @@ class Assistant::Function::GetRecurringTransactions < Assistant::Function
 
     if params["upcoming_within_days"].present?
       days = params["upcoming_within_days"].to_i.clamp(1, 365)
-      scope = scope.where(next_expected_date: ..days.days.from_now.to_date)
+      # A forward-looking window: overdue items (past next_expected_date)
+      # appear in unwindowed calls, not inside "the next N days".
+      scope = scope.where(next_expected_date: Date.current..days.days.from_now.to_date)
     end
 
+    total_count = scope.count
     rows = scope.order(status: :asc, next_expected_date: :asc).limit(MAX_RESULTS).to_a
 
     {
       as_of_date: Date.current,
+      total_results: total_count,
+      truncated: total_count > MAX_RESULTS,
       recurring_transactions: rows.map { |rt| serialize(rt) },
-      totals_by_currency: totals_by_currency(rows)
+      totals_by_currency: totals_by_currency(scope)
     }
   end
 
@@ -97,10 +103,13 @@ class Assistant::Function::GetRecurringTransactions < Assistant::Function
     end
 
     # Transfers are excluded: money moving between the user's own accounts is
-    # not recurring spend, however regular it is.
-    def totals_by_currency(rows)
-      rows.select { |rt| rt.active? && !rt.transfer? }
-        .group_by(&:currency)
-        .transform_values { |group| Money.new(group.sum(&:amount), group.first.currency).format }
+    # not recurring spend, however regular it is. Summed over the full
+    # filtered scope (not the displayed rows) so a truncated list never
+    # reports a partial sum as the total.
+    def totals_by_currency(scope)
+      scope.where(status: "active", destination_account_id: nil)
+        .group(:currency)
+        .sum(:amount)
+        .each_with_object({}) { |(currency, sum), totals| totals[currency] = Money.new(sum, currency).format }
     end
 end

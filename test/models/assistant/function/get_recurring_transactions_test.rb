@@ -67,6 +67,8 @@ class Assistant::Function::GetRecurringTransactionsTest < ActiveSupport::TestCas
 
     assert transfer_row[:is_transfer]
     assert_equal "$15.99", result[:totals_by_currency]["USD"]
+    assert_equal false, result[:truncated]
+    assert_equal result[:recurring_transactions].size, result[:total_results]
   end
 
   test "does not return another family's recurring transactions" do

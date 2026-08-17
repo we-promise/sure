@@ -37,6 +37,12 @@ class Assistant::Function::GetBalanceSheetTest < ActiveSupport::TestCase
     assert_equal "invalid_date", result[:error]
   end
 
+  test "a reversed custom range returns the structured error" do
+    result = @fn.call("start_date" => "2025-06-01", "end_date" => "2025-01-01")
+
+    assert_equal "invalid_date", result[:error]
+  end
+
   test "too many points returns an error instead of a giant series" do
     result = @fn.call("period" => "last_10_years", "interval" => "1 day")
 
