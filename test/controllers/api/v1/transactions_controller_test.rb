@@ -915,7 +915,8 @@ end
       { split: { splits: "not-an-array" } },
       { split: { splits: [ "not-an-object" ] } },
       { split: { splits: [ { name: "Part 1", amount: [ 100 ] } ] } },
-      { split: { splits: [ { name: "Part 1", amount: { value: 100 } } ] } }
+      { split: { splits: [ { name: "Part 1", amount: { value: 100 } } ] } },
+      { split: { splits: [ { name: "Part 1", amount: "not-a-number" } ] } }
     ].each do |payload|
       post split_api_v1_transaction_url(entry.transaction), params: payload, headers: api_headers(@api_key)
       assert_includes [ 400, 422 ], response.status, "expected 400/422 for #{payload.inspect}"

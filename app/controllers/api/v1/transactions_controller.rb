@@ -482,7 +482,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         end
 
         amount = s[:amount]
-        unless amount.is_a?(Numeric) || amount.is_a?(String)
+        unless amount.is_a?(Numeric) || (amount.is_a?(String) && amount.match?(/\A-?\d+(\.\d+)?\z/))
           raise ActionController::ParameterMissing, :amount
         end
 
