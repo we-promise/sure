@@ -80,14 +80,38 @@ class Provider::Openai < Provider
     positive_budget(ENV["LLM_MAX_RESPONSE_TOKENS"], Setting.llm_max_response_tokens, 512)
   end
 
+  # The response cap is only sent to the provider when someone explicitly
+  # configured it (ENV or a stored Setting). The 512 fallback above exists for
+  # budget math and must not silently truncate replies on stock installs.
+  def explicit_max_response_tokens
+    explicit = ENV["LLM_MAX_RESPONSE_TOKENS"].to_s.strip.to_i
+    return explicit if explicit.positive?
+
+    from_setting = Setting.llm_max_response_tokens.to_i
+    return from_setting if from_setting.positive?
+
+    nil
+  end
+
   def system_prompt_reserve
     positive_budget(ENV["LLM_SYSTEM_PROMPT_RESERVE"], nil, 256)
   end
 
-  def max_history_tokens
+  def max_history_tokens(instructions: nil)
     explicit = ENV["LLM_MAX_HISTORY_TOKENS"].presence&.to_i
     return explicit if explicit&.positive?
-    [ context_window - max_response_tokens - system_prompt_reserve, 256 ].max
+
+    # When the actual instructions are in hand, budget against their real
+    # estimated size instead of the flat reserve; the prompt with session
+    # context routinely exceeds the historical 256-token figure.
+    prompt_reserve =
+      if instructions.present?
+        Assistant::TokenEstimator.estimate(instructions.to_s)
+      else
+        system_prompt_reserve
+      end
+
+    [ context_window - max_response_tokens - prompt_reserve, 256 ].max
   end
 
   # Budget available for a one-shot (non-chat) request's full input,
@@ -366,14 +390,17 @@ class Provider::Openai < Provider
         input_payload = chat_config.build_input(prompt: prompt)
 
         begin
-          raw_response = client.responses.create(parameters: {
+          request_params = {
             model: model,
             input: input_payload,
             instructions: instructions,
             tools: chat_config.tools,
             previous_response_id: previous_response_id,
             stream: stream_proxy
-          })
+          }
+          request_params[:max_output_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
+
+          raw_response = client.responses.create(parameters: request_params)
 
           # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
           # for the "response chunk" in the stream and return it (it is already parsed)
@@ -460,6 +487,7 @@ class Provider::Openai < Provider
           messages: messages
         }
         params[:tools] = tools if tools.present?
+        params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
         begin
           raw_response = client.chat(parameters: params)
@@ -521,7 +549,7 @@ class Provider::Openai < Provider
       # LocalAI) don't silently truncate. tool_call/tool_result pairs are
       # preserved atomically by HistoryTrimmer.
       if messages.present?
-        trimmed = Assistant::HistoryTrimmer.new(messages, max_tokens: max_history_tokens).call
+        trimmed = Assistant::HistoryTrimmer.new(messages, max_tokens: max_history_tokens(instructions: instructions)).call
         payload.concat(trimmed)
       elsif prompt.present?
         payload << { role: "user", content: prompt }
