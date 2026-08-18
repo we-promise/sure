@@ -37,6 +37,50 @@ class OnchainWalletItem < ApplicationRecord
     true
   end
 
+  def import_latest_onchain_data
+    OnchainWalletItem::Importer.new(self).import
+  end
+
+  # Writes the given rows into the accounts they are linked to. One failing
+  # asset must not stop the rest of the wallet from syncing.
+  def process_accounts(onchain_accounts)
+    onchain_accounts.map do |onchain_account|
+      OnchainWalletAccount::Processor.new(onchain_account).process
+      { onchain_wallet_account_id: onchain_account.id, success: true }
+    rescue StandardError => e
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to process on-chain asset: #{e.class}",
+        source: self.class.name,
+        provider_key: "onchain_wallet",
+        family: family,
+        account: onchain_account.current_account,
+        metadata: {
+          onchain_wallet_item_id: id,
+          onchain_wallet_account_id: onchain_account.id,
+          chain: onchain_account.chain,
+          error: e.message
+        }
+      )
+      { onchain_wallet_account_id: onchain_account.id, success: false, error: e.message }
+    end
+  end
+
+  def schedule_account_syncs(accounts:, parent_sync: nil, window_start_date: nil, window_end_date: nil)
+    accounts.map do |account|
+      account.sync_later(
+        parent_sync: parent_sync,
+        window_start_date: window_start_date,
+        window_end_date: window_end_date
+      )
+      { account_id: account.id, success: true }
+    rescue StandardError => e
+      Rails.logger.error("OnchainWalletItem #{id} - failed to schedule sync for account #{account.id}: #{e.message}")
+      { account_id: account.id, success: false, error: e.message }
+    end
+  end
+
   # [[chain, address], ...] for every address this item tracks.
   def wallet_keys
     onchain_wallet_accounts.distinct.pluck(:chain, :wallet_address)

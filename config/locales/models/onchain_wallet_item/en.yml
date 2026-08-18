@@ -2,3 +2,14 @@
 en:
   onchain:
     institution_name: Self-custody wallets
+  onchain_wallet_item:
+    movement:
+      received: "Received %{quantity} %{symbol}"
+      sent: "Sent %{quantity} %{symbol}"
+    syncer:
+      calculating_balances: Calculating balances...
+      no_changes: No on-chain changes since the last sync.
+      processing_assets:
+        one: Processing 1 updated asset...
+        other: "Processing %{count} updated assets..."
+      reading_wallets: Reading wallet balances from the chains...

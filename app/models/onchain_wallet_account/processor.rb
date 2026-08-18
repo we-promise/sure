@@ -1,0 +1,192 @@
+# frozen_string_literal: true
+
+# Writes one tracked asset into the account it is linked to: the holding, the
+# account balance, and the entries that reconstruct how the position was built.
+#
+# Chain-agnostic by construction — it only ever reads the row and the payloads
+# the importer stored on it.
+class OnchainWalletAccount::Processor
+  SOURCE = "onchain_wallet"
+
+  attr_reader :onchain_wallet_account
+
+  def initialize(onchain_wallet_account)
+    @onchain_wallet_account = onchain_wallet_account
+  end
+
+  def process
+    return unless account
+
+    security = resolve_security
+    price = security ? price_on(security, Date.current) : nil
+    amount = price ? (quantity * price).round(4) : 0.to_d
+
+    import_holding(security, price, amount) if security
+    update_balances(amount)
+    materialize_movements(security) if security
+  end
+
+  private
+    def account
+      onchain_wallet_account.current_account
+    end
+
+    def currency
+      onchain_wallet_account.currency.presence || account.currency
+    end
+
+    def quantity
+      onchain_wallet_account.quantity.to_d
+    end
+
+    def resolve_security
+      Onchain::SecurityResolver.resolve(
+        symbol: onchain_wallet_account.symbol,
+        name: onchain_wallet_account.name
+      )
+    end
+
+    # The asset's price in the account's currency on (or most recently before)
+    # a date, or nil when it isn't known. An asset with no price is tracked by
+    # quantity and valued at zero rather than guessed at.
+    def price_on(security, date)
+      price = security.prices.where(date: ..date).order(date: :desc).first
+      return nil if price.nil?
+
+      convert(price.price.to_d, from: price.currency, date: date)
+    end
+
+    # Prices come from the crypto provider quoted in USD, so at most one
+    # conversion stands between a price and the account currency.
+    def convert(amount, from:, date:)
+      return amount if from.to_s.upcase == currency.to_s.upcase
+
+      rate = ExchangeRate.find_or_fetch_rate(from: from, to: currency, date: date)
+      return nil if rate.nil?
+
+      amount * rate.rate.to_d
+    end
+
+    def import_holding(security, price, amount)
+      import_adapter.import_holding(
+        security: security,
+        quantity: quantity,
+        amount: amount,
+        currency: currency,
+        date: Date.current,
+        # Holdings must carry a price; an unpriced asset is worth zero rather
+        # than absent, so the quantity still shows up in the portfolio.
+        price: price || 0,
+        external_id: holding_external_id,
+        account_provider_id: onchain_wallet_account.account_provider&.id,
+        source: SOURCE
+      )
+    end
+
+    def update_balances(amount)
+      account.update!(balance: amount, cash_balance: 0, currency: currency)
+      onchain_wallet_account.update!(current_balance: amount)
+    end
+
+    # Movements become one of two things:
+    #   - a signed trade, when a price for that date is known, so cost basis and
+    #     the value chart reconstruct back to acquisition;
+    #   - otherwise a display-only, excluded entry with amount 0, so the transfer
+    #     is still visible and its raw payload preserved, without inventing a
+    #     value that would distort the account's history.
+    def materialize_movements(security)
+      movements.each do |movement|
+        date = parse_date(movement["date"])
+        next if date.nil?
+
+        amount = BigDecimal(movement["amount"].to_s)
+        next if amount.zero?
+
+        price = exact_price_on(security, date)
+
+        if price
+          import_trade(security, movement, date, amount, price)
+        else
+          import_display_only_entry(movement, date, amount)
+        end
+      end
+    end
+
+    def import_trade(security, movement, date, quantity, price)
+      import_adapter.import_trade(
+        security: security,
+        quantity: quantity,
+        price: price,
+        # Sure's convention for trades: money leaves the account on a buy.
+        amount: -(quantity * price).round(4),
+        currency: currency,
+        date: date,
+        external_id: movement_external_id(movement),
+        source: SOURCE,
+        activity_label: quantity.positive? ? "Buy" : "Sell"
+      )
+    end
+
+    def import_display_only_entry(movement, date, quantity)
+      # Built directly rather than through the import adapter: this entry exists
+      # only to be seen, so it must carry amount 0, excluded: true and the raw
+      # movement, none of which the shared transaction importer models.
+      entry = account.entries.find_or_initialize_by(
+        external_id: movement_external_id(movement),
+        source: SOURCE
+      ) { |new_entry| new_entry.entryable = Transaction.new }
+
+      return unless entry.entryable.is_a?(Transaction)
+
+      entry.assign_attributes(
+        date: date,
+        amount: 0,
+        currency: currency,
+        name: movement_name(quantity),
+        excluded: true
+      )
+      entry.entryable.extra = (entry.entryable.extra || {}).merge(SOURCE => movement)
+      entry.save!
+    end
+
+    def movement_name(quantity)
+      key = quantity.positive? ? "received" : "sent"
+
+      I18n.t(
+        "onchain_wallet_item.movement.#{key}",
+        quantity: quantity.abs.to_s("F"),
+        symbol: onchain_wallet_account.symbol
+      )
+    end
+
+    def movements
+      Array(onchain_wallet_account.raw_movements_payload&.dig("movements"))
+    end
+
+    # Trades need the price of that day, not the nearest one: valuing a
+    # two-year-old transfer at today's price would invent a cost basis.
+    def exact_price_on(security, date)
+      price = security.prices.find_by(date: date)
+      return nil if price.nil?
+
+      convert(price.price.to_d, from: price.currency, date: date)
+    end
+
+    def parse_date(value)
+      Date.parse(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    def holding_external_id
+      "onchain_#{onchain_wallet_account.id}"
+    end
+
+    def movement_external_id(movement)
+      "onchain_#{onchain_wallet_account.id}_#{movement["external_id"]}"
+    end
+
+    def import_adapter
+      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+    end
+end

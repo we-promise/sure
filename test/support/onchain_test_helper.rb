@@ -118,6 +118,14 @@ module OnchainTestHelper
     OnchainWalletItem.create!({ family: family, name: "Wallets" }.merge(attrs))
   end
 
+  # Links a tracked asset to a real Sure account, the way the linking flow does.
+  def link_onchain_wallet_account!(onchain_wallet_account)
+    account = Account.create_from_onchain_wallet_account(onchain_wallet_account)
+    onchain_wallet_account.ensure_account_provider!(account)
+    onchain_wallet_account.reload
+    account
+  end
+
   def create_onchain_wallet_account(item:, asset: nil, chain: FAKE_CHAIN, address: FAKE_ADDRESS, **attrs)
     asset ||= fake_native_asset
     item.onchain_wallet_accounts.create!({

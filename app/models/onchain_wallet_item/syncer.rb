@@ -1,0 +1,82 @@
+# frozen_string_literal: true
+
+# Reads every tracked address, then reprocesses only the rows whose on-chain
+# state actually changed. An idle wallet costs reads and nothing else: no
+# holdings, entries or balances are rewritten, and no account syncs are queued.
+class OnchainWalletItem::Syncer
+  include SyncStats::Collector
+
+  attr_reader :onchain_wallet_item
+
+  def initialize(onchain_wallet_item)
+    @onchain_wallet_item = onchain_wallet_item
+  end
+
+  def perform_sync(sync)
+    update_status(sync, I18n.t("onchain_wallet_item.syncer.reading_wallets"))
+    result = onchain_wallet_item.import_latest_onchain_data
+    onchain_wallet_item.update!(status: :good) if onchain_wallet_item.requires_update?
+
+    collect_setup_stats(sync, provider_accounts: onchain_wallet_item.onchain_wallet_accounts.to_a)
+
+    changed = linked_accounts.where(id: result[:changed_account_ids]).to_a
+    if changed.empty?
+      update_status(sync, I18n.t("onchain_wallet_item.syncer.no_changes"))
+      return
+    end
+
+    update_status(sync, I18n.t("onchain_wallet_item.syncer.processing_assets", count: changed.size))
+    onchain_wallet_item.process_accounts(changed)
+
+    update_status(sync, I18n.t("onchain_wallet_item.syncer.calculating_balances"))
+    account_ids = changed.filter_map { |onchain_account| onchain_account.current_account&.id }
+    onchain_wallet_item.schedule_account_syncs(
+      accounts: Account.where(id: account_ids),
+      parent_sync: sync,
+      window_start_date: sync.window_start_date,
+      window_end_date: sync.window_end_date
+    )
+
+    return if account_ids.empty?
+
+    collect_trades_stats(sync, account_ids: account_ids, source: OnchainWalletAccount::Processor::SOURCE)
+    collect_transaction_stats(sync, account_ids: account_ids, source: OnchainWalletAccount::Processor::SOURCE)
+  rescue StandardError => e
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "On-chain wallet sync failed: #{e.class}",
+      source: self.class.name,
+      provider_key: "onchain_wallet",
+      family: onchain_wallet_item.family,
+      metadata: { onchain_wallet_item_id: onchain_wallet_item.id, error: e.message }
+    )
+    mark_failed(sync, e.message)
+    raise
+  end
+
+  def perform_post_sync
+  end
+
+  private
+    def linked_accounts
+      onchain_wallet_item.onchain_wallet_accounts.linked.joins(:account).merge(Account.visible)
+    end
+
+    def update_status(sync, text)
+      sync.update!(status_text: text) if sync.respond_to?(:status_text)
+    end
+
+    def mark_failed(sync, error_message)
+      sync.start! if sync.respond_to?(:may_start?) && sync.may_start?
+
+      if sync.respond_to?(:may_fail?) && sync.may_fail?
+        sync.fail!
+      elsif sync.respond_to?(:status)
+        sync.update!(status: :failed)
+      end
+
+      sync.update!(error: error_message) if sync.respond_to?(:error)
+      sync.update!(status_text: error_message) if sync.respond_to?(:status_text)
+    end
+end
