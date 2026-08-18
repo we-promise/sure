@@ -67,6 +67,7 @@
         ) %>
       <% elsif !account.pending_deletion? %>
         <% permission = account.permission_for(Current.user) %>
+        <% can_manage_linked_onchain_account = Current.user&.admin? && account.linked_to?("OnchainWalletAccount") %>
         <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
           <% if permission.in?([ :owner, :full_control ]) %>
             <% menu.with_item(variant: "link", text: t("accounts.account.edit"), href: edit_account_path(account, return_to: return_to), icon: "pencil-line", data: { turbo_frame: :modal }) %>
@@ -92,7 +93,7 @@
             <% end %>
           <% end %>
 
-          <% if permission.in?([ :owner, :full_control ]) %>
+          <% if permission.in?([ :owner, :full_control ]) || can_manage_linked_onchain_account %>
             <% menu.with_item(variant: "divider") %>
 
             <% if account.active? %>
