@@ -18,6 +18,7 @@ class OnchainWalletAccount::Processor
     return unless account
 
     security = resolve_security
+    backfill_prices(security) if security
     price = security ? price_on(security, Date.current) : nil
     amount = price ? (quantity * price).round(4) : 0.to_d
 
@@ -44,6 +45,44 @@ class OnchainWalletAccount::Processor
         symbol: onchain_wallet_account.symbol,
         name: onchain_wallet_account.name
       )
+    end
+
+    # A brand-new Security has no price history, so on a first sync every
+    # movement would fall back to a display-only entry and the cost basis would
+    # never reconstruct. One batched provider call covers the whole window
+    # instead of one call per movement date. A no-op when no crypto price
+    # provider is enabled — the settings panel warns about that up front.
+    def backfill_prices(security)
+      return if security.price_data_provider.blank?
+
+      dates = movement_dates
+      missing = dates.reject { |date| priced_dates(security, dates).include?(date) }
+      return if missing.empty?
+
+      security.import_provider_prices(start_date: missing.min, end_date: Date.current)
+      security.prices.reload
+    rescue StandardError => e
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Could not backfill on-chain asset prices: #{e.class}",
+        source: self.class.name,
+        provider_key: "onchain_wallet",
+        family: onchain_wallet_account.onchain_wallet_item.family,
+        account: account,
+        metadata: { security_id: security.id, ticker: security.ticker, error: e.message }
+      )
+    end
+
+    # Today included, so a wallet whose movements all predate the sync window
+    # still gets a current valuation.
+    def movement_dates
+      dates = movements.filter_map { |movement| parse_date(movement["date"]) }
+      (dates + [ Date.current ]).uniq
+    end
+
+    def priced_dates(security, dates)
+      @priced_dates ||= security.prices.where(date: dates.min..dates.max).pluck(:date).to_set
     end
 
     # The asset's price in the account's currency on (or most recently before)

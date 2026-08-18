@@ -47,7 +47,7 @@ class Onchain::SecurityResolver
   def ticker_symbol
     return @ticker_symbol if defined?(@ticker_symbol)
 
-    candidate = symbol.to_s.strip.upcase
+    candidate = Onchain::AssetSymbol.canonical(symbol)
     @ticker_symbol = SYMBOL_PATTERN.match?(candidate) ? candidate : nil
   end
 

@@ -121,6 +121,45 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "backfills missing prices in one batched provider call so cost basis reconstructs" do
+    date = 5.days.ago.to_date
+    store_movements(fake_movement(external_id: "tx1", amount: "1", timestamp: date))
+    Security.any_instance.stubs(:price_data_provider).returns(Provider::BinancePublic.new)
+    Security.any_instance.expects(:import_provider_prices).with(start_date: date, end_date: Date.current).once.returns([ 0, nil ])
+
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+  end
+
+  test "does not backfill when every needed price is already known" do
+    date = 5.days.ago.to_date
+    price_asset_at(date, 50)
+    price_asset_at(Date.current, 60)
+    store_movements(fake_movement(external_id: "tx1", amount: "1", timestamp: date))
+    Security.any_instance.stubs(:price_data_provider).returns(Provider::BinancePublic.new)
+    Security.any_instance.expects(:import_provider_prices).never
+
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+  end
+
+  test "does not reach for prices at all when no crypto price provider is enabled" do
+    store_movements(fake_movement(external_id: "tx1", amount: "1", timestamp: 5.days.ago.to_date))
+    Security.any_instance.expects(:import_provider_prices).never
+
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    assert_equal 0, @account.reload.balance
+  end
+
+  test "a failing price provider does not stop the holding from being written" do
+    store_movements(fake_movement(external_id: "tx1", amount: "1", timestamp: 5.days.ago.to_date))
+    Security.any_instance.stubs(:price_data_provider).returns(Provider::BinancePublic.new)
+    Security.any_instance.stubs(:import_provider_prices).raises(StandardError, "provider down")
+
+    assert_difference [ "Holding.count", "DebugLogEntry.count" ], 1 do
+      OnchainWalletAccount::Processor.new(@onchain_account).process
+    end
+  end
+
   test "does nothing when the asset is not linked to an account" do
     unlinked = create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa"))
 
