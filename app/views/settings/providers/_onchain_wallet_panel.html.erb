@@ -72,13 +72,15 @@
           </div>
         <% end %>
 
-        <%= button_to onchain_wallet_item_path(item),
-                      method: :delete,
-                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                      data: { turbo_confirm: t("settings.providers.onchain_wallet_panel.disconnect_all_confirm") } do %>
-          <%= icon "trash-2", size: "sm" %>
-          <%= t("settings.providers.onchain_wallet_panel.disconnect_all") %>
-        <% end %>
+        <%= render DS::Button.new(
+              text: t("settings.providers.onchain_wallet_panel.disconnect_all"),
+              icon: "trash-2",
+              variant: :outline_destructive,
+              size: :sm,
+              href: onchain_wallet_item_path(item),
+              method: :delete,
+              confirm: t("settings.providers.onchain_wallet_panel.disconnect_all_confirm")
+            ) %>
       </div>
     <% end %>
   <% end %>

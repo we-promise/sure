@@ -49,14 +49,16 @@
                   </p>
                 </div>
 
-                <%= button_to disconnect_asset_onchain_wallet_item_path(@onchain_wallet_item),
-                              method: :delete,
-                              params: { onchain_wallet_account_id: onchain_account.id },
-                              class: "inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                              data: { turbo_confirm: t(".disconnect_asset_confirm", symbol: onchain_account.symbol) } do %>
-                  <%= icon "unlink", size: "sm" %>
-                  <%= t(".disconnect_asset") %>
-                <% end %>
+                <%= render DS::Button.new(
+                      text: t(".disconnect_asset"),
+                      icon: "unlink",
+                      variant: :outline_destructive,
+                      size: :sm,
+                      href: disconnect_asset_onchain_wallet_item_path(@onchain_wallet_item),
+                      method: :delete,
+                      params: { onchain_wallet_account_id: onchain_account.id },
+                      confirm: t(".disconnect_asset_confirm", symbol: onchain_account.symbol)
+                    ) %>
               </li>
             <% end %>
           </ul>
@@ -78,14 +80,16 @@
                   frame: :modal
                 ) %>
 
-            <%= button_to disconnect_wallet_onchain_wallet_item_path(@onchain_wallet_item),
-                          method: :delete,
-                          params: { chain: chain, address: address },
-                          class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                          data: { turbo_confirm: t(".disconnect_wallet_confirm") } do %>
-              <%= icon "trash-2", size: "sm" %>
-              <%= t(".disconnect_wallet") %>
-            <% end %>
+            <%= render DS::Button.new(
+                  text: t(".disconnect_wallet"),
+                  icon: "trash-2",
+                  variant: :outline_destructive,
+                  size: :sm,
+                  href: disconnect_wallet_onchain_wallet_item_path(@onchain_wallet_item),
+                  method: :delete,
+                  params: { chain: chain, address: address },
+                  confirm: t(".disconnect_wallet_confirm")
+                ) %>
           </div>
         </section>
       <% end %>

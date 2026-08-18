@@ -20,13 +20,15 @@
       </div>
 
       <div class="flex items-center gap-1 shrink-0">
-        <%= button_to sync_onchain_wallet_item_path(onchain_wallet_item),
-                      method: :post,
-                      class: "inline-flex items-center gap-1 px-2 py-1.5 text-sm text-secondary hover:text-primary rounded-lg",
-                      title: t("onchain_wallet_items.onchain_wallet_item.sync"),
-                      disabled: onchain_wallet_item.syncing? do %>
-          <%= icon "refresh-cw", size: "sm" %>
-        <% end %>
+        <%= render DS::Button.new(
+              variant: :icon,
+              size: :sm,
+              icon: "refresh-cw",
+              href: sync_onchain_wallet_item_path(onchain_wallet_item),
+              method: :post,
+              title: t("onchain_wallet_items.onchain_wallet_item.sync"),
+              disabled: onchain_wallet_item.syncing?
+            ) %>
       </div>
     </div>
   <% end %>

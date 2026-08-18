@@ -23,13 +23,15 @@
     <%# Self-hosted only: these are site-wide settings, so on a managed instance %>
     <%# it is the operator's call, not a family's. %>
     <% if missing.include?(:crypto_provider) && self_hosted? && Current.user.admin? %>
-      <%= button_to enable_crypto_prices_onchain_wallet_items_path,
-                    method: :post,
-                    class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-surface",
-                    form: { data: { turbo_frame: "_top" } } do %>
-        <%= icon "zap", size: "sm" %>
-        <%= t("onchain_wallet_items.price_provider_warning.enable") %>
-      <% end %>
+      <%= render DS::Button.new(
+            text: t("onchain_wallet_items.price_provider_warning.enable"),
+            icon: "zap",
+            variant: :outline,
+            size: :sm,
+            href: enable_crypto_prices_onchain_wallet_items_path,
+            method: :post,
+            frame: "_top"
+          ) %>
     <% end %>
 
     <%= link_to t("onchain_wallet_items.price_provider_warning.link"),
