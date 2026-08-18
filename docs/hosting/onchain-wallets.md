@@ -95,19 +95,25 @@ address, the cost is roughly:
 |---|---|
 | Bitcoin | 1 + up to 10 history pages |
 | EVM | 1 summary + up to 10 pages of transfers + up to 10 pages of token transfers |
-| Solana | ~2 + up to 250 transaction reads |
+| Solana | ~2 + up to 25 transaction reads |
 
-History is capped at 10 pages per source by default: 250 transactions for
-Bitcoin, 10 pages per EVM collection, 250 transactions for Solana. Wallets with
-more history than that keep their **current balance correct** — balances come
-from an address summary, never from history — but their oldest transfers are not
+History is capped by default at 10 pages per source — 250 transactions for
+Bitcoin, 10 pages per EVM collection — and at 25 transactions for Solana, which
+spends one request per transaction rather than per page. Wallets with more
+history than that keep their **current balance correct** — balances come from an
+address summary, never from history — but their oldest transfers are not
 imported.
 
-Raise the cap with `ONCHAIN_HISTORY_MAX_PAGES` (default 10, maximum 200). It
-applies to every source, and the request cost in the table above scales with it,
-so raise it if you run your own node or indexer rather than against a public
-endpoint. Note that Solana spends one request per transaction, so it is the most
-expensive place to raise.
+Raise both caps with `ONCHAIN_HISTORY_MAX_PAGES` (default 10, maximum 200); the
+Solana budget scales with it proportionally. The request cost in the table above
+scales too, so raise it if you run your own node or indexer rather than against a
+public endpoint.
+
+**History is best effort; balances are not.** If a source refuses or times out
+on the paginated history, the balances are still recorded and the history is
+marked incomplete, rather than the whole read failing. This matters on the free
+Solana endpoint, which routinely throttles `getTransaction`: without it a Solana
+wallet would show nothing at all instead of showing what it holds.
 
 When a cap is hit, the affected address says so in **Manage wallets**, and the
 event is recorded in **Settings → Debug logs** under the `onchain_wallet`
@@ -218,10 +224,14 @@ throttling you, or too slow to answer. Retry later, or point the relevant
 failure — a refused connection, a timeout, a TLS error — as opposed to the
 generic "something went wrong", which means a bug worth reporting.
 
-**Solana times out on a large wallet.** `getTokenAccountsByOwner` returns every
-token account in one response, and the public endpoint struggles with wallets
-holding thousands of them (a well-known one has ~2,800). Set `SOLANA_RPC_URL` to
-your own node or a paid endpoint for those.
+**Solana shows balances but no transfers.** The free endpoint throttles the
+history methods; balances are kept and the history is marked incomplete. Set
+`SOLANA_RPC_URL` to your own node or a paid endpoint to get the transfers.
+
+**Solana times out entirely on a very large wallet.** `getTokenAccountsByOwner`
+returns every token account in one response, and the public endpoint struggles
+with wallets holding thousands of them (a well-known one has ~2,800). Same fix:
+point `SOLANA_RPC_URL` at a real node.
 
 **A token I received is not showing up.** New assets are never imported
 automatically. Use **Review tokens** and tick it.

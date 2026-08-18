@@ -5,8 +5,27 @@ require "test_helper"
 class Onchain::HistoryBudgetTest < ActiveSupport::TestCase
   test "defaults to a depth a public endpoint can serve" do
     assert_equal Onchain::HistoryBudget::DEFAULT_PAGES, Onchain::HistoryBudget.pages
-    assert_equal Onchain::HistoryBudget::DEFAULT_PAGES * Onchain::HistoryBudget::PAGE_SIZE,
-                 Onchain::HistoryBudget.transactions
+    assert_equal Onchain::HistoryBudget::DEFAULT_TRANSACTIONS, Onchain::HistoryBudget.transactions
+  end
+
+  # One transaction is one request on a per-transaction source, so this budget
+  # must stay an order of magnitude below the page budget's row count or a sync
+  # takes minutes instead of seconds.
+  test "the per-transaction budget is far smaller than the paginated row count" do
+    assert_operator Onchain::HistoryBudget.transactions, :<,
+                    Onchain::HistoryBudget.pages * Onchain::HistoryBudget::PAGE_SIZE / 5
+  end
+
+  test "one knob scales both budgets" do
+    with_env("50") do
+      assert_equal 50, Onchain::HistoryBudget.pages
+      assert_equal 125, Onchain::HistoryBudget.transactions
+    end
+
+    with_env("1") do
+      assert_equal 1, Onchain::HistoryBudget.pages
+      assert_operator Onchain::HistoryBudget.transactions, :>=, 1
+    end
   end
 
   test "a self-hoster can raise it" do

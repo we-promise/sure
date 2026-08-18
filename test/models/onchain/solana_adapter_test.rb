@@ -40,6 +40,33 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
     assert_not @adapter.has_activity?(ADDRESS)
   end
 
+  test "a node that refuses history still yields the balances" do
+    stub_request(:post, Provider::SolanaRpc.url).to_return do |request|
+      method = JSON.parse(request.body)["method"]
+      # Balances answer; the history methods are throttled, as the free endpoint
+      # does in practice.
+      case method
+      when "getBalance"
+        { status: 200, body: { "result" => { "value" => 2_000_000_000 } }.to_json, headers: json_headers }
+      when "getTokenAccountsByOwner"
+        accounts = request.body.include?(Provider::SolanaRpc::TOKEN_PROGRAM_IDS.first) ?
+          [ token_account(mint: USDC_MINT, amount: "1000000", decimals: 6) ] : []
+        { status: 200, body: { "result" => { "value" => accounts } }.to_json, headers: json_headers }
+      else
+        { status: 429, body: "rate limited" }
+      end
+    end
+    stub_token_list([])
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    assert_equal BigDecimal("2"), snapshot.find_asset(kind: "native").quantity
+    assert_equal BigDecimal("1"), snapshot.find_asset(kind: "spl", contract: USDC_MINT).quantity
+    assert_empty snapshot.movements
+    # Reported as incomplete, not as a wallet that never moved.
+    assert snapshot.history_truncated?
+  end
+
   test "a timed-out node is reported as unreachable, not as an unexpected failure" do
     stub_request(:post, Provider::SolanaRpc.url).to_timeout
 

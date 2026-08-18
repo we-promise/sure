@@ -77,12 +77,12 @@ class Onchain::SolanaAdapter
       # lookups too — an airdrop dump would otherwise cost dozens of requests.
       load_mint_metadata(token_accounts.map { |account| account[:mint] })
 
-      movements = movements(address, token_accounts)
+      movements = best_effort_movements { movements(address, token_accounts) }
 
       Onchain::Snapshot.new(
         assets: [ native_asset(address), *token_assets(token_accounts) ],
-        movements: movements,
-        history_truncated: @history_truncated,
+        movements: movements || [],
+        history_truncated: movements.nil? || @history_truncated,
         assets_truncated: @assets_truncated
       )
     end

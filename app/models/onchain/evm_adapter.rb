@@ -49,12 +49,12 @@ class Onchain::EvmAdapter
 
     wrap_provider_errors do
       tokens = token_assets(address)
-      movements = movements(address)
+      movements = best_effort_movements { movements(address) }
 
       Onchain::Snapshot.new(
         assets: [ native_asset(address), *tokens ],
-        movements: movements,
-        history_truncated: history_backend.truncated,
+        movements: movements || [],
+        history_truncated: movements.nil? || history_backend.truncated,
         assets_truncated: @assets_truncated
       )
     end

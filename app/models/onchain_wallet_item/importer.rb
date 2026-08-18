@@ -86,7 +86,7 @@ class OnchainWalletItem::Importer
       return unless @truncation_reported.add?([ chain, address ])
 
       reasons = []
-      reasons << "older movements were not read" if snapshot.history_truncated?
+      reasons << "not every transfer was read" if snapshot.history_truncated?
       reasons << "not every token held is surfaced" if snapshot.assets_truncated?
 
       DebugLogEntry.capture(

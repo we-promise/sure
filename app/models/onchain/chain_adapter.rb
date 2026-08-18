@@ -39,6 +39,31 @@ module Onchain::ChainAdapter
     raise
   end
 
+  # Reads transfer history without letting its failure cost the balances.
+  #
+  # A balance is one bounded request and is what a wallet fundamentally is;
+  # history is paginated, an order of magnitude more expensive, and the first
+  # thing a throttled public endpoint refuses. Failing the whole snapshot over it
+  # means a wallet that could have been valued correctly shows nothing at all —
+  # on some free endpoints, permanently.
+  #
+  # Returns nil when the history could not be read, which the caller reports as
+  # an incomplete history rather than as an empty one. Anything that is not the
+  # data source failing still raises: a bug here must not be silently swallowed.
+  def best_effort_movements
+    yield
+  rescue Onchain::Chains::Error
+    raise
+  rescue StandardError => e
+    rate_limit_classes, base_classes = provider_error_classes
+    known = Array(rate_limit_classes).any? { |klass| e.is_a?(klass) } ||
+      Array(base_classes).any? { |klass| e.is_a?(klass) }
+    raise unless known
+
+    Rails.logger.warn("#{self.class.name} - history unavailable, keeping balances only: #{e.class}")
+    nil
+  end
+
   # Whether this address is worth tracking on this chain, answered with at most
   # ONE bounded request and never by reading paginated history. Only chains that
   # share an address format with other chains (every EVM network) need to

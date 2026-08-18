@@ -55,7 +55,7 @@ en:
       disconnect_wallet: Disconnect wallet
       disconnect_wallet_confirm: Stop tracking every asset at this address?
       history_note: Disconnecting keeps the accounts and their history; they simply stop updating.
-      history_truncated: This address has more transfer history than one sync reads. Balances are complete; the oldest transfers are missing.
+      history_truncated: Not every transfer for this address could be read — there is more history than one sync covers, or the explorer refused it. Balances are complete; some transfers are missing.
       native: Native
       no_wallets: No wallets are tracked yet.
       review_tokens: Review tokens

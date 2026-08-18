@@ -39,12 +39,12 @@ class Onchain::BitcoinAdapter
     wrap_provider_errors do
       summary = provider.get_address(address)
 
-      movements = movements_for(address)
+      movements = best_effort_movements { movements_for(address) }
 
       Onchain::Snapshot.new(
         assets: [ definition.native_asset(quantity: balance_from(summary)) ],
-        movements: movements,
-        history_truncated: provider.truncated
+        movements: movements || [],
+        history_truncated: movements.nil? || provider.truncated
       )
     end
   end

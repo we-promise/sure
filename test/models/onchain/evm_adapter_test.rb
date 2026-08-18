@@ -52,6 +52,20 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
     assert_not @adapter.has_activity?(ADDRESS)
   end
 
+  test "an explorer that refuses history still yields the balances" do
+    stub_summary(coin_balance: "1500000000000000000")
+    stub_token_balances([ erc20(contract: USDC, symbol: "USDC", value: "2500000") ])
+    stub_request(:get, "#{explorer_url}/api/v2/addresses/#{ADDRESS}/transactions").to_return(status: 429)
+    stub_token_transfers([])
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    assert_equal BigDecimal("1.5"), snapshot.find_asset(kind: "native").quantity
+    assert_equal BigDecimal("2.5"), snapshot.find_asset(kind: "erc20", contract: USDC).quantity
+    assert_empty snapshot.movements
+    assert snapshot.history_truncated?
+  end
+
   test "a timed-out explorer is reported as unreachable, not as an unexpected failure" do
     stub_request(:get, %r{#{explorer_url}}).to_timeout
 

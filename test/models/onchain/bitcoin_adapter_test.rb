@@ -128,6 +128,17 @@ class Onchain::BitcoinAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "an explorer that refuses history still yields the balance" do
+    stub_address(chain_stats: { "funded_txo_sum" => 100_000_000, "spent_txo_sum" => 0 })
+    stub_request(:get, "#{base_url}/address/#{BECH32}/txs").to_return(status: 429)
+
+    snapshot = @adapter.fetch_snapshot(BECH32)
+
+    assert_equal BigDecimal("1"), snapshot.assets.sole.quantity
+    assert_empty snapshot.movements
+    assert snapshot.history_truncated?
+  end
+
   test "a timed-out explorer is reported as unreachable, not as an unexpected failure" do
     stub_request(:get, "#{base_url}/address/#{BECH32}").to_timeout
 
