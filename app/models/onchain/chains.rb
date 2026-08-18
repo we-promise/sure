@@ -78,6 +78,8 @@ module Onchain
       { key: "gnosis",   symbol: "XDAI", name: "xDai",     explorer_url: "https://gnosis.blockscout.com" }
     ].freeze
 
+    SOLANA = "solana"
+
     BUILTIN = [
       Definition.new(
         key: BITCOIN,
@@ -98,7 +100,14 @@ module Onchain
             etherscan_chain_id: evm[:etherscan_chain_id]
           }.compact
         )
-      end
+      end,
+      Definition.new(
+        key: SOLANA,
+        native: NativeAsset.new(symbol: "SOL", name: "Solana", decimals: 9),
+        token_kind: "spl",
+        adapter_class_name: "Onchain::SolanaAdapter",
+        adapter_options: {}
+      )
     ].freeze
 
     class << self

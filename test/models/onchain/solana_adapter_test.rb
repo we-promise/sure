@@ -1,0 +1,192 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
+  ADDRESS = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+  TOKEN_ACCOUNT = "4Qk1Ai1cWJKQZ4pQ9sTLC1z3TBcvxRuHF6vRzGBNRUR2"
+  USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  UNKNOWN_MINT = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+
+  setup do
+    @adapter = Onchain::Chains.adapter_for(Onchain::Chains::SOLANA)
+  end
+
+  test "accepts a Base58 pubkey and rejects anything outside the character set" do
+    assert @adapter.valid_address?(ADDRESS)
+
+    [ "", "short", "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "#{ADDRESS[0..-2]}0" ].each do |address|
+      assert_not @adapter.valid_address?(address), "#{address.inspect} should be rejected"
+    end
+  end
+
+  test "fetch_snapshot refuses a malformed address before any request" do
+    assert_raises Onchain::Chains::Error do
+      @adapter.fetch_snapshot("nope")
+    end
+  end
+
+  test "activity is one request, and a node that rejects the key means not here" do
+    balance = stub_rpc("getBalance", { "value" => 2_000_000_000 })
+
+    assert @adapter.has_activity?(ADDRESS)
+    assert_requested balance, times: 1
+  end
+
+  test "an address the node rejects is not detected instead of raising" do
+    stub_request(:post, Provider::SolanaRpc.url)
+      .to_return(status: 200, body: { "error" => { "message" => "Invalid param: WrongSize" } }.to_json, headers: json_headers)
+
+    assert_not @adapter.has_activity?(ADDRESS)
+  end
+
+  test "SPL balances come from the wallet's token accounts, summed per mint" do
+    stub_snapshot(
+      lamports: 1_500_000_000,
+      token_accounts: [
+        token_account(mint: USDC_MINT, amount: "2000000", decimals: 6),
+        token_account(mint: USDC_MINT, amount: "500000", decimals: 6, pubkey: "second"),
+        token_account(mint: UNKNOWN_MINT, amount: "0", decimals: 9)
+      ]
+    )
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    native = snapshot.find_asset(kind: "native")
+    assert_equal "SOL", native.symbol
+    assert_equal BigDecimal("1.5"), native.quantity
+
+    usdc = snapshot.find_asset(kind: "spl", contract: USDC_MINT)
+    assert_equal "USDC", usdc.symbol
+    assert_equal BigDecimal("2.5"), usdc.quantity
+
+    # An emptied token account is left behind on Solana by design.
+    assert_nil snapshot.find_asset(kind: "spl", contract: UNKNOWN_MINT)
+  end
+
+  test "an unknown mint is labelled so it cannot be mistaken for a ticker" do
+    stub_snapshot(lamports: 0, token_accounts: [ token_account(mint: UNKNOWN_MINT, amount: "1000000000", decimals: 9) ])
+
+    asset = @adapter.fetch_snapshot(ADDRESS).find_asset(kind: "spl", contract: UNKNOWN_MINT)
+
+    assert_equal UNKNOWN_MINT, asset.contract
+    assert_nil Onchain::SecurityResolver.resolve(symbol: asset.symbol)
+  end
+
+  test "the snapshot has the same shape as the other chains" do
+    stub_snapshot(lamports: 1_000_000_000, token_accounts: [])
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    assert_instance_of Onchain::Snapshot, snapshot
+    assert snapshot.assets.all? { |asset| asset.is_a?(Onchain::Asset) }
+    assert snapshot.movements.all? { |movement| movement.is_a?(Onchain::Movement) }
+  end
+
+  test "movements come from pre/post balances, with fee-only changes dropped" do
+    stub_snapshot(
+      lamports: 1_000_000_000,
+      token_accounts: [ token_account(mint: USDC_MINT, amount: "1000000", decimals: 6) ],
+      signatures: [ { "signature" => "sig1", "blockTime" => Time.utc(2026, 2, 3).to_i } ],
+      transaction: {
+        "blockTime" => Time.utc(2026, 2, 3).to_i,
+        "meta" => {
+          "err" => nil,
+          "preBalances" => [ 1_000_000_000 ],
+          "postBalances" => [ 2_000_000_000 ],
+          "preTokenBalances" => [ { "owner" => ADDRESS, "mint" => USDC_MINT, "uiTokenAmount" => { "amount" => "0", "decimals" => 6 } } ],
+          "postTokenBalances" => [ { "owner" => ADDRESS, "mint" => USDC_MINT, "uiTokenAmount" => { "amount" => "1000000", "decimals" => 6 } } ]
+        },
+        "transaction" => { "message" => { "accountKeys" => [ { "pubkey" => ADDRESS } ] } }
+      }
+    )
+
+    movements = @adapter.fetch_snapshot(ADDRESS).movements
+
+    native = movements.find { |movement| movement.contract.nil? }
+    assert_equal "sig1", native.external_id
+    assert_equal BigDecimal("1"), native.amount
+    assert_equal Date.new(2026, 2, 3), native.date
+
+    token = movements.find { |movement| movement.contract == USDC_MINT }
+    assert_equal "sig1_#{USDC_MINT}", token.external_id
+    assert_equal BigDecimal("1"), token.amount
+  end
+
+  test "a failed transaction produces no movements" do
+    stub_snapshot(
+      lamports: 0,
+      token_accounts: [],
+      signatures: [ { "signature" => "sig1", "blockTime" => Time.utc(2026, 2, 3).to_i } ],
+      transaction: {
+        "meta" => { "err" => { "InstructionError" => [] }, "preBalances" => [ 0 ], "postBalances" => [ 5_000_000_000 ] },
+        "transaction" => { "message" => { "accountKeys" => [ { "pubkey" => ADDRESS } ] } }
+      }
+    )
+
+    assert_empty @adapter.fetch_snapshot(ADDRESS).movements
+  end
+
+  test "a fee-only balance change is not a transfer" do
+    stub_snapshot(
+      lamports: 0,
+      token_accounts: [],
+      signatures: [ { "signature" => "sig1", "blockTime" => Time.utc(2026, 2, 3).to_i } ],
+      transaction: {
+        "meta" => { "err" => nil, "preBalances" => [ 1_000_000_000 ], "postBalances" => [ 999_995_000 ] },
+        "transaction" => { "message" => { "accountKeys" => [ { "pubkey" => ADDRESS } ] } }
+      }
+    )
+
+    assert_empty @adapter.fetch_snapshot(ADDRESS).movements
+  end
+
+  private
+    def json_headers
+      { "Content-Type" => "application/json" }
+    end
+
+    def token_account(mint:, amount:, decimals:, pubkey: TOKEN_ACCOUNT)
+      {
+        "pubkey" => pubkey,
+        "account" => {
+          "data" => {
+            "parsed" => {
+              "info" => { "mint" => mint, "tokenAmount" => { "amount" => amount, "decimals" => decimals } }
+            }
+          }
+        }
+      }
+    end
+
+    # One stub per RPC method, dispatched on the JSON-RPC method name so a single
+    # endpoint can serve the whole snapshot.
+    def stub_snapshot(lamports:, token_accounts:, signatures: [], transaction: nil)
+      responses = {
+        "getBalance" => { "value" => lamports },
+        "getTokenAccountsByOwner" => { "value" => token_accounts },
+        "getSignaturesForAddress" => signatures,
+        "getTransaction" => transaction
+      }
+
+      stub_request(:post, Provider::SolanaRpc.url).to_return do |request|
+        payload = JSON.parse(request.body)
+        result = responses[payload["method"]]
+
+        # Both token programs are asked; only the original one holds these
+        # accounts, as it would on chain.
+        if payload["method"] == "getTokenAccountsByOwner" &&
+           payload.dig("params", 1, "programId") != Provider::SolanaRpc::TOKEN_PROGRAM_IDS.first
+          result = { "value" => [] }
+        end
+
+        { status: 200, body: { "jsonrpc" => "2.0", "id" => 1, "result" => result }.to_json, headers: json_headers }
+      end
+    end
+
+    def stub_rpc(method, result)
+      stub_request(:post, Provider::SolanaRpc.url)
+        .with(body: hash_including("method" => method))
+        .to_return(status: 200, body: { "result" => result }.to_json, headers: json_headers)
+    end
+end
