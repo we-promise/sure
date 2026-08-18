@@ -2,7 +2,13 @@
 en:
   onchain:
     chains:
+      arbitrum: Arbitrum
+      base: Base
       bitcoin: Bitcoin
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimism
+      polygon: Polygon
     institution_name: Self-custody wallets
   onchain_wallet_item:
     movement:

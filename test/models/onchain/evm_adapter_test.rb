@@ -1,0 +1,187 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class Onchain::EvmAdapterTest < ActiveSupport::TestCase
+  ADDRESS = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+  USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+
+  setup do
+    @adapter = Onchain::Chains.adapter_for(Onchain::Chains::ETHEREUM)
+  end
+
+  test "accepts a 0x address and rejects anything else without a network call" do
+    assert @adapter.valid_address?(ADDRESS)
+    assert @adapter.valid_address?(ADDRESS.downcase)
+
+    [ "", "0x123", "0xZZZa6BF26964aF9D7eEd9e03E53415D37aA96045", "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq" ].each do |address|
+      assert_not @adapter.valid_address?(address), "#{address.inspect} should be rejected"
+    end
+  end
+
+  test "the same address is valid on every EVM network, which is why detection exists" do
+    evm_chains = Onchain::Chains.matching(ADDRESS).map(&:key)
+
+    assert_includes evm_chains, Onchain::Chains::ETHEREUM
+    assert_operator evm_chains.size, :>, 1
+    assert_not_includes evm_chains, Onchain::Chains::BITCOIN
+  end
+
+  test "detection costs exactly one request per network" do
+    summary = stub_summary(coin_balance: "5000000000000000000")
+
+    assert @adapter.has_activity?(ADDRESS)
+    assert_requested summary, times: 1
+  end
+
+  test "a wallet holding only tokens with no native balance is still detected" do
+    stub_summary(coin_balance: "0", flags: { "has_tokens" => true })
+
+    assert @adapter.has_activity?(ADDRESS)
+  end
+
+  test "an empty address is not detected" do
+    stub_summary(coin_balance: "0")
+
+    assert_not @adapter.has_activity?(ADDRESS)
+  end
+
+  test "a failing explorer does not break the linking flow" do
+    stub_request(:get, summary_url).to_return(status: 500)
+
+    assert_not @adapter.has_activity?(ADDRESS)
+  end
+
+  test "a malformed address is not probed at all" do
+    assert_not @adapter.has_activity?("0x123")
+  end
+
+  test "fetch_snapshot refuses a malformed address before any request" do
+    assert_raises Onchain::Chains::Error do
+      @adapter.fetch_snapshot("0x123")
+    end
+  end
+
+  test "reads the native coin and ERC-20 balances, scaled by their decimals" do
+    stub_summary(coin_balance: "1500000000000000000")
+    stub_token_balances([
+      { "token" => { "address_hash" => USDC, "symbol" => "USDC", "name" => "USD Coin", "decimals" => "6" }, "value" => "2500000" },
+      { "token" => { "address_hash" => "0xdust", "symbol" => "DUST", "name" => "Dust", "decimals" => "18" }, "value" => "0" }
+    ])
+    stub_transactions([])
+    stub_token_transfers([])
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    native = snapshot.find_asset(kind: "native")
+    assert_equal "ETH", native.symbol
+    assert_equal BigDecimal("1.5"), native.quantity
+
+    token = snapshot.find_asset(kind: "erc20", contract: USDC)
+    assert_equal "USDC", token.symbol
+    assert_equal 6, token.decimals
+    assert_equal BigDecimal("2.5"), token.quantity
+
+    # Zero-balance tokens are dropped: real wallets are full of spam dust.
+    assert_equal 2, snapshot.assets.size
+  end
+
+  test "the native asset is reported even when the wallet is empty" do
+    stub_summary(coin_balance: "0")
+    stub_token_balances([])
+    stub_transactions([])
+    stub_token_transfers([])
+
+    assert_equal 0, @adapter.fetch_snapshot(ADDRESS).find_asset(kind: "native").quantity
+  end
+
+  test "movements are signed by direction and carry the token contract" do
+    stub_summary(coin_balance: "0")
+    stub_token_balances([])
+    stub_transactions([
+      { "hash" => "0xin", "from" => { "hash" => "0xother" }, "to" => { "hash" => ADDRESS.downcase }, "value" => "2000000000000000000", "timestamp" => "2026-01-02T00:00:00.000000Z" },
+      { "hash" => "0xout", "from" => { "hash" => ADDRESS.downcase }, "to" => { "hash" => "0xother" }, "value" => "1000000000000000000", "timestamp" => "2026-01-03T00:00:00.000000Z" },
+      { "hash" => "0xself", "from" => { "hash" => ADDRESS.downcase }, "to" => { "hash" => ADDRESS.downcase }, "value" => "5", "timestamp" => "2026-01-04T00:00:00.000000Z" }
+    ])
+    stub_token_transfers([
+      {
+        "transaction_hash" => "0xtoken",
+        "from" => { "hash" => "0xother" },
+        "to" => { "hash" => ADDRESS.downcase },
+        "timestamp" => "2026-01-05T00:00:00.000000Z",
+        "token" => { "address_hash" => USDC, "symbol" => "USDC", "decimals" => "6" },
+        "total" => { "value" => "1500000", "decimals" => "6" }
+      }
+    ])
+
+    movements = @adapter.fetch_snapshot(ADDRESS).movements
+
+    assert_equal [ "0xin", "0xout", "0xtoken_#{USDC}" ], movements.map(&:external_id)
+    assert_equal BigDecimal("2"), movements[0].amount
+    assert_equal BigDecimal("-1"), movements[1].amount
+    assert_nil movements[0].contract
+    assert_equal BigDecimal("1.5"), movements[2].amount
+    assert_equal USDC, movements[2].contract_key
+    assert_equal Date.new(2026, 1, 5), movements[2].date
+  end
+
+  test "the keyless backend is used unless the family configured a key" do
+    assert_instance_of Provider::Blockscout, @adapter.backend
+
+    keyed = Onchain::Chains.adapter_for(Onchain::Chains::ETHEREUM, credentials: { etherscan_api_key: "key" })
+    assert_instance_of Provider::Etherscan, keyed.backend
+  end
+
+  test "an Etherscan key is ignored on networks the registry does not enable it for" do
+    polygon = Onchain::Chains.adapter_for("polygon", credentials: { etherscan_api_key: "key" })
+
+    assert_instance_of Provider::Blockscout, polygon.backend
+  end
+
+  test "each network reads its own explorer" do
+    ethereum = Onchain::Chains.adapter_for(Onchain::Chains::ETHEREUM)
+    base = Onchain::Chains.adapter_for("base")
+
+    assert_not_equal ethereum.explorer_url, base.explorer_url
+  end
+
+  private
+    def summary_url
+      "#{explorer_url}/api/v2/addresses/#{ADDRESS}"
+    end
+
+    def explorer_url
+      @adapter.explorer_url
+    end
+
+    def stub_summary(coin_balance:, flags: {})
+      stub_request(:get, summary_url).to_return(
+        status: 200,
+        body: { "coin_balance" => coin_balance }.merge(flags).to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+    end
+
+    # Blockscout returns this collection as a bare array rather than a paginated
+    # envelope, unlike the transfer endpoints below.
+    def stub_token_balances(items)
+      stub_request(:get, "#{explorer_url}/api/v2/addresses/#{ADDRESS}/token-balances?type=ERC-20")
+        .to_return(status: 200, body: items.to_json, headers: { "Content-Type" => "application/json" })
+    end
+
+    def stub_transactions(items)
+      stub_items("#{explorer_url}/api/v2/addresses/#{ADDRESS}/transactions", items)
+    end
+
+    def stub_token_transfers(items)
+      stub_items("#{explorer_url}/api/v2/addresses/#{ADDRESS}/token-transfers?type=ERC-20", items)
+    end
+
+    def stub_items(url, items)
+      stub_request(:get, url).to_return(
+        status: 200,
+        body: { "items" => items, "next_page_params" => nil }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+    end
+end

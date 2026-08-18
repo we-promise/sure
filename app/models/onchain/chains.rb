@@ -64,6 +64,20 @@ module Onchain
 
     BITCOIN = "bitcoin"
 
+    ETHEREUM = "ethereum"
+
+    # Every EVM network shares one adapter; what makes them different is data.
+    # `etherscan_chain_id` is set only where a family-supplied Etherscan key is
+    # accepted, which today is Ethereum alone.
+    EVM = [
+      { key: ETHEREUM, symbol: "ETH",  name: "Ethereum", explorer_url: "https://eth.blockscout.com",      etherscan_chain_id: "1" },
+      { key: "base",     symbol: "ETH",  name: "Ethereum", explorer_url: "https://base.blockscout.com" },
+      { key: "arbitrum", symbol: "ETH",  name: "Ethereum", explorer_url: "https://arbitrum.blockscout.com" },
+      { key: "optimism", symbol: "ETH",  name: "Ethereum", explorer_url: "https://optimism.blockscout.com" },
+      { key: "polygon",  symbol: "POL",  name: "Polygon",  explorer_url: "https://polygon.blockscout.com" },
+      { key: "gnosis",   symbol: "XDAI", name: "xDai",     explorer_url: "https://gnosis.blockscout.com" }
+    ].freeze
+
     BUILTIN = [
       Definition.new(
         key: BITCOIN,
@@ -71,7 +85,20 @@ module Onchain
         token_kind: nil,
         adapter_class_name: "Onchain::BitcoinAdapter",
         adapter_options: {}
-      )
+      ),
+      *EVM.map do |evm|
+        Definition.new(
+          key: evm[:key],
+          native: NativeAsset.new(symbol: evm[:symbol], name: evm[:name], decimals: 18),
+          token_kind: "erc20",
+          adapter_class_name: "Onchain::EvmAdapter",
+          adapter_options: {
+            chain: evm[:key],
+            explorer_url: evm[:explorer_url],
+            etherscan_chain_id: evm[:etherscan_chain_id]
+          }.compact
+        )
+      end
     ].freeze
 
     class << self
