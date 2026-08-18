@@ -9,6 +9,13 @@ class OpenBankingIoItemsControllerTest < ActionDispatch::IntegrationTest
     @family = families(:dylan_family)
   end
 
+  def create_item(name: "OBIO Test")
+    OpenBankingIoItem.create!(
+      family: @family, name: name,
+      api_base_url: "https://open-banking.io", api_key: "k", private_key: "p"
+    )
+  end
+
   def credentials_json(overrides = {})
     {
       "apiBaseUrl" => "https://staging.open-banking.io",
@@ -166,5 +173,184 @@ class OpenBankingIoItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to settings_providers_path
     assert_not item.reload.scheduled_for_deletion
+  end
+
+  # === AUTHORIZATION ===
+
+  test "every mutating action requires an admin" do
+    sign_in users(:family_member)
+    item = create_item
+
+    post open_banking_io_items_url, params: { open_banking_io_item: { credentials_json: credentials_json } }
+    assert_response :redirect
+
+    patch open_banking_io_item_url(item), params: { open_banking_io_item: { name: "Renamed" } }
+    assert_response :redirect
+
+    post sync_open_banking_io_item_url(item)
+    assert_response :redirect
+
+    get setup_accounts_open_banking_io_item_url(item)
+    assert_response :redirect
+
+    post link_accounts_open_banking_io_items_url, params: { open_banking_io_item_id: item.id }
+    assert_response :redirect
+
+    delete open_banking_io_item_url(item)
+    assert_response :redirect
+
+    assert OpenBankingIoItem.exists?(item.id), "a non-admin must not be able to delete a connection"
+    assert_equal "OBIO Test", item.reload.name
+  end
+
+  # === CROSS-FAMILY ISOLATION ===
+
+  test "cannot reach another family's connection" do
+    other_item = OpenBankingIoItem.create!(
+      family: families(:empty), name: "Someone else's bank",
+      api_base_url: "https://open-banking.io", api_key: "k", private_key: "p"
+    )
+
+    get select_accounts_open_banking_io_items_url(open_banking_io_item_id: other_item.id)
+    assert_response :not_found
+
+    post link_accounts_open_banking_io_items_url,
+         params: { open_banking_io_item_id: other_item.id, account_ids: [ "x" ] }
+    assert_response :not_found
+  end
+
+  test "cannot link another family's account" do
+    item = create_item
+    provider_account = item.open_banking_io_accounts.create!(
+      account_id: "acc-1", name: "Everyday", currency: "EUR"
+    )
+    other_account = families(:empty).accounts.create!(
+      name: "Not mine", balance: 1, currency: "EUR", accountable: Depository.new
+    )
+
+    post link_existing_account_open_banking_io_items_url, params: {
+      open_banking_io_item_id: item.id,
+      account_id: other_account.id,
+      open_banking_io_account_id: provider_account.id
+    }
+
+    assert_response :not_found
+    assert_nil provider_account.reload.account_provider
+  end
+
+  # === LINKING FLOW ===
+
+  test "link_accounts creates one account per selection and links it" do
+    item = create_item
+    first = item.open_banking_io_accounts.create!(account_id: "a1", name: "Everyday", currency: "EUR", current_balance: 250)
+    second = item.open_banking_io_accounts.create!(account_id: "a2", name: "Savings", currency: "EUR", current_balance: 900)
+
+    assert_difference "Account.count", 2 do
+      post link_accounts_open_banking_io_items_url, params: {
+        open_banking_io_item_id: item.id,
+        accountable_type: "Depository",
+        account_ids: [ first.id, second.id ]
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal 250, first.reload.account.balance
+    assert_equal "Savings", second.reload.account.name
+  end
+
+  test "link_accounts stores a credit card balance as a positive magnitude" do
+    item = create_item
+    card = item.open_banking_io_accounts.create!(account_id: "c1", name: "Card", currency: "EUR", current_balance: -430)
+
+    post link_accounts_open_banking_io_items_url, params: {
+      open_banking_io_item_id: item.id, accountable_type: "CreditCard", account_ids: [ card.id ]
+    }
+
+    assert_equal 430, card.reload.account.balance
+  end
+
+  test "link_accounts rejects an unsupported accountable type" do
+    item = create_item
+    provider_account = item.open_banking_io_accounts.create!(account_id: "a1", name: "Everyday", currency: "EUR")
+
+    assert_no_difference "Account.count" do
+      post link_accounts_open_banking_io_items_url, params: {
+        open_banking_io_item_id: item.id, accountable_type: "Crypto", account_ids: [ provider_account.id ]
+      }
+    end
+
+    assert_redirected_to new_account_path
+  end
+
+  test "link_accounts skips a provider account that is already linked" do
+    item = create_item
+    provider_account = item.open_banking_io_accounts.create!(account_id: "a1", name: "Everyday", currency: "EUR")
+    existing = @family.accounts.create!(name: "Already", balance: 5, currency: "EUR", accountable: Depository.new)
+    AccountProvider.create!(account: existing, provider: provider_account)
+
+    assert_no_difference "Account.count" do
+      post link_accounts_open_banking_io_items_url, params: {
+        open_banking_io_item_id: item.id, accountable_type: "Depository", account_ids: [ provider_account.id ]
+      }
+    end
+  end
+
+  test "link_existing_account flashes rather than 404ing on a stale provider account id" do
+    item = create_item
+    account = @family.accounts.create!(name: "Mine", balance: 1, currency: "EUR", accountable: Depository.new)
+
+    post link_existing_account_open_banking_io_items_url, params: {
+      open_banking_io_item_id: item.id,
+      account_id: account.id,
+      open_banking_io_account_id: SecureRandom.uuid
+    }
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("open_banking_io_items.link_existing_account.open_banking_io_account_not_found"), flash[:alert]
+  end
+
+  test "sync tells the user when the connection is already syncing" do
+    item = create_item
+    OpenBankingIoItem.any_instance.stubs(:syncing?).returns(true)
+
+    post sync_open_banking_io_item_url(item)
+
+    assert_equal I18n.t("open_banking_io_items.sync.already_syncing"), flash[:alert]
+  end
+
+  # === OPEN REDIRECT GUARD ===
+  # 27 lines of security-critical string parsing that had no test at all.
+
+  test "return_to only accepts a relative path that resolves to a real route" do
+    item = create_item
+    provider_account = item.open_banking_io_accounts.create!(account_id: "a1", name: "Everyday", currency: "EUR")
+
+    hostile = [
+      "//evil.com",
+      "/\\evil.com",
+      "%2f%2fevil.com",
+      "%5c%5cevil.com",
+      "https://evil.com",
+      "http://evil.com/accounts",
+      "/accounts\\@evil.com",
+      "/accounts\u0000",
+      "not-a-path"
+    ]
+
+    hostile.each_with_index do |return_to, i|
+      obio = item.open_banking_io_accounts.create!(account_id: "hostile-#{i}", name: "A#{i}", currency: "EUR")
+      post link_accounts_open_banking_io_items_url, params: {
+        open_banking_io_item_id: item.id, accountable_type: "Depository",
+        account_ids: [ obio.id ], return_to: return_to
+      }
+      assert_redirected_to accounts_path, "return_to #{return_to.inspect} must not be honoured"
+    end
+
+    # ...and a genuine in-app path still is.
+    post link_accounts_open_banking_io_items_url, params: {
+      open_banking_io_item_id: item.id, accountable_type: "Depository",
+      account_ids: [ provider_account.id ], return_to: "/accounts"
+    }
+    assert_redirected_to "/accounts"
   end
 end
