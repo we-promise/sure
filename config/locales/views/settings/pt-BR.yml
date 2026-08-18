@@ -193,3 +193,8 @@ pt-BR:
       enable_banking_panel:
         callback_url_instruction: "Para a URL de retorno de chamada, use %{callback_url}."
         connection_error: Erro de conexão
+
+      open_banking_io_panel:
+        step_1_html: "Acesse %{link}, conecte seu banco e exporte suas credenciais."
+        step_2: "Abra o arquivo credentials.json baixado."
+        step_3: "Cole todo o conteúdo abaixo, salve e depois vincule suas contas sincronizadas."

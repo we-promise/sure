@@ -41,6 +41,14 @@ class OpenBankingIoItem < ApplicationRecord
   # in force. Overridden here rather than in Encryptable because ~30 models share that
   # concern and flipping it globally is a data migration -- whereas these tables are new,
   # so getting it right costs nothing today and would cost a migration later.
+  #
+  # Known trade-off, stated plainly: these two models now have a different encryption
+  # policy from every other model on the concern, and support_unencrypted_data is off with
+  # no `previous:` keys configured. So a change to the derived key -- rotating
+  # SECRET_KEY_BASE, or setting ACTIVE_RECORD_ENCRYPTION_* as config/initializers/
+  # encryption_warning.rb recommends -- makes existing rows undecryptable. There is no
+  # in-app re-key; the connection must be deleted and the credentials re-pasted, which
+  # #destroy_later below is careful to keep possible.
   def self.encryption_ready?
     ActiveRecordEncryptionConfig.ready?
   end
@@ -74,6 +82,14 @@ class OpenBankingIoItem < ApplicationRecord
 
   def destroy_later
     update!(scheduled_for_deletion: true)
+    DestroyJob.perform_later(self)
+  rescue ActiveRecord::Encryption::Errors::Base
+    # If the encryption key changed under us, every encrypted column on this row is
+    # unreadable -- including on the way to writing an unrelated one. Without this the
+    # delete button 500s and the only way out is the console. Skip straight to deletion:
+    # the row's credentials are unrecoverable anyway, which is exactly why it is being
+    # removed. update_column bypasses the model (and therefore the encryption).
+    update_column(:scheduled_for_deletion, true)
     DestroyJob.perform_later(self)
   end
 

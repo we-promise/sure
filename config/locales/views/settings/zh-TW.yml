@@ -396,6 +396,7 @@ zh-TW:
       sync_provider_in_progress: 同步已開始。
       recently_synced: 剛剛才同步過，請稍候再試。
       taglines:
+        open_banking_io: "透過 open-banking.io 同步歐洲銀行帳戶。"
         akahu: 透過 Akahu 同步紐西蘭的金融機構。
         simplefin: 透過開放的 SimpleFIN 協定連結美國銀行帳戶。
         lunchflow: 連結來自 40 多個國家（英國、歐盟、美國等）的 2 萬多家銀行！
@@ -532,6 +533,10 @@ zh-TW:
         step_1_html: 前往 %{link} 並建立一個個人應用程式。
         step_2: 複製您的 app token 與 user token。
         step_3: 將 Token 貼到下方並儲存，然後連結您已同步的帳戶。
+      open_banking_io_panel:
+        step_1_html: "前往 %{link}，連接您的銀行並匯出憑證。"
+        step_2: "開啟下載的 credentials.json 檔案。"
+        step_3: "將其全部內容貼到下方，儲存後再連結已同步的帳戶。"
       up_panel:
         step_1_html: 前往 %{link} 並產生 Personal Access Token。
         step_2: 複製您的 Personal Access Token。

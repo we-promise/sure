@@ -267,4 +267,23 @@ class OpenBankingIoAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert @account.entries.exists?(external_id: "open_banking_io_NOSTATUS"),
            "booked history must never be pruned as though it were pending"
   end
+
+  # With the corrected classifier most banks never produce a pending row, so "payload
+  # present, zero pendings in it" is the normal case -- it must not destroy a recent
+  # pending that simply has not auto-claimed yet.
+  test "a fetch with no pending rows does not destroy a recent pending entry" do
+    @importer.send(:store_transactions, @provider_account, transactions: [ pending_txn(id: "P") ])
+    process
+    assert @account.entries.exists?(external_id: "open_banking_io_P")
+
+    booked_only = {
+      "id" => "B", "status" => "BOOK", "credit_debit_indicator" => "DBIT",
+      "amount" => "5.00", "booking_date" => Date.current.to_s
+    }
+    @provider_account.update!(raw_transactions_payload: [ booked_only ])
+    process
+
+    assert @account.entries.exists?(external_id: "open_banking_io_P"),
+           "a recent pending must survive a booked-only fetch"
+  end
 end

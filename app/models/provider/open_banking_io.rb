@@ -166,10 +166,10 @@ class Provider::OpenBankingIo
     # which turns "corrupt transport" into a short envelope that fails much later as an
     # opaque GCM error -- so decode strictly.
     #
-    # ASCII whitespace is stripped first rather than rejected: Convert.FromBase64String
-    # ignores it and the browser's atob runs WHATWG forgiving-base64, which strips it. A
-    # reader whose job is byte-for-byte agreement must not refuse input the other two
-    # readers accept.
+    # ASCII whitespace is stripped first rather than rejected, so this reader never refuses
+    # input the other two accept. The set stripped is WHATWG's (what atob tolerates);
+    # Convert.FromBase64String tolerates all of it except form feed. Accepting the union is
+    # the safe side of a one-sided divergence.
     def decode_base64(value, label)
       Base64.strict_decode64(value.to_s.gsub(/[\t\n\f\r ]/, ""))
     rescue ArgumentError
@@ -440,22 +440,26 @@ class Provider::OpenBankingIo
           instructed_amount: parse_decimal_nullable(d["instructedAmount"]),
           instructed_currency: d["instructedCurrency"],
           balance_after_transaction: parse_decimal_nullable(d["balanceAfter"]),
-          balance_after_computed: d["balanceAfterComputed"] == "true",
+          balance_after_computed: ActiveModel::Type::Boolean.new.cast(d["balanceAfterComputed"]) || false,
           balance_after_currency: d["balanceAfterCurrency"]
         )
       end
 
+      # nil in -> nil out, so a missing amount reaches OpenBankingIoEntry::Processor's guard
+      # and skips the row rather than importing it as 0.00.
+      #
+      # The rescue is load-bearing: `value` is decrypted envelope content, and BigDecimal's
+      # own ArgumentError quotes it verbatim. with_error_handling keeps e.message, which
+      # lands in syncs.error, DebugLogEntry.metadata and Sentry -- none of them encrypted.
       def parse_decimal(value)
-        return BigDecimal(0) if value.nil? || value == ""
-
-        BigDecimal(value.to_s)
-      end
-
-      def parse_decimal_nullable(value)
         return nil if value.nil? || value == ""
 
         BigDecimal(value.to_s)
+      rescue ArgumentError, TypeError
+        raise Error.new("open-banking.io returned an unparseable decimal (#{value.class})", :invalid_response)
       end
+
+      alias_method :parse_decimal_nullable, :parse_decimal
 
       # -- HTTP ----------------------------------------------------------------
 
@@ -552,7 +556,7 @@ class Provider::OpenBankingIo
 
           # Jitter so a family's accounts do not all resume in lockstep and re-trip the
           # per-API-key window.
-          return error.retry_after + (error.retry_after * rand * 0.25)
+          return [ error.retry_after + (error.retry_after * rand * 0.25), MAX_RETRY_DELAY ].min
         end
 
         base = INITIAL_RETRY_DELAY * (2**(attempt - 1))
