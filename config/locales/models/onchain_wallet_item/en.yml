@@ -1,6 +1,8 @@
 ---
 en:
   onchain:
+    chains:
+      bitcoin: Bitcoin
     institution_name: Self-custody wallets
   onchain_wallet_item:
     movement:

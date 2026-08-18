@@ -62,7 +62,17 @@ module Onchain
       end
     end
 
-    BUILTIN = [].freeze
+    BITCOIN = "bitcoin"
+
+    BUILTIN = [
+      Definition.new(
+        key: BITCOIN,
+        native: NativeAsset.new(symbol: "BTC", name: "Bitcoin", decimals: 8),
+        token_kind: nil,
+        adapter_class_name: "Onchain::BitcoinAdapter",
+        adapter_options: {}
+      )
+    ].freeze
 
     class << self
       def all
