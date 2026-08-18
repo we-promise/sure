@@ -350,7 +350,10 @@ class OpenBankingIoItem::Importer
       # A stored pending row must stay inside the window: fall out of it and the row is
       # stripped from storage and its entry pruned, even though the pre-auth is still live.
       # EU hotel/car-hire/fuel holds routinely outlive a 7-day window.
-      lookback = stored.any? { |tx| tx.is_a?(Hash) && OpenBankingIoEntry::Processor.pending?(tx) } ? 30.days : 7.days
+      # Must cover the prune's retention window: anything the prune still protects has to
+      # stay inside the fetch, or it is stripped from storage and destroyed as "gone".
+      has_pending = stored.any? { |tx| tx.is_a?(Hash) && OpenBankingIoEntry::Processor.pending?(tx) }
+      lookback = has_pending ? OpenBankingIoAccount::Transactions::Processor::MAX_PENDING_AGE : 7.days
       open_banking_io_item.last_synced_at.to_date - lookback
     end
 

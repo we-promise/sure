@@ -2468,6 +2468,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_18_060353) do
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oidc_identities", "users"
   add_foreign_key "open_banking_io_accounts", "open_banking_io_items"
+  add_foreign_key "open_banking_io_items", "families"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "questrade_accounts", "questrade_items"
