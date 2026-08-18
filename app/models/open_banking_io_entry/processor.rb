@@ -9,8 +9,18 @@ class OpenBankingIoEntry::Processor
   DEBIT_INDICATOR = "DBIT".freeze
   CREDIT_INDICATOR = "CRDT".freeze
   VALID_INDICATORS = [ DEBIT_INDICATOR, CREDIT_INDICATOR ].freeze
-  # ISO 20022 entry status. Anything other than BOOK (booked) is treated as pending.
+  # ISO 20022 entry status, mirroring the service's own vocabulary
+  # (BankingSyncService.NonBookedStatuses / PendingStatuses).
+  #
+  # Unknown MUST mean booked, never pending. BOOK and OTHR are both booked upstream, and a
+  # bank that does not stamp status at all (PayPal DE, Belfius BE, BPER Banca) sends none --
+  # treating those as pending made every transaction eligible for the stale-pending prune,
+  # which destroys the entry and every user edit attached to it.
   BOOKED_STATUS = "BOOK".freeze
+  PENDING_STATUSES = %w[PDNG PENDING HOLD].freeze
+  # Cancelled and rejected entries are money that never moved; scheduled ones have not
+  # happened yet. None of them belong in the ledger.
+  SKIPPED_STATUSES = %w[CNCL RJCT SCHD].freeze
 
   def self.canonical_external_id(open_banking_io_transaction)
     data = open_banking_io_transaction.with_indifferent_access
@@ -42,8 +52,18 @@ class OpenBankingIoEntry::Processor
   end
 
   def self.pending?(open_banking_io_transaction)
-    data = open_banking_io_transaction.with_indifferent_access
-    data[:status].to_s.upcase != BOOKED_STATUS
+    PENDING_STATUSES.include?(normalized_status(open_banking_io_transaction))
+  end
+
+  # Entries that must not be imported at all. The service filters non-booked rows out before
+  # persistence (CollectBookedAsync), so in practice the API only returns BOOK/OTHR/none --
+  # but classify defensively in case that ever changes.
+  def self.skip?(open_banking_io_transaction)
+    SKIPPED_STATUSES.include?(normalized_status(open_banking_io_transaction))
+  end
+
+  def self.normalized_status(open_banking_io_transaction)
+    open_banking_io_transaction.with_indifferent_access[:status].to_s.strip.upcase
   end
 
   def initialize(open_banking_io_transaction, open_banking_io_account:)
