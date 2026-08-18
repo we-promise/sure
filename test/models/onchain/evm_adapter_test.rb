@@ -65,8 +65,8 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
   test "reads the native coin and ERC-20 balances, scaled by their decimals" do
     stub_summary(coin_balance: "1500000000000000000")
     stub_token_balances([
-      { "token" => { "address_hash" => USDC, "symbol" => "USDC", "name" => "USD Coin", "decimals" => "6" }, "value" => "2500000" },
-      { "token" => { "address_hash" => "0xdust", "symbol" => "DUST", "name" => "Dust", "decimals" => "18" }, "value" => "0" }
+      erc20(contract: USDC, symbol: "USDC", name: "USD Coin", value: "2500000"),
+      erc20(contract: "0xdust", symbol: "DUST", value: "0", decimals: "18")
     ])
     stub_transactions([])
     stub_token_transfers([])
@@ -84,6 +84,36 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
 
     # Zero-balance tokens are dropped: real wallets are full of spam dust.
     assert_equal 2, snapshot.assets.size
+  end
+
+  test "token balances are asked for without a type filter, which the API rejects" do
+    stub_summary(coin_balance: "0")
+    request = stub_token_balances([])
+    stub_transactions([])
+    stub_token_transfers([])
+
+    @adapter.fetch_snapshot(ADDRESS)
+
+    # Passing ?type=ERC-20 here is a 422: the filter exists on token-transfers,
+    # not on token-balances.
+    assert_requested request, times: 1
+    assert_requested :get, "#{explorer_url}/api/v2/addresses/#{ADDRESS}/token-balances", query: {}
+  end
+
+  test "only ERC-20 rows become assets, so an NFT is not read as one token" do
+    stub_summary(coin_balance: "0")
+    stub_token_balances([
+      erc20(contract: USDC, symbol: "USDC", value: "1000000"),
+      { "token" => { "address_hash" => "0xnft", "symbol" => "PUNK", "name" => "Punk", "decimals" => nil, "type" => "ERC-721" }, "value" => "1", "token_id" => "42" },
+      { "token" => { "address_hash" => "0xmulti", "symbol" => "MULTI", "name" => "Multi", "decimals" => nil, "type" => "ERC-1155" }, "value" => "3" }
+    ])
+    stub_transactions([])
+    stub_token_transfers([])
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    assert_equal [ USDC ], snapshot.assets.filter_map(&:contract_key)
+    assert_nil snapshot.find_asset(kind: "erc20", contract: "0xnft")
   end
 
   test "the native asset is reported even when the wallet is empty" do
@@ -144,9 +174,7 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
   test "with a key configured, balances still come from the indexer and history from Etherscan" do
     keyed = Onchain::Chains.adapter_for(Onchain::Chains::ETHEREUM, credentials: { etherscan_api_key: "key" })
     stub_summary(coin_balance: "3000000000000000000")
-    stub_token_balances([
-      { "token" => { "address_hash" => USDC, "symbol" => "USDC", "name" => "USD Coin", "decimals" => "6" }, "value" => "7000000" }
-    ])
+    stub_token_balances([ erc20(contract: USDC, symbol: "USDC", name: "USD Coin", value: "7000000") ])
     etherscan_history = stub_etherscan_history
 
     snapshot = keyed.fetch_snapshot(ADDRESS)
@@ -192,10 +220,21 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
     end
 
     # Blockscout returns this collection as a bare array rather than a paginated
-    # envelope, unlike the transfer endpoints below.
+    # envelope, unlike the transfer endpoints below, and it rejects a `type`
+    # filter outright — hence the bare path.
     def stub_token_balances(items)
-      stub_request(:get, "#{explorer_url}/api/v2/addresses/#{ADDRESS}/token-balances?type=ERC-20")
+      stub_request(:get, "#{explorer_url}/api/v2/addresses/#{ADDRESS}/token-balances")
         .to_return(status: 200, body: items.to_json, headers: { "Content-Type" => "application/json" })
+    end
+
+    def erc20(contract:, symbol:, value:, decimals: "6", name: nil, market_cap: nil)
+      {
+        "token" => {
+          "address_hash" => contract, "symbol" => symbol, "name" => name || symbol,
+          "decimals" => decimals, "type" => "ERC-20", "circulating_market_cap" => market_cap
+        },
+        "value" => value
+      }
     end
 
     def stub_transactions(items)

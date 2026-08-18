@@ -21,6 +21,8 @@ class Provider::Blockscout
   # touching transfer history.
   ACTIVITY_FLAGS = %w[has_tokens has_token_transfers has_logs].freeze
 
+  ERC20_TYPE = "ERC-20"
+
   DEFAULT_MAX_PAGES = 10
   MIN_REQUEST_INTERVAL = 0.2
   MAX_RETRIES = 3
@@ -53,9 +55,15 @@ class Provider::Blockscout
     summary.is_a?(Hash) ? summary["coin_balance"].to_s : "0"
   end
 
+  # This endpoint takes no `type` filter — passing one is a 422 — and it answers
+  # with every token standard the address holds, so ERC-20 has to be selected
+  # here. An ERC-721 or ERC-1155 row would otherwise be read as a fungible
+  # balance, turning one NFT into "1 token".
   def token_balances(address)
-    paginate("/api/v2/addresses/#{encode(address)}/token-balances?type=ERC-20").filter_map do |entry|
+    paginate("/api/v2/addresses/#{encode(address)}/token-balances").filter_map do |entry|
       token = entry["token"].to_h
+      next unless token["type"].to_s == ERC20_TYPE
+
       contract = contract_of(token)
       next if contract.blank?
 
@@ -64,7 +72,10 @@ class Provider::Blockscout
         symbol: token["symbol"],
         name: token["name"],
         decimals: token["decimals"].to_i,
-        raw_amount: entry["value"].to_s
+        raw_amount: entry["value"].to_s,
+        # Blockscout's own market signal, used only to decide which tokens are
+        # worth surfacing first when an address holds thousands of them.
+        market_cap: token["circulating_market_cap"].to_s.presence&.to_d
       }
     end
   end
