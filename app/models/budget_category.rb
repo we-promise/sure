@@ -1,7 +1,7 @@
 class BudgetCategory < ApplicationRecord
   include Monetizable
 
-  belongs_to :budget
+  belongs_to :budget, inverse_of: :budget_categories
   belongs_to :category
 
   validates :budget_id, uniqueness: { scope: :category_id }
@@ -15,10 +15,16 @@ class BudgetCategory < ApplicationRecord
     delegate :name, :color, to: :category
 
     def self.for(budget_categories)
-      top_level_categories = budget_categories.select { |budget_category| budget_category.category.parent_id.nil? }
-      top_level_categories.map do |top_level_category|
-        subcategories = budget_categories.select { |bc| bc.category.parent_id == top_level_category.category_id && top_level_category.category_id.present? }
-        new(top_level_category, subcategories.sort_by { |subcategory| subcategory.category.name })
+      by_parent_id = budget_categories.group_by { |budget_category| budget_category.category.parent_id }
+
+      Array(by_parent_id[nil]).map do |top_level_budget_category|
+        subcategories = if top_level_budget_category.category_id.present?
+          Array(by_parent_id[top_level_budget_category.category_id])
+        else
+          []
+        end
+
+        new(top_level_budget_category, subcategories.sort_by { |subcategory| subcategory.category.name })
       end.sort_by { |group| group.category.name }
     end
 
@@ -231,12 +237,11 @@ class BudgetCategory < ApplicationRecord
   end
 
   def subcategories
-    return BudgetCategory.none unless category.parent_id.nil?
-    return BudgetCategory.none if category.id.nil?
+    return [] unless category.parent_id.nil?
+    return [] if category.id.nil?
 
-    budget.budget_categories
-      .joins(:category)
-      .where(categories: { parent_id: category.id })
+    # Avoid repeated per-parent queries (Skylight N+1)
+    budget.budget_subcategories_for(category.id)
   end
 
   private

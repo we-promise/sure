@@ -7,6 +7,20 @@ class BalanceSheetTest < ActiveSupport::TestCase
     @family = families(:empty)
   end
 
+  def count_sql_queries
+    count = 0
+    subscriber = lambda do |_name, _started, _finished, _unique_id, payload|
+      sql = payload[:sql]
+      next if payload[:name] == "SCHEMA"
+      next if sql.match?(/\A(?:BEGIN|COMMIT|SAVEPOINT|RELEASE|ROLLBACK)\b/i)
+
+      count += 1
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { yield }
+    count
+  end
+
   test "calculates total assets" do
     assert_equal 0, BalanceSheet.new(@family).assets.total
 
@@ -140,6 +154,20 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 2, liability_groups.size
     assert_equal 1000 + 2000, liability_groups.find { |ag| ag.name == CreditCard.display_name }.total
     assert_equal 3000 + 5000, liability_groups.find { |ag| ag.name == OtherLiability.display_name }.total
+  end
+
+  test "preloads accountables for sidebar rendering" do
+    family = families(:dylan_family)
+    user = users(:family_admin)
+    balance_sheet = family.balance_sheet(user: user)
+
+    liability_groups = balance_sheet.liabilities.account_groups
+    account_rows = liability_groups.flat_map(&:accounts)
+
+    assert account_rows.any? { |row| row.accountable_type == "Loan" }
+
+    queries = count_sql_queries { account_rows.each { |row| row.accountable&.class } }
+    assert_equal 0, queries
   end
 
   private
