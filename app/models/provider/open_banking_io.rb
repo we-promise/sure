@@ -595,9 +595,9 @@ class Provider::OpenBankingIo
 
   # Refresh a single account. Raises upstream if it has no active session, so
   # best-effort callers should rescue.
-  def sync(account_id)
+  def sync(account_id, from_date: nil)
     with_error_handling("sync") do
-      @client.sync(account_id)
+      @client.sync(account_id, from_date: format_date(from_date))
     end
   end
 
