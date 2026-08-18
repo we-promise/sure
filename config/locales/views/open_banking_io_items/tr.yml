@@ -4,7 +4,6 @@ tr:
     open_banking_io:
       name: open-banking.io
       description: open-banking.io ile Avrupa banka hesaplarını bağlayın
-  family:
   open_banking_io_account:
     fallback: open-banking.io hesabı
   open_banking_io_entry:

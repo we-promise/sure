@@ -4,7 +4,6 @@ nl:
     open_banking_io:
       name: open-banking.io
       description: Koppel Europese bankrekeningen via open-banking.io
-  family:
   open_banking_io_account:
     fallback: open-banking.io-rekening
   open_banking_io_entry:

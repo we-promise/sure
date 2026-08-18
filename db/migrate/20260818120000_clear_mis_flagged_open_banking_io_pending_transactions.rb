@@ -9,20 +9,31 @@ class ClearMisFlaggedOpenBankingIoPendingTransactions < ActiveRecord::Migration[
   # them, but the existing stamps stay until they are cleared here.
   PENDING_STATUSES = %w[PDNG PENDING HOLD].freeze
 
+  # Batched so the largest table in the schema is not held under one exclusive lock for the
+  # length of a full seq scan. Each statement commits on its own.
+  disable_ddl_transaction!
+
+  BATCH_SIZE = 5_000
+
   def up
     quoted = PENDING_STATUSES.map { |s| connection.quote(s) }.join(", ")
 
-    execute <<~SQL.squish
-      UPDATE transactions
-      SET extra = jsonb_set(
-        extra,
-        '{open_banking_io,pending}',
-        'false'::jsonb,
-        false
-      )
-      WHERE extra -> 'open_banking_io' ->> 'pending' = 'true'
-        AND COALESCE(UPPER(TRIM(extra -> 'open_banking_io' ->> 'status')), '') NOT IN (#{quoted})
-    SQL
+    loop do
+      updated = execute(<<~SQL.squish).cmd_tuples
+        UPDATE transactions
+        SET extra = jsonb_set(extra, '{open_banking_io,pending}', 'false'::jsonb, false)
+        WHERE id IN (
+          SELECT id FROM transactions
+          WHERE extra -> 'open_banking_io' ->> 'pending' = 'true'
+            AND COALESCE(UPPER(TRIM(extra -> 'open_banking_io' ->> 'status')), '') NOT IN (#{quoted})
+          LIMIT #{BATCH_SIZE}
+        )
+      SQL
+
+      break if updated.zero?
+
+      say "Cleared #{updated} mis-flagged open-banking.io pending transactions", true
+    end
   end
 
   def down

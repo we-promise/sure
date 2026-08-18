@@ -4,7 +4,6 @@ zh-TW:
     open_banking_io:
       name: open-banking.io
       description: 透過 open-banking.io 連結歐洲銀行帳戶
-  family:
   open_banking_io_account:
     fallback: open-banking.io 帳戶
   open_banking_io_entry:

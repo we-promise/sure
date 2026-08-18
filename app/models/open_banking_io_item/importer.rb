@@ -9,9 +9,11 @@ class OpenBankingIoItem::Importer
   def initialize(open_banking_io_item, open_banking_io_provider:)
     @open_banking_io_item = open_banking_io_item
     @open_banking_io_provider = open_banking_io_provider
+    @connection_needs_attention = false
   end
 
   def import
+    @connection_needs_attention = false
     Rails.logger.info "OpenBankingIoItem::Importer - Starting import for item #{open_banking_io_item.id}"
 
     trigger_upstream_sync
@@ -52,6 +54,7 @@ class OpenBankingIoItem::Importer
   # discovery step -- including its index_by preload and a wrapping transaction -- so the
   # controller does not need its own copy that saves once per account.
   def refresh_accounts_only
+    @connection_needs_attention = false
     accounts_data = fetch_accounts_data
     raise Provider::OpenBankingIo::Error.new(I18n.t("open_banking_io_item.errors.accounts_fetch_failed"), :fetch_failed) unless accounts_data
 
@@ -74,6 +77,11 @@ class OpenBankingIoItem::Importer
       result = open_banking_io_provider.sync_all
       report_upstream_sync_failures(result)
       result
+    rescue Provider::OpenBankingIo::Error => e
+      mark_requires_update! if e.error_type.in?(REQUIRES_UPDATE_ERRORS)
+      Rails.logger.error "OpenBankingIoItem::Importer - Upstream sync failed (continuing with cached data): #{e.error_type}"
+      capture_sync_error("Failed to trigger upstream open-banking.io sync", e, error_type: e.error_type)
+      nil
     rescue => e
       Rails.logger.error "OpenBankingIoItem::Importer - Upstream sync failed (continuing with cached data): #{e.class}"
       capture_sync_error("Failed to trigger upstream open-banking.io sync", e)
