@@ -4,33 +4,27 @@ export default class extends Controller {
   static targets = ["input", "fileName", "uploadArea", "uploadText"];
 
   connect() {
+    this._fileSelected = this.fileSelected.bind(this);
+    this._formSubmitting = this.formSubmitting.bind(this);
+
     if (this.hasInputTarget) {
-      this.inputTarget.addEventListener("change", this.fileSelected.bind(this));
+      this.inputTarget.addEventListener("change", this._fileSelected);
     }
 
     // Find the form element
     this.form = this.element.closest("form");
     if (this.form) {
-      this.form.addEventListener(
-        "turbo:submit-start",
-        this.formSubmitting.bind(this),
-      );
+      this.form.addEventListener("turbo:submit-start", this._formSubmitting);
     }
   }
 
   disconnect() {
     if (this.hasInputTarget) {
-      this.inputTarget.removeEventListener(
-        "change",
-        this.fileSelected.bind(this),
-      );
+      this.inputTarget.removeEventListener("change", this._fileSelected);
     }
 
     if (this.form) {
-      this.form.removeEventListener(
-        "turbo:submit-start",
-        this.formSubmitting.bind(this),
-      );
+      this.form.removeEventListener("turbo:submit-start", this._formSubmitting);
     }
   }
 

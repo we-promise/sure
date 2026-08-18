@@ -81,11 +81,11 @@ export default class extends Controller {
         const originalText = button.innerHTML;
         button.innerHTML =
           '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!';
-        button.classList.add("text-green-600");
+        button.classList.add("text-success");
 
         setTimeout(() => {
           button.innerHTML = originalText;
-          button.classList.remove("text-green-600");
+          button.classList.remove("text-success");
         }, 2000);
       })
       .catch((err) => {
@@ -107,7 +107,7 @@ export default class extends Controller {
         : `${issuer}/.well-known/openid-configuration`;
 
       // Show loading state
-      issuerInput.classList.add("border-yellow-300");
+      issuerInput.classList.add("border-warning");
 
       const response = await fetch(discoveryUrl, {
         method: "GET",
@@ -119,22 +119,18 @@ export default class extends Controller {
         if (data.issuer) {
           if (data.issuer === issuer) {
             issuerInput.classList.remove(
-              "border-yellow-300",
-              "border-red-300",
-              "border-amber-300",
+              "border-warning",
+              "border-destructive",
             );
-            issuerInput.classList.add("border-green-300");
+            issuerInput.classList.add("border-success");
             this.showValidationMessage(
               issuerInput,
               "Valid OIDC issuer",
               "success",
             );
           } else {
-            issuerInput.classList.remove(
-              "border-yellow-300",
-              "border-green-300",
-            );
-            issuerInput.classList.add("border-amber-300");
+            issuerInput.classList.remove("border-warning", "border-success");
+            issuerInput.classList.add("border-warning");
 
             const trailingSlashOnly =
               data.issuer.replace(/\/$/, "") === issuer.replace(/\/$/, "");
@@ -152,8 +148,8 @@ export default class extends Controller {
       }
     } catch (error) {
       // CORS errors are expected when validating from browser - show as warning not error
-      issuerInput.classList.remove("border-yellow-300", "border-green-300");
-      issuerInput.classList.add("border-amber-300");
+      issuerInput.classList.remove("border-warning", "border-success");
+      issuerInput.classList.add("border-warning");
       this.showValidationMessage(
         issuerInput,
         "Could not validate from browser (CORS). Provider can still be saved.",
@@ -179,11 +175,11 @@ export default class extends Controller {
         const originalText = button.innerHTML;
         button.innerHTML =
           '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!';
-        button.classList.add("text-green-600");
+        button.classList.add("text-success");
 
         setTimeout(() => {
           button.innerHTML = originalText;
-          button.classList.remove("text-green-600");
+          button.classList.remove("text-success");
         }, 2000);
       })
       .catch((err) => {
@@ -205,10 +201,10 @@ export default class extends Controller {
     const messageEl = document.createElement("p");
     const colorClass =
       type === "success"
-        ? "text-green-600"
+        ? "text-success"
         : type === "warning"
-          ? "text-amber-600"
-          : "text-red-600";
+          ? "text-warning"
+          : "text-destructive";
     messageEl.className = `validation-message mt-1 text-sm ${colorClass}`;
     messageEl.textContent = message;
 
@@ -219,9 +215,9 @@ export default class extends Controller {
       setTimeout(() => {
         messageEl.remove();
         input.classList.remove(
-          "border-green-300",
-          "border-red-300",
-          "border-amber-300",
+          "border-success",
+          "border-destructive",
+          "border-warning",
         );
       }, 5000);
     }
@@ -254,10 +250,10 @@ export default class extends Controller {
 
       if (data.success) {
         resultEl.textContent = `✓ ${data.message}`;
-        resultEl.classList.add("text-green-600");
+        resultEl.classList.add("text-success");
       } else {
         resultEl.textContent = `✗ ${data.message}`;
-        resultEl.classList.add("text-red-600");
+        resultEl.classList.add("text-destructive");
       }
 
       // Show details in console for debugging
@@ -266,7 +262,7 @@ export default class extends Controller {
       }
     } catch (error) {
       resultEl.textContent = `✗ Request failed: ${error.message}`;
-      resultEl.classList.add("text-red-600");
+      resultEl.classList.add("text-destructive");
     } finally {
       button.disabled = false;
       button.textContent = "Test Connection";

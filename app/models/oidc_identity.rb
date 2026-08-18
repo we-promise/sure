@@ -111,8 +111,9 @@ class OidcIdentity < ApplicationRecord
     return true if issuer.blank? # Backward compatibility for old records
 
     config = provider_config
-    return true if config.blank? || config[:issuer].blank? # No config to validate against
+    config_issuer = config&.dig(:issuer) || config&.dig("issuer")
+    return true if config_issuer.blank? # No config to validate against
 
-    issuer == config[:issuer]
+    issuer == config_issuer
   end
 end

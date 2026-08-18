@@ -102,10 +102,10 @@ module Admin
         changes << :password if @user.saved_change_to_password_digest?
 
         success_key = case changes
-                      when [:role, :password] then ".success_role_and_password"
-                      when [:password]        then ".success_password"
-                      else                         ".success_role"
-                      end
+        when [ :role, :password ] then ".success_role_and_password"
+        when [ :password ]        then ".success_password"
+        else                           ".success_role"
+        end
 
         Rails.logger.info(
           "[Admin::Users] User details changed (#{changes.join(', ')}) - " \
@@ -117,7 +117,6 @@ module Admin
         redirect_to admin_users_path, notice: t(success_key)
       else
         redirect_to admin_users_path, alert: @user.errors.full_messages.to_sentence.presence || t(".failure")
-        return
       end
     rescue ActiveRecord::RecordInvalid => e
       redirect_to admin_users_path, alert: e.record.errors.full_messages.to_sentence

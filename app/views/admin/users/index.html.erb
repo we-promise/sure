@@ -115,14 +115,18 @@
                               <%= render DS::Pill.new(label: t(".roles.#{user.role}", default: user.role.humanize), tone: user.super_admin? ? :success : :neutral) %>
                               <% if user.oidc_identities.any? %>
                                 <% sso_providers = user.oidc_identities.map { |i| (i.provider_config&.dig(:label) || i.provider_config&.dig("label")).presence || i.provider.titleize }.uniq.join(", ") %>
-                                <% provider_tooltip = t(".auth_types.sso_provider_tooltip", providers: sso_providers, default: "SSO Provider: #{sso_providers}") %>
+                                <% provider_tooltip = t(".auth_types.sso_provider_tooltip", providers: sso_providers) %>
                                 <% if user.sso_only? %>
-                                  <%= render DS::Pill.new(label: t(".auth_types.sso", default: "SSO"), tone: :info, title: provider_tooltip) %>
+                                  <%= render DS::Tooltip.new(text: provider_tooltip, as: :span) do %>
+                                    <%= render DS::Pill.new(label: t(".auth_types.sso"), tone: :info) %>
+                                  <% end %>
                                 <% else %>
-                                  <%= render DS::Pill.new(label: t(".auth_types.local_and_sso", default: "Local + SSO"), tone: :info, title: provider_tooltip) %>
+                                  <%= render DS::Tooltip.new(text: provider_tooltip, as: :span) do %>
+                                    <%= render DS::Pill.new(label: t(".auth_types.local_and_sso"), tone: :info) %>
+                                  <% end %>
                                 <% end %>
                               <% else %>
-                                <%= render DS::Pill.new(label: t(".auth_types.local", default: "Local"), tone: :neutral) %>
+                                <%= render DS::Pill.new(label: t(".auth_types.local"), tone: :neutral) %>
                               <% end %>
                             </div>
                             <p class="text-sm text-secondary"><%= user.email %></p>
@@ -136,7 +140,7 @@
                         <%= number_with_delimiter(@sessions_count_by_user[user.id] || 0) %>
                       </td>
                       <td class="px-4 py-3 text-right whitespace-nowrap">
-                        <%= render DS::Popover.new(variant: :icon, icon: "ellipsis-vertical", placement: "bottom-end", aria_label: t(".actions.manage_user", default: "Manage user")) do |popover| %>
+                        <%= render DS::Popover.new(variant: :icon, icon: "ellipsis-vertical", placement: "bottom-end", aria_label: t(".actions.manage_user")) do |popover| %>
                           <% popover.with_custom_content do %>
                             <% is_last_super_admin = user.super_admin? && User.where(role: :super_admin).where.not(id: user.id).none? %>
                             <div class="p-4 w-80 space-y-4 text-left whitespace-normal">

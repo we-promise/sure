@@ -49,9 +49,10 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
 
   test "index renders auth type pills for local and sso users" do
     solo_family = Family.create!(name: "SSO Test Family")
+    sso_email = "unique-sso-user-#{SecureRandom.hex(4)}@example.com"
     sso_user = User.create!(
       family: solo_family,
-      email: "unique-sso-user-#{SecureRandom.hex(4)}@example.com",
+      email: sso_email,
       first_name: "SSO",
       last_name: "User",
       skip_password_validation: true,
@@ -65,9 +66,18 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
 
     get admin_users_url
     assert_response :success
-    assert_match(/SSO/, response.body)
-    assert_match(/SSO Provider: /, response.body)
-    assert_match(/Local/, response.body)
+
+    # Locate each user's row and verify auth-type pills are scoped correctly
+    doc = Nokogiri::HTML(response.body)
+    sso_row = doc.at_css("tr:has(p:contains('#{sso_email}'))")
+    assert sso_row, "Expected a table row for SSO user #{sso_email}"
+    assert_match(/SSO/, sso_row.text)
+    assert_match(/SSO Provider: /, sso_row.text)
+
+    local_email = users(:family_admin).email
+    local_row = doc.at_css("tr:has(p:contains('#{local_email}'))")
+    assert local_row, "Expected a table row for local user #{local_email}"
+    assert_match(/Local/, local_row.text)
   end
 
   test "index exposes delete and family controls for super admins" do

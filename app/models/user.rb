@@ -245,7 +245,7 @@ class User < ApplicationRecord
 
   def cannot_demote_last_super_admin
     if User.where(role: :super_admin).where.not(id: id).none?
-      errors.add(:role, :cannot_demote_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error", default: "cannot demote the last super admin in the system"))
+      errors.add(:role, :cannot_demote_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
     end
   end
 
@@ -264,7 +264,7 @@ class User < ApplicationRecord
 
       next_default_account_id = account_ids.include?(default_account_id) ? default_account_id : nil
       update!(family: new_family, role: role, default_account_id: next_default_account_id)
-      Account.where(id: account_ids).find_each(&:auto_share_with_family!)
+      Account.where(id: account_ids).find_each { |a| a.auto_share_with_family! } if new_family.share_all_by_default?
       new_family.auto_share_existing_accounts_with(self)
     end
   end

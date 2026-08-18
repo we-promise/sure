@@ -7,6 +7,7 @@ export default class extends Controller {
 
   touchTimeout = null;
   activeTooltip = null;
+  tooltipTimeout = null;
   documentClickHandler = null;
 
   connect() {
@@ -17,6 +18,11 @@ export default class extends Controller {
   disconnect() {
     if (this.documentClickHandler) {
       document.removeEventListener("click", this.documentClickHandler);
+    }
+
+    if (this.tooltipTimeout) {
+      clearTimeout(this.tooltipTimeout);
+      this.tooltipTimeout = null;
     }
   }
 
@@ -87,11 +93,16 @@ export default class extends Controller {
 
     this.hideAllTooltipsExcept(tooltip);
 
+    if (this.tooltipTimeout) {
+      clearTimeout(this.tooltipTimeout);
+      this.tooltipTimeout = null;
+    }
+
     if (tooltip.classList.contains("hidden")) {
       tooltip.classList.remove("hidden");
       this.activeTooltip = tooltip;
 
-      setTimeout(() => {
+      this.tooltipTimeout = setTimeout(() => {
         if (tooltip === this.activeTooltip) {
           tooltip.classList.add("hidden");
           this.activeTooltip = null;
@@ -111,7 +122,11 @@ export default class extends Controller {
       tooltip.classList.remove("hidden");
       this.activeTooltip = tooltip;
 
-      setTimeout(() => {
+      if (this.tooltipTimeout) {
+        clearTimeout(this.tooltipTimeout);
+      }
+
+      this.tooltipTimeout = setTimeout(() => {
         if (tooltip === this.activeTooltip) {
           tooltip.classList.add("hidden");
           this.activeTooltip = null;
@@ -127,6 +142,11 @@ export default class extends Controller {
         tooltip.classList.add("hidden");
       });
     this.activeTooltip = null;
+
+    if (this.tooltipTimeout) {
+      clearTimeout(this.tooltipTimeout);
+      this.tooltipTimeout = null;
+    }
   }
 
   hideAllTooltipsExcept(tooltipToKeep) {

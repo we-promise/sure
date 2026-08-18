@@ -9,7 +9,6 @@ export default class extends Controller {
     "remainingContainer",
     "error",
     "submitButton",
-    "nameInput",
   ];
   static values = { total: Number, currency: String };
 
@@ -58,7 +57,7 @@ export default class extends Controller {
         const placeholderText = uncategorizedOption
           ? uncategorizedOption.dataset.filterName
           : "(uncategorized)";
-        button.innerHTML = placeholderText;
+        button.textContent = placeholderText;
         button.setAttribute("aria-expanded", "false");
       }
 
@@ -163,11 +162,11 @@ export default class extends Controller {
       this.remainingTarget.classList.remove("text-destructive");
       this.remainingTarget.classList.add("text-success");
       container.classList.remove("border-destructive", "bg-red-tint-10");
-      container.classList.add("border-green-200", "bg-green-tint-10");
+      container.classList.add("border-success/20", "bg-green-tint-10");
     } else {
       this.remainingTarget.classList.remove("text-success");
       this.remainingTarget.classList.add("text-destructive");
-      container.classList.remove("border-green-200", "bg-green-tint-10");
+      container.classList.remove("border-success/20", "bg-green-tint-10");
       container.classList.add("border-destructive", "bg-red-tint-10");
     }
 

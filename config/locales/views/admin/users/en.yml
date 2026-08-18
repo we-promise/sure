@@ -45,6 +45,7 @@ en:
           family: "Family"
           group: "Group"
         actions:
+          manage_user: "Manage user"
           update: "Update user"
           delete_user: "Delete user"
           self_edit_warning: "Changing your own role will modify your administrative privileges."
