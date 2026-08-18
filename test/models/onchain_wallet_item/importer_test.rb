@@ -101,6 +101,71 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     )
   end
 
+  test "a truncated history is recorded on the row and reported once per address" do
+    account = create_onchain_wallet_account(item: @item)
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ fake_native_asset ], movements: [], history_truncated: true)
+    )
+
+    assert_difference "DebugLogEntry.count", 1 do
+      OnchainWalletItem::Importer.new(@item).import
+    end
+
+    assert account.reload.history_truncated?
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "onchain_wallet", entry.provider_key
+    assert_equal OnchainTestHelper::FAKE_ADDRESS, entry.metadata["address"]
+  end
+
+  test "one report per address even when several assets are tracked there" do
+    create_onchain_wallet_account(item: @item)
+    create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa"))
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(
+        assets: [ fake_native_asset, fake_token_asset(contract: "0xaaa") ],
+        movements: [],
+        history_truncated: true
+      )
+    )
+
+    assert_difference "DebugLogEntry.count", 1 do
+      OnchainWalletItem::Importer.new(@item).import
+    end
+  end
+
+  test "an idle wallet with deep history is not reported again on every sync" do
+    create_onchain_wallet_account(item: @item)
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ fake_native_asset ], movements: [], history_truncated: true)
+    )
+    OnchainWalletItem::Importer.new(@item).import
+
+    assert_no_difference "DebugLogEntry.count" do
+      OnchainWalletItem::Importer.new(@item).import
+    end
+  end
+
+  test "a complete history clears the truncation flag" do
+    account = create_onchain_wallet_account(item: @item)
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ fake_native_asset(quantity: 1) ], movements: [], history_truncated: true)
+    )
+    OnchainWalletItem::Importer.new(@item).import
+    assert account.reload.history_truncated?
+
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ fake_native_asset(quantity: 2) ], movements: [], history_truncated: false)
+    )
+    OnchainWalletItem::Importer.new(@item).import
+
+    assert_not account.reload.history_truncated?
+  end
+
   test "movements before the connection start date are ignored" do
     account = create_onchain_wallet_account(item: @item)
     @item.update!(sync_start_date: 2.days.ago.to_date)

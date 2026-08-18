@@ -18,7 +18,7 @@ class Provider::Etherscan
 
   BASE_URL = "https://api.etherscan.io/v2"
   PAGE_SIZE = 1000
-  MAX_PAGES = 10
+  DEFAULT_MAX_PAGES = 10
   # The free tier allows 5 requests/second; stay well inside it.
   MIN_REQUEST_INTERVAL = 0.4
   MAX_RETRIES = 3
@@ -29,9 +29,14 @@ class Provider::Etherscan
 
   attr_reader :api_key, :chain_id
 
-  def initialize(api_key:, chain_id:)
+  # True when a walk stopped on the page budget rather than on its last page.
+  attr_reader :truncated
+
+  def initialize(api_key:, chain_id:, max_pages: DEFAULT_MAX_PAGES)
     @api_key = api_key.to_s.strip
     @chain_id = chain_id.to_s
+    @max_pages = max_pages
+    @truncated = false
     raise AuthenticationError, "Etherscan API key is required" if @api_key.blank?
   end
 
@@ -115,7 +120,7 @@ class Provider::Etherscan
     def paged_get(action:, address:)
       results = []
 
-      1.upto(MAX_PAGES) do |page|
+      1.upto(@max_pages) do |page|
         batch = api_get(
           action: action,
           address: address,
@@ -128,6 +133,8 @@ class Provider::Etherscan
         batch = [] unless batch.is_a?(Array)
         results.concat(batch)
         break if batch.size < PAGE_SIZE
+
+        @truncated ||= page == @max_pages
       end
 
       results

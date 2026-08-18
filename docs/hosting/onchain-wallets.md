@@ -95,12 +95,23 @@ address, the cost is roughly:
 |---|---|
 | Bitcoin | 1 + up to 10 history pages |
 | EVM | 1 summary + up to 10 pages of transfers + up to 10 pages of token transfers |
-| Solana | ~2 + up to 25 transaction reads |
+| Solana | ~2 + up to 250 transaction reads |
 
-History is capped: 250 transactions for Bitcoin, 10 pages per EVM collection, 25
-transactions for Solana. Wallets with more history than that keep their current
-balance correct — that never comes from history — but their oldest transfers are
-not imported.
+History is capped at 10 pages per source by default: 250 transactions for
+Bitcoin, 10 pages per EVM collection, 250 transactions for Solana. Wallets with
+more history than that keep their **current balance correct** — balances come
+from an address summary, never from history — but their oldest transfers are not
+imported.
+
+Raise the cap with `ONCHAIN_HISTORY_MAX_PAGES` (default 10, maximum 200). It
+applies to every source, and the request cost in the table above scales with it,
+so raise it if you run your own node or indexer rather than against a public
+endpoint. Note that Solana spends one request per transaction, so it is the most
+expensive place to raise.
+
+When a cap is hit, the affected address says so in **Manage wallets**, and the
+event is recorded in **Settings → Debug logs** under the `onchain_wallet`
+provider — once per address per sync, not once per night forever.
 
 Detecting which network an address belongs to costs **exactly one request per
 candidate network**, and never reads history. If an explorer is down during
@@ -200,6 +211,11 @@ available for that date yet. Once market data covers the range, the next sync
 upgrades those entries to trades automatically — they keep their identity, so
 nothing is duplicated. If they stay at zero, the date is outside what your market
 data provider can serve.
+
+**Manage wallets says the history is incomplete.** The address has more transfers
+than one sync reads. Balances are unaffected. Raise
+`ONCHAIN_HISTORY_MAX_PAGES` if you need the full history and can afford the extra
+requests.
 
 **Balances are correct but nothing updates.** Syncs only rewrite an account when
 the chain actually changed — an idle wallet is meant to produce no writes at all.

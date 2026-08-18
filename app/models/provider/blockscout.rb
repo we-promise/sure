@@ -21,7 +21,7 @@ class Provider::Blockscout
   # touching transfer history.
   ACTIVITY_FLAGS = %w[has_tokens has_token_transfers has_logs].freeze
 
-  MAX_PAGES = 10
+  DEFAULT_MAX_PAGES = 10
   MIN_REQUEST_INTERVAL = 0.2
   MAX_RETRIES = 3
   RETRY_BASE_DELAY = 0.5
@@ -30,9 +30,15 @@ class Provider::Blockscout
 
   attr_reader :chain, :base_url
 
-  def initialize(chain:, base_url:)
+  # True when any collection stopped on the page budget rather than on its last
+  # page.
+  attr_reader :truncated
+
+  def initialize(chain:, base_url:, max_pages: DEFAULT_MAX_PAGES)
     @chain = chain.to_s
     @base_url = ENV["BLOCKSCOUT_#{@chain.upcase}_URL"].presence || base_url
+    @max_pages = max_pages
+    @truncated = false
   end
 
   def has_activity?(address)
@@ -141,7 +147,7 @@ class Provider::Blockscout
       items = []
       next_params = nil
 
-      MAX_PAGES.times do
+      @max_pages.times do
         url = path.dup
         url += (url.include?("?") ? "&" : "?") + URI.encode_www_form(next_params) if next_params.present?
 
@@ -160,6 +166,9 @@ class Provider::Blockscout
         next_params = body.is_a?(Hash) ? body["next_page_params"] : nil
         break if next_params.blank? || page.empty?
       end
+
+      # A cursor still in hand means there were more pages than the budget.
+      @truncated ||= next_params.present?
 
       items
     end

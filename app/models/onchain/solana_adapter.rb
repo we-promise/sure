@@ -36,10 +36,10 @@ class Onchain::SolanaAdapter
     "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL" => { symbol: "JTO", name: "Jito" }
   }.freeze
 
-  # History budget. Each signature costs one getTransaction, so the caps below
-  # bound a sync to roughly 30 RPC calls on a rate-limited public endpoint.
+  # Each signature costs one getTransaction, so the transaction budget is what
+  # bounds a sync on a rate-limited public endpoint. It comes from
+  # Onchain::HistoryBudget so a self-hoster with their own node can raise it.
   SIGNATURES_PER_SOURCE = 25
-  MAX_TRANSACTIONS = 25
   MAX_TOKEN_ACCOUNTS_FOR_HISTORY = 5
 
   # Below this, a native balance change is a transaction fee rather than a
@@ -75,9 +75,12 @@ class Onchain::SolanaAdapter
       # must agree on what a token is called.
       load_mint_metadata(token_accounts.map { |account| account[:mint] })
 
+      movements = movements(address, token_accounts)
+
       Onchain::Snapshot.new(
         assets: [ native_asset(address), *token_assets(token_accounts) ],
-        movements: movements(address, token_accounts)
+        movements: movements,
+        history_truncated: @history_truncated
       )
     end
   end
@@ -145,11 +148,14 @@ class Onchain::SolanaAdapter
     end
 
     def movements(address, token_accounts)
-      signatures = signature_sources(address, token_accounts)
+      seen = signature_sources(address, token_accounts)
         .flat_map { |pubkey| provider.get_signatures(pubkey, limit: SIGNATURES_PER_SOURCE) }
         .uniq { |entry| entry[:signature] }
         .sort_by { |entry| -entry[:block_time].to_i }
-        .first(MAX_TRANSACTIONS)
+
+      budget = Onchain::HistoryBudget.transactions
+      @history_truncated = seen.size > budget
+      signatures = seen.first(budget)
 
       signatures.flat_map do |entry|
         transaction = provider.get_transaction(entry[:signature])

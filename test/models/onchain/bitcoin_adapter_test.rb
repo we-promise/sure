@@ -104,6 +104,37 @@ class Onchain::BitcoinAdapterTest < ActiveSupport::TestCase
     assert_empty @adapter.fetch_snapshot(BECH32).movements
   end
 
+  test "a history longer than the budget is reported as truncated" do
+    stub_address
+    full_page = Array.new(Provider::MempoolSpace::PAGE_SIZE) do |i|
+      {
+        "txid" => "tx#{i}",
+        "vin" => [],
+        "vout" => [ { "scriptpubkey_address" => BECH32, "value" => 1_000 } ],
+        "status" => { "confirmed" => true, "block_time" => Time.utc(2026, 1, 2).to_i }
+      }
+    end
+    stub_transactions(full_page)
+    stub_request(:get, %r{/address/#{BECH32}/txs/chain/}).to_return(
+      status: 200, body: full_page.to_json, headers: { "Content-Type" => "application/json" }
+    )
+
+    with_history_budget(2) do
+      snapshot = @adapter.fetch_snapshot(BECH32)
+
+      assert snapshot.history_truncated?
+      # Balances come from the summary, so they are unaffected by the cap.
+      assert_equal 0, snapshot.assets.sole.quantity
+    end
+  end
+
+  test "a history that fits is not reported as truncated" do
+    stub_address
+    stub_transactions([])
+
+    assert_not @adapter.fetch_snapshot(BECH32).history_truncated?
+  end
+
   test "an unconfirmed transaction is dated today" do
     stub_address
     stub_transactions([
@@ -119,6 +150,14 @@ class Onchain::BitcoinAdapterTest < ActiveSupport::TestCase
   end
 
   private
+    def with_history_budget(pages)
+      previous = ENV["ONCHAIN_HISTORY_MAX_PAGES"]
+      ENV["ONCHAIN_HISTORY_MAX_PAGES"] = pages.to_s
+      yield
+    ensure
+      ENV["ONCHAIN_HISTORY_MAX_PAGES"] = previous
+    end
+
     def base_url
       Provider::MempoolSpace.base_url
     end

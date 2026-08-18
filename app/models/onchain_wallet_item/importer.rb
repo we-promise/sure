@@ -15,6 +15,7 @@ class OnchainWalletItem::Importer
 
   def initialize(onchain_wallet_item)
     @onchain_wallet_item = onchain_wallet_item
+    @truncation_reported = Set.new
   end
 
   # @return [Hash] :wallets_imported, :changed_account_ids
@@ -35,7 +36,7 @@ class OnchainWalletItem::Importer
     snapshot = fetch_snapshot(chain: chain, address: address)
 
     onchain_wallet_item.accounts_for_wallet(chain, address).filter_map do |account|
-      apply_snapshot(account, snapshot)
+      apply_snapshot(account, snapshot, chain: chain, address: address)
     end
   end
 
@@ -46,7 +47,7 @@ class OnchainWalletItem::Importer
   end
 
   private
-    def apply_snapshot(account, snapshot)
+    def apply_snapshot(account, snapshot, chain:, address:)
       asset = snapshot.assets.find { |candidate| account.matches_asset?(candidate) }
       movements = asset ? relevant_movements(snapshot.movements_for(asset)) : []
       # An asset that vanished from the wallet is worth zero, not stale.
@@ -55,6 +56,8 @@ class OnchainWalletItem::Importer
 
       return nil if account.content_hash == digest
 
+      report_truncation(chain: chain, address: address) if snapshot.history_truncated?
+
       account.update!(
         quantity: quantity,
         symbol: asset&.symbol.presence || account.symbol,
@@ -62,10 +65,37 @@ class OnchainWalletItem::Importer
         decimals: asset&.decimals || account.decimals,
         content_hash: digest,
         raw_payload: asset_payload(asset),
-        raw_movements_payload: { "movements" => movements.map { |movement| movement_payload(movement) } }
+        raw_movements_payload: { "movements" => movements.map { |movement| movement_payload(movement) } },
+        # Recorded on the row so the UI can say the history is incomplete instead
+        # of implying these movements are all there ever were.
+        extra: account.extra.to_h.deep_merge(
+          "onchain_wallet" => { "history_truncated" => snapshot.history_truncated? }
+        )
       )
 
       account.id
+    end
+
+    # A capped history is worth a support-visible note, but only once per address
+    # per import, and only when something changed anyway — otherwise an idle
+    # wallet with deep history would log the same line every night.
+    def report_truncation(chain:, address:)
+      return unless @truncation_reported.add?([ chain, address ])
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "On-chain history truncated: older movements were not read",
+        source: self.class.name,
+        provider_key: "onchain_wallet",
+        family: onchain_wallet_item.family,
+        metadata: {
+          onchain_wallet_item_id: onchain_wallet_item.id,
+          chain: chain,
+          address: address,
+          max_pages: Onchain::HistoryBudget.pages
+        }
+      )
     end
 
     # Movements before the connection's start date are outside the window the

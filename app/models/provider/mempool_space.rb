@@ -17,9 +17,7 @@ class Provider::MempoolSpace
   DEFAULT_BASE_URL = "https://mempool.space/api"
   # mempool.space returns 25 confirmed transactions per page.
   PAGE_SIZE = 25
-  # Caps history at 250 transactions per address. Older movements are dropped
-  # with a warning rather than walking an arbitrarily long chain.
-  MAX_PAGES = 10
+  DEFAULT_MAX_PAGES = 10
   MIN_REQUEST_INTERVAL = 0.25
   MAX_RETRIES = 3
   RETRY_BASE_DELAY = 0.5
@@ -28,6 +26,16 @@ class Provider::MempoolSpace
 
   def self.base_url
     ENV["MEMPOOL_SPACE_URL"].presence || DEFAULT_BASE_URL
+  end
+
+  # True when the walk stopped on the page budget rather than on the end of the
+  # address's history, so the caller can say so instead of implying it read
+  # everything.
+  attr_reader :truncated
+
+  def initialize(max_pages: DEFAULT_MAX_PAGES)
+    @max_pages = max_pages
+    @truncated = false
   end
 
   # Address summary: confirmed and mempool funded/spent totals.
@@ -41,8 +49,9 @@ class Provider::MempoolSpace
     page = Array(get_json("/address/#{encoded}/txs"))
     transactions = page.dup
     pages_read = 1
+    @truncated = false
 
-    while page.size >= PAGE_SIZE && pages_read < MAX_PAGES
+    while page.size >= PAGE_SIZE && pages_read < @max_pages
       last_txid = page.last["txid"]
       break if last_txid.blank?
 
@@ -51,11 +60,7 @@ class Provider::MempoolSpace
       pages_read += 1
     end
 
-    if page.size >= PAGE_SIZE
-      Rails.logger.warn(
-        "Provider::MempoolSpace - history truncated at #{transactions.size} transactions; older movements were not read"
-      )
-    end
+    @truncated = page.size >= PAGE_SIZE
 
     transactions
   end

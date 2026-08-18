@@ -48,9 +48,12 @@ class Onchain::EvmAdapter
     raise Onchain::Chains::Error, "Invalid EVM address" unless valid_address?(address)
 
     wrap_provider_errors do
+      movements = movements(address)
+
       Onchain::Snapshot.new(
         assets: [ native_asset(address), *token_assets(address) ],
-        movements: movements(address)
+        movements: movements,
+        history_truncated: history_backend.truncated
       )
     end
   end
@@ -88,7 +91,11 @@ class Onchain::EvmAdapter
     end
 
     def keyless_backend
-      @keyless_backend ||= Provider::Blockscout.new(chain: chain, base_url: explorer_url)
+      @keyless_backend ||= Provider::Blockscout.new(
+        chain: chain,
+        base_url: explorer_url,
+        max_pages: Onchain::HistoryBudget.pages
+      )
     end
 
     def etherscan_backend
@@ -97,7 +104,8 @@ class Onchain::EvmAdapter
 
       @etherscan_backend ||= Provider::Etherscan.new(
         api_key: credentials[:etherscan_api_key],
-        chain_id: etherscan_chain_id
+        chain_id: etherscan_chain_id,
+        max_pages: Onchain::HistoryBudget.pages
       )
     end
 

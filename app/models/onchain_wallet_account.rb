@@ -31,6 +31,12 @@ class OnchainWalletAccount < ApplicationRecord
     asset_kind == Onchain::Chains::NATIVE_KIND
   end
 
+  # True when the last sync stopped on the history budget rather than on the end
+  # of this address's history.
+  def history_truncated?
+    extra.to_h.dig("onchain_wallet", "history_truncated") == true
+  end
+
   def chain_definition
     Onchain::Chains.find(chain)
   end

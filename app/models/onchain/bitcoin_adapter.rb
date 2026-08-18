@@ -39,9 +39,12 @@ class Onchain::BitcoinAdapter
     wrap_provider_errors do
       summary = provider.get_address(address)
 
+      movements = movements_for(address)
+
       Onchain::Snapshot.new(
         assets: [ definition.native_asset(quantity: balance_from(summary)) ],
-        movements: movements_for(address)
+        movements: movements,
+        history_truncated: provider.truncated
       )
     end
   end
@@ -58,7 +61,7 @@ class Onchain::BitcoinAdapter
     end
 
     def provider
-      @provider ||= Provider::MempoolSpace.new
+      @provider ||= Provider::MempoolSpace.new(max_pages: Onchain::HistoryBudget.pages)
     end
 
     # Confirmed plus mempool: funded minus spent.

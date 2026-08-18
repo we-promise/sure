@@ -5,9 +5,19 @@
 # importer, processor and UI ever consume, which is what keeps them free of
 # per-chain branches.
 module Onchain
-  Snapshot = Data.define(:assets, :movements) do
+  Snapshot = Data.define(:assets, :movements, :history_truncated) do
+    # Defaulted, so a chain that reads all of an address's history in one go says
+    # nothing about truncation.
+    def initialize(assets:, movements:, history_truncated: false)
+      super
+    end
+
     def self.empty
       new(assets: [], movements: [])
+    end
+
+    def history_truncated?
+      history_truncated == true
     end
 
     # Movements belonging to a given asset. Tokens match on contract; native
