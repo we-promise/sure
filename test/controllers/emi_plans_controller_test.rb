@@ -93,7 +93,11 @@ class EmiPlansControllerTest < ActionDispatch::IntegrationTest
       emi_plan: { tenure_months: 3, interest_rate: 0, processing_fee: 0, start_date: (Date.current - 45.days).iso8601 }
     }
 
-    assert_difference "Entry.count", -1 do
+    # The future installment is removed, but because installments already
+    # posted, a settlement entry is created for its outstanding principal
+    # so that amount isn't just dropped from budget totals. Net entry count
+    # is unchanged; what matters is which entry it is now.
+    assert_difference "Entry.count", 0 do
       delete transaction_emi_plan_path(@entry)
     end
 

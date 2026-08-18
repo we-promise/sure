@@ -39,7 +39,7 @@
               <div class="flex items-center gap-2">
                 <span class="text-xs font-medium text-secondary w-6"><%= installment.emi_installment_number %></span>
                 <div>
-                  <p class="text-sm text-primary"><%= installment.date.strftime("%b %d, %Y") %></p>
+                  <p class="text-sm text-primary"><%= I18n.l(installment.date, format: :long) %></p>
                   <% if installment.date > Date.current %>
                     <p class="text-xs text-secondary"><%= t("emi_plans.show.upcoming") %></p>
                   <% else %>

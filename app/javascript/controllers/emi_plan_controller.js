@@ -24,23 +24,58 @@ export default class extends Controller {
       return
     }
 
+    // Mirrors EmiPlan#amortization_schedule cent-for-cent: same formula,
+    // same per-row rounding, same "last installment absorbs the remainder"
+    // rule. Keeping this in lockstep with the server means the preview
+    // shown here matches exactly what gets persisted on submit.
     const monthlyRate = (annualRate / 100) / 12
 
     let emi
     if (monthlyRate === 0) {
-      emi = principal / tenure
+      emi = this.roundCents(principal / tenure)
     } else {
       const factor = (1 + monthlyRate) ** tenure
-      emi = (principal * monthlyRate * factor) / (factor - 1)
+      emi = this.roundCents((principal * monthlyRate * factor) / (factor - 1))
     }
 
-    const totalPayments = emi * tenure
-    const totalInterest = Math.max(totalPayments - principal, 0)
-    const totalPayable = totalPayments + fee
+    let remainingPrincipal = principal
+    let totalInterest = 0
+    let totalPrincipal = 0
+
+    for (let number = 1; number <= tenure; number++) {
+      const isLast = number === tenure
+      let principalComponent
+      let interestComponent
+
+      if (isLast) {
+        principalComponent = remainingPrincipal
+        interestComponent = monthlyRate === 0 ? 0 : emi - principalComponent
+      } else {
+        interestComponent = monthlyRate === 0 ? 0 : this.roundCents(remainingPrincipal * monthlyRate)
+        principalComponent = emi - interestComponent
+      }
+
+      interestComponent = this.roundCents(Math.max(interestComponent, 0))
+      principalComponent = this.roundCents(principalComponent)
+      remainingPrincipal = this.roundCents(remainingPrincipal - principalComponent)
+
+      totalInterest = this.roundCents(totalInterest + interestComponent)
+      totalPrincipal = this.roundCents(totalPrincipal + principalComponent)
+    }
+
+    const totalPayable = this.roundCents(totalPrincipal + totalInterest + fee)
 
     this.monthlyAmountTarget.textContent = this.formatMoney(emi)
     this.totalInterestTarget.textContent = this.formatMoney(totalInterest)
     this.totalPayableTarget.textContent = this.formatMoney(totalPayable)
+  }
+
+  // Half-up rounding to 2 decimals, matching Ruby BigDecimal#round(2)'s
+  // default mode. Plain toFixed()/Math.round() can drift on floating-point
+  // values that land near a cent boundary (e.g. banker's rounding in some
+  // engines), which is exactly the kind of mismatch this preview exists to avoid.
+  roundCents(value) {
+    return Math.round((value + Number.EPSILON) * 100) / 100
   }
 
   formatMoney(value) {

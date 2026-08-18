@@ -4,6 +4,7 @@ en:
     generated_entry_names:
       processing_fee: "%{name} — Processing fee"
       installment: "%{name} — Installment %{number}/%{tenure}"
+      foreclosure_settlement: "%{name} — Foreclosure settlement"
     new:
       title: Convert to EMI
       description: Split this purchase into equal monthly installments. Future installments are scheduled automatically.

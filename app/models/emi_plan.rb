@@ -182,8 +182,20 @@ class EmiPlan < ApplicationRecord
   def foreclose!
     Entry.transaction do
       had_posted_installments = posted_installments.exists?
+      future_installments = installment_entries.where("entries.date > ?", Date.current).to_a
 
-      installment_entries.where("entries.date > ?", Date.current).find_each do |installment|
+      # Any principal still outstanding on the cancelled future installments
+      # (interest is dropped — no more time will pass for it to accrue).
+      # Without this, that principal was never charged anywhere: not on the
+      # (excluded) parent purchase, not on any posted installment, and no
+      # longer on the deleted future ones — it would silently vanish from
+      # budget/balance reporting.
+      outstanding_principal = future_installments.sum do |installment|
+        row = amortization_schedule.find { |s| s[:number] == installment.emi_installment_number }
+        row ? row[:principal] : 0.to_d
+      end
+
+      future_installments.each do |installment|
         installment.foreclosing = true
         installment.destroy!
       end
@@ -195,7 +207,21 @@ class EmiPlan < ApplicationRecord
       # transaction so it counts in budgets again. If some installments did
       # post, the purchase stays excluded (its spend already happened via
       # those installments) even though no more are coming.
-      unless had_posted_installments
+      if had_posted_installments
+        if outstanding_principal.positive?
+          settlement_transaction = Transaction.new(kind: "emi_installment", category_id: entry.transaction.category_id)
+          entry.account.entries.create!(
+            date: Date.current,
+            name: I18n.t("emi_plans.generated_entry_names.foreclosure_settlement", name: entry.name),
+            amount: outstanding_principal,
+            currency: entry.currency,
+            emi_plan_id: id,
+            emi_installment_number: tenure_months + 1,
+            entryable: settlement_transaction,
+            user_modified: true
+          )
+        end
+      else
         entry.transaction.changing_emi_kind = true
         entry.transaction.update!(kind: "standard")
       end

@@ -106,7 +106,7 @@ class EmiPlanTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2026, 9, 1), Date.new(2026, 10, 1), Date.new(2026, 11, 1) ], dates
   end
 
-  test "foreclose! removes only future installments" do
+  test "foreclose! removes future installments and settles remaining principal" do
     plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current - 1.month)
 
     # First installment is in the past (posted), the rest are future.
@@ -115,10 +115,19 @@ class EmiPlanTest < ActiveSupport::TestCase
     assert_operator posted_count, :>, 0
     assert_operator future_count, :>, 0
 
+    future_principal = plan.remaining_installments.sum(&:amount)
+
     plan.foreclose!
 
-    assert_equal posted_count, plan.installment_entries.count
+    # Posted installments stay untouched, future ones are gone, and — since
+    # some installments already posted — a settlement entry appears for the
+    # principal that would otherwise have vanished from budget totals.
+    assert_equal posted_count + 1, plan.installment_entries.count
     assert_equal "foreclosed", plan.reload.status
+
+    settlement = plan.installment_entries.order(:emi_installment_number).last
+    assert_equal future_principal, settlement.amount
+    assert_equal Date.current, settlement.date
   end
 
   test "foreclose! reverts parent kind to standard when no installment ever posted" do
@@ -136,6 +145,21 @@ class EmiPlanTest < ActiveSupport::TestCase
     plan.foreclose!
 
     assert_equal "emi_purchase", @entry.reload.transaction.kind
+  end
+
+  test "foreclose! creates no settlement entry when nothing is outstanding" do
+    # All installments already posted (start_date far enough in the past
+    # that every one of the 3 monthly installments has a date <= today) —
+    # there's no future principal left to settle.
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current - 4.months)
+
+    assert_equal 0, plan.remaining_installments.count
+
+    assert_no_difference "Entry.count" do
+      plan.foreclose!
+    end
+
+    assert_equal "foreclosed", plan.reload.status
   end
 
   test "emi_convertible? is false once already converted" do
