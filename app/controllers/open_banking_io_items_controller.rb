@@ -116,7 +116,7 @@ class OpenBankingIoItemsController < ApplicationController
 
     selected_ids = Array(params[:account_ids]).compact_blank
     if selected_ids.empty?
-      redirect_to select_accounts_open_banking_io_items_path(open_banking_io_item_id: open_banking_io_item.id, accountable_type: params[:accountable_type], return_to: safe_return_to_path), alert: t(".no_accounts_selected")
+      redirect_to safe_return_to_path || new_account_path, alert: t(".no_accounts_selected")
       return
     end
 
@@ -143,7 +143,7 @@ class OpenBankingIoItemsController < ApplicationController
       end
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
       open_banking_io_item.capture_provider_error("Failed to link open-banking.io accounts", error: e)
-      redirect_to select_accounts_open_banking_io_items_path(open_banking_io_item_id: open_banking_io_item.id, accountable_type: account_type, return_to: safe_return_to_path), alert: t(".link_failed")
+      redirect_to safe_return_to_path || new_account_path, alert: t(".link_failed")
       return
     end
 
@@ -152,7 +152,7 @@ class OpenBankingIoItemsController < ApplicationController
     if created_accounts.any?
       redirect_to safe_return_to_path || accounts_path, notice: t(".success", count: created_accounts.count)
     else
-      redirect_to select_accounts_open_banking_io_items_path(open_banking_io_item_id: open_banking_io_item.id, accountable_type: account_type, return_to: safe_return_to_path), alert: t(".link_failed")
+      redirect_to safe_return_to_path || new_account_path, alert: t(".link_failed")
     end
   end
 
@@ -331,7 +331,10 @@ class OpenBankingIoItemsController < ApplicationController
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+        # Not :unprocessable_entity -- a 422 redirect has an empty body, and Turbo only
+        # renders a failed submission when the response HAS one, so the error vanished
+        # silently. :see_other navigates and shows the flash.
+        redirect_to settings_providers_path, alert: @error_message, status: :see_other
       end
     end
 

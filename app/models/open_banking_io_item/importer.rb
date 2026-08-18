@@ -26,9 +26,16 @@ class OpenBankingIoItem::Importer
     account_stats = import_accounts(accounts_data)
     transaction_stats = import_transactions
 
-    # Nothing used to clear this, so a connection that once returned 401 stayed badged
-    # "needs attention" forever -- even after the user pasted fresh credentials.
-    clear_requires_update! if account_stats[:failed].zero? && !@connection_needs_attention
+    # Connection health comes from the accounts we just fetched, not from whether this
+    # particular run happened to hit an error. `needsReconnect` is the service's durable
+    # per-account flag (an expired PSD2 consent sets it and it stays set until the user
+    # reconnects), so deriving from it is idempotent -- whereas the transient sync_all
+    # failures made the badge flap between good and requires_update run to run.
+    if accounts_needing_reconnect?
+      mark_requires_update!
+    elsif account_stats[:failed].zero? && !@connection_needs_attention
+      clear_requires_update!
+    end
 
     Rails.logger.info(
       "OpenBankingIoItem::Importer - Completed import for item #{open_banking_io_item.id}: " \
@@ -305,6 +312,8 @@ class OpenBankingIoItem::Importer
     # Best-effort: a bank that refuses the window must not fail the whole import.
     def request_backfill(open_banking_io_account, start_date)
       return if configured_sync_start_date(open_banking_io_account).blank?
+      # Initial sync only -- see determine_sync_start_date.
+      return if open_banking_io_account.raw_transactions_payload.to_a.any?
 
       result = open_banking_io_provider.sync(open_banking_io_account.account_id, from_date: start_date)
       served = result.try(:served_from_date)
@@ -324,10 +333,18 @@ class OpenBankingIoItem::Importer
     end
 
     def determine_sync_start_date(open_banking_io_account)
-      configured = configured_sync_start_date(open_banking_io_account)
-      return configured if configured.present?
-
       stored = open_banking_io_account.raw_transactions_payload.to_a
+
+      # The configured start date is a BACKFILL request, so it applies to the initial sync
+      # only. Returning it unconditionally made every later sync re-fetch, re-paginate and
+      # re-decrypt the entire history forever -- and on a large account that eventually
+      # crosses the pagination cap into a permanent hard failure. Matches how
+      # EnableBankingItem::Importer and MercuryItem::Importer gate theirs.
+      if stored.empty?
+        configured = configured_sync_start_date(open_banking_io_account)
+        return configured if configured.present?
+      end
+
       return 90.days.ago.to_date if stored.empty? || open_banking_io_item.last_synced_at.blank?
 
       # A stored pending row must stay inside the window: fall out of it and the row is
@@ -355,6 +372,12 @@ class OpenBankingIoItem::Importer
         account_provider: open_banking_io_account&.account_provider,
         metadata: metadata
       )
+    end
+
+    # Any linked-or-not provider account the service says needs reconnecting. Reads the
+    # snapshot column just written by import_accounts, so it reflects this fetch.
+    def accounts_needing_reconnect?
+      open_banking_io_item.open_banking_io_accounts.reload.any? { |a| a.account_status == "requires_update" }
     end
 
     def clear_requires_update!

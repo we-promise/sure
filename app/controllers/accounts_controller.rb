@@ -306,6 +306,7 @@ class AccountsController < ApplicationController
         @lunchflow_items,
         @redbark_items,
         @akahu_items,
+        @open_banking_io_items,
         @up_items,
         @enable_banking_items,
         @coinstats_items,
@@ -447,7 +448,9 @@ class AccountsController < ApplicationController
       # open-banking.io sync stats
       @open_banking_io_sync_stats_map = {}
       @open_banking_io_items.each do |item|
-        latest_sync = item.syncs.ordered.first
+        # latest_sync_record reads the preloaded map; item.syncs.ordered.first was a query
+        # per item, which is what every other provider here avoids.
+        latest_sync = item.latest_sync_record
         @open_banking_io_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
