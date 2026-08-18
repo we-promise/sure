@@ -156,4 +156,73 @@ class OpenBankingIoAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_match(/\Aopen_banking_io_pending_[0-9a-f]{32}\z/, expected_id)
     assert @account.entries.exists?(external_id: expected_id, source: "open_banking_io")
   end
+
+  # === EMPTY-FETCH GUARD ===
+  # A 200 with an empty items array is indistinguishable from "the bank dropped every
+  # pending row". Treating it as the latter strips the rows from storage and destroys the
+  # entries -- along with every category, merchant, note and split the user attached.
+  test "an empty fetch does not strip stored pending rows" do
+    @importer.send(:store_transactions, @provider_account, transactions: [ pending_txn(id: "P", amount: "10.00") ])
+    process
+    assert @account.entries.exists?(external_id: "open_banking_io_P")
+
+    @importer.send(:store_transactions, @provider_account, transactions: [])
+
+    assert_equal 1, @provider_account.reload.raw_transactions_payload.to_a.size,
+                 "an empty fetch must not strip the stored pending row"
+    process
+    assert @account.entries.exists?(external_id: "open_banking_io_P"),
+           "an empty fetch must not destroy a live pending entry"
+  end
+
+  test "a blank stored payload prunes nothing" do
+    entry = create_transaction(
+      account: @account, date: 2.days.ago.to_date, amount: 25,
+      external_id: "open_banking_io_ORPHAN", source: "open_banking_io"
+    )
+    entry.entryable.update!(extra: { "open_banking_io" => { "pending" => true } })
+    @provider_account.update!(raw_transactions_payload: [])
+
+    result = process
+
+    assert_equal 0, result[:pruned_pending]
+    assert @account.entries.exists?(external_id: "open_banking_io_ORPHAN"),
+           "a missing payload must never be read as an instruction to delete"
+  end
+
+  # === SKIPPED STATUSES ===
+  test "cancelled, rejected and scheduled entries are never imported" do
+    @provider_account.update!(raw_transactions_payload: %w[CNCL RJCT SCHD].map do |status|
+      {
+        "id" => "tx_#{status}", "status" => status, "credit_debit_indicator" => "DBIT",
+        "amount" => "42.00", "booking_date" => Date.current.to_s
+      }
+    end)
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+  end
+
+  # A bank that never stamps a status used to have its entire history classified pending,
+  # which made every row a prune candidate as soon as it fell out of the sync window.
+  test "status-less transactions are booked and survive a later narrow sync" do
+    booked = {
+      "id" => "NOSTATUS", "credit_debit_indicator" => "DBIT",
+      "amount" => "15.00", "booking_date" => 90.days.ago.to_date.to_s
+    }
+    @importer.send(:store_transactions, @provider_account, transactions: [ booked ])
+    process
+
+    entry = @account.entries.find_by(external_id: "open_banking_io_NOSTATUS")
+    assert entry, "a status-less transaction must be imported"
+    assert_not entry.entryable.pending?
+
+    # A later sync whose window excludes it must leave both the stored row and the entry alone.
+    @importer.send(:store_transactions, @provider_account, transactions: [ pending_txn(id: "NEW") ])
+    process
+
+    assert @account.entries.exists?(external_id: "open_banking_io_NOSTATUS"),
+           "booked history must never be pruned as though it were pending"
+  end
 end

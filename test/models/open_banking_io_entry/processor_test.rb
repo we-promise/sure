@@ -84,10 +84,46 @@ class OpenBankingIoEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal false, entry.entryable.extra.dig("open_banking_io", "pending")
   end
 
-  test "non-booked status marks the transaction pending under the provider key" do
-    entry = process(id: "tx_pending", status: "PNDG")
-    assert entry.entryable.pending?
-    assert_equal true, entry.entryable.extra.dig("open_banking_io", "pending")
+  test "a pending status marks the transaction pending under the provider key" do
+    %w[PDNG PENDING HOLD].each do |status|
+      entry = process(id: "tx_pending_#{status}", status: status)
+      assert entry.entryable.pending?, "#{status} should be pending"
+      assert_equal true, entry.entryable.extra.dig("open_banking_io", "pending")
+    end
+  end
+
+  # The service treats BOOK, OTHR and an omitted status as booked
+  # (BankingSyncService.NonBookedStatuses). Banks that never stamp a status -- PayPal DE,
+  # Belfius BE, BPER Banca -- send none at all. Classifying those as pending made every
+  # transaction eligible for the stale-pending prune, which destroys the entry and every
+  # user edit on it. Unknown must mean booked.
+  test "OTHR, a blank status and an omitted status are all booked, not pending" do
+    [ "OTHR", "", nil ].each_with_index do |status, i|
+      entry = process(id: "tx_booked_#{i}", status: status)
+      assert_not entry.entryable.pending?, "#{status.inspect} should not be pending"
+      assert_equal false, entry.entryable.extra.dig("open_banking_io", "pending")
+    end
+  end
+
+  test "status matching ignores case and surrounding whitespace" do
+    assert OpenBankingIoEntry::Processor.pending?(status: " pdng ")
+    assert_not OpenBankingIoEntry::Processor.pending?(status: " book ")
+  end
+
+  # === SKIPPED STATUSES ===
+  # Cancelled and rejected entries are money that never moved; scheduled ones have not
+  # happened yet. None of them belong in the ledger.
+  test "cancelled, rejected and scheduled entries are flagged for skipping" do
+    %w[CNCL RJCT SCHD].each do |status|
+      assert OpenBankingIoEntry::Processor.skip?(status: status), "#{status} should be skipped"
+    end
+  end
+
+  test "booked and pending entries are not flagged for skipping" do
+    %w[BOOK OTHR PDNG HOLD].each do |status|
+      assert_not OpenBankingIoEntry::Processor.skip?(status: status), "#{status} should not be skipped"
+    end
+    assert_not OpenBankingIoEntry::Processor.skip?(status: nil)
   end
 
   # === NAME ===

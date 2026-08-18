@@ -156,6 +156,11 @@ class OpenBankingIoItem::Importer
     def store_transactions(open_banking_io_account, transactions:)
       existing_transactions = open_banking_io_account.raw_transactions_payload.to_a
 
+      # A fetch that came back empty tells us nothing about which pendings are still live,
+      # so it must not be read as "the bank dropped them all". Mirrors the replace_pending
+      # flag in AkahuItem::Importer.
+      replace_pending = transactions.any?
+
       # Storage keys present in THIS fetch. A stored PENDING row whose key is not
       # in this set is a pre-auth/hold the bank stopped returning (canceled, or
       # settled under a new booked id). It must be stripped so its entry can be
@@ -184,7 +189,7 @@ class OpenBankingIoItem::Importer
 
         key = transaction_storage_key(tx)
         next if key.blank?
-        next if OpenBankingIoEntry::Processor.pending?(tx) && !incoming_keys.include?(key)
+        next if replace_pending && OpenBankingIoEntry::Processor.pending?(tx) && !incoming_keys.include?(key)
 
         add_row.call(tx)
       end
@@ -216,12 +221,14 @@ class OpenBankingIoItem::Importer
       return open_banking_io_account.sync_start_date if open_banking_io_account.sync_start_date.present?
       return open_banking_io_item.sync_start_date if open_banking_io_item.sync_start_date.present?
 
-      has_stored_transactions = open_banking_io_account.raw_transactions_payload.to_a.any?
-      if has_stored_transactions && open_banking_io_item.last_synced_at
-        open_banking_io_item.last_synced_at.to_date - 7.days
-      else
-        90.days.ago.to_date
-      end
+      stored = open_banking_io_account.raw_transactions_payload.to_a
+      return 90.days.ago.to_date if stored.empty? || open_banking_io_item.last_synced_at.blank?
+
+      # A stored pending row must stay inside the window: fall out of it and the row is
+      # stripped from storage and its entry pruned, even though the pre-auth is still live.
+      # EU hotel/car-hire/fuel holds routinely outlive a 7-day window.
+      lookback = stored.any? { |tx| tx.is_a?(Hash) && OpenBankingIoEntry::Processor.pending?(tx) } ? 30.days : 7.days
+      open_banking_io_item.last_synced_at.to_date - lookback
     end
 
     # Record a provider sync/import failure as a DebugLogEntry so it surfaces on

@@ -7,9 +7,11 @@ class OpenBankingIoAccount::Transactions::Processor
 
   def process
     unless open_banking_io_account.raw_transactions_payload.present?
+      # Prune nothing here. An absent payload is indistinguishable from a transient empty
+      # response, and prune_stale_pending_entries([]) has no "keep" list to narrow by -- it
+      # would destroy every pending entry on the account, and every user edit with it.
       Rails.logger.info "OpenBankingIoAccount::Transactions::Processor - No open-banking.io transactions available to process"
-      pruned_count = prune_stale_pending_entries([])
-      return { success: true, total: 0, imported: 0, failed: 0, pruned_pending: pruned_count, errors: [] }
+      return { success: true, total: 0, imported: 0, failed: 0, pruned_pending: 0, errors: [] }
     end
 
     total_count = open_banking_io_account.raw_transactions_payload.count
@@ -22,6 +24,12 @@ class OpenBankingIoAccount::Transactions::Processor
 
     ordered_transactions(open_banking_io_account.raw_transactions_payload).each_with_index do |transaction_data, index|
       ext_id = OpenBankingIoEntry::Processor.canonical_external_id(transaction_data)
+      if OpenBankingIoEntry::Processor.skip?(transaction_data)
+        # Cancelled, rejected or future-dated: not money that moved.
+        skipped_count += 1
+        next
+      end
+
       if ext_id.present? && excluded_ids.include?(ext_id)
         # This pending row was already reconciled into a booked transaction
         # (auto-claimed by the amount/date heuristic, or manually merged by the
