@@ -1583,12 +1583,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_120000) do
 
   create_table "open_banking_io_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
-    t.string "name"
-    t.string "institution_id"
-    t.string "institution_name"
-    t.string "institution_domain"
-    t.string "institution_url"
-    t.string "institution_color"
+    t.string "name", null: false
     t.string "status", default: "good", null: false
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.boolean "pending_account_setup", default: false, null: false
