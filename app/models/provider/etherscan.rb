@@ -90,7 +90,7 @@ class Provider::Etherscan
         next if raw_amount.zero?
 
         {
-          external_id: "#{transfer["hash"]}_#{contract}",
+          external_id: transfer_external_id(transfer["hash"], contract, transfer["logIndex"]),
           contract: contract,
           symbol: transfer["tokenSymbol"],
           name: transfer["tokenName"],
@@ -99,6 +99,12 @@ class Provider::Etherscan
           timestamp: parse_time(transfer["timeStamp"])
         }
       end
+    end
+
+    # See Provider::Blockscout#transfer_external_id: the log index is what makes
+    # one of several same-token transfers in a transaction distinct.
+    def transfer_external_id(transaction_hash, contract, log_index)
+      [ transaction_hash, log_index.presence || contract ].join("_")
     end
 
     def signed_amount(value, from:, to:, address:)

@@ -19,6 +19,11 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a checksummed address and its lowercase form are one address" do
+    assert_equal ADDRESS.downcase, @adapter.canonical_address(ADDRESS)
+    assert_equal ADDRESS.downcase, @adapter.canonical_address(" #{ADDRESS.upcase.sub("0X", "0x")} ")
+  end
+
   test "the same address is valid on every EVM network, which is why detection exists" do
     evm_chains = Onchain::Chains.matching(ADDRESS).map(&:key)
 
@@ -50,6 +55,25 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
     stub_request(:get, summary_url).to_return(status: 500)
 
     assert_not @adapter.has_activity?(ADDRESS)
+  end
+
+  test "two transfers of the same token in one transaction stay two movements" do
+    stub_summary(coin_balance: "0")
+    stub_token_balances([])
+    stub_transactions([])
+    # A swap router routinely emits several transfers of one token to the same
+    # address within a transaction; the hash and contract alone do not tell them
+    # apart, so one of them used to overwrite the other.
+    stub_token_transfers([
+      token_transfer(hash: "0xswap", log_index: 12, value: "1000000"),
+      token_transfer(hash: "0xswap", log_index: 27, value: "3000000")
+    ])
+
+    movements = @adapter.fetch_snapshot(ADDRESS).movements
+
+    assert_equal 2, movements.size
+    assert_equal 2, movements.map(&:external_id).uniq.size
+    assert_equal [ BigDecimal("1"), BigDecimal("3") ], movements.map(&:amount)
   end
 
   test "an explorer that refuses history still yields the balances" do
@@ -371,6 +395,18 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
 
           { status: 200, body: { "status" => "1", "message" => "OK", "result" => result }.to_json, headers: { "Content-Type" => "application/json" } }
         end
+    end
+
+    def token_transfer(hash:, log_index:, value:, contract: USDC)
+      {
+        "transaction_hash" => hash,
+        "log_index" => log_index,
+        "from" => { "hash" => "0xother" },
+        "to" => { "hash" => ADDRESS.downcase },
+        "timestamp" => "2026-01-05T00:00:00.000000Z",
+        "token" => { "address_hash" => contract, "symbol" => "USDC", "decimals" => "6", "type" => "ERC-20" },
+        "total" => { "value" => value, "decimals" => "6" }
+      }
     end
 
     def stub_items(url, items)

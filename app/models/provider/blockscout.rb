@@ -115,7 +115,7 @@ class Provider::Blockscout
         next if raw_amount.zero?
 
         {
-          external_id: "#{transfer["transaction_hash"]}_#{contract}",
+          external_id: transfer_external_id(transfer["transaction_hash"], contract, transfer["log_index"]),
           contract: contract,
           symbol: token["symbol"],
           decimals: (total["decimals"] || token["decimals"]).to_i,
@@ -123,6 +123,15 @@ class Provider::Blockscout
           timestamp: parse_time(transfer["timestamp"])
         }
       end
+    end
+
+    # A transaction can emit several transfers of the same token involving the
+    # same address — swap routers and batch payouts do it routinely — so the
+    # transaction hash and the contract are not unique together. The log index is
+    # what makes an event unique within a transaction; the contract is only a
+    # fallback for an instance that does not report one.
+    def transfer_external_id(transaction_hash, contract, log_index)
+      [ transaction_hash, log_index.nil? ? contract : log_index ].join("_")
     end
 
     # Blockscout renamed this field; accept both so an older self-hosted
