@@ -86,4 +86,33 @@ class Provider::OpenBankingIoAdapterTest < ActiveSupport::TestCase
     assert_equal "/open_banking_io_items/select_existing_account", existing_account_uri.path
     assert_includes existing_account_uri.query, "open_banking_io_item_id=#{second_item.id}"
   end
+
+  # Returning [] with nothing configured (what akahu and up do) hides the provider from the
+  # "How would you like to add it?" picker entirely, so the only way to find it is to
+  # already know to visit Settings -> Providers. Mercury and Wise offer a setup entry.
+  test "offers a setup entry when the family has no connection yet" do
+    @item.destroy!
+
+    configs = Provider::OpenBankingIoAdapter.connection_configs(family: @family)
+
+    assert_equal 1, configs.size
+    assert_equal "open_banking_io", configs.first[:key]
+    assert_equal I18n.t("providers.open_banking_io.name"), configs.first[:name]
+    assert configs.first[:can_connect]
+
+    # The entry routes into the normal flow with no item id; the controller sends the user
+    # to the credential form from there.
+    uri = URI.parse(configs.first[:new_account_path].call("Depository", "/accounts"))
+    assert_equal "/open_banking_io_items/select_accounts", uri.path
+    assert_not_includes uri.query.to_s, "open_banking_io_item_id"
+  end
+
+  test "the provider is reachable from the account picker with no connection configured" do
+    @item.destroy!
+
+    configs = Provider::Factory.connection_configs_for_account_type(account_type: "Depository", family: @family)
+
+    assert configs.any? { |c| c[:key] == "open_banking_io" },
+           "open-banking.io must appear in the add-account picker before it is configured"
+  end
 end
