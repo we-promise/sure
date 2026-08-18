@@ -106,7 +106,8 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     preserved_mid = create_balance(account: @account, date: 6.days.ago.to_date, balance: 4000)
 
     recalculated = [
-      Balance.new(
+      Balance::BalanceData.new(
+        account: @account,
         date: 2.days.ago.to_date, balance: 15000, cash_balance: 15000, currency: "USD",
         start_cash_balance: 12000, start_non_cash_balance: 0,
         cash_inflows: 3000, cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
