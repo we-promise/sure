@@ -48,26 +48,35 @@ class Onchain::EvmAdapter
     raise Onchain::Chains::Error, "Invalid EVM address" unless valid_address?(address)
 
     wrap_provider_errors do
-      backend = self.backend
-
       Onchain::Snapshot.new(
-        assets: [ native_asset(backend, address), *token_assets(backend, address) ],
-        movements: movements(backend, address)
+        assets: [ native_asset(address), *token_assets(address) ],
+        movements: movements(address)
       )
     end
   end
 
+  # Either backend can be in play within one snapshot, so both error families
+  # have to map onto the chain-agnostic ones.
   def provider_error_classes
-    if backend.is_a?(Provider::Etherscan)
-      [ Provider::Etherscan::RateLimitError, Provider::Etherscan::Error ]
-    else
-      [ Provider::Blockscout::RateLimitError, Provider::Blockscout::Error ]
-    end
+    [
+      [ Provider::Blockscout::RateLimitError, Provider::Etherscan::RateLimitError ],
+      [ Provider::Blockscout::Error, Provider::Etherscan::Error ]
+    ]
   end
 
-  # The backend actually used for balances and history: the keyed one when this
-  # network supports it and the family configured a key, otherwise keyless.
-  def backend
+  # What an address currently holds always comes from the keyless indexer, even
+  # when a key is configured. Etherscan has no free endpoint that enumerates an
+  # address's tokens, so a keyed read would have to sum transfer history — which
+  # is wrong for a rebasing token and wrong outright once history is capped. The
+  # summary that answers this is one request either way, so there is nothing to
+  # buy here.
+  def balance_backend
+    keyless_backend
+  end
+
+  # History is where a key actually helps: it is the paginated, rate-limited
+  # half of the work.
+  def history_backend
     etherscan_backend || keyless_backend
   end
 
@@ -94,12 +103,12 @@ class Onchain::EvmAdapter
 
     # Always present, even at zero: the native coin is what the wallet is, and a
     # wallet that spent everything still has a history worth keeping.
-    def native_asset(backend, address)
-      definition.native_asset(quantity: scale(backend.native_balance(address), NATIVE_DECIMALS))
+    def native_asset(address)
+      definition.native_asset(quantity: scale(balance_backend.native_balance(address), NATIVE_DECIMALS))
     end
 
-    def token_assets(backend, address)
-      backend.token_balances(address).filter_map do |token|
+    def token_assets(address)
+      balance_backend.token_balances(address).filter_map do |token|
         quantity = scale(token[:raw_amount], token[:decimals])
         next if quantity.zero?
 
@@ -113,8 +122,8 @@ class Onchain::EvmAdapter
       end
     end
 
-    def movements(backend, address)
-      backend.transfers(address).filter_map do |transfer|
+    def movements(address)
+      history_backend.transfers(address).filter_map do |transfer|
         next if transfer[:timestamp].blank?
 
         amount = scale(transfer[:raw_amount], transfer[:decimals])

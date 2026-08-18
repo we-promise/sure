@@ -17,8 +17,9 @@ module Onchain::ChainAdapter
     raise NotImplementedError, "#{self.class} must implement #fetch_snapshot"
   end
 
-  # The error classes this chain's data source raises, as
-  # [rate limit class, base class]. Used by #wrap_provider_errors.
+  # The error classes this chain's data sources raise, as
+  # [rate limit class(es), base class(es)]. Either entry may be a single class or
+  # an array, because a chain may read through more than one backend.
   def provider_error_classes
     []
   end
@@ -31,9 +32,9 @@ module Onchain::ChainAdapter
   rescue Onchain::Chains::Error
     raise
   rescue StandardError => e
-    rate_limit_class, base_class = provider_error_classes
-    raise Onchain::Chains::RateLimitedError, e.message if rate_limit_class && e.is_a?(rate_limit_class)
-    raise Onchain::Chains::UnreachableError, e.message if base_class && e.is_a?(base_class)
+    rate_limit_classes, base_classes = provider_error_classes
+    raise Onchain::Chains::RateLimitedError, e.message if Array(rate_limit_classes).any? { |klass| e.is_a?(klass) }
+    raise Onchain::Chains::UnreachableError, e.message if Array(base_classes).any? { |klass| e.is_a?(klass) }
 
     raise
   end

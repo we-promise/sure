@@ -2,12 +2,10 @@
 
 # Keyed EVM data source backed by Etherscan's v2 API.
 #
-# Optional, and only for the chain the registry gives an Etherscan chain id: a
-# key buys a higher rate limit than the public indexer, nothing else. Etherscan
-# has no free endpoint that enumerates an address's tokens, so token balances
-# are aggregated from transfer history — accurate for ordinary ERC-20s, but it
-# cannot see a rebasing token's current balance, which is one reason Blockscout
-# stays the default.
+# A history-only backend: optional, and only for the chain the registry gives an
+# Etherscan chain id. A key buys a higher rate limit on the paginated half of the
+# work and nothing else, so balances and activity detection stay on the keyless
+# indexer and this class refuses to answer them.
 class Provider::Etherscan
   include Provider::EvmExplorer
   include HTTParty
@@ -46,27 +44,12 @@ class Provider::Etherscan
     raise NotImplementedError, "Etherscan cannot answer activity in one request; use the keyless backend"
   end
 
-  def native_balance(address)
-    api_get(action: "balance", address: address, tag: "latest").to_s
-  end
-
-  def token_balances(address)
-    transfers(address)
-      .reject { |transfer| transfer[:contract].nil? }
-      .group_by { |transfer| transfer[:contract] }
-      .filter_map do |contract, transfers|
-        raw_amount = transfers.sum { |transfer| transfer[:raw_amount] }
-        next if raw_amount.zero?
-
-        newest = transfers.max_by { |transfer| transfer[:timestamp] || Time.at(0) }
-        {
-          contract: contract,
-          symbol: newest[:symbol],
-          name: newest[:name],
-          decimals: newest[:decimals],
-          raw_amount: raw_amount.to_s
-        }
-      end
+  # Not implemented on purpose. Etherscan has no free endpoint that enumerates an
+  # address's tokens, and summing transfer history cannot see a rebasing token's
+  # current balance — nor anything older than the history cap. Balances always
+  # come from the keyless indexer, so both backends agree on what is held.
+  def token_balances(_address)
+    raise NotImplementedError, "Etherscan cannot enumerate token balances; use the keyless backend"
   end
 
   def transfers(address)

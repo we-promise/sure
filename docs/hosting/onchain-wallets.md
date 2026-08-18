@@ -68,11 +68,13 @@ Blockscout. A key buys nothing except a higher rate limit. Add it under
 **Settings → Providers → On-chain wallets → Advanced**; it is stored encrypted,
 per family.
 
-Etherscan has no free endpoint that lists an address's tokens, so with a key in
-place token balances are aggregated from transfer history. That is accurate for
-ordinary ERC-20 tokens but cannot see the current balance of a *rebasing* token,
-which is why Blockscout remains the default. Leave the field empty unless you are
-actually being rate limited.
+A key only moves **transfer history** onto Etherscan. Balances and network
+detection always come from the keyless indexer, because Etherscan has no free
+endpoint that lists an address's tokens and summing transfer history would be
+wrong for a rebasing token — and wrong outright for anything older than the
+history cap. History is the paginated, rate-limited half of the work, so that is
+where a key actually helps. Leave the field empty unless you are being rate
+limited.
 
 ## Rate limits and request cost
 

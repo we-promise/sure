@@ -125,17 +125,46 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 1, 5), movements[2].date
   end
 
-  test "the keyless backend is used unless the family configured a key" do
-    assert_instance_of Provider::Blockscout, @adapter.backend
+  test "a key moves history onto Etherscan but never balances" do
+    assert_instance_of Provider::Blockscout, @adapter.balance_backend
+    assert_instance_of Provider::Blockscout, @adapter.history_backend
 
     keyed = Onchain::Chains.adapter_for(Onchain::Chains::ETHEREUM, credentials: { etherscan_api_key: "key" })
-    assert_instance_of Provider::Etherscan, keyed.backend
+
+    assert_instance_of Provider::Blockscout, keyed.balance_backend
+    assert_instance_of Provider::Etherscan, keyed.history_backend
   end
 
   test "an Etherscan key is ignored on networks the registry does not enable it for" do
     polygon = Onchain::Chains.adapter_for("polygon", credentials: { etherscan_api_key: "key" })
 
-    assert_instance_of Provider::Blockscout, polygon.backend
+    assert_instance_of Provider::Blockscout, polygon.history_backend
+  end
+
+  test "with a key configured, balances still come from the indexer and history from Etherscan" do
+    keyed = Onchain::Chains.adapter_for(Onchain::Chains::ETHEREUM, credentials: { etherscan_api_key: "key" })
+    stub_summary(coin_balance: "3000000000000000000")
+    stub_token_balances([
+      { "token" => { "address_hash" => USDC, "symbol" => "USDC", "name" => "USD Coin", "decimals" => "6" }, "value" => "7000000" }
+    ])
+    etherscan_history = stub_etherscan_history
+
+    snapshot = keyed.fetch_snapshot(ADDRESS)
+
+    # Summing Etherscan's transfers would report 1 USDC, not the 7 actually held:
+    # the indexer is the only backend that can answer this.
+    assert_equal BigDecimal("7"), snapshot.find_asset(kind: "erc20", contract: USDC).quantity
+    assert_equal BigDecimal("3"), snapshot.find_asset(kind: "native").quantity
+    assert_equal [ "0xkeyed", "0xkeyedtoken_#{USDC}" ], snapshot.movements.map(&:external_id)
+    assert_requested etherscan_history, times: 2
+  end
+
+  test "Etherscan refuses to answer token balances rather than approximating them" do
+    keyed = Onchain::Chains.adapter_for(Onchain::Chains::ETHEREUM, credentials: { etherscan_api_key: "key" })
+
+    assert_raises NotImplementedError do
+      keyed.history_backend.token_balances(ADDRESS)
+    end
   end
 
   test "each network reads its own explorer" do
@@ -175,6 +204,29 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
 
     def stub_token_transfers(items)
       stub_items("#{explorer_url}/api/v2/addresses/#{ADDRESS}/token-transfers?type=ERC-20", items)
+    end
+
+    # One stub for both Etherscan actions; the query string differs only by action.
+    def stub_etherscan_history
+      stub_request(:get, "#{Provider::Etherscan::BASE_URL}/api")
+        .with(query: hash_including({ "module" => "account" }))
+        .to_return do |request|
+          action = CGI.parse(URI(request.uri).query)["action"].first
+          result = case action
+          when "txlist"
+            [ { "hash" => "0xkeyed", "from" => "0xother", "to" => ADDRESS.downcase, "value" => "1000000000000000000", "timeStamp" => Time.utc(2026, 1, 2).to_i.to_s } ]
+          when "tokentx"
+            [ {
+              "hash" => "0xkeyedtoken", "from" => "0xother", "to" => ADDRESS.downcase,
+              "contractAddress" => USDC, "tokenSymbol" => "USDC", "tokenDecimal" => "6",
+              "value" => "1000000", "timeStamp" => Time.utc(2026, 1, 3).to_i.to_s
+            } ]
+          else
+            []
+          end
+
+          { status: 200, body: { "status" => "1", "message" => "OK", "result" => result }.to_json, headers: { "Content-Type" => "application/json" } }
+        end
     end
 
     def stub_items(url, items)
