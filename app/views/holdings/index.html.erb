@@ -24,8 +24,9 @@
         </div>
 
         <div class="bg-container rounded-lg shadow-border-xs">
-          <% if @account.cash_balance.to_d > 0 %>
-            <%= render "holdings/cash", account: @account %>
+          <% unlisted_cash = @account.cash_balance_outside_holdings %>
+          <% if unlisted_cash > 0 %>
+            <%= render "holdings/cash", account: @account, amount: unlisted_cash %>
             <%= render "shared/ruler" %>
           <% end %>
 
