@@ -17,6 +17,12 @@ class Onchain::EvmAdapter
   ADDRESS_PATTERN = /\A0x[0-9a-fA-F]{40}\z/
   NATIVE_DECIMALS = 18
 
+  # Below this, a priced holding is dust rather than something the holder is
+  # tracking on purpose. Only used to decide what the review screen pre-ticks:
+  # measured on a real airdropped address, market-cap presence alone leaves
+  # thousands of tokens looking credible, while holding value separates them.
+  DUST_VALUE = 1.to_d
+
   attr_reader :chain, :explorer_url, :etherscan_chain_id
 
   def initialize(chain:, explorer_url:, etherscan_chain_id: nil, credentials: {})
@@ -131,9 +137,17 @@ class Onchain::EvmAdapter
           name: token[:name].presence || token[:symbol].presence || short_contract(token[:contract]),
           decimals: token[:decimals],
           quantity: scale(token[:raw_amount], token[:decimals]),
-          contract: token[:contract]
+          contract: token[:contract],
+          notable: notable?(token)
         )
       end
+    end
+
+    # A holding the indexer can price, worth more than dust.
+    def notable?(token)
+      return false if token[:rate].nil?
+
+      (scale(token[:raw_amount], token[:decimals]) * token[:rate]) >= DUST_VALUE
     end
 
     # Market cap first, because that is the signal the indexer already gives us

@@ -144,6 +144,26 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
     assert_nil snapshot.find_asset(kind: "erc20", contract: "0xnft")
   end
 
+  test "only a priced holding above dust is pre-ticked, whatever its symbol" do
+    stub_summary(coin_balance: "1000000000000000000")
+    stub_token_balances([
+      erc20(contract: USDC, symbol: "USDC", value: "2500000", market_cap: "40000000000", rate: "1"),
+      # A plausible symbol, a real market cap, and 0.000001 of it: an airdrop.
+      erc20(contract: "0xdust", symbol: "0XBTC", value: "1", market_cap: "5000000", rate: "0.5"),
+      # Priced by nothing at all.
+      erc20(contract: "0xunpriced", symbol: "MEH", value: "5000000")
+    ])
+    stub_transactions([])
+    stub_token_transfers([])
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    assert snapshot.find_asset(kind: "native").notable?
+    assert snapshot.find_asset(kind: "erc20", contract: USDC).notable?
+    assert_not snapshot.find_asset(kind: "erc20", contract: "0xdust").notable?
+    assert_not snapshot.find_asset(kind: "erc20", contract: "0xunpriced").notable?
+  end
+
   test "an airdrop dump is capped, keeping the tokens with a market cap" do
     stub_summary(coin_balance: "0")
     stub_token_balances([
@@ -311,11 +331,12 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
         .to_return(status: 200, body: items.to_json, headers: { "Content-Type" => "application/json" })
     end
 
-    def erc20(contract:, symbol:, value:, decimals: "6", name: nil, market_cap: nil)
+    def erc20(contract:, symbol:, value:, decimals: "6", name: nil, market_cap: nil, rate: nil)
       {
         "token" => {
           "address_hash" => contract, "symbol" => symbol, "name" => name || symbol,
-          "decimals" => decimals, "type" => "ERC-20", "circulating_market_cap" => market_cap
+          "decimals" => decimals, "type" => "ERC-20",
+          "circulating_market_cap" => market_cap, "exchange_rate" => rate
         },
         "value" => value
       }

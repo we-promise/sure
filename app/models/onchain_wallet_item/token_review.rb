@@ -3,13 +3,15 @@
 # The list of assets found at an address, for the user to choose from.
 #
 # Nothing is imported without being ticked. Real wallets are full of spam
-# airdrops, so only assets whose symbol a price provider can quote are
-# pre-checked; the rest are listed, unchecked, and can still be tracked by
-# quantity if the user wants them.
+# airdrops — and airdrops use plausible short symbols, so "the symbol looks like
+# a ticker" pre-ticks nearly all of them. An asset is pre-ticked only when the
+# data source also treats it as notable: a priced holding above dust on an EVM
+# indexer, a place on Solana's verified token list. Everything else is listed,
+# unchecked, and can still be tracked by quantity if the user wants it.
 class OnchainWalletItem::TokenReview
   Row = Data.define(:asset, :key, :priceable, :tracked) do
     def preselected?
-      tracked || priceable
+      tracked || (priceable && asset.notable?)
     end
 
     def native?

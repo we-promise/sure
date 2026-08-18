@@ -103,13 +103,17 @@ module OnchainTestHelper
     fake_chain.native_asset(quantity: BigDecimal(quantity.to_s))
   end
 
-  def fake_token_asset(symbol: "FUSD", contract: "0xabc", quantity: 100, decimals: 6, name: nil)
+  # notable: whether the data source treats the token as a real asset, which is
+  # what the review screen pre-ticks on. Defaults to a real asset; pass false for
+  # an airdrop.
+  def fake_token_asset(symbol: "FUSD", contract: "0xabc", quantity: 100, decimals: 6, name: nil, notable: true)
     fake_chain.token_asset(
       symbol: symbol,
       name: name || symbol,
       decimals: decimals,
       quantity: BigDecimal(quantity.to_s),
-      contract: contract
+      contract: contract,
+      notable: notable
     )
   end
 

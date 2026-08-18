@@ -110,6 +110,19 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
     assert_equal "CRYPTO:PYTH", Onchain::SecurityResolver.resolve(symbol: asset.symbol).ticker
   end
 
+  test "only a mint the list vouches for is pre-tickable" do
+    stub_snapshot(lamports: 0, token_accounts: [
+      token_account(mint: USDC_MINT, amount: "1000000", decimals: 6),
+      token_account(mint: UNKNOWN_MINT, amount: "1000000", decimals: 6, pubkey: "other")
+    ])
+    stub_token_list([])
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    assert snapshot.find_asset(kind: "spl", contract: USDC_MINT).notable?
+    assert_not snapshot.find_asset(kind: "spl", contract: UNKNOWN_MINT).notable?
+  end
+
   test "an unverified mint keeps a label that cannot be mistaken for a ticker" do
     # A token calling itself USDC, which the list does not vouch for. Naming it
     # would hand it the real dollar's price.

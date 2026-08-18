@@ -137,7 +137,10 @@ class Onchain::SolanaAdapter
           name: metadata[:name],
           decimals: decimals,
           quantity: quantity,
-          contract: mint
+          contract: mint,
+          # Only a mint the token list vouches for, or one we ship, is an asset
+          # rather than an airdrop.
+          notable: metadata[:verified] == true
         )
       end
     end
@@ -160,10 +163,10 @@ class Onchain::SolanaAdapter
     # Falls back to a placeholder that cannot pass for a ticker, so security
     # resolution declines it instead of pricing an unrelated asset.
     def mint_metadata(mint)
-      KNOWN_MINTS[mint] || @resolved_mints&.dig(mint) || {
-        symbol: "SPL:#{mint.first(4)}…#{mint.last(4)}",
-        name: "SPL token #{mint}"
-      }
+      known = KNOWN_MINTS[mint] || @resolved_mints&.dig(mint)
+      return known.merge(verified: true) if known
+
+      { symbol: "SPL:#{mint.first(4)}…#{mint.last(4)}", name: "SPL token #{mint}", verified: false }
     end
 
     def movements(address, token_accounts)

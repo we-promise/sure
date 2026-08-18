@@ -150,10 +150,14 @@ whole flow; you can still pick it by hand.
    valid on all six EVM networks, and Bitcoin's Base58 shape overlaps Solana's —
    Sure probes each and asks you to choose, marking the ones where it found
    activity.
-3. Pick the assets to track. Assets with a known price are ticked; everything
-   else is listed unticked, because wallets accumulate spam airdrops whose
-   "symbol" is often an advertisement. You can still track them — they will show
-   a quantity and a value of zero.
+3. Pick the assets to track. The native coin and assets the data source treats
+   as notable are ticked; everything else is listed unticked. "Notable" means a
+   priced holding worth more than a dollar on EVM networks, or a place on
+   Solana's verified token list — because airdrops use perfectly plausible
+   symbols, so the symbol alone says nothing. On a heavily airdropped address
+   this is the difference between a handful of pre-ticked assets and two hundred.
+   You can still track anything listed; unpriceable assets show a quantity and a
+   value of zero.
 
 Nothing is imported that you did not tick.
 

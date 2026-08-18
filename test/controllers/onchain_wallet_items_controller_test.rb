@@ -94,14 +94,17 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
   end
 
-  test "preview_wallet lists what the address holds, pre-checking only priceable assets" do
+  test "preview_wallet lists what the address holds, pre-checking only vouched-for assets" do
     stub_fake_snapshot(
       OnchainTestHelper::FAKE_ADDRESS,
       Onchain::Snapshot.new(
         assets: [
           fake_native_asset(quantity: 2),
           fake_token_asset(symbol: "USDC", contract: "0xusdc", quantity: 10),
-          fake_token_asset(symbol: "Visit site to claim", contract: "0xspam", quantity: 1)
+          fake_token_asset(symbol: "Visit site to claim", contract: "0xspam", quantity: 1),
+          # An airdrop with a perfectly plausible symbol: only the data source's
+          # own signal separates it from the real thing.
+          fake_token_asset(symbol: "0XBTC", contract: "0xairdrop", quantity: 1, notable: false)
         ],
         movements: []
       )
@@ -116,6 +119,8 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='assets[]'][value='erc20:0xusdc'][checked]"
     assert_select "input[name='assets[]'][value='erc20:0xspam']"
     assert_select "input[name='assets[]'][value='erc20:0xspam'][checked]", false
+    assert_select "input[name='assets[]'][value='erc20:0xairdrop']"
+    assert_select "input[name='assets[]'][value='erc20:0xairdrop'][checked]", false
   end
 
   test "preview_wallet rejects an address that belongs to no supported chain" do

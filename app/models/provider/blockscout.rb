@@ -74,9 +74,11 @@ class Provider::Blockscout
         name: token["name"],
         decimals: token["decimals"].to_i,
         raw_amount: entry["value"].to_s,
-        # Blockscout's own market signal, used only to decide which tokens are
-        # worth surfacing first when an address holds thousands of them.
-        market_cap: token["circulating_market_cap"].to_s.presence&.to_d
+        # Blockscout's own market signals, used only to decide which tokens are
+        # worth surfacing first when an address holds thousands of them, and
+        # which are worth pre-ticking.
+        market_cap: token["circulating_market_cap"].to_s.presence&.to_d,
+        rate: token["exchange_rate"].to_s.presence&.to_d
       }
     end
   end
