@@ -111,6 +111,48 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_holdings(expected, calculated)
   end
 
+  test "cost_basis is nil for a security whose trade has a missing FX rate" do
+    eur_security = Security.create!(ticker: "ASML", name: "ASML Holding")
+    Security::Price.create!(security: eur_security, date: 1.day.ago.to_date, price: 100)
+    Security::Price.create!(security: eur_security, date: Date.current,       price: 100)
+
+    # Trade denominated in EUR with no EUR→USD exchange rate in the DB
+    create_trade(eur_security, qty: 10, date: 1.day.ago.to_date, price: 50, account: @account, currency: "EUR")
+
+    holdings = Holding::ForwardCalculator.new(@account).calculate
+
+    today = holdings.find { |h| h.security == eur_security && h.date == Date.current }
+    assert_not_nil today
+    assert_nil today.cost_basis, "cost_basis should be nil when FX rate is missing"
+  end
+
+  test "cost_basis is nil for all dates after a trade with a missing FX rate" do
+    eur_security = Security.create!(ticker: "ASML", name: "ASML Holding")
+    Security::Price.create!(security: eur_security, date: 2.days.ago.to_date, price: 100)
+    Security::Price.create!(security: eur_security, date: 1.day.ago.to_date,  price: 100)
+    Security::Price.create!(security: eur_security, date: Date.current,        price: 100)
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 2.days.ago.to_date, rate: 1.08)
+    # No EUR→USD rate exists for 1.day.ago
+
+    create_trade(eur_security, qty: 5,  date: 2.days.ago.to_date, price: 50, account: @account, currency: "EUR")
+    create_trade(eur_security, qty: 5,  date: 1.day.ago.to_date,  price: 55, account: @account, currency: "EUR")
+
+    holdings = Holding::ForwardCalculator.new(@account).calculate
+
+    # The first trade (2 days ago) has a known rate, so its holding has a cost_basis.
+    two_days_ago = holdings.find { |h| h.security == eur_security && h.date == 2.days.ago.to_date }
+    assert_not_nil two_days_ago
+    assert_not_nil two_days_ago.cost_basis, "cost_basis should be present before the missing-rate trade"
+
+    # Once the missing-rate trade occurs, all subsequent holdings must be nil.
+    [ 1.day.ago.to_date, Date.current ].each do |d|
+      h = holdings.find { |hh| hh.security == eur_security && hh.date == d }
+      assert_not_nil h
+      assert_nil h.cost_basis, "cost_basis should be nil on #{d} after the missing-rate trade"
+    end
+  end
+
   test "offline tickers sync holdings based on most recent trade price" do
     offline_security = Security.create!(ticker: "OFFLINE", name: "Offline Ticker")
 
