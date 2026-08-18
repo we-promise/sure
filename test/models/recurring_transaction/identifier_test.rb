@@ -13,7 +13,7 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     # An undeclared recurring charge: two occurrences on the same day.
     2.times do |i|
       account.entries.create!(
-        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        date: (i + 1).months.ago.to_date,
         amount: 45.00,
         currency: "USD",
         name: "City Water",
@@ -24,7 +24,7 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     # A recurring deposit: inflow, so an income candidate only.
     2.times do |i|
       account.entries.create!(
-        date: (i + 1).months.ago.beginning_of_month + 2.days,
+        date: (i + 1).months.ago.to_date,
         amount: -1840.00,
         currency: "USD",
         name: "ACME PAYROLL",
@@ -35,7 +35,7 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     # A penny sweep recurs but is never worth offering.
     2.times do |i|
       account.entries.create!(
-        date: (i + 1).months.ago.beginning_of_month + 4.days,
+        date: (i + 1).months.ago.to_date,
         amount: 0.01,
         currency: "USD",
         name: "To Car Vault",
@@ -46,7 +46,7 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     # An already-declared charge must not be re-offered.
     2.times do |i|
       account.entries.create!(
-        date: (i + 1).months.ago.beginning_of_month + 14.days,
+        date: (i + 1).months.ago.to_date,
         amount: 90.00,
         currency: "USD",
         name: "Internet Co",
@@ -59,8 +59,8 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
       amount: 90.00,
       currency: "USD",
       expected_day_of_month: 15,
-      last_occurrence_date: 1.month.ago.beginning_of_month + 14.days,
-      next_expected_date: Date.current.beginning_of_month + 14.days,
+      last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: 1.month.from_now.to_date,
       status: "active",
       manual: true
     )
@@ -142,7 +142,7 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
 
     2.times do |i|
       account.entries.create!(
-        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        date: (i + 1).months.ago.to_date,
         amount: 45.00,
         currency: "USD",
         name: "City Water",
