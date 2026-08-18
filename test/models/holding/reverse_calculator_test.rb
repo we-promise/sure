@@ -236,6 +236,134 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_in_delta 100.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
   end
 
+  # Cost basis FX: trade-date rate must be used, not today's rate
+  test "cost_basis uses trade-date exchange rate for foreign-currency buy" do
+    travel_to Date.new(2025, 6, 1) do
+      eur_stock = Security.create!(ticker: "EURST", name: "EUR Stock")
+      buy_date  = Date.new(2025, 5, 27)
+
+      Security::Price.create!(security: eur_stock, date: buy_date, price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: Date.current, price: 100, currency: "EUR")
+
+      @account.holdings.create!(security: eur_stock, date: Date.current,
+                                 qty: 10, price: 100, amount: 1000, currency: "EUR")
+
+      # EUR/USD was 1.10 on trade date; today it is 1.50 — cost basis must use 1.10
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: buy_date,     rate: 1.10)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.50)
+
+      create_trade(eur_stock, qty: 10, date: buy_date, price: 100, currency: "EUR", account: @account)
+
+      snapshot = OpenStruct.new(to_h: { eur_stock.id => 10 })
+      calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
+      today_holding = calculated.find { |h| h.date == Date.current && h.security == eur_stock }
+
+      # cost_basis per share = 100 EUR × 1.10 (trade-date rate) = 110 USD
+      assert_in_delta 110.0, today_holding.cost_basis.to_f, 0.01,
+        "cost_basis must use the trade-date FX rate (1.10), not today's rate (1.50)"
+    end
+  end
+
+  test "cost_basis uses provider-supplied exchange_rate when present" do
+    travel_to Date.new(2025, 6, 1) do
+      eur_stock = Security.create!(ticker: "EURST2", name: "EUR Stock 2")
+      buy_date  = Date.new(2025, 5, 27)
+
+      Security::Price.create!(security: eur_stock, date: buy_date, price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: Date.current, price: 100, currency: "EUR")
+
+      @account.holdings.create!(security: eur_stock, date: Date.current,
+                                 qty: 10, price: 100, amount: 1000, currency: "EUR")
+
+      # DB has a different rate — the provider-supplied rate (1.20) must win
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: buy_date,     rate: 1.10)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.50)
+
+      create_trade(eur_stock, qty: 10, date: buy_date, price: 100, currency: "EUR",
+                   exchange_rate: 1.20, account: @account)
+
+      snapshot = OpenStruct.new(to_h: { eur_stock.id => 10 })
+      calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
+      today_holding = calculated.find { |h| h.date == Date.current && h.security == eur_stock }
+
+      # cost_basis per share = 100 EUR × 1.20 (provider rate) = 120 USD
+      assert_in_delta 120.0, today_holding.cost_basis.to_f, 0.01,
+        "cost_basis must prefer the provider-supplied exchange_rate over the DB lookup"
+    end
+  end
+
+  test "cost_basis is nil for all dates after a failed FX conversion even when a later buy succeeds" do
+    travel_to Date.new(2025, 6, 1) do
+      eur_stock = Security.create!(ticker: "EURST4", name: "EUR Stock 4")
+      first_buy  = Date.new(2025, 5, 20)
+      failed_buy = Date.new(2025, 5, 27)
+      later_buy  = Date.new(2025, 5, 30)
+
+      Security::Price.create!(security: eur_stock, date: first_buy,   price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: failed_buy,  price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: later_buy,   price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: Date.current, price: 100, currency: "EUR")
+
+      @account.holdings.create!(security: eur_stock, date: Date.current,
+                                 qty: 30, price: 100, amount: 3000, currency: "EUR")
+
+      # first_buy and later_buy have rates; failed_buy does not — it will raise ConversionError
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: first_buy,   rate: 1.10)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: later_buy,   rate: 1.20)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.50)
+
+      create_trade(eur_stock, qty: 10, date: first_buy,  price: 100, currency: "EUR", account: @account)
+      create_trade(eur_stock, qty: 10, date: failed_buy, price: 100, currency: "EUR", account: @account)
+      create_trade(eur_stock, qty: 10, date: later_buy,  price: 100, currency: "EUR", account: @account)
+
+      snapshot = OpenStruct.new(to_h: { eur_stock.id => 30 })
+      calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
+
+      first_buy_holding = calculated.find { |h| h.date == first_buy && h.security == eur_stock }
+      assert_in_delta 110.0, first_buy_holding.cost_basis.to_f, 0.01,
+        "cost_basis should be valid (110 USD = 100 EUR × 1.10) before the FX failure on #{failed_buy}"
+
+      failed_date_holding = calculated.find { |h| h.date == failed_buy && h.security == eur_stock }
+      assert_nil failed_date_holding.cost_basis,
+        "cost_basis should be nil starting from the FX failure date"
+
+      later_date_holding = calculated.find { |h| h.date == later_buy && h.security == eur_stock }
+      assert_nil later_date_holding.cost_basis,
+        "cost_basis should remain nil even for dates with successful conversions after the failure"
+
+      today_holding = calculated.find { |h| h.date == Date.current && h.security == eur_stock }
+      assert_equal 30, today_holding.qty, "qty should still be calculated despite nil cost_basis"
+      assert_nil today_holding.cost_basis,
+        "cost_basis must be nil after FX failure even when a later buy converts successfully"
+    end
+  end
+
+  test "cost_basis is nil and trade is skipped when FX conversion fails" do
+    travel_to Date.new(2025, 6, 1) do
+      eur_stock = Security.create!(ticker: "EURST3", name: "EUR Stock 3")
+      buy_date  = Date.new(2025, 5, 27)
+
+      Security::Price.create!(security: eur_stock, date: buy_date, price: 100, currency: "EUR")
+      Security::Price.create!(security: eur_stock, date: Date.current, price: 100, currency: "EUR")
+
+      @account.holdings.create!(security: eur_stock, date: Date.current,
+                                 qty: 10, price: 100, amount: 1000, currency: "EUR")
+
+      # No exchange rate for buy_date and no custom_rate — conversion will fail
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.50)
+
+      create_trade(eur_stock, qty: 10, date: buy_date, price: 100, currency: "EUR", account: @account)
+
+      snapshot = OpenStruct.new(to_h: { eur_stock.id => 10 })
+      calculated = nil
+      assert_nothing_raised { calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate }
+
+      today_holding = calculated.find { |h| h.date == Date.current && h.security == eur_stock }
+      assert_nil today_holding.cost_basis,
+        "cost_basis must be nil when FX conversion fails (trade excluded to avoid mixing currencies)"
+    end
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
