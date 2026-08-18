@@ -44,7 +44,12 @@ class OpenBankingIoEntry::Processor
   def self.content_hash_for(open_banking_io_transaction)
     data = open_banking_io_transaction.with_indifferent_access
     attributes = [
+      # All three dates, not just booking_date: an ISO-20022 row may omit it, and two rows
+      # differing only in value_date would otherwise share a key -- which is also the
+      # importer's storage key, so one is discarded at ingest and never recoverable.
       data[:booking_date],
+      data[:value_date],
+      data[:transaction_date],
       data[:amount],
       data[:currency],
       data[:credit_debit_indicator],

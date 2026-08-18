@@ -1559,22 +1559,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_120000) do
   end
 
   create_table "open_banking_io_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "open_banking_io_item_id", null: false
-    t.string "name"
     t.string "account_id"
-    t.string "formatted_account"
-    t.string "currency"
-    t.decimal "current_balance", precision: 19, scale: 4
-    t.decimal "available_balance", precision: 19, scale: 4
-    t.decimal "balance_limit", precision: 19, scale: 4
     t.string "account_status"
     t.string "account_type"
-    t.string "provider"
+    t.decimal "available_balance", precision: 19, scale: 4
+    t.decimal "balance_limit", precision: 19, scale: 4
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "formatted_account"
     t.jsonb "institution_metadata"
+    t.string "name"
+    t.uuid "open_banking_io_item_id", null: false
+    t.string "provider"
     t.jsonb "raw_payload"
     t.jsonb "raw_transactions_payload"
     t.date "sync_start_date"
-    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_open_banking_io_accounts_on_account_id"
     t.index ["open_banking_io_item_id", "account_id"], name: "index_open_banking_io_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
@@ -1582,18 +1582,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_120000) do
   end
 
   create_table "open_banking_io_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "family_id", null: false
-    t.string "name", null: false
-    t.string "status", default: "good", null: false
-    t.boolean "scheduled_for_deletion", default: false, null: false
-    t.boolean "pending_account_setup", default: false, null: false
-    t.date "sync_start_date"
-    t.jsonb "raw_payload"
-    t.jsonb "raw_institution_payload"
     t.text "api_base_url"
     t.text "api_key"
-    t.text "private_key"
     t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.text "private_key"
+    t.jsonb "raw_institution_payload"
+    t.jsonb "raw_payload"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.date "sync_start_date"
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_open_banking_io_items_on_family_id"
     t.index ["status"], name: "index_open_banking_io_items_on_status"

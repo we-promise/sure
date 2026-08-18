@@ -60,11 +60,12 @@ class OpenBankingIoAccount::Transactions::Processor
       failed_count += 1
       errors << { index: index, transaction_id: transaction_id(transaction_data), error: "Validation error: #{e.message}" }
       Rails.logger.error "OpenBankingIoAccount::Transactions::Processor - Validation error processing transaction #{transaction_id(transaction_data)}: #{e.message}"
+      capture_row_error(e, transaction_data)
     rescue => e
       failed_count += 1
       errors << { index: index, transaction_id: transaction_id(transaction_data), error: "#{e.class}: #{e.message}" }
       Rails.logger.error "OpenBankingIoAccount::Transactions::Processor - Error processing transaction #{transaction_id(transaction_data)}: #{e.class} - #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
+      capture_row_error(e, transaction_data)
     end
     pruned_count = prune_stale_pending_entries(current_pending_external_ids)
     pruned_count += prune_discarded_entries(discarded_external_ids)
@@ -167,6 +168,18 @@ class OpenBankingIoAccount::Transactions::Processor
     # Removes entries for rows the bank has since marked cancelled, rejected or scheduled.
     # Scoped to this provider and to ids we just saw in the payload, so it can only ever
     # remove something we ourselves imported.
+    # The result this row's error lands in is replaced by a generic message one layer up, so
+    # without this /settings/debug shows "account processing failed" and nothing else.
+    def capture_row_error(error, transaction_data)
+      open_banking_io_account.open_banking_io_item&.capture_provider_error(
+        "Failed to process an open-banking.io transaction",
+        error: error,
+        open_banking_io_account_id: open_banking_io_account.id,
+        account_provider: open_banking_io_account.account_provider,
+        provider_transaction_id: transaction_id(transaction_data)
+      )
+    end
+
     def prune_discarded_entries(discarded_external_ids)
       return 0 if discarded_external_ids.empty?
 
