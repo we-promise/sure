@@ -236,4 +236,35 @@ class Provider::OpenBankingIo::ClientTest < ActiveSupport::TestCase
     # page one and silently import a single page of an N-page statement.
     assert_operator Provider::OpenBankingIo::PAGE_LIMIT, :<=, 500
   end
+
+  # === CONNECTION LIFETIME ===
+
+  test "reuses one connection across requests and releases it on close" do
+    stub_accounts
+    c = client
+
+    c.get_accounts
+    first = c.instance_variable_get(:@http)
+    assert first.started?
+
+    c.get_accounts
+    assert_same first, c.instance_variable_get(:@http), "the connection must be reused across requests"
+
+    c.close
+    assert_nil c.instance_variable_get(:@http)
+    assert_not first.started?
+  end
+
+  test "close is safe to call twice and before any request" do
+    stub_accounts
+    c = client
+
+    assert_nothing_raised do
+      c.close          # before any request
+      c.get_accounts
+      c.close
+      c.close          # idempotent
+    end
+    assert_nil c.instance_variable_get(:@http)
+  end
 end
