@@ -133,8 +133,6 @@ services:
       - sure_net
 
   backup:
-    profiles:
-      - backup
     image: prodrigestivill/postgres-backup-local
     restart: unless-stopped
     volumes:
