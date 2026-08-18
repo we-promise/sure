@@ -9,10 +9,11 @@
 # they are summed. Emptied token accounts are left behind by design and are
 # dropped here.
 #
-# RPC gives no token metadata, only mints. Well-known mints get their real
-# symbol; anything else is labelled with its mint in a form that deliberately
-# cannot be mistaken for a ticker, so it is tracked by quantity and valued at
-# zero rather than priced as some unrelated asset that happens to share a name.
+# RPC gives no token metadata, only mints, so names come from a keyless token
+# list — and only for mints it reports as verified. Anyone can mint a token
+# calling itself USDC, so an unverified or unknown mint keeps a label that
+# deliberately cannot pass for a ticker: tracked by quantity, valued at zero,
+# rather than handed an unrelated asset's price.
 class Onchain::SolanaAdapter
   include Onchain::ChainAdapter
 
@@ -23,8 +24,9 @@ class Onchain::SolanaAdapter
   # range too — which is exactly why activity is probed rather than assumed.
   ADDRESS_PATTERN = /\A[1-9A-HJ-NP-Za-km-z]{32,44}\z/
 
-  # Mints whose asset the price provider can quote. Deliberately short: a wrong
-  # guess here would value a holding as an unrelated asset.
+  # Fallback for the handful of mints that must resolve even when the token list
+  # is unreachable. Deliberately short: a wrong guess here would value a holding
+  # as an unrelated asset.
   KNOWN_MINTS = {
     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" => { symbol: "USDC", name: "USD Coin" },
     "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB" => { symbol: "USDT", name: "Tether USD" },
@@ -69,6 +71,9 @@ class Onchain::SolanaAdapter
 
     wrap_provider_errors do
       token_accounts = provider.get_token_accounts(address)
+      # Resolved once per snapshot, for every mint at once: assets and movements
+      # must agree on what a token is called.
+      load_mint_metadata(token_accounts.map { |account| account[:mint] })
 
       Onchain::Snapshot.new(
         assets: [ native_asset(address), *token_assets(token_accounts) ],
@@ -115,12 +120,28 @@ class Onchain::SolanaAdapter
       end
     end
 
-    # A placeholder that cannot pass for a ticker, so security resolution
-    # declines it instead of pricing an unrelated asset.
+    # Verified metadata for every mint in one request, cached per mint. A token
+    # list that is down or rate limiting is a naming inconvenience, not a sync
+    # failure, so it degrades to the placeholder rather than raising.
+    def load_mint_metadata(mints)
+      unknown = mints.uniq.reject { |mint| KNOWN_MINTS.key?(mint) }
+      @resolved_mints = unknown.any? ? token_list.metadata_for(unknown) : {}
+    rescue StandardError => e
+      Rails.logger.warn("Onchain::SolanaAdapter - token metadata unavailable: #{e.class}")
+      @resolved_mints = {}
+    end
+
+    def token_list
+      @token_list ||= Provider::JupiterTokens.new
+    end
+
+    # Falls back to a placeholder that cannot pass for a ticker, so security
+    # resolution declines it instead of pricing an unrelated asset.
     def mint_metadata(mint)
-      KNOWN_MINTS.fetch(mint) do
-        { symbol: "SPL:#{mint.first(4)}…#{mint.last(4)}", name: "SPL token #{mint}" }
-      end
+      KNOWN_MINTS[mint] || @resolved_mints&.dig(mint) || {
+        symbol: "SPL:#{mint.first(4)}…#{mint.last(4)}",
+        name: "SPL token #{mint}"
+      }
     end
 
     def movements(address, token_accounts)

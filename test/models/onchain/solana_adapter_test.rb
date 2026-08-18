@@ -64,13 +64,78 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
     assert_nil snapshot.find_asset(kind: "spl", contract: UNKNOWN_MINT)
   end
 
+  test "a verified mint gets its real symbol from the token list" do
+    stub_snapshot(lamports: 0, token_accounts: [ token_account(mint: UNKNOWN_MINT, amount: "1500000", decimals: 6) ])
+    stub_token_list([ { "id" => UNKNOWN_MINT, "symbol" => "PYTH", "name" => "Pyth Network", "isVerified" => true } ])
+
+    asset = @adapter.fetch_snapshot(ADDRESS).find_asset(kind: "spl", contract: UNKNOWN_MINT)
+
+    assert_equal "PYTH", asset.symbol
+    assert_equal "Pyth Network", asset.name
+    assert_equal "CRYPTO:PYTH", Onchain::SecurityResolver.resolve(symbol: asset.symbol).ticker
+  end
+
+  test "an unverified mint keeps a label that cannot be mistaken for a ticker" do
+    # A token calling itself USDC, which the list does not vouch for. Naming it
+    # would hand it the real dollar's price.
+    stub_snapshot(lamports: 0, token_accounts: [ token_account(mint: UNKNOWN_MINT, amount: "1000000000", decimals: 9) ])
+    stub_token_list([ { "id" => UNKNOWN_MINT, "symbol" => "USDC", "name" => "USD Coin", "isVerified" => false } ])
+
+    asset = @adapter.fetch_snapshot(ADDRESS).find_asset(kind: "spl", contract: UNKNOWN_MINT)
+
+    assert_no_match(/USDC/, asset.symbol)
+    assert_nil Onchain::SecurityResolver.resolve(symbol: asset.symbol)
+  end
+
   test "an unknown mint is labelled so it cannot be mistaken for a ticker" do
     stub_snapshot(lamports: 0, token_accounts: [ token_account(mint: UNKNOWN_MINT, amount: "1000000000", decimals: 9) ])
+    stub_token_list([])
 
     asset = @adapter.fetch_snapshot(ADDRESS).find_asset(kind: "spl", contract: UNKNOWN_MINT)
 
     assert_equal UNKNOWN_MINT, asset.contract
     assert_nil Onchain::SecurityResolver.resolve(symbol: asset.symbol)
+  end
+
+  test "a token list that is down leaves the wallet readable" do
+    stub_snapshot(lamports: 1_000_000_000, token_accounts: [ token_account(mint: UNKNOWN_MINT, amount: "1000000000", decimals: 9) ])
+    stub_request(:get, /lite-api\.jup\.ag/).to_return(status: 503)
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    assert_equal BigDecimal("1"), snapshot.find_asset(kind: "native").quantity
+    assert_equal 2, snapshot.assets.size
+  end
+
+  test "hard-coded mints resolve without asking the token list" do
+    stub_snapshot(lamports: 0, token_accounts: [ token_account(mint: USDC_MINT, amount: "1000000", decimals: 6) ])
+    list = stub_token_list([])
+
+    assert_equal "USDC", @adapter.fetch_snapshot(ADDRESS).find_asset(kind: "spl", contract: USDC_MINT).symbol
+    assert_not_requested list
+  end
+
+  test "movements and assets agree on a token's name" do
+    stub_snapshot(
+      lamports: 0,
+      token_accounts: [ token_account(mint: UNKNOWN_MINT, amount: "1000000", decimals: 6) ],
+      signatures: [ { "signature" => "sig1", "blockTime" => Time.utc(2026, 2, 3).to_i } ],
+      transaction: {
+        "blockTime" => Time.utc(2026, 2, 3).to_i,
+        "meta" => {
+          "err" => nil, "preBalances" => [ 0 ], "postBalances" => [ 0 ],
+          "preTokenBalances" => [],
+          "postTokenBalances" => [ { "owner" => ADDRESS, "mint" => UNKNOWN_MINT, "uiTokenAmount" => { "amount" => "1000000", "decimals" => 6 } } ]
+        },
+        "transaction" => { "message" => { "accountKeys" => [ { "pubkey" => ADDRESS } ] } }
+      }
+    )
+    stub_token_list([ { "id" => UNKNOWN_MINT, "symbol" => "PYTH", "name" => "Pyth Network", "isVerified" => true } ])
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    assert_equal "PYTH", snapshot.movements.sole.symbol
+    assert_equal [ "PYTH" ], snapshot.assets.select { |asset| asset.contract == UNKNOWN_MINT }.map(&:symbol)
   end
 
   test "the snapshot has the same shape as the other chains" do
@@ -142,6 +207,11 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
   end
 
   private
+    def stub_token_list(tokens)
+      stub_request(:get, /lite-api\.jup\.ag/)
+        .to_return(status: 200, body: tokens.to_json, headers: json_headers)
+    end
+
     def json_headers
       { "Content-Type" => "application/json" }
     end

@@ -56,6 +56,7 @@ before you link anything.
 | Polygon | Blockscout (`polygon.blockscout.com`) | No | `BLOCKSCOUT_POLYGON_URL` |
 | Gnosis | Blockscout (`gnosis.blockscout.com`) | No | `BLOCKSCOUT_GNOSIS_URL` |
 | Solana | Public JSON-RPC (`api.mainnet-beta.solana.com`) | No | `SOLANA_RPC_URL` |
+| Solana token names | Jupiter token search (`lite-api.jup.ag`) | No | `SOLANA_TOKEN_LIST_URL` |
 
 Every override expects the base URL of a compatible instance, without a trailing
 slash — useful if you run your own indexer or node, or if a public endpoint rate
@@ -145,10 +146,13 @@ extended keys would require BIP32 derivation — a dependency this codebase
 deliberately avoids — or a descriptor-indexing backend. If you use a single-address
 setup, or want to follow one specific address, this works exactly as expected.
 
-**Solana token metadata is limited.** RPC returns mints, not names. Well-known
-mints (USDC, USDT, PYUSD, BONK, JUP, JTO) get their real symbol; anything else is
-labelled with its mint and tracked by quantity only, rather than being priced as
-some unrelated asset that happens to share a symbol.
+**Solana token names depend on a token list.** RPC returns mints, not names, so
+names come from Jupiter's token search — and only for mints it reports as
+*verified*. Anyone can mint a token calling itself USDC, so an unverified or
+unknown mint keeps a label built from its mint address and is tracked by quantity
+only, rather than being handed the real asset's price. A handful of major mints
+resolve without the list, so they keep working if it is unreachable. Names are
+cached for 24 hours per mint, misses included.
 
 **Fees are not itemised.** Network fees are included in the net effect of each
 transfer rather than recorded separately. On Solana, native balance changes below
@@ -178,6 +182,10 @@ instance.
 
 **A token I received is not showing up.** New assets are never imported
 automatically. Use **Review tokens** and tick it.
+
+**A Solana token shows as `SPL:abcd…wxyz`.** The token list does not vouch for
+that mint, so Sure will not name or price it. Tick it anyway to track the
+quantity.
 
 **Transfers appear with a value of 0 and are excluded from totals.** No price was
 available for that date. Once market data covers the range, transfers
