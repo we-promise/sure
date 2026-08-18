@@ -182,6 +182,55 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_includes DebugLogEntry.pluck(:message).join(" "), "Could not backfill"
   end
 
+  test "a display-only movement becomes a trade once its price is known" do
+    date = 3.days.ago.to_date
+    store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    entry = onchain_entry("tx1")
+    assert_equal "Transaction", entry.entryable_type
+
+    price_asset_at(date, 40)
+
+    assert_equal 1, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+
+    upgraded = onchain_entry("tx1")
+    assert_equal "Trade", upgraded.entryable_type
+    assert_equal entry.external_id, upgraded.external_id
+    assert_equal BigDecimal("1.5"), upgraded.entryable.qty
+    assert_equal 40, upgraded.entryable.price
+    assert_equal(-60, upgraded.amount)
+    assert_not upgraded.excluded
+  end
+
+  test "the repair leaves a movement alone while its price is still unknown" do
+    store_movements(fake_movement(external_id: "tx1", amount: "1", timestamp: 3.days.ago.to_date))
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    assert_equal 0, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    assert_equal "Transaction", onchain_entry("tx1").entryable_type
+  end
+
+  test "the repair costs one query and no writes when there is nothing to upgrade" do
+    price_asset_at(Date.current, 100)
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    assert_no_difference [ "Entry.count", "Holding.count" ] do
+      assert_equal 0, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    end
+  end
+
+  test "the repair does not touch another provider's excluded entries" do
+    foreign = @account.entries.create!(
+      date: 3.days.ago.to_date, amount: 0, currency: @account.currency, name: "Manual note",
+      excluded: true, external_id: "#{@onchain_account.id}_manual", source: "kraken",
+      entryable: Transaction.new
+    )
+
+    assert_equal 0, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    assert_equal "Transaction", foreign.reload.entryable_type
+  end
+
   test "does nothing when the asset is not linked to an account" do
     unlinked = create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa"))
 
@@ -191,6 +240,10 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
   end
 
   private
+    def onchain_entry(movement_id)
+      @account.entries.find_by!(external_id: "onchain_#{@onchain_account.id}_#{movement_id}")
+    end
+
     def security
       @security ||= Onchain::SecurityResolver.resolve(symbol: @onchain_account.symbol, name: @onchain_account.name)
     end

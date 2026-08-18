@@ -55,7 +55,14 @@ class OnchainWalletItem::Syncer
     raise
   end
 
+  # Runs for every linked asset, not just the ones that changed on chain: what
+  # changed here is the price history, which no chain read can tell us about.
   def perform_post_sync
+    linked_accounts.each do |onchain_account|
+      OnchainWalletAccount::Processor.new(onchain_account).repair_display_only_movements
+    rescue StandardError => e
+      Rails.logger.warn("OnchainWalletItem::Syncer - movement repair failed for #{onchain_account.id}: #{e.class}")
+    end
   end
 
   private

@@ -74,6 +74,29 @@ class OnchainWalletItem::SyncerTest < ActiveSupport::TestCase
     assert_equal "error", entry.level
   end
 
+  test "post sync repairs movements for every linked asset, even unchanged ones" do
+    stub_wallet(quantity: "2")
+    date = 3.days.ago.to_date
+    @onchain_account.update!(
+      raw_movements_payload: {
+        "movements" => [ { "external_id" => "tx1", "symbol" => "FAKE", "contract" => nil, "amount" => "1", "date" => date.to_s } ]
+      }
+    )
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+    entry = @account.entries.find_by!(external_id: "onchain_#{@onchain_account.id}_tx1")
+    assert_equal "Transaction", entry.entryable_type
+
+    security = Onchain::SecurityResolver.resolve(symbol: @onchain_account.symbol)
+    Security::Price.create!(security: security, date: date, price: 30, currency: "USD")
+
+    # The wallet itself has not moved, so the sync changes nothing on chain — the
+    # repair still has to run.
+    OnchainWalletItem::Syncer.new(@item).perform_sync(@sync)
+    OnchainWalletItem::Syncer.new(@item).perform_post_sync
+
+    assert_equal "Trade", @account.entries.find_by!(external_id: "onchain_#{@onchain_account.id}_tx1").entryable_type
+  end
+
   private
     def stub_wallet(quantity: "1", assets: nil)
       stub_fake_snapshot(

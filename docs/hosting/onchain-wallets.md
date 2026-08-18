@@ -22,7 +22,8 @@ For each asset Sure records:
   is known, so cost basis and the value chart reconstruct back to acquisition.
   When that day's price is not known, the transfer still appears as an excluded,
   zero-amount entry so you can see it happened without a made-up value entering
-  your history.
+  your history — and it is upgraded to a trade on the first sync after the price
+  becomes available.
 
 Balances are read-only and always derived from the chain. Editing them by hand is
 pointless: the next sync overwrites them.
@@ -195,9 +196,10 @@ that mint, so Sure will not name or price it. Tick it anyway to track the
 quantity.
 
 **Transfers appear with a value of 0 and are excluded from totals.** No price was
-available for that date. Once market data covers the range, transfers
-materialised after that point become trades; existing zero-amount entries stay as
-they are.
+available for that date yet. Once market data covers the range, the next sync
+upgrades those entries to trades automatically — they keep their identity, so
+nothing is duplicated. If they stay at zero, the date is outside what your market
+data provider can serve.
 
 **Balances are correct but nothing updates.** Syncs only rewrite an account when
 the chain actually changed — an idle wallet is meant to produce no writes at all.

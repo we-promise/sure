@@ -28,6 +28,30 @@ class OnchainWalletAccount::Processor
     report_zero_valuation(security) if security && price.nil?
   end
 
+  # Converts movements that were recorded as display-only into trades, once a
+  # price for their date exists.
+  #
+  # On a first sync the price history usually is not there yet, so transfers land
+  # as zero-amount excluded entries. Nothing brought them back afterwards: the
+  # syncer only reprocesses assets whose on-chain state changed, and an old
+  # transfer never changes. The cost basis stayed broken for exactly the wallets
+  # that were linked before market data caught up.
+  #
+  # Reads prices from the database only — no network — so this can run for every
+  # linked asset on every sync.
+  # @return [Integer] number of entries upgraded
+  def repair_display_only_movements
+    return 0 unless account
+
+    candidates = display_only_entries
+    return 0 if candidates.empty?
+
+    security = resolve_security
+    return 0 if security.nil?
+
+    candidates.count { |entry| upgrade_to_trade(entry, security) }
+  end
+
   private
     def account
       onchain_wallet_account.current_account
@@ -213,6 +237,46 @@ class OnchainWalletAccount::Processor
       )
       entry.entryable.extra = (entry.entryable.extra || {}).merge(SOURCE => movement)
       entry.save!
+    end
+
+    # The zero-amount, excluded entries this processor writes for unpriced
+    # movements, identified by the external_id prefix it gave them.
+    def display_only_entries
+      account.entries
+        .where(source: SOURCE, entryable_type: "Transaction", excluded: true, amount: 0)
+        .where("external_id LIKE ?", "#{holding_external_id}_%")
+        .includes(:entryable)
+        .to_a
+    end
+
+    def upgrade_to_trade(entry, security)
+      movement = entry.entryable.extra.to_h[SOURCE].to_h
+      amount = BigDecimal(movement["amount"].to_s)
+      return false if amount.zero?
+
+      price = exact_price_on(security, entry.date)
+      return false if price.nil?
+
+      # The entry has to go before the trade is written: an Entry cannot change
+      # entryable type in place, and import_trade refuses an external_id already
+      # held by a Transaction.
+      external_id = entry.external_id
+      Entry.transaction do
+        entry.destroy!
+        import_adapter.import_trade(
+          security: security,
+          quantity: amount,
+          price: price,
+          amount: -(amount * price).round(4),
+          currency: currency,
+          date: entry.date,
+          external_id: external_id,
+          source: SOURCE,
+          activity_label: amount.positive? ? "Buy" : "Sell"
+        )
+      end
+
+      true
     end
 
     def movement_name(quantity)
