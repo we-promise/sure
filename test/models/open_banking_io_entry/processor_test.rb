@@ -294,4 +294,39 @@ class OpenBankingIoEntry::ProcessorTest < ActiveSupport::TestCase
   test "raises rather than importing a transaction with no amount" do
     assert_raises(ArgumentError) { process(id: "tx_noamount", amount: nil) }
   end
+
+  # === MERCHANTS ===
+  # open_banking_io was registered as a ProviderMerchant source but nothing ever created
+  # one, so the enum entry was inert while Up and Enable Banking both populate theirs.
+  test "creates a provider merchant from the creditor name on a debit" do
+    entry = process(id: "tx_merchant", credit_debit_indicator: "DBIT", creditor_name: "Netto")
+
+    merchant = entry.entryable.merchant
+    assert merchant
+    assert_equal "Netto", merchant.name
+    assert_equal "open_banking_io", merchant.source
+  end
+
+  test "reuses one merchant across case variations of the same name" do
+    process(id: "tx_m1", credit_debit_indicator: "DBIT", creditor_name: "Netto")
+
+    assert_no_difference "ProviderMerchant.count" do
+      process(id: "tx_m2", credit_debit_indicator: "DBIT", creditor_name: "NETTO")
+    end
+  end
+
+  # On a credit the counterparty is the payer -- an employer, a friend -- not a merchant.
+  test "does not create a merchant for a credit" do
+    assert_no_difference "ProviderMerchant.count" do
+      entry = process(id: "tx_credit", credit_debit_indicator: "CRDT", debtor_name: "Employer Ltd")
+      assert_nil entry.entryable.merchant
+    end
+  end
+
+  test "falls back to remittance information when there is no creditor name" do
+    entry = process(id: "tx_rem", credit_debit_indicator: "DBIT", creditor_name: nil,
+                    remittance_information: "Card payment CIRCLE K")
+
+    assert_equal "Card payment CIRCLE K", entry.entryable.merchant&.name
+  end
 end
