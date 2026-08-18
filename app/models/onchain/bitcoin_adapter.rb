@@ -36,12 +36,18 @@ class Onchain::BitcoinAdapter
   def fetch_snapshot(address)
     raise Onchain::Chains::Error, "Invalid Bitcoin address" unless valid_address?(address)
 
-    summary = provider.get_address(address)
+    wrap_provider_errors do
+      summary = provider.get_address(address)
 
-    Onchain::Snapshot.new(
-      assets: [ definition.native_asset(quantity: balance_from(summary)) ],
-      movements: movements_for(address)
-    )
+      Onchain::Snapshot.new(
+        assets: [ definition.native_asset(quantity: balance_from(summary)) ],
+        movements: movements_for(address)
+      )
+    end
+  end
+
+  def provider_error_classes
+    [ Provider::MempoolSpace::RateLimitError, Provider::MempoolSpace::Error ]
   end
 
   private

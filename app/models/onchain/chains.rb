@@ -10,6 +10,11 @@ module Onchain
   module Chains
     Error = Class.new(StandardError)
     UnknownChainError = Class.new(Error)
+    # A chain's data source refused or could not answer. Adapters translate
+    # whatever their explorer raises into these, so callers — the controller
+    # above all — never need to know one chain's error types from another's.
+    UnreachableError = Class.new(Error)
+    RateLimitedError = Class.new(Error)
 
     # Assets identified by their address alone.
     NATIVE_KIND = "native"

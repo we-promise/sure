@@ -127,6 +127,19 @@ Rails.application.routes.draw do
     end
   end
 
+  # Self-custody / on-chain wallets
+  resources :onchain_wallet_items, only: [ :update, :destroy ] do
+    collection do
+      get :new_wallet
+      post :preview_wallet
+      post :link_wallet
+    end
+
+    member do
+      post :sync
+    end
+  end
+
   resources :snaptrade_items, only: [ :index, :show, :destroy ] do
     collection do
       get :preload_accounts

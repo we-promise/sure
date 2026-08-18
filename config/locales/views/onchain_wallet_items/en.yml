@@ -1,0 +1,59 @@
+---
+en:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Activity found
+      explanation: This address format is used by more than one network, and the balances on each are different. Pick the one you want to track.
+      no_activity_found: Nothing found
+      subtitle: "%{address}"
+      title: Which network?
+    destroy:
+      success: Scheduled the self-custody connection for deletion.
+    errors:
+      address_required: Enter a wallet address.
+      already_linked: That address is already being tracked on this network. Use Review tokens to change which assets are tracked.
+      chain_unreachable: The public explorer for this network could not be reached. Try again in a moment.
+      rate_limited: The public explorer is rate limiting requests right now. Try again in a few minutes.
+      unexpected: Something went wrong reading this wallet. The details were recorded for support.
+      unrecognized_address: That does not look like an address on any supported network.
+    link_wallet:
+      errors:
+        nothing_selected: Pick at least one asset to track.
+      success:
+        one: Tracking 1 asset from this wallet.
+        other: "Tracking %{count} assets from this wallet."
+    new_wallet:
+      address_label: Wallet address
+      address_placeholder: bc1..., 0x..., or a Solana address
+      bitcoin_single_address_note: Bitcoin is tracked one address at a time. Extended keys (xpub/ypub/zpub) are not supported, so a wallet that spreads funds across derived addresses will show only the balance of the address you enter.
+      chain_auto_detect: Detect automatically
+      chain_label: Network
+      continue: Continue
+      read_only_note: Only public chain data is read. Never enter a seed phrase or private key.
+      subtitle: Track a wallet you hold the keys to, from its public address.
+      title: Add a self-custody wallet
+    onchain_wallet_item:
+      assets_tracked:
+        one: 1 asset tracked
+        other: "%{count} assets tracked"
+      sync: Sync now
+      syncing: Syncing...
+    price_provider_warning:
+      body: No enabled market data provider can price crypto, so these wallets will track quantities but show a value of zero. Enable the Binance public provider in your securities providers.
+      link: Open market data settings
+      title: Crypto prices are not configured
+    provider_connection:
+      description: Track a wallet you hold the keys to, from its public address.
+      name: Self-custody wallet
+    token_review:
+      import_selected: Track selected assets
+      subtitle: "%{chain} · %{address}"
+      title: Choose what to track
+    token_review_form:
+      cancel: Cancel
+      explanation: Assets with a known price are ticked. Anything else is left unticked — wallets collect spam airdrops, and tracking one has no value attached to it.
+      native: Native
+      no_price: No price available; tracked by quantity only
+      nothing_found: This address holds nothing we can see on this network.
+    update:
+      success: Updated the self-custody connection.

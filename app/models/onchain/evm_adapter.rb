@@ -47,12 +47,22 @@ class Onchain::EvmAdapter
   def fetch_snapshot(address)
     raise Onchain::Chains::Error, "Invalid EVM address" unless valid_address?(address)
 
-    backend = self.backend
+    wrap_provider_errors do
+      backend = self.backend
 
-    Onchain::Snapshot.new(
-      assets: [ native_asset(backend, address), *token_assets(backend, address) ],
-      movements: movements(backend, address)
-    )
+      Onchain::Snapshot.new(
+        assets: [ native_asset(backend, address), *token_assets(backend, address) ],
+        movements: movements(backend, address)
+      )
+    end
+  end
+
+  def provider_error_classes
+    if backend.is_a?(Provider::Etherscan)
+      [ Provider::Etherscan::RateLimitError, Provider::Etherscan::Error ]
+    else
+      [ Provider::Blockscout::RateLimitError, Provider::Blockscout::Error ]
+    end
   end
 
   # The backend actually used for balances and history: the keyed one when this

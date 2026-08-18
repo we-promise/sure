@@ -1,0 +1,18 @@
+<%# Shown before linking, not after: without a crypto price provider every %>
+<%# wallet is valued at zero, which reads as a broken sync rather than a %>
+<%# missing setting. %>
+<% unless Onchain::SecurityResolver.price_provider_enabled? %>
+  <%= render DS::Alert.new(
+        variant: :warning,
+        title: t("onchain_wallet_items.price_provider_warning.title"),
+        message: safe_join([
+          content_tag(:p, t("onchain_wallet_items.price_provider_warning.body")),
+          link_to(
+            t("onchain_wallet_items.price_provider_warning.link"),
+            settings_hosting_path,
+            class: "underline font-medium",
+            data: { turbo_frame: "_top" }
+          )
+        ], " ".html_safe)
+      ) %>
+<% end %>

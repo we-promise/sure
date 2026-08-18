@@ -10,6 +10,25 @@ class Provider::OnchainWalletAdapter < Provider::Base
     %w[Crypto]
   end
 
+  def self.connection_configs(family:)
+    return [] unless family.can_connect_onchain_wallet?
+
+    [
+      {
+        key: "onchain_wallet",
+        name: I18n.t("onchain_wallet_items.provider_connection.name"),
+        description: I18n.t("onchain_wallet_items.provider_connection.description"),
+        can_connect: true,
+        new_account_path: ->(accountable_type, return_to) {
+          Rails.application.routes.url_helpers.new_wallet_onchain_wallet_items_path(
+            accountable_type: accountable_type,
+            return_to: return_to
+          )
+        }
+      }
+    ]
+  end
+
   def provider_name
     "onchain_wallet"
   end

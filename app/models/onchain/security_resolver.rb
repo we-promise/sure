@@ -30,6 +30,13 @@ class Onchain::SecurityResolver
     def priceable?(symbol)
       new(symbol: symbol).ticker_symbol.present?
     end
+
+    # Whether anything is configured that can price crypto at all. When it is
+    # not, every on-chain holding is valued at zero — which users report as a
+    # sync bug — so the UI says so before they link rather than after.
+    def price_provider_enabled?
+      Setting.enabled_securities_providers.include?(PRICE_PROVIDER)
+    end
   end
 
   def initialize(symbol:, name: nil)

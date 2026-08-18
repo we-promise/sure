@@ -67,12 +67,18 @@ class Onchain::SolanaAdapter
   def fetch_snapshot(address)
     raise Onchain::Chains::Error, "Invalid Solana address" unless valid_address?(address)
 
-    token_accounts = provider.get_token_accounts(address)
+    wrap_provider_errors do
+      token_accounts = provider.get_token_accounts(address)
 
-    Onchain::Snapshot.new(
-      assets: [ native_asset(address), *token_assets(token_accounts) ],
-      movements: movements(address, token_accounts)
-    )
+      Onchain::Snapshot.new(
+        assets: [ native_asset(address), *token_assets(token_accounts) ],
+        movements: movements(address, token_accounts)
+      )
+    end
+  end
+
+  def provider_error_classes
+    [ Provider::SolanaRpc::RateLimitError, Provider::SolanaRpc::Error ]
   end
 
   private
