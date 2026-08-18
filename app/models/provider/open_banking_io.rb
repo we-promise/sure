@@ -115,6 +115,11 @@ class Provider::OpenBankingIo
   # Only the user's private key can decrypt -- the service stores ciphertext it cannot read.
   module Envelope
     VERSION_BYTE = 0x01
+    # SEC1 uncompressed point marker. The hybrid forms (0x06/0x07) decode to the same
+    # point and OpenSSL accepts them, but EnvelopeCrypto.ImportPublicPoint and WebCrypto's
+    # importKey both reject anything but 0x04 -- so accepting them here would make this
+    # reader disagree with the C# and browser readers on the same bytes.
+    UNCOMPRESSED_POINT_PREFIX = 0x04
     POINT_LEN = 65
     NONCE_LEN = 12
     TAG_LEN = 16
@@ -125,20 +130,43 @@ class Provider::OpenBankingIo
     module_function
 
     # Loads a base64 PKCS#8 EC (P-256) private key.
+    #
+    # The empty passphrase is deliberate: without it OpenSSL::PKey.read prompts on stdin
+    # for an encrypted PEM, which blocks the thread whenever a TTY is attached (bin/dev,
+    # rails console, a foreground container).
     def load_private_key(private_key_pkcs8_b64)
-      key = OpenSSL::PKey.read(Base64.decode64(private_key_pkcs8_b64))
+      key = OpenSSL::PKey.read(decode_base64(private_key_pkcs8_b64, "private key"), "")
       unless key.is_a?(OpenSSL::PKey::EC)
         raise ArgumentError, "Private key is not an EC key"
       end
 
       key
+    rescue OpenSSL::OpenSSLError
+      # Callers rescue ArgumentError; leaking OpenSSL's own class here bypasses the
+      # :configuration_error mapping in Provider::OpenBankingIo#initialize. The message is
+      # OpenSSL's constant "Could not parse PKey" -- it carries no key material.
+      raise ArgumentError, "Private key could not be parsed"
+    end
+
+    # Base64.decode64 silently discards invalid characters and tolerates missing padding,
+    # which turns "corrupt transport" into a short envelope that fails much later as an
+    # opaque GCM error. The service emits standard padded base64, so strict is safe.
+    def decode_base64(value, label)
+      Base64.strict_decode64(value.to_s)
+    rescue ArgumentError
+      raise ArgumentError, "Invalid base64 in open-banking.io #{label}"
     end
 
     # Decrypts raw envelope bytes to plaintext bytes.
     def decrypt(private_key, envelope_bytes)
       min_len = 1 + POINT_LEN + NONCE_LEN + TAG_LEN
-      if envelope_bytes.bytesize < min_len || envelope_bytes.getbyte(0) != VERSION_BYTE
-        raise ArgumentError, "Invalid or unsupported envelope"
+      raise ArgumentError, "Envelope too short" if envelope_bytes.bytesize < min_len
+
+      version = envelope_bytes.getbyte(0)
+      unless version == VERSION_BYTE
+        # v2 (context-bound) envelopes exist in the service but its writer is pinned to v1
+        # until every SDK reader supports them -- see open-banking-io/docs/envelope-versioning.md.
+        raise ArgumentError, "Unsupported envelope version #{version}"
       end
 
       eph_pub_bytes = envelope_bytes.byteslice(1, POINT_LEN)
@@ -169,17 +197,32 @@ class Provider::OpenBankingIo
     # Parses the 65-byte raw ephemeral public key into a P-256 point, wrapping OpenSSL's
     # off-curve/malformed errors in a clean `ArgumentError`.
     def decode_public_point(eph_pub_bytes)
-      OpenSSL::PKey::EC::Point.new(GROUP, OpenSSL::BN.new(eph_pub_bytes, 2))
+      unless eph_pub_bytes.getbyte(0) == UNCOMPRESSED_POINT_PREFIX
+        raise ArgumentError, "Invalid ephemeral public key in envelope: expected an uncompressed point"
+      end
+
+      point = OpenSSL::PKey::EC::Point.new(GROUP, OpenSSL::BN.new(eph_pub_bytes, 2))
+      # OpenSSL accepts 65 zero bytes as the point at infinity without complaint; only
+      # dh_compute_key would object, and it raises PKeyError rather than ArgumentError.
+      raise ArgumentError, "Invalid ephemeral public key in envelope: point at infinity" if point.infinity?
+
+      point
     rescue OpenSSL::PKey::EC::Point::Error, OpenSSL::BNError => e
       raise ArgumentError, "Invalid ephemeral public key in envelope: #{e.message}"
     end
 
     # Decrypts a base64 envelope and parses its JSON payload. nil in -> nil out.
     def decrypt_to_json(private_key, envelope_b64)
-      return nil if envelope_b64.nil?
+      return nil if envelope_b64.nil? || envelope_b64.empty?
 
-      plaintext = decrypt(private_key, Base64.decode64(envelope_b64))
-      JSON.parse(plaintext)
+      plaintext = decrypt(private_key, decode_base64(envelope_b64, "envelope"))
+      begin
+        JSON.parse(plaintext)
+      rescue JSON::ParserError
+        # JSON::ParserError embeds an excerpt of its input, and here the input is decrypted
+        # bank data. Never let that reach a log, Sentry, or a DebugLogEntry.
+        raise ArgumentError, "Decrypted envelope payload is not valid JSON"
+      end
     end
   end
 
@@ -405,7 +448,7 @@ class Provider::OpenBankingIo
       api_key: api_key,
       private_key_pkcs8: private_key
     )
-  rescue ArgumentError => e
+  rescue ArgumentError, OpenSSL::OpenSSLError => e
     raise Error.new(e.message, :configuration_error)
   end
 
