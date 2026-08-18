@@ -32,6 +32,20 @@ class OnchainWalletItemsController < ApplicationController
     end
   end
 
+  # Turns the "no crypto prices configured" warning into one click. Without a
+  # crypto-capable market data provider every on-chain holding is valued at zero,
+  # which reads as a broken sync; making the user go and find the setting is how
+  # that becomes a support ticket instead of a fix.
+  def enable_crypto_prices
+    unless self_hosted?
+      return redirect_back_or_to settings_providers_path, alert: t(".not_self_hosted")
+    end
+
+    Onchain::SecurityResolver.enable_price_provider!
+
+    redirect_back_or_to settings_providers_path, notice: t(".success")
+  end
+
   # Step 1: paste an address.
   def new_wallet
     @address = nil

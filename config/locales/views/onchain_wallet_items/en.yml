@@ -30,6 +30,9 @@ en:
       save: Update address
       subtitle: "%{chain}"
       title: Change wallet address
+    enable_crypto_prices:
+      not_self_hosted: Market data providers are configured by the instance operator on this deployment.
+      success: Crypto prices are enabled. Wallet values appear after the next sync.
     errors:
       address_required: Enter a wallet address.
       already_linked: That address is already being tracked on this network. Use Review tokens to change which assets are tracked.
@@ -73,7 +76,8 @@ en:
       sync: Sync now
       syncing: Syncing...
     price_provider_warning:
-      body: No enabled market data provider can price crypto, so these wallets will track quantities but show a value of zero. Enable the Binance public provider in your securities providers.
+      body: No enabled market data provider can price crypto, so these wallets track quantities but show a value of zero.
+      enable: Enable crypto prices
       link: Open market data settings
       title: Crypto prices are not configured
     provider_connection:

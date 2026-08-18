@@ -133,6 +133,7 @@ Rails.application.routes.draw do
       get :new_wallet
       post :preview_wallet
       post :link_wallet
+      post :enable_crypto_prices
     end
 
     member do

@@ -41,6 +41,26 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 0, @account.reload.balance
   end
 
+  test "records why an asset ended up valued at zero when crypto pricing is off" do
+    assert_difference "DebugLogEntry.count", 1 do
+      OnchainWalletAccount::Processor.new(@onchain_account).process
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "onchain_wallet", entry.provider_key
+    assert_equal @family, entry.family
+    assert_equal "CRYPTO:FAKE", entry.metadata["ticker"]
+  end
+
+  test "a merely missing price is not reported as a configuration problem" do
+    Setting.stubs(:enabled_securities_providers).returns([ Onchain::SecurityResolver::PRICE_PROVIDER ])
+    Security.any_instance.stubs(:price_data_provider).returns(nil)
+
+    assert_no_difference "DebugLogEntry.count" do
+      OnchainWalletAccount::Processor.new(@onchain_account).process
+    end
+  end
+
   test "creates no holding when the symbol cannot be a ticker" do
     @onchain_account.update_columns(symbol: "Visit site to claim rewards")
 
@@ -155,9 +175,11 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     Security.any_instance.stubs(:price_data_provider).returns(Provider::BinancePublic.new)
     Security.any_instance.stubs(:import_provider_prices).raises(StandardError, "provider down")
 
-    assert_difference [ "Holding.count", "DebugLogEntry.count" ], 1 do
+    assert_difference "Holding.count", 1 do
       OnchainWalletAccount::Processor.new(@onchain_account).process
     end
+
+    assert_includes DebugLogEntry.pluck(:message).join(" "), "Could not backfill"
   end
 
   test "does nothing when the asset is not linked to an account" do

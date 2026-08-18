@@ -5,14 +5,25 @@
   <%= render DS::Alert.new(
         variant: :warning,
         title: t("onchain_wallet_items.price_provider_warning.title"),
-        message: safe_join([
-          content_tag(:p, t("onchain_wallet_items.price_provider_warning.body")),
-          link_to(
-            t("onchain_wallet_items.price_provider_warning.link"),
-            settings_hosting_path,
-            class: "underline font-medium",
-            data: { turbo_frame: "_top" }
-          )
-        ], " ".html_safe)
+        message: t("onchain_wallet_items.price_provider_warning.body")
       ) %>
+
+  <div class="flex flex-wrap items-center gap-2 -mt-2">
+    <%# Self-hosted only: the securities providers are a site-wide setting, so on %>
+    <%# a managed instance it is the operator's call, not a family's. %>
+    <% if self_hosted? && Current.user.admin? %>
+      <%= button_to enable_crypto_prices_onchain_wallet_items_path,
+                    method: :post,
+                    class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-surface",
+                    form: { data: { turbo_frame: "_top" } } do %>
+        <%= icon "zap", size: "sm" %>
+        <%= t("onchain_wallet_items.price_provider_warning.enable") %>
+      <% end %>
+    <% end %>
+
+    <%= link_to t("onchain_wallet_items.price_provider_warning.link"),
+                settings_hosting_path,
+                class: "text-sm underline text-secondary hover:text-primary",
+                data: { turbo_frame: "_top" } %>
+  </div>
 <% end %>

@@ -25,6 +25,7 @@ class OnchainWalletAccount::Processor
     import_holding(security, price, amount) if security
     update_balances(amount)
     materialize_movements(security) if security
+    report_zero_valuation(security) if security && price.nil?
   end
 
   private
@@ -104,6 +105,32 @@ class OnchainWalletAccount::Processor
       return nil if rate.nil?
 
       amount * rate.rate.to_d
+    end
+
+    # A holding that ends up worth zero because nothing can price crypto is a
+    # configuration problem, not chain data. Users report it as a broken sync, so
+    # it gets recorded where support can see it — once per asset per changed sync,
+    # and only for this cause: a price that is merely missing for today is
+    # ordinary and already covered by the backfill.
+    def report_zero_valuation(security)
+      return if Onchain::SecurityResolver.price_provider_enabled?
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "On-chain asset valued at zero: no crypto price provider is enabled",
+        source: self.class.name,
+        provider_key: "onchain_wallet",
+        family: onchain_wallet_account.onchain_wallet_item.family,
+        account: account,
+        metadata: {
+          onchain_wallet_account_id: onchain_wallet_account.id,
+          chain: onchain_wallet_account.chain,
+          symbol: onchain_wallet_account.symbol,
+          ticker: security.ticker,
+          quantity: quantity.to_s("F")
+        }
+      )
     end
 
     def import_holding(security, price, amount)

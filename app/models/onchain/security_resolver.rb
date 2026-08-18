@@ -37,6 +37,15 @@ class Onchain::SecurityResolver
     def price_provider_enabled?
       Setting.enabled_securities_providers.include?(PRICE_PROVIDER)
     end
+
+    # Adds the crypto provider to the enabled securities providers, leaving the
+    # others alone — enabling crypto prices must not turn off whatever is pricing
+    # the user's equities.
+    def enable_price_provider!
+      return if price_provider_enabled?
+
+      Setting.securities_providers = (Setting.enabled_securities_providers + [ PRICE_PROVIDER ]).uniq.join(",")
+    end
   end
 
   def initialize(symbol:, name: nil)

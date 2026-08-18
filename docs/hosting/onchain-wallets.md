@@ -38,11 +38,18 @@ tracked by quantity and **valued at zero**. This is by far the most common
 support report for this feature, and it is a settings issue rather than a sync
 failure.
 
-To fix it, enable the Binance public provider under
-**Settings → Self hosting → Market data providers** (or set
-`SECURITIES_PROVIDERS` to a comma-separated list including `binance_public`).
-The settings panel and the linking modal both warn you when this is missing,
-before you link anything.
+The settings panel and the linking modal both warn you before you link
+anything, and on a self-hosted instance an admin can fix it from the warning
+itself with **Enable crypto prices** — that adds `binance_public` to the
+enabled providers and leaves the others alone. Otherwise, enable it under
+**Settings → Self hosting → Market data providers**, or set
+`SECURITIES_PROVIDERS` to a comma-separated list including `binance_public`.
+On a managed instance this is the operator's setting, so the button is not
+offered.
+
+When an asset ends up valued at zero for this reason, it is recorded in
+**Settings → Debug logs** under the `onchain_wallet` provider, so the cause is
+visible without having to reproduce it.
 
 ## Data sources
 
