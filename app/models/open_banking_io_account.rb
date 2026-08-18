@@ -20,6 +20,13 @@ class OpenBankingIoAccount < ApplicationRecord
   # ISO 20022 available balance code.
   AVAILABLE_BALANCE_TYPE = "ITAV".freeze
 
+  # open-banking.io covers the EU/EEA and UK, so a bank that reports no currency is far
+  # likelier to be euro-denominated than anything else. Single source for the fallback.
+  DEFAULT_CURRENCY = "EUR".freeze
+
+  # Accountable types whose balance Sure stores as a positive magnitude (money owed).
+  DEBT_ACCOUNT_TYPES = %w[CreditCard Loan].freeze
+
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
@@ -46,6 +53,46 @@ class OpenBankingIoAccount < ApplicationRecord
     OPEN_BANKING_IO_ACCOUNT_TYPE_MAP[account_type.to_s.upcase]&.[](:subtype)
   end
 
+  # The balance Sure should store for this provider account as `accountable_type`.
+  #
+  # Debt accounts are stored as a positive magnitude, and an account with only an
+  # available (ITAV) balance falls back to it rather than seeding a bogus zero. Shared by
+  # the account-creation path and OpenBankingIoAccount::Processor so the rule lives once.
+  def normalized_balance_for(accountable_type)
+    balance = current_balance || available_balance || 0
+    accountable_type.to_s.in?(DEBT_ACCOUNT_TYPES) ? balance.abs : balance
+  end
+
+  # Investment accounts track holdings separately, so their cash balance starts at zero.
+  def cash_balance_for(accountable_type)
+    accountable_type.to_s == "Investment" ? 0 : normalized_balance_for(accountable_type)
+  end
+
+  def subtype_for(accountable_type)
+    return "credit_card" if accountable_type.to_s == "CreditCard"
+    return nil unless suggested_account_type == accountable_type.to_s
+
+    suggested_subtype
+  end
+
+  # Creates the Sure Account this provider account will be linked to.
+  def build_linked_account!(family:, accountable_type:)
+    subtype = subtype_for(accountable_type)
+
+    Account.create_and_sync(
+      {
+        family: family,
+        name: name,
+        balance: normalized_balance_for(accountable_type),
+        cash_balance: cash_balance_for(accountable_type),
+        currency: currency || DEFAULT_CURRENCY,
+        accountable_type: accountable_type,
+        accountable_attributes: subtype.present? ? { subtype: subtype } : {}
+      },
+      skip_initial_sync: true
+    )
+  end
+
   def upsert_open_banking_io_snapshot!(account_snapshot)
     snapshot = account_snapshot.with_indifferent_access
     balances = snapshot[:balances].is_a?(Array) ? snapshot[:balances] : []
@@ -61,7 +108,7 @@ class OpenBankingIoAccount < ApplicationRecord
 
     assign_attributes(
       available_balance: parse_balance_amount(available),
-      currency: parse_currency(snapshot[:currency]) || parse_currency(booked&.dig(:currency)) || "EUR",
+      currency: parse_currency(snapshot[:currency]) || parse_currency(booked&.dig(:currency)) || DEFAULT_CURRENCY,
       name: display_name,
       account_id: snapshot[:id].presence,
       formatted_account: snapshot[:iban].presence || snapshot[:bban].presence,

@@ -15,10 +15,30 @@ ro:
       reference: Referință
   open_banking_io_item:
     errors:
+      stages:
+        import: "import open-banking.io"
+        account_processing: "procesarea conturilor open-banking.io"
+        sync_scheduling: "programarea sincronizării conturilor open-banking.io"
+      accounts_failed:
+        one: "1 cont a eșuat"
+        other: "%{count} conturi au eșuat"
+      transactions_failed_count:
+        one: "1 tranzacție a eșuat"
+        other: "%{count} tranzacții au eșuat"
+      stage_failed: "%{stage} a eșuat"
+      accounts_fetch_failed: "Nu s-au putut prelua conturile open-banking.io"
       account_processing_failed: Nu s-a putut sincroniza contul open-banking.io
       account_sync_schedule_failed: Nu s-a putut programa sincronizarea contului open-banking.io
       transactions_failed: Nu s-au putut prelua tranzacțiile open-banking.io
       sync_failed: Nu s-a putut sincroniza conexiunea open-banking.io
+    syncer:
+      importing_accounts: "Se importă conturi din open-banking.io..."
+      checking_configuration: "Se verifică configurarea conturilor..."
+      accounts_need_setup:
+        one: "1 cont necesită configurare..."
+        other: "%{count} conturi necesită configurare..."
+      processing_transactions: "Se procesează tranzacțiile..."
+      calculating_balances: "Se calculează soldurile..."
     sync_status:
       no_accounts: Nu s-au găsit conturi
       all_synced:
@@ -80,9 +100,15 @@ ro:
       cancel: Anulează
       link_account: Asociază contul
     link_existing_account:
+      no_credentials_configured: Configurează mai întâi open-banking.io în setările furnizorului.
+      open_banking_io_account_not_found: "Acest cont open-banking.io nu mai este disponibil."
+      link_failed: Nu a fost asociat niciun cont.
       success: "Contul open-banking.io a fost asociat la %{account_name}."
       account_already_linked: Acest cont este deja asociat unui furnizor.
       open_banking_io_account_already_linked: Acest cont open-banking.io este deja asociat.
+    sync:
+      already_syncing: "Această conexiune se sincronizează deja."
+      started: "Se sincronizează conexiunea open-banking.io."
     setup_accounts:
       title: Configurează conturile open-banking.io
       subtitle: Alege modul în care fiecare cont open-banking.io ar trebui să apară în Sure.

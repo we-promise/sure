@@ -15,10 +15,30 @@ en:
       reference: Reference
   open_banking_io_item:
     errors:
+      stages:
+        import: "open-banking.io import"
+        account_processing: "open-banking.io account processing"
+        sync_scheduling: "open-banking.io account sync scheduling"
+      accounts_failed:
+        one: "1 account failed"
+        other: "%{count} accounts failed"
+      transactions_failed_count:
+        one: "1 transaction failed"
+        other: "%{count} transactions failed"
+      stage_failed: "%{stage} failed"
+      accounts_fetch_failed: "Could not fetch open-banking.io accounts"
       account_processing_failed: Could not sync open-banking.io account
       account_sync_schedule_failed: Could not schedule open-banking.io account sync
       transactions_failed: Could not fetch open-banking.io transactions
       sync_failed: Could not sync open-banking.io connection
+    syncer:
+      importing_accounts: "Importing accounts from open-banking.io..."
+      checking_configuration: "Checking account configuration..."
+      accounts_need_setup:
+        one: "1 account needs setup..."
+        other: "%{count} accounts need setup..."
+      processing_transactions: "Processing transactions..."
+      calculating_balances: "Calculating balances..."
     sync_status:
       no_accounts: No accounts found
       all_synced:
@@ -80,9 +100,15 @@ en:
       cancel: Cancel
       link_account: Link account
     link_existing_account:
+      no_credentials_configured: Configure open-banking.io in provider settings first.
+      open_banking_io_account_not_found: "That open-banking.io account is no longer available."
+      link_failed: No accounts were linked.
       success: "Linked open-banking.io account to %{account_name}."
       account_already_linked: This account is already linked to a provider.
       open_banking_io_account_already_linked: This open-banking.io account is already linked.
+    sync:
+      already_syncing: "This connection is already syncing."
+      started: "Syncing open-banking.io connection."
     setup_accounts:
       title: Set Up open-banking.io Accounts
       subtitle: Choose how each open-banking.io account should appear in Sure.

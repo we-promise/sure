@@ -132,6 +132,22 @@ class OpenBankingIoItem < ApplicationRecord
     end
   end
 
+  # Refreshes the discovered provider accounts for the interactive linking screens.
+  # Returns nil on success, or a translated error message to show the user.
+  #
+  # Lives here rather than in the controller so it shares the importer's preload and
+  # transaction, and so failures land on /settings/debug like every other sync failure.
+  def refresh_accounts_from_provider!
+    provider = open_banking_io_provider
+    return I18n.t("open_banking_io_items.setup_accounts.no_credentials") unless provider
+
+    OpenBankingIoItem::Importer.new(self, open_banking_io_provider: provider).refresh_accounts_only
+    nil
+  rescue => e
+    capture_provider_error("Failed to refresh open-banking.io accounts", error: e)
+    I18n.t("open_banking_io_items.setup_accounts.api_error")
+  end
+
   def upsert_open_banking_io_snapshot!(accounts_snapshot)
     assign_attributes(raw_payload: accounts_snapshot)
     save!

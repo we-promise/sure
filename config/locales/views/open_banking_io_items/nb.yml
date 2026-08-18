@@ -15,10 +15,30 @@ nb:
       reference: Referanse
   open_banking_io_item:
     errors:
+      stages:
+        import: "open-banking.io-import"
+        account_processing: "open-banking.io-kontobehandling"
+        sync_scheduling: "planlegging av open-banking.io-kontosynkronisering"
+      accounts_failed:
+        one: "1 konto mislyktes"
+        other: "%{count} kontoer mislyktes"
+      transactions_failed_count:
+        one: "1 transaksjon mislyktes"
+        other: "%{count} transaksjoner mislyktes"
+      stage_failed: "%{stage} mislyktes"
+      accounts_fetch_failed: "Kunne ikke hente open-banking.io-kontoer"
       account_processing_failed: Kunne ikke synkronisere open-banking.io-konto
       account_sync_schedule_failed: Kunne ikke planlegge synkronisering av open-banking.io-konto
       transactions_failed: Kunne ikke hente open-banking.io-transaksjoner
       sync_failed: Kunne ikke synkronisere open-banking.io-tilkobling
+    syncer:
+      importing_accounts: "Importerer kontoer fra open-banking.io..."
+      checking_configuration: "Kontrollerer kontooppsett..."
+      accounts_need_setup:
+        one: "1 konto må settes opp..."
+        other: "%{count} kontoer må settes opp..."
+      processing_transactions: "Behandler transaksjoner..."
+      calculating_balances: "Beregner saldoer..."
     sync_status:
       no_accounts: Ingen kontoer funnet
       all_synced:
@@ -80,9 +100,15 @@ nb:
       cancel: Avbryt
       link_account: Koble til konto
     link_existing_account:
+      no_credentials_configured: Konfigurer open-banking.io i leverandørinnstillingene først.
+      open_banking_io_account_not_found: "Denne open-banking.io-kontoen er ikke lenger tilgjengelig."
+      link_failed: Ingen kontoer ble koblet til.
       success: "Koblet open-banking.io-konto til %{account_name}."
       account_already_linked: Denne kontoen er allerede koblet til en leverandør.
       open_banking_io_account_already_linked: Denne open-banking.io-kontoen er allerede koblet til.
+    sync:
+      already_syncing: "Denne tilkoblingen synkroniseres allerede."
+      started: "Synkroniserer open-banking.io-tilkoblingen."
     setup_accounts:
       title: Sett opp open-banking.io-kontoer
       subtitle: Velg hvordan hver open-banking.io-konto skal vises i Sure.

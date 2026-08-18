@@ -15,10 +15,30 @@ tr:
       reference: Referans
   open_banking_io_item:
     errors:
+      stages:
+        import: "open-banking.io içe aktarma"
+        account_processing: "open-banking.io hesap işleme"
+        sync_scheduling: "open-banking.io hesap eşitleme zamanlaması"
+      accounts_failed:
+        one: "1 hesap başarısız oldu"
+        other: "%{count} hesap başarısız oldu"
+      transactions_failed_count:
+        one: "1 işlem başarısız oldu"
+        other: "%{count} işlem başarısız oldu"
+      stage_failed: "%{stage} başarısız oldu"
+      accounts_fetch_failed: "open-banking.io hesapları alınamadı"
       account_processing_failed: open-banking.io hesabı senkronize edilemedi
       account_sync_schedule_failed: open-banking.io hesap senkronizasyonu planlanamadı
       transactions_failed: open-banking.io işlemleri alınamadı
       sync_failed: open-banking.io bağlantısı senkronize edilemedi
+    syncer:
+      importing_accounts: "Hesaplar open-banking.io üzerinden içe aktarılıyor..."
+      checking_configuration: "Hesap yapılandırması denetleniyor..."
+      accounts_need_setup:
+        one: "1 hesabın kurulması gerekiyor..."
+        other: "%{count} hesabın kurulması gerekiyor..."
+      processing_transactions: "İşlemler işleniyor..."
+      calculating_balances: "Bakiyeler hesaplanıyor..."
     sync_status:
       no_accounts: Hesap bulunamadı
       all_synced:
@@ -80,9 +100,15 @@ tr:
       cancel: İptal
       link_account: Hesabı bağla
     link_existing_account:
+      no_credentials_configured: Önce sağlayıcı ayarlarından open-banking.io yapılandırın.
+      open_banking_io_account_not_found: "Bu open-banking.io hesabı artık kullanılamıyor."
+      link_failed: Hiçbir hesap bağlanmadı.
       success: "open-banking.io hesabı %{account_name} hesabına bağlandı."
       account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
       open_banking_io_account_already_linked: Bu open-banking.io hesabı zaten bağlı.
+    sync:
+      already_syncing: "Bu bağlantı zaten eşitleniyor."
+      started: "open-banking.io bağlantısı eşitleniyor."
     setup_accounts:
       title: open-banking.io Hesaplarını Kur
       subtitle: Her open-banking.io hesabının Sure içinde nasıl görüneceğini seçin.

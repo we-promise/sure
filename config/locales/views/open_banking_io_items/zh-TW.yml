@@ -15,10 +15,30 @@ zh-TW:
       reference: 參考編號
   open_banking_io_item:
     errors:
+      stages:
+        import: "open-banking.io 匯入"
+        account_processing: "open-banking.io 帳戶處理"
+        sync_scheduling: "open-banking.io 帳戶同步排程"
+      accounts_failed:
+        one: "1 個帳戶失敗"
+        other: "%{count} 個帳戶失敗"
+      transactions_failed_count:
+        one: "1 筆交易失敗"
+        other: "%{count} 筆交易失敗"
+      stage_failed: "%{stage}失敗"
+      accounts_fetch_failed: "無法取得 open-banking.io 帳戶"
       account_processing_failed: 無法同步 open-banking.io 帳戶
       account_sync_schedule_failed: 無法排程 open-banking.io 帳戶同步
       transactions_failed: 無法取得 open-banking.io 交易紀錄
       sync_failed: 無法同步 open-banking.io 連線
+    syncer:
+      importing_accounts: "正在從 open-banking.io 匯入帳戶…"
+      checking_configuration: "正在檢查帳戶設定…"
+      accounts_need_setup:
+        one: "1 個帳戶需要設定…"
+        other: "%{count} 個帳戶需要設定…"
+      processing_transactions: "正在處理交易…"
+      calculating_balances: "正在計算餘額…"
     sync_status:
       no_accounts: 找不到帳戶
       all_synced:
@@ -80,9 +100,15 @@ zh-TW:
       cancel: 取消
       link_account: 連結帳戶
     link_existing_account:
+      no_credentials_configured: 請先在供應商設定中設定 open-banking.io。
+      open_banking_io_account_not_found: "此 open-banking.io 帳戶已無法使用。"
+      link_failed: 沒有帳戶被連結。
       success: "已將 open-banking.io 帳戶連結至 %{account_name}。"
       account_already_linked: 此帳戶已連結至某個供應商。
       open_banking_io_account_already_linked: 此 open-banking.io 帳戶已連結。
+    sync:
+      already_syncing: "此連線正在同步中。"
+      started: "正在同步 open-banking.io 連線。"
     setup_accounts:
       title: 設定 open-banking.io 帳戶
       subtitle: 選擇每個 open-banking.io 帳戶要如何顯示於 Sure。
