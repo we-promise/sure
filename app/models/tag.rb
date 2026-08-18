@@ -3,6 +3,7 @@ class Tag < ApplicationRecord
   has_many :taggings, dependent: :destroy
   has_many :transactions, through: :taggings, source: :taggable, source_type: "Transaction"
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
+  has_many :pockets, dependent: :destroy
 
   validates :name, presence: true, uniqueness: { scope: :family }
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
@@ -18,7 +19,17 @@ class Tag < ApplicationRecord
       raise ActiveRecord::RecordInvalid, "Replacement tag cannot be the same as the tag being destroyed" if replacement == self
 
       if replacement
+        # A taggable may already carry both tags (self and replacement). Moving
+        # self's tagging onto replacement in that case would collide with the
+        # existing (replacement, taggable) row under the taggings unique index,
+        # so drop the now-redundant one instead of reassigning it.
+        colliding_taggable_keys = replacement.taggings.pluck(:taggable_type, :taggable_id).to_set
+        taggings.find_each do |tagging|
+          tagging.destroy! if colliding_taggable_keys.include?([ tagging.taggable_type, tagging.taggable_id ])
+        end
+
         taggings.update_all tag_id: replacement.id
+        replacement.pockets.find_each(&:recompute_from_tag!)
       end
 
       destroy!

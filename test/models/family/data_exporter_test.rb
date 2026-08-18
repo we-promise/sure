@@ -55,11 +55,58 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     assert zip_data.is_a?(StringIO)
 
     # Check that the zip contains all expected files
-    expected_files = [ "version.txt", "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "merchants.csv", "rules.csv", "attachments.json", "all.ndjson" ]
+    expected_files = [ "version.txt", "accounts.csv", "transactions.csv", "trades.csv", "categories.csv", "merchants.csv", "rules.csv", "pockets.csv", "attachments.json", "all.ndjson" ]
 
     Zip::File.open_buffer(zip_data) do |zip|
       actual_files = zip.entries.map(&:name)
       assert_equal expected_files.sort, actual_files.sort
+    end
+  end
+
+  test "exports pockets csv with pocket data" do
+    pocket = @account.pockets.create!(name: "Export Test Pocket", allocated_amount: 500, currency: "USD")
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      csv_content = zip.find_entry("pockets.csv").get_input_stream.read
+      rows = CSV.parse(csv_content, headers: true)
+      row = rows.find { |r| r["name"] == pocket.name }
+
+      assert_not_nil row
+      assert_equal @account.name, row["account_name"]
+      assert_equal "500.0", row["allocated_amount"]
+    end
+  end
+
+  test "exports pockets to ndjson for restore" do
+    pocket = @account.pockets.create!(
+      name: "NDJSON Test Pocket",
+      allocated_amount: 250,
+      currency: "USD",
+      fill_direction: "outflows",
+      tag: @tag,
+      color: "#875BF7",
+      icon: "wallet",
+      description: "Vacation fund"
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson = zip.read("all.ndjson")
+      record = ndjson.each_line.map { |line| JSON.parse(line) }.find { |r| r["type"] == "Pocket" && r.dig("data", "id") == pocket.id }
+
+      assert_not_nil record
+      data = record["data"]
+      assert_equal pocket.id, data["id"]
+      assert_equal @account.id, data["account_id"]
+      assert_equal @tag.id, data["tag_id"]
+      assert_equal "NDJSON Test Pocket", data["name"]
+      assert_equal "outflows", data["fill_direction"]
+      assert_equal "#875BF7", data["color"]
+      assert_equal "wallet", data["icon"]
+      assert_equal "Vacation fund", data["description"]
     end
   end
 

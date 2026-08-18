@@ -460,6 +460,9 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_difference -> { Entry.where(id: split_entry_ids).count }, -3 do
       @import.revert
+      puts "DEBUG status=#{@import.reload.status} error=#{@import.reload.respond_to?(:error) ? @import.reload.error : 'n/a'}"
+      puts "DEBUG entries remaining=#{Entry.where(id: split_entry_ids).count}"
+      puts "DEBUG import entries count=#{@import.entries.where(parent_entry_id: nil).count}"
     end
     assert_equal "pending", @import.reload.status
   end
@@ -629,6 +632,52 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal Depository, Accountable.from_type("Depository")
     assert_equal [ "invalid_accountable_type" ], result.errors.map { |error| error[:code] }
     assert_includes result.error_message, 'invalid accountable_type "Kernel"'
+  end
+
+  test "preflight catches pockets with missing account and tag references" do
+    attach_ndjson(build_ndjson([
+      { type: "Pocket", data: {
+        id: "pocket-1",
+        account_id: "missing-account",
+        tag_id: "missing-tag",
+        name: "Vacation Fund",
+        allocated_amount: "100.00",
+        currency: "USD"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+    codes = result.errors.map { |error| error[:code] }
+
+    assert_not result.valid?
+    assert_includes codes, "missing_reference"
+    assert_includes result.error_message, "Pocket references missing account_id"
+  end
+
+  test "preflight accepts pockets with valid account and tag references" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Savings",
+        balance: "1000",
+        currency: "USD",
+        accountable_type: "Depository"
+      } },
+      { type: "Tag", data: { id: "tag-1", name: "Emergency" } },
+      { type: "Pocket", data: {
+        id: "pocket-1",
+        account_id: "account-1",
+        tag_id: "tag-1",
+        name: "Emergency Fund",
+        allocated_amount: "100.00",
+        currency: "USD"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert result.valid?
+    assert_equal 1, result.stats[:entity_counts][:pockets]
   end
 
   test "preflight catches duplicate taxonomy names inside ndjson" do

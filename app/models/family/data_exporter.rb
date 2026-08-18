@@ -39,6 +39,10 @@ class Family::DataExporter
       zipfile.put_next_entry("rules.csv")
       zipfile.write generate_rules_csv
 
+      # Add pockets.csv
+      zipfile.put_next_entry("pockets.csv")
+      zipfile.write generate_pockets_csv
+
       # Add attachment manifest metadata. Binary file payloads are not included.
       zipfile.put_next_entry("attachments.json")
       zipfile.write generate_attachments_manifest
@@ -172,6 +176,25 @@ class Family::DataExporter
             rule.effective_date&.iso8601,
             serialize_conditions_for_csv(rule.conditions),
             serialize_actions_for_csv(rule.actions)
+          ]
+        end
+      end
+    end
+
+    def generate_pockets_csv
+      CSV.generate do |csv|
+        csv << [ "id", "account_name", "name", "allocated_amount", "currency", "fill_direction", "tag", "created_at" ]
+
+        Pocket.joins(:account).where(accounts: { family_id: @family.id }).includes(:account, :tag).find_each do |pocket|
+          csv << [
+            pocket.id,
+            pocket.account.name,
+            pocket.name,
+            pocket.allocated_amount.to_s,
+            pocket.currency,
+            pocket.fill_direction,
+            pocket.tag&.name,
+            pocket.created_at.iso8601
           ]
         end
       end
@@ -352,6 +375,28 @@ class Family::DataExporter
         lines << {
           type: "Transaction",
           data: transaction_data
+        }.to_json
+      end
+
+      # Export pockets after accounts, tags, and transactions so import can remap
+      # account_id/tag_id and recompute tag-linked allocations from restored taggings.
+      Pocket.joins(:account).where(accounts: { family_id: @family.id }).find_each do |pocket|
+        lines << {
+          type: "Pocket",
+          data: {
+            id: pocket.id,
+            account_id: pocket.account_id,
+            tag_id: pocket.tag_id,
+            name: pocket.name,
+            allocated_amount: pocket.allocated_amount,
+            currency: pocket.currency,
+            fill_direction: pocket.fill_direction,
+            color: pocket.color,
+            icon: pocket.icon,
+            description: pocket.description,
+            created_at: pocket.created_at,
+            updated_at: pocket.updated_at
+          }
         }.to_json
       end
 

@@ -18,6 +18,7 @@ class SureImport::Preflight
     "Merchant" => %w[id name],
     "RecurringTransaction" => %w[id amount expected_day_of_month last_occurrence_date next_expected_date],
     "Transaction" => %w[id account_id date amount],
+    "Pocket" => %w[id account_id name allocated_amount],
     "Transfer" => %w[inflow_transaction_id outflow_transaction_id],
     "RejectedTransfer" => %w[inflow_transaction_id outflow_transaction_id],
     "Trade" => %w[account_id date amount qty price ticker],
@@ -34,6 +35,7 @@ class SureImport::Preflight
     "Account" => :accounts,
     "RecurringTransaction" => :recurring_transactions,
     "Transaction" => :transactions,
+    "Pocket" => :pockets,
     "Budget" => :budgets
   ).freeze
 
@@ -42,6 +44,7 @@ class SureImport::Preflight
     "Category" => { categories: %w[parent_id] },
     "RecurringTransaction" => { accounts: %w[account_id], merchants: %w[merchant_id] },
     "Transaction" => { accounts: %w[account_id], categories: %w[category_id], merchants: %w[merchant_id] },
+    "Pocket" => { accounts: %w[account_id], tags: %w[tag_id] },
     "Transfer" => { transactions: %w[inflow_transaction_id outflow_transaction_id] },
     "RejectedTransfer" => { transactions: %w[inflow_transaction_id outflow_transaction_id] },
     "Trade" => { accounts: %w[account_id] },

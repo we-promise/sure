@@ -1074,6 +1074,167 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Other transaction", other_entry.reload.name
   end
 
+  test "imports manual pockets with explicit allocated amount" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Savings",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Pocket",
+        data: {
+          id: "pocket-1",
+          account_id: "acct-1",
+          name: "Vacation Fund",
+          allocated_amount: "750.00",
+          currency: "USD",
+          fill_direction: "both",
+          color: "#875BF7",
+          icon: "plane",
+          description: "Trip savings"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Savings")
+    pocket = account.pockets.find_by!(name: "Vacation Fund")
+
+    assert_equal 750.0, pocket.allocated_amount.to_f
+    assert_equal "USD", pocket.currency
+    assert_equal "both", pocket.fill_direction
+    assert_equal "#875BF7", pocket.color
+    assert_equal "plane", pocket.icon
+    assert_equal "Trip savings", pocket.description
+    assert_nil pocket.tag_id
+  end
+
+  test "imports tag-linked pockets and recomputes allocation from restored taggings" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "acct-1",
+          name: "Checking",
+          balance: "5000",
+          currency: "USD",
+          accountable_type: "Depository"
+        }
+      },
+      {
+        type: "Tag",
+        data: {
+          id: "tag-1",
+          name: "Emergency"
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "txn-1",
+          account_id: "acct-1",
+          date: "2024-01-15",
+          amount: "-200.00",
+          name: "Paycheck deposit",
+          currency: "USD",
+          tag_ids: [ "tag-1" ]
+        }
+      },
+      {
+        type: "Pocket",
+        data: {
+          id: "pocket-1",
+          account_id: "acct-1",
+          tag_id: "tag-1",
+          name: "Emergency Fund",
+          allocated_amount: "0.00",
+          currency: "USD",
+          fill_direction: "inflows"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    account = @family.accounts.find_by!(name: "Checking")
+    tag = @family.tags.find_by!(name: "Emergency")
+    pocket = account.pockets.find_by!(name: "Emergency Fund")
+
+    assert_equal tag, pocket.tag
+    assert_equal 200.0, pocket.allocated_amount.to_f
+  end
+
+  test "skips pockets when referenced account is missing" do
+    ndjson = build_ndjson([
+      {
+        type: "Pocket",
+        data: {
+          id: "pocket-1",
+          account_id: "missing-account",
+          name: "Orphan Pocket",
+          allocated_amount: "100.00",
+          currency: "USD"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal 0, Pocket.joins(:account).where(accounts: { family_id: @family.id }).count
+  end
+
+  test "round trips pockets through full export" do
+    source_family = Family.create!(name: "Pocket Source", currency: "USD")
+    source_account = source_family.accounts.create!(
+      name: "Round Trip Savings",
+      accountable: Depository.new,
+      balance: 1000,
+      currency: "USD"
+    )
+    source_tag = source_family.tags.create!(name: "Round Trip Tag")
+    source_account.entries.create!(
+      date: Date.parse("2024-01-15"),
+      amount: -300,
+      currency: "USD",
+      name: "Deposit",
+      entryable: Transaction.new
+    ).entryable.taggings.create!(tag: source_tag)
+
+    source_account.pockets.create!(
+      name: "Manual Pocket",
+      allocated_amount: 150,
+      currency: "USD"
+    )
+    source_account.pockets.create!(
+      name: "Tagged Pocket",
+      currency: "USD",
+      tag: source_tag
+    )
+
+    zip_data = Family::DataExporter.new(source_family).generate_export
+    ndjson = nil
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson = zip.read("all.ndjson")
+    end
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    restored_account = @family.accounts.find_by!(name: "Round Trip Savings")
+    manual_pocket = restored_account.pockets.find_by!(name: "Manual Pocket")
+    tagged_pocket = restored_account.pockets.find_by!(name: "Tagged Pocket")
+
+    assert_equal 150.0, manual_pocket.allocated_amount.to_f
+    assert_equal 300.0, tagged_pocket.allocated_amount.to_f
+    assert_equal "Round Trip Tag", tagged_pocket.tag.name
+  end
+
   test "imports trades with securities" do
     ndjson = build_ndjson([
       {

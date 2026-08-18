@@ -1,0 +1,19 @@
+---
+fr:
+  activerecord:
+    models:
+      pocket: Enveloppe
+    attributes:
+      pocket:
+        name: Nom
+        allocated_amount: Montant alloué
+        currency: Devise
+        tag: Étiquette de remplissage auto
+    errors:
+      models:
+        pocket:
+          attributes:
+            allocated_amount:
+              exceeds_account_balance: "dépasse le solde disponible (max : %{available} %{currency})"
+            tag:
+              wrong_family: "n'appartient pas à cette famille"
