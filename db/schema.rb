@@ -373,11 +373,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_060353) do
   end
 
   create_table "budget_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "owner_id", null: false
-    t.uuid "viewer_id", null: false
-    t.string "permission", default: "read_only", null: false
     t.datetime "created_at", null: false
+    t.uuid "owner_id", null: false
+    t.string "permission", default: "read_only", null: false
     t.datetime "updated_at", null: false
+    t.uuid "viewer_id", null: false
     t.index ["owner_id", "viewer_id"], name: "index_budget_shares_on_owner_id_and_viewer_id", unique: true
     t.index ["owner_id"], name: "index_budget_shares_on_owner_id"
     t.index ["viewer_id"], name: "index_budget_shares_on_viewer_id"
@@ -806,6 +806,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_060353) do
     t.string "default_account_sharing", default: "shared", null: false
     t.boolean "early_access", default: false
     t.string "enabled_currencies", array: true
+    t.boolean "household_budget_enabled", default: true, null: false
     t.datetime "last_sync_all_attempted_at"
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
@@ -813,18 +814,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_060353) do
     t.string "moniker", default: "Family", null: false
     t.integer "month_start_day", default: 1, null: false
     t.string "name"
+    t.boolean "personal_budgets", default: false, null: false
     t.boolean "recurring_transactions_disabled", default: false, null: false
     t.string "stripe_customer_id"
     t.string "timezone"
     t.datetime "updated_at", null: false
     t.string "vector_store_id"
-    t.string "assistant_type", default: "builtin", null: false
-    t.string "default_account_sharing", default: "shared", null: false
-    t.string "enabled_currencies", array: true
-    t.datetime "last_sync_all_attempted_at"
-    t.boolean "personal_budgets", default: false, null: false
-    t.boolean "household_budget_enabled", default: true, null: false
-    t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
+    t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
