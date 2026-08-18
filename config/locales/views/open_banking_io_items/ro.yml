@@ -105,6 +105,16 @@ ro:
     sync:
       already_syncing: "Această conexiune se sincronizează deja."
       started: "Se sincronizează conexiunea open-banking.io."
+    setup_required:
+      title: "Configurarea open-banking.io este necesară"
+      credentials_not_configured: "Credențialele nu sunt configurate"
+      credentials_description: "Înainte de a conecta conturi open-banking.io, trebuie să lipești fișierul credentials.json exportat."
+      setup_steps_title: "Pași de configurare:"
+      setup_step_1_html: "Accesează <strong>Setări → Furnizori</strong>"
+      setup_step_2_html: "Găsește secțiunea <strong>open-banking.io</strong>"
+      setup_step_3: "Lipește conținutul fișierului credentials.json"
+      setup_step_4: "Revino aici pentru a conecta conturile"
+      go_to_provider_settings: "Mergi la setările furnizorilor"
     setup_accounts:
       title: Configurează conturile open-banking.io
       subtitle: Alege modul în care fiecare cont open-banking.io ar trebui să apară în Sure.

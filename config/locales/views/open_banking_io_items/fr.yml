@@ -105,6 +105,16 @@ fr:
     sync:
       already_syncing: "Cette connexion est déjà en cours de synchronisation."
       started: "Synchronisation de la connexion open-banking.io."
+    setup_required:
+      title: "Configuration d'open-banking.io requise"
+      credentials_not_configured: "Identifiants non configurés"
+      credentials_description: "Avant d'associer des comptes open-banking.io, vous devez coller votre credentials.json exporté."
+      setup_steps_title: "Étapes de configuration :"
+      setup_step_1_html: "Allez dans <strong>Paramètres → Fournisseurs</strong>"
+      setup_step_2_html: "Trouvez la section <strong>open-banking.io</strong>"
+      setup_step_3: "Collez le contenu de votre fichier credentials.json"
+      setup_step_4: "Revenez ici pour associer vos comptes"
+      go_to_provider_settings: "Aller aux paramètres des fournisseurs"
     setup_accounts:
       title: Configurer les comptes open-banking.io
       subtitle: Choisissez comment chaque compte open-banking.io doit apparaître dans Sure.

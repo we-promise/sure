@@ -105,6 +105,16 @@ nb:
     sync:
       already_syncing: "Denne tilkoblingen synkroniseres allerede."
       started: "Synkroniserer open-banking.io-tilkoblingen."
+    setup_required:
+      title: "Oppsett av open-banking.io kreves"
+      credentials_not_configured: "Legitimasjon er ikke konfigurert"
+      credentials_description: "Før du kan koble til open-banking.io-kontoer, må du lime inn den eksporterte credentials.json-filen."
+      setup_steps_title: "Oppsettstrinn:"
+      setup_step_1_html: "Gå til <strong>Innstillinger → Leverandører</strong>"
+      setup_step_2_html: "Finn <strong>open-banking.io</strong>-delen"
+      setup_step_3: "Lim inn innholdet i credentials.json-filen"
+      setup_step_4: "Kom tilbake hit for å koble til kontoene dine"
+      go_to_provider_settings: "Gå til leverandørinnstillinger"
     setup_accounts:
       title: Sett opp open-banking.io-kontoer
       subtitle: Velg hvordan hver open-banking.io-konto skal vises i Sure.

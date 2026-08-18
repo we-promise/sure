@@ -1,11 +1,32 @@
 class OpenBankingIoAccount < ApplicationRecord
   include CurrencyNormalizable, Encryptable
 
-  # open-banking.io reports the ISO 20022 cash-account type. We map the two we
-  # support to Sure accountable types (CACC = current/checking, CARD = card).
+  # open-banking.io passes through the bank's ISO 20022 ExternalCashAccountType1Code
+  # (Enable Banking's cashAccountType, falling back to its account type).
+  #
+  # Only codes with an unambiguous Sure equivalent are mapped. Anything else -- OTHR,
+  # SACC (settlement), TAXE, TRAS, CHAR, COMM, CPAC, NREX, ODFT -- deliberately falls
+  # through to nil so the setup screen asks the user rather than guessing wrong.
+  #
+  # Note most EU banks report CACC for every personal account, savings included: the ten
+  # Danish accounts this was built against are all CACC. So "Checking" showing up
+  # everywhere is the bank's classification, not a mapping failure.
   OPEN_BANKING_IO_ACCOUNT_TYPE_MAP = {
-    "CACC" => { accountable_type: "Depository", subtype: "checking" },
-    "CARD" => { accountable_type: "CreditCard", subtype: "credit_card" }
+    # Current / transaction accounts
+    "CACC" => { accountable_type: "Depository", subtype: "checking" },   # Current
+    "TRAN" => { accountable_type: "Depository", subtype: "checking" },   # Transacting
+    "SLRY" => { accountable_type: "Depository", subtype: "checking" },   # Salary
+    "CASH" => { accountable_type: "Depository", subtype: "checking" },   # Cash payment
+    # Savings-shaped
+    "SVGS" => { accountable_type: "Depository", subtype: "savings" },    # Savings
+    "LLSV" => { accountable_type: "Depository", subtype: "savings" },    # Limited liquidity savings
+    "ONDP" => { accountable_type: "Depository", subtype: "savings" },    # Overnight deposit
+    "MOMA" => { accountable_type: "Depository", subtype: "money_market" }, # Money market
+    # Credit
+    "CARD" => { accountable_type: "CreditCard", subtype: "credit_card" },
+    # Debt
+    "LOAN" => { accountable_type: "Loan", subtype: nil },
+    "MGLD" => { accountable_type: "Loan", subtype: nil }                 # Marginal lending
   }.freeze
 
   # ISO 20022 booked balance code preferred as the account's current balance.

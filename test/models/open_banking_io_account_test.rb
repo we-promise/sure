@@ -48,9 +48,12 @@ class OpenBankingIoAccountTest < ActiveSupport::TestCase
     assert_equal "credit_card", @account.suggested_subtype
   end
 
+  # SVGS used to be the example here, which encoded "we do not support savings". It is
+  # mapped now; OTHR is genuinely ambiguous and stays unmapped on purpose.
   test "unknown account type has no suggestion" do
-    @account.update!(account_type: "SVGS")
+    @account.update!(account_type: "OTHR")
     assert_nil @account.suggested_account_type
+    assert_nil @account.suggested_subtype
   end
 
   # === BALANCE (load-bearing) ===
@@ -92,5 +95,51 @@ class OpenBankingIoAccountTest < ActiveSupport::TestCase
   test "upsert defaults currency to EUR when the reported code is invalid" do
     @account.upsert_open_banking_io_snapshot!(snapshot(currency: "XXX", balances: [ { type: "ITBD", amount: "1.00", currency: "XXX" } ]))
     assert_equal "EUR", @account.currency
+  end
+
+  # === ISO 20022 ACCOUNT TYPE MAPPING ===
+  # open-banking.io passes through the bank's ExternalCashAccountType1Code. Most EU banks
+  # report CACC for every personal account, so "Checking" everywhere is the bank's own
+  # classification -- but banks that do distinguish must land on the right subtype.
+  test "maps the ISO 20022 cash account types with an unambiguous Sure equivalent" do
+    {
+      "CACC" => [ "Depository", "checking" ],
+      "TRAN" => [ "Depository", "checking" ],
+      "SLRY" => [ "Depository", "checking" ],
+      "CASH" => [ "Depository", "checking" ],
+      "SVGS" => [ "Depository", "savings" ],
+      "LLSV" => [ "Depository", "savings" ],
+      "ONDP" => [ "Depository", "savings" ],
+      "MOMA" => [ "Depository", "money_market" ],
+      "CARD" => [ "CreditCard", "credit_card" ],
+      "LOAN" => [ "Loan", nil ],
+      "MGLD" => [ "Loan", nil ]
+    }.each do |code, (type, subtype)|
+      account = OpenBankingIoAccount.new(account_type: code)
+      assert_equal type, account.suggested_account_type, code
+      assert_equal subtype, account.suggested_subtype, code
+    end
+  end
+
+  test "every mapped subtype is valid for its accountable type" do
+    OpenBankingIoAccount::OPEN_BANKING_IO_ACCOUNT_TYPE_MAP.each do |code, mapping|
+      subtype = mapping[:subtype]
+      next if subtype.nil?
+
+      valid = mapping[:accountable_type].constantize::SUBTYPES.keys
+      assert_includes valid, subtype, "#{code} maps to a subtype #{mapping[:accountable_type]} does not define"
+    end
+  end
+
+  # Guessing wrong is worse than asking: the setup screen offers a type picker.
+  test "ambiguous codes are left for the user to choose" do
+    %w[OTHR SACC TAXE TRAS CHAR COMM CPAC NREX ODFT].each do |code|
+      assert_nil OpenBankingIoAccount.new(account_type: code).suggested_account_type, code
+    end
+  end
+
+  test "account type matching is case-insensitive" do
+    assert_equal "Depository", OpenBankingIoAccount.new(account_type: "svgs").suggested_account_type
+    assert_equal "savings", OpenBankingIoAccount.new(account_type: "svgs").suggested_subtype
   end
 end

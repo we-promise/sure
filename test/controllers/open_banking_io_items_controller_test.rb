@@ -354,15 +354,28 @@ class OpenBankingIoItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to "/accounts"
   end
 
-  # The picker entry omits the item id when nothing is configured yet, so this must land on
-  # the credential form rather than 404ing on a missing id.
-  test "select_accounts without a connection sends the user to the credential form" do
+  # These pickers render INTO a turbo-frame. A redirect answers with a full page that has no
+  # matching frame, which Turbo discards -- the modal just closes with no explanation. The
+  # unconfigured case must therefore render a frame, not redirect.
+  test "select_accounts without a connection renders setup instructions inside the modal frame" do
     assert_equal 0, @family.open_banking_io_items.count
 
     get select_accounts_open_banking_io_items_url(accountable_type: "Depository")
 
-    assert_redirected_to settings_providers_path
-    assert_equal I18n.t("open_banking_io_items.select_accounts.no_credentials_configured"), flash[:alert]
+    assert_response :success
+    assert_match(/<turbo-frame[^>]+id="modal"/, response.body)
+    assert_match I18n.t("open_banking_io_items.setup_required.title"), response.body
+    assert_match settings_providers_path, response.body
+  end
+
+  test "select_existing_account without a connection renders the same frame" do
+    account = @family.accounts.create!(name: "Mine", balance: 1, currency: "EUR", accountable: Depository.new)
+
+    get select_existing_account_open_banking_io_items_url(account_id: account.id)
+
+    assert_response :success
+    assert_match(/<turbo-frame[^>]+id="modal"/, response.body)
+    assert_match I18n.t("open_banking_io_items.setup_required.title"), response.body
   end
 
   test "select_accounts with no id uses the family's configured connection" do

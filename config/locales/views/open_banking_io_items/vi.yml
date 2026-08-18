@@ -105,6 +105,16 @@ vi:
     sync:
       already_syncing: "Kết nối này đang được đồng bộ."
       started: "Đang đồng bộ kết nối open-banking.io."
+    setup_required:
+      title: "Cần thiết lập open-banking.io"
+      credentials_not_configured: "Chưa cấu hình thông tin xác thực"
+      credentials_description: "Trước khi liên kết tài khoản open-banking.io, bạn cần dán tệp credentials.json đã xuất."
+      setup_steps_title: "Các bước thiết lập:"
+      setup_step_1_html: "Vào <strong>Cài đặt → Nhà cung cấp</strong>"
+      setup_step_2_html: "Tìm mục <strong>open-banking.io</strong>"
+      setup_step_3: "Dán nội dung tệp credentials.json của bạn"
+      setup_step_4: "Quay lại đây để liên kết tài khoản"
+      go_to_provider_settings: "Đến cài đặt nhà cung cấp"
     setup_accounts:
       title: Thiết lập tài khoản open-banking.io
       subtitle: Chọn cách mỗi tài khoản open-banking.io hiển thị trong Sure.

@@ -105,6 +105,16 @@ ca:
     sync:
       already_syncing: "Aquesta connexió ja s'està sincronitzant."
       started: "Sincronitzant la connexió d'open-banking.io."
+    setup_required:
+      title: "Cal configurar open-banking.io"
+      credentials_not_configured: "Credencials no configurades"
+      credentials_description: "Abans de vincular comptes d'open-banking.io, has d'enganxar el teu credentials.json exportat."
+      setup_steps_title: "Passos de configuració:"
+      setup_step_1_html: "Ves a <strong>Configuració → Proveïdors</strong>"
+      setup_step_2_html: "Cerca la secció <strong>open-banking.io</strong>"
+      setup_step_3: "Enganxa el contingut del fitxer credentials.json"
+      setup_step_4: "Torna aquí per vincular els teus comptes"
+      go_to_provider_settings: "Ves a la configuració de proveïdors"
     setup_accounts:
       title: Configura els comptes d'open-banking.io
       subtitle: Tria com ha d'aparèixer cada compte d'open-banking.io a Sure.

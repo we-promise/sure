@@ -105,6 +105,16 @@ pt-BR:
     sync:
       already_syncing: "Esta conexão já está sincronizando."
       started: "Sincronizando a conexão do open-banking.io."
+    setup_required:
+      title: "Configuração do open-banking.io necessária"
+      credentials_not_configured: "Credenciais não configuradas"
+      credentials_description: "Antes de vincular contas do open-banking.io, você precisa colar seu credentials.json exportado."
+      setup_steps_title: "Etapas de configuração:"
+      setup_step_1_html: "Acesse <strong>Configurações → Provedores</strong>"
+      setup_step_2_html: "Encontre a seção <strong>open-banking.io</strong>"
+      setup_step_3: "Cole o conteúdo do seu arquivo credentials.json"
+      setup_step_4: "Volte aqui para vincular suas contas"
+      go_to_provider_settings: "Ir para configurações de provedores"
     setup_accounts:
       title: Configurar contas open-banking.io
       subtitle: Escolha como cada conta open-banking.io deve aparecer no Sure.

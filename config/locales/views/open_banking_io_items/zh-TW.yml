@@ -105,6 +105,16 @@ zh-TW:
     sync:
       already_syncing: "此連線正在同步中。"
       started: "正在同步 open-banking.io 連線。"
+    setup_required:
+      title: "需要設定 open-banking.io"
+      credentials_not_configured: "尚未設定憑證"
+      credentials_description: "在連結 open-banking.io 帳戶之前，您需要貼上匯出的 credentials.json。"
+      setup_steps_title: "設定步驟："
+      setup_step_1_html: "前往<strong>設定 → 提供者</strong>"
+      setup_step_2_html: "找到 <strong>open-banking.io</strong> 區段"
+      setup_step_3: "貼上 credentials.json 檔案的內容"
+      setup_step_4: "返回此處連結您的帳戶"
+      go_to_provider_settings: "前往提供者設定"
     setup_accounts:
       title: 設定 open-banking.io 帳戶
       subtitle: 選擇每個 open-banking.io 帳戶要如何顯示於 Sure。

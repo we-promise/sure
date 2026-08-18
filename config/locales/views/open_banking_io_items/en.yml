@@ -105,6 +105,16 @@ en:
     sync:
       already_syncing: "This connection is already syncing."
       started: "Syncing open-banking.io connection."
+    setup_required:
+      title: "open-banking.io Setup Required"
+      credentials_not_configured: "Credentials Not Configured"
+      credentials_description: "Before you can link open-banking.io accounts, you need to paste your exported credentials.json."
+      setup_steps_title: "Setup Steps:"
+      setup_step_1_html: "Go to <strong>Settings → Providers</strong>"
+      setup_step_2_html: "Find the <strong>open-banking.io</strong> section"
+      setup_step_3: "Paste the contents of your credentials.json file"
+      setup_step_4: "Return here to link your accounts"
+      go_to_provider_settings: "Go to Provider Settings"
     setup_accounts:
       title: Set Up open-banking.io Accounts
       subtitle: Choose how each open-banking.io account should appear in Sure.
