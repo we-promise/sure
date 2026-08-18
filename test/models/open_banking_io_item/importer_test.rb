@@ -171,4 +171,34 @@ class OpenBankingIoItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 0, result[:accounts_failed]
     assert_equal 0, result[:transactions_failed]
   end
+
+  # === CONNECTION HEALTH ===
+  # needsReconnect is the service's DURABLE per-account flag: an expired PSD2 consent sets
+  # it and it stays set until the user reconnects. Deriving the badge from the transient
+  # sync_all failures instead made it flap between good and requires_update run to run.
+  test "a connection whose accounts need reconnecting stays badged across repeated syncs" do
+    @provider_account.update!(account_status: "requires_update")
+    provider = mock
+    provider.stubs(:sync_all).returns(nil)
+    provider.stubs(:get_accounts).returns([])
+    provider.stubs(:close)
+
+    3.times do
+      OpenBankingIoItem::Importer.new(@item, open_banking_io_provider: provider).import
+      assert_equal "requires_update", @item.reload.status
+    end
+  end
+
+  test "the badge clears once no account needs reconnecting" do
+    @item.update!(status: :requires_update)
+    @provider_account.update!(account_status: "good")
+    provider = mock
+    provider.stubs(:sync_all).returns(nil)
+    provider.stubs(:get_accounts).returns([])
+    provider.stubs(:close)
+
+    OpenBankingIoItem::Importer.new(@item, open_banking_io_provider: provider).import
+
+    assert_equal "good", @item.reload.status
+  end
 end

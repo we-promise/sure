@@ -91,4 +91,54 @@ class OpenBankingIoItem::SyncerTest < ActiveSupport::TestCase
     assert_respond_to @syncer, :perform_post_sync
     assert_nil @syncer.perform_post_sync
   end
+
+  # === PARTIAL FAILURE MUST NOT BLACK OUT THE CONNECTION ===
+  # A PSD2 aggregator fans out over many banks: one consent lapsing, one bank rate-limiting
+  # or one account 404ing after a reconnect is the steady state. Aborting there used to skip
+  # process_accounts AND schedule_account_syncs, so every OTHER account on the connection
+  # stopped turning transactions into entries and stopped recalculating balances -- nightly,
+  # until the user fixed the one bad bank.
+  test "one failed account still processes and schedules the rest" do
+    @item.stubs(:import_latest_open_banking_io_data).returns(
+      { success: false, accounts_updated: 1, accounts_created: 0, accounts_failed: 0,
+        transactions_imported: 40, transactions_failed: 1 }
+    )
+    @item.expects(:process_accounts).returns([ { success: true } ]).once
+    @item.expects(:schedule_account_syncs).returns([ { success: true } ]).once
+    account = @item.family.accounts.create!(name: "Everyday", balance: 1, currency: "EUR", accountable: Depository.new)
+    provider_account = @item.open_banking_io_accounts.create!(account_id: "a1", name: "Everyday", currency: "EUR")
+    AccountProvider.create!(account: account, provider: provider_account)
+
+    # The error still surfaces -- it is raised after the work, not instead of it.
+    assert_raises(OpenBankingIoItem::Syncer::SyncError) do
+      @syncer.perform_sync(Sync.create!(syncable: @item))
+    end
+  end
+
+  # A total failure has nothing to process, so it still aborts immediately.
+  test "a total import failure aborts before processing" do
+    @item.stubs(:import_latest_open_banking_io_data).returns(
+      { success: false, error: "Could not fetch open-banking.io accounts" }
+    )
+    @item.expects(:process_accounts).never
+    @item.expects(:schedule_account_syncs).never
+
+    assert_raises(OpenBankingIoItem::Syncer::SyncError) do
+      @syncer.perform_sync(Sync.create!(syncable: @item))
+    end
+  end
+
+  test "a failed account does not stop the others being scheduled" do
+    account = @item.family.accounts.create!(name: "Everyday", balance: 1, currency: "EUR", accountable: Depository.new)
+    provider_account = @item.open_banking_io_accounts.create!(account_id: "a1", name: "Everyday", currency: "EUR")
+    AccountProvider.create!(account: account, provider: provider_account)
+
+    @item.stubs(:import_latest_open_banking_io_data).returns({ success: true })
+    @item.stubs(:process_accounts).returns([ { success: false, error: "boom" }, { success: true } ])
+    @item.expects(:schedule_account_syncs).returns([ { success: true } ]).once
+
+    assert_raises(OpenBankingIoItem::Syncer::SyncError) do
+      @syncer.perform_sync(Sync.create!(syncable: @item))
+    end
+  end
 end

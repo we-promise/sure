@@ -87,25 +87,32 @@
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
             <p class="text-secondary text-sm"><%= t(".setup_description", linked: linked_count, total: total_count) %></p>
-            <%= render DS::Link.new(
-              text: t(".setup_action"),
-              icon: "settings",
-              variant: "primary",
-              href: setup_accounts_open_banking_io_item_path(open_banking_io_item),
-              frame: :modal
-            ) %>
+            <%# Admins only: setup_accounts is behind require_admin!, whose HTML branch
+                redirects to a page with no modal frame -- Turbo discards it and the modal
+                dies silently, so a member would just get a dead button. %>
+            <% if Current.user&.admin? %>
+              <%= render DS::Link.new(
+                text: t(".setup_action"),
+                icon: "settings",
+                variant: "primary",
+                href: setup_accounts_open_banking_io_item_path(open_banking_io_item),
+                frame: :modal
+              ) %>
+            <% end %>
           </div>
         <% elsif open_banking_io_item.accounts.empty? && total_count == 0 %>
           <div class="p-4 flex flex-col gap-3 items-center justify-center">
             <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
             <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
-            <%= render DS::Link.new(
-              text: t(".setup_action"),
-              icon: "settings",
-              variant: "primary",
-              href: setup_accounts_open_banking_io_item_path(open_banking_io_item),
-              frame: :modal
-            ) %>
+            <% if Current.user&.admin? %>
+              <%= render DS::Link.new(
+                text: t(".setup_action"),
+                icon: "settings",
+                variant: "primary",
+                href: setup_accounts_open_banking_io_item_path(open_banking_io_item),
+                frame: :modal
+              ) %>
+            <% end %>
           </div>
         <% end %>
       </div>

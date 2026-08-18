@@ -37,7 +37,18 @@ class OpenBankingIoAccount < ApplicationRecord
   # balances (interim booked, then closing booked); an available balance is never
   # used here. When none is present we leave current_balance untouched rather than
   # picking an arbitrary balance.
-  BOOKED_BALANCE_PREFERENCE = [ BOOKED_BALANCE_TYPE, CLOSING_BOOKED_BALANCE_TYPE ].freeze
+  # Expected-closing balance: not strictly booked, but a far better anchor than nothing.
+  EXPECTED_BALANCE_TYPE = "XPCD".freeze
+  # Closing available -- some ASPSPs report this instead of ITAV.
+  CLOSING_AVAILABLE_BALANCE_TYPE = "CLAV".freeze
+
+  # Preference order for the account's current balance, most authoritative first. The last
+  # two are fallbacks for banks that report neither booked code: without them such an
+  # account is anchored at 0 forever, and ReverseCalculator then derives its whole history
+  # from that zero. Mirrors EnableBankingItem::Importer::BALANCE_TYPE_PRIORITY.
+  BOOKED_BALANCE_PREFERENCE = [
+    BOOKED_BALANCE_TYPE, CLOSING_BOOKED_BALANCE_TYPE, EXPECTED_BALANCE_TYPE, CLOSING_AVAILABLE_BALANCE_TYPE
+  ].freeze
   # ISO 20022 available balance code.
   AVAILABLE_BALANCE_TYPE = "ITAV".freeze
 
@@ -146,7 +157,7 @@ class OpenBankingIoAccount < ApplicationRecord
 
     assign_attributes(
       available_balance: parse_balance_amount(available),
-      currency: parse_currency(snapshot[:currency]) || parse_currency(booked&.dig(:currency)) || DEFAULT_CURRENCY,
+      currency: parse_currency(snapshot[:currency]) || parse_currency(booked&.dig(:currency)) || currency.presence || DEFAULT_CURRENCY,
       name: display_name,
       account_id: snapshot[:id].presence,
       formatted_account: snapshot[:iban].presence || snapshot[:bban].presence,

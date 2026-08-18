@@ -387,4 +387,56 @@ class OpenBankingIoItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
   end
+
+  # === TURBO FRAME CONTRACTS ===
+  # Every one of these is the same bug class: a response that does not contain the frame
+  # the request came from is discarded by Turbo, and the user sees nothing happen at all.
+
+  # The picker form submits to _top, and select_accounts answers `render layout: false` --
+  # a bare frame with no <html>, CSS or JS, so redirecting back to it lands the user on a
+  # blank white page with the flash lost.
+  test "link_accounts errors redirect somewhere that renders standalone" do
+    item = create_item
+    provider_account = item.open_banking_io_accounts.create!(account_id: "a1", name: "Everyday", currency: "EUR")
+
+    post link_accounts_open_banking_io_items_url,
+         params: { open_banking_io_item_id: item.id, accountable_type: "Depository", account_ids: [] }
+    assert_redirected_to new_account_path
+
+    post link_accounts_open_banking_io_items_url,
+         params: { open_banking_io_item_id: item.id, accountable_type: "Depository",
+                   account_ids: [ provider_account.id ], return_to: "/accounts" }
+    assert_response :redirect
+    assert_not_includes response.location, "select_accounts",
+                        "never bounce back to a layout-less picker"
+  end
+
+  # The connect drawer wraps the panel in a frame with target="_top", so no Turbo-Frame
+  # header is sent. A 422 redirect has an empty body and Turbo renders nothing -- pasting a
+  # malformed credentials.json did literally nothing.
+  test "a bad credentials paste outside a frame navigates and shows the error" do
+    assert_no_difference "OpenBankingIoItem.count" do
+      post open_banking_io_items_url, params: {
+        open_banking_io_item: { name: "Broken", credentials_json: "{not json" }
+      }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert flash[:alert].present?, "the user must be told why it failed"
+  end
+
+  # setup_accounts is behind require_admin!, which redirects to a page with no modal frame.
+  # A member would get a dead button, so the link is not rendered for them at all.
+  test "the setup-accounts link is only offered to admins" do
+    item = create_item
+    item.open_banking_io_accounts.create!(account_id: "a1", name: "Unlinked", currency: "EUR")
+
+    get accounts_url
+    assert_match setup_accounts_open_banking_io_item_path(item), response.body
+
+    sign_in users(:family_member)
+    get accounts_url
+    assert_no_match setup_accounts_open_banking_io_item_path(item), response.body
+  end
 end

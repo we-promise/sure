@@ -1,4 +1,8 @@
-<div id="open_banking_io-providers-panel" class="space-y-4">
+<%# No id here: settings/providers/_connection_row already wraps this partial in a
+    turbo-frame of the same name, and a duplicate id makes turbo_stream.replace target the
+    ancestor frame (getElementById returns the first match in tree order), replacing the
+    frame itself with a plain div. %>
+<div class="space-y-4">
   <% active_items = local_assigns[:open_banking_io_items] || @open_banking_io_items || Current.family.open_banking_io_items.active.ordered %>
 
   <%= render "settings/providers/setup_steps",
@@ -49,7 +53,7 @@
                 size: :sm,
                 href: open_banking_io_item_path(item),
                 method: :delete,
-                data: { turbo_confirm: t("open_banking_io_items.provider_panel.disconnect_confirm", name: item.name) }
+                data: { turbo_frame: "_top", turbo_confirm: t("open_banking_io_items.provider_panel.disconnect_confirm", name: item.name) }
               ) %>
             </div>
 
