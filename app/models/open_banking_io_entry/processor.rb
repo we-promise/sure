@@ -97,6 +97,7 @@ class OpenBankingIoEntry::Processor
       name: name,
       source: SOURCE,
       notes: notes,
+      merchant: merchant,
       extra: extra_metadata
     )
   rescue ArgumentError => e
@@ -186,6 +187,31 @@ class OpenBankingIoEntry::Processor
     def name
       counterparty = debit? ? data[:creditor_name] : data[:debtor_name]
       counterparty.presence || data[:remittance_information].presence || I18n.t("transactions.unknown_name")
+    end
+
+    # open_banking_io is registered as a ProviderMerchant source but nothing created one, so
+    # the enum entry was inert. Mirrors EnableBankingEntry::Processor, which reads the same
+    # ISO-20022 shape.
+    #
+    # Debits only: on a credit the counterparty is the payer (an employer, a friend), not a
+    # merchant, and recording those would pollute the merchant list with people's names.
+    def merchant
+      return nil unless debit?
+
+      merchant_name = data[:creditor_name].presence || data[:remittance_information].presence
+      return nil if merchant_name.blank?
+
+      merchant_name = merchant_name.to_s.strip.truncate(100)
+      return nil if merchant_name.blank?
+
+      @merchant ||= import_adapter.find_or_create_merchant(
+        provider_merchant_id: "open_banking_io_merchant_#{Digest::MD5.hexdigest(merchant_name.downcase)}",
+        name: merchant_name,
+        source: SOURCE
+      )
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.error "OpenBankingIoEntry::Processor - Failed to create merchant: #{e.class}"
+      nil
     end
 
     def notes
