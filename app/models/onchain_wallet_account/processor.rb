@@ -131,18 +131,20 @@ class OnchainWalletAccount::Processor
       amount * rate.rate.to_d
     end
 
-    # A holding that ends up worth zero because nothing can price crypto is a
-    # configuration problem, not chain data. Users report it as a broken sync, so
-    # it gets recorded where support can see it — once per asset per changed sync,
-    # and only for this cause: a price that is merely missing for today is
-    # ordinary and already covered by the backfill.
+    # A holding that ends up worth zero because nothing can price crypto, or
+    # because USD cannot be converted into the family's currency, is a
+    # configuration problem rather than chain data. Users report it as a broken
+    # sync, so the reason is recorded where support can see it — once per asset
+    # per changed sync, and only for these causes: a price merely missing for
+    # today is ordinary and already covered by the backfill.
     def report_zero_valuation(security)
-      return if Onchain::SecurityResolver.price_provider_enabled?
+      reasons = Onchain::Pricing.missing_for(currency)
+      return if reasons.empty?
 
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "warn",
-        message: "On-chain asset valued at zero: no crypto price provider is enabled",
+        message: "On-chain asset valued at zero: #{reasons.map { |reason| reason.to_s.humanize.downcase }.join(" and ")} not configured",
         source: self.class.name,
         provider_key: "onchain_wallet",
         family: onchain_wallet_account.onchain_wallet_item.family,
@@ -152,7 +154,9 @@ class OnchainWalletAccount::Processor
           chain: onchain_wallet_account.chain,
           symbol: onchain_wallet_account.symbol,
           ticker: security.ticker,
-          quantity: quantity.to_s("F")
+          quantity: quantity.to_s("F"),
+          currency: currency,
+          reasons: reasons.map(&:to_s)
         }
       )
     end
@@ -203,6 +207,28 @@ class OnchainWalletAccount::Processor
     end
 
     def import_trade(security, movement, date, quantity, price)
+      write_trade(
+        security: security,
+        external_id: movement_external_id(movement),
+        date: date,
+        quantity: quantity,
+        price: price
+      )
+    end
+
+    # The one place a movement becomes a trade, used both on the way in and by the
+    # repair pass.
+    #
+    # A movement first seen while its price was unknown already exists as a
+    # display-only entry, and an Entry cannot change entryable type in place —
+    # the shared importer refuses an external_id held by a Transaction. So the
+    # display-only entry is discarded first and the trade takes over its
+    # identity. Without this, every wallet linked before prices were available
+    # raised on the first sync that could price it, which also meant the repair
+    # pass — running after the sync — was never reached.
+    def write_trade(security:, external_id:, date:, quantity:, price:)
+      discard_display_only_entry(external_id)
+
       import_adapter.import_trade(
         security: security,
         quantity: quantity,
@@ -214,10 +240,17 @@ class OnchainWalletAccount::Processor
         # Named here because the shared helper says "Buy 0.5 shares of
         # CRYPTO:BTC" — "shares" is not a thing a wallet holds.
         name: trade_name(quantity),
-        external_id: movement_external_id(movement),
+        external_id: external_id,
         source: SOURCE,
         activity_label: quantity.positive? ? "Buy" : "Sell"
       )
+    end
+
+    def discard_display_only_entry(external_id)
+      entry = account.entries.find_by(external_id: external_id, source: SOURCE)
+      return if entry.nil? || !entry.entryable.is_a?(Transaction)
+
+      entry.destroy!
     end
 
     def import_display_only_entry(movement, date, quantity)
@@ -260,22 +293,13 @@ class OnchainWalletAccount::Processor
       price = exact_price_on(security, entry.date)
       return false if price.nil?
 
-      # The entry has to go before the trade is written: an Entry cannot change
-      # entryable type in place, and import_trade refuses an external_id already
-      # held by a Transaction.
-      external_id = entry.external_id
       Entry.transaction do
-        entry.destroy!
-        import_adapter.import_trade(
+        write_trade(
           security: security,
-          quantity: amount,
-          price: price,
-          amount: -(amount * price).round(4),
-          currency: currency,
+          external_id: entry.external_id,
           date: entry.date,
-          external_id: external_id,
-          source: SOURCE,
-          activity_label: amount.positive? ? "Buy" : "Sell"
+          quantity: amount,
+          price: price
         )
       end
 

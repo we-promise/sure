@@ -80,6 +80,8 @@ en:
     price_provider_warning:
       body: No enabled market data provider can price crypto, so these wallets track quantities but show a value of zero.
       enable: Enable crypto prices
+      exchange_rate_body: "Crypto is priced in USD, and no exchange rate provider is configured to convert it into %{currency}, so these wallets track quantities but show a value of zero. Set EXCHANGE_RATE_PROVIDER — Frankfurter needs no API key."
+      exchange_rate_title: No exchange rate provider is configured
       link: Open market data settings
       title: Crypto prices are not configured
     provider_connection:

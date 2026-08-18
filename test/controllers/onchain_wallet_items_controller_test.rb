@@ -56,6 +56,26 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("onchain_wallet_items.price_provider_warning.title"), response.body
   end
 
+  test "a non-USD family is warned that nothing can convert USD prices" do
+    Setting.stubs(:enabled_securities_providers).returns([ Onchain::SecurityResolver::PRICE_PROVIDER ])
+    ExchangeRate.stubs(:provider).returns(nil)
+    @family.update!(currency: "EUR")
+
+    get new_wallet_onchain_wallet_items_url
+
+    assert_match I18n.t("onchain_wallet_items.price_provider_warning.exchange_rate_title"), response.body
+    assert_no_match I18n.t("onchain_wallet_items.price_provider_warning.title"), response.body
+  end
+
+  test "a USD family with crypto prices on sees no pricing warning at all" do
+    Setting.stubs(:enabled_securities_providers).returns([ Onchain::SecurityResolver::PRICE_PROVIDER ])
+
+    get new_wallet_onchain_wallet_items_url
+
+    assert_no_match I18n.t("onchain_wallet_items.price_provider_warning.title"), response.body
+    assert_no_match I18n.t("onchain_wallet_items.price_provider_warning.exchange_rate_title"), response.body
+  end
+
   test "the warning offers a one-click fix on a self-hosted instance" do
     Rails.configuration.stubs(:app_mode).returns(ActiveSupport::StringInquirer.new("self_hosted"))
 

@@ -28,7 +28,7 @@ For each asset Sure records:
 Balances are read-only and always derived from the chain. Editing them by hand is
 pointless: the next sync overwrites them.
 
-## Prices are a separate setting (read this first)
+## Prices need two settings, not one (read this first)
 
 On-chain data sources report **quantities, not values**. Prices come from Sure's
 market data providers, and the only provider that can quote bare crypto symbols
@@ -48,9 +48,22 @@ enabled providers and leaves the others alone. Otherwise, enable it under
 On a managed instance this is the operator's setting, so the button is not
 offered.
 
-When an asset ends up valued at zero for this reason, it is recorded in
-**Settings → Debug logs** under the `onchain_wallet` provider, so the cause is
-visible without having to reproduce it.
+### And an exchange rate, if your currency is not USD
+
+The crypto provider quotes in USD, so valuing a wallet in any other family
+currency needs one conversion — and Sure's default exchange rate provider
+(`twelve_data`) requires an API key. With no key and a non-USD family, there is no
+FX at all and every on-chain wallet is valued at zero for that second, separate
+reason.
+
+Set `EXCHANGE_RATE_PROVIDER` (or **Settings → Self hosting**) to a provider you
+can actually use; `frankfurter` needs no API key. The linking UI warns about this
+gap specifically, naming your currency, and a USD family never sees the warning
+because it needs no conversion.
+
+When an asset ends up valued at zero for either reason, it is recorded in
+**Settings → Debug logs** under the `onchain_wallet` provider, with the reasons
+listed, so the cause is visible without having to reproduce it.
 
 ## Data sources
 
@@ -216,8 +229,10 @@ never mistaken for a balance of one fungible token.
 
 ## Troubleshooting
 
-**Every wallet shows a value of zero.** No crypto-capable market data provider is
-enabled. See "Prices are a separate setting" above.
+**Every wallet shows a value of zero.** Either no crypto-capable market data
+provider is enabled, or your family currency is not USD and no exchange rate
+provider is configured. Both are covered above, and the linking UI says which one
+applies.
 
 **A Bitcoin balance is much lower than my wallet app shows.** You are tracking one
 address of an HD wallet. See "Limitations".
