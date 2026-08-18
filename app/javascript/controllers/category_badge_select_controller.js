@@ -10,7 +10,7 @@ export default class extends Controller {
     );
     if (!option) return;
 
-    const badge = option.querySelector("span.flex.items-center");
+    const badge = option.querySelector("span.inline-flex.items-center");
     if (badge) {
       this.buttonTarget.innerHTML = badge.outerHTML;
     } else {
