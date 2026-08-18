@@ -18,7 +18,7 @@ class AccountsController < ApplicationController
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
     @redbark_items = visible_provider_items(family.redbark_items.ordered.with_attached_logo.includes(:redbark_accounts))
     @akahu_items = visible_provider_items(family.akahu_items.ordered.with_attached_logo.includes(:akahu_accounts))
-    @open_banking_io_items = visible_provider_items(family.open_banking_io_items.ordered.with_attached_logo.includes(:open_banking_io_accounts))
+    @open_banking_io_items = visible_provider_items(family.open_banking_io_items.ordered.includes(:open_banking_io_accounts))
     @up_items = visible_provider_items(family.up_items.ordered.with_attached_logo.includes(:up_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))

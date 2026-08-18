@@ -5,9 +5,6 @@ ro:
       name: open-banking.io
       description: Conectează conturi bancare europene prin open-banking.io
   family:
-    open_banking_io:
-      create_open_banking_io_item:
-        default_name: Conexiune open-banking.io
   open_banking_io_account:
     fallback: cont open-banking.io
   open_banking_io_entry:

@@ -257,8 +257,12 @@ class OpenBankingIoItem::Importer
       incoming_count = incoming_keys.size
       transactions.each { |tx| add_row.call(tx) }
 
-      final_transactions = order.map { |key| merged[key] }
-      return if final_transactions == existing_transactions
+      # Normalise before comparing: rows read back from the encrypted JSONB column are
+      # string-keyed while incoming rows from the provider are symbol-keyed, so the guard
+      # was always false and every sync re-serialised, re-encrypted and rewrote the whole
+      # (multi-MB) blob even when nothing had changed.
+      final_transactions = order.map { |key| merged[key].deep_stringify_keys }
+      return if final_transactions == existing_transactions.map { |tx| tx.is_a?(Hash) ? tx.deep_stringify_keys : tx }
 
       Rails.logger.info(
         "OpenBankingIoItem::Importer - Storing #{final_transactions.count} transactions " \
@@ -298,8 +302,8 @@ class OpenBankingIoItem::Importer
       capture_sync_error("Failed to request open-banking.io backfill", e, open_banking_io_account: open_banking_io_account)
     end
 
-    def configured_sync_start_date(open_banking_io_account)
-      open_banking_io_account.sync_start_date.presence || open_banking_io_item.sync_start_date.presence
+    def configured_sync_start_date(_open_banking_io_account)
+      open_banking_io_item.sync_start_date.presence
     end
 
     def determine_sync_start_date(open_banking_io_account)

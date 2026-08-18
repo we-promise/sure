@@ -5,9 +5,6 @@ zh-TW:
       name: open-banking.io
       description: 透過 open-banking.io 連結歐洲銀行帳戶
   family:
-    open_banking_io:
-      create_open_banking_io_item:
-        default_name: open-banking.io 連線
   open_banking_io_account:
     fallback: open-banking.io 帳戶
   open_banking_io_entry:

@@ -5,9 +5,6 @@ vi:
       name: open-banking.io
       description: Kết nối tài khoản ngân hàng châu Âu qua open-banking.io
   family:
-    open_banking_io:
-      create_open_banking_io_item:
-        default_name: Kết nối open-banking.io
   open_banking_io_account:
     fallback: Tài khoản open-banking.io
   open_banking_io_entry:
