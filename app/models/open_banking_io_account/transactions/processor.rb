@@ -22,10 +22,15 @@ class OpenBankingIoAccount::Transactions::Processor
     current_pending_external_ids = pending_external_ids
     excluded_ids = excluded_external_ids
 
+    discarded_external_ids = []
+
     ordered_transactions(open_banking_io_account.raw_transactions_payload).each_with_index do |transaction_data, index|
       ext_id = OpenBankingIoEntry::Processor.canonical_external_id(transaction_data)
       if OpenBankingIoEntry::Processor.skip?(transaction_data)
-        # Cancelled, rejected or future-dated: not money that moved.
+        # Cancelled, rejected or future-dated: not money that moved. If we imported it
+        # while it was still BOOK, it has to come back out -- skipping alone would leave it
+        # in the ledger permanently, affecting the balance, with no path to remove it.
+        discarded_external_ids << ext_id if ext_id.present?
         skipped_count += 1
         next
       end
@@ -62,6 +67,7 @@ class OpenBankingIoAccount::Transactions::Processor
       Rails.logger.error e.backtrace.join("\n")
     end
     pruned_count = prune_stale_pending_entries(current_pending_external_ids)
+    pruned_count += prune_discarded_entries(discarded_external_ids)
 
     {
       success: failed_count.zero?,
@@ -158,15 +164,42 @@ class OpenBankingIoAccount::Transactions::Processor
       end
     end
 
+    # Removes entries for rows the bank has since marked cancelled, rejected or scheduled.
+    # Scoped to this provider and to ids we just saw in the payload, so it can only ever
+    # remove something we ourselves imported.
+    def prune_discarded_entries(discarded_external_ids)
+      return 0 if discarded_external_ids.empty?
+
+      account = open_banking_io_account.current_account
+      return 0 unless account.present?
+
+      entries = account.entries.where(source: "open_banking_io", external_id: discarded_external_ids)
+      count = entries.count
+      entries.find_each(&:destroy!) if count.positive?
+      count
+    end
+
+    # A pending authorisation the bank never resolves would otherwise live forever: the
+    # keep-list protects it every sync, and its presence pins the lookback open. No real
+    # pre-auth outlives this, so anything older is stale regardless of the keep-list.
+    MAX_PENDING_AGE = 60.days
+
     def prune_stale_pending_entries(current_pending_external_ids)
       account = open_banking_io_account.current_account
       return 0 unless account.present?
 
-      stale_pending_entries = account.entries
+      pending_entries = account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(source: "open_banking_io")
         .where("(transactions.extra -> 'open_banking_io' ->> 'pending')::boolean = true")
-      stale_pending_entries = stale_pending_entries.where.not(external_id: current_pending_external_ids) if current_pending_external_ids.any?
+
+      stale_pending_entries =
+        if current_pending_external_ids.any?
+          pending_entries.where.not(external_id: current_pending_external_ids)
+                         .or(pending_entries.where(date: ...MAX_PENDING_AGE.ago.to_date))
+        else
+          pending_entries
+        end
 
       count = stale_pending_entries.count
       stale_pending_entries.find_each(&:destroy!) if count.positive?

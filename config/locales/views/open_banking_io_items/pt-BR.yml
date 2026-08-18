@@ -4,7 +4,6 @@ pt-BR:
     open_banking_io:
       name: open-banking.io
       description: Conecte contas bancárias europeias via open-banking.io
-  family:
   open_banking_io_account:
     fallback: conta open-banking.io
   open_banking_io_entry:

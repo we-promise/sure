@@ -190,7 +190,49 @@ class OpenBankingIoAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
            "a missing payload must never be read as an instruction to delete"
   end
 
+  # A pending the bank never resolves is otherwise immortal: the keep-list protects it on
+  # every sync, and its presence pins the lookback window open indefinitely.
+  test "a pending far older than any real pre-auth is pruned even while still returned" do
+    ancient = pending_txn(id: "OLD").merge("booking_date" => 90.days.ago.to_date.to_s)
+    @importer.send(:store_transactions, @provider_account, transactions: [ ancient ])
+
+    # The bank still returns it, so the keep-list would otherwise protect it forever.
+    process
+    process
+
+    assert_not @account.entries.exists?(external_id: "open_banking_io_OLD"),
+               "a pending older than MAX_PENDING_AGE must not survive on the keep-list"
+  end
+
+  test "a recent pending that is still returned is kept" do
+    @importer.send(:store_transactions, @provider_account, transactions: [ pending_txn(id: "RECENT") ])
+    process
+    process
+
+    assert @account.entries.exists?(external_id: "open_banking_io_RECENT")
+  end
+
   # === SKIPPED STATUSES ===
+  # A row imported while it was BOOK and later flipped to CNCL/RJCT must come back OUT.
+  # Skipping alone would leave it in the ledger permanently, affecting the balance, with
+  # no sync-driven path to remove it.
+  test "an entry the bank later cancels is removed from the ledger" do
+    booked = {
+      "id" => "FLIP", "status" => "BOOK", "credit_debit_indicator" => "DBIT",
+      "amount" => "99.00", "booking_date" => Date.current.to_s
+    }
+    @importer.send(:store_transactions, @provider_account, transactions: [ booked ])
+    process
+    assert @account.entries.exists?(external_id: "open_banking_io_FLIP")
+
+    @importer.send(:store_transactions, @provider_account, transactions: [ booked.merge("status" => "CNCL") ])
+    result = process
+
+    assert_not @account.entries.exists?(external_id: "open_banking_io_FLIP"),
+               "a cancelled transaction must not stay in the ledger"
+    assert_operator result[:pruned_pending], :>=, 1
+  end
+
   test "cancelled, rejected and scheduled entries are never imported" do
     @provider_account.update!(raw_transactions_payload: %w[CNCL RJCT SCHD].map do |status|
       {

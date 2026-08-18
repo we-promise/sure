@@ -4,7 +4,6 @@ zh-CN:
     open_banking_io:
       name: open-banking.io
       description: 通过 open-banking.io 连接欧洲银行账户
-  family:
   open_banking_io_account:
     fallback: open-banking.io 账户
   open_banking_io_entry:

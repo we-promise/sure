@@ -172,12 +172,29 @@ class Provider::OpenBankingIo::ClientTest < ActiveSupport::TestCase
     assert_requested(stub, times: Provider::OpenBankingIo::Client::MAX_RETRIES + 1)
   end
 
-  test "retries a network error" do
+  test "retries a network error on a GET" do
     stub_request(:get, "#{BASE}/api/accounts")
       .to_raise(Errno::ECONNRESET).then
       .to_return(status: 200, body: "[]")
 
     assert_equal [], client.get_accounts
+  end
+
+  # POST api/sync fans out to the user's banks synchronously. A transport error can fire
+  # after the server received the request, so retrying would trigger a SECOND fan-out --
+  # burning the bank's rate budget and pinning the worker for another SYNC_READ_TIMEOUT.
+  test "does not retry a transport error on a POST" do
+    stub = stub_request(:post, "#{BASE}/api/sync").to_raise(Net::ReadTimeout)
+
+    assert_raises(Net::ReadTimeout) { client.send(:post_json, "api/sync", { "items" => [] }) }
+    assert_requested(stub, times: 1)
+  end
+
+  test "still retries a 429 on a POST, which the server rejected before doing work" do
+    stub_request(:post, "#{BASE}/api/sync")
+      .to_return({ status: 429, body: "" }, { status: 200, body: "{}" })
+
+    assert_equal({}, client.send(:post_json, "api/sync", { "items" => [] }))
   end
 
   # The sync endpoints advertise Retry-After: 21600 when Enable Banking throttles the whole

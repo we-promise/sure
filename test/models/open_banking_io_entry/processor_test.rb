@@ -323,10 +323,23 @@ class OpenBankingIoEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "falls back to remittance information when there is no creditor name" do
-    entry = process(id: "tx_rem", credit_debit_indicator: "DBIT", creditor_name: nil,
-                    remittance_information: "Card payment CIRCLE K")
+  # Remittance is free text -- invoice numbers, references, one-off descriptions. Minting a
+  # merchant per distinct string fills provider_merchants with noise and makes the merchant
+  # filter useless, so a missing counterparty means no merchant.
+  test "does not invent a merchant from free-text remittance" do
+    assert_no_difference "ProviderMerchant.count" do
+      entry = process(id: "tx_rem", credit_debit_indicator: "DBIT", creditor_name: nil,
+                      remittance_information: "Invoice 2026-00417")
+      assert_nil entry.entryable.merchant
+    end
+  end
 
-    assert_equal "Card payment CIRCLE K", entry.entryable.merchant&.name
+  test "ignores technical placeholder counterparties" do
+    assert_no_difference "ProviderMerchant.count" do
+      [ "CARD-8842", "POS 1188", "ATM-0091" ].each_with_index do |name, i|
+        entry = process(id: "tx_tech_#{i}", credit_debit_indicator: "DBIT", creditor_name: name)
+        assert_nil entry.entryable.merchant, name
+      end
+    end
   end
 end

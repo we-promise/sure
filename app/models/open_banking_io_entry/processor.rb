@@ -22,6 +22,9 @@ class OpenBankingIoEntry::Processor
   # happened yet. None of them belong in the ledger.
   SKIPPED_STATUSES = %w[CNCL RJCT SCHD].freeze
 
+  # Placeholder counterparties some ASPSPs send instead of a real merchant name.
+  TECHNICAL_COUNTERPARTY = /\A(card|pos|atm|kort)[\s\-_]/i
+
   def self.canonical_external_id(open_banking_io_transaction)
     data = open_banking_io_transaction.with_indifferent_access
     id = data[:id].presence
@@ -195,13 +198,14 @@ class OpenBankingIoEntry::Processor
     #
     # Debits only: on a credit the counterparty is the payer (an employer, a friend), not a
     # merchant, and recording those would pollute the merchant list with people's names.
+    # Only a real counterparty name becomes a merchant. Falling back to remittance would
+    # mint one per invoice number and payment reference -- unbounded growth in
+    # provider_merchants and an unusable merchant filter. EnableBankingEntry::Processor
+    # reaches for remittance only when the counterparty is a technical CARD-* placeholder.
     def merchant
       return nil unless debit?
 
-      merchant_name = data[:creditor_name].presence || data[:remittance_information].presence
-      return nil if merchant_name.blank?
-
-      merchant_name = merchant_name.to_s.strip.truncate(100)
+      merchant_name = merchant_name_candidate
       return nil if merchant_name.blank?
 
       @merchant ||= import_adapter.find_or_create_merchant(
@@ -209,9 +213,22 @@ class OpenBankingIoEntry::Processor
         name: merchant_name,
         source: SOURCE
       )
-    rescue ActiveRecord::RecordInvalid => e
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+      # RecordNotUnique: two accounts on one connection can sync concurrently and race the
+      # uniqueness index on [name, source].
       Rails.logger.error "OpenBankingIoEntry::Processor - Failed to create merchant: #{e.class}"
       nil
+    end
+
+    def merchant_name_candidate
+      counterparty = data[:creditor_name].to_s.strip
+      return nil if counterparty.blank?
+      # Technical placeholders carry no merchant identity; the remittance behind them is
+      # free text, so neither is usable.
+      return nil if counterparty.match?(TECHNICAL_COUNTERPARTY)
+
+      # omission: "" so a long name hashes to the same id as its truncated form.
+      counterparty.truncate(100, omission: "")
     end
 
     def notes

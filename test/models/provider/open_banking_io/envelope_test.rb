@@ -89,9 +89,27 @@ class Provider::OpenBankingIo::EnvelopeTest < ActiveSupport::TestCase
     assert_equal "Envelope too short", error.message
   end
 
-  test "rejects an envelope that is not strict base64" do
+  test "rejects an envelope that is not valid base64" do
     error = assert_raises(ArgumentError) { Envelope.decrypt_to_json(@key, "AQ!!ID$%^&*") }
     assert_match(/Invalid base64/, error.message)
+  end
+
+  # Convert.FromBase64String ignores ASCII whitespace and atob runs WHATWG
+  # forgiving-base64, which strips it. Refusing what the C# and browser readers accept
+  # would be a self-inflicted outage the day anything wraps or pads a payload.
+  test "tolerates the whitespace the C# and browser readers tolerate" do
+    b64 = @v1["envelopeB64"]
+    wrapped = b64.scan(/.{1,64}/).join("\n") + "\n"
+
+    assert_equal @v1["expected"], Envelope.decrypt_to_json(@key, wrapped)
+    assert_equal @v1["expected"], Envelope.decrypt_to_json(@key, " #{b64} ")
+  end
+
+  test "tolerates whitespace in the private key too" do
+    b64 = @kat.dig("keypair", "privateKeyPkcs8B64")
+    wrapped = b64.scan(/.{1,64}/).join("\n")
+
+    assert_equal @v1["expected"], Envelope.decrypt_to_json(Envelope.load_private_key(wrapped), @v1["envelopeB64"])
   end
 
   test "treats a nil or empty envelope as absent rather than corrupt" do

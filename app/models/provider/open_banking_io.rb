@@ -134,7 +134,8 @@ class Provider::OpenBankingIo
     TAG_LEN = 16
     HKDF_SALT = ("\x00".b * 32)
     HKDF_INFO = "bank.core.ci/zk/v1".b.freeze
-    GROUP = OpenSSL::PKey::EC::Group.new("prime256v1")
+    CURVE_NAME = "prime256v1".freeze
+    GROUP = OpenSSL::PKey::EC::Group.new(CURVE_NAME)
 
     module_function
 
@@ -149,6 +150,10 @@ class Provider::OpenBankingIo
         raise ArgumentError, "Private key is not an EC key"
       end
 
+      unless key.group.curve_name == CURVE_NAME
+        raise ArgumentError, "Private key is not a P-256 key"
+      end
+
       key
     rescue OpenSSL::OpenSSLError
       # Callers rescue ArgumentError; leaking OpenSSL's own class here bypasses the
@@ -159,9 +164,14 @@ class Provider::OpenBankingIo
 
     # Base64.decode64 silently discards invalid characters and tolerates missing padding,
     # which turns "corrupt transport" into a short envelope that fails much later as an
-    # opaque GCM error. The service emits standard padded base64, so strict is safe.
+    # opaque GCM error -- so decode strictly.
+    #
+    # ASCII whitespace is stripped first rather than rejected: Convert.FromBase64String
+    # ignores it and the browser's atob runs WHATWG forgiving-base64, which strips it. A
+    # reader whose job is byte-for-byte agreement must not refuse input the other two
+    # readers accept.
     def decode_base64(value, label)
-      Base64.strict_decode64(value.to_s)
+      Base64.strict_decode64(value.to_s.gsub(/[\t\n\f\r ]/, ""))
     rescue ArgumentError
       raise ArgumentError, "Invalid base64 in open-banking.io #{label}"
     end
@@ -211,8 +221,10 @@ class Provider::OpenBankingIo
       end
 
       point = OpenSSL::PKey::EC::Point.new(GROUP, OpenSSL::BN.new(eph_pub_bytes, 2))
-      # OpenSSL accepts 65 zero bytes as the point at infinity without complaint; only
-      # dh_compute_key would object, and it raises PKeyError rather than ArgumentError.
+      # Belt and braces, mirroring EnvelopeCrypto.ImportPublicPoint's explicit check. In
+      # practice OpenSSL already rejects an all-zero point as off-curve, and the 0x04 check
+      # above catches that encoding first -- but dh_compute_key would raise PKeyError here
+      # rather than the ArgumentError this module promises.
       raise ArgumentError, "Invalid ephemeral public key in envelope: point at infinity" if point.infinity?
 
       point
@@ -494,9 +506,14 @@ class Provider::OpenBankingIo
           body = response.body
           return nil if body.nil? || body.empty?
 
-          JSON.parse(body)
+          begin
+            JSON.parse(body)
+          rescue JSON::ParserError
+            # The message would carry an excerpt of the response body.
+            raise Error.new("open-banking.io returned a malformed JSON response", :invalid_response)
+          end
         rescue *RETRYABLE_ERRORS, HTTPError => e
-          raise unless retryable?(e)
+          raise unless retryable?(e, request)
           raise if attempt > MAX_RETRIES
 
           delay = retry_delay(e, attempt)
@@ -507,7 +524,7 @@ class Provider::OpenBankingIo
           close unless e.is_a?(HTTPError)
 
           Rails.logger.warn(
-            "open-banking.io: request failed (attempt #{attempt}/#{MAX_RETRIES}): " \
+            "open-banking.io: request failed (attempt #{attempt}/#{MAX_RETRIES + 1}): " \
             "#{e.class}#{e.is_a?(HTTPError) ? " HTTP #{e.status}" : ""}. Retrying in #{delay.round(1)}s"
           )
           sleep(delay)
@@ -515,10 +532,17 @@ class Provider::OpenBankingIo
         end
       end
 
-      def retryable?(error)
-        return true unless error.is_a?(HTTPError)
+      def retryable?(error, request)
+        # A 429/503 means the request was rejected before it did any work, so it is safe to
+        # repeat whatever the verb.
+        return RETRYABLE_STATUSES.include?(error.status) if error.is_a?(HTTPError)
 
-        RETRYABLE_STATUSES.include?(error.status)
+        # A transport error, though, can fire AFTER the server received the request. For a
+        # GET that is harmless. For POST api/sync it is not: the server fans out to the
+        # user's banks synchronously, so a read timeout most likely means it is still
+        # working, and retrying would trigger a second fan-out and burn the ASPSP's rate
+        # budget -- while pinning this worker for another SYNC_READ_TIMEOUT.
+        request.is_a?(Net::HTTP::Get)
       end
 
       # A server-advertised Retry-After wins over our own curve. nil means "do not retry".
@@ -670,7 +694,12 @@ class Provider::OpenBankingIo
       parsed = JSON.parse(body)
       return "" unless parsed.is_a?(Hash)
 
-      bits = parsed.values_at("reason", "bankErrorCode", "traceId").compact
+      bits = parsed.values_at("reason", "bankErrorCode", "traceId").compact.map do |bit|
+        # Server-controlled and destined for the log and a DebugLogEntry column: strip
+        # control characters (log forging) and cap the length.
+        bit.to_s.gsub(/[[:cntrl:]]/, " ").strip.truncate(64, omission: "")
+      end.reject(&:empty?)
+
       bits.any? ? " (#{bits.join(' ')})" : ""
     rescue JSON::ParserError
       ""
