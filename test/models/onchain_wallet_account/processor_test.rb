@@ -61,6 +61,22 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a non-USD asset with no exchange rate provider says so instead of just showing zero" do
+    Setting.stubs(:enabled_securities_providers).returns([ Onchain::SecurityResolver::PRICE_PROVIDER ])
+    Security.any_instance.stubs(:price_data_provider).returns(nil)
+    ExchangeRate.stubs(:provider).returns(nil)
+    @onchain_account.update!(currency: "EUR")
+
+    assert_difference "DebugLogEntry.count", 1 do
+      OnchainWalletAccount::Processor.new(@onchain_account).process
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal [ "exchange_rate" ], entry.metadata["reasons"]
+    assert_equal "EUR", entry.metadata["currency"]
+    assert_equal 0, @account.reload.balance
+  end
+
   test "creates no holding when the symbol cannot be a ticker" do
     @onchain_account.update_columns(symbol: "Visit site to claim rewards")
 
@@ -184,6 +200,31 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     end
 
     assert_includes DebugLogEntry.pluck(:message).join(" "), "Could not backfill"
+  end
+
+  test "a movement priced only on a later sync does not collide with its display-only entry" do
+    date = 3.days.ago.to_date
+    store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
+
+    # First sync: no price for that day, so the movement is display-only.
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+    assert_equal "Transaction", onchain_entry("tx1").entryable_type
+
+    # Second sync, with the price now known and the wallet having moved. This
+    # used to raise, taking the whole item sync — and the repair pass that runs
+    # after it — down with it.
+    price_asset_at(date, 40)
+    @onchain_account.update!(quantity: 3)
+
+    assert_nothing_raised do
+      OnchainWalletAccount::Processor.new(@onchain_account).process
+    end
+
+    entry = onchain_entry("tx1")
+    assert_equal "Trade", entry.entryable_type
+    assert_equal BigDecimal("1.5"), entry.entryable.qty
+    assert_equal(-60, entry.amount)
+    assert_equal 1, @account.entries.where(external_id: entry.external_id).count
   end
 
   test "a display-only movement becomes a trade once its price is known" do
