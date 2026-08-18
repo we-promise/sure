@@ -1,0 +1,98 @@
+{
+  "_comment": "Cross-language envelope KAT. Regenerate with `node tools/generate-envelope-kat.mjs`. Consumed by EnvelopeKatTests.cs (C#) and crypto.kat.test.ts (web). Verify by decryption, not byte-equality.",
+  "scheme": "ECDH-P256 + HKDF-SHA256 (salt=32 zero bytes) + AES-256-GCM",
+  "wire": "version(1) | ephemeralPublicKeyRaw(65) | nonce(12) | tag(16) | ciphertext(N)",
+  "hkdf": {
+    "v1Info": "bank.core.ci/zk/v1",
+    "v2InfoPrefix": "bank.core.ci/zk/v2"
+  },
+  "keypair": {
+    "privateKeyPkcs8B64": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgHVcoGPPhTUfHuDKtVYVTiwUzJiGUyw1OE9WqRey5LaehRANCAAQ2Zn512i7CDHl2xrppkZlUnL18DISNOFZzIdWVY2vH4h3RRl/mvejPbWEyEPLRhxIlda4CiY909n/e0BjbFJqs",
+    "publicKeyRawB64": "BDZmfnXaLsIMeXbGummRmVScvXwMhI04VnMh1ZVja8fiHdFGX+a96M9tYTIQ8tGHEiV1rgKJj3T2f97QGNsUmqw="
+  },
+  "vectors": [
+    {
+      "name": "v1-display-name",
+      "version": 1,
+      "context": null,
+      "envelopeB64": "AQRL17l/tEDrVROxka0pnI7SZDmqk4EF5ERWifD4AZzuzi6tSUm/41wLzj7OfmLZ06PiKWyrXBKvvP2+aqOf1umGRNy4mFazHuJKvnU7elqrjOpwm25zkr+95PCKFpsxb30GP0fl39InOuObDTk+BugBoLeV",
+      "expected": {
+        "displayName": "Drift"
+      }
+    },
+    {
+      "name": "v2-account",
+      "version": 2,
+      "context": {
+        "userId": "demo@open-banking.io",
+        "fieldType": "account",
+        "accountId": "11111111-1111-4111-8111-111111111111"
+      },
+      "envelopeB64": "AgQeRmDbKAthIs2QqA5gUbBK0iUImjUIWndG2PMdrIIIwZCSG6K4DVXYnzTWtxYwMWcL9HJK1MDlWhxubba6h9GK2spqq73UnZ1OtolzfjvVEMrqSSDN34DIXH/mPXDo73etfBtsUHzxlEhNr67mxv6c/jSKIfbXXM8mdZeFdq7VGW489BRn1+3TFipEmy66vTIPTi94It9ubH2nGz54jebb/atxtq2fr1XqwxGlLPvzRK8K9aYcJzwDX5m+UqW4gdZyrchl6L4k0f29oCXcne6ZV4a+RJRa",
+      "expected": {
+        "ownerName": "Tatic ApS",
+        "iban": "DK6466952001724927",
+        "bban": "66952001724927",
+        "accountName": "Erhverv",
+        "product": "Business"
+      }
+    },
+    {
+      "name": "v2-balance",
+      "version": 2,
+      "context": {
+        "userId": "demo@open-banking.io",
+        "fieldType": "balance",
+        "accountId": "11111111-1111-4111-8111-111111111111"
+      },
+      "envelopeB64": "AgQYgbl6faFRredA7cwMYajTVdBmWGWwQJwk/Kx7t8GYZEzJeaVPQ8Xlk3iueIAM3kUjSdOUXwxv3sc65xKgk1G4KxUV2slP7GCSWmE69Myav1t0DjVmEDU2fvZQUBSCao1B7+bHsoU6sHNsjo+yxzAl7YoLDDyHj5D5jzAwuKw=",
+      "expected": {
+        "amount": "828.13",
+        "name": "Tatic"
+      }
+    },
+    {
+      "name": "v2-transaction",
+      "version": 2,
+      "context": {
+        "userId": "demo@open-banking.io",
+        "fieldType": "transaction",
+        "accountId": "11111111-1111-4111-8111-111111111111"
+      },
+      "envelopeB64": "AgQRHWbImLU5ePBAoKmsOSovD8NKHEPLEvnYu0mmVj/RRAvtDonbpSKEBpjqUkfzsWemq8MyYMhiDg8oSjl+rSqvkGiI5oe17mFvHEz0u1UTBIj12IIrRpVtj9BabdjSYUxcsU/SyLjq10IvhXvFPDRzGawAlmn9O9MkcnKCaLwUtx0PkOZRO/lMca3Zc4NVnR79LqEYgZdeNQQc57dHVCCeAubiEmE6T9c2gJdCRuV6FMSEegCpH7h/COG6W+vP8MWxog7pmocxXWfqnhHvCXXmYq4jNP0DSSVEzUKfCjORq0U6/tZNHzOqcNY12d20l5LVkPdwQR4qMQU+xr8/0tM39Oe/VMiqd3bwmrQATXOtk7q4QXXAaP+6OLAZKT0oExC9Q6qB3X5yDVfE9SueDvm0j+ZEHJDtt2bBNDvrlDlo2piMCZG1iyYmI2uiMKbReFjvkuTpzFPNBTBz4xvZJhfBkGsV/YiBRNdtp6jGTwt6eEsTuKQf4Frx0E3imC39wZYZYiAUeJTHm6e85pY7k7lo89NLCxX14j2uQufAWqFF5yK+dUk7Wzd3/KrocEUhySnDrbHMLTlmIkNkm/cn06rWHTtFEuA9bBoQJXd96FTOO7ecSGJCuq+FOPDx0OIHmHLupdTh7az2LXF+zhmk2ImWtNCZ0VEUylKrVsg=",
+      "expected": {
+        "amount": "194.23",
+        "creditorName": "One.com",
+        "creditorIban": null,
+        "creditorBban": null,
+        "creditorAgentBic": null,
+        "debtorName": null,
+        "debtorIban": null,
+        "debtorBban": null,
+        "debtorAgentBic": null,
+        "remittanceInformation": "One.com",
+        "note": null,
+        "referenceNumber": null,
+        "exchangeRate": null,
+        "merchantCategoryCode": "4816",
+        "balanceAfter": "633.90",
+        "balanceAfterCurrency": "DKK",
+        "balanceAfterComputed": null,
+        "rawJson": "{\"id\":\"txn-1\"}"
+      }
+    },
+    {
+      "name": "v2-uid-ref",
+      "version": 2,
+      "context": {
+        "userId": "demo@open-banking.io",
+        "fieldType": "uid",
+        "accountId": null
+      },
+      "envelopeB64": "AgRLZmwSr7AFVob60+mrhDwWBr5BErLlQuTf7fytAjVGgf15GhOHnsae0HDGu5h3rmEnEplsPUfP5XQstvpDe5PGvBYPAkQ+W2Ka48FgdwWqiG2ojGR6IE9DC1+QVWjAtO0cKYwDki2dQ5VDbXIYcD78JClz2GEb5jjv/0wwxvFeF5+QHFmwwhmtK4w=",
+      "expected": {
+        "uid": "c5d93aa7-5e23-4da0-ba88-42b9a584492c"
+      }
+    }
+  ]
+}
