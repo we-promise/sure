@@ -30,23 +30,46 @@ class OnchainWalletItem::TokenReview
   end
 
   def rows
-    @rows ||= snapshot.assets.map do |asset|
-      Row.new(
-        asset: asset,
-        key: self.class.key_for(asset),
-        priceable: Onchain::SecurityResolver.priceable?(asset.symbol),
-        tracked: tracked_keys.include?(self.class.key_for(asset))
-      )
-    end.sort_by { |row| [ row.native? ? 0 : 1, row.asset.symbol.to_s ] }
+    @rows ||= (snapshot_rows + orphan_rows).sort_by { |row| [ row.native? ? 0 : 1, row.asset.symbol.to_s ] }
   end
 
   # Assets the user is already tracking that the chain no longer reports. They
-  # stay listed so unticking them is possible even once they are gone.
+  # stay listed so unticking them is still possible once they are gone.
   def orphan_accounts
     tracked_accounts.reject { |account| snapshot.assets.any? { |asset| account.matches_asset?(asset) } }
   end
 
   private
+    def snapshot_rows
+      snapshot.assets.map { |asset| row_for(asset) }
+    end
+
+    def orphan_rows
+      orphan_accounts.map do |account|
+        row_for(
+          Onchain::Asset.new(
+            kind: account.asset_kind,
+            symbol: account.symbol,
+            name: account.name,
+            decimals: account.decimals,
+            quantity: account.quantity,
+            contract: account.contract_address
+          )
+        )
+      end
+    end
+
+    def row_for(asset)
+      key = self.class.key_for(asset)
+
+      Row.new(
+        asset: asset,
+        key: key,
+        priceable: Onchain::SecurityResolver.priceable?(asset.symbol),
+        tracked: tracked_keys.include?(key)
+      )
+    end
+
     attr_reader :snapshot, :tracked_accounts
 
     def tracked_keys

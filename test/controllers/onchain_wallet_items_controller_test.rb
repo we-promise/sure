@@ -43,6 +43,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("settings.providers.onchain_wallet_panel.etherscan_api_key_label"), response.body
     assert_match I18n.t("settings.providers.onchain_wallet_panel.sync_start_date_label"), response.body
     assert_select "form[action=?]", sync_onchain_wallet_item_path(item)
+    assert_select "a[href=?]", manage_onchain_wallet_item_path(item)
   end
 
   test "the price provider warning appears only when no crypto provider is enabled" do
@@ -280,6 +281,211 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     get new_wallet_onchain_wallet_items_url
 
     assert_response :redirect
+  end
+
+  test "manage lists every tracked address and offers all four actions" do
+    item = create_onchain_wallet_item(family: @family)
+    native = create_onchain_wallet_account(item: item)
+    token = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
+
+    get manage_onchain_wallet_item_url(item)
+
+    assert_response :success
+    assert_match OnchainTestHelper::FAKE_ADDRESS, response.body
+    assert_match I18n.t("onchain_wallet_items.manage.review_tokens"), response.body
+    assert_match I18n.t("onchain_wallet_items.manage.change_address"), response.body
+    assert_match I18n.t("onchain_wallet_items.manage.disconnect_wallet"), response.body
+    # Per-asset action, for each asset, not just one for the wallet.
+    assert_select "form[action=?]", disconnect_asset_onchain_wallet_item_path(item), count: 2
+    assert_match native.symbol, response.body
+    assert_match token.symbol, response.body
+  end
+
+  test "review_tokens reopens the selection with the address unchanged" do
+    item = create_onchain_wallet_item(family: @family)
+    create_onchain_wallet_account(item: item)
+    stub_wallet_with_token
+
+    get review_tokens_onchain_wallet_item_url(item, chain: OnchainTestHelper::FAKE_CHAIN, address: OnchainTestHelper::FAKE_ADDRESS)
+
+    assert_response :success
+    assert_select "input[name=address][value=?]", OnchainTestHelper::FAKE_ADDRESS
+    assert_select "input[name='new_address']", false
+    assert_select "input[name='assets[]'][value='native'][checked]"
+    assert_select "input[name='assets[]'][value='erc20:0xusdc'][checked]"
+  end
+
+  test "update_tokens adds a newly ticked asset and stops tracking an unticked one" do
+    item = create_onchain_wallet_item(family: @family)
+    native = create_onchain_wallet_account(item: item)
+    stub_wallet_with_token
+
+    assert_difference "OnchainWalletAccount.count", 0 do
+      post update_tokens_onchain_wallet_item_url(item), params: {
+        chain: OnchainTestHelper::FAKE_CHAIN,
+        address: OnchainTestHelper::FAKE_ADDRESS,
+        assets: [ "erc20:0xusdc" ]
+      }
+    end
+
+    assert_redirected_to manage_onchain_wallet_item_path(item)
+    assert_not OnchainWalletAccount.exists?(native.id)
+    assert_equal [ "USDC" ], item.reload.onchain_wallet_accounts.pluck(:symbol)
+  end
+
+  test "unticking one asset removes only it" do
+    item = create_onchain_wallet_item(family: @family)
+    native = create_onchain_wallet_account(item: item)
+    token = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
+    stub_wallet_with_token
+
+    post update_tokens_onchain_wallet_item_url(item), params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      assets: [ "native" ]
+    }
+
+    assert OnchainWalletAccount.exists?(native.id)
+    assert_not OnchainWalletAccount.exists?(token.id)
+  end
+
+  test "an asset the chain no longer reports can still be unticked" do
+    item = create_onchain_wallet_item(family: @family)
+    gone = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "GONE", contract: "0xgone"))
+    create_onchain_wallet_account(item: item)
+    stub_wallet_with_token
+
+    get review_tokens_onchain_wallet_item_url(item, chain: OnchainTestHelper::FAKE_CHAIN, address: OnchainTestHelper::FAKE_ADDRESS)
+    assert_select "input[name='assets[]'][value='erc20:0xgone'][checked]"
+
+    post update_tokens_onchain_wallet_item_url(item), params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      assets: [ "native" ]
+    }
+
+    assert_not OnchainWalletAccount.exists?(gone.id)
+  end
+
+  test "change_address keeps the rows, their accounts and their history" do
+    item = create_onchain_wallet_item(family: @family)
+    onchain_account = create_onchain_wallet_account(item: item)
+    account = link_onchain_wallet_account!(onchain_account)
+    balance = account.balances.create!(date: Date.current, balance: 100, cash_balance: 0, currency: account.currency)
+
+    patch change_address_onchain_wallet_item_url(item), params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      new_address: OnchainTestHelper::FAKE_ADDRESS_ALT
+    }
+
+    assert_redirected_to manage_onchain_wallet_item_path(item)
+    onchain_account.reload
+    assert_equal OnchainTestHelper::FAKE_ADDRESS_ALT, onchain_account.wallet_address
+    assert_equal account, onchain_account.account
+    assert Account.exists?(account.id)
+    assert account.balances.exists?(balance.id)
+    assert_nil onchain_account.content_hash
+  end
+
+  test "change_address refuses an address that is invalid for the chain" do
+    item = create_onchain_wallet_item(family: @family)
+    onchain_account = create_onchain_wallet_account(item: item)
+
+    patch change_address_onchain_wallet_item_url(item), params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      new_address: "not-an-address"
+    }
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("onchain_wallet_items.change_address.errors.invalid_address"), response.body
+    assert_equal OnchainTestHelper::FAKE_ADDRESS, onchain_account.reload.wallet_address
+  end
+
+  test "change_address refuses an address already tracked elsewhere" do
+    item = create_onchain_wallet_item(family: @family)
+    create_onchain_wallet_account(item: item)
+    create_onchain_wallet_account(item: item, address: OnchainTestHelper::FAKE_ADDRESS_ALT)
+
+    patch change_address_onchain_wallet_item_url(item), params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      new_address: OnchainTestHelper::FAKE_ADDRESS_ALT
+    }
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("onchain_wallet_items.change_address.errors.already_linked"), response.body
+  end
+
+  test "disconnect_wallet stops tracking every asset at that address only" do
+    item = create_onchain_wallet_item(family: @family)
+    create_onchain_wallet_account(item: item)
+    create_onchain_wallet_account(item: item, asset: fake_token_asset(contract: "0xusdc"))
+    kept = create_onchain_wallet_account(item: item, address: OnchainTestHelper::FAKE_ADDRESS_ALT)
+
+    assert_difference "OnchainWalletAccount.count", -2 do
+      delete disconnect_wallet_onchain_wallet_item_url(item), params: {
+        chain: OnchainTestHelper::FAKE_CHAIN,
+        address: OnchainTestHelper::FAKE_ADDRESS
+      }
+    end
+
+    assert OnchainWalletAccount.exists?(kept.id)
+  end
+
+  test "disconnecting keeps the account and its holdings as a manual account" do
+    item = create_onchain_wallet_item(family: @family)
+    onchain_account = create_onchain_wallet_account(item: item)
+    account = link_onchain_wallet_account!(onchain_account)
+    security = Onchain::SecurityResolver.resolve(symbol: onchain_account.symbol)
+    holding = account.holdings.create!(
+      security: security, date: Date.current, qty: 1, price: 1, amount: 1,
+      currency: account.currency, account_provider_id: onchain_account.account_provider.id
+    )
+
+    delete disconnect_asset_onchain_wallet_item_url(item), params: { onchain_wallet_account_id: onchain_account.id }
+
+    assert Account.exists?(account.id)
+    assert holding.reload.persisted?
+    assert_nil holding.account_provider_id
+    assert_not AccountProvider.exists?(provider_type: "OnchainWalletAccount", provider_id: onchain_account.id)
+  end
+
+  test "management actions refuse a wallet this connection does not track" do
+    item = create_onchain_wallet_item(family: @family)
+    create_onchain_wallet_account(item: item)
+
+    get review_tokens_onchain_wallet_item_url(item, chain: OnchainTestHelper::FAKE_CHAIN, address: OnchainTestHelper::FAKE_ADDRESS_ALT)
+
+    assert_redirected_to manage_onchain_wallet_item_path(item)
+    assert_equal I18n.t("onchain_wallet_items.errors.wallet_not_found"), flash[:alert]
+  end
+
+  test "management actions cannot reach another family's connection" do
+    other_family_item = create_onchain_wallet_item(family: families(:empty))
+    create_onchain_wallet_account(item: other_family_item)
+
+    get manage_onchain_wallet_item_url(other_family_item)
+    assert_response :not_found
+
+    delete disconnect_wallet_onchain_wallet_item_url(other_family_item), params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS
+    }
+    assert_response :not_found
+    assert_equal 1, other_family_item.onchain_wallet_accounts.count
+  end
+
+  test "disconnect_asset cannot reach a row belonging to another connection" do
+    item = create_onchain_wallet_item(family: @family)
+    other_item = create_onchain_wallet_item(family: families(:empty))
+    other_account = create_onchain_wallet_account(item: other_item)
+
+    delete disconnect_asset_onchain_wallet_item_url(item), params: { onchain_wallet_account_id: other_account.id }
+
+    assert_response :not_found
+    assert OnchainWalletAccount.exists?(other_account.id)
   end
 
   private

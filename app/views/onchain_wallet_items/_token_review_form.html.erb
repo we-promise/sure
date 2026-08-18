@@ -1,8 +1,9 @@
 <%# Shared by initial linking and the later "review tokens" action, which is the %>
 <%# same screen with the address left alone. %>
+<% turbo_frame = local_assigns.fetch(:turbo_frame, "_top") %>
 <%= styled_form_with url: url,
                      method: :post,
-                     data: { turbo_frame: "_top" },
+                     data: { turbo_frame: turbo_frame },
                      class: "space-y-4" do |form| %>
   <%= hidden_field_tag :chain, chain %>
   <%= hidden_field_tag :address, address %>
@@ -42,7 +43,11 @@
   <% end %>
 
   <div class="flex justify-end gap-2">
-    <%= render DS::Link.new(text: t("onchain_wallet_items.token_review_form.cancel"), variant: "secondary", href: settings_providers_path) %>
+    <%= render DS::Link.new(
+          text: t("onchain_wallet_items.token_review_form.cancel"),
+          variant: "secondary",
+          href: local_assigns.fetch(:cancel_path, settings_providers_path)
+        ) %>
     <%= form.submit submit_label %>
   </div>
 <% end %>

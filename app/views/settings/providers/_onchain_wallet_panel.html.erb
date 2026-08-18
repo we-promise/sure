@@ -23,13 +23,25 @@
     <%= render "onchain_wallet_items/onchain_wallet_item", onchain_wallet_item: item %>
   <% end %>
 
-  <%= render DS::Link.new(
-        text: t("settings.providers.onchain_wallet_panel.add_wallet"),
-        icon: "plus",
-        variant: "primary",
-        href: new_wallet_onchain_wallet_items_path,
-        frame: :modal
-      ) %>
+  <div class="flex flex-wrap items-center gap-2">
+    <%= render DS::Link.new(
+          text: t("settings.providers.onchain_wallet_panel.add_wallet"),
+          icon: "plus",
+          variant: "primary",
+          href: new_wallet_onchain_wallet_items_path,
+          frame: :modal
+        ) %>
+
+    <% if connection.present? %>
+      <%= render DS::Link.new(
+            text: t("settings.providers.onchain_wallet_panel.manage_wallets"),
+            icon: "settings",
+            variant: "secondary",
+            href: manage_onchain_wallet_item_path(connection),
+            frame: :modal
+          ) %>
+    <% end %>
+  </div>
 
   <% if connection.present? %>
     <%= render DS::Disclosure.new(title: t("settings.providers.onchain_wallet_panel.advanced"), align: :right) do %>

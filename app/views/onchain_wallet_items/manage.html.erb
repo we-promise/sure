@@ -1,0 +1,82 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle")) %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <%= render "onchain_wallet_items/price_provider_warning" %>
+
+      <% grouped = @onchain_wallet_item.grouped_accounts %>
+
+      <% if grouped.empty? %>
+        <p class="text-sm text-secondary py-4"><%= t(".no_wallets") %></p>
+      <% end %>
+
+      <% grouped.each do |(chain, address), accounts| %>
+        <section class="rounded-xl border border-primary bg-container p-4 space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="font-medium text-primary"><%= accounts.first.chain_label %></p>
+              <p class="text-xs text-secondary break-all"><%= address %></p>
+            </div>
+          </div>
+
+          <ul class="divide-y divide-primary border border-primary rounded-lg">
+            <% accounts.each do |onchain_account| %>
+              <li class="flex items-center justify-between gap-3 p-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-primary truncate">
+                    <%= onchain_account.symbol %>
+                    <% if onchain_account.native? %>
+                      <span class="text-xs text-secondary"><%= t(".native") %></span>
+                    <% end %>
+                  </p>
+                  <p class="text-xs text-secondary tabular-nums">
+                    <%= number_with_delimiter(onchain_account.quantity.round(8).to_s("F")) %>
+                  </p>
+                </div>
+
+                <%= button_to disconnect_asset_onchain_wallet_item_path(@onchain_wallet_item),
+                              method: :delete,
+                              params: { onchain_wallet_account_id: onchain_account.id },
+                              class: "inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-lg",
+                              data: { turbo_confirm: t(".disconnect_asset_confirm", symbol: onchain_account.symbol) } do %>
+                  <%= icon "unlink", size: "sm" %>
+                  <%= t(".disconnect_asset") %>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <%= render DS::Link.new(
+                  text: t(".review_tokens"),
+                  icon: "list-checks",
+                  variant: "secondary",
+                  href: review_tokens_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, address: address),
+                  frame: :modal
+                ) %>
+
+            <%= render DS::Link.new(
+                  text: t(".change_address"),
+                  icon: "pencil",
+                  variant: "secondary",
+                  href: edit_wallet_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, address: address),
+                  frame: :modal
+                ) %>
+
+            <%= button_to disconnect_wallet_onchain_wallet_item_path(@onchain_wallet_item),
+                          method: :delete,
+                          params: { chain: chain, address: address },
+                          class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
+                          data: { turbo_confirm: t(".disconnect_wallet_confirm") } do %>
+              <%= icon "trash-2", size: "sm" %>
+              <%= t(".disconnect_wallet") %>
+            <% end %>
+          </div>
+        </section>
+      <% end %>
+
+      <p class="text-xs text-secondary"><%= t(".history_note") %></p>
+    </div>
+  <% end %>
+<% end %>

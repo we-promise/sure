@@ -137,6 +137,13 @@ Rails.application.routes.draw do
 
     member do
       post :sync
+      get :manage
+      get :review_tokens
+      post :update_tokens
+      get :edit_wallet
+      patch :change_address
+      delete :disconnect_wallet
+      delete :disconnect_asset
     end
   end
 

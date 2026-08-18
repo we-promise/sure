@@ -511,6 +511,7 @@ en:
         etherscan_api_key_placeholder: Paste an Etherscan API key
         etherscan_hint: Ethereum reads work without a key. Adding an Etherscan key only raises the rate limit for Ethereum.
         keep_etherscan_api_key: Leave blank to keep the existing key
+        manage_wallets: Manage wallets
         keyless_body: Sure only ever reads public chain data. No keys, seed phrases or signatures are involved, and nothing can be spent.
         keyless_title: Read-only, no keys required
         save: Save

@@ -5,7 +5,10 @@
 # and is never branched on.
 class OnchainWalletItemsController < ApplicationController
   before_action :require_admin!
-  before_action :set_onchain_wallet_item, only: %i[update destroy sync]
+  before_action :set_onchain_wallet_item,
+                only: %i[update destroy sync manage review_tokens update_tokens edit_wallet change_address
+                         disconnect_wallet disconnect_asset]
+  before_action :set_wallet, only: %i[review_tokens update_tokens edit_wallet change_address disconnect_wallet]
 
   def update
     if @onchain_wallet_item.update(onchain_wallet_item_params)
@@ -85,9 +88,104 @@ class OnchainWalletItemsController < ApplicationController
     redirect_to accounts_path, notice: t(".success", count: result.created), status: :see_other
   end
 
+  # Everything a linked wallet can have done to it, in one place.
+  def manage
+  end
+
+  # The token screen again, with the address left alone. Without this the only
+  # way to stop tracking one asset would be to change the address.
+  def review_tokens
+    snapshot = fetch_snapshot(@chain, @address)
+    return redirect_to_manage(alert: @provider_error) if snapshot.nil?
+
+    @review = review_for(snapshot)
+  end
+
+  def update_tokens
+    snapshot = fetch_snapshot(@chain, @address)
+    return redirect_to_manage(alert: @provider_error) if snapshot.nil?
+
+    result = wallet_linker.revise(snapshot: snapshot, selected_keys: params[:assets])
+
+    unless result.changed?
+      @review = review_for(snapshot)
+      flash.now[:alert] = t(".errors.no_changes")
+      return render :review_tokens, status: :unprocessable_entity
+    end
+
+    redirect_to_manage(notice: t(".success", created: result.created, removed: result.removed))
+  end
+
+  def edit_wallet
+  end
+
+  def change_address
+    new_address = params[:new_address].to_s.strip
+
+    unless Onchain::Chains.valid_address?(@chain, new_address)
+      return render_edit_wallet(t(".errors.invalid_address"))
+    end
+
+    if new_address == @address
+      return render_edit_wallet(t(".errors.unchanged"))
+    end
+
+    if Current.family.onchain_address_linked?(@chain, new_address)
+      return render_edit_wallet(t(".errors.already_linked"))
+    end
+
+    @onchain_wallet_item.change_wallet_address!(chain: @chain, from: @address, to: new_address)
+
+    redirect_to_manage(notice: t(".success"))
+  end
+
+  def disconnect_wallet
+    removed = @onchain_wallet_item.disconnect_wallet!(chain: @chain, address: @address)
+
+    redirect_to_manage(notice: t(".success", count: removed))
+  end
+
+  def disconnect_asset
+    onchain_account = @onchain_wallet_item.onchain_wallet_accounts.find(params[:onchain_wallet_account_id])
+    onchain_account.destroy!
+
+    redirect_to_manage(notice: t(".success", symbol: onchain_account.symbol))
+  end
+
   private
     def set_onchain_wallet_item
       @onchain_wallet_item = Current.family.onchain_wallet_items.find(params[:id])
+    end
+
+    # A wallet is a (chain, address) couple, and only one this connection already
+    # tracks: every management action is scoped through the family's own item.
+    def set_wallet
+      @chain = requested_chain
+      @address = normalized_address
+
+      return if @chain.present? && @onchain_wallet_item.tracks_address?(@chain, @address)
+
+      redirect_to_manage(alert: t("onchain_wallet_items.errors.wallet_not_found"))
+    end
+
+    def wallet_linker
+      OnchainWalletItem::WalletLinker.new(@onchain_wallet_item, chain: @chain, address: @address)
+    end
+
+    def review_for(snapshot)
+      OnchainWalletItem::TokenReview.new(
+        snapshot: snapshot,
+        tracked_accounts: @onchain_wallet_item.accounts_for_wallet(@chain, @address).to_a
+      )
+    end
+
+    def redirect_to_manage(flash_message)
+      redirect_to manage_onchain_wallet_item_path(@onchain_wallet_item), **flash_message, status: :see_other
+    end
+
+    def render_edit_wallet(error_message)
+      @error_message = error_message
+      render :edit_wallet, status: :unprocessable_entity
     end
 
     def onchain_wallet_item_params
