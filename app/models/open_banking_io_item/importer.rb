@@ -164,6 +164,7 @@ class OpenBankingIoItem::Importer
 
     def fetch_and_store_transactions(open_banking_io_account)
       start_date = determine_sync_start_date(open_banking_io_account)
+      request_backfill(open_banking_io_account, start_date)
       Rails.logger.info "OpenBankingIoItem::Importer - Fetching transactions for account #{open_banking_io_account.id} from #{start_date}"
 
       transactions = open_banking_io_provider.get_account_transactions(
@@ -260,9 +261,33 @@ class OpenBankingIoItem::Importer
       "hash:#{OpenBankingIoEntry::Processor.content_hash_for(data)}"
     end
 
+    # An explicitly configured sync_start_date is a backfill request, and the server only
+    # advances its own incremental cursor unless asked otherwise -- so filtering the read by
+    # start_date returned nothing for history the service had never fetched from the bank.
+    # Best-effort: a bank that refuses the window must not fail the whole import.
+    def request_backfill(open_banking_io_account, start_date)
+      return if configured_sync_start_date(open_banking_io_account).blank?
+
+      result = open_banking_io_provider.sync(open_banking_io_account.account_id, from_date: start_date)
+      served = result.try(:served_from_date)
+      if served.present? && Date.parse(served.to_s) > start_date
+        Rails.logger.info(
+          "OpenBankingIoItem::Importer - Bank served from #{served}, not the requested #{start_date}, " \
+          "for account #{open_banking_io_account.id}"
+        )
+      end
+    rescue => e
+      Rails.logger.warn "OpenBankingIoItem::Importer - Backfill request failed for account #{open_banking_io_account.id}: #{e.class}"
+      capture_sync_error("Failed to request open-banking.io backfill", e, open_banking_io_account: open_banking_io_account)
+    end
+
+    def configured_sync_start_date(open_banking_io_account)
+      open_banking_io_account.sync_start_date.presence || open_banking_io_item.sync_start_date.presence
+    end
+
     def determine_sync_start_date(open_banking_io_account)
-      return open_banking_io_account.sync_start_date if open_banking_io_account.sync_start_date.present?
-      return open_banking_io_item.sync_start_date if open_banking_io_item.sync_start_date.present?
+      configured = configured_sync_start_date(open_banking_io_account)
+      return configured if configured.present?
 
       stored = open_banking_io_account.raw_transactions_payload.to_a
       return 90.days.ago.to_date if stored.empty? || open_banking_io_item.last_synced_at.blank?
