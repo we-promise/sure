@@ -148,6 +148,11 @@ class Transaction < ApplicationRecord
     # which share row it's paired with) — so COUNT(*) below would over-count transactions
     # on any owned account shared with multiple family members. COUNT(DISTINCT
     # transactions.id) counts each transaction once no matter how the caller's scope joins.
+    # Leading-wildcard ILIKE can't use index_entries_on_lower_name (a btree on
+    # lower(name), which only accelerates prefix/exact matches) and falls back
+    # to a scan — same tradeoff already accepted in EntrySearch#search and
+    # Entry.uncategorized_matching for the same reason. Revisit with a shared
+    # pg_trgm index across all three call sites if this becomes a bottleneck.
     matching_names = with_entry
       .distinct(false)
       .where("entries.name ILIKE ?", "%#{sanitize_sql_like(sanitized_query)}%")
