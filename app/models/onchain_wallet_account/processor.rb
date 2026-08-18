@@ -227,23 +227,28 @@ class OnchainWalletAccount::Processor
     # raised on the first sync that could price it, which also meant the repair
     # pass — running after the sync — was never reached.
     def write_trade(security:, external_id:, date:, quantity:, price:)
-      discard_display_only_entry(external_id)
+      # One transaction, because the two halves are one change: if writing the
+      # trade fails after the display-only entry is gone, the transfer would
+      # vanish from the account until a later sync happened to rewrite it.
+      Entry.transaction do
+        discard_display_only_entry(external_id)
 
-      import_adapter.import_trade(
-        security: security,
-        quantity: quantity,
-        price: price,
-        # Sure's convention for trades: money leaves the account on a buy.
-        amount: -(quantity * price).round(4),
-        currency: currency,
-        date: date,
-        # Named here because the shared helper says "Buy 0.5 shares of
-        # CRYPTO:BTC" — "shares" is not a thing a wallet holds.
-        name: trade_name(quantity),
-        external_id: external_id,
-        source: SOURCE,
-        activity_label: quantity.positive? ? "Buy" : "Sell"
-      )
+        import_adapter.import_trade(
+          security: security,
+          quantity: quantity,
+          price: price,
+          # Sure's convention for trades: money leaves the account on a buy.
+          amount: -(quantity * price).round(4),
+          currency: currency,
+          date: date,
+          # Named here because the shared helper says "Buy 0.5 shares of
+          # CRYPTO:BTC" — "shares" is not a thing a wallet holds.
+          name: trade_name(quantity),
+          external_id: external_id,
+          source: SOURCE,
+          activity_label: quantity.positive? ? "Buy" : "Sell"
+        )
+      end
     end
 
     def discard_display_only_entry(external_id)

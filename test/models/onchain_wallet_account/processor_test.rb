@@ -227,6 +227,23 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 1, @account.entries.where(external_id: entry.external_id).count
   end
 
+  test "a failed trade write does not lose the transfer it was replacing" do
+    date = 3.days.ago.to_date
+    store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+    price_asset_at(date, 40)
+
+    Account::ProviderImportAdapter.any_instance.stubs(:import_trade).raises(ActiveRecord::RecordInvalid.new(Entry.new))
+
+    assert_raises ActiveRecord::RecordInvalid do
+      OnchainWalletAccount::Processor.new(@onchain_account).process
+    end
+
+    # The display-only entry is still there rather than having been dropped in
+    # favour of a trade that never landed.
+    assert_equal "Transaction", onchain_entry("tx1").entryable_type
+  end
+
   test "a display-only movement becomes a trade once its price is known" do
     date = 3.days.ago.to_date
     store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
