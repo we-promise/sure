@@ -184,6 +184,58 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     assert_equal Onchain::AssetBudget.tokens, entry.metadata["max_tokens"]
   end
 
+  test "one unreachable address does not stop the others from importing" do
+    reachable = create_onchain_wallet_account(item: @item)
+    unreachable = create_onchain_wallet_account(item: @item, address: OnchainTestHelper::FAKE_ADDRESS_ALT)
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ fake_native_asset(quantity: 3) ], movements: [])
+    )
+    OnchainTestHelper::FakeAdapter.errors_by_address[OnchainTestHelper::FAKE_ADDRESS_ALT] =
+      Onchain::Chains::UnreachableError.new("explorer down")
+
+    result = nil
+    assert_difference "DebugLogEntry.count", 1 do
+      result = OnchainWalletItem::Importer.new(@item).import
+    end
+
+    assert_equal [ reachable.id ], result[:changed_account_ids]
+    assert_equal 1, result[:wallets_failed]
+    assert_equal 3, reachable.reload.quantity
+    # Untouched rather than zeroed: we did not learn that it holds nothing, we
+    # failed to look.
+    assert_equal BigDecimal("1.5"), unreachable.reload.quantity
+    assert_nil unreachable.content_hash
+  end
+
+  test "a wallet whose every address failed is a failed sync, not a quiet success" do
+    create_onchain_wallet_account(item: @item)
+    OnchainTestHelper::FakeAdapter.error = Onchain::Chains::UnreachableError.new("explorer down")
+
+    assert_raises Onchain::Chains::UnreachableError do
+      OnchainWalletItem::Importer.new(@item).import
+    end
+  end
+
+  test "a symbol that arrives later replaces the placeholder it was given" do
+    placeholder = fake_token_asset(symbol: "SPL:abcd…wxyz", contract: "0xaaa", quantity: 5, name: "SPL token")
+    account = create_onchain_wallet_account(item: @item, asset: placeholder)
+    stub_fake_snapshot(OnchainTestHelper::FAKE_ADDRESS, Onchain::Snapshot.new(assets: [ placeholder ], movements: []))
+    OnchainWalletItem::Importer.new(@item).import
+    assert_equal "SPL:abcd…wxyz", account.reload.symbol
+
+    # Same quantity, same movements, only the name is known now: the digest has to
+    # notice, or the placeholder is permanent.
+    named = fake_token_asset(symbol: "PYTH", contract: "0xaaa", quantity: 5, name: "Pyth Network")
+    stub_fake_snapshot(OnchainTestHelper::FAKE_ADDRESS, Onchain::Snapshot.new(assets: [ named ], movements: []))
+
+    result = OnchainWalletItem::Importer.new(@item).import
+
+    assert_equal [ account.id ], result[:changed_account_ids]
+    assert_equal "PYTH", account.reload.symbol
+    assert_equal "Pyth Network", account.name
+  end
+
   test "movements before the connection start date are ignored" do
     account = create_onchain_wallet_account(item: @item)
     @item.update!(sync_start_date: 2.days.ago.to_date)

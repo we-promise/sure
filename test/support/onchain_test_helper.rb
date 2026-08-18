@@ -18,13 +18,14 @@ module OnchainTestHelper
     ADDRESS_PATTERN = /\Afake1[a-z0-9]{4,}\z/
 
     class << self
-      attr_accessor :snapshots, :activity, :error, :provider_error_classes
+      attr_accessor :snapshots, :activity, :error, :provider_error_classes, :errors_by_address
       attr_reader :snapshot_calls, :activity_calls
 
       def reset!
         @snapshots = {}
         @activity = {}
         @error = nil
+        @errors_by_address = {}
         @provider_error_classes = []
         @snapshot_calls = []
         @activity_calls = []
@@ -55,6 +56,9 @@ module OnchainTestHelper
       wrap_provider_errors do
         self.class.record_snapshot_call(address)
         raise self.class.error if self.class.error
+
+        per_address = self.class.errors_by_address[address]
+        raise per_address if per_address
 
         self.class.snapshots.fetch(address, Onchain::Snapshot.empty)
       end

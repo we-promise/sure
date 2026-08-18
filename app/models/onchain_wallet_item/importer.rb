@@ -22,12 +22,26 @@ class OnchainWalletItem::Importer
   def import
     wallet_keys = onchain_wallet_item.wallet_keys
     changed_account_ids = []
+    failures = []
 
     wallet_keys.each do |chain, address|
       changed_account_ids.concat(import_wallet(chain: chain, address: address))
+    rescue Onchain::Chains::Error => e
+      # One chain being unreachable is not a reason to leave the family's other
+      # wallets unsynced. Recorded per address and carried on; only a wallet whose
+      # every address failed is reported as a failed sync.
+      failures << e
+      report_unreachable(chain: chain, address: address, error: e)
     end
 
-    { success: true, wallets_imported: wallet_keys.size, changed_account_ids: changed_account_ids }
+    raise failures.first if failures.any? && failures.size == wallet_keys.size
+
+    {
+      success: true,
+      wallets_imported: wallet_keys.size - failures.size,
+      wallets_failed: failures.size,
+      changed_account_ids: changed_account_ids
+    }
   end
 
   # Refreshes one address. Returns the ids of the rows whose on-chain state
@@ -52,7 +66,7 @@ class OnchainWalletItem::Importer
       movements = asset ? relevant_movements(snapshot.movements_for(asset)) : []
       # An asset that vanished from the wallet is worth zero, not stale.
       quantity = normalize(asset&.quantity || 0)
-      digest = content_hash(quantity, movements)
+      digest = content_hash(asset, quantity, movements)
 
       return nil if account.content_hash == digest
 
@@ -77,6 +91,18 @@ class OnchainWalletItem::Importer
       )
 
       account.id
+    end
+
+    def report_unreachable(chain:, address:, error:)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "On-chain address could not be read: #{error.class.name.demodulize}",
+        source: self.class.name,
+        provider_key: "onchain_wallet",
+        family: onchain_wallet_item.family,
+        metadata: { onchain_wallet_item_id: onchain_wallet_item.id, chain: chain, address: address }
+      )
     end
 
     # A capped history is worth a support-visible note, but only once per address
@@ -121,8 +147,15 @@ class OnchainWalletItem::Importer
     # Digest of everything that would change what we write downstream. No
     # timestamps: two identical reads of an idle wallet must produce the same
     # digest so the syncer can skip it.
-    def content_hash(quantity, movements)
+    # Covers everything the update below writes. Leaving the metadata out meant a
+    # Solana mint that later gained a real symbol from the token list produced the
+    # same digest as before, so the row was never rewritten and its placeholder
+    # label became permanent.
+    def content_hash(asset, quantity, movements)
       payload = {
+        "symbol" => asset&.symbol.to_s,
+        "name" => asset&.name.to_s,
+        "decimals" => asset&.decimals.to_s,
         "quantity" => quantity.to_s("F"),
         "movements" => movements
           .map { |movement| [ movement.external_id.to_s, normalize(movement.amount).to_s("F"), movement.date.to_s ] }
