@@ -311,10 +311,11 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     sync_cache = Balance::SyncCache.new(depository)
     converted_entries = sync_cache.send(:converted_entries)
 
-    # Purchase stays excluded; only the 2 posted installments remain counted
-    # (the 3rd, future installment was deleted by foreclose! and its share of
-    # the principal is genuinely gone, not represented anywhere).
+    # Purchase stays excluded; the 2 posted installments plus a settlement
+    # entry for the 3rd (future, deleted) installment's outstanding
+    # principal are counted — so the full $1200 is represented somewhere,
+    # not silently dropped.
     refute converted_entries.any? { |e| e.id == entry.id }
-    assert_equal 800.0, converted_entries.sum(&:amount)
+    assert_equal 1200.0, converted_entries.sum(&:amount)
   end
 end
