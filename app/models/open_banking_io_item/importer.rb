@@ -1,4 +1,9 @@
 class OpenBankingIoItem::Importer
+  # Error types that mean the connection itself needs the user's attention, not a retry:
+  # expired/revoked credentials (401/403), a withdrawn or dead consent (409), and a lapsed
+  # subscription (402). All of them park the item in :requires_update.
+  REQUIRES_UPDATE_ERRORS = %i[unauthorized access_forbidden requires_reconnect payment_required].freeze
+
   attr_reader :open_banking_io_item, :open_banking_io_provider
 
   def initialize(open_banking_io_item, open_banking_io_provider:)
@@ -43,17 +48,47 @@ class OpenBankingIoItem::Importer
     # account whose bank session expired) must never abort importing the cached
     # data we already have, so it is swallowed and surfaced via DebugLogEntry.
     def trigger_upstream_sync
-      open_banking_io_provider.sync_all
+      result = open_banking_io_provider.sync_all
+      report_upstream_sync_failures(result)
+      result
     rescue => e
       Rails.logger.error "OpenBankingIoItem::Importer - Upstream sync failed (continuing with cached data): #{e.class}"
       capture_sync_error("Failed to trigger upstream open-banking.io sync", e)
+      nil
+    end
+
+    # POST api/sync answers 200 even when individual accounts failed, so a connection where
+    # 3 of 5 accounts need reconnecting used to read as complete success.
+    def report_upstream_sync_failures(result)
+      failures = Array(result.try(:failures))
+      return if failures.empty?
+
+      failures.each do |failure|
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "warn",
+          message: "open-banking.io upstream sync failed for one account",
+          source: self.class.name,
+          provider_key: "open_banking_io",
+          family: open_banking_io_item.family,
+          metadata: {
+            open_banking_io_item_id: open_banking_io_item.id,
+            provider_account_id: failure[:account_id],
+            reason: failure[:reason],
+            bank_error_code: failure[:bank_error_code]
+          }.compact
+        )
+      end
+
+      # reconnect_needed is exactly the condition the item status exists to represent.
+      mark_requires_update! if failures.any? { |f| f[:reason].to_s == "reconnect_needed" }
     end
 
     def fetch_accounts_data
       items = open_banking_io_provider.get_accounts
       { items: items }
     rescue Provider::OpenBankingIo::Error => e
-      mark_requires_update! if e.error_type.in?([ :unauthorized, :access_forbidden ])
+      mark_requires_update! if e.error_type.in?(REQUIRES_UPDATE_ERRORS)
       Rails.logger.error "OpenBankingIoItem::Importer - open-banking.io API error: #{e.error_type}"
       capture_sync_error("Failed to fetch accounts data", e, error_type: e.error_type)
       nil
@@ -110,6 +145,14 @@ class OpenBankingIoItem::Importer
           stats[:imported] += result[:transactions_count]
         else
           stats[:failed] += 1
+
+          # The rate limit is per API key, so once one account trips it every remaining
+          # account trips it too -- each burning its own retry budget for nothing.
+          if result[:error_type] == :rate_limited
+            Rails.logger.warn "OpenBankingIoItem::Importer - Rate limited; skipping the remaining accounts this run"
+            stats[:aborted] = true
+            break
+          end
         end
       rescue => e
         stats[:failed] += 1
@@ -132,10 +175,10 @@ class OpenBankingIoItem::Importer
 
       { success: true, transactions_count: Array(transactions).count }
     rescue Provider::OpenBankingIo::Error => e
-      mark_requires_update! if e.error_type.in?([ :unauthorized, :access_forbidden ])
+      mark_requires_update! if e.error_type.in?(REQUIRES_UPDATE_ERRORS)
       Rails.logger.error "OpenBankingIoItem::Importer - open-banking.io API error for account #{open_banking_io_account.id}: #{e.error_type}"
       capture_sync_error("Failed to fetch transactions", e, open_banking_io_account: open_banking_io_account, error_type: e.error_type)
-      { success: false, transactions_count: 0, error: I18n.t("open_banking_io_item.errors.transactions_failed") }
+      { success: false, transactions_count: 0, error_type: e.error_type, error: I18n.t("open_banking_io_item.errors.transactions_failed") }
     rescue JSON::ParserError => e
       Rails.logger.error "OpenBankingIoItem::Importer - Failed to parse transaction response for account #{open_banking_io_account.id}: #{e.class}"
       capture_sync_error("Failed to parse open-banking.io transactions response", e, open_banking_io_account: open_banking_io_account)
@@ -257,7 +300,18 @@ class OpenBankingIoItem::Importer
       capture_sync_error("Failed to mark open-banking.io item as requiring update", e)
     end
 
-    def failed_result(error)
-      { success: false, error: error, accounts_imported: 0, transactions_imported: 0 }
+    # Must mirror the success shape from #import. `accounts_imported` appeared nowhere else
+    # in the codebase, so Syncer#errors_from_result only worked because :error is read first.
+    def failed_result(error, error_type: nil)
+      {
+        success: false,
+        error: error,
+        error_type: error_type,
+        accounts_updated: 0,
+        accounts_created: 0,
+        accounts_failed: 0,
+        transactions_imported: 0,
+        transactions_failed: 0
+      }.compact
     end
 end

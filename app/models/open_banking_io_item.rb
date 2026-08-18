@@ -52,6 +52,11 @@ class OpenBankingIoItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  # The memoized provider holds a parsed EC key built from these columns.
+  after_save :reset_open_banking_io_provider!, if: -> {
+    saved_change_to_api_base_url? || saved_change_to_api_key? || saved_change_to_private_key?
+  }
+
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
