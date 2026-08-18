@@ -116,4 +116,59 @@ class OpenBankingIoItem::ImporterTest < ActiveSupport::TestCase
       assert_not result[:success]
     end
   end
+
+  # === CONNECTION STATUS RECOVERY ===
+  # requires_update was set on a 401 and never cleared, so a connection stayed badged
+  # "needs attention" forever -- even after the user pasted fresh credentials.
+  test "a successful import clears a stale requires_update status" do
+    @item.update!(status: :requires_update)
+    provider = mock
+    provider.stubs(:sync_all).returns(nil)
+    provider.stubs(:get_accounts).returns([])
+
+    OpenBankingIoItem::Importer.new(@item, open_banking_io_provider: provider).import
+
+    assert_equal "good", @item.reload.status
+  end
+
+  test "a failed account import leaves requires_update in place" do
+    @item.update!(status: :requires_update)
+    provider = mock
+    provider.stubs(:sync_all).returns(nil)
+    provider.stubs(:get_accounts).raises(Provider::OpenBankingIo::Error.new("nope", :unauthorized))
+
+    OpenBankingIoItem::Importer.new(@item, open_banking_io_provider: provider).import
+
+    assert_equal "requires_update", @item.reload.status
+  end
+
+  # POST api/sync answers 200 even when individual accounts failed.
+  test "surfaces per-account upstream sync failures and flags a needed reconnect" do
+    provider = mock
+    provider.stubs(:sync_all).returns(
+      Provider::OpenBankingIo::SyncAllResult.new(
+        accounts: 1, new_transactions: 0,
+        failures: [ { account_id: "acc-9", reason: "reconnect_needed", bank_error_code: "EB-401" } ]
+      )
+    )
+    provider.stubs(:get_accounts).returns([])
+
+    assert_difference "DebugLogEntry.count", 1 do
+      OpenBankingIoItem::Importer.new(@item, open_banking_io_provider: provider).import
+    end
+
+    assert_equal "requires_update", @item.reload.status
+  end
+
+  test "failed_result matches the shape the syncer reads" do
+    importer = OpenBankingIoItem::Importer.new(@item, open_banking_io_provider: nil)
+    result = importer.send(:failed_result, "boom", error_type: :rate_limited)
+
+    assert_equal false, result[:success]
+    assert_equal :rate_limited, result[:error_type]
+    # accounts_imported was a phantom key that appeared nowhere else in the codebase.
+    assert_not result.key?(:accounts_imported)
+    assert_equal 0, result[:accounts_failed]
+    assert_equal 0, result[:transactions_failed]
+  end
 end

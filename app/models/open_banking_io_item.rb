@@ -62,16 +62,36 @@ class OpenBankingIoItem < ApplicationRecord
     DestroyJob.perform_later(self)
   end
 
+
+  # Provider sync/import diagnostics belong on /settings/debug where support can filter by
+  # provider and family, not only in the application log. Mirrors UpItem.
+  def capture_provider_error(message, error: nil, level: "error", **metadata)
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: level,
+      message: message,
+      source: self.class.name,
+      provider_key: "open_banking_io",
+      family: family,
+      account_provider: metadata.delete(:account_provider),
+      metadata: {
+        open_banking_io_item_id: id,
+        error_class: error&.class&.name,
+        error_message: error&.message
+      }.merge(metadata).compact
+    )
+  end
+
   def import_latest_open_banking_io_data
     provider = open_banking_io_provider
     unless provider
-      Rails.logger.error "OpenBankingIoItem #{id} - Cannot import: open-banking.io provider is not configured"
+      capture_provider_error("Cannot import: open-banking.io provider is not configured")
       raise StandardError.new("open-banking.io provider is not configured")
     end
 
     OpenBankingIoItem::Importer.new(self, open_banking_io_provider: provider).import
   rescue => e
-    Rails.logger.error "OpenBankingIoItem #{id} - Failed to import data: #{e.message}"
+    capture_provider_error("Failed to import open-banking.io data", error: e)
     raise
   end
 
@@ -86,7 +106,12 @@ class OpenBankingIoItem < ApplicationRecord
         { open_banking_io_account_id: open_banking_io_account.id, success: true, result: result }
       end
     rescue => e
-      Rails.logger.error "OpenBankingIoItem #{id} - Failed to process account #{open_banking_io_account.id}: #{e.class} - #{e.message}"
+      capture_provider_error(
+        "Failed to process open-banking.io account",
+        error: e,
+        open_banking_io_account_id: open_banking_io_account.id,
+        account_provider: open_banking_io_account.account_provider
+      )
       { open_banking_io_account_id: open_banking_io_account.id, success: false, error: I18n.t("open_banking_io_item.errors.account_processing_failed") }
     end
   end
@@ -102,7 +127,7 @@ class OpenBankingIoItem < ApplicationRecord
       )
       { account_id: account.id, success: true }
     rescue => e
-      Rails.logger.error "OpenBankingIoItem #{id} - Failed to schedule sync for account #{account.id}: #{e.class} - #{e.message}"
+      capture_provider_error("Failed to schedule open-banking.io account sync", error: e, account_id: account.id)
       { account_id: account.id, success: false, error: I18n.t("open_banking_io_item.errors.account_sync_schedule_failed") }
     end
   end

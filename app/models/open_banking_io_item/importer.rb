@@ -24,6 +24,10 @@ class OpenBankingIoItem::Importer
     account_stats = import_accounts(accounts_data)
     transaction_stats = import_transactions
 
+    # Nothing used to clear this, so a connection that once returned 401 stayed badged
+    # "needs attention" forever -- even after the user pasted fresh credentials.
+    clear_requires_update! if account_stats[:failed].zero? && !@connection_needs_attention
+
     Rails.logger.info(
       "OpenBankingIoItem::Importer - Completed import for item #{open_banking_io_item.id}: " \
       "#{account_stats[:updated]} accounts updated, #{account_stats[:created]} new accounts discovered, " \
@@ -318,7 +322,18 @@ class OpenBankingIoItem::Importer
       )
     end
 
+    def clear_requires_update!
+      return unless open_banking_io_item.requires_update?
+
+      open_banking_io_item.update!(status: :good)
+    rescue => e
+      capture_sync_error("Failed to clear the open-banking.io requires_update status", e)
+    end
+
     def mark_requires_update!
+      # Remember it for this run: the rest of the import can still succeed, and
+      # clear_requires_update! must not then undo the flag we just raised.
+      @connection_needs_attention = true
       open_banking_io_item.update!(status: :requires_update)
     rescue => e
       Rails.logger.error "OpenBankingIoItem::Importer - Failed to update item status: #{e.message}"

@@ -54,6 +54,17 @@ class OpenBankingIoAccount::Processor
     end
 
     def report_exception(error, context)
+      # Also record it on /settings/debug, per the repo's provider-diagnostics convention --
+      # the Sentry report below is deliberately message-free, which left support with
+      # nothing filterable by provider or family. Mirrors UpAccount::Processor.
+      open_banking_io_account.open_banking_io_item&.capture_provider_error(
+        "Failed to process open-banking.io account #{context}",
+        error: error,
+        open_banking_io_account_id: open_banking_io_account.id,
+        account_provider: open_banking_io_account.account_provider,
+        context: context
+      )
+
       safe_error = SanitizedProcessingError.new("open-banking.io account processing failed")
 
       Sentry.capture_exception(safe_error) do |scope|
