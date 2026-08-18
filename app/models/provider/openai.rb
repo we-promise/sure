@@ -73,7 +73,9 @@ class Provider::Openai < Provider
   # out of the box. Users on larger-context cloud models can raise via ENV or
   # via the Self-Hosting settings page.
   def context_window
-    positive_budget(ENV["LLM_CONTEXT_WINDOW"], Setting.llm_context_window, 2048)
+    # Single source of truth shared with prompt assembly, so the assistant's
+    # collapse-to-counts decision always agrees with the window used here.
+    Assistant::TokenBudget.context_window
   end
 
   def max_response_tokens

@@ -58,4 +58,30 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
 
     assert series[:start_date] >= 366.days.ago.to_date
   end
+
+  test "an account starting beyond the period skips its series without failing the call" do
+    future_account = @family.accounts.create!(
+      name: "Future Start Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    future_account.entries.create!(
+      name: "Scheduled opening deposit",
+      date: 30.days.from_now.to_date,
+      amount: -100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    result = @fn.call({ "include_balance_series" => true, "series_period" => "last_7_days" })
+
+    assert_not result.key?(:error)
+
+    future_payload = result[:accounts].find { |a| a[:id] == future_account.id }
+
+    assert_not_nil future_payload
+    assert_not future_payload.key?(:historical_balances)
+    assert(result[:accounts].any? { |a| a.key?(:historical_balances) })
+  end
 end

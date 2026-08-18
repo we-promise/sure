@@ -58,25 +58,30 @@ class Assistant::Function::GetAccounts < Assistant::Function
           status: account.status
         }
 
-        payload[:historical_balances] = historical_balances(account, period) if include_series
+        if include_series
+          series = historical_balances(account, period)
+          payload[:historical_balances] = series if series
+        end
         payload
       end
     }
   end
 
   private
-    # Balance rows are only needed for the opt-in series; the default path
-    # answers from the accounts table alone.
-    def accounts_scope(include_series)
-      scope = user.accessible_accounts.visible.includes(:account_providers)
-      include_series ? scope.includes(:balances) : scope
+    # No balances preload: the series goes through Balance::ChartSeriesBuilder,
+    # which runs its own query keyed by account ids.
+    def accounts_scope(_include_series)
+      user.accessible_accounts.visible.includes(:account_providers)
     end
 
     def historical_balances(account, period)
-      effective = Period.custom(
-        start_date: [ account.start_date, period.start_date ].max,
-        end_date: period.end_date
-      )
+      effective_start = [ account.start_date, period.start_date ].max
+      # An account whose start date lies beyond the period (start_date derives
+      # from the first entry, which can be future-dated) simply has no series;
+      # it must not fail the whole accounts listing.
+      return nil if effective_start > period.end_date
+
+      effective = Period.custom(start_date: effective_start, end_date: period.end_date)
       balance_series = account.balance_series(period: effective, interval: effective.interval)
 
       to_ai_time_series(balance_series)
