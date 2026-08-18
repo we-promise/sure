@@ -17,6 +17,17 @@ class OpenBankingIoItemsControllerTest < ActionDispatch::IntegrationTest
     }.deep_merge(overrides).to_json
   end
 
+  # The pasted bundle carries the API key and the PKCS#8 key that decrypts every envelope.
+  # Rails filters by parameter NAME, and "credentials_json" matches none of the stock
+  # substrings -- without an explicit entry the whole bundle lands in the request log (and,
+  # via Sentry's active_support_logger breadcrumbs, in Sentry).
+  test "credentials_json is filtered from request logs" do
+    filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+    filtered = filter.filter("open_banking_io_item" => { "credentials_json" => "SECRET-KEY-MATERIAL" })
+
+    assert_equal "[FILTERED]", filtered["open_banking_io_item"]["credentials_json"]
+  end
+
   test "create parses the pasted credentials.json into the three stored fields" do
     assert_difference "OpenBankingIoItem.count", 1 do
       post open_banking_io_items_url, params: {
