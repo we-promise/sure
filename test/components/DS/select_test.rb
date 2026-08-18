@@ -61,7 +61,7 @@ class DS::SelectTest < ViewComponent::TestCase
     refute_selector "button#parent_id_trigger", text: "(none)"
   end
 
-  test "still shows the include_blank item's own label once it is explicitly selected" do
+  test "shows the selected item's label when a real item is selected" do
     render_inline DS::Select.new(
       form: form_builder_for(Category.new, "category"),
       method: :parent_id,
