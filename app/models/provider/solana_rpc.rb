@@ -8,6 +8,7 @@
 # with SOLANA_RPC_URL.
 class Provider::SolanaRpc
   include HTTParty
+  include Provider::HttpTransport
   extend SslConfigurable
 
   class Error < StandardError; end
@@ -80,7 +81,7 @@ class Provider::SolanaRpc
       begin
         attempts += 1
         throttle_request
-        handle_response(self.class.post(self.class.url, body: body))
+        translate_transport_errors { handle_response(self.class.post(self.class.url, body: body)) }
       rescue RateLimitError => e
         raise if attempts > MAX_RETRIES
 

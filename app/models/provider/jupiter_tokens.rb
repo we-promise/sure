@@ -12,6 +12,7 @@
 # thousands. An unverified or unknown mint keeps its placeholder instead.
 class Provider::JupiterTokens
   include HTTParty
+  include Provider::HttpTransport
   extend SslConfigurable
 
   class Error < StandardError; end
@@ -96,11 +97,13 @@ class Provider::JupiterTokens
     end
 
     def get_json(mints)
-      response = self.class.get(self.class.url, query: { query: mints.join(",") })
+      translate_transport_errors do
+        response = self.class.get(self.class.url, query: { query: mints.join(",") })
 
-      raise RateLimitError, "Jupiter rate limit exceeded" if response.code == 429
-      raise ApiError, "Jupiter token search error: #{response.code}" unless response.code.between?(200, 299)
+        raise RateLimitError, "Jupiter rate limit exceeded" if response.code == 429
+        raise ApiError, "Jupiter token search error: #{response.code}" unless response.code.between?(200, 299)
 
-      response.parsed_response
+        response.parsed_response
+      end
     end
 end

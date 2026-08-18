@@ -212,9 +212,16 @@ enabled. See "Prices are a separate setting" above.
 **A Bitcoin balance is much lower than my wallet app shows.** You are tracking one
 address of an HD wallet. See "Limitations".
 
-**Sync says the explorer could not be reached.** The public endpoint is down or
-throttling you. Retry later, or point the relevant `*_URL` override at your own
-instance.
+**Sync says the explorer could not be reached.** The public endpoint is down,
+throttling you, or too slow to answer. Retry later, or point the relevant
+`*_URL` override at your own instance. This is the message for any transport
+failure — a refused connection, a timeout, a TLS error — as opposed to the
+generic "something went wrong", which means a bug worth reporting.
+
+**Solana times out on a large wallet.** `getTokenAccountsByOwner` returns every
+token account in one response, and the public endpoint struggles with wallets
+holding thousands of them (a well-known one has ~2,800). Set `SOLANA_RPC_URL` to
+your own node or a paid endpoint for those.
 
 **A token I received is not showing up.** New assets are never imported
 automatically. Use **Review tokens** and tick it.

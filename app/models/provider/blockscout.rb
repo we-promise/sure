@@ -10,6 +10,7 @@
 class Provider::Blockscout
   include Provider::EvmExplorer
   include HTTParty
+  include Provider::HttpTransport
   extend SslConfigurable
 
   class Error < StandardError; end
@@ -190,7 +191,7 @@ class Provider::Blockscout
       begin
         attempts += 1
         throttle_request
-        handle_response(self.class.get("#{base_url}#{path}"))
+        translate_transport_errors { handle_response(self.class.get("#{base_url}#{path}")) }
       rescue RateLimitError => e
         raise if attempts > MAX_RETRIES
 

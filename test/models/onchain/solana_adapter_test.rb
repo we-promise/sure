@@ -40,6 +40,14 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
     assert_not @adapter.has_activity?(ADDRESS)
   end
 
+  test "a timed-out node is reported as unreachable, not as an unexpected failure" do
+    stub_request(:post, Provider::SolanaRpc.url).to_timeout
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
   test "SPL balances come from the wallet's token accounts, summed per mint" do
     stub_snapshot(
       lamports: 1_500_000_000,

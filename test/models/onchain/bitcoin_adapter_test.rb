@@ -128,6 +128,14 @@ class Onchain::BitcoinAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a timed-out explorer is reported as unreachable, not as an unexpected failure" do
+    stub_request(:get, "#{base_url}/address/#{BECH32}").to_timeout
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(BECH32)
+    end
+  end
+
   test "a history that fits is not reported as truncated" do
     stub_address
     stub_transactions([])

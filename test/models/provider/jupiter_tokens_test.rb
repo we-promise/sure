@@ -51,6 +51,14 @@ class Provider::JupiterTokensTest < ActiveSupport::TestCase
     end
   end
 
+  test "a timeout becomes its own error type so the adapter degrades" do
+    stub_request(:get, /lite-api\.jup\.ag/).to_timeout
+
+    assert_raises Provider::JupiterTokens::ApiError do
+      Provider::JupiterTokens.new.metadata_for([ USDC ])
+    end
+  end
+
   private
     def stub_search(tokens)
       stub_request(:get, /lite-api\.jup\.ag/)

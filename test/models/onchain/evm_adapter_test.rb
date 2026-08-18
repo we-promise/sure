@@ -52,6 +52,20 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
     assert_not @adapter.has_activity?(ADDRESS)
   end
 
+  test "a timed-out explorer is reported as unreachable, not as an unexpected failure" do
+    stub_request(:get, %r{#{explorer_url}}).to_timeout
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
+  test "a timed-out explorer during detection means not detected here" do
+    stub_request(:get, summary_url).to_timeout
+
+    assert_not @adapter.has_activity?(ADDRESS)
+  end
+
   test "a malformed address is not probed at all" do
     assert_not @adapter.has_activity?("0x123")
   end

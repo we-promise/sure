@@ -156,6 +156,19 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "blockscout down", response.body
   end
 
+  test "a data source that times out reads as unreachable, not as our own failure" do
+    OnchainTestHelper::FakeAdapter.error = Provider::MempoolSpace::ApiError.new("MempoolSpace is unavailable (Net::ReadTimeout)")
+    OnchainTestHelper::FakeAdapter.provider_error_classes = [ Provider::MempoolSpace::RateLimitError, Provider::MempoolSpace::Error ]
+
+    assert_no_difference "DebugLogEntry.count" do
+      post preview_wallet_onchain_wallet_items_url, params: { address: OnchainTestHelper::FAKE_ADDRESS }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("onchain_wallet_items.errors.chain_unreachable"), response.body
+    assert_no_match "Net::ReadTimeout", response.body
+  end
+
   test "an unexpected failure is recorded and never interpolated into the response" do
     OnchainTestHelper::FakeAdapter.error = NoMethodError.new("undefined method 'boom' for nil")
 

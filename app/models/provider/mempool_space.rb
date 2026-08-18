@@ -7,6 +7,7 @@
 # this at their own instance with MEMPOOL_SPACE_URL.
 class Provider::MempoolSpace
   include HTTParty
+  include Provider::HttpTransport
   extend SslConfigurable
 
   class Error < StandardError; end
@@ -72,7 +73,7 @@ class Provider::MempoolSpace
       begin
         attempts += 1
         throttle_request
-        handle_response(self.class.get("#{self.class.base_url}#{path}"))
+        translate_transport_errors { handle_response(self.class.get("#{self.class.base_url}#{path}")) }
       rescue RateLimitError => e
         raise if attempts > MAX_RETRIES
 

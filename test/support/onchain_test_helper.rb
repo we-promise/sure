@@ -18,13 +18,14 @@ module OnchainTestHelper
     ADDRESS_PATTERN = /\Afake1[a-z0-9]{4,}\z/
 
     class << self
-      attr_accessor :snapshots, :activity, :error
+      attr_accessor :snapshots, :activity, :error, :provider_error_classes
       attr_reader :snapshot_calls, :activity_calls
 
       def reset!
         @snapshots = {}
         @activity = {}
         @error = nil
+        @provider_error_classes = []
         @snapshot_calls = []
         @activity_calls = []
       end
@@ -51,15 +52,23 @@ module OnchainTestHelper
     end
 
     def fetch_snapshot(address)
-      self.class.record_snapshot_call(address)
-      raise self.class.error if self.class.error
+      wrap_provider_errors do
+        self.class.record_snapshot_call(address)
+        raise self.class.error if self.class.error
 
-      self.class.snapshots.fetch(address, Onchain::Snapshot.empty)
+        self.class.snapshots.fetch(address, Onchain::Snapshot.empty)
+      end
     end
 
     def has_activity?(address)
       self.class.record_activity_call(address)
       self.class.activity.fetch(address, super)
+    end
+
+    # Lets a test stand in for a real data source's error family, so the
+    # translation into chain-agnostic errors is exercised.
+    def provider_error_classes
+      self.class.provider_error_classes
     end
   end
 

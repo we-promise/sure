@@ -9,6 +9,7 @@
 class Provider::Etherscan
   include Provider::EvmExplorer
   include HTTParty
+  include Provider::HttpTransport
   extend SslConfigurable
 
   class Error < StandardError; end
@@ -146,12 +147,14 @@ class Provider::Etherscan
       begin
         attempts += 1
         throttle_request
-        response = self.class.get("/api", query: {
-          apikey: api_key,
-          chainid: chain_id,
-          module: "account"
-        }.merge(params))
-        handle_response(response)
+        translate_transport_errors do
+          response = self.class.get("/api", query: {
+            apikey: api_key,
+            chainid: chain_id,
+            module: "account"
+          }.merge(params))
+          handle_response(response)
+        end
       rescue RateLimitError => e
         raise if attempts > MAX_RETRIES
 
