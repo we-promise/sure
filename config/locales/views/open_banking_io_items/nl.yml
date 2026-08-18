@@ -105,6 +105,16 @@ nl:
     sync:
       already_syncing: "Deze verbinding wordt al gesynchroniseerd."
       started: "open-banking.io-verbinding wordt gesynchroniseerd."
+    setup_required:
+      title: "Configuratie van open-banking.io vereist"
+      credentials_not_configured: "Inloggegevens niet geconfigureerd"
+      credentials_description: "Voordat je open-banking.io-rekeningen kunt koppelen, moet je je geëxporteerde credentials.json plakken."
+      setup_steps_title: "Installatiestappen:"
+      setup_step_1_html: "Ga naar <strong>Instellingen → Providers</strong>"
+      setup_step_2_html: "Zoek het gedeelte <strong>open-banking.io</strong>"
+      setup_step_3: "Plak de inhoud van je credentials.json-bestand"
+      setup_step_4: "Kom hier terug om je rekeningen te koppelen"
+      go_to_provider_settings: "Ga naar providerinstellingen"
     setup_accounts:
       title: open-banking.io-rekeningen instellen
       subtitle: Kies hoe elke open-banking.io-rekening in Sure moet verschijnen.

@@ -105,6 +105,16 @@ hu:
     sync:
       already_syncing: "Ez a kapcsolat már szinkronizál."
       started: "Az open-banking.io kapcsolat szinkronizálása folyamatban."
+    setup_required:
+      title: "Az open-banking.io beállítása szükséges"
+      credentials_not_configured: "A hitelesítő adatok nincsenek beállítva"
+      credentials_description: "Az open-banking.io fiókok összekapcsolása előtt be kell illesztenie az exportált credentials.json fájlt."
+      setup_steps_title: "Beállítási lépések:"
+      setup_step_1_html: "Nyissa meg a <strong>Beállítások → Szolgáltatók</strong> menüt"
+      setup_step_2_html: "Keresse meg az <strong>open-banking.io</strong> szakaszt"
+      setup_step_3: "Illessze be a credentials.json fájl tartalmát"
+      setup_step_4: "Térjen vissza ide a fiókok összekapcsolásához"
+      go_to_provider_settings: "Ugrás a szolgáltatói beállításokhoz"
     setup_accounts:
       title: open-banking.io számlák beállítása
       subtitle: Válassza ki, hogyan jelenjen meg minden open-banking.io számla a Sure alkalmazásban.

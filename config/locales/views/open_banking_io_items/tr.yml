@@ -105,6 +105,16 @@ tr:
     sync:
       already_syncing: "Bu bağlantı zaten eşitleniyor."
       started: "open-banking.io bağlantısı eşitleniyor."
+    setup_required:
+      title: "open-banking.io kurulumu gerekli"
+      credentials_not_configured: "Kimlik bilgileri yapılandırılmadı"
+      credentials_description: "open-banking.io hesaplarını bağlamadan önce dışa aktardığınız credentials.json dosyasını yapıştırmanız gerekir."
+      setup_steps_title: "Kurulum adımları:"
+      setup_step_1_html: "<strong>Ayarlar → Sağlayıcılar</strong> bölümüne gidin"
+      setup_step_2_html: "<strong>open-banking.io</strong> bölümünü bulun"
+      setup_step_3: "credentials.json dosyanızın içeriğini yapıştırın"
+      setup_step_4: "Hesaplarınızı bağlamak için buraya dönün"
+      go_to_provider_settings: "Sağlayıcı ayarlarına git"
     setup_accounts:
       title: open-banking.io Hesaplarını Kur
       subtitle: Her open-banking.io hesabının Sure içinde nasıl görüneceğini seçin.

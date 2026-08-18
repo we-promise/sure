@@ -94,7 +94,7 @@ class OpenBankingIoItemsController < ApplicationController
     @open_banking_io_item = requested_open_banking_io_item
 
     unless @open_banking_io_item&.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      render partial: "open_banking_io_items/setup_required", layout: false
       return
     end
 
@@ -166,7 +166,7 @@ class OpenBankingIoItemsController < ApplicationController
 
     @open_banking_io_item = requested_open_banking_io_item
     unless @open_banking_io_item&.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      render partial: "open_banking_io_items/setup_required", layout: false
       return
     end
 
