@@ -13,22 +13,16 @@ class OnchainWalletItem::Syncer
   end
 
   def perform_sync(sync)
-    update_status(sync, I18n.t("onchain_wallet_item.syncer.reading_wallets"))
     result = onchain_wallet_item.import_latest_onchain_data
     onchain_wallet_item.update!(status: :good) if onchain_wallet_item.requires_update?
 
     collect_setup_stats(sync, provider_accounts: onchain_wallet_item.onchain_wallet_accounts.to_a)
 
     changed = linked_accounts.where(id: result[:changed_account_ids]).to_a
-    if changed.empty?
-      update_status(sync, I18n.t("onchain_wallet_item.syncer.no_changes"))
-      return
-    end
+    return if changed.empty?
 
-    update_status(sync, I18n.t("onchain_wallet_item.syncer.processing_assets", count: changed.size))
     onchain_wallet_item.process_accounts(changed)
 
-    update_status(sync, I18n.t("onchain_wallet_item.syncer.calculating_balances"))
     account_ids = changed.filter_map { |onchain_account| onchain_account.current_account&.id }
     onchain_wallet_item.schedule_account_syncs(
       accounts: Account.where(id: account_ids),
@@ -70,10 +64,6 @@ class OnchainWalletItem::Syncer
       onchain_wallet_item.onchain_wallet_accounts.linked.joins(:account).merge(Account.visible)
     end
 
-    def update_status(sync, text)
-      sync.update!(status_text: text) if sync.respond_to?(:status_text)
-    end
-
     def mark_failed(sync, error_message)
       sync.start! if sync.respond_to?(:may_start?) && sync.may_start?
 
@@ -84,6 +74,5 @@ class OnchainWalletItem::Syncer
       end
 
       sync.update!(error: error_message) if sync.respond_to?(:error)
-      sync.update!(status_text: error_message) if sync.respond_to?(:status_text)
     end
 end

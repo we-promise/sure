@@ -85,6 +85,9 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal(-75, entry.amount)
     assert_equal "Buy", entry.entryable.investment_activity_label
     assert_not entry.excluded
+    # The shared helper would call this "Buy 1.5 shares of CRYPTO:FAKE"; a wallet
+    # does not hold shares.
+    assert_equal "Buy 1.5 FAKE", entry.name
   end
 
   test "materializes an outbound movement as a Sell trade" do
@@ -98,6 +101,7 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal(-1, entry.entryable.qty)
     assert_equal 50, entry.amount
     assert_equal "Sell", entry.entryable.investment_activity_label
+    assert_equal "Sell 1.0 FAKE", entry.name
   end
 
   test "materializes a display-only excluded entry when that day's price is unknown" do

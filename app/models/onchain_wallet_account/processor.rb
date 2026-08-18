@@ -211,6 +211,9 @@ class OnchainWalletAccount::Processor
         amount: -(quantity * price).round(4),
         currency: currency,
         date: date,
+        # Named here because the shared helper says "Buy 0.5 shares of
+        # CRYPTO:BTC" — "shares" is not a thing a wallet holds.
+        name: trade_name(quantity),
         external_id: movement_external_id(movement),
         source: SOURCE,
         activity_label: quantity.positive? ? "Buy" : "Sell"
@@ -279,12 +282,18 @@ class OnchainWalletAccount::Processor
       true
     end
 
-    def movement_name(quantity)
-      key = quantity.positive? ? "received" : "sent"
+    def trade_name(quantity)
+      translated_name("onchain_wallet_item.trade.#{quantity.positive? ? "buy" : "sell"}", quantity)
+    end
 
+    def movement_name(quantity)
+      translated_name("onchain_wallet_item.movement.#{quantity.positive? ? "received" : "sent"}", quantity)
+    end
+
+    def translated_name(key, quantity)
       I18n.t(
-        "onchain_wallet_item.movement.#{key}",
-        quantity: quantity.abs.to_s("F"),
+        key,
+        quantity: quantity.abs.round(8).to_s("F"),
         symbol: onchain_wallet_account.symbol
       )
     end
