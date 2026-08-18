@@ -578,6 +578,12 @@ class Provider::OpenBankingIo
     raise Error.new(e.message, :configuration_error)
   end
 
+  # Releases the keep-alive connection. Safe to call more than once; the next request
+  # re-establishes it lazily.
+  def close
+    @client.close
+  end
+
   def get_accounts
     with_error_handling("get_accounts") do
       @client.get_accounts.map { |account| account_hash(account) }

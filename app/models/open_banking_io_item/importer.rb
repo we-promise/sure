@@ -42,6 +42,10 @@ class OpenBankingIoItem::Importer
       transactions_imported: transaction_stats[:imported],
       transactions_failed: transaction_stats[:failed]
     }
+  ensure
+    # The client holds one keep-alive socket for the whole import. Release it here rather
+    # than leaving it open until the memoized provider is garbage collected.
+    open_banking_io_provider.try(:close)
   end
 
   # Accounts-only refresh for the interactive linking screens. Same path as #import's
@@ -55,6 +59,8 @@ class OpenBankingIoItem::Importer
       open_banking_io_item.upsert_open_banking_io_snapshot!(accounts_data)
       import_accounts(accounts_data)
     end
+  ensure
+    open_banking_io_provider.try(:close)
   end
 
   private
