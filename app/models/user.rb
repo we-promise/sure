@@ -35,6 +35,8 @@ class User < ApplicationRecord
   has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
   has_many :shared_accounts, through: :account_shares, source: :account
+  has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
+  has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy
   accepts_nested_attributes_for :family, update_only: true
 
   MFA_BACKUP_CODE_COUNT = 8
@@ -154,6 +156,12 @@ class User < ApplicationRecord
 
   def finance_accounts
     family.accounts.included_in_finances_for(self)
+  end
+
+  # Other family members who have granted this user access to their personal
+  # budget (see BudgetShare). Used to build the budget owner switcher.
+  def budget_owners_shared_with_me
+    User.where(id: budget_shares_received.select(:owner_id))
   end
 
   def display_name

@@ -144,6 +144,8 @@ class Family < ApplicationRecord
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
+  validates :personal_budgets, inclusion: { in: [ true, false ] }
+  validates :household_budget_enabled, inclusion: { in: [ true, false ] }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
@@ -311,8 +313,8 @@ class Family < ApplicationRecord
     BalanceSheet.new(self, user: user)
   end
 
-  def income_statement(user: Current.user)
-    IncomeStatement.new(self, user: user)
+  def income_statement(user: Current.user, accounts: nil)
+    IncomeStatement.new(self, user: user, accounts: accounts)
   end
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.

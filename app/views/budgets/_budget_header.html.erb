@@ -6,7 +6,7 @@
       <%= render DS::Link.new(
         variant: "icon",
         icon: "chevron-left",
-        href: budget_path(budget.previous_budget_param),
+        href: budget_path(budget.previous_budget_param, **budget_owner_query),
       ) %>
     <% else %>
       <span class="text-subdued">
@@ -18,7 +18,7 @@
       <%= render DS::Link.new(
         variant: "icon",
         icon: "chevron-right",
-        href: budget_path(budget.next_budget_param),
+        href: budget_path(budget.next_budget_param, **budget_owner_query),
       ) %>
     <% else %>
       <span class="text-subdued">
@@ -29,7 +29,9 @@
 
   <%= render DS::Popover.new(variant: "button") do |popover| %>
     <% popover.with_button class: "flex items-center gap-1 hover:bg-surface-hover cursor-pointer rounded-md p-2"  do %>
-      <span class="text-primary font-medium text-lg lg:text-base"><%= @budget.name %></span>
+      <span class="text-primary font-medium text-lg lg:text-base">
+        <%= @budget.name %>
+      </span>
       <%= icon("chevron-down") %>
     <% end %>
 
@@ -42,7 +44,13 @@
     <%= render DS::Link.new(
         text: t(".today"),
         variant: "outline",
-        href: budget_path(Budget.date_to_param(Date.current)),
+        href: budget_path(Budget.date_to_param(Date.current), **budget_owner_query),
     ) %>
   </div>
 </div>
+
+<% if @switch_options.present? && @switch_options.size > 1 %>
+  <div class="mb-4">
+    <%= render "budgets/owner_switcher", switch_options: @switch_options, switch_path: ->(owner_param) { budget_path(budget.to_param, owner: owner_param) } %>
+  </div>
+<% end %>

@@ -102,6 +102,20 @@ class Assistant::Function::GetBudgetTest < ActiveSupport::TestCase
     assert_equal target, month[:period][:start_date]
   end
 
+  test "does not leak another family member's personal budget in trend months" do
+    @family.update!(personal_budgets: true)
+    prior_start = Date.current.beginning_of_month << 1
+
+    other_budget = Budget.find_or_bootstrap(@family, start_date: prior_start, user: users(:family_member))
+    other_bc = other_budget.budget_categories.find { |bc| bc.category == categories(:food_and_drink) }
+    other_bc.update!(budgeted_spending: 12345)
+
+    result = @function.call("prior_months" => 1)
+
+    assert_equal 1, result[:months].length, "another member's personal budget must not surface as a trend month"
+    assert_equal 1, result[:months_unavailable]
+  end
+
   test "raises on invalid month format" do
     assert_raises(Assistant::Error) do
       @function.call("month" => "not-a-month")
