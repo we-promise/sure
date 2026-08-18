@@ -316,6 +316,7 @@ vi:
       sync_provider_in_progress: Đã bắt đầu đồng bộ.
       recently_synced: Đã đồng bộ gần đây. Thử lại sau một chút.
       taglines:
+        open_banking_io: "Đồng bộ tài khoản ngân hàng châu Âu qua open-banking.io."
         simplefin: Kết nối tài khoản ngân hàng Mỹ qua giao thức mở SimpleFIN.
         lunchflow: Kết nối 20.000+ ngân hàng từ 40+ quốc gia (Anh, EU, Mỹ và nhiều hơn!)
         enable_banking: Đồng bộ tài khoản ngân hàng châu Âu qua ngân hàng mở PSD2.
@@ -443,6 +444,10 @@ vi:
         base_url_placeholder: "https://lunchflow.app/api/v1 (mặc định)"
         save_and_connect: "Lưu và kết nối"
         update_connection: "Cập nhật kết nối"
+      open_banking_io_panel:
+        step_1_html: "Truy cập %{link}, kết nối ngân hàng của bạn và xuất thông tin xác thực."
+        step_2: "Mở tệp credentials.json đã tải xuống."
+        step_3: "Dán toàn bộ nội dung của tệp vào bên dưới, lưu lại, rồi liên kết các tài khoản đã đồng bộ."
       simplefin_panel:
         step_1_html: "Vào %{link} để lấy token thiết lập một lần."
         step_2: "Dán token vào bên dưới và kết nối."

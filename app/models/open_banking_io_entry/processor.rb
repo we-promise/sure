@@ -16,6 +16,10 @@ class OpenBankingIoEntry::Processor
   # bank that does not stamp status at all (PayPal DE, Belfius BE, BPER Banca) sends none --
   # treating those as pending made every transaction eligible for the stale-pending prune,
   # which destroys the entry and every user edit attached to it.
+  #
+  # No data migration accompanies this: the provider has never shipped, so no deployment
+  # holds rows stamped by the old rule. Anyone running this branch before the fix should
+  # reset their local database -- the create migration was tightened in place too.
   BOOKED_STATUS = "BOOK".freeze
   PENDING_STATUSES = %w[PDNG PENDING HOLD].freeze
   # Cancelled and rejected entries are money that never moved; scheduled ones have not
@@ -255,13 +259,11 @@ class OpenBankingIoEntry::Processor
         "reference_number" => data[:reference_number],
         "reference_number_schema" => data[:reference_number_schema],
         "merchant_category_code" => data[:merchant_category_code],
-        # Counterparty identifiers. Decrypted from the envelope and previously discarded,
-        # which left transfer matching and support with nothing but a display name.
-        "creditor_iban" => data[:creditor_iban],
-        "creditor_bban" => data[:creditor_bban],
+        # Counterparty BANK identifiers only. The IBAN/BBAN are deliberately NOT stored:
+        # transactions.extra is not encrypted, and writing a counterparty's account number
+        # there would undo the point of encrypting raw_payload. EnableBankingEntry::Processor
+        # reads the identical ISO-20022 shape and keeps none of them.
         "creditor_agent_bic" => data[:creditor_agent_bic],
-        "debtor_iban" => data[:debtor_iban],
-        "debtor_bban" => data[:debtor_bban],
         "debtor_agent_bic" => data[:debtor_agent_bic],
         "balance_after" => data[:balance_after_transaction],
         "balance_after_computed" => data[:balance_after_computed],

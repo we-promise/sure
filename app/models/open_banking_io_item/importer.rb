@@ -161,7 +161,10 @@ class OpenBankingIoItem::Importer
         end
       rescue => e
         stats[:failed] += 1
-        Rails.logger.error "OpenBankingIoItem::Importer - Failed to import account #{account_id}: #{e.message}"
+        # e.message is deliberately not logged: this rescue wraps snapshot writes over
+        # decrypted account data. capture_sync_error records the class and puts the message
+        # in DebugLogEntry metadata, where support can see it behind admin auth.
+        capture_sync_error("Failed to import an open-banking.io account", e, provider_account_id: account_id)
       end
 
       stats
@@ -187,7 +190,7 @@ class OpenBankingIoItem::Importer
         end
       rescue => e
         stats[:failed] += 1
-        Rails.logger.error "OpenBankingIoItem::Importer - Failed to fetch/store transactions for account #{open_banking_io_account.id}: #{e.class}"
+        capture_sync_error("Failed to fetch or store open-banking.io transactions", e, open_banking_io_account: open_banking_io_account)
       end
 
       stats
@@ -336,10 +339,11 @@ class OpenBankingIoItem::Importer
 
     # Record a provider sync/import failure as a DebugLogEntry so it surfaces on
     # /settings/debug, mirroring the sibling bank-sync providers (Up, Kraken, ...).
-    def capture_sync_error(message, error, open_banking_io_account: nil, error_type: nil)
+    def capture_sync_error(message, error, open_banking_io_account: nil, error_type: nil, **extra)
       metadata = { open_banking_io_item_id: open_banking_io_item.id, error_class: error.class.name, error_message: error.message }
       metadata[:open_banking_io_account_id] = open_banking_io_account.id if open_banking_io_account
       metadata[:error_type] = error_type if error_type
+      metadata.merge!(extra.compact)
 
       DebugLogEntry.capture(
         category: "provider_sync_error",

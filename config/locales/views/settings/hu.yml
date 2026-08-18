@@ -274,6 +274,7 @@ hu:
       sync_provider_in_progress: Szinkronizálás elindítva.
       recently_synced: Nemrég szinkronizálva. Próbáld újra egy pillanat múlva.
       taglines:
+        open_banking_io: "Európai bankszámlák szinkronizálása az open-banking.io szolgáltatással."
         simplefin: US bankszámlák csatlakoztatása az open SimpleFIN protokollon keresztül.
         lunchflow: 40+ ország 20 000+ bankjának csatlakoztatása (Egyesült Királyság, EU, USA stb.!)
         enable_banking: Európai bankszámlák szinkronizálása PSD2 open banking révén.
@@ -399,6 +400,10 @@ hu:
         base_url_placeholder: "https://lunchflow.app/api/v1 (alapértelmezett)"
         save_and_connect: "Mentés és csatlakozás"
         update_connection: "Kapcsolat frissítése"
+      open_banking_io_panel:
+        step_1_html: "Nyissa meg a(z) %{link} oldalt, csatlakoztassa a bankját, és exportálja a hitelesítő adatait."
+        step_2: "Nyissa meg a letöltött credentials.json fájlt."
+        step_3: "Illessze be a teljes tartalmát alább, mentse el, majd kapcsolja össze a szinkronizált fiókjait."
       simplefin_panel:
         step_1_html: "Menj a(z) %{link} oldalra egy egyszeri beállítási tokenért."
         step_2: "Illeszd be a tokent alább és csatlakozz."

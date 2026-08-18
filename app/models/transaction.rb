@@ -104,6 +104,14 @@ class Transaction < ApplicationRecord
     .join(" OR ")
     .freeze
 
+  # Same predicate against the `transactions` table itself, for callers joining entries to
+  # transactions rather than using a subquery alias. Derived from PENDING_PROVIDERS so a new
+  # provider cannot be added to the list and forgotten in a finder.
+  PENDING_CHECK_SQL_FOR_TRANSACTIONS = PENDING_PROVIDERS
+    .map { |p| "(transactions.extra -> '#{p}' ->> 'pending')::boolean = true" }
+    .join(" OR ")
+    .freeze
+
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {

@@ -245,21 +245,32 @@ class OpenBankingIoEntry::ProcessorTest < ActiveSupport::TestCase
   # === COUNTERPARTY IDENTIFIERS AND FX ===
   # These arrive inside the decrypted envelope and used to be dropped on the floor by
   # Provider::OpenBankingIo#transaction_hash before the entry processor ever saw them.
-  test "carries counterparty identifiers into the provider extra" do
+  test "carries counterparty bank identifiers into the provider extra" do
     entry = process(
       id: "tx_ids",
-      creditor_iban: "DK5000400440116243", creditor_bban: "00400440116243", creditor_agent_bic: "NDEADKKK",
-      debtor_iban: "DK9520000123456789", debtor_bban: "20000123456789", debtor_agent_bic: "NYKBDKKK",
+      creditor_agent_bic: "NDEADKKK", debtor_agent_bic: "NYKBDKKK",
       reference_number_schema: "SCOR"
     )
     obio = entry.entryable.extra["open_banking_io"]
 
-    assert_equal "DK5000400440116243", obio["creditor_iban"]
-    assert_equal "00400440116243", obio["creditor_bban"]
     assert_equal "NDEADKKK", obio["creditor_agent_bic"]
-    assert_equal "DK9520000123456789", obio["debtor_iban"]
     assert_equal "NYKBDKKK", obio["debtor_agent_bic"]
     assert_equal "SCOR", obio["reference_number_schema"]
+  end
+
+  # transactions.extra is not encrypted. Writing a counterparty's account number there
+  # would undo the point of encrypting raw_payload, and no sibling provider does it.
+  test "never writes a counterparty account number to the unencrypted extra" do
+    entry = process(
+      id: "tx_no_iban",
+      creditor_iban: "DK5000400440116243", creditor_bban: "00400440116243",
+      debtor_iban: "DK9520000123456789", debtor_bban: "20000123456789"
+    )
+
+    serialized = entry.entryable.extra.to_json
+    assert_no_match(/DK5000400440116243/, serialized)
+    assert_no_match(/DK9520000123456789/, serialized)
+    assert_no_match(/00400440116243/, serialized)
   end
 
   test "records FX metadata when the instructed currency differs from the account currency" do

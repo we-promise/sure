@@ -192,3 +192,8 @@ pl:
       enable_banking_panel:
         callback_url_instruction: Dla URL callback użyj %{callback_url}.
         connection_error: Błąd połączenia
+
+      open_banking_io_panel:
+        step_1_html: "Przejdź do %{link}, połącz swój bank i wyeksportuj swoje dane uwierzytelniające."
+        step_2: "Otwórz pobrany plik credentials.json."
+        step_3: "Wklej poniżej całą jego zawartość, zapisz, a następnie połącz zsynchronizowane konta."

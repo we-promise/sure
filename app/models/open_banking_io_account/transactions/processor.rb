@@ -193,12 +193,17 @@ class OpenBankingIoAccount::Transactions::Processor
         .where(source: "open_banking_io")
         .where("(transactions.extra -> 'open_banking_io' ->> 'pending')::boolean = true")
 
+      # The age grace applies in BOTH branches. With the corrected classifier most banks
+      # never produce a pending row at all, so "payload present, zero pendings in it" is now
+      # the normal case -- and pruning unconditionally there would destroy any pending entry
+      # that has not yet auto-claimed, along with its category, merchant, notes and splits.
+      cutoff = MAX_PENDING_AGE.ago.to_date
       stale_pending_entries =
         if current_pending_external_ids.any?
           pending_entries.where.not(external_id: current_pending_external_ids)
-                         .or(pending_entries.where(date: ...MAX_PENDING_AGE.ago.to_date))
+                         .or(pending_entries.where(date: ...cutoff))
         else
-          pending_entries
+          pending_entries.where(date: ...cutoff)
         end
 
       count = stale_pending_entries.count

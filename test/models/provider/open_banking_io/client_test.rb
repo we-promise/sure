@@ -284,4 +284,38 @@ class Provider::OpenBankingIo::ClientTest < ActiveSupport::TestCase
     end
     assert_nil c.instance_variable_get(:@http)
   end
+
+  # === DECIMAL PARSING ===
+  # `value` here is decrypted envelope content. BigDecimal's own ArgumentError quotes it
+  # verbatim, and with_error_handling keeps e.message -- which reaches syncs.error,
+  # DebugLogEntry.metadata and Sentry, none of them encrypted.
+  test "an unparseable decimal never leaks the decrypted value into the error" do
+    c = client
+    secret = "DK6466952001724927 Some Person"
+
+    error = assert_raises(Provider::OpenBankingIo::Error) { c.send(:parse_decimal, secret) }
+
+    assert_equal :invalid_response, error.error_type
+    assert_no_match(/DK6466952001724927/, error.message)
+    assert_no_match(/Some Person/, error.message)
+  end
+
+  # A missing amount must reach the entry processor's guard and skip the row, not arrive
+  # as BigDecimal(0) and import as a 0.00 transaction.
+  test "a missing decimal is nil rather than zero" do
+    c = client
+
+    assert_nil c.send(:parse_decimal, nil)
+    assert_nil c.send(:parse_decimal, "")
+    assert_equal BigDecimal("12.5"), c.send(:parse_decimal, "12.50")
+  end
+
+  test "a Retry-After sleep stays within MAX_RETRY_DELAY even with jitter" do
+    c = client
+    error = Provider::OpenBankingIo::HTTPError.new(429, nil, Provider::OpenBankingIo::Client::MAX_HONOURED_RETRY_AFTER)
+
+    50.times do
+      assert_operator c.send(:retry_delay, error, 1), :<=, Provider::OpenBankingIo::Client::MAX_RETRY_DELAY
+    end
+  end
 end
