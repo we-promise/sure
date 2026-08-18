@@ -67,29 +67,20 @@ class Provider::OpenBankingIoAdapter < Provider::Base
     false
   end
 
+  # Read from the per-account institution_metadata snapshot only. These used to fall back
+  # to institution_* columns on the item, which nothing ever wrote -- so the fallback was
+  # dead weight and the columns are gone. institution_color had no metadata key at all and
+  # is left to Provider::InstitutionMetadata's nil default.
   def institution_domain
-    metadata = provider_account.institution_metadata
-    return nil unless metadata.present?
-
-    metadata["domain"]
+    provider_account.institution_metadata&.dig("domain")
   end
 
   def institution_name
-    metadata = provider_account.institution_metadata
-    return nil unless metadata.present?
-
-    metadata["name"] || item&.institution_name
+    provider_account.institution_metadata&.dig("name")
   end
 
   def institution_url
-    metadata = provider_account.institution_metadata
-    return nil unless metadata.present?
-
-    metadata["url"] || item&.institution_url
-  end
-
-  def institution_color
-    item&.institution_color
+    provider_account.institution_metadata&.dig("url")
   end
 
   def self.resolve_open_banking_io_item(family, open_banking_io_item_id)

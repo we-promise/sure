@@ -5,9 +5,6 @@ nb:
       name: open-banking.io
       description: Koble til europeiske bankkontoer via open-banking.io
   family:
-    open_banking_io:
-      create_open_banking_io_item:
-        default_name: open-banking.io-tilkobling
   open_banking_io_account:
     fallback: open-banking.io-konto
   open_banking_io_entry:

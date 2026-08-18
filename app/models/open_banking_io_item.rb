@@ -35,11 +35,9 @@ class OpenBankingIoItem < ApplicationRecord
     encrypts :api_key
     encrypts :private_key
     encrypts :raw_payload
-    encrypts :raw_institution_payload
   end
 
   belongs_to :family
-  has_one_attached :logo, dependent: :purge_later
   has_many :open_banking_io_accounts, dependent: :destroy
   has_many :accounts, through: :open_banking_io_accounts
 
@@ -50,7 +48,6 @@ class OpenBankingIoItem < ApplicationRecord
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
-  scope :needs_update, -> { where(status: :requires_update) }
 
   # The memoized provider holds a parsed EC key built from these columns.
   after_save :reset_open_banking_io_provider!, if: -> {
@@ -153,10 +150,6 @@ class OpenBankingIoItem < ApplicationRecord
     save!
   end
 
-  def has_completed_initial_setup?
-    accounts.any?
-  end
-
   def sync_status_summary
     total_accounts = total_accounts_count
     linked_count = linked_accounts_count
@@ -172,26 +165,31 @@ class OpenBankingIoItem < ApplicationRecord
   end
 
   def linked_accounts_count
-    open_banking_io_accounts.joins(:account_provider).count
+    account_counts[:linked]
   end
 
   def unlinked_accounts_count
-    open_banking_io_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    account_counts[:unlinked]
   end
 
   def total_accounts_count
-    open_banking_io_accounts.count
+    account_counts[:total]
   end
 
+  # Part of the provider-item interface reflected over by ProviderConnectionStatus.
+  # open-banking.io aggregates many banks per connection, so the connection's own name is
+  # the only meaningful label here -- see #institution_summary for the per-bank breakdown.
   def institution_display_name
-    institution_name.presence || institution_domain.presence || name
+    name
   end
 
   def connected_institutions
-    open_banking_io_accounts.includes(:account)
-                            .where.not(institution_metadata: nil)
-                            .map(&:institution_metadata)
-                            .uniq { |inst| inst["id"] || inst["name"] }
+    # Memoized and without the eager-loaded :account it never touched: the item partial
+    # calls this once directly and again through #institution_summary.
+    @connected_institutions ||= open_banking_io_accounts
+      .where.not(institution_metadata: nil)
+      .map(&:institution_metadata)
+      .uniq { |inst| inst["id"] || inst["name"] }
   end
 
   def institution_summary
@@ -211,6 +209,19 @@ class OpenBankingIoItem < ApplicationRecord
   end
 
   private
+
+    # One query for all three counts. The item partial renders every one of them plus
+    # #sync_status_summary, which was four separate COUNTs per connection. Mirrors UpItem.
+    def account_counts
+      @account_counts ||= begin
+        rows = open_banking_io_accounts
+                 .left_joins(:account_provider)
+                 .pluck(Arel.sql("account_providers.id IS NOT NULL"))
+
+        linked = rows.count { |has_provider| has_provider }
+        { linked: linked, unlinked: rows.size - linked, total: rows.size }
+      end
+    end
 
     # Model-layer SSRF defense-in-depth: reject any api_base_url that isn't pinned
     # to open-banking.io, even if a caller bypasses the controller's guard.

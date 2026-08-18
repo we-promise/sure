@@ -205,12 +205,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_18_120000) do
 
   create_table "akahu_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
-    t.string "name"
-    t.string "institution_id"
-    t.string "institution_name"
-    t.string "institution_domain"
-    t.string "institution_url"
-    t.string "institution_color"
+    t.string "name", null: false
     t.string "status", default: "good", null: false
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.boolean "pending_account_setup", default: false, null: false
@@ -1499,20 +1494,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_18_120000) do
 
   create_table "open_banking_io_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "open_banking_io_item_id", null: false
-    t.string "name"
+    t.string "name", null: false
     t.string "account_id"
     t.string "formatted_account"
-    t.string "currency"
+    t.string "currency", null: false
     t.decimal "current_balance", precision: 19, scale: 4
     t.decimal "available_balance", precision: 19, scale: 4
-    t.decimal "balance_limit", precision: 19, scale: 4
     t.string "account_status"
     t.string "account_type"
     t.string "provider"
     t.jsonb "institution_metadata"
     t.jsonb "raw_payload"
     t.jsonb "raw_transactions_payload"
-    t.date "sync_start_date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_open_banking_io_accounts_on_account_id"
@@ -1533,7 +1526,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_18_120000) do
     t.boolean "pending_account_setup", default: false, null: false
     t.date "sync_start_date"
     t.jsonb "raw_payload"
-    t.jsonb "raw_institution_payload"
     t.text "api_base_url"
     t.text "api_key"
     t.text "private_key"

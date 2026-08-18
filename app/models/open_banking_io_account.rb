@@ -36,7 +36,6 @@ class OpenBankingIoAccount < ApplicationRecord
 
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :account, through: :account_provider, source: :account
-  has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
   validates :account_id, uniqueness: { scope: :open_banking_io_item_id, allow_nil: true }
