@@ -5,8 +5,10 @@
 # scaled out of the chain's smallest unit by the adapter.
 module Onchain
   Movement = Data.define(:external_id, :symbol, :contract, :amount, :timestamp) do
+    # Left as reported: whether case matters depends on the token kind, which a
+    # movement does not know. Onchain::Snapshot folds when it compares.
     def contract_key
-      contract.presence&.downcase
+      contract.presence
     end
 
     def date

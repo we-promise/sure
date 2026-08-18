@@ -135,6 +135,19 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
     assert_nil Onchain::SecurityResolver.resolve(symbol: asset.symbol)
   end
 
+  test "a mint keeps its Base58 case, because case is part of the key" do
+    mixed = "So11111111111111111111111111111111111111112"
+    stub_snapshot(lamports: 0, token_accounts: [ token_account(mint: mixed, amount: "1000000", decimals: 6) ])
+    stub_token_list([])
+
+    asset = @adapter.fetch_snapshot(ADDRESS).assets.find { |a| !a.native? }
+
+    assert_equal mixed, asset.contract
+    assert_equal mixed, asset.contract_key
+    # A Solana address is not canonicalised either: every character is meaningful.
+    assert_equal ADDRESS, @adapter.canonical_address(" #{ADDRESS} ")
+  end
+
   test "an unknown mint is labelled so it cannot be mistaken for a ticker" do
     stub_snapshot(lamports: 0, token_accounts: [ token_account(mint: UNKNOWN_MINT, amount: "1000000000", decimals: 9) ])
     stub_token_list([])

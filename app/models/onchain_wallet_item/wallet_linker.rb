@@ -55,7 +55,7 @@ class OnchainWalletItem::WalletLinker
     errors = []
 
     removed = tracked.count do |onchain_account|
-      next false if selected.include?(key_for(onchain_account))
+      next false if selected.include?(onchain_account.asset_key)
 
       onchain_account.destroy!
       true
@@ -81,10 +81,6 @@ class OnchainWalletItem::WalletLinker
   end
 
   private
-    def key_for(onchain_account)
-      [ onchain_account.asset_kind, onchain_account.contract_address.presence ].compact.join(":")
-    end
-
     def create_asset!(asset)
       OnchainWalletAccount.transaction do
         onchain_account = onchain_wallet_item.onchain_wallet_accounts.create!(

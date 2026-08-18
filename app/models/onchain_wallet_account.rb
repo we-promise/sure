@@ -61,9 +61,14 @@ class OnchainWalletAccount < ApplicationRecord
   end
 
   # The asset identity this row stands for, so the importer can match it against
-  # a freshly fetched snapshot without caring which chain produced either.
+  # a freshly fetched snapshot without caring which chain produced either. Shared
+  # with the review screen, which has to agree on what identifies an asset.
+  def asset_key
+    [ asset_kind, contract_address.presence ].compact.join(":")
+  end
+
   def matches_asset?(asset)
-    asset.kind == asset_kind && asset.contract_key == contract_address.presence&.downcase
+    asset.kind == asset_kind && asset.contract_key == contract_address.presence
   end
 
   def current_account
@@ -83,8 +88,15 @@ class OnchainWalletAccount < ApplicationRecord
   end
 
   private
+    # Folded only where case carries no meaning, so an SPL mint is stored as the
+    # Base58 key it is rather than an unusable lowercase copy.
     def normalize_contract_address
-      self.contract_address = contract_address.presence&.downcase
+      value = contract_address.presence
+      self.contract_address = if value.nil? || Onchain::Chains.contract_case_sensitive?(asset_kind)
+        value
+      else
+        value.downcase
+      end
     end
 
     def chain_is_registered

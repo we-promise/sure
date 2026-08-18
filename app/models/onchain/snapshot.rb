@@ -28,19 +28,31 @@ module Onchain
     # Movements belonging to a given asset. Tokens match on contract; native
     # assets match on symbol among the movements that carry no contract.
     def movements_for(asset)
-      if asset.contract_key.present?
-        movements.select { |movement| movement.contract_key == asset.contract_key }
+      if asset.contract.present?
+        movements.select { |movement| same_contract?(movement.contract, asset.contract, asset.kind) }
       else
         movements.select do |movement|
-          movement.contract_key.nil? && movement.symbol.to_s.casecmp?(asset.symbol.to_s)
+          movement.contract.blank? && movement.symbol.to_s.casecmp?(asset.symbol.to_s)
         end
       end
     end
 
     def find_asset(kind:, contract: nil)
       assets.find do |asset|
-        asset.kind == kind && asset.contract_key == contract.presence&.downcase
+        next false unless asset.kind == kind
+        next asset.contract.blank? if contract.blank?
+
+        same_contract?(asset.contract, contract, kind)
       end
     end
+
+    private
+      # Case matters on some token kinds and not others, and only the kind can say
+      # which — see Onchain::Chains::CASE_INSENSITIVE_CONTRACT_KINDS.
+      def same_contract?(left, right, kind)
+        return false if left.blank? || right.blank?
+
+        Onchain::Chains.contract_case_sensitive?(kind) ? left == right : left.casecmp?(right)
+      end
   end
 end

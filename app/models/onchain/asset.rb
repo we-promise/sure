@@ -50,10 +50,14 @@ module Onchain
       kind == Onchain::Chains::NATIVE_KIND
     end
 
-    # Contracts are case-insensitive on every chain we support, so identity
-    # comparisons and the DB uniqueness key both use the downcased form.
+    # The identity form of the contract, folded to lower case only for the kinds
+    # where case carries no meaning. See
+    # Onchain::Chains::CASE_INSENSITIVE_CONTRACT_KINDS.
     def contract_key
-      contract.presence&.downcase
+      value = contract.presence
+      return nil if value.nil?
+
+      Onchain::Chains.contract_case_sensitive?(kind) ? value : value.downcase
     end
   end
 end

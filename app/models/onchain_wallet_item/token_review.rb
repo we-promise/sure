@@ -75,8 +75,6 @@ class OnchainWalletItem::TokenReview
     attr_reader :snapshot, :tracked_accounts
 
     def tracked_keys
-      @tracked_keys ||= tracked_accounts.map do |account|
-        [ account.asset_kind, account.contract_address.presence ].compact.join(":")
-      end
+      @tracked_keys ||= tracked_accounts.map(&:asset_key)
     end
 end
