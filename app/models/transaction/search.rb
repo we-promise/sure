@@ -7,6 +7,7 @@ class Transaction::Search
   attribute :amount_operator, :string
   attribute :types, array: true
   attribute :status, array: true
+  attribute :excluded, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
@@ -36,6 +37,7 @@ class Transaction::Search
       query = apply_category_filter(query, categories)
       query = apply_type_filter(query, types)
       query = apply_status_filter(query, status)
+      query = apply_excluded_filter(query, excluded)
       query = apply_merchant_filter(query, merchants)
       query = apply_tag_filter(query, tags)
       query = EntrySearch.apply_search_filter(query, search)
@@ -204,6 +206,20 @@ class Transaction::Search
         query.pending
       when [ "confirmed" ]
         query.excluding_pending
+      else
+        query
+      end
+    end
+
+    def apply_excluded_filter(query, excluded_states)
+      return query unless excluded_states.present?
+      return query if excluded_states.uniq.sort == [ "active", "excluded" ] # Both selected = no filter
+
+      case excluded_states.uniq.sort
+      when [ "active" ]
+        query.where(entries: { excluded: false })
+      when [ "excluded" ]
+        query.where(entries: { excluded: true })
       else
         query
       end
