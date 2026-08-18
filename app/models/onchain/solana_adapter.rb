@@ -70,9 +70,11 @@ class Onchain::SolanaAdapter
     raise Onchain::Chains::Error, "Invalid Solana address" unless valid_address?(address)
 
     wrap_provider_errors do
-      token_accounts = provider.get_token_accounts(address)
-      # Resolved once per snapshot, for every mint at once: assets and movements
-      # must agree on what a token is called.
+      held = held_token_accounts(provider.get_token_accounts(address))
+      token_accounts = surfaced_token_accounts(held)
+      # Resolved once per snapshot, for every surfaced mint at once: assets and
+      # movements must agree on what a token is called. Capping first bounds the
+      # lookups too — an airdrop dump would otherwise cost dozens of requests.
       load_mint_metadata(token_accounts.map { |account| account[:mint] })
 
       movements = movements(address, token_accounts)
@@ -80,7 +82,8 @@ class Onchain::SolanaAdapter
       Onchain::Snapshot.new(
         assets: [ native_asset(address), *token_assets(token_accounts) ],
         movements: movements,
-        history_truncated: @history_truncated
+        history_truncated: @history_truncated,
+        assets_truncated: @assets_truncated
       )
     end
   end
@@ -102,6 +105,22 @@ class Onchain::SolanaAdapter
 
     def native_asset(address)
       definition.native_asset(quantity: provider.get_balance(address).to_d / LAMPORTS_PER_SOL)
+    end
+
+    # Emptied token accounts are left behind on Solana by design.
+    def held_token_accounts(token_accounts)
+      token_accounts.reject { |account| BigDecimal(account[:raw_amount].presence || "0").zero? }
+    end
+
+    # RPC offers no market signal to rank by, so the order is the mint itself:
+    # arbitrary, but identical between two reads of an unchanged address, which is
+    # what keeps the cap from reshuffling the wallet every sync.
+    def surfaced_token_accounts(held)
+      mints = held.map { |account| account[:mint] }.uniq.sort
+      surfaced_mints = mints.first(Onchain::AssetBudget.tokens).to_set
+      @assets_truncated = mints.size > surfaced_mints.size
+
+      held.select { |account| surfaced_mints.include?(account[:mint]) }
     end
 
     # Summed per mint: one wallet can own several token accounts for the same

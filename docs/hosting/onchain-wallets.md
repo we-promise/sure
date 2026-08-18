@@ -113,6 +113,22 @@ When a cap is hit, the affected address says so in **Manage wallets**, and the
 event is recorded in **Settings → Debug logs** under the `onchain_wallet`
 provider — once per address per sync, not once per night forever.
 
+### How many tokens one address surfaces
+
+Real addresses are airdrop dumping grounds: a well-known Ethereum address holds
+close to 8,000 ERC-20 tokens, and a comparable Solana one nearly 3,000 token
+accounts. Listing all of them would make the review screen unusable, so one read
+surfaces at most **200 tokens** per address, settable with
+`ONCHAIN_MAX_TOKENS_PER_ADDRESS` (maximum 5,000).
+
+The native coin is never affected, and anything already tracked keeps syncing
+regardless. On EVM networks the tokens kept are ranked by the market cap the
+indexer reports, so real assets survive the cap and airdrops fall off the end.
+Solana RPC offers no such signal, so there the order is by mint address —
+arbitrary, but identical between syncs, which is what stops the cap from
+reshuffling a wallet every night. The cap is stated in the review screen and in
+Manage wallets whenever it applies.
+
 Detecting which network an address belongs to costs **exactly one request per
 candidate network**, and never reads history. If an explorer is down during
 detection, that network simply reports "nothing found" instead of failing the
@@ -185,7 +201,8 @@ on two networks is one Security rather than two.
 currency using Sure's exchange rates. A transfer whose day has no price becomes a
 zero-amount excluded entry rather than a trade.
 
-**NFTs are not tracked.**
+**NFTs are not tracked.** They are filtered out by token standard, so an NFT is
+never mistaken for a balance of one fungible token.
 
 ## Troubleshooting
 

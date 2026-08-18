@@ -27,6 +27,13 @@
             </p>
           <% end %>
 
+          <% if accounts.any?(&:assets_truncated?) %>
+            <p class="flex items-start gap-2 text-xs text-warning">
+              <%= icon "alert-triangle", size: "sm", class: "shrink-0 mt-0.5" %>
+              <span><%= t(".assets_truncated", count: Onchain::AssetBudget.tokens) %></span>
+            </p>
+          <% end %>
+
           <ul class="divide-y divide-primary border border-primary rounded-lg">
             <% accounts.each do |onchain_account| %>
               <li class="flex items-center justify-between gap-3 p-3">

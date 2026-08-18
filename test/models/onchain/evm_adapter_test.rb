@@ -116,6 +116,54 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
     assert_nil snapshot.find_asset(kind: "erc20", contract: "0xnft")
   end
 
+  test "an airdrop dump is capped, keeping the tokens with a market cap" do
+    stub_summary(coin_balance: "0")
+    stub_token_balances([
+      erc20(contract: "0xspam1", symbol: "SPAM1", value: "1000000"),
+      erc20(contract: USDC, symbol: "USDC", value: "1000000", market_cap: "40000000000"),
+      erc20(contract: "0xspam2", symbol: "SPAM2", value: "1000000"),
+      erc20(contract: "0xmid", symbol: "MID", value: "1000000", market_cap: "1000000")
+    ])
+    stub_transactions([])
+    stub_token_transfers([])
+
+    with_asset_budget(2) do
+      snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+      assert snapshot.assets_truncated?
+      # Ranked by market cap, so the credible assets survive the cap and the
+      # native coin is never at risk.
+      assert_equal [ nil, USDC, "0xmid" ], snapshot.assets.map(&:contract_key)
+    end
+  end
+
+  test "the cap keeps the same tokens between two reads of an unchanged address" do
+    stub_summary(coin_balance: "0")
+    stub_token_balances([
+      erc20(contract: "0xbbb", symbol: "B", value: "1000000"),
+      erc20(contract: "0xaaa", symbol: "A", value: "1000000"),
+      erc20(contract: "0xccc", symbol: "C", value: "1000000")
+    ])
+    stub_transactions([])
+    stub_token_transfers([])
+
+    with_asset_budget(2) do
+      first = @adapter.fetch_snapshot(ADDRESS).assets.map(&:contract_key)
+      second = Onchain::Chains.adapter_for(Onchain::Chains::ETHEREUM).fetch_snapshot(ADDRESS).assets.map(&:contract_key)
+
+      assert_equal first, second
+    end
+  end
+
+  test "an address within the budget is not reported as capped" do
+    stub_summary(coin_balance: "0")
+    stub_token_balances([ erc20(contract: USDC, symbol: "USDC", value: "1000000") ])
+    stub_transactions([])
+    stub_token_transfers([])
+
+    assert_not @adapter.fetch_snapshot(ADDRESS).assets_truncated?
+  end
+
   test "the native asset is reported even when the wallet is empty" do
     stub_summary(coin_balance: "0")
     stub_token_balances([])
@@ -203,6 +251,14 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
   end
 
   private
+    def with_asset_budget(tokens)
+      previous = ENV["ONCHAIN_MAX_TOKENS_PER_ADDRESS"]
+      ENV["ONCHAIN_MAX_TOKENS_PER_ADDRESS"] = tokens.to_s
+      yield
+    ensure
+      ENV["ONCHAIN_MAX_TOKENS_PER_ADDRESS"] = previous
+    end
+
     def summary_url
       "#{explorer_url}/api/v2/addresses/#{ADDRESS}"
     end

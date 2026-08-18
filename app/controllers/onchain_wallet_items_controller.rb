@@ -74,6 +74,7 @@ class OnchainWalletItemsController < ApplicationController
     snapshot = fetch_snapshot(@chain, @address)
     return render_new_wallet(@provider_error) if snapshot.nil?
 
+    @assets_truncated = snapshot.assets_truncated?
     @review = OnchainWalletItem::TokenReview.new(snapshot: snapshot)
     render :token_review
   end
@@ -94,6 +95,7 @@ class OnchainWalletItemsController < ApplicationController
       .link(snapshot: snapshot, selected_keys: params[:assets])
 
     unless result.success?
+      @assets_truncated = snapshot.assets_truncated?
       @review = OnchainWalletItem::TokenReview.new(snapshot: snapshot)
       flash.now[:alert] = t(".errors.nothing_selected")
       return render :token_review, status: :unprocessable_entity
@@ -112,6 +114,7 @@ class OnchainWalletItemsController < ApplicationController
     snapshot = fetch_snapshot(@chain, @address)
     return redirect_to_manage(alert: @provider_error) if snapshot.nil?
 
+    @assets_truncated = snapshot.assets_truncated?
     @review = review_for(snapshot)
   end
 
@@ -122,6 +125,7 @@ class OnchainWalletItemsController < ApplicationController
     result = wallet_linker.revise(snapshot: snapshot, selected_keys: params[:assets])
 
     unless result.changed?
+      @assets_truncated = snapshot.assets_truncated?
       @review = review_for(snapshot)
       flash.now[:alert] = t(".errors.no_changes")
       return render :review_tokens, status: :unprocessable_entity

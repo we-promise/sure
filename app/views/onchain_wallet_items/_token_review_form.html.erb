@@ -12,6 +12,13 @@
 
   <%= render DS::Alert.new(variant: :info, message: t("onchain_wallet_items.token_review_form.explanation")) %>
 
+  <% if local_assigns[:assets_truncated] %>
+    <%= render DS::Alert.new(
+          variant: :warning,
+          message: t("onchain_wallet_items.token_review_form.assets_truncated", count: Onchain::AssetBudget.tokens)
+        ) %>
+  <% end %>
+
   <% if review.rows.empty? %>
     <p class="text-sm text-secondary py-4"><%= t("onchain_wallet_items.token_review_form.nothing_found") %></p>
   <% else %>

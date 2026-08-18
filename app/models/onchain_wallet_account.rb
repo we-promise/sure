@@ -37,6 +37,11 @@ class OnchainWalletAccount < ApplicationRecord
     extra.to_h.dig("onchain_wallet", "history_truncated") == true
   end
 
+  # True when the address holds more tokens than one read surfaces.
+  def assets_truncated?
+    extra.to_h.dig("onchain_wallet", "assets_truncated") == true
+  end
+
   def chain_definition
     Onchain::Chains.find(chain)
   end

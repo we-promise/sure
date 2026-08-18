@@ -97,6 +97,41 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
     assert_nil Onchain::SecurityResolver.resolve(symbol: asset.symbol)
   end
 
+  test "an airdrop dump is capped, and the cap bounds the metadata lookups too" do
+    mints = Array.new(5) { |i| "#{UNKNOWN_MINT[0..-3]}#{i}#{i}" }
+    stub_snapshot(
+      lamports: 0,
+      token_accounts: mints.map { |mint| token_account(mint: mint, amount: "1000000", decimals: 6) }
+    )
+    list = stub_token_list([])
+
+    with_asset_budget(2) do
+      snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+      assert snapshot.assets_truncated?
+      # Native plus the two surfaced mints, and one metadata request rather than
+      # one per batch of the whole dump.
+      assert_equal 3, snapshot.assets.size
+      assert_requested list, times: 1
+    end
+  end
+
+  test "the cap keeps the same mints between two reads of an unchanged address" do
+    mints = %w[ccc aaa bbb].map { |suffix| "#{UNKNOWN_MINT[0..-4]}#{suffix}" }
+    stub_snapshot(
+      lamports: 0,
+      token_accounts: mints.map { |mint| token_account(mint: mint, amount: "1000000", decimals: 6) }
+    )
+    stub_token_list([])
+
+    with_asset_budget(2) do
+      first = @adapter.fetch_snapshot(ADDRESS).assets.map(&:contract)
+      second = Onchain::Chains.adapter_for(Onchain::Chains::SOLANA).fetch_snapshot(ADDRESS).assets.map(&:contract)
+
+      assert_equal first, second
+    end
+  end
+
   test "a token list that is down leaves the wallet readable" do
     stub_snapshot(lamports: 1_000_000_000, token_accounts: [ token_account(mint: UNKNOWN_MINT, amount: "1000000000", decimals: 9) ])
     stub_request(:get, /lite-api\.jup\.ag/).to_return(status: 503)
@@ -207,6 +242,14 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
   end
 
   private
+    def with_asset_budget(tokens)
+      previous = ENV["ONCHAIN_MAX_TOKENS_PER_ADDRESS"]
+      ENV["ONCHAIN_MAX_TOKENS_PER_ADDRESS"] = tokens.to_s
+      yield
+    ensure
+      ENV["ONCHAIN_MAX_TOKENS_PER_ADDRESS"] = previous
+    end
+
     def stub_token_list(tokens)
       stub_request(:get, /lite-api\.jup\.ag/)
         .to_return(status: 200, body: tokens.to_json, headers: json_headers)

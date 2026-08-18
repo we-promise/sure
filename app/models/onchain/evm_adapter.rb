@@ -48,12 +48,14 @@ class Onchain::EvmAdapter
     raise Onchain::Chains::Error, "Invalid EVM address" unless valid_address?(address)
 
     wrap_provider_errors do
+      tokens = token_assets(address)
       movements = movements(address)
 
       Onchain::Snapshot.new(
-        assets: [ native_asset(address), *token_assets(address) ],
+        assets: [ native_asset(address), *tokens ],
         movements: movements,
-        history_truncated: history_backend.truncated
+        history_truncated: history_backend.truncated,
+        assets_truncated: @assets_truncated
       )
     end
   end
@@ -116,17 +118,31 @@ class Onchain::EvmAdapter
     end
 
     def token_assets(address)
-      balance_backend.token_balances(address).filter_map do |token|
-        quantity = scale(token[:raw_amount], token[:decimals])
-        next if quantity.zero?
+      held = balance_backend.token_balances(address).select do |token|
+        scale(token[:raw_amount], token[:decimals]).positive?
+      end
 
+      surfaced = rank(held).first(Onchain::AssetBudget.tokens)
+      @assets_truncated = held.size > surfaced.size
+
+      surfaced.map do |token|
         definition.token_asset(
           symbol: token[:symbol].presence || short_contract(token[:contract]),
           name: token[:name].presence || token[:symbol].presence || short_contract(token[:contract]),
           decimals: token[:decimals],
-          quantity: quantity,
+          quantity: scale(token[:raw_amount], token[:decimals]),
           contract: token[:contract]
         )
+      end
+    end
+
+    # Market cap first, because that is the signal the indexer already gives us
+    # for telling a real asset from an airdrop, then contract address so the
+    # order — and therefore what survives the cap — is identical between two
+    # reads of an unchanged address.
+    def rank(tokens)
+      tokens.sort_by do |token|
+        [ token[:market_cap].present? ? 0 : 1, -token[:market_cap].to_d, token[:contract].to_s ]
       end
     end
 

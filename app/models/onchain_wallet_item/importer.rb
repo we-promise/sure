@@ -56,7 +56,7 @@ class OnchainWalletItem::Importer
 
       return nil if account.content_hash == digest
 
-      report_truncation(chain: chain, address: address) if snapshot.history_truncated?
+      report_truncation(chain: chain, address: address, snapshot: snapshot) if snapshot.history_truncated? || snapshot.assets_truncated?
 
       account.update!(
         quantity: quantity,
@@ -69,7 +69,10 @@ class OnchainWalletItem::Importer
         # Recorded on the row so the UI can say the history is incomplete instead
         # of implying these movements are all there ever were.
         extra: account.extra.to_h.deep_merge(
-          "onchain_wallet" => { "history_truncated" => snapshot.history_truncated? }
+          "onchain_wallet" => {
+            "history_truncated" => snapshot.history_truncated?,
+            "assets_truncated" => snapshot.assets_truncated?
+          }
         )
       )
 
@@ -79,13 +82,17 @@ class OnchainWalletItem::Importer
     # A capped history is worth a support-visible note, but only once per address
     # per import, and only when something changed anyway — otherwise an idle
     # wallet with deep history would log the same line every night.
-    def report_truncation(chain:, address:)
+    def report_truncation(chain:, address:, snapshot:)
       return unless @truncation_reported.add?([ chain, address ])
+
+      reasons = []
+      reasons << "older movements were not read" if snapshot.history_truncated?
+      reasons << "not every token held is surfaced" if snapshot.assets_truncated?
 
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "warn",
-        message: "On-chain history truncated: older movements were not read",
+        message: "On-chain read truncated: #{reasons.join("; ")}",
         source: self.class.name,
         provider_key: "onchain_wallet",
         family: onchain_wallet_item.family,
@@ -93,7 +100,10 @@ class OnchainWalletItem::Importer
           onchain_wallet_item_id: onchain_wallet_item.id,
           chain: chain,
           address: address,
-          max_pages: Onchain::HistoryBudget.pages
+          history_truncated: snapshot.history_truncated?,
+          assets_truncated: snapshot.assets_truncated?,
+          max_pages: Onchain::HistoryBudget.pages,
+          max_tokens: Onchain::AssetBudget.tokens
         }
       )
     end

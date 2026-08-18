@@ -48,6 +48,7 @@ en:
         one: Tracking 1 asset from this wallet.
         other: "Tracking %{count} assets from this wallet."
     manage:
+      assets_truncated: "This address holds more tokens than one read surfaces, so only the %{count} most credible are listed. Anything already tracked keeps syncing."
       change_address: Change address
       disconnect_asset: Stop tracking
       disconnect_asset_confirm: "Stop tracking %{symbol}? Its account and history are kept and stop updating."
@@ -93,6 +94,7 @@ en:
       subtitle: "%{chain} · %{address}"
       title: Choose what to track
     token_review_form:
+      assets_truncated: "This address holds more tokens than one read surfaces, so only the %{count} most credible are listed."
       cancel: Cancel
       explanation: Assets with a known price are ticked. Anything else is left unticked — wallets collect spam airdrops, and tracking one has no value attached to it.
       native: Native

@@ -166,6 +166,24 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     assert_not account.reload.history_truncated?
   end
 
+  test "a capped token list is recorded on the row and named in the report" do
+    account = create_onchain_wallet_account(item: @item)
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ fake_native_asset ], movements: [], assets_truncated: true)
+    )
+
+    assert_difference "DebugLogEntry.count", 1 do
+      OnchainWalletItem::Importer.new(@item).import
+    end
+
+    assert account.reload.assets_truncated?
+    assert_not account.history_truncated?
+    entry = DebugLogEntry.order(:created_at).last
+    assert_match "not every token held is surfaced", entry.message
+    assert_equal Onchain::AssetBudget.tokens, entry.metadata["max_tokens"]
+  end
+
   test "movements before the connection start date are ignored" do
     account = create_onchain_wallet_account(item: @item)
     @item.update!(sync_start_date: 2.days.ago.to_date)
