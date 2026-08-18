@@ -49,4 +49,32 @@ class OpenBankingIoItemTest < ActiveSupport::TestCase
     assert_equal "https://staging.open-banking.io", reloaded.api_base_url
     assert_equal "secret-key", reloaded.api_key
   end
+
+  # The default self-hosted install auto-derives working ActiveRecord encryption keys from
+  # SECRET_KEY_BASE, but Encryptable#encryption_ready? only asks explicitly_configured?
+  # (env vars or credentials) -- so encryption is live at runtime while the columns are
+  # declared unencrypted, and the PKCS#8 key that decrypts every envelope sits in plaintext.
+  test "encryption tracks what is actually in force, not just what was declared" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:runtime_configured?).returns(true)
+
+    assert OpenBankingIoItem.encryption_ready?,
+           "auto-derived self-hosted keys must count as ready"
+    assert OpenBankingIoAccount.encryption_ready?
+  end
+
+  test "encryption is off only when nothing is configured at all" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:runtime_configured?).returns(false)
+
+    assert_not OpenBankingIoItem.encryption_ready?
+  end
+
+  test "the credential columns are the ones declared encrypted" do
+    skip "encryption not configured in this environment" unless OpenBankingIoItem.encryption_ready?
+
+    %i[api_base_url api_key private_key].each do |attribute|
+      assert_includes OpenBankingIoItem.encrypted_attributes.to_a, attribute
+    end
+  end
 end

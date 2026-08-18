@@ -27,6 +27,24 @@ class OpenBankingIoAccount < ApplicationRecord
   # Accountable types whose balance Sure stores as a positive magnitude (money owed).
   DEBT_ACCOUNT_TYPES = %w[CreditCard Loan].freeze
 
+  # Encryptable#encryption_ready? asks ActiveRecordEncryptionConfig.explicitly_configured?,
+  # which is true only for env vars or credentials. But config/initializers/active_record_encryption.rb
+  # AUTO-DERIVES fully working keys from SECRET_KEY_BASE for self-hosted installs -- so in
+  # the most common deployment encryption is live at runtime while explicitly_configured?
+  # is false, and these columns would be declared unencrypted.
+  #
+  # That is survivable for an access token. It is not for a PKCS#8 ECDH private key: it is
+  # the one secret that decrypts every zero-knowledge envelope this provider ever fetches,
+  # and it would sit in plaintext in the table, in every backup and every replica.
+  #
+  # ready? adds runtime_configured?, which is the predicate that matches what is actually
+  # in force. Overridden here rather than in Encryptable because ~30 models share that
+  # concern and flipping it globally is a data migration -- whereas these tables are new,
+  # so getting it right costs nothing today and would cost a migration later.
+  def self.encryption_ready?
+    ActiveRecordEncryptionConfig.ready?
+  end
+
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
