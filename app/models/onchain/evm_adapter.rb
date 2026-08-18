@@ -36,6 +36,12 @@ class Onchain::EvmAdapter
     ADDRESS_PATTERN.match?(address.to_s.strip)
   end
 
+  # Hex is hex: the mixed case of a checksummed address carries no identity, so
+  # 0xABC… and 0xabc… are one wallet and must not become two.
+  def canonical_address(address)
+    address.to_s.strip.downcase
+  end
+
   # Deliberately asks the keyless backend: its address summary reports token
   # holdings as well as the coin balance, so a wallet holding only ERC-20 tokens
   # is still found, and it costs exactly one request. An explorer being down

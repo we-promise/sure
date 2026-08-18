@@ -11,6 +11,13 @@ module Onchain::ChainAdapter
     raise NotImplementedError, "#{self.class} must implement #valid_address?"
   end
 
+  # The form of an address this chain considers canonical, so that two spellings
+  # of the same address cannot become two wallets. Case matters on some chains and
+  # not others, which is why only the adapter can answer it.
+  def canonical_address(address)
+    address.to_s.strip
+  end
+
   # @param address [String]
   # @return [Onchain::Snapshot]
   def fetch_snapshot(_address)

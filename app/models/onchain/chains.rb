@@ -25,6 +25,12 @@ module Onchain
     # so `register` refuses it.
     INDEXED_TOKEN_KINDS = %w[erc20 spl].freeze
 
+    # Token kinds whose contract identifier carries no case: an EVM contract is
+    # hex, so 0xAbC and 0xabc are one token. An SPL mint is a Base58 public key
+    # where case is part of the value — downcasing one corrupts it, and two
+    # distinct mints can collide once folded.
+    CASE_INSENSITIVE_CONTRACT_KINDS = %w[erc20].freeze
+
     NativeAsset = Data.define(:symbol, :name, :decimals)
 
     Definition = Data.define(:key, :native, :token_kind, :adapter_class_name, :adapter_options) do
@@ -146,6 +152,19 @@ module Onchain
         return false unless definition
 
         definition.adapter.valid_address?(address)
+      end
+
+      def contract_case_sensitive?(asset_kind)
+        !CASE_INSENSITIVE_CONTRACT_KINDS.include?(asset_kind.to_s)
+      end
+
+      # The canonical spelling of an address on a chain, or the input stripped when
+      # the chain is unknown.
+      def canonical_address(key, address)
+        definition = find(key)
+        return address.to_s.strip unless definition
+
+        definition.adapter.canonical_address(address)
       end
 
       # Chains whose address format accepts this string. A 0x address matches

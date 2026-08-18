@@ -69,6 +69,11 @@ class OnchainWalletItemsController < ApplicationController
       @chain = detection.chain
     end
 
+    # Only now can the address be put in its canonical form: what counts as the
+    # same address is a per-chain question, and the duplicate check has to run on
+    # the canonical form or two spellings become two wallets.
+    @address = Onchain::Chains.canonical_address(@chain, @address)
+
     return render_new_wallet(t(".errors.already_linked")) if Current.family.onchain_address_linked?(@chain, @address)
 
     snapshot = fetch_snapshot(@chain, @address)
@@ -84,6 +89,8 @@ class OnchainWalletItemsController < ApplicationController
     @address = normalized_address
     @chain = requested_chain
     return render_new_wallet(t(".errors.unrecognized_address")) if @chain.blank? || @address.blank?
+
+    @address = Onchain::Chains.canonical_address(@chain, @address)
     return render_new_wallet(t(".errors.already_linked")) if Current.family.onchain_address_linked?(@chain, @address)
 
     item = Current.family.onchain_wallet_item!
@@ -138,7 +145,7 @@ class OnchainWalletItemsController < ApplicationController
   end
 
   def change_address
-    new_address = params[:new_address].to_s.strip
+    new_address = Onchain::Chains.canonical_address(@chain, params[:new_address])
 
     unless Onchain::Chains.valid_address?(@chain, new_address)
       return render_edit_wallet(t(".errors.invalid_address"))

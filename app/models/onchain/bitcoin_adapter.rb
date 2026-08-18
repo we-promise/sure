@@ -33,6 +33,14 @@ class Onchain::BitcoinAdapter
     BASE58_PATTERN.match?(candidate) || BECH32_PATTERN.match?(candidate)
   end
 
+  # Bech32 is case-insensitive and canonically lowercase — and the API reports it
+  # that way, so an uppercase input would otherwise match no output and silently
+  # produce zero movements. Base58 is case-sensitive and must be left alone.
+  def canonical_address(address)
+    candidate = address.to_s.strip
+    BECH32_PATTERN.match?(candidate) ? candidate.downcase : candidate
+  end
+
   def fetch_snapshot(address)
     raise Onchain::Chains::Error, "Invalid Bitcoin address" unless valid_address?(address)
 

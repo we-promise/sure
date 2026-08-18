@@ -32,6 +32,15 @@ class Onchain::BitcoinAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "bech32 is canonically lowercase while Base58 keeps its case" do
+    # An uppercase bech32 address is valid, but the API reports outputs in lower
+    # case: left as typed it yields a correct balance and silently zero movements.
+    assert_equal BECH32, @adapter.canonical_address(BECH32.upcase)
+    assert_equal TAPROOT, @adapter.canonical_address(" #{TAPROOT.upcase} ")
+    # Base58 is case-sensitive; folding it would change the address.
+    assert_equal P2PKH, @adapter.canonical_address(P2PKH)
+  end
+
   test "fetch_snapshot refuses a malformed address before any request" do
     assert_raises Onchain::Chains::Error do
       @adapter.fetch_snapshot("not-an-address")
