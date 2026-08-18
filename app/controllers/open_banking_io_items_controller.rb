@@ -93,7 +93,7 @@ class OpenBankingIoItemsController < ApplicationController
     @return_to = safe_return_to_path
     @open_banking_io_item = requested_open_banking_io_item
 
-    unless @open_banking_io_item.credentials_configured?
+    unless @open_banking_io_item&.credentials_configured?
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
@@ -109,7 +109,7 @@ class OpenBankingIoItemsController < ApplicationController
 
   def link_accounts
     open_banking_io_item = requested_open_banking_io_item
-    unless open_banking_io_item.credentials_configured?
+    unless open_banking_io_item&.credentials_configured?
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
@@ -165,7 +165,7 @@ class OpenBankingIoItemsController < ApplicationController
     end
 
     @open_banking_io_item = requested_open_banking_io_item
-    unless @open_banking_io_item.credentials_configured?
+    unless @open_banking_io_item&.credentials_configured?
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
@@ -184,7 +184,7 @@ class OpenBankingIoItemsController < ApplicationController
     account = Current.family.accounts.find(params[:account_id])
     open_banking_io_item = requested_open_banking_io_item
 
-    unless open_banking_io_item.credentials_configured?
+    unless open_banking_io_item&.credentials_configured?
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
@@ -295,8 +295,14 @@ class OpenBankingIoItemsController < ApplicationController
       t("open_banking_io_items.provider_panel.#{parsed.error_key}")
     end
 
+    # With an explicit id, that connection or 404. Without one, the family's first
+    # credentialed connection -- the account-picker entry point omits the id when the user
+    # has not set one up yet, and nil sends them to the credential form.
     def requested_open_banking_io_item
-      Current.family.open_banking_io_items.active.find_by!(id: params[:open_banking_io_item_id])
+      scope = Current.family.open_banking_io_items.active
+      return scope.find_by!(id: params[:open_banking_io_item_id]) if params[:open_banking_io_item_id].present?
+
+      scope.ordered.find(&:credentials_configured?)
     end
 
     def render_provider_panel(flash_type, message)

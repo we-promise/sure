@@ -11,9 +11,16 @@ class Provider::OpenBankingIoAdapter < Provider::Base
   def self.connection_configs(family:)
     return [] unless family.can_connect_open_banking_io?
 
-    family.open_banking_io_items.active.ordered.select(&:credentials_configured?).map do |open_banking_io_item|
-      connection_config_for(open_banking_io_item)
-    end
+    configured = family.open_banking_io_items.active.ordered.select(&:credentials_configured?)
+
+    # With no connection yet, still offer one entry. Returning [] here (what akahu and up
+    # do) hides the provider from "How would you like to add it?" entirely, so the only way
+    # to discover it is to already know to go to Settings -> Providers first. Mercury and
+    # Wise take this approach instead; the nil entry routes into the same flow, which sends
+    # the user to the credential form when there is nothing to link yet.
+    return [ connection_config_for(nil) ] if configured.empty?
+
+    configured.map { |open_banking_io_item| connection_config_for(open_banking_io_item) }
   end
 
   def self.build_provider(family: nil, open_banking_io_item_id: nil)
@@ -30,11 +37,13 @@ class Provider::OpenBankingIoAdapter < Provider::Base
   end
 
   def self.connection_config_for(open_banking_io_item)
-    path_params = ->(extra = {}) { extra.merge(open_banking_io_item_id: open_banking_io_item.id) }
+    path_params = ->(extra = {}) do
+      open_banking_io_item.present? ? extra.merge(open_banking_io_item_id: open_banking_io_item.id) : extra
+    end
 
     {
-      key: "open_banking_io_#{open_banking_io_item.id}",
-      name: open_banking_io_item.name.presence || I18n.t("providers.open_banking_io.name"),
+      key: open_banking_io_item.present? ? "open_banking_io_#{open_banking_io_item.id}" : "open_banking_io",
+      name: open_banking_io_item&.name.presence || I18n.t("providers.open_banking_io.name"),
       description: I18n.t("providers.open_banking_io.description"),
       can_connect: true,
       new_account_path: ->(accountable_type, return_to) {

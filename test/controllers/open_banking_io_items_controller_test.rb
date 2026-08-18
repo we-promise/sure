@@ -353,4 +353,25 @@ class OpenBankingIoItemsControllerTest < ActionDispatch::IntegrationTest
     }
     assert_redirected_to "/accounts"
   end
+
+  # The picker entry omits the item id when nothing is configured yet, so this must land on
+  # the credential form rather than 404ing on a missing id.
+  test "select_accounts without a connection sends the user to the credential form" do
+    assert_equal 0, @family.open_banking_io_items.count
+
+    get select_accounts_open_banking_io_items_url(accountable_type: "Depository")
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("open_banking_io_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
+
+  test "select_accounts with no id uses the family's configured connection" do
+    item = create_item
+    item.open_banking_io_accounts.create!(account_id: "a1", name: "Everyday", currency: "EUR")
+    OpenBankingIoItem.any_instance.stubs(:refresh_accounts_from_provider!).returns(nil)
+
+    get select_accounts_open_banking_io_items_url(accountable_type: "Depository")
+
+    assert_response :success
+  end
 end
