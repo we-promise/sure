@@ -152,8 +152,12 @@ class OpenBankingIoEntry::Processor
         BigDecimal(data[:amount])
       when Numeric
         BigDecimal(data[:amount].to_s)
+      when nil
+        # A missing amount must not become a zero-amount transaction -- a skipped row is
+        # recoverable on the next sync, a silently-zeroed one is not.
+        raise ArgumentError, "Missing transaction amount"
       else
-        BigDecimal("0")
+        BigDecimal(data[:amount].to_s)
       end.abs
 
       debit? ? magnitude : -magnitude
@@ -200,15 +204,45 @@ class OpenBankingIoEntry::Processor
     end
 
     def extra_metadata
+      metadata = {
+        "pending" => pending?,
+        "credit_debit_indicator" => data[:credit_debit_indicator],
+        "status" => data[:status],
+        "bank_transaction_code" => data[:bank_transaction_code],
+        "reference_number" => data[:reference_number],
+        "reference_number_schema" => data[:reference_number_schema],
+        "merchant_category_code" => data[:merchant_category_code],
+        # Counterparty identifiers. Decrypted from the envelope and previously discarded,
+        # which left transfer matching and support with nothing but a display name.
+        "creditor_iban" => data[:creditor_iban],
+        "creditor_bban" => data[:creditor_bban],
+        "creditor_agent_bic" => data[:creditor_agent_bic],
+        "debtor_iban" => data[:debtor_iban],
+        "debtor_bban" => data[:debtor_bban],
+        "debtor_agent_bic" => data[:debtor_agent_bic],
+        "balance_after" => data[:balance_after_transaction],
+        "balance_after_computed" => data[:balance_after_computed],
+        "balance_after_currency" => data[:balance_after_currency]
+      }.merge(fx_metadata).compact
+
+      { "open_banking_io" => metadata }
+    end
+
+    # The original pre-conversion amount, mirroring EnableBankingEntry::Processor -- the
+    # same ISO-20022 data, which open-banking.io flattens to instructedAmount/Currency.
+    #
+    # fx_date deliberately prefers value_date (when the money moved) over booking_date
+    # (when it settled) -- the reverse of the coalesce in #date, which wants the settlement
+    # date for the ledger. Matches SimpleFIN preferring transacted over posted.
+    def fx_metadata
+      original_currency = parse_currency(data[:instructed_currency])
+      return {} if original_currency.blank? || original_currency == currency
+
       {
-        "open_banking_io" => {
-          "pending" => pending?,
-          "credit_debit_indicator" => data[:credit_debit_indicator],
-          "status" => data[:status],
-          "bank_transaction_code" => data[:bank_transaction_code],
-          "reference_number" => data[:reference_number],
-          "merchant_category_code" => data[:merchant_category_code]
-        }.compact
+        "fx_from" => original_currency,
+        "fx_amount" => data[:instructed_amount],
+        "fx_rate" => data[:exchange_rate],
+        "fx_date" => (data[:value_date].presence || data[:transaction_date].presence || data[:booking_date].presence)&.to_s
       }
     end
 
