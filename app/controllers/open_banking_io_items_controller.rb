@@ -1,31 +1,16 @@
 class OpenBankingIoItemsController < ApplicationController
-  before_action :set_open_banking_io_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :set_open_banking_io_item, only: [ :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
   before_action :require_admin!, only: [
-    :new, :create, :preload_accounts, :select_accounts, :link_accounts,
-    :select_existing_account, :link_existing_account, :edit, :update,
+    :create, :select_accounts, :link_accounts,
+    :select_existing_account, :link_existing_account, :update,
     :destroy, :sync, :setup_accounts, :complete_account_setup
   ]
 
-  def index
-    @open_banking_io_items = Current.family.open_banking_io_items.active.ordered
-    render layout: "settings"
-  end
-
-  def show
-  end
-
-  def new
-    @open_banking_io_item = Current.family.open_banking_io_items.build
-  end
-
-  def edit
-  end
-
   def create
-    credentials, parse_error = parse_credentials(params.dig(:open_banking_io_item, :credentials_json))
-    return render_provider_panel_error(parse_error) if parse_error
+    parsed = OpenBankingIoItem::Credentials.parse(params.dig(:open_banking_io_item, :credentials_json))
+    return render_provider_panel_error(credentials_error(parsed)) unless parsed.valid?
 
-    @open_banking_io_item = Current.family.open_banking_io_items.build(create_params.merge(credentials))
+    @open_banking_io_item = Current.family.open_banking_io_items.build(create_params.merge(parsed.attributes))
     @open_banking_io_item.name = t("open_banking_io_items.provider_panel.default_connection_name") if @open_banking_io_item.name.blank?
 
     if @open_banking_io_item.save
@@ -39,8 +24,10 @@ class OpenBankingIoItemsController < ApplicationController
   def update
     credentials = {}
     if params.dig(:open_banking_io_item, :credentials_json).present?
-      credentials, parse_error = parse_credentials(params.dig(:open_banking_io_item, :credentials_json))
-      return render_provider_panel_error(parse_error) if parse_error
+      parsed = OpenBankingIoItem::Credentials.parse(params.dig(:open_banking_io_item, :credentials_json))
+      return render_provider_panel_error(credentials_error(parsed)) unless parsed.valid?
+
+      credentials = parsed.attributes
     end
 
     if @open_banking_io_item.update(update_params.merge(credentials))
@@ -86,20 +73,19 @@ class OpenBankingIoItemsController < ApplicationController
   end
 
   def sync
-    @open_banking_io_item.sync_later unless @open_banking_io_item.syncing?
+    if @open_banking_io_item.syncing?
+      notice = nil
+      alert = t(".already_syncing")
+    else
+      @open_banking_io_item.sync_later
+      notice = t(".started")
+      alert = nil
+    end
 
     respond_to do |format|
-      format.html { redirect_back_or_to accounts_path }
+      format.html { redirect_back_or_to accounts_path, notice: notice, alert: alert }
       format.json { head :ok }
     end
-  end
-
-  def preload_accounts
-    open_banking_io_item = requested_open_banking_io_item
-    return render json: { success: false, error: "no_credentials", has_accounts: false } unless open_banking_io_item.credentials_configured?
-
-    error = fetch_open_banking_io_accounts_from_api(open_banking_io_item)
-    render json: { success: error.blank?, error_message: error, has_accounts: open_banking_io_item.open_banking_io_accounts.exists? }
   end
 
   def select_accounts
@@ -112,7 +98,7 @@ class OpenBankingIoItemsController < ApplicationController
       return
     end
 
-    @api_error = fetch_open_banking_io_accounts_from_api(@open_banking_io_item)
+    @api_error = @open_banking_io_item.refresh_accounts_from_provider!
     @open_banking_io_accounts = @open_banking_io_item.open_banking_io_accounts
       .left_joins(:account_provider)
       .where(account_providers: { id: nil })
@@ -142,14 +128,23 @@ class OpenBankingIoItemsController < ApplicationController
 
     created_accounts = []
 
-    ActiveRecord::Base.transaction do
-      open_banking_io_item.open_banking_io_accounts.where(id: selected_ids).find_each do |open_banking_io_account|
-        next if open_banking_io_account.account_provider.present?
+    begin
+      ActiveRecord::Base.transaction do
+        open_banking_io_item.open_banking_io_accounts
+                            .where(id: selected_ids)
+                            .includes(:account_provider)
+                            .find_each do |open_banking_io_account|
+          next if open_banking_io_account.account_provider.present?
 
-        account = create_account_from_open_banking_io(open_banking_io_account, account_type)
-        AccountProvider.create!(account: account, provider: open_banking_io_account)
-        created_accounts << account
+          account = open_banking_io_account.build_linked_account!(family: Current.family, accountable_type: account_type)
+          AccountProvider.create!(account: account, provider: open_banking_io_account)
+          created_accounts << account
+        end
       end
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+      open_banking_io_item.capture_provider_error("Failed to link open-banking.io accounts", error: e)
+      redirect_to select_accounts_open_banking_io_items_path(open_banking_io_item_id: open_banking_io_item.id, accountable_type: account_type, return_to: safe_return_to_path), alert: t(".link_failed")
+      return
     end
 
     open_banking_io_item.sync_later if created_accounts.any?
@@ -175,7 +170,7 @@ class OpenBankingIoItemsController < ApplicationController
       return
     end
 
-    @api_error = fetch_open_banking_io_accounts_from_api(@open_banking_io_item)
+    @api_error = @open_banking_io_item.refresh_accounts_from_provider!
     @open_banking_io_accounts = @open_banking_io_item.open_banking_io_accounts
       .left_joins(:account_provider)
       .where(account_providers: { id: nil })
@@ -190,11 +185,16 @@ class OpenBankingIoItemsController < ApplicationController
     open_banking_io_item = requested_open_banking_io_item
 
     unless open_banking_io_item.credentials_configured?
-      redirect_to settings_providers_path, alert: t("open_banking_io_items.select_existing_account.no_credentials_configured")
+      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 
-    open_banking_io_account = open_banking_io_item.open_banking_io_accounts.find(params[:open_banking_io_account_id])
+    # find_by, not find: a stale modal should get a flash, not a bare 404.
+    open_banking_io_account = open_banking_io_item.open_banking_io_accounts.find_by(id: params[:open_banking_io_account_id])
+    if open_banking_io_account.nil?
+      redirect_to accounts_path, alert: t(".open_banking_io_account_not_found")
+      return
+    end
 
     if account.account_providers.exists?
       redirect_to accounts_path, alert: t(".account_already_linked")
@@ -206,14 +206,21 @@ class OpenBankingIoItemsController < ApplicationController
       return
     end
 
-    AccountProvider.create!(account: account, provider: open_banking_io_account)
+    begin
+      AccountProvider.create!(account: account, provider: open_banking_io_account)
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+      open_banking_io_item.capture_provider_error("Failed to link an existing account to open-banking.io", error: e)
+      redirect_to accounts_path, alert: t(".link_failed")
+      return
+    end
+
     open_banking_io_item.sync_later
 
     redirect_to safe_return_to_path || accounts_path, notice: t(".success", account_name: account.name)
   end
 
   def setup_accounts
-    @api_error = fetch_open_banking_io_accounts_from_api(@open_banking_io_item)
+    @api_error = @open_banking_io_item.refresh_accounts_from_provider!
     @open_banking_io_accounts = @open_banking_io_item.open_banking_io_accounts
       .left_joins(:account_provider)
       .where(account_providers: { id: nil })
@@ -248,7 +255,7 @@ class OpenBankingIoItemsController < ApplicationController
         next unless open_banking_io_account
         next if open_banking_io_account.account_provider.present?
 
-        account = create_account_from_open_banking_io(open_banking_io_account, selected_type)
+        account = open_banking_io_account.build_linked_account!(family: Current.family, accountable_type: selected_type)
         AccountProvider.create!(account: account, provider: open_banking_io_account)
         created_accounts << account
       end
@@ -284,104 +291,12 @@ class OpenBankingIoItemsController < ApplicationController
       params.require(:open_banking_io_item).permit(:name, :sync_start_date)
     end
 
-    # Parses the exported credentials.json bundle pasted by the user, extracting
-    # the fields the item stores. Returns [credentials_hash, error_message].
-    def parse_credentials(raw_json)
-      return [ {}, t("open_banking_io_items.provider_panel.credentials_required") ] if raw_json.blank?
-
-      bundle = JSON.parse(raw_json)
-      # Valid JSON can still be the wrong shape (null, an array, or an
-      # encryptionKey that isn't an object). Treat any non-hash bundle or
-      # encryptionKey as invalid credentials rather than letting the ensuing
-      # `[]`/`dig` raise NoMethodError/TypeError and bubble up as a 500.
-      return [ {}, t("open_banking_io_items.provider_panel.credentials_invalid") ] unless bundle.is_a?(Hash)
-
-      encryption_key = bundle["encryptionKey"]
-      encryption_key = {} unless encryption_key.is_a?(Hash)
-
-      api_base_url = bundle["apiBaseUrl"].presence
-      # Reads the apiKey field from the user's pasted JSON at request time; it is
-      # not a hardcoded secret and never appears in a URL. pipelock's "credential
-      # in URL" rule false-positives on this assignment next to api_base_url.
-      api_key = bundle["apiKey"].presence # pipelock:ignore
-      private_key = encryption_key["privateKey"].presence ||
-                    encryption_key["privateKeyPkcs8B64"].presence
-
-      if api_base_url.blank? || api_key.blank? || private_key.blank?
-        return [ {}, t("open_banking_io_items.provider_panel.credentials_invalid") ]
-      end
-
-      unless allowed_api_base_url?(api_base_url)
-        return [ {}, t("open_banking_io_items.provider_panel.credentials_invalid_url") ]
-      end
-
-      [ { api_base_url: api_base_url, api_key: api_key, private_key: private_key }, nil ]
-    rescue JSON::ParserError, TypeError, NoMethodError
-      [ {}, t("open_banking_io_items.provider_panel.credentials_invalid") ]
-    end
-
-    # SSRF guard: delegate to the model so the allow-list logic lives in exactly
-    # one place. Rejects internal IPs, plain http, and look-alike hosts such as
-    # "open-banking.io.evil.com".
-    def allowed_api_base_url?(url)
-      OpenBankingIoItem.allowed_api_base_url?(url)
+    def credentials_error(parsed)
+      t("open_banking_io_items.provider_panel.#{parsed.error_key}")
     end
 
     def requested_open_banking_io_item
       Current.family.open_banking_io_items.active.find_by!(id: params[:open_banking_io_item_id])
-    end
-
-    def fetch_open_banking_io_accounts_from_api(open_banking_io_item)
-      return t("open_banking_io_items.setup_accounts.no_credentials") unless open_banking_io_item.credentials_configured?
-
-      provider = open_banking_io_item.open_banking_io_provider
-      accounts = provider.get_accounts
-      accounts.each do |account_data|
-        account = account_data.with_indifferent_access
-        account_id = account[:id].presence
-        next if account_id.blank?
-
-        open_banking_io_account = open_banking_io_item.open_banking_io_accounts.find_or_initialize_by(account_id: account_id.to_s)
-        open_banking_io_account.upsert_open_banking_io_snapshot!(account)
-      end
-
-      nil
-    rescue Provider::OpenBankingIo::Error => e
-      Rails.logger.error("open-banking.io API error while fetching accounts: #{e.class}: #{e.message}")
-      t("open_banking_io_items.setup_accounts.api_error")
-    rescue StandardError => e
-      Rails.logger.error("Unexpected error fetching open-banking.io accounts: #{e.class}: #{e.message}")
-      t("open_banking_io_items.setup_accounts.api_error")
-    end
-
-    def create_account_from_open_banking_io(open_banking_io_account, account_type)
-      # Avoid seeding a bogus 0 when the bank returned no booked balance (only an
-      # available/ITAV balance leaves current_balance nil): fall back to the
-      # available balance before defaulting to 0, so a real balance isn't lost.
-      balance = open_banking_io_account.current_balance ||
-                open_banking_io_account.available_balance || 0
-      balance = balance.abs if account_type.in?(%w[CreditCard Loan])
-      subtype = if account_type == "CreditCard"
-        "credit_card"
-      elsif account_type == "Depository" && open_banking_io_account.suggested_account_type == account_type
-        open_banking_io_account.suggested_subtype
-      elsif account_type == "Investment" && open_banking_io_account.suggested_account_type == account_type
-        open_banking_io_account.suggested_subtype
-      end
-      cash_balance = account_type == "Investment" ? 0 : balance
-
-      Account.create_and_sync(
-        {
-          family: Current.family,
-          name: open_banking_io_account.name,
-          balance: balance,
-          cash_balance: cash_balance,
-          currency: open_banking_io_account.currency || "EUR",
-          accountable_type: account_type,
-          accountable_attributes: subtype.present? ? { subtype: subtype } : {}
-        },
-        skip_initial_sync: true
-      )
     end
 
     def render_provider_panel(flash_type, message)

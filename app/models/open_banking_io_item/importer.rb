@@ -17,7 +17,7 @@ class OpenBankingIoItem::Importer
     trigger_upstream_sync
 
     accounts_data = fetch_accounts_data
-    return failed_result("Failed to fetch accounts data") unless accounts_data
+    return failed_result(I18n.t("open_banking_io_item.errors.accounts_fetch_failed")) unless accounts_data
 
     open_banking_io_item.upsert_open_banking_io_snapshot!(accounts_data)
 
@@ -42,6 +42,19 @@ class OpenBankingIoItem::Importer
       transactions_imported: transaction_stats[:imported],
       transactions_failed: transaction_stats[:failed]
     }
+  end
+
+  # Accounts-only refresh for the interactive linking screens. Same path as #import's
+  # discovery step -- including its index_by preload and a wrapping transaction -- so the
+  # controller does not need its own copy that saves once per account.
+  def refresh_accounts_only
+    accounts_data = fetch_accounts_data
+    raise Provider::OpenBankingIo::Error.new(I18n.t("open_banking_io_item.errors.accounts_fetch_failed"), :fetch_failed) unless accounts_data
+
+    ActiveRecord::Base.transaction do
+      open_banking_io_item.upsert_open_banking_io_snapshot!(accounts_data)
+      import_accounts(accounts_data)
+    end
   end
 
   private

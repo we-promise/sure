@@ -15,10 +15,30 @@ zh-CN:
       reference: 参考号
   open_banking_io_item:
     errors:
+      stages:
+        import: "open-banking.io 导入"
+        account_processing: "open-banking.io 账户处理"
+        sync_scheduling: "open-banking.io 账户同步调度"
+      accounts_failed:
+        one: "1 个账户失败"
+        other: "%{count} 个账户失败"
+      transactions_failed_count:
+        one: "1 笔交易失败"
+        other: "%{count} 笔交易失败"
+      stage_failed: "%{stage}失败"
+      accounts_fetch_failed: "无法获取 open-banking.io 账户"
       account_processing_failed: 无法同步 open-banking.io 账户
       account_sync_schedule_failed: 无法安排 open-banking.io 账户同步
       transactions_failed: 无法获取 open-banking.io 交易
       sync_failed: 无法同步 open-banking.io 连接
+    syncer:
+      importing_accounts: "正在从 open-banking.io 导入账户…"
+      checking_configuration: "正在检查账户配置…"
+      accounts_need_setup:
+        one: "1 个账户需要设置…"
+        other: "%{count} 个账户需要设置…"
+      processing_transactions: "正在处理交易…"
+      calculating_balances: "正在计算余额…"
     sync_status:
       no_accounts: 未找到账户
       all_synced:
@@ -80,9 +100,15 @@ zh-CN:
       cancel: 取消
       link_account: 关联账户
     link_existing_account:
+      no_credentials_configured: 请先在提供商设置中配置 open-banking.io。
+      open_banking_io_account_not_found: "该 open-banking.io 账户已不可用。"
+      link_failed: 未关联任何账户。
       success: "已将 open-banking.io 账户关联到 %{account_name}。"
       account_already_linked: 此账户已关联到某个提供商。
       open_banking_io_account_already_linked: 此 open-banking.io 账户已关联。
+    sync:
+      already_syncing: "该连接正在同步中。"
+      started: "正在同步 open-banking.io 连接。"
     setup_accounts:
       title: 设置 open-banking.io 账户
       subtitle: 选择每个 open-banking.io 账户在 Sure 中的显示方式。

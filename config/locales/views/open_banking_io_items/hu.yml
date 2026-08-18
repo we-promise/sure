@@ -15,10 +15,30 @@ hu:
       reference: Hivatkozás
   open_banking_io_item:
     errors:
+      stages:
+        import: "open-banking.io importálás"
+        account_processing: "open-banking.io fiókfeldolgozás"
+        sync_scheduling: "open-banking.io fiókszinkronizálás ütemezése"
+      accounts_failed:
+        one: "1 fiók sikertelen"
+        other: "%{count} fiók sikertelen"
+      transactions_failed_count:
+        one: "1 tranzakció sikertelen"
+        other: "%{count} tranzakció sikertelen"
+      stage_failed: "%{stage} sikertelen"
+      accounts_fetch_failed: "Nem sikerült lekérni az open-banking.io fiókokat"
       account_processing_failed: Nem sikerült szinkronizálni az open-banking.io számlát
       account_sync_schedule_failed: Nem sikerült ütemezni az open-banking.io számla szinkronizálását
       transactions_failed: Nem sikerült lekérni az open-banking.io tranzakciókat
       sync_failed: Nem sikerült szinkronizálni az open-banking.io kapcsolatot
+    syncer:
+      importing_accounts: "Fiókok importálása az open-banking.io szolgáltatásból..."
+      checking_configuration: "Fiókbeállítások ellenőrzése..."
+      accounts_need_setup:
+        one: "1 fiók beállításra vár..."
+        other: "%{count} fiók beállításra vár..."
+      processing_transactions: "Tranzakciók feldolgozása..."
+      calculating_balances: "Egyenlegek számítása..."
     sync_status:
       no_accounts: Nem található számla
       all_synced:
@@ -80,9 +100,15 @@ hu:
       cancel: Mégse
       link_account: Számla összekapcsolása
     link_existing_account:
+      no_credentials_configured: Először állítsa be az open-banking.io szolgáltatót a szolgáltatói beállításokban.
+      open_banking_io_account_not_found: "Ez az open-banking.io fiók már nem érhető el."
+      link_failed: Egyetlen számla sem lett összekapcsolva.
       success: "open-banking.io számla összekapcsolva ezzel: %{account_name}."
       account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
       open_banking_io_account_already_linked: Ez az open-banking.io számla már össze van kapcsolva.
+    sync:
+      already_syncing: "Ez a kapcsolat már szinkronizál."
+      started: "Az open-banking.io kapcsolat szinkronizálása folyamatban."
     setup_accounts:
       title: open-banking.io számlák beállítása
       subtitle: Válassza ki, hogyan jelenjen meg minden open-banking.io számla a Sure alkalmazásban.

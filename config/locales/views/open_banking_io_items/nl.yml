@@ -15,10 +15,30 @@ nl:
       reference: Referentie
   open_banking_io_item:
     errors:
+      stages:
+        import: "open-banking.io-import"
+        account_processing: "verwerking van open-banking.io-rekeningen"
+        sync_scheduling: "plannen van open-banking.io-rekeningsynchronisatie"
+      accounts_failed:
+        one: "1 rekening mislukt"
+        other: "%{count} rekeningen mislukt"
+      transactions_failed_count:
+        one: "1 transactie mislukt"
+        other: "%{count} transacties mislukt"
+      stage_failed: "%{stage} is mislukt"
+      accounts_fetch_failed: "Kon de open-banking.io-rekeningen niet ophalen"
       account_processing_failed: Kan open-banking.io-rekening niet synchroniseren
       account_sync_schedule_failed: Kan synchronisatie van open-banking.io-rekening niet inplannen
       transactions_failed: Kan open-banking.io-transacties niet ophalen
       sync_failed: Kan open-banking.io-koppeling niet synchroniseren
+    syncer:
+      importing_accounts: "Rekeningen importeren van open-banking.io..."
+      checking_configuration: "Rekeningconfiguratie controleren..."
+      accounts_need_setup:
+        one: "1 rekening moet worden ingesteld..."
+        other: "%{count} rekeningen moeten worden ingesteld..."
+      processing_transactions: "Transacties verwerken..."
+      calculating_balances: "Saldi berekenen..."
     sync_status:
       no_accounts: Geen rekeningen gevonden
       all_synced:
@@ -80,9 +100,15 @@ nl:
       cancel: Annuleren
       link_account: Rekening koppelen
     link_existing_account:
+      no_credentials_configured: Stel open-banking.io eerst in bij de provider-instellingen.
+      open_banking_io_account_not_found: "Deze open-banking.io-rekening is niet meer beschikbaar."
+      link_failed: Er zijn geen rekeningen gekoppeld.
       success: "open-banking.io-rekening gekoppeld aan %{account_name}."
       account_already_linked: Deze rekening is al gekoppeld aan een provider.
       open_banking_io_account_already_linked: Deze open-banking.io-rekening is al gekoppeld.
+    sync:
+      already_syncing: "Deze verbinding wordt al gesynchroniseerd."
+      started: "open-banking.io-verbinding wordt gesynchroniseerd."
     setup_accounts:
       title: open-banking.io-rekeningen instellen
       subtitle: Kies hoe elke open-banking.io-rekening in Sure moet verschijnen.

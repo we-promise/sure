@@ -15,10 +15,30 @@ ca:
       reference: Referència
   open_banking_io_item:
     errors:
+      stages:
+        import: "importació d'open-banking.io"
+        account_processing: "processament de comptes d'open-banking.io"
+        sync_scheduling: "planificació de la sincronització de comptes d'open-banking.io"
+      accounts_failed:
+        one: "1 compte amb errors"
+        other: "%{count} comptes amb errors"
+      transactions_failed_count:
+        one: "1 transacció amb errors"
+        other: "%{count} transaccions amb errors"
+      stage_failed: "%{stage} ha fallat"
+      accounts_fetch_failed: "No s'han pogut obtenir els comptes d'open-banking.io"
       account_processing_failed: No s'ha pogut sincronitzar el compte d'open-banking.io
       account_sync_schedule_failed: No s'ha pogut programar la sincronització del compte d'open-banking.io
       transactions_failed: No s'han pogut obtenir les transaccions d'open-banking.io
       sync_failed: No s'ha pogut sincronitzar la connexió d'open-banking.io
+    syncer:
+      importing_accounts: "S'estan important comptes des d'open-banking.io..."
+      checking_configuration: "S'està comprovant la configuració dels comptes..."
+      accounts_need_setup:
+        one: "1 compte necessita configuració..."
+        other: "%{count} comptes necessiten configuració..."
+      processing_transactions: "S'estan processant les transaccions..."
+      calculating_balances: "S'estan calculant els saldos..."
     sync_status:
       no_accounts: No s'ha trobat cap compte
       all_synced:
@@ -80,9 +100,15 @@ ca:
       cancel: Cancel·la
       link_account: Vincula el compte
     link_existing_account:
+      no_credentials_configured: Configura primer open-banking.io a la configuració del proveïdor.
+      open_banking_io_account_not_found: "Aquest compte d'open-banking.io ja no està disponible."
+      link_failed: No s'ha vinculat cap compte.
       success: "S'ha vinculat el compte d'open-banking.io a %{account_name}."
       account_already_linked: Aquest compte ja està vinculat a un proveïdor.
       open_banking_io_account_already_linked: Aquest compte d'open-banking.io ja està vinculat.
+    sync:
+      already_syncing: "Aquesta connexió ja s'està sincronitzant."
+      started: "Sincronitzant la connexió d'open-banking.io."
     setup_accounts:
       title: Configura els comptes d'open-banking.io
       subtitle: Tria com ha d'aparèixer cada compte d'open-banking.io a Sure.

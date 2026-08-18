@@ -200,7 +200,7 @@ class OpenBankingIoEntry::Processor
     end
 
     def currency
-      parse_currency(data[:currency]) || open_banking_io_account.currency || account&.currency || "EUR"
+      parse_currency(data[:currency]) || open_banking_io_account.currency || account&.currency || OpenBankingIoAccount::DEFAULT_CURRENCY
     end
 
     def extra_metadata

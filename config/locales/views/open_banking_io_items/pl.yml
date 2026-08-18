@@ -15,10 +15,30 @@ pl:
       reference: Numer referencyjny
   open_banking_io_item:
     errors:
+      stages:
+        import: "import open-banking.io"
+        account_processing: "przetwarzanie kont open-banking.io"
+        sync_scheduling: "planowanie synchronizacji kont open-banking.io"
+      accounts_failed:
+        one: "1 konto zakończone niepowodzeniem"
+        other: "Konta zakończone niepowodzeniem: %{count}"
+      transactions_failed_count:
+        one: "1 transakcja zakończona niepowodzeniem"
+        other: "Transakcje zakończone niepowodzeniem: %{count}"
+      stage_failed: "%{stage} — niepowodzenie"
+      accounts_fetch_failed: "Nie udało się pobrać kont open-banking.io"
       account_processing_failed: Nie udało się zsynchronizować konta open-banking.io
       account_sync_schedule_failed: Nie udało się zaplanować synchronizacji konta open-banking.io
       transactions_failed: Nie udało się pobrać transakcji open-banking.io
       sync_failed: Nie udało się zsynchronizować połączenia open-banking.io
+    syncer:
+      importing_accounts: "Importowanie kont z open-banking.io..."
+      checking_configuration: "Sprawdzanie konfiguracji kont..."
+      accounts_need_setup:
+        one: "1 konto wymaga konfiguracji..."
+        other: "Liczba kont wymagających konfiguracji: %{count}..."
+      processing_transactions: "Przetwarzanie transakcji..."
+      calculating_balances: "Obliczanie sald..."
     sync_status:
       no_accounts: Nie znaleziono kont
       all_synced:
@@ -80,9 +100,15 @@ pl:
       cancel: Anuluj
       link_account: Powiąż konto
     link_existing_account:
+      no_credentials_configured: Najpierw skonfiguruj open-banking.io w ustawieniach dostawcy.
+      open_banking_io_account_not_found: "To konto open-banking.io nie jest już dostępne."
+      link_failed: Nie powiązano żadnych kont.
       success: "Powiązano konto open-banking.io z %{account_name}."
       account_already_linked: To konto jest już powiązane z dostawcą.
       open_banking_io_account_already_linked: To konto open-banking.io jest już powiązane.
+    sync:
+      already_syncing: "To połączenie jest już synchronizowane."
+      started: "Synchronizowanie połączenia open-banking.io."
     setup_accounts:
       title: Skonfiguruj konta open-banking.io
       subtitle: Wybierz, jak każde konto open-banking.io ma być wyświetlane w Sure.

@@ -15,10 +15,30 @@ vi:
       reference: Tham chiếu
   open_banking_io_item:
     errors:
+      stages:
+        import: "nhập dữ liệu open-banking.io"
+        account_processing: "xử lý tài khoản open-banking.io"
+        sync_scheduling: "lên lịch đồng bộ tài khoản open-banking.io"
+      accounts_failed:
+        one: "1 tài khoản thất bại"
+        other: "%{count} tài khoản thất bại"
+      transactions_failed_count:
+        one: "1 giao dịch thất bại"
+        other: "%{count} giao dịch thất bại"
+      stage_failed: "%{stage} thất bại"
+      accounts_fetch_failed: "Không thể tải danh sách tài khoản open-banking.io"
       account_processing_failed: Không thể đồng bộ tài khoản open-banking.io
       account_sync_schedule_failed: Không thể lên lịch đồng bộ tài khoản open-banking.io
       transactions_failed: Không thể tải giao dịch open-banking.io
       sync_failed: Không thể đồng bộ kết nối open-banking.io
+    syncer:
+      importing_accounts: "Đang nhập tài khoản từ open-banking.io..."
+      checking_configuration: "Đang kiểm tra cấu hình tài khoản..."
+      accounts_need_setup:
+        one: "1 tài khoản cần được thiết lập..."
+        other: "%{count} tài khoản cần được thiết lập..."
+      processing_transactions: "Đang xử lý giao dịch..."
+      calculating_balances: "Đang tính số dư..."
     sync_status:
       no_accounts: Không tìm thấy tài khoản nào
       all_synced:
@@ -80,9 +100,15 @@ vi:
       cancel: Hủy
       link_account: Liên kết tài khoản
     link_existing_account:
+      no_credentials_configured: Hãy cấu hình open-banking.io trong cài đặt nhà cung cấp trước.
+      open_banking_io_account_not_found: "Tài khoản open-banking.io này không còn khả dụng."
+      link_failed: Không có tài khoản nào được liên kết.
       success: "Đã liên kết tài khoản open-banking.io với %{account_name}."
       account_already_linked: Tài khoản này đã được liên kết với một nhà cung cấp.
       open_banking_io_account_already_linked: Tài khoản open-banking.io này đã được liên kết.
+    sync:
+      already_syncing: "Kết nối này đang được đồng bộ."
+      started: "Đang đồng bộ kết nối open-banking.io."
     setup_accounts:
       title: Thiết lập tài khoản open-banking.io
       subtitle: Chọn cách mỗi tài khoản open-banking.io hiển thị trong Sure.
