@@ -14,6 +14,14 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
     count_modified_resources(scope) do |txn|
       entry = txn.entry
+      # Converting a purchase to EMI and converting it to a transfer are
+      # mutually exclusive operations. Skip silently here (same as the
+      # existing txn.transfer? skip below) rather than let it reach
+      # Transaction#update! and raise past
+      # cannot_change_kind_of_active_emi_entry mid-batch, which would halt
+      # every other transaction in this rule run.
+      next false if entry.emi_purchase? || entry.emi_installment?
+
       unless txn.transfer?
         transfer = build_transfer(target_account, entry)
         Transfer.transaction do
