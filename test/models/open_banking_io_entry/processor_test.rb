@@ -241,4 +241,57 @@ class OpenBankingIoEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal 2, @account.entries.where("external_id LIKE ?", "open_banking_io_pending_%").count
   end
+
+  # === COUNTERPARTY IDENTIFIERS AND FX ===
+  # These arrive inside the decrypted envelope and used to be dropped on the floor by
+  # Provider::OpenBankingIo#transaction_hash before the entry processor ever saw them.
+  test "carries counterparty identifiers into the provider extra" do
+    entry = process(
+      id: "tx_ids",
+      creditor_iban: "DK5000400440116243", creditor_bban: "00400440116243", creditor_agent_bic: "NDEADKKK",
+      debtor_iban: "DK9520000123456789", debtor_bban: "20000123456789", debtor_agent_bic: "NYKBDKKK",
+      reference_number_schema: "SCOR"
+    )
+    obio = entry.entryable.extra["open_banking_io"]
+
+    assert_equal "DK5000400440116243", obio["creditor_iban"]
+    assert_equal "00400440116243", obio["creditor_bban"]
+    assert_equal "NDEADKKK", obio["creditor_agent_bic"]
+    assert_equal "DK9520000123456789", obio["debtor_iban"]
+    assert_equal "NYKBDKKK", obio["debtor_agent_bic"]
+    assert_equal "SCOR", obio["reference_number_schema"]
+  end
+
+  test "records FX metadata when the instructed currency differs from the account currency" do
+    entry = process(
+      id: "tx_fx", currency: "EUR", amount: "92.10",
+      instructed_amount: "100.00", instructed_currency: "USD", exchange_rate: "0.921",
+      value_date: "2026-01-16", booking_date: "2026-01-18"
+    )
+    obio = entry.entryable.extra["open_banking_io"]
+
+    assert_equal "USD", obio["fx_from"]
+    assert_equal "100.00", obio["fx_amount"]
+    assert_equal "0.921", obio["fx_rate"]
+    # value_date, not booking_date: the rate applied when the money moved.
+    assert_equal "2026-01-16", obio["fx_date"]
+  end
+
+  test "omits FX metadata for a same-currency transaction" do
+    entry = process(id: "tx_nofx", currency: "EUR", instructed_currency: "EUR", instructed_amount: "12.50")
+    obio = entry.entryable.extra["open_banking_io"]
+
+    assert_nil obio["fx_from"]
+    assert_nil obio["fx_amount"]
+  end
+
+  test "omits FX metadata when the provider sends no instructed currency" do
+    entry = process(id: "tx_plain")
+    assert_nil entry.entryable.extra["open_banking_io"]["fx_from"]
+  end
+
+  # A missing amount must fail the row rather than importing it as 0.00.
+  test "raises rather than importing a transaction with no amount" do
+    assert_raises(ArgumentError) { process(id: "tx_noamount", amount: nil) }
+  end
 end

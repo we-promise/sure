@@ -90,9 +90,14 @@ class Provider::OpenBankingIo
     :remittance_information,
     :note,
     :reference_number,
+    :reference_number_schema,
     :exchange_rate,
     :merchant_category_code,
+    # FX: the amount and currency the user actually agreed to, before conversion.
+    :instructed_amount,           # BigDecimal or nil
+    :instructed_currency,
     :balance_after_transaction,   # BigDecimal or nil
+    :balance_after_computed,      # true when the service derived it rather than the bank reporting it
     :balance_after_currency,
     keyword_init: true
   )
@@ -314,9 +319,13 @@ class Provider::OpenBankingIo
           remittance_information: d["remittanceInformation"],
           note: d["note"],
           reference_number: d["referenceNumber"],
+          reference_number_schema: d["referenceNumberSchema"],
           exchange_rate: d["exchangeRate"],
           merchant_category_code: d["merchantCategoryCode"],
+          instructed_amount: parse_decimal_nullable(d["instructedAmount"]),
+          instructed_currency: d["instructedCurrency"],
           balance_after_transaction: parse_decimal_nullable(d["balanceAfter"]),
+          balance_after_computed: d["balanceAfterComputed"] == "true",
           balance_after_currency: d["balanceAfterCurrency"]
         )
       end
@@ -516,19 +525,36 @@ class Provider::OpenBankingIo
         bank_transaction_code: txn.bank_transaction_code,
         amount: decimal_string(txn.amount),
         creditor_name: txn.creditor_name,
+        creditor_iban: txn.creditor_iban,
+        creditor_bban: txn.creditor_bban,
+        creditor_agent_bic: txn.creditor_agent_bic,
         debtor_name: txn.debtor_name,
+        debtor_iban: txn.debtor_iban,
+        debtor_bban: txn.debtor_bban,
+        debtor_agent_bic: txn.debtor_agent_bic,
         remittance_information: txn.remittance_information,
         note: txn.note,
         reference_number: txn.reference_number,
+        reference_number_schema: txn.reference_number_schema,
+        exchange_rate: txn.exchange_rate,
         merchant_category_code: txn.merchant_category_code,
+        instructed_amount: decimal_string(txn.instructed_amount),
+        instructed_currency: txn.instructed_currency,
         balance_after_transaction: decimal_string(txn.balance_after_transaction),
+        balance_after_computed: txn.balance_after_computed,
         balance_after_currency: txn.balance_after_currency
       }
     end
 
+    # Parse-or-raise. Returning nil for an unexpected shape would be silent corruption:
+    # OpenBankingIoEntry::Processor#amount turns a nil amount into a zero-amount
+    # transaction rather than failing.
     def decimal_string(value)
       return nil if value.nil?
+      return value.to_s("F") if value.is_a?(BigDecimal)
 
-      value.to_s("F") if value.is_a?(BigDecimal)
+      BigDecimal(value.to_s).to_s("F")
+    rescue ArgumentError, TypeError
+      raise Error.new("open-banking.io returned an unparseable decimal (#{value.class})", :invalid_response)
     end
 end
