@@ -33,6 +33,14 @@
              icon: "pencil",
              href: edit_recurring_transaction_path(@series),
              data: { turbo_frame: :modal }) %>
+        <% if bills_one_shot_ai_available? %>
+          <% menu.with_item(
+               variant: "link",
+               text: t("bills.smart_configurations.show.trigger"),
+               icon: "sparkles",
+               href: smart_configuration_bill_path(@series),
+               data: { turbo_frame: :modal }) %>
+        <% end %>
         <% menu.with_item(
              variant: "button",
              text: @series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),

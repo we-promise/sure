@@ -78,14 +78,19 @@ module Assistant::Function::BillsSupport
     def serialize_occurrence(occurrence)
       return nil if occurrence.nil?
 
+      # Read once, derive locally: resolved_expected_amount is unmemoized and
+      # can cost two queries per call under the `last` amount strategy.
+      expected = occurrence.resolved_expected_amount
+      paid = occurrence.confirmed_allocated
+
       {
         due_on: occurrence.due_on.iso8601,
         effective_due_on: occurrence.effective_due_on.iso8601,
         state: occurrence.derived_state.to_s,
-        expected: occurrence.resolved_expected_amount_money.format,
-        paid: occurrence.confirmed_allocated_money.format,
-        remaining: occurrence.remaining_amount_money.format,
-        partially_paid: occurrence.partially_paid?
+        expected: Money.new(expected, occurrence.currency).format,
+        paid: Money.new(paid, occurrence.currency).format,
+        remaining: Money.new([ expected - paid, 0 ].max, occurrence.currency).format,
+        partially_paid: occurrence.scheduled? && paid.positive? && paid < expected
       }
     end
 
@@ -121,5 +126,14 @@ module Assistant::Function::BillsSupport
     # rather than spending it, so both stay out of any totals row.
     def spend_series?(series)
       !%w[income transfer].include?(series.bill_type)
+    end
+
+    # How far a price moved, as a signed percent of what it was. nil when
+    # there is no previous amount to compare against.
+    def percent_change(previous_amount, new_amount)
+      previous = previous_amount.abs
+      return nil if previous.zero?
+
+      (((new_amount.abs - previous) / previous) * 100).round(1).to_f
     end
 end

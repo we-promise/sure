@@ -32,13 +32,16 @@ All triggers share one per-family lock, so concurrent runs never stack.
 
 ## First run on existing data
 
-The first pipeline run on a family that has recurring series but no
-materialized occurrences (the signature of an instance upgraded from a
-build without the Bills subsystem) automatically backfills the last six
-months of history: past occurrences are generated and closed as paid
-where a real transaction anchors them. Past occurrences no transaction
-covers are deleted rather than shown as missed, so the backfill
-reconstructs what happened without fabricating debt.
+The user-triggered detection actions (the **Find recurring transactions**
+button on an empty Bills page and the **Identify Patterns** button under
+Settings -> Recurring transactions) backfill the last six months of
+history: past occurrences are generated and closed as paid where a real
+transaction anchors them. Past occurrences no transaction covers are
+deleted rather than shown as missed, so the backfill reconstructs what
+happened without fabricating debt. The backfill is idempotent, so
+re-running detection never duplicates history. Background syncs never
+backfill; on an instance upgraded from a build without the Bills
+subsystem, run either detection action once to reconstruct history.
 
 Confirming an individual suggestion likewise backfills that bill's own
 history, so a just-confirmed bill shows its lived past instead of

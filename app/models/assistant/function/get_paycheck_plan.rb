@@ -47,7 +47,7 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
     return recurring_disabled_result if recurring_disabled?
 
     planner = RecurringTransaction::PaycheckPlanner.new(family, user: user)
-    limit = (params["periods_limit"] || 3).to_i.clamp(1, 6)
+    limit = (Integer(params["periods_limit"].to_s, exception: false) || 3).clamp(1, 6)
     periods = planner.plan(periods_limit: limit)
 
     if periods.nil?

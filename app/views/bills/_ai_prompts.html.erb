@@ -3,7 +3,7 @@
     POSTs chats#create into the sidebar frame (the same mechanism the chat's
     own sample questions use) and makes sure the sidebar is visible. Hidden
     entirely without AI consent + a configured provider. %>
-<% if Current.user.ai_enabled? %>
+<% if bills_one_shot_ai_available? %>
   <div class="flex flex-wrap items-center gap-2">
     <% prompts.each do |prompt| %>
       <%= button_to chats_path,

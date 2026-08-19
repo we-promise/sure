@@ -1240,7 +1240,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("bills.index.empty.title"), response.body
   end
 
-  test "AI chips and the review button render only for AI-consented users" do
+  test "AI chips and the review button need both consent and a provider" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
     get bills_url
     assert_response :success
     # Apostrophe-free fragment: response bodies HTML-escape apostrophes.
@@ -1253,6 +1254,28 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_no_match "due before my next paycheck", response.body
     assert_no_match I18n.t("bills.index.review_with_ai"), response.body
+
+    # Consent without a configured provider is a button to a dead chat.
+    @user.update!(ai_enabled: true)
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    get bills_url
+    assert_response :success
+    assert_no_match "due before my next paycheck", response.body
+    assert_no_match I18n.t("bills.index.review_with_ai"), response.body
+  end
+
+  test "the bill page offers smart configure only when AI is available" do
+    bill = create_bill(name: "Power Co", amount: 80)
+
+    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    get bill_url(bill)
+    assert_response :success
+    assert_match smart_configuration_bill_path(bill), response.body
+
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    get bill_url(bill)
+    assert_response :success
+    assert_no_match smart_configuration_bill_path(bill), response.body
   end
 
   test "the suggested strip only shows series on accounts the member can reach" do

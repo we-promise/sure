@@ -130,16 +130,9 @@ class Assistant::Function::GetBillDetails < Assistant::Function
           effective_on: change.effective_on.iso8601,
           previous_amount: Money.new(change.previous_amount, change.currency).abs.format,
           new_amount: Money.new(change.new_amount, change.currency).abs.format,
-          percent_change: percent_change(change),
+          percent_change: percent_change(change.previous_amount, change.new_amount),
           source: change.source
         }
       end
-    end
-
-    def percent_change(change)
-      previous = change.previous_amount.abs
-      return nil if previous.zero?
-
-      (((change.new_amount.abs - previous) / previous) * 100).round(1).to_f
     end
 end

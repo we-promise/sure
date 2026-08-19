@@ -18,6 +18,9 @@
           unchecked, because FrequencyPreset.apply no-ops without a preset. %>
       <%= form_with url: recurring_transaction_path(@series), method: :patch,
                     data: { turbo_frame: :_top } do %>
+        <%# Keeps an all-unchecked submit a harmless no-op: params.require is
+            satisfied, and this unpermitted key is dropped on the other side. %>
+        <%= hidden_field_tag "recurring_transaction[_ai_review]", "1" %>
         <div class="space-y-1">
           <p class="text-sm text-secondary mb-2"><%= t(".intro") %></p>
 
@@ -41,7 +44,7 @@
                   name: "recurring_transaction[frequency_preset]", value: @suggestion.frequency,
                   label: t(".field_schedule"),
                   current: frequency_label(@series),
-                  proposed: t("recurring_transactions.frequency_presets.#{@suggestion.frequency}", default: @suggestion.frequency.humanize) %>
+                  proposed: t("recurring_transactions.frequency_presets.#{@suggestion.frequency}") %>
             <%= hidden_field_tag "recurring_transaction[frequency_day_of_month]",
                   @suggestion.day_of_month || @detection.day_of_month %>
             <%= hidden_field_tag "recurring_transaction[frequency_weekday]",
@@ -62,7 +65,8 @@
             <%= render "bills/smart_configurations/proposal",
                   name: "recurring_transaction[bill_type]", value: @suggestion.bill_type,
                   label: t(".field_kind"),
-                  current: @series.bill_type.humanize, proposed: @suggestion.bill_type.humanize %>
+                  current: t("bills.all.types.#{@series.bill_type}"),
+                  proposed: t("bills.all.types.#{@suggestion.bill_type}") %>
           <% end %>
 
           <% if @suggestion.autopay && !@series.autopay %>

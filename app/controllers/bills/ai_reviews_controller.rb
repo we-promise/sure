@@ -1,5 +1,8 @@
 class Bills::AiReviewsController < ApplicationController
-  guard_feature unless: -> { Current.user.ai_enabled? }
+  include BillsHelper
+  include RecurringFeatureGuardable
+
+  guard_feature unless: -> { bills_one_shot_ai_available? }
   before_action :ensure_recurring_enabled
 
   # Server-owned on purpose: the button must not become a vector for
@@ -18,9 +21,4 @@ class Bills::AiReviewsController < ApplicationController
 
     redirect_to chat_path(chat, thinking: true)
   end
-
-  private
-    def ensure_recurring_enabled
-      redirect_to root_path if Current.family.recurring_transactions_disabled?
-    end
 end

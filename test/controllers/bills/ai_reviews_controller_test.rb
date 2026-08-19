@@ -6,6 +6,8 @@ class Bills::AiReviewsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "seeds a chat with the server-owned review prompt" do
+    stub_provider
+
     assert_difference "@user.chats.count", 1 do
       post ai_review_bills_url
     end
@@ -17,6 +19,7 @@ class Bills::AiReviewsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "forbidden when AI is disabled" do
+    stub_provider
     @user.update!(ai_enabled: false)
 
     post ai_review_bills_url
@@ -24,7 +27,16 @@ class Bills::AiReviewsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "forbidden without an LLM provider" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    post ai_review_bills_url
+
+    assert_response :forbidden
+  end
+
   test "redirects when the family has recurring transactions off" do
+    stub_provider
     @user.family.update!(recurring_transactions_disabled: true)
 
     post ai_review_bills_url
@@ -36,4 +48,10 @@ class Bills::AiReviewsControllerTest < ActionDispatch::IntegrationTest
     route = Rails.application.routes.recognize_path("/bills/ai_review", method: :get)
     assert_equal "show", route[:action], "GET must never reach the review action"
   end
+
+  private
+
+    def stub_provider
+      Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    end
 end

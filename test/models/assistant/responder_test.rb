@@ -30,38 +30,19 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     assert_equal 8, Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS
   end
 
-  test "final round requests carry no tools so the model must answer in text" do
+  test "a model that never stops calling tools hits the cap and raises" do
     function_request = Provider::LlmConcept::ChatFunctionRequest.new(
       id: "1", call_id: "1", function_name: "echo", function_args: "{}"
     )
     tool_response = Provider::LlmConcept::ChatResponse.new(
       id: "1", model: "gpt-4.1", messages: [], function_requests: [ function_request ]
     )
-    text_response = Provider::LlmConcept::ChatResponse.new(
-      id: "2", model: "gpt-4.1",
-      messages: [ Provider::LlmConcept::ChatMessage.new(id: "2", output_text: "Here is what I found") ],
-      function_requests: []
-    )
 
-    functions_seen = []
-
-    @llm.stubs(:chat_response).with do |_prompt, **kwargs|
-      functions_seen << kwargs[:functions]
-      true
-    end.returns(
-      provider_success_response(tool_response),
-      provider_success_response(tool_response),
-      provider_success_response(text_response)
-    )
+    @llm.stubs(:chat_response).returns(provider_success_response(tool_response))
 
     with_iteration_cap(2) do
-      @responder.respond
+      assert_raises(Assistant::Responder::ToolCallLimitError) { @responder.respond }
     end
-
-    # First request offers tools; the request after the final permitted round
-    # must offer none.
-    assert_operator functions_seen.size, :>=, 2
-    assert_equal [], functions_seen.last
   end
 
   private

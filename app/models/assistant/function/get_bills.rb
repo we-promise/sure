@@ -74,7 +74,7 @@ class Assistant::Function::GetBills < Assistant::Function
       scope = scope.where(bill_type: bill_type)
     end
 
-    if (search = params["search"]).present?
+    if (search = params["search"].to_s).present?
       pattern = "%#{ActiveRecord::Base.sanitize_sql_like(search)}%"
       scope = scope.left_joins(:merchant)
                    .where("recurring_transactions.name ILIKE :p OR merchants.name ILIKE :p", p: pattern)
@@ -84,8 +84,9 @@ class Assistant::Function::GetBills < Assistant::Function
     currents = rows.index_with { |series| current_occurrence_from_loaded(series) }
     preload_allocation_sums(currents.values)
 
-    if (days = params["due_within_days"]).present?
-      horizon = Date.current + days.to_i.clamp(1, 365)
+    # Integer(..., exception: false): MCP clients send whatever they like.
+    if (days = Integer(params["due_within_days"].to_s, exception: false))
+      horizon = Date.current + days.clamp(1, 365)
       rows = rows.select { |series| series.next_due_date.present? && series.next_due_date <= horizon }
     end
 
@@ -109,10 +110,7 @@ class Assistant::Function::GetBills < Assistant::Function
     def apply_status_filter(scope, status)
       return scope if status == "all"
 
-      stored = STATUS_VOCABULARY.fetch(status.presence || "active", nil)
-      return scope.where(status: STATUS_VOCABULARY.fetch("active")) if stored.nil?
-
-      scope.where(status: stored)
+      scope.where(status: STATUS_VOCABULARY.fetch(status.presence || "active", STATUS_VOCABULARY.fetch("active")))
     end
 
     def payment_state_matches?(occurrence, state)

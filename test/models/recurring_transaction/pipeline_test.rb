@@ -16,10 +16,9 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
         create_entry(amount: 42.50, date: Date.new(2026, 8, 9) - i.months, name: "CITY POWER")
       end
 
-      result = Pipeline.new(@family).run!
+      patterns_count = Pipeline.new(@family).run!
 
-      refute result.locked?
-      assert_operator result.patterns_count, :>=, 1
+      assert_operator patterns_count, :>=, 1
 
       series = @family.recurring_transactions.find_by(name: "CITY POWER")
       assert series.present?, "detection must create the series"
@@ -30,44 +29,46 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
     end
   end
 
-  test "run! materializes active series and backfills history exactly once" do
+  test "run! with backfill reconstructs history and is idempotent" do
     travel_to Date.new(2026, 8, 10) do
       series = create_series(name: "CITY WATER", amount: 80, day_offset: -1)
       3.times do |i|
         create_entry(amount: 80, date: Date.new(2026, 8, 9) - (i + 1).months, name: "CITY WATER")
       end
 
-      # The upgraded-instance signature: series exist, occurrences never
+      # The upgraded-instance shape: series exist, occurrences never
       # materialized (creation auto-generates, so wipe them).
+      RecurringOccurrence.where(recurring_transaction: series).delete_all
+      assert @family.recurring_occurrences.none?
+
+      Pipeline.new(@family).run!(backfill: true)
+
+      historical = series.recurring_occurrences.where("due_on < ?", Date.new(2026, 8, 1))
+      assert_operator historical.paid.count, :>=, 1,
+        "the backfill reconstructs paid history from real entries"
+
+      # Backfilling again reconstructs nothing twice.
+      before_ids = series.recurring_occurrences.order(:id).pluck(:id)
+      Pipeline.new(@family).run!(backfill: true)
+      assert_equal before_ids, series.recurring_occurrences.order(:id).pluck(:id)
+    end
+  end
+
+  test "run! without backfill never reconstructs history" do
+    travel_to Date.new(2026, 8, 10) do
+      series = create_series(name: "CITY GAS", amount: 55, day_offset: -1)
+      create_entry(amount: 55, date: Date.new(2026, 6, 9), name: "CITY GAS")
+
+      # Even in the upgraded-instance shape (zero occurrences), a plain run
+      # must not backfill: background syncs keep their old cost profile.
       RecurringOccurrence.where(recurring_transaction: series).delete_all
       assert @family.recurring_occurrences.none?
 
       Pipeline.new(@family).run!
 
-      historical = series.recurring_occurrences.where("due_on < ?", Date.new(2026, 8, 1))
-      assert_operator historical.paid.count, :>=, 1,
-        "first run reconstructs paid history from real entries"
-
-      # Second run: not first-run any more; nothing new appears.
-      before_ids = series.recurring_occurrences.order(:id).pluck(:id)
-      Pipeline.new(@family).run!
-      assert_equal before_ids, series.recurring_occurrences.order(:id).pluck(:id)
-    end
-  end
-
-  test "an existing occurrence suppresses the first-run backfill" do
-    travel_to Date.new(2026, 8, 10) do
-      series = create_series(name: "CITY GAS", amount: 55, day_offset: -1)
-      create_entry(amount: 55, date: Date.new(2026, 6, 9), name: "CITY GAS")
-
-      assert @family.recurring_occurrences.any?,
-        "series creation should have materialized occurrences"
-
-      Pipeline.new(@family).run!
-
       assert_equal 0,
         series.recurring_occurrences.where("due_on < ?", Date.new(2026, 7, 1)).count,
-        "a family that already has occurrences must not be backfilled"
+        "only an explicit backfill request reconstructs history"
     end
   end
 
@@ -85,8 +86,7 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
 
     result = Pipeline.new(@family).run_with_lock!
 
-    assert result.locked?
-    assert_equal 0, result.patterns_count
+    assert_nil result, "a held lock reports nil rather than running"
   ensure
     other&.close
   end

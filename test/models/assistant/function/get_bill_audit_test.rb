@@ -60,6 +60,24 @@ class Assistant::Function::GetBillAuditTest < ActiveSupport::TestCase
     assert_operator candidate[:occurrence_count], :>=, 2
   end
 
+  test "undeclared candidates never include accounts the user cannot reach" do
+    3.times do |i|
+      accounts(:investment).entries.create!(
+        date: Date.current - i.months, amount: 25, currency: "USD",
+        name: "BROKERAGE FEE", entryable: Transaction.new
+      )
+    end
+
+    admin_names = call_tool[:undeclared_candidates][:items].map { |item| item[:name] }
+    assert_includes admin_names, "BROKERAGE FEE",
+      "positive control: the admin can see the investment-account pattern"
+
+    member_result = Assistant::Function::GetBillAudit.new(users(:family_member)).call
+    member_names = member_result[:undeclared_candidates][:items].map { |item| item[:name] }
+    assert_not_includes member_names, "BROKERAGE FEE",
+      "a pattern on an account the member was never given must not leak"
+  end
+
   test "long_overdue measures in the bill's own cycles" do
     overdue_day = 45.days.ago.to_date
     create_series(name: "Forgotten bill", amount: 60,

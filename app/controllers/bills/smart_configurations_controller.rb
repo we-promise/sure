@@ -1,5 +1,6 @@
 class Bills::SmartConfigurationsController < ApplicationController
   include BillsHelper
+  include RecurringFeatureGuardable
 
   guard_feature unless: -> { bills_one_shot_ai_available? }
   before_action :ensure_recurring_enabled
@@ -28,13 +29,4 @@ class Bills::SmartConfigurationsController < ApplicationController
 
     render layout: dialog_layout
   end
-
-  private
-    def dialog_layout
-      turbo_frame_request? ? false : "settings"
-    end
-
-    def ensure_recurring_enabled
-      redirect_to root_path if Current.family.recurring_transactions_disabled?
-    end
 end

@@ -45,9 +45,9 @@ class Assistant::Function::GetBillAudit < Assistant::Function
   def call(params = {})
     return recurring_disabled_result if recurring_disabled?
 
-    lookback = (params["lookback_months"] || 12).to_i.clamp(1, 24)
+    lookback = (Integer(params["lookback_months"].to_s, exception: false) || 12).clamp(1, 24)
     active = accessible_series.active
-                              .includes(:merchant, :account, :recurring_occurrences, :recurrence_rules)
+                              .includes(:merchant, :account, :recurrence_rules)
                               .to_a
 
     {
@@ -88,14 +88,13 @@ class Assistant::Function::GetBillAudit < Assistant::Function
                           .includes(:recurring_transaction)
                           .order(effective_on: :desc)
                           .map do |change|
-        previous = change.previous_amount.abs
         {
           bill: change.recurring_transaction.display_name,
           bill_id: change.recurring_transaction_id,
           effective_on: change.effective_on.iso8601,
           previous_amount: Money.new(change.previous_amount, change.currency).abs.format,
           new_amount: Money.new(change.new_amount, change.currency).abs.format,
-          percent_change: previous.zero? ? nil : (((change.new_amount.abs - previous) / previous) * 100).round(1).to_f
+          percent_change: percent_change(change.previous_amount, change.new_amount)
         }.compact
       end
     end
@@ -149,10 +148,14 @@ class Assistant::Function::GetBillAudit < Assistant::Function
     end
 
     # The same clustering the add-bill dialog offers: recurring outflow shapes
-    # detection spotted that no series covers yet.
+    # detection spotted that no series covers yet. Patterns are family-wide,
+    # so they are filtered to the accounts this user can actually reach.
     def undeclared_candidates
+      accessible_ids = Account.accessible_by(user).pluck(:id)
+
       RecurringTransaction::Identifier.new(family)
                                       .candidate_patterns(sign: :outflow)
+                                      .select { |pattern| accessible_ids.include?(pattern[:account_id]) }
                                       .sort_by { |pattern| pattern[:last_occurrence_date] }
                                       .reverse
                                       .map do |pattern|

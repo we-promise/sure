@@ -71,26 +71,14 @@ class Assistant::Function::UpdateBill < Assistant::Function
 
     changed = []
 
-    apply_simple_fields(series, params, changed)
-
-    if (type_error = apply_bill_type(series, params, changed))
-      return type_error
+    # Each step returns an error hash or nil; the first error aborts the call
+    # before anything is saved.
+    %i[apply_simple_fields apply_bill_type apply_amount apply_account
+       apply_category apply_status apply_schedule].each do |step|
+      if (error = send(step, series, params, changed))
+        return error
+      end
     end
-
-    if (amount_error = apply_amount(series, params, changed))
-      return amount_error
-    end
-
-    if (account_error = apply_account(series, params, changed))
-      return account_error
-    end
-
-    if (category_error = apply_category(series, params, changed))
-      return category_error
-    end
-
-    apply_status(series, params, changed)
-    apply_schedule(series, params, changed)
 
     if changed.empty?
       return { error: "No recognized fields to change", hint: "Pass at least one editable field." }
@@ -109,9 +97,22 @@ class Assistant::Function::UpdateBill < Assistant::Function
         "notes" => :notes, "renews_on" => :renews_on, "trial_ends_on" => :trial_ends_on }.each do |key, attribute|
         next unless params.key?(key)
 
-        series.public_send("#{attribute}=", params[key])
+        value = params[key]
+
+        # AR silently casts an unparseable date string to nil, which would
+        # read back as "cleared" instead of "rejected". A blank still clears.
+        if %w[renews_on trial_ends_on].include?(key) && value.present?
+          begin
+            value = Date.parse(value.to_s)
+          rescue Date::Error
+            return { error: "#{key} is not a valid date", hint: "Use YYYY-MM-DD." }
+          end
+        end
+
+        series.public_send("#{attribute}=", value)
         changed << key
       end
+      nil
     end
 
     def apply_bill_type(series, params, changed)
@@ -189,20 +190,21 @@ class Assistant::Function::UpdateBill < Assistant::Function
     # The stored value the UI's own Pause writes is "inactive"; "paused" is
     # the user-facing word for that state.
     def apply_status(series, params, changed)
-      return unless params.key?("status")
+      return nil unless params.key?("status")
 
       case params["status"]
       when "active" then series.status = "active"
       when "paused" then series.status = "inactive"
-      else return
+      else return nil
       end
       changed << "status"
+      nil
     end
 
     # An AI-applied cadence is user intent by proxy: pin it so detection
     # cannot quietly move it back, exactly as the edit dialog does.
     def apply_schedule(series, params, changed)
-      return unless params.key?("frequency")
+      return nil unless params.key?("frequency")
 
       applied = RecurringTransaction::FrequencyPreset.apply(
         series,
@@ -216,5 +218,6 @@ class Assistant::Function::UpdateBill < Assistant::Function
         series.pin_schedule
         changed << "schedule"
       end
+      nil
     end
 end

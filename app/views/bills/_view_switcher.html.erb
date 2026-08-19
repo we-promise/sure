@@ -9,8 +9,9 @@
 
   <div class="flex items-center gap-2 shrink-0">
     <%# Seeds a chat with the server-owned review prompt into the sidebar
-        frame; the audit tool grounds the findings. AI-consented users only. %>
-    <% if Current.user.ai_enabled? %>
+        frame; the audit tool grounds the findings. Needs AI consent plus a
+        configured provider, or the button leads to a dead chat. %>
+    <% if bills_one_shot_ai_available? %>
       <%= button_to ai_review_bills_path,
             form: { data: { turbo_frame: chat_frame } },
             data: { action: "app-layout#openRightSidebar" },

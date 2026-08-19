@@ -3,12 +3,13 @@ class RecurringTransaction
   # windows, repair provider-replaced entries, match payments, detect price
   # changes -- in one place for its three callers: the post-sync job, the
   # Settings "Identify Patterns" button, and the Bills page's detection action.
+  #
+  # `run!` returns the identified pattern count. `backfill: true` additionally
+  # reconstructs recent history after the five stages; user-triggered detection
+  # asks for it, background syncs never do. `run_with_lock!` returns the count,
+  # or nil when another run already holds the family lock.
   class Pipeline
     FIRST_RUN_BACKFILL_MONTHS = 6
-
-    Result = Data.define(:patterns_count, :locked) do
-      def locked? = locked
-    end
 
     attr_reader :family
 
@@ -16,13 +17,7 @@ class RecurringTransaction
       @family = family
     end
 
-    def run!
-      # Zero occurrences alongside any series is the signature of an instance
-      # whose detection ran under a build that never materialized anything.
-      # Captured before generation changes the answer; the backfill below then
-      # reconstructs history exactly once.
-      first_run = family.recurring_occurrences.none?
-
+    def run!(backfill: false)
       patterns_count = Identifier.new(family).identify_recurring_patterns
 
       family.recurring_transactions.active.find_each do |series|
@@ -34,17 +29,19 @@ class RecurringTransaction
       matcher.run!
       PriceChangeDetector.new(family).detect!
 
-      HistoryBackfiller.new(family, months: FIRST_RUN_BACKFILL_MONTHS).run! if first_run
+      # Unconditional when asked: the backfiller is idempotent, so re-running
+      # it reconstructs nothing twice.
+      HistoryBackfiller.new(family, months: FIRST_RUN_BACKFILL_MONTHS).run! if backfill
 
-      Result.new(patterns_count: patterns_count, locked: false)
+      patterns_count
     end
 
     # User-triggered runs refuse to stack on top of an in-flight pipeline
     # (debounced job or nightly sweep) instead of running concurrently.
-    def run_with_lock!
+    def run_with_lock!(backfill: false)
       result = nil
-      acquired = self.class.with_family_lock(family.id) { result = run! }
-      acquired ? result : Result.new(patterns_count: 0, locked: true)
+      acquired = self.class.with_family_lock(family.id) { result = run!(backfill: backfill) }
+      acquired ? result : nil
     end
 
     # One advisory lock per family, shared by every pipeline caller. Returns

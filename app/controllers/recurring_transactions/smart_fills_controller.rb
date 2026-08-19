@@ -2,6 +2,7 @@
 # resolves its relative partials ("form") against recurring_transactions/.
 class RecurringTransactions::SmartFillsController < RecurringTransactionsController
   include BillsHelper
+  include RecurringFeatureGuardable
 
   guard_feature unless: -> { bills_one_shot_ai_available? }
   before_action :ensure_recurring_enabled
@@ -27,7 +28,7 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
       return render "recurring_transactions/new", layout: dialog_layout
     end
 
-    prefill_from(entry)
+    prefill_recurring_from_entry(entry)
 
     begin
       suggestion = RecurringTransaction::AiSetupSuggester
@@ -44,21 +45,6 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
   end
 
   private
-    def ensure_recurring_enabled
-      redirect_to root_path if Current.family.recurring_transactions_disabled?
-    end
-
-    # Same seeding as the entry_id prefill path, so a failed suggestion still
-    # leaves the user exactly where the plain prefill would have.
-    def prefill_from(entry)
-      @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
-      @recurring_transaction.amount = entry.amount.abs
-      @recurring_transaction.account_id = entry.account_id
-      @recurring_transaction.is_income = true if entry.amount.negative?
-      @recurring_transaction.first_due_on =
-        RecurringTransaction::Schedule.new(expected_day_of_month: entry.date.day).next_occurrence_from_today
-    end
-
     # The picked entry's own history: same account, same sign, same name
     # shape. Recency-ordered so drifting amounts weight toward the present.
     def evidence_entries(entry, income:)
@@ -76,15 +62,34 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
 
     # Only fields the add form actually carries; anything else the suggestion
     # knows (category, kind) has no field to land in here and is dropped.
+    # The due date follows the cadence's own anchor: weekday for weekly-style
+    # presets, month for annual, day-of-month for the monthly-style rest.
     def apply_suggestion(suggestion)
       @recurring_transaction.name = suggestion.name if suggestion.name.present?
       @recurring_transaction.amount = suggestion.amount if suggestion.amount.present?
       @recurring_transaction.frequency_preset = suggestion.frequency if suggestion.frequency.present?
       @recurring_transaction.autopay = true if suggestion.autopay
 
-      if suggestion.day_of_month.present?
+      today = Date.current
+      if %w[weekly biweekly].include?(suggestion.frequency) && suggestion.weekday.present?
+        @recurring_transaction.first_due_on = today + ((suggestion.weekday - today.wday) % 7)
+      elsif suggestion.frequency == "annual" && suggestion.month_of_year.present?
+        @recurring_transaction.first_due_on = next_annual_occurrence(
+          today, suggestion.month_of_year,
+          suggestion.day_of_month || @recurring_transaction.first_due_on.day
+        )
+      elsif suggestion.day_of_month.present?
         @recurring_transaction.first_due_on =
           RecurringTransaction::Schedule.new(expected_day_of_month: suggestion.day_of_month).next_occurrence_from_today
       end
+    end
+
+    # The next date landing on (month, day), day clamped to the month's
+    # length, rolled a year forward once this year's is past.
+    def next_annual_occurrence(today, month, day)
+      candidate = Date.new(today.year, month, [ day, Date.new(today.year, month, -1).day ].min)
+      return candidate if candidate >= today
+
+      Date.new(today.year + 1, month, [ day, Date.new(today.year + 1, month, -1).day ].min)
     end
 end

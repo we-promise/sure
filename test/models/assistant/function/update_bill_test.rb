@@ -54,6 +54,21 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
       "raising the rent must not restate what last month's unpaid rent claims"
   end
 
+  test "an invalid renews_on is rejected instead of silently clearing" do
+    series = create_series(name: "Gym", amount: 40)
+
+    result = call_tool(series.id, "renews_on" => "not-a-date")
+
+    assert_equal "renews_on is not a valid date", result[:error]
+    assert_equal "Use YYYY-MM-DD.", result[:hint]
+    assert_nil series.reload.renews_on
+
+    result = call_tool(series.id, "renews_on" => "2027-03-01")
+
+    assert result[:updated]
+    assert_equal Date.new(2027, 3, 1), series.reload.renews_on
+  end
+
   test "kind cannot leave the editable set" do
     income = create_series(name: "Paycheck", amount: -1200, bill_type: "income")
 

@@ -1,4 +1,6 @@
 class BillsController < ApplicationController
+  include RecurringFeatureGuardable
+
   # What the All-bills status filter offers: payment state, plus the two
   # lifecycle values people actually use. suggested and inactive are detection
   # plumbing and stay out.
@@ -22,6 +24,17 @@ class BillsController < ApplicationController
 
     @view = %w[all calendar paycheck].include?(params[:view]) ? params[:view] : "overview"
 
+    # An upgraded instance can arrive with series but no occurrence rows,
+    # because nothing under the old build ever materialized them. One inline,
+    # idempotent generation covers every view. The cache is a cost gate, not
+    # correctness -- the none? probe stays authoritative; the guard only stops
+    # an all-ended-series family from re-running generation on every GET.
+    cache_key = "bills:materialized:#{Current.family.id}"
+    if Current.family.recurring_occurrences.none? && !Rails.cache.read(cache_key)
+      materialize_missing_occurrences
+      Rails.cache.write(cache_key, true, expires_in: 12.hours)
+    end
+
     case @view
     when "all"
       load_all_series
@@ -36,13 +49,6 @@ class BillsController < ApplicationController
       render :paycheck
       return
     end
-
-    # An upgraded instance can arrive with series but no occurrence rows,
-    # because nothing under the old build ever materialized them. One inline,
-    # idempotent generation covers it (the calendar already materializes on
-    # GET), and the zero-occurrences gate means it cannot re-fire once any
-    # row exists.
-    materialize_missing_occurrences if Current.family.recurring_occurrences.none?
 
     occurrences = payable_occurrences
     preload_allocation_sums(occurrences)
@@ -74,7 +80,9 @@ class BillsController < ApplicationController
     @detected_awaiting_review = detected_awaiting_review
     # Fresh detections wait here for confirm/dismiss. Reviewing them is bill
     # work, so the strip lives on this page as well as in Settings.
-    @suggested_series = accessible_suggested_series.includes(:merchant).order(next_expected_date: :asc)
+    # Loaded once: the view asks any?/none? and the partial counts and
+    # iterates, which would otherwise be separate queries.
+    @suggested_series = accessible_suggested_series.includes(:merchant).order(next_expected_date: :asc).load
     @has_transaction_history = Current.family.entries.where(entryable_type: "Transaction").exists?
     @suggested_allocations = suggested_allocations
     # A row waiting on a match decision offers Review rather than Find.
@@ -102,10 +110,12 @@ class BillsController < ApplicationController
   # pattern total would count refreshes of series that already exist.
   def detect
     before_ids = accessible_suggested_series.pluck(:id)
-    result = RecurringTransaction::Pipeline.new(Current.family).run_with_lock!
+    # backfill: user-triggered detection always reconstructs history (the
+    # backfiller is idempotent). nil means another run holds the family lock.
+    result = RecurringTransaction::Pipeline.new(Current.family).run_with_lock!(backfill: true)
 
     flash[:notice] =
-      if result.locked?
+      if result.nil?
         t(".already_running")
       else
         found = accessible_suggested_series.where.not(id: before_ids).count
@@ -593,9 +603,5 @@ class BillsController < ApplicationController
       end
 
       [ total, unconvertible ]
-    end
-
-    def ensure_recurring_enabled
-      redirect_to root_path if Current.family.recurring_transactions_disabled?
     end
 end

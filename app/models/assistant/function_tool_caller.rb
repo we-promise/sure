@@ -36,17 +36,23 @@ class Assistant::FunctionToolCaller
 
       fn_args = JSON.parse(function_request.function_args.presence || "{}")
       fn.call(fn_args)
-    rescue JSON::ParserError
+    rescue JSON::ParserError => e
+      Rails.logger.warn("Assistant tool #{function_request.function_name} got invalid JSON arguments: #{e.class}: #{e.message}")
+
       {
         error: "Arguments were not valid JSON",
         hint: "Re-send #{function_request.function_name} with valid JSON arguments."
       }
     rescue ActiveRecord::RecordNotFound => e
+      Rails.logger.warn("Assistant tool #{function_request.function_name} raised #{e.class}: #{e.message}")
+
       {
         error: e.message,
         hint: "That record was not found. List valid options first (for example get_accounts or get_categories) and retry once with an exact match."
       }
     rescue Date::Error, ArgumentError, KeyError => e
+      Rails.logger.warn("Assistant tool #{function_request.function_name} raised #{e.class}: #{e.message}")
+
       {
         error: e.message,
         hint: "Check argument formats (dates are YYYY-MM-DD) and retry once with corrected arguments."

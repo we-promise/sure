@@ -34,13 +34,17 @@ class RecurringTransactionsController < ApplicationController
     # A just-confirmed bill shows its lived history rather than starting
     # blank. Guarded so a replayed POST does not re-run the backfill; the
     # matcher pass inside is family-wide on purpose (exact-tier, idempotent,
-    # and scoping it would need a parallel Matcher entry point).
+    # and scoping it would need a parallel Matcher entry point). Taken under
+    # the family lock so it cannot interleave with a running pipeline; when
+    # the lock is held the backfill is skipped and the confirm still succeeds.
     if first_confirmation
-      RecurringTransaction::HistoryBackfiller.new(
-        Current.family,
-        months: RecurringTransaction::Pipeline::FIRST_RUN_BACKFILL_MONTHS,
-        series_scope: Current.family.recurring_transactions.where(id: @recurring_transaction.id)
-      ).run!
+      RecurringTransaction::Pipeline.with_family_lock(Current.family.id) do
+        RecurringTransaction::HistoryBackfiller.new(
+          Current.family,
+          months: RecurringTransaction::Pipeline::FIRST_RUN_BACKFILL_MONTHS,
+          series_scope: Current.family.recurring_transactions.where(id: @recurring_transaction.id)
+        ).run!
+      end
     end
 
     flash[:notice] = t("recurring_transactions.confirmed")
@@ -66,15 +70,17 @@ class RecurringTransactionsController < ApplicationController
   end
 
   def identify
-    result = RecurringTransaction::Pipeline.new(Current.family).run_with_lock!
+    # User-triggered detection always reconstructs history; the backfiller is
+    # idempotent. nil means another run already holds the family lock.
+    result = RecurringTransaction::Pipeline.new(Current.family).run_with_lock!(backfill: true)
 
     respond_to do |format|
       format.html do
         flash[:notice] =
-          if result.locked?
+          if result.nil?
             t("recurring_transactions.identify_already_running")
           else
-            t("recurring_transactions.identified", count: result.patterns_count)
+            t("recurring_transactions.identified", count: result)
           end
         redirect_to recurring_transactions_path
       end
@@ -122,13 +128,7 @@ class RecurringTransactionsController < ApplicationController
     # Accessible, not merely same-family: prefilling reads the entry's name,
     # amount and account straight back to the user.
     if (entry = Current.accessible_entries.find_by(id: params[:entry_id]))
-      @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
-      @recurring_transaction.amount = entry.amount.abs
-      @recurring_transaction.account_id = entry.account_id
-      # A negative entry is an inflow: pre-fill as income, not as a bill.
-      @recurring_transaction.is_income = true if entry.amount.negative?
-      @recurring_transaction.first_due_on =
-        RecurringTransaction::Schedule.new(expected_day_of_month: entry.date.day).next_occurrence_from_today
+      prefill_recurring_from_entry(entry)
     else
       # Fresh dialog: offer detected-but-undeclared recurring shapes as
       # optional starting points. Picking one reloads the dialog prefilled
@@ -237,13 +237,31 @@ class RecurringTransactionsController < ApplicationController
     redirect_back_or_to bills_path
   end
 
+  protected
+
+    # Seeds the dialog's model from an existing transaction. Shared with the
+    # smart-fill path, so a failed suggestion still leaves the user exactly
+    # where the plain prefill would have.
+    def prefill_recurring_from_entry(entry)
+      @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
+      @recurring_transaction.amount = entry.amount.abs
+      @recurring_transaction.account_id = entry.account_id
+      # A negative entry is an inflow: pre-fill as income, not as a bill.
+      @recurring_transaction.is_income = true if entry.amount.negative?
+      @recurring_transaction.first_due_on =
+        RecurringTransaction::Schedule.new(expected_day_of_month: entry.date.day).next_occurrence_from_today
+    end
+
   private
 
     # Sign-filtered detected patterns not yet covered by any series, mapped
     # to what the picker renders. Each candidate carries its latest entry's
-    # id so selection can ride the existing entry_id prefill path.
+    # id so selection can ride the existing entry_id prefill path. Patterns
+    # are family-wide, so they are filtered to the accounts this user can
+    # actually reach.
     def declare_candidates(income:)
       identifier = RecurringTransaction::Identifier.new(Current.family)
+      accessible_ids = Current.user.accessible_accounts.pluck(:id)
 
       patterns = if income
         # Already sorted heaviest-source-first, so the paycheck leads.
@@ -255,6 +273,7 @@ class RecurringTransactionsController < ApplicationController
       end
 
       patterns
+        .select { |pattern| accessible_ids.include?(pattern[:account_id]) }
         .first(8)
         .map do |pattern|
           latest = pattern[:entries].max_by(&:date)

@@ -40,15 +40,9 @@ class Assistant::Responder
         function_tool_calls: function_tool_calls
       })
 
-      # On the final permitted round the follow-up request carries no tools,
-      # so the model must answer in text with whatever it has gathered instead
-      # of the turn dying in ToolCallLimitError.
-      final_round = iteration == max_tool_call_iterations
-
       response, response_has_text = request_response(
         function_results: provider_preserves_response_context? ? function_results : in_flight_function_results.dup,
-        previous_response_id: response.id,
-        functions_override: final_round ? [] : nil
+        previous_response_id: response.id
       )
       any_response_has_text ||= response_has_text
     end
@@ -61,7 +55,7 @@ class Assistant::Responder
   private
     attr_reader :message, :instructions, :function_tool_caller, :llm
 
-    def request_response(function_results: [], previous_response_id: nil, functions_override: nil)
+    def request_response(function_results: [], previous_response_id: nil)
       response_has_text = false
 
       streamer = proc do |chunk|
@@ -74,8 +68,7 @@ class Assistant::Responder
       response = get_llm_response(
         streamer: streamer,
         function_results: function_results,
-        previous_response_id: previous_response_id,
-        functions_override: functions_override
+        previous_response_id: previous_response_id
       )
 
       response_has_text ||= response.messages.any? { |response_message| response_message.output_text.present? }
@@ -93,12 +86,12 @@ class Assistant::Responder
       DEFAULT_MAX_TOOL_CALL_ITERATIONS
     end
 
-    def get_llm_response(streamer:, function_results: [], previous_response_id: nil, functions_override: nil)
+    def get_llm_response(streamer:, function_results: [], previous_response_id: nil)
       response = llm.chat_response(
         message.content,
         model: message.ai_model,
         instructions: instructions,
-        functions: functions_override || function_tool_caller.function_definitions,
+        functions: function_tool_caller.function_definitions,
         function_results: function_results,
         messages: openai_messages_payload,
         conversation_history: chat_message_records,

@@ -148,6 +148,22 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match "City Water", response.body
   end
 
+  test "the candidate strip never offers a pattern on an account the member cannot reach" do
+    3.times do |i|
+      accounts(:investment).entries.create!(
+        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        amount: 45.00, currency: "USD", name: "PRIVATE BROKERAGE SUB",
+        entryable: Transaction.new
+      )
+    end
+    sign_in users(:family_member)
+
+    get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_no_match "PRIVATE BROKERAGE SUB", response.body
+  end
+
   test "income dialog offers only detected deposits" do
     account = accounts(:depository)
     2.times do |i|
