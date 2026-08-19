@@ -100,6 +100,13 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     unregister_fake_chain!
   end
 
+  test "index renders trading212 items" do
+    trading212_item = trading212_items(:configured_item)
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(trading212_item)}"
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success
