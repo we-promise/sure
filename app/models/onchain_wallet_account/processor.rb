@@ -342,8 +342,13 @@ class OnchainWalletAccount::Processor
 
     # Stored payloads are written by this code, but a row that survived an older
     # format should cost one movement rather than the whole asset's processing.
+    #
+    # NaN and the infinities have to be rejected explicitly: BigDecimal parses all
+    # three, and neither is zero, so they would sail through into a trade and only
+    # blow up on rounding.
     def parse_amount(value)
-      BigDecimal(value.to_s)
+      amount = BigDecimal(value.to_s)
+      amount.finite? ? amount : nil
     rescue ArgumentError, TypeError
       nil
     end

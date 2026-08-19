@@ -236,6 +236,24 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "Pyth Network", account.name
   end
 
+  test "a non-finite quantity is not written to the database" do
+    account = create_onchain_wallet_account(item: @item)
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(
+        assets: [ fake_chain.native_asset(quantity: BigDecimal("NaN")) ],
+        movements: []
+      )
+    )
+
+    OnchainWalletItem::Importer.new(@item).import
+
+    # Postgres numeric would have stored NaN, and every total reading it would
+    # have become NaN too.
+    assert_predicate account.reload.quantity, :finite?
+    assert_equal 0, account.quantity
+  end
+
   test "movements before the connection start date are ignored" do
     account = create_onchain_wallet_account(item: @item)
     @item.update!(sync_start_date: 2.days.ago.to_date)

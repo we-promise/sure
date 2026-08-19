@@ -313,6 +313,25 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Trade", onchain_entry("good").entryable_type
   end
 
+  test "NaN and the infinities are rejected, not carried into a trade" do
+    date = 3.days.ago.to_date
+    price_asset_at(date, 50)
+    movements = [ "NaN", "Infinity", "-Infinity" ].each_with_index.map do |amount, index|
+      { "external_id" => "tx#{index}", "symbol" => "FAKE", "contract" => nil, "amount" => amount, "date" => date.to_s }
+    end
+    movements << { "external_id" => "good", "symbol" => "FAKE", "contract" => nil, "amount" => "2", "date" => date.to_s }
+    @onchain_account.update!(raw_movements_payload: { "movements" => movements })
+
+    assert_nothing_raised do
+      OnchainWalletAccount::Processor.new(@onchain_account).process
+    end
+
+    # BigDecimal parses all three and none of them is zero, so only an explicit
+    # finite check keeps them out.
+    3.times { |index| assert_nil @account.entries.find_by(external_id: "onchain_#{@onchain_account.id}_tx#{index}") }
+    assert_equal "Trade", onchain_entry("good").entryable_type
+  end
+
   test "the repair pass survives a malformed stored amount too" do
     date = 3.days.ago.to_date
     store_movements(fake_movement(external_id: "tx1", amount: "1", timestamp: date))

@@ -188,7 +188,13 @@ class OnchainWalletItem::Importer
       }
     end
 
+    # Postgres numeric happily stores NaN, and one NaN quantity would poison every
+    # total that reads it, so a non-finite amount is treated as unknown rather
+    # than written.
     def normalize(value)
-      BigDecimal(value.to_s)
+      amount = BigDecimal(value.to_s)
+      amount.finite? ? amount : 0.to_d
+    rescue ArgumentError, TypeError
+      0.to_d
     end
 end
