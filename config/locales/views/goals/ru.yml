@@ -16,7 +16,6 @@ ru:
     create:
       success: Цель создана.
     destroy:
-      archive_first: Сначала архивируйте цель перед удалением.
       success: Цель удалена.
     edit:
       heading: Редактировать цель
@@ -194,6 +193,9 @@ ru:
       confirm_archive_body: Архивные цели скрываются из списка. Их можно восстановить позже.
       confirm_archive_cta: Архивировать
       confirm_archive_title: Архивировать цель?
+      confirm_delete_title: "Удалить эту цель?"
+      confirm_delete_body: "%{name} и история взносов будут удалены безвозвратно. Связанные счета, балансы и транзакции не затрагиваются. Чтобы сохранить её как запись, заархивируйте её вместо удаления."
+      confirm_delete_cta: "Удалить цель"
       confirm_complete_body: Цель исчезнет из активных.
       confirm_complete_body_short: Вы достигли %{progress}%, %{saved} из %{target}.
       confirm_complete_cta: Отметить выполненной

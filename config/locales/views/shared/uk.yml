@@ -4,6 +4,7 @@ uk:
       redis_configured: "Redis тепер налаштовано правильно! Тепер ви можете налаштувати свою програму Sure."
   shared:
     preview: Попередній перегляд
+    dot_separator: "·"
     sync_toast:
       message: "Доступні нові дані"
       refresh: "Оновити"

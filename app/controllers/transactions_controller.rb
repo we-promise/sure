@@ -353,11 +353,15 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(transaction.entry.account)
 
-    # Check if a recurring transaction already exists for this pattern
+    # Check if a recurring transaction already exists for this pattern.
+    # Amount is included so two distinct recurring payments with the same
+    # payee but different amounts aren't treated as duplicates (matches the
+    # DB uniqueness scope and RecurringTransaction::Identifier's grouping key).
     existing = Current.family.recurring_transactions.find_by(
       account_id: transaction.entry.account_id,
       merchant_id: transaction.merchant_id,
       name: transaction.merchant_id.present? ? nil : transaction.entry.name,
+      amount: transaction.entry.amount,
       currency: transaction.entry.currency,
       manual: true
     )
@@ -384,6 +388,16 @@ class TransactionsController < ApplicationController
           redirect_back_or_to transactions_path
         end
       end
+    rescue ActiveRecord::RecordNotUnique
+      # Another request created the same (account, name/merchant, amount,
+      # currency) pattern between the check above and this create — the DB
+      # unique index is the authoritative backstop for that race.
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.already_exists")
+          redirect_back_or_to transactions_path
+        end
+      end
     rescue StandardError => e
       respond_to do |format|
         format.html do
@@ -392,13 +406,6 @@ class TransactionsController < ApplicationController
         end
       end
     end
-  end
-
-  def update_preferences
-    Current.user.update_transactions_preferences(preferences_params)
-    head :ok
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
-    head :unprocessable_entity
   end
 
   def exchange_rate
@@ -582,10 +589,6 @@ class TransactionsController < ApplicationController
 
     def stored_params
       Current.session.prev_transaction_page_params
-    end
-
-    def preferences_params
-      params.require(:preferences).permit(collapsed_sections: {})
     end
 
     # Helper methods for convert_to_trade

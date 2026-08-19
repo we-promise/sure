@@ -139,6 +139,16 @@ fr:
         additional_currencies_label: Devises supplémentaires
         base_currency_badge: Devise de base
         base_currency_label: Devise de base
+        budget_sharing_title: Partage de budget
+        budget_sharing_subtitle: Autorisez d'autres membres à consulter ou modifier votre budget personnel
+        budget_sharing_no_members: Aucun autre membre de votre %{moniker} avec qui partager
+        budget_sharing_permission_label: "Accès de %{name}"
+        budget_sharing_permissions:
+          none: Aucun accès
+          read_only: Lecture seule
+          read_write: Peut modifier
+        budget_subtitle: Configurez le fonctionnement de vos budgets
+        budget_title: Budget
         country: Pays
         currencies_more: "+%{count} de plus"
         currencies_subtitle: Choisissez les devises qui apparaissent dans les champs monétaires de votre %{moniker}
@@ -160,6 +170,10 @@ fr:
         no_additional_currencies: Aucune sélectionnée
         no_matching_currencies: Aucune devise trouvée
         page_title: Préférences
+        personal_budgets: Budgets personnels
+        personal_budgets_hint: Activer les budgets individuels pour chaque membre de la famille.
+        household_budget_enabled: Budget commun
+        household_budget_enabled_hint: Garder un budget commun au foyer en plus des budgets personnels. Désactivez pour n'utiliser que les budgets personnels.
         preview:
           description: Activez les fonctionnalités en cours étiquetées Aperçu ou Canary.
           title: Activer les fonctionnalités d'aperçu
@@ -176,6 +190,9 @@ fr:
         sharing_title: Partage de %{moniker}
         timezone: Fuseau horaire
         translations_notice: Veuillez noter que nous travaillons toujours sur des traductions dans différentes langues.
+    budget_shares:
+      update:
+        success: Paramètres de partage de budget mis à jour
     profiles:
       destroy:
         cannot_remove_self: Vous ne pouvez pas vous enlever de votre compte.
