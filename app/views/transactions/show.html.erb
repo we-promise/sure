@@ -88,7 +88,8 @@
                     categories: Current.family.categories.alphabetically,
                     selected_id: ef.object.category_id,
                     disabled: @entry.split_child? || annotate_locked,
-                    auto_submit: true
+                    auto_submit: true,
+                    blank_label: t(".uncategorized")
                   ) %>
             <% end %>
           <% end %>

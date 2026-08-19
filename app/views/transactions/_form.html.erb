@@ -32,7 +32,8 @@
       <%= render DS::CategorySelect.new(
       form: ef,
       categories: categories,
-      selected_id: ef.object.category_id
+      selected_id: ef.object.category_id,
+      blank_label: t(".category_prompt")
     ) %>
     <% end %>
 

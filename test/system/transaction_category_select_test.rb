@@ -23,4 +23,32 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
 
     assert Category.exists?(name: "Inline Test Category")
   end
+
+  test "can clear a category from an existing transaction" do
+    transaction = transactions(:one)
+    entry = transaction.entry
+
+    visit transactions_url
+
+    page.execute_script <<~JS
+      const frame = document.querySelector("turbo-frame#drawer")
+      frame.src = "#{transaction_url(entry)}"
+    JS
+
+    within "turbo-frame#drawer", visible: :all do
+      assert_selector "[data-controller='category-select']"
+
+      within "[data-controller='category-select']" do
+        find("button", match: :first).click
+        click_button "(uncategorized)"
+      end
+    end
+
+    assert_selector(
+      "##{ActionView::RecordIdentifier.dom_id(entry)}",
+      text: "Uncategorized"
+    )
+
+    assert_nil transaction.reload.category_id
+  end
 end

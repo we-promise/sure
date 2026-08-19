@@ -119,9 +119,13 @@ export default class extends Controller {
 
     const badge = option.querySelector("[data-category-select-badge]");
 
+    this.selectionContainerTarget.innerHTML = "";
+
     if (badge) {
-      this.selectionContainerTarget.innerHTML = "";
       this.selectionContainerTarget.appendChild(badge.cloneNode(true));
+    } else {
+      this.selectionContainerTarget.textContent =
+        option.dataset.categoryDisplayLabel;
     }
   }
 
@@ -176,6 +180,8 @@ export default class extends Controller {
       this.filter();
       this.close();
       this.submitForm();
+    } catch {
+      this.showCreateError();
     } finally {
       this.creating = false;
       this.createFormTarget.disabled = false;

@@ -60,6 +60,24 @@
            id="<%= menu_id %>"
            role="listbox">
 
+        <% if blank_label.present? %>
+          <button type="button"
+                  role="option"
+                  aria-selected="<%= selected_id.blank? %>"
+                  data-category-select-target="option"
+                  data-category-id=""
+                  data-category-name="<%= blank_label %>"
+                  data-category-display-label="<%= blank_label %>"
+                  data-action="click->category-select#selectCategory"
+                  class="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if selected_id.blank? %>">
+            <span class="check-icon w-4 <%= "invisible" unless selected_id.blank? %>">
+              <%= helpers.icon("check") %>
+            </span>
+
+            <span><%= blank_label %></span>
+          </button>
+        <% end %>
+
         <% categories.each do |category| %>
           <%= render partial: "DS/category_select/option",
                      locals: {
