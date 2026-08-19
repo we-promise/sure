@@ -134,7 +134,7 @@ es:
       step_2: "Copia tu Client ID y tu Consumer Key desde el panel"
       step_3: "Introduce tus credenciales a continuación y haz clic en Guardar"
       step_4: "Ve a la página de Cuentas y usa 'Conectar otro bróker' para vincular tus cuentas de inversión"
-      free_tier_warning: "El nivel gratuito incluye 5 conexiones de bróker. Las conexiones adicionales requieren un plan de pago de SnapTrade."
+      free_tier_warning: El nivel gratuito de SnapTrade cubre 20 conexiones de bróker.
       client_id_label: "Client ID"
       client_id_placeholder: "Introduce tu Client ID de SnapTrade"
       client_id_update_placeholder: "Introduce el nuevo Client ID para actualizar"
