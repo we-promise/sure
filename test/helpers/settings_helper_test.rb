@@ -23,4 +23,11 @@ class SettingsHelperTest < ActionView::TestCase
 
     assert_equal({ status: :ok, last_synced_at: nil }, provider_summary("snaptrade"))
   end
+
+  test "provider_summary for trading212 reports sync-based status when connected" do
+    @trading212_items = [ OpenStruct.new ]
+    @provider_sync_health = {}
+
+    assert_equal({ status: :ok, last_synced_at: nil }, provider_summary("trading212"))
+  end
 end

@@ -96,6 +96,9 @@ module SettingsHelper
     when "onchain_wallet"
       return { status: :off } unless @onchain_wallet_items&.any?
       sync_based_summary(key)
+    when "trading212"
+      return { status: :off } unless @trading212_items&.any?
+      sync_based_summary(key)
     when "snaptrade"
       configured_item = @snaptrade_items&.find(&:oauth_configured?)
       return { status: :off } unless configured_item

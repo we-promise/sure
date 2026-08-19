@@ -713,7 +713,10 @@ en:
         save_configuration: Save Configuration
         update_configuration: Update Configuration
         sync: Sync
+        syncing: Syncing...
         disconnect_confirm: Disconnect Trading 212?
+        default_account_name: Trading 212 Account
+        add_account: Add another account
         status_configured_prefix: "Configured. Visit the"
         accounts_tab: Accounts
         status_configured_suffix: tab to manage discovered accounts.

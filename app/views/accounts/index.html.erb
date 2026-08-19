@@ -10,7 +10,7 @@
   ) %>
 <% end %>
 
-<% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? && @lunchflow_items.empty? && @redbark_items.empty? && @akahu_items.empty? && @up_items.empty? && @enable_banking_items.empty? && @coinstats_items.empty? && @coinbase_items.empty? && @mercury_items.empty? && @brex_items.empty? && @ibkr_items.empty? && @snaptrade_items.empty? && @indexa_capital_items.empty? && @sophtron_items.empty? && @binance_items.empty? && @kraken_items.empty? && @questrade_items.empty? && @wise_items.empty? && @onchain_wallet_items.empty? && @trade_republic_items.empty? %>
+<% if @manual_accounts.empty? && @plaid_items.empty? && @simplefin_items.empty? && @lunchflow_items.empty? && @redbark_items.empty? && @akahu_items.empty? && @up_items.empty? && @enable_banking_items.empty? && @coinstats_items.empty? && @coinbase_items.empty? && @mercury_items.empty? && @brex_items.empty? && @ibkr_items.empty? && @snaptrade_items.empty? && @indexa_capital_items.empty? && @sophtron_items.empty? && @binance_items.empty? && @kraken_items.empty? && @questrade_items.empty? && @wise_items.empty? && @onchain_wallet_items.empty? && @trade_republic_items.empty? && @trading212_items.empty? %>
   <%= render "empty" %>
 <% else %>
   <div class="space-y-2">
@@ -78,6 +78,10 @@
 
     <% if @kraken_items.any? %>
       <%= render @kraken_items.sort_by(&:created_at) %>
+    <% end %>
+
+    <% if @trading212_items.any? %>
+      <%= render @trading212_items.sort_by(&:created_at) %>
     <% end %>
 
     <% if @wise_items.any? %>
