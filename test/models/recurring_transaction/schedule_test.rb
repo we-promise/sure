@@ -261,6 +261,23 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
                  schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 8, 31))
   end
 
+  test "weekly rule without a weekday generates on the anchor's weekday" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "weekly", weekday: nil) ],
+      anchor_date: Date.new(2026, 8, 7)
+    )
+    # Fridays, inherited from the Friday anchor — same fallback matches_day? uses.
+    assert_equal [ 7, 14, 21, 28 ].map { |d| Date.new(2026, 8, d) },
+                 schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 8, 31))
+  end
+
+  test "weekly rule with neither weekday nor anchor cannot generate occurrences" do
+    schedule = build_schedule(rules: [ rule(frequency: "weekly", weekday: nil) ])
+    assert_raises(ArgumentError) do
+      schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 8, 31))
+    end
+  end
+
   test "biweekly rule keeps the anchor's phase, backward and forward" do
     schedule = build_schedule(
       rules: [ rule(frequency: "weekly", weekday: 5, interval: 2) ],

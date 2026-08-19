@@ -549,11 +549,15 @@ class RecurringTransaction < ApplicationRecord
     Schedule.new(expected_day_of_month: expected_day).next_occurrence_after(from_date)
   end
 
-  # Find matching transactions for this recurring pattern
+  # Find matching transactions for this recurring pattern. SQL narrows to
+  # amount/day-window candidates; the schedule then keeps only entries on a
+  # real occurrence, so an every-N cadence sheds same-day charges from
+  # off-cycle periods (which would keep a dead series alive in Cleaner and
+  # pollute variance samples).
   def matching_transactions
     # Recurring transfers can't be matched by single-account name/amount —
     # future occurrences carry arbitrary names — so match the Transfer pair.
-    return transfer_matching_transactions if transfer?
+    return schedule_matched(transfer_matching_transactions) if transfer?
 
     # Amount/cadence-scoped Transaction entries on this account (or family).
     base = account.present? ? account.entries : family.entries
@@ -562,15 +566,17 @@ class RecurringTransaction < ApplicationRecord
     ).order(date: :desc)
 
     # Filter by merchant or name
-    if merchant_id.present?
+    candidates = if merchant_id.present?
       # Match by merchant through the entryable (Transaction)
-      entries.select do |entry|
+      entries.includes(:entryable).select do |entry|
         entry.entryable.is_a?(Transaction) && entry.entryable.merchant_id == merchant_id
       end
     else
       # Match by entry name
       entries.where(name: name)
     end
+
+    schedule_matched(candidates)
   end
 
   # True only when the observed amounts actually spread. Detection records a band
@@ -732,6 +738,14 @@ class RecurringTransaction < ApplicationRecord
       else
         relation.where("entries.amount = ?", amount)
       end
+    end
+
+    # Ruby-side completion of day_of_month_scope: the SQL window only knows
+    # the calendar day, so the full schedule (interval phase, weekday, end
+    # conditions, weekend adjustment) prunes the candidates here.
+    def schedule_matched(entries)
+      full_schedule = schedule
+      entries.select { |entry| full_schedule.matches_day?(entry.date) }
     end
 
     # Entries landing within the schedule's day tolerance, on the circular

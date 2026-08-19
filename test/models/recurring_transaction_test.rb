@@ -342,6 +342,36 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert matches.all? { |entry| entry.name == "Gym Membership" }
   end
 
+  test "matching_transactions rejects a same-day charge in an off-cycle month" do
+    recurring = build_recurring(
+      merchant: nil,
+      name: "Quarterly water bill",
+      amount: 90.00,
+      anchor_date: Date.new(2026, 5, 15),
+      last_occurrence_date: Date.new(2026, 5, 15),
+      next_expected_date: Date.new(2026, 8, 15)
+    )
+    recurring.save!
+    recurring.recurrence_rules.create!(frequency: "monthly", interval: 3, day_of_month: 15)
+
+    entries = [ Date.new(2026, 8, 15), Date.new(2026, 7, 15) ].map do |date|
+      @account.entries.create!(
+        date: date,
+        amount: 90.00,
+        currency: "USD",
+        name: "Quarterly water bill",
+        entryable: Transaction.create!
+      )
+    end
+    on_cycle, off_cycle = entries
+
+    matches = recurring.matching_transactions.map(&:id)
+    # Positive control: the on-cycle month's charge still matches.
+    assert_includes matches, on_cycle.id
+    # Same calendar day, off-cycle month: the day window alone would accept it.
+    assert_not_includes matches, off_cycle.id
+  end
+
   test "validation requires either merchant or name" do
     recurring = @family.recurring_transactions.build(
       account: @account,

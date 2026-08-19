@@ -307,9 +307,14 @@ class RecurringTransaction
       # occurrences extend backward as well as forward so history can be
       # reconstructed (catch-up/backfill).
       def weekly_occurrences(rule, start_date, end_date)
+        # Same fallback as rule_matches_day?: a weekly rule without a weekday
+        # inherits the anchor's. With neither there is no day to generate on.
+        weekday = rule.weekday || anchor_date&.wday
+        raise ArgumentError, "a weekly rule needs a weekday or an anchor_date" if weekday.nil?
+
         step = 7 * rule.interval
         reference = anchor_date || start_date
-        base = reference + ((rule.weekday - reference.wday) % 7)
+        base = reference + ((weekday - reference.wday) % 7)
 
         first_step = ((start_date - base).to_i.to_f / step).ceil
         occurrences = []
