@@ -4,6 +4,11 @@
 class RecurringTransactionsController < ApplicationController
   layout "settings"
 
+  # Small on purpose: the picker narrows by searching, not by paging, and a
+  # fixed cap keeps the dialog free of pagination (whose shared partial
+  # targets _top and cannot live inside a turbo frame).
+  PICKER_SHOWN = 20
+
   before_action :set_recurring_transaction, only: %i[edit update toggle_status destroy confirm dismiss]
 
   def index
@@ -92,6 +97,21 @@ class RecurringTransactionsController < ApplicationController
   # amount, account and a projected next-due all come from the entry.
   def new
     income = params[:income].present?
+
+    # "Not seeing what you're looking for?": a picker over every transaction,
+    # for when the detected candidates don't include the charge on the
+    # statement in the user's hand. Same URL and frame as the dialog it
+    # replaces, and a result row is just the entry_id prefill link the
+    # candidate strip already uses.
+    if params[:picker].present?
+      @is_income = income
+      @picker_query = params[:q].to_s.strip
+      @picker_entries = picker_entries(income: income)
+      @picker_capped = @picker_entries.size == PICKER_SHOWN
+      @claimed_by = claimed_series_names(@picker_entries)
+      return render :pick_entry, layout: dialog_layout
+    end
+
     @recurring_transaction = Current.family.recurring_transactions.new(
       # Paychecks default to the most common pay cadence; bills to monthly.
       frequency_preset: income ? "biweekly" : "monthly",
@@ -248,6 +268,44 @@ class RecurringTransactionsController < ApplicationController
             entry_id: latest.id
           }
         end
+    end
+
+    # Every transaction a bill could start from: accessible (not merely
+    # same-family), the right sign for the mode, transfers and excluded rows
+    # out. No target amount exists yet, so recency is the only honest order.
+    # Merchant names are matched because detected entry names are often bank
+    # blobs; the search stays picker-local so the app-wide EntrySearch
+    # semantics (and the transactions index query plan) are untouched.
+    def picker_entries(income:)
+      scope = Current.accessible_entries
+        .where(entryable_type: "Transaction")
+        .where(excluded: false)
+        .where(income ? "entries.amount < 0" : "entries.amount > 0")
+        .merge(Entry.excluding_split_parents)
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+        .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+
+      if @picker_query.present?
+        pattern = "%#{ActiveRecord::Base.sanitize_sql_like(@picker_query)}%"
+        scope = scope
+          .joins("LEFT JOIN merchants ON merchants.id = transactions.merchant_id")
+          .where("entries.name ILIKE :q OR entries.notes ILIKE :q OR merchants.name ILIKE :q", q: pattern)
+      end
+
+      scope.order(date: :desc, created_at: :desc)
+           .limit(PICKER_SHOWN)
+           .preload(:account)
+    end
+
+    # Entries already backing a bill get a "Part of X" chip rather than being
+    # hidden: hiding lies, but starting a new bill from a claimed charge
+    # usually means a duplicate in the making.
+    def claimed_series_names(entries)
+      RecurringAllocation.confirmed
+        .joins(:recurring_occurrence)
+        .where(entry_id: entries.map(&:id))
+        .includes(recurring_occurrence: { recurring_transaction: :merchant })
+        .to_h { |a| [ a.entry_id, a.recurring_occurrence.recurring_transaction.display_name ] }
     end
 
     def dialog_layout

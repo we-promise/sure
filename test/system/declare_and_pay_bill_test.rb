@@ -30,9 +30,11 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
     # days, so the row carries no call to action -- there is nothing to chase
     # yet -- and the verb lives in the expansion, spelled out.
     #
-    # Targeted by the frame it loads rather than by name: the bill also appears
-    # in the summary's Next up strip, which goes to its page instead.
-    find("a[data-turbo-frame^='pane_recurring_occurrence_']", match: :first).click
+    # Targeted by the frame it loads rather than by bare name: the bill also
+    # appears in the summary's Next up strip, which goes to its page instead.
+    # And by name within that: the index materializes the fixture family's
+    # series on first visit now, so "first row" is no longer this bill.
+    find("a[data-turbo-frame^='pane_recurring_occurrence_']", text: "Watson Property", match: :first).click
     within(find("turbo-frame[id^='pane_recurring_occurrence_']", match: :first)) do
       click_on I18n.t("bills.find_payment")
     end
@@ -71,5 +73,39 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
     assert occurrence.paid?
     assert_equal 2, occurrence.allocations.count
     assert_equal 2150, occurrence.allocations.sum(:allocated_amount)
+  end
+
+  test "declare a bill by searching every transaction and picking one" do
+    charge = @account.entries.create!(
+      date: Date.current - 3, amount: 537.50, currency: "USD", name: "WATSON PROPERTY LLC",
+      entryable: Transaction.new
+    )
+
+    visit bills_url
+    click_on I18n.t("bills.index.add_bill"), match: :first
+
+    # A dead-end search first: nothing matches, and the way back works.
+    click_on I18n.t("recurring_transactions.new.search_all_cta")
+    fill_in I18n.t("recurring_transactions.pick_entry.search_placeholder"), with: "zzz-nothing"
+    find("input[name='q']").send_keys(:enter)
+    assert_text I18n.t("recurring_transactions.pick_entry.no_results", query: "zzz-nothing")
+
+    click_on I18n.t("recurring_transactions.pick_entry.back")
+    assert_field I18n.t("recurring_transactions.form.name_label"), with: ""
+
+    # Now the real search: find the charge, pick it, land in a prefilled form.
+    click_on I18n.t("recurring_transactions.new.search_all_cta")
+    fill_in I18n.t("recurring_transactions.pick_entry.search_placeholder"), with: "WATSON"
+    find("input[name='q']").send_keys(:enter)
+
+    click_on "WATSON PROPERTY LLC"
+
+    assert_field I18n.t("recurring_transactions.form.name_label"), with: "WATSON PROPERTY LLC"
+    assert_field I18n.t("recurring_transactions.form.amount_label"), with: "537.5"
+    click_button I18n.t("recurring_transactions.form.submit")
+
+    assert_text "WATSON PROPERTY LLC"
+    bill = @family.recurring_transactions.find_by!(name: "WATSON PROPERTY LLC")
+    assert_equal charge.account_id, bill.account_id, "the picked entry's account rides the prefill"
   end
 end

@@ -753,4 +753,151 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to bills_url
     assert suggestion.reload.ended?
   end
+
+  # --- "Search all your transactions" picker inside the add dialog ---
+
+  test "the add dialog links to the picker whether or not detection found anything" do
+    get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.search_all_cta"), response.body
+    assert_select "a[href=?]", new_recurring_transaction_path(picker: 1)
+  end
+
+  test "picker lists recent outflows as prefill links" do
+    entry = picker_entry(name: "ACME POWER", amount: 120)
+
+    get new_recurring_transaction_url(picker: 1), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match "ACME POWER", response.body
+    assert_select "a[href=?]", new_recurring_transaction_path(entry_id: entry.id)
+  end
+
+  test "picker filters by sign in each mode" do
+    picker_entry(name: "PAYCHECK DEPOSIT", amount: -900)
+    picker_entry(name: "ACME POWER", amount: 120)
+
+    get new_recurring_transaction_url(picker: 1), headers: { "Turbo-Frame" => "modal" }
+    assert_match "ACME POWER", response.body
+    assert_no_match "PAYCHECK DEPOSIT", response.body
+
+    get new_recurring_transaction_url(picker: 1, income: 1), headers: { "Turbo-Frame" => "modal" }
+    assert_match "PAYCHECK DEPOSIT", response.body
+    assert_no_match "ACME POWER", response.body
+  end
+
+  test "picker search matches the merchant behind a bank-blob entry name" do
+    picker_entry(name: "ACH WEB PMT 0042", amount: 15.49, merchant: merchants(:netflix))
+    picker_entry(name: "UNRELATED CHARGE", amount: 8)
+
+    get new_recurring_transaction_url(picker: 1, q: merchants(:netflix).name),
+        headers: { "Turbo-Frame" => "modal" }
+
+    assert_match "ACH WEB PMT 0042", response.body
+    assert_no_match "UNRELATED CHARGE", response.body
+  end
+
+  test "picker search matches notes" do
+    picker_entry(name: "CHECK 1042", amount: 300, notes: "quarterly water bill")
+    picker_entry(name: "CHECK 1043", amount: 300)
+
+    get new_recurring_transaction_url(picker: 1, q: "quarterly water"),
+        headers: { "Turbo-Frame" => "modal" }
+
+    assert_match "CHECK 1042", response.body
+    assert_no_match "CHECK 1043", response.body
+  end
+
+  test "picker search treats LIKE metacharacters as literals" do
+    picker_entry(name: "100% Juice Co", amount: 6)
+    picker_entry(name: "1003 Deli", amount: 9)
+
+    get new_recurring_transaction_url(picker: 1, q: "100%"), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match "100% Juice Co", response.body
+    assert_no_match "1003 Deli", response.body
+  end
+
+  test "picker hides transfers and excluded entries" do
+    picker_entry(name: "CARD PAYMENT", amount: 200, kind: "cc_payment")
+    picker_entry(name: "HIDDEN CHARGE", amount: 25, excluded: true)
+    picker_entry(name: "REAL CHARGE", amount: 25)
+
+    get new_recurring_transaction_url(picker: 1), headers: { "Turbo-Frame" => "modal" }
+
+    assert_match "REAL CHARGE", response.body
+    assert_no_match "CARD PAYMENT", response.body
+    assert_no_match "HIDDEN CHARGE", response.body
+  end
+
+  test "picker never shows an account the member was not given, even on exact match" do
+    hidden = picker_entry(name: "PRIVATE BROKERAGE FEE", amount: 30, account: accounts(:investment))
+    sign_in users(:family_member)
+
+    get new_recurring_transaction_url(picker: 1, q: "PRIVATE BROKERAGE FEE"),
+        headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    # The no-results copy echoes the query, so assert on the row link itself.
+    assert_select "a[href=?]", new_recurring_transaction_path(entry_id: hidden.id), count: 0
+    assert_match I18n.t("recurring_transactions.pick_entry.back"), response.body
+  end
+
+  test "an entry already backing a bill carries a chip instead of being hidden" do
+    claimed = picker_entry(name: "NETFLIX.COM", amount: 15.99)
+    series = @family.recurring_transactions.create!(
+      name: "Netflix", account: accounts(:depository), amount: 15.99, currency: "USD",
+      dedup_scope: "chip", expected_day_of_month: Date.current.day,
+      last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    occurrence.allocations.create!(
+      entry: claimed, allocated_amount: 15.99, currency: "USD", source: "user_created"
+    )
+    picker_entry(name: "UNCLAIMED CHARGE", amount: 12)
+
+    get new_recurring_transaction_url(picker: 1), headers: { "Turbo-Frame" => "modal" }
+
+    assert_match I18n.t("recurring_transactions.picker_row.claimed", name: "Netflix"), response.body
+    # The chip names its bill once, on the claimed row only.
+    assert_equal 1, response.body.scan(
+      I18n.t("recurring_transactions.picker_row.claimed", name: "Netflix")
+    ).size
+  end
+
+  test "picker caps at twenty rows and says so" do
+    25.times { |i| picker_entry(name: "CHARGE #{format('%02d', i)}", amount: 5 + i) }
+
+    get new_recurring_transaction_url(picker: 1), headers: { "Turbo-Frame" => "modal" }
+
+    assert_equal RecurringTransactionsController::PICKER_SHOWN,
+      response.body.scan(/CHARGE \d\d/).uniq.size
+    assert_match I18n.t("recurring_transactions.pick_entry.showing_recent",
+      count: RecurringTransactionsController::PICKER_SHOWN), response.body
+  end
+
+  test "picker with no results explains and offers the way back" do
+    get new_recurring_transaction_url(picker: 1, q: "zzz-nothing-matches"),
+        headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match CGI.escapeHTML("zzz-nothing-matches"), response.body
+    assert_match I18n.t("recurring_transactions.pick_entry.back"), response.body
+  end
+
+  private
+
+    def picker_entry(name:, amount:, account: accounts(:depository), merchant: nil, notes: nil, kind: nil, excluded: false)
+      transaction_attrs = { merchant: merchant }
+      transaction_attrs[:kind] = kind if kind
+
+      account.entries.create!(
+        date: Date.current, amount: amount, currency: "USD", name: name,
+        notes: notes, excluded: excluded,
+        entryable: Transaction.new(**transaction_attrs)
+      )
+    end
 end

@@ -51,6 +51,19 @@ en:
       start_from_income_title: Start from a recurring deposit we spotted
       start_from_hint: Optional. Picking one just fills in the form; you can still change anything.
       candidate_meta: "%{count}× · last %{date}"
+      search_all_prompt: Not seeing what you're looking for?
+      search_all_cta: Search all your transactions
+      pick_different: Start from a different transaction
+    pick_entry:
+      title: Find a transaction to start from
+      income_title: Find a deposit to start from
+      hint: Picking one just fills in the form; you can still change anything.
+      search_placeholder: Search by name, notes or merchant
+      back: Back to the form
+      showing_recent: Showing your %{count} most recent. Search to narrow it down.
+      no_results: Nothing matches “%{query}”. Try fewer words, or go back and fill in the form yourself.
+    picker_row:
+      claimed: Part of %{name}
     create:
       success: Bill added
       success_income: Income added
