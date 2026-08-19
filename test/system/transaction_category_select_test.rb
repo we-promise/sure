@@ -26,6 +26,7 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
 
   test "can clear a category from an existing transaction" do
     transaction = transactions(:one)
+    transaction.update!(category: categories(:food_and_drink))
     entry = transaction.entry
 
     visit transactions_url

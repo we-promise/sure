@@ -52,7 +52,7 @@ class CategoriesController < ApplicationController
 
         format.turbo_stream do
           set_categories
-          render :new, status: :unprocessable_entity
+          render :new, formats: [ :html ], status: :unprocessable_entity
         end
 
         format.json do
