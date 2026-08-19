@@ -12,6 +12,15 @@
           href: edit_recurring_transaction_path(series),
           frame: :modal
         ) %>
+    <% if bills_one_shot_ai_available? %>
+      <%= render DS::Link.new(
+            text: t("bills.smart_configurations.show.trigger"),
+            icon: "sparkles",
+            variant: "ghost",
+            href: smart_configuration_bill_path(series),
+            frame: :modal
+          ) %>
+    <% end %>
     <%= render DS::Link.new(
           text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
           icon: series.active? ? "pause" : "play",

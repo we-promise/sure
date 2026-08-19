@@ -28,11 +28,21 @@
 
     <%# Reachable whether or not detection found anything, and before the form
         so a search does not throw away typed fields. %>
-    <div class="mb-5 text-sm">
+    <div class="mb-5 text-sm flex flex-wrap items-center gap-x-3 gap-y-1">
       <% if params[:entry_id].present? %>
         <%= link_to t(".pick_different"),
               new_recurring_transaction_path(picker: 1, income: params[:income].presence),
               class: "text-primary underline underline-offset-2 hover:text-secondary" %>
+        <%# Smart-fill needs the picked transaction as its evidence anchor, so
+            it only exists on this variant: with no anchor it would guess. %>
+        <% if bills_one_shot_ai_available? %>
+          <%= button_to smart_fill_recurring_transactions_path,
+                params: { entry_id: params[:entry_id], income: params[:income].presence },
+                form: { data: { turbo_frame: :modal }, class: "inline" },
+                class: "inline-flex items-center gap-1 text-primary underline underline-offset-2 hover:text-secondary" do %>
+            <%= icon("sparkles", size: "sm") %><%= t(".smart_fill") %>
+          <% end %>
+        <% end %>
       <% else %>
         <span class="text-secondary"><%= t(".search_all_prompt") %></span>
         <%= link_to t(".search_all_cta"),
@@ -40,6 +50,19 @@
               class: "text-primary underline underline-offset-2 hover:text-secondary" %>
       <% end %>
     </div>
+
+    <% if @smart_fill %>
+      <div class="mb-5 rounded-lg bg-container-inset px-3 py-2 text-sm">
+        <p class="text-primary"><%= t(".smart_fill_applied") %></p>
+        <% if @smart_fill.rationale.present? %>
+          <p class="text-xs text-secondary"><%= @smart_fill.rationale %></p>
+        <% end %>
+      </div>
+    <% elsif @smart_fill_error %>
+      <div class="mb-5 rounded-lg bg-container-inset px-3 py-2 text-sm text-secondary">
+        <%= @smart_fill_error %>
+      </div>
+    <% end %>
 
     <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0 %>
   <% end %>

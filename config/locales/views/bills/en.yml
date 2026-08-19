@@ -14,6 +14,23 @@ en:
       subscriptions_up: Which subscriptions went up this year?
       monthly_subscriptions: What am I paying monthly for subscriptions?
       safe_to_spend: How much is safe to spend this period?
+    smart_configurations:
+      show:
+        trigger: Let AI configure
+        title: "AI suggestions for %{name}"
+        intro: Check the changes to apply. Unchecked ones are left exactly as they are.
+        no_changes: This bill already matches its payment history. Nothing to change.
+        failed: Could not analyze this bill right now. Its configuration is untouched.
+        field_name: Name
+        field_amount: Amount
+        field_schedule: Schedule
+        field_category: Category
+        field_kind: Kind
+        field_autopay: Autopay
+        uncategorized: Uncategorized
+        autopay_off: "Off"
+        autopay_on: "On"
+        apply: Apply selected
     detail:
       current: Current
       next_payment: Next payment

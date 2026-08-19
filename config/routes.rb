@@ -503,6 +503,9 @@ Rails.application.routes.draw do
       post :detect
       post :ai_review, to: "bills/ai_reviews#create"
     end
+    member do
+      get :smart_configuration, to: "bills/smart_configurations#show"
+    end
   end
   get "bills_feed/:token", to: "bills_feeds#show", as: :bills_feed, defaults: { format: :ics }
 
@@ -532,6 +535,7 @@ Rails.application.routes.draw do
       # URL and outside CSRF protection. Every call site passes method: :post.
       post :identify
       post :cleanup
+      post :smart_fill, to: "recurring_transactions/smart_fills#create"
       patch :update_settings
     end
 

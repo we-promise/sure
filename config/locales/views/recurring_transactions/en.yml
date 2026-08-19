@@ -54,6 +54,11 @@ en:
       search_all_prompt: Not seeing what you're looking for?
       search_all_cta: Search all your transactions
       pick_different: Start from a different transaction
+      smart_fill: Smart-fill with AI
+      smart_fill_applied: AI suggested these values from the charge history. Review before saving.
+    smart_fills:
+      create:
+        failed: Could not analyze the charge history right now. The form kept the transaction's own values.
     pick_entry:
       title: Find a transaction to start from
       income_title: Find a deposit to start from
