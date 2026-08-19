@@ -41,7 +41,7 @@ class TransactionsController < ApplicationController
                          }
                        )
 
-    @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
+    @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
     # Preload split parent data
