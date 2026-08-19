@@ -200,6 +200,17 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name='per_page'] option[value='100'][selected]"
   end
 
+  test "shares account per_page preference with the global transactions page" do
+    get account_url(@account, per_page: 50)
+    assert_response :success
+
+    get transactions_url
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+  end
+
   test "falls back to default per_page when nothing was stored yet" do
     get account_url(@account)
     assert_response :success

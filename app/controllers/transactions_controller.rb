@@ -577,7 +577,7 @@ class TransactionsController < ApplicationController
           prev_transaction_page_params: {
             q: search_params,
             page: params[:page],
-            per_page: params[:per_page]
+            per_page: params[:per_page].presence || stored_params["per_page"]
           }
         )
       end
