@@ -6,7 +6,7 @@ module RecurringTransactionsHelper
   def recurring_status_badge_classes(status)
     case status.to_s
     when "active"
-      "bg-green-50 text-success theme-dark:bg-green-tint-10"
+      "bg-success/10 text-success"
     when "suggested"
       "bg-warning/10 text-warning"
     else

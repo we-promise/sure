@@ -107,25 +107,7 @@
   <div class="border border-subdued rounded-lg grid <%= columns %> divide-y divide-subdued">
     <div class="px-3 py-3 flex flex-col justify-center">
       <p class="text-xs font-medium text-secondary uppercase pb-1"><%= t("bills.detail.history_title") %></p>
-      <% amounts = payment_history.map(&:last) %>
-      <% peak = [ amounts.max, 1 ].max %>
-      <svg viewBox="0 0 336 84" class="w-full text-success" role="img" aria-label="<%= t("bills.detail.history_aria") %>">
-        <% points = payment_history.each_with_index.map do |(_month, amount), index|
-             [ 10 + index * (316.0 / 11), 62 - (amount.to_f / peak.to_f) * 48, amount ]
-           end %>
-        <polyline points="<%= points.map { |x, y, _| "#{x.round(1)},#{y.round(1)}" }.join(" ") %>"
-                  fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.7"/>
-        <% points.each do |x, y, amount| %>
-          <circle cx="<%= x.round(1) %>" cy="<%= y.round(1) %>" r="3"
-                  fill="<%= amount.positive? ? "currentColor" : "none" %>"
-                  stroke="currentColor" stroke-width="1.5"/>
-        <% end %>
-        <% payment_history.each_with_index do |(month, _), index| %>
-          <% next unless index.even? %>
-          <text x="<%= (10 + index * (316.0 / 11)).round(1) %>" y="80" text-anchor="middle"
-                fill="currentColor" opacity="0.5" font-size="9"><%= l(month, format: "%b") %></text>
-        <% end %>
-      </svg>
+      <%= render DS::Sparkline.new(series: payment_history, aria_label: t("bills.detail.history_aria")) %>
     </div>
 
     <div class="px-3 py-3 space-y-2">
@@ -182,7 +164,7 @@
 
   <%# What it used to cost. The twelve-month chart above shows the shape; this
       names the moment it changed and by how much. %>
-  <% changes = series.recurring_price_changes.sort_by(&:effective_on).reverse.first(5) %>
+  <% changes = series.recurring_price_changes.order(effective_on: :desc).limit(5) %>
   <% if changes.any? %>
     <div class="space-y-1">
       <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.price_changes") %></p>

@@ -1368,8 +1368,11 @@ components:
         status:
           type: string
           enum:
+          - suggested
           - active
+          - paused
           - inactive
+          - ended
         occurrence_count:
           type: integer
           minimum: 0
@@ -1395,6 +1398,7 @@ components:
           enum:
           - bill
           - subscription
+          - installment
           - income
           - transfer
           - other
