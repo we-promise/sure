@@ -117,13 +117,11 @@
                                 <% sso_providers = user.oidc_identities.map { |i| (i.provider_config&.dig(:label) || i.provider_config&.dig("label")).presence || i.provider.titleize }.uniq.join(", ") %>
                                 <% provider_tooltip = t(".auth_types.sso_provider_tooltip", providers: sso_providers) %>
                                 <% if user.sso_only? %>
-                                  <%= render DS::Tooltip.new(text: provider_tooltip, as: :span) do %>
-                                    <%= render DS::Pill.new(label: t(".auth_types.sso"), tone: :info) %>
-                                  <% end %>
+                                  <%= render DS::Pill.new(label: t(".auth_types.sso"), tone: :info) %>
+                                  <%= render DS::Tooltip.new(text: provider_tooltip, as: :span) %>
                                 <% else %>
-                                  <%= render DS::Tooltip.new(text: provider_tooltip, as: :span) do %>
-                                    <%= render DS::Pill.new(label: t(".auth_types.local_and_sso"), tone: :info) %>
-                                  <% end %>
+                                  <%= render DS::Pill.new(label: t(".auth_types.local_and_sso"), tone: :info) %>
+                                  <%= render DS::Tooltip.new(text: provider_tooltip, as: :span) %>
                                 <% end %>
                               <% else %>
                                 <%= render DS::Pill.new(label: t(".auth_types.local"), tone: :neutral) %>
