@@ -1,7 +1,11 @@
 class Assistant::Responder
   ToolCallLimitError = Class.new(StandardError)
   EmptyResponseError = Class.new(StandardError)
-  DEFAULT_MAX_TOOL_CALL_ITERATIONS = 5
+  # Rounds, not calls: parallel calls in one round count once. Eight covers a
+  # taxonomy lookup, a target lookup, an action, one hint-corrected retry, a
+  # verification read and a summary, with margin. Override with
+  # ASSISTANT_MAX_TOOL_CALL_ITERATIONS (low-resource hosts may want 2).
+  DEFAULT_MAX_TOOL_CALL_ITERATIONS = 8
 
   def initialize(message:, instructions:, function_tool_caller:, llm:)
     @message = message
@@ -36,9 +40,15 @@ class Assistant::Responder
         function_tool_calls: function_tool_calls
       })
 
+      # On the final permitted round the follow-up request carries no tools,
+      # so the model must answer in text with whatever it has gathered instead
+      # of the turn dying in ToolCallLimitError.
+      final_round = iteration == max_tool_call_iterations
+
       response, response_has_text = request_response(
         function_results: provider_preserves_response_context? ? function_results : in_flight_function_results.dup,
-        previous_response_id: response.id
+        previous_response_id: response.id,
+        functions_override: final_round ? [] : nil
       )
       any_response_has_text ||= response_has_text
     end
@@ -51,7 +61,7 @@ class Assistant::Responder
   private
     attr_reader :message, :instructions, :function_tool_caller, :llm
 
-    def request_response(function_results: [], previous_response_id: nil)
+    def request_response(function_results: [], previous_response_id: nil, functions_override: nil)
       response_has_text = false
 
       streamer = proc do |chunk|
@@ -64,7 +74,8 @@ class Assistant::Responder
       response = get_llm_response(
         streamer: streamer,
         function_results: function_results,
-        previous_response_id: previous_response_id
+        previous_response_id: previous_response_id,
+        functions_override: functions_override
       )
 
       response_has_text ||= response.messages.any? { |response_message| response_message.output_text.present? }
@@ -82,12 +93,12 @@ class Assistant::Responder
       DEFAULT_MAX_TOOL_CALL_ITERATIONS
     end
 
-    def get_llm_response(streamer:, function_results: [], previous_response_id: nil)
+    def get_llm_response(streamer:, function_results: [], previous_response_id: nil, functions_override: nil)
       response = llm.chat_response(
         message.content,
         model: message.ai_model,
         instructions: instructions,
-        functions: function_tool_caller.function_definitions,
+        functions: functions_override || function_tool_caller.function_definitions,
         function_results: function_results,
         messages: openai_messages_payload,
         conversation_history: chat_message_records,

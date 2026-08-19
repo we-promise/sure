@@ -109,6 +109,7 @@ module Assistant::Configurable
           - For functions that require dates, use the current date as your reference point: #{Date.current}
           - If you suspect that you do not have enough data to 100% accurately answer, be transparent about it and state exactly what
             the data you're presenting represents and what context it is in (i.e. date range, account, etc.)
+          - If a tool result contains an "error" and a "hint", follow the hint and retry once with corrected arguments. Never repeat an identical failing call.
         PROMPT
       end
   end
