@@ -293,6 +293,39 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Transaction", foreign.reload.entryable_type
   end
 
+  test "a malformed stored amount costs its movement, not the whole asset" do
+    date = 3.days.ago.to_date
+    price_asset_at(date, 50)
+    @onchain_account.update!(
+      raw_movements_payload: {
+        "movements" => [
+          { "external_id" => "junk", "symbol" => "FAKE", "contract" => nil, "amount" => "not-a-number", "date" => date.to_s },
+          { "external_id" => "good", "symbol" => "FAKE", "contract" => nil, "amount" => "2", "date" => date.to_s }
+        ]
+      }
+    )
+
+    assert_nothing_raised do
+      OnchainWalletAccount::Processor.new(@onchain_account).process
+    end
+
+    assert_nil @account.entries.find_by(external_id: "onchain_#{@onchain_account.id}_junk")
+    assert_equal "Trade", onchain_entry("good").entryable_type
+  end
+
+  test "the repair pass survives a malformed stored amount too" do
+    date = 3.days.ago.to_date
+    store_movements(fake_movement(external_id: "tx1", amount: "1", timestamp: date))
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+    entry = onchain_entry("tx1")
+    entry.entryable.update!(extra: { "onchain_wallet" => { "amount" => "not-a-number", "date" => date.to_s } })
+    price_asset_at(date, 50)
+
+    assert_nothing_raised do
+      assert_equal 0, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    end
+  end
+
   test "does nothing when the asset is not linked to an account" do
     unlinked = create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa"))
 

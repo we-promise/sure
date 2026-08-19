@@ -19,10 +19,13 @@
         ) %>
   <% end %>
 
-  <div class="flex flex-wrap items-center gap-2 -mt-2">
-    <%# Self-hosted only: these are site-wide settings, so on a managed instance %>
-    <%# it is the operator's call, not a family's. %>
-    <% if missing.include?(:crypto_provider) && self_hosted? && Current.user.admin? %>
+  <%# Self-hosted admins only: these are site-wide settings, so on a managed %>
+  <%# instance it is the operator's call, not a family's — and the settings page %>
+  <%# itself is gated the same way, so offering either control to anyone else is %>
+  <%# a dead end. The warning text stands on its own. %>
+  <% if self_hosted? && Current.user.admin? %>
+    <div class="flex flex-wrap items-center gap-2 -mt-2">
+    <% if missing.include?(:crypto_provider) %>
       <%= render DS::Button.new(
             text: t("onchain_wallet_items.price_provider_warning.enable"),
             icon: "zap",
@@ -34,9 +37,10 @@
           ) %>
     <% end %>
 
-    <%= link_to t("onchain_wallet_items.price_provider_warning.link"),
-                settings_hosting_path,
-                class: "text-sm underline text-secondary hover:text-primary",
-                data: { turbo_frame: "_top" } %>
-  </div>
+      <%= link_to t("onchain_wallet_items.price_provider_warning.link"),
+                  settings_hosting_path,
+                  class: "text-sm underline text-secondary hover:text-primary",
+                  data: { turbo_frame: "_top" } %>
+    </div>
+  <% end %>
 <% end %>

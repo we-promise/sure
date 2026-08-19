@@ -268,6 +268,75 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("onchain_wallet_items.errors.already_linked"), response.body
   end
 
+  test "a failed read leaves no empty connection behind" do
+    OnchainTestHelper::FakeAdapter.error = Onchain::Chains::UnreachableError.new("explorer down")
+
+    assert_no_difference "OnchainWalletItem.count" do
+      post link_wallet_onchain_wallet_items_url, params: {
+        chain: OnchainTestHelper::FAKE_CHAIN,
+        address: OnchainTestHelper::FAKE_ADDRESS,
+        assets: [ "native" ]
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("onchain_wallet_items.errors.chain_unreachable"), response.body
+  end
+
+  test "assets that were ticked but could not be tracked are named, not blamed on the user" do
+    stub_wallet_with_token
+    OnchainWalletItem::WalletLinker.any_instance.stubs(:link).returns(
+      OnchainWalletItem::WalletLinker::Result.new(created: 0, removed: 0, errors: [ "USDC" ])
+    )
+
+    post link_wallet_onchain_wallet_items_url, params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      assets: [ "erc20:0xusdc" ]
+    }
+
+    assert_response :unprocessable_entity
+    assert_match "USDC", response.body
+    # Being told to "pick at least one asset" would send them back to tick the
+    # same one.
+    assert_no_match I18n.t("onchain_wallet_items.link_wallet.errors.nothing_selected"), response.body
+  end
+
+  test "a partial failure is reported alongside what did get tracked" do
+    stub_wallet_with_token
+    OnchainWalletItem::WalletLinker.any_instance.stubs(:link).returns(
+      OnchainWalletItem::WalletLinker::Result.new(created: 1, removed: 0, errors: [ "USDC" ])
+    )
+
+    post link_wallet_onchain_wallet_items_url, params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      assets: [ "native", "erc20:0xusdc" ]
+    }
+
+    assert_redirected_to accounts_path
+    assert_match "USDC", flash[:alert]
+  end
+
+  test "the settings link is not offered to anyone who cannot open that page" do
+    # Managed instance: market data is the operator's setting and the page is
+    # gated, so a link there is a dead end. Asserted on the link's own text —
+    # the settings layout mentions that path for its own reasons.
+    link = I18n.t("onchain_wallet_items.price_provider_warning.link")
+
+    get new_wallet_onchain_wallet_items_url
+    assert_match I18n.t("onchain_wallet_items.price_provider_warning.title"), response.body
+    assert_no_match link, response.body
+
+    Rails.configuration.stubs(:app_mode).returns(ActiveSupport::StringInquirer.new("self_hosted"))
+    get new_wallet_onchain_wallet_items_url
+    assert_match link, response.body
+
+    sign_in users(:family_member)
+    get manage_onchain_wallet_item_url(create_onchain_wallet_item(family: @family))
+    assert_response :redirect
+  end
+
   test "link_wallet with nothing ticked reopens the selection" do
     stub_wallet_with_token
 

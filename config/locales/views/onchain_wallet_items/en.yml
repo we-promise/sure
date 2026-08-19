@@ -43,7 +43,9 @@ en:
       wallet_not_found: That wallet is not tracked by this connection.
     link_wallet:
       errors:
+        none_tracked: "Nothing was tracked: %{assets} could not be added. Try again in a moment."
         nothing_selected: Pick at least one asset to track.
+        some_failed: "%{assets} could not be tracked and was left out."
       success:
         one: Tracking 1 asset from this wallet.
         other: "Tracking %{count} assets from this wallet."
@@ -107,4 +109,6 @@ en:
     update_tokens:
       errors:
         no_changes: Nothing changed; the same assets are still ticked.
+        none_tracked: "Nothing changed: %{assets} could not be added. Try again in a moment."
+        some_failed: "%{assets} could not be tracked and was left out."
       success: "Tracked assets updated (%{created} added, %{removed} removed)."

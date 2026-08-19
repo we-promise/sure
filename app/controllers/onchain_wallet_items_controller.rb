@@ -93,21 +93,30 @@ class OnchainWalletItemsController < ApplicationController
     @address = Onchain::Chains.canonical_address(@chain, @address)
     return render_new_wallet(t(".errors.already_linked")) if Current.family.onchain_address_linked?(@chain, @address)
 
-    item = Current.family.onchain_wallet_item!
     snapshot = fetch_snapshot(@chain, @address)
     return render_new_wallet(@provider_error) if snapshot.nil?
 
+    # The connection is created only now. Reading the address needs none, so a
+    # failed read must not leave an empty one behind — the same reason previewing
+    # uses an unsaved one.
     result = OnchainWalletItem::WalletLinker
-      .new(item, chain: @chain, address: @address)
+      .new(Current.family.onchain_wallet_item!, chain: @chain, address: @address)
       .link(snapshot: snapshot, selected_keys: params[:assets])
 
     unless result.success?
       @assets_truncated = snapshot.assets_truncated?
       @review = OnchainWalletItem::TokenReview.new(snapshot: snapshot)
-      flash.now[:alert] = t(".errors.nothing_selected")
+      # Telling someone who ticked three assets to "pick at least one" sends them
+      # back to tick the same three.
+      flash.now[:alert] = if result.errors.any?
+        t(".errors.none_tracked", assets: result.errors.to_sentence)
+      else
+        t(".errors.nothing_selected")
+      end
       return render :token_review, status: :unprocessable_entity
     end
 
+    flash[:alert] = t(".errors.some_failed", assets: result.errors.to_sentence) if result.errors.any?
     redirect_to accounts_path, notice: t(".success", count: result.created), status: :see_other
   end
 
@@ -134,10 +143,15 @@ class OnchainWalletItemsController < ApplicationController
     unless result.changed?
       @assets_truncated = snapshot.assets_truncated?
       @review = review_for(snapshot)
-      flash.now[:alert] = t(".errors.no_changes")
+      flash.now[:alert] = if result.errors.any?
+        t(".errors.none_tracked", assets: result.errors.to_sentence)
+      else
+        t(".errors.no_changes")
+      end
       return render :review_tokens, status: :unprocessable_entity
     end
 
+    flash[:alert] = t(".errors.some_failed", assets: result.errors.to_sentence) if result.errors.any?
     redirect_to_manage(notice: t(".success", created: result.created, removed: result.removed))
   end
 

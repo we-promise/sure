@@ -193,8 +193,8 @@ class OnchainWalletAccount::Processor
         date = parse_date(movement["date"])
         next if date.nil?
 
-        amount = BigDecimal(movement["amount"].to_s)
-        next if amount.zero?
+        amount = parse_amount(movement["amount"])
+        next if amount.nil? || amount.zero?
 
         price = exact_price_on(security, date)
 
@@ -292,8 +292,8 @@ class OnchainWalletAccount::Processor
 
     def upgrade_to_trade(entry, security)
       movement = entry.entryable.extra.to_h[SOURCE].to_h
-      amount = BigDecimal(movement["amount"].to_s)
-      return false if amount.zero?
+      amount = parse_amount(movement["amount"])
+      return false if amount.nil? || amount.zero?
 
       price = exact_price_on(security, entry.date)
       return false if price.nil?
@@ -338,6 +338,14 @@ class OnchainWalletAccount::Processor
       return nil if price.nil?
 
       convert(price.price.to_d, from: price.currency, date: date)
+    end
+
+    # Stored payloads are written by this code, but a row that survived an older
+    # format should cost one movement rather than the whole asset's processing.
+    def parse_amount(value)
+      BigDecimal(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
     end
 
     def parse_date(value)
