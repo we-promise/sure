@@ -62,23 +62,23 @@ class Provider::Blockscout
   # balance, turning one NFT into "1 token".
   def token_balances(address)
     paginate("/api/v2/addresses/#{encode(address)}/token-balances").filter_map do |entry|
-      token = entry["token"].to_h
-      next unless token["type"].to_s == ERC20_TYPE
+      token_data = entry["token"].to_h
+      next unless token_data["type"].to_s == ERC20_TYPE
 
-      contract = contract_of(token)
+      contract = contract_of(token_data)
       next if contract.blank?
 
       {
         contract: contract,
-        symbol: token["symbol"],
-        name: token["name"],
-        decimals: token["decimals"].to_i,
+        symbol: token_data["symbol"],
+        name: token_data["name"],
+        decimals: token_data["decimals"].to_i,
         raw_amount: entry["value"].to_s,
         # Blockscout's own market signals, used only to decide which tokens are
         # worth surfacing first when an address holds thousands of them, and
         # which are worth pre-ticking.
-        market_cap: token["circulating_market_cap"].to_s.presence&.to_d,
-        rate: token["exchange_rate"].to_s.presence&.to_d
+        market_cap: token_data["circulating_market_cap"].to_s.presence&.to_d,
+        rate: token_data["exchange_rate"].to_s.presence&.to_d
       }
     end
   end
@@ -106,9 +106,9 @@ class Provider::Blockscout
 
     def token_transfers(address)
       paginate("/api/v2/addresses/#{encode(address)}/token-transfers?type=ERC-20").filter_map do |transfer|
-        token = transfer["token"].to_h
+        token_data = transfer["token"].to_h
         total = transfer["total"].to_h
-        contract = contract_of(token)
+        contract = contract_of(token_data)
         next if contract.blank?
 
         raw_amount = signed_amount(total["value"], from: transfer.dig("from", "hash"), to: transfer.dig("to", "hash"), address: address)
@@ -117,8 +117,8 @@ class Provider::Blockscout
         {
           external_id: transfer_external_id(transfer["transaction_hash"], contract, transfer["log_index"]),
           contract: contract,
-          symbol: token["symbol"],
-          decimals: (total["decimals"] || token["decimals"]).to_i,
+          symbol: token_data["symbol"],
+          decimals: (total["decimals"] || token_data["decimals"]).to_i,
           raw_amount: raw_amount,
           timestamp: parse_time(transfer["timestamp"])
         }

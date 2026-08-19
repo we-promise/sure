@@ -269,9 +269,9 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1"), native.amount
     assert_equal Date.new(2026, 2, 3), native.date
 
-    token = movements.find { |movement| movement.contract == USDC_MINT }
-    assert_equal "sig1_#{USDC_MINT}", token.external_id
-    assert_equal BigDecimal("1"), token.amount
+    token_asset = movements.find { |movement| movement.contract == USDC_MINT }
+    assert_equal "sig1_#{USDC_MINT}", token_asset.external_id
+    assert_equal BigDecimal("1"), token_asset.amount
   end
 
   test "a failed transaction produces no movements" do

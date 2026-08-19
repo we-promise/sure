@@ -129,10 +129,10 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
     assert_equal "ETH", native.symbol
     assert_equal BigDecimal("1.5"), native.quantity
 
-    token = snapshot.find_asset(kind: "erc20", contract: USDC)
-    assert_equal "USDC", token.symbol
-    assert_equal 6, token.decimals
-    assert_equal BigDecimal("2.5"), token.quantity
+    token_asset = snapshot.find_asset(kind: "erc20", contract: USDC)
+    assert_equal "USDC", token_asset.symbol
+    assert_equal 6, token_asset.decimals
+    assert_equal BigDecimal("2.5"), token_asset.quantity
 
     # Zero-balance tokens are dropped: real wallets are full of spam dust.
     assert_equal 2, snapshot.assets.size

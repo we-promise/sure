@@ -124,9 +124,9 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
   end
 
   test "ordered puts the native asset of each wallet first" do
-    token = create_onchain_wallet_account(item: @item, asset: fake_token_asset(symbol: "AAA", contract: "0xaaa"))
+    token_asset = create_onchain_wallet_account(item: @item, asset: fake_token_asset(symbol: "AAA", contract: "0xaaa"))
     native = create_onchain_wallet_account(item: @item)
 
-    assert_equal [ native.id, token.id ], @item.onchain_wallet_accounts.ordered.map(&:id)
+    assert_equal [ native.id, token_asset.id ], @item.onchain_wallet_accounts.ordered.map(&:id)
   end
 end

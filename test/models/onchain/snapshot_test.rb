@@ -14,12 +14,12 @@ class Onchain::SnapshotTest < ActiveSupport::TestCase
   end
 
   test "movements_for matches tokens on contract regardless of case" do
-    token = fake_token_asset(contract: "0xAAA")
+    token_asset = fake_token_asset(contract: "0xAAA")
     matching = fake_movement(external_id: "a", symbol: "FUSD", contract: "0xaaa")
     other = fake_movement(external_id: "b", symbol: "FUSD", contract: "0xbbb")
-    snapshot = Onchain::Snapshot.new(assets: [ token ], movements: [ matching, other ])
+    snapshot = Onchain::Snapshot.new(assets: [ token_asset ], movements: [ matching, other ])
 
-    assert_equal [ "a" ], snapshot.movements_for(token).map(&:external_id)
+    assert_equal [ "a" ], snapshot.movements_for(token_asset).map(&:external_id)
   end
 
   test "movements_for matches native assets on symbol and ignores token movements" do
@@ -33,11 +33,11 @@ class Onchain::SnapshotTest < ActiveSupport::TestCase
 
   test "find_asset looks an asset up by kind and contract" do
     native = fake_native_asset
-    token = fake_token_asset(contract: "0xAAA")
-    snapshot = Onchain::Snapshot.new(assets: [ native, token ], movements: [])
+    token_asset = fake_token_asset(contract: "0xAAA")
+    snapshot = Onchain::Snapshot.new(assets: [ native, token_asset ], movements: [])
 
     assert_equal native, snapshot.find_asset(kind: "native")
-    assert_equal token, snapshot.find_asset(kind: OnchainTestHelper::FAKE_TOKEN_KIND, contract: "0xaaa")
+    assert_equal token_asset, snapshot.find_asset(kind: OnchainTestHelper::FAKE_TOKEN_KIND, contract: "0xaaa")
     assert_nil snapshot.find_asset(kind: OnchainTestHelper::FAKE_TOKEN_KIND, contract: "0xccc")
   end
 

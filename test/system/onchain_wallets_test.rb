@@ -3,7 +3,7 @@
 require "application_system_test_case"
 
 # The linking flow spans three Turbo frame navigations stacked on top of each
-# other (provider drawer → linking modal → token review), which no controller
+# other (provider drawer → linking modal → token_asset review), which no controller
 # test exercises. This walks it in a real browser once; the branching cases stay
 # in the controller test.
 class OnchainWalletsTest < ApplicationSystemTestCase
@@ -79,8 +79,8 @@ class OnchainWalletsTest < ApplicationSystemTestCase
     item = create_onchain_wallet_item(family: families(:dylan_family))
     native = create_onchain_wallet_account(item: item)
     native_account = link_onchain_wallet_account!(native)
-    token = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
-    token_account = link_onchain_wallet_account!(token)
+    token_asset = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
+    token_account = link_onchain_wallet_account!(token_asset)
 
     visit settings_providers_path
     open_onchain_panel
@@ -98,11 +98,11 @@ class OnchainWalletsTest < ApplicationSystemTestCase
     click_on I18n.t("onchain_wallet_items.review_tokens.save")
 
     assert_text I18n.t("onchain_wallet_items.manage.title")
-    assert_not OnchainWalletAccount.exists?(token.id)
+    assert_not OnchainWalletAccount.exists?(token_asset.id)
     assert OnchainWalletAccount.exists?(native.id)
     # Disconnecting keeps the account behind, it only stops updating.
     assert Account.exists?(token_account.id)
     assert Account.exists?(native_account.id)
-    assert_not AccountProvider.exists?(provider_type: "OnchainWalletAccount", provider_id: token.id)
+    assert_not AccountProvider.exists?(provider_type: "OnchainWalletAccount", provider_id: token_asset.id)
   end
 end

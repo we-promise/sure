@@ -68,11 +68,11 @@ class Provider::JupiterTokens
         verified = verified_tokens(batch)
 
         batch.each do |mint|
-          token = verified[mint]
+          metadata = verified[mint]
           # Misses are cached too: a mint the list does not vouch for today is
           # unlikely to change by the next sync, and spam wallets hold many.
-          Rails.cache.write(cache_key(mint), token || MISS, expires_in: CACHE_TTL)
-          found[mint] = token.symbolize_keys if token
+          Rails.cache.write(cache_key(mint), metadata || MISS, expires_in: CACHE_TTL)
+          found[mint] = metadata.symbolize_keys if metadata
         end
       end
 

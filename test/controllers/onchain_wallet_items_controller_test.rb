@@ -431,7 +431,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
   test "manage lists every tracked address and offers all four actions" do
     item = create_onchain_wallet_item(family: @family)
     native = create_onchain_wallet_account(item: item)
-    token = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
+    token_asset = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
 
     get manage_onchain_wallet_item_url(item)
 
@@ -443,7 +443,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     # Per-asset action, for each asset, not just one for the wallet.
     assert_select "form[action=?]", disconnect_asset_onchain_wallet_item_path(item), count: 2
     assert_match native.symbol, response.body
-    assert_match token.symbol, response.body
+    assert_match token_asset.symbol, response.body
   end
 
   test "review_tokens reopens the selection with the address unchanged" do
@@ -481,7 +481,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
   test "unticking one asset removes only it" do
     item = create_onchain_wallet_item(family: @family)
     native = create_onchain_wallet_account(item: item)
-    token = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
+    token_asset = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
     stub_wallet_with_token
 
     post update_tokens_onchain_wallet_item_url(item), params: {
@@ -491,7 +491,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert OnchainWalletAccount.exists?(native.id)
-    assert_not OnchainWalletAccount.exists?(token.id)
+    assert_not OnchainWalletAccount.exists?(token_asset.id)
   end
 
   test "an asset the chain no longer reports can still be unticked" do
