@@ -7,9 +7,14 @@ class IncomeStatement
 
   attr_reader :family, :user
 
-  def initialize(family, user: nil)
+  # `accounts:` overrides the account scope entirely (e.g. a personal
+  # budget's "owned accounts only" view) instead of inferring it from
+  # `user.finance_accounts`. `user` is still kept for cache-key/estimate
+  # purposes when both are given.
+  def initialize(family, user: nil, accounts: nil)
     @family = family
     @user = user || Current.user
+    @accounts = accounts
   end
 
   def totals(transactions_scope: nil, date_range:)
@@ -239,7 +244,11 @@ class IncomeStatement
     end
 
     def included_account_ids
-      @included_account_ids ||= user ? user.finance_accounts.pluck(:id) : nil
+      @included_account_ids ||= if @accounts
+        @accounts.pluck(:id)
+      elsif user
+        user.finance_accounts.pluck(:id)
+      end
     end
 
     def included_account_ids_hash

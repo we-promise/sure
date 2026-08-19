@@ -1,5 +1,8 @@
 class BudgetCategoriesController < ApplicationController
+  include BudgetOwnership
+
   before_action :set_budget
+  before_action :ensure_budget_editable!, only: %i[index update]
 
   def index
     @budget_categories = @budget.budget_categories.includes(:category)
@@ -21,7 +24,7 @@ class BudgetCategoriesController < ApplicationController
       @budget_category = @budget.uncategorized_budget_category
       @recent_transactions = @recent_transactions.where(transactions: { category_id: nil })
     else
-      @budget_category = Current.family.budget_categories.find(params[:id])
+      @budget_category = @budget.budget_categories.find(params[:id])
       @recent_transactions = @recent_transactions.joins("LEFT JOIN categories ON categories.id = transactions.category_id")
                                                  .where("categories.id = ? OR categories.parent_id = ?", @budget_category.category.id, @budget_category.category.id)
     end
@@ -30,12 +33,12 @@ class BudgetCategoriesController < ApplicationController
   end
 
   def update
-    @budget_category = Current.family.budget_categories.find(params[:id])
+    @budget_category = @budget.budget_categories.find(params[:id])
     @budget_category.update_budgeted_spending!(budgeted_spending_param)
 
     respond_to do |format|
       format.turbo_stream
-      format.html { redirect_to budget_budget_categories_path(@budget) }
+      format.html { redirect_to budget_budget_categories_path(@budget, **budget_owner_query) }
     end
   rescue ActiveRecord::RecordInvalid
     render :index, status: :unprocessable_entity
@@ -51,6 +54,7 @@ class BudgetCategoriesController < ApplicationController
 
     def set_budget
       start_date = Budget.param_to_date(params[:budget_month_year], family: Current.family)
-      @budget = Current.family.budgets.find_by!(start_date: start_date)
+      @budget = resolve_budget(start_date)
+      raise ActiveRecord::RecordNotFound unless @budget
     end
 end
