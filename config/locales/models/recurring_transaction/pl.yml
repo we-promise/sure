@@ -1,0 +1,7 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: "Kontrahent lub nazwa muszą być obecne"

@@ -21,6 +21,7 @@ en:
         general: General Settings
         ai_assistant: AI Assistant
         financial_data_providers: Financial Data Providers
+        property_valuation_providers: Property Valuation Providers
         sync_settings: Sync Settings
         invites: Invite Codes
         title: Self-Hosting
@@ -44,6 +45,8 @@ en:
         requires_api_key_alpha_vantage: requires API key, 25 calls/day limit
         mfapi_hint: free, no API key -- Indian mutual funds only
         binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
+        moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
+        tinkoff_invest_hint: requires read-only token -- Russian stocks/funds/bonds prices + brand logos
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -52,6 +55,9 @@ en:
           alpha_vantage: Alpha Vantage
           mfapi: MFAPI.in
           binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
@@ -135,14 +141,36 @@ en:
         max_response_tokens_help: "Tokens reserved for the model's reply. Default: 512. Lower to free up room for longer history."
         max_items_per_call_label: Max Items Per Batch (Optional)
         max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. Larger batches are auto-sliced to fit the context window."
+        ai_response_timeout_heading: Chat Response Timeout
+        ai_response_timeout_description: How long the chat waits for the assistant before showing a "no response" error. Raise this if you run a local model on slow hardware — responses from OpenAI-compatible providers are not streamed, and tool-call rounds display nothing, so the chat can sit on "Thinking…" for the whole turn.
+        ai_response_timeout_label: Response Timeout in Seconds (Optional)
+        ai_response_timeout_help: "Default: 90. This covers the whole turn, so size it as a sum: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT, plus tool execution and queue time. Lowering ASSISTANT_MAX_TOOL_CALL_ITERATIONS reduces how large this needs to be, and is often the better lever on slow hardware."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance provides free access to stock prices, exchange rates, and financial data without requiring an API key.
-        status_active: Yahoo Finance is active and working
-        status_inactive: Yahoo Finance connection failed
-        connection_failed: Unable to connect to Yahoo Finance
-        troubleshooting: Check your internet connection and firewall settings. Yahoo Finance may be temporarily unavailable.
+        status_healthy: Yahoo Finance is active and working.
+        status_rate_limited: Yahoo Finance is temporarily rate limiting requests.
+        rate_limited_title: Yahoo Finance rate limit reached.
+        rate_limited_message: No action is required. Sure will avoid additional health checks for 30 minutes. Price and exchange-rate operations continue independently.
+        status_unavailable: Yahoo Finance is currently unavailable.
+        unavailable_title: Could not verify Yahoo Finance.
+        unavailable_message: Yahoo Finance could not be reached or returned an unexpected response. Check your internet connection and try again later.
+        status_unknown: Yahoo Finance status is being checked.
+      rentcast_settings:
+        title: RentCast
+        description: Enter your RentCast API key to look up US property details and value estimates when adding a property. The free tier is limited to 50 API requests per month, shared between property lookups and daily valuation refreshes. On a paid plan, raise the cap with the RENTCAST_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the RENTCAST_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your RentCast API key here
+        usage: "%{used} of %{limit} monthly requests used"
+      realie_settings:
+        title: Realie
+        description: Enter your Realie API key to look up US property details and value estimates when adding a property. The free tier is limited to 25 API requests per month, shared between property lookups and daily valuation refreshes. On a paid plan, raise the cap with the REALIE_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the REALIE_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your Realie API key here
+        usage: "%{used} of %{limit} monthly requests used"
       tiingo_settings:
         title: Tiingo
         description: Enter the API token provided by Tiingo. Free tier supports 50 unique symbols per hour with 30+ years of historical data.
@@ -153,6 +181,16 @@ en:
         step_1_html: 'Visit <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> and create a free account.'
         step_2_html: 'Go to the <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a> page.'
         step_3: Copy your API token and paste it below.
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Enter a read-only T-Invest API token. Used to fetch brand logos for securities (incl. funds and bonds, even when MOEX prices them) and, when enabled above, prices for Russian instruments.
+        env_configured_message: Successfully configured through the TINKOFF_INVEST_API_KEY environment variable.
+        label: API Token
+        placeholder: Enter your T-Invest API token here
+        show_details: "(show details)"
+        step_1: Open T-Bank investments, then Settings, then API tokens (requires an open T-Bank brokerage account).
+        step_2: Create a token with read-only access.
+        step_3: Copy the token and paste it below.
       eodhd_settings:
         title: EODHD
         description: Enter the API token provided by EODHD. Supports EU ETFs on LSE, XETRA, and other international exchanges.

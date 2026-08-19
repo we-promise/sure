@@ -3,10 +3,15 @@ en:
   transfers:
     create:
       success: Transfer created
+      exchange_rate_unavailable: Exchange rate unavailable for selected currencies and date
+      date_invalid: is invalid
     destroy:
       success: Transfer removed
     form:
       amount: Amount
+      bank_charges: Bank Charges
+      outgoing_fee: Outgoing transfer fee
+      incoming_fee: Incoming transfer fee
       date: Date
       destination_amount: Destination amount
       destination_amount_display: "Destination amount: %{amount}"
@@ -38,7 +43,11 @@ en:
       from: From
       to: To
       date: Date
-      amount: Amount
+      transfer_amount: Transfer amount
+      total: Total
+      bank_charges: Bank Charges
+      source_fee: Source fee
+      destination_fee: Destination fee
       category: Category
       uncategorized: Uncategorized
     update:

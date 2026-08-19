@@ -1,8 +1,5 @@
 ---
 fr:
-  defaults:
-    brand_name: "%{brand_name}"
-    product_name: "%{product_name}"
   activerecord:
     errors:
       messages:
@@ -46,7 +43,9 @@ fr:
     formats:
       default: "%d/%m/%Y"
       long: "%-d %B %Y"
+      month_year: "%B %Y"
       short: "%-d %b"
+      short_month_year: "%b %Y"
     month_names:
     -
     - janvier
@@ -113,6 +112,11 @@ fr:
       month: Mois
       second: Seconde
       year: Année
+  defaults:
+    brand_name: "%{brand_name}"
+    common:
+      close: Fermer
+    product_name: "%{product_name}"
   errors:
     format: "%{attribute} %{message}"
     messages:
@@ -156,8 +160,8 @@ fr:
     expand: Développer
   helpers:
     select:
-      prompt: Veuillez sélectionner
       default_label: Sélectionner…
+      prompt: Veuillez sélectionner
       search_placeholder: Rechercher
     submit:
       create: Créer un(e) %{model}
@@ -166,13 +170,8 @@ fr:
   number:
     currency:
       format:
-        delimiter: " "
-        format: "%n %u"
-        precision: 2
-        separator: ","
         significant: false
         strip_insignificant_zeros: false
-        unit: "€"
     format:
       delimiter: " "
       precision: 3

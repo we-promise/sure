@@ -1,0 +1,20 @@
+---
+tr:
+  pdf_import_mailer:
+    next_steps:
+      document_stored_note: Bu belge referansınız için saklandı. Gelecekteki yapay
+        zeka sohbetlerinde bağlam sağlamak için kullanılabilir.
+      document_type_label: Belge Türü
+      footer_note: Bu otomatik bir mesajdır. Lütfen bu e-postayı doğrudan yanıtlamayın.
+      greeting: Merhaba %{name},
+      intro: "%{product}'a yüklediğiniz PDF belgesinin analizini tamamladık."
+      next_steps_intro: 'Birkaç seçeneğiniz var:'
+      next_steps_label: Sırada Ne Var?
+      option_delete: Artık ihtiyacınız yoksa bu içe aktarmayı silin
+      option_extract_transactions: Bu ekstreden işlemleri çıkarın
+      option_keep_reference: Gelecekteki yapay zeka sohbetlerinde referans olması
+        için bu belgeyi saklayın
+      summary_label: Yapay Zeka Özeti
+      transactions_note: Bu belge işlemler içeriyor gibi görünüyor. Şimdi bunları
+        çıkarabilir ve inceleyebilirsiniz.
+      view_import_button: İçe Aktarma Ayrıntılarını Görüntüle

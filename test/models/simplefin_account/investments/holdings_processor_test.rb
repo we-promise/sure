@@ -122,14 +122,14 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_equal BigDecimal("100.00"), cost_basis
   end
 
-  test "institution_reports_total_basis? matches Vanguard and Fidelity org metadata" do
+  test "institution_reports_total_basis? matches Vanguard, Fidelity, and Schwab org metadata" do
     cases = {
       { "name" => "Vanguard" }                          => true,
       { "name" => "VANGUARD BROKERAGE" }                => true,
       { "name" => "Fidelity Investments" }              => true,
       { "domain" => "vanguard.com" }                    => true,
       { "domain" => "401k.fidelity.com" }               => true,
-      { "name" => "Charles Schwab", "domain" => "schwab.com" } => false,
+      { "name" => "Charles Schwab", "domain" => "schwab.com" } => true,
       { "name" => "Chase" }                             => false,
       {}                                                => false
     }
@@ -141,6 +141,28 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
         processor.send(:institution_reports_total_basis?),
         "org_data #{org.inspect} expected #{expected}"
     end
+  end
+
+  test "cost_basis from Charles Schwab is divided by qty (#2626)" do
+    # Schwab reports `cost_basis` as the total position cost, not per-share,
+    # in violation of the SimpleFIN spec — same failure mode as Vanguard
+    # (#1182) and Fidelity (#1718). Observed on two independent Sure
+    # instances via raw SimpleFIN payloads, e.g.:
+    #   { "shares" => "651.00", "cost_basis" => "30162.36", "purchase_price" => "46.33235" }
+    # Left uncorrected, Holding#calculate_trend later multiplies this
+    # (mislabeled-as-per-share) total by qty again when reconstructing the
+    # position's original cost, inflating a holding's unrealized loss by
+    # roughly qty× — e.g. a $46,950 position showing a -99.8% / -$19.6M
+    # "return" instead of its true +55.7% gain.
+    cost_basis = @processor.send(
+      :normalize_cost_basis,
+      BigDecimal("30162.36"),
+      BigDecimal("651"),
+      "cost_basis",
+      true # institution_reports_total_basis?
+    )
+
+    assert_in_delta 46.33, cost_basis.to_f, 0.01
   end
 
   test "missing cost basis fields return nil" do

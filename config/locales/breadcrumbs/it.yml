@@ -1,0 +1,88 @@
+---
+it:
+  breadcrumbs:
+    account_sharings: Condivisione conto
+    account_statements: Archivio estratti
+    accounts: Conti
+    ai_prompts: Prompt AI
+    api_key: Chiave API
+    api_keys: Chiavi API
+    appearance: Aspetto
+    appearances: Aspetto
+    bank_sync: Sincronizzazione bancaria
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Categorie budget
+    budgets: Budget
+    categories: Categorie
+    categorize: Categorizza
+    chats: Chat
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Carte di credito
+    cryptos: Crypto
+    dashboard: Dashboard
+    debug: Debug
+    debugs: Debug
+    depositories: Conti correnti
+    enable_banking_items: Enable Banking
+    exports: Esportazioni
+    family_exports: Esportazioni
+    family_merchants: Esercenti
+    guides: Guide
+    holdings: Portafoglio
+    home: Home
+    hostings: Self-Hosting
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Impersonazioni
+    imports: Importazioni
+    indexa_capital_items: Indexa Capital
+    intro: Introduzione
+    investments: Investimenti
+    invitations: Inviti
+    invite_codes: Codici invito
+    kraken_items: Kraken
+    llm_usage: Utilizzo LLM
+    llm_usages: Utilizzo LLM
+    loans: Prestiti
+    lunchflow_items: Lunch Flow
+    mcp: Server MCP
+    merchants: Esercenti
+    mercury_items: Mercury
+    messages: Messaggi
+    mfa: Autenticazione a due fattori
+    oidc_accounts: Account SSO
+    onboardings: Configurazione iniziale
+    other_assets: Altri asset
+    other_liabilities: Altre passività
+    payments: Pagamenti
+    pending_duplicate_merges: Revisione duplicati
+    plaid_items: Plaid
+    preferences: Preferenze
+    profile: Informazioni profilo
+    profiles: Informazioni profilo
+    properties: Proprietà
+    providers: Provider
+    recurring_transactions: Ricorrenti
+    registrations: Registrazione
+    reports: Rapporti
+    rules: Regole
+    securities: Titoli
+    security: Sicurezza
+    self_hosting: Self-Hosting
+    sessions: Accedi
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Suddivisione
+    sso_identities: Connessioni SSO
+    sso_providers: Provider SSO
+    subscriptions: Abbonamento
+    tags: Etichette
+    trades: Operazioni
+    transactions: Transazioni
+    transfer_matches: Corrispondenze bonifici
+    transfers: Bonifici
+    users: Utenti
+    valuations: Valutazioni
+    vehicles: Veicoli

@@ -234,4 +234,165 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal({ "type" => "financial_document" }, document.metadata)
     assert_equal "vs_test123", family.reload.vector_store_id
   end
+
+  # auto_share_existing_accounts_with -----------------------------------------
+
+  test "auto_share_existing_accounts_with shares existing family accounts read_write when sharing is default" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    newcomer = users(:empty)
+    newcomer.update_columns(family_id: family.id, role: "member")
+
+    expected_ids = family.accounts.where.not(owner_id: newcomer.id).pluck(:id).sort
+    assert expected_ids.any?, "fixture family must have shareable accounts"
+
+    family.auto_share_existing_accounts_with(newcomer)
+
+    shares = AccountShare.where(user: newcomer)
+    assert_equal expected_ids, shares.pluck(:account_id).sort
+    assert shares.all?(&:read_write?), "shares must grant read_write"
+    assert shares.all?(&:include_in_finances?), "shares must be included in finances"
+  end
+
+  test "auto_share_existing_accounts_with shares existing family accounts read_only for guests" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    newcomer = users(:empty)
+    newcomer.update_columns(family_id: family.id, role: "guest")
+
+    expected_ids = family.accounts.where.not(owner_id: newcomer.id).pluck(:id).sort
+    assert expected_ids.any?, "fixture family must have shareable accounts"
+
+    family.auto_share_existing_accounts_with(newcomer)
+
+    shares = AccountShare.where(user: newcomer)
+    assert_equal expected_ids, shares.pluck(:account_id).sort
+    assert shares.all?(&:read_only?), "guest shares must grant read_only"
+    assert shares.all?(&:include_in_finances?), "shares must be included in finances"
+  end
+
+  test "auto_share_existing_accounts_with is a no-op when family sharing is private" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "private")
+    newcomer = users(:empty)
+    newcomer.update_columns(family_id: family.id, role: "member")
+
+    assert_no_difference "AccountShare.count" do
+      family.auto_share_existing_accounts_with(newcomer)
+    end
+  end
+
+  test "auto_share_existing_accounts_with does not share with a user outside the family" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    outsider = users(:empty)
+    outsider.update_columns(family_id: families(:empty).id, role: "member")
+
+    assert_no_difference "AccountShare.count" do
+      family.auto_share_existing_accounts_with(outsider)
+    end
+  end
+
+  test "auto_share_existing_accounts_with never shares a user's own account and is idempotent" do
+    family = families(:dylan_family)
+    family.update!(default_account_sharing: "shared")
+    newcomer = users(:empty)
+    newcomer.update_columns(family_id: family.id, role: "member")
+    owned = family.accounts.first
+    owned.update!(owner: newcomer)
+
+    family.auto_share_existing_accounts_with(newcomer)
+    count_after_first = AccountShare.where(user: newcomer).count
+
+    assert_not AccountShare.exists?(user: newcomer, account: owned),
+      "must not share a user's own account with themselves"
+
+    family.auto_share_existing_accounts_with(newcomer) # re-run
+
+    assert_equal count_after_first, AccountShare.where(user: newcomer).count,
+      "re-running must not create duplicate shares"
+  end
+
+  # Preview access is per-user, but jobs that act on family-scoped data have no
+  # Current.user. One opted-in member enables the family.
+  test "preview_features_enabled? is true when any member has opted in" do
+    family = families(:dylan_family)
+    family.users.each { |user| set_preview_features(user, false) }
+
+    assert_not family.reload.preview_features_enabled?
+
+    set_preview_features(family.users.first, true)
+
+    assert family.reload.preview_features_enabled?
+  end
+
+  test "with_preview_features scope agrees with the predicate" do
+    family = families(:dylan_family)
+    family.users.each { |user| set_preview_features(user, false) }
+
+    assert_not_includes Family.with_preview_features, family.reload
+
+    set_preview_features(family.users.first, true)
+
+    assert_includes Family.with_preview_features, family.reload
+  end
+
+  # The family rollup is a jsonb containment match; the UI gates on
+  # User#preview_features_enabled?'s strict `== true`. If containment were the
+  # looser of the two, the nightly job would generate for families whose UI
+  # still hides the feature — so assert the user-level predicate agrees.
+  test "with_preview_features ignores truthy non-boolean values" do
+    family = families(:dylan_family)
+    family.users.each { |user| set_preview_features(user, false) }
+    set_preview_features(family.users.first, "yes")
+
+    assert_not family.users.first.reload.preview_features_enabled?,
+      "the per-user predicate the UI reads must reject a non-boolean"
+    assert_not family.reload.preview_features_enabled?
+    assert_not_includes Family.with_preview_features, family
+  end
+
+  test "rejects a timezone ActiveSupport::TimeZone doesn't recognize" do
+    family = families(:dylan_family)
+    family.timezone = "Invalid/Timezone"
+
+    assert_not family.valid?
+    assert_includes family.errors[:timezone], "is invalid"
+  end
+
+  test "accepts a timezone identifier, the form the settings dropdown actually submits" do
+    family = families(:dylan_family)
+    # LanguagesHelper#timezone_options submits tz.tzinfo.identifier (e.g.
+    # "America/New_York"), not tz.name (e.g. "Eastern Time (US & Canada)") --
+    # these differ for every zone Rails ships, so this is the case that
+    # actually matters, not just the display name.
+    family.timezone = "America/New_York"
+
+    assert family.valid?
+  end
+
+  test "allows a blank timezone" do
+    family = families(:dylan_family)
+    family.timezone = nil
+
+    assert family.valid?
+  end
+
+  test "does not re-validate an existing invalid timezone when saving unrelated changes" do
+    family = families(:dylan_family)
+    # Bypasses validations, simulating data that predates this validation --
+    # e.g. the exact #390 scenario (a stale/renamed IANA zone already sitting
+    # in the DB).
+    family.update_column(:timezone, "Invalid/Timezone")
+
+    family.name = "Updated name, timezone untouched"
+
+    assert family.valid?, "an unrelated change must not be blocked by a pre-existing bad timezone"
+    assert family.save
+  end
+
+  private
+    def set_preview_features(user, enabled)
+      user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
+    end
 end

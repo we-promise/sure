@@ -28,6 +28,102 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "opening boundary difference is surfaced as an adjustment instead of a silent jump" do
+    opening_date = Date.new(2024, 1, 1)
+    day_after_opening = opening_date + 1.day
+    transaction_date = opening_date + 2.days
+    current_anchor_date = transaction_date + 1.day
+
+    account = create_account_with_ledger(
+      account: { type: Depository, balance: 1000, cash_balance: 1000, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: current_anchor_date, balance: 1000 },
+        { type: "transaction", date: transaction_date, amount: 200 },
+        { type: "opening_anchor", date: opening_date, balance: 1000 }
+      ]
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: opening_date,
+          legacy_balances: { balance: 1000, cash_balance: 1000 },
+          balances: { start: 1000, start_cash: 1000, start_non_cash: 0, end_cash: 1000, end_non_cash: 0, end: 1000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: day_after_opening,
+          legacy_balances: { balance: 1200, cash_balance: 1200 },
+          balances: { start: 1000, start_cash: 1000, start_non_cash: 0, end_cash: 1200, end_non_cash: 0, end: 1200 },
+          flows: 0,
+          adjustments: { cash_adjustments: 200, non_cash_adjustments: 0 }
+        },
+        {
+          date: transaction_date,
+          legacy_balances: { balance: 1000, cash_balance: 1000 },
+          balances: { start: 1200, start_cash: 1200, start_non_cash: 0, end_cash: 1000, end_non_cash: 0, end: 1000 },
+          flows: { cash_inflows: 0, cash_outflows: 200 },
+          adjustments: 0
+        },
+        {
+          date: current_anchor_date,
+          legacy_balances: { balance: 1000, cash_balance: 1000 },
+          balances: { start: 1000, start_cash: 1000, start_non_cash: 0, end_cash: 1000, end_non_cash: 0, end: 1000 },
+          flows: 0,
+          adjustments: 0
+        }
+      ]
+    )
+  end
+
+  test "opening boundary adjustment uses liability flow direction" do
+    opening_date = Date.new(2024, 1, 1)
+    boundary_date = opening_date + 1.day
+    current_anchor_date = boundary_date + 1.day
+
+    account = create_account_with_ledger(
+      account: { type: CreditCard, balance: 500, cash_balance: 500, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: current_anchor_date, balance: 500 },
+        { type: "transaction", date: boundary_date, amount: 100 },
+        { type: "opening_anchor", date: opening_date, balance: 1000 }
+      ]
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: opening_date,
+          legacy_balances: { balance: 1000, cash_balance: 1000 },
+          balances: { start: 1000, start_cash: 1000, start_non_cash: 0, end_cash: 1000, end_non_cash: 0, end: 1000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: boundary_date,
+          legacy_balances: { balance: 500, cash_balance: 500 },
+          balances: { start: 1000, start_cash: 1000, start_non_cash: 0, end_cash: 500, end_non_cash: 0, end: 500 },
+          flows: { cash_inflows: 0, cash_outflows: 100 },
+          adjustments: { cash_adjustments: -600, non_cash_adjustments: 0 }
+        },
+        {
+          date: current_anchor_date,
+          legacy_balances: { balance: 500, cash_balance: 500 },
+          balances: { start: 500, start_cash: 500, start_non_cash: 0, end_cash: 500, end_non_cash: 0, end: 500 },
+          flows: 0,
+          adjustments: 0
+        }
+      ]
+    )
+  end
+
   # Reconciliation valuations act as waypoints during reverse syncs. This ensures that
   # historical balances accurately reflect the API-reported values, even if the transaction
   # history is incomplete or missing.
@@ -43,6 +139,8 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
 
     calculated = Balance::ReverseCalculator.new(account).calculate
 
+    # The day after the opening anchor now carries an explicit adjustment so
+    # the gap to the first reconciliation waypoint is auditable.
     assert_calculated_ledger_balances(
       calculated_data: calculated,
       expected_data: [
@@ -70,10 +168,10 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
         {
           date: 3.days.ago,
           legacy_balances: { balance: 17000, cash_balance: 17000 },
-          balances: { start: 17000, start_cash: 17000, start_non_cash: 0, end_cash: 17000, end_non_cash: 0, end: 17000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 17000, end_non_cash: 0, end: 17000 },
           flows: 0,
-          adjustments: { cash_adjustments: 0, non_cash_adjustments: 0 }
-        }, # Derived from Reconciliation waypoint
+          adjustments: { cash_adjustments: 2000, non_cash_adjustments: 0 }
+        }, # Opening boundary adjustment explains the gap from opening anchor to waypoint
         {
           date: 4.days.ago,
           legacy_balances: { balance: 15000, cash_balance: 15000 },
@@ -154,10 +252,10 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
         {
           date: 6.days.ago,
           legacy_balances: { balance: 22500, cash_balance: 22500 },
-          balances: { start: 22200, start_cash: 22200, start_non_cash: 0, end_cash: 22500, end_non_cash: 0, end: 22500 },
+          balances: { start: 18000, start_cash: 18000, start_non_cash: 0, end_cash: 22500, end_non_cash: 0, end: 22500 },
           flows: { cash_inflows: 300, cash_outflows: 0 },
-          adjustments: { cash_adjustments: 0, non_cash_adjustments: 0 }
-        }, # Income derived further back, right before opening_anchor
+          adjustments: { cash_adjustments: 4200, non_cash_adjustments: 0 }
+        }, # Opening boundary adjustment explains the gap from opening anchor to derived balance
         {
           date: 7.days.ago,
           legacy_balances: { balance: 18000, cash_balance: 18000 },
@@ -216,9 +314,9 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
         {
           date: 3.days.ago,
           legacy_balances: { balance: 18000, cash_balance: 18000 },
-          balances: { start: 18000, start_cash: 18000, start_non_cash: 0, end_cash: 18000, end_non_cash: 0, end: 18000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 18000, end_non_cash: 0, end: 18000 },
           flows: 0,
-          adjustments: { cash_adjustments: 0, non_cash_adjustments: 0 }
+          adjustments: { cash_adjustments: 3000, non_cash_adjustments: 0 }
         },
         {
           date: 4.days.ago,
@@ -314,10 +412,10 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
         {
           date: Date.current,
           legacy_balances: { balance: 20000, cash_balance: 10000 },
-          balances: { start: 20000, start_cash: 10000, start_non_cash: 10000, end_cash: 10000, end_non_cash: 10000, end: 20000 },
+          balances: { start: 15000, start_cash: 5000, start_non_cash: 10000, end_cash: 10000, end_non_cash: 10000, end: 20000 },
           flows: { market_flows: 0 },
-          adjustments: 0
-        }, # Since $10,000 of holdings, cash has to be $10,000 to reach $20,000 total value
+          adjustments: { cash_adjustments: 5000, non_cash_adjustments: 0 }
+        }, # Opening boundary adjustment explains the gap to the current provider anchor
         {
           date: 1.day.ago,
           legacy_balances: { balance: 15000, cash_balance: 5000 },
@@ -672,9 +770,9 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
         {
           date: 1.day.ago,
           legacy_balances: { balance: 20000, cash_balance: 19000 },
-          balances: { start: 20000, start_cash: 19000, start_non_cash: 1000, end_cash: 19000, end_non_cash: 1000, end: 20000 },
+          balances: { start: 15000, start_cash: 14000, start_non_cash: 1000, end_cash: 19000, end_non_cash: 1000, end: 20000 },
           flows: { market_flows: 0 },
-          adjustments: 0
+          adjustments: { cash_adjustments: 5000, non_cash_adjustments: 0 }
         },
         {
           date: 2.days.ago,
@@ -683,6 +781,67 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
           flows: { market_flows: 0 },
           adjustments: 0
         } # Opening anchor sets absolute balance
+      ]
+    )
+  end
+
+  # Regression: a reconciliation waypoint dated EARLIER than the opening anchor
+  # must still be materialized. The reverse loop is bounded on
+  # min(opening_anchor_date, oldest_entry_date), so it continues past the anchor
+  # down to the earliest entry, which resets the balance on its own date.
+  test "materializes reconciliation waypoints dated before the opening anchor" do
+    account = create_account_with_ledger(
+      account: { type: Depository, balance: 20000, cash_balance: 20000, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 20000 },
+        { type: "opening_anchor",  date: 2.days.ago,  balance: 15000 },
+        { type: "reconciliation", date: 4.days.ago,  balance: 9000 } # before the opening anchor
+      ]
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+
+    # Loop extends back to the earliest entry, not the (later) opening anchor.
+    assert_equal 4.days.ago.to_date, calculated.map(&:date).min
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: Date.current,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: 0
+        }, # Current anchor
+        {
+          date: 1.day.ago,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: { cash_adjustments: 5000, non_cash_adjustments: 0 }
+        }, # Opening boundary adjustment explains the gap above the anchor
+        {
+          date: 2.days.ago,
+          legacy_balances: { balance: 15000, cash_balance: 15000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 15000, end_non_cash: 0, end: 15000 },
+          flows: 0,
+          adjustments: 0
+        }, # Opening anchor
+        {
+          date: 3.days.ago,
+          legacy_balances: { balance: 15000, cash_balance: 15000 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 15000, end_non_cash: 0, end: 15000 },
+          flows: 0,
+          adjustments: 0
+        }, # Gap below the anchor carries down with no flows
+        {
+          date: 4.days.ago,
+          legacy_balances: { balance: 9000, cash_balance: 9000 },
+          balances: { start: 9000, start_cash: 9000, start_non_cash: 0, end_cash: 9000, end_non_cash: 0, end: 9000 },
+          flows: 0,
+          adjustments: 0
+        } # Pre-anchor reconciliation resets to its own value
       ]
     )
   end

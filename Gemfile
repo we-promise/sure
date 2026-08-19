@@ -10,7 +10,7 @@ gem "pg", "~> 1.5"
 gem "redis", "~> 5.4"
 
 # Deployment
-gem "puma", ">= 5.0"
+gem "puma", ">= 7.2.1"
 gem "bootsnap", require: false
 
 # Assets
@@ -59,7 +59,6 @@ gem "image_processing", ">= 1.2"
 gem "ostruct"
 gem "bcrypt", "~> 3.1"
 gem "jwt"
-gem "ed25519" # For Coinbase CDP API authentication
 gem "jbuilder"
 gem "countries"
 
@@ -76,13 +75,12 @@ gem "octokit"
 gem "pagy"
 gem "rails-i18n"
 gem "rails-settings-cached"
-gem "tzinfo-data", platforms: %i[windows jruby]
+gem "tzinfo-data", platforms: %i[mswin mswin64 mingw x64_mingw jruby]
 gem "csv"
 gem "rchardet" # Character encoding detection
 gem "redcarpet"
 gem "stripe"
 gem "plaid"
-gem "snaptrade", "~> 2.0"
 gem "httparty"
 gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"
@@ -93,7 +91,7 @@ gem "pdf-reader", "~> 2.12"
 
 # OpenID Connect, OAuth & SAML authentication
 gem "omniauth", "~> 2.1"
-gem "omniauth-rails_csrf_protection"
+gem "omniauth-rails_csrf_protection", ">= 2.0"
 gem "omniauth_openid_connect"
 gem "omniauth-google-oauth2"
 gem "omniauth-github"
@@ -109,7 +107,7 @@ gem "anthropic", "~> 1.0"
 gem "langfuse-ruby", "~> 0.1.4", require: "langfuse"
 
 group :development, :test do
-  gem "debug", platforms: %i[mri windows]
+  gem "debug", platforms: %i[mri mswin mswin64 mingw x64_mingw]
   gem "brakeman", require: false
   gem "rubocop-rails-omakase", require: false
   gem "i18n-tasks"

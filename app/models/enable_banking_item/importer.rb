@@ -3,6 +3,17 @@ class EnableBankingItem::Importer
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
 
+  # Prefer booked ledger balances for net worth/current_balance. Available balances
+  # can include an arranged overdraft facility for some ASPSPs (for example CGD PT),
+  # so they are only a last-resort fallback.
+  BALANCE_TYPE_PRIORITY = %w[
+    CLBD closingBooked
+    ITBD interimBooked
+    XPCD expected
+    CLAV closingAvailable
+    ITAV interimAvailable
+  ].freeze
+
   NETWORK_ERRORS = [
     ::SocketError,
     ::Errno::ECONNREFUSED,
@@ -82,19 +93,18 @@ class EnableBankingItem::Importer
       end
     end
 
-    # Fetch balances and transactions for linked accounts
+    # Fetch balances and transactions for linked accounts. Balance refreshes are
+    # best-effort: a balance endpoint failure should keep the previous balance and
+    # must not prevent transaction sync for the same account.
     transactions_imported = 0
     transactions_failed = 0
+    balances_failed = 0
 
     linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
 
     linked_accounts_query.each do |enable_banking_account|
       begin
-        unless fetch_and_update_balance(enable_banking_account)
-          transactions_failed += 1
-          # @sync_error already set in fetch_and_update_balance
-          next
-        end
+        balances_failed += 1 unless fetch_and_update_balance(enable_banking_account)
 
         result = fetch_and_store_transactions(enable_banking_account)
         if result[:success]
@@ -115,7 +125,8 @@ class EnableBankingItem::Importer
       accounts_updated: accounts_updated,
       accounts_failed: accounts_failed,
       transactions_imported: transactions_imported,
-      transactions_failed: transactions_failed
+      transactions_failed: transactions_failed,
+      balances_failed: balances_failed
     }
 
     result[:error] = @sync_error || I18n.t("enable_banking_items.errors.unexpected") if !result[:success]
@@ -187,46 +198,196 @@ class EnableBankingItem::Importer
       balance_data = enable_banking_provider.get_account_balances(
         account_id: enable_banking_account.api_account_id,
         psu_headers: enable_banking_item.build_psu_headers
+      ).with_indifferent_access
+
+      # Enable Banking returns an array of balances. Use booked ledger balances for
+      # current_balance/net worth before considering available balances. Available
+      # balances can include arranged overdraft facilities and overstate cash.
+      balances = Array(balance_data[:balances]).map { |balance| balance.with_indifferent_access }
+
+      if balances.empty?
+        mark_balance_unavailable(enable_banking_account)
+        return false
+      end
+
+      balance = select_current_balance(balances)
+
+      unless balance.present?
+        mark_balance_unavailable(enable_banking_account)
+        return false
+      end
+
+      amount = balance.dig(:balance_amount, :amount) || balance[:amount]
+      currency = balance.dig(:balance_amount, :currency) || balance[:currency]
+
+      unless amount.present?
+        mark_balance_unavailable(enable_banking_account)
+        return false
+      end
+
+      indicator = balance[:credit_debit_indicator].to_s.upcase
+      parsed_amount = amount.to_d
+
+      # Enable Banking uses positive amounts for both credit and debit.
+      # DBIT indicates a negative balance (money owed/withdrawn).
+      parsed_amount = -parsed_amount if indicator == "DBIT"
+
+      enable_banking_account.update!(
+        current_balance: parsed_amount,
+        currency: currency.presence || enable_banking_account.currency
       )
 
-      # Enable Banking returns an array of balances. We prioritize types based on reliability.
-      # closingBooked (CLBD) > interimAvailable (ITAV) > expected (XPCD)
-      balances = balance_data[:balances] || []
-      return true if balances.empty?
-
-      priority_types = [ "CLBD", "ITAV", "XPCD", "CLAV", "ITBD" ]
-      balance = nil
-
-      priority_types.each do |type|
-        balance = balances.find { |b| b[:balance_type] == type }
-        break if balance
-      end
-
-      balance ||= balances.first
-
-      if balance.present?
-        amount = balance.dig(:balance_amount, :amount) || balance[:amount]
-        currency = balance.dig(:balance_amount, :currency) || balance[:currency]
-
-        if amount.present?
-          indicator = balance[:credit_debit_indicator]
-          parsed_amount = amount.to_d
-
-          # Enable Banking uses positive amounts for both credit and debit.
-          # DBIT indicates a negative balance (money owed/withdrawn).
-          parsed_amount = -parsed_amount if indicator == "DBIT"
-
-          enable_banking_account.update!(
-            current_balance: parsed_amount,
-            currency: currency.presence || enable_banking_account.currency
-          )
-        end
-      end
       true
     rescue Provider::EnableBanking::EnableBankingError => e
       @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
       Rails.logger.error "EnableBankingItem::Importer - Error fetching balance for account #{enable_banking_account.uid}: #{e.message}"
+      capture_balance_sync_error(enable_banking_account, e)
+      mark_balance_unavailable(enable_banking_account)
       false
+    rescue => e
+      @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
+      Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching balance for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
+      capture_balance_sync_error(enable_banking_account, e)
+      mark_balance_unavailable(enable_banking_account)
+      false
+    end
+
+    def select_current_balance(balances)
+      by_type = balances.index_by { |balance| normalize_balance_type(balance[:balance_type]) }
+
+      BALANCE_TYPE_PRIORITY.each do |type|
+        balance = by_type[normalize_balance_type(type)]
+        return balance if balance.present?
+      end
+
+      balances.first
+    end
+
+    def normalize_balance_type(type)
+      type.to_s.delete("_-").downcase
+    end
+
+    def mark_balance_unavailable(enable_banking_account)
+      unless enable_banking_account.persisted?
+        enable_banking_account.current_balance = nil
+        return
+      end
+
+      enable_banking_account.update_columns(
+        current_balance: nil,
+        updated_at: Time.current
+      )
+    end
+
+    def capture_balance_sync_error(enable_banking_account, error)
+      metadata = {
+        enable_banking_item_id: enable_banking_item.id,
+        enable_banking_account_id: enable_banking_account.id,
+        uid: enable_banking_account.uid,
+        api_account_id: enable_banking_account.api_account_id,
+        previous_current_balance: enable_banking_account.current_balance,
+        error_class: error.class.name,
+        error_message: sanitized_error_message(error)
+      }
+
+      if error.is_a?(Provider::EnableBanking::EnableBankingError)
+        metadata[:error_type] = error.error_type.to_s
+        metadata[:provider_error] = sanitized_provider_error(error)
+      end
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Failed to fetch Enable Banking balance; keeping previous balance and continuing transaction sync",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: metadata
+      )
+    end
+
+    # Surfaces a pagination truncation as a support-visible diagnostic (rather than
+    # only a Rails log line) so the /settings/debug UI shows when a sync silently
+    # dropped pages beyond a validation error, in case the account ever has more
+    # transactions in the requested window than the ASPSP's broken pagination can
+    # actually deliver (currently harmless for narrow incremental sync windows, but
+    # a wider historical resync could otherwise lose data without any visible sign).
+    def capture_pagination_truncation_debug_log(enable_banking_account, transaction_status:, pages_kept:, transactions_kept:, error:)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Enable Banking transaction pagination truncated by a validation error mid-fetch; kept partial results instead of failing the sync",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          transaction_status: transaction_status,
+          pages_kept: pages_kept,
+          transactions_kept: transactions_kept,
+          error_type: error.error_type.to_s,
+          provider_error: sanitized_provider_error(error)
+        }
+      )
+    end
+
+    # Surfaces "ASPSP doesn't support PDNG" as a support-visible diagnostic, same
+    # rationale as capture_pagination_truncation_debug_log: this is a partial
+    # degradation (booked transactions still sync, pending transactions are
+    # silently skipped) that was previously only visible via Rails.logger.
+    def capture_pdng_unsupported_debug_log(enable_banking_account, error:)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "ASPSP does not support the PDNG transaction status; skipping pending transactions and continuing with booked transactions only",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          error_type: error.error_type.to_s,
+          provider_error: sanitized_provider_error(error)
+        }
+      )
+    end
+
+    def sanitized_error_message(error)
+      return error.message unless error.is_a?(Provider::EnableBanking::EnableBankingError)
+
+      provider_error = sanitized_provider_error(error)
+      provider_error[:message].presence ||
+        provider_error[:error].presence ||
+        provider_error[:error_type].presence ||
+        error.error_type.to_s
+    end
+
+    def sanitized_provider_error(error)
+      response_data = error.response_data
+      response_data = response_data.with_indifferent_access if response_data.respond_to?(:with_indifferent_access)
+
+      metadata = { error_type: error.error_type.to_s }
+      return metadata unless response_data.is_a?(Hash)
+
+      metadata[:code] = response_data[:code] if response_data[:code].present?
+      metadata[:error] = response_data[:error] if response_data[:error].present?
+      metadata[:message] = response_data[:message] if response_data[:message].present?
+
+      detail = response_data[:detail]
+      detail = detail.with_indifferent_access if detail.respond_to?(:with_indifferent_access)
+
+      if detail.is_a?(Hash)
+        metadata[:detail_message] = detail[:message] if detail[:message].present?
+        metadata[:detail_error_name] = detail[:error_name] if detail[:error_name].present?
+      end
+
+      metadata
     end
 
     def promote_session_invalid(existing, new)
@@ -250,6 +411,20 @@ class EnableBankingItem::Importer
         psu_headers: enable_banking_item.build_psu_headers
       )
 
+      if include_pending
+        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG) with _pending: true
+        all_transactions = all_transactions.map do |tx|
+          tx_ia = tx.with_indifferent_access
+          tx_ia[:status] == "PDNG" ? tx_ia.merge(_pending: true) : tx_ia
+        end
+      else
+        # If include_pending is false, we must filter out any pending transactions
+        # that were returned (e.g. if the bank ignores transaction_status="BOOK").
+        all_transactions = all_transactions.reject do |tx|
+          tx.with_indifferent_access[:status] == "PDNG"
+        end
+      end
+
       pending_transactions = []
       if include_pending
         # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled.
@@ -258,6 +433,8 @@ class EnableBankingItem::Importer
         # (e.g. ImaginV2 returns WRONG_REQUEST_PARAMETERS; others mention "transactionStatus" verbatim),
         # so we treat every validation_error on PDNG as "ASPSP doesn't support pending" and continue with
         # the booked transactions only. (Issue #1805)
+        # Trade Republic rejects the same request with a 400 (:bad_request) instead of a
+        # 422 (:validation_error), so both error types are treated as "PDNG unsupported". (Issue #392)
         begin
           pending_transactions = fetch_paginated_transactions(
             enable_banking_account,
@@ -266,20 +443,23 @@ class EnableBankingItem::Importer
             psu_headers: enable_banking_item.build_psu_headers
           )
         rescue Provider::EnableBanking::EnableBankingError => e
-          raise unless e.error_type == :validation_error
+          raise unless [ :validation_error, :bad_request ].include?(e.error_type)
           api_error = e.response_data.is_a?(Hash) ? (e.response_data[:error] || e.response_data["error"]) : nil
           Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{api_error || e.message}"
+          capture_pdng_unsupported_debug_log(enable_banking_account, error: e)
         end
       end
 
-      book_fingerprints = all_transactions
+      booked_transactions = all_transactions.reject { |tx| tx.with_indifferent_access[:_pending] }
+
+      book_fingerprints = booked_transactions
         .map { |tx| EnableBankingEntry::Processor.compute_external_id(tx) }
         .compact.to_set
 
       # Also index all booked entry_references so a pending row that lacks
       # transaction_id can still be matched when the settled BOOK row adds one
       # (fingerprints differ; entry_reference stays the same across settlement).
-      book_entry_refs = all_transactions
+      book_entry_refs = booked_transactions
         .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
         .compact.to_set
 
@@ -323,13 +503,13 @@ class EnableBankingItem::Importer
         #    no transaction_id but the settled BOOK row gained one — fingerprints
         #    diverge (enable_banking_<ref> vs enable_banking_<txn_id>) but the
         #    shared entry_reference is a reliable settlement signal.
-        book_fingerprints = all_transactions
-          .reject { |tx| tx.with_indifferent_access[:_pending] }
+        booked_transactions_for_settlement = all_transactions.reject { |tx| tx.with_indifferent_access[:_pending] }
+
+        book_fingerprints = booked_transactions_for_settlement
           .map { |tx| EnableBankingEntry::Processor.compute_external_id(tx) }
           .compact.to_set
 
-        book_entry_refs = all_transactions
-          .reject { |tx| tx.with_indifferent_access[:_pending] }
+        book_entry_refs = booked_transactions_for_settlement
           .map { |tx| tx.with_indifferent_access[:entry_reference].presence }
           .compact.to_set
 
@@ -455,13 +635,46 @@ class EnableBankingItem::Importer
           raise PaginationTruncatedError, msg
         end
 
-        transactions_data = enable_banking_provider.get_account_transactions(
-          account_id: enable_banking_account.api_account_id,
-          date_from: start_date,
-          continuation_key: continuation_key,
-          transaction_status: transaction_status,
-          psu_headers: psu_headers
-        )
+        begin
+          transactions_data = enable_banking_provider.get_account_transactions(
+            account_id: enable_banking_account.api_account_id,
+            date_from: start_date,
+            continuation_key: continuation_key,
+            transaction_status: transaction_status,
+            psu_headers: psu_headers
+          )
+        rescue Provider::EnableBanking::EnableBankingError => e
+          # Some ASPSPs (e.g. Trade Republic via Enable Banking) issue a continuation_key
+          # that their own API then rejects on the next page as mismatched with
+          # transaction_status (422 WRONG_REQUEST_PARAMETERS: "transactionStatus in
+          # request is not the same as in continuationKey", surfaced as :validation_error;
+          # Trade Republic's PDNG fetch specifically surfaces the same underlying issue as
+          # a plain 400/:bad_request instead). Failing outright would discard every page
+          # already fetched, so once at least one page has succeeded, treat either error
+          # type as "pagination exhausted" and keep the partial result — symmetric with the
+          # PDNG-unsupported handling below, which already tolerates both types for the same
+          # reason. A validation error on the very first page has no prior data to fall back
+          # on and is a real failure, so it still propagates.
+          # WRONG_TRANSACTIONS_PERIOD is excluded even mid-pagination: it means the
+          # date range itself is invalid (already retried once with a corrected
+          # date_from in Provider::EnableBanking#get_account_transactions), not that
+          # pagination is exhausted, so swallowing it here would silently drop the
+          # remaining pages instead of surfacing a retryable failure. (Issue #392)
+          raise if ![ :validation_error, :bad_request ].include?(e.error_type) || page_count == 1 || e.wrong_transactions_period?
+          # error (not warn): this discards data for any ASPSP/scenario matching this
+          # error_type mid-pagination, not just the specific Trade Republic continuationKey
+          # mismatch this was written for — worth surfacing prominently in case a future
+          # ASPSP hits this path for a genuinely different reason.
+          Rails.logger.error "EnableBankingItem::Importer - Validation error mid-pagination for account #{enable_banking_account.uid} (status=#{transaction_status}), keeping #{all_transactions.count} transaction(s) from #{page_count - 1} page(s). #{e.message}"
+          capture_pagination_truncation_debug_log(
+            enable_banking_account,
+            transaction_status: transaction_status,
+            pages_kept: page_count - 1,
+            transactions_kept: all_transactions.count,
+            error: e
+          )
+          break
+        end
 
         transactions = transactions_data[:transactions] || []
         all_transactions.concat(transactions)

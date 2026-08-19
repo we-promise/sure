@@ -11,3 +11,4 @@ de:
         explanation: "%{tag_name} wird aus Transaktionen und anderen getaggten Elementen entfernt. Statt sie ungetaggt zu lassen, kannst du unten einen neuen Tag zuweisen."
         replacement_tag_prompt: Tag auswählen
         tag: Tag
+        delete_and_reassign: Löschen und neu zuordnen

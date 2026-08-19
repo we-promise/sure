@@ -65,7 +65,7 @@
 {{- $chainWindow = int (.Values.pipelock.toolChainDetection.windowSize | default 20) -}}
 {{- $chainGap = int (.Values.pipelock.toolChainDetection.maxGap | default 3) -}}
 {{- end -}}
-{{- $rbsEnabled := false -}}
+{{- $rbsEnabled := true -}}
 {{- $rbsAction := "warn" -}}
 {{- $rbsMaxBytes := 5242880 -}}
 {{- $rbsScanHeaders := true -}}
@@ -92,6 +92,24 @@
 {{- if hasKey .Values.pipelock.healthWatchdog "exposeSubsystems" -}}
 {{- $hwExpose = .Values.pipelock.healthWatchdog.exposeSubsystems -}}
 {{- end -}}
+{{- end -}}
+{{- $frEnabled := true -}}
+{{- $frRequireReceipts := false -}}
+{{- $frRedact := true -}}
+{{- $frDir := "" -}}
+{{- $frSigningKeyPath := "" -}}
+{{- if .Values.pipelock.flightRecorder -}}
+{{- if hasKey .Values.pipelock.flightRecorder "enabled" -}}
+{{- $frEnabled = .Values.pipelock.flightRecorder.enabled -}}
+{{- end -}}
+{{- if hasKey .Values.pipelock.flightRecorder "requireReceipts" -}}
+{{- $frRequireReceipts = .Values.pipelock.flightRecorder.requireReceipts -}}
+{{- end -}}
+{{- if hasKey .Values.pipelock.flightRecorder "redact" -}}
+{{- $frRedact = .Values.pipelock.flightRecorder.redact -}}
+{{- end -}}
+{{- $frDir = .Values.pipelock.flightRecorder.dir | default "" -}}
+{{- $frSigningKeyPath = .Values.pipelock.flightRecorder.signingKeyPath | default "" -}}
 {{- end -}}
 {{- $logFormat := "json" -}}
 {{- $logOutput := "stdout" -}}
@@ -197,6 +215,16 @@ data:
       enabled: {{ $hwEnabled }}
       interval_seconds: {{ $hwInterval }}
       expose_subsystems: {{ $hwExpose }}
+    flight_recorder:
+      enabled: {{ $frEnabled }}
+      require_receipts: {{ $frRequireReceipts }}
+      redact: {{ $frRedact }}
+{{- if $frDir }}
+      dir: {{ $frDir | quote }}
+{{- end }}
+{{- if $frSigningKeyPath }}
+      signing_key_path: {{ $frSigningKeyPath | quote }}
+{{- end }}
     logging:
       format: {{ $logFormat }}
       output: {{ $logOutput }}

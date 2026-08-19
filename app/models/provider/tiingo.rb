@@ -83,15 +83,40 @@ class Provider::Tiingo < Provider
         raise Error, "Unexpected response format from search endpoint"
       end
 
+      # Tiingo's daily-price endpoints are looked up by ticker alone, so every
+      # result sharing a ticker resolves to the same priced entry (see
+      # best_match_for_ticker) and therefore the same currency. Resolve it once
+      # per unique ticker and reuse it both for caching (so fetch_security_prices
+      # can use it without a second search request) and for the Security objects
+      # below, so what's shown in search results always matches what
+      # fetch_security_prices will later return.
+      matches_by_ticker = parsed.filter_map { |security| security["ticker"] }.map(&:upcase).uniq.index_with do |ticker|
+        best_match_for_ticker(parsed, ticker)
+      end
+
+      currency_by_ticker = matches_by_ticker.transform_values { |match| currency_for_country(match&.dig("countryCode")) }
+
+      currency_by_ticker.each do |ticker, currency|
+        next if currency.blank?
+
+        cache_key = "tiingo:currency:#{ticker}"
+
+        # A ticker's daily-price endpoint is US-centric (see best_match_for_ticker),
+        # so a currency derived from a US match is authoritative. But a search
+        # query can return a result set that happens not to include the US
+        # cross-listing for an already-cached ticker (Tiingo's relevance ranking
+        # varies by query), and this loop runs on every search_securities call.
+        # Only overwrite a cached value when this result set's match is US, or
+        # nothing is cached yet - never downgrade a previously US-derived
+        # currency to one derived from a non-US match.
+        next if matches_by_ticker[ticker]&.dig("countryCode") != "US" && Rails.cache.read(cache_key).present?
+
+        Rails.cache.write(cache_key, currency, expires_in: 24.hours)
+      end
+
       parsed.first(25).map do |security|
         ticker = security["ticker"]
-        currency = security["priceCurrency"]
-
-        # Cache the API-returned currency so fetch_security_prices can use it
-        # without making a second search request
-        if currency.present? && ticker.present?
-          Rails.cache.write("tiingo:currency:#{ticker.upcase}", currency, expires_in: 24.hours)
-        end
+        currency = currency_by_ticker[ticker&.upcase]
 
         Security.new(
           symbol: ticker,
@@ -263,8 +288,8 @@ class Provider::Tiingo < Provider
       check_api_error!(parsed)
 
       if parsed.is_a?(Array)
-        match = parsed.find { |s| s["ticker"]&.upcase == symbol.upcase }
-        currency = match&.dig("priceCurrency")
+        match = best_match_for_ticker(parsed, symbol)
+        currency = currency_for_country(match&.dig("countryCode"))
 
         if currency.present?
           Rails.cache.write("tiingo:currency:#{symbol.upcase}", currency, expires_in: 24.hours)
@@ -278,6 +303,31 @@ class Provider::Tiingo < Provider
     def map_exchange_to_mic(exchange_name)
       return nil if exchange_name.blank?
       TIINGO_EXCHANGE_TO_MIC[exchange_name.strip] || exchange_name.strip
+    end
+
+    # Tiingo's search/utilities response never includes a priceCurrency field
+    # (confirmed against the live API), only countryCode. Resolve the currency
+    # via the countries gem's ISO 4217 data (already used for country
+    # resolution in Provider::TwelveData) instead of hand-maintaining a
+    # per-provider allowlist.
+    def currency_for_country(country_code)
+      return nil if country_code.blank?
+      ISO3166::Country.new(country_code.strip)&.currency_code
+    end
+
+    # Tiingo's search endpoint can return multiple entries sharing the exact
+    # same ticker - e.g. a US primary listing alongside a foreign
+    # cross-listing (confirmed live: searching "AAPL" returns both a US entry
+    # and a CA entry). The /tiingo/daily price endpoints this resolves
+    # currency for are US-centric (also confirmed live: a Canadian ticker
+    # like VFV has search metadata but no daily price history at all), so
+    # when a US entry exists for the ticker, that's the one actually backing
+    # the price data. Fall back to the first match otherwise.
+    def best_match_for_ticker(results, ticker)
+      return nil if ticker.blank?
+
+      matches = results.select { |s| s["ticker"]&.upcase == ticker.upcase }
+      matches.find { |s| s["countryCode"] == "US" } || matches.first
     end
 
     def check_api_error!(parsed)

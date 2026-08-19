@@ -1,0 +1,30 @@
+---
+ru:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Счёт
+        account_last4_hint: Последние четыре цифры счёта
+        account_name_hint: Подсказка по названию счёта
+        closing_balance: Закрывающий баланс
+        content_sha256: Контрольная сумма содержимого
+        currency: Валюта
+        filename: Имя файла
+        institution_name_hint: Подсказка по учреждению
+        opening_balance: Начальный баланс
+        original_file: Файл выписки
+        period_end_on: Конец периода
+        period_start_on: Начало периода
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: уже загружен для этой семьи
+            content_sha256:
+              duplicate_statement_file: уже загружен для этой семьи
+            original_file:
+              invalid_format: должен быть в формате PDF, CSV или XLSX
+              too_large: слишком большой. Максимальный размер %{max_mb}MB
+            period_end_on:
+              on_or_after_start: должен быть не раньше начала периода

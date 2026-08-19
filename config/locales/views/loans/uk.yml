@@ -1,0 +1,36 @@
+uk:
+  loans:
+    edit:
+      edit: Редагувати %{account}
+    form:
+      interest_rate: Процентна ставка
+      interest_rate_placeholder: '5.25'
+      initial_balance: Початковий баланс позики
+      rate_type: Тип ставки
+      term_months: Термін (місяці)
+      term_months_placeholder: '360'
+      none: Немає
+      subtype_prompt: Виберіть тип позики
+      subtype_none: Немає
+    new:
+      title: Введіть деталі позики
+    overview:
+      interest_rate: Процентна ставка
+      monthly_payment: Щомісячний платіж
+      not_applicable: Н/Д
+      original_principal: Початкова сума позики
+      remaining_principal: Залишок основної суми
+      term: Термін
+      type: Тип
+      unknown: Невідомо
+    tabs:
+      overview:
+        interest_rate: Процентна ставка
+        monthly_payment: Щомісячний платіж
+        not_applicable: Н/Д
+        original_principal: Початкова сума позики
+        remaining_principal: Залишок основної суми
+        term: Термін
+        type: Тип
+        unknown: Невідомо
+        edit_loan_details: "Редагувати деталі позики"

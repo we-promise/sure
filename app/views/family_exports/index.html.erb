@@ -67,6 +67,18 @@
                   <td class="px-2 py-3 text-right">
                     <% if export.processing? || export.pending? %>
                       <div class="flex items-center justify-end gap-2 text-secondary">
+                        <% if export.presumed_lost? %>
+                          <%= button_to cancel_family_export_path(export),
+                                        method: :post,
+                                        class: "flex items-center gap-2 text-secondary hover:text-primary",
+                                        aria: { label: t("family_exports.table.row.actions.mark_failed") },
+                                        data: {
+                                          turbo_confirm: t("family_exports.table.row.actions.confirm_mark_failed"),
+                                          turbo_frame: "_top"
+                                        } do %>
+                            <%= icon "circle-x", class: "w-4 h-4" %>
+                          <% end %>
+                        <% end %>
                         <div class="animate-spin h-4 w-4 border-2 border-secondary border-t-transparent rounded-full"></div>
                         <span class="text-sm"><%= t("family_exports.exporting") %></span>
                       </div>

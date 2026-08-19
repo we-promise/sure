@@ -9,6 +9,14 @@
   <% menu.with_item(variant: "link", text: t(".statements"), href: account_path(account, tab: "statements"), icon: "archive") %>
 
   <% if permission.in?([ :owner, :full_control ]) %>
+    <% menu.with_item(variant: "divider") %>
+
+    <% if account.exclude_from_reports? %>
+      <% menu.with_item(variant: "button", text: t(".include_in_reports"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye", data: { turbo_frame: :_top }) %>
+    <% else %>
+      <% menu.with_item(variant: "button", text: t(".exclude_from_reports"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye-off", data: { turbo_frame: :_top }) %>
+    <% end %>
+
     <% if account.supports_trades? %>
       <% menu.with_item(
         variant: "link",
