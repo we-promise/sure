@@ -63,28 +63,15 @@ class OnchainWalletItem::Importer
   private
     def apply_snapshot(account, snapshot, chain:, address:)
       asset = snapshot.assets.find { |candidate| account.matches_asset?(candidate) }
-      # Sorted so that two reads of the same state produce the same payload, and
-      # therefore the same digest, whatever order the source listed them in.
-      movements = asset ? relevant_movements(snapshot.movements_for(asset)).sort_by { |movement| [ movement.date.to_s, movement.external_id.to_s ] } : []
-      # An asset that vanished from the wallet is worth zero, not stale.
-      quantity = normalize(asset&.quantity || 0)
-
-      attributes = {
-        quantity: quantity,
-        symbol: asset&.symbol.presence || account.symbol,
-        name: asset&.name.presence || account.name,
-        decimals: asset&.decimals || account.decimals,
-        raw_payload: asset_payload(asset),
-        raw_movements_payload: { "movements" => movements.map { |movement| movement_payload(movement) } },
-        # Recorded on the row so the UI can say the history is incomplete instead
-        # of implying these movements are all there ever were.
-        extra: account.extra.to_h.deep_merge(
-          "onchain_wallet" => {
-            "history_truncated" => snapshot.history_truncated?,
-            "assets_truncated" => snapshot.assets_truncated?
-          }
-        )
-      }
+      attributes = if asset.nil? && snapshot.assets_truncated?
+        # The read was capped before it reached this asset, so its absence says
+        # nothing: we did not learn that it holds nothing, we failed to look.
+        # Zeroing it here would take a real balance off the user's net worth —
+        # the same distinction already made for an address we could not read.
+        last_known_attributes(account, snapshot)
+      else
+        observed_attributes(account, snapshot, asset)
+      end
 
       # The digest is taken from exactly what is about to be written, so the two
       # cannot drift apart. Deriving it from a hand-picked subset is how the symbol
@@ -113,6 +100,48 @@ class OnchainWalletItem::Importer
       when BigDecimal then value.to_s("F")
       else value
       end
+    end
+
+    # What the chain just said about this asset. An asset genuinely gone from a
+    # complete read is worth zero, not stale.
+    def observed_attributes(account, snapshot, asset)
+      # Sorted so that two reads of the same state produce the same payload, and
+      # therefore the same digest, whatever order the source listed them in.
+      movements = asset ? relevant_movements(snapshot.movements_for(asset)).sort_by { |movement| [ movement.date.to_s, movement.external_id.to_s ] } : []
+
+      {
+        quantity: normalize(asset&.quantity || 0),
+        symbol: asset&.symbol.presence || account.symbol,
+        name: asset&.name.presence || account.name,
+        decimals: asset&.decimals || account.decimals,
+        raw_payload: asset_payload(asset),
+        raw_movements_payload: { "movements" => movements.map { |movement| movement_payload(movement) } },
+        extra: truncation_extra(account, snapshot)
+      }
+    end
+
+    # Everything the row already holds, with only the completeness flags refreshed.
+    def last_known_attributes(account, snapshot)
+      {
+        quantity: account.quantity,
+        symbol: account.symbol,
+        name: account.name,
+        decimals: account.decimals,
+        raw_payload: account.raw_payload,
+        raw_movements_payload: account.raw_movements_payload,
+        extra: truncation_extra(account, snapshot)
+      }
+    end
+
+    # Recorded on the row so the UI can say the read was incomplete instead of
+    # implying what it returned is all there is.
+    def truncation_extra(account, snapshot)
+      account.extra.to_h.deep_merge(
+        "onchain_wallet" => {
+          "history_truncated" => snapshot.history_truncated?,
+          "assets_truncated" => snapshot.assets_truncated?
+        }
+      )
     end
 
     def report_unreachable(chain:, address:, error:)

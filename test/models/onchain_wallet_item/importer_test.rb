@@ -50,6 +50,21 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "an asset the cap never reached keeps its balance instead of being zeroed" do
+    tracked = create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa", quantity: 42))
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      # The token is not in the snapshot because the read stopped at the cap,
+      # not because the wallet stopped holding it.
+      Onchain::Snapshot.new(assets: [ fake_native_asset ], movements: [], assets_truncated: true)
+    )
+
+    OnchainWalletItem::Importer.new(@item).import
+
+    assert_equal 42, tracked.reload.quantity
+    assert tracked.assets_truncated?
+  end
+
   test "an asset that disappeared from the wallet is set to zero" do
     account = create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa", quantity: 10))
     stub_fake_snapshot(OnchainTestHelper::FAKE_ADDRESS, Onchain::Snapshot.new(assets: [ fake_native_asset ], movements: []))
