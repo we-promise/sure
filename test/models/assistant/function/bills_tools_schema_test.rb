@@ -5,7 +5,10 @@ class Assistant::Function::BillsToolsSchemaTest < ActiveSupport::TestCase
     Assistant::Function::GetBills,
     Assistant::Function::GetBillDetails,
     Assistant::Function::GetPaycheckPlan,
-    Assistant::Function::GetBillAudit
+    Assistant::Function::GetBillAudit,
+    Assistant::Function::CreateBill,
+    Assistant::Function::UpdateBill,
+    Assistant::Function::RecordBillPayment
   ].freeze
 
   # Strict function calling requires every declared property in `required`;

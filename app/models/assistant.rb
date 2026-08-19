@@ -61,7 +61,10 @@ module Assistant
         Function::GetBills,
         Function::GetBillDetails,
         Function::GetPaycheckPlan,
-        Function::GetBillAudit
+        Function::GetBillAudit,
+        Function::CreateBill,
+        Function::UpdateBill,
+        Function::RecordBillPayment
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
