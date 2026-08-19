@@ -87,7 +87,10 @@ class RecurringTransaction
     # Matches against each rule's own generated occurrences, so an every-N
     # cadence rejects dates that sit on the right weekday or day-of-month but
     # in the wrong cycle. A weekly cadence repeats on an exact weekday (no
-    # drift tolerance); the day-of-month window only fits the others.
+    # drift tolerance); the day-of-month window only fits the others. End
+    # conditions and weekend adjustment apply exactly as in materialization:
+    # an ended series stops claiming entries, and an adjusted occurrence also
+    # matches the day it is actually due.
     def matches_day?(date)
       rules.any? { |rule| rule_matches_day?(rule, date) }
     end
@@ -193,10 +196,34 @@ class RecurringTransaction
           weekday = rule.weekday || anchor_date&.wday
           return true if weekday.nil?
 
-          raw_occurrences(rule.with(weekday: weekday), date, date).any?
+          rule_occurrence_near?(rule.with(weekday: weekday), date, 0)
         else
-          raw_occurrences(rule, date - DAY_MATCH_TOLERANCE, date + DAY_MATCH_TOLERANCE).any?
+          rule_occurrence_near?(rule, date, DAY_MATCH_TOLERANCE)
         end
+      end
+
+      # True when one of the rule's occurrences is observable within
+      # `tolerance` days of `date`: on its raw scheduled day (the occurrence's
+      # identity, where a payment can still post) or on its weekend-adjusted
+      # due day. Occurrences the end conditions remove match nothing, and a
+      # skipped-weekend occurrence does not exist at all.
+      def rule_occurrence_near?(rule, date, tolerance)
+        window = tolerance + WEEKEND_MARGIN
+        raw_occurrences(rule, date - window, date + window).any? do |original|
+          due = adjust_for_weekend(original)
+          next false if due.nil? || past_end_date?(due) || beyond_occurrence_count?(original)
+
+          (original - date).abs <= tolerance || (due - date).abs <= tolerance
+        end
+      end
+
+      # Under an after_count end, an occurrence only exists while it is one of
+      # the series' first end_after_count occurrences, counted from the anchor.
+      def beyond_occurrence_count?(original)
+        return false unless end_mode == "after_count"
+
+        lifetime_pairs(through: original + WEEKEND_MARGIN)
+          .none? { |pair| pair.original_due_on == original }
       end
 
       def implicit_monthly_rule

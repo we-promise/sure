@@ -201,6 +201,57 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
       "the right day of month in an off-cycle month is not this bill's day"
   end
 
+  test "matches_day stops matching once the series has ended on a date" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "monthly", day_of_month: 15) ],
+      end_mode: "on_date", end_on: Date.new(2026, 8, 15)
+    )
+
+    assert schedule.matches_day?(Date.new(2026, 7, 15)), "history inside the window still matches"
+    assert schedule.matches_day?(Date.new(2026, 8, 15)), "the final occurrence still matches"
+    assert_not schedule.matches_day?(Date.new(2026, 9, 15)),
+      "a date after the series ended is not this bill's day"
+  end
+
+  test "matches_day stops matching after the occurrence count is exhausted" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "monthly", day_of_month: 15) ],
+      anchor_date: Date.new(2026, 5, 15),
+      end_mode: "after_count", end_after_count: 3
+    )
+
+    assert schedule.matches_day?(Date.new(2026, 5, 15)), "the first occurrence of the plan matches"
+    assert schedule.matches_day?(Date.new(2026, 7, 15)), "the third and final occurrence matches"
+    assert_not schedule.matches_day?(Date.new(2026, 8, 15)),
+      "a fourth occurrence never exists under a three-payment plan"
+  end
+
+  test "matches_day follows a weekend-adjusted occurrence to the day it is due" do
+    # Saturdays adjusted forward land on Monday, two days off the raw weekday,
+    # which the exact weekly match would otherwise reject.
+    schedule = build_schedule(
+      rules: [ rule(frequency: "weekly", weekday: 6) ],
+      weekend_adjust: "after"
+    )
+
+    # Aug 15 2026 is a Saturday, so the payment is due Monday Aug 17.
+    assert schedule.matches_day?(Date.new(2026, 8, 17)), "the Monday the bill is actually due"
+    assert schedule.matches_day?(Date.new(2026, 8, 15)), "the raw scheduled Saturday still matches"
+    assert_not schedule.matches_day?(Date.new(2026, 8, 18)), "a Tuesday is neither scheduled nor due"
+  end
+
+  test "matches_day does not match an occurrence the weekend skip removed" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "monthly", day_of_month: 15) ],
+      weekend_adjust: "skip"
+    )
+
+    # Aug 15 2026 is a Saturday, so skip drops that month's occurrence entirely.
+    assert_not schedule.matches_day?(Date.new(2026, 8, 15)),
+      "a skipped occurrence does not exist, so its day matches nothing"
+    assert schedule.matches_day?(Date.new(2026, 9, 15)), "a weekday occurrence is unaffected by skip"
+  end
+
   # --- Rules-based engine ---
 
   test "weekly rule fires every week on its weekday" do

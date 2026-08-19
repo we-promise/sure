@@ -456,6 +456,13 @@ class RecurringTransaction < ApplicationRecord
       merchant_id: transaction.merchant_id,
       name: transaction.merchant_id.present? ? nil : entry.name,
       amount: entry.amount,
+      # Identity no longer includes amount, so a second legitimate series for
+      # one merchant (another price tier) is distinguished by stamping its
+      # amount into dedup_scope before the first insert. The same identity at
+      # the same amount then collides immediately instead of slipping past as
+      # a duplicate; callers treat the raised RecordNotUnique as "already
+      # exists".
+      dedup_scope: entry.amount.to_d.to_s("F"),
       currency: entry.currency,
       expected_day_of_month: expected_day,
       last_occurrence_date: entry.date,
@@ -470,14 +477,6 @@ class RecurringTransaction < ApplicationRecord
     }
 
     create!(attributes)
-  rescue ActiveRecord::RecordNotUnique
-    # Identity no longer includes amount, so a second legitimate series for one
-    # merchant is distinguished by stamping its amount into dedup_scope. Retried
-    # once; a true duplicate re-raises.
-    scoped = attributes.merge(dedup_scope: entry.amount.to_d.to_s("F"))
-    raise if where(scoped.slice(:family, :account, :merchant_id, :name, :currency, :dedup_scope)).exists?
-
-    create!(scoped)
   end
 
   # Find matching transaction entries for variance calculation

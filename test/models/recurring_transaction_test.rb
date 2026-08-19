@@ -524,6 +524,53 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal 1, recurring.occurrence_count
   end
 
+  test "create_from_transaction collides on an identical series and still forks a different price tier" do
+    first_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 2.months.ago,
+      amount: 50.00,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: first_transaction
+    )
+
+    recurring = RecurringTransaction.create_from_transaction(first_transaction)
+    assert_equal "50.0", recurring.dedup_scope, "the amount is stamped before the first insert"
+
+    # An identical series (same identity, same amount) must hit the unique
+    # index on the first insert, not slip past it as a stamped duplicate.
+    duplicate_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 1.month.ago,
+      amount: 50.00,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: duplicate_transaction
+    )
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      assert_raises ActiveRecord::RecordNotUnique do
+        RecurringTransaction.create_from_transaction(duplicate_transaction)
+      end
+    end
+
+    # A different amount is a legitimate second tier from the same biller and
+    # still forks a sibling series.
+    tier_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 1.month.ago,
+      amount: 80.00,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: tier_transaction
+    )
+
+    assert_difference "@family.recurring_transactions.count", 1 do
+      tier = RecurringTransaction.create_from_transaction(tier_transaction)
+      assert_equal "80.0", tier.dedup_scope
+    end
+  end
+
   test "amount_within_variance_band? allows up to 2x and excludes beyond" do
     assert RecurringTransaction.amount_within_variance_band?(199, 100)
     assert_not RecurringTransaction.amount_within_variance_band?(201, 100)
