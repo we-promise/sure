@@ -39,7 +39,7 @@ openssl rand -base64 32
 The `MCP_USER_EMAIL` must match an existing Sure user's email address. The AI assistant will have access to all financial data for that user's family.
 
 > [!CAUTION]
-> The AI assistant will have **read access to all financial data** for the specified user. Only set this for users you trust with your AI provider.
+> The AI assistant receives the full MCP tool set for the specified user. This includes tools that create, update, unlink, schedule deletion of, and permanently delete financial records. Only configure a trusted AI client and user.
 
 ## Configuration
 
@@ -108,19 +108,23 @@ Sure implements the following JSON-RPC 2.0 methods:
 
 ### Available Tools
 
-The MCP endpoint exposes these financial tools:
+The MCP endpoint exposes 31 financial tools:
 
-| Tool | Description |
-|------|-------------|
-| `get_transactions` | Retrieve transaction history with filtering |
-| `get_accounts` | Get account information and balances |
-| `get_holdings` | Query investment holdings |
-| `get_balance_sheet` | Current financial position (assets, liabilities, net worth) |
-| `get_income_statement` | Income and expenses over a period |
-| `import_bank_statement` | Import bank statement data |
-| `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
+| Area | Tools |
+|------|-------|
+| Transactions | `get_transactions`, `create_transaction`, `update_transaction`, `delete_transaction` |
+| Accounts | `get_accounts`, `create_account`, `update_account`, `delete_account` |
+| Transfers | `get_transfers`, `create_transfer`, `update_transfer`, `delete_transfer` |
+| Goals | `get_goals`, `create_goal`, `update_goal`, `delete_goal` |
+| Categories | `get_categories`, `create_category`, `update_category`, `delete_category` |
+| Tags | `get_tags`, `create_tag`, `update_tag`, `delete_tag` |
+| Budgets | `get_budget`, `update_budget` |
+| Reports and holdings | `get_holdings`, `get_balance_sheet`, `get_income_statement` |
+| Files and imports | `search_family_files`, `import_bank_statement` |
 
-These are the same tools used by Sure's builtin AI assistant.
+`get_accounts`, `get_goals`, `get_transfers`, and the other list tools return the stable IDs needed by follow-up actions. In `get_accounts`, `writable` means the account can be used for account-level and balance-affecting write tools; `transaction_editing.annotations` separately reports whether the user can update transaction notes, categories, merchants, or tags on that account. Creation tools that accept an `external_id` require the caller to reuse the same key when retrying an operation.
+
+The MCP registry is separate from the builtin AI assistant registry. Destructive MCP-only tools are not automatically exposed to Sure's builtin assistant.
 
 ### Preview Tools
 

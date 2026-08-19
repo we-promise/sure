@@ -280,7 +280,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       tools = body["result"]["tools"]
 
       assert_kind_of Array, tools
-      assert_equal Assistant.function_classes(@user).size, tools.size
+      assert_equal Assistant.mcp_function_classes(@user).size, tools.size
 
       tool_names = tools.map { |t| t["name"] }
       assert_includes tool_names, "get_transactions"
@@ -288,8 +288,23 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_includes tool_names, "get_holdings"
       assert_includes tool_names, "get_balance_sheet"
       assert_includes tool_names, "get_income_statement"
+      assert_includes tool_names, "create_transaction"
       assert_includes tool_names, "update_transaction"
       assert_includes tool_names, "update_budget"
+
+      expected_action_tools = %w[
+        create_account update_account delete_account
+        create_transaction update_transaction delete_transaction
+        create_transfer update_transfer delete_transfer
+        create_goal update_goal delete_goal
+        create_category update_category delete_category
+        create_tag update_tag delete_tag
+        update_budget
+      ]
+      assert_empty expected_action_tools - tool_names
+      assert_equal 31, tools.size
+      assert_includes Assistant.mcp_function_classes(@user), Assistant::Function::DeleteTransaction
+      assert_not_includes Assistant.function_classes, Assistant::Function::DeleteTransaction
 
       # Each tool has required fields
       tools.each do |tool|
@@ -488,6 +503,79 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/call executes create_transaction" do
+    with_mcp_env do
+      account = @user.family.accounts.visible.writable_by(@user).first!
+      external_id = "mcp-controller-#{SecureRandom.uuid}"
+
+      assert_difference "account.entries.count", 1 do
+        post "/mcp", params: jsonrpc_request("tools/call", {
+          name: "create_transaction",
+          arguments: {
+            account_id: account.id,
+            amount: 25,
+            date: Date.current.iso8601,
+            name: "Created through MCP",
+            nature: "expense",
+            external_id: external_id
+          }
+        }).to_json, headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      result = body["result"]
+      inner = JSON.parse(result["content"][0]["text"])
+
+      assert_equal true, inner["success"]
+      assert_equal true, inner["created"]
+      assert account.entries.exists?(source: "mcp", external_id: external_id)
+    end
+  end
+
+  test "tools/call completes the practical account and transaction lifecycle" do
+    with_mcp_env do
+      account_result = call_mcp_tool("create_account", {
+        name: "MCP lifecycle wallet",
+        account_type: "Depository",
+        subtype: "checking",
+        balance: 100,
+        currency: "USD"
+      })
+      assert_equal true, account_result["success"]
+      account_id = account_result.dig("account", "id")
+
+      transaction_result = call_mcp_tool("create_transaction", {
+        account_id: account_id,
+        amount: 12.5,
+        date: Date.current.iso8601,
+        name: "Lifecycle expense",
+        nature: "expense",
+        external_id: "mcp-lifecycle-#{SecureRandom.uuid}"
+      })
+      assert_equal true, transaction_result["success"]
+      transaction_id = transaction_result.dig("transaction", "id")
+
+      update_result = call_mcp_tool("update_transaction", {
+        id: transaction_id,
+        amount: 20,
+        nature: "income",
+        notes: "Corrected through MCP"
+      })
+      assert_equal true, update_result["success"]
+      assert_equal "income", update_result.dig("transaction", "nature")
+      assert_equal(-20, Transaction.find(transaction_id).entry.amount)
+
+      delete_result = call_mcp_tool("delete_transaction", { id: transaction_id })
+      assert_equal true, delete_result["success"]
+      assert_not Transaction.exists?(transaction_id)
+
+      account_delete_result = call_mcp_tool("delete_account", { id: account_id })
+      assert_equal true, account_delete_result["success"]
+      assert_equal "pending_deletion", Account.find(account_id).status
+    end
+  end
+
   test "tools/call wraps function errors as isError response" do
     with_mcp_env do
       # Force a function error by stubbing
@@ -546,6 +634,15 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def call_mcp_tool(name, arguments)
+      post "/mcp", params: jsonrpc_request("tools/call", { name: name, arguments: arguments }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      JSON.parse(body.dig("result", "content", 0, "text"))
+    end
 
     def with_mcp_env(&block)
       with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
