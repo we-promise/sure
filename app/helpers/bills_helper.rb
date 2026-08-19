@@ -1,4 +1,12 @@
 module BillsHelper
+  # One-shot AI features (smart-fill, smart-configure) need both the user's
+  # consent AND a resolvable LLM provider -- an unconfigured self-hosted
+  # install renders no AI affordances at all, following the Rules registry's
+  # conditional-executor precedent.
+  def bills_one_shot_ai_available?
+    Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider.present?
+  end
+
   # The paycheck split into `[key, percent]` pairs; the caller owns the colours.
   # A short period gets two segments (covered / short) rather than three, since
   # there is no safe slice to draw.
