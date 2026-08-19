@@ -30,7 +30,7 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     assert_equal 8, Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS
   end
 
-  test "final round requests carry no tools so the model must answer in text" do
+  test "final round requests forbid tool calls via tool_choice while keeping tool definitions" do
     function_request = Provider::LlmConcept::ChatFunctionRequest.new(
       id: "1", call_id: "1", function_name: "echo", function_args: "{}"
     )
@@ -44,9 +44,11 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     )
 
     functions_seen = []
+    tool_choices_seen = []
 
     @llm.stubs(:chat_response).with do |_prompt, **kwargs|
       functions_seen << kwargs[:functions]
+      tool_choices_seen << kwargs[:tool_choice]
       true
     end.returns(
       provider_success_response(tool_response),
@@ -58,10 +60,14 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
       @responder.respond
     end
 
-    # First request offers tools; the request after the final permitted round
-    # must offer none.
+    # Every request carries the real tool definitions — Anthropic rejects
+    # messages containing tool blocks when no tools are defined — and only the
+    # request after the final permitted round forbids further calls.
     assert_operator functions_seen.size, :>=, 2
-    assert_equal [], functions_seen.last
+    assert functions_seen.last.present?
+    assert_equal functions_seen.first, functions_seen.last
+    assert_equal :none, tool_choices_seen.last
+    assert tool_choices_seen[0..-2].all?(&:nil?)
   end
 
   private

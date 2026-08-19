@@ -289,6 +289,7 @@ class Provider::Openai < Provider
     instructions: nil,
     functions: [],
     function_results: [],
+    tool_choice: nil,
     messages: nil,
     conversation_history: [],
     streamer: nil,
@@ -307,6 +308,7 @@ class Provider::Openai < Provider
         instructions: instructions,
         functions: functions,
         function_results: function_results,
+        tool_choice: tool_choice,
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: session_id,
@@ -320,6 +322,7 @@ class Provider::Openai < Provider
         instructions: instructions,
         functions: functions,
         function_results: function_results,
+        tool_choice: tool_choice,
         messages: messages,
         streamer: streamer,
         session_id: session_id,
@@ -361,6 +364,7 @@ class Provider::Openai < Provider
       instructions: nil,
       functions: [],
       function_results: [],
+      tool_choice: nil,
       streamer: nil,
       previous_response_id: nil,
       session_id: nil,
@@ -400,6 +404,7 @@ class Provider::Openai < Provider
             previous_response_id: previous_response_id,
             stream: stream_proxy
           }
+          request_params[:tool_choice] = "none" if tool_choice == :none && chat_config.tools.present?
           request_params[:max_output_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
           raw_response = client.responses.create(parameters: request_params)
@@ -467,6 +472,7 @@ class Provider::Openai < Provider
       instructions: nil,
       functions: [],
       function_results: [],
+      tool_choice: nil,
       messages: nil,
       streamer: nil,
       session_id: nil,
@@ -489,6 +495,7 @@ class Provider::Openai < Provider
           messages: messages
         }
         params[:tools] = tools if tools.present?
+        params[:tool_choice] = "none" if tool_choice == :none && tools.present?
         params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
         begin
