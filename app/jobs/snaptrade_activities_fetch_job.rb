@@ -95,26 +95,56 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
 
   private
 
-    def fetch_activities(snaptrade_account, provider, credentials, start_date, end_date)
-      response = provider.get_account_activities(
-        user_id: credentials[:user_id],
-        user_secret: credentials[:user_secret],
-        account_id: snaptrade_account.snaptrade_account_id,
-        start_date: start_date,
-        end_date: end_date
-      )
+    # SnapTrade caps a page at PAGE_LIMIT and reports the full count in
+    # pagination.total, so reading only the first response silently drops
+    # everything past it on a busy account.
+    PAGE_LIMIT = 1000
+    MAX_PAGES = 50
 
-      # Handle paginated response
-      activities = if response.respond_to?(:data)
+    def fetch_activities(snaptrade_account, provider, credentials, start_date, end_date)
+      activities = []
+      offset = 0
+
+      MAX_PAGES.times do
+        response = provider.get_account_activities(
+          user_id: credentials[:user_id],
+          user_secret: credentials[:user_secret],
+          account_id: snaptrade_account.snaptrade_account_id,
+          start_date: start_date,
+          end_date: end_date,
+          offset: offset,
+          limit: PAGE_LIMIT
+        )
+
+        page = extract_activities_page(response)
+        activities.concat(page)
+
+        total = extract_activities_total(response)
+        offset += page.size
+
+        break if page.empty?
+        break if total.nil? ? page.size < PAGE_LIMIT : offset >= total
+      end
+
+      # Convert SDK objects to hashes
+      activities.map { |a| sdk_object_to_hash(a) }
+    end
+
+    def extract_activities_page(response)
+      if response.respond_to?(:data)
         response.data || []
       elsif response.is_a?(Array)
         response
       else
         []
       end
+    end
 
-      # Convert SDK objects to hashes
-      activities.map { |a| sdk_object_to_hash(a) }
+    def extract_activities_total(response)
+      pagination = response.respond_to?(:pagination) ? response.pagination : nil
+      return nil unless pagination.respond_to?(:total)
+
+      pagination.total
     end
 
     # Merge activities, deduplicating by ID

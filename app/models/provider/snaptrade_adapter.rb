@@ -44,9 +44,11 @@ class Provider::SnaptradeAdapter < Provider::Base
   def self.build_provider(family: nil)
     return nil unless family.present?
 
-    # Get family-specific credentials
-    snaptrade_item = family.snaptrade_items.where.not(client_id: nil).first
-    return nil unless snaptrade_item&.credentials_configured?
+    # Get family-specific credentials. Selecting on client_id alone would pick
+    # a half-configured item and return nil even when another item of the same
+    # family is fully configured.
+    snaptrade_item = family.snaptrade_items.credentials_configured.first
+    return nil unless snaptrade_item
 
     Provider::Snaptrade.new(
       client_id: snaptrade_item.client_id,

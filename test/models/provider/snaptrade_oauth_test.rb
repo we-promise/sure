@@ -3,6 +3,10 @@ require "test_helper"
 class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
   setup do
     @provider = Provider::Snaptrade.new(client_id: "snap_client", consumer_key: "snap_secret")
+    # Rails.configuration is process-global and is not rolled back between
+    # tests, so leaking this value would make other SnapTrade tests that read
+    # oauth_client_id_configured? pass or fail depending on run order.
+    @original_oauth_client_id = Rails.configuration.x.snaptrade.oauth_client_id
     Rails.configuration.x.snaptrade.oauth_client_id = "sure-oauth-client"
     stub_request(:get, Provider::Snaptrade::OAUTH_DISCOVERY_URL)
       .to_return(
@@ -14,6 +18,10 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
           token_endpoint: "https://api.snaptrade.com/oauth/token/"
         }.to_json
       )
+  end
+
+  teardown do
+    Rails.configuration.x.snaptrade.oauth_client_id = @original_oauth_client_id
   end
 
   test "starts device authorization using well known metadata" do

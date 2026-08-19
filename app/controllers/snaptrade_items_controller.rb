@@ -111,7 +111,12 @@ class SnaptradeItemsController < ApplicationController
 
   # Redirect user to SnapTrade connection portal
   def connect
-    @snaptrade_item.ensure_user_registered! unless @snaptrade_item.user_registered?
+    # Unconditional: user_registered? only checks local columns, so a user
+    # deleted at SnapTrade would otherwise take stale credentials to the portal
+    # and fail. ensure_user_registered! now re-registers only on a definite
+    # rejection and raises on a transient failure, so this cannot discard a
+    # working secret.
+    @snaptrade_item.ensure_user_registered!
 
     redirect_url = callback_snaptrade_items_url(
       item_id: @snaptrade_item.id,
@@ -341,7 +346,7 @@ class SnaptradeItemsController < ApplicationController
 
   def complete_oauth_device_flow
     if params[:device_code].blank?
-      render json: { error: "device_code is required" }, status: :unprocessable_entity
+      render json: { error: t("snaptrade_items.complete_oauth_device_flow.device_code_required") }, status: :unprocessable_entity
       return
     end
 
@@ -630,12 +635,22 @@ class SnaptradeItemsController < ApplicationController
     end
 
     def snaptrade_item_params
-      params.require(:snaptrade_item).permit(
+      permitted = params.require(:snaptrade_item).permit(
         :name,
         :sync_start_date,
         :client_id,
         :consumer_key
       )
+
+      # The form deliberately renders empty credential fields rather than
+      # echoing the stored values, so on update a blank field means "keep what
+      # is stored", not "clear it".
+      if @snaptrade_item&.persisted?
+        permitted.delete(:client_id) if permitted[:client_id].blank?
+        permitted.delete(:consumer_key) if permitted[:consumer_key].blank?
+      end
+
+      permitted
     end
 
     def build_connections_list
@@ -684,7 +699,10 @@ class SnaptradeItemsController < ApplicationController
     def oauth_error_payload(error)
       parsed_body = parse_oauth_error_body(error.response_body)
       payload = parsed_body.slice("error", "error_description", "error_uri", "interval")
-      payload["error"] ||= error.message
+      # Only OAuth fields SnapTrade actually returned are safe to pass through.
+      # error.message can carry internal detail (paths, upstream text), so an
+      # unparseable body falls back to the generic string.
+      payload["error"] ||= complete_oauth_device_flow_error_message
       payload
     end
 

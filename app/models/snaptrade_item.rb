@@ -33,14 +33,28 @@ class SnaptradeItem < ApplicationRecord
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
 
+  # A registered SnapTrade user belongs to the client that created it, so it
+  # cannot survive a credential swap: the new client cannot see the old user,
+  # and user_registered? would otherwise stay true and skip re-registration,
+  # leaving every sync to fail with no recovery path.
+  before_save :reset_registration_when_api_credentials_change
+
   has_many :snaptrade_accounts, dependent: :destroy
   has_many :linked_accounts, through: :snaptrade_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :credentials_configured, -> { active.where.not(client_id: [ nil, "" ]).where.not(consumer_key: [ nil, "" ]) }
-  # Syncable = active + fully configured (user registered with SnapTrade API)
-  # Items without user registration will fail sync, so exclude them from auto-sync
-  scope :syncable, -> { active.where.not(snaptrade_user_id: [ nil, "" ]).where.not(snaptrade_user_secret: [ nil, "" ]) }
+  # Syncable = active + fully configured (API credentials present AND user
+  # registered with SnapTrade). Either half missing makes the import raise, so
+  # such items must stay out of auto-sync.
+  # snaptrade_user_secret is non-deterministically encrypted, so a "" comparison
+  # would re-encrypt with a fresh IV and never match; NULL is stored unencrypted
+  # and is the only empty state apply/registration ever writes.
+  scope :syncable, -> {
+    credentials_configured
+      .where.not(snaptrade_user_id: [ nil, "" ])
+      .where.not(snaptrade_user_secret: nil)
+  }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
@@ -242,4 +256,15 @@ class SnaptradeItem < ApplicationRecord
       I18n.t("snaptrade_item.brokerage_summary.count", count: brokerages.count)
     end
   end
+
+  private
+    def reset_registration_when_api_credentials_change
+      return if new_record?
+      return unless will_save_change_to_client_id? || will_save_change_to_consumer_key?
+      return if snaptrade_user_id.blank? && snaptrade_user_secret.blank?
+
+      Rails.logger.info "SnaptradeItem #{id} - API credentials changed, clearing stale SnapTrade user registration"
+      self.snaptrade_user_id = nil
+      self.snaptrade_user_secret = nil
+    end
 end

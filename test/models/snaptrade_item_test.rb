@@ -130,6 +130,61 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_not item.syncing?
   end
 
+  test "a transient verification failure keeps the unrecoverable user secret" do
+    item = snaptrade_items(:configured_item)
+    provider = mock
+    provider.stubs(:list_connections).raises(
+      Provider::Snaptrade::ApiError.new("rate limited", status_code: 429)
+    )
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    assert_equal :unknown, item.verify_user_status
+    assert_raises(Provider::Snaptrade::ApiError) { item.ensure_user_registered! }
+    assert_equal "user_123", item.reload.snaptrade_user_id
+    assert_equal "secret_abc", item.snaptrade_user_secret
+  end
+
+  test "a rejected user is cleared so registration can start over" do
+    item = snaptrade_items(:configured_item)
+    provider = mock
+    provider.stubs(:list_connections).raises(
+      Provider::Snaptrade::AuthenticationError.new("no such user")
+    )
+    provider.stubs(:register_user).returns({ user_id: "family_1_999", user_secret: "fresh" })
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    assert_equal :missing, item.verify_user_status
+    assert item.ensure_user_registered!
+    assert_equal "family_1_999", item.reload.snaptrade_user_id
+  end
+
+  test "changing API credentials drops the registration tied to the old client" do
+    item = snaptrade_items(:configured_item)
+
+    item.update!(client_id: "rotated_client_id")
+
+    assert_nil item.reload.snaptrade_user_id
+    assert_nil item.snaptrade_user_secret
+    assert_not item.user_registered?
+  end
+
+  test "renaming an item leaves its registration alone" do
+    item = snaptrade_items(:configured_item)
+
+    item.update!(name: "Renamed")
+
+    assert_equal "user_123", item.reload.snaptrade_user_id
+  end
+
+  test "syncable excludes items without API credentials" do
+    item = snaptrade_items(:configured_item)
+    assert_includes SnaptradeItem.syncable, item
+
+    item.update_columns(consumer_key: nil)
+
+    assert_not_includes SnaptradeItem.syncable, item.reload
+  end
+
   test "sync_later_with_follow_up queues a follow-up after an active sync" do
     item = snaptrade_items(:configured_item)
     active_sync = item.syncs.create!

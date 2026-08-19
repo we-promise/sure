@@ -2,7 +2,8 @@ module SnaptradeItem::Provided
   extend ActiveSupport::Concern
 
   included do
-    before_destroy :delete_snaptrade_user
+    before_destroy :capture_snaptrade_user_for_cleanup
+    after_commit :delete_snaptrade_user, on: :destroy
   end
 
   def snaptrade_provider
@@ -18,21 +19,43 @@ module SnaptradeItem::Provided
     snaptrade_provider || Provider::Snaptrade.new
   end
 
-  # Clean up SnapTrade user when item is destroyed
+  # Captured before the row goes away, so the cleanup below can still run after
+  # the transaction has committed.
+  def capture_snaptrade_user_for_cleanup
+    @snaptrade_user_cleanup =
+      if user_registered? && credentials_configured?
+        { user_id: snaptrade_user_id, client_id: client_id, consumer_key: consumer_key }
+      end
+    true
+  end
+
+  # Clean up the SnapTrade user once the item is really gone.
+  #
+  # Runs after_commit rather than before_destroy: delete_user is a network call
+  # wrapped in with_retries, which can sleep 2s + 4s + 8s on top of a 30s
+  # timeout per attempt. Inside the destroy transaction that held row locks on
+  # snaptrade_items and every cascading association for up to two minutes.
+  #
+  # Deliberately not a background job: the credentials are encrypted at rest and
+  # passing them as job arguments would write them to the queue store in plain
+  # text.
   def delete_snaptrade_user
-    return unless user_registered?
+    cleanup = @snaptrade_user_cleanup
+    @snaptrade_user_cleanup = nil
+    return unless cleanup
 
-    provider = snaptrade_provider
-    return unless provider
+    Rails.logger.info "SnapTrade: Deleting user #{cleanup[:user_id]} for family #{family_id}"
 
-    Rails.logger.info "SnapTrade: Deleting user #{snaptrade_user_id} for family #{family_id}"
+    provider = Provider::Snaptrade.new(
+      client_id: cleanup[:client_id],
+      consumer_key: cleanup[:consumer_key]
+    )
+    provider.delete_user(user_id: cleanup[:user_id])
 
-    provider.delete_user(user_id: snaptrade_user_id)
-
-    Rails.logger.info "SnapTrade: Successfully deleted user #{snaptrade_user_id}"
+    Rails.logger.info "SnapTrade: Successfully deleted user #{cleanup[:user_id]}"
   rescue => e
     # Log but don't block deletion - user may not exist or credentials may be invalid
-    Rails.logger.warn "SnapTrade: Failed to delete user #{snaptrade_user_id}: #{e.class} - #{e.message}"
+    Rails.logger.warn "SnapTrade: Failed to delete user #{cleanup[:user_id]}: #{e.class} - #{e.message}"
   end
 
   # User ID and secret for SnapTrade API calls
@@ -56,12 +79,21 @@ module SnaptradeItem::Provided
   def ensure_user_registered!
     # If we think we're registered, verify the user still exists
     if user_registered?
-      if verify_user_exists?
+      case verify_user_status
+      when :ok
         return true
-      else
+      when :missing
         # User was deleted from SnapTrade API - clear local credentials and re-register
         Rails.logger.warn "SnapTrade: User #{snaptrade_user_id} no longer exists, clearing credentials and re-registering"
         update!(snaptrade_user_id: nil, snaptrade_user_secret: nil)
+      else
+        # Rate limit, 5xx or any other transient failure. The user_secret is
+        # only ever returned at registration, so discarding it here on a blip
+        # would orphan a working connection permanently. Keep it and let the
+        # caller retry.
+        raise Provider::Snaptrade::ApiError.new(
+          "SnapTrade user verification is temporarily unavailable. Please try again."
+        )
       end
     end
 
@@ -98,27 +130,32 @@ module SnaptradeItem::Provided
     raise
   end
 
-  # Verify that the stored user actually exists in SnapTrade
-  # Returns false if user doesn't exist, credentials are invalid, or verification fails
-  def verify_user_exists?
-    return false unless snaptrade_user_id.present?
+  # Verify that the stored user actually exists in SnapTrade.
+  # :ok      - the user answered for these credentials
+  # :missing - SnapTrade rejected the credentials, so the user is really gone
+  # :unknown - the check could not be completed (rate limit, 5xx, unconfigured)
+  #
+  # The distinction matters: only :missing may cost the caller its stored
+  # snaptrade_user_secret, which SnapTrade returns exactly once at registration
+  # and can never be read back.
+  def verify_user_status
+    return :unknown if snaptrade_user_id.blank?
 
     provider = snaptrade_provider
-    return false unless provider
+    return :unknown unless provider
 
     # Try to list connections - this will fail with 401/403 if user doesn't exist
     provider.list_connections(
       user_id: snaptrade_user_id,
       user_secret: snaptrade_user_secret
     )
-    true
+    :ok
   rescue Provider::Snaptrade::AuthenticationError => e
     Rails.logger.warn "SnapTrade: User verification failed - #{e.message}"
-    false
+    :missing
   rescue Provider::Snaptrade::ApiError => e
-    # Return false on API errors - caller can retry registration if needed
-    Rails.logger.warn "SnapTrade: User verification error - #{e.message}"
-    false
+    Rails.logger.warn "SnapTrade: User verification could not be completed - #{e.message}"
+    :unknown
   end
 
   # Get the connection portal URL for linking brokerages

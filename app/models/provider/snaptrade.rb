@@ -39,8 +39,10 @@ class Provider::Snaptrade
     Rails.configuration.x.snaptrade&.oauth_client_id.present?
   end
 
+  # Memoized: the document is static, and device-flow polling would otherwise
+  # pay a blocking round trip before every token request.
   def oauth_authorization_server_metadata
-    with_retries("oauth_authorization_server_metadata") do
+    @oauth_authorization_server_metadata ||= with_retries("oauth_authorization_server_metadata") do
       response = oauth_connection.get(OAUTH_DISCOVERY_URL)
       parse_oauth_response(response, "oauth_authorization_server_metadata")
     end
@@ -90,7 +92,11 @@ class Provider::Snaptrade
   # Register a new SnapTrade user
   # Returns { user_id: String, user_secret: String }
   def register_user(user_id)
-    with_retries("register_user") do
+    # Not retried: registration is a create whose user_secret is returned only
+    # on the first success. Replaying it after a lost response either conflicts
+    # on the same user_id or creates a second upstream user we can never
+    # authenticate, burning a connection slot for good.
+    with_retries("register_user", max_retries: 0) do
       response = client.authentication.register_snap_trade_user(
         user_id: user_id
       )
@@ -246,7 +252,7 @@ class Provider::Snaptrade
 
   # Get activity/transaction history for a specific account
   # Supports pagination via start_date and end_date
-  def get_account_activities(user_id:, user_secret:, account_id:, start_date: nil, end_date: nil)
+  def get_account_activities(user_id:, user_secret:, account_id:, start_date: nil, end_date: nil, offset: nil, limit: nil)
     with_retries("get_account_activities") do
       params = {
         user_id: user_id,
@@ -255,6 +261,8 @@ class Provider::Snaptrade
       }
       params[:start_date] = start_date.to_date.to_s if start_date
       params[:end_date] = end_date.to_date.to_s if end_date
+      params[:offset] = offset if offset
+      params[:limit] = limit if limit
 
       client.account_information.get_account_activities(**params)
     end

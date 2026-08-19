@@ -94,12 +94,13 @@ module SettingsHelper
       return { status: :off } unless @kraken_items&.any?
       sync_based_summary(key)
     when "snaptrade"
-      configured_item = @snaptrade_items&.find { |item| item.credentials_configured? || item.oauth_configured? }
-      return { status: :off } unless configured_item
+      # Evaluate every item: picking the first configured one would report a
+      # registration warning for an unregistered item even when another item in
+      # the family is fully configured and syncing.
+      items = @snaptrade_items || []
+      return { status: :off } unless items.any? { |item| item.credentials_configured? || item.oauth_configured? }
+      return { status: :warn, meta: t("settings.providers.meta.registration_needed") } unless items.any?(&:fully_configured?)
 
-      unless configured_item.user_registered?
-        return { status: :warn, meta: t("settings.providers.meta.registration_needed") }
-      end
       sync_based_summary(key)
     when "ibkr"
       return { status: :off } unless @ibkr_items&.any?

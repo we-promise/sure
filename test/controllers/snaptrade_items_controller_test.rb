@@ -34,10 +34,39 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Failed to connect/, flash[:alert])
   end
 
+  test "the settings panel never renders stored API credentials" do
+    get settings_providers_url
+
+    assert_response :success
+    # Scoped to the SnapTrade inputs on purpose: an unrelated Plaid setting on
+    # this page happens to hold the same fixture string.
+    %w[client_id consumer_key].each do |field|
+      inputs = css_select("input[name='snaptrade_item[#{field}]']")
+      assert_predicate inputs, :any?, "expected the SnapTrade #{field} field to render"
+      inputs.each do |input|
+        assert input["value"].blank?, "SnapTrade #{field} must not be rendered into the DOM"
+      end
+    end
+  end
+
+  test "a blank credential field on update keeps the stored value" do
+    @snaptrade_item.update!(client_id: "keep_me", consumer_key: "keep_me_too")
+
+    patch snaptrade_item_url(@snaptrade_item), params: {
+      snaptrade_item: { name: "Renamed", client_id: "", consumer_key: "" }
+    }
+
+    @snaptrade_item.reload
+    assert_equal "Renamed", @snaptrade_item.name
+    assert_equal "keep_me", @snaptrade_item.client_id
+    assert_equal "keep_me_too", @snaptrade_item.consumer_key
+  end
+
   test "connect redirects to portal when successful" do
     portal_url = "https://app.snaptrade.com/portal/test123"
 
     SnaptradeItem.any_instance.stubs(:user_registered?).returns(true)
+    SnaptradeItem.any_instance.stubs(:ensure_user_registered!).returns(true)
     SnaptradeItem.any_instance.stubs(:connection_portal_url).returns(portal_url)
 
     get connect_snaptrade_item_url(@snaptrade_item)
@@ -47,6 +76,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "connect carries the setup-accounts return context through the portal redirect" do
     SnaptradeItem.any_instance.stubs(:user_registered?).returns(true)
+    SnaptradeItem.any_instance.stubs(:ensure_user_registered!).returns(true)
     captured_redirect_url = nil
     SnaptradeItem.any_instance.stubs(:connection_portal_url).with do |args|
       captured_redirect_url = args[:redirect_url]
@@ -84,7 +114,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 5, payload["interval"]
   end
 
-  test "complete oauth device flow falls back to api error message without json body" do
+  test "complete oauth device flow falls back to a generic message without json body" do
     error = Provider::Snaptrade::ApiError.new(
       "SnapTrade OAuth error (poll_device_token): invalid response",
       status_code: 502,
@@ -98,7 +128,10 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :bad_gateway
     payload = JSON.parse(response.body)
-    assert_equal "SnapTrade OAuth error (poll_device_token): invalid response", payload["error"]
+    # An unparseable body means nothing SnapTrade returned is safe to echo, so
+    # the raw ApiError message must not reach the client.
+    assert_equal "Unable to complete SnapTrade OAuth device authorization. Please try again.", payload["error"]
+    assert_no_match(/poll_device_token/, response.body)
   end
 
   test "complete oauth device flow does not expose non-api provider error details" do

@@ -11,7 +11,7 @@
     active_items = items.select { |item| !item.scheduled_for_deletion? }
     snaptrade_item =
       active_items.first ||
-      Current.family.snaptrade_items.build(name: "SnapTrade Connection")
+      Current.family.snaptrade_items.build(name: t("snaptrade_items.default_name"))
     is_new_record = snaptrade_item.new_record?
     oauth_href =
       if snaptrade_item.persisted?
@@ -88,15 +88,21 @@
                            method: is_new_record ? :post : :patch,
                            data: { turbo: true },
                            class: "space-y-3" do |form| %>
+        <%# value: nil - a model-bound field would render the decrypted %>
+        <%# credential as the HTML value. Blank on update means "unchanged". %>
         <%= form.text_field :client_id,
                             label: t("providers.snaptrade.client_id_label"),
+                            value: nil,
                             placeholder: is_new_record ?
                               t("providers.snaptrade.client_id_placeholder") :
                               t("providers.snaptrade.client_id_update_placeholder"),
                             type: :password %>
 
+        <%# value: nil - a model-bound field would render the decrypted %>
+        <%# credential as the HTML value. Blank on update means "unchanged". %>
         <%= form.text_field :consumer_key,
                             label: t("providers.snaptrade.consumer_key_label"),
+                            value: nil,
                             placeholder: is_new_record ?
                               t("providers.snaptrade.consumer_key_placeholder") :
                               t("providers.snaptrade.consumer_key_update_placeholder"),

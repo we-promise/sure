@@ -19,12 +19,17 @@ module Family::SnaptradeConnectable
       snaptrade_user_secret: snaptrade_user_secret
     )
 
-    snaptrade_item.sync_later
+    # snaptrade_user_id is optional here, and an unregistered item makes
+    # import_latest_snaptrade_data raise "SnapTrade user not registered".
+    # Registration schedules its own sync once it completes.
+    snaptrade_item.sync_later if snaptrade_item.user_registered?
 
     snaptrade_item
   end
 
   def has_snaptrade_credentials?
-    snaptrade_items.where.not(client_id: nil).exists?
+    # Both halves are required to build a provider, so a stray client_id
+    # without a consumer_key is not usable credentials.
+    snaptrade_items.credentials_configured.exists?
   end
 end
