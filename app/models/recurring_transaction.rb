@@ -302,6 +302,16 @@ class RecurringTransaction < ApplicationRecord
     amount_money * (schedule.occurrences_per_year / 12.0)
   end
 
+  # The newest price changes, most recent first. Sorts in Ruby when a caller
+  # preloaded the association so the detail panel costs no extra query.
+  def recent_price_changes(count = 5)
+    if recurring_price_changes.loaded?
+      recurring_price_changes.sort_by(&:effective_on).reverse.first(count)
+    else
+      recurring_price_changes.order(effective_on: :desc).limit(count)
+    end
+  end
+
   # Deliberately strict -- same name ignoring case and spacing, same amount AND
   # same expected day -- so concurrent subscription tiers to one merchant are
   # never flagged as duplicates of each other.

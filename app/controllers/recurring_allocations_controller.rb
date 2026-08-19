@@ -13,7 +13,7 @@ class RecurringAllocationsController < ApplicationController
       amount: params[:amount].presence,
       # Defaults to today via RecurringAllocation's callback; accepting a date
       # lets someone record last Tuesday's payment as last Tuesday.
-      paid_on: params[:paid_on].presence
+      paid_on: parse_paid_on(params[:paid_on])
     )
 
     redirect_with notice: t(".success")
@@ -56,6 +56,15 @@ class RecurringAllocationsController < ApplicationController
   end
 
   private
+    # Active Record casts an unparseable date to nil, and a nil paid_on records
+    # the payment as today. Parsing here raises Date::Error (an ArgumentError),
+    # which the create rescue turns into the invalid-allocation message.
+    def parse_paid_on(raw)
+      return nil if raw.blank?
+
+      Date.iso8601(raw.to_s)
+    end
+
     # Reading a shared bill is fine; changing its payment state is not. Sharing
     # is per account, so a read-only account share must not mutate. Accountless
     # series carry no account gate.

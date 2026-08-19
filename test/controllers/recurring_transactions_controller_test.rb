@@ -440,7 +440,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
       "a present-but-unresolvable id must not silently detach the account"
   end
 
-  test "create stamps dedup_scope when the identity is already taken" do
+  test "create stamps dedup_scope up front so tiers fork and true duplicates collide" do
     post recurring_transactions_url, params: {
       recurring_transaction: { name: "STREAMCO", amount: "5.99", account_id: accounts(:depository).id,
                                first_due_on: (Date.current + 3).iso8601, frequency_preset: "monthly" }
@@ -452,7 +452,14 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
     tiers = @family.recurring_transactions.where(name: "STREAMCO").order(:amount)
     assert_equal 2, tiers.count
-    assert_equal [ "", "24.99" ], tiers.map(&:dedup_scope)
+    assert_equal [ "5.99", "24.99" ], tiers.map(&:dedup_scope)
+
+    # The stamp makes the very first identical duplicate collide on insert.
+    post recurring_transactions_url, params: {
+      recurring_transaction: { name: "STREAMCO", amount: "5.99", account_id: accounts(:depository).id,
+                               first_due_on: (Date.current + 3).iso8601, frequency_preset: "monthly" }
+    }
+    assert_equal 2, @family.recurring_transactions.where(name: "STREAMCO").count
   end
 
   test "marking a bill as an installment plan caps its occurrences and tracks progress" do

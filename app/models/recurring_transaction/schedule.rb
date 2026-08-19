@@ -84,19 +84,12 @@ class RecurringTransaction
     end
 
     # Ruby-side twin of day_window_sql for code that already holds the entry.
-    # A weekly cadence repeats on a weekday, not a day of month, so it matches
-    # on the rule's weekday; the day-of-month window only fits the others.
+    # Matches against each rule's own generated occurrences, so an every-N
+    # cadence rejects dates that sit on the right weekday or day-of-month but
+    # in the wrong cycle. A weekly cadence repeats on an exact weekday (no
+    # drift tolerance); the day-of-month window only fits the others.
     def matches_day?(date)
-      weekly_rules = rules.select { |rule| rule.frequency == "weekly" }
-      if weekly_rules.any?
-        weekdays = weekly_rules.map(&:weekday).compact
-        weekdays << anchor_date.wday if weekdays.empty? && anchor_date
-
-        return weekdays.empty? || weekdays.include?(date.wday)
-      end
-
-      clamped_expected = [ expected_day_of_month, date.end_of_month.day ].min
-      self.class.circular_day_distance(date.day, clamped_expected) <= DAY_MATCH_TOLERANCE
+      rules.any? { |rule| rule_matches_day?(rule, date) }
     end
 
     # --- The rules-based engine ---
@@ -193,6 +186,19 @@ class RecurringTransaction
     end
 
     private
+      def rule_matches_day?(rule, date)
+        if rule.frequency == "weekly"
+          # A weekly rule without a weekday inherits the anchor's; with
+          # neither there is nothing to reject on, so any day matches.
+          weekday = rule.weekday || anchor_date&.wday
+          return true if weekday.nil?
+
+          raw_occurrences(rule.with(weekday: weekday), date, date).any?
+        else
+          raw_occurrences(rule, date - DAY_MATCH_TOLERANCE, date + DAY_MATCH_TOLERANCE).any?
+        end
+      end
+
       def implicit_monthly_rule
         raise ArgumentError, "a schedule needs rules or an expected_day_of_month" if expected_day_of_month.nil?
 

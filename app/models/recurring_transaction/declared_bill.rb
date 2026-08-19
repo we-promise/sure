@@ -21,11 +21,14 @@ class RecurringTransaction
       end
 
       is_income = ActiveModel::Type::Boolean.new.cast(attrs[:is_income]) || false
+      # BigDecimal parses "Infinity" and "NaN" as non-finite numbers; both are
+      # invalid here, same as unparseable input.
       amount = begin
         BigDecimal(attrs[:amount].to_s.presence || "0").abs
       rescue ArgumentError
         nil
       end
+      amount = nil if amount && !amount.finite?
       amount = -amount if amount && is_income
 
       recurring = family.recurring_transactions.new(
@@ -71,19 +74,16 @@ class RecurringTransaction
     end
 
     # A series for this identifier may already exist; a second legitimate one
-    # (another tier from the same biller) is distinguished by its amount. The
-    # same identity at the same amount is a true duplicate, reported as a
-    # validation error rather than an escaping exception.
+    # (another tier from the same biller) is distinguished by its amount, so
+    # the amount is stamped into dedup_scope before the first insert. The same
+    # identity at the same amount then collides immediately and is reported as
+    # a validation error rather than an escaping exception.
     def self.save(recurring)
+      recurring.dedup_scope = recurring.amount.to_d.to_s("F") if recurring.dedup_scope.blank?
       recurring.save
     rescue ActiveRecord::RecordNotUnique
-      recurring.dedup_scope = recurring.amount.to_d.to_s("F")
-      begin
-        recurring.save
-      rescue ActiveRecord::RecordNotUnique
-        recurring.errors.add(:base, I18n.t("recurring_transactions.create.already_exists"))
-        false
-      end
+      recurring.errors.add(:base, I18n.t("recurring_transactions.create.already_exists"))
+      false
     end
   end
 end

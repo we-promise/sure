@@ -173,8 +173,32 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
       anchor_date: Date.new(2026, 8, 7)
     )
 
-    assert schedule.matches_day?(Date.new(2026, 8, 14)), "a Friday, like the anchor"
+    assert schedule.matches_day?(Date.new(2026, 8, 21)), "a Friday two weeks after the anchor"
     assert_not schedule.matches_day?(Date.new(2026, 8, 13))
+  end
+
+  test "matches_day on a biweekly cadence rejects the off week's weekday" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "weekly", weekday: 5, interval: 2) ],
+      anchor_date: Date.new(2026, 8, 7)
+    )
+
+    assert schedule.matches_day?(Date.new(2026, 8, 7))
+    assert schedule.matches_day?(Date.new(2026, 8, 21))
+    assert_not schedule.matches_day?(Date.new(2026, 8, 14)),
+      "the right weekday in the wrong week is not this bill's day"
+  end
+
+  test "matches_day on an every-N-months cadence rejects the off months" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "monthly", day_of_month: 15, interval: 3) ],
+      anchor_date: Date.new(2026, 2, 15)
+    )
+
+    assert schedule.matches_day?(Date.new(2026, 5, 15))
+    assert schedule.matches_day?(Date.new(2026, 5, 17)), "day drift inside the tolerance still matches"
+    assert_not schedule.matches_day?(Date.new(2026, 4, 15)),
+      "the right day of month in an off-cycle month is not this bill's day"
   end
 
   # --- Rules-based engine ---

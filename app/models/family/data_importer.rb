@@ -636,7 +636,10 @@ class Family::DataImporter
         next if series.blank?
 
         original_due_on = parse_import_date(data["original_due_on"])
-        next if original_due_on.blank?
+        if original_due_on.blank?
+          increment_summary("RecurringOccurrence", :skipped)
+          next
+        end
 
         occurrence = series.recurring_occurrences.find_or_initialize_by(original_due_on: original_due_on)
         created = occurrence.new_record?
@@ -654,11 +657,13 @@ class Family::DataImporter
           notes: data["notes"]
         )
         # A check constraint ties status and closed_at together, so a closed row
-        # exported without a timestamp would otherwise fail the insert.
+        # exported without a timestamp would otherwise fail the insert. The
+        # stand-in derives from the due date, not the import time, so replaying
+        # the same export lands on the same value.
         if occurrence.status == "scheduled"
           occurrence.closed_at = nil
         else
-          occurrence.closed_at ||= Time.current
+          occurrence.closed_at ||= occurrence.due_on.in_time_zone
         end
 
         occurrence.save!
@@ -671,14 +676,23 @@ class Family::DataImporter
       records.each do |record|
         data = record["data"]
         occurrence_id = @recurring_occurrence_ids[data["recurring_occurrence_id"]]
-        next if occurrence_id.blank?
-
-        occurrence = RecurringOccurrence.find_by(id: occurrence_id)
-        next if occurrence.blank?
+        occurrence = RecurringOccurrence.find_by(id: occurrence_id) if occurrence_id.present?
+        if occurrence.blank?
+          increment_summary("RecurringAllocation", :skipped)
+          next
+        end
 
         entry_id = imported_entry_id(data["transaction_id"], "RecurringAllocation")
         paid_on = parse_import_date(data["paid_on"])
         amount = data["allocated_amount"].to_d
+
+        # A hand-recorded payment is matched on its values, and paid_on is one
+        # of them; without it the default (today) would make a replay on a
+        # later day miss the row and insert a duplicate.
+        if entry_id.blank? && paid_on.blank?
+          invalid_record!("RecurringAllocation", "paid_on", data["paid_on"])
+          next
+        end
 
         allocation = if entry_id
           RecurringAllocation.find_or_initialize_by(
@@ -717,7 +731,10 @@ class Family::DataImporter
         next if series.blank?
 
         effective_on = parse_import_date(data["effective_on"])
-        next if effective_on.blank?
+        if effective_on.blank?
+          increment_summary("RecurringPriceChange", :skipped)
+          next
+        end
 
         change = RecurringPriceChange.find_or_initialize_by(
           recurring_transaction_id: series.id, effective_on: effective_on
@@ -744,7 +761,10 @@ class Family::DataImporter
         entry_id = imported_entry_id(data["transaction_id"], "RecurringMatchRejection")
         # entry_id is NOT NULL here, so a rejection whose transaction did not
         # come across cannot be represented and is dropped rather than faked.
-        next if entry_id.blank?
+        if entry_id.blank?
+          increment_summary("RecurringMatchRejection", :skipped)
+          next
+        end
 
         rejection = RecurringMatchRejection.find_or_initialize_by(
           recurring_transaction_id: series.id, entry_id: entry_id
@@ -755,13 +775,15 @@ class Family::DataImporter
       end
     end
 
+    # Counts the dropped record as skipped on every nil return, so a non-strict
+    # import cannot silently discard rows whose series never came across.
     def imported_series_for(data, record_type)
       series_id = remap_optional_id(
         :recurring_transactions, data["recurring_transaction_id"], record_type: record_type
       )
-      return if series_id.blank?
-
-      @family.recurring_transactions.find_by(id: series_id)
+      series = @family.recurring_transactions.find_by(id: series_id) if series_id.present?
+      increment_summary(record_type, :skipped) if series.nil?
+      series
     end
 
     # Allocations travel with the transaction that owns their entry, because

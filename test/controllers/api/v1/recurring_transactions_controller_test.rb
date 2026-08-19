@@ -385,6 +385,37 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
     assert_equal "validation_failed", response_data["error"]
   end
 
+  # suggested, paused and ended are valid model statuses, but they are
+  # lifecycle states the API does not document as writable and must refuse.
+  test "should reject update with an undocumented model status" do
+    %w[suggested paused ended].each do |status|
+      patch api_v1_recurring_transaction_url(@recurring_transaction),
+            params: { recurring_transaction: { status: status } },
+            headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity
+      response_data = JSON.parse(response.body)
+      assert_equal "validation_failed", response_data["error"]
+      assert_equal "active", @recurring_transaction.reload.status,
+        "#{status} must not be written through the API"
+    end
+  end
+
+  test "should reject create with an undocumented model status" do
+    params = valid_recurring_transaction_params.deep_dup
+    params[:recurring_transaction][:status] = "suggested"
+
+    assert_no_difference("@family.recurring_transactions.count") do
+      post api_v1_recurring_transactions_url,
+           params: params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+  end
+
   test "should reject update with nil status" do
     patch api_v1_recurring_transaction_url(@recurring_transaction),
           params: { recurring_transaction: { status: nil } },

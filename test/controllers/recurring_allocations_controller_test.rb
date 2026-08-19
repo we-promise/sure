@@ -63,4 +63,24 @@ class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to bills_url
     assert_equal 5, @occurrence.reload.allocations.sole.allocated_amount
   end
+
+  test "a valid paid_on records the payment on that date" do
+    paid = 3.days.ago.to_date
+
+    post recurring_occurrence_allocations_url(@occurrence),
+         params: { amount: "5.00", paid_on: paid.iso8601 }
+
+    assert_redirected_to bills_url
+    assert_equal paid, @occurrence.reload.allocations.sole.paid_on
+  end
+
+  test "a malformed paid_on is rejected instead of being recorded as today" do
+    post recurring_occurrence_allocations_url(@occurrence),
+         params: { amount: "5.00", paid_on: "not-a-date" }
+
+    assert_redirected_to bills_url
+    assert flash[:alert].present?
+    assert_equal 0, @occurrence.reload.allocations.count,
+      "a nil-cast date would have silently defaulted the payment to today"
+  end
 end

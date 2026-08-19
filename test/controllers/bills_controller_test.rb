@@ -1317,6 +1317,32 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match smart_configuration_bill_path(bill), response.body
   end
 
+  test "price changes on accounts the member cannot reach stay out of notices and the rollup" do
+    hidden = create_bill(name: "Hidden brokerage sub", amount: 24.99, account: accounts(:investment))
+    hidden.update!(bill_type: "subscription")
+    hidden.recurring_price_changes.create!(
+      effective_on: Date.current - 5, previous_amount: 19.99, new_amount: 24.99,
+      currency: "USD", source: "detected"
+    )
+    visible = create_bill(name: "Visible sub", amount: 9.99)
+    visible.update!(bill_type: "subscription")
+    visible.recurring_price_changes.create!(
+      effective_on: Date.current - 5, previous_amount: 7.99, new_amount: 9.99,
+      currency: "USD", source: "detected"
+    )
+
+    sign_in users(:family_member)
+
+    get bills_url
+    assert_response :success
+    assert_match "Visible sub", response.body
+    assert_no_match "Hidden brokerage sub", response.body
+
+    get bills_url(view: "all", q: { bill_type: "subscription" })
+    assert_response :success
+    assert_no_match "Hidden brokerage sub", response.body
+  end
+
   test "the suggested strip only shows series on accounts the member can reach" do
     create_suggested(name: "Hidden brokerage sub", account: accounts(:investment))
     create_suggested(name: "Visible sub", account: accounts(:depository))

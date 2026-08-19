@@ -138,9 +138,15 @@ class Assistant::Function::UpdateBill < Assistant::Function
     def apply_amount(series, params, changed)
       return nil unless params.key?("amount")
 
+      # BigDecimal parses "Infinity" and "NaN" as non-finite numbers; the tool
+      # caller does not enforce params_schema, so both are rejected here the
+      # same as unparseable input.
       magnitude = begin
         BigDecimal(params["amount"].to_s).abs
       rescue ArgumentError
+        nil
+      end
+      if magnitude.nil? || !magnitude.finite?
         return { error: "amount is not a number", hint: "Pass a positive numeric magnitude." }
       end
       if magnitude.zero?

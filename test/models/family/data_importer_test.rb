@@ -2293,6 +2293,57 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal before, census.call
   end
 
+  test "a closed occurrence exported without closed_at replays to the same timestamp" do
+    records = bills_ndjson_records
+    records.each { |record| record[:data].delete(:closed_at) if record[:type] == "RecurringOccurrence" }
+
+    Family::DataImporter.new(@family, build_ndjson(records)).import!
+    occurrence = @family.recurring_transactions.sole
+                        .recurring_occurrences.find_by!(original_due_on: Date.new(2026, 6, 9))
+    first_stamp = occurrence.closed_at
+    assert_not_nil first_stamp
+    assert_equal Date.new(2026, 6, 9), first_stamp.to_date, "the stand-in derives from the due date"
+
+    importer = Family::DataImporter.new(@family, build_ndjson(records))
+    parsed = importer.send(:parse_ndjson)
+    importer.send(:import_recurring_transactions, parsed["RecurringTransaction"])
+    importer.send(:import_recurring_occurrences, parsed["RecurringOccurrence"])
+
+    assert_equal first_stamp, occurrence.reload.closed_at,
+      "an import-time stand-in would move the historical timestamp on every replay"
+  end
+
+  test "a hand-recorded allocation without a paid_on is skipped, not defaulted to today" do
+    records = bills_ndjson_records
+    records.each do |record|
+      next unless record[:type] == "RecurringAllocation"
+
+      record[:data].delete(:transaction_id)
+      record[:data].delete(:paid_on)
+    end
+
+    result = Family::DataImporter.new(@family, build_ndjson(records)).import!
+
+    occurrence = @family.recurring_transactions.sole
+                        .recurring_occurrences.find_by!(original_due_on: Date.new(2026, 6, 9))
+    assert_equal 0, occurrence.allocations.count,
+      "a defaulted paid_on would make every later replay insert a fresh copy"
+    assert_equal 1, result.dig(:summary, "recurring_allocations", "skipped")
+  end
+
+  test "recurring records whose series never came across are counted as skipped" do
+    ndjson = build_ndjson([
+      { type: "RecurringPriceChange", data: {
+          id: "old-change", recurring_transaction_id: "missing-series",
+          effective_on: "2026-05-01", previous_amount: "10.0", new_amount: "12.0",
+          currency: "USD" } }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal 1, result.dig(:summary, "recurring_price_changes", "skipped")
+  end
+
   # A bill created with a full payment history must not also carry the
   # occurrences its own creation callback generates.
   test "imported occurrences do not duplicate the ones a new series generates" do

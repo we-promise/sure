@@ -27,6 +27,19 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
     assert_equal 40, series.reload.amount.to_f
   end
 
+  test "a non-finite amount is refused, not assigned" do
+    # BigDecimal happily parses these strings, so the finite check is the
+    # only thing between them and the ledger.
+    series = create_series(name: "Gym", amount: 40)
+
+    %w[Infinity -Infinity NaN].each do |value|
+      result = call_tool(series.id, "amount" => value)
+
+      assert result[:error].present?, "#{value} must be refused"
+      assert_equal 40, series.reload.amount.to_f
+    end
+  end
+
   test "a schedule change applies the preset and pins it against detection" do
     series = create_series(name: "Gym", amount: 40)
     refute series.schedule_pinned?

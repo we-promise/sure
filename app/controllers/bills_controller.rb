@@ -357,6 +357,7 @@ class BillsController < ApplicationController
 
       @recent_price_changes = RecurringPriceChange
                                 .joins(:recurring_transaction)
+                                .merge(RecurringTransaction.accessible_by(Current.user))
                                 .where(recurring_transactions: { family_id: Current.family.id })
                                 .where("effective_on >= ?", 1.year.ago.to_date)
                                 .includes(:recurring_transaction)
@@ -536,6 +537,7 @@ class BillsController < ApplicationController
         notices << Notice.new(kind: :renewal, series: series, date: series.renews_on, detail: nil)
       end
       RecurringPriceChange.joins(:recurring_transaction)
+                          .merge(RecurringTransaction.accessible_by(Current.user))
                           .where(recurring_transactions: { family_id: Current.family.id })
                           .where("effective_on >= ?", today - 30)
                           .includes(:recurring_transaction)

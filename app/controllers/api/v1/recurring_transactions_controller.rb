@@ -3,6 +3,11 @@
 class Api::V1::RecurringTransactionsController < Api::V1::BaseController
   include Pagy::Backend
 
+  # The model knows more statuses (suggested, paused, ended), but those are
+  # lifecycle states owned by detection and the web UI; the API writes only
+  # the two it documents.
+  WRITABLE_STATUSES = %w[active inactive].freeze
+
   before_action :ensure_read_scope, only: %i[index show]
   before_action :ensure_write_scope, only: %i[create update destroy]
   before_action :set_readable_recurring_transaction, only: :show
@@ -213,6 +218,7 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
       input = recurring_transaction_input
       recurring_transaction.errors.add(:last_occurrence_date, :blank) if input[:last_occurrence_date].blank?
       recurring_transaction.errors.add(:next_expected_date, :blank) if input[:next_expected_date].blank?
+      validate_status_write_param(recurring_transaction)
     end
 
     def validate_update_write_params(recurring_transaction)
@@ -220,6 +226,15 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
       if input.key?(:next_expected_date) && input[:next_expected_date].blank?
         recurring_transaction.errors.add(:next_expected_date, :blank)
       end
+      validate_status_write_param(recurring_transaction)
+    end
+
+    # A blank status falls through to the model's presence validation.
+    def validate_status_write_param(recurring_transaction)
+      status = recurring_transaction_input[:status]
+      return if status.blank? || status.to_s.in?(WRITABLE_STATUSES)
+
+      recurring_transaction.errors.add(:status, :inclusion)
     end
 
     def recurring_transaction_input

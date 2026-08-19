@@ -164,7 +164,7 @@
 
   <%# What it used to cost. The twelve-month chart above shows the shape; this
       names the moment it changed and by how much. %>
-  <% changes = series.recurring_price_changes.order(effective_on: :desc).limit(5) %>
+  <% changes = series.recent_price_changes %>
   <% if changes.any? %>
     <div class="space-y-1">
       <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.price_changes") %></p>
