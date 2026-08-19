@@ -28,33 +28,12 @@ class GenerateRecurringOccurrencesJob < ApplicationJob
       return unless family
       return if family.recurring_transactions_disabled?
 
-      with_advisory_lock(family_id) do
+      # Shares the pipeline's per-family lock so the nightly sweep and the
+      # sync-triggered pipeline serialize against each other.
+      RecurringTransaction::Pipeline.with_family_lock(family_id) do
         family.recurring_transactions.active.find_each do |series|
           RecurringTransaction::OccurrenceGenerator.new(series).generate!
         end
       end
-    end
-
-    def with_advisory_lock(family_id)
-      lock_key = advisory_lock_key(family_id)
-      acquired = ActiveRecord::Base.connection.select_value(
-        ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", lock_key ])
-      )
-
-      return unless acquired
-
-      begin
-        yield
-      ensure
-        ActiveRecord::Base.connection.execute(
-          ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", lock_key ])
-        )
-      end
-    end
-
-    # Same key derivation as IdentifyRecurringTransactionsJob so the nightly
-    # sweep and the sync-triggered pipeline serialize against each other.
-    def advisory_lock_key(family_id)
-      Digest::MD5.hexdigest("recurring_transaction_identify:#{family_id}").to_i(16) % (2**31)
     end
 end

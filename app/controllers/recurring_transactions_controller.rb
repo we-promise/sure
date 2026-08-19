@@ -23,17 +23,30 @@ class RecurringTransactionsController < ApplicationController
   # real, active bill; dismissing tombstones it as `ended`, which the
   # Identifier treats as "never suggest this again".
   def confirm
+    first_confirmation = @recurring_transaction.suggested?
     @recurring_transaction.update!(status: "active")
 
+    # A just-confirmed bill shows its lived history rather than starting
+    # blank. Guarded so a replayed POST does not re-run the backfill; the
+    # matcher pass inside is family-wide on purpose (exact-tier, idempotent,
+    # and scoping it would need a parallel Matcher entry point).
+    if first_confirmation
+      RecurringTransaction::HistoryBackfiller.new(
+        Current.family,
+        months: RecurringTransaction::Pipeline::FIRST_RUN_BACKFILL_MONTHS,
+        series_scope: Current.family.recurring_transactions.where(id: @recurring_transaction.id)
+      ).run!
+    end
+
     flash[:notice] = t("recurring_transactions.confirmed")
-    redirect_to recurring_transactions_path
+    redirect_back_or_to recurring_transactions_path
   end
 
   def dismiss
     @recurring_transaction.update!(status: "ended")
 
     flash[:notice] = t("recurring_transactions.dismissed")
-    redirect_to recurring_transactions_path
+    redirect_back_or_to recurring_transactions_path
   end
 
   def update_settings
@@ -48,22 +61,16 @@ class RecurringTransactionsController < ApplicationController
   end
 
   def identify
-    count = RecurringTransaction.identify_patterns_for!(Current.family)
-
-    # Manual-first parity with the sync pipeline: a user with no bank feed
-    # (or a fresh install reviewing history) gets the same materialize +
-    # reconcile the post-sync job performs.
-    Current.family.recurring_transactions.active.find_each do |series|
-      RecurringTransaction::OccurrenceGenerator.new(series).generate!
-    end
-    matcher = RecurringTransaction::Matcher.new(Current.family)
-    matcher.repair_orphans!
-    matcher.run!
-    RecurringTransaction::PriceChangeDetector.new(Current.family).detect!
+    result = RecurringTransaction::Pipeline.new(Current.family).run_with_lock!
 
     respond_to do |format|
       format.html do
-        flash[:notice] = t("recurring_transactions.identified", count: count)
+        flash[:notice] =
+          if result.locked?
+            t("recurring_transactions.identify_already_running")
+          else
+            t("recurring_transactions.identified", count: result.patterns_count)
+          end
         redirect_to recurring_transactions_path
       end
     end

@@ -129,6 +129,7 @@ en:
         - CSV imports complete (transactions, trades, accounts, etc. )
         - Any provider sync completes ( Plaid, SimpleFIN, etc. )
     identified: Identified %{count} recurring transaction patterns
+    identify_already_running: Detection is already running. Check back in a moment.
     cleaned_up: Cleaned up %{count} stale recurring transactions
     marked_inactive: Paused. It won't appear again until you resume it.
     marked_active: Resumed.

@@ -20,23 +20,8 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
     return if family_has_incomplete_syncs?(family)
 
     # Use advisory lock as final safety net against concurrent execution
-    with_advisory_lock(family_id) do
-      RecurringTransaction::Identifier.new(family).identify_recurring_patterns
-
-      # Keep every active series' occurrence window materialized as new
-      # patterns and fresh data arrive. Idempotent upserts, so running after
-      # every sync is cheap.
-      family.recurring_transactions.active.find_each do |series|
-        RecurringTransaction::OccurrenceGenerator.new(series).generate!
-      end
-
-      # Then reconcile: re-attach allocations whose entries were replaced by
-      # their provider, auto-link unambiguous payments, queue the rest for
-      # review.
-      matcher = RecurringTransaction::Matcher.new(family)
-      matcher.repair_orphans!
-      matcher.run!
-      RecurringTransaction::PriceChangeDetector.new(family).detect!
+    RecurringTransaction::Pipeline.with_family_lock(family_id) do
+      RecurringTransaction::Pipeline.new(family).run!
     end
   end
 
@@ -66,28 +51,5 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
     # bypassed this gate and let the identifier run against a partial dataset.
     def family_has_incomplete_syncs?(family)
       Sync.any_incomplete_for?(family)
-    end
-
-    def with_advisory_lock(family_id)
-      lock_key = advisory_lock_key(family_id)
-      acquired = ActiveRecord::Base.connection.select_value(
-        ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", lock_key ])
-      )
-
-      return unless acquired
-
-      begin
-        yield
-      ensure
-        ActiveRecord::Base.connection.execute(
-          ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", lock_key ])
-        )
-      end
-    end
-
-    def advisory_lock_key(family_id)
-      # Generate a stable integer key from the family ID for PostgreSQL advisory lock
-      # Advisory locks require a bigint key
-      Digest::MD5.hexdigest("recurring_transaction_identify:#{family_id}").to_i(16) % (2**31)
     end
 end
