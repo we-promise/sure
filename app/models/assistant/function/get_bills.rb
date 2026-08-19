@@ -64,7 +64,10 @@ class Assistant::Function::GetBills < Assistant::Function
   def call(params = {})
     return recurring_disabled_result if recurring_disabled?
 
-    scope = accessible_series.includes(:merchant, :account, :destination_account, :category, :recurring_occurrences)
+    # recurrence_rules included because serialization reads the schedule
+    # (frequency, next due date); without it every series costs one query.
+    scope = accessible_series.includes(:merchant, :account, :destination_account, :category,
+                                       :recurring_occurrences, :recurrence_rules)
     scope = apply_status_filter(scope, params["status"])
 
     if (bill_type = params["bill_type"]).presence_in(RecurringTransaction.bill_types.keys)

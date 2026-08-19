@@ -46,7 +46,9 @@ class Assistant::Function::GetBillAudit < Assistant::Function
     return recurring_disabled_result if recurring_disabled?
 
     lookback = (params["lookback_months"] || 12).to_i.clamp(1, 24)
-    active = accessible_series.active.includes(:merchant, :account, :recurring_occurrences).to_a
+    active = accessible_series.active
+                              .includes(:merchant, :account, :recurring_occurrences, :recurrence_rules)
+                              .to_a
 
     {
       as_of_date: Date.current.iso8601,
