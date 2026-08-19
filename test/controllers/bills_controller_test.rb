@@ -1240,6 +1240,21 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match I18n.t("bills.index.empty.title"), response.body
   end
 
+  test "AI chips and the review button render only for AI-consented users" do
+    get bills_url
+    assert_response :success
+    # Apostrophe-free fragment: response bodies HTML-escape apostrophes.
+    assert_match "due before my next paycheck", response.body
+    assert_match I18n.t("bills.index.review_with_ai"), response.body
+    assert_select "form[action=?]", ai_review_bills_path
+
+    @user.update!(ai_enabled: false)
+    get bills_url
+    assert_response :success
+    assert_no_match "due before my next paycheck", response.body
+    assert_no_match I18n.t("bills.index.review_with_ai"), response.body
+  end
+
   test "the suggested strip only shows series on accounts the member can reach" do
     create_suggested(name: "Hidden brokerage sub", account: accounts(:investment))
     create_suggested(name: "Visible sub", account: accounts(:depository))

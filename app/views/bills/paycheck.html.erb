@@ -21,6 +21,8 @@
 <div class="space-y-4 pb-6 lg:pb-12">
   <%= render "bills/view_switcher", active: "paycheck" %>
 
+  <%= render "bills/ai_prompts", prompts: %w[due_before_paycheck safe_to_spend] %>
+
   <% if @income_series.any? %>
     <%= render "bills/paycheck_income" %>
   <% end %>

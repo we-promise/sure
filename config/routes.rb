@@ -501,6 +501,7 @@ Rails.application.routes.draw do
     # CSRF protection rather than a plain URL.
     collection do
       post :detect
+      post :ai_review, to: "bills/ai_reviews#create"
     end
   end
   get "bills_feed/:token", to: "bills_feeds#show", as: :bills_feed, defaults: { format: :ics }

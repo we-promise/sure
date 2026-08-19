@@ -8,6 +8,16 @@
   <h1 class="text-xl"><%= t("bills.index.title") %></h1>
 
   <div class="flex items-center gap-2 shrink-0">
+    <%# Seeds a chat with the server-owned review prompt into the sidebar
+        frame; the audit tool grounds the findings. AI-consented users only. %>
+    <% if Current.user.ai_enabled? %>
+      <%= button_to ai_review_bills_path,
+            form: { data: { turbo_frame: chat_frame } },
+            data: { action: "app-layout#openRightSidebar" },
+            class: "font-medium whitespace-nowrap focus-ring inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary bg-transparent hover:bg-surface-hover" do %>
+        <%= icon("sparkles", size: "sm") %><%= t("bills.index.review_with_ai") %>
+      <% end %>
+    <% end %>
     <%= render DS::Link.new(
           text: t("bills.index.add_income"),
           icon: "plus",

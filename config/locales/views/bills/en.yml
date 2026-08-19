@@ -9,6 +9,11 @@ en:
         other: Found %{count} possible bills. Review them below.
       none_found: No new recurring patterns found. You can add bills by hand.
       already_running: Detection is already running. Check back in a moment.
+    ai_prompts:
+      due_before_paycheck: What's due before my next paycheck?
+      subscriptions_up: Which subscriptions went up this year?
+      monthly_subscriptions: What am I paying monthly for subscriptions?
+      safe_to_spend: How much is safe to spend this period?
     detail:
       current: Current
       next_payment: Next payment
@@ -232,6 +237,7 @@ en:
       hero_next_seven: "%{amount} due in the next 7 days"
       add_bill: Add bill
       add_income: Add income
+      review_with_ai: Review with AI
       detected_review:
         one: We found 1 recurring payment in your transactions. Check it over so the totals here match what you actually pay.
         other: We found %{count} recurring payments in your transactions. Check them over so the totals here match what you actually pay.
