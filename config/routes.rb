@@ -502,6 +502,7 @@ Rails.application.routes.draw do
     collection do
       post :detect
       post :ai_review, to: "bills/ai_reviews#create"
+      post :reset_feed_token
     end
     member do
       get :smart_configuration, to: "bills/smart_configurations#show"

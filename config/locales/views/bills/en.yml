@@ -201,8 +201,12 @@ en:
       review_plan: Review plan
       allocation_aria: "Of %{income} income, %{due} is due now, %{reserved} is reserved for later, and %{safe} is safe to spend."
       allocation_aria_short: "%{income} of income goes to what is committed here, and %{short} more is needed."
+    reset_feed_token:
+      done: Feed link reset. Calendar apps using the old link will stop updating; resubscribe with the new one.
+      confirm: Reset the calendar feed link? Every previously shared link stops working.
     calendar:
       subscribe_ical: Subscribe (iCal)
+      reset_feed: Reset link
       previous_month: Previous month
       next_month: Next month
       today: Today

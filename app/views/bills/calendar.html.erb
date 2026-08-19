@@ -60,10 +60,14 @@
     </div>
   </div>
 
-  <div class="flex justify-end">
+  <div class="flex items-center justify-end gap-3">
     <%= link_to t(".subscribe_ical"),
-          bills_feed_path(token: BillsFeedsController.token_for(Current.family)),
+          bills_feed_path(token: Current.family.bills_feed_token!),
           class: "text-xs text-link hover:underline" %>
+    <%= button_to t(".reset_feed"),
+          reset_feed_token_bills_path,
+          class: "text-xs text-secondary hover:underline",
+          data: { turbo_confirm: t("bills.reset_feed_token.confirm") } %>
   </div>
 
   <%# Mobile: an agenda list of the month's days that actually have bills,

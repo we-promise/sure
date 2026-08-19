@@ -125,6 +125,13 @@ class BillsController < ApplicationController
     redirect_to bills_path
   end
 
+  # Revocation for the iCal feed: every previously shared URL stops working.
+  def reset_feed_token
+    Current.family.reset_bills_feed_token!
+    flash[:notice] = t(".done")
+    redirect_to bills_path(view: "calendar")
+  end
+
   # One bill's complete story: current state, history, what is coming, cost.
   def show
     @series = Current.family.recurring_transactions

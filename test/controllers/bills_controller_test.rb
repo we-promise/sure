@@ -886,15 +886,36 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "changed price", response.body
   end
 
-  test "the ical feed serves upcoming occurrences with a signed token and rejects garbage" do
+  test "the ical feed serves upcoming occurrences with the stored token and rejects garbage" do
     create_bill(name: "Rent", amount: 2150)
 
-    get bills_feed_url(token: BillsFeedsController.token_for(@family))
+    get bills_feed_url(token: @family.bills_feed_token!)
     assert_response :success
     assert_match "BEGIN:VCALENDAR", response.body
     assert_match "Rent", response.body
 
     get bills_feed_url(token: "tampered")
+    assert_response :not_found
+  end
+
+  test "reset_feed_token rotates the family token and returns to the calendar" do
+    old_token = @family.bills_feed_token!
+
+    post reset_feed_token_bills_url
+
+    assert_redirected_to bills_path(view: "calendar")
+    assert_equal I18n.t("bills.reset_feed_token.done"), flash[:notice]
+    assert_not_equal old_token, @family.reload.bills_feed_token
+  end
+
+  test "reset_feed_token refuses GET" do
+    # GET /bills/reset_feed_token falls through to bills#show (id:
+    # "reset_feed_token"), which 404s on lookup; the point is that it can
+    # never reach the reset action.
+    route = Rails.application.routes.recognize_path("/bills/reset_feed_token", method: :get)
+    assert_equal "show", route[:action], "GET must never reach the reset action"
+
+    get "/bills/reset_feed_token"
     assert_response :not_found
   end
 

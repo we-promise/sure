@@ -1,21 +1,16 @@
 # Read-only iCal feed of upcoming bill occurrences, so calendar apps can
 # subscribe (an entire third-party product exists to do this for a
-# competitor). Token-authenticated: the URL carries a signed family id, works
-# without a session, and deliberately contains obligations only -- no
-# balances, no accounts.
+# competitor). Token-authenticated: the URL carries a stored random secret,
+# works without a session, and deliberately contains obligations only -- no
+# balances, no accounts. Resetting the token revokes every previously
+# shared URL.
 class BillsFeedsController < ApplicationController
   skip_authentication
 
-  FEED_PURPOSE = "bills-ical-feed"
   HORIZON_DAYS = 90
 
-  def self.token_for(family)
-    Rails.application.message_verifier(FEED_PURPOSE).generate(family.id)
-  end
-
   def show
-    family_id = Rails.application.message_verifier(FEED_PURPOSE).verify(params[:token])
-    family = Family.find(family_id)
+    family = Family.where.not(bills_feed_token: nil).find_by!(bills_feed_token: params[:token].to_s)
 
     occurrences = family.recurring_occurrences
                         .open_status
@@ -27,7 +22,7 @@ class BillsFeedsController < ApplicationController
                         .order(:due_on)
 
     render plain: to_ical(occurrences), content_type: "text/calendar"
-  rescue ActiveSupport::MessageVerifier::InvalidSignature, ActiveRecord::RecordNotFound
+  rescue ActiveRecord::RecordNotFound
     head :not_found
   end
 
