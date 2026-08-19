@@ -1,0 +1,4 @@
+---
+vi:
+  provider_warnings:
+    limited_investment_data: "Dữ liệu đầu tư từ nhà cung cấp này còn hạn chế. Nhãn hoạt động (Mua, Bán, Cổ tức) không khả dụng, có thể ảnh hưởng đến độ chính xác của ngân sách. Hãy cân nhắc tạo quy tắc để loại trừ hoặc phân loại các giao dịch đầu tư."

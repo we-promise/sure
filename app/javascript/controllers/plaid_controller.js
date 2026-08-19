@@ -128,9 +128,32 @@ export default class extends Controller {
   };
 
   handleExit = (err, metadata) => {
-    // If there was an error during update mode, refresh the page to show latest status
-    if (err && metadata.status === "requires_credentials") {
+    // If there was an error during update mode, refresh the page to show
+    // latest status. Guard `metadata` (Plaid can fire onExit with it
+    // undefined when Link aborts very early) and gate the redirect on
+    // `isUpdateValue` so first-time link failures don't bounce the user
+    // away from whatever page they were on.
+    if (
+      err &&
+      metadata &&
+      metadata.status === "requires_credentials" &&
+      this.isUpdateValue
+    ) {
       window.location.href = "/accounts";
+      return;
+    }
+
+    // Promote Plaid's own error payload to the console so a silent modal
+    // close still leaves a breadcrumb (issue #1792). Plaid Link's own UI
+    // is responsible for showing a message inside the modal when this
+    // fires; backend link-token failures are handled server-side via the
+    // PlaidItemsController rescue + flash.
+    if (err?.error_code) {
+      console.error(
+        "Plaid Link exited with error",
+        err.error_code,
+        err.display_message || err.error_message
+      );
     }
   };
 

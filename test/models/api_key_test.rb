@@ -135,23 +135,8 @@ class ApiKeyTest < ActiveSupport::TestCase
     assert @api_key.last_used_at > (original_time || Time.at(0))
   end
 
-  test "should prevent user from having multiple active api keys" do
+  test "allows multiple active api keys for the same user" do
     @api_key.save!
-
-    second_key = ApiKey.new(
-      user: @user,
-      name: "Second API Key",
-      key: "another_key_123",
-      scopes: [ "read" ]
-    )
-
-    assert_not second_key.valid?
-    assert_includes second_key.errors[:user], "can only have one active API key per source (web)"
-  end
-
-  test "should allow user to have new active key after revoking old one" do
-    @api_key.save!
-    @api_key.revoke!
 
     second_key = ApiKey.new(
       user: @user,
@@ -161,6 +146,68 @@ class ApiKeyTest < ActiveSupport::TestCase
     )
 
     assert second_key.valid?
+    assert second_key.save
+    assert second_key.active?
+    assert_equal 2, @user.api_keys.active.count
+  end
+
+  test "rejects duplicate name among active keys for the same user" do
+    ApiKey.create!(
+      user: @user,
+      name: "Dup",
+      key: "dup_key_123",
+      scopes: [ "read" ]
+    )
+
+    duplicate = ApiKey.new(
+      user: @user,
+      name: "Dup",
+      key: "dup_key_456",
+      scopes: [ "read" ]
+    )
+
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors.attribute_names, :name
+  end
+
+  test "allows reusing the name of a revoked key" do
+    first = ApiKey.create!(
+      user: @user,
+      name: "Reuse",
+      key: "reuse_key_123",
+      scopes: [ "read" ]
+    )
+    first.revoke!
+
+    reused = ApiKey.new(
+      user: @user,
+      name: "Reuse",
+      key: "reuse_key_456",
+      scopes: [ "read" ]
+    )
+
+    assert reused.valid?
+  end
+
+  test "allows the same name across different users" do
+    ApiKey.create!(
+      user: @user,
+      name: "Shared",
+      key: "shared_key_123",
+      scopes: [ "read" ]
+    )
+
+    other_user = users(:family_member)
+    other_user.api_keys.destroy_all
+
+    other_key = ApiKey.new(
+      user: other_user,
+      name: "Shared",
+      key: "shared_key_456",
+      scopes: [ "read" ]
+    )
+
+    assert other_key.valid?
   end
 
   test "should allow active monitoring key alongside active web key" do
@@ -175,6 +222,21 @@ class ApiKeyTest < ActiveSupport::TestCase
     )
 
     assert monitoring_key.valid?
+  end
+
+  test "visible scope excludes the demo monitoring key" do
+    # The demo key's exclusion from `.visible` is the revocation guard used by
+    # Settings::ApiKeysController#destroy. Lock the invariant so broadening the
+    # scope can't silently make the demo key revocable.
+    demo_key = ApiKey.create!(
+      user: @user,
+      name: "Demo Monitoring Key",
+      display_key: ApiKey::DEMO_MONITORING_KEY,
+      scopes: [ "read" ]
+    )
+
+    refute_includes ApiKey.visible, demo_key
+    refute_includes @user.api_keys.active.visible, demo_key
   end
 
   test "should include active api keys in active scope" do

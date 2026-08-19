@@ -1,0 +1,101 @@
+---
+vi:
+  holdings:
+    cash:
+      brokerage_cash: Tiền mặt môi giới
+    destroy:
+      success: Đã xóa danh mục nắm giữ
+      cannot_delete: Bạn không thể xóa danh mục nắm giữ này
+    update:
+      success: Đã lưu giá vốn.
+      error: Giá trị giá vốn không hợp lệ.
+    unlock_cost_basis:
+      success: Đã mở khóa giá vốn. Có thể được cập nhật lần đồng bộ tiếp theo.
+    remap_security:
+      success: Đã cập nhật chứng khoán thành công.
+      security_not_found: Không tìm thấy chứng khoán đã chọn.
+    reset_security:
+      success: Chứng khoán đã được đặt lại về giá trị từ nhà cung cấp.
+    sync_prices:
+      success: Đã đồng bộ dữ liệu thị trường thành công.
+      unavailable: Đồng bộ dữ liệu thị trường không khả dụng cho chứng khoán ngoại tuyến.
+      provider_error: Không thể tải giá mới nhất. Vui lòng thử lại sau vài phút.
+    errors:
+      security_collision: "Không thể ánh xạ lại: bạn đã có danh mục nắm giữ cho %{ticker} vào ngày %{date}."
+    cost_basis_sources:
+      manual: Người dùng đặt
+      calculated: Từ giao dịch
+      provider: Từ nhà cung cấp
+    cost_basis_cell:
+      unknown: "--"
+      set: Đặt
+      set_cost_basis_header: "Đặt giá vốn cho %{ticker} (%{qty} cổ phiếu)"
+      total_cost_basis_label: Tổng giá vốn
+      or_per_share_label: "Hoặc nhập mỗi cổ phiếu:"
+      per_share: mỗi cổ phiếu
+      cancel: Hủy
+      save: Lưu
+      overwrite_confirm_title: Ghi đè giá vốn?
+      overwrite_confirm_body: "Thao tác này sẽ thay thế giá vốn hiện tại là %{current}."
+    holding:
+      per_share: mỗi cổ phiếu
+      shares: "%{qty} cổ phiếu"
+      unknown: "--"
+      no_cost_basis: Không có giá vốn
+    index:
+      average_cost: Giá trung bình
+      holdings: Danh mục nắm giữ
+      name: Tên
+      new_holding: Hoạt động mới
+      no_holdings: Không có danh mục nắm giữ.
+      return: Tổng lợi nhuận
+      weight: Tỷ trọng
+    missing_price_tooltip:
+      description: Khoản đầu tư này có giá trị bị thiếu và chúng tôi không thể tính lợi nhuận hoặc giá trị.
+      missing_data: Thiếu dữ liệu
+    show:
+      avg_cost_label: Giá trung bình
+      current_market_price_label: Giá thị trường hiện tại
+      delete: Xóa
+      delete_subtitle: Thao tác này sẽ xóa danh mục nắm giữ và tất cả giao dịch liên quan trong tài khoản này. Không thể hoàn tác.
+      delete_title: Xóa danh mục nắm giữ
+      edit_security: Chỉnh sửa chứng khoán
+      history: Lịch sử
+      no_trade_history: Không có lịch sử giao dịch cho danh mục nắm giữ này.
+      overview: Tổng quan
+      portfolio_weight_label: Tỷ trọng danh mục
+      settings: Cài đặt
+      security_label: Chứng khoán
+      originally: "là %{ticker}"
+      search_security: Tìm kiếm chứng khoán
+      search_security_placeholder: Tìm theo mã ticker hoặc tên
+      cancel: Hủy
+      remap_security: Lưu
+      provider_disabled_warning: "Cập nhật giá tạm dừng — nhà cung cấp %{provider} đã bị tắt. Chuyển sang nhà cung cấp khác bên dưới hoặc bật lại trong Cài đặt."
+      truncated_history_warning: "Lịch sử giá chỉ khả dụng từ %{date} trở đi. Các ngày trước đó không có dữ liệu từ nhà cung cấp đã chọn."
+      switch_provider_label: Chuyển nhà cung cấp
+      switch_provider_description: "%{provider} đã bị tắt. Tìm kiếm chứng khoán này từ nhà cung cấp khác đã bật."
+      switch_provider_button: Chuyển
+      no_security_provider: Chưa cấu hình nhà cung cấp chứng khoán. Không thể tìm kiếm chứng khoán.
+      security_remapped_label: Chứng khoán đã được ánh xạ lại
+      provider_sent: "Nhà cung cấp gửi: %{ticker}"
+      reset_to_provider: Đặt lại về nhà cung cấp
+      reset_confirm_title: Đặt lại chứng khoán về nhà cung cấp?
+      reset_confirm_body: "Thao tác này sẽ thay đổi chứng khoán từ %{current} về %{original} và chuyển tất cả giao dịch liên quan."
+      ticker_label: Mã ticker
+      trade_history_entry: "%{qty} cổ phiếu %{security} ở mức %{price}"
+      total_return_label: Tổng lợi nhuận
+      unknown: Không xác định
+      cost_basis_locked_label: Giá vốn đã bị khóa
+      cost_basis_locked_description: Giá vốn bạn đặt thủ công sẽ không bị thay đổi khi đồng bộ.
+      unlock_cost_basis: Mở khóa
+      unlock_confirm_title: Mở khóa giá vốn?
+      unlock_confirm_body: Thao tác này sẽ cho phép giá vốn được cập nhật bởi đồng bộ nhà cung cấp hoặc tính toán giao dịch.
+      shares_label: Cổ phiếu
+      book_value_label: Giá trị sổ sách
+      market_value_label: Giá trị thị trường
+      market_data_label: Dữ liệu thị trường
+      market_data_sync_button: Làm mới
+      last_price_update: Cập nhật giá lần cuối
+      syncing: Đang đồng bộ...
+      never: Chưa bao giờ

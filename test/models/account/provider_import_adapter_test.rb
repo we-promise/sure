@@ -55,6 +55,37 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "applies an explicit provider kind on a depository account" do
+    entry = @adapter.import_transaction(
+      external_id: "up_transfer_1",
+      amount: -50.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Transfer to Savings",
+      source: "up",
+      kind: "funds_movement"
+    )
+
+    assert_equal "funds_movement", entry.transaction.kind
+  end
+
+  test "account-type kind takes precedence over an explicit provider kind" do
+    loan_adapter = Account::ProviderImportAdapter.new(accounts(:loan))
+
+    entry = loan_adapter.import_transaction(
+      external_id: "up_loan_repayment_1",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Home Loan Repayment",
+      source: "up",
+      kind: "funds_movement"
+    )
+
+    assert_equal "loan_payment", entry.transaction.kind,
+                 "a repayment on a Loan account must stay loan_payment, not the provider's funds_movement"
+  end
+
   test "updates existing transaction instead of creating duplicate" do
     # Create initial transaction
     entry = @adapter.import_transaction(
@@ -1444,5 +1475,78 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     # pending1 should still exist as pending
     pending1.reload
     assert_equal "plaid_pending_1", pending1.external_id
+  end
+
+  # =========================================================================
+  # Same-external-id pending → booked (e.g. Revolut Italy via Enable Banking)
+  # Some ASPSPs reuse the same transaction_id for pending and booked, so the
+  # entry is found by find_or_initialize_by (persisted), bypassing auto-claim.
+  # =========================================================================
+
+  test "clears pending flag when same external_id is reused for booked version (not user-modified)" do
+    pending_entry = @adapter.import_transaction(
+      external_id: "eb_same_id_123",
+      amount: 30.0,
+      currency: "EUR",
+      date: Date.today - 2.days,
+      name: "Piero Fiorista",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+    assert pending_entry.transaction.pending?, "entry should start as pending"
+
+    # Booked version arrives with the SAME external_id (Revolut Italy behaviour).
+    # extra is nil (no FX, no MCC) so the deep-merge block would normally be skipped.
+    assert_no_difference "@account.entries.count" do
+      booked_entry = @adapter.import_transaction(
+        external_id: "eb_same_id_123",
+        amount: 30.0,
+        currency: "EUR",
+        date: Date.today,
+        name: "Piero Fiorista",
+        source: "enable_banking",
+        extra: nil
+      )
+
+      assert_equal pending_entry.id, booked_entry.id, "should update the same entry"
+      assert_not booked_entry.transaction.pending?,
+        "pending flag should be cleared even when extra is nil"
+    end
+  end
+
+  test "clears pending flag when same external_id reused and entry is user-modified (Revolut Italy)" do
+    pending_entry = @adapter.import_transaction(
+      external_id: "eb_same_id_user_mod",
+      amount: 50.0,
+      currency: "EUR",
+      date: Date.today - 3.days,
+      name: "Clean Center",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+    assert pending_entry.transaction.pending?, "entry should start as pending"
+
+    # User categorises the pending entry — sets user_modified = true
+    pending_entry.mark_user_modified!
+    assert pending_entry.reload.user_modified?, "entry should be marked user-modified"
+
+    # Booked version with the same external_id arrives — protection check would normally
+    # return early and leave the pending badge intact.
+    assert_no_difference "@account.entries.count" do
+      booked_entry = @adapter.import_transaction(
+        external_id: "eb_same_id_user_mod",
+        amount: 50.0,
+        currency: "EUR",
+        date: Date.today,
+        name: "Clean Center",
+        source: "enable_banking",
+        extra: nil
+      )
+
+      assert_equal pending_entry.id, booked_entry.id, "should reference the same entry"
+      booked_entry.reload
+      assert_not booked_entry.transaction.pending?,
+        "pending flag must be cleared even for user-modified entries"
+    end
   end
 end

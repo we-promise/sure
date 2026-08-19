@@ -15,7 +15,9 @@ ro:
       none: (niciunul)
       note_label: Notițe
       note_placeholder: Introdu o notiță
+      create_tag: Creează
       submit: Adaugă tranzacție
+      tag_search_placeholder: Caută sau creează etichetă
       tags_label: Etichete
       transfer: Transfer
     new:

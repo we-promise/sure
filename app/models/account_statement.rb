@@ -33,6 +33,7 @@ class AccountStatement < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :suggested_account, class_name: "Account", optional: true
 
+  has_many :pdf_imports, -> { where(type: "PdfImport").ordered }, class_name: "PdfImport", dependent: :restrict_with_error
   has_one_attached :original_file, dependent: :purge_later
 
   enum :source, { manual_upload: "manual_upload" }, validate: true, default: "manual_upload"
@@ -358,6 +359,10 @@ class AccountStatement < ApplicationRecord
 
   def xlsx?
     content_type.in?(ALLOWED_EXTENSION_CONTENT_TYPES[".xlsx"])
+  end
+
+  def latest_reusable_pdf_import
+    pdf_imports.where.not(status: :failed).order(created_at: :desc).first
   end
 
   private

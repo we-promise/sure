@@ -10,10 +10,11 @@ class TradesTest < ApplicationSystemTestCase
 
     @account = accounts(:investment)
 
-    visit_account_portfolio
-
     # Disable provider to focus on form testing
     Security.stubs(:provider).returns(nil)
+    Security.stubs(:providers).returns([])
+
+    visit_account_portfolio
   end
 
   test "can create buy transaction" do
@@ -44,6 +45,8 @@ class TradesTest < ApplicationSystemTestCase
     open_new_trade_modal
 
     select "Sell", from: "Type"
+    assert_selector "turbo-frame#modal form[data-trade-type='sell']"
+
     fill_in "Ticker symbol", with: "AAPL"
     fill_in "Date", with: Date.current
     fill_in "Quantity", with: qty

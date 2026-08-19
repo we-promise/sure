@@ -1,0 +1,75 @@
+---
+zh-CN:
+  coinstats_items:
+    create:
+      success: CoinStats 提供商连接配置成功。
+      default_name: CoinStats 连接
+      errors:
+        validation_failed: "验证失败：%{message}。"
+    update:
+      success: CoinStats 提供商连接已更新。
+      errors:
+        validation_failed: "验证失败：%{message}。"
+    destroy:
+      success: CoinStats 提供商连接已安排删除。
+    link_wallet:
+      success: "%{count} 个加密钱包链接成功。"
+      missing_params: "缺少必需参数：address 和 blockchain。"
+      failed: 加密钱包链接失败。
+      error: "加密钱包链接失败：%{message}。"
+    link_exchange:
+      success: "%{name} 交易所已关联。"
+      missing_params: 需要交易所和凭据。
+      invalid_exchange: 所选交易所已不再受支持。
+      failed: 关联交易所失败。
+      error: "关联交易所失败：%{message}。"
+    new:
+      title: 使用 CoinStats 连接加密资产
+      blockchain_fetch_error: 获取区块链列表失败，请稍后再试。
+      link_wallet_title: 关联钱包地址
+      link_wallet_description: 通过 CoinStats 跟踪自托管钱包或单个链上地址。
+      address_label: 地址
+      address_placeholder: 必填
+      blockchain_label: 区块链
+      blockchain_placeholder: 必填
+      blockchain_select_blank: 选择区块链
+      link_wallet_submit: 关联加密钱包
+      link_exchange_title: 关联交易所 API
+      link_exchange_description: 使用只读交易所 API key，以便 CoinStats 从 Bitvavo、Binance 和其他受支持的交易所同步余额和交易。
+      link_exchange_note: 如果交易所要求 API key 激活或邮件确认，请先完成这一步再在此关联。
+      exchange_select_blank: 选择交易所
+      exchange_label: 交易所
+      link_exchange_submit: 关联交易所
+      not_configured_title: CoinStats 提供商连接未配置
+      not_configured_message: 要关联加密钱包或交易所，您必须先配置 CoinStats 提供商连接。
+      not_configured_step1_html: 前往 <strong>设置 → 提供商</strong>
+      not_configured_step2_html: 找到 <strong>CoinStats</strong> 提供商
+      not_configured_step3_html: 按照提供的 <strong>设置说明</strong> 完成提供商配置
+      go_to_settings: 前往提供商设置
+      setup_instructions: "设置说明："
+      step1_html: 访问 <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats 公共 API 仪表盘</a> 获取 API key。
+      step2: 在下方输入您的 API key，然后点击配置。
+      step3_html: 连接成功后，前往 <a href="%{accounts_url}" class="link" data-turbo-frame="_top">账户</a> 标签页设置您的加密账户。
+      api_key_label: API Key
+      api_key_placeholder: 必填
+      configure: 配置
+      update_configuration: 重新配置
+      default_name: CoinStats 连接
+    coinstats_item:
+      deletion_in_progress: 正在删除加密钱包数据…
+      provider_name: CoinStats
+      syncing: 正在同步…
+      sync_status:
+        no_accounts: 未找到加密钱包
+        all_synced:
+          one: 已同步 %{count} 个加密钱包
+          other: 已同步 %{count} 个加密钱包
+        partial_sync: 已同步 %{linked_count} 个加密钱包，%{unlinked_count} 个需要设置
+      reconnect: 重新连接
+      status: "%{timestamp} 前上次同步"
+      status_never: 从未同步
+      status_with_summary: "%{timestamp} 前上次同步 • %{summary}"
+      update_api_key: 更新 API Key
+      delete: 删除
+      no_wallets_title: 未连接任何加密钱包
+      no_wallets_message: 当前没有任何加密钱包连接到 CoinStats。

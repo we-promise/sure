@@ -31,7 +31,7 @@ zh-CN:
       edit:
         title: 编辑应用
       form:
-        error: 错误！请检查表单中的可能错误
+        error: 错误！请检查表单中可能存在的错误。
       help:
         blank_redirect_uri: 如果您的提供商配置为使用客户端凭据、资源所有者密码凭据或其他不需要重定向 URI 的授权类型，请留空。
         confidential: 此应用将用于可以保密客户端密钥的场景。原生移动应用和单页应用被视为非保密应用。
@@ -64,6 +64,7 @@ zh-CN:
         authorize: 授权
         deny: 拒绝
       error:
+        go_back: 返回
         title: 发生错误
       form_post:
         title: 提交此表单
@@ -72,6 +73,8 @@ zh-CN:
         prompt: 授权 %{client_name} 使用您的账户吗？
         title: 需要授权
       show:
+        authorization_code_label: 授权码：
+        copy_instructions: 复制此代码并粘贴到应用中。
         title: 授权代码
     authorized_applications:
       buttons:
@@ -86,31 +89,28 @@ zh-CN:
     errors:
       messages:
         access_denied: 资源所有者或授权服务器拒绝了请求。
-        admin_authenticator_not_configured: 访问管理面板被禁止，因为 Doorkeeper.configure.admin_authenticator
-          未配置。
-        credential_flow_not_configured: 资源所有者密码凭据流程失败，因为 Doorkeeper.configure.resource_owner_from_credentials
-          未配置。
+        admin_authenticator_not_configured: 访问管理面板被禁止，因为 Doorkeeper.configure.admin_authenticator 未配置。
+        credential_flow_not_configured: 资源所有者密码凭据流程失败，因为 Doorkeeper.configure.resource_owner_from_credentials 未配置。
         forbidden_token:
-          missing_scope: 访问此资源需要权限范围 "%{oauth_scopes}"。
-        invalid_client: 客户端认证失败：未知客户端、未包含客户端认证或使用了不受支持的认证方法。
+          missing_scope: 访问此资源需要范围 "%{oauth_scopes}"。
+        invalid_client: 客户端认证失败：未知客户端、未包含客户端认证，或使用了不受支持的认证方法。
         invalid_code_challenge_method:
           one: code_challenge_method 必须是 %{challenge_methods}。
           other: code_challenge_method 必须是以下之一：%{challenge_methods}。
           zero: 授权服务器不支持 PKCE，因为没有可接受的 code_challenge_method 值。
-        invalid_grant: 提供的授权授权码无效、已过期、已撤销、与授权请求中使用的重定向 URI 不匹配，或已颁发给其他客户端。
-        invalid_redirect_uri: 请求的重定向 URI 格式不正确或与客户端重定向 URI 不匹配。
+        invalid_grant: 提供的授权许可无效、已过期、已撤销，或与授权请求中使用的重定向 URI 不匹配，或已颁发给其他客户端。
+        invalid_redirect_uri: 请求的重定向 URI 格式不正确，或与客户端重定向 URI 不匹配。
         invalid_request:
-          invalid_code_challenge: 需要代码挑战参数。
-          missing_param: 缺少必要参数：%{value}。
-          request_not_authorized: 请求需要授权。授权请求的必要参数缺失或无效。
-          unknown: 请求缺少必要参数、包含不受支持的参数值或格式不正确。
-        invalid_scope: 请求的权限范围无效、未知或格式不正确。
+          invalid_code_challenge: 需要代码挑战。
+          missing_param: 缺少必需参数：%{value}。
+          request_not_authorized: 请求需要授权。授权请求所需的参数缺失或无效。
+          unknown: 请求缺少必需参数、包含不受支持的参数值，或以其他方式格式不正确。
+        invalid_scope: 请求的范围无效、未知或格式不正确。
         invalid_token:
           expired: 访问令牌已过期
           revoked: 访问令牌已被撤销
           unknown: 访问令牌无效
-        resource_owner_authenticator_not_configured: 资源所有者查找失败，因为 Doorkeeper.configure.resource_owner_authenticator
-          未配置。
+        resource_owner_authenticator_not_configured: 资源所有者查找失败，因为 Doorkeeper.configure.resource_owner_authenticator 未配置。
         revoke:
           unauthorized: 您无权撤销此令牌
         server_error: 授权服务器遇到意外情况，无法完成请求。
@@ -133,9 +133,9 @@ zh-CN:
     layouts:
       admin:
         nav:
-          applications: 应用管理
-          home: 首页
-          oauth2_provider: OAuth2 提供商
+          applications: 应用
+          home: 主页
+          oauth2_provider: OAuth2 提供方
         title: Doorkeeper
       application:
         title: 需要 OAuth 授权

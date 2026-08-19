@@ -2,28 +2,43 @@ class TransactionsController < ApplicationController
   include EntryableResource
 
   before_action :set_entry_for_unlock, only: :unlock
+  before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 
   def new
     prefill_params_from_duplicate!
     super
     apply_duplicate_attributes!
-    @income_categories = Current.family.categories.incomes.alphabetically
-    @expense_categories = Current.family.categories.expenses.alphabetically
-    @categories = Current.family.categories.alphabetically
+    set_new_transaction_form_options
   end
 
   def index
     @q = search_params
-    accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
-    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: accessible_account_ids)
+    @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
+    @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: @accessible_account_ids)
 
     base_scope = @search.transactions_scope
                        .reverse_chronological
                        .includes(
                          { entry: :account },
                          :category, :merchant, :tags,
-                         :transfer_as_inflow, :transfer_as_outflow
+                         # Union of #2643 counterpart UI + Skylight category-menu N+1:
+                         # - outflow rows need inflow_transaction (to_account) for both
+                         #   counterpart display and Transfer#categorizable?/#payment?
+                         # - inflow rows need outflow_transaction (from_account) for
+                         #   counterpart display, and inflow_transaction (to_account)
+                         #   for the category menu on the same row
+                         {
+                           transfer_as_outflow: {
+                             inflow_transaction: { entry: :account }
+                           }
+                         },
+                         {
+                           transfer_as_inflow: {
+                             inflow_transaction: { entry: :account },
+                             outflow_transaction: { entry: :account }
+                           }
+                         }
                        )
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
@@ -116,6 +131,7 @@ class TransactionsController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
       end
     else
+      set_new_transaction_form_options
       render :new, status: :unprocessable_entity
     end
   end
@@ -123,6 +139,7 @@ class TransactionsController < ApplicationController
   def update
     if @entry.update(permitted_entry_params)
       transaction = @entry.transaction
+      transaction.record_category_usage!
 
       if needs_rule_notification?(transaction)
         flash[:cta] = {
@@ -174,6 +191,20 @@ class TransactionsController < ApplicationController
     else
       render :show, status: :unprocessable_entity
     end
+  end
+
+  def update_tags
+    return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
+
+    tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
+
+    @entry.transaction.tag_ids = tag_ids
+    @entry.lock_saved_attributes!
+    @entry.mark_user_modified!
+    @entry.transaction.lock_attr!(:tag_ids)
+    @entry.sync_account_later
+
+    render json: { tag_ids: @entry.transaction.tag_ids }
   end
 
   def merge_duplicate
@@ -322,11 +353,15 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(transaction.entry.account)
 
-    # Check if a recurring transaction already exists for this pattern
+    # Check if a recurring transaction already exists for this pattern.
+    # Amount is included so two distinct recurring payments with the same
+    # payee but different amounts aren't treated as duplicates (matches the
+    # DB uniqueness scope and RecurringTransaction::Identifier's grouping key).
     existing = Current.family.recurring_transactions.find_by(
       account_id: transaction.entry.account_id,
       merchant_id: transaction.merchant_id,
       name: transaction.merchant_id.present? ? nil : transaction.entry.name,
+      amount: transaction.entry.amount,
       currency: transaction.entry.currency,
       manual: true
     )
@@ -353,6 +388,16 @@ class TransactionsController < ApplicationController
           redirect_back_or_to transactions_path
         end
       end
+    rescue ActiveRecord::RecordNotUnique
+      # Another request created the same (account, name/merchant, amount,
+      # currency) pattern between the check above and this create — the DB
+      # unique index is the authoritative backstop for that race.
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.already_exists")
+          redirect_back_or_to transactions_path
+        end
+      end
     rescue StandardError => e
       respond_to do |format|
         format.html do
@@ -361,13 +406,6 @@ class TransactionsController < ApplicationController
         end
       end
     end
-  end
-
-  def update_preferences
-    Current.user.update_transactions_preferences(preferences_params)
-    head :ok
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
-    head :unprocessable_entity
   end
 
   def exchange_rate
@@ -466,6 +504,29 @@ class TransactionsController < ApplicationController
       entry_params
     end
 
+    def tag_ids_param
+      Array(params[:tag_ids]).reject(&:blank?)
+    end
+
+    def set_entry_for_tags
+      set_entry
+    end
+
+    def set_new_transaction_form_options
+      accessible_accounts_scope = accessible_accounts
+
+      @account_currencies = accessible_accounts_scope.pluck(:id, :currency).to_h
+      @manual_accounts = accessible_accounts_scope
+        .manual
+        .active
+        .alphabetically
+        .includes(:account_providers, logo_attachment: :blob)
+        .to_a
+      @categories = Current.family.categories.alphabetically.to_a
+      @merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
+      @tags = Current.family.tags.alphabetically.to_a
+    end
+
     # Filters entry_params based on the user's permission on the account.
     # read_write users can only annotate (category, tags, notes, merchant).
     # read_only users cannot update anything.
@@ -528,10 +589,6 @@ class TransactionsController < ApplicationController
 
     def stored_params
       Current.session.prev_transaction_page_params
-    end
-
-    def preferences_params
-      params.require(:preferences).permit(collapsed_sections: {})
     end
 
     # Helper methods for convert_to_trade

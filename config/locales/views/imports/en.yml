@@ -110,8 +110,26 @@ en:
         description: Upload a simple CSV file (like the one we generate when you
           export your data). We'll automatically map the columns for you.
         instructions: Select continue to parse your CSV and move on to the clean step.
+      merchant_import:
+        button_label: Continue
+        description: Upload a CSV file with your merchants. We'll automatically map the columns for you.
+        instructions: Select continue to parse your CSV and move on to the clean step.
       mint_import:
         date_format_label: Date format
+        account_optional: Account (optional)
+        amount: Amount
+        apply_configuration: Apply configuration
+        category_optional: Category (optional)
+        currency: Currency
+        date: Date
+        format: Format
+        incomes_negative: Incomes are negative
+        incomes_positive: Incomes are positive
+        intro: We have pre-configured your Mint import for you. Please proceed to the next step.
+        leave_empty: Leave empty
+        name_optional: Name (optional)
+        select_format: Select format
+        tags_optional: Tags (optional)
       actual_import:
         preconfigured_notice: We have pre-configured your Actual Budget import for you. Please proceed to the next step.
         leave_empty: Leave empty
@@ -125,6 +143,17 @@ en:
         name_label: Payee (optional)
         category_label: Category (optional)
         notes_label: Notes (optional)
+        apply_configuration: Apply configuration
+      ynab_import:
+        preconfigured_notice: We have pre-configured your YNAB import for you. Please proceed to the next step.
+        amount_notice: Amounts are detected automatically from the Outflow and Inflow columns.
+        leave_empty: Leave empty
+        date_label: Date
+        date_format_label: Date format
+        account_label: Account (optional)
+        name_label: Payee (optional)
+        category_label: Category (optional)
+        notes_label: Memo (optional)
         apply_configuration: Apply configuration
       rule_import:
         description: Configure your rule import. Rules will be created or updated based
@@ -169,6 +198,8 @@ en:
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
     uploads:
+      handle_qif_upload:
+        qif_uploaded: "QIF file uploaded successfully."
       update:
         qif_uploaded: "QIF file uploaded successfully."
       show:
@@ -250,6 +281,8 @@ en:
       category_parent: "Parent category"
       category_color: "Color"
       category_icon: "Lucide icon"
+      merchant_color: "Color"
+      merchant_website: "Website URL"
     update:
       account_saved: "Account saved."
       invalid_account: "Account not found."
@@ -258,6 +291,9 @@ en:
       max_rows_exceeded: "Your import exceeds the maximum row count of %{max}."
     revert:
       started: "Import is reverting in the background."
+    cancel:
+      cancelled: "Import marked as failed. You can try again from the import page."
+      not_cancellable: "This import can't be marked as failed right now — its job may still be running. Try again once it has been inactive for an hour."
     apply_template:
       template_applied: "Template applied."
       no_template_found: "No template found, please manually configure your import."
@@ -302,9 +338,11 @@ en:
       account_import: "Account import"
       mint_import: "Mint import"
       actual_import: "Actual import"
+      ynab_import: "YNAB import"
       qif_import: "QIF import"
       category_import: "Category import"
       rule_import: "Rule import"
+      merchant_import: "Merchant import"
       pdf_import: "PDF import"
       document_import: "Document import"
       sure_import: "Sure import"
@@ -335,9 +373,11 @@ en:
           account_import: "Account"
           mint_import: "Mint"
           actual_import: "Actual"
+          ynab_import: "YNAB"
           qif_import: "QIF"
           category_import: "Category"
           rule_import: "Rule"
+          merchant_import: "Merchant"
           pdf_import: "PDF"
           document_import: "Document"
           sure_import: "Sure"
@@ -353,15 +393,17 @@ en:
           confirm_revert: This will delete transactions that were imported, but you will still be able to review and re-import your data at any time.
           delete: Delete
           view: View
+          mark_failed: Mark as failed
+          confirm_mark_failed: This import has been inactive for a while and its background job was likely interrupted. Mark it as failed so you can try again? No imported data is kept.
       empty: No imports yet.
     new:
       description: Import from a financial tool or upload raw data files.
       tab_financial_tools: Financial Tools & Files
       tab_raw_data: Raw Data
-      coming_soon: Coming soon
       import_ynab: Import from YNAB
       import_accounts: Import accounts
       import_categories: Import categories
+      import_merchants: Import merchants
       import_mint: Import from Mint
       import_actual: Import from Actual Budget
       import_portfolio: Import investments
@@ -384,6 +426,7 @@ en:
       pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
       invalid_pdf: The uploaded file is not a valid PDF.
+      duplicate_pdf_unavailable: This PDF is already stored as a statement you cannot access.
       document_too_large: Document file is too large. Maximum size is %{max_size}MB.
       invalid_document_file_type: Invalid document file type for the active vector store.
       document_uploaded: Document uploaded successfully.
@@ -405,6 +448,8 @@ en:
       back_to_imports: Back to imports
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
+      interrupted: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."
+      presumed_lost: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
     document_types:
       bank_statement: Bank Statement
       credit_card_statement: Credit Card Statement
@@ -425,6 +470,7 @@ en:
       complete_title: Document analyzed
       complete_description: We've analyzed your PDF and here's what we found.
       document_type_label: Document Type
+      source_statement: Source statement
       summary_label: Summary
       email_sent_notice: An email has been sent to you with next steps.
       back_to_imports: Back to imports

@@ -30,8 +30,7 @@ class Family::AutoCategorizer
     )
 
     unless result.success?
-      Rails.logger.error("Failed to auto-categorize transactions for family #{family.id}: #{result.error.message}")
-      return 0
+      raise Error, "Failed to auto-categorize transactions: #{result.error.message}"
     end
 
     modified_count = 0
@@ -58,9 +57,11 @@ class Family::AutoCategorizer
   private
     attr_reader :family, :transaction_ids
 
-    # For now, OpenAI only, but this should work with any LLM concept provider
+    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
+    # auto_categorize (PR #1984), so batch categorization routes to the configured
+    # provider, with fallback handled by Provider::Registry.preferred_llm_provider.
     def llm_provider
-      Provider::Registry.get_provider(:openai)
+      Provider::Registry.preferred_llm_provider
     end
 
     def user_categories_input

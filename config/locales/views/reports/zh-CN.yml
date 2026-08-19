@@ -1,130 +1,244 @@
 ---
 zh-CN:
   reports:
-    budget_performance:
-      budgeted: 预算额
-      no_budgets: 本月未设置预算分类
-      over_by: 超支
-      remaining: 剩余
-      spent: 已支出
-      status:
-        good: 正常执行
-        over: 超出预算
-        warning: 接近限额
-      suggested_daily: 建议每日 %{amount}（剩余 %{days} 天）
-      title: 预算执行情况
-    empty_state:
-      add_account: 添加账户
-      add_transaction: 添加交易
-      description: 开始追踪您的财务状况：添加交易记录或关联账户以查看详细报告
-      title: 无可用数据
-    google_sheets_instructions:
-      close: 知道了
-      example: 示例
-      go_to_api_keys: 前往 API 密钥设置
-      need_key: 要将数据导入 Google 表格，您需要一个 API 密钥。
-      open_sheets: 打开 Google 表格
-      ready: 您的 CSV 链接（含 API 密钥）已准备就绪。
-      security_warning: 此链接包含您的 API 密钥，请妥善保管！
-      step1: 前往 设置 → API 密钥
-      step2: 创建一个具有"读取"权限的新 API 密钥
-      step3: 复制 API 密钥
-      step4: 将其添加到链接中：?api_key=您的密钥
-      steps: |-
-        导入到 Google 表格的步骤：
-        1. 创建新的 Google 表格
-        2. 在 A1 单元格中输入下方所示的公式
-        3. 按 Enter 键
-      then_use: 然后在 Google 表格中使用完整链接和 =IMPORTDATA() 函数。
-      title_no_key: "⚠️ 需要 API 密钥"
-      title_with_key: "✅ 复制 Google 表格导入链接"
     index:
-      date_range:
-        from: 开始日期
-        to: 结束日期
-      drag_to_reorder: 拖动以重新排序模块
+      title: 报表
+      subtitle: 您财务健康状况的全面洞察
       export: 导出 CSV
+      print_report: 打印报表
+      drag_to_reorder: 拖动以重新排序模块
+      toggle_section: 切换模块可见性
       periods:
+        monthly: 按月
+        quarterly: 按季度
+        ytd: 年初至今
+        last_6_months: 最近 6 个月
         custom: 自定义范围
-        last_6_months: 过去6个月
-        monthly: 月度
-        quarterly: 季度
-        ytd: 本年度至今
-      showing_period: 显示 %{start} 至 %{end} 的数据
-      subtitle: 全面洞察您的财务健康状况
-      title: 财务报告
-      toggle_section: 切换模块显示/隐藏
-    invalid_date_range: 结束日期不能早于开始日期。日期已自动交换。
+      date_range:
+        from: 从
+        to: 到
+      showing_period: 显示从 %{start} 到 %{end} 的数据
+      previous_period: 上一周期
+      next_period: 下一周期
+      today: 今天
+      period_label:
+        quarterly: "%{year} 年第 %{quarter} 季度"
+        ytd: "%{year} 年初至今"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "%{year} 年第 %{quarter} 季度"
+        ytd: "%{year} 年初至今"
+      previous_year: 上一年
+      next_year: 下一年
+      previous_decade: 上一个十年
+      next_decade: 下一个十年
+    invalid_date_range: 结束日期不能早于开始日期，日期已为您对调。
     summary:
-      budget_performance: 预算执行情况
-      income_minus_expenses: 收入减去支出
-      net_savings: 净储蓄
-      no_budget_data: 此期间无预算数据
-      of_budget_used: 的预算已使用
-      total_expenses: 总支出
       total_income: 总收入
-      vs_previous: 与上一期相比
-    transactions_breakdown:
-      export:
-        csv: CSV
-        excel: Excel
-        google_sheets: 在 Google 表格中打开
-        label: 导出格式
-        pdf: PDF
-      filters:
-        account: 账户
-        all_accounts: 全部账户
-        all_categories: 全部分类
-        all_tags: 全部标签
-        amount_max: 最大金额
-        amount_min: 最小金额
-        apply: 应用筛选
-        category: 分类
-        clear: 清除筛选
-        date_range: 日期范围
-        tag: 标签
-        title: 筛选条件
-      no_transactions: 所选时间段和筛选条件下未找到交易记录
-      pagination:
-        next: 下一页
-        previous: 上一页
-        showing: 显示 %{count} 笔交易
-      sort:
-        amount_asc: 金额（从低到高）
-        amount_desc: 金额（从高到低）
-        date_desc: 日期（从新到旧）
-        label: 排序方式
-      table:
-        amount: 金额
-        category: 分类
-        expense: 支出
-        income: 收入
-        percentage: 占总比
-        transactions: 笔交易
-        type: 类型
-        uncategorized: 未分类
-      title: 交易明细分析
+      total_expenses: 总支出
+      net_savings: 净储蓄
+      budget_performance: 预算表现
+      vs_previous: 与上一周期相比
+      income_minus_expenses: 收入减支出
+      of_budget_used: 已使用预算的
+      no_budget_data: 此周期没有预算数据
+    budget_performance:
+      title: 预算表现
+      spent: 已花费
+      budgeted: 预算
+      remaining: 剩余
+      over_by: 超出
+      shared: 共享
+      suggested_daily: 剩余 %{days} 天，建议每天花费 %{amount}
+      no_budgets: 本月尚未设置预算分类
+      status:
+        good: 进展良好
+        warning: 接近上限
+        over: 超出预算
     trends:
-      avg_monthly_expenses: 月均支出
-      avg_monthly_income: 月均收入
-      avg_monthly_savings: 月均储蓄
-      avg_per_transaction: 每笔交易平均
-      current: 当前
-      expenses: 支出
-      income: 收入
-      insight_higher_weekday: 您工作日每笔交易消费比周末高 %{percent}%
-      insight_higher_weekend: 您周末每笔交易消费比工作日高 %{percent}%
-      insight_similar: 您工作日和周末的每笔交易消费水平相似
-      insight_title: 数据洞察
-      month: 月份
-      monthly_breakdown: 月度明细
-      net: 净额
-      no_data: 无趋势数据可用
-      no_spending_data: 此期间无消费数据可用
-      savings_rate: 储蓄率
-      spending_patterns: 消费模式
       title: 趋势与洞察
-      total: 总计
-      transactions: 交易笔数
+      monthly_breakdown: 月度明细
+      month: 月份
+      income: 收入
+      expenses: 支出
+      net: 净额
+      savings_rate: 储蓄率
+      current: 当前
+      avg_monthly_income: 月均收入
+      avg_monthly_expenses: 月均支出
+      avg_monthly_savings: 月均储蓄
+      no_data: 暂无趋势数据
+      spending_patterns: 消费模式
       weekday_spending: 工作日消费
       weekend_spending: 周末消费
+      total: 总计
+      avg_per_transaction: 每笔平均
+      transactions: 交易
+      insight_title: 洞察
+      insight_higher_weekend: 您在周末的每笔消费比工作日高 %{percent}%
+      insight_higher_weekday: 您在工作日的每笔消费比周末高 %{percent}%
+      insight_similar: 您在工作日和周末的每笔消费相近
+      no_spending_data: 此周期没有消费数据
+    empty_state:
+      title: 暂无可用数据
+      description: 通过添加交易或连接账户开始跟踪您的财务，以查看完整报表
+      add_transaction: 添加交易
+      add_account: 添加账户
+    transactions_breakdown:
+      title: 活动明细
+      no_transactions: 所选周期和筛选条件下没有活动
+      filters:
+        title: 筛选条件
+        category: 分类
+        account: 账户
+        tag: 标签
+        amount_min: 最小金额
+        amount_max: 最大金额
+        date_range: 日期范围
+        all_categories: 全部分类
+        all_accounts: 全部账户
+        all_tags: 全部标签
+        apply: 应用筛选
+        clear: 清除筛选
+      sort:
+        label: 排序方式
+        date_desc: 日期（最新）
+        amount_desc: 金额（从高到低）
+        amount_asc: 金额（从低到高）
+      export:
+        label: 导出
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: 在 Google 表格中打开
+      table:
+        category: 分类
+        amount: 金额
+        type: 类型
+        expense: 支出
+        income: 收入
+        uncategorized: 未分类
+        entries:
+          one: "%{count} 条记录"
+          other: "%{count} 条记录"
+        percentage: 占总计百分比
+      pagination:
+        showing:
+          one: 显示 %{count} 条记录
+          other: 显示 %{count} 条记录
+        previous: 上一页
+        next: 下一页
+    net_worth:
+      title: 净资产
+      current_net_worth: 当前净资产
+      period_change: 周期变化
+      assets_vs_liabilities: 资产与负债
+      total_assets: 资产
+      total_liabilities: 负债
+      no_assets: 暂无资产
+      no_liabilities: 暂无负债
+    investment_performance:
+      title: 投资表现
+      portfolio_value: 投资组合价值
+      total_return: 总回报
+      period_return: 本期回报
+      contributions: 本期投入
+      withdrawals: 本期提取
+      top_holdings: 主要持仓
+      holding: 持仓
+      weight: 占比
+      value: 金额
+      return: 回报
+      accounts: 投资账户
+      gains_by_tax_treatment: 按税务处理分类的收益
+      unrealized_gains: 未实现收益
+      realized_gains: 已实现收益
+      total_gains: 总收益
+      taxable_realized_note: 这些收益可能需要纳税
+      no_data: "-"
+      view_details: 查看详情
+      holdings_count:
+        one: "%{count} 个持仓"
+        other: "%{count} 个持仓"
+      sells_count:
+        one: "%{count} 笔卖出"
+        other: "%{count} 笔卖出"
+      holdings: 持仓
+      sell_trades: 卖出交易
+      and_more: 还有 %{count} 项
+    investment_flows:
+      title: 投资资金流
+      description: 跟踪通过投入和提取流入与流出投资账户的资金。
+      contributions: 投入
+      contributions_description: 投资新增资金
+      withdrawals: 提取
+      withdrawals_description: 从投资中提取的资金
+      net_flow: 净流入
+      net_flow_description: 总净变化
+    google_sheets_instructions:
+      title_with_key: ✅ 复制 Google 表格 URL
+      title_no_key: ⚠️ 需要 API 密钥
+      ready: 您的 CSV URL（含 API 密钥）已准备好。
+      steps: "导入到 Google 表格的步骤：\n1. 新建一个 Google 表格\n2. 在 A1 单元格中输入下方公式\n3. 按回车"
+      security_warning: "此 URL 包含您的 API 密钥，请妥善保管！"
+      need_key: 要导入数据到 Google 表格，您需要一个 API 密钥。
+      step1: 前往 设置 → API 密钥
+      step2: 创建一个具有“read”权限的新 API 密钥
+      step3: 复制该 API 密钥
+      step4: 将其添加到此 URL 中：?api_key=YOUR_KEY
+      example: 示例
+      then_use: 然后在 Google 表格中使用完整 URL 和 =IMPORTDATA()。
+      open_sheets: 打开 Google 表格
+      go_to_api_keys: 前往 API 密钥
+      close: 知道了
+    print:
+      document_title: 财务报表
+      title: 财务报表
+      generated_on: "生成于 %{date}"
+      summary:
+        title: 汇总
+        income: 收入
+        expenses: 支出
+        net_savings: 净储蓄
+        budget: 预算
+        vs_prior: 比上一期 %{percent}
+        of_income: 占收入的 %{percent}
+        used: 已使用
+      net_worth:
+        title: 净资产
+        current_balance: 当前余额
+        this_period: 本期
+        assets: 资产
+        liabilities: 负债
+        no_liabilities: 暂无负债
+      trends:
+        title: 月度趋势
+        month: 月份
+        income: 收入
+        expenses: 支出
+        net: 净额
+        savings_rate: 储蓄率
+        average: 平均
+        current_month_note: "* 当前月份（部分数据）"
+      investments:
+        title: 投资
+        portfolio_value: 投资组合价值
+        total_return: 总回报
+        contributions: 投入
+        withdrawals: 提取
+        this_period: 本期
+        top_holdings: 主要持仓
+        holding: 持仓
+        weight: 占比
+        value: 金额
+        return: 回报
+        period_return: 本期回报
+      spending:
+        title: 按分类支出
+        income: 收入
+        expenses: 支出
+        category: 分类
+        amount: 金额
+        percent: "%"
+        more_categories: 还有 %{count} 个分类

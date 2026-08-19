@@ -8,11 +8,14 @@ class EnableBankingItem::Syncer
   end
 
   def perform_sync(sync)
-    # Check if session is valid before syncing
+    # An expired/missing session is an expected state that needs user action, not a
+    # hard failure. Mark the connection requires_update and finish the sync
+    # gracefully so the UI surfaces the "Reconnect" CTA instead of a red sync error.
     unless enable_banking_item.session_valid?
       sync.update!(status_text: "Session expired - re-authorization required") if sync.respond_to?(:status_text)
       enable_banking_item.update!(status: :requires_update)
-      raise StandardError.new("Enable Banking session has expired. Please re-authorize.")
+      collect_health_stats(sync, errors: nil)
+      return
     end
 
     # Phase 1: Import data from Enable Banking API
@@ -20,6 +23,16 @@ class EnableBankingItem::Syncer
     import_result = enable_banking_item.import_latest_enable_banking_data
 
     unless import_result[:success]
+      # A session-level auth failure detected mid-import flips the item to
+      # requires_update — surface that as a graceful reconnect state, not a red
+      # error. Transient/per-account failures leave status good and fall through
+      # to a normal sync error that retries next time.
+      if enable_banking_item.requires_update?
+        sync.update!(status_text: "Re-authorization required") if sync.respond_to?(:status_text)
+        collect_health_stats(sync, errors: nil)
+        return
+      end
+
       error_msg = import_result[:error]
       if error_msg.blank? && (import_result[:accounts_failed].to_i > 0 || import_result[:transactions_failed].to_i > 0)
         parts = []

@@ -9,6 +9,7 @@ en:
       title: Join %{family}
     create:
       existing_user_added: User has been added to your household.
+      existing_user_has_family_data: That user already owns a household with accounts. They need to remove or transfer those accounts before joining yours.
       failure: Could not send invitation
       success: Invitation sent successfully
     destroy:

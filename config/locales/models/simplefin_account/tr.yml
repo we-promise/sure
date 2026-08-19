@@ -1,0 +1,8 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        simplefin_account:
+          no_balance: SimpleFIN hesabında güncel veya kullanılabilir bakiyeden en
+            az biri bulunmalıdır

@@ -1,0 +1,8 @@
+---
+fr:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: Impossible de détruire la clé API de surveillance
+            de la démonstration

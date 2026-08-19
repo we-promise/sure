@@ -1,8 +1,12 @@
 class Family < ApplicationRecord
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
-  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable
+  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable
   include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
-  include IndexaCapitalConnectable, IbkrConnectable
+  include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
+  include UpConnectable
+  include Trading212Connectable
+  include QuestradeConnectable
+  include RedbarkConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -14,7 +18,9 @@ class Family < ApplicationRecord
     [ "MM/DD/YYYY", "%m/%d/%Y" ],
     [ "D/MM/YYYY", "%e/%m/%Y" ],
     [ "YYYY.MM.DD", "%Y.%m.%d" ],
-    [ "YYYYMMDD", "%Y%m%d" ]
+    [ "YYYYMMDD", "%Y%m%d" ],
+    # QIF month-name imports rely on QifParser preserving normalized spaces.
+    [ "DD MMM YYYY", "%d %b %Y" ]
   ].freeze
 
 
@@ -27,6 +33,8 @@ class Family < ApplicationRecord
   has_many :invitations, dependent: :destroy
 
   has_many :imports, dependent: :destroy
+  has_many :import_sessions, dependent: :destroy
+  has_many :import_source_mappings, dependent: :destroy
   has_many :family_exports, dependent: :destroy
   has_many :account_statements, dependent: :destroy
 
@@ -44,8 +52,92 @@ class Family < ApplicationRecord
   has_many :budget_categories, through: :budgets
   has_one :retirement_config, dependent: :destroy
 
+  has_many :goals, dependent: :destroy
+
+  # Net inflow into every depository account linked to any primary-currency
+  # goal, over the given window. Transfers between linked accounts net to zero
+  # because both sides of an internal move land inside the same account set;
+  # external transfers (e.g. checking → linked savings) net positive.
+  #
+  # Scoped to the family's primary currency: mixed-currency families would
+  # otherwise sum raw EUR + USD numbers and surface the result as primary.
+  # Foreign-currency goals are excluded from this KPI until FX conversion is
+  # added.
+  #
+  # Entry amount convention in Sure: inflow is negative, so flip the sign.
+  # Result is allowed to go negative (net outflow last 30d) so the headline
+  # reflects reality; the controller decides how to render.
+  def savings_inflow_velocity(range: 30.days.ago.to_date..Date.current, account_ids: nil)
+    ids = account_ids || goal_linked_account_ids
+    return 0 if ids.empty?
+
+    net = Entry
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(account_id: ids, date: range)
+      .where(excluded: false)
+      .merge(Transaction.excluding_pending)
+      .sum(:amount)
+
+    -net.to_d
+  end
+
+  # Two velocity windows in a single pair of sums that share one
+  # account-id lookup. The kpi tile on the index reads both the current
+  # 30d window and the prior 30d window; without this helper the
+  # `accounts.joins(:goal_accounts)…pluck(:id)` query runs twice per
+  # request even though the answer is identical.
+  def savings_inflow_windows(window_days: 30, now: Date.current)
+    ids = goal_linked_account_ids
+    {
+      current: savings_inflow_velocity(range: (now - window_days)..now, account_ids: ids),
+      prior:   savings_inflow_velocity(range: (now - 2 * window_days)..(now - window_days - 1), account_ids: ids)
+    }
+  end
+
+  private
+
+    # Depository accounts linked to this family's goals, restricted to the
+    # primary currency until FX is added. Memoized for the lifetime of the
+    # Family instance so a single request that reads velocity twice (the
+    # KPI tile uses current vs prior 30d) doesn't re-run the join+pluck.
+    # `accounts` is already scoped by the has_many association, and the
+    # join restricts to this family's goals — so cross-family bleed
+    # remains impossible.
+    def goal_linked_account_ids
+      @goal_linked_account_ids ||= accounts
+        .joins(:goal_accounts)
+        .where(goal_accounts: { goal_id: goals.select(:id) })
+        .where(currency: primary_currency_code)
+        .distinct
+        .pluck(:id)
+    end
+
+  public
+
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :insights, dependent: :destroy
+
+  # Families with at least one opted-in member. Lets a job filter in one
+  # indexed query rather than loading every family and asking each in Ruby.
+  scope :with_preview_features, -> { where(id: User.with_preview_features.select(:family_id)) }
+
+  # Family-level rollup of the per-user preview flag, for callers that run
+  # without a Current.user (the nightly insights job). Preview access is a
+  # personal preference but the data it produces is family-scoped, so one
+  # opted-in member is enough to generate for the family.
+  #
+  # EXISTS rather than `users.any?(&:preview_features_enabled?)`: the job asks
+  # this once per family, and the block form would load and instantiate every
+  # member just to answer a boolean.
+  #
+  # Never gate UI on this — visibility is per-user, and this answers "somebody
+  # in the household opted in", so a view using it would show the feature to a
+  # user who explicitly opted out. Use the PreviewGateable helper (Current.user)
+  # for anything a person sees.
+  def preview_features_enabled?
+    users.with_preview_features.exists?
+  end
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
@@ -53,6 +145,9 @@ class Family < ApplicationRecord
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
+  validates :personal_budgets, inclusion: { in: [ true, false ] }
+  validates :household_budget_enabled, inclusion: { in: [ true, false ] }
+  validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
 
@@ -107,6 +202,33 @@ class Family < ApplicationRecord
 
   def share_all_by_default?
     default_account_sharing == "shared"
+  end
+
+  # Shares every existing account in this family (except ones the user already
+  # owns) with the given user, honoring the family's default sharing policy and
+  # the user's role. Guests receive read_only; members/admins receive read_write.
+  #
+  # This is the single entry point for "a member just joined, give them the
+  # accounts the family shares by default." It self-guards on the sharing policy
+  # and family membership so every membership path (invitation accept, SSO JIT
+  # sign-up, token registration, mobile SSO) can call it without reintroducing
+  # the "member joined but sees nothing" bug. No-op when sharing is disabled or
+  # there is nothing to share, and idempotent on re-run.
+  def auto_share_existing_accounts_with(user)
+    return unless share_all_by_default?
+    # Load-bearing security guard: insert_all below bypasses AccountShare's
+    # user_in_same_family / cannot_share_with_owner validations, so this
+    # membership check is the ONLY thing preventing cross-family sharing.
+    # Do not drop it when refactoring.
+    return unless user&.persisted? && user.family_id == id
+
+    permission = user.guest? ? "read_only" : "read_write"
+    records = accounts.where.not(owner_id: user.id).pluck(:id).map do |account_id|
+      { account_id: account_id, user_id: user.id, permission: permission,
+        include_in_finances: true, created_at: Time.current, updated_at: Time.current }
+    end
+
+    AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
   end
 
   def uses_custom_month_start?
@@ -192,8 +314,8 @@ class Family < ApplicationRecord
     BalanceSheet.new(self, user: user)
   end
 
-  def income_statement(user: Current.user)
-    IncomeStatement.new(self, user: user)
+  def income_statement(user: Current.user, accounts: nil)
+    IncomeStatement.new(self, user: user, accounts: accounts)
   end
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
@@ -259,7 +381,7 @@ class Family < ApplicationRecord
         .where(cryptos: { tax_treatment: %w[tax_deferred tax_exempt] })
         .pluck(:id)
 
-      investment_ids + crypto_ids
+      investment_ids + crypto_ids + tax_advantaged_depository_account_ids
     end
   end
 
@@ -345,6 +467,18 @@ class Family < ApplicationRecord
   end
 
   private
+    # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
+    # `tax_advantaged_account_ids`. Joins `depositories` and filters by
+    # `Depository::TAX_ADVANTAGED_SUBTYPES` (currently `%w[hsa]`). Extracted
+    # rather than inlined because the existing two blocks are already long
+    # enough; the extraction keeps `tax_advantaged_account_ids` readable.
+    def tax_advantaged_depository_account_ids
+      accounts
+        .joins("INNER JOIN depositories ON depositories.id = accounts.accountable_id AND accounts.accountable_type = 'Depository'")
+        .where(depositories: { subtype: Depository::TAX_ADVANTAGED_SUBTYPES })
+        .pluck(:id)
+    end
+
     def normalize_enabled_currencies!
       if enabled_currencies.blank?
         self.enabled_currencies = nil
@@ -367,5 +501,29 @@ class Family < ApplicationRecord
       Money::Currency.new(value).iso_code
     rescue Money::Currency::UnknownCurrencyError, ArgumentError
       nil
+    end
+
+    # Not a plain `inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }`
+    # on purpose: the settings form submits `tz.tzinfo.identifier` (e.g.
+    # "America/New_York"), not `tz.name` (e.g. "Eastern Time (US & Canada)")
+    # -- see LanguagesHelper#timezone_options. For every zone Rails ships,
+    # those two differ, so an inclusion check against `.name` would reject
+    # every legitimate value the form actually submits. `ActiveSupport::TimeZone[]`
+    # resolves both forms, and is the same lookup `Localize#resolved_timezone`
+    # uses at request time, so "valid at save time" and "valid when rendering"
+    # can't drift apart.
+    #
+    # Only runs when timezone is actually being changed (see the `if:` on the
+    # `validate` call above). A family that already has a stale value from
+    # before this validation existed (the exact case in #390) must still be
+    # able to save unrelated changes -- e.g. a settings update, or any
+    # background job touching the record -- without being blocked by a field
+    # nobody is currently trying to set. That value still can't crash a
+    # request either way, since Localize#resolved_timezone falls back safely
+    # regardless of whether this validation ever ran.
+    def timezone_must_be_a_known_zone
+      return if timezone.blank?
+
+      errors.add(:timezone, :invalid) if ActiveSupport::TimeZone[timezone].blank?
     end
 end

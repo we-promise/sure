@@ -1,0 +1,75 @@
+---
+vi:
+  coinstats_items:
+    create:
+      success: Kết nối nhà cung cấp CoinStats đã được cấu hình thành công.
+      default_name: Kết nối CoinStats
+      errors:
+        validation_failed: "Xác thực thất bại: %{message}."
+    update:
+      success: Kết nối nhà cung cấp CoinStats đã được cập nhật thành công.
+      errors:
+        validation_failed: "Xác thực thất bại: %{message}."
+    destroy:
+      success: Kết nối nhà cung cấp CoinStats đã được lên lịch xóa.
+    link_wallet:
+      success: "%{count} ví tiền điện tử đã được liên kết thành công."
+      missing_params: "Thiếu tham số bắt buộc: địa chỉ và blockchain."
+      failed: Liên kết ví tiền điện tử thất bại.
+      error: "Liên kết ví tiền điện tử thất bại: %{message}."
+    link_exchange:
+      success: "%{name} sàn giao dịch đã được liên kết."
+      missing_params: Sàn giao dịch và thông tin xác thực là bắt buộc.
+      invalid_exchange: Sàn giao dịch đã chọn không còn được hỗ trợ.
+      failed: Liên kết sàn giao dịch thất bại.
+      error: "Liên kết sàn giao dịch thất bại: %{message}."
+    new:
+      title: Liên kết tiền điện tử với CoinStats
+      blockchain_fetch_error: Tải blockchain thất bại. Vui lòng thử lại sau.
+      link_wallet_title: Liên kết địa chỉ ví
+      link_wallet_description: Theo dõi ví tự quản hoặc địa chỉ on-chain đơn lẻ qua CoinStats.
+      address_label: Địa chỉ
+      address_placeholder: Bắt buộc
+      blockchain_label: Blockchain
+      blockchain_placeholder: Bắt buộc
+      blockchain_select_blank: Chọn một Blockchain
+      link_wallet_submit: Liên kết ví tiền điện tử
+      link_exchange_title: Liên kết API sàn giao dịch
+      link_exchange_description: Sử dụng khóa API chỉ đọc của sàn giao dịch để CoinStats có thể đồng bộ số dư và giao dịch từ Bitvavo, Binance và các sàn được hỗ trợ khác.
+      link_exchange_note: Nếu sàn giao dịch của bạn yêu cầu kích hoạt khóa API hoặc xác nhận qua email, hãy hoàn tất bước đó trước khi liên kết ở đây.
+      exchange_select_blank: Chọn một sàn giao dịch
+      exchange_label: Sàn giao dịch
+      link_exchange_submit: Liên kết sàn giao dịch
+      not_configured_title: Kết nối nhà cung cấp CoinStats chưa được cấu hình
+      not_configured_message: Để liên kết ví tiền điện tử hoặc sàn giao dịch, bạn phải cấu hình kết nối nhà cung cấp CoinStats trước.
+      not_configured_step1_html: Đi đến <strong>Cài đặt → Nhà cung cấp</strong>
+      not_configured_step2_html: Tìm nhà cung cấp <strong>CoinStats</strong>
+      not_configured_step3_html: Làm theo <strong>hướng dẫn thiết lập</strong> được cung cấp để hoàn tất cấu hình nhà cung cấp
+      go_to_settings: Đi đến Cài đặt nhà cung cấp
+      setup_instructions: "Hướng dẫn thiết lập:"
+      step1_html: Truy cập <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> để lấy khóa API.
+      step2: Nhập khóa API của bạn bên dưới và nhấn Cấu hình.
+      step3_html: Sau khi kết nối thành công, truy cập tab <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Tài khoản</a> để thiết lập tài khoản tiền điện tử.
+      api_key_label: Khóa API
+      api_key_placeholder: Bắt buộc
+      configure: Cấu hình
+      update_configuration: Cấu hình lại
+      default_name: Kết nối CoinStats
+    coinstats_item:
+      deletion_in_progress: Dữ liệu ví tiền điện tử đang được xóa…
+      provider_name: CoinStats
+      syncing: Đang đồng bộ…
+      sync_status:
+        no_accounts: Không tìm thấy ví tiền điện tử
+        all_synced:
+          one: "%{count} ví tiền điện tử đã đồng bộ"
+          other: "%{count} ví tiền điện tử đã đồng bộ"
+        partial_sync: "%{linked_count} ví tiền điện tử đã đồng bộ, %{unlinked_count} cần thiết lập"
+      reconnect: Kết nối lại
+      status: Đồng bộ lần cuối %{timestamp} trước
+      status_never: Chưa bao giờ đồng bộ
+      status_with_summary: "Đồng bộ lần cuối %{timestamp} trước • %{summary}"
+      update_api_key: Cập nhật khóa API
+      delete: Xóa
+      no_wallets_title: Không có ví tiền điện tử nào được kết nối
+      no_wallets_message: Hiện không có ví tiền điện tử nào được kết nối với CoinStats.

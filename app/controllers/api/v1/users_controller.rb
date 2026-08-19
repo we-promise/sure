@@ -45,7 +45,6 @@ class Api::V1::UsersController < Api::V1::BaseController
     user = current_resource_owner
 
     if user.deactivate
-      Current.session&.destroy
       render json: { message: "Account has been deleted" }
     else
       render json: { error: "Failed to delete account", details: user.errors.full_messages }, status: :unprocessable_entity
@@ -70,14 +69,8 @@ class Api::V1::UsersController < Api::V1::BaseController
     end
 
     def reset_target_counts(family)
-      {
-        accounts: family.accounts.count,
-        categories: family.categories.count,
-        tags: family.tags.count,
-        merchants: family.merchants.count,
-        plaid_items: family.plaid_items.count,
-        imports: family.imports.count,
-        budgets: family.budgets.count
-      }
+      counts = Family::FinancialDataReset.new(family: family, dry_run: true, confirmed: false).call.before_counts.except(:syncs)
+
+      counts.merge(plaid_items: family.plaid_items.count)
     end
 end

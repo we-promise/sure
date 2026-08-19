@@ -3,9 +3,17 @@ class Balance::LinkedInvestmentSeriesNormalizer
 
   class << self
     def aggregate_accounts(accounts:, currency:, period:, favorable_direction:, interval: "1 day")
-      accounts = Array(accounts)
-      account_ids = accounts.map(&:id)
+      aggregate_account_ids(
+        account_ids: Array(accounts).map(&:id),
+        currency: currency,
+        period: period,
+        favorable_direction: favorable_direction,
+        interval: interval
+      )
+    end
 
+    def aggregate_account_ids(account_ids:, currency:, period:, favorable_direction:, interval: "1 day")
+      account_ids = Array(account_ids).compact
       series = Balance::ChartSeriesBuilder.new(
         account_ids: account_ids,
         currency: currency,
@@ -31,7 +39,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
 
     private
       def common_supported_history_start_date(account_ids)
-        account_ids = Array(account_ids).compact
+        account_ids = Array(account_ids)
         return if account_ids.empty?
 
         activity_dates = Entry.where(account_id: account_ids)

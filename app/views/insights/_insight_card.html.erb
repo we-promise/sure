@@ -1,0 +1,62 @@
+<%# locals: (insight:, unread: false) %>
+
+<div id="<%= dom_id(insight) %>" class="bg-container rounded-xl shadow-border-xs">
+  <div class="p-4 flex gap-3">
+    <div class="shrink-0 mt-0.5">
+      <%= icon(insight_icon_key(insight), color: insight_icon_color(insight)) %>
+    </div>
+
+    <div class="min-w-0 grow space-y-1">
+      <p class="text-xs text-secondary"><%= insight_meta_line(insight) %></p>
+
+      <div class="flex items-start justify-between gap-3">
+        <h3 class="text-sm font-medium text-primary inline-flex items-center gap-2 min-w-0">
+          <%= insight_privacy_text(insight.title) %>
+          <% if unread %>
+            <%# A dot, not a labelled chip. Visiting this page marks every insight
+                read in one go, so at first paint the badge is on *every* row and
+                differentiates nothing — an uppercase tracked chip that heavy just
+                steals weight from the title it sits beside. %>
+            <%= render DS::Pill.new(label: t("insights.card.new"), tone: :info, dot_only: true) %>
+          <% end %>
+        </h3>
+
+        <%# The figure now owns this corner outright. It used to share it with the
+            acknowledge control, so the card's data and its escape hatch competed
+            for the same spot. %>
+        <% if (figure = insight_key_figure(insight)) %>
+          <div class="text-right shrink-0">
+            <p class="text-sm font-mono font-medium privacy-sensitive <%= insight_sentiment(insight) == :positive ? "text-success" : "text-primary" %>"><%= figure.first %></p>
+            <p class="text-xs text-subdued"><%= figure.last %></p>
+          </div>
+        <% end %>
+      </div>
+
+      <p class="text-sm text-secondary"><%= insight_privacy_text(insight.body) %></p>
+    </div>
+  </div>
+
+  <%# Both actions in a footer strip, which fixes an inverted action pyramid: the
+      escape hatch used to be a chromed icon button in the top-right corner while
+      the card's actual purpose ("View budget") was a borderless ghost link
+      buried under the body text. The subject action gets the chrome now, and
+      acknowledging is labelled text beside it — quieter, and honest about being
+      an acknowledgement rather than a deletion. %>
+  <div class="px-4 py-2.5 bg-container-inset rounded-b-xl flex items-center justify-between gap-3">
+    <% if (action = insight_action(insight)) %>
+      <%= render DS::Link.new(text: action[:text], href: action[:href], variant: "outline", size: "sm") %>
+    <% else %>
+      <span></span>
+    <% end %>
+
+    <%= render DS::Button.new(
+      text: t("insights.card.acknowledge"),
+      icon: "check",
+      variant: "ghost",
+      size: "sm",
+      href: acknowledge_insight_path(insight),
+      method: :patch,
+      title: t("insights.card.acknowledge_title")
+    ) %>
+  </div>
+</div>

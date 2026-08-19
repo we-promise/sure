@@ -1,0 +1,75 @@
+---
+nl:
+  binance_items:
+    create:
+      default_name: Binance
+      success: Succesvol verbonden met Binance! Uw account wordt gesynchroniseerd.
+    update:
+      success: Binance-configuratie succesvol bijgewerkt.
+    destroy:
+      success: Binance-verbinding is in de wachtrij voor verwijdering geplaatst.
+    setup_accounts:
+      title: Binance-account importeren
+      subtitle: Selecteer welke portefeuilles u wilt volgen
+      instructions: Selecteer de Binance-portefeuilles die u wilt importeren. Alleen portefeuilles met saldo worden weergegeven.
+      no_accounts: Alle accounts zijn geïmporteerd.
+      accounts_count:
+        one: "%{count} account beschikbaar"
+        other: "%{count} accounts beschikbaar"
+      select_all: Alles selecteren
+      import_selected: Geselecteerde importeren
+      cancel: Annuleren
+      creating: Importeren...
+    complete_account_setup:
+      success:
+        one: "%{count} account geïmporteerd"
+        other: "%{count} accounts geïmporteerd"
+      none_selected: Geen accounts geselecteerd
+      no_accounts: Geen accounts om te importeren
+    binance_item:
+      provider_name: Binance
+      syncing: Synchroniseren...
+      reconnect: Inloggegevens moeten worden bijgewerkt
+      deletion_in_progress: Verwijderen...
+      sync_status:
+        no_accounts: Geen accounts gevonden
+        all_synced:
+          one: "%{count} account gesynchroniseerd"
+          other: "%{count} accounts gesynchroniseerd"
+        partial_sync: "%{linked_count} gesynchroniseerd, %{unlinked_count} moeten worden ingesteld"
+      status: "Laatst gesynchroniseerd %{timestamp} geleden"
+      status_with_summary: "Laatst gesynchroniseerd %{timestamp} geleden - %{summary}"
+      status_never: Nooit gesynchroniseerd
+      update_credentials: Inloggegevens bijwerken
+      delete: Verwijderen
+      no_accounts_title: Geen accounts gevonden
+      no_accounts_message: Uw Binance-portefeuille verschijnt hier na de synchronisatie.
+      setup_needed: Account klaar om te importeren
+      setup_description: Selecteer welke Binance-portefeuilles u wilt volgen.
+      setup_action: Account importeren
+      import_accounts_menu: Account importeren
+      stale_rate_warning: "Het saldo is bij benadering — de exacte wisselkoers voor %{date} was niet beschikbaar. Wordt bijgewerkt bij de volgende synchronisatie."
+    select_existing_account:
+      title: Binance-account koppelen
+      no_accounts_found: Geen Binance-accounts gevonden.
+      wait_for_sync: Wacht tot Binance klaar is met synchroniseren
+      check_provider_health: Controleer of uw Binance-API-inloggegevens geldig zijn
+      currently_linked_to: "Momenteel gekoppeld aan: %{account_name}"
+      link: Koppelen
+      cancel: Annuleren
+    link_existing_account:
+      success: Succesvol gekoppeld aan Binance-account
+      errors:
+        only_manual: Alleen handmatige accounts kunnen aan Binance worden gekoppeld
+        invalid_binance_account: Ongeldig Binance-account
+  binance_item:
+    syncer:
+      checking_credentials: Inloggegevens controleren...
+      credentials_invalid: Ongeldige API-inloggegevens. Controleer uw API-sleutel en secret.
+      importing_accounts: Accounts importeren vanuit Binance...
+      checking_configuration: Accountconfiguratie controleren...
+      accounts_need_setup:
+        one: "%{count} account moet worden ingesteld"
+        other: "%{count} accounts moeten worden ingesteld"
+      processing_accounts: Accountgegevens verwerken...
+      calculating_balances: Saldi berekenen...

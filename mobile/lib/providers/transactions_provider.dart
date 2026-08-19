@@ -32,10 +32,14 @@ class TransactionsProvider with ChangeNotifier {
 
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get hasPendingTransactions =>
-      _transactions.any((t) => t.syncStatus == SyncStatus.pending || t.syncStatus == SyncStatus.pendingDelete);
-  int get pendingCount =>
-      _transactions.where((t) => t.syncStatus == SyncStatus.pending || t.syncStatus == SyncStatus.pendingDelete).length;
+  bool get hasPendingTransactions => _transactions.any((t) =>
+      t.syncStatus == SyncStatus.pending ||
+      t.syncStatus == SyncStatus.pendingDelete);
+  int get pendingCount => _transactions
+      .where((t) =>
+          t.syncStatus == SyncStatus.pending ||
+          t.syncStatus == SyncStatus.pendingDelete)
+      .length;
 
   SyncService get syncService => _syncService;
 
@@ -49,33 +53,34 @@ class TransactionsProvider with ChangeNotifier {
 
   void _onConnectivityChanged() {
     if (_isDisposed) return;
-    
+
     // Auto-sync when connectivity is restored
     if (_connectivityService?.isOnline == true &&
         hasPendingTransactions &&
         _lastAccessToken != null &&
         !_isAutoSyncing) {
-      _log.info('TransactionsProvider', 'Connectivity restored, auto-syncing $pendingCount pending transactions');
+      _log.info('TransactionsProvider',
+          'Connectivity restored, auto-syncing $pendingCount pending transactions');
       _isAutoSyncing = true;
 
       // Fire and forget - we don't await to avoid blocking connectivity listener
       // Use callbacks to handle completion and errors asynchronously
-      syncTransactions(accessToken: _lastAccessToken!)
-          .then((_) {
-            if (!_isDisposed) {
-              _log.info('TransactionsProvider', 'Auto-sync completed successfully');
-            }
-          })
-          .catchError((e) {
-            if (!_isDisposed) {
-              _log.error('TransactionsProvider', 'Auto-sync failed: $e');
-            }
-          })
-          .whenComplete(() {
-            if (!_isDisposed) {
-              _isAutoSyncing = false;
-            }
-          });
+      syncTransactions(accessToken: _lastAccessToken!).then((_) {
+        if (!_isDisposed) {
+          _log.info('TransactionsProvider', 'Auto-sync completed successfully');
+        }
+      }).catchError((e) {
+        if (!_isDisposed) {
+          _log.error(
+            'TransactionsProvider',
+            'Auto-sync failed with ${e.runtimeType}',
+          );
+        }
+      }).whenComplete(() {
+        if (!_isDisposed) {
+          _isAutoSyncing = false;
+        }
+      });
     }
   }
 
@@ -100,29 +105,38 @@ class TransactionsProvider with ChangeNotifier {
         accountId: accountId,
       );
 
-      _log.debug('TransactionsProvider', 'Loaded ${localTransactions.length} transactions from local storage (accountId: $accountId)');
+      _log.debug(
+        'TransactionsProvider',
+        'Loaded ${localTransactions.length} transactions from local storage${accountId != null ? " with account filter" : ""}',
+      );
 
       _transactions = localTransactions;
       notifyListeners();
 
       // If online and force sync, or if local storage is empty, sync from server
       final isOnline = _connectivityService?.isOnline ?? true;
-      _log.debug('TransactionsProvider', 'Online: $isOnline, ForceSync: $forceSync, LocalEmpty: ${localTransactions.isEmpty}');
+      _log.debug('TransactionsProvider',
+          'Online: $isOnline, ForceSync: $forceSync, LocalEmpty: ${localTransactions.isEmpty}');
 
       if (isOnline && (forceSync || localTransactions.isEmpty)) {
-        _log.debug('TransactionsProvider', 'Syncing from server for accountId: $accountId');
+        _log.debug(
+          'TransactionsProvider',
+          'Syncing transactions from server${accountId != null ? " with account filter" : ""}',
+        );
         final result = await _syncService.syncFromServer(
           accessToken: accessToken,
           accountId: accountId,
         );
 
         if (result.success) {
-          _log.info('TransactionsProvider', 'Sync successful, synced ${result.syncedCount} transactions');
+          _log.info('TransactionsProvider',
+              'Sync successful, synced ${result.syncedCount} transactions');
           // Reload from local storage after sync
           final updatedTransactions = await _offlineStorage.getTransactions(
             accountId: accountId,
           );
-          _log.debug('TransactionsProvider', 'After sync, loaded ${updatedTransactions.length} transactions from local storage');
+          _log.debug('TransactionsProvider',
+              'After sync, loaded ${updatedTransactions.length} transactions from local storage');
           _transactions = updatedTransactions;
           _error = null;
         } else {
@@ -131,7 +145,10 @@ class TransactionsProvider with ChangeNotifier {
         }
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Error in fetchTransactions: $e');
+      _log.error(
+        'TransactionsProvider',
+        'fetchTransactions failed with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;
@@ -151,13 +168,20 @@ class TransactionsProvider with ChangeNotifier {
     String? notes,
     String? categoryId,
     String? categoryName,
+    String? merchantId,
+    String? merchantName,
+    List<String>? tagIds,
+    List<String>? tagNames,
   }) async {
     _lastAccessToken = accessToken; // Store for auto-sync
 
     try {
       final isOnline = _connectivityService?.isOnline ?? false;
 
-      _log.info('TransactionsProvider', 'Creating transaction: $name, amount: $amount, online: $isOnline');
+      _log.info(
+        'TransactionsProvider',
+        'Creating transaction locally, online: $isOnline',
+      );
 
       // ALWAYS save locally first (offline-first strategy)
       final localTransaction = await _offlineStorage.saveTransaction(
@@ -170,20 +194,26 @@ class TransactionsProvider with ChangeNotifier {
         notes: notes,
         categoryId: categoryId,
         categoryName: categoryName,
+        merchantId: merchantId,
+        merchantName: merchantName,
+        tagIds: tagIds ?? const [],
+        tagNames: tagNames ?? const [],
         syncStatus: SyncStatus.pending, // Start as pending
       );
 
-      _log.info('TransactionsProvider', 'Transaction saved locally with ID: ${localTransaction.localId}');
+      _log.info('TransactionsProvider', 'Transaction saved locally');
 
       // Reload transactions to show the new one immediately
       await fetchTransactions(accessToken: accessToken, accountId: accountId);
 
       // If online, try to upload in background
       if (isOnline) {
-        _log.info('TransactionsProvider', 'Attempting to upload transaction to server...');
+        _log.info('TransactionsProvider',
+            'Attempting to upload transaction to server...');
 
         // Don't await - upload in background
-        _transactionsService.createTransaction(
+        _transactionsService
+            .createTransaction(
           accessToken: accessToken,
           accountId: accountId,
           name: name,
@@ -193,11 +223,17 @@ class TransactionsProvider with ChangeNotifier {
           nature: nature,
           notes: notes,
           categoryId: categoryId,
-        ).then((result) async {
+          merchantId: merchantId,
+          tagIds: tagIds == null || tagIds.isEmpty ? null : tagIds,
+          externalId: localTransaction.localId,
+          source: TransactionsService.mobileIdempotencySource,
+        )
+            .then((result) async {
           if (_isDisposed) return;
-          
+
           if (result['success'] == true) {
-            _log.info('TransactionsProvider', 'Transaction uploaded successfully');
+            _log.info(
+                'TransactionsProvider', 'Transaction uploaded successfully');
             final serverTransaction = result['transaction'] as Transaction;
             // Update local transaction with server ID and mark as synced
             await _offlineStorage.updateTransactionSyncStatus(
@@ -206,27 +242,123 @@ class TransactionsProvider with ChangeNotifier {
               serverId: serverTransaction.id,
             );
             // Reload to update UI
-            await fetchTransactions(accessToken: accessToken, accountId: accountId);
+            await fetchTransactions(
+                accessToken: accessToken, accountId: accountId);
           } else {
-            _log.warning('TransactionsProvider', 'Server upload failed: ${result['error']}. Transaction will sync later.');
+            _log.warning('TransactionsProvider',
+                'Server upload failed: ${result['error']}. Transaction will sync later.');
           }
         }).catchError((e) {
           if (_isDisposed) return;
-          
-          _log.error('TransactionsProvider', 'Exception during upload: $e');
+
+          _log.error(
+            'TransactionsProvider',
+            'Upload failed with ${e.runtimeType}',
+          );
           _error = 'Failed to upload transaction. It will sync when online.';
           notifyListeners();
         });
       } else {
-        _log.info('TransactionsProvider', 'Offline: Transaction will sync when online');
+        _log.info('TransactionsProvider',
+            'Offline: Transaction will sync when online');
       }
 
       return true; // Always return true because it's saved locally
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to create transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to create transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Update an existing synced transaction. Edits are online-only because the
+  /// current offline queue supports create/delete but not pending updates.
+  Future<bool> updateTransaction({
+    required String accessToken,
+    required OfflineTransaction transaction,
+    String? name,
+    String? notes,
+    String? categoryId,
+    String? merchantId,
+    List<String>? tagIds,
+  }) async {
+    _lastAccessToken = accessToken;
+    _currentAccountId = transaction.accountId;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final transactionId = transaction.id;
+      if (transactionId == null || transactionId.isEmpty) {
+        _error = 'Only synced transactions can be edited from mobile.';
+        return false;
+      }
+
+      final isOnline = _connectivityService?.isOnline ?? false;
+      if (!isOnline) {
+        _error = 'Connect to the internet before editing synced transactions.';
+        return false;
+      }
+
+      final result = await _transactionsService.updateTransaction(
+        accessToken: accessToken,
+        transactionId: transactionId,
+        name: name,
+        notes: notes,
+        categoryId: categoryId,
+        merchantId: merchantId,
+        tagIds: tagIds,
+      );
+
+      if (result['success'] == true) {
+        var updatedTransaction = result['transaction'];
+        if (updatedTransaction is! Transaction) {
+          final refreshed = await _transactionsService.getTransaction(
+            accessToken: accessToken,
+            transactionId: transactionId,
+          );
+          updatedTransaction = refreshed['transaction'];
+        }
+
+        final transactionToCache = updatedTransaction is Transaction
+            ? updatedTransaction
+            : transaction.toTransactionWithSubmittedUpdate(
+                name: name,
+                notes: notes,
+                categoryId: categoryId,
+                merchantId: merchantId,
+                tagIds: tagIds,
+              );
+
+        await _offlineStorage.upsertTransactionFromServer(
+          transactionToCache,
+          accountId: transaction.accountId,
+        );
+        final updatedTransactions = await _offlineStorage.getTransactions(
+          accountId: transaction.accountId,
+        );
+        _transactions = updatedTransactions;
+        _error = null;
+        return true;
+      }
+
+      _error = result['error'] as String? ?? 'Failed to update transaction';
+      return false;
+    } catch (e) {
+      _log.error(
+        'TransactionsProvider',
+        'Failed to update transaction with ${e.runtimeType}',
+      );
+      _error = 'Something went wrong. Please try again.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -258,7 +390,8 @@ class TransactionsProvider with ChangeNotifier {
         }
       } else {
         // Offline - mark for deletion and sync later
-        _log.info('TransactionsProvider', 'Offline: Marking transaction for deletion');
+        _log.info('TransactionsProvider',
+            'Offline: Marking transaction for deletion');
         await _offlineStorage.markTransactionForDeletion(transactionId);
 
         // Reload from storage to update UI with pending delete status
@@ -270,7 +403,10 @@ class TransactionsProvider with ChangeNotifier {
         return true;
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to delete transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to delete transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -300,13 +436,15 @@ class TransactionsProvider with ChangeNotifier {
           notifyListeners();
           return true;
         } else {
-          _error = result['error'] as String? ?? 'Failed to delete transactions';
+          _error =
+              result['error'] as String? ?? 'Failed to delete transactions';
           notifyListeners();
           return false;
         }
       } else {
         // Offline - mark all for deletion and sync later
-        _log.info('TransactionsProvider', 'Offline: Marking ${transactionIds.length} transactions for deletion');
+        _log.info('TransactionsProvider',
+            'Offline: Marking ${transactionIds.length} transactions for deletion');
         for (final id in transactionIds) {
           await _offlineStorage.markTransactionForDeletion(id);
         }
@@ -320,7 +458,10 @@ class TransactionsProvider with ChangeNotifier {
         return true;
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to delete multiple transactions: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to delete multiple transactions with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -332,10 +473,14 @@ class TransactionsProvider with ChangeNotifier {
     required String localId,
     required SyncStatus syncStatus,
   }) async {
-    _log.info('TransactionsProvider', 'Undoing transaction $localId with status $syncStatus');
+    _log.info(
+      'TransactionsProvider',
+      'Undoing transaction with status $syncStatus',
+    );
 
     try {
-      final success = await _offlineStorage.undoPendingTransaction(localId, syncStatus);
+      final success =
+          await _offlineStorage.undoPendingTransaction(localId, syncStatus);
 
       if (success) {
         // Reload from storage to update UI
@@ -352,7 +497,10 @@ class TransactionsProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to undo transaction: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to undo transaction with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
@@ -384,7 +532,10 @@ class TransactionsProvider with ChangeNotifier {
         _error = result.error;
       }
     } catch (e) {
-      _log.error('TransactionsProvider', 'Failed to sync transactions: $e');
+      _log.error(
+        'TransactionsProvider',
+        'Failed to sync transactions with ${e.runtimeType}',
+      );
       _error = 'Something went wrong. Please try again.';
     } finally {
       _isLoading = false;

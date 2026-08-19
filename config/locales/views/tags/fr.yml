@@ -3,14 +3,17 @@ fr:
   tags:
     create:
       created: Étiquette créée
-      error: "Erreur lors de la création de l'étiquette : %{error}"
+      error: 'Erreur lors de la création de l''étiquette : %{error}'
     destroy:
       deleted: Étiquette supprimée
+    destroy_all:
+      all_deleted: Toutes les balises supprimées
     edit:
       edit: Éditer l'étiquette
     form:
       placeholder: Nom de l'étiquette
     index:
+      delete_all: Supprimer tout
       empty: Aucune étiquette pour le moment
       new: Nouvelle étiquette
       tags: Étiquettes

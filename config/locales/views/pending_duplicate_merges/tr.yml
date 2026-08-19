@@ -1,0 +1,23 @@
+---
+tr:
+  pending_duplicate_merges:
+    create:
+      invalid_transaction: Birleştirme için geçersiz işlem seçildi
+      merge_failed: İşlemler birleştirilemedi
+      merge_success: Bekleyen işlem, kaydedilmiş işlemle birleştirildi
+      no_posted_selected: Lütfen birleştirmek için kaydedilmiş bir işlem seçin
+    new:
+      next: Sonraki 10 →
+      no_candidates: Bu hesapta kaydedilmiş işlem bulunamadı.
+      pending_transaction: Bekleyen İşlem
+      previous: "← Önceki 10"
+      select_posted: Birleştirilecek Kaydedilmiş İşlemi Seçin
+      showing_range: "%{start} - %{end} arası gösteriliyor"
+      submit_button: İşlemleri Birleştir
+      title: Kaydedilmiş İşlemle Birleştir
+      warning_description: Bunu, bekleyen bir işlemi kaydedilmiş sürümüyle manuel
+        olarak birleştirmek için kullanın. Bu, bekleyen işlemi silecek ve yalnızca
+        kaydedilmiş olanı tutacaktır.
+      warning_title: Manuel Yinelenen Birleştirme
+    set_transaction:
+      pending_only: Bu özellik yalnızca bekleyen işlemler için kullanılabilir

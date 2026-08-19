@@ -26,6 +26,9 @@ en:
       refresh_page: Refresh Page
     changelog:
       title: What's new
+    release_notes_unavailable:
+      name: Release notes unavailable
+      body_html: "<p>Unable to fetch the latest release notes at this time. Please check back later or visit our <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub releases page</a> directly.</p>"
     privacy:
       title: Privacy Policy
       heading: Privacy Policy
@@ -38,8 +41,18 @@ en:
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
       new: "New"
+      sections_aria_label: "Dashboard sections"
       drag_to_reorder: "Drag to reorder section"
       toggle_section: "Toggle section visibility"
+      widget_size:
+        label: "Adjust size"
+        width_label: "Width"
+        half: "Half"
+        full: "Full"
+        height_label: "Height"
+        compact: "Compact"
+        auto: "Auto"
+        tall: "Tall"
       net_worth_chart:
         data_not_available: Data not available for the selected period
         title: Net Worth
@@ -61,6 +74,8 @@ en:
         classifications:
           asset: "Assets"
           liability: "Liabilities"
+      insights_feed:
+        title: "Insights"
       cashflow_sankey:
         title: "Cashflow"
         zoom_out: "Back to full cashflow"
@@ -90,3 +105,16 @@ en:
         trades: "Trades"
         no_investments: "No investment accounts"
         add_investment: "Add an investment account to track your portfolio"
+      money_flow:
+        title: "Money In / Out"
+        date_range: "%{start_date} to %{end_date}"
+        month_picker_aria_label: "Select month"
+        filter_accounts: "Filter accounts (%{count})"
+        filter_accounts_all: "All accounts"
+        period_scope_hint: "Shows the months you pick here — independent of the dashboard's time period at the top."
+        search_accounts: "Search accounts"
+        apply: "Apply"
+        balance: "Transaction balance"
+        chart_span: "Last %{count} months"
+        income: "Income"
+        expenses: "Expenses"

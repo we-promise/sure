@@ -1,0 +1,10 @@
+---
+vi:
+  invite_codes:
+    create:
+      success: "Mã đã được tạo"
+    destroy:
+      success: "Mã đã được xóa"
+    index:
+      invite_code_description: Tạo mã mới để xem nó được hiển thị ở đây. Các mã đã được tạo và sử dụng sẽ không còn được hiển thị nữa.
+      no_invite_codes: Không có mã nào để hiển thị

@@ -880,6 +880,20 @@ btc:
   delimiter: ","
   default_format: "%u%n"
   default_precision: 8
+doge:
+  name: Dogecoin
+  priority: 100
+  iso_code: DOGE
+  iso_numeric: ""
+  html_code: "&#x00D0;"
+  symbol: "Ð"
+  minor_unit: Koinu
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
 jep:
   name: Jersey Pound
   priority: 100

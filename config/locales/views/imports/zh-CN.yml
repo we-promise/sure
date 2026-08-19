@@ -1,57 +1,257 @@
 ---
 zh-CN:
   import:
+    qif_category_selections:
+      update:
+        success: 分类和标签已保存。
+      show:
+        title: 配置并选择
+        description: 请先检查检测到的日期格式，然后选择要从 QIF 文件导入到 %{product_name} 的分类和标签。
+        categories_heading: 分类
+        categories_found:
+          one: 找到 1 个分类
+          other: 找到 %{count} 个分类
+        category_name_col: 分类名称
+        transactions_col: 交易
+        tags_heading: 标签
+        tags_found:
+          one: 找到 1 个标签
+          other: 找到 %{count} 个标签
+        tag_name_col: 标签名称
+        txn_count:
+          one: 1 笔交易
+          other: "%{count} 笔交易"
+        split_warning_title: 检测到拆分交易
+        split_warning_description: 此 QIF 文件包含拆分交易。当前尚不支持拆分，因此每笔拆分交易将作为一笔完整金额、无分类的单笔交易导入。各个拆分明细不会被保留。
+        split_badge: 拆分
+        empty_state_primary: 此 QIF 文件中未找到任何分类或标签。
+        empty_state_secondary: 所有交易都将以无分类或无标签的形式导入。
+        submit: 继续审核
     cleans:
       show:
-        description: 请在下方表格中编辑您的数据。红色单元格表示无效数据。
+        not_configured: 请先配置导入设置再继续。
+        description: 在下面的表格中编辑您的数据。红色单元格表示无效。
         errors_notice: 您的数据中存在错误。将鼠标悬停在错误上可查看详情。
         errors_notice_mobile: 您的数据中存在错误。点击错误提示可查看详情。
-        title: 数据清洗
+        title: 清理您的数据
+        data_cleaned: 您的数据已清理完成
+        next_step: 下一步
+        all_rows: 所有行
+        error_rows: 错误行
     configurations:
+      update:
+        success: 导入配置成功。
+      account_import:
+        leave_empty: 留空
+        default: 默认
+        entity_type: 实体类型
+        name: 名称
+        balance: 余额
+        currency: 货币
+        balance_date: 余额日期
+        date_format: 日期格式
+        select_format: 选择格式
+        apply_configuration: 应用配置
+      transaction_import:
+        date_label: 日期
+        select_column: 选择列
+        select_format: 选择格式
+        amount_label: 金额
+        default: 默认
+        currency_label: 货币
+        format_label: 格式
+        amount_type_strategy_label: 金额类型策略
+        select_strategy: 选择策略
+        set: 设为
+        as_amount_type_column: 作为金额类型列
+        select_value: 选择值
+        as_identifier_value: 作为标识值
+        treat_as_html: 将“<span class="font-medium">%{value}</span>”视为
+        income_inflow: 收入（流入）
+        expense_outflow: 支出（流出）
+        select_type: 选择类型
+        leave_empty: 留空
+        account_label: 账户
+        name_label: 名称
+        category_label: 分类
+        tags_label: 标签
+        notes_label: 备注
+        apply_configuration: 应用配置
+        incomes_are_positive: 收入为正数
+        incomes_are_negative: 收入为负数
+        amount_type_label: 金额类型
+        select_convention: 选择约定
+        date_format_label: 日期格式
+        rows_to_skip_label: 跳过前 n 行
+      trade_import:
+        select_column: 选择列
+        date_label: 日期
+        quantity_label: 数量
+        buys_are_positive: 买入为正数量
+        buys_are_negative: 买入为负数量
+        default: 默认
+        currency_label: 货币
+        format_label: 格式
+        select_format: 选择格式
+        ticker_label: 代码
+        leave_empty: 留空
+        stock_exchange_code_label: 证券交易所代码
+        price_label: 价格
+        account_label: 账户
+        name_label: 名称
+        note_label: 备注
+        no_security_provider_warning: 证券价格提供方尚未配置。您的交易导入仍可进行，但 Sure 不会回填价格历史。请前往设置进行配置。
+        date_format_label: 日期格式
+        apply_configuration: 应用配置
       category_import:
         button_label: 继续
-        description: 上传简单的 CSV 文件（例如我们导出数据时生成的文件格式）。我们将自动为您映射列。
-        instructions: 选择继续以解析您的 CSV 文件并进入清洗步骤。
+        description: 上传一个简单 CSV 文件（例如我们在导出数据时生成的那个）。系统会自动为您映射列。
+        instructions: 选择继续即可解析 CSV 并进入清理步骤。
       mint_import:
         date_format_label: 日期格式
+      actual_import:
+        preconfigured_notice: 我们已为您的 Actual Budget 导入预先配置好了。请继续下一步。
+        leave_empty: 留空
+        date_label: 日期
+        date_format_label: 日期格式
+        amount_label: 金额
+        signage_convention_label: 符号约定
+        incomes_are_negative: 收入为负数
+        incomes_are_positive: 收入为正数
+        account_label: 账户（可选）
+        name_label: 收款方（可选）
+        category_label: 分类（可选）
+        notes_label: 备注（可选）
+        apply_configuration: 应用配置
       rule_import:
-        description: 配置您的规则导入。规则将根据 CSV 数据创建或更新。
+        description: 配置您的规则导入。系统将根据 CSV 数据创建或更新规则。
         process_button: 处理规则
         process_help: 点击下方按钮处理您的 CSV 并生成规则行。
       show:
-        description: 请选择 CSV 文件中各列对应的字段。
-        title: 配置导入设置
-      trade_import:
-        date_format_label: 日期格式
-      transaction_import:
-        date_format_label: 日期格式
+        description: 选择与 CSV 中每个字段对应的列。
+        title: 配置您的导入
+      merchant_import:
+        button_label: 继续
+        description: 导入商户列表，用于补全交易商户信息。
+        instructions: 上传包含商户名称、网站和颜色等字段的 CSV 文件。
     confirms:
+      sure_import:
+        title: 确认您的导入
+        description: 检查将从导出文件中导入的数据。
+        summary: 导入摘要
+        empty_summary: 我们在此文件中找不到任何可导入的记录。它可能为空，或者这些行与预期的导出格式不匹配（每行应为一个 JSON 对象，包含 "type" 和 "data" 键，并使用此导入所支持的类型）。
+        publish_button: 开始导入
+        cancel: 取消
       mappings:
-        create_account: 新建账户
+        create_account: 创建账户
         csv_mapping_label: CSV 中的 %{mapping}
-        no_accounts: 您目前没有任何账户。请创建一个账户用于处理 CSV 中的（未分配）行，或返回上一步的“清洗”环节提供一个可用的账户名称。
-        rows_label: 行数
         sure_mapping_label: "%{product_name} 中的 %{mapping}"
-        unassigned_account: 需要为未分配行创建新账户？
+        no_accounts: 您还没有任何账户。请创建一个账户，用于 CSV 中未分配的行，或者返回清理步骤并提供一个我们可以使用的账户名称。
+        rows_label: 行
+        unassigned_account: 是否需要为未分配的行创建新账户？
+        next: 下一步
       show:
-        account_mapping_description: 将导入文件中的所有账户分配到 %{product_name} 的现有账户。您也可以新建账户或保留为未分类。
-        account_mapping_title: 分配账户
+        invalid_data: 您的数据无效，请编辑直到所有错误都解决
+        account_mapping_description: 将导入文件中的所有账户映射到 %{product_name} 中现有的账户。您也可以添加新账户，或将其保留为未分类。
+        account_mapping_title: 分配您的账户
         account_type_mapping_description: 将导入文件中的所有账户类型分配到 %{product_name} 的账户类型
-        account_type_mapping_title: 分配账户类型
-        category_mapping_description: 将导入文件中的所有分类分配到 %{product_name} 的现有分类。您也可以新建分类或保留为未分类。
-        category_mapping_title: 分配分类
-        tag_mapping_description: 将导入文件中的所有标签分配到 %{product_name} 的现有标签。您也可以新建标签或保留为未分类。
-        tag_mapping_title: 分配标签
+        account_type_mapping_title: 分配您的账户类型
+        category_mapping_description: 将导入文件中的所有分类分配到 %{product_name} 中现有的分类。您也可以添加新分类，或将其保留为未分类。
+        category_mapping_title: 分配您的分类
+        tag_mapping_description: 将导入文件中的所有标签分配到 %{product_name} 中现有的标签。您也可以添加新标签，或将其保留为未分类。
+        tag_mapping_title: 分配您的标签
     uploads:
+      handle_qif_upload:
+        qif_uploaded: QIF 文件上传成功。
+      update:
+        qif_uploaded: QIF 文件上传成功。
       show:
-        description: 请在下方粘贴或上传您的 CSV 文件。开始前请仔细阅读下表中的说明。
-        instructions_1: 下方是可供导入的 CSV 示例文件及列说明。
-        instructions_2: 您的 CSV 文件必须包含表头行
-        instructions_3: 您可以为各列自由命名，稍后步骤中将进行字段映射。
-        instructions_4: 标有星号 (*) 的列为必填数据。
-        instructions_5: 数字中请勿包含逗号、货币符号或括号。
-        title: 导入数据
+        csv_invalid: 必须是有效的 CSV，且至少包含标题和一行数据
+        drop_csv_title: 拖放 CSV 以上传
+        drop_csv_subtitle: 您的文件将自动上传
+        upload_csv_tab: 上传 CSV
+        copy_paste_tab: 复制并粘贴
+        account_optional_label: 账户（可选）
+        multi_account_import: 多账户导入
+        upload_csv_button: 上传 CSV
+        paste_csv_placeholder: 将 CSV 文件内容粘贴到这里
+        download_sample_csv: 下载示例 CSV
+        to_see_format: 以查看所需的 CSV 格式
+        qif_title: 上传 QIF 文件
+        qif_description: 选择此 QIF 文件所属的账户，然后上传您从 Quicken 导出的 .qif 文件。
+        qif_account_label: 账户
+        qif_account_placeholder: 选择一个账户…
+        qif_file_prompt: 将您的 QIF 文件添加到这里
+        qif_file_hint: 仅限 .qif 文件
+        qif_submit: 上传 QIF
+        browse: 浏览
+        csv_file_prompt: 将您的 CSV 文件添加到这里
+        description: 请在下方粘贴或上传您的 CSV 文件。开始前请先阅读下方表格中的说明。
+        instructions_1: 下方示例 CSV 展示了可用于导入的列。
+        instructions_2: 您的 CSV 必须有表头行
+        instructions_3: 列名可以随意命名。后续步骤中您会进行映射。
+        instructions_4: 标有星号（*）的列为必填数据。
+        instructions_5: 数字中不要包含逗号、货币符号和括号。
+        title: 导入您的数据
+      sure_import:
+        title: 从导出文件导入
+        description: 上传您的数据导出 ZIP 中的 all.ndjson 文件，以恢复您的账户、交易、分类等数据。
+        drop_title: 拖放 NDJSON 以上传
+        drop_subtitle: 您的文件将自动上传
+        browse: 浏览
+        browse_hint: 将您的 all.ndjson 文件添加到这里
+        upload_button: 上传 NDJSON
+        hint_html: 上传您数据导出 ZIP 中的 <strong>all.ndjson</strong> 文件
+        ndjson_invalid: 必须是有效的 NDJSON，且至少包含一条记录
   imports:
+    mapping_labels:
+      account_type: 账户类型
+      account: 账户
+      category: 分类
+      tag: 标签
+    dry_run_resources:
+      transactions: 交易
+      balances: 余额
+      accounts: 账户
+      categories: 分类
+      tags: 标签
+      rules: 规则
+      merchants: 商户
+      recurring_transactions: 循环交易
+      transfers: 转账
+      rejected_transfers: 被拒绝的转账
+      trades: 交易
+      holdings: 持仓
+      valuations: 估值
+      budgets: 预算
+      budget_categories: 预算分类
+    column_labels:
+      date: 日期
+      amount: 金额
+      name: 名称
+      currency: 货币
+      category: 分类
+      tags: 标签
+      account: 账户
+      notes: 备注
+      qty: 数量
+      ticker: 代码
+      exchange: 交易所
+      price: 价格
+      entity_type: 类型
+      category_parent: 父分类
+      category_color: 颜色
+      category_icon: Lucide 图标
+      merchant_color: 颜色
+      merchant_website: 网站 URL
+    update:
+      account_saved: 账户已保存。
+      invalid_account: 未找到账户。
+    publish:
+      started: 您的导入已在后台开始。
+      max_rows_exceeded: 您的导入超过了最大行数 %{max}。
+    revert:
+      started: 导入正在后台回滚。
     index:
       title: 导入记录
       new: 新建导入
@@ -75,6 +275,19 @@ zh-CN:
           confirm_revert: 这将删除已导入的交易记录，但您仍然可以随时查看和重新导入您的数据。
           delete: 删除
           view: 查看
+        type_labels:
+          transaction_import: 交易
+          trade_import: 投资交易
+          account_import: 账户
+          mint_import: Mint
+          actual_import: Actual
+          qif_import: QIF
+          category_import: 分类
+          rule_import: 规则
+          merchant_import: 商户
+          pdf_import: PDF
+          document_import: 文档
+          sure_import: Sure
       empty: 暂无导入记录。
     new:
       description: 您可以通过 CSV 手动导入多种类型数据，或使用我们的导入模板（如 Mint 格式）。
@@ -87,6 +300,17 @@ zh-CN:
       resume: 继续 %{type}
       sources: 数据来源
       title: 新建 CSV 导入
+      tab_financial_tools: 财务工具和文件
+      tab_raw_data: 原始数据
+      import_ynab: 从 YNAB 导入
+      import_merchants: 导入商户
+      import_actual: 从 Actual Budget 导入
+      import_qif: 从 Quicken（QIF）导入
+      import_sure: 从 Sure 导入
+      import_sure_description: 导入 Sure 导出的数据文件。
+      import_file: 导入文档
+      import_file_description: 上传账单、CSV 或其他财务文档。
+      requires_account: 导入前需要先创建账户。
     ready:
       description: 以下是发布导入后将添加到您账户的新项目摘要。
       title: 确认导入数据
@@ -95,3 +319,130 @@ zh-CN:
       empty_summary: 在此文件中未找到可导入的记录。文件可能为空，或各行不符合预期的导出格式（每行应为包含「type」和「data」键的 JSON 对象，且类型须为本导入支持的类型）。
       publish_import: 发布导入
       back_to_imports: 返回导入列表
+    apply_template:
+      template_applied: 模板已应用。
+      no_template_found: 找不到可用模板。
+    destroy:
+      deleted: 导入已删除。
+    failure:
+      title: 导入 失败
+      description: 导入过程中出现问题。
+      try_again: 重试
+    success:
+      title: 导入成功
+      description: 导入成功说明
+      back_to_dashboard: 返回仪表盘
+      verification:
+        title: 回读校验
+        checked: 已检查
+        mismatches: 不匹配
+        status:
+          not_verified: 未校验
+          matched: 已匹配
+          mismatch: 不匹配
+          failed: 失败
+          reverted: 已回滚
+    importing:
+      title: 正在导入
+      description: 正在处理导入文件，请稍候。
+      check_status: 检查状态
+      back_to_dashboard: 返回仪表盘
+    revert_failure:
+      title: 回滚导入失败
+      description: 请重试
+      try_again: 重试
+    date_format:
+      heading: 日期格式
+      description: 选择导入文件中日期字段使用的格式。
+      preview: 第一条解析日期
+      error_title: 日期格式无效
+      error_description: 无法按所选格式解析日期，请检查示例。
+    type_labels:
+      transaction_import: 交易导入
+      trade_import: 投资交易导入
+      account_import: 账户导入
+      mint_import: Mint 导入
+      actual_import: Actual 导入
+      qif_import: QIF 导入
+      category_import: 分类导入
+      rule_import: 规则导入
+      merchant_import: 商户导入
+      pdf_import: PDF 导入
+      document_import: 文档导入
+      sure_import: Sure 导入
+    steps:
+      upload: 上传
+      configure: 配置
+      clean: 清理
+      map: 映射
+      confirm: 确认
+      select: 选择
+      progress: 第 %{step} 步，共 %{total} 步
+    empty:
+      message: 未找到导入记录。
+    create:
+      file_too_large: 文件过大，最大允许 %{max_size}。
+      invalid_file_type: 文件类型无效。
+      csv_uploaded: CSV 已成功上传。
+      ndjson_uploaded: NDJSON 文件已成功上传。
+      pdf_too_large: PDF 过大，最大允许 %{max_size}。
+      pdf_processing: PDF 正在处理中。
+      invalid_pdf: PDF 文件无效。
+      duplicate_pdf_unavailable: 暂时无法检查重复 PDF。
+      document_too_large: 文档过大，最大允许 %{max_size}。
+      invalid_document_file_type: 文档文件类型无效。
+      document_uploaded: 文档已成功上传。
+      document_upload_failed: 文档上传失败。
+      invalid_ndjson_file_type: NDJSON 文件类型无效。
+      document_provider_not_configured: 文档处理提供商尚未配置。
+    show:
+      finalize_upload: 完成上传
+      finalize_mappings: 完成映射
+    errors:
+      custom_column_requires_inflow: 自定义列需要选择流入金额列。
+    document_types:
+      bank_statement: 银行账单
+      credit_card_statement: 信用卡账单
+      investment_statement: 投资账单
+      financial_document: 财务文档
+      contract: 合同
+      other: 其他文档
+      unknown: 未知文档
+    pdf_import:
+      processing_title: 正在处理 PDF
+      processing_description: 正在分析文档并提取交易。
+      check_status: 检查状态
+      back_to_dashboard: 返回仪表盘
+      failed_title: 处理失败
+      failed_description: 无法处理此文档。请重试或查看日志。
+      try_again: 重试
+      delete_import: 删除导入
+      complete_title: 文档已分析
+      complete_description: 文档分析完成，可以继续审核导入结果。
+      document_type_label: 文档类型
+      source_statement: 来源账单
+      summary_label: 摘要
+      email_sent_notice: 处理完成后会发送邮件通知。
+      back_to_imports: 返回导入
+      unknown_state_title: 未知状态
+      unknown_state_description: 此导入处于未知状态。请刷新页面或查看日志。
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: 处理失败：%{error}
+      ready_for_review_title: 可供审核
+      ready_for_review_description: 已提取 %{count} 条交易，请审核后发布。
+      transactions_extracted: 已提取交易
+      transactions_extracted_count:
+        one: "%{count} 笔交易"
+        other: "%{count} 笔交易"
+      select_account: 导入到账户
+      select_account_placeholder: 选择账户...
+      select_account_hint: 选择这些交易要导入的账户。
+      no_accounts: 没有可用账户。
+      create_account: 创建账户
+      save_account: 保存
+      publish_transactions:
+        one: 发布 %{count} 笔交易
+        other: 发布 %{count} 笔交易
+      review_transactions: 审核交易
+      select_account_to_continue: 请选择账户后继续。
+      unknown_document_type: 未知

@@ -77,6 +77,43 @@ module ApplicationHelper
     current_page?(path) || (request.path.start_with?(path) && path != "/")
   end
 
+  # Wraps a nav-item hash so a single call performs both halves of a
+  # preview-gated entry: returns `nil` for users without the flag (so the
+  # entry never reaches the rendered nav), and stamps `preview: true` on
+  # the hash for users with the flag (so the partial paints the violet
+  # dot on the icon). Use inside an `Array#compact` nav-items list.
+  def preview_gated_nav_item(item)
+    return nil unless preview_features_enabled?
+    item.merge(preview: true)
+  end
+
+  # Budgets and Goals share one nav slot. Preview users get the "Plan" hub
+  # entry fronting both (it stays lit while browsing either subpage, since
+  # page_active? is a path-prefix match and /budgets · /goals don't share
+  # the /plan prefix). Everyone else gets exactly the pre-Plan Budgets
+  # entry — Goals was already hidden without the flag, so their nav is
+  # unchanged.
+  def plan_nav_item
+    if preview_features_enabled?
+      {
+        name: t("layouts.application.nav.plan"),
+        path: plan_path,
+        icon: "compass",
+        icon_custom: false,
+        active: page_active?(plan_path) || page_active?(budgets_path) || page_active?(goals_path),
+        preview: true
+      }
+    else
+      {
+        name: t("layouts.application.nav.budgets"),
+        path: budgets_path,
+        icon: "map",
+        icon_custom: false,
+        active: page_active?(budgets_path)
+      }
+    end
+  end
+
   # Wrapper around I18n.l to support custom date formats
   def format_date(object, format = :default, options = {})
     date = object.to_date
@@ -137,6 +174,11 @@ module ApplicationHelper
     end
 
     cookies[:admin] == "true"
+  end
+
+  def sidekiq_web_available?
+    named_routes = Rails.application.routes.named_routes
+    named_routes.route_defined?(:sidekiq_web_path) || named_routes.route_defined?(:sidekiq_web_url)
   end
 
   def assistant_icon

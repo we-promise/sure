@@ -13,6 +13,16 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_not @import.pdf_uploaded?
   end
 
+  test "pdf_uploaded? returns true for statement backed import" do
+    statement = create_pdf_statement
+    import = PdfImport.create_from_statement!(statement: statement)
+
+    assert import.pdf_uploaded?
+    assert import.statement_backed?
+    assert_equal statement.original_file.download, import.pdf_file_content
+    assert_equal statement.filename, import.pdf_filename
+  end
+
   test "ai_processed? returns false when no summary present" do
     assert_not @import.ai_processed?
   end
@@ -77,9 +87,40 @@ class PdfImportTest < ActiveSupport::TestCase
   end
 
   test "process_with_ai_later enqueues ProcessPdfJob" do
-    assert_enqueued_with job: ProcessPdfJob, args: [ @import ] do
-      @import.process_with_ai_later
+    import = PdfImport.create_from_statement!(statement: create_pdf_statement)
+
+    assert_enqueued_with job: ProcessPdfJob, args: [ import ] do
+      assert import.process_with_ai_later
     end
+
+    assert_equal "importing", import.reload.status
+  end
+
+  test "process_with_ai_later does not enqueue duplicate jobs while importing" do
+    import = PdfImport.create_from_statement!(statement: create_pdf_statement)
+
+    assert_enqueued_jobs 1, only: ProcessPdfJob do
+      assert import.process_with_ai_later
+      assert_not import.reload.process_with_ai_later
+    end
+
+    assert_equal "importing", import.reload.status
+  end
+
+  test "process_with_ai_later does not claim import without pdf content" do
+    assert_no_enqueued_jobs only: ProcessPdfJob do
+      assert_not @import.process_with_ai_later
+    end
+
+    assert_equal "pending", @import.reload.status
+  end
+
+  test "process_with_ai_later resets pending when enqueue fails" do
+    import = PdfImport.create_from_statement!(statement: create_pdf_statement)
+    ProcessPdfJob.stubs(:perform_later).raises(StandardError, "queue offline")
+
+    assert_not import.process_with_ai_later
+    assert_equal "pending", import.reload.status
   end
 
   test "generate_rows_from_extracted_data creates import rows" do
@@ -163,4 +204,111 @@ class PdfImportTest < ActiveSupport::TestCase
 
     assert_not ActiveStorage::Attachment.exists?(attachment_id)
   end
+
+  test "destroying statement backed import keeps statement file" do
+    statement = create_pdf_statement
+    import = PdfImport.create_from_statement!(statement: statement)
+    attachment_id = statement.original_file.id
+
+    perform_enqueued_jobs do
+      import.destroy!
+    end
+
+    assert ActiveStorage::Attachment.exists?(attachment_id)
+  end
+
+  test "statement backed import prevents source statement destroy" do
+    statement = create_pdf_statement
+    import = PdfImport.create_from_statement!(statement: statement)
+
+    assert_no_difference "AccountStatement.count" do
+      assert_not statement.destroy
+    end
+
+    assert_equal statement, import.reload.account_statement
+  end
+
+  test "statement backed import memoizes pdf content" do
+    statement = create_pdf_statement
+    import = PdfImport.create_from_statement!(statement: statement)
+    statement.original_file.expects(:download).once.returns("%PDF-test")
+
+    assert_equal "%PDF-test", import.pdf_file_content
+    assert_equal "%PDF-test", import.pdf_file_content
+  end
+
+  test "statement backed import reuse requires current account and date format" do
+    statement = create_pdf_statement
+    stale_import = PdfImport.create_from_statement!(statement: statement)
+    formats = Family::DATE_FORMATS.map(&:last)
+    alternate_date_format = (formats - [ statement.family.date_format ]).first || "#{statement.family.date_format}-alternate"
+    stale_import.update!(account: nil, date_format: alternate_date_format)
+
+    fresh_import = PdfImport.create_from_statement!(statement: statement)
+
+    assert_not_equal stale_import, fresh_import
+    assert_equal statement.account, fresh_import.account
+    assert_equal statement.family.date_format, fresh_import.date_format
+  end
+
+  test "statement backed import reuses matching reusable import" do
+    statement = create_pdf_statement
+    existing_import = PdfImport.create_from_statement!(statement: statement)
+
+    assert_equal existing_import, PdfImport.create_from_statement!(statement: statement)
+  end
+
+  test "assigning account links statement backed import statement" do
+    statement = create_pdf_statement(account: nil)
+    import = PdfImport.create_from_statement!(statement: statement)
+    account = accounts(:depository)
+
+    import.assign_account!(account)
+
+    assert_equal account, import.reload.account
+    assert_equal account, statement.reload.account
+    assert statement.linked?
+  end
+
+  test "statement backed import requires pdf statement" do
+    csv_statement = AccountStatement.create_from_upload!(
+      family: @import.family,
+      account: nil,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    import = PdfImport.new(family: @import.family, account_statement: csv_statement)
+
+    assert_not import.valid?
+    assert import.errors[:account_statement].present?
+  end
+
+  test "statement backed import requires statement from same family" do
+    statement = AccountStatement.create_from_upload!(
+      family: families(:empty),
+      account: nil,
+      file: uploaded_file(
+        filename: "other_family_statement.pdf",
+        content_type: "application/pdf",
+        content: file_fixture("imports/sample_bank_statement.pdf").binread
+      )
+    )
+    import = PdfImport.new(family: @import.family, account_statement: statement)
+
+    assert_not import.valid?
+    assert import.errors[:account_statement].present?
+  end
+
+  private
+
+    def create_pdf_statement(account: accounts(:depository))
+      AccountStatement.create_from_upload!(
+        family: @import.family,
+        account: account,
+        file: uploaded_file(
+          filename: "sample_bank_statement.pdf",
+          content_type: "application/pdf",
+          content: file_fixture("imports/sample_bank_statement.pdf").binread
+        )
+      )
+    end
 end

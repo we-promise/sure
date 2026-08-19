@@ -196,23 +196,14 @@ class Transaction::Search
       return query unless statuses.present?
       return query if statuses.uniq.sort == [ "confirmed", "pending" ] # Both selected = no filter
 
-      pending_condition = <<~SQL.squish
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-      SQL
-
-      confirmed_condition = <<~SQL.squish
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS DISTINCT FROM true
-        AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS DISTINCT FROM true
-        AND (transactions.extra -> 'lunchflow' ->> 'pending')::boolean IS DISTINCT FROM true
-      SQL
-
+      # Delegate to the model scopes so the provider list stays sourced from
+      # Transaction::PENDING_PROVIDERS. Previously this method hardcoded only
+      # simplefin/plaid/lunchflow, silently dropping enable_banking transactions.
       case statuses.sort
       when [ "pending" ]
-        query.where(pending_condition)
+        query.pending
       when [ "confirmed" ]
-        query.where(confirmed_condition)
+        query.excluding_pending
       else
         query
       end

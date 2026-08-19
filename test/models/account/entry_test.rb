@@ -67,6 +67,30 @@ class EntryTest < ActiveSupport::TestCase
     assert_equal 0, family.entries.search(params).size
   end
 
+  test "status filter matches pending transactions for every supported provider via EntrySearch" do
+    family = families(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    confirmed = create_transaction(account: account, amount: 50, kind: "standard")
+
+    pending_by_provider = Transaction::PENDING_PROVIDERS.index_with do |provider|
+      entry = create_transaction(account: account, amount: 50, kind: "standard")
+      entry.entryable.update!(extra: { provider => { "pending" => true } })
+      entry.id
+    end
+
+    pending_ids = family.entries.search(status: [ "pending" ]).pluck(:id)
+    confirmed_ids = family.entries.search(status: [ "confirmed" ]).pluck(:id)
+
+    pending_by_provider.each do |provider, entry_id|
+      assert_includes pending_ids, entry_id, "#{provider} pending entry should match the pending filter"
+      assert_not_includes confirmed_ids, entry_id, "#{provider} pending entry should be excluded from the confirmed filter"
+    end
+
+    assert_includes confirmed_ids, confirmed.id
+    assert_not_includes pending_ids, confirmed.id
+  end
+
   test "visible scope only returns entries from visible accounts" do
     # Create transactions for all account types
     visible_transaction = create_transaction(account: accounts(:depository), name: "Visible transaction")

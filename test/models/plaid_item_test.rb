@@ -44,4 +44,46 @@ class PlaidItemTest < ActiveSupport::TestCase
       @plaid_item.destroy
     end
   end
+
+  test "get_update_link_token marks item as requires_update and returns nil on ITEM_NOT_FOUND" do
+    error_response = { "error_code" => "ITEM_NOT_FOUND", "error_message" => "not found" }.to_json
+    Family.any_instance.expects(:get_link_token).raises(
+      Plaid::ApiError.new(code: 400, response_body: error_response)
+    )
+
+    result = @plaid_item.get_update_link_token(webhooks_url: "https://x", redirect_url: "https://x")
+
+    assert_nil result
+    assert_predicate @plaid_item.reload, :requires_update?
+  end
+
+  test "get_update_link_token re-raises other Plaid errors so the controller can surface them" do
+    # Issue #1792: silently swallowing all Plaid errors here is what made the
+    # "modal closes with nothing happening" experience so opaque.
+    error_response = { "error_code" => "INVALID_PRODUCT", "error_message" => "Your account is not enabled..." }.to_json
+    Family.any_instance.expects(:get_link_token).raises(
+      Plaid::ApiError.new(code: 400, response_body: error_response)
+    )
+
+    assert_raises(Plaid::ApiError) do
+      @plaid_item.get_update_link_token(webhooks_url: "https://x", redirect_url: "https://x")
+    end
+    assert_predicate @plaid_item.reload, :good?
+  end
+
+  test "get_update_link_token tolerates a Plaid::ApiError with a nil/blank response_body" do
+    # Plaid clients have been observed raising ApiError without a response
+    # body (network-layer failures, early aborts). The old JSON.parse would
+    # blow up with TypeError before the rescue could fire; we now coerce
+    # to String so the parse falls back to {} and the error re-raises
+    # cleanly for the controller to handle.
+    Family.any_instance.expects(:get_link_token).raises(
+      Plaid::ApiError.new(code: 500, response_body: nil)
+    )
+
+    assert_raises(Plaid::ApiError) do
+      @plaid_item.get_update_link_token(webhooks_url: "https://x", redirect_url: "https://x")
+    end
+    assert_predicate @plaid_item.reload, :good?
+  end
 end

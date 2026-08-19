@@ -2,6 +2,103 @@ class PdfImport < Import
   has_one_attached :pdf_file, dependent: :purge_later
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
+  validate :account_statement_matches_import
+
+  class << self
+    # PdfImport's importing status doubles as a processing claim: the AI
+    # extraction claim from process_with_ai_later (no rows yet) or a regular
+    # publish (rows being written). A lost job leaves the claim held forever —
+    # ProcessPdfJob's own reclaim only runs when the job is redelivered.
+    # Which claim died is observable from the data: no rows attached → the AI
+    # claim, reclaim to pending so the user can re-trigger; rows attached →
+    # the publish died after import!'s commit, so finalize as complete
+    # (pending would let the user publish the same extracted rows again —
+    # PdfImport#import! always builds new transactions). Stuck reverts go to
+    # revert_failed like every other import, keeping the retry path exposed.
+    def clean
+      where(status: [ :importing, :reverting ])
+        .where("updated_at < ?", Import::STUCK_AFTER.ago)
+        .includes(:family)
+        .find_each do |pdf_import|
+          reap_stuck!(pdf_import)
+        rescue => e
+          # One bad record must not abort the sweep for the rest.
+          Rails.logger.error("PdfImport.clean failed for #{pdf_import.id}: #{e.class}: #{e.message}")
+          Sentry.capture_exception(e) { |scope| scope.set_tags(record_type: name, record_id: pdf_import.id) } if defined?(Sentry)
+        end
+    end
+
+    def reap_stuck!(pdf_import)
+      needs_sync = false
+      # Read before the lock — see Import.reap_stuck!.
+      family = pdf_import.family
+
+      pdf_import.with_lock do
+        next unless pdf_import.reapable_since?(Import::STUCK_AFTER.ago)
+
+        previous_status = pdf_import.status
+        if previous_status == "reverting"
+          pdf_import.update!(status: :revert_failed, error: Import.interrupted_error_message)
+        elsif pdf_import.data_committed?
+          pdf_import.update!(status: :complete, error: nil)
+          needs_sync = true
+        else
+          pdf_import.update!(status: :pending)
+        end
+
+        DebugLogEntry.capture(
+          category: "background_jobs",
+          level: "warn",
+          message: "Reclaimed PdfImport stuck in #{previous_status} for over #{Import::STUCK_AFTER.inspect} (→ #{pdf_import.status})",
+          source: name,
+          family: family,
+          metadata: { record_type: name, record_id: pdf_import.id, previous_status: previous_status, new_status: pdf_import.status }
+        )
+      end
+
+      # Outside the row lock — see Import.reap_stuck!.
+      family.sync_later if needs_sync
+    end
+
+    def create_from_upload!(family:, file:, user:)
+      statement = AccountStatement.create_from_prepared_upload!(
+        family: family,
+        account: nil,
+        prepared_upload: AccountStatement.prepare_upload!(file)
+      )
+
+      create_from_statement!(statement: statement)
+    rescue AccountStatement::DuplicateUploadError => e
+      raise unless e.statement.manageable_by?(user)
+
+      create_from_statement!(statement: e.statement)
+    end
+
+    def create_from_statement!(statement:)
+      reusable_import = statement.latest_reusable_pdf_import
+      return reusable_import if reusable_import &&
+                                reusable_import.account_id == statement.account_id &&
+                                reusable_import.date_format == statement.family.date_format
+
+      create!(family: statement.family, account: statement.account, account_statement: statement, date_format: statement.family.date_format, status: :pending)
+    end
+  end
+
+  # A PdfImport's importing status is a processing claim (AI extraction or
+  # publish). Release a lost claim back to pending so the user can re-trigger
+  # processing, mirroring ProcessPdfJob's own reclaim; lost reverts keep the
+  # base revert_failed behavior.
+  def force_fail!(error_message = Import.lost_error_message)
+    return super if reverting?
+
+    with_lock do
+      return false unless presumed_lost?
+
+      update!(status: :pending)
+    end
+
+    true
+  end
 
   def import!
     raise "Account required for PDF import" unless account.present?
@@ -31,8 +128,18 @@ class PdfImport < Import
     end
   end
 
+  def assign_account!(account)
+    transaction do
+      update!(account: account)
+      if (statement = account_statement)
+        statement.lock!
+        statement.link_to_account!(account) if statement.account_id != account.id
+      end
+    end
+  end
+
   def pdf_uploaded?
-    pdf_file.attached?
+    statement_backed? || pdf_file.attached?
   end
 
   def ai_processed?
@@ -40,11 +147,22 @@ class PdfImport < Import
   end
 
   def process_with_ai_later
-    ProcessPdfJob.perform_later(self)
+    return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing) }
+
+    begin
+      ProcessPdfJob.perform_later(self)
+      true
+    rescue StandardError => e
+      Rails.logger.error("Failed to enqueue PDF processing for import #{id}: #{e.class.name} - #{e.message}")
+      reload.with_lock { update!(status: :pending) }
+      false
+    end
   end
 
   def process_with_ai
-    provider = Provider::Registry.get_provider(:openai)
+    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
+    # process_pdf (PR #1985).
+    provider = Provider::Registry.preferred_llm_provider
     raise "AI provider not configured" unless provider
     raise "AI provider does not support PDF processing" unless provider.supports_pdf_processing?
 
@@ -70,7 +188,9 @@ class PdfImport < Import
   def extract_transactions
     return unless statement_with_transactions?
 
-    provider = Provider::Registry.get_provider(:openai)
+    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
+    # extract_bank_statement (PR #1985).
+    provider = Provider::Registry.preferred_llm_provider
     raise "AI provider not configured" unless provider
 
     response = provider.extract_bank_statement(
@@ -172,9 +292,20 @@ class PdfImport < Import
   end
 
   def pdf_file_content
-    return nil unless pdf_file.attached?
+    return @pdf_file_content if defined?(@pdf_file_content)
+    return @pdf_file_content = account_statement.original_file.download if statement_backed?
 
-    pdf_file.download
+    @pdf_file_content = pdf_file.download if pdf_file.attached?
+  end
+
+  def pdf_filename
+    return account_statement.filename if statement_backed?
+
+    pdf_file.filename.to_s if pdf_file.attached?
+  end
+
+  def statement_backed?
+    account_statement&.original_file&.attached?
   end
 
   def required_column_keys
@@ -198,5 +329,11 @@ class PdfImport < Import
       Date.parse(date_str).strftime(date_format)
     rescue ArgumentError
       date_str.to_s
+    end
+
+    def account_statement_matches_import
+      return if account_statement.blank? || (account_statement.family_id == family_id && account_statement.pdf?)
+
+      errors.add(:account_statement, :invalid)
     end
 end

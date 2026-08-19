@@ -41,7 +41,9 @@ hu:
       none: (egyik sem)
       note_label: Megjegyzések
       note_placeholder: Megjegyzés írása
+      create_tag: Létrehozás
       submit: Tranzakció hozzáadása
+      tag_search_placeholder: Címke keresése vagy létrehozása
       tags_label: Címkék
       transfer: Átutalás
     create:

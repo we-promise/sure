@@ -4,8 +4,6 @@ ca:
     authorize:
       authorization_failed: 'No s''ha pogut iniciar l''autorització: %{message}'
       bank_required: Selecciona un banc.
-      decoupled_not_supported: Aquest banc utilitza un mètode d'autenticació amb dispositiu
-        separat que encara no està admès. Afegeix aquest compte manualment.
       invalid_redirect: L'URL d'autorització rebuda no és vàlida. Torna-ho a provar.
       redirect_uri_not_allowed: Redirecció no permesa. Configura `%{callback_url}`
         a la configuració de la teva aplicació Enable Banking.

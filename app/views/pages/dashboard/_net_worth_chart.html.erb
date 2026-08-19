@@ -13,20 +13,13 @@
         <p class="text-sm text-secondary"><%= t(".data_not_available") %></p>
       <% end %>
     </div>
-
-    <%= form_with url: root_path, method: :get, data: { controller: "auto-submit-form", turbo_frame: "_top" } do |form| %>
-      <%= form.select :period,
-                    Period.as_options,
-                    { selected: period.key },
-                    data: { "auto-submit-form-target": "auto" },
-                    class: "bg-container border border-secondary font-medium rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
-    <% end %>
   </div>
 
   <% if series.any? %>
     <div
     id="netWorthChart"
-    class="w-full flex-1 min-h-52 privacy-sensitive"
+    class="w-full min-h-52 privacy-sensitive"
+    style="height: var(--dash-widget-h, 13rem);"
     data-controller="time-series-chart"
     data-time-series-chart-data-value="<%= series.to_json %>"></div>
   <% else %>

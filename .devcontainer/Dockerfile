@@ -1,4 +1,4 @@
-ARG RUBY_VERSION=3.4.7
+ARG RUBY_VERSION=3.4.9
 FROM ruby:${RUBY_VERSION}-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive

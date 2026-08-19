@@ -1,0 +1,7 @@
+---
+vi:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Không thể hủy liên kết danh tính cuối cùng
+        success: Đã hủy liên kết danh tính SSO thành công

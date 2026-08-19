@@ -1,0 +1,29 @@
+---
+vi:
+  users:
+    destroy:
+      success: Tài khoản của bạn đã được xóa.
+    update:
+      email_change_failed: Không thể thay đổi địa chỉ email.
+      email_change_initiated: Vui lòng kiểm tra địa chỉ email mới của bạn để xác nhận thay đổi.
+      success: Hồ sơ của bạn đã được cập nhật.
+    resend_confirmation_email:
+      success: Email xác nhận mới đã được xếp vào hàng chờ gửi.
+      no_pending_change: Hiện không có thay đổi email nào đang chờ xử lý!
+    reset:
+      success: Tài khoản của bạn đã được đặt lại. Dữ liệu sẽ được xóa trong nền sau một thời gian.
+      unauthorized: Bạn không được phép thực hiện hành động này
+    reset_with_sample_data:
+      success: Tài khoản của bạn đã được đặt lại và dữ liệu mẫu đang được chuẩn bị. Bạn sẽ thấy dữ liệu demo trong giây lát.
+    roles:
+      admin: Quản trị viên
+      member: Thành viên
+      super_admin: Quản trị viên cấp cao
+    user_menu:
+      aria_label: Mở menu tài khoản
+      version: Phiên bản
+      settings: Cài đặt
+      changelog: Nhật ký thay đổi
+      feedback: Phản hồi
+      contact: Liên hệ
+      log_out: Đăng xuất

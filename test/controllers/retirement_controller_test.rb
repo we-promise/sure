@@ -4,6 +4,7 @@ class RetirementControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
     @family = @user.family
+    ensure_tailwind_build
   end
 
   test "show redirects to setup when no config exists" do

@@ -2,9 +2,14 @@ require "test_helper"
 
 class Provider::RegistryTest < ActiveSupport::TestCase
   test "providers filters out nil values when provider is not configured" do
-    # Ensure OpenAI is not configured
-    ClimateControl.modify("OPENAI_ACCESS_TOKEN" => nil) do
+    # Ensure no LLM provider is configured
+    ClimateControl.modify(
+      "OPENAI_ACCESS_TOKEN" => nil,
+      "ANTHROPIC_ACCESS_TOKEN" => nil,
+      "ANTHROPIC_API_KEY" => nil
+    ) do
       Setting.stubs(:openai_access_token).returns(nil)
+      Setting.stubs(:anthropic_access_token).returns(nil)
 
       registry = Provider::Registry.for_concept(:llm)
 
@@ -45,6 +50,44 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     end
   end
 
+  test "anthropic provider returns nil when no credentials are configured" do
+    ClimateControl.modify(
+      "ANTHROPIC_ACCESS_TOKEN" => nil,
+      "ANTHROPIC_API_KEY" => nil
+    ) do
+      Setting.stubs(:anthropic_access_token).returns(nil)
+
+      assert_nil Provider::Registry.get_provider(:anthropic)
+    end
+  end
+
+  test "anthropic provider initializes from ANTHROPIC_API_KEY env" do
+    ClimateControl.modify("ANTHROPIC_API_KEY" => "fake-anthropic-key-for-tests", "ANTHROPIC_ACCESS_TOKEN" => nil) do
+      Setting.stubs(:anthropic_access_token).returns(nil)
+
+      provider = Provider::Registry.get_provider(:anthropic)
+
+      assert_instance_of Provider::Anthropic, provider
+    end
+  end
+
+  test "anthropic provider falls back to Setting when ENV is empty" do
+    ClimateControl.modify(
+      "ANTHROPIC_ACCESS_TOKEN" => "",
+      "ANTHROPIC_API_KEY" => "",
+      "ANTHROPIC_BASE_URL" => "",
+      "ANTHROPIC_MODEL" => ""
+    ) do
+      Setting.stubs(:anthropic_access_token).returns("fake-anthropic-key-from-setting")
+      Setting.stubs(:anthropic_base_url).returns(nil)
+      Setting.stubs(:anthropic_model).returns(nil)
+
+      provider = Provider::Registry.get_provider(:anthropic)
+
+      assert_instance_of Provider::Anthropic, provider
+    end
+  end
+
   test "openai provider falls back to Setting when ENV is empty string" do
     # Mock ENV to return empty string (common in Docker/env files)
     # Use stub_env helper which properly stubs ENV access
@@ -63,5 +106,40 @@ class Provider::RegistryTest < ActiveSupport::TestCase
       assert_not_nil provider
       assert_instance_of Provider::Openai, provider
     end
+  end
+
+  test "preferred_llm_provider returns openai by default" do
+    openai = mock("openai")
+    Provider::Registry.stubs(:openai).returns(openai)
+    Provider::Registry.stubs(:anthropic).returns(mock("anthropic"))
+    Setting.stubs(:llm_provider).returns("openai")
+
+    assert_same openai, Provider::Registry.preferred_llm_provider
+  end
+
+  test "preferred_llm_provider returns anthropic when selected" do
+    anthropic = mock("anthropic")
+    Provider::Registry.stubs(:openai).returns(mock("openai"))
+    Provider::Registry.stubs(:anthropic).returns(anthropic)
+    Setting.stubs(:llm_provider).returns("anthropic")
+
+    assert_same anthropic, Provider::Registry.preferred_llm_provider
+  end
+
+  test "preferred_llm_provider falls back to the configured provider when the selected one is unconfigured" do
+    openai = mock("openai")
+    Provider::Registry.stubs(:openai).returns(openai)
+    Provider::Registry.stubs(:anthropic).returns(nil)
+    Setting.stubs(:llm_provider).returns("anthropic")
+
+    assert_same openai, Provider::Registry.preferred_llm_provider
+  end
+
+  test "preferred_llm_provider returns nil when no provider is configured" do
+    Provider::Registry.stubs(:openai).returns(nil)
+    Provider::Registry.stubs(:anthropic).returns(nil)
+    Setting.stubs(:llm_provider).returns("openai")
+
+    assert_nil Provider::Registry.preferred_llm_provider
   end
 end

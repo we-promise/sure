@@ -1,0 +1,46 @@
+---
+it:
+  concerns:
+    self_hostable:
+      redis_configured: "Redis è ora configurato correttamente! Puoi procedere con la configurazione della tua applicazione."
+  shared:
+    dot_separator: "·"
+    preview: Anteprima
+    sync_toast:
+      message: "Nuovi dati disponibili"
+      refresh: "Aggiorna"
+    confirm_modal:
+      accept: Conferma
+      body_html: "<p>Non potrai annullare questa decisione</p>"
+      cancel: Annulla
+      title: Sei sicuro?
+    money_field:
+      label: Importo
+    exchange_rate_tabs:
+      calculate_rate_tab: Calcola tasso di cambio
+      convert_tab: Converti con tasso di cambio
+      destination_amount: Importo di destinazione
+      exchange_rate: Tasso di cambio
+      exchange_rate_help: Scegli come inserire l'importo.
+    syncing_notice:
+      syncing: Sincronizzazione dati conti in corso...
+    require_admin: "Solo gli amministratori possono eseguire questa azione"
+    custom_confirm:
+      default_title: "Sei sicuro?"
+      default_body: "Questa operazione non è reversibile."
+      default_btn_text: "Conferma"
+      resource_deletion_title: "Eliminare %{resource}?"
+      resource_deletion_body: "Sei sicuro di voler eliminare %{resource}? Questa operazione non è reversibile."
+      resource_deletion_btn_text: "Elimina %{resource}"
+    family_moniker:
+      group_plural: Gruppi
+      group_singular: Gruppo
+      plural: Famiglie
+      singular: Famiglia
+    trend_change:
+      no_change: "nessuna variazione"
+    cancel: Annulla
+    transaction_tabs:
+      expense: Spesa
+      income: Entrata
+      transfer: Bonifico

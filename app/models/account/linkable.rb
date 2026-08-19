@@ -52,6 +52,11 @@ module Account::Linkable
     account_provider&.adapter
   end
 
+  # Returns the raw provider account record (e.g. EnableBankingAccount) for a specific provider type
+  def provider_account_for(provider_type)
+    account_providers.find_by(provider_type: provider_type)&.provider
+  end
+
   # Convenience method to get the provider name
   def provider_name
     # Try new system first
@@ -67,6 +72,13 @@ module Account::Linkable
   # Check if account is linked to a specific provider
   def linked_to?(provider_type)
     account_providers.exists?(provider_type: provider_type)
+  end
+
+  # Whether this account's provider applies the category matcher to imported
+  # transactions. Only Plaid honors `enable_category_matcher` today; extend this
+  # when other providers (e.g. SimpleFIN) wire up category matching.
+  def supports_category_matcher?
+    plaid_account.present? || linked_to?("PlaidAccount")
   end
 
   # Check if holdings can be deleted

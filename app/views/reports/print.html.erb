@@ -210,6 +210,17 @@
             </span>
           </div>
         <% end %>
+        <% if @investment_metrics[:period_return_trend] %>
+          <div class="tufte-metric-card tufte-metric-card-sm">
+            <span class="tufte-metric-card-label"><%= t("reports.print.investments.period_return") %></span>
+            <span class="tufte-metric-card-value" style="color: <%= @investment_metrics[:period_return_trend].color %>">
+              <%= @investment_metrics[:period_return_trend].value >= 0 ? "+" : "" %><%= format_money(Money.new(@investment_metrics[:period_return_trend].value, Current.family.currency)) %>
+            </span>
+            <span class="tufte-metric-card-change" style="color: <%= @investment_metrics[:period_return_trend].color %>">
+              <%= @investment_metrics[:period_return_trend].percent_formatted %>
+            </span>
+          </div>
+        <% end %>
         <div class="tufte-metric-card tufte-metric-card-sm">
           <span class="tufte-metric-card-label"><%= t("reports.print.investments.contributions") %></span>
           <span class="tufte-metric-card-value tufte-income"><%= format_money(@investment_metrics[:period_contributions]) %></span>

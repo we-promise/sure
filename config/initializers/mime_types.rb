@@ -8,3 +8,6 @@ Mime::Type.register "application/vnd.openxmlformats-officedocument.spreadsheetml
 
 # Register .mjs so Propshaft serves ES modules with the correct Content-Type.
 Mime::Type.register "text/javascript", :mjs unless Mime::Type.lookup_by_extension(:mjs)
+
+# Service Worker
+Mime::Type.register "application/javascript", :serviceworker

@@ -97,7 +97,7 @@ RSpec.describe 'API V1 Imports', type: :request do
                 schema: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] }
       parameter name: :type, in: :query, required: false,
                 description: 'Filter by import type',
-                schema: { type: :string, enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport] }
+                schema: { type: :string, enum: Import::TYPES }
 
       response '200', 'imports listed' do
         schema '$ref' => '#/components/schemas/ImportCollection'
@@ -138,7 +138,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport],
+            enum: Import::TYPES,
             description: 'Import type (defaults to TransactionImport)'
           },
           account_id: {
@@ -250,7 +250,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - file too large' do
+      response '422', 'validation error or publish rejection' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
           { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }
@@ -269,9 +269,22 @@ RSpec.describe 'API V1 Imports', type: :request do
       response '500', 'import uploaded but publish enqueue failed' do
         schema '$ref' => '#/components/schemas/ErrorResponseWithImportId'
 
+        before do
+          allow(ImportJob).to receive(:perform_later).and_raise(StandardError, 'queue offline')
+        end
+
         let(:body) do
           {
-            raw_file_content: { type: 'Account', data: { id: 'account_1', name: 'Checking' } }.to_json,
+            raw_file_content: {
+              type: 'Account',
+              data: {
+                id: 'account_1',
+                name: 'Checking',
+                balance: '100',
+                currency: 'USD',
+                accountable_type: 'Depository'
+              }
+            }.to_json,
             type: 'SureImport',
             publish: 'true'
           }
@@ -388,7 +401,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: %w[TransactionImport TradeImport AccountImport MintImport ActualImport CategoryImport RuleImport SureImport],
+            enum: Import::TYPES,
             description: 'Import type to validate (defaults to TransactionImport)'
           },
           account_id: {

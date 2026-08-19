@@ -1,0 +1,11 @@
+---
+vi:
+  activerecord:
+    errors:
+      models:
+        transaction:
+          attributes:
+            attachments:
+              too_many: "không được vượt quá %{max} tệp mỗi giao dịch"
+              too_large: "tệp %{index} quá lớn (tối đa %{max_mb}MB)"
+              invalid_format: "tệp %{index} có định dạng không được hỗ trợ (%{file_format})"

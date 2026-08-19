@@ -7,7 +7,7 @@
   <%= turbo_frame_tag dom_id(transaction) do %>
     <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= "pl-8 lg:pl-12" if in_split_group %>">
 
-      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
+      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-7 min-w-0">
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
             class: "checkbox checkbox--light hidden lg:block",
@@ -153,7 +153,21 @@
                 <div class="text-secondary text-xs font-normal">
                   <% if transaction.transfer? %>
                     <span class="text-secondary">
-                      <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> • <%= entry.account.name %>
+                      <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> •
+                      <% if transaction.transfer.present? %>
+                        <% counterpart = transaction.transfer_as_outflow.present? ? transaction.transfer.to_account : transaction.transfer.from_account %>
+                        <% if counterpart.present? && @accessible_account_ids&.include?(counterpart.id) %>
+                          <% if transaction.transfer_as_outflow.present? %>
+                            <%= entry.account.name %> → <%= counterpart.name %>
+                          <% else %>
+                            <%= entry.account.name %> ← <%= counterpart.name %>
+                          <% end %>
+                        <% else %>
+                          <%= entry.account.name %>
+                        <% end %>
+                      <% else %>
+                        <%= entry.account.name %>
+                      <% end %>
                     </span>
                   <% else %>
                     <% if transaction.merchant&.present? %>
@@ -179,9 +193,9 @@
         </div>
       </div>
 
-      <div class="hidden md:flex min-w-0 items-center gap-1 col-span-2">
-        <% if entry.account.investment? && !transaction.transfer? %>
-          <%# For investment accounts, show activity label instead of category %>
+      <div class="hidden md:flex min-w-0 items-center gap-1 col-span-3">
+        <% if entry.account.supports_trades? && !transaction.transfer? %>
+          <%# For investment/crypto accounts, show activity label instead of category %>
           <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: transaction %>
         <% else %>
           <%= render "transactions/transaction_category", transaction: transaction, variant: "desktop", in_split_group: in_split_group %>

@@ -1,10 +1,9 @@
 <%# locals: (name:, categories:, selected_id: nil) %>
 <%
   selected_category = categories.find { |c| c.id == selected_id }
-  default_color = "#737373"
 %>
 
-<div class="category-select-container relative flex-1 md:flex-none md:w-44" data-controller="select list-filter form-dropdown category-badge-select" data-action="dropdown:select->form-dropdown#onSelect dropdown:select->category-badge-select#updateButton">
+<div class="category-select-container relative flex-1 md:flex-initial md:w-auto md:min-w-44 md:max-w-72" data-controller="select list-filter form-dropdown category-badge-select" data-action="dropdown:select->form-dropdown#onSelect dropdown:select->category-badge-select#updateButton">
   <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.category_label") %></label>
   <input type="hidden"
          name="<%= name %>"
@@ -18,21 +17,24 @@
           aria-haspopup="listbox"
           aria-expanded="false">
     <% if selected_category %>
-      <% hex_color = selected_category.color.presence || default_color %>
-      <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border truncate"
-            style="background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent); border-color: color-mix(in oklab, <%= hex_color %> 20%, transparent); color: <%= hex_color %>;">
-        <% if selected_category.lucide_icon.present? %>
-          <%= icon selected_category.lucide_icon, size: "sm", color: "current" %>
-        <% else %>
-          <span class="size-1.5 rounded-full" style="background-color: <%= hex_color %>;"></span>
-        <% end %>
-        <%= selected_category.name %>
-      </span>
+      <%# Same DS::Pill shape as the canonical categories/badge partial; rendered
+          directly (without its div wrapper) because a button only allows
+          phrasing content. category-badge-select clones the option's pill into
+          this button on selection, so both must stay the same markup. %>
+      <%= render DS::Pill.new(
+            label: selected_category.display_name,
+            custom_color: selected_category.color,
+            icon: selected_category.lucide_icon.presence,
+            icon_size: "sm",
+            marker: false,
+            size: :md,
+            truncate: true,
+            title: selected_category.display_name) %>
     <% else %>
       <%= t("splits.new.uncategorized") %>
     <% end %>
   </button>
-  <div class="absolute z-50 p-1.5 w-full min-w-48 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
+  <div class="absolute z-50 p-1.5 w-full min-w-48 md:w-80 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden" data-select-target="menu">
     <div class="flex items-center bg-container border border-secondary rounded-lg mb-1 focus-within:ring-4 focus-within:ring-alpha-black-200 theme-dark:focus-within:ring-alpha-white-300 transition-shadow">
       <%= render DS::SearchInput.new(
         variant: :embedded,
@@ -61,26 +63,17 @@
 
       <% categories.each do |category| %>
         <% is_selected = category.id == selected_id %>
-        <% hex_color = category.color.presence || default_color %>
         <div class="filterable-item text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
              role="option"
              tabindex="0"
              aria-selected="<%= is_selected %>"
              data-action="click->select#select"
              data-value="<%= category.id %>"
-             data-filter-name="<%= category.name %>">
+             data-filter-name="<%= category.display_name %>">
           <span class="check-icon <%= "hidden" unless is_selected %>">
             <%= icon("check") %>
           </span>
-          <span class="flex items-center gap-2 text-sm font-medium rounded-full px-3 py-1 border truncate"
-                style="background-color: color-mix(in oklab, <%= hex_color %> 10%, transparent); border-color: color-mix(in oklab, <%= hex_color %> 20%, transparent); color: <%= hex_color %>;">
-            <% if category.lucide_icon.present? %>
-              <%= icon category.lucide_icon, size: "sm", color: "current" %>
-            <% else %>
-              <span class="size-1.5 rounded-full" style="background-color: <%= hex_color %>;"></span>
-            <% end %>
-            <%= category.name %>
-          </span>
+          <%= render partial: "categories/badge", locals: { category: category } %>
         </div>
       <% end %>
     </div>

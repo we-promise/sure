@@ -5,6 +5,10 @@ en:
       success: Account linked successfully.  Please wait for accounts to sync.
     destroy:
       success: Accounts scheduled for deletion.
+    errors:
+      link_token_generic: We couldn't open Plaid right now. Please try again, and
+        if the problem persists check the server logs for details.
+      link_token_with_message: "Plaid couldn't open the connection: %{message}"
     plaid_item:
       add_new: Add new connection
       confirm_accept: Delete institution

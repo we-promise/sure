@@ -35,6 +35,8 @@ class User < ApplicationRecord
   has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
   has_many :shared_accounts, through: :account_shares, source: :account
+  has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
+  has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy
   accepts_nested_attributes_for :family, update_only: true
 
   MFA_BACKUP_CODE_COUNT = 8
@@ -56,6 +58,17 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
   enum :role, { guest: "guest", member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+
+  # SQL counterpart to #preview_features_enabled?, for callers that filter
+  # users (or their families) in one query instead of loading and iterating.
+  # The `@>` containment operator uses index_users_on_preferences (GIN) and
+  # matches only a JSON boolean true, so it agrees with that predicate's
+  # strict `== true` — a stray "yes" enables neither.
+  scope :with_preview_features, -> {
+    where("preferences @> ?", { preview_features_enabled: true }.to_json)
+  }
+
+  attribute :ui_layout, :string
   enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
 
   before_validation :apply_ui_layout_defaults
@@ -63,9 +76,26 @@ class User < ApplicationRecord
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
-  # get the specified fallback role (typically :admin for family creators).
+  # get the specified admin-capable fallback role.
   def self.role_for_new_family_creator(fallback_role: :admin)
+    fallback_role = fallback_role.to_s.in?(%w[admin super_admin]) ? fallback_role : :admin
+
     User.exists? ? fallback_role : :super_admin
+  end
+
+  class << self
+    def human_attribute_name(attribute, options = {})
+      locale = options[:locale] || I18n.locale
+      moniker = I18n.with_locale(locale) do
+        Current.family&.moniker_label || I18n.t("shared.family_moniker.singular", default: "Family")
+      end
+
+      options = {
+        moniker: moniker
+      }.merge(options)
+
+      super(attribute, options)
+    end
   end
 
   has_one_attached :profile_image, dependent: :purge_later do |attachable|
@@ -128,6 +158,12 @@ class User < ApplicationRecord
     family.accounts.included_in_finances_for(self)
   end
 
+  # Other family members who have granted this user access to their personal
+  # budget (see BudgetShare). Used to build the budget owner switcher.
+  def budget_owners_shared_with_me
+    User.where(id: budget_shares_received.select(:owner_id))
+  end
+
   def display_name
     [ first_name, last_name ].compact.join(" ").presence || email
   end
@@ -157,8 +193,16 @@ class User < ApplicationRecord
     when "external"
       Assistant::External.available_for?(self)
     else
-      ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+      openai_configured? || anthropic_configured?
     end
+  end
+
+  def openai_configured?
+    Provider::Openai.configured?
+  end
+
+  def anthropic_configured?
+    Provider::Anthropic.configured?
   end
 
   def ai_enabled?
@@ -305,6 +349,16 @@ class User < ApplicationRecord
     preferences&.[]("section_order") || default_dashboard_section_order
   end
 
+  # Per-widget height preset override ("compact" | "auto" | "tall"); nil = use default.
+  def dashboard_section_height(section_key)
+    preferences&.dig("dashboard_section_layout", section_key, "height")
+  end
+
+  # Per-widget column-span override ("single" | "full"); nil = use default.
+  def dashboard_section_width(section_key)
+    preferences&.dig("dashboard_section_layout", section_key, "col_span")
+  end
+
   def update_dashboard_preferences(prefs)
     # Use pessimistic locking to ensure atomic read-modify-write
     # This prevents race conditions when multiple sections are collapsed quickly
@@ -315,7 +369,9 @@ class User < ApplicationRecord
       prefs.each do |key, value|
         if value.is_a?(Hash)
           updated_prefs[key] ||= {}
-          updated_prefs[key] = updated_prefs[key].merge(value)
+          # deep_merge so a partial update of one nested dimension (e.g. a widget's
+          # col_span) doesn't clobber a sibling dimension (e.g. its height).
+          updated_prefs[key] = updated_prefs[key].deep_merge(value)
         else
           updated_prefs[key] = value
         end
@@ -354,10 +410,6 @@ class User < ApplicationRecord
   end
 
   # Transactions preferences management
-  def transactions_section_collapsed?(section_key)
-    preferences&.dig("transactions_collapsed_sections", section_key) == true
-  end
-
   def show_split_grouped?
     preferences&.dig("show_split_grouped") != false
   end
@@ -366,26 +418,12 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_two_column") == true
   end
 
-  def preview_features_enabled?
-    preferences&.dig("preview_features_enabled") == true
+  def disable_modal_click_outside?
+    preferences&.dig("disable_modal_click_outside") == true
   end
 
-  def update_transactions_preferences(prefs)
-    transaction do
-      lock!
-
-      updated_prefs = (preferences || {}).deep_dup
-      prefs.each do |key, value|
-        if value.is_a?(Hash)
-          updated_prefs["transactions_#{key}"] ||= {}
-          updated_prefs["transactions_#{key}"] = updated_prefs["transactions_#{key}"].merge(value)
-        else
-          updated_prefs["transactions_#{key}"] = value
-        end
-      end
-
-      update!(preferences: updated_prefs)
-    end
+  def preview_features_enabled?
+    preferences&.dig("preview_features_enabled") == true
   end
 
   private
@@ -431,7 +469,7 @@ class User < ApplicationRecord
     end
 
     def default_dashboard_section_order
-      %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet]
+      %w[insights_feed cashflow_sankey outflows_donut net_worth_chart balance_sheet]
     end
 
     def default_reports_section_order

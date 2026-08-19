@@ -10,7 +10,7 @@
 # content? Use `DS::Popover` — `role="menu"` restricts AT users to
 # menuitem-only navigation and breaks anything that isn't an action.
 class DS::Menu < DesignSystemComponent
-  attr_reader :variant, :placement, :offset, :icon_vertical, :no_padding, :testid, :mobile_fullwidth, :max_width, :menu_id
+  attr_reader :variant, :placement, :offset, :icon_vertical, :no_padding, :testid, :mobile_fullwidth, :max_width, :max_height, :menu_id
 
   renders_one :button, ->(**button_options, &block) do
     options_with_target = button_options.deep_dup
@@ -33,7 +33,7 @@ class DS::Menu < DesignSystemComponent
 
   VARIANTS = %i[icon icon_sm button].freeze
 
-  def initialize(variant: "icon", placement: "bottom-end", offset: 12, icon_vertical: false, no_padding: false, testid: nil, mobile_fullwidth: true, max_width: nil)
+  def initialize(variant: "icon", placement: "bottom-end", offset: 12, icon_vertical: false, no_padding: false, testid: nil, mobile_fullwidth: true, max_width: nil, max_height: nil)
     @variant = variant.to_sym
     @placement = placement
     @offset = offset
@@ -42,6 +42,7 @@ class DS::Menu < DesignSystemComponent
     @testid = testid
     @mobile_fullwidth = mobile_fullwidth
     @max_width = max_width
+    @max_height = max_height
     @menu_id = "menu-#{SecureRandom.hex(4)}"
 
     raise ArgumentError, "Invalid variant: #{@variant}. DS::Menu is for action lists only; use DS::Popover for mixed content (forms, pickers, account dropdowns)." unless VARIANTS.include?(@variant)

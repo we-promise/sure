@@ -22,10 +22,14 @@ export default class extends Controller {
     this.fieldsTargets.forEach((el) => {
       if (el.dataset.pensionSystemKey === selected) {
         el.classList.remove("hidden");
-        el.querySelectorAll("input, select").forEach((i) => (i.disabled = false));
+        el.querySelectorAll("input, select").forEach((i) => {
+          i.disabled = false;
+        });
       } else {
         el.classList.add("hidden");
-        el.querySelectorAll("input, select").forEach((i) => (i.disabled = true));
+        el.querySelectorAll("input, select").forEach((i) => {
+          i.disabled = true;
+        });
       }
     });
   }

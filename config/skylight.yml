@@ -1,0 +1,1 @@
+authentication: <%= ENV["SKYLIGHT_AUTHENTICATION"] %>

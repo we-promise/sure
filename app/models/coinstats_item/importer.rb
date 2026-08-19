@@ -3,6 +3,12 @@
 class CoinstatsItem::Importer
   include CoinstatsTransactionIdentifiable
 
+  FETCH_FAILED = Object.new.freeze
+  DEFI_UNSUPPORTED_BLOCKCHAINS = %w[
+    bitcoin btc litecoin ltc dogecoin doge ripple xrp stellar xlm
+    cardano ada polkadot dot cosmos atom
+  ].freeze
+
   attr_reader :coinstats_item, :coinstats_provider
 
   # @param coinstats_item [CoinstatsItem] Item containing accounts to import
@@ -25,6 +31,7 @@ class CoinstatsItem::Importer
     linked_accounts = coinstats_item.coinstats_accounts
                                     .joins(:account_provider)
                                     .includes(:account)
+                                    .order(:created_at, :id)
 
     if linked_accounts.empty?
       Rails.logger.info "CoinstatsItem::Importer - No linked accounts to sync for item #{coinstats_item.id}"
@@ -43,6 +50,19 @@ class CoinstatsItem::Importer
 
     bulk_balance_data = fetch_balances_for_accounts(wallet_accounts)
     bulk_transactions_data = fetch_transactions_for_accounts(wallet_accounts)
+
+    if fetch_failed?(bulk_balance_data) || fetch_failed?(bulk_transactions_data)
+      accounts_failed += wallet_accounts.size
+      Rails.logger.warn "CoinstatsItem::Importer - Wallet bulk fetch failed; preserving existing wallet snapshots for item #{coinstats_item.id}"
+
+      return {
+        success: false,
+        accounts_updated: 0,
+        accounts_failed: accounts_failed,
+        transactions_imported: 0
+      }
+    end
+
     portfolio_coins_data = fetch_portfolio_coins_for_exchange(exchange_accounts)
     portfolio_transactions_data = fetch_portfolio_transactions_for_exchange(exchange_accounts)
 
@@ -110,7 +130,7 @@ class CoinstatsItem::Importer
 
     # Fetch balance data for all linked accounts using the bulk endpoint
     # @param linked_accounts [Array<CoinstatsAccount>] Accounts to fetch balances for
-    # @return [Array<Hash>, nil] Bulk balance data, or nil on error
+    # @return [Array<Hash>, Object] Bulk balance data, or FETCH_FAILED on error
     def fetch_balances_for_accounts(linked_accounts)
       # Extract unique wallet addresses and blockchains
       wallets = linked_accounts.filter_map do |account|
@@ -122,15 +142,29 @@ class CoinstatsItem::Importer
         { address: address, blockchain: blockchain }
       end.uniq { |w| [ w[:address].downcase, w[:blockchain].downcase ] }
 
-      return nil if wallets.empty?
+      return [] if wallets.empty?
 
       Rails.logger.info "CoinstatsItem::Importer - Fetching balances for #{wallets.size} wallet(s) via bulk endpoint"
-      # Build comma-separated string in format "blockchain:address"
-      wallets_param = wallets.map { |w| "#{w[:blockchain]}:#{w[:address]}" }.join(",")
+      # Build comma-separated string in format "blockchain:address". Sort for a
+      # deterministic batch order so the request is stable regardless of the
+      # account query order (otherwise the bulk-endpoint param varies run to run).
+      wallets_param = wallets
+        .sort_by { |w| "#{w[:blockchain]}:#{w[:address]}".downcase }
+        .map { |w| "#{w[:blockchain]}:#{w[:address]}" }
+        .join(",")
       response = coinstats_provider.get_wallet_balances(wallets_param)
-      response.success? ? response.data : nil
+      response.success? ? response.data : FETCH_FAILED
     rescue => e
-      Rails.logger.warn "CoinstatsItem::Importer - Bulk balance fetch failed: #{e.message}"
+      log_debug_event(
+        level: "warn",
+        message: "CoinStats bulk balance fetch failed",
+        metadata: {
+          coinstats_item_id: coinstats_item.id,
+          wallets: wallets.map { |wallet| "#{wallet[:blockchain]}:#{wallet[:address]}" },
+          error_class: e.class.name,
+          error_message: e.message
+        }
+      )
       nil
     end
 
@@ -148,7 +182,7 @@ class CoinstatsItem::Importer
 
     # Fetch transaction data for all linked accounts using the bulk endpoint
     # @param linked_accounts [Array<CoinstatsAccount>] Accounts to fetch transactions for
-    # @return [Array<Hash>, nil] Bulk transaction data, or nil on error
+    # @return [Array<Hash>, Object] Bulk transaction data, or FETCH_FAILED on error
     def fetch_transactions_for_accounts(linked_accounts)
       # Extract unique wallet addresses and blockchains
       wallets = linked_accounts.filter_map do |account|
@@ -160,16 +194,21 @@ class CoinstatsItem::Importer
         { address: address, blockchain: blockchain }
       end.uniq { |w| [ w[:address].downcase, w[:blockchain].downcase ] }
 
-      return nil if wallets.empty?
+      return [] if wallets.empty?
 
       Rails.logger.info "CoinstatsItem::Importer - Fetching transactions for #{wallets.size} wallet(s) via bulk endpoint"
-      # Build comma-separated string in format "blockchain:address"
-      wallets_param = wallets.map { |w| "#{w[:blockchain]}:#{w[:address]}" }.join(",")
+      # Build comma-separated string in format "blockchain:address". Sort for a
+      # deterministic batch order so the request is stable regardless of the
+      # account query order (otherwise the bulk-endpoint param varies run to run).
+      wallets_param = wallets
+        .sort_by { |w| "#{w[:blockchain]}:#{w[:address]}".downcase }
+        .map { |w| "#{w[:blockchain]}:#{w[:address]}" }
+        .join(",")
       response = coinstats_provider.get_wallet_transactions(wallets_param)
-      response.success? ? response.data : nil
+      response.success? ? response.data : FETCH_FAILED
     rescue => e
       Rails.logger.warn "CoinstatsItem::Importer - Bulk transaction fetch failed: #{e.message}"
-      nil
+      FETCH_FAILED
     end
 
     def fetch_portfolio_transactions_for_exchange(linked_accounts)
@@ -225,20 +264,67 @@ class CoinstatsItem::Importer
         return { success: false, error: "Missing address or blockchain" }
       end
 
-      # Extract balance data for this specific wallet from the bulk response
-      balance_data = if bulk_balance_data.present?
-        coinstats_provider.extract_wallet_balance(bulk_balance_data, address, blockchain)
+      if bulk_balance_data.nil?
+        log_debug_event(
+          level: "warn",
+          message: "CoinStats wallet balance sync preserved existing snapshot after bulk fetch failure",
+          account_provider: coinstats_account.account_provider,
+          metadata: {
+            coinstats_item_id: coinstats_item.id,
+            coinstats_account_id: coinstats_account.id,
+            wallet_address: address,
+            blockchain: blockchain,
+            reason: "bulk_balance_data_missing"
+          }
+        )
+      elsif wallet_missing_from_bulk_balance_data?(bulk_balance_data, address, blockchain)
+        log_debug_event(
+          level: "warn",
+          message: "CoinStats wallet balance sync preserved existing snapshot because wallet was missing from bulk response",
+          account_provider: coinstats_account.account_provider,
+          metadata: {
+            coinstats_item_id: coinstats_item.id,
+            coinstats_account_id: coinstats_account.id,
+            wallet_address: address,
+            blockchain: blockchain,
+            reason: "wallet_missing_from_bulk_response"
+          }
+        )
       else
-        []
-      end
+        balance_data = coinstats_provider.extract_wallet_balance(bulk_balance_data, address, blockchain)
 
-      # Update the coinstats account with new balance data
-      coinstats_account.upsert_coinstats_snapshot!(normalize_balance_data(balance_data, coinstats_account))
+        # Update the coinstats account with new balance data
+        coinstats_account.upsert_coinstats_snapshot!(normalize_balance_data(balance_data, coinstats_account))
+      end
 
       # Extract and merge transactions from bulk response
       transactions_count = fetch_and_merge_transactions(coinstats_account, address, blockchain, bulk_transactions_data)
 
       { success: true, transactions_count: transactions_count }
+    end
+
+    def wallet_missing_from_bulk_balance_data?(bulk_balance_data, address, blockchain)
+      return true unless bulk_balance_data.is_a?(Array)
+
+      bulk_balance_data.none? do |entry|
+        entry = entry.with_indifferent_access
+        entry[:address]&.downcase == address&.downcase &&
+          (entry[:connectionId]&.downcase == blockchain&.downcase ||
+           entry[:blockchain]&.downcase == blockchain&.downcase)
+      end
+    end
+
+    def log_debug_event(level:, message:, metadata:, account_provider: nil)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: level,
+        message: message,
+        source: self.class.name,
+        provider_key: "coinstats",
+        family: coinstats_item.family,
+        account_provider: account_provider,
+        metadata: metadata
+      )
     end
 
     def update_exchange_account(coinstats_account, portfolio_coins_data:, portfolio_transactions_data:)
@@ -472,6 +558,10 @@ class CoinstatsItem::Importer
       end
     end
 
+    def fetch_failed?(data)
+      data.equal?(FETCH_FAILED)
+    end
+
     def find_matching_portfolio_coin(balance_data, coinstats_account)
       Array(balance_data).map(&:with_indifferent_access).find do |coin_data|
         coin = coin_data[:coin].to_h.with_indifferent_access
@@ -598,6 +688,7 @@ class CoinstatsItem::Importer
       unique_wallets = (wallet_accounts + defi_accounts).uniq(&:id).filter_map do |account|
         raw = account.raw_payload.to_h.with_indifferent_access
         next unless raw[:address].present? && raw[:blockchain].present?
+        next unless defi_supported_blockchain?(raw[:blockchain])
 
         { address: raw[:address], blockchain: raw[:blockchain] }
       end.uniq { |w| [ w[:address].downcase, w[:blockchain].downcase ] }
@@ -616,5 +707,9 @@ class CoinstatsItem::Importer
     rescue => e
       Rails.logger.warn "CoinstatsItem::Importer - DeFi sync failed: #{e.message}"
       Set.new
+    end
+
+    def defi_supported_blockchain?(blockchain)
+      blockchain.present? && !DEFI_UNSUPPORTED_BLOCKCHAINS.include?(blockchain.to_s.downcase)
     end
 end

@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".heading")) %>
+  <% dialog.with_body do %>
+    <%= render "form", goal: @goal, linkable_accounts: @linkable_accounts, currently_linked_account_ids: @currently_linked_account_ids %>
+  <% end %>
+<% end %>
