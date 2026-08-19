@@ -2,7 +2,7 @@ class ProcessPdfJob < ApplicationJob
   queue_as :medium_priority
 
   discard_on(Provider::Error) do |job, err|
-    Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}): #{err.message}")
+    Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}, error_class=#{err.class.name})")
   end
 
   def perform(pdf_import)
