@@ -38,17 +38,20 @@ class Provider::SnaptradeAdapter < Provider::Base
     "snaptrade"
   end
 
-  # Build a SnapTrade provider instance for a family's authorized item
-  # @param family [Family] The family to get an authorized item for (required)
-  # @return [Provider::Snaptrade, nil] Returns nil if OAuth is not configured/authorized
+  # Build a SnapTrade provider instance with family-specific credentials
+  # @param family [Family] The family to get credentials for (required)
+  # @return [Provider::Snaptrade, nil] Returns nil if credentials are not configured
   def self.build_provider(family: nil)
     return nil unless family.present?
-    return nil unless Provider::Snaptrade.oauth_configured?
 
-    snaptrade_item = family.snaptrade_items.syncable.first
-    return nil unless snaptrade_item
+    # Get family-specific credentials
+    snaptrade_item = family.snaptrade_items.where.not(client_id: nil).first
+    return nil unless snaptrade_item&.credentials_configured?
 
-    Provider::Snaptrade.new(snaptrade_item)
+    Provider::Snaptrade.new(
+      client_id: snaptrade_item.client_id,
+      consumer_key: snaptrade_item.consumer_key
+    )
   end
 
   def sync_path
