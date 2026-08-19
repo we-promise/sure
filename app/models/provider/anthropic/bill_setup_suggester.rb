@@ -145,7 +145,7 @@ class Provider::Anthropic::BillSetupSuggester
         month_of_year: parsed["month_of_year"].is_a?(Integer) ? parsed["month_of_year"] : nil,
         category_name: presence_string(parsed["category_name"]),
         bill_type: presence_string(parsed["bill_type"]),
-        autopay: parsed["autopay"] == true ? true : nil,
+        autopay: [ true, false ].include?(parsed["autopay"]) ? parsed["autopay"] : nil,
         confidence: parsed["confidence"].is_a?(Numeric) ? parsed["confidence"].to_f : nil,
         rationale: presence_string(parsed["rationale"])
       )

@@ -179,7 +179,9 @@ class RecurringTransactionsController < ApplicationController
       @recurring_transaction.anchor_date ||= @recurring_transaction.last_occurrence_date
     end
 
-    if @recurring_transaction.save
+    # apply_editable_identity flags a bad account id; save would wipe that
+    # error while validating, so it is checked first.
+    if @recurring_transaction.errors.none? && @recurring_transaction.save
       applied = apply_payment_url_to_siblings
 
       flash[:notice] = if applied.positive?
@@ -410,8 +412,15 @@ class RecurringTransactionsController < ApplicationController
       end
 
       if attrs.key?(:account_id)
-        @recurring_transaction.account =
-          Current.user.accessible_accounts.find_by(id: attrs[:account_id])
+        # Blank means "any account"; a present id that does not resolve must
+        # not silently detach the bill from its account.
+        if attrs[:account_id].blank?
+          @recurring_transaction.account = nil
+        elsif (account = Current.user.accessible_accounts.find_by(id: attrs[:account_id]))
+          @recurring_transaction.account = account
+        else
+          @recurring_transaction.errors.add(:account, :invalid)
+        end
       end
     end
 

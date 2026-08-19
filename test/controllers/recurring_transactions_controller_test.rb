@@ -417,6 +417,29 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "create with a currency-formatted amount re-renders with an error instead of crashing" do
+    assert_no_difference "@family.recurring_transactions.count" do
+      post recurring_transactions_url, params: {
+        recurring_transaction: { name: "Trash Pickup", amount: "$40.00", account_id: accounts(:depository).id,
+                                 first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly" }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.create.amount_invalid"), response.body
+  end
+
+  test "update with an unresolvable account keeps the current account and reports the error" do
+    original_account_id = @recurring_transaction.account_id
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { account_id: SecureRandom.uuid } }
+
+    assert_response :unprocessable_entity
+    assert_equal original_account_id, @recurring_transaction.reload.account_id,
+      "a present-but-unresolvable id must not silently detach the account"
+  end
+
   test "create stamps dedup_scope when the identity is already taken" do
     post recurring_transactions_url, params: {
       recurring_transaction: { name: "STREAMCO", amount: "5.99", account_id: accounts(:depository).id,

@@ -138,7 +138,11 @@ class Assistant::Function::UpdateBill < Assistant::Function
     def apply_amount(series, params, changed)
       return nil unless params.key?("amount")
 
-      magnitude = BigDecimal(params["amount"].to_s).abs
+      magnitude = begin
+        BigDecimal(params["amount"].to_s).abs
+      rescue ArgumentError
+        return { error: "amount is not a number", hint: "Pass a positive numeric magnitude." }
+      end
       if magnitude.zero?
         return { error: "amount must be greater than zero", hint: "Pass a positive magnitude." }
       end

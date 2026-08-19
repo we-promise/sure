@@ -157,6 +157,26 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 9, 29), on_day.end
   end
 
+  test "matches_day on a weekly cadence follows the weekday, not the day of month" do
+    schedule = build_schedule(rules: [ rule(frequency: "weekly", weekday: 5) ])
+
+    # Fridays across a month boundary sit on wildly different days of month.
+    assert schedule.matches_day?(Date.new(2026, 5, 29))
+    assert schedule.matches_day?(Date.new(2026, 6, 5))
+    assert schedule.matches_day?(Date.new(2026, 6, 19))
+    assert_not schedule.matches_day?(Date.new(2026, 6, 18)), "a Thursday is not this bill's day"
+  end
+
+  test "matches_day on a weekly rule without a weekday falls back to the anchor's weekday" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "weekly", weekday: nil, interval: 2) ],
+      anchor_date: Date.new(2026, 8, 7)
+    )
+
+    assert schedule.matches_day?(Date.new(2026, 8, 14)), "a Friday, like the anchor"
+    assert_not schedule.matches_day?(Date.new(2026, 8, 13))
+  end
+
   # --- Rules-based engine ---
 
   test "weekly rule fires every week on its weekday" do

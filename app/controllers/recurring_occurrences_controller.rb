@@ -1,7 +1,11 @@
 class RecurringOccurrencesController < ApplicationController
+  include RecurringFeatureGuardable
+
   layout "settings"
 
+  before_action :ensure_recurring_enabled
   before_action :set_occurrence
+  before_action :ensure_series_writable, only: %i[mark_paid skip reopen snooze override_amount]
 
   # The dialog is delivered into the shared <turbo-frame id="modal"> (see
   # RecurringTransactionsController#edit for the two-frames trap).
@@ -53,12 +57,19 @@ class RecurringOccurrencesController < ApplicationController
                            .find(params[:id])
     end
 
-    def allocator
-      RecurringTransaction::Allocator.new(@occurrence)
+    # Reading a shared bill is fine; changing its payment state is not. Sharing
+    # is per account, so a read-only account share must not mutate. Accountless
+    # series carry no account gate.
+    def ensure_series_writable
+      series = @occurrence.recurring_transaction
+      return if series.account_id.nil?
+      return if Account.writable_by(Current.user).where(id: series.account_id).exists?
+
+      raise ActiveRecord::RecordNotFound
     end
 
-    def dialog_layout
-      turbo_frame_request? ? false : "settings"
+    def allocator
+      RecurringTransaction::Allocator.new(@occurrence)
     end
 
     def redirect_after_action(message, alert: false)
@@ -85,7 +96,14 @@ class RecurringOccurrencesController < ApplicationController
     # only legal because it puts that table in the query.
     def candidate_scope
       series = @occurrence.recurring_transaction
-      base = series.account.present? ? series.account.entries : Current.family.entries
+      # Accountless bills fall back to the accounts this user can see, never
+      # the whole family: sharing is per account, and the drawer would
+      # otherwise print entries from accounts that were never shared.
+      base = if series.account.present?
+        series.account.entries
+      else
+        Current.family.entries.where(account_id: Account.accessible_by(Current.user).select(:id))
+      end
       sign = series.amount.negative? ? "entries.amount < 0" : "entries.amount > 0"
 
       scope = base

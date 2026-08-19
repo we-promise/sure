@@ -21,8 +21,12 @@ class RecurringTransaction
       end
 
       is_income = ActiveModel::Type::Boolean.new.cast(attrs[:is_income]) || false
-      amount = BigDecimal(attrs[:amount].to_s.presence || "0").abs
-      amount = -amount if is_income
+      amount = begin
+        BigDecimal(attrs[:amount].to_s.presence || "0").abs
+      rescue ArgumentError
+        nil
+      end
+      amount = -amount if amount && is_income
 
       recurring = family.recurring_transactions.new(
         name: attrs[:name],
@@ -39,6 +43,11 @@ class RecurringTransaction
       )
       recurring.frequency_preset = attrs[:frequency_preset]
       recurring.first_due_on = attrs[:first_due_on]
+
+      if amount.nil?
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.amount_invalid"))
+        return recurring
+      end
 
       if due.nil?
         recurring.errors.add(:base, I18n.t("recurring_transactions.create.due_date_required"))
@@ -62,12 +71,19 @@ class RecurringTransaction
     end
 
     # A series for this identifier may already exist; a second legitimate one
-    # (another tier from the same biller) is distinguished by its amount.
+    # (another tier from the same biller) is distinguished by its amount. The
+    # same identity at the same amount is a true duplicate, reported as a
+    # validation error rather than an escaping exception.
     def self.save(recurring)
       recurring.save
     rescue ActiveRecord::RecordNotUnique
       recurring.dedup_scope = recurring.amount.to_d.to_s("F")
-      recurring.save
+      begin
+        recurring.save
+      rescue ActiveRecord::RecordNotUnique
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.already_exists"))
+        false
+      end
     end
   end
 end

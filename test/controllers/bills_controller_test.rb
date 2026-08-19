@@ -519,6 +519,24 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.safe_after_bills"), response.body
   end
 
+  # A lone materialized paycheck landing today collapses the planner's
+  # boundary list to a single date, which yields an empty plan; the page must
+  # treat that like no plan instead of crashing on plan.last.
+  test "the paycheck view survives a lone paycheck landing today" do
+    series = @family.recurring_transactions.create!(
+      name: "Paycheck", account: accounts(:depository), amount: -1840, currency: "USD",
+      bill_type: "income", expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    series.recurring_occurrences.where("due_on > ?", Date.current).delete_all
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_match I18n.t("bills.paycheck.empty.title"), response.body
+  end
+
   # Income was addable only from inside the Income plan tab, so a family that
   # had declared none had no way to discover the planning half of Bills
   # existed. Both halves are now addable from every view.

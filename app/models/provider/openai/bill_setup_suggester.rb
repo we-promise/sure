@@ -110,7 +110,7 @@ class Provider::Openai::BillSetupSuggester
         month_of_year: integer_or_nil(parsed["month_of_year"]),
         category_name: string_or_nil(parsed["category_name"]),
         bill_type: string_or_nil(parsed["bill_type"]),
-        autopay: parsed["autopay"] == true ? true : nil,
+        autopay: [ true, false ].include?(parsed["autopay"]) ? parsed["autopay"] : nil,
         confidence: numeric_or_nil(parsed["confidence"]),
         rationale: string_or_nil(parsed["rationale"])
       )

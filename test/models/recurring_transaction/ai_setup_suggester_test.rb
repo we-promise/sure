@@ -44,6 +44,24 @@ class RecurringTransaction::AiSetupSuggesterTest < ActiveSupport::TestCase
     assert_equal 40.0, suggestion.amount.to_f
   end
 
+  test "an explicit autopay false survives normalization as a real proposal" do
+    stub_provider(raw(autopay: false))
+
+    suggestion = Suggester.new(@family, user: @user).suggest_from_entries(@entries)
+
+    assert_equal false, suggestion.autopay, "false proposes turning autopay off; only nil means no proposal"
+    assert suggestion.any_proposal?
+  end
+
+  test "a non-boolean autopay normalizes to no proposal" do
+    stub_provider(raw(autopay: "yes"))
+
+    suggestion = Suggester.new(@family, user: @user).suggest_from_entries(@entries)
+
+    assert_nil suggestion.autopay
+    assert_not suggestion.any_proposal?
+  end
+
   test "resolves the category to this family's own id, case-insensitively" do
     category = @family.categories.create!(name: "Utilities", color: "#0000ff")
     stub_provider(raw(category_name: "utilities"))

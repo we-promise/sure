@@ -69,11 +69,14 @@
                   proposed: t("bills.all.types.#{@suggestion.bill_type}") %>
           <% end %>
 
-          <% if @suggestion.autopay && !@series.autopay %>
+          <%# false is a real proposal (turn autopay off), so the gate is
+              non-nil and different, not truthy. %>
+          <% unless @suggestion.autopay.nil? || @suggestion.autopay == @series.autopay %>
             <%= render "bills/smart_configurations/proposal",
-                  name: "recurring_transaction[autopay]", value: "true",
+                  name: "recurring_transaction[autopay]", value: @suggestion.autopay.to_s,
                   label: t(".field_autopay"),
-                  current: t(".autopay_off"), proposed: t(".autopay_on") %>
+                  current: @series.autopay ? t(".autopay_on") : t(".autopay_off"),
+                  proposed: @suggestion.autopay ? t(".autopay_on") : t(".autopay_off") %>
           <% end %>
         </div>
 

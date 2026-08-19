@@ -579,6 +579,91 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     end
   end
 
+  # A weekly cadence lands on a weekday, not near one day of the month, so the
+  # variance refresh must keep every weekly payment instead of only the ones
+  # that happen to sit within two days of expected_day_of_month.
+  test "updates manual weekly variance from every payment on the series' weekday" do
+    travel_to Date.new(2026, 6, 20) do
+      account = @family.accounts.first
+      name = "Weekly Lawn Service"
+      fridays = [ Date.new(2026, 5, 29), Date.new(2026, 6, 5), Date.new(2026, 6, 12), Date.new(2026, 6, 19) ]
+
+      recurring = @family.recurring_transactions.create!(
+        account: account,
+        name: name,
+        amount: 40,
+        currency: "USD",
+        expected_day_of_month: fridays.first.day,
+        anchor_date: fridays.first,
+        last_occurrence_date: fridays.first,
+        next_expected_date: fridays.second,
+        occurrence_count: 0,
+        status: "active",
+        manual: true
+      )
+      RecurringTransaction::FrequencyPreset.apply(recurring, preset: "weekly", weekday: 5)
+      recurring.save!
+
+      fridays.each do |date|
+        account.entries.create!(
+          date: date,
+          amount: 40,
+          currency: "USD",
+          name: name,
+          entryable: Transaction.create!(category: categories(:food_and_drink))
+        )
+      end
+
+      assert_no_difference -> { @family.recurring_transactions.count } do
+        @identifier.identify_recurring_patterns
+      end
+
+      recurring.reload
+      assert_equal 4, recurring.occurrence_count,
+        "every Friday payment counts, including the ones across the month boundary"
+      assert_equal fridays.last, recurring.last_occurrence_date
+    end
+  end
+
+  # The next-due bookkeeping and the regenerated occurrences must agree: when
+  # detection observes a day shift, next_expected_date has to follow the new
+  # day immediately, not one detection run later.
+  test "a detected day shift moves next_expected_date onto the new day" do
+    travel_to Date.new(2026, 6, 20) do
+      account = @family.accounts.first
+      name = "Shifted Gym Membership"
+      recurring = @family.recurring_transactions.create!(
+        account: account,
+        name: name,
+        amount: 55,
+        currency: "USD",
+        expected_day_of_month: 5,
+        last_occurrence_date: Date.new(2026, 5, 5),
+        next_expected_date: Date.new(2026, 7, 5),
+        occurrence_count: 3,
+        status: "active",
+        manual: false
+      )
+
+      [ Date.new(2026, 4, 12), Date.new(2026, 5, 12), Date.new(2026, 6, 12) ].each do |date|
+        account.entries.create!(
+          date: date,
+          amount: 55,
+          currency: "USD",
+          name: name,
+          entryable: Transaction.create!(category: categories(:food_and_drink))
+        )
+      end
+
+      @identifier.identify_recurring_patterns
+
+      recurring.reload
+      assert_equal 12, recurring.expected_day_of_month
+      assert_equal 12, recurring.next_expected_date.day,
+        "the persisted next due date must use the newly detected day"
+    end
+  end
+
   test "circular_distance calculates correct distance for days near month boundary" do
     # Test wrapping: day 31 to day 1 should be distance 1 (31 -> 1 is one day forward)
     distance = @identifier.send(:circular_distance, 31, 1)

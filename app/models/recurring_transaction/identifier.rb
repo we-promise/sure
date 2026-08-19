@@ -319,19 +319,23 @@ class RecurringTransaction
       # PriceChangeDetector), and so is the due day once the user has pinned
       # the schedule.
       def update_claimed_series(recurring, pattern)
-        attributes = {
+        # A detected day shift lands before the date math, so the persisted
+        # next_expected_date agrees with the regenerated occurrences instead
+        # of keeping the old day for a cycle.
+        recurring.last_occurrence_date = pattern[:last_occurrence_date]
+        unless recurring.schedule_pinned?
+          recurring.expected_day_of_month = pattern[:expected_day_of_month]
+          sync_monthly_rule_day(recurring, pattern[:expected_day_of_month])
+        end
+
+        recurring.update!(
           last_occurrence_date: pattern[:last_occurrence_date],
           next_expected_date: recurring.schedule.next_occurrence_after(pattern[:last_occurrence_date]),
           occurrence_count: pattern[:occurrence_count],
           expected_amount_min: pattern[:expected_amount_min],
           expected_amount_max: pattern[:expected_amount_max],
           expected_amount_avg: pattern[:expected_amount_avg]
-        }
-        attributes[:expected_day_of_month] = pattern[:expected_day_of_month] unless recurring.schedule_pinned?
-
-        recurring.update!(attributes)
-
-        sync_monthly_rule_day(recurring, pattern[:expected_day_of_month]) unless recurring.schedule_pinned?
+        )
       end
 
       # Scheduling reads recurrence_rules, not expected_day_of_month, so a

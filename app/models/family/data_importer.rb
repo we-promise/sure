@@ -615,7 +615,9 @@ class Family::DataImporter
         rule = series.recurrence_rules.find_or_initialize_by(position: data["position"].to_i)
         created = rule.new_record?
         rule.assign_attributes(
-          frequency: data["frequency"],
+          # Enum writers raise on unknown values, and one stale export value
+          # must not abort the whole import.
+          frequency: imported_enum_value(data["frequency"], RecurrenceRule.frequencies, "monthly"),
           interval: data["interval"].to_i,
           day_of_month: data["day_of_month"],
           weekday: data["weekday"],
@@ -646,7 +648,9 @@ class Family::DataImporter
           status: imported_occurrence_status(data["status"]),
           snoozed_until: parse_import_date(data["snoozed_until"]),
           closed_at: data["closed_at"].presence && Time.zone.parse(data["closed_at"].to_s),
-          closed_source: data["closed_source"],
+          # A check constraint limits closed_source; an unknown export value
+          # degrades to nil rather than aborting the import.
+          closed_source: data["closed_source"].to_s.presence_in(%w[auto user]),
           notes: data["notes"]
         )
         # A check constraint ties status and closed_at together, so a closed row
@@ -723,7 +727,7 @@ class Family::DataImporter
           previous_amount: data["previous_amount"].to_d,
           new_amount: data["new_amount"].to_d,
           currency: data["currency"] || series.currency,
-          source: data["source"],
+          source: imported_enum_value(data["source"], RecurringPriceChange.sources, "detected"),
           entry_id: imported_entry_id(data["transaction_id"], "RecurringPriceChange")
         )
         change.save!

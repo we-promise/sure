@@ -82,6 +82,14 @@ class Assistant::Function::CreateBillTest < ActiveSupport::TestCase
     assert result[:hint].present?
   end
 
+  test "a non-numeric amount returns an error instead of raising" do
+    result = call_tool("name" => "Bill", "amount" => "abc", "first_due_on" => (Date.current + 5).iso8601)
+
+    assert result[:error].present?
+    assert result[:hint].present?
+    assert_not @family.recurring_transactions.exists?(name: "Bill")
+  end
+
   private
 
     def call_tool(params)

@@ -246,6 +246,29 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
       "the JPY obligation must be reported, not silently valued at zero"
   end
 
+  # Generation lag can leave a lone materialized paycheck landing today; the
+  # boundary list collapses to one date and there is no period to build.
+  test "income due today with no later occurrences yields an empty plan rather than raising" do
+    series = create_series(name: "Final paycheck", amount: -1840, due: Date.current, income: true)
+    series.recurring_occurrences.where("due_on > ?", Date.current).delete_all
+
+    assert_equal [], Planner.new(@family, user: @user).plan
+  end
+
+  test "a past-due open bill lands whole in the leading window" do
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 7, preset: "weekly", income: true)
+    overdue_due = Date.current - 3
+    create_series(name: "Power", amount: 120, due: overdue_due)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 2)
+
+    shares = plan.flat_map(&:items).select { |item| item.occurrence.due_on == overdue_due }
+    assert_equal 1, shares.size, "the overdue bill must appear exactly once"
+    assert_equal 120, shares.sum(&:share), "its whole remaining amount is owed now"
+    assert shares.first.due_in_period, "it is due money, not a reserve"
+    assert_includes plan.first.items, shares.first, "and it belongs to the leading window"
+  end
+
   private
     def create_series(name:, amount:, due:, preset: "monthly", income: false)
       series = @family.recurring_transactions.create!(

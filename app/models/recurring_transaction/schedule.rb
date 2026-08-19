@@ -84,7 +84,17 @@ class RecurringTransaction
     end
 
     # Ruby-side twin of day_window_sql for code that already holds the entry.
+    # A weekly cadence repeats on a weekday, not a day of month, so it matches
+    # on the rule's weekday; the day-of-month window only fits the others.
     def matches_day?(date)
+      weekly_rules = rules.select { |rule| rule.frequency == "weekly" }
+      if weekly_rules.any?
+        weekdays = weekly_rules.map(&:weekday).compact
+        weekdays << anchor_date.wday if weekdays.empty? && anchor_date
+
+        return weekdays.empty? || weekdays.include?(date.wday)
+      end
+
       clamped_expected = [ expected_day_of_month, date.end_of_month.day ].min
       self.class.circular_day_distance(date.day, clamped_expected) <= DAY_MATCH_TOLERANCE
     end

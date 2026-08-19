@@ -50,6 +50,23 @@ class Assistant::Function::GetPaycheckPlanTest < ActiveSupport::TestCase
     assert period_with_rent[:safe_after_bills].present?
   end
 
+  # A lone materialized paycheck landing today yields an empty plan; the tool
+  # answers with its guidance instead of raising on the missing periods.
+  test "a lone paycheck landing today returns guidance rather than raising" do
+    series = @family.recurring_transactions.create!(
+      name: "Paycheck", account: accounts(:depository), amount: -1840,
+      currency: "USD", bill_type: "income", manual: true,
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current, status: "active"
+    )
+    series.recurring_occurrences.where("due_on > ?", Date.current).delete_all
+
+    result = call_tool
+
+    assert_equal "No declared income schedule", result[:error]
+    assert result[:hint].present?
+  end
+
   private
 
     def call_tool(params = {})

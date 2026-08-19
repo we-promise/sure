@@ -58,7 +58,7 @@ class Assistant::Function::RecordBillPayment < Assistant::Function
     if params["amount"].present?
       allocator.allocate!(amount: BigDecimal(params["amount"].to_s).abs, paid_on: paid_on, source: "user_created")
     else
-      allocator.mark_paid!
+      allocator.mark_paid!(paid_on: paid_on)
     end
 
     { recorded: true, bill: series.display_name, occurrence: serialize_occurrence(occurrence.reload).merge(status: occurrence.status) }

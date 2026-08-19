@@ -19,8 +19,10 @@ class RecurringTransaction
       :name, :amount, :frequency, :day_of_month, :weekday, :month_of_year,
       :category_id, :category_name, :bill_type, :autopay, :confidence, :rationale
     ) do
+      # nil means "no proposal for this field"; false is a real proposal
+      # (turn autopay off), so presence is non-nil rather than truthy.
       def any_proposal?
-        [ name, amount, frequency, day_of_month, weekday, month_of_year, category_id, bill_type, autopay ].any?
+        [ name, amount, frequency, day_of_month, weekday, month_of_year, category_id, bill_type, autopay ].any? { |value| !value.nil? }
       end
     end
 
@@ -98,7 +100,7 @@ class RecurringTransaction
           category_id: category&.id,
           category_name: category&.name,
           bill_type: raw.bill_type.presence_in(%w[bill subscription installment]),
-          autopay: raw.autopay == true ? true : nil,
+          autopay: [ true, false ].include?(raw.autopay) ? raw.autopay : nil,
           confidence: raw.confidence.is_a?(Numeric) ? raw.confidence.to_f.clamp(0.0, 1.0) : nil,
           rationale: raw.rationale
         )

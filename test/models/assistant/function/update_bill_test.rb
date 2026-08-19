@@ -17,6 +17,16 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
       "a raw assignment would have flipped the paycheck into a bill")
   end
 
+  test "a non-numeric amount is refused with a hint, not raised" do
+    series = create_series(name: "Gym", amount: 40)
+
+    result = call_tool(series.id, "amount" => "twenty")
+
+    assert result[:error].present?
+    assert result[:hint].present?
+    assert_equal 40, series.reload.amount.to_f
+  end
+
   test "a schedule change applies the preset and pins it against detection" do
     series = create_series(name: "Gym", amount: 40)
     refute series.schedule_pinned?

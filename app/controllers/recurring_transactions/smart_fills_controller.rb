@@ -68,7 +68,7 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
       @recurring_transaction.name = suggestion.name if suggestion.name.present?
       @recurring_transaction.amount = suggestion.amount if suggestion.amount.present?
       @recurring_transaction.frequency_preset = suggestion.frequency if suggestion.frequency.present?
-      @recurring_transaction.autopay = true if suggestion.autopay
+      @recurring_transaction.autopay = suggestion.autopay unless suggestion.autopay.nil?
 
       today = Date.current
       if %w[weekly biweekly].include?(suggestion.frequency) && suggestion.weekday.present?

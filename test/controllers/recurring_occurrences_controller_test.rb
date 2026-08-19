@@ -289,4 +289,84 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert @occurrence.reload.scheduled?
     assert_equal 0, @occurrence.allocations.count
   end
+
+  test "the drawer redirects when the family has turned recurring transactions off" do
+    @family.update!(recurring_transactions_disabled: true)
+
+    get recurring_occurrence_url(@occurrence)
+
+    assert_redirected_to root_path
+  end
+
+  # Sharing is per account. An accountless bill is visible family-wide, but
+  # its candidate list must still show only entries from accounts the viewer
+  # can reach, or the drawer leaks names and amounts from unshared accounts.
+  test "an accountless bill's candidates exclude entries from unshared accounts" do
+    accountless = @family.recurring_transactions.create!(
+      name: "Water Utility", amount: 60, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    occurrence = accountless.recurring_occurrences.order(:due_on).first
+
+    hidden = accounts(:investment).entries.create!(
+      date: occurrence.due_on, amount: 60, currency: "USD",
+      name: "Broker service fee", entryable: Transaction.new
+    )
+    visible = accounts(:depository).entries.create!(
+      date: occurrence.due_on, amount: 60, currency: "USD",
+      name: "Shared checking charge", entryable: Transaction.new
+    )
+
+    sign_in users(:family_member)
+    get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match hidden.name, response.body,
+      "an entry on an account never shared with the viewer must not render"
+    assert_match visible.name, response.body,
+      "positive control: the same-shaped entry on a shared account must render"
+  end
+
+  # credit_card is shared read-only with family_member in the fixtures; a
+  # read-only share can look at the bill but never move its payment state.
+  test "a read-only account share cannot mutate an occurrence" do
+    occurrence = credit_card_occurrence
+
+    sign_in users(:family_member)
+
+    post mark_paid_recurring_occurrence_url(occurrence)
+    assert_response :not_found
+    assert occurrence.reload.scheduled?, "a read-only share must not settle the bill"
+
+    post skip_recurring_occurrence_url(occurrence)
+    assert_response :not_found
+
+    patch override_amount_recurring_occurrence_url(occurrence, amount: "1")
+    assert_response :not_found
+    assert_nil occurrence.reload.expected_amount
+
+    get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+    assert_response :success, "reading the shared bill stays allowed"
+  end
+
+  test "the account owner still settles the same occurrence" do
+    occurrence = credit_card_occurrence
+
+    post mark_paid_recurring_occurrence_url(occurrence)
+
+    assert occurrence.reload.paid?
+  end
+
+  private
+    def credit_card_occurrence
+      series = @family.recurring_transactions.create!(
+        name: "Card Annual Fee", account: accounts(:credit_card), amount: 95,
+        currency: "USD", expected_day_of_month: Date.current.day,
+        anchor_date: Date.current, last_occurrence_date: Date.current,
+        next_expected_date: Date.current, status: "active", manual: true
+      )
+      series.recurring_occurrences.order(:due_on).first
+    end
 end

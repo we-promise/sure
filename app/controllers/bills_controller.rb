@@ -208,7 +208,8 @@ class BillsController < ApplicationController
     # instance answers both, so the income list and the periods always agree.
     def load_paycheck_plan
       planner = RecurringTransaction::PaycheckPlanner.new(Current.family, user: Current.user)
-      @plan = planner.plan
+      # An empty plan (no periods to spread anything across) renders as no plan.
+      @plan = planner.plan.presence
       @plan_unconvertible = planner.unconvertible_count
 
       @income_series = Current.family.recurring_transactions

@@ -69,6 +69,37 @@ class RecurringTransaction::PriceChangeDetectorTest < ActiveSupport::TestCase
     assert_equal 0, @detector.detect!, "same evidence must not mint a second change"
   end
 
+  test "the recorded change links the settling payment's entry, not a bystander suggestion" do
+    series = create_series(amount: 79.99, manual: false)
+    settle(series, 1.month.ago.to_date, 94.99)
+
+    newest = series.recurring_occurrences.find_or_create_by!(
+      family: @family, original_due_on: Date.current
+    ) { |o| o.due_on = Date.current; o.currency = "USD" }
+    decoy = @account.entries.create!(
+      date: Date.current, amount: 94.99, currency: "USD",
+      name: "FIBER INTERNET PENDING", entryable: Transaction.new
+    )
+    paying_entry = @account.entries.create!(
+      date: Date.current, amount: 94.99, currency: "USD",
+      name: "FIBER INTERNET", entryable: Transaction.new
+    )
+    # A suggestion sits on the same occurrence; reading the unordered
+    # association's first row could hand the change the decoy's entry.
+    RecurringTransaction::Allocator.new(newest).allocate_matched!(
+      entry: decoy, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+    RecurringTransaction::Allocator.new(newest.reload).allocate!(entry: paying_entry, amount: "94.99")
+    newest.reload
+    RecurringTransaction::Allocator.new(newest).mark_paid! unless newest.paid?
+
+    assert_equal 1, @detector.detect!
+
+    change = series.recurring_price_changes.sole
+    assert_equal paying_entry.id, change.entry_id,
+      "the entry on the change must be the confirmed settlement's"
+  end
+
   private
     def create_series(amount:, manual:)
       due = Date.current + 20

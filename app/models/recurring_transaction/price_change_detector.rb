@@ -37,13 +37,15 @@ class RecurringTransaction
                        .to_a
         return false unless recent.size == 2
 
-        totals = recent.map do |occurrence|
+        settlements = recent.map do |occurrence|
           confirmed = occurrence.allocations.select(&:allocation_confirmed?)
           # Only single-payment settlements speak to the PRICE; a pile of
           # partials says nothing about what the biller charges.
-          confirmed.size == 1 ? confirmed.first.allocated_amount : nil
+          confirmed.size == 1 ? confirmed.first : nil
         end
-        return false if totals.any?(&:nil?)
+        return false if settlements.any?(&:nil?)
+
+        totals = settlements.map(&:allocated_amount)
         return false unless (totals.first - totals.last).abs <= EPSILON
 
         new_amount = totals.first
@@ -60,7 +62,7 @@ class RecurringTransaction
           new_amount: new_amount,
           currency: series.currency,
           source: "detected",
-          entry: recent.first.allocations.first.entry
+          entry: settlements.first.entry
         )
 
         series.update!(amount: new_amount) unless series.manual?

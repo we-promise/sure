@@ -50,7 +50,7 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
     limit = (Integer(params["periods_limit"].to_s, exception: false) || 3).clamp(1, 6)
     periods = planner.plan(periods_limit: limit)
 
-    if periods.nil?
+    if periods.blank?
       return {
         error: "No declared income schedule",
         hint: "Only manually declared income defines paydays; detected inflows never do. Suggest the user adds their income under Bills -> Income plan. Do not infer paydays from transaction data."

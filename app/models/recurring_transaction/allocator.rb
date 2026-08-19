@@ -124,8 +124,9 @@ class RecurringTransaction
     end
 
     # Settles the remainder with no transaction, as a user decision, so it
-    # never auto-reopens.
-    def mark_paid!
+    # never auto-reopens. A backdated settlement carries its real payment date
+    # into the history instead of defaulting to today.
+    def mark_paid!(paid_on: nil)
       occurrence.with_lock do
         freeze_expected_amount!
         remaining = occurrence.remaining_amount
@@ -135,7 +136,8 @@ class RecurringTransaction
             allocated_amount: remaining,
             currency: occurrence.currency,
             state: "confirmed",
-            source: "user_created"
+            source: "user_created",
+            paid_on: paid_on
           )
         end
 

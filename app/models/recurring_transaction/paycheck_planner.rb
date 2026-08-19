@@ -59,6 +59,10 @@ class RecurringTransaction
 
       boundaries = period_boundaries(incomes, periods_limit)
       periods = build_periods(boundaries, incomes)
+      # A single boundary (every upcoming paycheck lands today) yields no
+      # periods to spread anything across.
+      return [] if periods.empty?
+
       apportion_bills(periods)
 
       periods.map do |period|
@@ -143,10 +147,14 @@ class RecurringTransaction
         horizon_end = periods.last[:ends_on]
 
         open_payable_occurrences(horizon_end).each do |occurrence|
-          eligible = periods.select do |period|
-            next false unless period[:starts_on] <= occurrence.due_on
+          # A past-due open occurrence still needs paying; it lands whole in
+          # the leading window, since every share of it is already owed.
+          effective_due = [ occurrence.due_on, periods.first[:starts_on] ].max
 
-            period[:income].positive? || occurrence.due_on.between?(period[:starts_on], period[:ends_on])
+          eligible = periods.select do |period|
+            next false unless period[:starts_on] <= effective_due
+
+            period[:income].positive? || effective_due.between?(period[:starts_on], period[:ends_on])
           end
           next if eligible.empty?
 
@@ -161,7 +169,7 @@ class RecurringTransaction
               occurrence: occurrence,
               share: share,
               remaining_total: remaining,
-              due_in_period: occurrence.due_on.between?(period[:starts_on], period[:ends_on])
+              due_in_period: effective_due.between?(period[:starts_on], period[:ends_on])
             )
           end
         end

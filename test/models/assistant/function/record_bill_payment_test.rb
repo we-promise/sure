@@ -23,6 +23,16 @@ class Assistant::Function::RecordBillPaymentTest < ActiveSupport::TestCase
     assert_equal 2000, @occurrence.allocations.sum(:allocated_amount)
   end
 
+  test "a backdated full settlement carries its payment date into the allocation" do
+    paid_on = Date.current - 6
+
+    result = call_tool("paid_on" => paid_on.iso8601)
+
+    assert result[:recorded]
+    assert_equal paid_on, @occurrence.reload.allocations.sole.paid_on,
+      "the settlement must record the stated payment date, not today"
+  end
+
   test "a partial payment leaves the occurrence open and partially paid" do
     result = call_tool("amount" => 500)
 

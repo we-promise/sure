@@ -82,7 +82,9 @@
                   <p class="text-sm text-primary truncate">
                     <%= allocation.entry&.name.presence || t(".manual_payment") %>
                   </p>
-                  <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short) %></p>
+                  <% if allocation.paid_on %>
+                    <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short) %></p>
+                  <% end %>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                   <span class="text-sm text-primary privacy-sensitive"><%= format_money(allocation.allocated_amount_money) %></span>
@@ -112,7 +114,9 @@
                 <p class="text-sm font-medium text-primary truncate">
                   <%= @pending_suggestion.entry&.name.presence || t(".manual_payment") %>
                 </p>
-                <p class="text-xs text-secondary"><%= l(@pending_suggestion.paid_on, format: :short) %></p>
+                <% if @pending_suggestion.paid_on %>
+                  <p class="text-xs text-secondary"><%= l(@pending_suggestion.paid_on, format: :short) %></p>
+                <% end %>
               </div>
               <p class="text-sm font-medium text-primary privacy-sensitive shrink-0">
                 <%= format_money(@pending_suggestion.allocated_amount_money) %>

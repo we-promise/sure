@@ -1,6 +1,11 @@
 class RecurringAllocationsController < ApplicationController
+  include RecurringFeatureGuardable
+
+  before_action :ensure_recurring_enabled
+
   def create
     occurrence = find_occurrence(params[:recurring_occurrence_id])
+    ensure_series_writable(occurrence)
     entry = find_entry(occurrence, params[:entry_id])
 
     RecurringTransaction::Allocator.new(occurrence).allocate!(
@@ -23,6 +28,7 @@ class RecurringAllocationsController < ApplicationController
   def destroy
     allocation = find_allocation
     occurrence = allocation.recurring_occurrence
+    ensure_series_writable(occurrence)
 
     RecurringTransaction::Allocator.new(occurrence).unallocate!(allocation)
 
@@ -32,6 +38,7 @@ class RecurringAllocationsController < ApplicationController
   def confirm
     allocation = find_allocation
     occurrence = allocation.recurring_occurrence
+    ensure_series_writable(occurrence)
 
     RecurringTransaction::Allocator.new(occurrence).confirm_suggestion!(allocation)
 
@@ -41,6 +48,7 @@ class RecurringAllocationsController < ApplicationController
   def reject
     allocation = find_allocation
     occurrence = allocation.recurring_occurrence
+    ensure_series_writable(occurrence)
 
     RecurringTransaction::Allocator.new(occurrence).reject_suggestion!(allocation)
 
@@ -48,6 +56,17 @@ class RecurringAllocationsController < ApplicationController
   end
 
   private
+    # Reading a shared bill is fine; changing its payment state is not. Sharing
+    # is per account, so a read-only account share must not mutate. Accountless
+    # series carry no account gate.
+    def ensure_series_writable(occurrence)
+      series = occurrence.recurring_transaction
+      return if series.account_id.nil?
+      return if Account.writable_by(Current.user).where(id: series.account_id).exists?
+
+      raise ActiveRecord::RecordNotFound
+    end
+
     def find_allocation
       RecurringAllocation
         .joins(recurring_occurrence: :recurring_transaction)
@@ -59,11 +78,24 @@ class RecurringAllocationsController < ApplicationController
     # Queue actions come from the Bills page and should land back there.
     def redirect_with_return(notice:)
       flash[:notice] = notice
+      target = safe_return_path
 
       respond_to do |format|
-        format.html { redirect_back_or_to bills_path }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, request.referer || bills_path) }
+        format.html { redirect_to target }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, target) }
       end
+    end
+
+    # The referer is request input: only a same-host referer may become a
+    # redirect target, matching what redirect_back_or_to enforces.
+    def safe_return_path
+      referer = request.referer
+      return bills_path if referer.blank?
+
+      uri = URI.parse(referer)
+      uri.host.nil? || uri.host == request.host ? referer : bills_path
+    rescue URI::InvalidURIError
+      bills_path
     end
 
     def find_occurrence(id)
