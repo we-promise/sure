@@ -254,6 +254,70 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 0, account.quantity
   end
 
+  test "a truncation flag that changes on its own still updates the row" do
+    account = create_onchain_wallet_account(item: @item)
+    asset = fake_native_asset(quantity: 2)
+    movements = [ fake_movement(external_id: "tx1") ]
+
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ asset ], movements: movements, history_truncated: true)
+    )
+    OnchainWalletItem::Importer.new(@item).import
+    assert account.reload.history_truncated?
+
+    # Same quantity, same movements: only the completeness of the read changed.
+    # Missed, the UI keeps claiming an incomplete history forever.
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ asset ], movements: movements, history_truncated: false)
+    )
+
+    result = OnchainWalletItem::Importer.new(@item).import
+
+    assert_equal [ account.id ], result[:changed_account_ids]
+    assert_not account.reload.history_truncated?
+  end
+
+  test "an asset cap that starts applying updates the row too" do
+    account = create_onchain_wallet_account(item: @item)
+    asset = fake_native_asset(quantity: 2)
+
+    stub_fake_snapshot(OnchainTestHelper::FAKE_ADDRESS, Onchain::Snapshot.new(assets: [ asset ], movements: []))
+    OnchainWalletItem::Importer.new(@item).import
+    assert_not account.reload.assets_truncated?
+
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ asset ], movements: [], assets_truncated: true)
+    )
+
+    assert_equal [ account.id ], OnchainWalletItem::Importer.new(@item).import[:changed_account_ids]
+    assert account.reload.assets_truncated?
+  end
+
+  test "the order a source lists movements in does not count as a change" do
+    account = create_onchain_wallet_account(item: @item)
+    first = fake_movement(external_id: "aaa", timestamp: 2.days.ago.to_date)
+    second = fake_movement(external_id: "bbb", timestamp: 2.days.ago.to_date)
+
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ fake_native_asset ], movements: [ first, second ])
+    )
+    OnchainWalletItem::Importer.new(@item).import
+    updated_at = account.reload.updated_at
+
+    # The same two movements, listed the other way round.
+    stub_fake_snapshot(
+      OnchainTestHelper::FAKE_ADDRESS,
+      Onchain::Snapshot.new(assets: [ fake_native_asset ], movements: [ second, first ])
+    )
+
+    assert_empty OnchainWalletItem::Importer.new(@item).import[:changed_account_ids]
+    assert_equal updated_at, account.reload.updated_at
+  end
+
   test "movements before the connection start date are ignored" do
     account = create_onchain_wallet_account(item: @item)
     @item.update!(sync_start_date: 2.days.ago.to_date)

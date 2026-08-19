@@ -63,21 +63,17 @@ class OnchainWalletItem::Importer
   private
     def apply_snapshot(account, snapshot, chain:, address:)
       asset = snapshot.assets.find { |candidate| account.matches_asset?(candidate) }
-      movements = asset ? relevant_movements(snapshot.movements_for(asset)) : []
+      # Sorted so that two reads of the same state produce the same payload, and
+      # therefore the same digest, whatever order the source listed them in.
+      movements = asset ? relevant_movements(snapshot.movements_for(asset)).sort_by { |movement| [ movement.date.to_s, movement.external_id.to_s ] } : []
       # An asset that vanished from the wallet is worth zero, not stale.
       quantity = normalize(asset&.quantity || 0)
-      digest = content_hash(asset, quantity, movements)
 
-      return nil if account.content_hash == digest
-
-      report_truncation(chain: chain, address: address, snapshot: snapshot) if snapshot.history_truncated? || snapshot.assets_truncated?
-
-      account.update!(
+      attributes = {
         quantity: quantity,
         symbol: asset&.symbol.presence || account.symbol,
         name: asset&.name.presence || account.name,
         decimals: asset&.decimals || account.decimals,
-        content_hash: digest,
         raw_payload: asset_payload(asset),
         raw_movements_payload: { "movements" => movements.map { |movement| movement_payload(movement) } },
         # Recorded on the row so the UI can say the history is incomplete instead
@@ -88,9 +84,35 @@ class OnchainWalletItem::Importer
             "assets_truncated" => snapshot.assets_truncated?
           }
         )
-      )
+      }
+
+      # The digest is taken from exactly what is about to be written, so the two
+      # cannot drift apart. Deriving it from a hand-picked subset is how the symbol
+      # was left out once — a Solana placeholder that gained a real name produced
+      # the old digest and was never rewritten — and then the truncation flags,
+      # leaving the UI claiming an incomplete history after one became complete.
+      digest = Digest::SHA256.hexdigest(canonical(attributes).to_json)
+
+      return nil if account.content_hash == digest
+
+      report_truncation(chain: chain, address: address, snapshot: snapshot) if snapshot.history_truncated? || snapshot.assets_truncated?
+
+      account.update!(attributes.merge(content_hash: digest))
 
       account.id
+    end
+
+    # Key order carries no information, and jsonb does not preserve it: an `extra`
+    # written as {history, assets} comes back as {assets, history}, which would make
+    # the digest of an unchanged wallet flip every other sync. Numbers are compared
+    # by value rather than by representation for the same reason.
+    def canonical(value)
+      case value
+      when Hash then value.map { |key, nested| [ key.to_s, canonical(nested) ] }.sort_by(&:first).to_h
+      when Array then value.map { |entry| canonical(entry) }
+      when BigDecimal then value.to_s("F")
+      else value
+      end
     end
 
     def report_unreachable(chain:, address:, error:)
@@ -147,24 +169,6 @@ class OnchainWalletItem::Importer
     # Digest of everything that would change what we write downstream. No
     # timestamps: two identical reads of an idle wallet must produce the same
     # digest so the syncer can skip it.
-    # Covers everything the update below writes. Leaving the metadata out meant a
-    # Solana mint that later gained a real symbol from the token list produced the
-    # same digest as before, so the row was never rewritten and its placeholder
-    # label became permanent.
-    def content_hash(asset, quantity, movements)
-      payload = {
-        "symbol" => asset&.symbol.to_s,
-        "name" => asset&.name.to_s,
-        "decimals" => asset&.decimals.to_s,
-        "quantity" => quantity.to_s("F"),
-        "movements" => movements
-          .map { |movement| [ movement.external_id.to_s, normalize(movement.amount).to_s("F"), movement.date.to_s ] }
-          .sort
-      }
-
-      Digest::SHA256.hexdigest(payload.to_json)
-    end
-
     def asset_payload(asset)
       return {} if asset.nil?
 
