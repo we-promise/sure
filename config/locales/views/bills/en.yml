@@ -3,6 +3,12 @@ en:
   bills:
     row_overdue: Overdue
     row_today: Today
+    detect:
+      found:
+        one: Found 1 possible bill. Review it below.
+        other: Found %{count} possible bills. Review them below.
+      none_found: No new recurring patterns found. You can add bills by hand.
+      already_running: Detection is already running. Check back in a moment.
     detail:
       current: Current
       next_payment: Next payment
@@ -278,3 +284,4 @@ en:
         title: No bills yet
         description: Bills are your recurring expenses. Sure finds them automatically from your transaction history, and you can add a payment link to each one so you can pay straight from here.
         action: Find recurring transactions
+        no_history_description: No transactions yet. Connect an account or import history and Sure will find your bills automatically, or add one by hand.

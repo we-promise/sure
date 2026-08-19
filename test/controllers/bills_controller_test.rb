@@ -1129,6 +1129,129 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "equally small changes should read newest first, not oldest first"
   end
 
+  # --- Onboarding: detection from the Bills page ---
+
+  test "empty page with transaction history offers detection beside Add bill" do
+    create_transaction_entry(name: "Coffee", amount: 20, date: Date.current)
+
+    get bills_url
+
+    assert_response :success
+    assert_select "a[href=?][data-turbo-method=post]", detect_bills_path
+    assert_match I18n.t("bills.index.empty.action"), response.body
+  end
+
+  test "empty page with no transactions hides detection and explains why" do
+    Entry.where(account: @family.accounts).delete_all
+
+    get bills_url
+
+    assert_response :success
+    assert_select "a[href=?]", detect_bills_path, count: 0
+    assert_match I18n.t("bills.index.empty.no_history_description"), response.body
+  end
+
+  test "detect creates suggestions, counts only them, and the strip offers review" do
+    3.times do |i|
+      create_transaction_entry(name: "GYM MEMBERSHIP", amount: 40, date: Date.current - i.months)
+    end
+
+    post detect_bills_url
+
+    assert_redirected_to bills_path
+    assert_equal I18n.t("bills.detect.found", count: 1), flash[:notice]
+
+    follow_redirect!
+    assert_match "GYM MEMBERSHIP", response.body
+    assert_match I18n.t("recurring_transactions.suggested.confirm"), response.body
+  end
+
+  test "detect does not resurrect a dismissed pattern" do
+    # Same identity as the entries below (name, currency, account, blank
+    # dedup scope): the ended tombstone claims the pattern and blocks it.
+    create_bill(name: "GYM MEMBERSHIP", amount: 40, status: "ended", dedup_scope: "", manual: false)
+    3.times do |i|
+      create_transaction_entry(name: "GYM MEMBERSHIP", amount: 40, date: Date.current - i.months)
+    end
+
+    post detect_bills_url
+
+    assert_equal I18n.t("bills.detect.none_found"), flash[:notice]
+    assert_equal 0, @family.recurring_transactions.suggested.count
+  end
+
+  test "detect refuses GET" do
+    # GET /bills/detect falls through to bills#show (id: "detect"), which
+    # 404s on lookup; the point is that it can never reach the detect action.
+    route = Rails.application.routes.recognize_path("/bills/detect", method: :get)
+    assert_equal "show", route[:action], "GET must never reach the detect action"
+
+    get "/bills/detect"
+    assert_response :not_found
+  end
+
+  test "detect on an upgraded instance reconstructs paid history" do
+    last_month_ninth = Date.current.beginning_of_month + 8.days - 1.month
+    bill = create_bill(name: "CITY WATER", amount: 80, dedup_scope: "",
+                       expected_day_of_month: 9,
+                       last_occurrence_date: last_month_ninth,
+                       next_expected_date: last_month_ninth + 1.month)
+    create_transaction_entry(name: "CITY WATER", amount: 80, date: last_month_ninth)
+    RecurringOccurrence.where(recurring_transaction: bill).delete_all
+
+    post detect_bills_url
+
+    assert bill.recurring_occurrences.paid.where(due_on: last_month_ninth).exists?,
+      "the first-run backfill closes history a real entry anchors"
+  end
+
+  test "index materializes occurrences for an upgraded instance" do
+    bill = create_bill(name: "Rent", amount: 1200)
+    RecurringOccurrence.where(recurring_transaction: bill).delete_all
+
+    get bills_url
+
+    assert_response :success
+    assert_operator bill.recurring_occurrences.count, :>, 0
+    assert_match "Rent", response.body
+  end
+
+  test "index creates no occurrences when the family has no active series" do
+    get bills_url
+
+    assert_response :success
+    assert_equal 0, @family.recurring_occurrences.count
+  end
+
+  test "an overdue-only family sees its overdue bill, not the empty state" do
+    overdue_day = 10.days.ago.to_date
+    bill = create_bill(name: "Late bill", amount: 75,
+                       expected_day_of_month: overdue_day.day,
+                       last_occurrence_date: 2.months.ago.to_date,
+                       next_expected_date: overdue_day)
+    # Strip the future so only the overdue occurrence remains: the empty-state
+    # condition used to ignore @overdue and rendered both at once.
+    bill.recurring_occurrences.where("due_on > ?", Date.current).delete_all
+
+    get bills_url
+
+    assert_response :success
+    assert_match "Late bill", response.body
+    assert_no_match I18n.t("bills.index.empty.title"), response.body
+  end
+
+  test "the suggested strip only shows series on accounts the member can reach" do
+    create_suggested(name: "Hidden brokerage sub", account: accounts(:investment))
+    create_suggested(name: "Visible sub", account: accounts(:depository))
+
+    sign_in users(:family_member)
+    get bills_url
+
+    assert_response :success
+    assert_match "Visible sub", response.body
+    assert_no_match "Hidden brokerage sub", response.body
+  end
+
   private
 
     # A declared income series anchored to a specific payday, which is what the
@@ -1155,6 +1278,23 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     def money_string(amount)
       ApplicationController.helpers.format_money(Money.new(amount, @family.currency))
+    end
+
+    def create_transaction_entry(name:, amount:, date:, account: accounts(:depository))
+      account.entries.create!(
+        date: date, amount: amount, currency: "USD", name: name,
+        entryable: Transaction.new
+      )
+    end
+
+    def create_suggested(name:, account:)
+      @family.recurring_transactions.create!(
+        name: name, account: account, amount: 15, currency: "USD",
+        dedup_scope: name, expected_day_of_month: 5,
+        last_occurrence_date: 1.month.ago.to_date,
+        next_expected_date: Date.current,
+        status: "suggested", manual: false
+      )
     end
 
     def create_bill(name:, amount:, **overrides)

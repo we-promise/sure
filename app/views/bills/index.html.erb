@@ -106,24 +106,53 @@
     </div>
   <% end %>
 
-  <% if [ @month_rows, @later, @dormant ].all?(&:empty?) %>
-    <div class="bg-container rounded-xl shadow-border-xs p-4">
-      <%= render DS::EmptyState.new(
-            icon: "receipt",
-            title: t(".empty.title"),
-            description: t(".empty.description")
-          ) do |empty| %>
-        <% empty.with_action do %>
-          <%= render DS::Link.new(
-                text: t(".add_bill"),
-                icon: "plus",
-                variant: "primary",
-                href: new_recurring_transaction_path,
-                frame: :modal
-              ) %>
+  <%# Series-level review: detection found these, nobody confirmed them yet.
+      Distinct from the payment-match queue above. %>
+  <% if @suggested_series.any? %>
+    <%= render "recurring_transactions/suggested_series", suggested: @suggested_series %>
+  <% end %>
+
+  <% if [ @overdue, @month_rows, @later, @dormant ].all?(&:empty?) %>
+    <% if @suggested_series.none? %>
+      <div class="bg-container rounded-xl shadow-border-xs p-4">
+        <%= render DS::EmptyState.new(
+              icon: "receipt",
+              title: t(".empty.title"),
+              description: @has_transaction_history ? t(".empty.description") : t(".empty.no_history_description")
+            ) do |empty| %>
+          <% empty.with_action do %>
+            <div class="flex flex-wrap items-center justify-center gap-2">
+              <% if @has_transaction_history %>
+                <%= render DS::Link.new(
+                      text: t(".empty.action"),
+                      icon: "search",
+                      variant: "primary",
+                      href: detect_bills_path,
+                      method: :post
+                    ) %>
+                <%= render DS::Link.new(
+                      text: t(".add_bill"),
+                      icon: "plus",
+                      variant: "outline",
+                      href: new_recurring_transaction_path,
+                      frame: :modal
+                    ) %>
+              <% else %>
+                <%# Detection over zero transactions finds nothing; offering it
+                    would be a button that silently does nothing. %>
+                <%= render DS::Link.new(
+                      text: t(".add_bill"),
+                      icon: "plus",
+                      variant: "primary",
+                      href: new_recurring_transaction_path,
+                      frame: :modal
+                    ) %>
+              <% end %>
+            </div>
+          <% end %>
         <% end %>
-      <% end %>
-    </div>
+      </div>
+    <% end %>
   <% else %>
     <%# Anything late is pulled out of the chronological run. Inside it, an
         overdue bill was distinguishable only by a word in the date column, so

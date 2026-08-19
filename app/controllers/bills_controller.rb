@@ -37,6 +37,13 @@ class BillsController < ApplicationController
       return
     end
 
+    # An upgraded instance can arrive with series but no occurrence rows,
+    # because nothing under the old build ever materialized them. One inline,
+    # idempotent generation covers it (the calendar already materializes on
+    # GET), and the zero-occurrences gate means it cannot re-fire once any
+    # row exists.
+    materialize_missing_occurrences if Current.family.recurring_occurrences.none?
+
     occurrences = payable_occurrences
     preload_allocation_sums(occurrences)
 
@@ -65,6 +72,10 @@ class BillsController < ApplicationController
     compute_kpis(today, month_end)
 
     @detected_awaiting_review = detected_awaiting_review
+    # Fresh detections wait here for confirm/dismiss. Reviewing them is bill
+    # work, so the strip lives on this page as well as in Settings.
+    @suggested_series = accessible_suggested_series.includes(:merchant).order(next_expected_date: :asc)
+    @has_transaction_history = Current.family.entries.where(entryable_type: "Transaction").exists?
     @suggested_allocations = suggested_allocations
     # A row waiting on a match decision offers Review rather than Find.
     # Already loaded for the queue above, so indexing is free.
@@ -83,6 +94,25 @@ class BillsController < ApplicationController
                  .select { |occurrence| occurrence.effective_due_on >= today }
                  .sort_by(&:effective_due_on)
                  .first(NEXT_UP_LIMIT)
+  end
+
+  # One-click detection for a page with nothing on it: run the full pipeline
+  # and land back here, where the review strip presents anything found. The
+  # flash counts only rows this run created and this user can see -- the
+  # pattern total would count refreshes of series that already exist.
+  def detect
+    before_ids = accessible_suggested_series.pluck(:id)
+    result = RecurringTransaction::Pipeline.new(Current.family).run_with_lock!
+
+    flash[:notice] =
+      if result.locked?
+        t(".already_running")
+      else
+        found = accessible_suggested_series.where.not(id: before_ids).count
+        found.positive? ? t(".found", count: found) : t(".none_found")
+      end
+
+    redirect_to bills_path
   end
 
   # One bill's complete story: current state, history, what is coming, cost.
@@ -513,6 +543,21 @@ class BillsController < ApplicationController
       return 0 if user_touched.exists?
 
       series.where(manual: false, status: :active).count
+    end
+
+    def accessible_suggested_series
+      Current.family.recurring_transactions
+             .accessible_by(Current.user)
+             .suggested
+    end
+
+    # Family-wide, not user-scoped: occurrence materialization is the same
+    # machinery the sync job runs, and a partial per-user generation would
+    # leave the family half-materialized forever.
+    def materialize_missing_occurrences
+      Current.family.recurring_transactions.active.find_each do |series|
+        RecurringTransaction::OccurrenceGenerator.new(series).generate!
+      end
     end
 
     def suggested_allocations

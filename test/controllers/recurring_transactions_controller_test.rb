@@ -699,4 +699,58 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Netflix Premium", series.reload.display_name,
       "a name the user typed should win over the detected merchant"
   end
+
+  # --- Suggested-series review: confirm/dismiss from either page ---
+
+  test "confirming from the Bills page returns there and reconstructs the bill's history" do
+    last_month_ninth = Date.current.beginning_of_month + 8.days - 1.month
+    suggestion = @family.recurring_transactions.create!(
+      name: "CITY WATER", account: accounts(:depository), amount: 80, currency: "USD",
+      expected_day_of_month: 9, last_occurrence_date: last_month_ninth,
+      next_expected_date: last_month_ninth + 1.month, status: "suggested", manual: false
+    )
+    accounts(:depository).entries.create!(
+      date: last_month_ninth, amount: 80, currency: "USD", name: "CITY WATER",
+      entryable: Transaction.new
+    )
+
+    post confirm_recurring_transaction_url(suggestion), headers: { "HTTP_REFERER" => bills_url }
+
+    assert_redirected_to bills_url
+    assert suggestion.reload.active?
+    assert_operator suggestion.recurring_occurrences.count, :>, 0,
+      "confirming must materialize the schedule"
+    assert suggestion.recurring_occurrences.paid.where(due_on: last_month_ninth).exists?,
+      "confirming must close history a real entry anchors"
+  end
+
+  test "confirming twice does not double anything" do
+    suggestion = @family.recurring_transactions.create!(
+      name: "CITY GAS", account: accounts(:depository), amount: 55, currency: "USD",
+      expected_day_of_month: 9,
+      last_occurrence_date: Date.current.beginning_of_month + 8.days - 1.month,
+      next_expected_date: Date.current.beginning_of_month + 8.days,
+      status: "suggested", manual: false
+    )
+
+    post confirm_recurring_transaction_url(suggestion)
+    state = suggestion.recurring_occurrences.order(:due_on).pluck(:due_on, :status)
+
+    post confirm_recurring_transaction_url(suggestion)
+
+    assert_equal state, suggestion.recurring_occurrences.order(:due_on).pluck(:due_on, :status)
+  end
+
+  test "dismissing from the Bills page tombstones and returns there" do
+    suggestion = @family.recurring_transactions.create!(
+      name: "PHANTOM SUB", account: accounts(:depository), amount: 12, currency: "USD",
+      expected_day_of_month: 5, last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current, status: "suggested", manual: false
+    )
+
+    post dismiss_recurring_transaction_url(suggestion), headers: { "HTTP_REFERER" => bills_url }
+
+    assert_redirected_to bills_url
+    assert suggestion.reload.ended?
+  end
 end

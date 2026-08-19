@@ -1,0 +1,39 @@
+<%# locals: (suggested:) %>
+<%# Detection proposes, the user disposes. Rendered from both the Bills
+    overview and Settings -> Recurring, so every key is absolutely scoped. %>
+<div class="rounded-xl bg-container-inset space-y-1 p-1">
+  <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+    <p><%= t("recurring_transactions.suggested.title") %></p>
+    <span class="text-subdued">&middot;</span>
+    <p><%= suggested.count %></p>
+  </div>
+
+  <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
+    <% suggested.each do |suggestion| %>
+      <div class="flex items-center justify-between gap-4 px-4 py-3">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-primary truncate"><%= suggestion.display_name %></p>
+          <p class="text-xs text-secondary">
+            <span class="privacy-sensitive"><%= format_money(-suggestion.amount_money) %></span>
+            &middot; <%= frequency_label(suggestion) %>
+            &middot; <%= t("recurring_transactions.suggested.seen_count", count: suggestion.occurrence_count) %>
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <%= render DS::Link.new(
+            text: t("recurring_transactions.suggested.confirm"),
+            variant: "primary",
+            href: confirm_recurring_transaction_path(suggestion),
+            method: :post
+          ) %>
+          <%= render DS::Link.new(
+            text: t("recurring_transactions.suggested.dismiss"),
+            variant: "ghost",
+            href: dismiss_recurring_transaction_path(suggestion),
+            method: :post
+          ) %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
