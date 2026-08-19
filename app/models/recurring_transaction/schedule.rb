@@ -259,9 +259,13 @@ class RecurringTransaction
       end
 
       # The series' first end_after_count occurrences, counted from the
-      # anchor, up to `through`.
+      # anchor, up to `through`. Membership keys on the raw scheduled date:
+      # the lookup starts before the anchor so an anchor occurrence moved
+      # earlier by weekend_adjust "before" still counts as the first one.
       def lifetime_pairs(through:)
-        adjusted_pairs(anchor_date, [ through, anchor_date ].max).first(end_after_count)
+        adjusted_pairs(anchor_date - WEEKEND_MARGIN, [ through, anchor_date ].max)
+          .select { |pair| pair.original_due_on >= anchor_date }
+          .first(end_after_count)
       end
 
       def lifetime_occurrences(through:)

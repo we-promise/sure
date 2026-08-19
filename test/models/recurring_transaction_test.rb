@@ -1020,6 +1020,40 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_includes rt.errors[:destination_account], "must belong to the same family as the source account"
   end
 
+  test "validation rejects a source account from a different family" do
+    other_family = Family.create!(name: "Other", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
+    other_account = other_family.accounts.create!(name: "Other depository", balance: 0, currency: "USD", accountable: Depository.new)
+
+    rt = build_recurring(account: other_account)
+
+    assert_not rt.valid?
+    assert_includes rt.errors[:account], "must belong to this family"
+  end
+
+  test "validation rejects a transfer whose endpoints both sit in another family" do
+    # The endpoint pair is internally consistent here, so only the check
+    # against the bill's own family can catch it.
+    other_family = Family.create!(name: "Other", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
+    other_source = other_family.accounts.create!(name: "Other depository", balance: 0, currency: "USD", accountable: Depository.new)
+    other_destination = other_family.accounts.create!(name: "Other card", balance: 0, currency: "USD", accountable: CreditCard.new)
+
+    rt = @family.recurring_transactions.build(
+      account: other_source,
+      destination_account: other_destination,
+      name: "Foreign transfer pair",
+      amount: 100,
+      currency: "USD",
+      expected_day_of_month: 1,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      manual: true
+    )
+
+    assert_not rt.valid?
+    assert_includes rt.errors[:account], "must belong to this family"
+    assert_includes rt.errors[:destination_account], "must belong to this family"
+  end
+
   test "create_from_transfer builds a recurring transfer with both endpoints" do
     source = @account
     destination = accounts(:credit_card)
@@ -1381,6 +1415,8 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     expense = build_recurring(name: "Rent", merchant: nil, amount: 1200).tap(&:save!)
     build_recurring(name: "Paycheck", merchant: nil, amount: -2000).tap(&:save!)
     build_recurring(name: "Paused", merchant: nil, amount: 40, status: "inactive").tap(&:save!)
+    build_recurring(name: "Card payment", merchant: nil, amount: 500,
+                    destination_account: accounts(:credit_card)).tap(&:save!)
 
     assert_equal [ expense.id ], @family.recurring_transactions.bills.pluck(:id)
   end

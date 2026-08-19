@@ -366,6 +366,23 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
     assert_nil schedule.first_occurrence_after(Date.new(2026, 10, 15))
   end
 
+  test "after_count counts an anchor occurrence adjusted before the anchor date" do
+    # Aug 15 2026 is a Saturday, so "before" moves the first payment to
+    # Friday Aug 14 -- a day before the anchor. It is still the plan's first
+    # occurrence; a three-payment plan must not materialize a November one.
+    schedule = build_schedule(
+      rules: [ rule(frequency: "monthly", day_of_month: 15) ],
+      anchor_date: Date.new(2026, 8, 15),
+      weekend_adjust: "before",
+      end_mode: "after_count", end_after_count: 3
+    )
+
+    assert_equal [ Date.new(2026, 8, 14), Date.new(2026, 9, 15), Date.new(2026, 10, 15) ],
+                 schedule.occurrences_between(Date.new(2026, 1, 1), Date.new(2027, 12, 31))
+    assert_nil schedule.first_occurrence_after(Date.new(2026, 10, 15)),
+      "a fourth occurrence never exists under a three-payment plan"
+  end
+
   test "first_occurrence_after survives long weekend-skip droughts" do
     # A yearly bill due on a Saturday with skip adjustment has no occurrence
     # that year at all; the search must roll to the next non-weekend year.

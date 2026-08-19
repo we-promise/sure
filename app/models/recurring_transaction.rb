@@ -51,6 +51,7 @@ class RecurringTransaction < ApplicationRecord
             allow_nil: true
   validate :merchant_or_name_present
   validate :category_belongs_to_family
+  validate :accounts_belong_to_family
   validate :amount_variance_consistency
   validate :transfer_endpoints_consistent
   validate :payment_url_is_http
@@ -136,6 +137,19 @@ class RecurringTransaction < ApplicationRecord
     end
   end
 
+  # account_id and destination_account_id are mass-assignable like category_id,
+  # so a crafted id could attach another family's account to this bill --
+  # transfer_endpoints_consistent only compares the endpoints to each other.
+  def accounts_belong_to_family
+    return if family_id.blank?
+
+    { account: account, destination_account: destination_account }.each do |attribute, record|
+      next if record.blank? || record.family_id == family_id
+
+      errors.add(attribute, :wrong_family)
+    end
+  end
+
   def payment_url_is_http
     return if payment_url.blank?
 
@@ -209,7 +223,7 @@ class RecurringTransaction < ApplicationRecord
   def amount_variance_consistency
     if expected_amount_min.present? && expected_amount_max.present?
       if expected_amount_min > expected_amount_max
-        errors.add(:expected_amount_min, "cannot be greater than expected_amount_max")
+        errors.add(:expected_amount_min, :greater_than_max)
       end
     end
   end
@@ -220,21 +234,21 @@ class RecurringTransaction < ApplicationRecord
     return if destination_account_id.blank?
 
     if account_id.blank?
-      errors.add(:account, "must be present on a recurring transfer")
+      errors.add(:account, :required_for_transfer)
     elsif account.blank?
       # account_id references a row that was destroyed. Mirror the
       # destination_account.blank? branch so the source side surfaces a
-      # normal validation error too.
-      errors.add(:account, "must exist")
+      # normal validation error too. :required is the stock "must exist".
+      errors.add(:account, :required)
     elsif destination_account.blank?
       # destination_account_id references a row that was destroyed (or never
       # existed). Surface as a normal validation error instead of letting
       # the FK fire on save.
-      errors.add(:destination_account, "must exist")
+      errors.add(:destination_account, :required)
     elsif account_id == destination_account_id
-      errors.add(:destination_account, "cannot be the same as the source account")
+      errors.add(:destination_account, :same_as_source)
     elsif account.family_id != destination_account.family_id
-      errors.add(:destination_account, "must belong to the same family as the source account")
+      errors.add(:destination_account, :family_mismatch)
     end
   end
 
