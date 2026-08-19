@@ -113,7 +113,11 @@ class SnaptradeItemsController < ApplicationController
   def connect
     @snaptrade_item.ensure_user_registered! unless @snaptrade_item.user_registered?
 
-    redirect_url = callback_snaptrade_items_url(item_id: @snaptrade_item.id)
+    redirect_url = callback_snaptrade_items_url(
+      item_id: @snaptrade_item.id,
+      return_to: params[:return_to].presence,
+      accountable_type: params[:accountable_type].presence
+    )
     portal_url = @snaptrade_item.connection_portal_url(redirect_url: redirect_url)
     redirect_to portal_url, allow_other_host: true
   rescue ActiveRecord::Encryption::Errors::Decryption => e

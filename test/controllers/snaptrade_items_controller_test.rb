@@ -45,6 +45,20 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to portal_url
   end
 
+  test "connect carries the setup-accounts return context through the portal redirect" do
+    SnaptradeItem.any_instance.stubs(:user_registered?).returns(true)
+    captured_redirect_url = nil
+    SnaptradeItem.any_instance.stubs(:connection_portal_url).with do |args|
+      captured_redirect_url = args[:redirect_url]
+      true
+    end.returns("https://app.snaptrade.com/portal/test123")
+
+    get connect_snaptrade_item_url(@snaptrade_item, return_to: "setup_accounts", accountable_type: "Investment")
+
+    assert_includes captured_redirect_url, "return_to=setup_accounts"
+    assert_includes captured_redirect_url, "accountable_type=Investment"
+  end
+
   test "complete oauth device flow preserves provider oauth error fields" do
     error = Provider::Snaptrade::ApiError.new(
       "SnapTrade OAuth error (poll_device_token): authorization_pending",
@@ -554,7 +568,7 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".no-accounts-found", count: 1, message: "Expected the no-accounts UI to be shown after a completed sync with zero accounts"
     assert_select "#snaptrade-sync-spinner", count: 0, message: "Expected the spinner to be hidden when there is no active sync"
-    assert_select "a[href=?]", connect_snaptrade_item_path(@snaptrade_item), text: /Connect Brokerage/
+    assert_select "a[href=?]", connect_snaptrade_item_path(@snaptrade_item, return_to: "setup_accounts"), text: /Connect Brokerage/
     assert_no_match oauth_connect_snaptrade_items_path(item_id: @snaptrade_item.id), response.body
   end
 
