@@ -96,6 +96,33 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert occurrence.allocations.sole.allocation_suggested?
   end
 
+  # The payment review queue is where suggestions land, and income review has
+  # no home there: a paycheck is not a bill anyone needs to approve paying.
+  test "an income series never suggests, while the same shape on a bill does" do
+    income = create_series(name: "ACME PAYROLL", amount: -1840, day_offset: -7, bill_type: "income")
+    bill = create_series(name: "CITY WATER", amount: 80, day_offset: -7)
+    create_entry(amount: -1900, date: Date.current, name: "ACME PAYROLL")
+    create_entry(amount: 85.50, date: Date.current, name: "CITY WATER")
+
+    @matcher.run!
+
+    assert_equal 0, income.recurring_occurrences.order(:due_on).first.allocations.count,
+      "a near-miss deposit must not queue income for payment review"
+    assert bill.recurring_occurrences.order(:due_on).first.allocations.sole.allocation_suggested?,
+      "the identical near-miss on a bill still suggests"
+  end
+
+  test "an exact income match still auto-links and closes the payday" do
+    income = create_series(name: "ACME PAYROLL", amount: -1840, day_offset: 0, bill_type: "income")
+    occurrence = income.recurring_occurrences.order(:due_on).first
+    create_entry(amount: -1840, date: Date.current, name: "ACME PAYROLL")
+
+    assert_equal 1, @matcher.run!
+
+    assert occurrence.allocations.sole.allocation_confirmed?
+    assert occurrence.reload.paid?, "the exact tier is what advances the paycheck planner"
+  end
+
   test "weekly windows clamp so one payment cannot satisfy two weeks" do
     series = create_series(name: "CLEANER", amount: 100, day_offset: 0, preset: "weekly")
     occurrences = series.recurring_occurrences.order(:due_on).limit(2).to_a
@@ -257,7 +284,7 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
   end
 
   private
-    def create_series(amount:, day_offset:, name: nil, merchant: nil, dedup_scope: "", preset: "monthly")
+    def create_series(amount:, day_offset:, name: nil, merchant: nil, dedup_scope: "", preset: "monthly", bill_type: "bill")
       due = Date.current + day_offset
 
       series = @family.recurring_transactions.create!(
@@ -266,6 +293,7 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
         account: @account,
         amount: amount,
         currency: "USD",
+        bill_type: bill_type,
         dedup_scope: dedup_scope,
         expected_day_of_month: due.day,
         anchor_date: due,

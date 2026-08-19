@@ -14,7 +14,7 @@
         <div class="min-w-0">
           <p class="text-sm font-medium text-primary truncate"><%= suggestion.display_name %></p>
           <p class="text-xs text-secondary">
-            <span class="privacy-sensitive"><%= format_money(-suggestion.amount_money) %></span>
+            <span class="privacy-sensitive"><%= format_money(suggestion.amount_money.abs) %></span>
             &middot; <%= frequency_label(suggestion) %>
             &middot; <%= t("recurring_transactions.suggested.seen_count", count: suggestion.occurrence_count) %>
           </p>

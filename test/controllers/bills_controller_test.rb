@@ -1355,6 +1355,32 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Hidden brokerage sub", response.body
   end
 
+  # The matcher no longer suggests income, but a suggestion written before
+  # that rule can still sit on the row. The queue must not render it; the
+  # same pending state on a bill must.
+  test "a pre-existing income suggestion stays out of the payment review queue" do
+    payday = Date.current - 3
+    income = declare_income(name: "ACME PAYROLL", amount: -1840, payday: payday)
+    bill = declare_bill(name: "CITY WATER", amount: 80, due: payday)
+    deposit = create_transaction_entry(name: "ACME PAYROLL", amount: -1900, date: payday)
+    charge = create_transaction_entry(name: "CITY WATER", amount: 85.50, date: payday)
+
+    [ [ income, deposit ], [ bill, charge ] ].each do |series, entry|
+      occurrence = series.recurring_occurrences.order(:due_on).first
+      RecurringTransaction::Allocator.new(occurrence).allocate_matched!(
+        entry: entry, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+      )
+    end
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.index.suggestion_line", entry: "CITY WATER", bill: "CITY WATER"),
+      response.body
+    assert_no_match I18n.t("bills.index.suggestion_line", entry: "ACME PAYROLL", bill: "ACME PAYROLL"),
+      response.body
+  end
+
   private
 
     # A declared income series anchored to a specific payday, which is what the

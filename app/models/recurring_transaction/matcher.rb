@@ -124,7 +124,10 @@ class RecurringTransaction
         if candidate.confidence >= EXACT_TIER && !pending_entry?(candidate.entry) && unambiguous?(candidate, ordered)
           :exact
         elsif candidate.confidence >= HIGH_TIER
-          :high
+          # Suggestions render on the payment review queue, and income review
+          # has no home there: a deposit either matches at the exact tier and
+          # closes the payday, or waits.
+          :high unless candidate.occurrence.recurring_transaction.typed_income?
         end
       end
 

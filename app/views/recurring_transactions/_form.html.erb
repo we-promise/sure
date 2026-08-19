@@ -29,6 +29,7 @@
       <div class="grid grid-cols-2 gap-3">
         <%= f.number_field :amount,
               label: income ? t(".income_amount_label") : t(".amount_label"),
+              value: recurring_transaction.amount&.abs,
               min: 0,
               step: 0.01,
               required: true %>
@@ -42,8 +43,11 @@
           exists, so editing when a bill falls due happens in the frequency
           picker below rather than here. %>
       <div class="space-y-2">
+        <%# Income stores its amount negative; the field edits the magnitude
+            and the update path re-applies the sign. %>
         <%= f.number_field :amount,
               label: income ? t(".income_amount_label") : t(".amount_label"),
+              value: recurring_transaction.amount&.abs,
               min: 0,
               step: 0.01,
               required: true %>

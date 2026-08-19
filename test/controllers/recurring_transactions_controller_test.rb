@@ -726,6 +726,24 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal(-2500, income.reload.amount.to_f,
       "income is stored negative; a raw assignment would flip it into a bill")
   end
+
+  test "the edit form shows an income amount as a positive magnitude" do
+    income = recurring_transactions(:netflix_subscription)
+    income.update!(bill_type: "income", amount: -2000)
+
+    get edit_recurring_transaction_url(income)
+
+    assert_response :success
+    # The stored sign is bookkeeping; the form edits what the paycheck pays.
+    assert_select "input[name=?][value=?]", "recurring_transaction[amount]", "2000.0"
+  end
+
+  test "the edit form shows a bill amount as it is stored" do
+    get edit_recurring_transaction_url(recurring_transactions(:netflix_subscription))
+
+    assert_response :success
+    assert_select "input[name=?][value=?]", "recurring_transaction[amount]", "15.99"
+  end
   # Detected bills carry a merchant and no name of their own. The field has to
   # arrive seeded, or it renders empty and, being required, browsers refuse to
   # submit the whole form; and the rename has to actually show, or it is a

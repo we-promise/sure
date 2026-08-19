@@ -588,6 +588,9 @@ class BillsController < ApplicationController
         .joins(recurring_occurrence: :recurring_transaction)
         .where(recurring_occurrences: { family_id: Current.family.id })
         .merge(RecurringTransaction.accessible_by(Current.user))
+        # Income never reviews here: the matcher no longer suggests it, and
+        # this filter also retires any suggestion written before that rule.
+        .merge(RecurringTransaction.where.not(bill_type: "income"))
         .includes(:entry, recurring_occurrence: { recurring_transaction: :merchant })
         # The confidence the matcher scored these with was sitting unused on
         # the row while the queue ordered itself by when the job happened to
