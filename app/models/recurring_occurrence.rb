@@ -159,15 +159,20 @@ class RecurringOccurrence < ApplicationRecord
     # What the last settled cycle actually cost. `expected_amount` on a closed
     # row is the frozen estimate, so reading it would re-propose the guess and
     # strategy could never converge on a variable bill's real amount.
+    # Memoized: every amount label on a row asks this same question.
     def last_paid_total
-      previous = recurring_transaction.recurring_occurrences
-                                      .paid
-                                      .where("due_on < ?", due_on)
-                                      .order(due_on: :desc)
-                                      .first
-      return nil if previous.nil?
+      return @last_paid_total if defined?(@last_paid_total)
 
-      total = previous.allocations.confirmed.sum(:allocated_amount)
-      total.positive? ? total : nil
+      @last_paid_total = begin
+        previous = recurring_transaction.recurring_occurrences
+                                        .paid
+                                        .where("due_on < ?", due_on)
+                                        .order(due_on: :desc)
+                                        .first
+        if previous
+          total = previous.allocations.confirmed.sum(:allocated_amount)
+          total.positive? ? total : nil
+        end
+      end
     end
 end

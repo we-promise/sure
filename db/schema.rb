@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_19_052813) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_19_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1676,6 +1676,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_19_052813) do
     t.uuid "entry_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["entry_id"], name: "index_recurring_match_rejections_on_entry_id"
     t.index ["recurring_transaction_id", "entry_id"], name: "idx_recurring_match_rejections_pair", unique: true
   end
 
@@ -1712,6 +1713,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_19_052813) do
     t.uuid "entry_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["entry_id"], name: "index_recurring_price_changes_on_entry_id"
     t.index ["recurring_transaction_id", "effective_on"], name: "idx_recurring_price_changes_identity", unique: true
   end
 

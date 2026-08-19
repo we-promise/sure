@@ -55,7 +55,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
         .where(recurring_transactions: { status: :active, destination_account_id: nil })
         .where("recurring_transactions.amount > 0")
         .where("due_on < ?", Date.current)
-        .includes(recurring_transaction: :merchant)
+        .includes(recurring_transaction: [ :merchant, :recurrence_rules ])
         .to_a
 
       stale = candidates.select do |occurrence|
