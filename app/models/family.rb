@@ -28,16 +28,6 @@ class Family < ApplicationRecord
   ASSISTANT_TYPES = %w[builtin external].freeze
   SHARING_DEFAULTS = %w[shared private].freeze
 
-  DEFAULT_CURRENCY_BY_COUNTRY = {
-    "AU" => "AUD", "CA" => "CAD", "CH" => "CHF", "CN" => "CNY",
-    "CZ" => "CZK", "DK" => "DKK", "GB" => "GBP", "HK" => "HKD",
-    "HU" => "HUF", "ID" => "IDR", "IL" => "ILS", "IN" => "INR",
-    "JP" => "JPY", "KR" => "KRW", "MX" => "MXN", "MY" => "MYR",
-    "NO" => "NOK", "NZ" => "NZD", "PH" => "PHP", "PL" => "PLN",
-    "SE" => "SEK", "SG" => "SGD", "TH" => "THB", "TR" => "TRY",
-    "TW" => "TWD", "US" => "USD", "ZA" => "ZAR"
-  }.freeze
-
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
@@ -161,11 +151,28 @@ class Family < ApplicationRecord
   before_validation :normalize_enabled_currencies!
 
   def primary_currency_code
-    normalize_currency_code(currency) || "USD"
+    self.class.normalize_currency_code(currency) || "USD"
   end
 
   def default_currency_for_country
-    DEFAULT_CURRENCY_BY_COUNTRY.fetch(country.to_s.upcase, "USD")
+    self.class.default_currency_for_country(country)
+  end
+
+  def self.default_currency_for_country(country)
+    country_currency = ISO3166::Country.new(country.to_s.upcase)&.currency_code
+    normalize_currency_code(country_currency) || "USD"
+  end
+
+  def self.default_currency_by_country
+    LanguagesHelper::COUNTRY_MAPPING.keys.index_with { |country| default_currency_for_country(country) }
+  end
+
+  def self.normalize_currency_code(value)
+    return if value.blank?
+
+    Money::Currency.new(value).iso_code
+  rescue Money::Currency::UnknownCurrencyError, ArgumentError
+    nil
   end
 
   def custom_enabled_currencies?
@@ -505,15 +512,7 @@ class Family < ApplicationRecord
     end
 
     def normalize_currency_codes(values)
-      Array(values).filter_map { |value| normalize_currency_code(value) }.uniq
-    end
-
-    def normalize_currency_code(value)
-      return if value.blank?
-
-      Money::Currency.new(value).iso_code
-    rescue Money::Currency::UnknownCurrencyError, ArgumentError
-      nil
+      Array(values).filter_map { |value| self.class.normalize_currency_code(value) }.uniq
     end
 
     # Not a plain `inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }`

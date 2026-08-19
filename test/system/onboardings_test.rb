@@ -48,6 +48,27 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_text I18n.t("onboardings.goals.title")
   end
 
+  test "browser locale defaults onboarding country and currency" do
+    @family.update!(country: "US", currency: "USD")
+    set_browser_language("en-CA")
+
+    visit onboarding_path
+
+    assert_equal "CA", find("#user_family_attributes_country").value
+
+    click_button I18n.t("onboardings.show.submit")
+    assert_current_path preferences_onboarding_path
+
+    assert_equal "CAD", find("#user_family_attributes_currency").value
+
+    click_button I18n.t("onboardings.preferences.submit")
+    assert_current_path goals_onboarding_path
+
+    @family.reload
+    assert_equal "CA", @family.country
+    assert_equal "CAD", @family.currency
+  end
+
   test "preferences page renders chart without errors" do
     visit preferences_onboarding_path
 
@@ -192,6 +213,18 @@ class OnboardingsTest < ApplicationSystemTestCase
       find("#user_theme", visible: :all)
         .find("option[value='#{value}']", visible: :all)
         .select_option
+    end
+
+    def set_browser_language(language)
+      page.driver.browser.execute_cdp(
+        "Page.addScriptToEvaluateOnNewDocument",
+        source: <<~JS
+          Object.defineProperty(navigator, "language", {
+            get: () => "#{language}",
+            configurable: true
+          });
+        JS
+      )
     end
 
     def sign_in(user)

@@ -9,6 +9,7 @@ export default class extends Controller {
     groupNameLabel: String,
     groupNamePlaceholder: String,
     country: String,
+    countryCurrencies: Object,
     currencyOverride: Boolean
   }
 
@@ -41,7 +42,7 @@ export default class extends Controller {
     }
 
     if (this.hasCurrencyFieldTarget && !this.currencyOverrideValue) {
-      const country = this.countryValue || this.countryFieldTarget?.value || browserCountry;
+      const country = this.countryValue || (this.hasCountryFieldTarget ? this.countryFieldTarget.value : null) || browserCountry;
       const currency = this.currencyForCountry(country);
 
       if (currency && this.hasCurrencyOption(currency)) {
@@ -59,13 +60,7 @@ export default class extends Controller {
   }
 
   currencyForCountry(country) {
-    return {
-      AU: "AUD", CA: "CAD", CH: "CHF", CN: "CNY", CZ: "CZK", DK: "DKK",
-      GB: "GBP", HK: "HKD", HU: "HUF", ID: "IDR", IL: "ILS", IN: "INR",
-      JP: "JPY", KR: "KRW", MX: "MXN", MY: "MYR", NO: "NOK", NZ: "NZD",
-      PH: "PHP", PL: "PLN", SE: "SEK", SG: "SGD", TH: "THB", TR: "TRY",
-      TW: "TWD", US: "USD", ZA: "ZAR"
-    }[country?.toUpperCase()];
+    return (this.hasCountryCurrenciesValue ? this.countryCurrenciesValue : {})[country?.toUpperCase()];
   }
 
   hasCountryOption(country) {
