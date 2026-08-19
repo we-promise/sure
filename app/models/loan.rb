@@ -15,7 +15,9 @@ class Loan < ApplicationRecord
 
   def monthly_payment
     return nil if term_months.nil? || interest_rate.nil? || rate_type.nil? || rate_type != "fixed"
-    return Money.new(0, account.currency) if original_balance.amount.zero? || term_months.zero?
+    # Non-positive, not just zero: `amortizable?` rejects both, so anything that
+    # slips past here would fall through to a nil schedule instead of a payment.
+    return Money.new(0, account.currency) if original_balance.amount <= 0 || term_months <= 0
 
     amortization_schedule&.periodic_payment
   end
