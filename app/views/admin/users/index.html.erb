@@ -112,7 +112,7 @@
                               <% if user.id == Current.user.id %>
                                 <span class="text-xs font-medium text-secondary"><%= t(".you") %></span>
                               <% end %>
-                              <%= render DS::Pill.new(label: t(".roles.#{user.role}", default: user.role.humanize), tone: user.super_admin? ? :success : :neutral) %>
+                              <%= render DS::Pill.new(label: t(".roles.#{user.role}"), tone: user.super_admin? ? :success : :neutral) %>
                               <% if user.oidc_identities.any? %>
                                 <% sso_providers = user.oidc_identities.map { |i| (i.provider_config&.dig(:label) || i.provider_config&.dig("label")).presence || i.provider.titleize }.uniq.join(", ") %>
                                 <% provider_tooltip = t(".auth_types.sso_provider_tooltip", providers: sso_providers) %>
