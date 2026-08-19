@@ -111,6 +111,24 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_holdings(expected, calculated)
   end
 
+  # Cost basis is a per-share weighted average that only changes on buy trades,
+  # so it must carry forward (LOCF) onto gap-filled non-trade dates rather than
+  # resetting to nil/zero.
+  test "carries cost basis forward onto gap-filled dates" do
+    load_prices
+
+    create_trade(@wmt, qty: 100, date: 3.days.ago.to_date, price: 100, account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+
+    wmt_holdings = calculated.select { |h| h.security_id == @wmt.id && h.qty.positive? }
+
+    assert wmt_holdings.any?, "expected WMT holdings to be generated"
+    wmt_holdings.each do |holding|
+      assert_equal 100, holding.cost_basis, "Cost basis should carry forward on #{holding.date}"
+    end
+  end
+
   test "offline tickers sync holdings based on most recent trade price" do
     offline_security = Security.create!(ticker: "OFFLINE", name: "Offline Ticker")
 
