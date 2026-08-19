@@ -53,7 +53,15 @@ module Assistant
         Function::CreateCategory,
         Function::UpdateCategory,
         Function::UpdateTransaction,
-        Function::UpdateBudget
+        Function::UpdateBudget,
+        # Bills: deliberately in the default (MCP-visible) set, including the
+        # write tools -- the same exposure CreateGoal and UpdateTransaction
+        # already have. Each tool re-checks the family's recurring feature
+        # gate and the user's account-access scope itself.
+        Function::GetBills,
+        Function::GetBillDetails,
+        Function::GetPaycheckPlan,
+        Function::GetBillAudit
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
