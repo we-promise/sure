@@ -195,6 +195,34 @@ tracked, use Review tokens rather than adding the address again.
 
 ## Limitations
 
+**Only tokens the crypto price provider quotes get a value, and it quotes by
+symbol.** This is the largest limitation of the feature, so read it before
+judging a number you disagree with. Valuation goes through a `CRYPTO:<SYMBOL>`
+ticker, and a symbol is not a token's identity — its contract is. In practice the
+provider covers major assets and little else: measured on a real Ethereum
+address, of its ten largest token positions it quoted two. The other eight —
+including holdings worth roughly $406,000, $141,000 and $74,000 — showed a value
+of zero while their quantities were tracked correctly.
+
+So: **a zero next to a token you know is worth something almost always means the
+provider does not list that token, not that the balance is wrong.** Check the
+quantity, which is read straight from the chain. Native coins (BTC, ETH, SOL,
+POL, XDAI) and large-cap tokens are the well-covered case.
+
+Pricing by contract address instead of by symbol would close most of the gap, and
+the data is already close at hand — the EVM indexer returns an exchange rate per
+token and Jupiter returns a USD price per mint, neither of which this version
+uses for valuation. That change belongs to how crypto enters Sure's price
+pipeline rather than to this feature, so it is not something you can configure
+your way out of today.
+
+**DeFi positions are not seen at all.** Staked ETH, liquidity-pool tokens,
+lending positions and Solana stake accounts are invisible: only natively-held
+coins and fungible tokens sitting at the address are read. A wallet holding most
+of its value in a staking or lending protocol will report a fraction of it. This
+is a scope limit, not a bug — nothing in the UI claims those positions were
+checked.
+
 **Bitcoin is one address at a time.** Extended keys (`xpub`, `ypub`, `zpub`) are
 not supported and are rejected as addresses. This matters: most Bitcoin wallets
 are HD wallets, where one extended key derives thousands of addresses and change
@@ -233,6 +261,11 @@ never mistaken for a balance of one fungible token.
 provider is enabled, or your family currency is not USD and no exchange rate
 provider is configured. Both are covered above, and the linking UI says which one
 applies.
+
+**One token shows zero while the others in the same wallet are fine.** Different
+cause: the price provider does not quote that token. Pricing is by symbol and
+covers major assets, so long-tail tokens are tracked by quantity and valued at
+zero. See "Limitations" — there is no setting that changes this.
 
 **A Bitcoin balance is much lower than my wallet app shows.** You are tracking one
 address of an HD wallet. See "Limitations".
