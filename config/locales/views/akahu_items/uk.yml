@@ -1,0 +1,135 @@
+---
+uk:
+  providers:
+    akahu:
+      name: "Akahu"
+      description: "Підключіть новозеландські банківські рахунки через Akahu"
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: "Підключення Akahu"
+  akahu_account:
+    fallback: "Рахунок Akahu"
+  akahu_entry:
+    notes:
+      reference: "Довідка"
+      particulars: "Деталі"
+      code: "Код"
+      other_account: "Інший рахунок"
+  akahu_item:
+    errors:
+      account_processing_failed: "Не вдалося синхронізувати рахунок Akahu"
+      account_sync_schedule_failed: "Не вдалося запланувати синхронізацію рахунку Akahu"
+      pending_transactions_failed: "Не вдалося отримати незавершені транзакції Akahu"
+      transactions_failed: "Не вдалося отримати транзакції Akahu"
+      sync_failed: "Не вдалося синхронізувати підключення Akahu"
+    sync_status:
+      no_accounts: "Рахунків не знайдено"
+      all_synced:
+        one: "1 рахунок синхронізовано"
+        few: "%{count} рахунки синхронізовано"
+        many: "%{count} рахунків синхронізовано"
+        other: "%{count} рахунків синхронізовано"
+      partial: "%{linked} синхронізовано, %{unlinked} потребують налаштування"
+    institution_summary:
+      none: "Немає підключених установ"
+      one: "1 установа"
+      count:
+        one: "1 установа"
+        few: "%{count} установи"
+        many: "%{count} установ"
+        other: "%{count} установ"
+  akahu_items:
+    provider_panel:
+      default_connection_name: "Підключення Akahu"
+      add_connection: "Додати підключення Akahu"
+      update_connection: "Оновити підключення"
+      connection_name_label: "Назва підключення"
+      connection_name_placeholder: "Основний Akahu"
+      app_token_label: "Токен програми"
+      app_token_placeholder: "Вставте свій токен програми Akahu"
+      keep_app_token_placeholder: "Залиште порожнім, щоб зберегти існуючий токен програми"
+      user_token_label: "Токен користувача"
+      user_token_placeholder: "Вставте свій токен користувача Akahu"
+      keep_user_token_placeholder: "Залиште порожнім, щоб зберегти існуючий токен користувача"
+      setup_accounts: "Налаштувати рахунки"
+      syncing: "Синхронізація..."
+      sync: "Синхронізувати"
+      disconnect: "Від'єднати"
+      disconnect_confirm: "Ви впевнені, що хочете від'єднати %{name}?"
+    create:
+      success: "Підключення Akahu збережено."
+    update:
+      success: "Підключення Akahu оновлено."
+    destroy:
+      success: "Заплановано видалення підключення Akahu."
+      unlink_failed: "Не вдалося від'єднати підключення Akahu"
+    select_accounts:
+      title: "Прив'язати рахунки Akahu"
+      description: "Виберіть рахунки Akahu, які потрібно додати."
+      no_accounts_found: "Не знайдено неприв'язаних рахунків Akahu."
+      no_credentials_configured: "Спочатку налаштуйте Akahu в налаштуваннях постачальника."
+      cancel: "Скасувати"
+      link_accounts: "Прив'язати рахунки"
+    link_accounts:
+      success:
+        one: "Прив'язано 1 рахунок Akahu."
+        few: "Прив'язано %{count} рахунки Akahu."
+        many: "Прив'язано %{count} рахунків Akahu."
+        other: "Прив'язано %{count} рахунків Akahu."
+      no_accounts_selected: "Виберіть принаймні один рахунок."
+      no_credentials_configured: "Спочатку налаштуйте Akahu в налаштуваннях постачальника."
+      unsupported_account_type: "Akahu не підтримує цей тип рахунку."
+      link_failed: "Жоден рахунок не було прив'язано."
+    select_existing_account:
+      title: "Прив'язати рахунок Akahu до %{account_name}"
+      description: "Виберіть неприв'язаний рахунок Akahu для підключення до цього рахунку."
+      no_accounts_found: "Не знайдено неприв'язаних рахунків Akahu."
+      no_credentials_configured: "Спочатку налаштуйте Akahu в налаштуваннях постачальника."
+      account_already_linked: "Цей рахунок уже прив'язано до постачальника."
+      cancel: "Скасувати"
+      link_account: "Прив'язати рахунок"
+    link_existing_account:
+      success: "Прив'язано рахунок Akahu до %{account_name}."
+      account_already_linked: "Цей рахунок уже прив'язано до постачальника."
+      akahu_account_already_linked: "Цей рахунок Akahu вже прив'язано."
+    setup_accounts:
+      title: "Налаштувати рахунки Akahu"
+      subtitle: "Виберіть, як кожен рахунок Akahu має відображатися в Sure."
+      no_credentials: "Спочатку налаштуйте облікові дані Akahu."
+      api_error: "Не вдалося отримати рахунки Akahu."
+      fetch_failed: "Не вдалося отримати рахунки"
+      no_accounts_to_setup: "Немає рахунків для налаштування"
+      all_accounts_linked: "Всі рахунки Akahu вже прив'язано."
+      choose_account_type: "Виберіть тип рахунку"
+      choose_account_type_description: "Пропустіть рахунки, які ви не хочете відстежувати."
+      account_type_label: "Тип рахунку"
+      account_types:
+        skip: "Пропустити"
+        depository: "Готівка"
+        credit_card: "Кредитна картка"
+        investment: "Інвестиції"
+        loan: "Позика"
+      create_accounts: "Створити рахунки"
+      cancel: "Скасувати"
+    complete_account_setup:
+      success:
+        one: "Створено 1 рахунок Akahu."
+        few: "Створено %{count} рахунки Akahu."
+        many: "Створено %{count} рахунків Akahu."
+        other: "Створено %{count} рахунків Akahu."
+      all_skipped: "Жоден рахунок Akahu не було створено."
+      no_accounts: "Не вибрано жодного рахунку Akahu."
+      creation_failed: "Не вдалося створити рахунки Akahu."
+    akahu_item:
+      deletion_in_progress: "Видалення в процесі"
+      syncing: "Синхронізація"
+      error: "Помилка"
+      status_with_summary: "Синхронізовано %{timestamp} тому · %{summary}"
+      status_never: "Ніколи не синхронізовано"
+      delete: "Видалити"
+      setup_needed: "Потрібне налаштування рахунку"
+      setup_description: "%{linked} з %{total} рахунків прив'язано."
+      setup_action: "Налаштувати рахунки"
+      no_accounts_title: "Ще не імпортовано жодного рахунку"
+      no_accounts_description: "Отримайте рахунки Akahu та виберіть, які з них прив'язати."

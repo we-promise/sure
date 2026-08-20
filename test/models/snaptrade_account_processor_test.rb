@@ -159,6 +159,81 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "CHF", @account.currency
   end
 
+  # === /positions/all payload shape ===
+
+  test "holdings processor creates holdings from a positions/all payload" do
+    security = securities(:aapl)
+
+    @snaptrade_account.update!(
+      raw_holdings_payload: [
+        {
+          "instrument" => {
+            "kind" => "stock",
+            "symbol" => security.ticker,
+            "raw_symbol" => security.ticker,
+            "description" => security.name,
+            "currency" => "USD",
+            "exchange" => "XNAS"
+          },
+          "units" => "10",
+          "price" => "77.885",
+          "cost_basis" => "30",
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    SnaptradeAccount::HoldingsProcessor.new(@snaptrade_account).process
+
+    holding = @account.holdings.find_by(security: security)
+    assert_not_nil holding
+    assert_equal BigDecimal("10"), holding.qty
+    assert_equal BigDecimal("77.885"), holding.price
+  end
+
+  test "holdings processor reads cost_basis as a per-share value" do
+    security = securities(:aapl)
+
+    @snaptrade_account.update!(
+      raw_holdings_payload: [
+        {
+          "instrument" => { "kind" => "stock", "symbol" => security.ticker, "currency" => "USD" },
+          "units" => "10",
+          "price" => "77.885",
+          "cost_basis" => "30",
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    SnaptradeAccount::HoldingsProcessor.new(@snaptrade_account).process
+
+    holding = @account.holdings.find_by(security: security)
+    assert_not_nil holding
+    assert_equal BigDecimal("30"), holding.cost_basis
+    assert_equal "provider", holding.cost_basis_source
+  end
+
+  test "cash-equivalent positions are recognised in a positions/all payload" do
+    security = securities(:aapl)
+
+    @snaptrade_account.update!(
+      currency: "USD",
+      cash_balance: BigDecimal("1000.00"),
+      raw_holdings_payload: [
+        {
+          "instrument" => { "kind" => "mutualfund", "symbol" => security.ticker, "currency" => "USD" },
+          "units" => "100",
+          "price" => "1.00",
+          "currency" => "USD",
+          "cash_equivalent" => true
+        }
+      ]
+    )
+
+    assert_equal BigDecimal("100"), @snaptrade_account.cash_equivalent_position_value("USD")
+  end
+
   # === ActivitiesProcessor Tests ===
 
   test "activities processor maps BUY type to Buy label" do
