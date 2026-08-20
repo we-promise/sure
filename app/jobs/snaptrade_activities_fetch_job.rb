@@ -129,12 +129,29 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
         end
       end
 
-      # Exhausting MAX_PAGES without a completion condition means the account
-      # has more activities than the cap allows. Without this the partial result
-      # would look like the whole history.
+      # Exhausting MAX_PAGES without a completion condition means the account has
+      # more activities than the cap allows, and nothing continues the fetch. The
+      # partial result would otherwise look like the whole history, so record it
+      # where support can filter by family and provider rather than only in the
+      # application log.
       unless complete
-        Rails.logger.warn "SnaptradeActivitiesFetchJob - hit the #{MAX_PAGES}-page cap for account " \
-                          "#{snaptrade_account.id}; activities beyond #{activities.size} were not fetched"
+        DebugLogEntry.capture(
+          category: "sync",
+          level: "warn",
+          message: "SnaptradeActivitiesFetchJob - hit the #{MAX_PAGES}-page cap for account " \
+                   "#{snaptrade_account.id}; activities beyond #{activities.size} were not fetched",
+          source: "snaptrade",
+          family: snaptrade_account.snaptrade_item&.family,
+          provider_key: "snaptrade",
+          metadata: {
+            snaptrade_account_id: snaptrade_account.id,
+            fetched: activities.size,
+            page_limit: PAGE_LIMIT,
+            max_pages: MAX_PAGES,
+            start_date: start_date.to_s,
+            end_date: end_date.to_s
+          }
+        )
       end
 
       # Convert SDK objects to hashes
