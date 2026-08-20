@@ -10,6 +10,7 @@ class MarketDataSchedulerTest < ActiveSupport::TestCase
 
   test "sync! creates a cron job with the correct UTC cron string when enabled" do
     Setting.stubs(:market_data_sync_enabled?).returns(true)
+    Setting.stubs(:market_data_sync_enabled).returns(true)
     Setting.stubs(:market_data_sync_time).returns("18:00")
     Setting.stubs(:market_data_sync_timezone).returns("UTC")
 
@@ -41,6 +42,8 @@ class MarketDataSchedulerTest < ActiveSupport::TestCase
 
   test "sync! removes the cron job when disabled" do
     Setting.stubs(:market_data_sync_enabled?).returns(false)
+    Setting.stubs(:market_data_sync_enabled).returns(false)
+    Setting.stubs(:market_data_sync_time).returns("18:00")
     Sidekiq::Cron::Job.expects(:find).with(MarketDataScheduler::JOB_NAME).returns(@job)
     @job.expects(:destroy)
 
