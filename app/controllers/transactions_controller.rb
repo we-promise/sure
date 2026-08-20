@@ -354,17 +354,9 @@ class TransactionsController < ApplicationController
     return unless require_account_permission!(transaction.entry.account)
 
     # Check if a recurring transaction already exists for this pattern.
-    # Amount is included so two distinct recurring payments with the same
-    # payee but different amounts aren't treated as duplicates (matches the
-    # DB uniqueness scope and RecurringTransaction::Identifier's grouping key).
-    existing = Current.family.recurring_transactions.find_by(
-      account_id: transaction.entry.account_id,
-      merchant_id: transaction.merchant_id,
-      name: transaction.merchant_id.present? ? nil : transaction.entry.name,
-      amount: transaction.entry.amount,
-      currency: transaction.entry.currency,
-      manual: true
-    )
+    # The UI disables the button ahead of time using the same lookup, but this
+    # guard remains as the authoritative check (e.g. stale page, direct POST).
+    existing = transaction.existing_manual_recurring_transaction
 
     if existing
       flash[:alert] = t("recurring_transactions.already_exists")
