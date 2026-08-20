@@ -7,9 +7,11 @@ class Bills::AiReviewsController < ApplicationController
 
   # Server-owned on purpose: the button must not become a vector for
   # client-supplied prompts, and the text appears in the chat as the user's
-  # own message so it stays short and legible.
+  # own message so it stays short and legible. It reads like something a
+  # person would type: no internal tool names, because the tool descriptions
+  # already route the model without the prompt naming them.
   REVIEW_PROMPT = <<~PROMPT.freeze
-    Review my bills and subscriptions. Use get_bill_audit first, then get_bills or get_bill_details where you need detail. Report: possible duplicates, price increases, bills that look overdue or abandoned, trials about to convert, and recurring charges I haven't declared yet. For each finding, propose the specific fix, and ask me before changing anything.
+    Review my bills and subscriptions. Look for duplicate bills, price increases, anything overdue or abandoned, trials about to convert, and recurring charges I have not declared yet. Propose specific fixes and ask me before changing anything.
   PROMPT
 
   # Seeds a chat rather than generating a report: the audit tool grounds the

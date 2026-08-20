@@ -110,6 +110,7 @@ module Assistant::Configurable
           - If you suspect that you do not have enough data to 100% accurately answer, be transparent about it and state exactly what
             the data you're presenting represents and what context it is in (i.e. date range, account, etc.)
           - If a tool result contains an "error" and a "hint", follow the hint and retry once with corrected arguments. Never repeat an identical failing call.
+          - Never mention internal tool or function names in your responses. Describe what you did in plain language ("I checked your bills" rather than naming a function).
         PROMPT
       end
   end

@@ -15,7 +15,12 @@ class Bills::AiReviewsControllerTest < ActionDispatch::IntegrationTest
 
     chat = @user.chats.order(created_at: :desc).first
     assert_redirected_to chat_path(chat, thinking: true)
-    assert_includes chat.messages.find_by!(type: "UserMessage").content, "get_bill_audit"
+    content = chat.messages.find_by!(type: "UserMessage").content
+    assert_includes content, "Review my bills and subscriptions"
+    assert_includes content, "ask me before changing anything"
+    # The prompt appears in the chat as the user's own words, so it must not
+    # leak internal tool names; the tool descriptions route the model.
+    assert_no_match(/get_bill/, content)
     assert_equal chat, @user.reload.last_viewed_chat
   end
 
