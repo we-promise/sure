@@ -34,13 +34,16 @@ class CategoriesController < ApplicationController
         @transaction.record_category_usage!
       end
 
-      flash[:notice] = t(".success")
-
       redirect_target_url = request.referer || categories_path
 
       respond_to do |format|
         format.html { redirect_back_or_to categories_path, notice: t(".success") }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, redirect_target_url) }
+
+        format.turbo_stream do
+          flash[:notice] = t(".success")
+          render turbo_stream: turbo_stream.action(:redirect, redirect_target_url)
+        end
+
         format.json { render json: category_json(@category), status: :created }
       end
     else

@@ -21,7 +21,11 @@ class DS::CategorySelect < DesignSystemComponent
     "#{form.object_name}[category_id]"
   end
 
+  def field_id
+    "#{form.object_name}_category_id".gsub(/\W+/, "_")
+  end
+
   def menu_id
-    @menu_id ||= "category_select_#{field_name.gsub(/\W+/, "_")}_#{object_id}"
+    "#{field_id}_menu"
   end
 end

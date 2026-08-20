@@ -78,6 +78,13 @@ export default class extends Controller {
   }
 
   handleSearchKeydown(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.close();
+      this.buttonTarget.focus();
+      return;
+    }
+
     if (
       event.key === "Enter" &&
       !this.createFormTarget.classList.contains("hidden") &&

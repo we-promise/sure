@@ -15,11 +15,13 @@
                      class: "form-field__label" %>
 
       <button type="button"
+              id="<%= field_id %>"
               class="form-field__input min-h-7 flex items-center gap-2 pr-8"
               data-category-select-target="button"
               data-action="click->category-select#toggle"
               aria-haspopup="listbox"
               aria-expanded="false"
+              aria-controls="<%= menu_id %>"
               <%= "disabled" if disabled %>>
 
         <span data-category-select-target="selectionContainer"
