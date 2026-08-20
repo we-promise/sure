@@ -107,7 +107,7 @@ module Provider::Configurable
 
   # Configuration DSL
   class Configuration
-    attr_reader :provider_key, :fields, :provider_description
+    attr_reader :provider_key, :fields
 
     def initialize(provider_key)
       @provider_key = provider_key
@@ -117,9 +117,13 @@ module Provider::Configurable
     end
 
     # Set the provider-level description (markdown supported)
-    # @param text [String] The description text for this provider
+    # @param text [String, Proc] The description text or a locale-aware callable
     def description(text)
       @provider_description = text
+    end
+
+    def provider_description
+      resolve(@provider_description)
     end
 
     # Define a custom check for whether this provider is configured
@@ -132,12 +136,12 @@ module Provider::Configurable
 
     # Define a configuration field
     # @param name [Symbol] The field name
-    # @param label [String] Human-readable label
+    # @param label [String, Proc] Human-readable label or a locale-aware callable
     # @param required [Boolean] Whether this field is required
     # @param secret [Boolean] Whether this field contains sensitive data (will be masked in UI)
     # @param env_key [String] The ENV variable key for this field
     # @param default [String] Default value if none provided
-    # @param description [String] Optional help text
+    # @param description [String, Proc] Optional help text or a locale-aware callable
     def field(name, label:, required: false, secret: false, env_key: nil, default: nil, description: nil)
       @fields << ConfigField.new(
         name: name,
@@ -182,11 +186,17 @@ module Provider::Configurable
         hash[field.name] = field.value
       end
     end
+
+    private
+
+      def resolve(value)
+        value.respond_to?(:call) ? value.call : value
+      end
   end
 
   # Represents a single configuration field
   class ConfigField
-    attr_reader :name, :label, :required, :secret, :env_key, :default, :description, :provider_key
+    attr_reader :name, :required, :secret, :env_key, :default, :provider_key
 
     def initialize(name:, label:, required:, secret:, env_key:, default:, description:, provider_key:)
       @name = name
@@ -197,6 +207,14 @@ module Provider::Configurable
       @default = default
       @description = description
       @provider_key = provider_key
+    end
+
+    def label
+      resolve(@label)
+    end
+
+    def description
+      resolve(@description)
     end
 
     # Get the setting key for this field
@@ -261,6 +279,11 @@ module Provider::Configurable
     end
 
     private
+
+      def resolve(value)
+        value.respond_to?(:call) ? value.call : value
+      end
+
       # Normalize value by stripping whitespace and converting empty strings to nil
       def normalize_value(val)
         return nil if val.nil?

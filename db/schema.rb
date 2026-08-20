@@ -2337,6 +2337,57 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_18_060353) do
     t.index ["status"], name: "index_wise_items_on_status"
   end
 
+  create_table "yaxi_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_status"
+    t.string "account_type"
+    t.string "bic"
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "external_id", null: false
+    t.string "iban"
+    t.string "name", null: false
+    t.string "number"
+    t.jsonb "raw_payload", default: {}, null: false
+    t.jsonb "raw_transactions_payload", default: [], null: false
+    t.datetime "updated_at", null: false
+    t.uuid "yaxi_item_id", null: false
+    t.index ["yaxi_item_id", "external_id"], name: "index_yaxi_accounts_on_yaxi_item_id_and_external_id", unique: true
+    t.index ["yaxi_item_id"], name: "index_yaxi_accounts_on_yaxi_item_id"
+  end
+
+  create_table "yaxi_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "connection_id"
+    t.datetime "created_at", null: false
+    t.text "credential_secret", null: false
+    t.string "credential_storage_id", null: false
+    t.uuid "family_id", null: false
+    t.string "institution_name"
+    t.datetime "last_refreshed_at"
+    t.string "logo_id"
+    t.string "name", null: false
+    t.string "status", default: "connecting", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "credential_storage_id"], name: "index_yaxi_items_on_family_id_and_credential_storage_id", unique: true
+    t.index ["family_id"], name: "index_yaxi_items_on_family_id"
+    t.index ["status"], name: "index_yaxi_items_on_status"
+  end
+
+  create_table "yaxi_tickets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "consumed_at"
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.uuid "family_id", null: false
+    t.string "service", null: false
+    t.jsonb "service_data"
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["expires_at"], name: "index_yaxi_tickets_on_expires_at"
+    t.index ["family_id", "user_id", "consumed_at"], name: "index_yaxi_tickets_on_owner_and_consumed"
+    t.index ["family_id"], name: "index_yaxi_tickets_on_family_id"
+    t.index ["user_id"], name: "index_yaxi_tickets_on_user_id"
+  end
+
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
   add_foreign_key "account_shares", "accounts"
   add_foreign_key "account_shares", "users"
@@ -2477,4 +2528,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_18_060353) do
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
   add_foreign_key "wise_items", "families"
+  add_foreign_key "yaxi_accounts", "yaxi_items"
+  add_foreign_key "yaxi_items", "families"
+  add_foreign_key "yaxi_tickets", "families"
+  add_foreign_key "yaxi_tickets", "users", on_delete: :cascade
 end

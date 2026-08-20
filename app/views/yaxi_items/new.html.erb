@@ -1,0 +1,22 @@
+<%= render DS::Dialog.new(frame: "modal", responsive: true, auto_open: true) do |dialog| %>
+  <% dialog.with_header(title: t("yaxi_items.new.title")) %>
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <%= render DS::Alert.new(
+            variant: :info,
+            title: t("yaxi_items.new.privacy_title"),
+            message: t("yaxi_items.new.privacy_message")
+          ) %>
+      <p class="text-sm text-secondary"><%= t("yaxi_items.new.description") %></p>
+      <div class="flex justify-end">
+        <%= render DS::Button.new(
+              text: t("yaxi_items.new.start"),
+              icon: "arrow-right",
+              href: yaxi_items_path,
+              method: :post,
+              frame: :_top
+            ) %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

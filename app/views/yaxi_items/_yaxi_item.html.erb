@@ -1,0 +1,53 @@
+<%# locals: (yaxi_item:) %>
+
+<%= tag.div id: dom_id(yaxi_item) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+          <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
+            <span class="text-xs font-medium text-inverse">YX</span>
+          </div>
+          <div class="pl-1 text-sm">
+            <p class="font-medium text-primary"><%= yaxi_item.institution_name.presence || yaxi_item.name %></p>
+            <p class="text-xs text-secondary"><%= t("yaxi_items.item.provider_name") %></p>
+            <p class="text-xs text-secondary">
+              <% if yaxi_item.last_refreshed_at.present? %>
+                <%= t("yaxi_items.item.last_refreshed", time: time_ago_in_words(yaxi_item.last_refreshed_at)) %>
+              <% else %>
+                <%= t("yaxi_items.item.not_refreshed") %>
+              <% end %>
+            </p>
+          </div>
+        </div>
+
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <%= render DS::Link.new(
+                  text: t("yaxi_items.item.refresh"),
+                  icon: "refresh-cw",
+                  variant: :outline,
+                  href: refresh_yaxi_item_path(yaxi_item),
+                  frame: :_top
+                ) %>
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                variant: "button",
+                text: t("yaxi_items.item.delete"),
+                icon: "trash-2",
+                href: yaxi_item_path(yaxi_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(yaxi_item.name, high_severity: true)
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="mt-4">
+      <%= render "accounts/index/account_groups", accounts: yaxi_item.accounts %>
+    </div>
+  <% end %>
+<% end %>

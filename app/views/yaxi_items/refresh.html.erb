@@ -1,0 +1,32 @@
+<%= content_for :page_title, t("yaxi_items.refresh.title") %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
+
+<div class="max-w-2xl mx-auto space-y-6"
+     data-controller="yaxi"
+     data-action="yaxi-dialog:respond->yaxi#respondToDialog yaxi-dialog:confirm->yaxi#confirmDialog"
+     data-yaxi-base-url-value="<%= @base_url %>"
+     data-yaxi-submit-url-value="<%= apply_refresh_yaxi_item_path(@yaxi_item) %>"
+     data-yaxi-storage-id-value="<%= @yaxi_item.credential_storage_id %>"
+     data-yaxi-storage-secret-value="<%= @yaxi_item.credential_secret %>"
+     data-yaxi-balances-ticket-value="<%= @balances_ticket.token %>"
+     data-yaxi-balances-ticket-id-value="<%= @balances_ticket.id %>"
+     data-yaxi-transaction-tickets-value="<%= json_escape(@transaction_tickets.to_json) %>"
+     data-yaxi-account-references-value="<%= json_escape(@account_references.to_json) %>"
+     data-yaxi-messages-value="<%= json_escape(t("yaxi_items.javascript").to_json) %>">
+  <div>
+    <h1 class="text-2xl font-medium text-primary"><%= t("yaxi_items.refresh.title") %></h1>
+    <p class="mt-1 text-sm text-secondary"><%= t("yaxi_items.refresh.description", bank: @yaxi_item.institution_name) %></p>
+  </div>
+
+  <div class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
+    <p class="text-sm text-secondary"><%= t("yaxi_items.refresh.browser_note") %></p>
+    <%= render DS::Button.new(
+          text: t("yaxi_items.refresh.start"),
+          data: { action: "yaxi#startRefresh" }
+        ) %>
+  </div>
+
+  <%= render "yaxi_items/interaction" %>
+</div>

@@ -1,0 +1,35 @@
+<div data-controller="yaxi-status"
+     data-action="yaxi-status:busy@window->yaxi-status#busy yaxi-status:clear@window->yaxi-status#clear yaxi-status:error@window->yaxi-status#error">
+  <div class="hidden" role="status" aria-live="polite" data-yaxi-status-target="progress">
+    <div class="flex items-center gap-2 text-sm text-secondary">
+      <%= icon "loader", size: "sm", class: "animate-spin" %>
+      <span data-yaxi-status-target="progressText"><%= t("yaxi_items.interaction.working") %></span>
+    </div>
+  </div>
+
+  <div class="hidden" role="alert" aria-live="assertive" data-yaxi-status-target="error">
+    <%= render DS::Alert.new(variant: :error, message: tag.span("", data: { yaxi_status_target: "errorText" })) %>
+  </div>
+</div>
+
+<section class="hidden bg-container shadow-border-xs rounded-xl p-5 space-y-4"
+         data-controller="yaxi-dialog"
+         data-action="yaxi-dialog:show@window->yaxi-dialog#show yaxi-dialog:hide@window->yaxi-dialog#hide"
+         data-yaxi-dialog-fallback-message-value="<%= t("yaxi_items.javascript.confirm_request") %>">
+  <p class="text-sm text-primary whitespace-pre-line" data-yaxi-dialog-target="message"></p>
+  <img class="hidden max-w-full mx-auto" alt="" data-yaxi-dialog-target="image">
+  <div class="space-y-2" data-yaxi-dialog-target="options"></div>
+  <div class="hidden" data-yaxi-dialog-target="fieldGroup">
+    <label class="block text-sm font-medium text-primary" for="yaxi-dialog-field"><%= t("yaxi_items.interaction.field_label") %></label>
+    <input id="yaxi-dialog-field" class="form-field__input w-full" autocomplete="one-time-code" data-yaxi-dialog-target="field">
+  </div>
+  <div class="flex justify-end">
+    <%= render DS::Button.new(
+          text: t("yaxi_items.interaction.continue"),
+          data: { action: "yaxi-dialog#continue", yaxi_dialog_target: "continue" }
+        ) %>
+  </div>
+  <template>
+    <%= render DS::Button.new(text: "", type: "button", variant: "outline", class: "w-full justify-start") %>
+  </template>
+</section>
