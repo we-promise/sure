@@ -166,7 +166,7 @@ class PdfImport < Import
 
       # Matching is per-account, so anything reconciled against the old account
       # is no longer evidence-backed, and the rows have to be judged again.
-      release_reconciliations!
+      release_reconciliations!(previous_account_id)
       if has_extracted_transactions?
         generate_rows_from_extracted_data
         sync_mappings
@@ -267,7 +267,12 @@ class PdfImport < Import
 
   def generate_rows_from_extracted_data
     transaction do
-      rows.destroy_all
+      # insert_all! below bypasses ActiveRecord, so the `rows` association is
+      # never populated with what it wrote. Reload before destroying, or a second
+      # call on the same in-memory record (assign_account! regenerating after
+      # ProcessPdfJob already generated) clears a stale empty collection, deletes
+      # nothing, and collides on (import_id, source_row_number).
+      rows.reload.destroy_all
 
       unless has_extracted_transactions?
         update_column(:rows_count, 0)
@@ -306,6 +311,9 @@ class PdfImport < Import
       end
 
       Import::Row.insert_all!(mapped_rows) if mapped_rows.any?
+      # Drop the now-stale association cache so later reads (sync_mappings, the
+      # view) see what was actually written.
+      rows.reset
       update_column(:rows_count, mapped_rows.size)
     end
   end
@@ -475,10 +483,15 @@ class PdfImport < Import
       update!(status: target) unless status.to_s == target
     end
 
-    def release_reconciliations!
-      return if account_statement.blank?
+    # Scoped to the account being moved away from. A statement is evidence for
+    # exactly one account at a time, but it can back more than one import, so an
+    # unscoped release would clear reconciliations another account still relies
+    # on. Nothing is reconciled while no account is assigned, so a blank scope
+    # has nothing to release.
+    def release_reconciliations!(account_scope_id)
+      return if account_statement.blank? || account_scope_id.blank?
 
-      Entry.reconciled_by(account_statement).update_all(
+      Entry.reconciled_by(account_statement).where(account_id: account_scope_id).update_all(
         reconciled_at: nil,
         reconciled_by_statement_id: nil,
         updated_at: Time.current

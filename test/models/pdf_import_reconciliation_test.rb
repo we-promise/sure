@@ -193,6 +193,37 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal @import.id, logged.metadata["import_id"]
   end
 
+  test "regenerating rows twice does not collide on source row numbers" do
+    # insert_all! leaves the rows association stale, so a second generation on
+    # the same in-memory record used to re-insert source_row_number 1.
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -12, name: "Bookstore") ] })
+
+    @import.generate_rows_from_extracted_data
+    @import.generate_rows_from_extracted_data
+
+    assert_equal 1, @import.reload.rows_count
+    assert_equal 1, @import.rows.count
+  end
+
+  test "releasing reconciliations leaves another account's evidence intact" do
+    other = @family.accounts.create!(
+      name: "Sibling Checking", balance: 0, currency: "USD", accountable: Depository.new
+    )
+    # Same statement, evidence recorded against a second account by another import.
+    on_other = create_transaction(account: other, date: @date, amount: 99, name: "Elsewhere")
+    on_other.mark_reconciled!(statement: @statement)
+
+    on_first = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    assert on_first.reload.reconciled?
+
+    @import.assign_account!(other)
+
+    assert_not on_first.reload.reconciled?, "the account being left is released"
+    assert on_other.reload.reconciled?, "another account's evidence must survive"
+  end
+
   private
 
     def create_statement
