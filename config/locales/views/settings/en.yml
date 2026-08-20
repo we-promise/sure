@@ -714,6 +714,7 @@ en:
         update_configuration: Update Configuration
         sync: Sync
         syncing: Syncing...
+        disconnect: Disconnect Trading 212 account
         disconnect_confirm: Disconnect Trading 212?
         default_account_name: Trading 212 Account
         add_account: Add another account

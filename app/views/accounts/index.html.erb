@@ -81,7 +81,7 @@
     <% end %>
 
     <% if @trading212_items.any? %>
-      <%= render @trading212_items.sort_by(&:created_at) %>
+      <%= render @trading212_items %>
     <% end %>
 
     <% if @wise_items.any? %>

@@ -489,7 +489,9 @@ de:
         api_secret_placeholder_existing: Leer lassen, um den bisherigen Secret Key zu behalten
         api_secret_placeholder_new: Trading-212-Secret-Key einfügen
         currency_label: Kontowährung
+        disconnect: Trading-212-Konto trennen
         disconnect_confirm: Trading 212 trennen?
+        default_account_name: Trading-212-Konto
         environment_demo: Demokonto
         environment_label: Umgebung
         environment_live: Echtes Konto
@@ -502,6 +504,8 @@ de:
           step_2: Erzeug einen neuen API-Key – Trading 212 zeigt dir eine API ID und einen Secret Key.
           step_3: Füg beides unten ein, wähl Umgebung und Kontowährung und speichere.
         sync: Sync
+        syncing: Wird synchronisiert...
+        add_account: Weiteres Konto hinzufügen
         update_configuration: Konfiguration aktualisieren
       trade_republic_panel:
         encryption_warning:
