@@ -9,7 +9,16 @@ class Assistant::Function::SchemaStrictnessTest < ActiveSupport::TestCase
     user = users(:family_admin)
     user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
 
-    Assistant.function_classes(user).each do |fn_class|
+    function_classes = Assistant.function_classes(user)
+
+    # Every shipped tool declares optional properties and so opts out of strict
+    # mode; the walk below therefore asserts nothing today and exists to catch
+    # the first tool that keeps the default. Guard the registry itself so a
+    # future empty or broken lookup cannot make this test vacuous unnoticed.
+    assert_operator function_classes.size, :>, 15,
+      "the tool registry looks empty or truncated, so the strictness walk would prove nothing"
+
+    function_classes.each do |fn_class|
       fn = fn_class.new(user)
       definition = fn.to_definition
       next unless definition[:strict]

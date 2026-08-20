@@ -117,4 +117,68 @@ class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
 
     assert_equal "invalid_date", result[:error]
   end
+
+  # The assistant and MCP paths run without a session, so Current.user is nil
+  # and an unscoped IncomeStatement reports family-wide totals. Every read in
+  # this tool must resolve through the user-scoped statement, or the numbers it
+  # reports disagree with the account ids it validates against.
+  test "totals stay scoped to the requesting user when there is no session" do
+    Current.session = nil
+    other = users(:family_member)
+
+    foreign = Account.create!(
+      family: @family,
+      name: "Another members checking",
+      currency: "USD",
+      balance: 0,
+      owner: other,
+      accountable: Depository.new
+    )
+    foreign.entries.create!(
+      name: "Spend outside this users finances",
+      date: Date.current,
+      amount: 1234.56,
+      currency: "USD",
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+    @family.reload
+
+    assert_not_includes @user.finance_accounts.pluck(:id), foreign.id,
+      "precondition: the foreign account must sit outside the requesting users finances"
+
+    period = Period.custom(
+      start_date: Date.parse(@params["start_date"]),
+      end_date: Date.parse(@params["end_date"])
+    )
+    scoped = @family.income_statement(user: @user).expense_totals(period: period).total
+    unscoped = @family.income_statement(user: nil).expense_totals(period: period).total
+
+    assert_operator unscoped, :>, scoped,
+      "precondition: the unscoped statement must actually differ, or this test proves nothing"
+
+    result = @fn.call(@params)
+
+    assert_equal scoped.to_f.round(2),
+      result[:expense][:total].gsub(/[^\d.-]/, "").to_f.round(2)
+  end
+
+  test "eligible account validation and reported totals agree on scope" do
+    Current.session = nil
+    other = users(:family_member)
+
+    foreign = Account.create!(
+      family: @family,
+      name: "Another members savings",
+      currency: "USD",
+      balance: 0,
+      owner: other,
+      accountable: Depository.new
+    )
+
+    # Rejected as ineligible, so its money must not reach the totals either.
+    result = @fn.call(@params.merge("account_ids" => [ foreign.id ]))
+
+    assert_equal "unknown_account_ids", result[:error]
+    assert_includes result[:unknown_ids], foreign.id
+  end
 end

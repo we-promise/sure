@@ -48,7 +48,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
       # Validated against the accounts income/expense totals actually reflect:
       # hidden, excluded-from-reports and tax-advantaged accounts would come
       # back as silent zeros if accepted here.
-      eligible = family.income_statement(user: user).eligible_accounts.where(id: account_ids)
+      eligible = income_statement.eligible_accounts.where(id: account_ids)
       unknown_ids = account_ids.uniq - eligible.pluck(:id)
 
       if unknown_ids.any?
@@ -113,9 +113,16 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
   end
 
   private
+    # Scoped to the requesting user, like get_balance_sheet's. In the assistant
+    # and MCP paths there is no session, so Current.user is nil and an unscoped
+    # IncomeStatement silently reports family-wide totals.
+    def income_statement
+      @income_statement ||= family.income_statement(user: user)
+    end
+
     def full_result(period)
-      income_data = family.income_statement.income_totals(period: period)
-      expense_data = family.income_statement.expense_totals(period: period)
+      income_data = income_statement.income_totals(period: period)
+      expense_data = income_statement.expense_totals(period: period)
 
       {
         currency: family.currency,
@@ -138,7 +145,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
     # Category rollups and family stats are family-wide by construction, so a
     # per-account view reports totals only and says why the breakdown is gone.
     def scoped_result(period, account_ids)
-      totals = family.income_statement.totals_for(period, account_ids: account_ids)
+      totals = income_statement.totals_for(period, account_ids: account_ids)
 
       {
         currency: family.currency,
@@ -167,7 +174,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
     end
 
     def bucket_totals(bucket, account_ids)
-      totals = family.income_statement.totals_for(bucket, account_ids: account_ids)
+      totals = income_statement.totals_for(bucket, account_ids: account_ids)
       income = totals.income_money.amount
       expenses = totals.expense_money.amount
 
@@ -185,8 +192,8 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         start_date: period.start_date - period.days.days,
         end_date: period.start_date - 1.day
       )
-      current_totals = family.income_statement.totals_for(period, account_ids: account_ids)
-      previous_totals = family.income_statement.totals_for(previous, account_ids: account_ids)
+      current_totals = income_statement.totals_for(period, account_ids: account_ids)
+      previous_totals = income_statement.totals_for(previous, account_ids: account_ids)
 
       {
         start_date: previous.start_date,
@@ -252,9 +259,9 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
     def get_insights(income_data, expense_data)
       net_income = income_data.total - expense_data.total
       savings_rate = calculate_savings_rate(income_data.total, expense_data.total)
-      median_monthly_income = family.income_statement.median_income
-      median_monthly_expenses = family.income_statement.median_expense
-      avg_monthly_expenses = family.income_statement.avg_expense
+      median_monthly_income = income_statement.median_income
+      median_monthly_expenses = income_statement.median_expense
+      avg_monthly_expenses = income_statement.avg_expense
 
       {
         net_income: format_money(net_income),
