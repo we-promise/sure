@@ -6,6 +6,7 @@ da:
     update:
       email_change_failed: Kunne ikke ændre e-mailadressen.
       email_change_initiated: Tjek din nye e-mailadresse for bekræftelsesvejledning.
+      success: Din profil er opdateret.
     resend_confirmation_email:
       success: En ny bekræftelsesmail er sat i kø.
       no_pending_change: Der er ingen afventende e-mailændring!
