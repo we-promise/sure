@@ -154,19 +154,18 @@ class Settings::HostingsController < ApplicationController
 
     market_data_sync_settings_changed = false
 
+    if hosting_params.key?(:market_data_sync_time) && !Setting.valid_auto_sync_time?(hosting_params[:market_data_sync_time])
+      flash[:alert] = t(".invalid_sync_time")
+      return redirect_to settings_hosting_path
+    end
+
     if hosting_params.key?(:market_data_sync_enabled)
       Setting.market_data_sync_enabled = hosting_params[:market_data_sync_enabled] == "1"
       market_data_sync_settings_changed = true
     end
 
     if hosting_params.key?(:market_data_sync_time)
-      time_value = hosting_params[:market_data_sync_time]
-      unless Setting.valid_auto_sync_time?(time_value)
-        flash[:alert] = t(".invalid_sync_time")
-        return redirect_to settings_hosting_path
-      end
-
-      Setting.market_data_sync_time = time_value
+      Setting.market_data_sync_time = hosting_params[:market_data_sync_time]
       Setting.market_data_sync_timezone = current_user_timezone
       market_data_sync_settings_changed = true
     end

@@ -14,8 +14,21 @@ class MarketDataSchedulerTest < ActiveSupport::TestCase
 
     job = Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
     assert job, "Expected a cron job to be created"
-    assert_equal "0 18 * * 1-5", job.cron
+    assert_equal "0 18 * * 1-5 Etc/UTC", job.cron
     assert_equal "ImportMarketDataJob", job.klass
+  end
+
+  test "upsert_job embeds the configured IANA timezone instead of converting to UTC" do
+    Setting.stubs(:market_data_sync_time).returns("22:00")
+    Setting.stubs(:market_data_sync_timezone).returns("Pacific Time (US & Canada)")
+
+    MarketDataScheduler.upsert_job
+
+    job = Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
+    # The local hour/weekday are preserved verbatim (no UTC conversion), so
+    # the job always fires at 22:00 local time regardless of daylight-saving
+    # transitions or how far the local date is from the UTC date boundary.
+    assert_equal "0 22 * * 1-5 America/Los_Angeles", job.cron
   end
 
   test "sync! removes the cron job when disabled" do
@@ -38,6 +51,6 @@ class MarketDataSchedulerTest < ActiveSupport::TestCase
     MarketDataScheduler.upsert_job
 
     job = Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
-    assert_equal "0 22 * * 1-5", job.cron
+    assert_equal "0 22 * * 1-5 Etc/UTC", job.cron
   end
 end
