@@ -5,6 +5,11 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 
+  def show
+    super
+    @existing_manual_recurring = @entry.transaction.existing_manual_recurring_transaction
+  end
+
   def new
     prefill_params_from_duplicate!
     super
