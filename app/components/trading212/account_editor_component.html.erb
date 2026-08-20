@@ -17,21 +17,23 @@
 
     <div class="mt-4 space-y-4">
       <div class="flex flex-wrap justify-end gap-2">
-        <%= helpers.button_to helpers.sync_trading212_item_path(item),
-                      method: :post,
-                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
-                      disabled: item.syncing? do %>
-          <%= helpers.icon "refresh-cw", size: "sm" %>
-          <%= translation("sync") %>
-        <% end %>
+        <%= render DS::Button.new(
+                     text: translation("sync"),
+                     icon: "refresh-cw",
+                     variant: :outline,
+                     href: helpers.sync_trading212_item_path(item),
+                     method: :post,
+                     disabled: item.syncing?
+                   ) %>
 
-        <%= helpers.button_to helpers.trading212_item_path(item),
-                      method: :delete,
-                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                      aria: { label: translation("disconnect") },
-                      data: { turbo_confirm: translation("disconnect_confirm") } do %>
-          <%= helpers.icon "trash-2", size: "sm" %>
-        <% end %>
+        <%= render DS::Button.new(
+                     icon: "trash-2",
+                     variant: :outline_destructive,
+                     href: helpers.trading212_item_path(item),
+                     method: :delete,
+                     confirm: translation("disconnect_confirm"),
+                     aria_label: translation("disconnect")
+                   ) %>
       </div>
 
       <%= helpers.styled_form_with model: item,
