@@ -241,10 +241,24 @@ class PdfImport < Import
     return false unless reconciliation_reportable?
 
     recon = reconciliation_data
+    required_keys = %w[
+      synced_transaction_count
+      matched_count
+      new_count
+      missing_count
+      new_transactions
+      missing_transactions
+    ]
+
+    return false unless required_keys.all? { |key| recon.key?(key) }
+
+    statement_count = recon["statement_transaction_count"].to_i
+
     recon["balance_match"] == true &&
       recon["statement_transaction_count"].present? &&
       recon["synced_transaction_count"].present? &&
-      recon["statement_transaction_count"].to_i == recon["synced_transaction_count"].to_i &&
+      statement_count == recon["synced_transaction_count"].to_i &&
+      statement_count == recon["matched_count"].to_i &&
       recon["new_count"].to_i.zero? &&
       recon["missing_count"].to_i.zero? &&
       Array.wrap(recon["new_transactions"]).empty? &&

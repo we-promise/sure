@@ -2,7 +2,20 @@
 
 <div class="min-h-full flex flex-col justify-center items-center py-8">
   <div class="space-y-6 max-w-lg w-full">
-    <% if import.respond_to?(:reconciliation_reportable?) && import.reconciliation_reportable? && (import.complete? || (import.pending? && import.rows_count > 0)) %>
+    <% show_reconciliation_report =
+      import.respond_to?(:reconciliation_reportable?) &&
+        import.reconciliation_reportable? &&
+        (
+          import.complete? ||
+            (
+              import.pending? &&
+                import.rows_count > 0 &&
+                (import.reconciliation_matched? || import.account.present?)
+            )
+        )
+    %>
+
+    <% if show_reconciliation_report %>
       <% recon = import.reconciliation_data %>
       <% balance_matched = import.reconciliation_matched? %>
       <% currency_unit = import.extracted_data&.dig("currency").presence || import.account&.currency.presence || "" %>

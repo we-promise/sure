@@ -189,6 +189,55 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal "Coffee", import.extracted_transactions.first["name"]
   end
 
+  test "reconciliation_matched? requires complete zero-mismatch details" do
+    @import.update!(
+      extracted_data: {
+        "reconciliation" => {
+          "performed" => true,
+          "account_id" => accounts(:depository).id,
+          "balance_match" => true,
+          "statement_transaction_count" => 2,
+          "synced_transaction_count" => 2,
+          "matched_count" => 2,
+          "new_count" => 0,
+          "missing_count" => 0,
+          "new_transactions" => [],
+          "missing_transactions" => []
+        }
+      }
+    )
+
+    assert @import.reconciliation_matched?
+
+    @import.extracted_data["reconciliation"].delete("new_count")
+    @import.save!
+
+    assert_not @import.reconciliation_matched?
+  end
+
+  test "reconciliation_matched? rejects partial matches even when balances and counts match" do
+    @import.update!(
+      extracted_data: {
+        "reconciliation" => {
+          "performed" => true,
+          "account_id" => accounts(:depository).id,
+          "balance_match" => true,
+          "statement_transaction_count" => 2,
+          "synced_transaction_count" => 2,
+          "matched_count" => 1,
+          "new_count" => 1,
+          "missing_count" => 0,
+          "new_transactions" => [
+            { "date" => "2024-01-02", "amount" => "-12.34", "description" => "Unmatched" }
+          ],
+          "missing_transactions" => []
+        }
+      }
+    )
+
+    assert_not @import.reconciliation_matched?
+  end
+
   test "has_extracted_transactions? returns true with transactions" do
     assert @import_with_rows.has_extracted_transactions?
   end
