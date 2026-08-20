@@ -457,6 +457,53 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert recurring.next_expected_date >= Date.current
   end
 
+  test "create_from_transaction does not blend a distinct same-day charge type into the variance band" do
+    # Mirrors a real production case: two genuinely different charges from
+    # the same merchant, same day (a small fee alongside a larger due),
+    # ~6.5x apart -- not one fluctuating payment.
+    fee_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    fee_entry = @account.entries.create!(
+      date: 1.month.ago.beginning_of_month + 14.days,
+      amount: 3.00,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: fee_transaction
+    )
+
+    due_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 1.month.ago.beginning_of_month + 14.days,
+      amount: 19.68,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: due_transaction
+    )
+
+    recurring = RecurringTransaction.create_from_transaction(fee_entry.transaction)
+
+    assert_equal 3.00, recurring.expected_amount_min
+    assert_equal 3.00, recurring.expected_amount_max
+    assert_equal 3.00, recurring.expected_amount_avg
+    assert_equal 1, recurring.occurrence_count
+  end
+
+  test "amount_within_variance_band? allows up to 2x and excludes beyond" do
+    assert RecurringTransaction.amount_within_variance_band?(199, 100)
+    assert_not RecurringTransaction.amount_within_variance_band?(201, 100)
+    assert RecurringTransaction.amount_within_variance_band?(50, 100) # halved is still within band
+    assert_not RecurringTransaction.amount_within_variance_band?(49, 100)
+  end
+
+  test "amount_within_variance_band? handles a zero anchor without dividing by zero" do
+    assert RecurringTransaction.amount_within_variance_band?(0, 0)
+    assert_not RecurringTransaction.amount_within_variance_band?(5, 0)
+  end
+
+  test "amount_within_variance_band? does not match across a sign mismatch" do
+    assert_not RecurringTransaction.amount_within_variance_band?(50, -50)
+    assert_not RecurringTransaction.amount_within_variance_band?(-10, 100)
+  end
+
   test "matching_transactions with amount variance matches within range" do
     # Create manual recurring with variance for day 15 of the month
     recurring = @family.recurring_transactions.create!(
@@ -608,6 +655,54 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal 60.00, manual_recurring.expected_amount_max
     assert_in_delta 53.33, manual_recurring.expected_amount_avg.to_f, 0.01 # (45 + 55 + 60) / 3
     assert manual_recurring.occurrence_count > 1
+  end
+
+  test "identify_patterns_for does not re-blend a distinct charge type into an existing manual recurring transaction" do
+    # Mirrors the real production corruption: a manual recurring row seeded
+    # at 3.00 must not have its variance widened by a same-day, same-merchant
+    # 19.68 entry when the periodic identification job runs.
+    manual_recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 3.00,
+      currency: "USD",
+      expected_day_of_month: 15,
+      last_occurrence_date: 3.months.ago,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1,
+      expected_amount_min: 3.00,
+      expected_amount_max: 3.00,
+      expected_amount_avg: 3.00
+    )
+
+    fee_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 1.month.ago.beginning_of_month + 14.days,
+      amount: 3.00,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: fee_transaction
+    )
+
+    due_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 1.month.ago.beginning_of_month + 14.days,
+      amount: 19.68,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: due_transaction
+    )
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      RecurringTransaction.identify_patterns_for!(@family)
+    end
+
+    manual_recurring.reload
+    assert_equal 3.00, manual_recurring.expected_amount_min
+    assert_equal 3.00, manual_recurring.expected_amount_max
+    assert_equal 3.00, manual_recurring.expected_amount_avg
   end
 
   test "cleaner does not delete manual recurring transactions" do

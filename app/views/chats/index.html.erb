@@ -1,4 +1,4 @@
-<div data-controller="chat hotkey" class="h-full">
+<div data-controller="chat hotkey" data-chat-response-timeout-value="<%= Chat.response_timeout_ms %>" class="h-full">
   <%= turbo_frame_tag chat_frame do %>
     <div class="flex flex-col h-full md:p-4">
       <% if show_demo_warning? %>

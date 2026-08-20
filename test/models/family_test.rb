@@ -165,6 +165,13 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "Groups", family.moniker_label_plural
   end
 
+  test "default currency comes from country ISO data" do
+    assert_equal "CAD", Family.default_currency_for_country("CA")
+    assert_equal "EUR", Family.default_currency_for_country("DE")
+    assert_equal "BRL", Family.default_currency_for_country("BR")
+    assert_equal "USD", Family.default_currency_for_country("unknown")
+  end
+
   test "available_merchants includes family merchants without transactions" do
     family = families(:dylan_family)
 
@@ -350,6 +357,45 @@ class FamilyTest < ActiveSupport::TestCase
       "the per-user predicate the UI reads must reject a non-boolean"
     assert_not family.reload.preview_features_enabled?
     assert_not_includes Family.with_preview_features, family
+  end
+
+  test "rejects a timezone ActiveSupport::TimeZone doesn't recognize" do
+    family = families(:dylan_family)
+    family.timezone = "Invalid/Timezone"
+
+    assert_not family.valid?
+    assert_includes family.errors[:timezone], "is invalid"
+  end
+
+  test "accepts a timezone identifier, the form the settings dropdown actually submits" do
+    family = families(:dylan_family)
+    # LanguagesHelper#timezone_options submits tz.tzinfo.identifier (e.g.
+    # "America/New_York"), not tz.name (e.g. "Eastern Time (US & Canada)") --
+    # these differ for every zone Rails ships, so this is the case that
+    # actually matters, not just the display name.
+    family.timezone = "America/New_York"
+
+    assert family.valid?
+  end
+
+  test "allows a blank timezone" do
+    family = families(:dylan_family)
+    family.timezone = nil
+
+    assert family.valid?
+  end
+
+  test "does not re-validate an existing invalid timezone when saving unrelated changes" do
+    family = families(:dylan_family)
+    # Bypasses validations, simulating data that predates this validation --
+    # e.g. the exact #390 scenario (a stale/renamed IANA zone already sitting
+    # in the DB).
+    family.update_column(:timezone, "Invalid/Timezone")
+
+    family.name = "Updated name, timezone untouched"
+
+    assert family.valid?, "an unrelated change must not be blocked by a pre-existing bad timezone"
+    assert family.save
   end
 
   private

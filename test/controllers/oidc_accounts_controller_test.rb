@@ -187,6 +187,36 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal new_user_auth["uid"], oidc_identity.uid
   end
 
+  test "create_user makes new family creator admin even when provider default role is member" do
+    session[:pending_oidc_auth] = new_user_auth
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: new_user_auth["provider"], settings: { default_role: "member" } }
+    ])
+
+    assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
+      post :create_user
+    end
+
+    new_user = User.find_by!(email: new_user_auth["email"])
+    assert_equal "admin", new_user.role
+    assert new_user.admin?
+  end
+
+  test "create_user preserves super admin provider default for new family creator" do
+    session[:pending_oidc_auth] = new_user_auth
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: new_user_auth["provider"], settings: { default_role: "super_admin" } }
+    ])
+
+    assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
+      post :create_user
+    end
+
+    new_user = User.find_by!(email: new_user_auth["email"])
+    assert_equal "super_admin", new_user.role
+    assert new_user.admin?
+  end
+
   test "create_user uses form params for name when provided" do
     session[:pending_oidc_auth] = new_user_auth
 
