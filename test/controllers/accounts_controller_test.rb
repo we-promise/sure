@@ -107,6 +107,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(trading212_item)}"
   end
 
+  test "index renders only trading212 items with accessible accounts for members" do
+    shared_account = accounts(:credit_card)
+    trading212_accounts(:main_account).ensure_account_provider!(shared_account)
+    sign_in users(:family_member)
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(trading212_items(:configured_item))}"
+    assert_select "##{dom_id(trading212_items(:pending_setup_item))}", count: 0
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success

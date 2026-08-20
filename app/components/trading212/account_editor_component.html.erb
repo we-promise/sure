@@ -1,0 +1,105 @@
+<% items.each do |item| %>
+  <%= render DS::Disclosure.new(variant: :card) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-3 w-full">
+        <div class="min-w-0">
+          <p class="font-medium text-primary truncate"><%= item.name %></p>
+          <p class="text-xs text-secondary">
+            <% if item.syncing? %>
+              <%= translation("syncing") %>
+            <% else %>
+              <%= item.sync_status_summary %>
+            <% end %>
+          </p>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="mt-4 space-y-4">
+      <div class="flex flex-wrap justify-end gap-2">
+        <%= helpers.button_to helpers.sync_trading212_item_path(item),
+                      method: :post,
+                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
+                      disabled: item.syncing? do %>
+          <%= helpers.icon "refresh-cw", size: "sm" %>
+          <%= translation("sync") %>
+        <% end %>
+
+        <%= helpers.button_to helpers.trading212_item_path(item),
+                      method: :delete,
+                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
+                      aria: { label: translation("disconnect") },
+                      data: { turbo_confirm: translation("disconnect_confirm") } do %>
+          <%= helpers.icon "trash-2", size: "sm" %>
+        <% end %>
+      </div>
+
+      <%= helpers.styled_form_with model: item,
+                                   url: helpers.trading212_item_path(item),
+                                   scope: :trading212_item,
+                                   method: :patch,
+                                   data: { turbo: true },
+                                   class: "space-y-3" do |form| %>
+        <%= form.text_field :api_key,
+                            label: translation("api_key_label"),
+                            placeholder: translation("api_key_placeholder_existing"),
+                            type: :password,
+                            value: nil %>
+
+        <%= form.text_field :api_secret,
+                            label: translation("api_secret_label"),
+                            placeholder: translation("api_secret_placeholder_existing"),
+                            type: :password,
+                            value: nil %>
+
+        <%= form.select :environment,
+                        environment_options,
+                        { label: translation("environment_label"), selected: item.environment || "live" } %>
+
+        <%= form.select :currency,
+                        currency_options,
+                        { label: translation("currency_label"), selected: item.currency.presence || @family.currency } %>
+
+        <div class="flex flex-wrap justify-end gap-2">
+          <%= form.submit translation("update_configuration") %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<% if items.any? %>
+  <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
+    <%= helpers.icon "plus", size: "sm" %>
+    <%= translation("add_account") %>
+  </h3>
+<% end %>
+
+<%= helpers.styled_form_with model: new_item,
+                             url: helpers.trading212_items_path,
+                             scope: :trading212_item,
+                             method: :post,
+                             data: { turbo: true },
+                             class: "space-y-3" do |form| %>
+  <%= form.text_field :api_key,
+                      label: translation("api_key_label"),
+                      placeholder: translation("api_key_placeholder_new"),
+                      type: :password %>
+
+  <%= form.text_field :api_secret,
+                      label: translation("api_secret_label"),
+                      placeholder: translation("api_secret_placeholder_new"),
+                      type: :password %>
+
+  <%= form.select :environment,
+                  environment_options,
+                  { label: translation("environment_label"), selected: "live" } %>
+
+  <%= form.select :currency,
+                  currency_options,
+                  { label: translation("currency_label"), selected: @family.currency } %>
+
+  <div class="flex flex-wrap justify-end gap-2">
+    <%= form.submit translation("save_configuration") %>
+  </div>
+<% end %>

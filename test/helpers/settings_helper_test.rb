@@ -30,4 +30,10 @@ class SettingsHelperTest < ActionView::TestCase
 
     assert_equal({ status: :ok, last_synced_at: nil }, provider_summary("trading212"))
   end
+
+  test "provider_summary for trading212 is off without connections" do
+    @trading212_items = []
+
+    assert_equal({ status: :off }, provider_summary("trading212"))
+  end
 end
