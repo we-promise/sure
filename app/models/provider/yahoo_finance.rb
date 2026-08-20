@@ -800,6 +800,7 @@ class Provider::YahooFinance < Provider
 
         results.sort_by(&:date)
       rescue Faraday::Error, JSON::ParserError => e
+        Rails.logger.warn("#{self.class.name}: fetch_chart_data failed for #{symbol}: #{e.class}: #{e.message}")
         nil
       end
     end
@@ -811,7 +812,7 @@ class Provider::YahooFinance < Provider
           interval: retry_interval,
           interval_randomness: 0.5,
           backoff_factor: 2,
-          retry_statuses: [ 429 ],
+          retry_statuses: [ 429, 500, 502, 503, 504 ],
           exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
         })
 
@@ -975,7 +976,7 @@ class Provider::YahooFinance < Provider
           interval: retry_interval,
           interval_randomness: 0.5,
           backoff_factor: 2,
-          retry_statuses: [ 429 ],
+          retry_statuses: [ 429, 500, 502, 503, 504 ],
           exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
         })
 

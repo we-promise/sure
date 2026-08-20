@@ -37,7 +37,15 @@ module Security::Provided
     # Per-provider timeout so one slow provider can't stall the entire search
     PROVIDER_SEARCH_TIMEOUT = 8.seconds
 
-    def search_provider(symbol, country_code: nil, exchange_operating_mic: nil)
+    # technical_failure is an optional callable invoked once per provider that
+    # errored/timed out (as opposed to answering with zero results). Callers
+    # that need to distinguish "provider search technically failed" from
+    # "provider search succeeded, nothing found" — e.g. Security::Resolver,
+    # which must not treat a rate-limited/timed-out search as a confirmed
+    # "no such security" — can pass a callback here instead of us changing
+    # the return type for all callers (e.g. SecuritiesController just wants
+    # the plain result array).
+    def search_provider(symbol, country_code: nil, exchange_operating_mic: nil, technical_failure: nil)
       return [] if symbol.blank?
 
       active_providers = providers.compact
@@ -70,7 +78,10 @@ module Security::Provided
       seen_keys = Set.new
 
       results_array.each_with_index do |provider_results, idx|
-        next if provider_results.nil?
+        if provider_results.nil?
+          technical_failure&.call(active_providers[idx])
+          next
+        end
 
         provider_key = provider_key_for(active_providers[idx])
 
@@ -203,7 +214,10 @@ module Security::Provided
       date: date
     )
 
-    return nil unless response.success? # Provider error
+    unless response.success? # Provider error
+      log_failed_price_fetch(response.error)
+      return nil
+    end
 
     price = response.data
     Security::Price.find_or_create_by!(
@@ -214,6 +228,25 @@ module Security::Provided
     ) if cache
     price
   end
+
+  # Throttled so a page with many holdings missing today's price doesn't
+  # flood the debug log with one entry per request — at most one per
+  # security per day.
+  def log_failed_price_fetch(error)
+    cache_key = "security_price_fetch_log:#{id}:#{Date.current}"
+    return if Rails.cache.read(cache_key)
+    Rails.cache.write(cache_key, true, expires_in: 24.hours)
+
+    DebugLogEntry.capture(
+      category: "security_price_fetch",
+      level: "warn",
+      message: "find_or_fetch_price failed",
+      source: self.class.name,
+      provider: price_data_provider,
+      metadata: { security_id: id, ticker: ticker, provider_error: error&.message }
+    )
+  end
+  private :log_failed_price_fetch
 
   def import_provider_details(clear_cache: false)
     unless price_data_provider.present?

@@ -679,4 +679,43 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   ensure
     Setting.securities_providers = ""
   end
+
+  test "can update market data sync settings when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1", market_data_sync_time: "18:30" } }
+
+      assert_redirected_to settings_hosting_url
+      assert Setting.market_data_sync_enabled
+      assert_equal "18:30", Setting.market_data_sync_time
+
+      job = Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
+      assert job, "Expected the market data cron job to be (re)created"
+      assert_equal "ImportMarketDataJob", job.klass
+    end
+  ensure
+    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
+  end
+
+  test "disabling market data sync removes its cron job" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1" } }
+      assert Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
+
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "0" } }
+      refute Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
+    end
+  ensure
+    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
+  end
+
+  test "rejects an invalid market data sync time" do
+    with_self_hosting do
+      original_time = Setting.market_data_sync_time
+
+      patch settings_hosting_url, params: { setting: { market_data_sync_time: "not-a-time" } }
+
+      assert_redirected_to settings_hosting_path
+      assert_equal original_time, Setting.market_data_sync_time
+    end
+  end
 end
