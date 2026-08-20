@@ -7,7 +7,7 @@ class TransactionsController < ApplicationController
 
   def show
     super
-    @existing_manual_recurring = @entry.transaction.existing_manual_recurring_transaction
+    assign_mark_recurring_state
   end
 
   def new
@@ -194,6 +194,7 @@ class TransactionsController < ApplicationController
         end
       end
     else
+      assign_mark_recurring_state
       render :show, status: :unprocessable_entity
     end
   end
@@ -430,6 +431,17 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def assign_mark_recurring_state
+      existing = @entry.transaction.existing_manual_recurring_transaction
+
+      @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"
+      @mark_recurring_subtitle = existing ? t("recurring_transactions.already_exists") : t("transactions.show.mark_recurring_subtitle")
+      @mark_recurring_href = existing ? nil : mark_as_recurring_transaction_path(@entry.transaction)
+      @mark_recurring_disabled = existing.present?
+      @mark_recurring_title = existing ? t("recurring_transactions.already_exists") : nil
+      @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
+    end
+
     def accessible_transactions
       Current.family.transactions
         .joins(entry: :account)

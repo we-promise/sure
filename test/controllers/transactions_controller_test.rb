@@ -74,6 +74,42 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "re-renders show with mark-recurring state when update fails validation" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+
+    family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: entry.amount,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1
+    )
+
+    patch transaction_url(entry), params: {
+      entry: {
+        name: entry.name,
+        date: "",
+        currency: entry.currency,
+        amount: entry.amount.abs,
+        nature: "outflow",
+        entryable_type: entry.entryable_type,
+        entryable_attributes: { id: entry.entryable_id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "A manual recurring transaction already exists for this pattern"
+  end
+
   test "transaction count represents filtered total" do
     family = families(:empty)
     sign_in users(:empty)
