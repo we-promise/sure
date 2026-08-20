@@ -1,0 +1,645 @@
+---
+da:
+  views:
+    settings:
+      payments:
+        renewal: "Dit bidrag fortsætter den %{date}."
+        cancellation: "Dit bidrag ophører den %{date}."
+  settings:
+    background_jobs:
+      show:
+        page_title: "Baggrundsjobs"
+        title: "Worker-status"
+        subtitle: "Live Sidekiq-tilstand: worker-processer, kødybde og retry/dead-sæt."
+        redis_unreachable: "Sidekiq-tilstand er utilgængelig (Redis kan ikke nås). Liveness er ukendt, så handlinger er slået fra."
+        operations_title: "Igangværende handlinger"
+        operations_subtitle: "Synkroniseringer, importer og eksporter på tværs af husstande, der ikke er afsluttet. Handlinger, der har været inaktive i over 30 minutter uden et synligt job, antages tabt og kan markeres som sådan."
+        empty: "Ingen igangværende handlinger."
+        missing_value: "-"
+        stats:
+          workers: "Workers"
+          busy: "Optaget"
+          enqueued: "I kø"
+          retries: "Forsøg igen"
+          scheduled: "Planlagt"
+          dead: "Døde"
+          queue_label: "%{name}: %{size} · %{latency}s latenstid"
+        table:
+          type: "Handling"
+          family: "Husstand"
+          status: "Status"
+          last_activity: "Sidste aktivitet"
+          liveness: "Liveness"
+          action: "Handling"
+      operation:
+        ago: "%{time} siden"
+        sync_label: "Synk · %{type}"
+        running: "Kører"
+        queued: "I kø"
+        recent: "Nylig"
+        unknown: "Ukendt"
+        stuck: "Fastlåst — antaget tabt"
+        confirm: "Markér denne handling som tabt? Posten flyttes til en afsluttet status, så den kan forsøges igen. De underliggende data røres ikke."
+        missing_value: "-"
+        actions:
+          mark_stale: "Markér som forældet"
+          mark_failed: "Markér som fejlet"
+          release_claim: "Frigiv claim"
+      cancel:
+        cancelled: "%{type} markeret som tabt."
+        not_cancellable: "Handlingen kan ikke ændres lige nu — jobbet kan stadig være i kø eller køre. Prøv igen, når den har været inaktiv i 30 minutter."
+        cancelled_error: "Markeret som fejlet af en administrator — baggrundsjobbet blev antaget tabt."
+    debugs:
+      show:
+        page_title: "Debug"
+        title: "Debug-hændelseslog"
+        subtitle: "Driftsrelevante hændelser for superadmins. Nyeste først."
+        empty: "Ingen debug-hændelser fundet."
+        missing_value: "-"
+        filters:
+          all: "Alle"
+          category: "Kategori"
+          level: "Niveau"
+          source: "Kilde"
+          provider: "Udbyder"
+          start_date: "Fra"
+          end_date: "Til"
+          family_id: "Husstands-ID"
+          account_id: "Konto-ID"
+          user_id: "Bruger-ID"
+          account_provider_id: "Kontoudbyder-ID"
+          submit: "Filtrer"
+          reset: "Nulstil"
+        table:
+          time: "Tid"
+          level: "Niveau"
+          category: "Kategori"
+          source: "Kilde"
+          message: "Besked"
+          context: "Kontekst"
+          metadata: "Metadata"
+          view_metadata: "Vis"
+        context:
+          provider: "provider=%{value}"
+          family: "family=%{value}"
+          account: "account=%{value}"
+          user: "user=%{value}"
+          account_provider: "account_provider=%{value}"
+    llm_usages:
+      show:
+        page_title: "LLM-forbrug og omkostninger"
+        subtitle: "Følg dit AI-forbrug og anslåede omkostninger"
+        start_date: "Startdato"
+        end_date: "Slutdato"
+        filter: "Filtrer"
+        total_requests: "Forespørgsler i alt"
+        total_tokens: "Tokens i alt"
+        prompt: "prompt"
+        completion: "completion"
+        total_cost: "Samlet omkostning"
+        avg_cost_per_request: "Gns. omkostning/forespørgsel"
+        based_on_requests: "Baseret på %{with_cost} af %{total} forespørgsler med omkostningsdata"
+        cost_by_operation: "Omkostning pr. handling"
+        cost_by_model: "Omkostning pr. model"
+        recent_usage: "Seneste forbrug"
+        col_date: "Dato"
+        col_operation: "Handling"
+        col_model: "Model"
+        col_tokens: "Tokens"
+        col_cost: "Omkostning"
+        failed: "Fejlet"
+        no_usage_data: "Ingen forbrugsdata for den valgte periode"
+        cost_estimates_title: "Om omkostningsestimater"
+        cost_estimates_description: "Omkostninger er anslået ud fra offentliggjort udbyderpriser, inkl. OpenAI-priser pr. juli 2026. Faktiske omkostninger kan afvige. Prisen er pr. 1 million tokens og varierer efter model. Egne eller self-hostede modeller vises som \"N/A\" og indgår ikke i totalen."
+    ai_prompts:
+      show:
+        page_title: AI-prompts
+        openai_label: OpenAI
+        disable_ai: Slå AI-assistent fra
+        prompt_instructions: Prompt-instruktioner
+        main_system_prompt:
+          title: Hovedsystemprompt
+          subtitle: Kerneregler for, hvordan AI-assistenten opfører sig i alle chats
+        transaction_categorizer:
+          title: Transaktionskategorisering
+          subtitle: AI kategoriserer automatisk dine transaktioner ud fra dine kategorier
+        merchant_detector:
+          title: Forretningsgenkendelse
+          subtitle: AI identificerer og beriger transaktioner med forretningsoplysninger
+    payments:
+      show:
+        page_title: Betalinger
+        subscription_subtitle: Opdater dine kortoplysninger
+        subscription_title: Administrer bidrag
+        currently_on_plan: "Du er i øjeblikket på"
+        trialing: "Du bruger den åbne demo af %{product_name}"
+        trial_days_left:
+          one: "Data slettes om %{count} dag"
+          other: "Data slettes om %{count} dage"
+        not_contributing_prefix: "Du"
+        not_contributing_emphasis: "bidrager ikke"
+        contributions_note: "Bidrag til %{product_name} vises her."
+        manage: "Administrer"
+        choose_level: "Vælg niveau"
+        payment_via_stripe: "Betaling via Stripe"
+    appearances:
+      show:
+        page_title: Udseende
+        theme_title: Tema
+        theme_subtitle: Vælg et foretrukket tema til appen
+        theme_dark: Mørkt
+        theme_light: Lyst
+        theme_system: System
+        modals_title: Modaler
+        modals_subtitle: Tilpas modalernes opførsel
+        disable_modal_click_outside_title: Hold modaler åbne ved klik udenfor
+        disable_modal_click_outside_description: Forhindr at modaler lukker, når du klikker udenfor. Nyttigt for at undgå at miste ugemte ændringer.
+        transactions_title: Transaktioner
+        transactions_subtitle: Tilpas hvordan transaktioner vises
+        dashboard_title: Oversigt
+        dashboard_subtitle: Tilpas hvordan oversigten vises
+        dashboard_two_column_title: To-kolonne-layout
+        dashboard_two_column_description: Vis widgets i to kolonner på store skærme, med bredde- og højdestyring i hver widgets header. Når det er slået fra, stables widgets i én kolonne.
+        split_grouped_title: Gruppér split-transaktioner
+        split_grouped_description: Vis split-transaktioner samlet under deres overordnede i listen. Når det er slået fra, vises split-børn som enkelte rækker.
+    preferences:
+      show:
+        country: Land
+        currency: Valuta
+        date_format: Datoformat
+        general_subtitle: Tilpas dine præferencer
+        general_title: Generelt
+        default_period: Standardperiode
+        default_account_order: Standard rækkefølge for konti
+        language: Sprog
+        language_auto: Browsersprog
+        page_title: Præferencer
+        timezone: Tidszone
+        translations_notice: Vi arbejder stadig på oversættelser til flere sprog.
+        budget_title: Budget
+        budget_subtitle: Tilpas hvordan dine budgetter opfører sig
+        month_start_day: Budgetmåneden starter den
+        month_start_day_hint: Vælg hvornår budgetmåneden starter (fx lønningsdag)
+        month_start_day_warning: Dine budgetter og MTD-beregninger bruger denne startdag i stedet for den 1. i hver måned.
+        personal_budgets: Personlige budgetter
+        personal_budgets_hint: Slå individuelle budgetter til for hvert husstandsmedlem.
+        household_budget_enabled: Husstandsbudget
+        household_budget_enabled_hint: Behold et fælles husstandsbudget ved siden af personlige budgetter. Slå fra for kun at bruge personlige budgetter.
+        budget_sharing_title: Budgetdeling
+        budget_sharing_subtitle: Lad andre medlemmer se eller redigere dit personlige budget
+        budget_sharing_no_members: Der er ingen andre medlemmer i din %{moniker} at dele med
+        budget_sharing_permission_label: "%{name}s adgang"
+        budget_sharing_permissions:
+          none: Ingen adgang
+          read_only: Kun visning
+          read_write: Kan redigere
+        currencies_title: "%{moniker}s valutaer"
+        currencies_subtitle: Vælg hvilke valutaer der vises i beløbsfelter for din %{moniker}
+        base_currency_label: Basisvaluta
+        base_currency_badge: Basisvaluta
+        additional_currencies_label: Yderligere valutaer
+        no_additional_currencies: Ingen valgt
+        currencies_more: "+%{count} mere"
+        manage_currencies: Administrer valutaer
+        manage_currencies_subtitle: Fravælg valutaer, du aldrig bruger, eller begræns listen til nogle få.
+        select_all_currencies: Vælg alle
+        select_base_only: Kun basisvaluta
+        currency_search_placeholder: Søg valutaer
+        no_matching_currencies: Ingen valutaer fundet
+        selected_currencies_count:
+          one: "%{count} valgt"
+          other: "%{count} valgt"
+        save_currencies: Gem valutaer
+        sharing_title: "%{moniker}s deling"
+        sharing_subtitle: "Styr hvordan konti deles i din %{moniker}"
+        sharing_default_label: Standarddeling for nye konti
+        sharing_shared: Del med alle medlemmer
+        sharing_private: Hold privat som standard
+        preview:
+          title: Slå forhåndsvisningsfunktioner til
+          description: Tilmeld dig funktioner under udvikling, mærket preview eller canary.
+    budget_shares:
+      update:
+        success: Indstillinger for budgetdeling er opdateret
+    profiles:
+      destroy:
+        cannot_remove_self: Du kan ikke fjerne dig selv fra kontoen.
+        member_owns_other_family_data: Medlemmet ejer stadig konti i en anden husstand og kan ikke fjernes. Overfør eller fjern de konti først.
+        member_removal_failed: Der opstod et problem med at fjerne medlemmet.
+        member_removed: Medlemmet er fjernet.
+        not_authorized: Du har ikke tilladelse til at fjerne medlemmer.
+      show:
+        confirm_delete:
+          body: Er du sikker på, at du vil slette din konto permanent? Handlingen
+            kan ikke fortrydes.
+          title: Slet konto?
+        confirm_reset:
+          body: Er du sikker på, at du vil nulstille din konto? Det sletter alle konti, kategorier, forretninger, tags og andre data. Handlingen kan ikke fortrydes.
+          title: Nulstil konto?
+        confirm_reset_with_sample_data:
+          body: Er du sikker på, at du vil nulstille kontoen og indlæse eksempeldata? Dine eksisterende data slettes og erstattes med demodata, så du kan udforske Sure sikkert.
+          title: Nulstil konto og indlæs eksempeldata?
+        confirm_remove_invitation:
+          body: Er du sikker på, at du vil fjerne invitationen til %{email}?
+          title: Fjern invitation
+        confirm_remove_member:
+          body: Er du sikker på, at du vil fjerne %{name} fra din konto?
+          title: Fjern medlem
+        danger_zone_title: Farezone
+        delete_account: Slet konto
+        delete_account_warning: Hvis du sletter din konto, fjernes alle dine data
+          permanent, og det kan ikke fortrydes.
+        reset_account: Nulstil konto
+        reset_account_warning: Nulstilling sletter alle konti, kategorier, forretninger, tags og andre data, men beholder din brugerkonto.
+        reset_account_with_sample_data: Nulstil og forudindlæs
+        reset_account_with_sample_data_warning: Slet alle eksisterende data, og indlæs derefter friske eksempeldata, så du kan udforske med et udfyldt miljø.
+        email: E-mail
+        first_name: Fornavn
+        group_form_input_placeholder: Indtast gruppenavn
+        group_form_label: Gruppenavn
+        group_title: Gruppemedlemmer
+        household_form_input_placeholder: Indtast husstandsnavn
+        household_form_label: Husstandsnavn
+        household_subtitle: Inviterede kan logge ind på din %{moniker}-konto og få adgang til delte ressourcer.
+        household_title: Husstand
+        invitation_link: Invitationslink
+        invite_member: Tilføj medlem
+        last_name: Efternavn
+        page_title: Profil
+        pending: Afventer
+        profile_subtitle: Tilpas hvordan du vises på %{product_name}
+        profile_title: Personligt
+        remove_invitation: Fjern invitation
+        remove_member: Fjern medlem
+        resend_confirmation_link: anmod om en ny bekræftelsesmail
+        save: Gem
+        unconfirmed_email_notice_html: Du har bedt om at ændre din e-mail til %{email}. Gå til din indbakke og bekræft, før ændringen træder i kraft. Hvis du ikke har fået mailen, så tjek spam, eller %{resend_link}.
+    securities:
+      show:
+        page_title: Sikkerhed
+        encryption_warning:
+          title: Krypteringsnøgler mangler
+          intro: "Følsomme data (API-nøgler, udbydertokens, MFA-hemmeligheder og personoplysninger) gemmes ukrypteret i hvile. For at slå kryptering til skal du sætte følgende nøgler i miljøvariabler eller Rails credentials:"
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: "Generer et sæt med: bin/rails db:encryption:init"
+        mfa_title: To-faktor-godkendelse
+        mfa_description: Tilføj et ekstra sikkerhedslag ved at kræve en kode fra din authenticator-app ved login
+        enable_mfa: Slå 2FA til
+        disable_mfa: Slå 2FA fra
+        disable_mfa_confirm: Er du sikker på, at du vil slå to-faktor-godkendelse fra?
+        sso_title: Tilknyttede konti
+        sso_subtitle: Administrer dine single sign-on-forbindelser
+        sso_disconnect: Afbryd
+        sso_last_used: Sidst brugt
+        sso_never: Aldrig
+        sso_no_email: Ingen e-mail
+        sso_no_identities: Ingen SSO-konti tilknyttet
+        sso_connect_hint: Log ud, og log ind med en SSO-udbyder for at tilknytte en konto.
+        sso_confirm_title: Afbryd konto?
+        sso_confirm_body: Er du sikker på, at du vil afbryde din %{provider}-konto? Du kan tilknytte den igen senere ved at logge ind med den udbyder.
+        sso_confirm_button: Afbryd
+        sso_warning_message: Dette er din eneste loginmetode. Du bør sætte en adgangskode under sikkerhed, før du afbryder, ellers kan du blive låst ude.
+    mcp:
+      show:
+        page_title: MCP-server
+        connect_title: Tilslut en AI-assistent
+        connect_subtitle: Indsæt denne URL i Claude.ai (eller en anden MCP-klient) for at forbinde den til din Sure-konto.
+        copy_url: Kopiér
+        copied: Kopieret!
+        how_to_connect_title: Sådan tilslutter du Claude
+        step_1: "Åbn Claude.ai og gå til Settings → Customize → Connectors."
+        step_2: Klik på "Add connector", og indsæt MCP-server-URL'en ovenfor.
+        step_3: Klik Connect — du bliver sendt til Sure for at logge ind og give adgang.
+        step_4: Når adgangen er godkendt, kan Claude læse dine konti, transaktioner og saldi.
+        connected_title: Tilsluttede klienter
+        connected_subtitle: Disse apps har adgang til dine Sure-data. Tilbagekald dem, du ikke længere bruger.
+        unknown_client: Ukendt klient
+        connected_ago: "Tilsluttet for %{time} siden"
+        revoke: Tilbagekald
+        revoke_confirm: Tilbagekald adgang for denne klient?
+      revoke:
+        revoked: Forbindelsen er tilbagekaldt.
+    settings_nav:
+      accounts_label: Konti
+      advanced_section_title: Avanceret
+      ai_prompts_label: AI-prompts
+      background_jobs_label: Baggrundsjobs
+      api_key_label: API-nøgler
+      payment_label: Betaling
+      categories_label: Kategorier
+      feedback_label: Feedback
+      general_section_title: Generelt
+      imports_label: Importer
+      exports_label: Eksporter
+      llm_usage_label: LLM-forbrug
+      logout: Log ud
+      merchants_label: Forretninger
+      providers_label: Udbydere
+      guides_label: Guides
+      other_section_title: Mere
+      preferences_label: Præferencer
+      profile_label: Profil
+      recurring_transactions_label: Faste
+      rules_label: Regler
+      mcp_label: MCP
+      security_label: Sikkerhed
+      self_hosting_label: Self-hosting
+      sso_providers_label: SSO-udbydere
+      statement_vault_label: Kontoudtog
+      tags_label: Tags
+      transactions_section_title: Transaktioner
+      users_label: Brugere
+      whats_new_label: Nyheder
+      api_keys_label: API-nøgler
+      appearance_label: Udseende
+      bank_sync_label: Banksynk
+      debug_label: Debug
+    settings_nav_link_large:
+      next: Næste
+      previous: Tilbage
+    user_avatar_field:
+      accepted_formats: JPG eller PNG. Maks. 5 MB.
+      choose: Upload foto
+      choose_label: (valgfrit)
+      change: Skift foto
+    providers:
+      update:
+        updated_successfully: Udbyderindstillinger er opdateret
+        no_changes: Der blev ikke lavet ændringer
+      not_authorized: Ikke autoriseret
+      bank_sync:
+        page_title: Banksynk
+        lede: Tilslut eksterne konti, så transaktioner, saldi og beholdninger flyder automatisk ind i Sure.
+      status:
+        ok: Tilsluttet
+        warn: Handling påkrævet
+        err: Fejl
+        "off": Ikke konfigureret
+      maturity:
+        beta: Beta
+        alpha: Alpha
+      drawer_trust_statement: "Skrivebeskyttet adgang. Sure kan aldrig flytte penge, og dine oplysninger gemmes krypteret."
+      setup_steps:
+        eyebrow: Opsætning
+        need_help: "Brug for hjælp?"
+      connect: Tilslut
+      groups:
+        your_connections: Dine forbindelser
+        available: Tilgængelige
+        empty_available: Alle tilgængelige udbydere er tilsluttet.
+      health_strip:
+        connected: tilsluttet
+        needs_attention: kræver opmærksomhed
+        accounts_syncing: konti synkroniserer
+        last_synced: Sidst synkroniseret for %{time} siden
+      meta:
+        sync_error: Synkfejl
+        no_recent_sync: Synk forfalden
+        reconsent_required: Ny accept påkrævet
+        reconsent_needed:
+          one: Ny accept om 1 dag
+          other: Ny accept om %{count} dage
+        last_synced: Synkroniseret for %{time} siden
+      sync_all: Synkroniser alle
+      sync_all_in_progress: Synkroniserer alle tilsluttede udbydere…
+      sync_all_recently: Synk er allerede i gang. Prøv igen om et øjeblik.
+      sync_provider: Synkroniser nu
+      sync_provider_in_progress: Synk startet.
+      recently_synced: Synkroniseret for nylig. Prøv igen om et øjeblik.
+      taglines:
+        akahu: Synkroniser newzealandske finansielle institutioner via Akahu.
+        simplefin: Tilslut amerikanske bankkonti via den åbne SimpleFIN-protokol.
+        lunchflow: Tilslut 20.000+ banker i 40+ lande (UK, EU, USA m.fl.)
+        redbark: Synkroniser australske bankkonti via Redbark open banking.
+        enable_banking: Synkroniser europæiske bankkonti via PSD2 open banking.
+        coinstats: Følg hele din kryptoportefølje på tværs af wallets og børser.
+        wise: Synkroniser dine Wise-multivalutasaldi og internationale overførsler automatisk.
+        mercury: Synkroniser dine Mercury-erhvervskonti automatisk.
+        brex: Synkroniser Brex-kontanter og firmakort med skrivebeskyttet adgang.
+        coinbase: Importér dine Coinbase-kryptobeholdninger og følg afkast.
+        binance: Synkroniser dine Binance spot-saldi med en skrivebeskyttet API-nøgle.
+        kraken: Synkroniser Kraken-saldi og spot-handler med en skrivebeskyttet API-nøgle.
+        snaptrade: Tilslut mæglerkonti via SnapTrade-netværket.
+        trading212: Synkroniser din Trading 212-investeringsportefølje med en skrivebeskyttet API-nøgle.
+        ibkr: Synkroniser Interactive Brokers-investeringskonti via Flex Query-import.
+        questrade: Synkroniser dine Questrade-investeringskonti direkte via Questrade API.
+        indexa_capital: Følg din Indexa Capital automatiserede investeringsportefølje.
+        sophtron: Tilslut amerikanske og canadiske banker og forsyningsselskaber.
+        plaid: Tilslut tusindvis af amerikanske finansielle institutioner via Plaid.
+        plaid_eu: Tilslut europæiske finansielle institutioner via Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Søg udbydere
+        placeholder: Søg udbydere
+        chips:
+          all: Alle
+          bank: Banker
+          crypto: Krypto
+          investment: Investeringer
+      empty_filter: Ingen udbydere matcher dit filter.
+      clear_filter: Ryd filtre
+      encryption_error:
+        title: Krypteringsnøgler mangler
+        message: "Banksynk kræver Active Record-kryptering. Sæt primary_key, deterministic_key og key_derivation_salt i Rails credentials eller miljøvariabler."
+      provider_form:
+        save_and_connect: "Gem og tilslut"
+      coinbase_panel:
+        setup_instructions: "Sådan tilslutter du Coinbase:"
+        step1_html: Gå til <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
+        step2: Opret en ny API-nøgle med skrivebeskyttede rettigheder (se konti, se transaktioner)
+        step3: Kopiér din API-nøgle og API-hemmelighed, og indsæt dem nedenfor
+        api_key_label: API-nøgle
+        api_key_placeholder: Indtast din Coinbase API-nøgle
+        api_secret_label: API-hemmelighed
+        api_secret_placeholder: Indtast din Coinbase API-hemmelighed
+        connect_button: Tilslut Coinbase
+        syncing: Synkroniserer...
+        sync: Synkroniser
+        disconnect_confirm: Er du sikker på, at du vil afbryde denne Coinbase-forbindelse? Dine synkroniserede konti bliver manuelle konti.
+      binance_panel:
+        setup_instructions: "Sådan tilslutter du Binance — opret en skrivebeskyttet API-nøgle:"
+        step1_html: 'Gå til <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>'
+        step2: "Opret en ny API-nøgle med kun Enable Reading"
+        step3: "Indsæt din API Key og Secret nedenfor"
+        no_withdraw_title: "Kun skrivebeskyttet nøgle"
+        no_withdraw_body: "Slå ikke withdrawal-rettigheder til, når du opretter Binance API-nøglen. Sure behøver kun læseadgang."
+        ip_hint_title: "IP-whitelisting påkrævet"
+        ip_hint_body: "Tilføj app-serverens udgående IP til Binance API-nøglens whitelist:"
+        ip_hint_contact_admin: "Kontakt din administrator for at få app-serverens udgående IP-adresse."
+        api_key_label: API-nøgle
+        api_key_placeholder: Indsæt din Binance API Key
+        api_secret_label: API-hemmelighed
+        api_secret_placeholder: Indsæt din Binance API Secret
+        connect_button: Tilslut Binance
+        syncing: Synkroniserer...
+        sync: Synkroniser
+        historical_import: "Indstillinger for historisk import"
+        sync_start_date_label: "Importér data fra"
+        sync_start_date_help: "Vælg hvor langt tilbage historiske handler skal hentes."
+        disconnect_confirm: "Er du sikker på, at du vil afbryde Binance?"
+      kraken_panel:
+        step1_html: 'Gå til <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>'
+        step2: "Opret en API-nøgle med kun Query Funds og Query Closed Orders & Trades."
+        step3: "Indsæt API-nøglen og den private nøgle nedenfor."
+        read_only_title: "Kun skrivebeskyttet børs-synk"
+        read_only_body: "Giv ikke rettigheder til handel, annullering, udbetaling, eksport, ledger, Earn, staking eller overførsler. Sure importerer kun saldi, beholdninger og spot-handler."
+        default_connection_name: Kraken
+        add_connection: Tilføj Kraken-forbindelse
+        update_connection: Opdater forbindelse
+        connection_name_label: Forbindelsesnavn
+        connection_name_placeholder: Primær Kraken
+        api_key_label: API-nøgle
+        api_key_placeholder: Indsæt din Kraken API-nøgle
+        keep_api_key_placeholder: Lad feltet være tomt for at beholde den eksisterende API-nøgle
+        api_secret_label: Privat nøgle
+        api_secret_placeholder: Indsæt din Kraken private nøgle
+        keep_api_secret_placeholder: Lad feltet være tomt for at beholde den eksisterende private nøgle
+        setup_accounts: Opsæt konto
+        syncing: Synkroniserer...
+        sync: Synkroniser
+        disconnect: Afbryd
+        disconnect_confirm: "Er du sikker på, at du vil afbryde %{name}?"
+      enable_banking_panel:
+        callback_url_instruction: "Til callback-URL skal du bruge %{callback_url}."
+        connection_error: Forbindelsesfejl
+        step_1_html: "Gå til %{link} og hent dine udvikleroplysninger."
+        step_2: "Vælg land, og indsæt Application ID + Client Certificate nedenfor."
+        step_3: "Gem, og brug Tilføj forbindelse til at knytte din bank."
+        config_locked_title: "Konfigurationen er låst"
+        config_locked_message: "Afbryd alle tilknyttede banker, før du ændrer disse oplysninger."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Indtast application ID"
+        application_id_placeholder_update: "Indtast nyt ID for at opdatere"
+        client_certificate_label: "Client Certificate (med privat nøgle)"
+        save_and_connect: "Gem og tilslut"
+        update_connection: "Opdater forbindelse"
+        connected_bank: "Tilsluttet bank"
+        session_expires: "Session udløber: %{date}"
+        unknown: "Ukendt"
+        connection: "Forbindelse"
+        session_expired_reconnect: "Session udløbet — tilslut igen"
+        configured: "Konfigureret"
+        ready_to_link: "Klar til at knytte konti"
+        sync: "Synkroniser"
+        reconnect: "Tilslut igen"
+        connect_bank: "Tilslut bank"
+        remove: "Fjern"
+        remove_confirm: "Er du sikker på, at du vil fjerne denne forbindelse?"
+        add_connection: "Tilføj forbindelse"
+        syncing: "Synkroniserer"
+        select_country: "Vælg land..."
+        country_label: "Land"
+      lunchflow_panel:
+        step_1_html: "Gå til %{link} og opret en API-nøgle."
+        step_2: "Indsæt din nøgle nedenfor, og tilslut."
+        step_3: "Gå derefter til Konti for at knytte dine synkroniserede konti."
+        api_key_label: "API-nøgle"
+        api_key_placeholder_new: "Indsæt API-nøgle her"
+        api_key_placeholder_update: "Indtast ny API-nøgle for at opdatere"
+        base_url_label: "Base-URL (valgfri)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (standard)"
+        save_and_connect: "Gem og tilslut"
+        update_connection: "Opdater forbindelse"
+      akahu_panel:
+        step_1_html: "Gå til %{link} og opret en personlig app."
+        step_2: "Kopiér din app-token og bruger-token."
+        step_3: "Indsæt tokens nedenfor, gem, og knyt dine synkroniserede konti."
+      up_panel:
+        step_1_html: "Gå til %{link} og generer en personlig adgangstoken."
+        step_2: "Kopiér din personlige adgangstoken."
+        step_3: "Indsæt tokenen nedenfor, gem, og knyt dine synkroniserede konti."
+      simplefin_panel:
+        step_1_html: "Gå til %{link} for en engangs-opsætningstoken."
+        step_2: "Indsæt tokenen nedenfor, og tilslut."
+        step_3: "Gå derefter til Konti for at knytte dine synkroniserede konti."
+        setup_token_label: "Opsætningstoken"
+        setup_token_placeholder: "Indsæt SimpleFIN-opsætningstoken"
+        save_and_connect: "Gem og tilslut"
+      plaid_panel:
+        step_1_html: "Åbn %{link}, og kopiér Client ID og Secret Key."
+        step_2: "Vælg miljø. Brug sandbox til test og production til rigtige konti."
+        step_3: "Indsæt dine oplysninger nedenfor, og tilslut."
+      plaid_eu_panel:
+        step_1_html: "Åbn %{link}, og kopiér dit EU Client ID og Secret Key."
+      not_found: Udbyder ikke fundet.
+      sync_provider_no_items: Ingen forbindelser at synkronisere.
+      ibkr_panel:
+        steps:
+          step_1: 'I IBKR Client Portal skal du gå til "Performance & Reports" > "Flex Queries".'
+          step_2: 'Klik på "+"-ikonet under "Activity Flex Query" for at oprette en ny forespørgsel.'
+          step_3: 'Navngiv forespørgslen (fx "Sure Sync"), gennemgå Flex Query-detaljerne nedenfor, og slå de nævnte sektioner, felter og indstillinger til.'
+          step_4: 'Gem forespørgslen, notér dit "Query ID", og brug tandhjulet under "Flex Web Service Configuration" til at generere en adgangstoken.'
+          step_5: "Indsæt Query ID og Token nedenfor, gem konfigurationen, og gå til Konti for at knytte fundne IBKR-konti."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Sektioner, felter og konfiguration
+          summary: Fold ud for at se de præcise sektioner, felter og indstillinger, din IBKR Activity Flex Query skal indeholde.
+          sections_heading: Slå disse sektioner og felter til
+          configuration_heading: Sæt disse forespørgselsindstillinger
+        sections:
+          account_information: "Account Information: Account ID, Currency"
+          cash_report: "Cash Report:"
+          cash_report_options: "Options: None"
+          cash_report_fields: "Fields: Currency, Ending Cash"
+          cash_transactions: "Cash Transactions:"
+          cash_transactions_options: "Options: Dividends, Deposits & Withdrawals, Detail"
+          cash_transactions_fields: "Fields: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
+          change_in_position_value_summary: "Change In Position Value Summary: Currency, End Of Period Value"
+          net_asset_value: "Net Asset Value (NAV) in Base:"
+          net_asset_value_options: "Options: None"
+          net_asset_value_fields: "Fields: Currency, Report Date, Total"
+          open_positions: "Open Positions:"
+          open_positions_options: "Options: Summary"
+          open_positions_fields: "Fields: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol"
+          trades: "Trades:"
+          trades_options: "Options: Execution"
+          trades_fields: "Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
+        configuration:
+          models: "Models: Optional"
+          format: "Format: XML"
+          period: "Period: Last 365 Calendar Days"
+          date_format: "Date Format: yyyy-MM-dd"
+          time_format: "Time Format: HH:mm:ss"
+          date_time_separator: "Date/Time Separator: ; (semi-colon)"
+          profit_and_loss: "Profit and Loss: Default"
+          all_other_options: 'All other configuration options: "No"'
+        report_window_note: "IBKR Flex-rapporter er begrænset til det vindue, du har sat i IBKR. Sure importerer aktuelle beholdninger plus op til de seneste 365 dages aktivitet fra rapporten."
+        sync: Synkroniser
+        disconnect_confirm: Afbryd Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Indtast dit IBKR Flex Query ID
+        query_id_placeholder_existing: Lad feltet være tomt for at beholde det nuværende Query ID
+        token_label: Token
+        token_placeholder_new: Indtast din IBKR Flex Web Service Token
+        token_placeholder_existing: Lad feltet være tomt for at beholde den nuværende Token
+        save_configuration: Gem konfiguration
+        update_configuration: Opdater konfiguration
+        status_configured_prefix: "%{summary}. Gå til"
+        accounts_tab: Konti
+        status_configured_suffix: for at administrere fundne konti.
+        not_configured: Ikke konfigureret.
+      trading212_panel:
+        steps:
+          step_1: Gå til Trading 212 → Settings → API (web eller mobilapp).
+          step_2: Generer en ny API-nøgle — Trading 212 viser et API ID og en Secret Key.
+          step_3: Indsæt begge nedenfor, vælg miljø og kontovaluta, og gem.
+        api_key_label: API ID
+        api_key_placeholder_new: Indsæt dit Trading 212 API ID
+        api_key_placeholder_existing: Lad feltet være tomt for at beholde det nuværende API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Indsæt din Trading 212 Secret Key
+        api_secret_placeholder_existing: Lad feltet være tomt for at beholde den nuværende Secret Key
+        environment_label: Miljø
+        environment_live: Live-konto
+        environment_demo: Demo-konto
+        currency_label: Kontovaluta
+        save_configuration: Gem konfiguration
+        update_configuration: Opdater konfiguration
+        sync: Synkroniser
+        disconnect_confirm: Afbryd Trading 212?
+        status_configured_prefix: "Konfigureret. Gå til"
+        accounts_tab: Konti
+        status_configured_suffix: for at administrere fundne konti.
+        not_configured: Ikke konfigureret.

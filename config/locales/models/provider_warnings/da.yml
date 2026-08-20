@@ -1,0 +1,4 @@
+---
+da:
+  provider_warnings:
+    limited_investment_data: "Investeringsdata fra denne udbyder er begrænsede. Aktivitetstyper (køb, salg, udbytte) er ikke tilgængelige, hvilket kan påvirke budgetnøjagtigheden. Overvej at oprette regler til at udelade eller kategorisere investeringstransaktioner."

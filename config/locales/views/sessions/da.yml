@@ -1,0 +1,37 @@
+---
+da:
+  sessions:
+    create:
+      invalid_credentials: Ugyldig e-mail eller adgangskode.
+      local_login_disabled: Login med adgangskode er slået fra. Brug single sign-on.
+    destroy:
+      logout_successful: Du er logget ud.
+    post_logout:
+      logout_successful: Du er logget ud.
+    openid_connect:
+      account_linked: "Kontoen er knyttet til %{provider}"
+      failed: Kunne ikke logge ind via OpenID Connect.
+    failure:
+      failed: Kunne ikke logge ind.
+      sso_provider_unavailable: "SSO-udbyderen er ikke tilgængelig lige nu. Prøv igen senere, eller kontakt en administrator."
+      sso_invalid_response: "Ugyldigt svar fra SSO-udbyderen. Prøv igen."
+      sso_failed: "Single sign-on mislykkedes. Prøv igen."
+    mobile_sso_start:
+      redirecting_html: "Omdirigerer til login... <a href=\"%{url}\">Klik her</a> hvis du ikke bliver sendt videre."
+    new:
+      email: E-mailadresse
+      email_placeholder: dig@eksempel.dk
+      forgot_password: Glemt adgangskode?
+      password: Adgangskode
+      submit: Log ind
+      title: Sure
+      password_placeholder: Indtast din adgangskode
+      openid_connect: Log ind med OpenID Connect
+      oidc: Log ind med OpenID Connect
+      google_auth_connect: Log ind med Google
+      local_login_admin_only: Lokalt login er begrænset til administratorer.
+      passkey_button: Log ind med passkey
+      passkey_unsupported: Denne browser understøtter ikke passkeys.
+      no_auth_methods_enabled: Der er ingen loginmetoder slået til. Kontakt en administrator.
+      demo_banner_title: "Demo er aktiv"
+      demo_banner_message: "Dette er et demomiljø. Loginoplysninger er udfyldt på forhånd. Indtast ikke rigtige eller følsomme oplysninger."

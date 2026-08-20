@@ -1,0 +1,40 @@
+---
+da:
+  loans:
+    edit:
+      edit: Rediger %{account}
+    form:
+      interest_rate: Rente
+      interest_rate_placeholder: '5.25'
+      initial_balance: Oprindeligt lånebeløb
+      rate_type: Rentetype
+      term_months: Løbetid (måneder)
+      term_months_placeholder: '360'
+      none: Ingen
+      subtype_prompt: Vælg lånetype
+      subtype_none: Ingen
+      rate_type_adjustable: Justerbar
+      rate_type_fixed: Fast
+      rate_type_variable: Variabel
+    new:
+      title: Indtast lånedetaljer
+    overview:
+      interest_rate: Rente
+      monthly_payment: Månedlig ydelse
+      not_applicable: I/T
+      original_principal: Oprindelig hovedstol
+      remaining_principal: Resterende hovedstol
+      term: Løbetid
+      type: Type
+      unknown: Ukendt
+    tabs:
+      overview:
+        interest_rate: Rente
+        monthly_payment: Månedlig ydelse
+        not_applicable: I/T
+        original_principal: Oprindelig hovedstol
+        remaining_principal: Resterende hovedstol
+        term: Løbetid
+        type: Type
+        unknown: Ukendt
+        edit_loan_details: "Rediger lånedetaljer"

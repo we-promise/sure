@@ -1,0 +1,5 @@
+---
+da:
+  passkey_sessions:
+    invalid_credential: Kunne ikke logge ind med den passkey. Prøv igen, eller
+      brug din adgangskode.

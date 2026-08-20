@@ -1,0 +1,7 @@
+---
+da:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: "Kan ikke slette demo-overvågnings-API-nøglen"

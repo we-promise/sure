@@ -1,0 +1,190 @@
+---
+da:
+  investments:
+    edit:
+      edit: Rediger %{account}
+    form:
+      none: Ingen
+      subtype_prompt: Vælg investeringstype
+    new:
+      title: Indtast kontosaldo
+    show:
+      chart_title: Samlet værdi
+    subtypes:
+      brokerage:
+        short: Mæglerkonto
+        long: Mæglerkonto
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: Traditional IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: 529-plan
+        long: 529 uddannelsesopsparing
+      hsa:
+        short: HSA
+        long: Health Savings Account
+      ugma:
+        short: UGMA
+        long: UGMA-depotkonto
+      utma:
+        short: UTMA
+        long: UTMA-depotkonto
+      isa:
+        short: ISA
+        long: Individual Savings Account
+      lisa:
+        short: LISA
+        long: Lifetime ISA
+      sipp:
+        short: SIPP
+        long: Self-Invested Personal Pension
+      workplace_pension_uk:
+        short: Pension
+        long: Arbejdsmarkedspension
+      rrsp:
+        short: RRSP
+        long: Registered Retirement Savings Plan
+      tfsa:
+        short: TFSA
+        long: Tax-Free Savings Account
+      resp:
+        short: RESP
+        long: Registered Education Savings Plan
+      lira:
+        short: LIRA
+        long: Locked-In Retirement Account
+      rrif:
+        short: RRIF
+        long: Registered Retirement Income Fund
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Self-Managed Super Fund
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Søjle 3a
+        long: Privat pension (søjle 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      nps:
+        short: NPS
+        long: National Pension System
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Indiske aktier
+        long: Indiske aktier (Demat)
+      indian_equity:
+        short: Indisk aktie
+        long: Indisk aktie
+      indian_etf:
+        short: Indisk ETF
+        long: Indisk ETF
+      life_insurance:
+        short: Livsforsikring
+        long: Livsforsikring
+      ppf:
+        short: PPF
+        long: Public Provident Fund
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: National Savings Certificate
+      scss:
+        short: SCSS
+        long: Senior Citizens' Savings Scheme
+      fd:
+        short: FD
+        long: Fast indskud
+      rd:
+        short: RD
+        long: Løbende indskud
+      pomis:
+        short: POMIS
+        long: Post Office Monthly Income Scheme
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: Guld-ETF
+        long: Guld-ETF
+      gold_mf:
+        short: Guld-MF
+        long: Guld-investeringsforening
+      sgb:
+        short: SGB
+        long: Sovereign Gold Bond
+      g_sec:
+        short: G-Sec
+        long: Statsobligationer (G-Secs)
+      sdl:
+        short: SDL
+        long: State Development Loans (SDLs)
+      corporate_bond:
+        short: Erhvervsobligation
+        long: Erhvervsobligation
+      infrastructure_bond:
+        short: Infra-obligation
+        long: Infrastrukturobligation
+      tax_free_bond:
+        short: Skattefri obligation
+        long: Skattefri obligation
+      pension:
+        short: Pension
+        long: Pension
+      retirement:
+        short: Pension
+        long: Pensionskonto
+      mutual_fund:
+        short: Investeringsforening
+        long: Investeringsforening
+      gold:
+        short: Guld
+        long: Guld (fysisk eller digitalt)
+      angel:
+        short: Angel
+        long: Angel-investering
+      trust:
+        short: Trust
+        long: Trust
+      other:
+        short: Andet
+        long: Anden investering
+    value_tooltip:
+      cash: Kontanter
+      holdings: Beholdninger
+      total: Porteføljesaldo
+      total_value_tooltip: Den samlede porteføljesaldo er summen af mæglerkontanter
+        (tilgængelige til handel) og den aktuelle markedsværdi af dine beholdninger.

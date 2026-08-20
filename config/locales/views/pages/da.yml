@@ -1,0 +1,120 @@
+---
+da:
+  pages:
+    feedback:
+      title: Feedback
+      heading: Giv feedback
+      description: Fortæl os, hvis du har konkret feedback. Links til videoer eller skærmbilleder er velkomne.
+      feature_request: Skriv et feature-ønske
+      bug_report: Rapportér en fejl
+      discuss: "Diskutér %{product} med andre"
+    intro:
+      not_authorized: "Intro er kun tilgængelig for gæstebrugere."
+      welcome: "Velkommen!"
+      coming_soon: Intro-oplevelsen kommer snart
+      description: "Vi bygger en rigere onboarding, så vi kan lære dine mål, milepæle og hverdagsbehov at kende. Indtil videre kan du starte en samtale med Sure i chat-sidebaren og fortælle, hvor du er i din økonomi."
+      start_chatting: Start chat
+    redis_configuration_error:
+      page_title: Redis-konfiguration påkrævet - Sure
+      heading: Redis-konfiguration påkrævet
+      subheading: Din self-hostede Sure-installation skal have Redis konfigureret korrekt.
+      why_required_title: Hvorfor er Redis påkrævet?
+      why_required_body: Sure bruger Redis til Sidekiq-baggrundsjobs som synkronisering af kontodata, import og andre baggrundsopgaver, der holder dine finansdata opdaterede.
+      view_setup_guide: Se opsætningsguide
+      setup_guide_hint: Følg vores fulde Docker-guide for at konfigurere Redis
+      refresh_hint: "Når Redis er konfigureret, skal du opdatere denne side for at fortsætte."
+      refresh_page: Opdater side
+    changelog:
+      title: Nyheder
+    release_notes_unavailable:
+      name: Udgivelsesnoter utilgængelige
+      body_html: "<p>Kunne ikke hente de seneste udgivelsesnoter. Prøv igen senere, eller besøg vores <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub releases-side</a> direkte.</p>"
+    privacy:
+      title: Privatlivspolitik
+      heading: Privatlivspolitik
+      placeholder: Privatlivspolitik vises her.
+    terms:
+      title: Vilkår for brug
+      heading: Vilkår for brug
+      placeholder: Vilkår for brug vises her.
+    dashboard:
+      welcome: "Velkommen tilbage, %{name}"
+      subtitle: "Sådan ser din økonomi ud"
+      new: "Ny"
+      sections_aria_label: "Oversigtssektioner"
+      drag_to_reorder: "Træk for at ændre rækkefølge"
+      toggle_section: "Slå sektionens synlighed til/fra"
+      widget_size:
+        label: "Tilpas størrelse"
+        width_label: "Bredde"
+        half: "Halv"
+        full: "Fuld"
+        height_label: "Højde"
+        compact: "Kompakt"
+        auto: "Auto"
+        tall: "Høj"
+      net_worth_chart:
+        data_not_available: Data er ikke tilgængelige for den valgte periode
+        title: Nettoværdi
+      no_account_empty_state:
+        new_account: Ny konto
+        no_account_subtitle: Der er ingen konti endnu, så der er intet at vise. Tilføj dine første konti for at se oversigten.
+        no_account_title: Ingen konti endnu
+      balance_sheet:
+        title: "Balance"
+        no_items: "Ingen %{name} endnu"
+        add_accounts: "Tilføj dine %{name}-konti for at se en fuld opdeling"
+        no_asset: "Ingen aktiver endnu"
+        no_liability: "Ingen passiver endnu"
+        add_asset_accounts: "Tilføj dine aktivkonti for at se en fuld opdeling"
+        add_liability_accounts: "Tilføj dine passivkonti for at se en fuld opdeling"
+        name: "Navn"
+        weight: "Vægt"
+        value: "Værdi"
+        classifications:
+          asset: "Aktiver"
+          liability: "Passiver"
+      insights_feed:
+        title: "Indsigt"
+      cashflow_sankey:
+        title: "Pengestrøm"
+        zoom_out: "Tilbage til fuld pengestrøm"
+        no_data_title: "Ingen pengestrømsdata for denne periode"
+        no_data_description: "Tilføj transaktioner for at vise pengestrøm, eller udvid perioden"
+        add_transaction: "Tilføj transaktion"
+      no_accounts:
+        title: "Ingen konti endnu"
+        description: "Tilføj konti for at vise nettoværdi"
+        add_account: "Tilføj konto"
+      outflows_donut:
+        title: "Udgående"
+        total_outflows: "Udgående i alt"
+        categories: "Kategorier"
+        value: "Værdi"
+        weight: "Vægt"
+      investment_summary:
+        title: "Investeringer"
+        total_return: "Samlet afkast"
+        holding: "Beholdning"
+        weight: "Vægt"
+        value: "Værdi"
+        return: "Afkast"
+        period_activity: "%{period}-aktivitet"
+        contributions: "Indskud"
+        withdrawals: "Udbetalinger"
+        trades: "Handler"
+        no_investments: "Ingen investeringskonti"
+        add_investment: "Tilføj en investeringskonto for at følge din portefølje"
+      money_flow:
+        title: "Penge ind / ud"
+        date_range: "%{start_date} til %{end_date}"
+        month_picker_aria_label: "Vælg måned"
+        filter_accounts: "Filtrer konti (%{count})"
+        filter_accounts_all: "Alle konti"
+        period_scope_hint: "Viser de måneder, du vælger her — uafhængigt af oversigtsperioden øverst."
+        search_accounts: "Søg konti"
+        apply: "Anvend"
+        balance: "Transaktionssaldo"
+        chart_span: "Seneste %{count} måneder"
+        income: "Indtægt"
+        expenses: "Udgifter"

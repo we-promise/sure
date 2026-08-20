@@ -1,0 +1,38 @@
+---
+da:
+  settings:
+    securities:
+      show:
+        disable_mfa: Deaktivér 2FA
+        disable_mfa_confirm: Er du sikker på, at du vil deaktivere tofaktorgodkendelse?
+          Det gør din konto mindre sikker.
+        enable_mfa: Aktivér 2FA
+        mfa_enabled_status_html: "Tofaktorgodkendelse er <span class=\"font-medium text-green-600\">aktiveret</span>"
+        mfa_enabled_description: Din konto er beskyttet med et ekstra sikkerhedslag.
+        mfa_disabled_status_html: "Tofaktorgodkendelse er <span class=\"font-medium text-red-600\">deaktiveret</span>"
+        mfa_disabled_description: Aktivér 2FA for at tilføje et ekstra sikkerhedslag til din konto.
+        mfa_description: Tilføj et ekstra sikkerhedslag til din konto ved at kræve
+          en kode fra din autentificeringsapp, når du logger ind
+        mfa_title: Tofaktorgodkendelse
+        webauthn_add: Tilføj passkey eller sikkerhedsnøgle
+        webauthn_added: Tilføjet %{date}
+        webauthn_description: Brug en passkey, Touch ID, Windows Hello eller en hardware-
+          sikkerhedsnøgle som anden faktor ved login.
+        webauthn_empty: Ingen passkeys eller sikkerhedsnøgler er registreret endnu.
+        webauthn_last_used: Sidst brugt for %{time_ago} siden
+        webauthn_name_label: Nøglenavn
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey osv.
+        webauthn_remove: Fjern
+        webauthn_remove_confirm: Er du sikker på, at du vil fjerne denne passkey eller
+          sikkerhedsnøgle?
+        webauthn_remove_confirm_body: Du skal registrere denne passkey eller
+          sikkerhedsnøgle igen, før den kan bruges til loginverifikation.
+        webauthn_title: Passkeys og sikkerhedsnøgler
+        webauthn_unsupported: Denne browser understøtter ikke passkeys eller sikkerheds-
+          nøgler.
+  webauthn_credentials:
+    default_name: Sikkerhedsnøgle
+    failure: Kunne ikke gemme den passkey eller sikkerhedsnøgle. Prøv igen.
+    mfa_required: Aktivér tofaktorgodkendelse, før du tilføjer en passkey eller sikkerheds-
+      nøgle.
+    success: Passkey eller sikkerhedsnøgle fjernet.

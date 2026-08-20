@@ -1,0 +1,32 @@
+---
+da:
+  helpers:
+    label:
+      user:
+        invite_code: Inviteringskode
+    submit:
+      user:
+        create: Fortsæt
+  registrations:
+    closed: Tilmelding er lukket i øjeblikket.
+    create:
+      failure: Der opstod et problem under oprettelsen af kontoen.
+      invalid_invite_code: Ugyldig inviteringskode. Prøv igen.
+      success: Din konto er oprettet.
+    new:
+      invitation_message: "%{inviter} har inviteret dig til at deltage som %{role}"
+      join_family_title: Deltag i %{family} %{moniker}
+      role_admin: administrator
+      role_guest: gæst
+      role_member: medlem
+      submit: Opret konto
+      title: Opret din konto
+      welcome_body: For at komme i gang skal du oprette en ny konto. Bagefter kan du
+        tilpasse indstillingerne i appen.
+      welcome_title: Velkommen til self-hostet %{product_name}!
+      password_placeholder: Indtast din adgangskode
+      password_requirements:
+        length: Mindst 8 tegn
+        case: Store og små bogstaver
+        number: Et tal (0-9)
+        special: "Et specialtegn (!, @, #, $, % osv.)"

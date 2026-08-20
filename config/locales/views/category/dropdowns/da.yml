@@ -1,0 +1,12 @@
+---
+da:
+  category:
+    dropdowns:
+      row:
+        delete: Slet kategori
+        edit: Rediger kategori
+      show:
+        clear: Fjern kategori
+        no_categories: Ingen kategorier fundet
+        recent: Seneste
+        search_placeholder: Søg

@@ -1,0 +1,68 @@
+---
+da:
+  valuations:
+    confirmation_contents:
+      this_will: "Dette vil %{action_verb} kontoværdien den"
+      to_colon: "til:"
+      total_account_value: Samlet kontoværdi
+      holdings_value: Beholdningsværdi
+      brokerage_cash: Mæglerkontanter
+      account_balance: kontosaldo
+      credit_card_balance: kreditkortsaldo
+      loan_balance: lånesaldo
+      property_value: ejendomsværdi
+      vehicle_value: køretøjsværdi
+      crypto_balance: kryptosaldo
+      asset_value: aktivværdi
+      liability_balance: passivsaldo
+      balance: saldo
+      "on": "den"
+      to: "til"
+      recalculate_notice: "Alle fremtidige transaktioner og saldi genberegnes ud fra denne %{change_or_update}."
+      change: ændring
+      update: opdatering
+      action_set: sætte
+      action_update: opdatere
+    create:
+      account_updated: Konto opdateret
+    update:
+      account_updated: Konto opdateret
+      entry_updated: Postering opdateret
+    errors:
+      amount_required: Beløb er påkrævet
+    form:
+      amount: Beløb
+      submit: Tilføj saldoopdatering
+    header:
+      balance: Saldo
+    index:
+      change: ændring
+      date: dato
+      new_entry: Ny postering
+      no_valuations: Ingen værdiansættelser for denne konto endnu
+      valuations: Værdi
+      value: værdi
+    new:
+      title: Ny saldo
+    show:
+      amount: Beløb
+      amount_label: Kontoværdi på dato
+      date_label: Dato
+      delete: Slet
+      delete_subtitle: Denne handling kan ikke fortrydes
+      delete_title: Slet postering
+      details: Detaljer
+      name_label: Navn
+      name_placeholder: Indtast et navn til denne postering
+      note_label: Noter
+      note_placeholder: Tilføj yderligere detaljer om denne postering
+      overview: Oversigt
+      settings: Indstillinger
+      opening_balance: "Åbningssaldo"
+      update_value: Opdater værdi
+    confirm_create:
+      confirm: Bekræft
+      title: Bekræft ny saldo
+    confirm_update:
+      title: Opdater saldo
+      update: Opdater

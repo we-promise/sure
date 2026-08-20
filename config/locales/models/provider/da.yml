@@ -1,0 +1,17 @@
+---
+da:
+  providers:
+    property_valuation:
+      not_configured: Denne ejendomsdataudbyder er ikke konfigureret.
+      missing_fields: Angiv et navn og en komplet amerikansk adresse (gade, by, stat og postnummer).
+      preview_expired: Denne ejendomsforhåndsvisning er udløbet — slå adressen op igen.
+    rentcast:
+      errors:
+        no_valuation: RentCast returnerede ikke et værdiskøn for denne adresse.
+        not_found: RentCast kunne ikke finde en ejendom, der matcher denne adresse.
+    realie:
+      errors:
+        no_property: Realie returnerede ikke en ejendom for denne adresse.
+        no_valuation: Realie returnerede ikke en vurdering for denne ejendom.
+        not_found: Realie kunne ikke finde en ejendom, der matcher denne adresse.
+        location_mismatch: Realie matchede en ejendom i en anden by eller postnummer. Dobbelttjek adressen.

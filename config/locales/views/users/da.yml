@@ -1,0 +1,28 @@
+---
+da:
+  users:
+    destroy:
+      success: Din konto er slettet.
+    update:
+      email_change_failed: Kunne ikke ændre e-mailadressen.
+      email_change_initiated: Tjek din nye e-mailadresse for bekræftelsesvejledning.
+    resend_confirmation_email:
+      success: En ny bekræftelsesmail er sat i kø.
+      no_pending_change: Der er ingen afventende e-mailændring!
+    reset:
+      success: Din konto er nulstillet. Data slettes i baggrunden om lidt.
+      unauthorized: Du har ikke tilladelse til at udføre denne handling
+    reset_with_sample_data:
+      success: Din konto er nulstillet, og eksempeldata er ved at blive klargjort. Du ser dem om lidt.
+    roles:
+      admin: Admin
+      member: Medlem
+      super_admin: Superadmin
+    user_menu:
+      aria_label: Åbn kontomenu
+      version: Version
+      settings: Indstillinger
+      changelog: Ændringslog
+      feedback: Feedback
+      contact: Kontakt
+      log_out: Log ud

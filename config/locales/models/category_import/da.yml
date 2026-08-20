@@ -1,0 +1,8 @@
+---
+da:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: "Kategori '%{name}' kan ikke være sin egen overordnede"
+          missing_columns: "Mangler påkrævede kolonner: %{columns}"

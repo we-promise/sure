@@ -1,0 +1,9 @@
+---
+da:
+  activemodel:
+    errors:
+      models:
+        time_series/value:
+          attributes:
+            value:
+              must_be_a_money_or_numeric: skal være Money eller Numeric

@@ -1,0 +1,7 @@
+---
+da:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: "Enten INDEXA_API_TOKEN-miljøvariabel eller brugernavn/dokument/adgangskode er påkrævet"

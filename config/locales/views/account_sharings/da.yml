@@ -1,0 +1,29 @@
+---
+da:
+  account_sharings:
+    show:
+      title: Kontodeling
+      subtitle: Styr, hvem der kan se og arbejde med denne konto
+      member: Medlem
+      permission: Tilladelse
+      shared: Delt
+      no_members: Ingen andre medlemmer i din %{moniker} at dele med
+      permissions:
+        full_control: Fuld kontrol
+        full_control_description: Kan se, redigere og administrere transaktioner
+        read_write: Kan annotere
+        read_write_description: Kan kategorisere, tagge og tilføje noter
+        read_only: Kun visning
+        read_only_description: Kan kun se kontodata
+      save: Gem delingsindstillinger
+      owner_label: "Ejer: %{name}"
+      shared_with_count:
+        one: Delt med 1 medlem
+        other: "Delt med %{count} medlemmer"
+      include_in_finances: Medtag i mine budgetter og rapporter
+      exclude_from_finances: Udelad fra mine budgetter og rapporter
+      finance_toggle_description: Tæl denne konto med i din nettoværdi, budgetter og rapporter
+    update:
+      success: Delingsindstillinger opdateret
+      not_owner: Kun kontoejeren kan administrere deling
+      finance_toggle_success: Præference for medtagelse i økonomi opdateret

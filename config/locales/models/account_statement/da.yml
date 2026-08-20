@@ -1,0 +1,30 @@
+---
+da:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Konto
+        account_last4_hint: Kontos sidste fire
+        account_name_hint: Kontonavnshint
+        closing_balance: Slutsaldo
+        content_sha256: Indholdskontrolsum
+        currency: Valuta
+        filename: Filnavn
+        institution_name_hint: Institutionshint
+        opening_balance: Åbningssaldo
+        original_file: Udtogsfil
+        period_end_on: Periodeslut
+        period_start_on: Periodestart
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: er allerede uploadet for denne husstand
+            content_sha256:
+              duplicate_statement_file: er allerede uploadet for denne husstand
+            original_file:
+              invalid_format: skal være en PDF-, CSV- eller XLSX-fil
+              too_large: er for stor. Maksimal størrelse er %{max_mb}MB
+            period_end_on:
+              on_or_after_start: skal være den eller efter periodestart

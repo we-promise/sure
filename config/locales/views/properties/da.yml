@@ -1,0 +1,107 @@
+---
+da:
+  properties:
+    edit:
+      edit: Rediger %{account}
+      title: Indtast ejendom manuelt
+    form:
+      address_line1: Gadeadresse
+      address_line1_placeholder: Hovedgaden 123
+      area: Boligareal
+      area_placeholder: '2000'
+      area_unit: Måleenhed
+      country: Land
+      country_placeholder: DK
+      locality: By
+      locality_placeholder: København
+      none: Ingen
+      postal_code: Postnummer
+      postal_code_placeholder: '2100'
+      region: Region
+      region_placeholder: Hovedstaden
+      subtype_prompt: Vælg ejendomstype
+      year_built: Byggeår
+      year_built_placeholder: '2000'
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    new:
+      title: Indtast ejendom manuelt
+      next: "Næste"
+      avm_option: "Tilføj via %{provider}"
+      avm_title: "Tilføj ejendom via %{provider}"
+      avm_description: "Indtast et navn og adressen. %{provider} slår ejendomsdetaljer og anslået markedsværdi op for dig."
+      avm_us_only: "%{provider} understøtter kun ejendomme i USA."
+      avm_submit: "Slå ejendom op"
+      avm_preview_title: "Bekræft ejendomsdetaljer"
+      avm_preview_description: "Her er, hvad %{provider} fandt. Gennemgå detaljerne, før du tilføjer ejendommen — intet er oprettet endnu."
+      avm_preview_no_record: "%{provider} kunne ikke finde en ejendom på denne adresse, så den viste værdi er et skøn ud fra området. Dobbelttjek adressen, før du fortsætter."
+      avm_preview_back: "Tilbage"
+      avm_preview_confirm: "Tilføj ejendom"
+    address:
+      title: "Indtast ejendom manuelt"
+      address_line1_label: "Adresselinje 1"
+      address_line1_placeholder: "Hovedgaden 123"
+      city_label: "By"
+      city_placeholder: "København"
+      state_region_label: "Region"
+      state_region_placeholder: "Hovedstaden"
+      postal_code_label: "Postnummer"
+      postal_code_placeholder: "2100"
+      country_label: "Land"
+      country_placeholder: "Danmark"
+      save: "Gem"
+    balances:
+      title: "Indtast ejendom manuelt"
+      market_value_label: "Anslået markedsværdi"
+      market_value_tooltip: "Den anslåede markedsværdi af din ejendom. Tallet kan ofte findes på boligsider og er aldrig et præcist tal."
+      save: "Gem"
+      next: "Næste"
+    overview_fields:
+      name_label: "Navn"
+      name_placeholder: "Sommerhus"
+      subtype_prompt: "Vælg type"
+      property_type_label: "Ejendomstype"
+      year_built_label: "Byggeår (valgfri)"
+      year_built_placeholder: "1990"
+      area_label: "Areal (valgfri)"
+      area_placeholder: "1200"
+      square_feet: "Kvadratfod"
+      square_meters: "Kvadratmeter"
+      area_unit_label: "Arealenhed"
+    overview:
+      living_area: Boligareal
+      market_value: Markedsværdi
+      purchase_price: Købspris
+      trend: Tendens
+      unknown: Ukendt
+      year_built: Byggeår
+    tabs:
+      overview:
+        living_area: Boligareal
+        market_value: Markedsværdi
+        purchase_price: Købspris
+        trend: Tendens
+        unknown: Ukendt
+        year_built: Byggeår
+        edit_account_details: "Rediger kontodetaljer"
+    subtypes:
+      apartment:
+        short: Lejlighed
+        long: Lejlighed
+      plot:
+        short: Grund
+        long: Grund / jord
+      commercial:
+        short: Erhverv
+        long: Erhvervsejendom
+      rented:
+        short: Udlejet
+        long: Udlejet ejendom
+      agri_land:
+        short: Landbrug
+        long: Landbrugsjord
+    form_tabs:
+      address: Adresse
+      overview: Oversigt
+      value: Værdi

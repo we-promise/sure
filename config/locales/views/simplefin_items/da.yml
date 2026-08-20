@@ -1,0 +1,160 @@
+---
+da:
+  simplefin_items:
+    new:
+      title: Forbind SimpleFIN
+      setup_token: Opsætningstoken
+      setup_token_placeholder: indsæt dit SimpleFIN-opsætningstoken
+      connect: Forbind
+      cancel: Annuller
+    create:
+      success: SimpleFIN-forbindelse tilføjet! Dine konti vises om lidt, mens de synkroniseres i baggrunden.
+      errors:
+        blank_token: Indtast et SimpleFIN-opsætningstoken.
+        invalid_token: Ugyldigt opsætningstoken. Tjek, at du har kopieret det komplette token fra SimpleFIN Bridge.
+        token_compromised: Opsætningstokenet kan være kompromitteret, udløbet eller allerede brugt. Opret et nyt.
+        create_failed: "Kunne ikke forbinde: %{message}"
+        unexpected: Der opstod en uventet fejl. Prøv igen.
+    destroy:
+      success: SimpleFIN-forbindelse fjernes
+    update:
+      success: SimpleFIN-forbindelse opdateret! Dine konti genoprettes.
+      errors:
+        blank_token: Indtast et SimpleFIN-opsætningstoken.
+        invalid_token: Ugyldigt opsætningstoken. Tjek, at du har kopieret det komplette token fra SimpleFIN Bridge.
+        token_compromised: Opsætningstokenet kan være kompromitteret, udløbet eller allerede brugt. Opret et nyt.
+        update_failed: "Kunne ikke opdatere forbindelse: %{message}"
+        unexpected: Der opstod en uventet fejl. Prøv igen.
+    edit:
+      setup_token:
+        label: "SimpleFIN-opsætningstoken:"
+        placeholder: "Indsæt dit SimpleFIN-opsætningstoken her..."
+        help_text: "Tokenet skal være en lang streng, der starter med bogstaver og tal"
+      title: Opdater SimpleFIN-forbindelse
+      header_subtitle: Hent et nyt opsætningstoken for at genoprette din SimpleFIN-konto
+      connection_needs_update: "Din SimpleFIN-forbindelse skal opdateres:"
+      step_1_html: "Besøg <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> for at oprette et nyt opsætningstoken"
+      step_2: Kopiér tokenet og indsæt det nedenfor
+      step_3: "Klik på \"Opdater\" for at gendanne adgangen"
+      update: Opdater
+      cancel: Annuller
+    setup_accounts:
+      title: Sæt dine SimpleFIN-konti op
+      header_subtitle: Vælg de rigtige kontotyper til dine importerede konti
+      choose_account_type: "Vælg den rigtige kontotype for hver SimpleFIN-konto:"
+      account_type_checking_savings: Lønkonto eller opsparing
+      account_type_checking_savings_desc: Almindelige bankkonti
+      account_type_credit_card: Kreditkort
+      account_type_credit_card_desc: Kreditkortkonti
+      account_type_investment: Investering
+      account_type_investment_desc: "Mæglerkonto, 401(k), IRA-konti"
+      account_type_loan: Lån eller realkredit
+      account_type_loan_desc: Gældskonti
+      account_type_other_asset: Andet aktiv
+      account_type_other_asset_desc: Alt andet
+      transaction_history_title: "Transaktionshistorik:"
+      transaction_history_description_html: "SimpleFIN giver typisk <strong>60-90 dage</strong> transaktionshistorik, afhængigt af din bank. Efter den indledende opsætning synkroniseres nye transaktioner automatisk fremad. Historisk datatilgængelighed varierer efter institution og kontotype."
+      account_type_label: "Kontotype:"
+      create_accounts: Opret konti
+      creating_accounts: Opretter konti...
+      cancel: Annuller
+      account_card:
+        balance: "Saldo"
+      activity:
+        recent:
+          one: "1 transaktion • seneste %{when}"
+          other: "%{count} transaktioner • seneste %{when}"
+        dormant: "Ingen aktivitet i %{days} dage"
+        empty: "Ingen transaktioner importeret endnu"
+        likely_closed: "Ingen nylig aktivitet og nul-saldo — dette kan være et lukket eller udskiftet kort"
+        today: "i dag"
+        yesterday: "i går"
+        days_ago:
+          one: "for 1 dag siden"
+          other: "for %{count} dage siden"
+      stale_accounts:
+        title: "Konti der ikke længere er i SimpleFIN"
+        description: "Disse konti findes i din database, men leveres ikke længere af SimpleFIN. Det kan ske, når kontokonfigurationer ændres hos kilden."
+        action_prompt: "Hvad vil du gøre?"
+        action_delete: "Slet konto og alle transaktioner"
+        action_move: "Flyt transaktioner til:"
+        action_skip: "Spring over indtil videre"
+        transaction_count:
+          one: "%{count} transaktion"
+          other: "%{count} transaktioner"
+    complete_account_setup:
+      all_skipped: "Alle konti blev sprunget over. Ingen konti blev oprettet."
+      no_accounts: "Ingen konti at sætte op."
+      success:
+        one: "Oprettede %{count} SimpleFIN-konto! Dine transaktioner og beholdninger importeres i baggrunden."
+        other: "Oprettede %{count} SimpleFIN-konti! Dine transaktioner og beholdninger importeres i baggrunden."
+      stale_accounts_processed: "Forældede konti: %{deleted} slettet, %{moved} flyttet."
+      stale_accounts_errors:
+        one: "%{count} handling på forældet konto mislykkedes. Tjek logs for detaljer."
+        other: "%{count} handlinger på forældede konti mislykkedes. Tjek logs for detaljer."
+    simplefin_item:
+      add_new: Tilføj ny forbindelse
+      confirm_accept: Slet forbindelse
+      confirm_body: Dette sletter permanent alle konti i denne gruppe og al tilknyttet data.
+      confirm_title: Slet SimpleFIN-forbindelse?
+      delete: Slet
+      deletion_in_progress: "(sletning i gang...)"
+      error: Fejl under synkronisering af data
+      no_accounts_description: Denne forbindelse har ingen synkroniserede konti endnu.
+      no_accounts_title: Ingen konti fundet
+      requires_update: Genopret forbindelse
+      setup_needed: Nye konti klar til opsætning
+      setup_description: Vælg kontotyper til dine nyligt importerede SimpleFIN-konti.
+      setup_action: Sæt nye konti op
+      setup_accounts_menu: Sæt konti op
+      more_accounts_available:
+        one: "%{count} konto mere klar til opsætning"
+        other: "%{count} konti mere klar til opsætning"
+      accounts_skipped_tooltip: "Nogle konti blev sprunget over pga. fejl under synk"
+      accounts_skipped_label: "Sprunget over: %{count}"
+      rate_limited_ago: "Ratebegrænset (for %{time} siden)"
+      rate_limited_recently: "Ratebegrænset for nylig"
+      status: Senest synkroniseret for %{timestamp} siden
+      status_never: Aldrig synkroniseret
+      status_with_summary: "Senest synkroniseret for %{timestamp} siden • %{summary}"
+      syncing: Synkroniserer...
+      update: Opdater
+      stale_pending_note: "(udeladt fra budgetter)"
+      stale_pending_accounts: "i: %{accounts}"
+      reconciled_details_note: "(se synkoversigt for detaljer)"
+      duplicate_accounts_skipped: "Nogle konti blev sprunget over som dubletter — brug 'Kobl eksisterende konti' for at flette."
+    select_existing_account:
+      title: "Kobl %{account_name} til SimpleFIN"
+      description: Vælg en SimpleFIN-konto at koble til din eksisterende konto
+      cancel: Annuller
+      link_account: Kobl konto
+      no_accounts_found: "Ingen SimpleFIN-konti fundet for denne %{moniker}."
+      wait_for_sync: Hvis du lige har forbundet eller synkroniseret, så prøv igen, når synken er færdig.
+      check_provider_health: Tjek, at din SimpleFIN-forbindelse er sund under Indstillinger → Udbydere.
+      unlink_to_move: For at flytte en kobling skal du først fjerne den fra kontoens handlingsmenu.
+      all_accounts_already_linked: Alle SimpleFIN-konti ser ud til at være koblet allerede.
+      currently_linked_to: "I øjeblikket koblet til: %{account_name}"
+
+    link_existing_account:
+      success: Konto koblet til SimpleFIN
+      errors:
+        only_manual: Kun manuelle konti kan kobles
+        different_provider: Denne konto er koblet til en anden udbyder. Fjern først den kobling, og kobl derefter til SimpleFIN.
+        invalid_simplefin_account: Ugyldig SimpleFIN-konto valgt
+    dismiss_replacement_suggestion:
+      dismissed: Udskiftningsforslag afvist
+    replacement_prompt:
+      title: "Dit %{institution}-kort kan være blevet udskiftet"
+      description: "“%{account_name}” er koblet til “%{old_name}”, som ikke har haft nylig aktivitet og har nul-saldo. Et nyt kort, “%{new_name}”, er nu aktivt hos samme institution. Kobl om for at bevare historikken."
+      relink: Kobl til nyt kort
+      confirm_title: Kobl til det nye kort?
+      confirm_body: "“%{account_name}” kobles til “%{new_name}”. Din transaktionshistorik bevares; fremtidige transaktioner kommer fra det nye kort."
+      dismiss_aria: Afvis udskiftningsforslag
+    reconciled_status:
+      message:
+        one: "%{count} dublet verserende transaktion afstemt"
+        other: "%{count} dublet verserende transaktioner afstemt"
+    stale_pending_status:
+      message:
+        one: "%{count} verserende transaktion ældre end %{days} dage"
+        other: "%{count} verserende transaktioner ældre end %{days} dage"

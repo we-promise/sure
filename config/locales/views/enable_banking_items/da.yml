@@ -1,0 +1,115 @@
+---
+da:
+  enable_banking_items:
+    errors:
+      api_error: "Der opstod en kommunikationsfejl med banken."
+      network_unreachable: "Banktjenesten er midlertidigt utilgængelig. Prøv igen senere."
+      session_invalid: "Sessionen er udløbet. Genopret forbindelsen til din bank."
+      unexpected: "Der opstod en uventet fejl under synkronisering."
+    authorize:
+      authorization_failed: "Kunne ikke starte autorisation: %{message}"
+      bank_required: Vælg en bank.
+      invalid_redirect: Den modtagne autorisations-URL er ugyldig. Prøv igen.
+      redirect_uri_not_allowed: Redirect er ikke tilladt. Konfigurer `%{callback_url}` i dine Enable Banking-appindstillinger.
+      unexpected_error: Der opstod en uventet fejl. Prøv igen.
+    callback:
+      authorization_error: Autorisation mislykkedes
+      invalid_callback: Ugyldige callback-parametre.
+      item_not_found: Forbindelse ikke fundet.
+      session_failed: Kunne ikke fuldføre autorisation
+      success: Forbundet til din bank. Dine konti synkroniseres.
+      unexpected_error: Der opstod en uventet fejl. Prøv igen.
+    complete_account_setup:
+      all_skipped: Alle konti blev sprunget over. Du kan sætte dem op senere på kontosiden.
+      no_accounts: Ingen konti tilgængelige at sætte op.
+      success: Oprettede %{count} konti!
+    create:
+      success: Enable Banking-konfiguration lykkedes.
+    destroy:
+      success: Enable Banking-forbindelse er sat i kø til sletning.
+    link_accounts:
+      already_linked: De valgte konti er allerede koblet.
+      link_failed: Kunne ikke koble konti
+      no_accounts_selected: Ingen konti valgt.
+      no_session: Ingen aktiv Enable Banking-forbindelse. Forbind først til en bank.
+      success: Koblede %{count} konti.
+    link_existing_account:
+      success: Konto koblet til Enable Banking
+      errors:
+        only_manual: Kun manuelle konti kan kobles
+        invalid_enable_banking_account: Ugyldig Enable Banking-konto valgt
+    enable_banking_item:
+      deletion_in_progress: Sletning i gang
+      provider_name: Enable Banking
+      syncing: Synkroniserer...
+      reconnect: Genopret forbindelse
+      last_synced: Senest synkroniseret for %{time} siden
+      never_synced: Aldrig synkroniseret
+      update: Opdater
+      delete: Slet
+      setup_needed: Opsætning påkrævet
+      setup_needed_description:
+        one: 1 konto importeret fra Enable Banking skal sættes op
+        other: "%{count} konti importeret fra Enable Banking skal sættes op"
+      set_up_accounts: Sæt konti op
+      no_accounts_found: Ingen konti fundet
+      no_accounts_found_description: Ingen konti blev fundet fra Enable Banking. Prøv at synkronisere igen.
+    select_existing_account:
+      title: Kobl Enable Banking-konto
+      all_linked: Alle Enable Banking-konti ser ud til at være koblet allerede.
+      try_after_sync: Hvis du lige har forbundet eller synkroniseret, så prøv igen, når synken er færdig.
+      unlink_to_move: For at koble en anden konto skal du først fjerne koblingen fra kontoens handlingsmenu.
+      balance: Saldo
+      link: Kobl
+      cancel: Annuller
+    setup_accounts:
+      title: Sæt dine Enable Banking-konti op
+      header_subtitle: Vælg de rigtige kontotyper til dine importerede konti
+      choose_account_type: "Vælg den rigtige kontotype for hver Enable Banking-konto:"
+      historical_data_range: "Historisk datainterval:"
+      sync_start_date_label: "Start synk af transaktioner fra:"
+      sync_start_date_help: Vælg, hvor langt tilbage du vil synkronisere transaktionshistorik. Maksimalt 2 års historik tilgængelig.
+      account_type_label: "Kontotype:"
+      balance: Saldo
+      create_accounts: Opret konti
+      creating_accounts: Opretter konti...
+      cancel: Annuller
+    new:
+      link_enable_banking_title: Kobl Enable Banking
+      session_expired: Session udløbet - ny autorisation påkrævet
+      connected_bank: Forbundet bank
+      session_expires: "Session udløber"
+      unknown: Ukendt
+      connection: Forbindelse
+      configured: Konfigureret
+      ready_to_connect: Klar til at forbinde en bank
+      sync: Synkroniser
+      reconnect: Genopret forbindelse
+      connect_bank: Forbind bank
+      remove_confirm: Er du sikker på, at du vil fjerne denne forbindelse?
+      remove: Fjern
+      add_connection: Tilføj forbindelse
+      not_configured: Enable Banking-forbindelse ikke konfigureret
+      not_configured_description: Før du kan koble Enable Banking-konti, skal du konfigurere din Enable Banking-forbindelse.
+      setup_steps_title: "Opsætningstrin:"
+      setup_step_1_html: "Gå til <strong>Indstillinger → Udbydere</strong>"
+      setup_step_2_html: "Find sektionen <strong>Enable Banking</strong>"
+      setup_step_3: Indtast dine Enable Banking-legitimationsoplysninger
+      setup_step_4: Vend tilbage hertil for at koble dine konti
+      go_to_provider_settings: Gå til udbyderindstillinger
+    reauthorize:
+      invalid_redirect: Den modtagne autorisations-URL er ugyldig. Prøv igen.
+      reauthorization_failed: Genautorisation mislykkedes
+    select_bank:
+      beta_label: Beta
+      cancel: Annuller
+      check_country: Tjek dine landekodeindstillinger.
+      credentials_required: Konfigurer først dine Enable Banking-legitimationsoplysninger.
+      description: Vælg den bank, du vil forbinde til dine konti.
+      no_banks: Ingen banker tilgængelige for dette land/denne region.
+      no_search_results: Ingen banker matcher din søgning.
+      search_label: Søg efter din bank
+      search_placeholder: Søg efter din bank...
+      title: Vælg din bank
+    update:
+      success: Enable Banking-konfiguration opdateret.

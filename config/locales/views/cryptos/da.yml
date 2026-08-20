@@ -1,0 +1,20 @@
+---
+da:
+  cryptos:
+    edit:
+      edit: Rediger %{account}
+    form:
+      subtype_label: Kontotype
+      subtype_prompt: Vælg kontotype
+      subtype_none: Ingen
+      tax_treatment_label: Skattebehandling
+      tax_treatment_hint: De fleste kryptovalutaer holdes på skattepligtige konti. Vælg en anden mulighed, hvis de holdes på en skattefordelagtig konto.
+    new:
+      title: Indtast kontosaldo
+    subtypes:
+      wallet:
+        short: Wallet
+        long: Kryptowallet
+      exchange:
+        short: Børs
+        long: Kryptobørs

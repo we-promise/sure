@@ -1,0 +1,15 @@
+---
+da:
+  category:
+    deletions:
+      create:
+        success: Transaktionskategori slettet
+      new:
+        category: Kategori
+        delete_and_leave_uncategorized: Slet "%{category_name}" og lad være ukategoriseret
+        delete_and_recategorize: Slet "%{category_name}" og tildel ny kategori
+        delete_category: Slet kategori?
+        explanation: Hvis du sletter denne kategori, bliver alle transaktioner med kategorien "%{category_name}"
+          ukategoriserede. I stedet for at lade dem være ukategoriserede kan du
+          også tildele en ny kategori nedenfor.
+        replacement_category_prompt: Vælg kategori

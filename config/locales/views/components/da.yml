@@ -1,0 +1,169 @@
+---
+da:
+  UI:
+    period_picker:
+      aria_label: "Tidsperiode: %{period}"
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Slå markering til/fra
+      balance_reconciliation:
+        labels:
+          adjustments: Justeringer
+          buys: Køb
+          change_in_brokerage_cash: Ændring i mæglerkontanter
+          change_in_holdings_market: Ændring i beholdninger (markedskurs)
+          change_in_holdings_trades: Ændring i beholdninger (køb/salg)
+          charges: Træk
+          end_balance: Slutsaldo
+          end_principal: Sluthovedstol
+          end_value: Slutværdi
+          final_balance: Endelig saldo
+          final_principal: Endelig hovedstol
+          final_value: Endelig værdi
+          market_changes: Markedsændringer
+          net_cash_flow: Nettopengestrøm
+          net_principal_change: Nettoændring i hovedstol
+          net_value_change: Nettoændring i værdi
+          payments: Betalinger
+          sells: Salg
+          start_balance: Startsaldo
+          start_principal: Starthovedstol
+          start_value: Startværdi
+        tooltips:
+          adjustments: Manuelle afstemninger eller andre justeringer
+          adjustments_asset: Manuelle værdijusteringer eller vurderinger
+          buys: Kryptokøb i løbet af dagen
+          change_in_brokerage_cash: Nettoændring i kontanter fra indskud, udbetalinger og handler
+          change_in_holdings_market: Ændring i beholdningsværdi fra markedskursbevægelser
+          change_in_holdings_trades: Effekt på beholdninger fra køb og salg af værdipapirer
+          charges: Nye træk i løbet af dagen
+          end_balance: Den beregnede saldo efter alle transaktioner
+          end_balance_investment: Den beregnede saldo efter al aktivitet
+          end_principal: Den beregnede hovedstol efter alle transaktioner
+          end_value: Den beregnede værdi efter alle ændringer
+          final_balance: Den endelige kontosaldo for dagen
+          final_balance_credit: Den endelige skyldige saldo for dagen
+          final_balance_crypto: Den endelige kryptobeholdningsværdi for dagen
+          final_balance_investment: Den endelige porteføljeværdi for dagen
+          final_principal: Den endelige hovedstol for dagen
+          final_value: Den endelige aktivværdi for dagen
+          market_changes: Værdiændringer fra markedskursbevægelser
+          net_cash_flow: Nettoændring i saldo fra alle transaktioner i løbet af dagen
+          net_principal_change: Afdrag på hovedstol og ny gæld i løbet af dagen
+          net_value_change: Alle værdiændringer inkl. forbedringer og afskrivning
+          payments: Betalinger til kortet i løbet af dagen
+          sells: Kryptosalg i løbet af dagen
+          start_balance: Kontosaldoen ved dagens start
+          start_balance_credit: Skyldigt beløb ved dagens start
+          start_balance_crypto: Kryptobeholdningsværdi ved dagens start
+          start_balance_investment: Samlet porteføljeværdi ved dagens start
+          start_principal: Hovedstolen ved dagens start
+          start_value: Aktivværdien ved dagens start
+      chart:
+        no_data_available: "Ingen data tilgængelige"
+        title:
+          balance: Saldo
+          cash_value: Kontantværdi
+          debt_balance: Gældssaldo
+          estimated_property_value: Anslået ejendomsværdi
+          estimated_vehicle_value: Anslået køretøjsværdi
+          holdings_value: Beholdningsværdi
+          remaining_principal_balance: Resterende hovedstol
+          total_account_value: Samlet kontoværdi
+          total_gains: Gevinster i alt
+        views:
+          cash: Kontanter
+          gains: Gevinster / ROI
+          holdings: Beholdninger
+          total_value: Samlet værdi
+        vs_available_history: vs. tilgængelig historik
+      activity_date:
+        balance_tooltip: "Dagens slutsaldo, efter alle transaktioner og justeringer"
+        no_balance_data: "Ingen saldodata for denne dato"
+  ds:
+    alert:
+      variants:
+        info: Info
+        success: Succes
+        warning: Advarsel
+        error: Fejl
+        destructive: Fejl
+    pill:
+      aria_label: "%{label}"
+      default_label: Forhåndsvisning
+    dialog:
+      close: Luk
+    popover:
+      avatar_default_label: Åbn menu
+    tooltip:
+      trigger_label: Mere info
+    link:
+      opens_in_new_tab: (åbner i ny fane)
+    icon_picker:
+      no_matching_icons: Ingen matchende ikoner
+      search_placeholder: Søg ikoner...
+  provider_sync_summary:
+    title: Synkoversigt
+    last_sync: "Seneste synk: for %{time_ago} siden"
+    accounts:
+      title: Konti
+      total: "I alt: %{count}"
+      linked: "Koblet: %{count}"
+      unlinked: "Ikke koblet: %{count}"
+      institutions: "Institutioner: %{count}"
+    transactions:
+      title: Transaktioner
+      seen: "Set: %{count}"
+      imported: "Importeret: %{count}"
+      updated: "Opdateret: %{count}"
+      skipped: "Sprunget over: %{count}"
+      fetching: "Henter fra mægler..."
+      protected:
+        one: "%{count} postering beskyttet (ikke overskrevet)"
+        other: "%{count} posteringer beskyttet (ikke overskrevet)"
+      view_protected: Se beskyttede posteringer
+    skip_reasons:
+      excluded: Udeladt
+      user_modified: Ændret af bruger
+      import_locked: CSV-import
+      protected: Beskyttet
+    holdings:
+      title: Beholdninger
+      found: "Fundet: %{count}"
+      processed: "Behandlet: %{count}"
+    trades:
+      title: Handler
+      imported: "Importeret: %{count}"
+      skipped: "Sprunget over: %{count}"
+      fetching: "Henter aktiviteter fra mægler..."
+    health:
+      title: Helbred
+      view_error_details: Se fejldetaljer
+      rate_limited: "Ratebegrænset %{time_ago}"
+      recently: for nylig
+      errors: "Fejl: %{count}"
+      pending_reconciled:
+        one: "%{count} dublet verserende transaktion afstemt"
+        other: "%{count} dublet verserende transaktioner afstemt"
+      view_reconciled: Se afstemte transaktioner
+      duplicate_suggestions:
+        one: "%{count} mulig dublet skal gennemgås"
+        other: "%{count} mulige dubletter skal gennemgås"
+      view_duplicate_suggestions: Se foreslåede dubletter
+      stale_pending:
+        one: "%{count} forældet verserende transaktion (udeladt fra budgetter)"
+        other: "%{count} forældede verserende transaktioner (udeladt fra budgetter)"
+      view_stale_pending: Se berørte konti
+      stale_pending_count:
+        one: "%{count} transaktion"
+        other: "%{count} transaktioner"
+      stale_unmatched:
+        one: "%{count} verserende transaktion skal gennemgås manuelt"
+        other: "%{count} verserende transaktioner skal gennemgås manuelt"
+      view_stale_unmatched: Se transaktioner der skal gennemgås
+      stale_unmatched_count:
+        one: "%{count} transaktion"
+        other: "%{count} transaktioner"
+      data_warnings: "Dataadvarsler: %{count}"
+      notices: "Notitser: %{count}"
+      view_data_quality: Se datakvalitetsdetaljer

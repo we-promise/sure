@@ -1,0 +1,32 @@
+---
+da:
+  credit_cards:
+    edit:
+      edit: Rediger %{account}
+    form:
+      annual_fee: Årligt gebyr
+      annual_fee_placeholder: '99'
+      apr: ÅOP
+      apr_placeholder: '15.99'
+      available_credit: Tilgængelig kredit
+      available_credit_placeholder: '10000'
+      expiration_date: Udløbsdato
+      minimum_payment: Minimumsbetaling
+      minimum_payment_placeholder: '100'
+      treat_balance_as_available_credit_description: Slå til, hvis din bank rapporterer
+        kortets saldo som resterende tilgængelig kredit i stedet for det skyldige
+        beløb. Gælden udledes så af kreditloftet fra din
+        bank, eller fra feltet Tilgængelig kredit, hvis banken ikke
+        oplyser et loft.
+      treat_balance_as_available_credit_label: Saldo er tilgængelig kredit
+    new:
+      title: Indtast kreditkortdetaljer
+    overview:
+      amount_owed: Skyldigt beløb
+      annual_fee: Årligt gebyr
+      apr: ÅOP
+      available_credit: Tilgængelig kredit
+      edit_account_details: Rediger kontodetaljer
+      expiration_date: Udløbsdato
+      minimum_payment: Minimumsbetaling
+      unknown: Ukendt

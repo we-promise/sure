@@ -1,0 +1,280 @@
+---
+da:
+  goals:
+    color_picker:
+      trigger_label: Vælg farve og ikon
+      color_heading: Farve
+      icon_heading: Ikon
+      poor_contrast: Dårlig kontrast, vælg en mørkere farve eller
+      auto_adjust: autojuster.
+    index:
+      title: Mål
+      subtitle: Spar op til det, der betyder noget.
+      new_goal: Nyt mål
+      empty_filtered: Ingen mål matcher.
+      pending_pledges_callout: Du har verserende tilsagn. Sure bekræfter dem ved næste synk.
+      kpi:
+        contributed_label: Bidraget · seneste 30 dage
+        velocity_delta_up: "↑ %{percent}%% vs. forrige 30 dage"
+        velocity_delta_down: "↓ %{percent}%% vs. forrige 30 dage"
+        velocity_delta_flat: vs. forrige 30 dage
+        velocity_delta_zero_base: Første 30 dages aktivitet
+        needs_this_month_label: Behov denne måned
+        needs_this_month_sub:
+          one: 1 mål bagud
+          other: "%{count} mål bagud"
+        needs_this_month_zero_sub: Ingen mål bagud
+        on_track_label: Mål på sporet
+        on_track_value: "%{on_track} af %{total}"
+        on_track_sub_parts:
+          reached:
+            one: 1 nået
+            other: "%{count} nået"
+          behind:
+            one: 1 bagud
+            other: "%{count} bagud"
+          no_date:
+            one: 1 uden deadline
+            other: "%{count} uden deadline"
+          paused:
+            one: 1 sat på pause
+            other: "%{count} sat på pause"
+        on_track_sub_all_good: Alle aktive mål er i trit
+        on_track_all_caught_up: Alt er indhentet
+      goals_section:
+        heading: Mål
+        subtitle: Spar op til det, der betyder noget.
+      ongoing_section:
+        heading: Mål
+      archived_section:
+        heading: Arkiveret
+      search:
+        placeholder: Søg mål…
+        aria_label: Søg mål
+        empty: Ingen mål matcher.
+        empty_with_query: "Ingen mål matcher \"%{query}\"."
+        empty_with_filter: Ingen mål matcher dette filter.
+        empty_with_both: "Ingen mål matcher \"%{query}\" med dette filter."
+        clear_search: Ryd søgning
+        show_all: Vis alle
+      chips_aria: Filtrer mål efter status
+      chips:
+        all: Alle
+        on_track: På sporet
+        behind: Bagud
+        no_target_date: Åben
+        paused: På pause
+        completed: Fuldført
+    new:
+      heading: Nyt mål
+      subtitle: Spar op til noget konkret.
+    edit:
+      heading: Rediger mål
+      save: Gem ændringer
+    create:
+      success: Mål oprettet.
+    update:
+      success: Mål opdateret.
+    destroy:
+      success: Mål slettet.
+    pause:
+      success: Mål sat på pause.
+      invalid_transition: Målet kan ikke sættes på pause fra den aktuelle tilstand.
+    resume:
+      success: Mål genoptaget.
+      invalid_transition: Målet kan ikke genoptages fra den aktuelle tilstand.
+    complete:
+      success: Mål markeret som fuldført.
+      invalid_transition: Målet kan ikke fuldføres fra den aktuelle tilstand.
+    archive:
+      success: Mål arkiveret.
+      invalid_transition: Målet kan ikke arkiveres fra den aktuelle tilstand.
+    unarchive:
+      success: Mål gendannet.
+      invalid_transition: Målet kan ikke gendannes fra den aktuelle tilstand.
+    reopen:
+      success: Mål genåbnet.
+      invalid_transition: Målet kan ikke genåbnes fra den aktuelle tilstand.
+    show:
+      edit: Rediger
+      pause: Sæt på pause
+      resume: Genoptag
+      complete: Markér som fuldført
+      archive: Arkivér
+      unarchive: Gendan
+      reopen: Genåbn mål
+      delete: Slet
+      record_pledge_cta: Registrér tilsagn
+      pledge_just_transferred: Log en overførsel, du har lavet
+      pledge_just_saved: Log penge, du har sat til side
+      funding_accounts_heading: Finansieringskonti
+      funding_accounts:
+        earmarked_of: "%{earmarked} øremærket af %{balance}"
+        empty:
+          heading: Ingen finansieringskonti tilknyttet endnu
+          body: Rediger målet for at tilknytte de bankkonti, du sparer op på.
+      notes: Noter
+      funding_last_30d: seneste 30 dage
+      funding_last_90d: seneste 90 dage
+      status_callout:
+        behind: "spar %{amount}/md. mere for at indhente"
+        behind_covered: "verserende tilsagn lukker hullet"
+        on_track: "når målet omkring %{date}"
+        no_target_date: "sæt en måldato for at projicere en slutlinje"
+      pending_pledge:
+        title:
+          zero: "Verserende: %{amount} til %{account} · udløber i dag"
+          one: "Verserende: %{amount} til %{account} · 1 dag tilbage"
+          other: "Verserende: %{amount} til %{account} · %{count} dage tilbage"
+        body_transfer: Bekræftes automatisk, når Sure finder et matchende indskud ved næste synk.
+        body_manual: Bekræftes ved din næste manuelle saldoredigering.
+        pledged_at: "Tilsagt for %{time_ago} siden"
+        extend: Forlæng 7 dage
+        cancel: Annuller
+        confirm_cancel_title: Annuller dette tilsagn?
+        confirm_cancel_body: "Tilsagnet på %{amount} fjernes. Du kan registrere et nyt når som helst."
+        confirm_cancel_cta: Annuller tilsagn
+      header:
+        target: "Mål %{amount}"
+        target_by: "Mål %{amount} inden %{date}"
+        target_by_past: "Mål %{amount} · forfaldt %{date}"
+      ring:
+        saved: Sparet
+        of: "af %{target}"
+        to_go: "%{amount} tilbage"
+        of_target: af mål
+        market_value: "Markedsværdi %{amount}"
+        aria_label: "Mål %{percent}% fuldført. %{amount} af %{target} sparet."
+      projection:
+        heading: Projektion
+        legend_saved: Sparet
+        legend_projection: Projektion
+        legend_required: Påkrævet
+        reached: Du har nået målet. Ingen projektion nødvendig.
+        no_target_date: Ingen måldato sat. Sæt én for at projicere en slutlinje.
+        no_pace: Ingen indskud endnu. Tilføj penge til en tilknyttet konto for at starte en projektion.
+        behind: Bagud i forhold til nuværende tempo.
+        on_track_html: Med dit nuværende tempo når du dette mål omkring <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: "Projektionsgraf for %{name}"
+        today_marker: I dag
+        tooltip_projected: "Projiceret: %{amount}"
+        tooltip_saved: "Sparet: %{amount}"
+        tooltip_target_relation: "%{percent}% af %{target}-mål"
+      catch_up:
+        title: "Spar %{amount}/md. mere for at indhente"
+        body: "Nuværende tempo %{avg}/md. · krævet %{required}/md. for at ramme målet."
+        adjust_target_cta: Juster målet i stedet
+      confirm_complete_title: Markér dette mål som fuldført?
+      confirm_complete_body: Det forlader listen over igangværende. Du kan stadig arkivere eller gendanne det senere.
+      confirm_complete_body_short: "Du er på %{progress}%, %{saved} af %{target}. At markere som fuldført registrerer dette som din præstation i stedet for det oprindelige mål. Fortsæt, eller luk og juster målet i stedet?"
+      confirm_complete_cta: Markér som fuldført
+      confirm_archive_title: Arkivér dette mål?
+      confirm_archive_body: Arkiverede mål forsvinder fra hovedlisten. Du kan gendanne dem senere.
+      confirm_archive_cta: Arkivér
+      confirm_delete_title: Slet dette mål?
+      confirm_delete_body: "%{name} og dets tilsagnshistorik fjernes for altid. Dine tilknyttede konti, saldi og transaktioner påvirkes ikke. Arkivér det i stedet, hvis du vil beholde det som dokumentation."
+      confirm_delete_cta: Slet mål
+      paused_banner:
+        title: Dette mål er sat på pause
+        body: Genoptag det for at fortsætte med at følge din fremgang.
+        resume_cta: Genoptag mål
+      archived_banner:
+        title: Dette mål er arkiveret
+        body: Gendan det for at fortsætte med at bidrage, eller lad det stå som dokumentation.
+        restore_cta: Gendan mål
+      celebration:
+        heading: Mål nået. Godt gået.
+        body: "Mål lukket ved %{saved} af %{target}. Behold det som dokumentation, eller arkivér det nu."
+        archive_cta: Arkivér mål
+      inactive:
+        heading_paused: Dette mål er sat på pause
+        heading_archived: Dette mål er arkiveret
+        body: "%{saved} af %{target} sparet indtil videre."
+      no_target_date:
+        heading: Tilføj en måldato
+        body: Sæt en deadline for at projicere en slutlinje og følge det krævede tempo.
+        cta: Sæt måldato
+      empty:
+        heading: Ingen indskud endnu
+        body: Lav en overførsel til din tilknyttede konto. Sure fanger den ved næste synk. Eller opdater din manuelle kontosaldo.
+    errors:
+      not_found: Dette mål kunne ikke findes. Det kan være slettet.
+    states:
+      active: Aktiv
+      paused: På pause
+      completed: Fuldført
+      archived: Arkiveret
+    status:
+      on_track: På sporet
+      behind: Bagud
+      reached: Nået
+      completed: Fuldført
+      no_target_date: Åben
+      paused: På pause
+      archived: Arkiveret
+    empty_state:
+      heading: Ingen mål endnu
+      body: Sæt et mål, tilknyt de konti du sparer op på, og se fremgangen vokse.
+      subtitle: Sæt et mål og begynd at spare op.
+      new_goal: Opret dit første mål
+      no_depository_accounts: Du skal have mindst én bankkonto (lønkonto, opsparing, HSA, tidsindskud, pengemarked), før du opretter et mål.
+      add_account: Tilføj en konto
+    goal_card:
+      no_accounts: Ingen tilknyttede konti
+      n_accounts: "%{first} +%{count}"
+      left: tilbage
+      aria_progress: "%{percent}% af %{target}"
+      accounts:
+        one: 1 konto
+        other: "%{count} konti"
+      no_target_date: Åben
+      completed: Fuldført
+      past_due: Overskredet
+      days_left:
+        one: 1 dag tilbage
+        other: "%{count} dage tilbage"
+      pace_with_target: "%{avg}/md. · mål %{target}/md."
+      pace_no_target: "%{avg}/md. gns."
+      footer_paused: På pause
+      footer_archived: Arkiveret
+      footer_reached: Mål nået
+      footer_catch_up: "Spar %{amount}/md. for at indhente"
+      footer_no_deadline: Åben
+      pending_pledge: Verserende tilsagn
+      pending_count:
+        one: 1 verserende
+        other: "%{count} verserende"
+      footer_no_pledges: Ingen matchede tilsagn endnu
+      footer_last_today: Sidste tilsagn matchet i dag
+      footer_last_days:
+        one: Sidste tilsagn matchet for 1 dag siden
+        other: "Sidste tilsagn matchet for %{count} dage siden"
+    form:
+      create: Opret mål
+      save: Gem ændringer
+      suggested_with_date: "Spar {monthly}/md. på {accounts} for at nå det til tiden."
+      suggested_no_date: Sæt en måldato for at projicere en slutlinje.
+      errors:
+        name_required: Giv dit mål et navn.
+        amount_required: Sæt et mål over nul.
+        accounts_required: Vælg mindst én finansieringskonto.
+      fields:
+        name: Navn
+        name_placeholder: Nødfond, Udbetaling til hus…
+        target_amount: Målbeløb
+        target_date: Måldato
+        color: Farve
+        notes: Noter (valgfri)
+        notes_placeholder: En påmindelse til fremtidens dig…
+        funding_accounts: Finansieringskonti
+        funding_accounts_hint: Dette måls saldo er saldoen (eller den øremærkede del) af disse konti.
+        whole_balance: Hele saldoen
+        earmark_for: Øremærk beløb til %{account}
+        earmark_hint: Lad et beløb stå tomt for at bruge hele kontoens saldo.
+      subtypes:
+        checking: Lønkonto
+        savings: Opsparing
+        hsa: HSA
+        cd: CD
+        money_market: Pengemarked
+        other: Andet

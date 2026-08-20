@@ -1,0 +1,75 @@
+---
+da:
+  coinstats_items:
+    create:
+      success: CoinStats-udbyderforbindelse konfigureret.
+      default_name: CoinStats-forbindelse
+      errors:
+        validation_failed: "Validering mislykkedes: %{message}."
+    update:
+      success: CoinStats-udbyderforbindelse opdateret.
+      errors:
+        validation_failed: "Validering mislykkedes: %{message}."
+    destroy:
+      success: CoinStats-udbyderforbindelse planlagt til sletning.
+    link_wallet:
+      success: "%{count} kryptowallet(s) koblet."
+      missing_params: "Mangler påkrævede parametre: adresse og blockchain."
+      failed: Kobling af kryptowallet mislykkedes.
+      error: "Kobling af kryptowallet mislykkedes: %{message}."
+    link_exchange:
+      success: "%{name}-børs koblet."
+      missing_params: Børs og legitimationsoplysninger er påkrævet.
+      invalid_exchange: Den valgte børs understøttes ikke længere.
+      failed: Kunne ikke koble børs.
+      error: "Kunne ikke koble børs: %{message}."
+    new:
+      title: Kobl krypto med CoinStats
+      blockchain_fetch_error: Kunne ikke indlæse blockchains. Prøv igen senere.
+      link_wallet_title: Kobl wallet-adresse
+      link_wallet_description: Følg en self-custody-wallet eller en enkelt on-chain-adresse via CoinStats.
+      address_label: Adresse
+      address_placeholder: Påkrævet
+      blockchain_label: Blockchain
+      blockchain_placeholder: Påkrævet
+      blockchain_select_blank: Vælg en blockchain
+      link_wallet_submit: Kobl kryptowallet
+      link_exchange_title: Kobl børs-API
+      link_exchange_description: Brug en skrivebeskyttet børs-API-nøgle, så CoinStats kan synkronisere saldi og transaktioner fra Bitvavo, Binance og andre understøttede børser.
+      link_exchange_note: Hvis din børs kræver aktivering af API-nøgle eller e-mailbekræftelse, så fuldfør det trin, før du kobler her.
+      exchange_select_blank: Vælg en børs
+      exchange_label: Børs
+      link_exchange_submit: Kobl børs
+      not_configured_title: CoinStats-udbyderforbindelse ikke konfigureret
+      not_configured_message: For at koble en kryptowallet eller børs skal du først konfigurere CoinStats-udbyderforbindelsen.
+      not_configured_step1_html: Gå til <strong>Indstillinger → Udbydere</strong>
+      not_configured_step2_html: Find udbyderen <strong>CoinStats</strong>
+      not_configured_step3_html: Følg de angivne <strong>opsætningsvejledninger</strong> for at fuldføre udbyderkonfigurationen
+      go_to_settings: Gå til udbyderindstillinger
+      setup_instructions: "Opsætningsvejledning:"
+      step1_html: Besøg <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> for at få en API-nøgle.
+      step2: Indtast din API-nøgle nedenfor, og klik på Konfigurer.
+      step3_html: Efter en vellykket forbindelse skal du gå til fanen <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Konti</a> for at sætte dine kryptokonti op.
+      api_key_label: API-nøgle
+      api_key_placeholder: Påkrævet
+      configure: Konfigurer
+      update_configuration: Rekonfigurer
+      default_name: CoinStats-forbindelse
+    coinstats_item:
+      deletion_in_progress: Kryptowallet-data slettes…
+      provider_name: CoinStats
+      syncing: Synkroniserer…
+      sync_status:
+        no_accounts: Ingen kryptowallets fundet
+        all_synced:
+          one: "%{count} kryptowallet synkroniseret"
+          other: "%{count} kryptowallets synkroniseret"
+        partial_sync: "%{linked_count} kryptowallets synkroniseret, %{unlinked_count} skal sættes op"
+      reconnect: Genopret forbindelse
+      status: Senest synkroniseret for %{timestamp} siden
+      status_never: Aldrig synkroniseret
+      status_with_summary: "Senest synkroniseret for %{timestamp} siden • %{summary}"
+      update_api_key: Opdater API-nøgle
+      delete: Slet
+      no_wallets_title: Ingen kryptowallets forbundet
+      no_wallets_message: Ingen kryptowallets er i øjeblikket forbundet til CoinStats.

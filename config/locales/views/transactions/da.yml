@@ -1,0 +1,351 @@
+---
+da:
+  transactions:
+    bulk_updates:
+      new:
+        cancel: Annuller
+        category_label: Kategori
+        category_prompt: Vælg en kategori
+        date_label: Dato
+        header_title: Rediger transaktioner
+        merchant_label: Forretning
+        merchant_prompt: Vælg en forretning
+        name_label: Navn
+        name_placeholder: Indtast et navn, der anvendes på de valgte transaktioner
+        none: "(ingen)"
+        notes_label: Noter
+        notes_placeholder: Indtast en note, der anvendes på de valgte transaktioner
+        overview: Oversigt
+        save: Gem
+        tags_label: Tags
+        transactions_section: Transaktioner
+    unknown_name: Ukendt transaktion
+    selection_bar:
+      duplicate: Duplikér
+      edit: Rediger
+      selected: valgt
+    form:
+      details: Detaljer
+      account: Konto
+      account_prompt: Vælg en konto
+      amount: Beløb
+      category: Kategori
+      category_label: Kategori
+      category_prompt: Vælg en kategori
+      date: Dato
+      description: Beskrivelse
+      description_placeholder: Beskriv transaktionen
+      expense: Udgift
+      income: Indtægt
+      merchant_label: Forretning
+      none: (ingen)
+      note_label: Noter
+      note_placeholder: Indtast en note
+      create_tag: Opret
+      submit: Tilføj transaktion
+      tag_search_placeholder: Søg eller opret tag
+      tags_label: Tags
+      transfer: Overførsel
+    create:
+      created: Transaktion oprettet
+    update:
+      updated: Transaktion opdateret
+    new:
+      new_transaction: Ny transaktion
+    show:
+      keep_both: Nej, behold begge
+      loan_payment: Låneafdrag
+      mark_recurring: Markér som fast
+      mark_recurring_subtitle: Følg denne som en fast transaktion. Beløbsvariation beregnes automatisk ud fra de seneste 6 måneders lignende transaktioner.
+      mark_recurring_title: Fast transaktion
+      merge_duplicate: Ja, flet dem
+      potential_duplicate_description: Denne verserende transaktion kan være den samme som den bogførte transaktion nedenfor. Hvis ja, så flet dem for at undgå dobbelttælling.
+      potential_duplicate_title: Mulig dublet fundet
+      transfer: Overførsel
+      account_label: Konto
+      amount: Beløb
+      category_label: Kategori
+      date_label: Dato
+      delete: Slet
+      delete_subtitle: Dette sletter transaktionen permanent, påvirker dine historiske
+        saldi og kan ikke fortrydes.
+      delete_title: Slet transaktion
+      details: Detaljer
+      attachments: Vedhæftninger
+      exclude: Udelad
+      exclude_description: Udeladte transaktioner fjernes fra budgetberegninger og rapporter.
+      activity_type: Aktivitetstype
+      activity_type_description: Type af investeringsaktivitet (køb, salg, udbytte osv.). Automatisk fundet eller sat manuelt.
+      one_time_title: Engangs-%{type}
+      one_time_description: Engangstransaktioner udelades fra visse budgetberegninger og rapporter, så du kan se det, der virkelig betyder noget.
+      convert_to_trade_title: Konverter til værdipapirhandel
+      convert_to_trade_description: Konverter denne transaktion til et køb eller salg med værdipapirdetaljer til porteføljeopfølgning.
+      convert_to_trade_button: Konverter til handel
+      transfer_matcher_description: Forbind denne transaktion med dens modpart på en anden konto.
+      pending_duplicate_merger_title: Dublet af bogført transaktion?
+      pending_duplicate_merger_description: Flet manuelt denne verserende transaktion med dens bogførte version.
+      pending_duplicate_merger_button: Åbn fletning
+      merchant_label: Forretning
+      name_label: Navn
+      nature: Type
+      none: "(ingen)"
+      note_label: Noter
+      note_placeholder: Indtast en note
+      overview: Oversigt
+      settings: Indstillinger
+      tags_label: Tags
+      tab_transactions: Transaktioner
+      tab_upcoming: Kommende
+      uncategorized: "(ukategoriseret)"
+      additional_details: "Yderligere detaljer"
+      payee: "Modtager"
+      description: "Beskrivelse"
+      memo: "Memo"
+      provider_extras: "Udbyderfelter"
+      transfer_or_debt_payment: "Overførsel eller gældsafdrag?"
+      open_matcher: "Åbn matcher"
+      convert: "Konverter"
+    activity_labels:
+      buy: Køb
+      sell: Salg
+      sweep_in: Sweep ind
+      sweep_out: Sweep ud
+      dividend: Udbytte
+      reinvestment: Geninvestering
+      interest: Rente
+      fee: Gebyr
+      transfer: Overførsel
+      contribution: Indskud
+      withdrawal: Udbetaling
+      exchange: Valutaveksling
+      other: Andet
+    mark_recurring: Markér som fast
+    mark_recurring_subtitle: Følg denne som en fast transaktion. Beløbsvariation beregnes automatisk ud fra de seneste 6 måneders lignende transaktioner.
+    mark_recurring_title: Fast transaktion
+    potential_duplicate_title: Mulig dublet fundet
+    potential_duplicate_description: Denne verserende transaktion kan være den samme som den bogførte transaktion nedenfor. Hvis ja, så flet dem for at undgå dobbelttælling.
+    merge_duplicate: Ja, flet dem
+    keep_both: Nej, behold begge
+    split_parent_row:
+      split_label: "Opdelt"
+    transfer_match:
+      auto_matched: Automatisk matchet
+      auto_matched_short: A/M
+      confirm_match: Bekræft match
+      payment_confirmed: Betaling er bekræftet
+      reject_match: Afvis match
+      transfer_confirmed: Overførsel er bekræftet
+    transaction:
+      pending: Verserende
+      pending_tooltip: Verserende transaktion — kan ændre sig, når den bogføres
+      linked_with_provider: Koblet med %{provider}
+      activity_type_tooltip: Investeringsaktivitetstype
+      possible_duplicate: Dublet?
+      potential_duplicate_tooltip: Dette kan være en dublet af en anden transaktion
+      review_recommended: Gennemgå
+      review_recommended_tooltip: Stor beløbsforskel — gennemgå for at tjekke, om det er en dublet
+      split: Opdelt
+      split_tooltip: Denne transaktion er opdelt i flere posteringer
+      split_child_tooltip: Del af en opdelt transaktion
+    merge_duplicate:
+      success: Transaktioner flettet
+      failure: Kunne ikke flette transaktioner
+    dismiss_duplicate:
+      success: Beholdt som separate transaktioner
+      failure: Kunne ikke afvise dubletforslag
+    pending_duplicate_merge:
+      possible_duplicate: Dublet?
+      possible_duplicate_short: Dub?
+      review_recommended: Gennemgå
+      review_recommended_short: Gns
+      confirm_title: "Flet med bogført transaktion (%{posted_amount})"
+      reject_title: Behold som separate transaktioner
+    summary:
+      total_transactions: Transaktioner i alt
+      income: Indtægt
+      expenses: Udgifter
+      inflow: Indgående
+      outflow: Udgående
+    header:
+      edit_categories: Rediger kategorier
+      edit_imports: Rediger importer
+      edit_merchants: Rediger forretninger
+      edit_tags: Rediger tags
+      import: Importér
+    index:
+      title: "Transaktioner"
+      transaction: transaktion
+      transactions: transaktioner
+      import: Importér
+      new_rule: "Ny regel"
+      edit_rules: "Rediger regler"
+      edit_categories: "Rediger kategorier"
+      edit_tags: "Rediger tags"
+      edit_merchants: "Rediger forretninger"
+      edit_imports: "Rediger importer"
+      new_transaction: "Ny transaktion"
+      categorize_button:
+        one: "Kategoriser (1)"
+        other: "Kategoriser (%{count})"
+    categorizes:
+      show:
+        exit: "Afslut"
+        skip: "Spring over"
+        remaining:
+          one: "1 ukategoriseret transaktion tilbage"
+          other: "%{count} ukategoriserede transaktioner tilbage"
+        transaction_count:
+          one: "1 transaktion"
+          other: "%{count} transaktioner"
+        transactions_hint: "Fjern markering for at udelade en transaktion, eller tildel den en anden kategori direkte i rækken."
+        assign_category: "Tildel en kategori"
+        assign_category_prompt: "→ tildel"
+        filter_placeholder: "Søg kategorier..."
+        col_transaction: "Transaktion"
+        col_date: "Dato"
+        col_amount: "Beløb"
+        col_category: "Kategori"
+        type_income: "Indtægt"
+        type_expense: "Udgift"
+        create_rule_label: "Opret kategoriseringsregel"
+        rule_description_prefix: "Fremtidige %{type}-transaktioner med navn der indeholder"
+        rule_description_suffix: "skal også få denne kategori."
+        no_categories: "Ingen matchende kategorier"
+        all_done: "Alle transaktioner er kategoriseret"
+      create:
+        categorized:
+          one: "1 transaktion kategoriseret"
+          other: "%{count} transaktioner kategoriseret"
+        rule_creation_failed: "Transaktioner kategoriseret, men reglen kunne ikke oprettes (den findes måske allerede)."
+      entry_row:
+        include_checkbox: "Medtag %{name}"
+        assign_category_select: "Tildel kategori til %{name}"
+    list:
+      drag_drop_title: Slip CSV for at importere
+      drag_drop_subtitle: Upload transaktioner direkte
+      transaction: transaktion
+      transactions: transaktioner
+    toggle_recurring_section: Vis/skjul kommende faste transaktioner
+    search:
+      filters:
+        account: Konto
+        date: Dato
+        type: Type
+        status: Status
+        amount: Beløb
+        category: Kategori
+        tag: Tag
+        merchant: Forretning
+    convert_to_trade:
+      title: Konverter til værdipapirhandel
+      description: Konverter denne transaktion til en handel med værdipapirdetaljer
+      date_label: "Dato:"
+      account_label: "Konto:"
+      amount_label: "Beløb:"
+      security_label: Værdipapir
+      security_prompt: Vælg et værdipapir...
+      security_custom: "+ Indtast eget ticker"
+      security_not_listed_hint: Ser du ikke dit værdipapir? Vælg "Indtast eget ticker" nederst i listen.
+      ticker_placeholder: AAPL
+      ticker_hint: Indtast aktie-/ETF-tickersymbol (f.eks. AAPL, MSFT)
+      ticker_search_placeholder: Søg efter et ticker...
+      ticker_search_hint: Søg på tickersymbol eller firmanavn, eller skriv et eget ticker
+      price_mismatch_title: Prisen matcher måske ikke
+      price_mismatch_message: "Din pris (%{entered_price}/stk.) afviger markant fra %{ticker}s aktuelle markedskurs (%{market_price}). Hvis det ser forkert ud, har du måske valgt det forkerte værdipapir — prøv \"Indtast eget ticker\" for at angive det rigtige."
+      quantity_label: Antal (stk.)
+      quantity_placeholder: f.eks. 20
+      quantity_hint: Antal handlede aktier
+      price_label: Pris pr. stk.
+      price_placeholder: f.eks. 52.15
+      price_hint: Pris pr. stk. (%{currency})
+      qty_or_price_hint: Indtast mindst antal ELLER pris. Det andet beregnes ud fra transaktionsbeløbet (%{amount}).
+      trade_type_label: Handelstype
+      trade_type_hint: Køb eller sælg aktier i et værdipapir
+      exchange_label: Børs (valgfri)
+      exchange_placeholder: XNAS
+      exchange_hint: Lad stå tomt for automatisk genkendelse
+      cancel: Annuller
+      submit: Konverter til handel
+      success: Transaktion konverteret til handel
+      conversion_note: "Konverteret fra transaktion: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Kun transaktioner på investeringskonti kan konverteres til handler
+        already_converted: Denne transaktion er allerede konverteret eller udeladt
+        enter_ticker: Indtast et tickersymbol
+        security_not_found: Det valgte værdipapir findes ikke længere. Vælg et andet.
+        select_security: Vælg eller indtast et værdipapir
+        enter_qty_or_price: Indtast enten antal eller pris pr. stk. Det andet beregnes ud fra transaktionsbeløbet.
+        invalid_qty_or_price: Ugyldigt antal eller pris. Indtast gyldige positive værdier.
+        conversion_failed: "Kunne ikke konvertere transaktion: %{error}"
+        unexpected_error: "Uventet fejl under konvertering: %{error}"
+    searches:
+      filters:
+        account_filter:
+          filter_accounts: Filtrer konti
+        category_filter:
+          filter_category: Filtrer kategori
+        date_filter:
+          start_date: "Startdato"
+          end_date: "Slutdato"
+        merchant_filter:
+          filter_merchants: Filtrer forretninger
+        tag_filter:
+          filter_tags: Filtrer tags
+        amount_filter:
+          equal_to: Lig med
+          greater_than: Større end
+          less_than: Mindre end
+          placeholder: '0'
+        badge:
+          expense: Udgift
+          income: Indtægt
+          on_or_after: den eller efter %{date}
+          on_or_before: den eller før %{date}
+          transfer: Overførsel
+          confirmed: Bekræftet
+          pending: Verserende
+        type_filter:
+          expense: Udgift
+          income: Indtægt
+          transfer: Overførsel
+        status_filter:
+          confirmed: Bekræftet
+          pending: Verserende
+      menu:
+        account_filter: Konto
+        amount_filter: Beløb
+        apply: Anvend
+        cancel: Annuller
+        category_filter: Kategori
+        clear_filters: Ryd filtre
+        date_filter: Dato
+        merchant_filter: Forretning
+        status_filter: Status
+        tag_filter: Tag
+        type_filter: Type
+      search:
+        equal_to: lig med
+        greater_than: større end
+        less_than: mindre end
+      form:
+        toggle_selection_checkboxes: Slå alle afkrydsningsfelter til/fra
+        search_placeholder: "Søg transaktioner ..."
+        filter: "Filter"
+    attachments:
+      cannot_exceed: "Kan ikke overstige %{count} vedhæftninger pr. transaktion"
+      uploaded_one: "Vedhæftning uploadet"
+      uploaded_many: "%{count} vedhæftninger uploadet"
+      failed_upload: "Kunne ikke uploade vedhæftning: %{error}"
+      no_files_selected: "Ingen filer valgt til upload"
+      attachment_deleted: "Vedhæftning slettet"
+      failed_delete: "Kunne ikke slette vedhæftning: %{error}"
+      upload_failed: "Kunne ikke uploade vedhæftning. Prøv igen, eller kontakt support."
+      delete_failed: "Kunne ikke slette vedhæftning. Prøv igen, eller kontakt support."
+      upload: "Upload"
+      no_attachments: "Ingen vedhæftninger endnu"
+      select_up_to: "Vælg op til %{count} filer (billeder eller PDF'er, maks. %{size}MB hver) • %{used} af %{count} brugt"
+      files:
+        one: "Fil (1)"
+        other: "Filer (%{count})"
+      browse_to_add: "Gennemse for at tilføje filer"
+      max_reached: "Maksimalt antal filer nået (%{count}/%{max}). Slet en eksisterende fil for at uploade en ny."

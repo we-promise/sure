@@ -1,0 +1,58 @@
+---
+da:
+  trades:
+    form:
+      account: Overførselskonto (valgfri)
+      account_prompt: Søg konto
+      amount: Beløb
+      fee: Handelsgebyr
+      holding: Tickersymbol
+      holding_optional: Tickersymbol (valgfri)
+      price: Pris pr. stk.
+      qty: Antal
+      submit: Tilføj transaktion
+      ticker_placeholder: AAPL
+      type: Type
+      type_buy: Køb
+      type_sell: Salg
+      type_deposit: Indskud
+      type_withdrawal: Udbetaling
+      type_dividend: Udbytte
+      type_interest: Rente
+      dividend_requires_security: Værdipapir er påkrævet for udbytte
+      trade_requires_security: Et værdipapir (ticker) er påkrævet for køb og salg
+    header:
+      buy: Køb
+      sell: Salg
+      dividend: Udbytte
+      interest: Rente
+      current_market_price_label: Aktuel markedskurs
+      overview: Oversigt
+      purchase_price_label: Købspris
+      purchase_qty_label: Købsantal
+      symbol_label: Symbol
+      total_return_label: Urealiseret gevinst/tab
+    new:
+      title: Ny transaktion
+    show:
+      additional: Yderligere
+      amount_label: Beløb
+      buy: Køb
+      category_label: Kategori
+      cost_per_share_label: Kostpris pr. stk.
+      date_label: Dato
+      delete: Slet
+      fee_label: Handelsgebyr
+      delete_subtitle: Denne handling kan ikke fortrydes
+      delete_title: Slet handel
+      details: Detaljer
+      provider_disabled_warning: "Prisopdateringer sat på pause — %{provider}-udbyderen er slået fra. Slå den til igen under Indstillinger, eller ommapp beholdningen til en anden udbyder."
+      exclude_subtitle: Denne handel indgår ikke i rapporter og beregninger
+      exclude_title: Udelad fra analyser
+      no_category: Ingen kategori
+      note_label: Note
+      note_placeholder: Tilføj yderligere noter her...
+      quantity_label: Antal
+      sell: Salg
+      settings: Indstillinger
+      type_label: Type

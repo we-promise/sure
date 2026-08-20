@@ -1,0 +1,29 @@
+---
+da:
+  models:
+    category:
+      uncategorized: Ukategoriseret
+      other_investments: Andre investeringer
+      investment_contributions: Investeringsindskud
+      defaults:
+        income: Indtægt
+        food_and_drink: Mad og drikke
+        groceries: Dagligvarer
+        shopping: Shopping
+        transportation: Transport
+        travel: Rejse
+        entertainment: Underholdning
+        healthcare: Sundhed
+        personal_care: Personlig pleje
+        home_improvement: Boligforbedring
+        mortgage_rent: Realkredit / husleje
+        utilities: Forsyning
+        subscriptions: Abonnementer
+        insurance: Forsikring
+        sports_and_fitness: Sport og fitness
+        gifts_and_donations: Gaver og donationer
+        taxes: Skatter
+        loan_payments: Låneafdrag
+        services: Tjenester
+        fees: Gebyrer
+        savings_and_investments: Opsparing og investeringer

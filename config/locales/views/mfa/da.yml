@@ -1,0 +1,45 @@
+---
+da:
+  mfa:
+    backup_codes:
+      backup_codes_description: Hver kode kan kun bruges én gang. Opbevar koderne
+        sikkert.
+      backup_codes_title: Dine backupkoder
+      continue: Fortsæt til sikkerhedsindstillinger
+      description: Gem disse backupkoder et sikkert sted — du skal bruge dem, hvis
+        du mister adgang til din authenticator-app
+      page_title: Backupkoder
+      title: Gem dine backupkoder
+    create:
+      invalid_code: Ugyldig bekræftelseskode. Prøv igen.
+    disable:
+      success: To-faktor-godkendelse er slået fra
+    new:
+      code_label: Bekræftelseskode
+      code_placeholder: Indtast 6-cifret kode
+      description: Styrk din kontosikkerhed med to-faktor-godkendelse
+      page_title: Opsætning af to-faktor-godkendelse
+      scan_description: Brug en authenticator-app som Google Authenticator eller 1Password
+        til at scanne denne QR-kode
+      scan_title: 1. Scan QR-kode
+      secret_description: Hvis du ikke kan scanne QR-koden, kan du indtaste denne hemmelige nøgle manuelt
+        i din authenticator-app
+      secret_title: Manuel indtastningskode
+      title: Konfigurer to-faktor-godkendelse
+      verify_button: Bekræft og slå 2FA til
+      verify_description: Indtast den 6-cifrede kode fra din authenticator-app
+      verify_title: 2. Indtast bekræftelseskode
+    verify:
+      description: Indtast koden fra din authenticator-app for at fortsætte
+      or: eller
+      page_title: Bekræft to-faktor-godkendelse
+      title: To-faktor-godkendelse
+      verify_button: Bekræft
+      webauthn_button: Brug passkey eller sikkerhedsnøgle
+      webauthn_unsupported: Denne browser understøtter ikke passkeys eller sikkerhedsnøgler.
+    verify_code:
+      invalid_code: Ugyldig godkendelseskode. Prøv igen.
+    verify_webauthn:
+      invalid_credential: Kunne ikke bekræfte den passkey eller sikkerhedsnøgle. Prøv igen.
+    webauthn_options:
+      unavailable: Der er ingen passkeys eller sikkerhedsnøgler til denne konto.

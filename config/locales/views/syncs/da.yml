@@ -1,0 +1,6 @@
+---
+da:
+  syncs:
+    cancel:
+      cancelled: Synk annulleret. Det, der allerede er synkroniseret, bevares; arbejde i kø blev stoppet.
+      not_cancellable: Denne synk er allerede færdig.

@@ -1,0 +1,183 @@
+da:
+  snaptrade_items:
+    default_name: "SnapTrade-forbindelse"
+    destroy:
+      success: "SnapTrade-forbindelse planlagt til sletning."
+    connect:
+      decryption_failed: "Kunne ikke læse SnapTrade-legitimationsoplysninger. Slet og opret forbindelsen igen."
+      connection_failed: "Kunne ikke oprette forbindelse til SnapTrade: %{message}"
+    callback:
+      success: "Mægler forbundet! Vælg hvilke konti der skal kobles."
+      no_item: "SnapTrade-konfiguration ikke fundet."
+    complete_account_setup:
+      success:
+        one: "Koblede %{count} konto."
+        other: "Koblede %{count} konti."
+      partial_success:
+        one: "Koblede %{count} konto. %{failed_count} kunne ikke kobles."
+        other: "Koblede %{count} konti. %{failed_count} kunne ikke kobles."
+      link_failed: "Kunne ikke koble konti: %{errors}"
+      no_accounts: "Ingen konti blev valgt til kobling."
+    preload_accounts:
+      not_configured: "SnapTrade er ikke konfigureret."
+    select_accounts:
+      not_configured: "SnapTrade er ikke konfigureret."
+    oauth_authorize:
+      not_configured: "SnapTrade OAuth er ikke konfigureret. Sæt SNAPTRADE_OAUTH_CLIENT_ID og SNAPTRADE_OAUTH_CLIENT_SECRET, genstart appen, og prøv igen."
+    oauth_callback:
+      success: "SnapTrade-autorisation fuldført."
+      access_denied: "SnapTrade-autorisation blev annulleret."
+      state_mismatch: "SnapTrade-autorisation bestod ikke sikkerhedstjekket. Prøv igen."
+      failed: "Kunne ikke fuldføre SnapTrade-autorisation. Prøv igen."
+    select_existing_account:
+      not_found: "Konto eller SnapTrade-konfiguration ikke fundet."
+      title: "Kobl til SnapTrade-konto"
+      header: "Kobl eksisterende konto"
+      subtitle: "Vælg en SnapTrade-konto at koble til"
+      no_accounts: "Ingen ukoblede SnapTrade-konti tilgængelige."
+      connect_hint: "Du skal måske forbinde en mægler først."
+      settings_link: "Gå til udbyderindstillinger"
+      linking_to: "Kobler til konto:"
+      balance_label: "Saldo:"
+      link_button: "Kobl"
+      cancel_button: "Annuller"
+    link_existing_account:
+      success: "Koblet til SnapTrade-konto."
+      failed: "Kunne ikke koble konto: %{message}"
+      not_found: "Konto ikke fundet."
+    connections:
+      unknown_brokerage: "Ukendt mægler"
+    delete_connection:
+      success: "Forbindelse slettet. Én plads frigjort."
+      failed: "Kunne ikke slette forbindelse: %{message}"
+      missing_authorization_id: "Autorisations-ID mangler"
+      api_deletion_failed: "Kunne ikke slette forbindelse fra SnapTrade — dette element er ikke autoriseret. Forbindelsen findes måske stadig i din SnapTrade-konto."
+    setup_accounts:
+      title: "Sæt SnapTrade-konti op"
+      header: "Sæt dine SnapTrade-konti op"
+      subtitle: "Vælg hvilke mæglerkonti der skal kobles"
+      syncing: "Henter dine konti..."
+      loading: "Henter konti fra SnapTrade..."
+      loading_hint: "Klik Opdater for at tjekke efter konti."
+      refresh: "Opdater"
+      info_title: "SnapTrade-investeringsdata"
+      info_holdings: "Beholdninger med aktuelle priser og mængder"
+      info_cost_basis: "Kostpris pr. position (når tilgængelig)"
+      info_activities: "Handelshistorik med aktivitetsmærkater (Køb, Salg, Udbytte osv.)"
+      info_history: "Op til 3 års transaktionshistorik"
+      free_tier_note: "SnapTrades gratis niveau tillader 20 mæglerforbindelser."
+      no_accounts_title: "Ingen konti fundet"
+      no_accounts_message: "Ingen mæglerkonti blev fundet. Det kan ske, hvis du annullerede forbindelsen, eller hvis din mægler ikke understøttes."
+      try_again: "Forbind mægler"
+      back_to_settings: "Tilbage til indstillinger"
+      available_accounts: "Tilgængelige konti"
+      balance_label: "Saldo:"
+      account_number: "Konto:"
+      account_type_label: "Kontotype"
+      account_types:
+        depository: "Løn- eller opsparingskonto"
+        credit_card: "Kreditkort"
+        investment: "Investeringskonto"
+        crypto: "Kryptokonto"
+        loan: "Lån eller kreditlinje"
+        other_asset: "Andet aktiv"
+      sync_start_date_label: "Importér transaktioner fra:"
+      sync_start_date_help: "Lad feltet stå tomt for al tilgængelig historik"
+      create_button: "Opret valgte konti"
+      cancel_button: "Annuller"
+      creating: "Opretter konti..."
+      done_button: "Færdig"
+      or_link_existing: "Eller kobl til en eksisterende konto i stedet for at oprette en ny:"
+      select_account: "Vælg en konto..."
+      link_button: "Kobl"
+      linked_accounts: "Allerede koblet"
+      linked_to: "Koblet til:"
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} konto skal sættes op"
+        other: "%{count} konti skal sættes op"
+      deletion_in_progress: "Sletning i gang..."
+      syncing: "Synkroniserer..."
+      requires_update: "Forbindelse skal opdateres"
+      error: "Synkfejl"
+      status: "Senest synkroniseret for %{timestamp} siden - %{summary}"
+      status_never: "Aldrig synkroniseret"
+      reconnect: "Genopret forbindelse"
+      connect_brokerage: "Forbind mægler"
+      add_another_brokerage: "Forbind endnu en mægler"
+      delete: "Slet"
+      setup_needed: "Konti skal sættes op"
+      setup_description: "Nogle konti fra SnapTrade skal kobles til Sure-konti."
+      setup_action: "Sæt konti op"
+      setup_accounts_menu: "Sæt konti op"
+      manage_connections: "Administrer forbindelser"
+      more_accounts_available:
+        one: "%{count} konto mere tilgængelig til opsætning"
+        other: "%{count} konti mere tilgængelige til opsætning"
+      no_accounts_title: "Ingen konti fundet"
+      no_accounts_description: "Forbind en mægler for at importere dine investeringskonti."
+
+  providers:
+    snaptrade:
+      name: "SnapTrade"
+      connection_description: "Forbind til din mægler via SnapTrade (25+ mæglere understøttet)"
+      description: "SnapTrade forbinder til 25+ store mæglere (Fidelity, Vanguard, Schwab, Robinhood osv.) og giver fuld handelshistorik med aktivitetsmærkater og kostpris."
+      oauth_setup_step_1_html: "Registrér en OAuth-app på <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">dashboard.snaptrade.com</a>"
+      oauth_setup_step_2_html: "Tilføj denne apps callback-URL (<code>%{callback_url}</code>) som registreret redirect URI"
+      oauth_setup_step_3: "Sæt SNAPTRADE_OAUTH_CLIENT_ID og SNAPTRADE_OAUTH_CLIENT_SECRET i dit miljø, og genstart"
+      free_tier_warning: "SnapTrades gratis niveau dækker 20 mæglerforbindelser."
+      oauth_title: "SnapTrade OAuth"
+      oauth_status_ready: "Autoriser Sure til at læse dine SnapTrade-kontodata."
+      oauth_status_authorized: "Autoriseret med SnapTrade."
+      oauth_connect_button: "Forbind med SnapTrade"
+      oauth_reauthorize_button: "Genautoriser"
+      status_connected:
+        one: "%{count} konto fra SnapTrade"
+        other: "%{count} konti fra SnapTrade"
+      needs_setup:
+        one: "%{count} skal sættes op"
+        other: "%{count} skal sættes op"
+      status_ready: "Klar til at forbinde mæglere"
+      setup_accounts_button: "Sæt konti op"
+      connect_button: "Forbind mægler"
+      connected_brokerages: "Forbundet:"
+      manage_connections: "Administrer forbindelser"
+      loading_connections: "Indlæser forbindelser..."
+      connections_error: "Kunne ikke indlæse forbindelser: %{message}"
+      accounts_count:
+        one: "%{count} konto"
+        other: "%{count} konti"
+      orphaned_connection: "Forældreløs forbindelse (ikke synkroniseret lokalt)"
+      needs_linking: "skal kobles"
+      no_connections: "Ingen mæglerforbindelser fundet."
+      delete_connection: "Slet"
+      delete_connection_title: "Slet mæglerforbindelse?"
+      delete_connection_body: "Dette fjerner permanent %{brokerage}-forbindelsen fra SnapTrade. Alle konti fra denne mægler fjernes koblingen. Du skal genoprette forbindelsen for at synkronisere disse konti igen."
+      delete_connection_confirm: "Slet forbindelse"
+      manage_at_snaptrade: "Administrer forbindelser hos SnapTrade"
+
+  snaptrade_item:
+    sync_status:
+      no_accounts: "Ingen konti fundet"
+      synced:
+        one: "%{count} konto synkroniseret"
+        other: "%{count} konti synkroniseret"
+      synced_with_setup: "%{linked} synkroniseret, %{unlinked} skal sættes op"
+    institution_summary:
+      none: "Ingen institutioner forbundet"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutioner"
+    brokerage_summary:
+      none: "Ingen mæglere forbundet"
+      count:
+        one: "%{count} mægler"
+        other: "%{count} mæglere"
+    syncer:
+      discovering: "Finder konti..."
+      importing: "Importerer konti fra SnapTrade..."
+      processing: "Behandler beholdninger og aktiviteter..."
+      calculating: "Beregner saldi..."
+      checking_config: "Tjekker kontokonfiguration..."
+      needs_setup: "%{count} konti skal sættes op..."
+      activities_fetching_async: "Aktiviteter hentes i baggrunden. Det kan tage op til et minut for nye mæglerforbindelser."

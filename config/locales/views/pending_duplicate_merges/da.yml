@@ -1,0 +1,21 @@
+---
+da:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: Vælg en bogført transaktion at flette med
+      invalid_transaction: Ugyldig transaktion valgt til fletning
+      merge_success: Verserende transaktion flettet med bogført transaktion
+      merge_failed: Kunne ikke flette transaktioner
+    set_transaction:
+      pending_only: Denne funktion er kun tilgængelig for verserende transaktioner
+    new:
+      title: Flet med bogført transaktion
+      warning_title: Manuel fletning af dubletter
+      warning_description: Brug dette til manuelt at flette en verserende transaktion med dens bogførte version. Den verserende transaktion slettes, og kun den bogførte beholdes.
+      pending_transaction: Verserende transaktion
+      select_posted: Vælg bogført transaktion at flette med
+      showing_range: "Viser %{start} - %{end}"
+      previous: "← Forrige 10"
+      next: "Næste 10 →"
+      no_candidates: Ingen bogførte transaktioner fundet på denne konto.
+      submit_button: Flet transaktioner

@@ -1,0 +1,11 @@
+---
+da:
+  invite_codes:
+    create:
+      success: "Kode genereret"
+    destroy:
+      success: "Kode slettet"
+    index:
+      invite_code_description: Generer en ny kode for at se den her. Genererede
+        koder, der er brugt, vises ikke længere.
+      no_invite_codes: Ingen koder at vise

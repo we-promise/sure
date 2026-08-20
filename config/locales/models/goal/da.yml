@@ -1,0 +1,25 @@
+---
+da:
+  activerecord:
+    attributes:
+      goal:
+        name: Navn
+        target_amount: Målbeløb
+        currency: Valuta
+        target_date: Måldato
+        color: Farve
+        notes: Noter
+        state: Tilstand
+        linked_accounts: Tilknyttede konti
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Vælg mindst én konto til at finansiere dette mål.
+            linked_accounts:
+              must_be_fundable: Alle tilknyttede konti skal være kontant- eller investeringskonti.
+              currency_mismatch: Alle tilknyttede konti skal have samme valuta.
+              must_belong_to_family: Tilknyttede konti skal tilhøre samme husstand som målet.
+            currency:
+              locked_after_linked: Valutaen kan ikke ændres, efter målet er tilknyttet konti.

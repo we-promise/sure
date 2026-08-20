@@ -1,0 +1,10 @@
+---
+da:
+  password_mailer:
+    password_reset:
+      cta: Nulstil din adgangskode
+      ignore_if_not_requested: Hvis du ikke har bedt om dette, kan du ignorere denne
+        e-mail.
+      request_made: Der er anmodet om at nulstille din %{product_name}-adgangskode. Klik på linket
+        for at nulstille den.
+      subject: '%{product_name}: Nulstil din adgangskode'

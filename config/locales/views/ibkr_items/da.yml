@@ -1,0 +1,92 @@
+---
+da:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Tilslut en Interactive Brokers Flex Web Service-rapport
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Sletning i gang
+      flex_web_service: Flex Web Service
+      syncing: Synkroniserer
+      requires_update: Legitimationsoplysninger kræver opmærksomhed
+      error: Fejl
+      synced: Synkroniseret for %{time} siden. %{summary}.
+      never_synced: Aldrig synkroniseret.
+      setup_accounts: Opsæt konti
+      delete: Slet
+      accounts_need_setup: Konti skal sættes op
+      accounts_need_setup_description: Nogle IBKR-konti skal kobles til Sure-konti.
+      no_accounts_discovered: Ingen IBKR-konti fundet endnu.
+      no_accounts_discovered_description: Kør en synk efter at have konfigureret din Flex-forespørgsel for at finde konti.
+    setup_accounts:
+      page_title: Opsæt Interactive Brokers-konti
+      dialog_title: Opsæt dine Interactive Brokers-konti
+      subtitle: Vælg hvilke IBKR-mæglerkonti der skal kobles.
+      info_box:
+        title: IBKR Flex Query Import
+        items:
+          item_1: Beholdninger med aktuelle priser og mængder
+          item_2: Kostpris pr. position
+          item_3: Handler, udbytter, provisioner og kontantindskud eller -udtag
+        warning: Historisk aktivitet er begrænset til rapportvinduet i Flex Query
+      status:
+        fetching_accounts: Henter konti fra Interactive Brokers...
+        no_accounts_found_title: Ingen konti fundet.
+        no_accounts_found_description: Sure kunne ikke finde nogen IBKR-konti i den seneste Flex-rapport.
+      available_accounts:
+        title: Tilgængelige konti
+        account_type_investment: Investering
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "Account ID: %{account_id}"
+      link_existing:
+        description: Eller kobl en fundet IBKR-konto til en eksisterende manuel investeringskonto.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Vælg en konto...
+      linked_accounts:
+        title: Allerede koblet
+        linked_to_html: "Koblet til: %{account}"
+      buttons:
+        refresh: Opdater
+        cancel: Annuller
+        back_to_settings: Tilbage til Indstillinger
+        create_selected_accounts: Opret valgte konti
+        link: Kobl
+        done: Færdig
+    sync_status:
+      no_accounts: Ingen IBKR-konti fundet endnu
+      all_linked:
+        one: 1 konto koblet
+        other: "%{count} konti koblet"
+      partial: "%{linked} koblet, %{unlinked} skal sættes op"
+    select_existing_account:
+      title: Kobl Interactive Brokers-konto
+      no_accounts_available: Ingen ukoblede Interactive Brokers-konti er tilgængelige endnu.
+      run_sync_hint: "Kør en synk fra Indstillinger > Udbydere efter at have opdateret din Flex-forespørgsel."
+      wait_for_sync: Vent, til synkroniseringen til kontofinding er færdig.
+      balance: Saldo
+      link: Kobl
+      cancel: Annuller
+    create:
+      success: Interactive Brokers konfigureret.
+    update:
+      success: Interactive Brokers-konfiguration opdateret.
+    destroy:
+      success: Interactive Brokers-forbindelse planlagt til sletning.
+    select_accounts:
+      not_configured: Interactive Brokers er ikke konfigureret.
+    link_existing_account:
+      not_found: Konto eller Interactive Brokers-konfiguration ikke fundet.
+      only_manual_investment: Kun manuelle investeringskonti kan kobles til Interactive Brokers.
+      already_linked: Denne Interactive Brokers-konto er allerede koblet.
+      success: Koblet til Interactive Brokers-konto.
+      failed: Kunne ikke koble Interactive Brokers-konto.
+    complete_account_setup:
+      success:
+        one: Oprettede %{count} Interactive Brokers-konto.
+        other: Oprettede %{count} Interactive Brokers-konti.
+      none_selected: Ingen konti blev valgt.
+      none_created: Ingen konti blev oprettet.

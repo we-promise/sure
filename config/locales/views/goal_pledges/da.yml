@@ -1,0 +1,20 @@
+---
+da:
+  goal_pledges:
+    new:
+      helper_transfer: Sure leder efter et matchende indskud på din tilknyttede konto. Tilsagnet forbliver verserende i 7 dage og bekræftes automatisk, når Sure finder det.
+      helper_manual: Sure registrerer dette ved din næste manuelle saldoredigering og bekræfter bidraget.
+      amount_label: Beløb
+      account_label: Til konto
+      submit: Registrér tilsagn
+      preview_zero: "I øjeblikket {current} af {target} sparet."
+      preview_nonzero: "Når {percent}%, {newTotal} af {target}."
+      preview_reached: "Ramte dit {target}-mål. Mål nået."
+    create:
+      success: Tilsagn registreret. Sure bekræfter det ved næste synk.
+    renew:
+      success: Tilsagnsvindue forlænget med 7 dage.
+      not_open: Kun åbne tilsagn kan forlænges.
+    destroy:
+      success: Tilsagn annulleret.
+      not_open: Kun åbne tilsagn kan annulleres.

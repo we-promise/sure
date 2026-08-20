@@ -1,0 +1,34 @@
+---
+da:
+  layouts:
+    application:
+      insights: Indsigt
+      privacy_mode: Slå privatlivstilstand til/fra
+      resize_left_sidebar: Tilpas kontomenuens bredde
+      resize_right_sidebar: Tilpas assistentens bredde
+      skip_to_main: Spring til hovedindhold
+      nav:
+        assistant: Assistent
+        budgets: Budgetter
+        home: Hjem
+        plan: Plan
+        reports: Rapporter
+        goals: Mål
+        transactions: Transaktioner
+    auth:
+      existing_account: Har du allerede en konto?
+      no_account: Ny hos %{product_name}?
+      sign_in: Log ind
+      sign_up: Opret konto
+    shared:
+      footer:
+        privacy_policy: Privatlivspolitik
+        terms_of_service: Vilkår for brug
+      confirm_dialog:
+        are_you_sure: Er du sikker?
+        cannot_be_undone: Denne handling kan ikke fortrydes.
+        confirm: Bekræft
+    trial:
+      open_demo: Åbn demo
+      data_deleted_in_days: Data slettes om %{days} dage
+      contribute: Bidrag

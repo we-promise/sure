@@ -1,0 +1,15 @@
+---
+da:
+  activemodel:
+    errors:
+      models:
+        trend:
+          attributes:
+            current:
+              must_be_of_the_same_type_as_previous: skal være samme type som forrige
+              must_be_of_type_money_numeric_or_nil: skal være af typen Money, Numeric
+                eller nil
+            previous:
+              must_be_of_the_same_type_as_current: skal være samme type som aktuel
+              must_be_of_type_money_numeric_or_nil: skal være af typen Money, Numeric
+                eller nil

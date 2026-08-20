@@ -1,0 +1,8 @@
+---
+da:
+  invitation_mailer:
+    invite_email:
+      accept_button: Acceptér invitation
+      body: "%{inviter} har inviteret dig til at deltage i %{family} %{moniker} på %{product_name}!"
+      expiry_notice: Denne invitation udløber om %{days} dage
+      greeting: Velkommen til %{product_name}!

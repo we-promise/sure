@@ -1,0 +1,204 @@
+---
+da:
+  account:
+    entries:
+      destroy:
+        success: "Postering slettet."
+  accounts:
+    not_authorized: "Du har ikke tilladelse til at administrere denne konto"
+    account:
+      complete_setup: Fuldfør opsætning
+      edit: Rediger
+      link_lunchflow: Kobl med Lunch Flow
+      link_provider: Kobl med udbyder
+      unlink_provider: Fjern kobling til udbyder
+      change_simplefin_account: Skift SimpleFIN-konto
+      troubleshoot: Fejlfinding
+      enable: Aktivér konto
+      disable: Deaktivér konto
+      exclude_from_reports: Udelad fra alle rapporter
+      include_in_reports: Medtag i rapporter
+      excluded_from_reports_indicator: Udeladt fra rapporter
+      set_default: Sæt som standard
+      remove_default: Fjern som standard
+      default_label: Standard
+      delete: Slet konto
+      sharing: Deling
+    chart:
+      data_not_available: Data er ikke tilgængelige for den valgte periode
+    create:
+      success: "%{type}-konto oprettet"
+    set_default:
+      depository_only: "Kun kontant- og kreditkortkonti kan sættes som standard."
+    destroy:
+      success: "%{type}-konto planlagt til sletning"
+      cannot_delete_linked: "En koblet konto kan ikke slettes. Fjern koblingen først."
+      failed: "Sletning mislykkedes. Prøv igen senere."
+    empty:
+      empty_message: Tilføj en konto via forbindelse, import eller manuel indtastning.
+      new_account: Ny konto
+      no_accounts: Ingen konti endnu
+    form:
+      balance: "Saldo på dato:"
+      opening_balance_date_label: Åbningssaldodato
+      name_label: Kontonavn
+      name_placeholder: Eksempel på kontonavn
+      additional_details: Yderligere detaljer
+      institution_name_label: Institutionsnavn
+      institution_name_placeholder: f.eks. Danske Bank
+      institution_domain_label: Institutionsdomæne
+      institution_domain_placeholder: f.eks. danskebank.dk
+      notes_label: Noter
+      notes_placeholder: Gem ekstra oplysninger som kontonumre, registreringsnumre, IBAN osv.
+      exclude_from_reports: Udelad fra alle rapporter
+      enable_category_matcher_label: Aktivér kategorimatcher
+      enable_category_matcher_hint: Når den er slået til, anvendes udbyderens foreslåede kategori på importerede transaktioner. Slå fra for at lade nye transaktioner være ukategoriserede.
+    index:
+      accounts: Konti
+      cancel_sync: Annuller synk
+      manual_accounts:
+        other_accounts: Andre konti
+      new_account: Ny konto
+      sync: Synkroniser alle
+    sync_all:
+      syncing: "Synkroniserer konti..."
+    new:
+      import_accounts: Importér konti
+      container:
+        select: Vælg
+        navigate: Naviger
+        close: Luk
+      method_selector:
+        connected_entry: Kobl konto
+        connected_entry_eu: Kobl EU-konto
+        link_with_provider: "Kobl med %{provider}"
+        lunchflow_entry: Kobl Lunch Flow-konto
+        manual_entry: Indtast kontosaldo
+        title: Hvordan vil du tilføje den?
+      title: Hvad vil du tilføje?
+    show:
+      limited_fx_history_warning: "Valutakurshistorik er kun tilgængelig fra %{date} og frem. Transaktioner før denne dato bruger omtrentlige omregninger — det kan ske, når valutakursudbyderen kun tilbyder et begrænset historisk vindue."
+      tabs:
+        activity: Aktivitet
+        holdings: Beholdninger
+        overview: Oversigt
+        statements: Kontoudtog
+      activity:
+        amount: Beløb
+        balance: Saldo
+        confirmed: Bekræftet
+        date: Dato
+        entries: posteringer
+        entry: postering
+        filter: Filter
+        new: Ny
+        new_activity: Ny aktivitet
+        new_balance: Ny saldo
+        new_trade: Ny handel
+        new_transaction: Ny transaktion
+        new_transfer: Ny overførsel
+        no_entries: Ingen posteringer fundet
+        pending: Verserende
+        search:
+          placeholder: Søg posteringer efter navn
+        search_placeholder: Søg posteringer efter navn
+        status: Status
+        title: Aktivitet
+      chart:
+        balance: Saldo
+        owed: Skyldigt beløb
+      header:
+        complete_setup: Fuldfør opsætning
+      menu:
+        confirm_accept: Slet "%{name}"
+        confirm_body_html: "<p>Når du sletter denne konto, slettes dens værdihistorik,
+          hvilket påvirker flere dele af din samlede økonomi. Det har direkte betydning
+          for beregning af nettoværdi og kontograferne.</p><br /> <p>Efter sletning
+          kan kontooplysningerne ikke gendannes, fordi du skal tilføje den som en ny konto.</p>"
+        confirm_title: Slet konto?
+        delete_account: Slet konto
+        edit: Rediger
+        import: Importér transaktioner
+        import_trades: Importér handler
+        import_transactions: Importér transaktioner
+        manage: Administrer konti
+        sharing: Deling
+        statements: Kontoudtog
+        exclude_from_reports: Udelad fra alle rapporter
+        include_in_reports: Medtag i rapporter
+    update:
+      success: "%{type}-konto opdateret"
+    sidebar:
+      missing_data: Manglende historiske data
+      missing_data_description: "%{product} bruger tredjepartsudbydere til at hente historiske valutakurser, værdipapirpriser og mere. Disse data er nødvendige for at beregne nøjagtige historiske kontosaldi."
+      configure_providers: Konfigurer dine udbydere her.
+      tabs:
+        all: Alle
+        assets: Aktiver
+        debts: Gæld
+      new_asset: Nyt aktiv
+      new_debt: Ny gæld
+      new_account: Ny konto
+      new_account_group: "Ny %{account_group}"
+    types:
+      depository: Kontanter
+      investment: Investering
+      crypto: Krypto
+      property: Fast ejendom
+      vehicle: Køretøj
+      other_asset: Andet aktiv
+      credit_card: Kreditkort
+      loan: Lån
+      other_liability: Andet passiv
+    types_plural:
+      depository: Kontanter
+      investment: Investeringer
+      crypto: Krypto
+      property: Fast ejendom
+      vehicle: Køretøjer
+      other_asset: Andre aktiver
+      credit_card: Kreditkort
+      loan: Lån
+      other_liability: Andre passiver
+    tax_treatments:
+      taxable: Skattepligtig
+      tax_deferred: Skatteudsæt
+      tax_exempt: Skattefri
+      tax_advantaged: Skattefordelagtig
+    tax_treatment_descriptions:
+      taxable: Gevinster beskattes ved realisation
+      tax_deferred: Indskud er fradragsberettigede, beskattes ved udbetaling
+      tax_exempt: Indskud efter skat, gevinster beskattes ikke
+      tax_advantaged: Særlige skattefordele med betingelser
+    subtype_regions:
+      us: USA
+      uk: Storbritannien
+      ca: Canada
+      au: Australien
+      eu: Europa
+      in: Indien
+      generic: Generelt
+    confirm_unlink:
+      title: Fjern kontoens kobling til udbyder?
+      description_html: "Du er ved at fjerne koblingen af <strong>%{account_name}</strong> fra <strong>%{provider_name}</strong>. Den bliver derefter en manuel konto."
+      warning_title: Hvad det betyder
+      warning_no_sync: Kontoen synkroniseres ikke længere automatisk med din udbyder
+      warning_manual_updates: Du skal selv tilføje transaktioner og opdatere saldi
+      warning_transactions_kept: Alle eksisterende transaktioner og saldi bevares
+      warning_can_delete: Efter fjernelse af koblingen kan du slette kontoen, hvis det er nødvendigt
+      confirm_button: Bekræft og fjern kobling
+    unlink:
+      success: "Kontoens kobling er fjernet. Den er nu en manuel konto."
+      not_linked: "Kontoen er ikke koblet til en udbyder"
+      error: "Kunne ikke fjerne kobling: %{error}"
+      generic_error: "Der opstod en uventet fejl. Prøv igen."
+    select_provider:
+      title: Vælg en udbyder at koble
+      description: "Vælg hvilken udbyder du vil bruge til at koble %{account_name}"
+      already_linked: "Kontoen er allerede koblet til en udbyder"
+      no_providers: "Ingen udbydere er konfigureret i øjeblikket"
+
+  email_confirmations:
+    new:
+      invalid_token: Ugyldigt eller udløbet bekræftelseslink.
+      success_login: Din e-mail er bekræftet. Log ind med din nye e-mailadresse.

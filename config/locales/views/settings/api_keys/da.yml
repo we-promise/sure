@@ -1,0 +1,77 @@
+---
+da:
+  settings:
+    api_keys_controller:
+      success: "Din API-nøgle er oprettet"
+      revoked_successfully: "API-nøgle er tilbagekaldt"
+      revoke_failed: "Kunne ikke tilbagekalde API-nøgle"
+    api_keys:
+      create:
+        success: "Din API-nøgle er oprettet"
+      destroy:
+        revoked_successfully: "API-nøgle er tilbagekaldt"
+        revoke_failed: "Kunne ikke tilbagekalde API-nøgle"
+      shared:
+        active: "Aktiv"
+        created_ago: "Oprettet for %{time} siden"
+        last_used_ago: "Sidst brugt for %{time} siden"
+        never_used: "Aldrig brugt"
+        scope_read_only: "Kun læsning"
+        scope_read_write: "Læs/skriv"
+      index:
+        title: "API-nøgler"
+        subtitle: "Administrer API-nøgler til programmatisk adgang til dine data."
+        new_key: "Ny API-nøgle"
+        empty_heading: "Ingen API-nøgler endnu"
+        empty_description: "Opret en API-nøgle for at tilgå dine data programmatisk."
+        revoke_key: "Tilbagekald"
+        revoke_confirmation: "Er du sikker på, at du vil tilbagekalde \"%{name}\"? Det deaktiverer med det samme alle applikationer, der bruger denne nøgle."
+      key_reveal:
+        copied: "Kopieret!"
+      show:
+        title: "API-nøgleadministration"
+        newly_created:
+          page_title: "API-nøgle oprettet"
+          heading: "API-nøgle oprettet!"
+          key_ready: "Din nye API-nøgle \"%{name}\" er oprettet og klar til brug."
+          your_api_key: "Din API-nøgle"
+          copy_store_securely: "Kopiér og gem denne nøgle sikkert. Du skal bruge den til at godkende dine API-forespørgsler."
+          copy_api_key: "Kopiér API-nøgle"
+          how_to_use: "Sådan bruger du din API-nøgle"
+          continue: "Fortsæt til API-nøgleindstillinger"
+        current_api_key:
+          title: "Din API-nøgle"
+          permissions: "Tilladelser"
+          copy_api_key: "Kopiér API-nøgle"
+          copy_store_securely: "Kopiér og gem denne nøgle sikkert. Du skal bruge den til at godkende dine API-forespørgsler."
+          usage_instructions_title: "Sådan bruger du din API-nøgle"
+          usage_instructions: "Inkluder din API-nøgle i X-Api-Key-headeren, når du kalder %{product_name}-API'et:"
+          back_to_keys: "Tilbage til API-nøgler"
+          revoke_key: "Tilbagekald nøgle"
+          revoke_confirmation: "Er du sikker på, at du vil tilbagekalde denne API-nøgle? Handlingen kan ikke fortrydes og deaktiverer med det samme alle applikationer, der bruger denne nøgle."
+      new:
+        title: "Opret API-nøgle"
+        create_new_api_key: "Opret ny API-nøgle"
+        subtitle: "Generer en ny API-nøgle til programmatisk adgang til dine Sure-data."
+        description: "Konfigurer din nye API-nøgle med et beskrivende navn og passende tilladelser."
+        name_label: "API-nøglenavn"
+        name_placeholder: "f.eks. Mit budget-app, Portefølje-tracker"
+        name_help_text: "Vælg et beskrivende navn, så du senere kan kende nøglen."
+        name_help: "Vælg et beskrivende navn, der viser nøgles formål."
+        permissions_label: "Tilladelser"
+        permissions_help: "Vælg de tilladelser, denne API-nøgle skal have:"
+        scope_read_only: "Kun læsning"
+        scope_read_only_description: "Se dine konti, transaktioner og saldi"
+        scope_read_write: "Læs/skriv"
+        scope_read_write_description: "Se dine data og opret nye transaktioner"
+        scope_details:
+          read_accounts: "Se kontooplysninger, saldi og kontoniveau-data"
+          read_transactions: "Se transaktionsdata, kategorier og transaktionsdetaljer"
+          read_balances: "Se historiske saldodata og kontoværditendenser"
+          write_transactions: "Opret og opdater transaktionsposter (kommer snart)"
+        security_warning_title: "Sikkerhedsadvarsel"
+        security_warning_body: "Din API-nøgle vises kun én gang efter oprettelse. Sørg for at kopiere og gemme den sikkert. Alle med adgang til denne nøgle kan tilgå dine data efter de tilladelser, du vælger."
+        security_warning: "Din API-nøgle vises kun én gang efter oprettelse. Gem den sikkert og del den aldrig offentligt. Mister du den, skal du oprette en ny."
+        create_key: "Opret API-nøgle"
+        cancel: "Annuller"
+        save_api_key: "Gem API-nøgle"

@@ -1,0 +1,5 @@
+---
+da:
+  coinbase:
+    processor:
+      paid_via: "Betalt via %{method}"

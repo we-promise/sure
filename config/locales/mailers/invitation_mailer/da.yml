@@ -1,0 +1,5 @@
+---
+da:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} har inviteret dig til at deltage i deres husstand på %{product_name}!"

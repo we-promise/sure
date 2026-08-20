@@ -1,0 +1,28 @@
+---
+da:
+  invitations:
+    accept_choice:
+      create_account: Opret ny konto
+      joined_household: Du er tilmeldt husstanden.
+      message: "%{inviter} har inviteret dig til at deltage som %{role}."
+      sign_in_existing: Jeg har allerede en konto
+      title: Deltag i %{family}
+    create:
+      existing_user_added: Brugeren er tilføjet til din husstand.
+      existing_user_has_family_data: Den bruger ejer allerede en husstand med konti. De skal fjerne eller overføre de konti, før de kan deltage i din.
+      failure: Kunne ikke sende invitation
+      success: Invitation sendt
+    destroy:
+      failure: Der opstod et problem med at fjerne invitationen.
+      not_authorized: Du har ikke tilladelse til at administrere invitationer.
+      success: Invitation fjernet.
+    new:
+      email_label: E-mailadresse
+      email_placeholder: Indtast e-mailadresse
+      role_admin: Administrator
+      role_guest: Gæst
+      role_label: Rolle
+      role_member: Medlem
+      submit: Send invitation
+      subtitle: Send en invitation til at deltage i din %{moniker}-konto på %{product_name}
+      title: Inviter nogen

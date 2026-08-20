@@ -1,0 +1,9 @@
+---
+da:
+  messages:
+    create:
+      chat_not_found: Denne chat er ikke længere tilgængelig.
+    chat_form:
+      placeholder: "Spørg om hvad som helst ..."
+      disclaimer: "AI-svar er kun til information. Ikke finansiel rådgivning!"
+      coming_soon: Kommer snart

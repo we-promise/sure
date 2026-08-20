@@ -1,0 +1,26 @@
+---
+da:
+  tags:
+    create:
+      created: Tag oprettet
+      error: 'Fejl ved oprettelse af tag: %{error}'
+    destroy:
+      deleted: Tag slettet
+    destroy_all:
+      all_deleted: Alle tags slettet
+    edit:
+      edit: Rediger tag
+    form:
+      placeholder: Tagnavn
+    index:
+      empty: Ingen tags endnu
+      new: Nyt tag
+      tags: Tags
+      delete_all: Slet alle
+    new:
+      new: Nyt tag
+    tag:
+      delete: Slet
+      edit: Rediger
+    update:
+      updated: Tag opdateret

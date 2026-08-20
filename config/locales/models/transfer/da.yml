@@ -1,0 +1,26 @@
+---
+da:
+  activerecord:
+    errors:
+      models:
+        transfer:
+          attributes:
+            base:
+              inflow_cannot_be_in_multiple_transfers: Indgående transaktion kan ikke
+                indgå i flere overførsler
+              must_be_from_different_accounts: Overførsel skal have forskellige konti
+              must_be_from_same_family: Overførsel skal være fra samme husstand
+              must_be_within_date_range: Overførselstransaktionernes datoer skal ligge inden for
+                4 dage af hinanden
+              must_have_opposite_amounts: Overførselstransaktioner skal have modsatrettede
+                beløb
+              must_have_single_currency: Overførsel skal have én valuta
+              outflow_cannot_be_in_multiple_transfers: Udgående transaktion kan ikke
+                indgå i flere overførsler
+          different_accounts: "Skal være fra forskellige konti"
+          same_family: "Skal være fra samme husstand"
+          opposite_amounts: "Skal have modsatrettede beløb"
+          within_days: "Skal være inden for %{count} dage"
+  transfer:
+    name: Overførsel til %{to_account}
+    payment_name: Betaling til %{to_account}

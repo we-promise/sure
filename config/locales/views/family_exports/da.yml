@@ -1,0 +1,48 @@
+---
+da:
+  family_exports:
+    access_denied: Adgang nægtet
+    create:
+      success: Eksport startet. Du kan downloade den om lidt.
+    delete_confirmation: Er du sikker på, at du vil slette denne eksport? Handlingen kan ikke fortrydes.
+    delete_failed_confirmation: Er du sikker på, at du vil slette denne mislykkede eksport?
+    cancel:
+      cancelled: Eksport markeret som mislykket. Du kan oprette en ny eksport med det samme.
+      not_cancellable: Denne eksport kan ikke markeres som mislykket lige nu — jobbet kører måske stadig. Prøv igen, når den har været inaktiv i en time.
+    destroy:
+      success: Eksport slettet
+    export_not_ready: Eksport er ikke klar til download
+    exporting: Eksporterer...
+    new:
+      dialog_title: Eksportér dine data
+      dialog_subtitle: Download alle dine finansdata
+      whats_included: "Hvad er med:"
+      accounts_and_balances: Alle konti og saldi
+      transaction_history: Transaktionshistorik
+      investment_trades: Investeringshandler
+      categories_tags_rules: Kategorier, tags og regler
+      note_label: Bemærk
+      note_description: Denne eksport indeholder alle dine data, men kun nogle kan importeres tilbage via CSV-import. Vi understøtter import af konti, transaktioner (med kategori og tags) og handler. Øvrige kontodata kan ikke importeres og er kun til dine egne arkiver.
+      cancel: Annuller
+      export_data: Eksportér data
+    index:
+      title: Eksporter
+      new: Ny eksport
+    table:
+      title: Eksporter
+      header:
+        date: Dato
+        filename: Filnavn
+        status: Status
+        actions: Handlinger
+      row:
+        status:
+          in_progress: I gang
+          complete: Fuldført
+          failed: Mislykkedes
+        actions:
+          delete: Slet
+          download: Download
+          mark_failed: Markér som mislykket
+          confirm_mark_failed: Denne eksport har været inaktiv et stykke tid, og baggrundsjobbet blev sandsynligvis afbrudt. Markér den som mislykket? Du kan oprette en ny eksport med det samme.
+      empty: Ingen eksporter endnu.

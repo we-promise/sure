@@ -1,0 +1,78 @@
+---
+da:
+  coinbase_items:
+    create:
+      default_name: Coinbase
+      success: Forbundet til Coinbase! Dine konti synkroniseres.
+    update:
+      success: Coinbase-konfiguration opdateret.
+    destroy:
+      success: Coinbase-forbindelse planlagt til sletning.
+    setup_accounts:
+      title: Importér Coinbase-wallets
+      subtitle: Vælg hvilke wallets der skal følges
+      instructions: Vælg de wallets, du vil importere. Ikke-valgte wallets forbliver tilgængelige, hvis du vil tilføje dem senere.
+      no_accounts: Alle wallets er importeret.
+      accounts_count:
+        one: "%{count} wallet tilgængelig"
+        other: "%{count} wallets tilgængelige"
+      select_all: Vælg alle
+      import_selected: Importér valgte
+      cancel: Annuller
+      creating: Importerer...
+    complete_account_setup:
+      success:
+        one: "Importerede %{count} wallet"
+        other: "Importerede %{count} wallets"
+      none_selected: Ingen wallets valgt
+      no_accounts: Ingen wallets at importere
+    coinbase_item:
+      provider_name: Coinbase
+      syncing: Synkroniserer...
+      reconnect: Legitimationsoplysninger skal opdateres
+      deletion_in_progress: Sletter...
+      sync_status:
+        no_accounts: Ingen konti fundet
+        all_synced:
+          one: "%{count} konto synkroniseret"
+          other: "%{count} konti synkroniseret"
+        partial_sync: "%{linked_count} synkroniseret, %{unlinked_count} skal sættes op"
+      status: "Senest synkroniseret for %{timestamp} siden"
+      status_with_summary: "Senest synkroniseret for %{timestamp} siden - %{summary}"
+      status_never: Aldrig synkroniseret
+      update_credentials: Opdater legitimationsoplysninger
+      delete: Slet
+      no_accounts_title: Ingen konti fundet
+      no_accounts_message: Dine Coinbase-wallets vises her efter synk.
+      setup_needed: Wallets klar til import
+      setup_description: Vælg hvilke Coinbase-wallets du vil følge.
+      setup_action: Importér wallets
+      import_wallets_menu: Importér wallets
+      more_wallets_available:
+        one: "%{count} wallet mere klar til import"
+        other: "%{count} wallets mere klar til import"
+    select_existing_account:
+      title: Kobl Coinbase-konto
+      no_accounts_found: Ingen Coinbase-konti fundet.
+      wait_for_sync: Vent, til Coinbase er færdig med at synkronisere
+      check_provider_health: Tjek, at dine Coinbase-API-legitimationsoplysninger er gyldige
+      balance: Saldo
+      currently_linked_to: "I øjeblikket koblet til: %{account_name}"
+      link: Kobl
+      cancel: Annuller
+    link_existing_account:
+      success: Koblet til Coinbase-konto
+      errors:
+        only_manual: Kun manuelle konti kan kobles til Coinbase
+        invalid_coinbase_account: Ugyldig Coinbase-konto
+  coinbase_item:
+    syncer:
+      checking_credentials: Tjekker legitimationsoplysninger...
+      credentials_invalid: Ugyldige API-legitimationsoplysninger. Tjek din API-nøgle og secret.
+      importing_accounts: Importerer konti fra Coinbase...
+      checking_configuration: Tjekker kontokonfiguration...
+      accounts_need_setup:
+        one: "%{count} konto skal sættes op"
+        other: "%{count} konti skal sættes op"
+      processing_accounts: Behandler kontodata...
+      calculating_balances: Beregner saldi...

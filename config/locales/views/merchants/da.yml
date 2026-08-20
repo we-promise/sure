@@ -1,0 +1,82 @@
+---
+da:
+  family_merchants:
+    create:
+      error: 'Fejl ved oprettelse af forretning: %{error}'
+      success: Ny forretning oprettet
+    destroy:
+      success: Forretning slettet
+      unlinked_success: Forretning fjernet fra dine transaktioner
+    edit:
+      title: Rediger forretning
+    form:
+      name_placeholder: Forretningsnavn
+      website_placeholder: Website (f.eks. starbucks.com)
+      website_hint: Indtast forretningens website for automatisk at vise logoet
+    index:
+      empty: Ingen forretninger endnu
+      new: Ny forretning
+      import: Importér forretninger
+      merge: Flet forretninger
+      title: Forretninger
+      family_title: "%{moniker}-forretninger"
+      family_empty: "Ingen %{moniker}-forretninger endnu"
+      provider_title: Udbyderforretninger
+      provider_empty: "Ingen udbyderforretninger koblet til denne %{moniker} endnu"
+      provider_read_only: Udbyderforretninger synkroniseres fra dine tilknyttede institutioner. De kan ikke redigeres her.
+      provider_info: Disse forretninger blev automatisk fundet af dine bankforbindelser eller AI. Du kan redigere dem for at oprette din egen kopi, eller fjerne dem for at fjerne koblingen fra dine transaktioner.
+      enhance_info:
+        one: "%{count} udbyderforretning mangler websiteoplysninger. Forbedr med AI for at finde websites, vise logoer og flette dubletter."
+        other: "%{count} udbyderforretninger mangler websiteoplysninger. Forbedr med AI for at finde websites, vise logoer og flette dubletter."
+      enhance_button: Forbedr med AI
+      search_family_merchants: Søg husstandens forretninger...
+      search_provider_merchants: Søg udbyderforretninger...
+      no_family_merchants_found: Ingen matchende husstandsforretninger fundet
+      no_provider_merchants_found: Ingen matchende udbyderforretninger fundet
+      per_page: pr. side
+      unlinked_title: For nylig afkoblet
+      unlinked_info: Disse forretninger blev for nylig fjernet fra dine transaktioner. De forsvinder fra listen efter 30 dage, medmindre de tildeles en transaktion igen.
+      table:
+        merchant: Forretning
+        actions: Handlinger
+        source: Kilde
+    family_merchant:
+      edit: Rediger
+      delete: Slet
+    merchant:
+      confirm_accept: Slet forretning
+      confirm_body: Er du sikker på, at du vil slette denne forretning? Hvis du fjerner den,
+        afkobles alle tilknyttede transaktioner, og det kan påvirke dine rapporter.
+      confirm_title: Slet forretning?
+      delete: Slet forretning
+      edit: Rediger forretning
+    merge:
+      title: Flet forretninger
+      description: Vælg en målforretning og de forretninger, der skal flettes ind i den. Alle transaktioner fra de flettede forretninger tildeles målet.
+      target_label: Flet ind i (mål)
+      select_target: Vælg målforretning...
+      sources_label: Forretninger der skal flettes
+      sources_search_placeholder: Søg forretninger...
+      no_merchants_found: Ingen matchende forretninger fundet
+      sources_hint: Valgte forretninger flettes ind i målet. Husstandsforretninger slettes, udbyderforretninger afkobles.
+      submit: Flet valgte
+    new:
+      title: Ny forretning
+    perform_merge:
+      success:
+        one: Flettede %{count} forretning
+        other: Flettede %{count} forretninger
+      no_merchants_selected: Ingen forretninger valgt til fletning
+      target_not_found: Målforretning ikke fundet
+      invalid_merchants: Ugyldige forretninger valgt
+    provider_merchant:
+      edit: Rediger
+      remove: Fjern
+      remove_confirm_title: Fjern forretning?
+      remove_confirm_body: Er du sikker på, at du vil fjerne %{name}? Det afkobler alle tilknyttede transaktioner fra denne forretning, men sletter ikke forretningen selv.
+    enhance:
+      success: Forbedring af udbyderforretninger er startet. Forretninger forbedres, og dubletter flettes om lidt.
+      already_running: Forbedring er allerede i gang. Vent, til den er færdig.
+    update:
+      success: Forretning opdateret
+      converted_success: Forretning konverteret og opdateret
