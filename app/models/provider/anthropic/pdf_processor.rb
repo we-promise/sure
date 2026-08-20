@@ -53,7 +53,7 @@ class Provider::Anthropic::PdfProcessor
     span&.end(output: result.to_h, usage: usage_hash(response.usage))
     result
   rescue => e
-    span&.end(output: { error: e.message }, level: "ERROR")
+    span&.end(output: { error: e.message, error_detail: safe_error_detail(e) }, level: "ERROR")
     record_usage_error(model, operation: "process_pdf", error: e, metadata: { pdf_size: pdf_content&.bytesize })
     raise
   end
