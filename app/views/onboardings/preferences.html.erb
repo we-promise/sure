@@ -9,13 +9,14 @@
 <% end %>
 
 <% currency_override = Family.normalize_currency_code(params[:currency]) %>
-<% selected_currency = currency_override || (@user.set_onboarding_preferences_at? ? @user.family.primary_currency_code : @user.family.default_currency_for_country) %>
+<% saved_currency = @user.family.primary_currency_code if @user.set_onboarding_preferences_at? %>
+<% selected_currency = currency_override || saved_currency || @user.family.default_currency_for_country %>
 
 <div class="grow max-w-lg w-full mx-auto bg-surface flex flex-col justify-center md:py-0 py-6 px-4 md:px-0"
   data-controller="onboarding"
   data-onboarding-country-value="<%= @user.family.country %>"
   data-onboarding-country-currencies-value="<%= Family.default_currency_by_country.to_json %>"
-  data-onboarding-currency-override-value="<%= currency_override.present? %>">
+  data-onboarding-currency-override-value="<%= currency_override.present? || saved_currency.present? %>">
   <div>
     <div class="space-y-1 mb-6">
       <h1 class="text-2xl font-medium"><%= t(".title") %></h1>

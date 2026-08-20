@@ -69,6 +69,17 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_equal "CAD", @family.currency
   end
 
+  test "saved currency stays authoritative after onboarding controller connects" do
+    @family.update!(country: "CA", currency: "USD")
+    @user.update!(set_onboarding_preferences_at: Time.current)
+    set_browser_language("en-CA")
+
+    visit preferences_onboarding_path
+
+    assert_selector "[data-onboarding-currency-override-value='true']"
+    assert_equal "USD", find("#user_family_attributes_currency").value
+  end
+
   test "preferences page renders chart without errors" do
     visit preferences_onboarding_path
 
