@@ -549,16 +549,20 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
   # Income was addable only from inside the Income plan tab, so a family that
   # had declared none had no way to discover the planning half of Bills
-  # existed. Both halves are now addable from every view.
+  # existed. Both halves are addable from every view, but only the half the
+  # view is about earns the header button; the other waits in the menu.
   test "every bills view offers both add actions, and income opens an income dialog" do
     %w[overview calendar paycheck all].each do |view|
       get view == "overview" ? bills_url : bills_url(view: view)
 
+      header_action = view == "paycheck" ? new_recurring_transaction_path(income: true) : new_recurring_transaction_path
+      menu_action = view == "paycheck" ? new_recurring_transaction_path : new_recurring_transaction_path(income: true)
+
       assert_response :success
       assert_select "header" do
-        assert_select "a[href=?]", new_recurring_transaction_path, text: /#{I18n.t("bills.index.add_bill")}/
-        assert_select "a[href=?]", new_recurring_transaction_path(income: true),
-          text: /#{I18n.t("bills.index.add_income")}/
+        assert_select "a[href=?]:not([role=menuitem])", header_action
+        assert_select "a[href=?][role=menuitem]", menu_action
+        assert_select "a[href=?]:not([role=menuitem])", menu_action, count: 0
       end
     end
 
@@ -1296,7 +1300,11 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # Apostrophe-free fragment: response bodies HTML-escape apostrophes.
     assert_match "due before my next paycheck", response.body
     assert_match I18n.t("bills.index.review_with_ai"), response.body
-    assert_select "form[action=?]", ai_review_bills_path
+    # A menu item, not a third header button: it still has to POST into the
+    # sidebar chat frame and open the sidebar, or it seeds a chat nobody sees.
+    assert_select "header div[role=menu] form[action=?]", ai_review_bills_path do
+      assert_select "button[data-turbo-frame=?][data-action=?]", "sidebar_chat", "app-layout#openRightSidebar"
+    end
 
     @user.update!(ai_enabled: false)
     get bills_url
