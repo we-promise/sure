@@ -1,8 +1,8 @@
 class RecurringTransaction
-  # Slices time by the family's declared income schedule and spreads every open
-  # obligation across the paychecks that fall before it is due, so each period
-  # reports what is due inside it, what is reserved out of it for a later bill,
-  # and what is safe once both are taken out.
+  # Slices time by the family's declared income schedule and funds every open
+  # obligation from the paycheck of the window it falls due in, so each period
+  # reports what is due inside it, what it holds for a later bill that outgrows
+  # its own paycheck, and what is safe once both are taken out.
   #
   # Only manually declared income defines paydays; detected inflows never do.
   class PaycheckPlanner
@@ -135,43 +135,70 @@ class RecurringTransaction
         end.tap { |periods| periods.last[:final] = true if periods.any? }
       end
 
-      # Each obligation spreads its remaining amount evenly across every period
-      # up to the one it falls due in; the last share absorbs rounding.
+      # Each obligation is funded by the paycheck of the window it falls due
+      # in. Only what that paycheck cannot cover cascades backward into earlier
+      # windows as reserves, nearest paycheck first, so a reserve always means
+      # a bill outgrew one paycheck and never bookkeeping noise. Overflow no
+      # earlier paycheck can absorb piles onto the earliest one, surfacing the
+      # shortfall today instead of the week the bill lands.
       #
       # A reserve has to come out of a paycheck, so only periods that receive
       # income can carry one. The leading window is the gap before the next
-      # payday and has no income by definition: charging it a share of a bill
-      # due after that payday would report it as short by money it was never
-      # going to see. It carries only what genuinely falls due inside it.
+      # payday and has no income by definition: it carries only what genuinely
+      # falls due inside it, paid from cash already in hand.
       def apportion_bills(periods)
-        horizon_end = periods.last[:ends_on]
+        available = periods.map { |period| period[:income] }
 
-        open_payable_occurrences(horizon_end).each do |occurrence|
-          # A past-due open occurrence still needs paying; it lands whole in
-          # the leading window, since every share of it is already owed.
-          effective_due = [ occurrence.due_on, periods.first[:starts_on] ].max
+        # Chronological, so each window's own bills claim its paycheck before
+        # any later window's overflow reaches back for the spare.
+        occurrences = open_payable_occurrences(periods.last[:ends_on])
+                        .sort_by { |occurrence| [ occurrence.due_on, occurrence.id ] }
 
-          eligible = periods.select do |period|
-            next false unless period[:starts_on] <= effective_due
-
-            period[:income].positive? || effective_due.between?(period[:starts_on], period[:ends_on])
-          end
-          next if eligible.empty?
-
+        occurrences.each do |occurrence|
           remaining = to_family_currency(occurrence.remaining_amount_money)
           next unless remaining.positive?
 
-          base_share = (remaining / eligible.size).round(2)
+          # A past-due open occurrence still needs paying; it lands whole in
+          # the leading window, since every share of it is already owed.
+          effective_due = [ occurrence.due_on, periods.first[:starts_on] ].max
+          home = periods.index { |period| effective_due.between?(period[:starts_on], period[:ends_on]) }
+          next if home.nil?
 
-          eligible.each_with_index do |period, index|
-            share = index == eligible.size - 1 ? remaining - base_share * (eligible.size - 1) : base_share
-            period[:items] << Item.new(
+          funded = [ remaining, [ available[home], 0 ].max ].min
+          uncovered = remaining - funded
+
+          # Earlier paychecks, nearest first. The earliest takes whatever the
+          # others could not and goes short, so the gap shows now rather than
+          # the week the bill arrives.
+          sources = (0...home).select { |index| periods[index][:income].positive? }.reverse
+
+          sources.each do |index|
+            break unless uncovered.positive?
+
+            take = index == sources.last ? uncovered : [ uncovered, [ available[index], 0 ].max ].min
+            next unless take.positive?
+
+            available[index] -= take
+            uncovered -= take
+            periods[index][:items] << Item.new(
               occurrence: occurrence,
-              share: share,
+              share: take,
               remaining_total: remaining,
-              due_in_period: effective_due.between?(period[:starts_on], period[:ends_on])
+              due_in_period: false
             )
           end
+
+          # With no earlier paycheck to lean on, the bill's own window carries
+          # all of it, shortfall included.
+          funded += uncovered if uncovered.positive?
+
+          available[home] -= funded
+          periods[home][:items] << Item.new(
+            occurrence: occurrence,
+            share: funded,
+            remaining_total: remaining,
+            due_in_period: true
+          )
         end
       end
 

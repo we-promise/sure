@@ -40,15 +40,13 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_equal 1840, plan[1].income
 
     rent_shares = plan.flat_map(&:items).select { |item| item.occurrence.recurring_transaction_id == rent.id }
-    # Only periods that receive income can carry a reserve, plus whichever one
-    # the bill actually falls due in.
-    eligible = plan.count do |period|
-      period.starts_on <= rent_due &&
-        (period.income.positive? || rent_due.between?(period.starts_on, period.ends_on))
-    end
-    assert_equal eligible, rent_shares.size, "rent spreads across every paycheck before its due date"
+    # Rent's own paycheck funds what it can; only the overflow it cannot cover
+    # is reserved, out of the paycheck nearest before it.
+    assert_equal 2, rent_shares.size, "one due share plus one reserve for the overflow"
     assert_equal 2150, rent_shares.sum(&:share), "shares reassemble the full obligation exactly"
     assert_equal 1, rent_shares.count(&:due_in_period)
+    assert_equal 1840, rent_shares.find(&:due_in_period).share, "the due share is what its paycheck can fund"
+    assert_equal 310, plan[2].reserved_total, "the paycheck just before rent holds the overflow"
 
     plan.each do |period|
       assert_equal period.income - period.obligation_total, period.remaining
@@ -76,7 +74,7 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     internet_shares = plan.flat_map(&:items).select { |item| item.occurrence.recurring_transaction.name == "Internet" }
     assert_equal 90, internet_shares.sum(&:share), "the shares reassemble the bill"
     assert_equal 1, internet_shares.count(&:due_in_period),
-      "a bill counts as due in exactly one window, and is reserved in the ones before it"
+      "a bill counts as due in exactly one window, and reserves earlier only what that window cannot fund"
     assert plan.any? { |period| period.due_total.positive? }
     assert plan.any? { |period| period.reserved_total.positive? }
 
@@ -143,15 +141,76 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
   test "reserves land on the paychecks before the bill, and still reassemble it" do
     payday = Date.current + 3
     create_series(name: "Paycheck", amount: -1840, due: payday, preset: "weekly", income: true)
-    rent = create_series(name: "Rent", amount: 1450, due: payday + 10)
+    rent = create_series(name: "Rent", amount: 2150, due: payday + 10)
 
     plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
     shares = plan.flat_map(&:items).select { |item| item.occurrence.recurring_transaction_id == rent.id }
 
-    assert_equal 1450, shares.sum(&:share), "the shares still reassemble the bill"
+    assert_equal 2150, shares.sum(&:share), "the shares still reassemble the bill"
     assert plan.first.items.none? { |item| item.occurrence.recurring_transaction_id == rent.id },
       "and none of it is charged to the window before the first payday"
-    assert plan.drop(1).any? { |period| period.reserved_total.positive? }
+    assert_equal 310, plan[1].reserved_total, "the first paycheck holds what rent's own cannot fund"
+  end
+
+  # The user's own case: paid weekly with weekly bills, every bill inside its
+  # own paycheck. The old even spread parked half of next week's bill in this
+  # week's check anyway, so no week ever read as clean.
+  test "bills covered by their own paycheck reserve nothing from earlier ones" do
+    create_series(name: "Paycheck", amount: -1600, due: Date.current + 3, preset: "weekly", income: true)
+    create_series(name: "Groceries", amount: 200, due: Date.current + 5, preset: "weekly")
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+    paychecks = plan.reject(&:bridge?)
+
+    assert_equal 3, paychecks.size
+    paychecks.each do |period|
+      assert_equal 200, period.due_total, "each week's bill lands in its own week"
+      assert_equal 0, period.reserved_total,
+        "a bill its own paycheck covers reserves nothing; the even spread would have parked next week's bill here"
+      assert_equal 1400, period.remaining, "safe is simply income minus what is due"
+    end
+  end
+
+  # A bill bigger than one paycheck is the one genuine reason to reserve, and
+  # the reserve fills backward from the paycheck nearest the bill.
+  test "a bill that outgrows its paycheck reserves the overflow from the nearest earlier one" do
+    payday = Date.current + 3
+    create_series(name: "Paycheck", amount: -1600, due: payday, preset: "weekly", income: true)
+    rent = create_series(name: "Rent", amount: 2150, due: Date.current + 17)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    rent_period = plan[3]
+    assert_equal 1600, rent_period.due_total, "rent takes its whole paycheck"
+    assert_equal 0, rent_period.remaining
+    assert_not rent_period.short?, "the reserve upstream is what keeps it whole"
+
+    assert_equal 550, plan[2].reserved_total, "the nearest earlier paycheck holds the overflow"
+    assert_equal 0, plan[1].reserved_total, "the farther one is untouched: nearest fills first"
+
+    shares = plan.flat_map(&:items).select { |item| item.occurrence.recurring_transaction_id == rent.id }
+    assert_equal 2150, shares.sum(&:share), "the shares reassemble the bill"
+    reserve = shares.find { |item| !item.due_in_period }
+    assert_equal 2150, reserve.remaining_total, "the reserve names the whole bill it is a slice of"
+  end
+
+  # When even every earlier paycheck cannot absorb the overflow, the earliest
+  # one takes the rest and goes short, so the plan is short today rather than
+  # the week the bill arrives.
+  test "overflow no paycheck can absorb lands on the earliest paycheck as its shortfall" do
+    create_series(name: "Paycheck", amount: -400, due: Date.current + 3, preset: "weekly", income: true)
+    create_series(name: "Rent", amount: 2150, due: Date.current + 17)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal 400, plan[3].due_total, "rent's own paycheck goes in whole"
+    assert_equal 0, plan[3].remaining
+    assert_equal 400, plan[2].reserved_total, "the nearer paycheck fills to its income and no further"
+    assert_equal 0, plan[2].remaining
+    assert_equal 1350, plan[1].reserved_total, "the earliest takes everything the others could not"
+    assert plan[1].short?
+    assert_equal 950, plan[1].shortfall, "short by exactly what three paychecks cannot cover"
+    assert_equal 0, plan.first.reserved_total, "and the bridge window still never reserves"
   end
 
   # A paycheck arriving today makes the leading window a real pay period, so

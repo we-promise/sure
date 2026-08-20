@@ -673,7 +673,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     payday = Date.current + 3
     declare_income(name: "Frito Lay", amount: -1200, payday: payday)
     declare_bill(name: "Streaming", amount: 20, due: Date.current + 5)
-    declare_bill(name: "Insurance", amount: 300, due: Date.current + 12)
+    # Bigger than one paycheck and due in the next one, so its overflow is
+    # genuinely reserved out of the first.
+    declare_bill(name: "Insurance", amount: 1500, due: payday + 31)
 
     get bills_url(view: "paycheck")
 
@@ -689,9 +691,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match money_string(paycheck.due_total), response.body
     assert_match money_string(paycheck.reserved_total), response.body
 
-    # Asserting the combined figure is simply ABSENT does not work: the
-    # planner's even splits make totals collide across periods by arithmetic,
-    # so the test would pass or fail on a coincidence. What is actually being
+    # Asserting the combined figure is simply ABSENT does not work: period
+    # totals can collide across periods by arithmetic, so the test would pass
+    # or fail on a coincidence. What is actually being
     # pinned is that no label survives for a combined bills figure to render
     # under -- which fails the moment one is reintroduced.
     assert_nil I18n.t("bills.paycheck.bills_that_period", default: nil)

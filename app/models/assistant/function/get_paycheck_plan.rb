@@ -17,8 +17,10 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
         - Only income the user declared defines paydays. Detected bank inflows never do.
         - A "bridge" period is the window between today and the next payday: nothing
           arrives in it, so what it needs must come from cash already in hand.
-        - "reserved" is this period's share of a later bill, set aside in advance --
-          rent due on the 29th is spread across the paychecks before it.
+        - "reserved" is the part of a later bill that its own paycheck cannot cover,
+          set aside out of an earlier one -- rent that outgrows one paycheck reserves
+          the difference from the paychecks just before it. A bill its own paycheck
+          covers reserves nothing.
         - A "short" period's obligations exceed its income by "shortfall".
 
         This answers "can I afford X before my next paycheck" and "which paycheck does
