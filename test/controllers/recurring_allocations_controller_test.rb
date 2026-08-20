@@ -3,6 +3,7 @@ require "test_helper"
 class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family = @user.family
     # credit_card is shared read-only with family_member in the fixtures, so
     # this series is visible to them but must never be mutable by them.
@@ -25,7 +26,9 @@ class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a read-only account share cannot record a payment" do
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
 
     post recurring_occurrence_allocations_url(@occurrence), params: { amount: "5.00" }
 
@@ -42,7 +45,9 @@ class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
       entry: entry, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
     )
 
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
 
     post confirm_recurring_allocation_url(suggestion)
     assert_response :not_found

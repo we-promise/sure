@@ -5,6 +5,7 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
 
   setup do
     sign_in @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family = @user.family
     @entry = accounts(:depository).entries.create!(
       date: Date.current, amount: 40, currency: "USD", name: "GYM MEMBERSHIP",
@@ -65,7 +66,9 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
       date: Date.current, amount: 30, currency: "USD", name: "PRIVATE FEE",
       entryable: Transaction.new
     )
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
 
     post smart_fill_recurring_transactions_url(entry_id: hidden.id),
          headers: { "Turbo-Frame" => "modal" }

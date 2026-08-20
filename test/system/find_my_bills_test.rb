@@ -3,6 +3,7 @@ require "application_system_test_case"
 class FindMyBillsTest < ApplicationSystemTestCase
   setup do
     sign_in @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family = @user.family
     @family.recurring_transactions.destroy_all
     @account = accounts(:depository)

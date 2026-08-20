@@ -3,6 +3,7 @@ require "application_system_test_case"
 class RecurringTransactionFrequencyTest < ApplicationSystemTestCase
   setup do
     sign_in @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @recurring = recurring_transactions(:netflix_subscription)
   end
 

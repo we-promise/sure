@@ -14,6 +14,7 @@ class BillsMobileTest < ApplicationSystemTestCase
 
   setup do
     sign_in @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family = @user.family
     page.driver.browser.manage.window.resize_to(*PHONE)
   end

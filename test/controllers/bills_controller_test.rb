@@ -3,9 +3,19 @@ require "test_helper"
 class BillsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family = @user.family
     @family.recurring_transactions.destroy_all
     ensure_tailwind_build
+  end
+
+  test "redirects users without preview access" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+
+    get bills_url
+
+    assert_redirected_to root_path
+    assert_match(/preview/i, flash[:alert])
   end
 
   # Bills was the only top-level destination with no heading, so screen readers
@@ -1331,7 +1341,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       currency: "USD", source: "detected"
     )
 
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
 
     get bills_url
     assert_response :success
@@ -1347,7 +1359,9 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     create_suggested(name: "Hidden brokerage sub", account: accounts(:investment))
     create_suggested(name: "Visible sub", account: accounts(:depository))
 
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
     get bills_url
 
     assert_response :success

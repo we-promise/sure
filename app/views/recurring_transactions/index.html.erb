@@ -60,17 +60,21 @@
         <%= render "recurring_transactions/suggested_series", suggested: @suggested %>
       <% end %>
 
-      <div class="bg-container rounded-xl shadow-border-xs p-4 flex items-center justify-between gap-4">
-        <div>
-          <p class="text-sm font-medium text-primary"><%= t("recurring_transactions.manage.title") %></p>
-          <p class="text-xs text-secondary"><%= t("recurring_transactions.manage.description") %></p>
+      <%# The Bills workspace is preview-gated, so the card that leads into it
+          only renders for opted-in users. %>
+      <% if preview_features_enabled? %>
+        <div class="bg-container rounded-xl shadow-border-xs p-4 flex items-center justify-between gap-4">
+          <div>
+            <p class="text-sm font-medium text-primary"><%= t("recurring_transactions.manage.title") %></p>
+            <p class="text-xs text-secondary"><%= t("recurring_transactions.manage.description") %></p>
+          </div>
+          <%= render DS::Link.new(
+                text: t("recurring_transactions.manage.cta"),
+                icon: "receipt",
+                variant: "outline",
+                href: bills_path(view: "all")
+              ) %>
         </div>
-        <%= render DS::Link.new(
-              text: t("recurring_transactions.manage.cta"),
-              icon: "receipt",
-              variant: "outline",
-              href: bills_path(view: "all")
-            ) %>
-      </div>
+      <% end %>
   <% end %>
 </div>

@@ -3,6 +3,7 @@ require "test_helper"
 class Bills::AiReviewsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
   end
 
   test "seeds a chat with the server-owned review prompt" do

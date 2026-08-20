@@ -3,6 +3,7 @@ require "test_helper"
 class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family = @user.family
     @series = recurring_transactions(:netflix_subscription)
     @occurrence = @series.recurring_occurrences.create!(
@@ -245,7 +246,9 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       date: Date.current, amount: 15.99, currency: "USD", name: "PRIVATE BROKERAGE FEE",
       entryable: Transaction.new
     )
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
 
     post recurring_occurrence_allocations_url(@occurrence, entry_id: hidden.id), params: { amount: "15.99" }
 
@@ -319,7 +322,9 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       name: "Shared checking charge", entryable: Transaction.new
     )
 
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
     get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
 
     assert_response :success
@@ -334,7 +339,9 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
   test "a read-only account share cannot mutate an occurrence" do
     occurrence = credit_card_occurrence
 
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
 
     post mark_paid_recurring_occurrence_url(occurrence)
     assert_response :not_found
