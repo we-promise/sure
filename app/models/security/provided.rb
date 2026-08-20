@@ -234,8 +234,7 @@ module Security::Provided
   # security per day.
   def log_failed_price_fetch(error)
     cache_key = "security_price_fetch_log:#{id}:#{Date.current}"
-    return if Rails.cache.read(cache_key)
-    Rails.cache.write(cache_key, true, expires_in: 24.hours)
+    return unless Rails.cache.write(cache_key, true, expires_in: 24.hours, unless_exist: true)
 
     DebugLogEntry.capture(
       category: "security_price_fetch",

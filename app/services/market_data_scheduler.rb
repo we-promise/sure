@@ -21,12 +21,16 @@ class MarketDataScheduler
 
     hour, minute = time_str.split(":").map(&:to_i)
     timezone = ActiveSupport::TimeZone[timezone_str] || ActiveSupport::TimeZone["UTC"]
-    local_time = timezone.now.change(hour: hour, min: minute, sec: 0)
-    utc_time = local_time.utc
+    iana_timezone = timezone.tzinfo.name
 
     # Markets are closed on weekends, matching the previous static
-    # config/schedule.yml entry ("0 22 * * 1-5").
-    cron = "#{utc_time.min} #{utc_time.hour} * * 1-5"
+    # config/schedule.yml entry ("0 22 * * 1-5"). The IANA timezone is
+    # embedded directly in the cron string (sidekiq-cron/fugit syntax)
+    # instead of converting to a fixed UTC offset, so the job keeps firing
+    # at the configured local time/weekday across daylight-saving
+    # transitions rather than drifting by an hour or landing on the wrong
+    # local day near the UTC date boundary.
+    cron = "#{minute} #{hour} * * 1-5 #{iana_timezone}"
 
     job = Sidekiq::Cron::Job.create(
       name: JOB_NAME,
@@ -43,7 +47,7 @@ class MarketDataScheduler
       raise StandardError, "Failed to create market data sync schedule: #{error_msg}"
     end
 
-    Rails.logger.info("[MarketDataScheduler] Created cron job with schedule: #{cron} (#{time_str} #{timezone_str})")
+    Rails.logger.info("[MarketDataScheduler] Created cron job with schedule: #{cron}")
     job
   end
 

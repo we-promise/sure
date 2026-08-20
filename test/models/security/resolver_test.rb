@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class Security::ResolverTest < ActiveSupport::TestCase
   test "resolves DB security" do
@@ -290,6 +291,66 @@ class Security::ResolverTest < ActiveSupport::TestCase
     resolved.reload
     assert resolved.offline?, "Automated syncs must not silently bring a failed security back online"
     assert_equal "health_check_failed", resolved.offline_reason
+  end
+
+  test "offline_security does not overwrite an existing, more specific offline_reason with resolution_pending" do
+    db_security = Security.create!(
+      ticker: "XMAW3",
+      exchange_operating_mic: "XNAS",
+      country_code: "US",
+      offline: true,
+      offline_reason: "health_check_failed"
+    )
+
+    bad_provider = mock("bad_provider")
+    bad_provider.stubs(:class).returns(Provider::YahooFinance)
+    bad_provider.expects(:search_securities).with("XMAW3", exchange_operating_mic: "XNAS", country_code: "GB").raises(StandardError, "rate limited")
+
+    Security.stubs(:providers).returns([ bad_provider ])
+    Security.stubs(:enabled_securities_providers).returns([ "yahoo_finance" ])
+
+    # A different country_code this time so the exact DB lookup (which
+    # filters by country_code when present) misses the existing "US" record
+    # and falls through to a (failing) provider search.
+    resolved = Security::Resolver.new("XMAW3", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+
+    assert_equal db_security, resolved
+    resolved.reload
+    assert resolved.offline?
+    assert_equal "health_check_failed", resolved.offline_reason
+  end
+
+  test "bypasses the DB fast path and retries the provider for a resolution_pending security" do
+    db_security = Security.create!(
+      ticker: "XMAW4",
+      exchange_operating_mic: "XNAS",
+      country_code: "US",
+      offline: true,
+      offline_reason: "resolution_pending",
+      failed_fetch_count: 2
+    )
+
+    good_provider = mock("good_provider")
+    good_provider.stubs(:class).returns(Provider::YahooFinance)
+    good_provider.expects(:search_securities).with("XMAW4", exchange_operating_mic: "XNAS", country_code: "US").returns(
+      Provider::Response.new(
+        success?: true,
+        data: [ OpenStruct.new(symbol: "XMAW4", name: "Test Co", exchange_operating_mic: "XNAS", country_code: "US", logo_url: nil) ],
+        error: nil
+      )
+    )
+
+    Security.stubs(:providers).returns([ good_provider ])
+    Security.stubs(:enabled_securities_providers).returns([ "yahoo_finance" ])
+    Security.stubs(:provider_for).with("yahoo_finance").returns(good_provider)
+
+    resolved = Security::Resolver.new("XMAW4", exchange_operating_mic: "XNAS", country_code: "US").resolve
+
+    assert_equal db_security, resolved
+    resolved.reload
+    refute resolved.offline?, "A resolution_pending security must come back online once the provider search succeeds again"
+    assert_nil resolved.offline_reason
+    assert_equal 0, resolved.failed_fetch_count
   end
 
   test "rejects disabled price_provider" do

@@ -692,6 +692,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     @provider.stubs(:fetch_authenticated_chart).raises(Faraday::ConnectionFailed, "connection failed")
 
     Rails.logger.expects(:warn).with(regexp_matches(/fetch_chart_data failed for EURUSD=X/))
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:provider_key] == "yahoo_finance" &&
+        attributes[:metadata][:symbol] == "EURUSD=X" &&
+        attributes[:metadata][:exception_class] == "Faraday::ConnectionFailed"
+    end
 
     result = @provider.send(:fetch_chart_data, "EURUSD=X", Date.current - 5.days, Date.current) { |ts, close| close }
 

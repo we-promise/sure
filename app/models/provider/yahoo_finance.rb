@@ -801,6 +801,14 @@ class Provider::YahooFinance < Provider
         results.sort_by(&:date)
       rescue Faraday::Error, JSON::ParserError => e
         Rails.logger.warn("#{self.class.name}: fetch_chart_data failed for #{symbol}: #{e.class}: #{e.message}")
+        DebugLogEntry.capture(
+          category: "provider_chart_fetch",
+          level: "warn",
+          message: "Yahoo Finance fetch_chart_data failed",
+          source: self.class.name,
+          provider_key: "yahoo_finance",
+          metadata: { symbol: symbol, exception_class: e.class.name, exception_message: e.message }
+        )
         nil
       end
     end

@@ -55,9 +55,9 @@ class Security::Resolver
         offline: true # This tells us that we shouldn't try to fetch prices later
       )
       # Don't clobber a more specific existing reason (e.g. "provider_disabled",
-      # "health_check_failed") with a blank "confirmed no match" result — only
-      # write when we have something to say, or the record has no reason yet.
-      security.offline_reason = reason if reason.present? || security.offline_reason.blank?
+      # "health_check_failed") with "resolution_pending" — only write a new
+      # reason when the record doesn't already have a more specific one.
+      security.offline_reason = reason if reason.present? && security.offline_reason.blank?
 
       security.save!
 
@@ -67,11 +67,13 @@ class Security::Resolver
           level: "warn",
           message: "Could not resolve security: provider search failed technically (not a confirmed no-match)",
           source: self.class.name,
+          provider_key: provider_search_technical_failure_keys.first,
           metadata: {
             security_id: security.id,
             ticker: symbol,
             exchange_operating_mic: exchange_operating_mic,
-            country_code: country_code
+            country_code: country_code,
+            failed_providers: provider_search_technical_failure_keys
           }
         )
       end
@@ -89,6 +91,13 @@ class Security::Resolver
       )
 
       return nil unless security
+
+      # A "resolution_pending" record means the last provider search failed
+      # technically (rate limit/timeout), not that the security is a
+      # confirmed no-match. Skip the DB fast path so this resolution attempt
+      # actually retries the provider instead of returning the same stale
+      # offline record forever.
+      return nil if security.offline? && security.offline_reason == "resolution_pending"
 
       # When the caller provides an explicit provider (e.g. user selected from
       # search results), honor that choice. Automated syncs (Plaid, SimpleFIN)
@@ -192,16 +201,18 @@ class Security::Resolver
     # If a security was marked offline, bring it back online whenever we have
     # a good reason to trust it can now be priced: either its provider was
     # temporarily disabled and is available again ("provider_disabled"), or
-    # the caller explicitly passed a price_provider — meaning the user picked
-    # this exact security+provider combination from search results, which we
-    # trust the same way HoldingsController#remap_security already does
-    # unconditionally. Automated syncs (Plaid, SimpleFIN, imports) pass
-    # price_provider: nil and won't trigger this second path, so a security
-    # that went offline for other reasons (e.g. "health_check_failed") stays
-    # offline until a human explicitly re-confirms it.
+    # a provider search just found it again after a prior technical failure
+    # ("resolution_pending"), or the caller explicitly passed a price_provider
+    # — meaning the user picked this exact security+provider combination from
+    # search results, which we trust the same way
+    # HoldingsController#remap_security already does unconditionally.
+    # Automated syncs (Plaid, SimpleFIN, imports) pass price_provider: nil and
+    # won't trigger the explicit-selection path, so a security that went
+    # offline for other reasons (e.g. "health_check_failed") stays offline
+    # until a human explicitly re-confirms it.
     def reactivate_if_provider_available!(security)
       return unless security.offline?
-      return unless price_provider.present? || security.offline_reason == "provider_disabled"
+      return unless price_provider.present? || %w[provider_disabled resolution_pending].include?(security.offline_reason)
       return unless security.price_data_provider.present?
 
       security.update!(offline: false, offline_reason: nil, failed_fetch_count: 0, failed_fetch_at: nil)
@@ -224,7 +235,7 @@ class Security::Resolver
 
       @provider_search_result ||= Security.search_provider(
         symbol,
-        technical_failure: ->(_provider) { @provider_search_technical_failure = true },
+        technical_failure: ->(provider) { (@provider_search_technical_failure_keys ||= []) << provider.class.name.demodulize.underscore },
         **params
       )
     end
@@ -234,7 +245,11 @@ class Security::Resolver
     # provider_search_result has run (close_match_from_provider always calls
     # it before resolve reaches the offline_security fallback).
     def provider_search_technical_failure?
-      @provider_search_technical_failure || false
+      provider_search_technical_failure_keys.any?
+    end
+
+    def provider_search_technical_failure_keys
+      @provider_search_technical_failure_keys || []
     end
 
     # Non-exhaustive list of common country codes for help in choosing "close" matches

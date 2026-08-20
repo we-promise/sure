@@ -77,6 +77,7 @@
                         url: settings_hosting_path,
                         method: :patch,
                         data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.label :market_data_sync_time, t(".market_data_sync_time_label"), class: "sr-only" %>
       <%= form.time_field :market_data_sync_time,
                           value: Setting.market_data_sync_time,
                           disabled: !Setting.market_data_sync_enabled,

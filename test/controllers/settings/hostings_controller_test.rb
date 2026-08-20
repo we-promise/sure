@@ -27,7 +27,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token external_assistant_token rentcast_api_key realie_api_key].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token external_assistant_token rentcast_api_key realie_api_key
+       market_data_sync_enabled market_data_sync_time market_data_sync_timezone].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
