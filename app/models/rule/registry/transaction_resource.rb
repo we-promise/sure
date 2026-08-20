@@ -4,7 +4,7 @@ class Rule::Registry::TransactionResource < Rule::Registry
   end
 
   def condition_filters
-    [
+    @condition_filters ||= [
       Rule::ConditionFilter::TransactionName.new(rule),
       Rule::ConditionFilter::TransactionAmount.new(rule),
       Rule::ConditionFilter::TransactionType.new(rule),
