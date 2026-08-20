@@ -43,7 +43,11 @@
         <div class="space-y-2">
           <h2 id="pdf-import-select-account" class="font-medium text-primary"><%= t("imports.pdf_import.select_account") %></h2>
           <%= styled_form_with model: import, scope: :import, url: import_path(import), method: :patch, class: "space-y-2" do |f| %>
-            <% accounts = Current.user.accessible_accounts.manual.alphabetically.pluck(:name, :id) %>
+            <%# Provider-backed accounts are offered too: rows are matched against
+                existing transactions before they are ever shown, so importing a
+                statement for a synced account can no longer duplicate what sync
+                already brought in. %>
+            <% accounts = Current.user.accessible_accounts.alphabetically.pluck(:name, :id) %>
             <% if accounts.any? %>
               <%= f.select :account_id, accounts,
                            { include_blank: t("imports.pdf_import.select_account_placeholder"), selected: import.account_id, label: false },

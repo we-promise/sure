@@ -106,11 +106,23 @@ class PdfImport < Import
     transaction do
       mappings.each(&:create_mappable!)
 
-      new_transactions = rows.map do |row|
-        category = mappings.categories.mappable_for(row.category)
+      # Rows were already filtered against existing records when they were
+      # generated, but a provider sync can land in between, so check again here
+      # the way TransactionImport#import! does.
+      adapter = Account::ProviderImportAdapter.new(account)
+      claimed = []
+      reconciled_now = []
+      reconciled_at = Time.current
+
+      new_transactions = rows.filter_map do |row|
+        if (existing = already_recorded_entry(adapter, row, claimed))
+          claimed << existing.id
+          reconciled_now << existing
+          next
+        end
 
         Transaction.new(
-          category: category,
+          category: mappings.categories.mappable_for(row.category),
           entry: Entry.new(
             account: account,
             date: row.date_iso,
@@ -119,21 +131,39 @@ class PdfImport < Import
             currency: row.currency,
             notes: row.notes,
             import: self,
-            import_locked: true
+            import_locked: true,
+            # Born reconciled: the statement being imported is the evidence.
+            # Set by id rather than association so activerecord-import writes the
+            # column directly on the recursive insert.
+            reconciled_at: reconciled_at,
+            reconciled_by_statement_id: account_statement&.id
           )
         )
       end
 
       Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
+      reconcile_entries!(reconciled_now, at: reconciled_at)
     end
   end
 
   def assign_account!(account)
     transaction do
+      previous_account_id = account_id
       update!(account: account)
+
       if (statement = account_statement)
         statement.lock!
         statement.link_to_account!(account) if statement.account_id != account.id
+      end
+
+      next if previous_account_id == account.id
+
+      # Matching is per-account, so anything reconciled against the old account
+      # is no longer evidence-backed, and the rows have to be judged again.
+      release_reconciliations!
+      if has_extracted_transactions?
+        generate_rows_from_extracted_data
+        sync_mappings
       end
     end
   end
@@ -203,8 +233,13 @@ class PdfImport < Import
       raise error_message
     end
 
-    update!(extracted_data: response.data)
-    response.data
+    # BankStatementExtractor returns symbol keys, but every reader here (and in
+    # generate_rows_from_extracted_data) digs with strings. jsonb keeps the hash
+    # exactly as assigned until the record is reloaded, so without this the
+    # in-memory read comes back empty and the import produces no rows at all.
+    data = response.data.deep_stringify_keys
+    update!(extracted_data: data)
+    data
   end
 
   def bank_statement?
@@ -233,10 +268,9 @@ class PdfImport < Import
       end
 
       currency = account&.currency || family.currency
-
-      mapped_rows = extracted_transactions.map.with_index(1) do |txn, index|
-        {
-          import_id: id,
+      candidates = extracted_transactions.map.with_index(1) do |txn, index|
+        Import::Row.new(
+          import: self,
           source_row_number: index,
           date: format_date_for_import(txn["date"]),
           amount: txn["amount"].to_s,
@@ -244,12 +278,37 @@ class PdfImport < Import
           category: txn["category"].to_s,
           notes: txn["notes"].to_s,
           currency: currency
+        )
+      end
+
+      unmatched, matched_entries = partition_already_recorded(candidates)
+
+      reconcile_entries!(matched_entries)
+
+      mapped_rows = unmatched.map.with_index(1) do |row, index|
+        {
+          import_id: id,
+          source_row_number: index,
+          date: row.date,
+          amount: row.amount,
+          name: row.name,
+          category: row.category,
+          notes: row.notes,
+          currency: row.currency
         }
       end
 
       Import::Row.insert_all!(mapped_rows) if mapped_rows.any?
       update_column(:rows_count, mapped_rows.size)
     end
+  end
+
+  # Transactions this statement reconciled against records that already existed.
+  # Derived from the statement link rather than stored, so it cannot go stale.
+  def reconciled_entries
+    return Entry.none if account_statement.blank?
+
+    Entry.reconciled_by(account_statement)
   end
 
   def send_next_steps_email(user)
@@ -322,6 +381,75 @@ class PdfImport < Import
   end
 
   private
+
+    # A statement's posting date routinely differs by a day or two from the date
+    # a provider recorded for the same transaction, so matching allows a small
+    # window rather than demanding an exact date.
+    RECONCILIATION_DATE_WINDOW = 3
+
+    # Splits candidate rows into those that are genuinely new and the existing
+    # entries the rest already correspond to. Matching is per-account, so with no
+    # account assigned yet every row is treated as new and judged again once the
+    # user picks one (see assign_account!).
+    def partition_already_recorded(candidates)
+      return [ candidates, [] ] if account.blank?
+
+      adapter = Account::ProviderImportAdapter.new(account)
+      claimed = []
+      unmatched = []
+      matched = []
+
+      candidates.each do |row|
+        if (existing = already_recorded_entry(adapter, row, claimed))
+          claimed << existing.id
+          matched << existing
+        else
+          unmatched << row
+        end
+      end
+
+      [ unmatched, matched ]
+    end
+
+    # Name is deliberately not part of the match: statement descriptions and
+    # provider names for the same transaction rarely agree, and the adapter makes
+    # the same choice for provider sync.
+    def already_recorded_entry(adapter, row, claimed)
+      adapter.find_duplicate_transaction(
+        date: row.date_iso,
+        amount: row.signed_amount,
+        currency: row.currency,
+        exclude_entry_ids: claimed,
+        date_window: RECONCILIATION_DATE_WINDOW,
+        include_provider_entries: true
+      )
+    rescue ArgumentError, TypeError => e # Date::Error subclasses ArgumentError
+      # A row whose date or amount will not parse cannot be judged. Offer it for
+      # import rather than dropping it silently -- the review step surfaces it.
+      Rails.logger.warn("PDF import #{id}: could not evaluate row for reconciliation (#{e.class})")
+      nil
+    end
+
+    def reconcile_entries!(entries, at: Time.current)
+      return if entries.blank?
+
+      Entry.where(id: entries.map(&:id)).update_all(
+        reconciled_at: at,
+        reconciled_by_statement_id: account_statement&.id,
+        updated_at: at
+      )
+    end
+
+    def release_reconciliations!
+      return if account_statement.blank?
+
+      Entry.reconciled_by(account_statement).update_all(
+        reconciled_at: nil,
+        reconciled_by_statement_id: nil,
+        updated_at: Time.current
+      )
+    end
+
 
     def format_date_for_import(date_str)
       return "" if date_str.blank?
