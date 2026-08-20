@@ -318,6 +318,7 @@ Rails.application.routes.draw do
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
     resource :preferences, only: %i[show update]
+    resource :budget_shares, only: :update
     resource :appearance, only: %i[show update]
     resource :debug, only: :show
     resource :background_jobs, controller: "background_jobs", only: :show do
