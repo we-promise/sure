@@ -24,6 +24,10 @@ class BillsMobileTest < ApplicationSystemTestCase
   end
 
   test "no Bills view scrolls sideways on a phone" do
+    # The AI chips render only with consent plus a provider, so without this
+    # the overview would be measured without a whole strip it can carry.
+    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+
     # A long name, a five-figure amount and a note: the row at its widest.
     bill = @family.recurring_transactions.create!(
       name: "Watson Property Management Company LLC",
@@ -46,10 +50,46 @@ class BillsMobileTest < ApplicationSystemTestCase
       status: "active", manual: true
     )
 
+    # Detection's suggested strip: a long name fighting two buttons for a row.
+    @family.recurring_transactions.create!(
+      name: "Neighborhood Fitness and Racquet Club Membership",
+      account: accounts(:depository), amount: 89.99, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current + 1.month,
+      status: "suggested", occurrence_count: 3
+    )
+
     %w[overview calendar paycheck all].each do |view|
       visit view == "overview" ? bills_url : bills_url(view: view)
+
+      # The widest optional strips have to actually be on the page for the
+      # measurement to mean anything.
+      if view == "overview"
+        assert_text I18n.t("bills.ai_prompts.due_before_paycheck")
+        assert_text "Neighborhood Fitness and Racquet Club Membership"
+      end
+
+      # The management table reflows into the stacked list on a narrow
+      # container; a table that merely scrolls sideways would pass the
+      # document measurement below while still hiding six of its columns.
+      assert_no_selector "table", visible: true if view == "all"
+
       assert_no_horizontal_scroll("the #{view} view")
     end
+
+    # The bill's own page: chart, history and configuration in one column.
+    visit bill_url(bill)
+    assert_text bill.display_name
+    assert_no_horizontal_scroll("the bill page")
+
+    # The control for the reflow above: given its width back, the container
+    # query must bring the table back, or the check proved only that a table
+    # never renders at all. 1920 and not 1400, because the switch reads the
+    # container: the app shell's sidebars eat ~885px before the bills column
+    # gets any, and 1400 leaves it narrower than the table deserves.
+    page.driver.browser.manage.window.resize_to(1920, 1400)
+    visit bills_url(view: "all")
+    assert_selector "table", visible: true
 
     # The reserved list is behind a disclosure, so its rows are only ever
     # measured with it open.

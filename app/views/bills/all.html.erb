@@ -78,8 +78,11 @@
     <%# A seven-column table on a phone is a table you scroll sideways to read.
         The same rows, the same filters, laid out the way the Calendar already
         does it: a purpose-built small-screen list rather than a squeezed
-        desktop one. %>
-    <div class="md:hidden bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+        desktop one. Switched on the container, not the viewport: the app
+        shell's sidebars can squeeze a desktop window to phone-list widths,
+        and a viewport breakpoint cannot see that. %>
+    <div class="@container">
+    <div class="@3xl:hidden bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
       <% @all_series.each do |series| %>
         <div class="flex items-center gap-3 p-3">
           <%= link_to bill_path(series), class: "flex items-center gap-3 min-w-0 flex-1 group" do %>
@@ -132,7 +135,7 @@
       <% end %>
     </div>
 
-    <div class="hidden md:block bg-container rounded-lg shadow-border-xs overflow-x-auto">
+    <div class="hidden @3xl:block bg-container rounded-lg shadow-border-xs overflow-x-auto">
       <table class="w-full">
         <thead>
           <%# The one rule on these pages that stays at full weight. Row
@@ -203,6 +206,7 @@
           <% end %>
         </tbody>
       </table>
+    </div>
     </div>
   <% end %>
 
