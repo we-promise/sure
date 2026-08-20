@@ -14,6 +14,10 @@ class Entry < ApplicationRecord
   belongs_to :parent_entry, class_name: "Entry", optional: true
   belongs_to :reconciled_by_statement, class_name: "AccountStatement", optional: true
 
+  # Mirrors chk_entries_reconciled_at_present_when_statement_set so a direct
+  # assignment surfaces a validation error rather than a StatementInvalid.
+  validates :reconciled_at, presence: true, if: -> { reconciled_by_statement_id.present? }
+
   has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
 
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
@@ -51,11 +55,12 @@ class Entry < ApplicationRecord
     )
   }
 
-  # Pending transaction scopes - check Transaction.extra for provider pending flags
+  # Reconciliation scopes - see AddReconciliationToEntries
   scope :reconciled, -> { where.not(reconciled_at: nil) }
   scope :unreconciled, -> { where(reconciled_at: nil) }
   scope :reconciled_by, ->(statement) { where(reconciled_by_statement_id: statement) }
 
+  # Pending transaction scopes - check Transaction.extra for provider pending flags
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {
     conditions = Transaction::PENDING_PROVIDERS.map { |p| "(transactions.extra -> '#{p}' ->> 'pending')::boolean = true" }

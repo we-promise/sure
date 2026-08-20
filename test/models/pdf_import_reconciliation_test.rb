@@ -120,7 +120,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     provider = mock("llm_provider")
     Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
     provider.stubs(:extract_bank_statement).returns(
-      stub(success?: true, data: { transactions: [ { date: @date.to_s, amount: "-5.0", name: "Coffee" } ] })
+      OpenStruct.new(success?: true, data: { transactions: [ { date: @date.to_s, amount: "-5.0", name: "Coffee" } ] })
     )
     @import.stubs(:pdf_file_content).returns("fake-pdf")
 
