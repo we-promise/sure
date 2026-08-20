@@ -104,6 +104,7 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
     def fetch_activities(snaptrade_account, provider, credentials, start_date, end_date)
       activities = []
       offset = 0
+      complete = false
 
       MAX_PAGES.times do
         response = provider.get_account_activities(
@@ -122,8 +123,18 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
         total = extract_activities_total(response)
         offset += page.size
 
-        break if page.empty?
-        break if total.nil? ? page.size < PAGE_LIMIT : offset >= total
+        if page.empty? || (total.nil? ? page.size < PAGE_LIMIT : offset >= total)
+          complete = true
+          break
+        end
+      end
+
+      # Exhausting MAX_PAGES without a completion condition means the account
+      # has more activities than the cap allows. Without this the partial result
+      # would look like the whole history.
+      unless complete
+        Rails.logger.warn "SnaptradeActivitiesFetchJob - hit the #{MAX_PAGES}-page cap for account " \
+                          "#{snaptrade_account.id}; activities beyond #{activities.size} were not fetched"
       end
 
       # Convert SDK objects to hashes

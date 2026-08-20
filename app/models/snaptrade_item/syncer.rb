@@ -57,6 +57,7 @@ class SnaptradeItem::Syncer
     collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
     raise
   rescue => e
+    capture_debug_log(e, category: "sync_error", level: "error")
     collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
     raise
   end

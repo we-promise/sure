@@ -160,12 +160,25 @@ class SnaptradeItemTest < ActiveSupport::TestCase
 
   test "changing API credentials drops the registration tied to the old client" do
     item = snaptrade_items(:configured_item)
+    SnaptradeItem.any_instance.stubs(:delete_rotated_snaptrade_user)
 
     item.update!(client_id: "rotated_client_id")
 
     assert_nil item.reload.snaptrade_user_id
     assert_nil item.snaptrade_user_secret
     assert_not item.user_registered?
+  end
+
+  test "the upstream user left by a rotation is deleted with the old credentials" do
+    item = snaptrade_items(:configured_item)
+    provider = mock
+    provider.expects(:delete_user).with(user_id: "user_123").once
+    # The old pair, not the new one - only the previous client can see that user.
+    Provider::Snaptrade.expects(:new)
+      .with(client_id: "test_client_id", consumer_key: "test_consumer_key")
+      .returns(provider)
+
+    item.update!(client_id: "rotated_client_id")
   end
 
   test "renaming an item leaves its registration alone" do

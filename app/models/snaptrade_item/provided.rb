@@ -4,6 +4,13 @@ module SnaptradeItem::Provided
   included do
     before_destroy :capture_snaptrade_user_for_cleanup
     after_commit :delete_snaptrade_user, on: :destroy
+
+    # A registered SnapTrade user belongs to the client that created it, so it
+    # cannot survive a credential swap: the new client cannot see the old user,
+    # and user_registered? would otherwise stay true and skip re-registration,
+    # leaving every sync to fail with no recovery path.
+    before_save :reset_registration_when_api_credentials_change
+    after_commit :delete_rotated_snaptrade_user, on: :update
   end
 
   def snaptrade_provider
@@ -56,6 +63,46 @@ module SnaptradeItem::Provided
   rescue => e
     # Log but don't block deletion - user may not exist or credentials may be invalid
     Rails.logger.warn "SnapTrade: Failed to delete user #{cleanup[:user_id]}: #{e.class} - #{e.message}"
+  end
+
+  def reset_registration_when_api_credentials_change
+    return if new_record?
+    return unless will_save_change_to_client_id? || will_save_change_to_consumer_key?
+    return if snaptrade_user_id.blank?
+
+    # Captured before clearing: the upstream user survives the rotation, and
+    # only the *previous* client can see or delete it. orphaned_users lists the
+    # new client's users, so without this the old one holds a connection slot
+    # that nothing can ever reclaim.
+    @rotated_snaptrade_user = {
+      user_id: snaptrade_user_id,
+      client_id: client_id_was,
+      consumer_key: consumer_key_was
+    }
+
+    Rails.logger.info "SnaptradeItem #{id} - API credentials changed, clearing stale SnapTrade user registration"
+    self.snaptrade_user_id = nil
+    self.snaptrade_user_secret = nil
+  end
+
+  # Delete the upstream user left behind by a credential rotation, using the
+  # credentials it was registered under. Same after_commit reasoning as
+  # delete_snaptrade_user: off the transaction, and not a background job
+  # because job arguments would put the credentials in the queue store.
+  def delete_rotated_snaptrade_user
+    rotated = @rotated_snaptrade_user
+    @rotated_snaptrade_user = nil
+    return unless rotated
+    return if rotated.values.any?(&:blank?)
+
+    Rails.logger.info "SnaptradeItem #{id} - deleting SnapTrade user #{rotated[:user_id]} left by a credential rotation"
+
+    Provider::Snaptrade.new(
+      client_id: rotated[:client_id],
+      consumer_key: rotated[:consumer_key]
+    ).delete_user(user_id: rotated[:user_id])
+  rescue => e
+    Rails.logger.warn "SnapTrade: Failed to delete rotated user #{rotated&.dig(:user_id)}: #{e.class} - #{e.message}"
   end
 
   # User ID and secret for SnapTrade API calls
