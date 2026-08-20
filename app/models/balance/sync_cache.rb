@@ -35,31 +35,19 @@ class Balance::SyncCache
 
     def converted_entries
       @converted_entries ||= account.entries.excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
-        converted_entry = e.dup
-        # dup does not copy the association cache, so the entryable would
-        # be re-fetched on access. Copy it to keep the preload active.
-        converted_entry.association(:entryable).target = e.entryable
-
         custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 
-        # Use Money#exchange_to with custom rate if available, standard lookup
-        # otherwise. On a missing historical rate, DROP the entry from the
-        # cache (not retain+relabel). The downstream flow/derivation in
-        # Balance::BaseCalculator sums entry.amount across the day with no
-        # currency awareness (see #flows_for_date's `sum(&:amount)`), so:
-        #   - keeping the source-currency nominal and relabeling it to
-        #     account.currency would silently treat a 100 EUR entry as
-        #     100 #{account.currency} in the balance series (currency laundering),
-        #   - keeping the entry in its source currency would mix currencies
-        #     in the naive sum.
-        # Dropping is the honest failure mode: that day's balance omits the
-        # unconvertible foreign entry rather than booking a fabricated value,
-        # and the logged warn surfaces it for support — while preserving the
-        # resilience policy (a single bad entry can't crash the whole sync),
-        # mirroring holdings_value_by_date's non-crashing rescue.
-        converted_entry.amount =
+        # Use Money#exchange_to with custom rate if available, standard lookup otherwise.
+        # Mutate the entry in place rather than dup'ing — these instances are scoped to
+        # this sync-cache only and never persisted, so avoiding the dup eliminates a
+        # large amount of ActiveModel::Attribute allocations during sync.
+        # to_a materializes independent instances; no AR identity map is active during sync,
+        # so callers holding a reference to the same association will never see these mutations.
+        # On a missing historical rate, drop the entry from the cache instead of
+        # relabeling a source-currency nominal as account.currency.
+        new_amount =
           begin
-            converted_entry.amount_money.exchange_to(
+            e.amount_money.exchange_to(
               account.currency,
               date: e.date,
               custom_rate: custom_rate
@@ -72,8 +60,9 @@ class Balance::SyncCache
             next nil
           end
 
-        converted_entry.currency = account.currency
-        converted_entry
+        e.amount = new_amount
+        e.currency = account.currency
+        e
       end.compact
     end
 end
