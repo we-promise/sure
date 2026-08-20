@@ -10,9 +10,10 @@ class SnaptradeItem::Syncer
   def perform_sync(sync)
     Rails.logger.info "SnaptradeItem::Syncer - Starting sync for item #{snaptrade_item.id}"
 
-    # Verify the item is authorized
-    unless snaptrade_item.oauth_configured?
-      raise StandardError, "SnapTrade is not authorized"
+    # Verify the item can talk to SnapTrade under whichever auth model it uses
+    unless snaptrade_item.fully_configured?
+      reason = snaptrade_item.device_flow? ? "SnapTrade user not registered" : "SnapTrade is not authorized"
+      raise StandardError, reason
     end
 
     # Phase 1: Import data from SnapTrade API

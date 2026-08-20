@@ -10,26 +10,25 @@ class Provider::SnaptradeAdapterTest < ActiveSupport::TestCase
     assert_nil Provider::SnaptradeAdapter.build_provider(family: nil)
   end
 
-  test "build_provider returns nil when OAuth app is not configured" do
-    Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
-
-    assert_nil Provider::SnaptradeAdapter.build_provider(family: families(:dylan_family))
-  end
-
-  test "build_provider returns nil when family has no authorized snaptrade item" do
-    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+  test "build_provider returns nil when the family has no connected snaptrade item" do
+    snaptrade_items(:legacy_oauth_item).destroy!
 
     assert_nil Provider::SnaptradeAdapter.build_provider(family: families(:empty))
   end
 
-  test "build_provider returns a Provider::Snaptrade wrapping the authorized item" do
-    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
-    family = families(:dylan_family)
-    item = snaptrade_items(:configured_item)
-
-    provider = Provider::SnaptradeAdapter.build_provider(family: family)
+  test "build_provider returns the device-flow client for a registered item" do
+    provider = Provider::SnaptradeAdapter.build_provider(family: families(:dylan_family))
 
     assert_instance_of Provider::Snaptrade, provider
+    assert_equal "user_123", provider.user_id
+  end
+
+  test "build_provider returns the deprecated client for a PKCE item" do
+    item = snaptrade_items(:legacy_oauth_item)
+
+    provider = Provider::SnaptradeAdapter.build_provider(family: families(:empty))
+
+    assert_instance_of Provider::SnaptradeOauth, provider
     assert_equal item, provider.snaptrade_item
   end
 end

@@ -25,6 +25,10 @@ class SnaptradeItem < ApplicationRecord
   end
 
   validates :name, presence: true
+  validates :client_id, presence: true, if: -> { consumer_key.present? }
+  validates :consumer_key, presence: true, if: -> { client_id.present? }
+  # Note: snaptrade_user_id and snaptrade_user_secret are populated after user
+  # registration via ensure_user_registered!, so they aren't validated on create
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -33,10 +37,16 @@ class SnaptradeItem < ApplicationRecord
   has_many :linked_accounts, through: :snaptrade_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
-  # Syncable = active + authorized via OAuth (has an access token).
-  # oauth_access_token is non-deterministically encrypted, so it can only be
-  # queried with an IS NULL check (never persisted as "" -- see apply_oauth_tokens!).
-  scope :syncable, -> { active.where.not(oauth_access_token: nil) }
+  scope :api_credentials_configured, -> { where.not(client_id: [ nil, "" ]).where.not(consumer_key: [ nil, "" ]) }
+  # Device flow: the family's API credentials plus a registered SnapTrade user.
+  scope :registered, -> { api_credentials_configured.where.not(snaptrade_user_id: [ nil, "" ]).where.not(snaptrade_user_secret: nil) }
+  # DEPRECATED authorization-code + PKCE (#2747): a bearer token and no API
+  # credentials. oauth_access_token is non-deterministically encrypted, so it
+  # can only be queried with an IS NULL check (never persisted as "" -- see
+  # apply_oauth_tokens!); client_id is deterministic, so it can be compared.
+  scope :legacy_oauth, -> { where(client_id: [ nil, "" ]).where.not(oauth_access_token: nil) }
+  # Syncable = active + usable under either auth model.
+  scope :syncable, -> { registered.or(legacy_oauth).where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
@@ -48,7 +58,7 @@ class SnaptradeItem < ApplicationRecord
   def import_latest_snaptrade_data(sync: nil)
     provider = snaptrade_provider
     unless provider
-      Rails.logger.error "SnaptradeItem #{id} - Cannot import: OAuth not authorized"
+      Rails.logger.error "SnaptradeItem #{id} - Cannot import: no usable SnapTrade authorization"
       raise StandardError, "SnapTrade is not authorized"
     end
 
@@ -185,10 +195,42 @@ class SnaptradeItem < ApplicationRecord
   def oauth_configured?
     oauth_access_token.present?
   end
-  alias_method :credentials_configured?, :oauth_configured?
+
+  # The family's own SnapTrade API credentials, used by the device flow.
+  def api_credentials_configured?
+    client_id.present? && consumer_key.present?
+  end
+
+  # Cross-provider convention: does this connection hold credentials we can
+  # use at all? True under either auth model.
+  def credentials_configured?
+    api_credentials_configured? || oauth_configured?
+  end
+
+  # Which auth model this item talks to SnapTrade under.
+  #   :device_flow  - the family's API credentials + a registered SnapTrade user
+  #   :legacy_oauth - DEPRECATED authorization-code + PKCE bearer tokens (#2747)
+  #   nil           - not connected yet
+  def auth_method
+    return :device_flow if api_credentials_configured?
+    return :legacy_oauth if oauth_configured?
+
+    nil
+  end
+
+  def device_flow?
+    auth_method == :device_flow
+  end
+
+  # Connections made under #2747's authorization-code + PKCE flow. They keep
+  # syncing on their bearer tokens, but the flow is closed to new connections
+  # and these items are prompted to migrate; see Provider::SnaptradeOauth.
+  def legacy_oauth?
+    auth_method == :legacy_oauth
+  end
 
   def fully_configured?
-    oauth_configured?
+    device_flow? ? user_registered? : oauth_configured?
   end
 
   # Override Syncable#syncing? to also show syncing state when activities are being

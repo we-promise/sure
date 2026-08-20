@@ -2,10 +2,14 @@
 
 <%= tag.div id: dom_id(snaptrade_item) do %>
   <% unlinked_count = snaptrade_item.unlinked_accounts_count %>
-  <% snaptrade_registered = snaptrade_item.oauth_configured? %>
-  <% brokerage_connect_href = snaptrade_registered ? connect_snaptrade_item_path(snaptrade_item) : oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id) %>
-  <% brokerage_connect_frame = snaptrade_registered ? "_top" : :drawer %>
-  <% reconnect_href = oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id) %>
+  <%# Ready to talk to SnapTrade under whichever auth model this item uses.
+      Items that aren't are sent to the device flow, the supported way to
+      connect; a deprecated PKCE item can still re-consent from the settings
+      panel while its owner migrates. %>
+  <% snaptrade_ready = snaptrade_item.fully_configured? %>
+  <% brokerage_connect_href = snaptrade_ready ? connect_snaptrade_item_path(snaptrade_item) : oauth_connect_snaptrade_items_path(item_id: snaptrade_item.id) %>
+  <% brokerage_connect_frame = snaptrade_ready ? "_top" : :drawer %>
+  <% reconnect_href = oauth_connect_snaptrade_items_path(item_id: snaptrade_item.id) %>
 
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
@@ -64,7 +68,7 @@
 
         <% if Current.user&.admin? %>
           <div class="flex items-center gap-2">
-            <% if snaptrade_item.requires_update? || !snaptrade_registered %>
+            <% if snaptrade_item.requires_update? || !snaptrade_ready %>
               <%= render DS::Link.new(
                 text: t(".reconnect"),
                 icon: "link",

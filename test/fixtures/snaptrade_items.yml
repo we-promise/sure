@@ -1,9 +1,22 @@
 # Minimal fixtures for SnapTrade items
 # Per CLAUDE.md: Keep fixtures minimal (2-3 per model for base cases)
 
+# Device flow: the family's API credentials plus a registered SnapTrade user
 configured_item:
   family: dylan_family
   name: "SnapTrade Connection"
+  client_id: "test_client_id"
+  consumer_key: "test_consumer_key"
+  snaptrade_user_id: "user_123"
+  snaptrade_user_secret: "secret_abc"
+  status: good
+  scheduled_for_deletion: false
+  pending_account_setup: false
+
+# DEPRECATED authorization-code + PKCE (#2747): bearer tokens, no API credentials
+legacy_oauth_item:
+  family: empty
+  name: "Legacy SnapTrade OAuth"
   oauth_access_token: "test-access-token"
   oauth_refresh_token: "test-refresh-token"
   oauth_token_type: "Bearer"
@@ -13,7 +26,7 @@ configured_item:
   scheduled_for_deletion: false
   pending_account_setup: false
 
-# Item that has never completed the OAuth flow (no tokens)
+# Never connected under either auth model
 unauthorized_item:
   family: empty
   name: "Unauthorized SnapTrade"

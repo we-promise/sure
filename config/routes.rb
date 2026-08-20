@@ -127,13 +127,17 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :snaptrade_items, only: [ :index, :show, :destroy ] do
+  resources :snaptrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
       get :select_accounts
       get :select_existing_account
       post :link_existing_account
       get :callback
+      get :oauth_connect
+      post :start_oauth_connect
+      # DEPRECATED (#2747 authorization-code + PKCE): reachable only to
+      # re-authorize a connection already made under that flow.
       get :oauth_authorize
       get :oauth_callback
     end
@@ -144,7 +148,10 @@ Rails.application.routes.draw do
       get :setup_accounts
       post :complete_account_setup
       get :connections
+      post :start_oauth_device_flow
+      post :complete_oauth_device_flow
       delete :delete_connection
+      delete :delete_orphaned_user
     end
   end
 

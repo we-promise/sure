@@ -94,8 +94,12 @@ module SettingsHelper
       return { status: :off } unless @kraken_items&.any?
       sync_based_summary(key)
     when "snaptrade"
-      configured_item = @snaptrade_items&.find(&:oauth_configured?)
+      configured_item = @snaptrade_items&.find(&:credentials_configured?)
       return { status: :off } unless configured_item
+
+      unless configured_item.fully_configured?
+        return { status: :warn, meta: t("settings.providers.meta.registration_needed") }
+      end
 
       sync_based_summary(key)
     when "ibkr"

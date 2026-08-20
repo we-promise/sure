@@ -12,13 +12,13 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
   end
 
   test "oauth_configured? requires both client id and secret" do
-    assert_not Provider::Snaptrade.oauth_configured?
+    assert_not Provider::SnaptradeOauth.oauth_configured?
 
     Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
-    assert_not Provider::Snaptrade.oauth_configured?
+    assert_not Provider::SnaptradeOauth.oauth_configured?
 
     Rails.configuration.x.snaptrade.oauth_client_secret = "client-secret"
-    assert Provider::Snaptrade.oauth_configured?
+    assert Provider::SnaptradeOauth.oauth_configured?
   end
 
   # --- helpers ---
@@ -45,7 +45,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     def item.applied = @applied || []
     def item.update!(attrs) = (@updates ||= []) << attrs
     def item.updates = @updates || []
-    # Stand in for ActiveRecord's row-locking API used by Provider::Snaptrade#refresh_access_token!.
+    # Stand in for ActiveRecord's row-locking API used by Provider::SnaptradeOauth#refresh_access_token!.
     # By default there's nothing concurrent to guard against in these tests, so locking is a no-op
     # and reload leaves attributes untouched (they're already "current" in memory).
     def item.with_lock
@@ -58,7 +58,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
   end
 
   test "generate_pkce returns S256 challenge of the verifier" do
-    pkce = Provider::Snaptrade.generate_pkce
+    pkce = Provider::SnaptradeOauth.generate_pkce
     expected = Base64.urlsafe_encode64(OpenSSL::Digest::SHA256.digest(pkce[:verifier]), padding: false)
     assert_equal expected, pkce[:challenge]
     assert pkce[:verifier].length.between?(43, 128)
@@ -66,7 +66,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
   test "authorize_url contains all required OAuth params" do
     configure_oauth!
-    url = Provider::Snaptrade.authorize_url(
+    url = Provider::SnaptradeOauth.authorize_url(
       redirect_uri: "https://sure.test/callback", state: "st4te", code_challenge: "ch4llenge"
     )
     uri = URI.parse(url)
@@ -85,11 +85,11 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     configure_oauth!
     connection = mock("faraday")
     request = OpenStruct.new(headers: {})
-    connection.expects(:post).with(Provider::Snaptrade::TOKEN_URL).yields(request)
+    connection.expects(:post).with(Provider::SnaptradeOauth::TOKEN_URL).yields(request)
       .returns(faraday_response(status: 200, body: { access_token: "at", refresh_token: "rt", expires_in: 900, token_type: "Bearer", scope: "read" }.to_json))
-    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+    Provider::SnaptradeOauth.stubs(:oauth_connection).returns(connection)
 
-    payload = Provider::Snaptrade.exchange_code(code: "c0de", redirect_uri: "https://sure.test/cb", code_verifier: "v3rifier")
+    payload = Provider::SnaptradeOauth.exchange_code(code: "c0de", redirect_uri: "https://sure.test/cb", code_verifier: "v3rifier")
 
     assert_equal "at", payload["access_token"]
     assert_equal "Basic #{Base64.strict_encode64('client-id:client-secret')}", request.headers["Authorization"]
@@ -104,10 +104,10 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     configure_oauth!
     connection = mock("faraday")
     connection.expects(:post).returns(faraday_response(status: 400, body: { error: "invalid_grant", error_description: "expired" }.to_json))
-    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+    Provider::SnaptradeOauth.stubs(:oauth_connection).returns(connection)
 
-    error = assert_raises(Provider::Snaptrade::AuthenticationError) do
-      Provider::Snaptrade.refresh_tokens(refresh_token: "dead-rt")
+    error = assert_raises(Provider::SnaptradeOauth::AuthenticationError) do
+      Provider::SnaptradeOauth.refresh_tokens(refresh_token: "dead-rt")
     end
     assert_match "expired", error.message
   end
@@ -115,11 +115,11 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
   test "data calls send Bearer token on API base URL" do
     configure_oauth!
     item = fake_item
-    provider = Provider::Snaptrade.new(item)
+    provider = Provider::SnaptradeOauth.new(item)
 
     request = OpenStruct.new(headers: {}, params: {})
     connection = mock("faraday")
-    connection.expects(:get).with("#{Provider::Snaptrade::API_BASE_URL}/api/v1/accounts").yields(request)
+    connection.expects(:get).with("#{Provider::SnaptradeOauth::API_BASE_URL}/api/v1/accounts").yields(request)
       .returns(faraday_response(status: 200, body: [ { id: "acct-1" } ].to_json))
     provider.stubs(:api_connection).returns(connection)
 
@@ -130,7 +130,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
   test "get_positions calls /positions/all and unwraps results" do
     configure_oauth!
-    provider = Provider::Snaptrade.new(fake_item)
+    provider = Provider::SnaptradeOauth.new(fake_item)
 
     request = OpenStruct.new(headers: {}, params: {})
     body = {
@@ -140,7 +140,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
     connection = mock("faraday")
     connection.expects(:get)
-      .with("#{Provider::Snaptrade::API_BASE_URL}/api/v1/accounts/acct-1/positions/all")
+      .with("#{Provider::SnaptradeOauth::API_BASE_URL}/api/v1/accounts/acct-1/positions/all")
       .yields(request).returns(faraday_response(status: 200, body: body))
     provider.stubs(:api_connection).returns(connection)
 
@@ -152,7 +152,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
   test "get_positions returns an empty array for an account holding nothing" do
     configure_oauth!
-    provider = Provider::Snaptrade.new(fake_item)
+    provider = Provider::SnaptradeOauth.new(fake_item)
 
     connection = mock("faraday")
     connection.expects(:get).yields(OpenStruct.new(headers: {}, params: {}))
@@ -164,14 +164,14 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
   test "get_positions raises rather than reporting no positions when results are absent" do
     configure_oauth!
-    provider = Provider::Snaptrade.new(fake_item)
+    provider = Provider::SnaptradeOauth.new(fake_item)
 
     connection = mock("faraday")
     connection.expects(:get).yields(OpenStruct.new(headers: {}, params: {}))
       .returns(faraday_response(status: 200, body: { data_freshness: {} }.to_json))
     provider.stubs(:api_connection).returns(connection)
 
-    error = assert_raises(Provider::Snaptrade::ApiError) do
+    error = assert_raises(Provider::SnaptradeOauth::ApiError) do
       provider.get_positions(account_id: "acct-1")
     end
     assert_match "no results array", error.message
@@ -179,7 +179,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
   test "get_positions filters out instrument kinds the holdings pipeline cannot model" do
     configure_oauth!
-    provider = Provider::Snaptrade.new(fake_item)
+    provider = Provider::SnaptradeOauth.new(fake_item)
 
     body = {
       results: [
@@ -204,9 +204,9 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
   test "expired token is refreshed before the data call and rotation persisted" do
     configure_oauth!
     item = fake_item(expires_at: 1.minute.ago)
-    provider = Provider::Snaptrade.new(item)
+    provider = Provider::SnaptradeOauth.new(item)
 
-    Provider::Snaptrade.expects(:refresh_tokens).with(refresh_token: "rt-1")
+    Provider::SnaptradeOauth.expects(:refresh_tokens).with(refresh_token: "rt-1")
       .returns({ "access_token" => "at-2", "refresh_token" => "rt-2", "expires_in" => 900 })
 
     request = OpenStruct.new(headers: {}, params: {})
@@ -222,9 +222,9 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
   test "401 triggers one refresh and retry" do
     configure_oauth!
     item = fake_item
-    provider = Provider::Snaptrade.new(item)
+    provider = Provider::SnaptradeOauth.new(item)
 
-    Provider::Snaptrade.expects(:refresh_tokens).with(refresh_token: "rt-1")
+    Provider::SnaptradeOauth.expects(:refresh_tokens).with(refresh_token: "rt-1")
       .returns({ "access_token" => "at-2", "expires_in" => 900 })
 
     connection = mock("faraday")
@@ -238,22 +238,22 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
   test "failed refresh marks item requires_update and raises AuthenticationError" do
     configure_oauth!
     item = fake_item(expires_at: 1.minute.ago)
-    provider = Provider::Snaptrade.new(item)
+    provider = Provider::SnaptradeOauth.new(item)
     DebugLogEntry.stubs(:capture)
 
-    Provider::Snaptrade.expects(:refresh_tokens).raises(Provider::Snaptrade::AuthenticationError, "invalid_grant")
+    Provider::SnaptradeOauth.expects(:refresh_tokens).raises(Provider::SnaptradeOauth::AuthenticationError, "invalid_grant")
 
-    assert_raises(Provider::Snaptrade::AuthenticationError) { provider.list_accounts }
+    assert_raises(Provider::SnaptradeOauth::AuthenticationError) { provider.list_accounts }
     assert_includes item.updates, { status: :requires_update }
   end
 
   test "blank refresh token raises AuthenticationError and marks requires_update exactly once" do
     configure_oauth!
     item = fake_item(refresh_token: nil, expires_at: 1.minute.ago)
-    provider = Provider::Snaptrade.new(item)
+    provider = Provider::SnaptradeOauth.new(item)
     DebugLogEntry.stubs(:capture)
 
-    assert_raises(Provider::Snaptrade::AuthenticationError) { provider.list_accounts }
+    assert_raises(Provider::SnaptradeOauth::AuthenticationError) { provider.list_accounts }
     assert_equal [ { status: :requires_update } ], item.updates
   end
 
@@ -268,9 +268,9 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
       self.oauth_token_expires_at = 1.hour.from_now
       self
     end
-    provider = Provider::Snaptrade.new(item)
+    provider = Provider::SnaptradeOauth.new(item)
 
-    Provider::Snaptrade.expects(:refresh_tokens).never
+    Provider::SnaptradeOauth.expects(:refresh_tokens).never
 
     request = OpenStruct.new(headers: {}, params: {})
     connection = mock("faraday")
@@ -283,11 +283,11 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
   test "get_connection_url posts login and returns redirect URI" do
     configure_oauth!
-    provider = Provider::Snaptrade.new(fake_item)
+    provider = Provider::SnaptradeOauth.new(fake_item)
 
     request = OpenStruct.new(headers: {}, params: {})
     connection = mock("faraday")
-    connection.expects(:post).with("#{Provider::Snaptrade::API_BASE_URL}/api/v1/snapTrade/login").yields(request)
+    connection.expects(:post).with("#{Provider::SnaptradeOauth::API_BASE_URL}/api/v1/snapTrade/login").yields(request)
       .returns(faraday_response(status: 200, body: { redirectURI: "https://app.snaptrade.com/connect/xyz" }.to_json))
     provider.stubs(:api_connection).returns(connection)
 

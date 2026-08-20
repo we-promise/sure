@@ -422,42 +422,43 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Query ID/i, response.body)
   end
 
-  test "GET connect_form for snaptrade shows OAuth setup instructions when instance is not configured" do
-    Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
-
-    get connect_form_settings_providers_path(provider_key: "snaptrade")
-
-    assert_response :success
-    assert_includes response.body, I18n.t("providers.snaptrade.oauth_setup_step_3")
-    refute_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
-    refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready")
-  end
-
-  test "GET connect_form for snaptrade shows connect CTA when configured but item is not authorized" do
+  test "GET connect_form for snaptrade asks for API credentials before anything else" do
     sign_in users(:empty)
-    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    snaptrade_items(:legacy_oauth_item).destroy!
 
     get connect_form_settings_providers_path(provider_key: "snaptrade")
 
     assert_response :success
-    assert_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
-    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready")
+    assert_includes response.body, I18n.t("providers.snaptrade.api_credentials_description")
+    assert_includes response.body, I18n.t("providers.snaptrade.step_3")
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_needs_credentials")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_authorized")
-    refute_includes response.body, I18n.t("providers.snaptrade.oauth_reauthorize_button")
   end
 
-  test "GET connect_form for snaptrade shows authorized status and reauthorize CTA when item is connected" do
+  test "GET connect_form for snaptrade shows the device-flow CTA once credentials are saved" do
     # Default signed-in user (family_admin) belongs to dylan_family, which owns
-    # the oauth-authorized `configured_item` fixture.
-    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    # the device-flow `configured_item` fixture.
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("providers.snaptrade.api_credentials_configured")
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
+    assert_includes response.body, I18n.t("providers.snaptrade.manage_connections")
+    refute_includes response.body, I18n.t("providers.snaptrade.deprecated_oauth_title")
+  end
+
+  test "GET connect_form for snaptrade flags a deprecated PKCE connection and offers re-consent" do
+    sign_in users(:empty)
+    legacy_item = snaptrade_items(:legacy_oauth_item)
 
     get connect_form_settings_providers_path(provider_key: "snaptrade")
 
     assert_response :success
-    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_authorized")
-    assert_includes response.body, I18n.t("providers.snaptrade.oauth_reauthorize_button")
-    assert_includes response.body, I18n.t("providers.snaptrade.manage_connections")
-    refute_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
+    assert_includes response.body, I18n.t("providers.snaptrade.deprecated_oauth_title")
+    assert_includes response.body, I18n.t("providers.snaptrade.deprecated_oauth_reauthorize_button")
+    assert_includes response.body, oauth_authorize_snaptrade_items_path(item_id: legacy_item.id)
+    # It still needs API credentials to move over to the device flow
+    assert_includes response.body, I18n.t("providers.snaptrade.api_credentials_description")
   end
 
   test "POST sync for ibkr without an active Ibkr sync enqueues SyncJob" do
