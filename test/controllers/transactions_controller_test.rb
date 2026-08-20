@@ -96,8 +96,8 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     patch transaction_url(entry), params: {
       entry: {
-        name: entry.name,
-        date: "",
+        name: "",
+        date: entry.date,
         currency: entry.currency,
         amount: entry.amount.abs,
         nature: "outflow",
@@ -108,6 +108,8 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_includes response.body, "A manual recurring transaction already exists for this pattern"
+    assert_select "button[disabled]", text: /Mark as Recurring/
+    assert_no_match(/#{Regexp.escape(mark_as_recurring_transaction_path(entry))}/, response.body)
   end
 
   test "transaction count represents filtered total" do
