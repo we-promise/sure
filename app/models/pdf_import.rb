@@ -110,7 +110,13 @@ class PdfImport < Import
       # generated, but a provider sync can land in between, so check again here
       # the way TransactionImport#import! does.
       adapter = Account::ProviderImportAdapter.new(account)
-      claimed = []
+      # Entries this statement already consumed during row generation are spoken
+      # for. Without excluding them, a statement carrying two same-amount
+      # transactions where the account held only one would re-match the surviving
+      # row against that same entry and silently drop a genuinely new
+      # transaction. Newly synced entries are still caught, because only the
+      # already-reconciled ones are excluded.
+      claimed = reconciled_entries.pluck(:id)
       reconciled_now = []
       reconciled_at = Time.current
 
@@ -164,6 +170,7 @@ class PdfImport < Import
       if has_extracted_transactions?
         generate_rows_from_extracted_data
         sync_mappings
+        refresh_status_after_regeneration!
       end
     end
   end
@@ -426,7 +433,22 @@ class PdfImport < Import
     rescue ArgumentError, TypeError => e # Date::Error subclasses ArgumentError
       # A row whose date or amount will not parse cannot be judged. Offer it for
       # import rather than dropping it silently -- the review step surfaces it.
-      Rails.logger.warn("PDF import #{id}: could not evaluate row for reconciliation (#{e.class})")
+      DebugLogEntry.capture(
+        category: "import",
+        level: "warn",
+        message: "PdfImport: could not evaluate statement row for reconciliation (#{e.class})",
+        source: "pdf_import",
+        family: family,
+        account: account,
+        metadata: {
+          import_id: id,
+          account_statement_id: account_statement_id,
+          source_row_number: row.source_row_number,
+          raw_date: row.date,
+          raw_amount: row.amount,
+          error_class: e.class.name
+        }
+      )
       nil
     end
 
@@ -438,6 +460,19 @@ class PdfImport < Import
         reconciled_by_statement_id: account_statement&.id,
         updated_at: at
       )
+    end
+
+    # Regeneration can empty the row set (everything now matches) or refill it
+    # (the new account matches nothing). Status has to follow, using the same
+    # rule ProcessPdfJob applies after initial processing -- otherwise a
+    # fully-matched import sits at pending with no rows, which renders as the
+    # processing screen forever and cannot be restarted.
+    def refresh_status_after_regeneration!
+      return if data_committed?
+      return unless pending? || complete?
+
+      target = statement_with_transactions? && rows_count > 0 ? "pending" : "complete"
+      update!(status: target) unless status.to_s == target
     end
 
     def release_reconciliations!

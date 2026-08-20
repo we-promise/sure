@@ -131,6 +131,68 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal "Coffee", @import.extracted_transactions.first["name"]
   end
 
+  test "publishing does not re-match a row against an entry row generation already consumed" do
+    create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+
+    # Two identical statement lines, one existing transaction: the first line
+    # reconciles against it, the second is genuinely new and must be created.
+    @import.update!(extracted_data: { "transactions" => [
+      extracted(date: @date, amount: -50, name: "Coffee"),
+      extracted(date: @date, amount: -50, name: "Coffee")
+    ] })
+    @import.generate_rows_from_extracted_data
+    assert_equal 1, @import.reload.rows_count
+
+    assert_difference -> { @account.entries.count }, 1 do
+      @import.import!
+    end
+  end
+
+  test "assigning an account that reconciles every row completes the import" do
+    @import.update!(account: nil, status: :pending)
+    create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    assert_equal 1, @import.reload.rows_count, "nothing matches while no account is assigned"
+
+    @import.assign_account!(@account)
+
+    @import.reload
+    assert_equal 0, @import.rows_count
+    assert @import.complete?, "a fully reconciled import must finish rather than sit at pending with no rows"
+  end
+
+  test "assigning an account that matches nothing returns the import to pending" do
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    @import.update!(status: :complete)
+
+    other = @family.accounts.create!(
+      name: "Untouched Checking", balance: 0, currency: "USD", accountable: Depository.new
+    )
+    @import.assign_account!(other)
+
+    @import.reload
+    assert_equal 1, @import.rows_count
+    assert @import.pending?
+  end
+
+  test "a row that cannot be evaluated is recorded in the debug log" do
+    @import.update!(extracted_data: { "transactions" => [
+      { "date" => "not-a-date", "amount" => "-50", "name" => "Mystery" }
+    ] })
+
+    assert_difference "DebugLogEntry.count", 1 do
+      @import.generate_rows_from_extracted_data
+    end
+
+    logged = DebugLogEntry.last
+    assert_equal "import", logged.category
+    assert_equal @family, logged.family
+    assert_equal @import.id, logged.metadata["import_id"]
+  end
+
   private
 
     def create_statement
