@@ -29,13 +29,18 @@ class EmiPlansController < ApplicationController
 
     redirect_back_or_to transactions_path, notice: t("emi_plans.create.success", count: plan.tenure_months)
   rescue ActiveRecord::RecordInvalid => e
-    redirect_back_or_to transactions_path, alert: e.message
+    # e.message is "Validation failed: <full_messages>" -- the "Validation
+    # failed:" prefix is a hard-coded Rails string, not localized. The
+    # individual field messages (e.g. tenure/interest_rate bounds) already
+    # come from Rails' own i18n-backed error messages, so join those
+    # directly instead of using the English-prefixed exception message.
+    redirect_back_or_to transactions_path, alert: e.record.errors.full_messages.to_sentence
   rescue ActiveRecord::RecordNotUnique
-    # Two simultaneous submits can both pass the emi_convertible? check and
-    # the app-level uniqueness validation before either commits (the
-    # validation's SELECT isn't atomic with its INSERT) -- the DB's unique
-    # index on emi_plans.entry_id is the real backstop for that narrow
-    # window, and it raises this lower-level error instead of RecordInvalid.
+    # EmiPlan.build! locks entry and re-checks eligibility under that lock,
+    # so this shouldn't normally fire for a same-entry double-submit
+    # anymore -- kept as a defense-in-depth backstop for the unique index
+    # on emi_plans.entry_id in case any other path ever calls build!
+    # without going through this controller's locking.
     redirect_back_or_to transactions_path, alert: t("emi_plans.new.not_convertible")
   end
 

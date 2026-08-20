@@ -115,25 +115,37 @@ class EmiPlan < ApplicationRecord
   #
   # @return [EmiPlan] self, persisted, with installment_entries populated
   def self.build!(entry:, interest_rate:, tenure_months:, processing_fee: 0, start_date: nil)
-    unless entry.transaction? && entry.transaction.emi_convertible?
-      raise ActiveRecord::RecordInvalid.new(entry), "This transaction can't be converted to an EMI plan."
-    end
+    # Locking entry (rather than checking eligibility first and locking
+    # after) closes the window where two concurrent requests both read
+    # emi_convertible? as true before either has committed: without the
+    # lock, both proceed to build a full plan -- fee entry, every
+    # installment -- and only the second discovers the conflict at
+    # plan.save! via the unique index on emi_plans.entry_id, after having
+    # done all that work just to roll it back. With the lock, the second
+    # request blocks until the first commits, then re-reads emi_convertible?
+    # (which will now correctly be false) and fails fast via the normal
+    # ActiveRecord::RecordInvalid path below -- no wasted writes, and no
+    # reliance on the unique index as the only thing standing between two
+    # plans on one entry.
+    entry.with_lock do
+      unless entry.transaction? && entry.transaction.emi_convertible?
+        raise ActiveRecord::RecordInvalid.new(entry), I18n.t("emi_plans.new.not_convertible")
+      end
 
-    principal = entry.amount.abs
-    start_date ||= entry.date.next_month
+      principal = entry.amount.abs
+      start_date ||= entry.date.next_month
 
-    plan = new(
-      entry: entry,
-      account: entry.account,
-      principal_amount: principal,
-      interest_rate: interest_rate,
-      tenure_months: tenure_months,
-      processing_fee: processing_fee,
-      start_date: start_date,
-      status: "active"
-    )
+      plan = new(
+        entry: entry,
+        account: entry.account,
+        principal_amount: principal,
+        interest_rate: interest_rate,
+        tenure_months: tenure_months,
+        processing_fee: processing_fee,
+        start_date: start_date,
+        status: "active"
+      )
 
-    Entry.transaction do
       plan.save!
 
       if plan.processing_fee.to_d.positive?
@@ -166,9 +178,9 @@ class EmiPlan < ApplicationRecord
       entry.transaction.changing_emi_kind = true
       entry.transaction.update!(kind: "emi_purchase")
       entry.mark_user_modified!
-    end
 
-    plan
+      plan
+    end
   end
 
   # Cancels the plan. Any installment entries that are still in the future
