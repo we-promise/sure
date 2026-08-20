@@ -61,29 +61,32 @@ class MarketDataSchedulerTest < ActiveSupport::TestCase
     MarketDataScheduler.upsert_job
   end
 
-  test "the timezone-suffixed cron format MarketDataScheduler emits is accepted by the installed Sidekiq::Cron parser" do
+  test "the timezone-suffixed cron formats MarketDataScheduler emits are accepted by the installed Sidekiq::Cron parser" do
     # Unlike the tests above, this hits real Sidekiq::Cron (Redis) to confirm
     # the installed sidekiq-cron/fugit version actually parses and persists a
-    # cron string with a trailing IANA timezone (e.g. "0 18 * * 1-5 Etc/UTC").
-    # Mocking Job.create everywhere would let a parser/version regression slip
-    # through unnoticed. Uses a random job name (not JOB_NAME) so it can't
-    # race with other tests/workers touching MarketDataScheduler's job.
-    job_name = "market_data_scheduler_cron_contract_test_#{SecureRandom.hex(8)}"
+    # cron string with a trailing IANA timezone. Mocking Job.create everywhere
+    # would let a parser/version regression slip through unnoticed. Covers
+    # both a UTC alias and a non-UTC zone, since MarketDataScheduler emits
+    # both. Uses random job names (not JOB_NAME) so this can't race with
+    # other tests/workers touching MarketDataScheduler's job.
+    [ "0 18 * * 1-5 Etc/UTC", "0 22 * * 1-5 America/Los_Angeles" ].each do |cron|
+      job_name = "market_data_scheduler_cron_contract_test_#{SecureRandom.hex(8)}"
 
-    begin
-      created = Sidekiq::Cron::Job.create(
-        name: job_name,
-        cron: "0 18 * * 1-5 Etc/UTC",
-        class: "ImportMarketDataJob"
-      )
-      assert created, "Expected Sidekiq::Cron to accept a timezone-suffixed cron string"
+      begin
+        created = Sidekiq::Cron::Job.create(
+          name: job_name,
+          cron: cron,
+          class: "ImportMarketDataJob"
+        )
+        assert created, "Expected Sidekiq::Cron to accept cron string: #{cron}"
 
-      job = Sidekiq::Cron::Job.find(job_name)
-      assert job, "Expected the cron job to be persisted"
-      assert job.valid?, job.errors.to_a.join(", ")
-      assert_equal "0 18 * * 1-5 Etc/UTC", job.cron
-    ensure
-      Sidekiq::Cron::Job.find(job_name)&.destroy
+        job = Sidekiq::Cron::Job.find(job_name)
+        assert job, "Expected the cron job to be persisted for: #{cron}"
+        assert job.valid?, job.errors.to_a.join(", ")
+        assert_equal cron, job.cron
+      ensure
+        Sidekiq::Cron::Job.find(job_name)&.destroy
+      end
     end
   end
 end
