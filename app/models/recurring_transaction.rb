@@ -138,6 +138,21 @@ class RecurringTransaction < ApplicationRecord
     )
   end
 
+  # A candidate amount only counts as "the same fluctuating payment" as the
+  # anchor amount if it's within this ratio (2x = may double or halve).
+  # Anchored on the target amount (not pairwise) so unrelated charges can't
+  # chain together, and expressed as a ratio (not a %-of-target-with-floor)
+  # so it's scale-invariant and handles negative (expense) amounts correctly
+  # via the signed min/max bounds below.
+  AMOUNT_VARIANCE_RATIO = 2
+
+  def self.amount_within_variance_band?(candidate_amount, anchor_amount, ratio: AMOUNT_VARIANCE_RATIO)
+    return candidate_amount == anchor_amount if anchor_amount.zero?
+
+    low, high = [ anchor_amount / ratio, anchor_amount * ratio ].minmax
+    candidate_amount.between?(low, high)
+  end
+
   # Create a manual recurring transaction from an existing transaction
   # Automatically calculates amount variance from past 6 months of matching transactions
   def self.create_from_transaction(transaction, date_variance: 2)
@@ -152,6 +167,7 @@ class RecurringTransaction < ApplicationRecord
       name: transaction.merchant_id.present? ? nil : entry.name,
       currency: entry.currency,
       expected_day: expected_day,
+      amount: entry.amount,
       lookback_months: 6,
       account: entry.account
     )
@@ -194,8 +210,9 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Find matching transaction entries for variance calculation
-  def self.find_matching_transaction_entries(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil)
+  def self.find_matching_transaction_entries(family:, merchant_id:, name:, currency:, expected_day:, amount:, lookback_months: 6, account: nil)
     lookback_date = lookback_months.months.ago.to_date
+    amount_low, amount_high = [ amount / AMOUNT_VARIANCE_RATIO, amount * AMOUNT_VARIANCE_RATIO ].minmax
 
     entries = (account.present? ? account.entries : family.entries)
       .where(entryable_type: "Transaction")
@@ -204,6 +221,11 @@ class RecurringTransaction < ApplicationRecord
       .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
              [ expected_day - 2, 1 ].max,
              [ expected_day + 2, 31 ].min)
+      # Only entries whose amount is within the variance band of the target
+      # amount count as "the same fluctuating payment" — otherwise unrelated
+      # charges that happen to share a merchant/day get averaged together
+      # (see issue #2936 follow-up).
+      .where("entries.amount BETWEEN ? AND ?", amount_low, amount_high)
       .order(date: :desc)
 
     # Filter by merchant or name
@@ -219,13 +241,14 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Find matching transaction amounts for variance calculation
-  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil)
+  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, amount:, lookback_months: 6, account: nil)
     matching_entries = find_matching_transaction_entries(
       family: family,
       merchant_id: merchant_id,
       name: name,
       currency: currency,
       expected_day: expected_day,
+      amount: amount,
       lookback_months: lookback_months,
       account: account
     )

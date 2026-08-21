@@ -37,14 +37,16 @@
   <% unless disabled %>
     <div class="absolute z-50 p-1.5 w-full min-w-32 rounded-lg shadow-lg shadow-border-xs bg-container mt-1.5 transition duration-150 ease-out -translate-y-1 opacity-0 hidden"
          data-tag-select-target="menu">
-      <div class="relative flex items-center bg-container border border-secondary rounded-lg mb-1">
-        <input type="search"
-               placeholder="<%= helpers.t("transactions.form.tag_search_placeholder") %>"
-               autocomplete="off"
-               class="bg-container text-primary text-sm placeholder:text-secondary font-normal h-10 pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
-               data-tag-select-target="search"
-               data-action="input->tag-select#filter keydown->tag-select#handleSearchKeydown">
-        <%= helpers.icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
+      <div class="flex items-center bg-container border border-secondary rounded-lg mb-1 focus-ring-within transition-shadow">
+        <%= render DS::SearchInput.new(
+              variant: :embedded,
+              class: "flex-1 min-w-0",
+              placeholder: helpers.t("transactions.form.tag_search_placeholder"),
+              data: {
+                tag_select_target: "search",
+                action: "input->tag-select#filter keydown->tag-select#handleSearchKeydown"
+              }
+            ) %>
       </div>
 
       <div class="flex flex-col gap-1 max-h-64 overflow-auto"

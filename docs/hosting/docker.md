@@ -185,7 +185,7 @@ The first time you run the app, you will need to register a new account by hitti
 After creating your initial admin account, you can control how other people join your self-hosted instance from **Settings > Self-Hosting > Onboarding**.
 
 - **Open**: Anyone can create an account from the registration page.
-- **Invite-only**: New account creation stays enabled, but signups require a valid invite code.
+- **Invite-only**: New account creation stays enabled. Signups require a valid invite code unless you configure a default family for invite-only onboarding.
 - **Closed**: The registration page is disabled for new signups.
 
 If you do not want additional self-service registrations, switch the instance to **Closed** after the initial setup.

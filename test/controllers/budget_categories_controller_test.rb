@@ -139,6 +139,24 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       "matched funds_movement inflow must not appear in Uncategorized drilldown"
   end
 
+  test "show and update do not leak another member's personal budget category" do
+    @family.update!(personal_budgets: true)
+
+    other_member_budget = Budget.find_or_bootstrap(@family, start_date: @budget.start_date, user: users(:family_member))
+    other_budget_category = other_member_budget.budget_categories.find_by!(category: @parent_category)
+    other_budget_category.update!(budgeted_spending: 999)
+
+    get budget_budget_category_path(@budget, other_budget_category)
+    assert_response :not_found
+
+    patch budget_budget_category_path(@budget, other_budget_category),
+          params: { budget_category: { budgeted_spending: 1 } },
+          as: :turbo_stream
+    assert_response :not_found
+
+    assert_equal 999.0, other_budget_category.reload.budgeted_spending.to_f
+  end
+
   test "show drilldown still lists loan_payment transfers (intentionally budget-tracked)" do
     # loan_payment is NOT in BUDGET_EXCLUDED_KINDS. The drilldown should
     # keep showing loan_payment transfers so the user can see what's
@@ -161,5 +179,39 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes @response.body, "MORTGAGE_REPRO_OUTFLOW",
       "loan_payment outflow remains visible (kind is not BUDGET_EXCLUDED)"
+  end
+end
+
+class BudgetCategoriesControllerSharingTest < ActionDispatch::IntegrationTest
+  setup do
+    @family = families(:empty)
+    @family.update!(personal_budgets: true)
+    @owner = users(:josh)
+    @viewer = users(:ann)
+    @date = Date.current.beginning_of_month
+    @family.categories.create!(name: "Groceries", color: "#6172F3")
+    @owner_budget = Budget.find_or_bootstrap(@family, start_date: @date, user: @owner)
+  end
+
+  test "a read_only viewer cannot reach the categories wizard for the owner's budget" do
+    BudgetShare.create!(owner: @owner, viewer: @viewer, permission: "read_only")
+    sign_in @viewer
+
+    get budget_budget_categories_path(@owner_budget, owner: @owner.id)
+
+    assert_response :not_found
+  end
+
+  test "a read_write viewer can update a category on the owner's budget" do
+    BudgetShare.create!(owner: @owner, viewer: @viewer, permission: "read_write")
+    budget_category = @owner_budget.budget_categories.first
+    sign_in @viewer
+
+    patch budget_budget_category_path(@owner_budget, budget_category, owner: @owner.id),
+          params: { budget_category: { budgeted_spending: 250 } },
+          as: :turbo_stream
+
+    assert_response :success
+    assert_equal 250.0, budget_category.reload.budgeted_spending.to_f
   end
 end

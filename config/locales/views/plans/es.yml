@@ -1,0 +1,36 @@
+---
+es:
+  plans:
+    show:
+      title: Plan
+      subtitle: "Decide a dónde va tu dinero: lo que gastas y lo que ahorras."
+    budget_card:
+      title: Este mes
+      edit_budget: Editar presupuesto
+      of_total: de %{total}
+      days_left:
+        one: Queda 1 día
+        other: "Quedan %{count} días"
+      percent_used: "%{percent}% usado"
+      top_categories: Categorías principales
+      view_budget: Ver presupuesto completo
+      empty_body: Define un objetivo mensual de gasto y límites por categoría para ver cómo va este mes.
+      set_up: Configurar el presupuesto de este mes
+    goals_card:
+      title: Tus objetivos
+      new_goal: Nuevo objetivo
+      active_count:
+        one: 1 activo
+        other: "%{count} activos"
+      of_targets: de %{total} entre objetivos
+      behind_count:
+        one: 1 por detrás del ritmo
+        other: "%{count} por detrás del ritmo"
+      pending_count:
+        one: 1 compromiso pendiente
+        other: "%{count} compromisos pendientes"
+      all_on_pace: Todo va al ritmo previsto
+      active_goals: Objetivos activos
+      pending_marker: pendiente
+      runway: "%{months} meses de margen · %{pace}/mes"
+      all_goals: Todos los objetivos

@@ -2,8 +2,8 @@
   <%= render "budgets/budget_nav", budget: @budget %>
 <% end %>
 
-<%= content_for :previous_path, budget_path(@budget) %>
-<%= content_for :cancel_path, budget_path(@budget) %>
+<%= content_for :previous_path, budget_path(@budget, **budget_owner_query) %>
+<%= content_for :cancel_path, budget_path(@budget, **budget_owner_query) %>
 
 <div>
   <div class="space-y-4">
@@ -15,7 +15,7 @@
     </div>
 
     <div class="mx-auto max-w-lg">
-      <%= styled_form_with model: @budget, class: "space-y-3", data: { controller: "budget-form" } do |f| %>
+      <%= styled_form_with model: @budget, url: budget_path(@budget, **budget_owner_query), class: "space-y-3", data: { controller: "budget-form" } do |f| %>
         <%= f.money_field :budgeted_spending, label: t(".budgeted_spending"), required: true, disable_currency: true %>
         <%= f.money_field :expected_income, label: t(".expected_income"), required: true, disable_currency: true %>
 

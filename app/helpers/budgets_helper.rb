@@ -1,4 +1,15 @@
 module BudgetsHelper
+  # Forwards the current `owner` param (if any) so links generated while
+  # viewing the household budget or a shared member's budget keep pointing
+  # at that same budget instead of silently resetting to "mine". Defined
+  # here (rather than only in BudgetOwnership) so it's available to any view
+  # context, including isolated view tests that render budget partials
+  # without a full BudgetsController/BudgetCategoriesController/
+  # PlansController request cycle.
+  def budget_owner_query
+    params[:owner].present? ? { owner: params[:owner] } : {}
+  end
+
   def budget_has_over_budget?(budget)
     return false unless budget.initialized?
 

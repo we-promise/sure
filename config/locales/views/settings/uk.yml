@@ -22,7 +22,7 @@ uk:
           retries: "Повтори"
           scheduled: "Заплановано"
           dead: "Мертві"
-          latency: "%{value}с затримка"
+          queue_label: "%{name}: %{size} · %{latency}с затримка"
         table:
           type: "Операція"
           family: "Сім'я"

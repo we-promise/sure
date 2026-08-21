@@ -56,6 +56,10 @@ class PagesController < ApplicationController
     @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT) : Insight.none
 
     @money_flow_accounts = income_statement.eligible_accounts
+    # TransactionsController's default (account_ids absent) scopes to this
+    # broader set, not @money_flow_accounts, so the view needs it to know
+    # when the drill-down links can safely omit account_ids.
+    @money_flow_accessible_account_ids = Current.user.accessible_accounts.pluck(:id).map(&:to_s)
     @money_flow_month = money_flow_month_param
     @money_flow_account_ids = money_flow_account_ids_param
     @money_flow_data = build_money_flow_data(income_statement, @money_flow_month, @money_flow_account_ids)
@@ -157,7 +161,7 @@ class PagesController < ApplicationController
           title: "pages.dashboard.money_flow.title",
           partial: "pages/dashboard/money_flow",
           layout: section_layout("money_flow"),
-          locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts, col_span: section_layout("money_flow")[:col_span] },
+          locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts, accessible_account_ids: @money_flow_accessible_account_ids, col_span: section_layout("money_flow")[:col_span] },
           visible: @accounts.any?,
           collapsible: true
         },
