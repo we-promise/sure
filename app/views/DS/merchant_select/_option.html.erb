@@ -14,7 +14,7 @@
   <% logo_url = merchant.respond_to?(:logo_url) && merchant.logo_url.present? ? Setting.transform_brand_fetch_url(merchant.logo_url) : nil %>
   <span data-merchant-select-avatar>
     <% if logo_url %>
-      <%= image_tag logo_url, class: "w-6 h-6 rounded-full border border-secondary", loading: "lazy" %>
+      <%= image_tag logo_url, class: "w-5 h-5 rounded-full border border-secondary", loading: "lazy" %>
     <% else %>
       <%= render DS::FilledIcon.new(variant: :text, text: merchant.name, size: "sm", rounded: true) %>
     <% end %>
