@@ -339,6 +339,7 @@
           </div>
         <% end %>
         <% unless @entry.split_child? %>
+          <% emi_kind_locked = @entry.emi_purchase? && (@entry.originated_emi_plan.active? || @entry.originated_emi_plan.posted_installments.exists?) %>
           <div class="pb-4">
             <%= styled_form_with model: @entry,
                   url: transaction_path(@entry),
@@ -353,6 +354,7 @@
                   </div>
                   <%= ef.toggle :kind, {
                         checked: @entry.transaction.one_time?,
+                        disabled: emi_kind_locked,
                         data: { auto_submit_form_target: "auto" }
                       }, "one_time", "standard" %>
                 </div>

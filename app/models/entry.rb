@@ -438,6 +438,25 @@ class Entry < ApplicationRecord
     emi_plan_id.present?
   end
 
+  # True while this entry's amount/date must stay locked because of an EMI
+  # plan that's still "live" — active, or foreclosed with posted
+  # installment history. Same bar as the model validations
+  # (cannot_edit_emi_purchase_amount_or_date / ..._installment_...) and
+  # Transaction#cannot_change_kind_of_active_emi_entry. Once a plan is
+  # foreclosed with nothing ever posted, it has nothing left to desync, so
+  # this returns false and normal editing resumes.
+  def emi_date_locked?
+    if emi_purchase?
+      plan = originated_emi_plan
+      plan.active? || plan.posted_installments.exists?
+    elsif emi_installment?
+      plan = EmiPlan.find_by(id: emi_plan_id)
+      plan.present? && plan.active?
+    else
+      false
+    end
+  end
+
   # Splits this entry into child entries. Marks parent as excluded.
   #
   # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
@@ -530,7 +549,7 @@ class Entry < ApplicationRecord
           # Update standard attributes
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
-            attrs.delete(:date) if entry.split_child? || entry.emi_purchase? || entry.emi_installment?
+            attrs.delete(:date) if entry.split_child? || entry.emi_date_locked?
             attrs.delete(:entryable_attributes) unless entry.transaction?
 
             if attrs.present?
@@ -578,12 +597,18 @@ class Entry < ApplicationRecord
     end
 
     # The parent purchase's amount is what the whole installment schedule was
-    # computed from. Letting it change after conversion would silently desync
-    # the entry from its EmiPlan (the schedule wouldn't reflect the new
-    # amount, and totals would no longer reconcile). Foreclose the plan first
-    # if the purchase needs correcting.
+    # computed from. Letting it change while the plan is still live would
+    # silently desync the entry from its EmiPlan (the schedule wouldn't
+    # reflect the new amount, and totals would no longer reconcile).
+    # Foreclose the plan first if the purchase needs correcting.
+    #
+    # Scoped to a "live" plan — active, or foreclosed but with posted
+    # installment history — same bar used by Transaction's kind guard and
+    # by #prevent_emi_purchase_deletion. A plan foreclosed before anything
+    # ever posted has nothing left to desync, so editing is allowed again.
     def cannot_edit_emi_purchase_amount_or_date
       return unless emi_purchase? && persisted? && (amount_changed? || date_changed?)
+      return unless emi_date_locked?
 
       errors.add(:base, "Amount and date can't be changed on a purchase that's been converted to an EMI plan. Foreclose the plan first.")
     end
@@ -591,9 +616,16 @@ class Entry < ApplicationRecord
     # Installment entries are generated from the amortization schedule and
     # dated by EmiPlan#build!. Editing one directly (manually or via a
     # provider sync overwrite) would break the "schedule sums to principal"
-    # guarantee and desync it from its siblings. Foreclose + re-create instead.
+    # guarantee and desync it from its siblings while the plan is still
+    # live. Foreclose + re-create instead.
+    #
+    # Once foreclosed, remaining future installments have already been
+    # deleted by EmiPlan#foreclose! — so any installment entry that's still
+    # around at that point is a posted one, kept intentionally as real spend
+    # history, and edits to it behave like an ordinary transaction.
     def cannot_edit_emi_installment_amount_or_date
       return unless emi_installment? && persisted? && (amount_changed? || date_changed?)
+      return unless emi_date_locked?
 
       errors.add(:base, "Amount and date can't be changed on an individual EMI installment. Foreclose the plan to cancel remaining installments.")
     end

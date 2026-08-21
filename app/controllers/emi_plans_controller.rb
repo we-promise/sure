@@ -58,7 +58,7 @@ class EmiPlansController < ApplicationController
   def destroy
     resolve_to_parent!
 
-    unless @entry.emi_purchase?
+    unless @entry.emi_purchase? && @entry.originated_emi_plan.active?
       redirect_to transactions_path, alert: t("emi_plans.show.not_emi")
       return
     end
