@@ -116,8 +116,24 @@ class EmiPlan < ApplicationRecord
     Money.new(amortization_schedule.sum { |s| s[:interest] }, currency)
   end
 
+  # For an active plan, the total is derived from the original amortization
+  # schedule (principal + interest for every installment) plus the fee.
+  #
+  # For a foreclosed plan, that schedule no longer matches reality: foreclose!
+  # deletes the future installments and their interest, replacing them with a
+  # single principal-only settlement entry. Summing the original schedule
+  # here would keep counting interest on installments that no longer exist,
+  # so foreclosed plans instead sum the installment_entries that actually
+  # remain (posted installments + the settlement, if any) plus the fee —
+  # matching what's really persisted and what the plan drawer should show.
   def total_payable
-    Money.new(amortization_schedule.sum { |s| s[:total] } + processing_fee.to_d, currency)
+    base = if status == "foreclosed"
+      installment_entries.sum(:amount)
+    else
+      amortization_schedule.sum { |s| s[:total] }
+    end
+
+    Money.new(base + processing_fee.to_d, currency)
   end
 
   def currency
@@ -331,9 +347,9 @@ class EmiPlan < ApplicationRecord
       return if start_date.blank?
 
       if start_date < Date.current - 5.years
-        errors.add(:start_date, "can't be more than 5 years in the past")
+        errors.add(:start_date, I18n.t("emi_plans.new.start_date_too_far_past"))
       elsif start_date > Date.current + 5.years
-        errors.add(:start_date, "can't be more than 5 years in the future")
+        errors.add(:start_date, I18n.t("emi_plans.new.start_date_too_far_future"))
       end
     end
 end

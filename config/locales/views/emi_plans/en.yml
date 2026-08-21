@@ -22,6 +22,8 @@ en:
       submit: Create EMI Plan
       cancel: Cancel
       not_convertible: This transaction can't be converted to an EMI plan.
+      start_date_too_far_past: "can't be more than 5 years in the past"
+      start_date_too_far_future: "can't be more than 5 years in the future"
     create:
       success: EMI plan created with %{count} installments.
     show:

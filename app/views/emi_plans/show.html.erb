@@ -12,18 +12,18 @@
   <% dialog.with_body do %>
     <div class="px-4 space-y-4">
       <div class="grid grid-cols-3 gap-3">
-        <div class="p-3 rounded-lg border border-secondary text-center">
+        <%= render DS::Card.new(class: "text-center") do %>
           <p class="text-xs text-secondary uppercase tracking-wide"><%= t("emi_plans.show.principal") %></p>
           <p class="text-sm font-semibold text-primary mt-1"><%= format_money(@plan.principal_amount_money) %></p>
-        </div>
-        <div class="p-3 rounded-lg border border-secondary text-center">
+        <% end %>
+        <%= render DS::Card.new(class: "text-center") do %>
           <p class="text-xs text-secondary uppercase tracking-wide"><%= t("emi_plans.show.interest_rate") %></p>
           <p class="text-sm font-semibold text-primary mt-1"><%= number_to_percentage(@plan.interest_rate, precision: 2) %></p>
-        </div>
-        <div class="p-3 rounded-lg border border-secondary text-center">
+        <% end %>
+        <%= render DS::Card.new(class: "text-center") do %>
           <p class="text-xs text-secondary uppercase tracking-wide"><%= t("emi_plans.show.tenure") %></p>
           <p class="text-sm font-semibold text-primary mt-1"><%= t("emi_plans.show.months", count: @plan.tenure_months) %></p>
-        </div>
+        <% end %>
       </div>
 
       <div class="flex items-center justify-between p-3 rounded-lg bg-surface-inset text-sm">

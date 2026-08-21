@@ -582,10 +582,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_000000) do
     t.datetime "created_at", null: false
     t.uuid "entry_id", null: false
     t.decimal "interest_rate", precision: 10, scale: 3, default: "0.0", null: false
+    t.string "original_kind", default: "standard", null: false
     t.decimal "principal_amount", precision: 19, scale: 4, null: false
     t.decimal "processing_fee", precision: 19, scale: 4, default: "0.0", null: false
     t.uuid "processing_fee_entry_id"
-    t.string "original_kind", default: "standard", null: false
     t.date "start_date", null: false
     t.string "status", default: "active", null: false
     t.integer "tenure_months", null: false

@@ -570,14 +570,29 @@ class Entry < ApplicationRecord
 
       return 0 unless has_updates
 
+      entries = all.includes(:originated_emi_plan, :emi_plan).to_a
+
+      # emi_date_locked? calls EmiPlan#posted_installments.exists? for every
+      # emi_purchase entry, which is one query per foreclosed plan when run
+      # inside the loop below. Batch that lookup into a single query up
+      # front instead, and pass the result in so the per-entry check stays
+      # in-memory.
+      originated_plan_ids = entries.filter_map { |entry| entry.originated_emi_plan&.id }
+      plan_ids_with_posted_installments = Entry
+        .where(emi_plan_id: originated_plan_ids)
+        .where("entries.date <= ?", Date.current)
+        .distinct
+        .pluck(:emi_plan_id)
+        .to_set
+
       transaction do
-        all.includes(:originated_emi_plan, :emi_plan).each do |entry|
+        entries.each do |entry|
           changed = false
 
           # Update standard attributes
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
-            attrs.delete(:date) if entry.split_child? || entry.emi_date_locked?
+            attrs.delete(:date) if entry.split_child? || emi_date_locked_for_bulk_update?(entry, plan_ids_with_posted_installments)
             attrs.delete(:entryable_attributes) unless entry.transaction?
 
             if attrs.present?
@@ -606,6 +621,23 @@ class Entry < ApplicationRecord
 
       all.size
     end
+
+    private
+
+      # Mirrors Entry#emi_date_locked?, but takes a precomputed set of
+      # originated-plan ids that have at least one posted installment
+      # instead of calling EmiPlan#posted_installments.exists? per entry.
+      # Used by bulk_update! to avoid an N+1 query across foreclosed plans.
+      def emi_date_locked_for_bulk_update?(entry, plan_ids_with_posted_installments)
+        if entry.emi_purchase?
+          plan = entry.originated_emi_plan
+          plan.active? || plan_ids_with_posted_installments.include?(plan.id)
+        elsif entry.emi_installment?
+          (entry.emi_plan.present? && entry.emi_plan.active?) || entry.date <= Date.current
+        else
+          false
+        end
+      end
   end
 
   private

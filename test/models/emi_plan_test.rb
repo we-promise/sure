@@ -130,6 +130,30 @@ class EmiPlanTest < ActiveSupport::TestCase
     assert_equal Date.current, settlement.date
   end
 
+  test "total_payable matches the original schedule while the plan is active" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 10, tenure_months: 6, processing_fee: 25)
+
+    expected = plan.amortization_schedule.sum { |s| s[:total] } + plan.processing_fee.to_d
+    assert_equal expected, plan.total_payable.amount
+  end
+
+  test "total_payable is derived from retained installments after foreclosure, not the original schedule" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 10, tenure_months: 6, processing_fee: 25, start_date: Date.current - 1.month)
+
+    # Sanity check: with interest > 0 and installments still outstanding,
+    # the original schedule's total is strictly more than what remains
+    # after foreclosure (it still includes interest on the cancelled
+    # future installments).
+    original_schedule_total = plan.amortization_schedule.sum { |s| s[:total] } + plan.processing_fee.to_d
+
+    plan.foreclose!
+    plan.reload
+
+    expected = plan.installment_entries.sum(:amount) + plan.processing_fee.to_d
+    assert_equal expected, plan.total_payable.amount
+    assert_operator plan.total_payable.amount, :<, original_schedule_total
+  end
+
   test "foreclose! reverts parent kind to standard when no installment ever posted" do
     # start_date in the future so nothing has posted yet
     plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current + 1.month)
