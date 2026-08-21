@@ -530,6 +530,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           status: "active",
           occurrence_count: 6,
           manual: true,
+          payment_url: "https://pay.example.com/internet",
           expected_amount_min: "-95.00",
           expected_amount_max: "-85.00",
           expected_amount_avg: "-89.99"
@@ -551,6 +552,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "active", recurring_transaction.status
     assert_equal 6, recurring_transaction.occurrence_count
     assert_equal true, recurring_transaction.manual
+    assert_equal "https://pay.example.com/internet", recurring_transaction.payment_url
     assert_equal(-95.0, recurring_transaction.expected_amount_min.to_f)
     assert_equal(-85.0, recurring_transaction.expected_amount_max.to_f)
     assert_equal(-89.99, recurring_transaction.expected_amount_avg.to_f)
@@ -665,7 +667,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           expected_day_of_month: "8",
           last_occurrence_date: "2024-01-08",
           next_expected_date: "2024-02-08",
-          status: "paused",
+          status: "bogus_status",
           occurrence_count: 2
         }
       }
@@ -2240,9 +2242,154 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Local Grocery", recurring_transaction.merchant.name
   end
 
+  # Everything below the series was silently absent from an export: a restored
+  # bill kept its name and amount and lost its cadence, its payment history and
+  # every setting that decides how it behaves.
+  test "imports the bills subsystem, reattaching payments to their transactions" do
+    importer = Family::DataImporter.new(@family, build_ndjson(bills_ndjson_records))
+    importer.import!
+
+    series = @family.recurring_transactions.sole
+    assert_equal "bill", series.bill_type
+    assert_equal 9.5, series.amount_tolerance_pct.to_f
+    assert_equal "before", series.weekend_adjust
+    assert_equal "2000", series.dedup_scope
+    assert_equal [ "WATSON PROPERTY" ], series.matcher_hints["name_aliases"]
+
+    rule = series.recurrence_rules.sole
+    assert_equal "weekly", rule.frequency, "cadence must survive, not fall back to monthly"
+    assert_equal 2, rule.interval
+
+    occurrence = series.recurring_occurrences.find_by(original_due_on: Date.new(2026, 6, 9))
+    assert occurrence.paid?
+    assert_equal 2000, occurrence.expected_amount.to_f
+
+    allocation = occurrence.allocations.sole
+    assert_equal 2000, allocation.allocated_amount.to_f
+    assert_equal "user_confirmed", allocation.source
+    assert_not_nil allocation.entry, "the payment must reattach to the imported transaction"
+    assert_equal 2000, allocation.entry.amount.to_f
+    assert_equal Date.new(2026, 6, 9), allocation.entry.date
+  end
+
+  test "replaying a bills export changes nothing the second time" do
+    records = bills_ndjson_records
+    Family::DataImporter.new(@family, build_ndjson(records)).import!
+
+    census = -> {
+      [ RecurrenceRule.joins(:recurring_transaction).where(recurring_transactions: { family_id: @family.id }).count,
+        RecurringOccurrence.where(family_id: @family.id).count,
+        RecurringAllocation.joins(:recurring_occurrence).where(recurring_occurrences: { family_id: @family.id }).count ]
+    }
+    before = census.call
+
+    importer = Family::DataImporter.new(@family, build_ndjson(records))
+    parsed = importer.send(:parse_ndjson)
+    importer.send(:import_recurring_transactions, parsed["RecurringTransaction"])
+    importer.send(:import_recurrence_rules, parsed["RecurrenceRule"])
+    importer.send(:import_recurring_occurrences, parsed["RecurringOccurrence"])
+    importer.send(:import_recurring_allocations, parsed["RecurringAllocation"])
+
+    assert_equal before, census.call
+  end
+
+  test "a closed occurrence exported without closed_at replays to the same timestamp" do
+    records = bills_ndjson_records
+    records.each { |record| record[:data].delete(:closed_at) if record[:type] == "RecurringOccurrence" }
+
+    Family::DataImporter.new(@family, build_ndjson(records)).import!
+    occurrence = @family.recurring_transactions.sole
+                        .recurring_occurrences.find_by!(original_due_on: Date.new(2026, 6, 9))
+    first_stamp = occurrence.closed_at
+    assert_not_nil first_stamp
+    assert_equal Date.new(2026, 6, 9), first_stamp.to_date, "the stand-in derives from the due date"
+
+    importer = Family::DataImporter.new(@family, build_ndjson(records))
+    parsed = importer.send(:parse_ndjson)
+    importer.send(:import_recurring_transactions, parsed["RecurringTransaction"])
+    importer.send(:import_recurring_occurrences, parsed["RecurringOccurrence"])
+
+    assert_equal first_stamp, occurrence.reload.closed_at,
+      "an import-time stand-in would move the historical timestamp on every replay"
+  end
+
+  test "a hand-recorded allocation without a paid_on is skipped, not defaulted to today" do
+    records = bills_ndjson_records
+    records.each do |record|
+      next unless record[:type] == "RecurringAllocation"
+
+      record[:data].delete(:transaction_id)
+      record[:data].delete(:paid_on)
+    end
+
+    result = Family::DataImporter.new(@family, build_ndjson(records)).import!
+
+    occurrence = @family.recurring_transactions.sole
+                        .recurring_occurrences.find_by!(original_due_on: Date.new(2026, 6, 9))
+    assert_equal 0, occurrence.allocations.count,
+      "a defaulted paid_on would make every later replay insert a fresh copy"
+    assert_equal 1, result.dig(:summary, "recurring_allocations", "skipped")
+  end
+
+  test "recurring records whose series never came across are counted as skipped" do
+    ndjson = build_ndjson([
+      { type: "RecurringPriceChange", data: {
+          id: "old-change", recurring_transaction_id: "missing-series",
+          effective_on: "2026-05-01", previous_amount: "10.0", new_amount: "12.0",
+          currency: "USD" } }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal 1, result.dig(:summary, "recurring_price_changes", "skipped")
+  end
+
+  # A bill created with a full payment history must not also carry the
+  # occurrences its own creation callback generates.
+  test "imported occurrences do not duplicate the ones a new series generates" do
+    Family::DataImporter.new(@family, build_ndjson(bills_ndjson_records)).import!
+
+    series = @family.recurring_transactions.sole
+    duplicates = series.recurring_occurrences.group(:original_due_on).count.select { |_, n| n > 1 }
+
+    assert_empty duplicates, "generation and import collided on the same due date"
+  end
+
   private
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")
+    end
+
+    # A bill, one non-monthly rule, a settled occurrence, and the payment that
+    # settled it, pointing at a transaction arriving in the same export.
+    def bills_ndjson_records
+      [
+        { type: "Account", data: {
+            id: "old-acct", name: "Checking", balance: "0", currency: "USD",
+            accountable_type: "Depository", accountable: { subtype: "checking" } } },
+        { type: "RecurringTransaction", data: {
+            id: "old-series", account_id: "old-acct", amount: "2000.0", currency: "USD",
+            expected_day_of_month: 9, last_occurrence_date: "2026-06-09",
+            next_expected_date: "2026-07-09", status: "active", name: "Rent",
+            manual: true, bill_type: "bill", amount_tolerance_pct: "9.5",
+            anchor_date: "2026-06-09", weekend_adjust: "before", dedup_scope: "2000",
+            matcher_hints: { "name_aliases" => [ "WATSON PROPERTY" ] } } },
+        { type: "RecurrenceRule", data: {
+            id: "old-rule", recurring_transaction_id: "old-series",
+            frequency: "weekly", interval: 2, weekday: 1, position: 0 } },
+        { type: "Transaction", data: {
+            id: "old-txn", entry_id: "old-entry", account_id: "old-acct",
+            date: "2026-06-09", amount: "2000.0", currency: "USD", name: "Rent payment" } },
+        { type: "RecurringOccurrence", data: {
+            id: "old-occ", recurring_transaction_id: "old-series",
+            original_due_on: "2026-06-09", due_on: "2026-06-09", currency: "USD",
+            expected_amount: "2000.0", status: "paid",
+            closed_at: "2026-06-09T12:00:00Z", closed_source: "auto" } },
+        { type: "RecurringAllocation", data: {
+            id: "old-alloc", recurring_occurrence_id: "old-occ", transaction_id: "old-txn",
+            allocated_amount: "2000.0", currency: "USD", state: "confirmed",
+            source: "user_confirmed", paid_on: "2026-06-09" } }
+      ]
     end
 end

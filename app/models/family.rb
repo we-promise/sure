@@ -115,6 +115,7 @@ class Family < ApplicationRecord
 
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :recurring_occurrences, dependent: :destroy
   has_many :insights, dependent: :destroy
 
   # Families with at least one opted-in member. Lets a job filter in one
@@ -484,6 +485,20 @@ class Family < ApplicationRecord
 
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
+  end
+
+  # Lazy so existing families get a token on first render, and resetting is
+  # revocation.
+  def bills_feed_token!
+    return bills_feed_token if bills_feed_token.present?
+
+    update!(bills_feed_token: SecureRandom.urlsafe_base64(24))
+    bills_feed_token
+  end
+
+  def reset_bills_feed_token!
+    update!(bills_feed_token: SecureRandom.urlsafe_base64(24))
+    bills_feed_token
   end
 
   private

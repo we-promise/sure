@@ -1,7 +1,11 @@
 class Assistant::Responder
   ToolCallLimitError = Class.new(StandardError)
   EmptyResponseError = Class.new(StandardError)
-  DEFAULT_MAX_TOOL_CALL_ITERATIONS = 5
+  # Rounds, not calls: parallel calls in one round count once. Eight covers a
+  # taxonomy lookup, a target lookup, an action, one hint-corrected retry, a
+  # verification read and a summary, with margin. Override with
+  # ASSISTANT_MAX_TOOL_CALL_ITERATIONS (low-resource hosts may want 2).
+  DEFAULT_MAX_TOOL_CALL_ITERATIONS = 8
 
   def initialize(message:, instructions:, function_tool_caller:, llm:)
     @message = message

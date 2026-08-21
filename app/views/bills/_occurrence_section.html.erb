@@ -1,0 +1,40 @@
+<%# locals: (title:, occurrences:, tone: :default, date_labels: false, suggestions: {}, meta: nil) %>
+<% return if occurrences.empty? %>
+
+<%# Two bills can be genuinely indistinguishable on a row -- same merchant,
+    same amount, three tiers of one subscription. Where that happens, and only
+    where it happens, the row earns a second fact to tell them apart. Adding
+    the schedule to every row instead would be nineteen copies of something
+    nobody was confused about. %>
+<% ambiguous = occurrences.group_by { |o| [ o.recurring_transaction.display_name, o.resolved_expected_amount ] }
+                          .select { |_, group| group.size > 1 }
+                          .keys.to_set %>
+
+<div>
+  <div class="flex items-baseline justify-between gap-3 px-4 py-2">
+    <div class="flex items-center gap-1.5 text-xs font-medium uppercase <%= tone == :destructive ? "text-destructive" : "text-secondary" %>">
+      <p><%= title %></p>
+      <span class="text-subdued">&middot;</span>
+      <p><%= occurrences.size %></p>
+    </div>
+    <% if meta %>
+      <p class="text-xs text-secondary privacy-sensitive shrink-0"><%= meta %></p>
+    <% end %>
+  </div>
+
+  <%# The divider is half its old weight: the rows are separated by a hairline
+      and by the hover state, not by a rule competing with the content. %>
+  <%# A container query, not a media query. The app shell has two sidebars, so
+      main is ~420px wide at a 1280px viewport -- "desktop" by any breakpoint
+      and phone-width in practice. The row has to size itself against the space
+      it actually has. %>
+  <div class="@container bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+    <% occurrences.each do |occurrence| %>
+      <%= render "bills/occurrence",
+                 occurrence: occurrence,
+                 date_label: date_labels,
+                 suggestion: suggestions[occurrence.id],
+                 disambiguate: ambiguous.include?([ occurrence.recurring_transaction.display_name, occurrence.resolved_expected_amount ]) %>
+    <% end %>
+  </div>
+</div>

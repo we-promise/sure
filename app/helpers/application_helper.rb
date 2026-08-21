@@ -87,6 +87,25 @@ module ApplicationHelper
     item.merge(preview: true)
   end
 
+  # Bills is only meaningful while recurring detection is on, since a family that has
+  # turned it off has nothing to list. Returns nil so the entry drops out of the
+  # `Array#compact` nav list entirely rather than leading to an empty page. The
+  # subsystem also ships as a preview feature, so the entry is preview-gated on
+  # top: hidden without the flag, violet-dotted with it.
+  def bills_nav_item
+    return nil if Current.family.nil? || Current.family.recurring_transactions_disabled?
+
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.bills"),
+        path: bills_path,
+        icon: "receipt",
+        icon_custom: false,
+        active: page_active?(bills_path)
+      }
+    )
+  end
+
   # Budgets and Goals share one nav slot. Preview users get the "Plan" hub
   # entry fronting both (it stays lit while browsing either subpage, since
   # page_active? is a path-prefix match and /budgets · /goals don't share

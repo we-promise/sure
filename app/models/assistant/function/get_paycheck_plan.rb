@@ -1,0 +1,112 @@
+class Assistant::Function::GetPaycheckPlan < Assistant::Function
+  include Assistant::Function::BillsSupport
+
+  class << self
+    def name
+      "get_paycheck_plan"
+    end
+
+    def description
+      <<~INSTRUCTIONS
+        Get the user's income plan: time sliced into pay periods by their declared income
+        schedule, with each period showing what is due before the next payday, what must
+        stay reserved for bigger bills due later, and what is genuinely safe to spend
+        (income - due - reserved).
+
+        Key concepts:
+        - Only income the user declared defines paydays. Detected bank inflows never do.
+        - A "bridge" period is the window between today and the next payday: nothing
+          arrives in it, so what it needs must come from cash already in hand.
+        - "reserved" is the part of a later bill that its own paycheck cannot cover,
+          set aside out of an earlier one -- rent that outgrows one paycheck reserves
+          the difference from the paychecks just before it. A bill its own paycheck
+          covers reserves nothing.
+        - A "short" period's obligations exceed its income by "shortfall".
+
+        This answers "can I afford X before my next paycheck" and "which paycheck does
+        this bill come out of".
+      INSTRUCTIONS
+    end
+  end
+
+  def strict_mode?
+    false
+  end
+
+  def params_schema
+    build_schema(
+      required: [],
+      properties: {
+        periods_limit: {
+          type: "integer", minimum: 1, maximum: 6,
+          description: "How many pay periods to plan (default 3)."
+        }
+      }
+    )
+  end
+
+  def call(params = {})
+    return recurring_disabled_result if recurring_disabled?
+
+    planner = RecurringTransaction::PaycheckPlanner.new(family, user: user)
+    limit = (Integer(params["periods_limit"].to_s, exception: false) || 3).clamp(1, 6)
+    periods = planner.plan(periods_limit: limit)
+
+    if periods.blank?
+      return {
+        error: "No declared income schedule",
+        hint: "Only manually declared income defines paydays; detected inflows never do. Suggest the user adds their income under Bills -> Income plan. Do not infer paydays from transaction data."
+      }
+    end
+
+    {
+      as_of_date: Date.current.iso8601,
+      family_currency: family.currency,
+      unconvertible_count: planner.unconvertible_count,
+      periods: periods.map { |period| serialize_period(period) }
+    }
+  end
+
+  private
+    def serialize_period(period)
+      {
+        starts_on: period.starts_on.iso8601,
+        ends_on: period.ends_on.iso8601,
+        bridge: period.bridge?,
+        income: fmt(period.income),
+        income_sources: period.income_sources,
+        due_total: fmt(period.due_total),
+        reserved_total: fmt(period.reserved_total),
+        safe_after_bills: fmt(period.remaining),
+        short: period.short?,
+        shortfall: period.short? ? fmt(period.shortfall) : nil,
+        bills_due: period.items_due.map { |item| serialize_item(item) },
+        reserved_for_later: period.items_reserved.map { |item| serialize_item(item) },
+        largest_obligation: largest_obligation(period)
+      }.compact
+    end
+
+    def serialize_item(item)
+      {
+        name: item.occurrence.recurring_transaction.display_name,
+        due_on: item.occurrence.due_on.iso8601,
+        this_period_share: fmt(item.share),
+        whole_obligation_remaining: fmt(item.remaining_total)
+      }
+    end
+
+    def largest_obligation(period)
+      item = period.largest_obligation
+      return nil if item.nil?
+
+      {
+        name: item.occurrence.recurring_transaction.display_name,
+        remaining_total: fmt(item.remaining_total)
+      }
+    end
+
+    # Planner sums over an empty side come back as bare zero, not Money.
+    def fmt(value)
+      value.respond_to?(:format) ? value.format : Money.new(value, family.currency).format
+    end
+end
