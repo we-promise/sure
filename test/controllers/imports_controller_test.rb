@@ -398,6 +398,29 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to imports_path
   end
 
+  test "respects SURE_IMPORT_MAX_NDJSON_SIZE_MB when creating Sure import (#3010)" do
+    configured_limit = 2.megabytes
+    SureImport.stubs(:max_ndjson_size).returns(configured_limit)
+
+    oversized_file = Rack::Test::UploadedFile.new(
+      StringIO.new("x" * (configured_limit + 1)),
+      "application/x-ndjson",
+      original_filename: "all.ndjson"
+    )
+
+    assert_no_difference "Import.count" do
+      post imports_url, params: {
+        import: {
+          type: "SureImport",
+          import_file: oversized_file
+        }
+      }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.file_too_large", max_size: configured_limit / 1.megabyte), flash[:alert]
+  end
+
   test "PDF import account select does not leak unshared family accounts (#1803)" do
     sign_in users(:family_member)
     pdf_import = imports(:pdf_with_rows)
