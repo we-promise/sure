@@ -38,6 +38,31 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "login page offers passkey sign-in" do
+    AuthConfig.stubs(:passkey_login_enabled?).returns(true)
+
+    get new_session_url
+
+    assert_response :success
+    assert_select "button", text: I18n.t("sessions.new.passkey_button")
+    assert_select "[data-webauthn-authentication-conditional-value='true']"
+    assert_select "[data-webauthn-authentication-unsupported-message-value=?]", I18n.t("sessions.new.passkey_unsupported")
+    assert_select "[data-webauthn-authentication-error-fallback-value=?]", I18n.t("passkey_sessions.invalid_credential")
+    # Browsers only surface passkeys from autofill when the field carries the
+    # "webauthn" token.
+    assert_select "input[type=email][autocomplete='username webauthn']"
+  end
+
+  test "login page hides passkey sign-in when disabled" do
+    AuthConfig.stubs(:passkey_login_enabled?).returns(false)
+
+    get new_session_url
+
+    assert_response :success
+    assert_select "button", text: I18n.t("sessions.new.passkey_button"), count: 0
+    assert_select "input[type=email][autocomplete='email']"
+  end
+
   test "can sign in" do
     sign_in @user
     assert_redirected_to root_url
@@ -678,5 +703,76 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     # Follow redirect to verify we're on the link page (not logged in)
     follow_redirect!
     assert_response :success
+  end
+
+  # ── Desktop SSO: browser handoff + PKCE code exchange ──
+
+  test "desktop SSO exchanges a PKCE-bound code for a web session and is single-use" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    verifier = SecureRandom.hex(32)
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+    oidc_identity = oidc_identities(:bob_google)
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+    setup_omniauth_mock(provider: oidc_identity.provider, uid: oidc_identity.uid, email: @user.email, name: "Bob Dylan")
+
+    get "/auth/desktop/openid_connect", params: { code_challenge: challenge }
+    assert_response :success
+
+    get "/auth/openid_connect/callback"
+    assert_response :redirect
+    redirect_url = @response.redirect_url
+    assert redirect_url.start_with?("sure://sso/callback?code="), "Expected sure://sso/callback but got #{redirect_url}"
+    code = Rack::Utils.parse_query(URI.parse(redirect_url).query)["code"]
+    assert code.present?
+
+    assert_difference -> { oidc_identity.user.sessions.count }, 1 do
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
+    end
+    assert_redirected_to root_path
+
+    # Single-use: the same code cannot be redeemed again.
+    assert_no_difference -> { oidc_identity.user.sessions.count } do
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
+    end
+    assert_redirected_to new_session_path
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "desktop SSO exchange rejects a wrong PKCE verifier" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest("the-real-verifier"), padding: false)
+    oidc_identity = oidc_identities(:bob_google)
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+    setup_omniauth_mock(provider: oidc_identity.provider, uid: oidc_identity.uid, email: @user.email, name: "Bob Dylan")
+
+    get "/auth/desktop/openid_connect", params: { code_challenge: challenge }
+    get "/auth/openid_connect/callback"
+    code = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)["code"]
+
+    assert_no_difference -> { oidc_identity.user.sessions.count } do
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: "an-attacker-guess" }
+    end
+    assert_redirected_to new_session_path
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "desktop_sso_start rejects a missing PKCE code_challenge" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+    get "/auth/desktop/openid_connect"
+    assert_redirected_to new_session_path
   end
 end

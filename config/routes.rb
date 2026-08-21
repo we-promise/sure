@@ -207,7 +207,9 @@ Rails.application.routes.draw do
   get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
-  use_doorkeeper
+  use_doorkeeper do |mapping|
+    mapping.controllers authorizations: "oauth/authorizations"
+  end
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
     get :verify
@@ -275,6 +277,15 @@ Rails.application.routes.draw do
 
   resource :registration, only: %i[new create]
   resources :sessions, only: %i[index new create destroy]
+  # Passwordless sign-in with a discoverable passkey. Unauthenticated by design;
+  # rate limited alongside the MFA WebAuthn endpoints in Rack::Attack.
+  post "/sessions/passkey_options", to: "passkey_sessions#options", as: :passkey_session_options
+  post "/sessions/passkey", to: "passkey_sessions#create", as: :passkey_session
+  # Desktop app SSO: opens the flow in the system browser (so passkeys/WebAuthn
+  # work), then hands a single-use, PKCE-bound code back via the sure:// scheme
+  # which the desktop webview exchanges for a normal web session.
+  post "/sessions/desktop_exchange", to: "sessions#desktop_exchange", as: :desktop_sso_exchange
+  get "/auth/desktop/:provider", to: "sessions#desktop_sso_start"
   get "/auth/mobile/:provider", to: "sessions#mobile_sso_start"
   match "/auth/:provider/callback", to: "sessions#openid_connect", via: %i[get post]
   match "/auth/failure", to: "sessions#failure", via: %i[get post]
@@ -307,6 +318,7 @@ Rails.application.routes.draw do
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
     resource :preferences, only: %i[show update]
+    resource :budget_shares, only: :update
     resource :appearance, only: %i[show update]
     resource :debug, only: :show
     resource :background_jobs, controller: "background_jobs", only: :show do
@@ -372,6 +384,9 @@ Rails.application.routes.draw do
     get :picker, on: :collection
   end
 
+  # Hub page fronting budgets + goals under a single "Plan" nav entry.
+  resource :plan, only: :show
+
   resources :budgets, only: %i[index show edit update], param: :month_year do
     post :copy_previous, on: :member
     get :picker, on: :collection
@@ -409,6 +424,7 @@ Rails.application.routes.draw do
   resources :transfers, only: %i[new create destroy show update] do
     member do
       post :mark_as_recurring
+      patch :tags, action: :update_tags
     end
   end
 
@@ -466,7 +482,6 @@ Rails.application.routes.draw do
 
     collection do
       delete :clear_filter
-      patch :update_preferences
     end
 
     member do
@@ -498,8 +513,8 @@ Rails.application.routes.draw do
     end
 
     member do
-      patch :dismiss
-      patch :undismiss
+      patch :acknowledge
+      patch :unacknowledge
     end
   end
 
@@ -706,6 +721,20 @@ Rails.application.routes.draw do
       get :preload_accounts
       get :select_accounts
       post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :redbark_items, only: %i[create update destroy] do
+    collection do
+      get :select_accounts
       get :select_existing_account
       post :link_existing_account
     end

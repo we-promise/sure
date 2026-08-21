@@ -14,6 +14,10 @@ class Session < ApplicationRecord
 
   before_create :capture_session_info
 
+  def prev_transaction_page_params
+    super || {}
+  end
+
   def get_preferred_tab(tab_key)
     data.dig("tab_preferences", tab_key)
   end

@@ -12,7 +12,7 @@
   </div>
 
   <div class="ml-auto">
-    <%= form_with model: [budget_category.budget, budget_category], data: { controller: "auto-submit-form preserve-focus" } do |f| %>
+    <%= form_with model: [budget_category.budget, budget_category], url: budget_budget_category_path(budget_category.budget, budget_category, **budget_owner_query), data: { controller: "auto-submit-form preserve-focus" } do |f| %>
       <div class="form-field w-[120px]">
         <div class="flex items-center privacy-sensitive privacy-sensitive-interactive">
           <span class="text-secondary text-sm mr-2"><%= currency.symbol %></span>

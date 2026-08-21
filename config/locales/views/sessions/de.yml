@@ -31,3 +31,5 @@ de:
       no_auth_methods_enabled: Derzeit sind keine Anmeldemethoden aktiviert. Bitte wende dich an einen Administrator.
       demo_banner_title: "Demo-Modus aktiv"
       demo_banner_message: "Dies ist eine Demo-Umgebung. Anmeldedaten wurden zur Vereinfachung vorausgefüllt. Bitte gib keine echten oder sensiblen Daten ein."
+    mobile_sso_start:
+      redirecting_html: Weiterleitung zur Anmeldung … <a href="%{url}">Hier klicken</a>, falls nichts passiert.

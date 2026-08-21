@@ -1,0 +1,42 @@
+uk:
+  concerns:
+    self_hostable:
+      redis_configured: "Redis тепер налаштовано правильно! Тепер ви можете налаштувати свою програму Sure."
+  shared:
+    preview: Попередній перегляд
+    dot_separator: "·"
+    sync_toast:
+      message: "Доступні нові дані"
+      refresh: "Оновити"
+    confirm_modal:
+      accept: Підтвердити
+      body_html: "<p>Ви не зможете скасувати це рішення</p>"
+      cancel: Скасувати
+      title: Ви впевнені?
+    money_field:
+      label: Сума
+    exchange_rate_tabs:
+      calculate_rate_tab: Розрахувати курс обміну
+      convert_tab: Конвертувати за курсом обміну
+      destination_amount: Сума призначення
+      exchange_rate: Обмінний курс
+      exchange_rate_help: Виберіть, як вводити суму.
+    syncing_notice:
+      syncing: Синхронізація даних облікових записів...
+    require_admin: "Тільки адміністратори можуть виконувати цю дію"
+    custom_confirm:
+      default_title: "Ви впевнені?"
+      default_body: "Це незворотно."
+      default_btn_text: "Підтвердити"
+    family_moniker:
+      group_plural: Групи
+      group_singular: Група
+      plural: Сім'ї
+      singular: Сім'я
+    trend_change:
+      no_change: "без змін"
+    cancel: Скасувати
+    transaction_tabs:
+      expense: Витрата
+      income: Дохід
+      transfer: Переказ

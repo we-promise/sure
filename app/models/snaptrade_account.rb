@@ -28,6 +28,25 @@ class SnaptradeAccount < ApplicationRecord
     linked_account
   end
 
+  # SnapTrade normalizes provider-specific account types into three categories.
+  # Keep this derived from the raw API payload so existing records immediately
+  # receive a sensible setup default without a data migration.
+  def suggested_account_type
+    payload = raw_payload.to_h.with_indifferent_access
+    raw_type = payload[:raw_type].presence || account_type
+
+    case payload[:account_category]
+    when "DEPOSIT"
+      "Depository"
+    when "LOC"
+      raw_type.to_s.gsub(/[^a-z]/i, "").downcase.include?("card") ? "CreditCard" : "Loan"
+    else
+      # SnapTrade documents INVESTMENT and an unknown category as investment
+      # accounts. The user may still select a more appropriate Sure type.
+      raw_type.to_s.match?(/crypto|bitcoin|ethereum|digital.?asset/i) ? "Crypto" : "Investment"
+    end
+  end
+
   # Ensure there is an AccountProvider link for this SnapTrade account and the given Account.
   # Safe and idempotent; returns the AccountProvider or nil if no account is provided.
   def ensure_account_provider!(account = nil)

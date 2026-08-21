@@ -6,6 +6,9 @@ class Provider::Wise
 
   LIVE_BASE_URL = "https://api.wise.com"
   SANDBOX_BASE_URL = "https://api.sandbox.transferwise.tech"
+  # Wise caps a single balance-statement request at 469 days; chunk at 468 to
+  # stay safely within the limit while covering the full requested range.
+  MAX_STATEMENT_DAYS = 468
 
   headers "User-Agent" => "Sure Finance Wise Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
@@ -33,14 +36,38 @@ class Provider::Wise
     get("/v4/profiles/#{profile_id}/balances", query: { types: "SAVINGS" })
   end
 
-  def get_balance_statement(profile_id, balance_id, interval_start:, interval_end:)
+  def get_balance_statement(profile_id, balance_id, interval_start:, interval_end:, currency: nil)
     get(
       "/v1/profiles/#{profile_id}/balance-statements/#{balance_id}/statement.json",
       query: {
-        intervalStart: interval_start.iso8601,
-        intervalEnd: interval_end.iso8601
+        currency: currency,
+        intervalStart: interval_start.to_time.utc.iso8601,
+        intervalEnd: interval_end.to_time.utc.iso8601
       }
     )
+  end
+
+  def get_balance_statements(profile_id, balance_id, currency:, start_date:, end_date: Date.current)
+    transactions = []
+    window_start = start_date.to_date
+    end_date = end_date.to_date
+
+    while window_start <= end_date
+      window_end = [ window_start + MAX_STATEMENT_DAYS - 1, end_date ].min
+      response = with_rate_limit_retry do
+        get_balance_statement(
+          profile_id,
+          balance_id,
+          currency: currency,
+          interval_start: window_start.beginning_of_day,
+          interval_end: window_end.end_of_day
+        )
+      end
+      transactions.concat(Array(response["transactions"] || response[:transactions]))
+      window_start = window_end + 1.day
+    end
+
+    transactions
   end
 
   def get_transfers(profile_id, limit: 100, offset: 0)
@@ -106,12 +133,28 @@ class Provider::Wise
       end
     end
 
-    class WiseError < StandardError
-      attr_reader :error_type
+    private
 
-      def initialize(message, error_type = :unknown)
-        super(message)
-        @error_type = error_type
+      # Retries only the failed window so a rate-limited request does not
+      # restart earlier windows in a multi-window statement fetch.
+      def with_rate_limit_retry(max_retries: 3)
+        retries = 0
+        begin
+          yield
+        rescue WiseError => e
+          raise unless e.error_type == :rate_limited && retries < max_retries
+          retries += 1
+          sleep(2 ** retries)
+          retry
+        end
       end
-    end
+
+      class WiseError < StandardError
+        attr_reader :error_type
+
+        def initialize(message, error_type = :unknown)
+          super(message)
+          @error_type = error_type
+        end
+      end
 end
