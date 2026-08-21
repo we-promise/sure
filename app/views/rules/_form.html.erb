@@ -21,7 +21,7 @@
 
   <section class="space-y-4">
     <div class="flex items-center gap-1 text-secondary">
-      <h3 class="text-sm font-medium text-primary">IF</h3>
+      <h3 class="text-sm font-medium text-primary"><%= t(".if") %></h3>
     </div>
 
     <%# Condition Group template, used by Stimulus controller to add new conditions dynamically %>
@@ -81,13 +81,13 @@
 
   <section class="space-y-4">
     <div class="flex items-center gap-1 text-secondary">
-      <h3 class="text-sm font-medium text-primary">FOR</h3>
+      <h3 class="text-sm font-medium text-primary"><%= t(".for") %></h3>
     </div>
 
     <div class="ml-6 space-y-3">
       <div class="flex items-center gap-2">
         <%= f.radio_button :effective_date_enabled, false, checked: rule.effective_date.nil?, data: { action: "rules#clearEffectiveDate" } %>
-        <%= f.label :effective_date_enabled_false, t(".all_past_and_future", resource: rule.resource_type.pluralize), class: "text-sm text-primary" %>
+        <%= f.label :effective_date_enabled_false, t(".all_past_and_future", resource: t("rules.resource_types.#{rule.resource_type}", count: 2)), class: "text-sm text-primary" %>
       </div>
 
       <div class="flex items-center gap-2">

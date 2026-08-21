@@ -1,9 +1,9 @@
 class Rule::ActionExecutor::AutoDetectMerchants < Rule::ActionExecutor
   def label
     if rule.family.self_hoster?
-      "Auto-detect merchants with AI ($$)"
+      I18n.t("rules.action_executors.auto_detect_merchants_paid")
     else
-      "Auto-detect merchants"
+      I18n.t("rules.action_executors.auto_detect_merchants")
     end
   end
 

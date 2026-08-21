@@ -16,7 +16,7 @@ da:
         other: og %{count} handlinger mere
       action_label_to: "%{label} til %{value}"
       all_past_and_future: Alle tidligere og fremtidige %{resource}
-      on_or_after: "%{resource} den eller efter %{date}"
+      on_or_after: "%{resource} fra og med %{date}"
     form:
       rule_name_label: Regelnavn (valgfri)
       rule_name_placeholder: Indtast et navn til denne regel
@@ -26,6 +26,61 @@ da:
       all_past_and_future: Alle tidligere og fremtidige %{resource}
       starting_from: Fra og med
       then: SÅ
+      if: HVIS
+      for: FOR
+      to: til
+      back: Tilbage til regler
+    new:
+      title: Ny transaktionsregel
+    edit:
+      title: Rediger transaktionsregel
+      title_named: Rediger transaktionsregel "%{name}"
+    apply:
+      activated: Transaktionsregel aktiveret
+    primary_condition: "Hvis %{filter} %{operator} %{value}"
+    resource_types:
+      transaction:
+        one: transaktion
+        other: transaktioner
+    operators:
+      like: Indeholder
+      eq: Lig med
+      is_null: Er tom
+      gt: Større end
+      gte: Større end eller lig med
+      lt: Mindre end
+      lte: Mindre end eller lig med
+      neq: Ikke lig med
+    condition_filter_labels:
+      transaction_name: Transaktionsnavn
+      transaction_amount: Beløb
+      transaction_type: Type
+      transaction_merchant: Forretning
+      transaction_category: Kategori
+      transaction_details: Detaljer
+      transaction_notes: Noter
+      transaction_account: Konto
+    action_executors:
+      set_transaction_category: Sæt transaktionskategori
+      set_transaction_tags: Sæt tags
+      set_transaction_merchant: Sæt forretning
+      set_transaction_name: Sæt transaktionsnavn
+      set_investment_activity_label: Sæt investeringsaktivitet
+      exclude_transaction: Udelad fra budget og rapporter
+      set_as_transfer_or_payment: Sæt som overførsel eller betaling
+      send_email_notification: Send e-mailnotifikation
+      auto_categorize: Kategoriser automatisk med AI
+      auto_categorize_cost: "Kategoriser automatisk med AI (~$%{cost} pr. 20 transaktioner)"
+      auto_categorize_cost_na: "Kategoriser automatisk med AI (omkostning: n/a)"
+      auto_categorize_no_provider: Kategoriser automatisk med AI (ingen LLM-udbyder konfigureret)
+      auto_detect_merchants: Find forretninger automatisk
+      auto_detect_merchants_paid: Find forretninger automatisk med AI ($$)
+    category_rule_cta:
+      updated_to: Opdateret til %{category}
+      description: Du kan oprette en regel, der automatisk kategoriserer transaktioner som denne
+      dont_show_again: Vis ikke igen
+      dismiss: Luk
+      create_rule: Opret regel
     index:
       page_title: Regler
       delete_all_rules: Slet alle regler
@@ -108,7 +163,7 @@ da:
     conditions:
       condition_group:
         and_prefix: og
-        match: match
+        match: Opfyld
         all: alle
         any: mindst én
         of_the_following_conditions: af følgende betingelser

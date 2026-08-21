@@ -1,6 +1,8 @@
 ---
 da:
   activerecord:
+    models:
+      rule: Regel
     errors:
       models:
         rule:

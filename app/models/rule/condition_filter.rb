@@ -4,9 +4,9 @@ class Rule::ConditionFilter
   TYPES = [ "text", "number", "select" ]
 
   OPERATORS_MAP = {
-    "text" => [ [ "Contains", "like" ], [ "Equal to", "=" ], [ "Is empty", "is_null" ] ],
-    "number" => [ [ "Greater than", ">" ], [ "Greater or equal to", ">=" ], [ "Less than", "<" ], [ "Less than or equal to", "<=" ], [ "Is equal to", "=" ], [ "Is not equal to", "!=" ] ],
-    "select" => [ [ "Equal to", "=" ], [ "Is empty", "is_null" ] ]
+    "text" => [ [ "like", "like" ], [ "eq", "=" ], [ "is_null", "is_null" ] ],
+    "number" => [ [ "gt", ">" ], [ "gte", ">=" ], [ "lt", "<" ], [ "lte", "<=" ], [ "eq", "=" ], [ "neq", "!=" ] ],
+    "select" => [ [ "eq", "=" ], [ "is_null", "is_null" ] ]
   }
 
   def initialize(rule)
@@ -27,7 +27,7 @@ class Rule::ConditionFilter
   end
 
   def label
-    key.humanize
+    I18n.t("rules.condition_filter_labels.#{key}", default: key.humanize)
   end
 
   def options
@@ -35,7 +35,13 @@ class Rule::ConditionFilter
   end
 
   def operators
-    OPERATORS_MAP.dig(type)
+    OPERATORS_MAP.fetch(type).map do |i18n_key, operator|
+      [ I18n.t("rules.operators.#{i18n_key}"), operator ]
+    end
+  end
+
+  def operator_label(operator)
+    operators.find { |(_label, value)| value == operator }&.first || operator
   end
 
   # Matchers can prepare the scope with joins by implementing this method

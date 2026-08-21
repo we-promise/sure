@@ -10,12 +10,12 @@
       <% additional_condition_count = rule.additional_displayable_conditions_count %>
       <div class="flex items-center gap-2 mt-1">
         <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
-          <span class="font-mono text-xs">IF</span>
+          <span class="font-mono text-xs"><%= t("rules.form.if") %></span>
         </div>
         <p class="flex items-center flex-wrap gap-1.5 m-0">
           <span class="px-2 py-1 border border-secondary rounded-full">
             <% if displayed_condition.present? %>
-              <%= displayed_condition.filter.label %> <%= displayed_condition.operator %> <%= displayed_condition.value_display %>
+              <%= displayed_condition.filter.label %> <%= displayed_condition.filter.operator_label(displayed_condition.operator) %> <%= displayed_condition.value_display %>
             <% else %>
               <%= t("rules.no_condition") %>
             <% end %>
@@ -49,14 +49,14 @@
     </div>
     <div class="flex items-center gap-2 mt-1">
       <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
-        <span class="font-mono text-xs">FOR</span>
+          <span class="font-mono text-xs"><%= t("rules.form.for") %></span>
       </div>
       <p class="flex items-center flex-wrap gap-1.5 m-0">
         <span class="px-2 py-1 border border-secondary rounded-full">
           <% if rule.effective_date.nil? %>
-            <%= t(".all_past_and_future", resource: rule.resource_type.pluralize) %>
+            <%= t(".all_past_and_future", resource: t("rules.resource_types.#{rule.resource_type}", count: 2)) %>
           <% else %>
-            <%= t(".on_or_after", resource: rule.resource_type.pluralize, date: rule.effective_date.strftime("%b %-d, %Y")) %>
+            <%= t(".on_or_after", resource: t("rules.resource_types.#{rule.resource_type}", count: 2), date: l(rule.effective_date, format: :long)) %>
           <% end %>
         </span>
       </p>

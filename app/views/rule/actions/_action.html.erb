@@ -15,7 +15,7 @@
                 data: { rule__actions_target: "actionValue" } do %>
       <%# Initial rendering based on the action executor type. %>
       <%# Subsequent renders are injected by the Stimulus controller, which uses the templates from below. %>
-      <span class="font-medium text-primary uppercase text-xs">to</span>
+      <span class="font-medium text-primary uppercase text-xs"><%= t("rules.form.to") %></span>
       <% if action.executor.type == "select" %>
         <%= form.select :value, action.options || [], {} %>
       <% elsif action.executor.type == "text" %>
@@ -32,12 +32,12 @@
 
   <%# Templates for different input types - these will be cloned and used by the Stimulus controller %>
   <template data-rule--actions-target="selectTemplate">
-    <span class="font-medium text-primary uppercase text-xs">to</span>
+    <span class="font-medium text-primary uppercase text-xs"><%= t("rules.form.to") %></span>
     <%= form.select :value, [], {} %>
   </template>
 
   <template data-rule--actions-target="textTemplate">
-    <span class="font-medium text-primary uppercase text-xs">to</span>
+    <span class="font-medium text-primary uppercase text-xs"><%= t("rules.form.to") %></span>
     <%= form.text_field :value, placeholder: t("rules.actions.value_placeholder") %>
   </template>
 

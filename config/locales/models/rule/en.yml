@@ -1,6 +1,8 @@
 ---
 en:
   activerecord:
+    models:
+      rule: Rule
     errors:
       models:
         rule:
