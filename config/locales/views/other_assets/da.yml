@@ -1,0 +1,9 @@
+---
+da:
+  other_assets:
+    edit:
+      edit: Rediger %{account}
+      balance_tracking_info: "Andre aktiver følges via manuelle værdiansættelser med 'Ny saldo', ikke transaktioner. Pengestrøm påvirker ikke kontosaldoen."
+    new:
+      title: Indtast aktivdetaljer
+      balance_tracking_info: "Andre aktiver følges via manuelle værdiansættelser med 'Ny saldo', ikke transaktioner. Pengestrøm påvirker ikke kontosaldoen."

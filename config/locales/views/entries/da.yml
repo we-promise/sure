@@ -1,0 +1,23 @@
+---
+da:
+  entries:
+    create:
+      success: Postering oprettet
+    destroy:
+      success: Postering slettet
+    empty:
+      description: Prøv at tilføje en postering, redigere filtre eller præcisere din søgning
+      title: Ingen posteringer fundet
+    loading:
+      loading: Indlæser posteringer...
+    update:
+      success: Postering opdateret
+    unlock:
+      success: Postering låst op. Den kan blive opdateret ved næste synk.
+    protection:
+      tooltip: Beskyttet mod synk
+      title: Beskyttet mod synk
+      description: Dine rettelser af denne postering overskrives ikke af udbyder-synk.
+      locked_fields_label: "Låste felter:"
+      unlock_button: Tillad synk at opdatere
+      unlock_confirm: Tillad synk at opdatere denne postering? Dine ændringer kan blive overskrevet ved næste synk.

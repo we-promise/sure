@@ -1,0 +1,211 @@
+---
+da:
+  redbark_items:
+    default_name: "Redbark-forbindelse"
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "Ingen konti fundet"
+      synced:
+        one: "%{count} konto synkroniseret"
+        other: "%{count} konti synkroniseret"
+      synced_with_setup: "%{linked} synkroniseret, %{unlinked} skal sættes op"
+    institution_summary:
+      none: "Ingen institutioner forbundet"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutioner"
+    errors:
+      provider_not_configured: "Redbark-udbyderen er ikke konfigureret"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Importerer konti fra Redbark..."
+        processing: "Behandler transaktioner..."
+        calculating: "Beregner saldi..."
+        importing_data: "Importerer kontodata..."
+        checking_setup: "Tjekker kontokonfiguration..."
+        needs_setup: "%{count} konti skal sættes op..."
+      success: "Synk startet"
+
+    # Panel (settings view)
+    panel:
+      setup_instructions: "Opsætningsvejledning:"
+      step_1: "Opret en API-nøgle på app.redbark.com under Indstillinger"
+      step_2: "Indtast din API-nøgle nedenfor, og klik på Gem"
+      step_3: "Efter en vellykket forbindelse skal du gå til fanen Konti for at sætte nye konti op"
+      field_descriptions: "Feltbeskrivelser:"
+      optional: "(Valgfrit)"
+      required: "(påkrævet)"
+      optional_with_default: "(valgfrit, standard er %{default_value})"
+      save_button: "Gem konfiguration"
+      update_button: "Opdater konfiguration"
+      status_configured_html: "Konfigureret og klar til brug. Besøg fanen <a href=\"%{accounts_path}\" class=\"link\">Konti</a> for at administrere og sætte konti op."
+      status_not_configured: "Ikke konfigureret"
+      fields:
+        api_key:
+          label: "API-nøgle"
+          description: "Din Redbark API-nøgle (starter med rbk_live_)"
+          placeholder_new: "rbk_live_..."
+          placeholder_update: "Indtast ny API-nøgle for at opdatere"
+
+    # CRUD success messages
+    create:
+      success: "Redbark-forbindelse oprettet"
+    update:
+      success: "Redbark-forbindelse opdateret"
+    destroy:
+      success: "Redbark-forbindelse fjernet"
+      unlink_failed:
+        one: "Kunne ikke fjerne kobling for %{count} konto. Prøv igen."
+        other: "Kunne ikke fjerne kobling for %{count} konti. Prøv igen."
+    index:
+      title: "Redbark-forbindelser"
+
+    # Loading states
+    loading:
+      loading_message: "Indlæser Redbark-konti..."
+      loading_title: "Indlæser"
+
+    # Provider item display (used in _item partial)
+    redbark_item:
+      accounts_need_setup: "Konti skal sættes op"
+      delete: "Slet forbindelse"
+      deletion_in_progress: "sletning i gang..."
+      error: "Fejl"
+      more_accounts_available:
+        one: "%{count} konto mere tilgængelig"
+        other: "%{count} konti mere tilgængelige"
+      no_accounts_description: "Denne forbindelse har ingen koblede konti endnu."
+      no_accounts_title: "Ingen konti"
+      provider_name: "Redbark"
+      requires_update: "Forbindelsen skal opdateres"
+      setup_action: "Sæt nye konti op"
+      setup_description: "%{linked} af %{total} konti koblet. Vælg kontotyper til dine nyligt importerede Redbark-konti."
+      setup_needed: "Nye konti klar til opsætning"
+      status: "Synkroniseret for %{timestamp} siden"
+      status_never: "Aldrig synkroniseret"
+      status_with_summary: "Senest synkroniseret for %{timestamp} siden - %{summary}"
+      syncing: "Synkroniserer..."
+      total: "I alt"
+      unlinked: "Ikke koblet"
+      update_credentials: "Opdater legitimationsoplysninger"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "konti valgt"
+      api_error: "API-fejl: %{message}"
+      cancel: "Annuller"
+      configure_name_in_provider: "Kan ikke importere — konfigurer kontonavn i Redbark"
+      description: "Vælg de konti, du vil koble til din %{product_name}-konto."
+      link_accounts: "Kobl valgte konti"
+      no_accounts_found: "Ingen konti fundet. Tjek din API-nøglekonfiguration."
+      no_api_key: "Redbark API-nøgle er ikke konfigureret. Konfigurer den under Indstillinger."
+      no_credentials_configured: "Konfigurer dine Redbark-legitimationsoplysninger først under Udbyderindstillinger."
+      no_name_placeholder: "(Intet navn)"
+      title: "Vælg Redbark-konti"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "Denne konto er allerede koblet til en udbyder"
+      all_accounts_already_linked: "Alle Redbark-konti er allerede koblet"
+      api_error: "API-fejl: %{message}"
+      balance_label: "Saldo:"
+      cancel: "Annuller"
+      cancel_button: "Annuller"
+      configure_name_in_provider: "Kan ikke importere — konfigurer kontonavn i Redbark"
+      connect_hint: "Forbind en Redbark-konto for at aktivere automatisk synkronisering."
+      description: "Vælg en Redbark-konto at koble med denne konto. Transaktioner synkroniseres og deduplikeres automatisk."
+      header: "Kobl med Redbark"
+      link_account: "Kobl konto"
+      link_button: "Kobl denne konto"
+      linking_to: "Kobler til:"
+      no_account_specified: "Ingen konto angivet"
+      no_accounts: "Ingen ikke-koblede Redbark-konti fundet."
+      no_accounts_found: "Ingen Redbark-konti fundet. Tjek din API-nøglekonfiguration."
+      no_api_key: "Redbark API-nøgle er ikke konfigureret. Konfigurer den under Indstillinger."
+      no_credentials_configured: "Konfigurer dine Redbark-legitimationsoplysninger først under Udbyderindstillinger."
+      no_name_placeholder: "(Intet navn)"
+      settings_link: "Gå til udbyderindstillinger"
+      subtitle: "Vælg en Redbark-konto"
+      title: "Kobl %{account_name} med Redbark"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "Denne konto er allerede koblet til en udbyder"
+      api_error: "API-fejl: %{message}"
+      invalid_account_name: "Kan ikke koble konto med tomt navn"
+      provider_account_already_linked: "Denne Redbark-konto er allerede koblet til en anden konto"
+      provider_account_not_found: "Redbark-konto ikke fundet"
+      missing_parameters: "Mangler påkrævede parametre"
+      no_api_key: "Redbark API-nøgle ikke fundet. Konfigurer den under Udbyderindstillinger."
+      success: "Koblede %{account_name} med Redbark"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Kontotype:"
+      accounts_count:
+        one: "%{count} konto tilgængelig"
+        other: "%{count} konti tilgængelige"
+      all_accounts_linked: "Alle dine Redbark-konti er allerede sat op."
+      api_error: "API-fejl: %{message}"
+      creating: "Opretter konti..."
+      fetch_failed: "Kunne ikke hente konti"
+      import_selected: "Importer valgte konti"
+      instructions: "Vælg de konti, du vil importere fra Redbark. Du kan vælge flere konti."
+      no_accounts: "Ingen ikke-koblede konti fundet fra denne Redbark-forbindelse."
+      no_accounts_to_setup: "Ingen konti at sætte op"
+      no_api_key: "Redbark API-nøgle er ikke konfigureret. Tjek dine forbindelsesindstillinger."
+      select_all: "Vælg alle"
+      account_types:
+        skip: "Spring denne konto over"
+        depository: "Løn- eller opsparingskonto"
+        credit_card: "Kreditkort"
+        loan: "Lån eller realkredit"
+        other_asset: "Andet aktiv"
+      subtype_labels:
+        depository: "Konto-undertype:"
+        credit_card: ""
+        loan: "Lånetype:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkort sættes automatisk op som kreditkortkonti."
+        other_asset: "Ingen ekstra muligheder nødvendige for andre aktiver."
+      subtypes:
+        depository:
+          checking: "Lønkonto"
+          savings: "Opsparing"
+          hsa: "Health Savings Account"
+          cd: "Tidsindskud"
+          money_market: "Pengemarked"
+        loan:
+          mortgage: "Realkredit"
+          student: "Studielån"
+          auto: "Billån"
+          other: "Andet lån"
+      balance: "Saldo"
+      cancel: "Annuller"
+      done: "Færdig"
+      choose_account_type: "Vælg den rigtige kontotype for hver Redbark-konto:"
+      create_accounts: "Opret konti"
+      creating_accounts: "Opretter konti..."
+      historical_data_range: "Historisk datainterval:"
+      subtitle: "Vælg de rigtige kontotyper til dine importerede konti"
+      sync_start_date_help: "Vælg, hvor langt tilbage du vil synkronisere transaktionshistorik."
+      sync_start_date_label: "Start synk af transaktioner fra:"
+      title: "Sæt dine Redbark-konti op"
+
+    setup_required:
+      title: Forbind Redbark først
+      not_configured_title: Redbark er endnu ikke forbundet
+      not_configured_description: Tilføj din Redbark API-nøgle under Udbyderindstillinger, og vend derefter tilbage hertil for at koble konti.
+      go_to_provider_settings: Gå til udbyderindstillinger
+
+    # Complete account setup
+    complete_account_setup:
+      all_skipped: "Alle konti blev sprunget over. Ingen konti blev oprettet."
+      creation_failed: "Kunne ikke oprette konti: %{error}"
+      creation_failed_generic: "Kunne ikke oprette konti."
+      setup_failed: "%{count} konto(er) kunne ikke oprettes. Intet andet blev ændret — ret problemet, og prøv igen."
+      no_accounts: "Ingen konti at sætte op."
+      success: "Oprettede %{count} konto(er)."

@@ -26,6 +26,61 @@ en:
       all_past_and_future: All past and future %{resource}
       starting_from: Starting from
       then: THEN
+      if: IF
+      for: FOR
+      to: to
+      back: Back to rules
+    new:
+      title: New transaction rule
+    edit:
+      title: Edit transaction rule
+      title_named: Edit transaction rule "%{name}"
+    apply:
+      activated: Transaction rule activated
+    primary_condition: "If %{filter} %{operator} %{value}"
+    resource_types:
+      transaction:
+        one: transaction
+        other: transactions
+    operators:
+      like: Contains
+      eq: Equal to
+      is_null: Is empty
+      gt: Greater than
+      gte: Greater or equal to
+      lt: Less than
+      lte: Less than or equal to
+      neq: Is not equal to
+    condition_filter_labels:
+      transaction_name: Transaction name
+      transaction_amount: Transaction amount
+      transaction_type: Transaction type
+      transaction_merchant: Transaction merchant
+      transaction_category: Transaction category
+      transaction_details: Transaction details
+      transaction_notes: Transaction notes
+      transaction_account: Transaction account
+    action_executors:
+      set_transaction_category: Set transaction category
+      set_transaction_tags: Set transaction tags
+      set_transaction_merchant: Set transaction merchant
+      set_transaction_name: Set transaction name
+      set_investment_activity_label: Set investment activity label
+      exclude_transaction: Exclude from budgeting and reports
+      set_as_transfer_or_payment: Set as transfer or payment
+      send_email_notification: Send email notification
+      auto_categorize: Auto-categorize transactions with AI
+      auto_categorize_cost: "Auto-categorize transactions with AI (~$%{cost} per 20 transactions)"
+      auto_categorize_cost_na: "Auto-categorize transactions with AI (cost: N/A)"
+      auto_categorize_no_provider: Auto-categorize transactions with AI (no LLM provider configured)
+      auto_detect_merchants: Auto-detect merchants
+      auto_detect_merchants_paid: Auto-detect merchants with AI ($$)
+    category_rule_cta:
+      updated_to: Updated to %{category}
+      description: You can create a rule to automatically categorize transactions like this one
+      dont_show_again: Don't show this again
+      dismiss: Dismiss
+      create_rule: Create rule
     index:
       page_title: Rules
       delete_all_rules: Delete all rules

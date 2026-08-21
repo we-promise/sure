@@ -1,8 +1,18 @@
 import { Controller } from "@hotwired/stimulus"
+import parseLocaleFloat from "utils/parse_locale_float"
 
 export default class extends Controller {
   static targets = ["rowsContainer", "row", "amountInput", "remaining", "remainingContainer", "error", "submitButton", "nameInput"]
-  static values = { total: Number, currency: String }
+  static values = {
+    total: Number,
+    currency: String,
+    separator: { type: String, default: "." },
+    nameLabel: String,
+    amountLabel: String,
+    namePlaceholder: String,
+    amountPlaceholder: String,
+    uncategorized: String
+  }
 
   connect() {
     this.updateRemaining()
@@ -36,14 +46,12 @@ export default class extends Controller {
       // Reset button to show placeholder text (uncategorized)
       const button = cloned.querySelector("[data-select-target='button']")
       if (button) {
-        // Find the uncategorized option text from the menu
         const uncategorizedOption = cloned.querySelector("[data-value='']")
-        const placeholderText = uncategorizedOption ? uncategorizedOption.dataset.filterName : "(uncategorized)"
+        const placeholderText = uncategorizedOption ? uncategorizedOption.dataset.filterName : this.uncategorizedValue
         button.innerHTML = placeholderText
         button.setAttribute("aria-expanded", "false")
       }
 
-      // Reset selected states in menu
       cloned.querySelectorAll("[role='option']").forEach(option => {
         option.setAttribute("aria-selected", "false")
         option.classList.remove("bg-container-inset")
@@ -51,7 +59,6 @@ export default class extends Controller {
         if (checkIcon) checkIcon.classList.add("hidden")
       })
 
-      // Select the blank/uncategorized option
       const blankOption = cloned.querySelector("[data-value='']")
       if (blankOption) {
         blankOption.setAttribute("aria-selected", "true")
@@ -60,7 +67,6 @@ export default class extends Controller {
         if (checkIcon) checkIcon.classList.remove("hidden")
       }
 
-      // Ensure menu is hidden
       const menu = cloned.querySelector("[data-select-target='menu']")
       if (menu && !menu.classList.contains("hidden")) {
         menu.classList.add("hidden")
@@ -72,21 +78,21 @@ export default class extends Controller {
     row.innerHTML = `
       <div class="flex flex-wrap md:flex-nowrap items-end gap-2">
         <div class="w-full md:flex-1 md:w-auto min-w-0 md:min-w-28">
-          <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Name</label>
+          <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">${this.nameLabelValue}</label>
           <input type="text"
                  name="split[splits][${index}][name]"
-                 placeholder="Split name"
+                 placeholder="${this.namePlaceholderValue}"
                  class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
                  required
                  autocomplete="off"
                  data-split-transaction-target="nameInput">
         </div>
         <div class="flex-1 md:flex-none md:w-28">
-          <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">Amount</label>
-          <input type="number"
+          <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1">${this.amountLabelValue}</label>
+          <input type="text"
                  name="split[splits][${index}][amount]"
-                 placeholder="0.00"
-                 step="0.01"
+                 placeholder="${this.amountPlaceholderValue}"
+                 inputmode="decimal"
                  class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
                  required
                  autocomplete="off"
@@ -118,7 +124,6 @@ export default class extends Controller {
 
   reindexRows() {
     this.rowTargets.forEach((row, index) => {
-      // Update input names (including hidden inputs inside category select)
       row.querySelectorAll("[name]").forEach(input => {
         input.name = input.name.replace(/splits\[\d+\]/, `splits[${index}]`)
       })
@@ -128,16 +133,15 @@ export default class extends Controller {
   updateRemaining() {
     const total = this.totalValue
     const sum = this.amountInputTargets.reduce((acc, input) => {
-      return acc + (Number.parseFloat(input.value) || 0)
+      return acc + parseLocaleFloat(input.value)
     }, 0)
 
     const remaining = total - sum
     const absRemaining = Math.abs(remaining)
     const balanced = absRemaining < 0.005
 
-    this.remainingTarget.textContent = balanced ? "0.00" : remaining.toFixed(2)
+    this.remainingTarget.textContent = this.formatAmount(balanced ? 0 : remaining)
 
-    // Visual feedback on remaining balance
     const container = this.remainingContainerTarget
 
     if (balanced) {
@@ -154,5 +158,10 @@ export default class extends Controller {
 
     this.errorTarget.classList.toggle("hidden", balanced)
     this.submitButtonTarget.disabled = !balanced
+  }
+
+  formatAmount(value) {
+    const formatted = value.toFixed(2)
+    return this.separatorValue === "," ? formatted.replace(".", ",") : formatted
   }
 }

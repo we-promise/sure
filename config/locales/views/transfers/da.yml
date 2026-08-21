@@ -1,0 +1,54 @@
+---
+da:
+  transfers:
+    create:
+      success: Overførsel oprettet
+      exchange_rate_unavailable: Valutakurs ikke tilgængelig for de valgte valutaer og datoen
+      date_invalid: er ugyldig
+    destroy:
+      success: Overførsel fjernet
+    form:
+      amount: Beløb
+      bank_charges: Bankgebyrer
+      outgoing_fee: Udgående overførselsgebyr
+      incoming_fee: Indgående overførselsgebyr
+      date: Dato
+      destination_amount: Beløb i målkonto
+      destination_amount_display: "Beløb i målkonto: %{amount}"
+      exchange_rate_display: "Valutakurs: %{rate}"
+      expense: Udgift
+      from: Fra
+      income: Indtægt
+      select_account: Vælg konto
+      source_amount: Beløb fra kilde
+      submit: Opret overførsel
+      to: Til
+      transfer: Overførsel
+    new:
+      title: Ny overførsel
+    show:
+      delete: Fjern overførsel
+      delete_subtitle: Dette fjerner overførslen. De underliggende
+        transaktioner slettes ikke.
+      delete_title: Fjern overførsel?
+      details: Detaljer
+      mark_recurring: Markér som fast
+      mark_recurring_subtitle: Følg denne overførsel som et fast mønster i den kommende
+        feed og under faste posteringer.
+      mark_recurring_title: Markér overførsel som fast
+      note_label: Noter
+      note_placeholder: Tilføj en note til denne overførsel
+      overview: Oversigt
+      settings: Indstillinger
+      from: Fra
+      to: Til
+      date: Dato
+      transfer_amount: Overførselsbeløb
+      total: I alt
+      bank_charges: Bankgebyrer
+      source_fee: Kildegebyr
+      destination_fee: Målgebyr
+      category: Kategori
+      uncategorized: Ukategoriseret
+    update:
+      success: Overførsel opdateret

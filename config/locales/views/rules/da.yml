@@ -1,0 +1,172 @@
+---
+da:
+  rules:
+    no_action: Ingen handling
+    no_condition: Ingen betingelse
+    rule:
+      edit: Rediger
+      re_apply_rule: Anvend regel igen
+      delete: Slet
+      then: SÅ
+      and_more_conditions:
+        one: og 1 betingelse mere
+        other: og %{count} betingelser mere
+      and_more_actions:
+        one: og 1 handling mere
+        other: og %{count} handlinger mere
+      action_label_to: "%{label} til %{value}"
+      all_past_and_future: Alle tidligere og fremtidige %{resource}
+      on_or_after: "%{resource} fra og med %{date}"
+    form:
+      rule_name_label: Regelnavn (valgfri)
+      rule_name_placeholder: Indtast et navn til denne regel
+      add_condition: Tilføj betingelse
+      add_condition_group: Tilføj betingelsesgruppe
+      add_action: Tilføj handling
+      all_past_and_future: Alle tidligere og fremtidige %{resource}
+      starting_from: Fra og med
+      then: SÅ
+      if: HVIS
+      for: FOR
+      to: til
+      back: Tilbage til regler
+    new:
+      title: Ny transaktionsregel
+    edit:
+      title: Rediger transaktionsregel
+      title_named: Rediger transaktionsregel "%{name}"
+    apply:
+      activated: Transaktionsregel aktiveret
+    primary_condition: "Hvis %{filter} %{operator} %{value}"
+    resource_types:
+      transaction:
+        one: transaktion
+        other: transaktioner
+    operators:
+      like: Indeholder
+      eq: Lig med
+      is_null: Er tom
+      gt: Større end
+      gte: Større end eller lig med
+      lt: Mindre end
+      lte: Mindre end eller lig med
+      neq: Ikke lig med
+    condition_filter_labels:
+      transaction_name: Transaktionsnavn
+      transaction_amount: Beløb
+      transaction_type: Type
+      transaction_merchant: Forretning
+      transaction_category: Kategori
+      transaction_details: Detaljer
+      transaction_notes: Noter
+      transaction_account: Konto
+    action_executors:
+      set_transaction_category: Sæt transaktionskategori
+      set_transaction_tags: Sæt tags
+      set_transaction_merchant: Sæt forretning
+      set_transaction_name: Sæt transaktionsnavn
+      set_investment_activity_label: Sæt investeringsaktivitet
+      exclude_transaction: Udelad fra budget og rapporter
+      set_as_transfer_or_payment: Sæt som overførsel eller betaling
+      send_email_notification: Send e-mailnotifikation
+      auto_categorize: Kategoriser automatisk med AI
+      auto_categorize_cost: "Kategoriser automatisk med AI (~$%{cost} pr. 20 transaktioner)"
+      auto_categorize_cost_na: "Kategoriser automatisk med AI (omkostning: n/a)"
+      auto_categorize_no_provider: Kategoriser automatisk med AI (ingen LLM-udbyder konfigureret)
+      auto_detect_merchants: Find forretninger automatisk
+      auto_detect_merchants_paid: Find forretninger automatisk med AI ($$)
+    category_rule_cta:
+      updated_to: Opdateret til %{category}
+      description: Du kan oprette en regel, der automatisk kategoriserer transaktioner som denne
+      dont_show_again: Vis ikke igen
+      dismiss: Luk
+      create_rule: Opret regel
+    index:
+      page_title: Regler
+      delete_all_rules: Slet alle regler
+      new_rule: Ny regel
+      ai_cost_warning: AI-handlinger i regler koster penge. Filtrer så snævert som muligt for at undgå unødvendige omkostninger.
+      rules_heading: Regler
+      sort_by: "Sortér efter:"
+      sort_name: Navn
+      sort_updated_at: Opdateret
+      toggle_sort_direction: Skift sorteringsretning
+      no_rules_title: Ingen regler endnu
+      no_rules_description: Opret regler, der udfører handlinger på dine transaktioner og andre data ved hver kontosynk.
+    confirm:
+      title: Bekræft ændringer
+      title_with_name: "Bekræft ændringer af \"%{name}\""
+      apply_notice_html: "Du er ved at anvende denne regel på <span class=\"text-primary font-medium\">%{count} %{resource}</span>, der matcher kriterierne. Bekræft, hvis du vil fortsætte."
+      ai_cost_title: Estimeret AI-omkostning
+      ai_cost_with_estimate_html: "Dette bruger AI til at kategorisere %{count} transaktion(er). Estimeret omkostning: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate_html: "Dette bruger AI til at kategorisere %{count} transaktion(er)."
+      cost_unavailable_model: "Omkostningsestimat ikke tilgængeligt for model \"%{model}\"."
+      cost_unavailable_no_provider: Omkostningsestimat ikke tilgængeligt (ingen LLM-udbyder konfigureret).
+      cost_warning: Der kan påløbe omkostninger. Tjek de aktuelle priser hos modeludbyderen.
+      view_usage_history: Se forbrugshistorik
+      confirm_changes: Bekræft ændringer
+    actions:
+      value_placeholder: Indtast en værdi
+    update:
+      success: Regel opdateret
+    destroy:
+      success: Regel slettet
+    destroy_all:
+      success: Alle regler slettet
+    apply_all:
+      button: Anvend alle
+      confirm_title: Anvend alle regler
+      confirm_message: Du er ved at anvende %{count} regler, der påvirker %{transactions} unikke transaktioner. Bekræft, hvis du vil fortsætte.
+      confirm_button: Bekræft og anvend alle
+      success: Alle regler er sat i kø til kørsel
+      ai_cost_title: Estimeret AI-omkostning
+      ai_cost_message: Dette bruger AI til at kategorisere op til %{transactions} transaktioner.
+      estimated_cost: "Estimeret omkostning: ~$%{cost}"
+      cost_unavailable_model: Omkostningsestimat ikke tilgængeligt for model "%{model}".
+      cost_unavailable_no_provider: Omkostningsestimat ikke tilgængeligt (ingen LLM-udbyder konfigureret).
+      cost_warning: Der kan påløbe omkostninger. Tjek de aktuelle priser hos modeludbyderen.
+      view_usage: Se forbrugshistorik
+    recent_runs:
+      title: Seneste kørsler
+      description: Se kørselshistorik for dine regler med status og transaktionsantal.
+      unnamed_rule: Unavngivet regel
+      columns:
+        date_time: Dato/tid
+        execution_type: Type
+        status: Status
+        rule_name: Regelnavn
+        transactions_counts:
+          queued: I kø
+          processed: Behandlet
+          modified: Ændret
+          blocked: Blokeret
+      execution_types:
+        manual: Manuel
+        scheduled: Planlagt
+      statuses:
+        pending: Verserende
+        success: Lykkedes
+        failed: Mislykkedes
+    clear_ai_cache:
+      button: Nulstil AI-cache
+      confirm_title: Nulstil AI-cache?
+      confirm_body: Er du sikker på, at du vil nulstille AI-cachen? Det lader AI-regler behandle alle transaktioner igen. Det kan medføre ekstra API-omkostninger.
+      confirm_button: Nulstil cache
+      success: AI-cachen ryddes. Det kan tage et øjeblik.
+    condition_filters:
+      transaction_type:
+        income: Indtægt
+        expense: Udgift
+        transfer: Overførsel
+        equal_to: Lig med
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: og
+        match: Opfyld
+        all: alle
+        any: mindst én
+        of_the_following_conditions: af følgende betingelser
+        add_condition: Tilføj betingelse
+      condition:
+        value_placeholder: Indtast en værdi

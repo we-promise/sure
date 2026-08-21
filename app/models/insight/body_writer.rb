@@ -38,13 +38,14 @@ class Insight::BodyWriter
 
       prompt = <<~PROMPT
         Insight type: #{generated_insight.insight_type.humanize}
+        Language: #{I18n.locale}
         Facts: #{generated_insight.facts.to_json}
       PROMPT
 
       response = provider.chat_response(
         prompt,
         model: provider.class.effective_model,
-        instructions: SYSTEM_PROMPT,
+        instructions: "#{SYSTEM_PROMPT}- Write in #{I18n.locale}.\n",
         family: family
       )
       return nil unless response.success?

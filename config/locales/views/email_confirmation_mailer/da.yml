@@ -1,0 +1,10 @@
+---
+da:
+  email_confirmation_mailer:
+    confirmation_email:
+      body: Du har for nylig anmodet om at ændre din e-mailadresse. Klik på knappen
+        nedenfor for at bekræfte ændringen.
+      cta: Bekræft e-mailændring
+      expiry_notice: Dette link udløber om %{hours} timer.
+      greeting: Hej!
+      subject: '%{product_name}: Bekræft din e-mailændring'

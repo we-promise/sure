@@ -1,0 +1,7 @@
+---
+da:
+  other_liabilities:
+    edit:
+      edit: Rediger %{account}
+    new:
+      title: Indtast passivdetaljer

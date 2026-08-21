@@ -1,0 +1,11 @@
+---
+da:
+  activerecord:
+    models:
+      rule: Regel
+    errors:
+      models:
+        rule:
+          min_actions: "skal have mindst én handling"
+          duplicate_actions: "Regel kan ikke have dublet-handlinger %{types}"
+          nested_conditions: "Sammensatte betingelser kan ikke indlejres"

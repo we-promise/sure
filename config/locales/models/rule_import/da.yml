@@ -1,0 +1,9 @@
+---
+da:
+  activerecord:
+    errors:
+      models:
+        rule_import:
+          unsupported_resource_type: "Ikke-understøttet ressourcetype: %{resource_type}"
+          invalid_json: "Ugyldig JSON i betingelser eller handlinger: %{message}"
+          min_actions: "Regel skal have mindst én handling"

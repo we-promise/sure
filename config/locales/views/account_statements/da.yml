@@ -1,0 +1,117 @@
+---
+da:
+  account_statements:
+    account_tab:
+      coverage_title: Udtogsdækning
+      coverage_description: Historiske måneder understøttet af uploadede udtog og saldokontrol.
+      coverage_range: "%{start} - %{end}"
+      empty: Ingen udtog koblet til denne konto endnu.
+      open_inbox: Indbakke
+      statements_title: Kontoudtog
+      year_label: Dækningsår
+    balance:
+      unknown: Ukendt
+    coverage:
+      status:
+        ambiguous: Tvetydig
+        covered: Dækket
+        duplicate: Dublet
+        mismatched: Uoverensstemmelse
+        missing: Mangler
+        not_expected: Ikke forventet
+    create:
+      duplicates:
+        one: 1 dubletudtog blev sprunget over.
+        other: "%{count} dubletudtog blev sprunget over."
+      invalid_file_type: Upload et PDF-, CSV- eller XLSX-udtog under størrelsesgrænsen.
+      no_files: Vælg mindst én udtogsfil.
+      success:
+        one: 1 udtog uploadet.
+        other: "%{count} udtog uploadet."
+    destroy:
+      failure: Udtoget kunne ikke slettes.
+      success: Udtog slettet.
+    form:
+      account_upload: Upload udtog
+      files_hint: PDF, CSV eller XLSX. Maks. %{max_size}MB pr. fil.
+      files_label: Udtogsfiler
+      inbox_upload: Upload
+    index:
+      account_label: Konto
+      confidence: "%{confidence} match"
+      empty_linked: Ingen koblede udtog endnu.
+      empty_unmatched: Udtogsindbakken er tom.
+      leave_unmatched: Lad være umatchet
+      linked_title: Koblede udtog
+      no_suggestion: Intet forslag
+      storage_used: Lager brugt
+      title: Udtogsarkiv
+      unmatched_title: Umatchet indbakke
+      upload_description: Upload udtog til indbakken, eller vælg en konto at koble med det samme.
+      upload_title: Upload udtog
+    link:
+      no_account: Vælg en konto, før du kobler dette udtog.
+      success: Udtog koblet til %{account}.
+    period:
+      unknown: Periode ukendt
+    reconciliation:
+      checks:
+        closing_balance: Slutsaldo
+        opening_balance: Åbningssaldo
+        period_movement: Periodebevægelse
+        unknown_check: Ukendt kontrol
+      matched: Matchet
+      mismatched: Uoverensstemmelse
+      unavailable: Ikke tjekket
+    reject:
+      success: Udtogsmatch afvist.
+    show:
+      account_label: Konto
+      account_last4_hint: Kontos sidste fire
+      account_name_hint: Kontonavnshint
+      closing_balance: Slutsaldo
+      currency: Valuta
+      delete: Slet
+      difference: Forskel
+      download: Download
+      institution_name_hint: Institutionshint
+      ledger_amount: Sure-bogføring
+      linked_to: Koblet til %{account}.
+      linking_title: Kontokobling
+      link_suggestion: Koblingsforslag
+      metadata_title: Udtogsmetadata
+      no_suggestion: Intet kontoforslag endnu.
+      opening_balance: Åbningssaldo
+      period_end_on: Periodeslut
+      period_start_on: Periodestart
+      reconciliation_title: Afstemning
+      reconciliation_unavailable: Tilføj en udtogsperiode og åbnings- eller slutsaldo, og sørg for, at Sure har saldo-historik for de datoer.
+      reject: Afvis
+      save: Gem udtog
+      statement_amount: Udtog
+      suggested_account: Foreslået konto er %{account} (%{confidence} sikkerhed).
+      title: Udtog
+      unlink: Fjern kobling
+      unmatched_account: Umatchet indbakke
+      unknown_value: Ukendt
+    status:
+      linked: Koblet
+      rejected: Afvist
+      unmatched: Umatchet
+    table:
+      account: Konto
+      actions: Handlinger
+      download: Download
+      edit: Rediger
+      file: Fil
+      link_suggestion: Koblingsforslag
+      period: Periode
+      reconciliation: Afstemning
+      reject: Afvis forslag
+      suggestion: Forslag
+      unlink: Fjern kobling
+      view: Vis
+    unlink:
+      success: Udtog flyttet tilbage til den umatchede indbakke.
+    update:
+      success: Udtog opdateret.

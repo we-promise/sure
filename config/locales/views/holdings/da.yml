@@ -1,0 +1,103 @@
+---
+da:
+  holdings:
+    cash:
+      brokerage_cash: Mæglerkontanter
+    destroy:
+      success: Beholdning slettet
+      cannot_delete: Du kan ikke slette denne beholdning
+    update:
+      success: Anskaffelsesværdi gemt.
+      error: Ugyldig anskaffelsesværdi.
+    unlock_cost_basis:
+      success: Anskaffelsesværdi låst op. Den kan blive opdateret ved næste synk.
+    remap_security:
+      success: Værdipapir opdateret.
+      security_not_found: Kunne ikke finde det valgte værdipapir.
+    reset_security:
+      success: Værdipapir nulstillet til udbyderværdi.
+    sync_prices:
+      success: Markedsdata synkroniseret.
+      unavailable: Synk af markedsdata er ikke tilgængelig for offline-værdipapirer.
+      provider_error: Kunne ikke hente seneste priser. Prøv igen om et par minutter.
+    errors:
+      security_collision: "Kan ikke ommappe: du har allerede en beholdning af %{ticker} den %{date}."
+    cost_basis_sources:
+      manual: Sat af bruger
+      calculated: Fra handler
+      provider: Fra udbyder
+    cost_basis_cell:
+      unknown: "--"
+      set: Sæt
+      set_cost_basis_header: "Sæt anskaffelsesværdi for %{ticker} (%{qty} stk.)"
+      total_cost_basis_label: Samlet anskaffelsesværdi
+      or_per_share_label: "Eller indtast pr. stk.:"
+      per_share: pr. stk.
+      cancel: Annuller
+      save: Gem
+      overwrite_confirm_title: Overskriv anskaffelsesværdi?
+      overwrite_confirm_body: "Dette erstatter den aktuelle anskaffelsesværdi på %{current}."
+    holding:
+      per_share: pr. stk.
+      shares: "%{qty} stk."
+      unknown: "--"
+      no_cost_basis: Ingen anskaffelsesværdi
+    index:
+      average_cost: Gennemsnitlig kostpris
+      holdings: Beholdninger
+      name: Navn
+      new_holding: Ny aktivitet
+      no_holdings: Ingen beholdninger at vise.
+      return: Samlet afkast
+      weight: Vægt
+    missing_price_tooltip:
+      description: Denne investering mangler værdier, og vi kunne ikke beregne
+        afkast eller værdi.
+      missing_data: Manglende data
+    show:
+      avg_cost_label: Gennemsnitlig kostpris
+      current_market_price_label: Aktuel markedskurs
+      delete: Slet
+      delete_subtitle: Dette sletter beholdningen og alle tilknyttede handler
+        på denne konto. Handlingen kan ikke fortrydes.
+      delete_title: Slet beholdning
+      edit_security: Rediger værdipapir
+      history: Historik
+      no_trade_history: Ingen handelshistorik for denne beholdning.
+      overview: Oversigt
+      portfolio_weight_label: Porteføljevægt
+      settings: Indstillinger
+      security_label: Værdipapir
+      originally: "var %{ticker}"
+      search_security: Søg værdipapir
+      search_security_placeholder: Søg på ticker eller navn
+      cancel: Annuller
+      remap_security: Gem
+      provider_disabled_warning: "Prisopdateringer sat på pause — %{provider}-udbyderen er slået fra. Skift til en anden udbyder nedenfor, eller slå den til igen under Indstillinger."
+      truncated_history_warning: "Prishistorik er kun tilgængelig fra %{date} og frem. Tidligere datoer har ingen data fra den valgte udbyder — det kan ske, når aktivet blev noteret efter din handelsdato, eller når udbyderen kun tilbyder et begrænset historisk vindue på den aktuelle plan."
+      switch_provider_label: Skift udbyder
+      switch_provider_description: "%{provider} er slået fra. Søg efter dette værdipapir hos en anden aktiveret udbyder."
+      switch_provider_button: Skift
+      no_security_provider: Værdipapirudbyder er ikke konfigureret. Kan ikke søge efter værdipapirer.
+      security_remapped_label: Værdipapir ommappet
+      provider_sent: "Udbyder sendte: %{ticker}"
+      reset_to_provider: Nulstil til udbyder
+      reset_confirm_title: Nulstil værdipapir til udbyder?
+      reset_confirm_body: "Dette ændrer værdipapiret fra %{current} tilbage til %{original} og flytter alle tilknyttede handler."
+      ticker_label: Ticker
+      trade_history_entry: "%{qty} stk. %{security} til %{price}"
+      total_return_label: Samlet afkast
+      unknown: Ukendt
+      cost_basis_locked_label: Anskaffelsesværdi er låst
+      cost_basis_locked_description: Din manuelt satte anskaffelsesværdi ændres ikke af synk.
+      unlock_cost_basis: Lås op
+      unlock_confirm_title: Lås anskaffelsesværdi op?
+      unlock_confirm_body: Dette lader anskaffelsesværdien blive opdateret af udbydersynk eller handelsberegninger.
+      shares_label: Stk.
+      book_value_label: Bogført værdi
+      market_value_label: Markedsværdi
+      market_data_label: Markedsdata
+      market_data_sync_button: Opdater
+      last_price_update: Seneste prisopdatering
+      syncing: Synkroniserer...
+      never: Aldrig

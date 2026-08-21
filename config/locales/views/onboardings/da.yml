@@ -1,0 +1,66 @@
+---
+da:
+  onboardings:
+    header:
+      sign_out: Log ud
+      setup: Opsætning
+      preferences: Præferencer
+      goals: Mål
+      start: Start
+    logout:
+      sign_out: Log ud
+    show:
+      title: Lad os sætte din konto op
+      subtitle: Først skal vi have din profil på plads.
+      first_name: Fornavn
+      first_name_placeholder: Fornavn
+      last_name: Efternavn
+      last_name_placeholder: Efternavn
+      group_name: Gruppenavn
+      group_name_placeholder: Gruppenavn
+      household_name: Husstandsnavn
+      household_name_placeholder: Husstandsnavn
+      moniker_prompt: "Vil bruge %{product_name} med ..."
+      moniker_family: Familiemedlemmer (dig selv, partner, teenagere osv.)
+      moniker_group: En gruppe (virksomhed, klub, forening eller andet)
+      country: Land
+      submit: Fortsæt
+    preferences:
+      title: Tilpas dine præferencer
+      subtitle: Lad os indstille dine præferencer.
+      example: Eksempelkonto
+      preview: Se hvordan data vises ud fra dine valg.
+      color_theme: Farvetema
+      theme_system: System
+      theme_light: Lyst
+      theme_dark: Mørkt
+      locale: Sprog
+      currency: Valuta
+      date_format: Datoformat
+      submit: Fuldfør
+    goals:
+      title: Hvad bringer dig herhen?
+      subtitle: Vælg et eller flere mål for at bruge %{product_name} som dit personlige økonomiværktøj.
+      unified_accounts: Se alle mine konti ét sted
+      cashflow: Forstå pengestrøm og udgifter
+      budgeting: Styre økonomiplaner og budgetter
+      partner: Holde styr på økonomien sammen med en partner
+      investments: Følge investeringer
+      ai_insights: Lad AI hjælpe mig med at forstå min økonomi
+      optimization: Analysere og optimere konti
+      reduce_stress: Reducere økonomisk stress eller bekymring
+      submit: Næste
+    trial:
+      title: Prøv Sure i 45 dage
+      data_deletion: Data slettes derefter
+      description_html: Fra i dag kan du se produktet grundigt an.<br/>Kan du lide det, kan du self-hoste eller bidrage for at fortsætte her.
+      try_button: Prøv Sure i 45 dage
+      continue_trial: Fortsæt prøveperioden
+      upgrade: Opgrader
+      how_it_works: Sådan fungerer det her
+      today: I dag
+      today_description: Du får gratis adgang til Sure i 45 dage på vores AWS.
+      in_40_days: Om 40 dage (%{date})
+      in_40_days_description: Vi sender en påmindelse om at eksportere dine data.
+      in_45_days: Om 45 dage (%{date})
+      in_45_days_description: Vi sletter dine data — bidrag for at fortsætte med Sure her!

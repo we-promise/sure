@@ -1,0 +1,56 @@
+---
+da:
+  recurring_transactions:
+    title: Faste transaktioner
+    upcoming: Kommende faste transaktioner
+    projected: Projiceret
+    recurring: Fast
+    expected_today: "Forventet i dag"
+    expected_in:
+      one: "Forventet om %{count} dag"
+      other: "Forventet om %{count} dage"
+    day_of_month: Dag %{day} i måneden
+    identify_patterns: Find mønstre
+    cleanup_stale: Ryd forældede
+    settings:
+      enable_label: Aktivér faste transaktioner
+      enable_description: Find automatisk faste transaktionsmønstre og vis kommende projicerede transaktioner.
+    settings_updated: Indstillinger for faste transaktioner opdateret
+    info:
+      title: Automatisk mønstergendkendelse
+      manual_description: Du kan manuelt finde mønstre eller rydde forældede faste transaktioner med knapperne ovenfor.
+      automatic_description: "Automatisk genkendelse kører også efter:"
+      triggers:
+        - CSV-import er fuldført (transaktioner, handler, konti osv.)
+        - Enhver udbydersynk er fuldført (Plaid, SimpleFIN osv.)
+    identified: Fandt %{count} faste transaktionsmønstre
+    cleaned_up: Rydde %{count} forældede faste transaktioner
+    marked_inactive: Fast transaktion markeret som inaktiv
+    marked_active: Fast transaktion markeret som aktiv
+    deleted: Fast transaktion slettet
+    confirm_delete: Er du sikker på, at du vil slette denne faste transaktion?
+    marked_as_recurring: Transaktion markeret som fast
+    already_exists: Der findes allerede en manuel fast transaktion for dette mønster
+    creation_failed: Kunne ikke oprette fast transaktion. Tjek transaktionsdetaljerne og prøv igen.
+    unexpected_error: Der opstod en uventet fejl under oprettelse af den faste transaktion
+    amount_range: "Interval: %{min} til %{max}"
+    empty:
+      title: Ingen faste transaktioner fundet
+      description: Klik på "Find mønstre" for automatisk at finde faste transaktioner i din historik.
+    table:
+      merchant: Navn
+      amount: Beløb
+      expected_day: Forventet dag
+      next_date: Næste dato
+      last_occurrence: Seneste forekomst
+      status: Status
+      actions: Handlinger
+    status:
+      active: Aktiv
+      inactive: Inaktiv
+    badges:
+      manual: Manuel
+    transfer_marked_as_recurring: Overførsel markeret som fast
+    transfer_already_exists: Der findes allerede en fast overførsel for dette kontopar
+    transfer_creation_failed: Kunne ikke oprette fast overførsel. Tjek overførselsdetaljerne og prøv igen.
+    transfer_feature_disabled: Faste transaktioner er slået fra for denne husstand

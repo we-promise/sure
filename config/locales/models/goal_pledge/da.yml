@@ -1,0 +1,20 @@
+---
+da:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: Beløb
+        currency: Valuta
+        account: Konto
+        kind: Type
+        status: Status
+        expires_at: Udløber
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Vælg én af målets tilknyttede konti.
+            currency:
+              must_match_goal: Tilsagnets valuta skal matche målets valuta.
+          duplicate_open_pledge: Du har allerede et åbent tilsagn for dette beløb på denne konto. Annuller eller forlæng det eksisterende, før du registrerer et nyt.

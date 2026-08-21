@@ -232,4 +232,16 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal 0, result
     assert_nil @txn1.reload.investment_activity_label
   end
+
+  test "action executor labels are translated" do
+    executor = Rule::ActionExecutor::SetTransactionCategory.new(@transaction_rule)
+
+    I18n.with_locale(:en) do
+      assert_equal "Set transaction category", executor.label
+    end
+
+    I18n.with_locale(:da) do
+      assert_equal "Sæt transaktionskategori", executor.label
+    end
+  end
 end

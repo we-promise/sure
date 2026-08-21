@@ -1,0 +1,16 @@
+---
+da:
+  rule_notification_mailer:
+    digest:
+      subject:
+        one: "1 ny transaktion matchede din regel på %{product_name}"
+        other: "%{count} nye transaktioner matchede din regel på %{product_name}"
+      heading:
+        one: "1 ny transaktion matchede din regel"
+        other: "%{count} nye transaktioner matchede din regel"
+      intro: 'Disse transaktioner matchede reglen "%{rule}":'
+      date: "Dato"
+      name: "Navn"
+      account: "Konto"
+      amount: "Beløb"
+      cta: "Se transaktioner"

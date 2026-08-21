@@ -288,7 +288,7 @@ class AccountsController < ApplicationController
     end
 
     def stored_per_page_default
-      Current.session.prev_transaction_page_params["per_page"].presence || 10
+      Current.session.prev_transaction_page_params["per_page"].presence || 100
     end
 
     def set_account

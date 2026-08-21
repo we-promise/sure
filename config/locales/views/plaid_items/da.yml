@@ -1,0 +1,41 @@
+---
+da:
+  plaid_items:
+    create:
+      success: Konto koblet. Vent, mens kontiene synkroniseres.
+    destroy:
+      success: Konti planlagt til sletning.
+    errors:
+      link_token_generic: Vi kunne ikke åbne Plaid lige nu. Prøv igen, og
+        tjek serverloggene, hvis problemet fortsætter.
+      link_token_with_message: "Plaid kunne ikke åbne forbindelsen: %{message}"
+    plaid_item:
+      add_new: Tilføj ny forbindelse
+      confirm_accept: Slet institution
+      confirm_body: Dette sletter permanent alle konti i denne gruppe og
+        al tilknyttet data.
+      confirm_title: Slet institution?
+      connection_lost: Forbindelse mistet
+      connection_lost_description: Denne forbindelse er ikke længere gyldig. Du skal
+        slette forbindelsen og tilføje den igen for at fortsætte synkroniseringen.
+      delete: Slet
+      deletion_in_progress: (sletning i gang...)
+      error: Fejl under synkronisering af data
+      no_accounts_description: Vi kunne ikke indlæse nogen konti fra denne finansielle
+        institution.
+      no_accounts_title: Ingen konti fundet
+      requires_update: Genopret forbindelse
+      status: Senest synkroniseret for %{timestamp} siden
+      status_never: Kræver datasynk
+      syncing: Synkroniserer...
+      update: Opdater
+    select_existing_account:
+      no_available_accounts: Ingen tilgængelige Plaid-konti at koble. Forbind først en ny Plaid-konto.
+      title: "Kobl %{account_name} til Plaid"
+      description: Vælg en Plaid-konto at koble til din eksisterende konto
+      cancel: Annuller
+      link_account: Kobl konto
+    link_existing_account:
+      invalid_account: Ugyldig Plaid-konto valgt
+      already_linked: Denne Plaid-konto er allerede koblet
+      success: Konto koblet til Plaid

@@ -1,0 +1,53 @@
+---
+da:
+  admin:
+    users:
+      index:
+        title: "Brugeradministration"
+        description: "Administrer brugerroller på din instans. Super-admins kan tilgå SSO-udbyderindstillinger og brugeradministration."
+        section_title: "Husstande / grupper"
+        you: "(Dig)"
+        trial_ends_at: "Prøveperiode slutter"
+        not_available: "i/t"
+        no_users: "Ingen brugere fundet."
+        unnamed_family: "Unavngivet husstand/gruppe"
+        no_subscription: "Intet abonnement"
+        family_summary: "%{members} medlemmer · %{accounts} konti · %{transactions} transaktioner"
+        filters:
+          role: "Rolle"
+          role_all: "Alle roller"
+          trial_status: "Prøvestatus"
+          trial_all: "Alle"
+          trial_expiring_soon: "Udløber om 7 dage"
+          trial_trialing: "På prøve"
+          submit: "Filtrer"
+        summary:
+          trials_expiring_7_days: "Prøveperioder der udløber inden for 7 dage"
+        table:
+          user: "Bruger"
+          trial_ends_at: "Prøveperiode slutter"
+          family_accounts: "Husstandskonti"
+          family_transactions: "Husstandstransaktioner"
+          last_login: "Seneste login"
+          session_count: "Antal sessioner"
+          never: "Aldrig"
+          role: "Rolle"
+        role_descriptions_title: "Rollebeskrivelser"
+        roles:
+          guest: "Gæst"
+          member: "Medlem"
+          admin: "Admin"
+          super_admin: "Super-admin"
+        role_descriptions:
+          guest: "Assistent-først-oplevelse med bevidst begrænsede rettigheder til intro-forløb."
+          member: "Grundlæggende brugeradgang. Kan administrere egne konti, transaktioner og indstillinger."
+          admin: "Husstandsadministrator. Kan tilgå avancerede indstillinger som API-nøgler, importer og AI-prompts."
+          super_admin: "Instansadministrator. Kan administrere SSO-udbydere, brugerroller og udgive sig for brugere til support."
+        invitations:
+          pending_label: "Inviteret (afventer)"
+          expires: "Udløber %{date}"
+          delete: "Slet"
+          delete_all: "Slet alle"
+      update:
+        success: "Brugerrolle opdateret."
+        failure: "Kunne ikke opdatere brugerrolle."

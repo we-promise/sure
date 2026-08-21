@@ -1,0 +1,136 @@
+<script nonce="<%= content_security_policy_nonce %>">
+  (function () {
+    function openPicker(input) {
+      if (!input || input.disabled) return;
+      if (typeof input.showPicker === "function") {
+        try { input.showPicker(); return; } catch (e) {}
+      }
+      input.focus();
+    }
+
+    function emit(input) {
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    if (window.SureLocalizedDate) {
+      window.SureLocalizedDate.bind();
+      return;
+    }
+
+    window.SureLocalizedDate = {
+      format: function (iso, fmt) {
+        if (!iso) return "";
+        var parts = iso.split("-");
+        return fmt
+          .replaceAll("%Y", parts[0])
+          .replaceAll("%m", parts[1])
+          .replaceAll("%d", parts[2])
+          .replaceAll("%e", String(Number(parts[2])));
+      },
+      parse: function (text, fmt) {
+        if (!text || !text.trim()) return "";
+        var keys = [];
+        var pattern = fmt
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+          .replace(/%(Y|m|d|e)/g, function (_, token) {
+            keys.push(token);
+            if (token === "Y") return "(\\d{4})";
+            if (token === "e") return "\\s*(\\d{1,2})";
+            return "(\\d{1,2})";
+          });
+        var match = text.trim().match(new RegExp("^" + pattern + "$"));
+        if (!match) return null;
+        var year, month, day;
+        keys.forEach(function (key, i) {
+          var n = match[i + 1];
+          if (key === "Y") year = n;
+          if (key === "m") month = n.padStart(2, "0");
+          if (key === "d" || key === "e") day = n.trim().padStart(2, "0");
+        });
+        if (!year || !month || !day) return null;
+        var iso = year + "-" + month + "-" + day;
+        var parsed = new Date(iso + "T00:00:00");
+        if (Number.isNaN(parsed.getTime())) return null;
+        if (
+          parsed.getFullYear() !== Number(year) ||
+          parsed.getMonth() + 1 !== Number(month) ||
+          parsed.getDate() !== Number(day)
+        ) {
+          return null;
+        }
+        return iso;
+      },
+      applyDisplay: function (root) {
+        var dateInput = root.querySelector('input[type="date"]');
+        var display = root.querySelector("[data-localized-date-display]");
+        if (!dateInput || !display) return;
+        var iso = window.SureLocalizedDate.parse(
+          display.value,
+          root.dataset.format || "%Y-%m-%d"
+        );
+        if (iso === null) return;
+        if (dateInput.value === iso) return;
+        dateInput.value = iso;
+        emit(dateInput);
+      },
+      syncFromDate: function (root) {
+        var dateInput = root.querySelector('input[type="date"]');
+        var display = root.querySelector("[data-localized-date-display]");
+        if (!dateInput || !display) return;
+        display.value = window.SureLocalizedDate.format(
+          dateInput.value,
+          root.dataset.format || "%Y-%m-%d"
+        );
+      },
+      revertDisplay: function (root) {
+        var dateInput = root.querySelector('input[type="date"]');
+        var display = root.querySelector("[data-localized-date-display]");
+        if (!dateInput || !display) return;
+        var iso = window.SureLocalizedDate.parse(
+          display.value,
+          root.dataset.format || "%Y-%m-%d"
+        );
+        if (iso === null) {
+          display.value = window.SureLocalizedDate.format(
+            dateInput.value,
+            root.dataset.format || "%Y-%m-%d"
+          );
+        }
+      },
+      bind: function () {
+        document.querySelectorAll("[data-localized-date]").forEach(function (root) {
+          var display = root.querySelector("[data-localized-date-display]");
+          if (display && !display.value) window.SureLocalizedDate.syncFromDate(root);
+        });
+      }
+    };
+
+    document.addEventListener("click", function (event) {
+      var picker = event.target.closest("[data-localized-date-picker]");
+      if (!picker) return;
+      event.preventDefault();
+      var root = picker.closest("[data-localized-date]");
+      if (root) openPicker(root.querySelector('input[type="date"]'));
+    });
+    document.addEventListener("input", function (event) {
+      var display = event.target.closest("[data-localized-date-display]");
+      if (!display) return;
+      var root = display.closest("[data-localized-date]");
+      if (root) window.SureLocalizedDate.applyDisplay(root);
+    });
+    document.addEventListener("change", function (event) {
+      if (event.target.matches('input[type="date"]')) {
+        var root = event.target.closest("[data-localized-date]");
+        if (root) window.SureLocalizedDate.syncFromDate(root);
+      }
+    });
+    document.addEventListener("focusout", function (event) {
+      var root = event.target.closest("[data-localized-date]");
+      if (root) window.SureLocalizedDate.revertDisplay(root);
+    });
+    document.addEventListener("turbo:load", window.SureLocalizedDate.bind);
+    document.addEventListener("turbo:frame-render", window.SureLocalizedDate.bind);
+    window.SureLocalizedDate.bind();
+  })();
+</script>

@@ -1,0 +1,45 @@
+---
+da:
+  chats:
+    demo_banner_title: "Demotilstand aktiv"
+    demo_banner_message: "Du bruger LLM'er via credits fra Cloudflare Workers AI. Resultater kan variere, da kodebasen er testet på `gpt-4.1`, men dine tokens trænes ikke andre steder! 🤖"
+    thinking: "Tænker ..."
+    worker_unhealthy_warning: "AI-svar leveres måske ikke lige nu — baggrundsjobbet ser ud til at være nede eller overbelastet. Tjek, at din Sidekiq-worker kører."
+    ai_greeting:
+      greeting: "Hej %{name}! Jeg er en AI/stor sprogmodel, der kan hjælpe med din økonomi. Jeg har adgang til nettet og dine kontodata."
+      there: "der"
+      commands_hint_html: "Du kan bruge <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> til at åbne kommandoer"
+      questions_intro: "Her er et par spørgsmål, du kan stille:"
+      evaluate_portfolio: "Vurder investeringsportefølje"
+      spending_insights: "Vis forbrugsindsigt"
+      unusual_patterns: "Find usædvanlige mønstre"
+    chat:
+      edit_chat_title: "Rediger chattitel"
+      delete_chat: "Slet chat"
+    chat_nav:
+      all_chats: "Alle chats"
+      start_new_chat: "Start ny chat"
+      edit_chat_title: "Rediger chattitel"
+      delete_chat: "Slet chat"
+    error:
+      retry: "Prøv igen"
+    destroy:
+      notice: "Chat slettet"
+    index:
+      chats: "Chats"
+      new_chat: "Ny chat"
+    update:
+      success: "Chat opdateret"
+    ai_consent:
+      title: "Aktivér AI-chat"
+      available_description: "AI-chat kan svare på økonomiske spørgsmål og give indsigt baseret på dine data. For at bruge funktionen skal du slå den til eksplicit."
+      unavailable_description_html: "For at bruge AI-assistenten skal du sætte miljøvariablen <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> eller konfigurere den under self-hosting-indstillingerne."
+      enable_button: "Aktivér AI-chat"
+      disable_note: "Slå fra når som helst. Alle data, der sendes til vores LLM-udbydere, anonymiseres."
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: "Assistentens ræsonnement"
+    tool_calls:
+      tool_calls: "Værktøjskald"
+      function: "Funktion:"
+      arguments: "Argumenter:"

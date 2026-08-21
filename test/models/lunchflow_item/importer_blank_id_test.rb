@@ -215,4 +215,73 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
     assert result[:success]
     assert_equal 1, @lunchflow_account.reload.raw_transactions_payload.size
   end
+
+  test "incoming merchant mapping overwrites existing transaction with the same id" do
+    stored = {
+      "id" => "txn_123",
+      "accountId" => @lunchflow_account.account_id,
+      "amount" => -69.90,
+      "currency" => "DKK",
+      "date" => Date.today.to_s,
+      "merchant" => "Michael Loft Mikkelsen",
+      "description" => "",
+      "isPending" => false
+    }
+    remapped = stored.merge("merchant" => "REMA 1000 VARDE Notanr 05309416232800065062737")
+
+    mock_provider = mock()
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [ stored ], count: 1 })
+    mock_provider.stubs(:get_account_balance)
+      .with(@lunchflow_account.account_id)
+      .returns({ balance: 100.0, currency: "DKK" })
+
+    importer = LunchflowItem::Importer.new(@item, lunchflow_provider: mock_provider)
+    result = importer.send(:fetch_and_store_transactions, @lunchflow_account)
+    assert result[:success]
+    assert_equal "Michael Loft Mikkelsen",
+      @lunchflow_account.reload.raw_transactions_payload.first.with_indifferent_access[:merchant]
+
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [ remapped ], count: 1 })
+
+    result = importer.send(:fetch_and_store_transactions, @lunchflow_account)
+    assert result[:success]
+
+    payload = @lunchflow_account.reload.raw_transactions_payload
+    assert_equal 1, payload.size
+    assert_equal "REMA 1000 VARDE Notanr 05309416232800065062737",
+      payload.first.with_indifferent_access[:merchant]
+  end
+
+  test "subsequent syncs refetch from the linked account start date" do
+    @lunchflow_account.upsert_lunchflow_transactions_snapshot!([
+      {
+        "id" => "txn_old",
+        "accountId" => @lunchflow_account.account_id,
+        "amount" => -10,
+        "currency" => "GBP",
+        "date" => 200.days.ago.to_date.to_s,
+        "merchant" => "OLD",
+        "description" => "",
+        "isPending" => false
+      }
+    ])
+    @sure_account.entries.create!(
+      name: "OLD",
+      amount: -10,
+      currency: "GBP",
+      date: 200.days.ago.to_date,
+      entryable: Transaction.new
+    )
+    @item.stubs(:last_synced_at).returns(1.day.ago)
+
+    importer = LunchflowItem::Importer.new(@item, lunchflow_provider: mock())
+    start_date = importer.send(:determine_sync_start_date, @lunchflow_account.reload)
+
+    assert start_date <= 200.days.ago.to_date.beginning_of_day,
+      "expected history refetch, got #{start_date}"
+  end
 end

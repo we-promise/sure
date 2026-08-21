@@ -1,0 +1,25 @@
+---
+da:
+  impersonation_sessions:
+    approve:
+      success: Anmodning godkendt
+    complete:
+      success: Session afsluttet
+    create:
+      success: Anmodning sendt til bruger. Venter på godkendelse.
+    join:
+      success: Deltog i session
+    leave:
+      success: Forlod session
+    reject:
+      success: Anmodning afvist
+    super_admin_bar:
+      super_admin: Super-admin
+      jobs: Jobs
+      impersonating: Udgiver sig for
+      leave: Forlad
+      terminate: Afslut
+      join_a_session: Deltag i en session
+      join: Deltag
+      uuid_placeholder: UUID
+      request_impersonation: Anmod om impersonation

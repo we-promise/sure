@@ -1,0 +1,8 @@
+---
+da:
+  simplefin_items:
+    update:
+      success: "SimpleFIN-forbindelse opdateret."
+      errors:
+        blank_token: "Mangler SimpleFIN-adgangstoken. Angiv et token, eller brug Kobl eksisterende konti for at fortsætte."
+        update_failed: "Kunne ikke opdatere SimpleFIN-forbindelse: %{message}"

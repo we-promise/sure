@@ -1,0 +1,26 @@
+---
+da:
+  depositories:
+    edit:
+      edit: Rediger %{account}
+    form:
+      none: Ingen
+      subtype_prompt: Vælg kontotype
+    new:
+      title: Indtast kontosaldo
+    subtypes:
+      cd:
+        long: Tidsindskud
+        short: CD
+      checking:
+        long: Lønkonto
+        short: Lønkonto
+      hsa:
+        long: Health Savings Account
+        short: HSA
+      money_market:
+        long: Pengemarked
+        short: PM
+      savings:
+        long: Opsparing
+        short: Opsparing

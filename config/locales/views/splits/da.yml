@@ -1,0 +1,47 @@
+---
+da:
+  splits:
+    new:
+      title: Opdel transaktion
+      description: Opdel denne transaktion i flere posteringer med forskellige kategorier og beløb.
+      submit: Opdel transaktion
+      cancel: Annuller
+      add_row: Tilføj opdeling
+      remove_row: Fjern
+      remaining: Tilbage
+      amounts_must_match: Opdelte beløb skal svare til det oprindelige transaktionsbeløb.
+      name_label: Navn
+      name_placeholder: Navn på opdeling
+      amount_label: Beløb
+      category_label: Kategori
+      uncategorized: "(ukategoriseret)"
+      original_name: "Navn:"
+      original_date: "Dato:"
+      original_amount: "Beløb"
+      split_number: "Opdeling #%{number}"
+    create:
+      success: Transaktion opdelt
+      not_splittable: Denne transaktion kan ikke opdeles.
+    destroy:
+      success: Transaktionens opdeling er fjernet
+    show:
+      title: Opdelte posteringer
+      description: Denne transaktion er opdelt i følgende posteringer.
+      button_title: Opdel transaktion
+      button_description: Opdel denne transaktion i flere posteringer med forskellige kategorier og beløb.
+      button: Opdel
+      unsplit_title: Fjern opdeling
+      unsplit_button: Fjern opdeling
+      unsplit_confirm: Dette fjerner alle opdelte posteringer og gendanner den oprindelige transaktion.
+    edit:
+      title: Rediger opdeling
+      description: Ændr de opdelte posteringer for denne transaktion.
+      submit: Opdater opdeling
+      not_split: Denne transaktion er ikke opdelt.
+    update:
+      success: Opdeling opdateret
+    child:
+      title: Del af opdeling
+      description: Denne postering er del af en opdelt transaktion.
+      edit_split: Rediger opdeling
+      unsplit: Fjern opdeling

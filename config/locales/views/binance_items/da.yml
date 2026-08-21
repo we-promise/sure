@@ -1,0 +1,75 @@
+---
+da:
+  binance_items:
+    create:
+      default_name: Binance
+      success: Forbundet til Binance! Din konto synkroniseres.
+    update:
+      success: Binance-konfiguration opdateret.
+    destroy:
+      success: Binance-forbindelse planlagt til sletning.
+    setup_accounts:
+      title: Importér Binance-konto
+      subtitle: Vælg hvilke porteføljer der skal følges
+      instructions: Vælg de Binance-porteføljer, du vil importere. Kun porteføljer med saldo vises.
+      no_accounts: Alle konti er importeret.
+      accounts_count:
+        one: "%{count} konto tilgængelig"
+        other: "%{count} konti tilgængelige"
+      select_all: Vælg alle
+      import_selected: Importér valgte
+      cancel: Annuller
+      creating: Importerer...
+    complete_account_setup:
+      success:
+        one: "Importerede %{count} konto"
+        other: "Importerede %{count} konti"
+      none_selected: Ingen konti valgt
+      no_accounts: Ingen konti at importere
+    binance_item:
+      provider_name: Binance
+      syncing: Synkroniserer...
+      reconnect: Legitimationsoplysninger skal opdateres
+      deletion_in_progress: Sletter...
+      sync_status:
+        no_accounts: Ingen konti fundet
+        all_synced:
+          one: "%{count} konto synkroniseret"
+          other: "%{count} konti synkroniseret"
+        partial_sync: "%{linked_count} synkroniseret, %{unlinked_count} skal sættes op"
+      status: "Senest synkroniseret for %{timestamp} siden"
+      status_with_summary: "Senest synkroniseret for %{timestamp} siden - %{summary}"
+      status_never: Aldrig synkroniseret
+      update_credentials: Opdater legitimationsoplysninger
+      delete: Slet
+      no_accounts_title: Ingen konti fundet
+      no_accounts_message: Din Binance-portefølje vises her efter synk.
+      setup_needed: Konto klar til import
+      setup_description: Vælg hvilke Binance-porteføljer du vil følge.
+      setup_action: Importér konto
+      import_accounts_menu: Importér konto
+      stale_rate_warning: "Saldo er omtrentlig — den præcise valutakurs for %{date} var ikke tilgængelig. Opdateres ved næste synk."
+    select_existing_account:
+      title: Kobl Binance-konto
+      no_accounts_found: Ingen Binance-konti fundet.
+      wait_for_sync: Vent, til Binance er færdig med at synkronisere
+      check_provider_health: Tjek, at dine Binance-API-legitimationsoplysninger er gyldige
+      currently_linked_to: "I øjeblikket koblet til: %{account_name}"
+      link: Kobl
+      cancel: Annuller
+    link_existing_account:
+      success: Koblet til Binance-konto
+      errors:
+        only_manual: Kun manuelle konti kan kobles til Binance
+        invalid_binance_account: Ugyldig Binance-konto
+  binance_item:
+    syncer:
+      checking_credentials: Tjekker legitimationsoplysninger...
+      credentials_invalid: Ugyldige API-legitimationsoplysninger. Tjek din API-nøgle og secret.
+      importing_accounts: Importerer konti fra Binance...
+      checking_configuration: Tjekker kontokonfiguration...
+      accounts_need_setup:
+        one: "%{count} konto skal sættes op"
+        other: "%{count} konti skal sættes op"
+      processing_accounts: Behandler kontodata...
+      calculating_balances: Beregner saldi...

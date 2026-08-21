@@ -1,0 +1,70 @@
+---
+da:
+  categories:
+    bootstrap:
+      success: Standardkategorier er oprettet
+    category:
+      delete: Slet kategori
+      edit: Rediger kategori
+    create:
+      success: Kategori oprettet
+    destroy:
+      success: Kategori slettet
+    edit:
+      edit: Rediger kategori
+    form:
+      placeholder: Kategorinavn
+      name_label: Navn
+      unassigned: "(ikke tildelt)"
+      parent_category_label: "Overordnet kategori (valgfri)"
+      trigger_label: Vælg farve og ikon
+      color: Farve
+      icon: Ikon
+      auto_adjust: autojuster.
+      poor_contrast: "Dårlig kontrast, vælg en mørkere farve eller"
+    destroy_all:
+      success: Alle kategorier slettet
+    index:
+      bootstrap: Brug standarder (anbefalet)
+      categories: Kategorier
+      categories_expenses: Udgiftskategorier
+      categories_incomes: Indtægtskategorier
+      delete_all: Slet alle
+      empty: Ingen kategorier fundet
+      merge: Flet kategorier
+      new: Ny kategori
+    merge:
+      title: Flet kategorier
+      description: Vælg en målkategori og de kategorier, der skal flettes ind i den. Matchende transaktioner og budgetlinjer flyttes til målet.
+      target_label: Flet ind i (mål)
+      select_target: Vælg målkategori...
+      sources_label: Kategorier der skal flettes
+      sources_hint: Valgte kategorier slettes, når deres transaktioner og budgetlinjer er flyttet til målet. Vælg ikke målet som kilde.
+      submit: Flet valgte
+    menu:
+      loading: Indlæser...
+    new:
+      new_category: Ny kategori
+    perform_merge:
+      success:
+        one: Flettede %{count} kategori
+        other: Flettede %{count} kategorier
+      no_categories_selected: Ingen kategorier valgt til fletning
+      target_not_found: Målkategori ikke fundet
+      invalid_categories: Ugyldige kategorier valgt
+      target_selected_as_source: Vælg forskellige kategorier som mål og kilder.
+    update:
+      success: Kategori opdateret
+    virtual:
+      transfer: Overførsel
+      payment: Betaling
+      trade: Handel
+  category:
+    dropdowns:
+      show:
+        bootstrap: Generer standardkategorier
+        empty: Ingen kategorier fundet
+        match_transfer: "Match overførsel/betaling"
+        one_time: "Engangs-%{type}"
+        income: "indtægt"
+        expense: "udgift"

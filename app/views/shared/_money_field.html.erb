@@ -7,8 +7,18 @@
                    end
    currency = Money::Currency.new(currency_value || options[:default_currency] || "USD") %>
 
+<% precision = options[:precision].presence || currency.default_precision
+   separator = I18n.t("number.format.separator", default: ".")
+   formatted_amount = if options[:value]
+     LocaleNumber.format(options[:value], precision: precision)
+   elsif form.object && form.object.respond_to?(amount_method)
+     val = form.object.public_send(amount_method)
+     LocaleNumber.format(val, precision: precision) if val.present?
+   end %>
+
 <div class="form-field <%= options[:container_class] %>"
      data-controller="money-field"
+     data-money-field-separator-value="<%= separator %>"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>>
   <% if options[:label_tooltip] %>
@@ -46,19 +56,13 @@
           <%= currency.symbol %>
         </span>
 
-        <%= form.number_field amount_method,
+        <%= form.text_field amount_method,
           class: "form-field__input",
           inline: true,
-          placeholder: "100",
-          value: if options[:value]
-            sprintf("%.#{options[:precision].presence || currency.default_precision}f", options[:value])
-          elsif form.object && form.object.respond_to?(amount_method)
-            val = form.object.public_send(amount_method)
-            sprintf("%.#{options[:precision].presence || currency.default_precision}f", val) if val.present?
-          end,
-          min: options[:min] || -99999999999999,
-          max: options[:max] || 99999999999999,
-          step: options[:step] || currency.step,
+          placeholder: LocaleNumber.format(0, precision: precision),
+          value: formatted_amount,
+          inputmode: "decimal",
+          autocomplete: "off",
           disabled: options[:disabled],
           data: (options[:amount_data] || {}).merge({
             "money-field-target": "amount",

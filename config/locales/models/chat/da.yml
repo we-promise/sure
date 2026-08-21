@@ -1,0 +1,9 @@
+---
+da:
+  chat:
+    errors:
+      rate_limited: "AI-udbyderen er ratebegrænset lige nu. Prøv igen om et par minutter."
+      temporarily_unavailable: "AI-udbyderen er midlertidigt utilgængelig. Prøv igen om et par minutter."
+      misconfigured: "AI-udbyderen er ikke konfigureret korrekt. Kontakt din administrator."
+      no_response: "Assistenten svarede ikke. Baggrundsjobbet kan være nede, eller AI er måske ikke fuldt konfigureret. Prøv igen."
+      default: "Kunne ikke generere et svar. Prøv igen."

@@ -1,0 +1,101 @@
+---
+da:
+  budgets:
+    switcher:
+      aria_label: "Skift budget"
+      household: "Husstand"
+    budget_donut:
+      spent: "Brugt"
+      new_budget: "Nyt budget"
+      of_budget: "af %{amount}"
+      unused: "Ubrugt"
+    budget_header:
+      today: "I dag"
+    budget_nav:
+      categories: Kategorier
+      setup: Opsætning
+    over_allocation_warning:
+      over_allocated_message: "Du har overfordelt dit budget. Ret dine allokeringer."
+      fix_allocations: "Ret allokeringer"
+    actuals_summary:
+      income: "Indtægt"
+      expenses: "Udgifter"
+    budgeted_summary:
+      expected_income: "Forventet indtægt"
+      budgeted: "Budgetteret"
+      earned: "%{amount} tjent"
+      over: "%{amount} over"
+      left: "%{amount} tilbage"
+      spent: "%{amount} brugt"
+    edit:
+      setup_title: "Opsæt dit budget"
+      setup_description: "Indtast dine månedlige indtægter og planlagte udgifter nedenfor for at opsætte dit budget."
+      budgeted_spending: "Budgetterede udgifter"
+      expected_income: "Forventet indtægt"
+      autosuggest_title: "Foreslå indtægts- og udgiftsbudget"
+      autosuggest_description: "Baseres på transaktionshistorik. AI kan tage fejl — tjek, før du fortsætter."
+      continue: "Fortsæt"
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories:
+        amount: Beløb
+        edit: Rediger
+        title: Kategorier
+      on_track_categories:
+        short_title: På sporet
+        title: På sporet
+      over_budget_categories:
+        short_title: Over budget
+        title: Over budget
+      filter:
+        all: Alle
+        aria_label: Filtrer budgetkategorier
+        on_track: På sporet
+        over_budget: Over budget
+      tabs:
+        actual: Faktisk
+        budgeted: Budgetteret
+    copy_previous_prompt:
+      title: "Opsæt dit budget"
+      description: "Du kan kopiere dit budget fra %{source_name} eller starte forfra."
+      copy_button: "Kopiér fra %{source_name}"
+      fresh_button: "Start forfra"
+    copy_previous:
+      success: "Budget kopieret fra %{source_name}"
+      no_source: "Intet tidligere budget at kopiere fra"
+      already_initialized: "Dette budget er allerede sat op"
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: 'Budget overskredet med <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: tilbage at allokere
+      over_set: "> 100% sat"
+      percent_set: "%{percent} sat"
+    budget_category_form:
+      monthly_average: "%{amount}/md. gns."
+      shared_placeholder: Delt
+      shared_title: Lad stå tomt for at dele overordnet budget
+    confirm_button:
+      confirm: "Bekræft"
+    no_categories:
+      oops: "Ups!"
+      no_categories_message: "Du har endnu ikke oprettet eller tildelt udgiftskategorier til dine transaktioner."
+      use_defaults: "Brug standarder (anbefalet)"
+      new_category: "Ny kategori"
+    index:
+      title: "Rediger dine kategoribudgetter"
+      description: "Juster kategoribudgetter for at sætte udgiftslofter. Uallokerede midler tildeles automatisk som ukategoriserede."
+    show:
+      category: "Kategori"
+      overview: "Oversigt"
+      spending: "%{date}-forbrug"
+      status: "Status"
+      overspent: "overskredet"
+      left: "tilbage"
+      budgeted: "Budgetteret"
+      monthly_average_spending: "Gennemsnitligt månedligt forbrug"
+      monthly_median_spending: "Median månedligt forbrug"
+      recent_transactions: "Seneste transaktioner"
+      view_all_transactions: "Se alle transaktioner i kategorien"
+      no_transactions: "Ingen transaktioner fundet for denne budgetperiode."

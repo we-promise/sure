@@ -1,0 +1,244 @@
+---
+da:
+  reports:
+    index:
+      title: Rapporter
+      subtitle: Samlet indblik i din økonomiske sundhed
+      export: Eksportér CSV
+      print_report: Udskriv rapport
+      drag_to_reorder: "Træk for at ændre rækkefølge"
+      toggle_section: "Slå sektionens synlighed til/fra"
+      periods:
+        monthly: Månedlig
+        quarterly: Kvartalsvis
+        ytd: År til dato
+        last_6_months: Seneste 6 måneder
+        custom: Tilpasset interval
+      date_range:
+        from: Fra
+        to: Til
+      showing_period: "Viser data fra %{start} til %{end}"
+      previous_period: "Forrige periode"
+      next_period: "Næste periode"
+      today: "I dag"
+      period_label:
+        quarterly: "Q%{quarter} %{year}"
+        ytd: "YTD %{year}"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "Q%{quarter} %{year}"
+        ytd: "YTD %{year}"
+      previous_year: "Forrige år"
+      next_year: "Næste år"
+      previous_decade: "Forrige årti"
+      next_decade: "Næste årti"
+    invalid_date_range: "Slutdato kan ikke ligge før startdato. Datoerne er byttet om."
+    summary:
+      total_income: Indtægt i alt
+      total_expenses: Udgifter i alt
+      net_savings: Nettopsparing
+      budget_performance: Budgetresultat
+      vs_previous: vs. forrige periode
+      income_minus_expenses: Indtægt minus udgifter
+      of_budget_used: af budgettet brugt
+      no_budget_data: Ingen budgetdata for denne periode
+    budget_performance:
+      title: Budgetresultat
+      spent: Brugt
+      budgeted: Budgetteret
+      remaining: Tilbage
+      over_by: Overskredet med
+      shared: delt
+      suggested_daily: "%{amount} foreslået pr. dag i %{days} resterende dage"
+      no_budgets: Ingen budgetkategorier sat op for denne måned
+      status:
+        good: På sporet
+        warning: Tæt på grænsen
+        over: Over budget
+    trends:
+      title: Tendenser og indsigt
+      monthly_breakdown: Månedlig opdeling
+      month: Måned
+      income: Indtægt
+      expenses: Udgifter
+      net: Netto
+      savings_rate: Opsparingsrate
+      current: aktuelt
+      avg_monthly_income: Gns. månedlig indtægt
+      avg_monthly_expenses: Gns. månedlige udgifter
+      avg_monthly_savings: Gns. månedlig opsparing
+      no_data: Ingen tendensdata tilgængelige
+      spending_patterns: Forbrugsmønstre
+      weekday_spending: Hverdagsforbrug
+      weekend_spending: Weekendforbrug
+      total: I alt
+      avg_per_transaction: Gns. pr. transaktion
+      transactions: Transaktioner
+      insight_title: Indsigt
+      insight_higher_weekend: "Du bruger %{percent}% mere pr. transaktion i weekenden end på hverdage"
+      insight_higher_weekday: "Du bruger %{percent}% mere pr. transaktion på hverdage end i weekenden"
+      insight_similar: "Dit forbrug pr. transaktion er ens på hverdage og i weekenden"
+      no_spending_data: Ingen forbrugsdata for denne periode
+    empty_state:
+      title: Ingen data
+      description: Begynd at følge din økonomi ved at tilføje transaktioner eller forbinde dine konti for at se fulde rapporter
+      add_transaction: Tilføj transaktion
+      add_account: Tilføj konto
+    transactions_breakdown:
+      title: Aktivitetsopdeling
+      no_transactions: Ingen aktivitet fundet for den valgte periode og de valgte filtre
+      filters:
+        title: Filtre
+        category: Kategori
+        account: Konto
+        tag: Tag
+        amount_min: Min. beløb
+        amount_max: Maks. beløb
+        date_range: Datointerval
+        all_categories: Alle kategorier
+        all_accounts: Alle konti
+        all_tags: Alle tags
+        apply: Anvend filtre
+        clear: Ryd filtre
+      sort:
+        label: Sortér efter
+        date_desc: Dato (nyeste)
+        amount_desc: Beløb (høj til lav)
+        amount_asc: Beløb (lav til høj)
+      export:
+        label: Eksportér
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Åbn i Google Sheets
+      table:
+        category: Kategori
+        amount: Beløb
+        type: Type
+        expense: Udgifter
+        income: Indtægt
+        uncategorized: Ukategoriseret
+        entries:
+          one: "%{count} postering"
+          other: "%{count} posteringer"
+        percentage: "% af total"
+      pagination:
+        showing:
+          one: Viser %{count} postering
+          other: Viser %{count} posteringer
+        previous: Forrige
+        next: Næste
+    net_worth:
+      title: Nettoværdi
+      current_net_worth: Aktuel nettoværdi
+      period_change: Periodeændring
+      assets_vs_liabilities: Aktiver vs. passiver
+      total_assets: Aktiver
+      total_liabilities: Passiver
+      no_assets: Ingen aktiver
+      no_liabilities: Ingen passiver
+    investment_performance:
+      title: Investeringsresultat
+      portfolio_value: Porteføljeværdi
+      total_return: Samlet afkast
+      period_return: Periodeafkast
+      contributions: Periodeindskud
+      withdrawals: Periodeudbetalinger
+      top_holdings: Største beholdninger
+      holding: Beholdning
+      weight: Vægt
+      value: Værdi
+      return: Afkast
+      accounts: Investeringskonti
+      gains_by_tax_treatment: Gevinster efter skattebehandling
+      unrealized_gains: Urealiserede gevinster
+      realized_gains: Realiserede gevinster
+      total_gains: Gevinster i alt
+      taxable_realized_note: Disse gevinster kan være skattepligtige
+      no_data: "-"
+      view_details: Se detaljer
+      holdings_count:
+        one: "%{count} beholdning"
+        other: "%{count} beholdninger"
+      sells_count:
+        one: "%{count} salg"
+        other: "%{count} salg"
+      holdings: Beholdninger
+      sell_trades: Salgshandler
+      and_more: "+%{count} mere"
+    investment_flows:
+      title: Investeringsstrømme
+      description: Følg penge ind og ud af dine investeringskonti via indskud og udbetalinger.
+      contributions: Indskud
+      contributions_description: Penge tilføjet til investeringer
+      withdrawals: Udbetalinger
+      withdrawals_description: Penge trukket ud af investeringer
+      net_flow: Nettostrøm
+      net_flow_description: Samlet nettoændring
+    google_sheets_instructions:
+      title_with_key: "✅ Kopiér URL til Google Sheets"
+      title_no_key: "⚠️ API-nøgle påkrævet"
+      ready: Din CSV-URL (med API-nøgle) er klar.
+      steps: "Sådan importerer du til Google Sheets:\n1. Opret et nyt Google Sheet\n2. I celle A1 skal du indtaste formlen nedenfor\n3. Tryk på Enter"
+      security_warning: "Denne URL indeholder din API-nøgle. Hold den fortrolig!"
+      need_key: For at importere data til Google Sheets skal du bruge en API-nøgle.
+      step1: "Gå til Indstillinger → API-nøgler"
+      step2: "Opret en ny API-nøgle med \"read\"-tilladelse"
+      step3: Kopiér API-nøglen
+      step4: "Tilføj den til denne URL som: ?api_key=DIN_NØGLE"
+      example: Eksempel
+      then_use: Brug derefter den fulde URL med =IMPORTDATA() i Google Sheets.
+      open_sheets: Åbn Google Sheets
+      go_to_api_keys: Gå til API-nøgler
+      close: Forstået
+    print:
+      document_title: Finansrapport
+      title: Finansrapport
+      generated_on: "Genereret %{date}"
+      summary:
+        title: Opsummering
+        income: Indtægt
+        expenses: Udgifter
+        net_savings: Nettopsparing
+        budget: Budget
+        vs_prior: "%{percent}% vs. forrige"
+        of_income: "%{percent}% af indtægt"
+        used: brugt
+      net_worth:
+        title: Nettoværdi
+        current_balance: Aktuel saldo
+        this_period: denne periode
+        assets: Aktiver
+        liabilities: Passiver
+        no_liabilities: Ingen passiver
+      trends:
+        title: Månedlige tendenser
+        month: Måned
+        income: Indtægt
+        expenses: Udgifter
+        net: Netto
+        savings_rate: Opsparingsrate
+        average: Gennemsnit
+        current_month_note: "* Aktuel måned (delvise data)"
+      investments:
+        title: Investeringer
+        portfolio_value: Porteføljeværdi
+        total_return: Samlet afkast
+        period_return: Periodeafkast
+        contributions: Indskud
+        withdrawals: Udbetalinger
+        this_period: denne periode
+        top_holdings: Største beholdninger
+        holding: Beholdning
+        weight: Vægt
+        value: Værdi
+        return: Afkast
+      spending:
+        title: Forbrug efter kategori
+        income: Indtægt
+        expenses: Udgifter
+        category: Kategori
+        amount: Beløb
+        percent: "%"
+        more_categories: "+ %{count} flere kategorier"

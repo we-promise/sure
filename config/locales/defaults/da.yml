@@ -1,5 +1,12 @@
 ---
 da:
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
+    common:
+      close: Luk
+  global:
+    expand: Udvid
   activerecord:
     errors:
       messages:
@@ -42,6 +49,8 @@ da:
       default: "%d.%m.%Y"
       long: "%e. %B %Y"
       short: "%e. %b %Y"
+      month_year: "%B %Y"
+      short_month_year: "%b %Y"
     month_names:
     -
     - januar
@@ -147,6 +156,8 @@ da:
   helpers:
     select:
       prompt: Vælg...
+      search_placeholder: Søg
+      default_label: Vælg...
     submit:
       create: Opret %{model}
       submit: Gem %{model}

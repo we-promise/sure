@@ -42,7 +42,7 @@
               passing a name would render it as link text on top of the row. %>
           <%= link_to "", insights_path,
                 class: "absolute inset-0 rounded-lg cursor-pointer",
-                aria: { label: insight.title },
+                aria: { label: insight_display_title(insight) },
                 data: { turbo_prefetch: false } %>
 
           <div class="h-7 w-7 shrink-0 rounded-full flex justify-center items-center group-hover/insight:scale-105 transition-all duration-300"
@@ -55,8 +55,8 @@
                 unread ones ("New · 3"), and with only three rows the pill was
                 usually on all of them — saying the same thing twice while
                 crowding the title. %>
-            <span class="text-sm font-medium text-primary truncate block"><%= insight_privacy_text(insight.title) %></span>
-            <p class="text-sm text-secondary truncate"><%= insight_privacy_text(insight.body) %></p>
+            <span class="text-sm font-medium text-primary truncate block"><%= insight_privacy_text(insight_display_title(insight)) %></span>
+            <p class="text-sm text-secondary truncate"><%= insight_privacy_text(insight_display_body(insight)) %></p>
           </div>
 
           <% if (figure = insight_key_figure(insight)) %>
@@ -85,7 +85,7 @@
               href: acknowledge_insight_path(insight),
               method: :patch,
               title: t("insights.card.acknowledge"),
-              aria_label: t("insights.feed.acknowledge_aria", title: insight.title)
+              aria_label: t("insights.feed.acknowledge_aria", title: insight_display_title(insight))
             ) %>
           </div>
         </div>

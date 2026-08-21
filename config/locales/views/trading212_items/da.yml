@@ -1,0 +1,102 @@
+---
+da:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: Tilslut en Trading 212-investeringskonto via API-nøgle
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: Sletning i gang
+      environment_label_live: Live-konto
+      environment_label_demo: Demo-konto
+      syncing: Synkroniserer
+      requires_update: API-nøgle kræver opmærksomhed
+      error: Fejl
+      synced: Synkroniseret for %{time} siden. %{summary}.
+      never_synced: Aldrig synkroniseret.
+      setup_accounts: Opsæt konti
+      delete: Slet
+      accounts_need_setup: Konto skal sættes op
+      accounts_need_setup_description: Din Trading 212-konto skal kobles til en Sure-konto.
+      no_accounts_discovered: Ingen Trading 212-konto fundet endnu.
+      no_accounts_discovered_description: Kør en synk efter at have gemt din API-nøgle for at finde din konto.
+    setup_accounts:
+      page_title: Opsæt Trading 212-konto
+      dialog_title: Opsæt din Trading 212-konto
+      subtitle: Kobl din Trading 212-investeringskonto.
+      info_box:
+        title: Trading 212 API Import
+        items:
+          item_1: Aktuelle positioner med priser og mængder
+          item_2: Fuld ordrehistorik (køb og salg)
+          item_3: Udbytter og kontanttransaktioner
+      status:
+        fetching_accounts: Henter konto fra Trading 212...
+        no_accounts_found_title: Ingen konto fundet.
+        no_accounts_found_description: Sure kunne ikke finde en Trading 212-konto. Tjek, at din API-nøgle er gyldig.
+      available_accounts:
+        title: Tilgængelig konto
+        account_type_investment: Investering
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "Account ID: %{account_id}"
+      link_existing:
+        description: Eller kobl den fundede Trading 212-konto til en eksisterende manuel investeringskonto.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Vælg en konto...
+      linked_accounts:
+        title: Allerede koblet
+        linked_to_html: "Koblet til: %{account}"
+      buttons:
+        refresh: Opdater
+        cancel: Annuller
+        back_to_settings: Tilbage til Indstillinger
+        create_selected_accounts: Opret valgte konti
+        link: Kobl
+        done: Færdig
+    sync:
+      status:
+        checking_credentials: Tjekker Trading 212-legitimationsoplysninger...
+        importing_account: Importerer Trading 212-konto...
+        checking_configuration: Tjekker kontokonfiguration...
+        accounts_need_setup:
+          one: 1 Trading 212-konto skal sættes op...
+          other: "%{count} Trading 212-konti skal sættes op..."
+        processing_activity: Behandler positioner og aktivitet...
+        calculating_balances: Beregner saldi...
+    sync_status:
+      no_accounts: Ingen Trading 212-konto fundet endnu
+      all_linked:
+        one: 1 konto koblet
+        other: "%{count} konti koblet"
+      partial: "%{linked} koblet, %{unlinked} skal sættes op"
+    select_existing_account:
+      title: Kobl Trading 212-konto
+      no_accounts_available: Ingen ukoblede Trading 212-konti er tilgængelige endnu.
+      run_sync_hint: "Kør en synk fra Indstillinger > Udbydere efter at have gemt din API-nøgle."
+      wait_for_sync: Vent, til synkroniseringen til kontofinding er færdig.
+      balance: Saldo
+      link: Kobl
+      cancel: Annuller
+    create:
+      success: Trading 212 konfigureret.
+    update:
+      success: Trading 212-konfiguration opdateret.
+    destroy:
+      success: Trading 212-forbindelse planlagt til sletning.
+    select_accounts:
+      not_configured: Trading 212 er ikke konfigureret.
+    link_existing_account:
+      not_found: Konto eller Trading 212-konfiguration ikke fundet.
+      only_manual_investment: Kun manuelle investeringskonti kan kobles til Trading 212.
+      already_linked: Denne Trading 212-konto er allerede koblet.
+      success: Koblet til Trading 212-konto.
+      failed: Kunne ikke koble Trading 212-konto.
+    complete_account_setup:
+      success:
+        one: Oprettede %{count} Trading 212-konto.
+        other: Oprettede %{count} Trading 212-konti.
+      none_selected: Ingen konti blev valgt.
+      none_created: Ingen konti blev oprettet.

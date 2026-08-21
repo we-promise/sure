@@ -1,0 +1,252 @@
+---
+da:
+  indexa_capital_items:
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "Ingen konti fundet"
+      synced:
+        one: "%{count} konto synkroniseret"
+        other: "%{count} konti synkroniseret"
+      synced_with_setup: "%{linked} synkroniseret, %{unlinked} skal sættes op"
+    institution_summary:
+      none: "Ingen institutioner forbundet"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutioner"
+    errors:
+      provider_not_configured: "IndexaCapital-udbyderen er ikke konfigureret"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Importerer konti fra IndexaCapital..."
+        processing: "Behandler beholdninger og aktiviteter..."
+        calculating: "Beregner saldi..."
+        importing_data: "Importerer kontodata..."
+        checking_setup: "Tjekker kontokonfiguration..."
+        needs_setup: "%{count} konti skal sættes op..."
+      success: "Synk startet"
+
+    # Panel (settings view)
+    panel:
+      setup_instructions: "Opsætningsvejledning:"
+      step_1: "Besøg dit Indexa Capital-dashboard for at generere et skrivebeskyttet API-token"
+      step_2: "Indsæt dit API-token nedenfor, og klik på Gem"
+      step_3: "Efter en vellykket forbindelse skal du gå til fanen Konti for at sætte nye konti op"
+      field_descriptions: "Feltbeskrivelser:"
+      optional: "(Valgfrit)"
+      required: "(påkrævet)"
+      optional_with_default: "(valgfrit, standard er %{default_value})"
+      alternative_auth: "Eller brug brugernavn/adgangskode i stedet..."
+      save_button: "Gem konfiguration"
+      update_button: "Opdater konfiguration"
+      fields:
+        api_token:
+          label: "API-token"
+          description: "Dit skrivebeskyttede API-token fra Indexa Capital-dashboardet"
+          placeholder_new: "Indsæt dit API-token her"
+          placeholder_update: "Indtast nyt API-token for at opdatere"
+        username:
+          label: "Brugernavn"
+          description: "Dit Indexa Capital-brugernavn/e-mail"
+          placeholder_new: "Indsæt brugernavn her"
+          placeholder_update: "Indtast nyt brugernavn for at opdatere"
+        document:
+          label: "Dokument-ID"
+          description: "Dit Indexa Capital-dokument/ID"
+          placeholder_new: "Indsæt dokument-ID her"
+          placeholder_update: "Indtast nyt dokument-ID for at opdatere"
+        password:
+          label: "Adgangskode"
+          description: "Din Indexa Capital-adgangskode"
+          placeholder_new: "Indsæt adgangskode her"
+          placeholder_update: "Indtast ny adgangskode for at opdatere"
+
+    # CRUD success messages
+    create:
+      success: "IndexaCapital-forbindelse oprettet"
+    update:
+      success: "IndexaCapital-forbindelse opdateret"
+    destroy:
+      success: "IndexaCapital-forbindelse fjernet"
+    index:
+      title: "IndexaCapital-forbindelser"
+
+    # Loading states
+    loading:
+      loading_message: "Indlæser IndexaCapital-konti..."
+      loading_title: "Indlæser"
+
+    # Account linking
+    link_accounts:
+      all_already_linked:
+        one: "Den valgte konto (%{names}) er allerede koblet"
+        other: "Alle %{count} valgte konti er allerede koblet: %{names}"
+      api_error: "API-fejl: %{message}"
+      invalid_account_names:
+        one: "Kan ikke koble konto med tomt navn"
+        other: "Kan ikke koble %{count} konti med tomme navne"
+      link_failed: "Kunne ikke koble konti"
+      no_accounts_selected: "Vælg mindst én konto"
+      no_api_key: "IndexaCapital-legitimationsoplysninger ikke fundet. Konfigurer dem under Udbyderindstillinger."
+      partial_invalid: "Koblede %{created_count} konto(er), %{already_linked_count} var allerede koblet, %{invalid_count} konto(er) havde ugyldige navne"
+      partial_success: "Koblede %{created_count} konto(er). %{already_linked_count} konto(er) var allerede koblet: %{already_linked_names}"
+      success:
+        one: "Koblede %{count} konto"
+        other: "Koblede %{count} konti"
+
+    # Provider item display (used in _item partial)
+    indexa_capital_item:
+      accounts_need_setup: "Konti skal sættes op"
+      delete: "Slet forbindelse"
+      deletion_in_progress: "sletning i gang..."
+      error: "Fejl"
+      more_accounts_available:
+        one: "%{count} konto mere tilgængelig"
+        other: "%{count} konti mere tilgængelige"
+      no_accounts_description: "Denne forbindelse har ingen koblede konti endnu."
+      no_accounts_title: "Ingen konti"
+      provider_name: "IndexaCapital"
+      requires_update: "Forbindelsen skal opdateres"
+      setup_action: "Sæt nye konti op"
+      setup_description: "%{linked} af %{total} konti koblet. Vælg kontotyper til dine nyligt importerede IndexaCapital-konti."
+      setup_needed: "Nye konti klar til opsætning"
+      status: "Synkroniseret for %{timestamp} siden — %{summary}"
+      status_never: "Aldrig synkroniseret"
+      syncing: "Synkroniserer..."
+      total: "I alt"
+      unlinked: "Ikke koblet"
+      update_credentials: "Opdater legitimationsoplysninger"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "konti valgt"
+      api_error: "API-fejl: %{message}"
+      cancel: "Annuller"
+      configure_name_in_provider: "Kan ikke importere — konfigurer kontonavn i IndexaCapital"
+      description: "Vælg de konti, du vil koble til din %{product_name}-konto."
+      link_accounts: "Kobl valgte konti"
+      no_accounts_found: "Ingen konti fundet. Tjek dine IndexaCapital-legitimationsoplysninger."
+      no_api_key: "IndexaCapital-legitimationsoplysninger er ikke konfigureret. Konfigurer dem under Indstillinger."
+      no_credentials_configured: "Konfigurer dine IndexaCapital-legitimationsoplysninger først under Udbyderindstillinger."
+      no_name_placeholder: "(Intet navn)"
+      title: "Vælg IndexaCapital-konti"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "Denne konto er allerede koblet til en udbyder"
+      all_accounts_already_linked: "Alle IndexaCapital-konti er allerede koblet"
+      api_error: "API-fejl: %{message}"
+      balance_label: "Saldo:"
+      cancel: "Annuller"
+      cancel_button: "Annuller"
+      configure_name_in_provider: "Kan ikke importere — konfigurer kontonavn i IndexaCapital"
+      connect_hint: "Forbind en IndexaCapital-konto for at aktivere automatisk synkronisering."
+      description: "Vælg en IndexaCapital-konto at koble med denne konto. Transaktioner synkroniseres og deduplikeres automatisk."
+      header: "Kobl med IndexaCapital"
+      link_account: "Kobl konto"
+      link_button: "Kobl denne konto"
+      linking_to: "Kobler til:"
+      no_account_specified: "Ingen konto angivet"
+      no_accounts: "Ingen ikke-koblede IndexaCapital-konti fundet."
+      no_accounts_found: "Ingen IndexaCapital-konti fundet. Tjek dine legitimationsoplysninger."
+      no_api_key: "IndexaCapital-legitimationsoplysninger er ikke konfigureret. Konfigurer dem under Indstillinger."
+      no_credentials_configured: "Konfigurer dine IndexaCapital-legitimationsoplysninger først under Udbyderindstillinger."
+      no_name_placeholder: "(Intet navn)"
+      settings_link: "Gå til udbyderindstillinger"
+      subtitle: "Vælg en IndexaCapital-konto"
+      title: "Kobl %{account_name} med IndexaCapital"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "Denne konto er allerede koblet til en udbyder"
+      api_error: "API-fejl: %{message}"
+      invalid_account_name: "Kan ikke koble konto med tomt navn"
+      provider_account_already_linked: "Denne IndexaCapital-konto er allerede koblet til en anden konto"
+      provider_account_not_found: "IndexaCapital-konto ikke fundet"
+      missing_parameters: "Mangler påkrævede parametre"
+      no_api_key: "IndexaCapital-legitimationsoplysninger ikke fundet. Konfigurer dem under Udbyderindstillinger."
+      success: "Koblede %{account_name} med IndexaCapital"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Kontotype:"
+      accounts_count:
+        one: "%{count} konto tilgængelig"
+        other: "%{count} konti tilgængelige"
+      all_accounts_linked: "Alle dine IndexaCapital-konti er allerede sat op."
+      api_error: "API-fejl: %{message}"
+      creating: "Opretter konti..."
+      fetch_failed: "Kunne ikke hente konti"
+      import_selected: "Importer valgte konti"
+      instructions: "Vælg de konti, du vil importere fra IndexaCapital. Du kan vælge flere konti."
+      no_accounts: "Ingen ikke-koblede konti fundet fra denne IndexaCapital-forbindelse."
+      no_accounts_to_setup: "Ingen konti at sætte op"
+      no_api_key: "IndexaCapital-legitimationsoplysninger er ikke konfigureret. Tjek dine forbindelsesindstillinger."
+      select_all: "Vælg alle"
+      account_types:
+        skip: "Spring denne konto over"
+        depository: "Løn- eller opsparingskonto"
+        credit_card: "Kreditkort"
+        investment: "Investeringskonto"
+        crypto: "Kryptovaluta-konto"
+        loan: "Lån eller realkredit"
+        other_asset: "Andet aktiv"
+      subtype_labels:
+        depository: "Konto-undertype:"
+        credit_card: ""
+        investment: "Investeringstype:"
+        crypto: ""
+        loan: "Lånetype:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkort sættes automatisk op som kreditkortkonti."
+        other_asset: "Ingen ekstra muligheder nødvendige for andre aktiver."
+        crypto: "Kryptovaluta-konti sættes op til at spore beholdninger og transaktioner."
+      subtypes:
+        depository:
+          checking: "Lønkonto"
+          savings: "Opsparing"
+          hsa: "Health Savings Account"
+          cd: "Tidsindskud"
+          money_market: "Pengemarked"
+        investment:
+          brokerage: "Mæglerkonto"
+          pension: "Pension"
+          retirement: "Pension"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "Thrift Savings Plan"
+          "529_plan": "529-plan"
+          hsa: "Health Savings Account"
+          mutual_fund: "Investeringsforening"
+          ira: "Traditional IRA"
+          roth_ira: "Roth IRA"
+          angel: "Angel"
+        loan:
+          mortgage: "Realkredit"
+          student: "Studielån"
+          auto: "Billån"
+          other: "Andet lån"
+      balance: "Saldo"
+      cancel: "Annuller"
+      choose_account_type: "Vælg den rigtige kontotype for hver IndexaCapital-konto:"
+      create_accounts: "Opret konti"
+      creating_accounts: "Opretter konti..."
+      historical_data_range: "Historisk datainterval:"
+      subtitle: "Vælg de rigtige kontotyper til dine importerede konti"
+      sync_start_date_help: "Vælg, hvor langt tilbage du vil synkronisere transaktionshistorik."
+      sync_start_date_label: "Start synk af transaktioner fra:"
+      title: "Sæt dine IndexaCapital-konti op"
+
+    # Complete account setup
+    complete_account_setup:
+      all_skipped: "Alle konti blev sprunget over. Ingen konti blev oprettet."
+      creation_failed: "Kunne ikke oprette konti: %{error}"
+      no_accounts: "Ingen konti at sætte op."
+      success: "Oprettede %{count} konto(er)."
+
+    # Preload accounts
+    preload_accounts:
+      no_credentials_configured: "Konfigurer dine IndexaCapital-legitimationsoplysninger først under Udbyderindstillinger."

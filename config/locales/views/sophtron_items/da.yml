@@ -1,0 +1,313 @@
+---
+da:
+  sophtron_items:
+    defaults:
+      name: Sophtron-forbindelse
+    new:
+      title: Forbind Sophtron
+      user_id: User ID
+      user_id_placeholder: indsæt dit Sophtron User ID
+      access_key: Access Key
+      access_key_placeholder: indsæt din Sophtron Access Key
+      connect: Forbind
+      cancel: Annuller
+    create:
+      success: Sophtron-forbindelse oprettet
+    destroy:
+      success: Sophtron-forbindelse fjernet
+    update:
+      success: Sophtron-forbindelse opdateret! Dine konti genoprettes.
+      errors:
+        blank_user_id: Indtast et Sophtron User ID.
+        invalid_user_id: Ugyldigt User ID. Tjek, at du har kopieret det komplette User ID fra Sophtron.
+        user_id_compromised: User ID'et kan være kompromitteret, udløbet eller allerede brugt. Opret et nyt.
+        blank_access_key: Indtast en Sophtron Access Key.
+        invalid_access_key: Ugyldig Access Key. Tjek, at du har kopieret den komplette Access Key fra Sophtron.
+        access_key_compromised: Access Key'en kan være kompromitteret, udløbet eller allerede brugt. Opret en ny.
+        update_failed: "Kunne ikke opdatere forbindelse: %{message}"
+        unexpected: Der opstod en uventet fejl. Prøv igen, eller kontakt support.
+    edit:
+      user_id:
+        label: "Sophtron User ID:"
+        placeholder: "Indsæt dit Sophtron User ID her..."
+        help_text: "User ID'et skal være en lang streng, der starter med bogstaver og tal"
+      access_key:
+        label: "Sophtron Access Key:"
+        placeholder: "Indsæt din Sophtron Access Key her..."
+        help_text: "Access Key'en skal være en lang streng, der starter med bogstaver og tal"
+    index:
+      title: Sophtron-forbindelser
+    loading:
+      loading_message: Indlæser Sophtron-konti...
+      loading_title: Indlæser
+    link_accounts:
+      all_already_linked:
+        one: "Den valgte konto (%{names}) er allerede koblet"
+        other: "Alle %{count} valgte konti er allerede koblet: %{names}"
+      api_error: "API-forbindelsesfejl"
+      invalid_account_names:
+        one: "Kan ikke koble konto med tomt navn"
+        other: "Kan ikke koble %{count} konti med tomme navne"
+      link_failed: Kunne ikke koble konti
+      no_accounts_selected: Vælg mindst én konto
+      partial_invalid: "Koblede %{created_count} konto(er), %{already_linked_count} var allerede koblet, %{invalid_count} konto(er) havde ugyldige navne"
+      partial_success: "Koblede %{created_count} konto(er). %{already_linked_count} konto(er) var allerede koblet: %{already_linked_names}"
+      success:
+        one: "Koblede %{count} konto"
+        other: "Koblede %{count} konti"
+      no_credentials_configured: "Konfigurer først dit Sophtron API User ID og Access Key under Udbyderindstillinger."
+      no_accounts_found: Ingen konti fundet. Tjek din API-nøglekonfiguration.
+      no_access_key: Sophtron Access Key er ikke konfigureret. Konfigurer den under Indstillinger.
+      no_user_id: Sophtron User ID er ikke konfigureret. Konfigurer det under Indstillinger.
+      no_institution_connected: Forbind først en bankinstitution med Sophtron.
+    connect:
+      cancel: Annuller
+      captcha: Captcha
+      connect: Forbind
+      institution_search_label: Institution
+      institution_search_placeholder: Søg efter banknavn
+      no_institutions: Ingen matchende institutioner fundet.
+      password: Adgangskode
+      search: Søg
+      search_too_short: Indtast mindst to tegn for at søge.
+      title: Forbind Sophtron-institution
+      username: Brugernavn
+    connect_institution:
+      api_error: "Sophtron-forbindelse mislykkedes: %{message}"
+      missing_parameters: Vælg en institution, og indtast dine banklogin-legitimationsoplysninger.
+    connection_status:
+      api_error: "API-forbindelsesfejl: %{message}"
+      attempt: "Forsøg %{attempt} af %{max}"
+      check_again: Tjek igen
+      failed: Sophtron kunne ikke fuldføre denne institutionsforbindelse.
+      failed_timeout: Sophtron fik timeout, mens institutionen fuldførte login.
+      timeout: Sophtron nåede ikke at fuldføre forbindelsen inden for den forventede tid. Du kan tjekke igen eller prøve at genoprette forbindelsen senere.
+      title: Forbinder Sophtron
+      waiting: Sophtron forbinder stadig til din institution.
+    mfa:
+      captcha: Captcha-tekst
+      captcha_alt: Sophtron captcha
+      phone_confirmed: Jeg bekræftede via telefon
+      submit: Send
+      title: Sophtron-verificering
+      token: Verificeringskode
+    submit_mfa:
+      api_error: "Verificering mislykkedes: %{message}"
+      invalid_security_answers: Sikkerhedssvar mangler eller er for lange.
+      unknown_challenge: Ukendt Sophtron-verificeringstrin.
+    sophtron_item:
+      accounts_need_setup: Konti skal sættes op
+      automatic_sync: Brug automatisk synk
+      delete: Slet forbindelse
+      deletion_in_progress: sletning i gang...
+      error: Fejl
+      no_accounts_description: Denne forbindelse har ingen koblede konti endnu.
+      no_accounts_title: Ingen konti
+      manual_sync: Manuel synk
+      manual_sync_action: Kræv manuel synk
+      manual_sync_action_for: "Kræv manuel synk for %{institution}"
+      automatic_sync_for: "Brug automatisk synk for %{institution}"
+      setup_action: Sæt nye konti op
+      setup_description: "%{linked} af %{total} konti koblet. Vælg kontotyper til dine nyligt importerede Sophtron-konti."
+      setup_needed: Nye konti klar til opsætning
+      status: "Synkroniseret for %{timestamp} siden"
+      status_never: Aldrig synkroniseret
+      status_with_summary: "Senest synkroniseret for %{timestamp} siden • %{summary}"
+      sync_now: Synk nu
+      syncing: Synkroniserer...
+      total: I alt
+      unlinked: Ikke koblet
+    preload_accounts:
+      preload_accounts: indlæs konti
+      api_error: "API-forbindelsesfejl"
+      unexpected_error: "Der opstod en uventet fejl"
+      no_credentials_configured: "Konfigurer først dit Sophtron API User ID og Access Key under Udbyderindstillinger."
+      no_accounts_found: Ingen konti fundet. Tjek din API-nøglekonfiguration.
+      no_access_key: Sophtron Access Key er ikke konfigureret. Konfigurer den under Indstillinger.
+      no_user_id: Sophtron User ID er ikke konfigureret. Konfigurer det under Indstillinger.
+    select_accounts:
+      accounts_selected: konti valgt
+      api_error: "API-forbindelsesfejl"
+      unexpected_error: "Der opstod en uventet fejl"
+      cancel: Annuller
+      configure_name_in_sophtron: Kan ikke importere - konfigurer kontonavn i Sophtron
+      description: Vælg de konti, du vil koble til din %{product_name}-konto.
+      link_accounts: Kobl valgte konti
+      no_accounts_found: Ingen konti fundet. Tjek din API-nøglekonfiguration.
+      no_access_key: Sophtron Access Key er ikke konfigureret. Konfigurer den under Indstillinger.
+      no_user_id: Sophtron User ID er ikke konfigureret. Konfigurer det under Indstillinger.
+      no_credentials_configured: "Konfigurer først dit Sophtron API User ID og Access Key under Udbyderindstillinger."
+      no_institution_connected: Forbind først en bankinstitution med Sophtron.
+      no_name_placeholder: "(Intet navn)"
+      title: Vælg Sophtron-konti
+    select_existing_account:
+      account_already_linked: Denne konto er allerede koblet til en udbyder
+      all_accounts_already_linked: Alle Sophtron-konti er allerede koblet
+      api_error: "API-forbindelsesfejl"
+      cancel: Annuller
+      configure_name_in_sophtron: Kan ikke importere - konfigurer kontonavn i Sophtron
+      description: Vælg en Sophtron-konto at koble med denne konto. Transaktioner synkroniseres og deduplikeres automatisk.
+      link_account: Kobl konto
+      no_account_specified: Ingen konto angivet
+      no_accounts_found: Ingen Sophtron-konti fundet. Tjek din API-nøglekonfiguration.
+      no_access_key: Sophtron Access Key er ikke konfigureret. Konfigurer den under Indstillinger.
+      no_user_id: Sophtron User ID er ikke konfigureret. Konfigurer det under Indstillinger.
+      no_institution_connected: Forbind først en bankinstitution med Sophtron.
+      no_name_placeholder: "(Intet navn)"
+      title: "Kobl %{account_name} med Sophtron"
+      unexpected_error: "Der opstod en uventet fejl"
+    link_existing_account:
+      account_already_linked: Denne konto er allerede koblet til en udbyder
+      api_error: "API-forbindelsesfejl"
+      unexpected_error: "Der opstod en uventet fejl"
+      invalid_account_name: Kan ikke koble konto med tomt navn
+      sophtron_account_already_linked: Denne Sophtron-konto er allerede koblet til en anden konto
+      sophtron_account_not_found: Sophtron-konto ikke fundet
+      missing_parameters: Mangler påkrævede parametre
+      no_institution_connected: Forbind først en bankinstitution med Sophtron.
+      success: "Koblede %{account_name} med Sophtron"
+    setup_accounts:
+      account_type_label: "Kontotype:"
+      all_accounts_linked: "Alle dine Sophtron-konti er allerede sat op."
+      api_error: "API-forbindelsesfejl"
+      unexpected_error: "Der opstod en uventet fejl"
+      fetch_failed: "Kunne ikke hente konti"
+      no_accounts_to_setup: "Ingen konti at sætte op"
+      no_access_key: "Sophtron Access Key er ikke konfigureret. Tjek dine forbindelsesindstillinger."
+      no_user_id: "Sophtron User ID er ikke konfigureret. Tjek dine forbindelsesindstillinger."
+      no_institution_connected: "Sophtron-institutionen er ikke forbundet endnu."
+      account_types:
+        skip: Spring denne konto over
+        depository: Løn- eller opsparingskonto
+        credit_card: Kreditkort
+        investment: Investeringskonto
+        loan: Lån eller realkredit
+        other_asset: Andet aktiv
+      subtype_labels:
+        depository: "Konto-undertype:"
+        credit_card: ""
+        investment: "Investeringstype:"
+        loan: "Lånetype:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkort sættes automatisk op som kreditkortkonti."
+        other_asset: "Ingen ekstra muligheder nødvendige for andre aktiver."
+      balance: Saldo
+      cancel: Annuller
+      choose_account_type: "Vælg den rigtige kontotype for hver Sophtron-konto:"
+      create_accounts: Opret konti
+      creating_accounts: Opretter konti...
+      historical_data_range: "Historisk datainterval:"
+      subtitle: Vælg de rigtige kontotyper til dine importerede konti
+      sync_start_date_help: Vælg, hvor langt tilbage du vil synkronisere transaktionshistorik. Maksimalt 3 års historik tilgængelig.
+      sync_start_date_label: "Start synk af transaktioner fra:"
+      title: Sæt dine Sophtron-konti op
+    complete_account_setup:
+      all_skipped: "Alle konti blev sprunget over. Ingen konti blev oprettet."
+      creation_failed: "Kunne ikke oprette konti"
+      api_error: "API-forbindelsesfejl"
+      unexpected_error: "Der opstod en uventet fejl"
+      no_accounts: "Ingen konti at sætte op."
+      success: "Oprettede %{count} konto(er)."
+    sync:
+      already_running: Sophtron manuel synk er allerede i gang.
+      api_error: "Sophtron manuel synk mislykkedes: %{message}"
+      failed: Sophtron manuel synk mislykkedes
+      no_linked_accounts: Denne Sophtron-institution har ingen koblede konti at synkronisere.
+      processing_failed: Sophtron manuel synk kunne ikke behandle de opdaterede transaktioner.
+      success: Synk startet
+    toggle_manual_sync:
+      success_disabled: Sophtron-institutionen synkroniseres automatisk.
+      success_enabled: Sophtron-institutionen kræver nu manuel synk.
+    manual_sync_complete:
+      close: Luk
+      description: Kontosaldi opdateres færdigt i baggrunden.
+      message: Transaktioner blev hentet efter Sophtron-verificering.
+      title: Sophtron-synk startet
+    sophtron_setup_required:
+      title: Sophtron-opsætning påkrævet
+      message: >
+        For at fuldføre opsætningen af din Sophtron-forbindelse skal du gå til siden Udbyderindstillinger og følge instruktionerne for at godkende og konfigurere din Sophtron-forbindelse.
+      go_to_provider_settings: Gå til udbyderindstillinger
+      heading: "User ID og Access Key ikke konfigureret"
+      description: "Før du kan koble Sophtron-konti, skal du konfigurere dit Sophtron User ID og Access Key."
+      setup_steps_title: "Opsætningstrin:"
+      step_1_html: "Gå til <strong>Indstillinger → Udbydere</strong>"
+      step_2_html: "Find sektionen <strong>Sophtron</strong>"
+      step_3_html: "Indtast dit Sophtron User ID og Access Key"
+      step_4: "Vend tilbage hertil for at koble dine konti"
+    api_error:
+      title: "Sophtron-forbindelsesfejl"
+      unable_to_connect: "Kunne ikke forbinde til Sophtron"
+      institution_unable_to_connect: "Kunne ikke forbinde til institutionen"
+      common_issues_title: "Almindelige problemer:"
+      incorrect_user_id: "Forkert User ID: Verificer dit User ID under Udbyderindstillinger"
+      invalid_access_key: "Ugyldig Access Key: Tjek din Access Key under Udbyderindstillinger"
+      expired_credentials: "Udløbne legitimationsoplysninger: Generer et nyt User ID og Access Key fra Sophtron"
+      network_issue: "Netværksproblem: Tjek din internetforbindelse"
+      service_down: "Tjeneste nede: Sophtron-API'et kan være midlertidigt utilgængeligt"
+      bad_credentials: "Banklegitimationsoplysninger: Tjek at brugernavn og adgangskode er korrekte"
+      verification_code: "Verificeringskode: Sørg for, at den seneste kode blev indtastet, før den udløb"
+      institution_timeout: "Institution timeout: Bankens login-side blev ikke færdig i tide"
+      unsupported_mfa: "MFA-understøttelse: Sophtron understøtter muligvis ikke institutionens nuværende verificeringsflow"
+      check_provider_settings: "Tjek udbyderindstillinger"
+      try_again: "Prøv at forbinde igen"
+    select_option: "Vælg %{type}"
+    subtype: "undertype"
+    type: "type"
+    sophtron_panel:
+      setup_instructions_title: "Opsætningsinstruktioner:"
+      setup_instructions:
+        step_1_html: 'Besøg <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> for at hente dine API-legitimationsoplysninger'
+        step_2: "Kopiér dit User ID og Access Key fra dine Sophtron-kontoindstillinger"
+        step_3: "Indsæt legitimationsoplysningerne nedenfor, og klik på Gem; Sure opretter eller genbruger automatisk dit Sophtron Customer ID"
+      field_descriptions_title: "Feltbeskrivelser:"
+      field_descriptions:
+        user_id_html: "<strong>User ID:</strong> Dit Sophtron User ID"
+        access_key_html: "<strong>Access Key:</strong> Din Sophtron Access Key"
+        base_url_html: "<strong>Base URL:</strong> Sophtron API-endpoint-URL'en, normalt https://api.sophtron.com/api"
+      fields:
+        user_id:
+          label: "User ID"
+          placeholder_new: "Indsæt dit Sophtron User ID"
+          placeholder_edit: "••••••••"
+        access_key:
+          label: "Access Key"
+          placeholder_new: "Indsæt din Sophtron Access Key"
+          placeholder_edit: "••••••••"
+        base_url:
+          label: "Base URL"
+          placeholder: "https://api.sophtron.com/api"
+      save: "Gem konfiguration"
+      update: "Opdater konfiguration"
+    syncer:
+      manual_sync_required: "Manuel Sophtron-synk er påkrævet for denne institution; springer disse konti over under automatisk synk."
+      importing_accounts: "Importerer konti fra Sophtron..."
+      checking_account_configuration: "Tjekker kontokonfiguration..."
+      accounts_need_setup: "%{count} konto(er) skal sættes op"
+      processing_transactions: "Behandler transaktioner for koblede konti..."
+      calculating_balances: "Beregner saldi for koblede konti..."
+    sophtron_entry:
+      processor:
+        unknown_transaction: "Ukendt transaktion"
+    render_connection_timeout:
+      timeout: "Forbindelsen fik timeout. Prøv igen."
+    redirect_after_account_link:
+      invalid_account_names:
+        one: "Kan ikke koble %{count} konto med tomt navn"
+        other: "Kan ikke koble %{count} konti med tomme navne"
+      partial_invalid: "Koblede %{created_count} konto(er). %{already_linked_count} var allerede koblet, %{invalid_count} havde ugyldige navne."
+      partial_success: "Koblede %{created_count} konto(er). %{already_linked_count} konto(er) var allerede koblet."
+      success:
+        one: "Koblede %{count} konto."
+        other: "Koblede %{count} konti."
+      all_already_linked:
+        one: "Den valgte konto er allerede koblet"
+        other: "Alle %{count} valgte konti er allerede koblet"
+      link_failed: "Kunne ikke koble konti"
+    start_manual_sync:
+      already_running: "En synk er allerede i gang."
+      no_linked_accounts: "Ingen koblede konti tilgængelige til synk."
+      api_error: "API-fejl: %{message}"
+    start_manual_sync_for_account:
+      failed: "Kunne ikke synkronisere konto"

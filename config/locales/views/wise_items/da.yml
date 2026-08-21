@@ -1,0 +1,154 @@
+---
+da:
+  wise_items:
+    profile_types:
+      personal: Personlig
+      business: Erhverv
+    entries:
+      default_name: Wise-transaktion
+      fee_name: Wise-gebyr
+    activities:
+      jar_deposit: Overførsel til Jar
+      jar_withdrawal: Overførsel fra Jar
+      transfer_to_jar: "Overførsel til %{jar}"
+      transfer_from_jar: "Overførsel fra %{jar}"
+      interest: Wise-renter
+      asset_fee: Wise Assets-gebyr
+      default_name: Wise-aktivitet
+    sync_status:
+      no_accounts: Ingen konti fundet
+      all_synced:
+        one: "%{count} konto synkroniseret"
+        other: "%{count} konti synkroniseret"
+      partial_setup: "%{synced} synkroniseret, %{pending} skal sættes op"
+    create:
+      no_profiles_found: Ingen Wise-profiler fundet. Tjek dit API-token.
+      invalid_token: Ugyldigt API-token. Tjek og prøv igen.
+      connection_failed: Kunne ikke oprette forbindelse til Wise. Prøv igen senere.
+    destroy:
+      success: Wise-forbindelse fjernet
+    update:
+      success: Wise-forbindelse opdateret
+    sync:
+      success: Synkronisering startet
+    syncer:
+      importing_accounts: Importerer konti fra Wise...
+      checking_account_configuration: Tjekker kontokonfiguration...
+      accounts_need_setup:
+        one: "%{count} konto skal sættes op..."
+        other: "%{count} konti skal sættes op..."
+      processing_transactions: Behandler transaktioner...
+      calculating_balances: Beregner saldi...
+      credentials_invalid: Ugyldigt Wise API-token eller utilstrækkelige tilladelser
+      failed: Synkronisering mislykkedes. Prøv igen, eller kontakt support.
+      import_failed: Wise-import mislykkedes.
+      accounts_failed:
+        one: "%{count} saldo kunne ikke importeres."
+        other: "%{count} saldi kunne ikke importeres."
+      transactions_failed:
+        one: "%{count} saldo havde fejl ved import af transaktioner."
+        other: "%{count} saldi havde fejl ved import af transaktioner."
+      account_processing_failed:
+        one: "%{count} Wise-konto mislykkedes under behandling."
+        other: "%{count} Wise-konti mislykkedes under behandling."
+      account_sync_failed:
+        one: "Synkronisering af %{count} Wise-konto kunne ikke planlægges."
+        other: "Synkronisering af %{count} Wise-konti kunne ikke planlægges."
+    provider_panel:
+      setup_title: "Opsætningsvejledning:"
+      add_connection: Tilføj Wise-forbindelse
+      token_label: API-token
+      token_placeholder: Indsæt dit personlige Wise API-token
+      keep_token_placeholder: Lad feltet stå tomt for at beholde det nuværende token
+      connection_name_label: Forbindelsesnavn
+      connection_name_placeholder: Wise Personlig
+      sync_start_date_label: Importér transaktioner fra
+      sync_start_date_help: Wise-kontoudtog importeres fra denne dato og frem. Behold standardværdien for op til et års historik.
+      import_all_history_label: Importér fuld transaktionshistorik
+      import_all_history_help: Hent alle historiske Wise-kontoudtog i stedet for kun det seneste år.
+      connect: Forbind Wise
+      update_connection: Opdater forbindelse
+      setup_accounts: Sæt konti op
+      sync: Synkroniser
+      disconnect: Fjern forbindelse
+      disconnect_label: "Fjern forbindelse til %{name}"
+      disconnect_confirm: "Er du sikker på, at du vil fjerne forbindelsen til %{name}? Dette fjerner alle synkroniserede kontodata."
+      accounts_link: Konti
+      configured_html: "Forbundet og synkroniserer. Gå til fanen %{accounts_link} for at administrere dine konti."
+      not_configured: Ikke konfigureret
+      sandbox_note_html: "Brug <strong>sandbox</strong> base URL (<code>https://api.sandbox.transferwise.tech</code>) til test. Sæt <code>WISE_BASE_URL</code> i dit miljø."
+      encryption_warning:
+        title: Databasekryptering er ikke konfigureret
+        message: Konfigurer Active Record-krypteringsnøgler, før du tilføjer Wise-tokens i produktion. Uden kryptering gemmes tokens i klartekst.
+      instructions:
+        sign_in_html: "Besøg %{link}, og log ind på din konto"
+        open_tokens: "Gå til Indstillinger → Forbind og administrer apps → Udviklerværktøjer → API-tokens"
+        create_token: "Opret et nyt personligt API-token med skrivebeskyttet adgang"
+        copy_token_html: "Kopiér tokenet, og indsæt det nedenfor. Sure bruger det kun til at synkronisere dine saldi og transaktioner."
+    provider_connection:
+      default_name: Wise
+      default_description: Forbind din Wise-konto med flere valutaer
+      name: "Wise — %{name}"
+      description: "Forbind med %{name}"
+    link_profiles:
+      session_expired: Sessionen er udløbet. Prøv at oprette forbindelse igen.
+      no_profiles_selected: Vælg mindst én profil.
+      already_connected: Alle valgte profiler er allerede forbundet.
+      success:
+        one: "Forbundet %{count} Wise-profil"
+        other: "Forbundet %{count} Wise-profiler"
+    select_profiles:
+      session_expired: Sessionen er udløbet. Prøv at oprette forbindelse igen.
+      title: Vælg Wise-profiler
+      subtitle: Vælg hvilke profiler der skal forbindes
+      description: Din Wise-konto har flere profiler. Vælg dem, du vil synkronisere med Sure.
+      unnamed_profile: "(Unavngivet profil)"
+      already_connected_label: Allerede forbundet
+      connect: Forbind valgte profiler
+      cancel: Annuller
+    wise_item:
+      deletion_in_progress: sletning i gang...
+      syncing: Synkroniserer...
+      error: Synkfejl
+      status: "Synkroniseret for %{timestamp} siden"
+      status_never: Aldrig synkroniseret
+      status_with_summary: "Senest synkroniseret for %{timestamp} siden — %{summary}"
+      delete: Fjern forbindelse
+      setup_needed: Nye konti klar til opsætning
+      setup_description: "%{linked} af %{total} konti koblet. Opret Sure-konti for dine Wise-valutasaldi."
+      setup_action: Sæt konti op
+      no_accounts_title: Ingen konti koblet endnu
+      no_accounts_description: Kør en synkronisering for at finde dine Wise-saldi, og kobl dem derefter til Sure-konti.
+    setup_accounts:
+      title: Sæt Wise-konti op
+      subtitle: Kobl dine Wise-valutasaldi
+      description: Opret en Sure-konto for hvert Wise-valutasaldo, du vil følge. Hver valuta bliver sin egen konto.
+      no_accounts_to_setup: Alle konti er sat op
+      all_accounts_linked: Alle dine Wise-valutasaldi er koblet til Sure-konti.
+      create_account: Opret konto
+      done: Færdig
+    select_accounts:
+      title: Vælg Wise-saldo
+      description: Vælg det Wise-valutasaldo, du vil koble til din %{product_name}-konto.
+      no_accounts_found: Alle Wise-saldi er allerede koblet til Sure-konti.
+      no_connection: Ingen Wise-forbindelse fundet. Forbind Wise i udbyderindstillinger først.
+      link_account: Kobl saldo
+      cancel: Annuller
+    select_existing_account:
+      title: "Kobl %{account_name} med Wise"
+      description: Vælg det Wise-valutasaldo, der skal kobles til denne konto. Transaktioner synkroniseres automatisk.
+      no_accounts_found: Ingen ukoblede Wise-saldi fundet.
+      link_account: Kobl saldo
+      cancel: Annuller
+    link_accounts:
+      not_found: Wise-saldo ikke fundet.
+      success: Wise-saldo koblet til konto.
+      failed: Kunne ikke koble Wise-saldo. Prøv igen.
+    link_existing_account:
+      not_found: Konto eller Wise-saldo ikke fundet.
+      success: "Koblede %{account_name} med Wise"
+      failed: Kunne ikke koble konto. Prøv igen.
+    complete_account_setup:
+      not_found: Wise-saldo ikke fundet.
+      success: Konto oprettet og koblet.
+      failed: Kunne ikke oprette konto. Prøv igen.

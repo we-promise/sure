@@ -530,4 +530,20 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     # Should NOT include investment_contribution even with negative amount
     assert_not filtered.map(&:id).include?(contribution_entry.transaction.id)
   end
+
+  test "condition filter labels and operators are translated" do
+    filter = Rule::ConditionFilter::TransactionName.new(@transaction_rule)
+
+    I18n.with_locale(:en) do
+      assert_equal "Transaction name", filter.label
+      assert_includes filter.operators.map(&:first), "Contains"
+      assert_equal "Contains", filter.operator_label("like")
+    end
+
+    I18n.with_locale(:da) do
+      assert_equal "Transaktionsnavn", filter.label
+      assert_includes filter.operators.map(&:first), "Indeholder"
+      assert_equal "Indeholder", filter.operator_label("like")
+    end
+  end
 end

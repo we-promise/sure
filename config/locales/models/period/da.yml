@@ -1,0 +1,54 @@
+---
+da:
+  period:
+    last_day:
+      label_short: "1D"
+      label: "Seneste dag"
+      comparison_label: "vs. i går"
+    current_week:
+      label_short: "WTD"
+      label: "Denne uge"
+      comparison_label: "vs. ugens start"
+    last_7_days:
+      label_short: "7D"
+      label: "Seneste 7 dage"
+      comparison_label: "vs. sidste uge"
+    current_month:
+      label_short: "MTD"
+      label: "Denne måned"
+      comparison_label: "vs. månedens start"
+    last_month:
+      label_short: "LM"
+      label: "Sidste måned"
+      comparison_label: "vs. sidste måned"
+    last_30_days:
+      label_short: "30D"
+      label: "Seneste 30 dage"
+      comparison_label: "vs. seneste 30 dage"
+    last_90_days:
+      label_short: "90D"
+      label: "Seneste 90 dage"
+      comparison_label: "vs. sidste kvartal"
+    current_year:
+      label_short: "YTD"
+      label: "Dette år"
+      comparison_label: "vs. årets start"
+    last_365_days:
+      label_short: "365D"
+      label: "Seneste 365 dage"
+      comparison_label: "vs. for 1 år siden"
+    last_5_years:
+      label_short: "5Å"
+      label: "Seneste 5 år"
+      comparison_label: "vs. for 5 år siden"
+    last_10_years:
+      label_short: "10Å"
+      label: "Seneste 10 år"
+      comparison_label: "vs. for 10 år siden"
+    all_time:
+      label_short: "Alle"
+      label: "Hele perioden"
+      comparison_label: "vs. begyndelsen"
+    custom:
+      label_short: "Tilpasset"
+      label: "Tilpasset periode"

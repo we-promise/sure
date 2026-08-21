@@ -1,0 +1,10 @@
+---
+da:
+  passwords:
+    edit:
+      password: Ny adgangskode
+      password_challenge: Nuværende adgangskode
+      submit: Nulstil adgangskode
+      title: Opdater adgangskode
+    update:
+      success: Din adgangskode er blevet nulstillet.

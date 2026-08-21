@@ -1,0 +1,92 @@
+---
+da:
+  breadcrumbs:
+    account_sharings: Kontodeling
+    account_statements: Kontoudtog
+    accounts: Konti
+    ai_prompts: AI-prompts
+    api_key: API-nøgle
+    api_keys: API-nøgler
+    appearance: Udseende
+    appearances: Udseende
+    bank_sync: Banksynk
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Budgetkategorier
+    budgets: Budgetter
+    categories: Kategorier
+    categorize: Kategoriser
+    changelog: Nyheder
+    chats: Chats
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Kreditkort
+    cryptos: Krypto
+    dashboard: Oversigt
+    debug: Debug
+    debugs: Debug
+    depositories: Kontantkonti
+    enable_banking_items: Enable Banking
+    exports: Eksporter
+    family_exports: Eksporter
+    family_merchants: Forretninger
+    feedback: Feedback
+    guides: Guides
+    holdings: Beholdninger
+    home: Hjem
+    hostings: Self-hosting
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Impersonationer
+    imports: Importer
+    indexa_capital_items: Indexa Capital
+    intro: Intro
+    investments: Investeringer
+    invitations: Invitationer
+    invite_codes: Inviteringskoder
+    kraken_items: Kraken
+    llm_usage: LLM-forbrug
+    llm_usages: LLM-forbrug
+    loans: Lån
+    lunchflow_items: Lunch Flow
+    mcp: MCP-server
+    merchants: Forretninger
+    mercury_items: Mercury
+    messages: Beskeder
+    mfa: To-faktor-godkendelse
+    oidc_accounts: SSO-konti
+    onboardings: Onboarding
+    other_assets: Andre aktiver
+    other_liabilities: Andre passiver
+    payments: Betalinger
+    pending_duplicate_merges: Duplikatgennemgang
+    plaid_items: Plaid
+    plan: Plan
+    preferences: Præferencer
+    profile: Profil
+    profiles: Profil
+    properties: Ejendomme
+    providers: Udbydere
+    recurring_transactions: Faste
+    redbark_items: Redbark
+    registrations: Opret konto
+    reports: Rapporter
+    rules: Regler
+    securities: Sikkerhed
+    security: Sikkerhed
+    self_hosting: Self-hosting
+    sessions: Log ind
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Split
+    sso_identities: SSO-forbindelser
+    sso_providers: SSO-udbydere
+    subscriptions: Abonnement
+    tags: Tags
+    trades: Handler
+    transactions: Transaktioner
+    transfer_matches: Overførselsmatch
+    transfers: Overførsler
+    users: Brugere
+    valuations: Værdiansættelser
+    vehicles: Køretøjer

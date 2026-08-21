@@ -1,0 +1,21 @@
+---
+da:
+  activerecord:
+    attributes:
+      user:
+        email: E-mail
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        first_name: Fornavn
+        last_name: Efternavn
+        password: Adgangskode
+        password_confirmation: Bekræft adgangskode
+    errors:
+      models:
+        user:
+          attributes:
+            base:
+              cannot_deactivate_admin_with_other_users: Admin kan ikke slette kontoen,
+                mens der er andre brugere. Slet alle medlemmer først.
+            profile_image:
+              invalid_file_size: filstørrelsen skal være under %{max_megabytes}MB

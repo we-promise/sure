@@ -29,6 +29,12 @@
             controller: "split-transaction",
             split_transaction_total_value: (-@entry.amount).to_f,
             split_transaction_currency_value: @entry.currency,
+            split_transaction_separator_value: I18n.t("number.format.separator"),
+            split_transaction_name_label_value: t("splits.new.name_label"),
+            split_transaction_amount_label_value: t("splits.new.amount_label"),
+            split_transaction_name_placeholder_value: t("splits.new.name_placeholder"),
+            split_transaction_amount_placeholder_value: LocaleNumber.format(0),
+            split_transaction_uncategorized_value: t("splits.new.uncategorized"),
             turbo_frame: :_top
           }
         ) do %>
@@ -51,14 +57,14 @@
               </div>
               <div class="flex-1 md:flex-none md:w-28">
                 <label class="text-xs font-medium text-secondary uppercase tracking-wide block mb-1"><%= t("splits.new.amount_label") %></label>
-                <input type="number"
+                <input type="text"
                        name="split[splits][<%= index %>][amount]"
-                       placeholder="0.00"
-                       step="0.01"
+                       placeholder="<%= LocaleNumber.format(0) %>"
+                       inputmode="decimal"
                        class="form-field__input border border-secondary rounded-md px-2.5 py-1.5 w-full text-sm text-primary bg-container"
                        required
                        autocomplete="off"
-                       value="<%= (-child.amount).to_f %>"
+                       value="<%= LocaleNumber.format(-child.amount) %>"
                        data-split-transaction-target="amountInput"
                        data-action="input->split-transaction#updateRemaining">
               </div>
@@ -90,7 +96,7 @@
         <div class="flex items-center justify-between">
           <span class="text-secondary font-medium"><%= t("splits.new.remaining") %></span>
           <span data-split-transaction-target="remaining" class="font-semibold text-primary">
-            <%= (-@entry.amount).to_f %>
+            <%= LocaleNumber.format(-@entry.amount) %>
           </span>
         </div>
         <p data-split-transaction-target="error" class="text-destructive text-xs mt-1.5 hidden">
@@ -113,6 +119,7 @@
           data: { split_transaction_target: "submitButton" }
         ) %>
       </div>
+      <%= render "shared/split_transaction_boot" %>
     <% end %>
   <% end %>
 <% end %>

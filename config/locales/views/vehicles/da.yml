@@ -1,0 +1,37 @@
+---
+da:
+  vehicles:
+    edit:
+      edit: Rediger %{account}
+    form:
+      make: Mærke
+      make_placeholder: Toyota
+      mileage: Kilometerstand
+      mileage_placeholder: '15000'
+      mileage_unit: Enhed
+      model: Model
+      model_placeholder: Camry
+      year: Årgang
+      year_placeholder: '2023'
+      mileage_unit_kilometers: Kilometer
+      mileage_unit_miles: Miles
+    new:
+      title: Indtast køretøjsdetaljer
+    overview:
+      current_price: Aktuel pris
+      make_model: Mærke og model
+      mileage: Kilometerstand
+      purchase_price: Købspris
+      trend: Tendens
+      unknown: Ukendt
+      year: Årgang
+    tabs:
+      overview:
+        current_price: Aktuel pris
+        make_model: Mærke og model
+        mileage: Kilometerstand
+        purchase_price: Købspris
+        trend: Tendens
+        unknown: Ukendt
+        year: Årgang
+        edit_account_details: "Rediger kontodetaljer"

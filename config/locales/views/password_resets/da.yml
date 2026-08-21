@@ -1,0 +1,15 @@
+---
+da:
+  password_resets:
+    disabled: Nulstilling af adgangskode via Sure er slået fra. Nulstil adgangskoden hos din identitetsudbyder.
+    sso_only_user: Din konto bruger SSO til login. Kontakt din administrator for at administrere dine oplysninger.
+    edit:
+      title: Nulstil adgangskode
+    new:
+      requested: Tjek din e-mail for et link til at nulstille adgangskoden.
+      submit: Nulstil adgangskode
+      title: Nulstil adgangskode
+      back: Tilbage
+    update:
+      invalid_token: Ugyldig token.
+      success: Din adgangskode er blevet nulstillet.

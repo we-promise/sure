@@ -1,0 +1,24 @@
+---
+da:
+  transfer_matches:
+    create:
+      success: Overførsel oprettet
+    new:
+      header:
+        title: Match overførsel eller betaling
+        subtitle: Match den tilsvarende transaktion på en anden konto, eller opret en, hvis den ikke findes.
+      from_account: Fra konto
+      from_account_named: "Fra konto: %{name}"
+      to_account: Til konto
+      to_account_named: "Til konto: %{name}"
+      outflow_transaction: Udgående transaktion
+      inflow_transaction: Indgående transaktion
+      create_transfer_match: Opret overførselsmatch
+    matching_fields:
+      select_method: Vælg en metode til at matche dine transaktioner.
+      match_existing_recommended: Match eksisterende transaktion (anbefalet)
+      create_new_transaction: Opret ny transaktion
+      matching_method: Matchmetode
+      matching_transaction: Matchende transaktion
+      target_account: Målkonto
+      no_matching_transactions: Vi kunne ikke finde transaktioner at matche fra dine andre konti. Vælg en konto, så opretter vi en ny indgående transaktion.

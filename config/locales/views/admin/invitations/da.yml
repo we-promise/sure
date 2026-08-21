@@ -1,0 +1,8 @@
+---
+da:
+  admin:
+    invitations:
+      destroy:
+        success: "Invitation slettet."
+      destroy_all:
+        success: "Alle invitationer for denne husstand er slettet."

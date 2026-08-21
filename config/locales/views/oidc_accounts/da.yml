@@ -1,0 +1,42 @@
+---
+da:
+  oidc_accounts:
+    link:
+      no_pending_oidc: Ingen afventende OIDC-godkendelse fundet
+      title_link: Kobl OIDC-konto
+      title_create: Opret konto
+      verify_heading: Bekræft din identitet
+      verify_description_html: "For at koble din %{provider}-konto%{email_suffix} skal du bekræfte din identitet ved at indtaste din adgangskode."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: E-mail
+      email_placeholder: Indtast din e-mail
+      password_label: Adgangskode
+      password_placeholder: Indtast din adgangskode
+      verify_hint: Det sikrer, at kun du kan koble eksterne konti til din profil.
+      submit_link: Kobl konto
+      create_heading: Opret ny konto
+      create_description_html: "Ingen konto fundet med e-mailen <strong>%{email}</strong>. Klik nedenfor for at oprette en ny konto med din %{provider}-identitet."
+      info_email: "E-mail:"
+      info_name: "Navn:"
+      submit_create: Opret konto
+      submit_accept_invitation: Acceptér invitation
+      account_creation_disabled: Oprettelse af nye konti via single sign-on er slået fra. Kontakt en administrator for at få oprettet din konto.
+      cancel: Annuller
+    create_link:
+      no_pending_oidc: Ingen afventende OIDC-godkendelse fundet
+    new_user:
+      no_pending_oidc: Ingen afventende OIDC-godkendelse fundet
+      title: Fuldfør din konto
+      heading: Opret din konto
+      description: Bekræft dine oplysninger for at fuldføre kontooprettelsen med din %{provider}-identitet.
+      email_label: E-mail (fra SSO-udbyder)
+      first_name_label: Fornavn
+      first_name_placeholder: Indtast dit fornavn
+      last_name_label: Efternavn
+      last_name_placeholder: Indtast dit efternavn
+      submit: Opret konto
+      cancel: Annuller
+    create_user:
+      no_pending_oidc: Ingen afventende OIDC-godkendelse fundet
+      account_creation_disabled: SSO-kontooprettelse er slået fra. Kontakt en administrator.
+      account_created: "Velkommen! Din konto er oprettet."

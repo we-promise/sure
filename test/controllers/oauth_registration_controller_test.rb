@@ -121,4 +121,22 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     json = JSON.parse(response.body)
     assert_equal "invalid_client_metadata", json["error"]
   end
+
+  test "allows Cursor native app redirect uri" do
+    post "/register",
+      params: {
+        client_name: "Cursor",
+        redirect_uris: [
+          "cursor://anysphere.cursor-mcp/oauth/callback",
+          "http://localhost:8787/callback",
+          "https://www.cursor.com/agents/mcp/oauth/callback"
+        ]
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    json = JSON.parse(response.body)
+    assert_includes json["redirect_uris"], "cursor://anysphere.cursor-mcp/oauth/callback"
+    assert_includes json["redirect_uris"], "http://localhost:8787/callback"
+  end
 end

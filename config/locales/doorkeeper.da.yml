@@ -1,0 +1,155 @@
+---
+da:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: 'Navn'
+        redirect_uri: 'Redirect URI'
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: 'må ikke indeholde et fragment.'
+              invalid_uri: 'skal være en gyldig URI.'
+              unspecified_scheme: 'skal angive et skema.'
+              relative_uri: 'skal være en absolut URI.'
+              secured_uri: 'skal være en HTTPS/SSL-URI.'
+              forbidden_uri: 'er forbudt af serveren.'
+            scopes:
+              not_match_configured: "matcher ikke det, der er konfigureret på serveren."
+
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: 'Er du sikker?'
+      buttons:
+        edit: 'Rediger'
+        destroy: 'Slet'
+        submit: 'Send'
+        cancel: 'Annuller'
+        authorize: 'Autoriser'
+      form:
+        error: 'Ups! Tjek formularen for mulige fejl'
+      help:
+        confidential: 'Applikationen bruges, hvor client secret kan holdes fortrolig. Native mobilapps og Single Page Apps betragtes som ikke-fortrolige.'
+        redirect_uri: 'Brug én linje pr. URI'
+        blank_redirect_uri: "Lad stå tomt, hvis du har konfigureret din udbyder til Client Credentials, Resource Owner Password Credentials eller en anden grant-type, der ikke kræver redirect URI."
+        scopes: 'Adskil scopes med mellemrum. Lad stå tomt for at bruge standard-scopes.'
+      edit:
+        title: 'Rediger applikation'
+      index:
+        title: 'Dine applikationer'
+        new: 'Ny applikation'
+        name: 'Navn'
+        callback_url: 'Callback-URL'
+        confidential: 'Fortrolig?'
+        actions: 'Handlinger'
+        confidentiality:
+          'yes': 'Ja'
+          'no': 'Nej'
+      new:
+        title: 'Ny applikation'
+      show:
+        title: 'Applikation: %{name}'
+        application_id: 'UID'
+        secret: 'Hemmelighed'
+        secret_hashed: 'Hashet hemmelighed'
+        scopes: 'Scopes'
+        confidential: 'Fortrolig'
+        callback_urls: "Callback-URL'er"
+        actions: 'Handlinger'
+        not_defined: 'Ikke defineret'
+
+    authorizations:
+      buttons:
+        authorize: 'Autoriser'
+        deny: 'Afvis'
+      error:
+        title: 'Der opstod en fejl'
+        go_back: 'Gå tilbage'
+      new:
+        title: 'Autorisation påkrævet'
+        prompt: 'Autoriser %{client_name} til at bruge din konto?'
+        able_to: 'Denne applikation vil kunne'
+      show:
+        title: 'Autorisationskode'
+        authorization_code_label: 'Autorisationskode:'
+        copy_instructions: 'Kopiér denne kode og indsæt den i applikationen.'
+      form_post:
+        title: 'Send denne formular'
+
+    authorized_applications:
+      confirmations:
+        revoke: 'Er du sikker?'
+      buttons:
+        revoke: 'Tilbagekald'
+      index:
+        title: 'Dine autoriserede applikationer'
+        application: 'Applikation'
+        created_at: 'Oprettet'
+        date_format: '%Y-%m-%d %H:%M:%S'
+
+    pre_authorization:
+      status: 'Forhåndsautorisation'
+
+    errors:
+      messages:
+        invalid_request:
+          unknown: 'Forespørgslen mangler en påkrævet parameter, indeholder en ikke-understøttet parameterværdi eller er på anden vis ugyldig.'
+          missing_param: 'Mangler påkrævet parameter: %{value}.'
+          request_not_authorized: 'Forespørgslen skal autoriseres. Påkrævet parameter til autorisation mangler eller er ugyldig.'
+          invalid_code_challenge: 'Code challenge er påkrævet.'
+        invalid_redirect_uri: "Den anmodede redirect URI er ugyldig eller matcher ikke klientens redirect URI."
+        unauthorized_client: 'Klienten er ikke autoriseret til at udføre denne forespørgsel med denne metode.'
+        access_denied: 'Ressourceejeren eller autorisationsserveren afviste forespørgslen.'
+        invalid_scope: 'Det anmodede scope er ugyldigt, ukendt eller forkert formet.'
+        invalid_code_challenge_method:
+          zero: 'Autorisationsserveren understøtter ikke PKCE, da der ikke er accepterede code_challenge_method-værdier.'
+          one: 'code_challenge_method skal være %{challenge_methods}.'
+          other: 'code_challenge_method skal være én af %{challenge_methods}.'
+        server_error: 'Autorisationsserveren ramte en uventet tilstand og kunne ikke fuldføre forespørgslen.'
+        temporarily_unavailable: 'Autorisationsserveren kan i øjeblikket ikke håndtere forespørgslen pga. midlertidig overbelastning eller vedligeholdelse.'
+
+        credential_flow_not_configured: 'Resource Owner Password Credentials-flow fejlede, fordi Doorkeeper.configure.resource_owner_from_credentials ikke er konfigureret.'
+        resource_owner_authenticator_not_configured: 'Find ressourceejer fejlede, fordi Doorkeeper.configure.resource_owner_authenticator ikke er konfigureret.'
+        admin_authenticator_not_configured: 'Adgang til admin-panelet er forbudt, fordi Doorkeeper.configure.admin_authenticator ikke er konfigureret.'
+
+        unsupported_response_type: 'Autorisationsserveren understøtter ikke denne svartype.'
+        unsupported_response_mode: 'Autorisationsserveren understøtter ikke denne svartilstand.'
+
+        invalid_client: 'Klientgodkendelse fejlede pga. ukendt klient, manglende klientgodkendelse eller ikke-understøttet godkendelsesmetode.'
+        invalid_grant: 'Den angivne autorisationsgrant er ugyldig, udløbet, tilbagekaldt, matcher ikke den redirect URI, der blev brugt i autorisationsforespørgslen, eller blev udstedt til en anden klient.'
+        unsupported_grant_type: 'Autorisationsgrant-typen understøttes ikke af autorisationsserveren.'
+
+        invalid_token:
+          revoked: "Adgangstokenet blev tilbagekaldt"
+          expired: "Adgangstokenet er udløbet"
+          unknown: "Adgangstokenet er ugyldigt"
+        revoke:
+          unauthorized: "Du er ikke autoriseret til at tilbagekalde dette token"
+
+        forbidden_token:
+          missing_scope: 'Adgang til denne ressource kræver scopet "%{oauth_scopes}".'
+
+    flash:
+      applications:
+        create:
+          notice: 'Applikation oprettet.'
+        destroy:
+          notice: 'Applikation slettet.'
+        update:
+          notice: 'Applikation opdateret.'
+      authorized_applications:
+        destroy:
+          notice: 'Applikation tilbagekaldt.'
+
+    layouts:
+      admin:
+        title: 'Doorkeeper'
+        nav:
+          oauth2_provider: 'OAuth2-udbyder'
+          applications: 'Applikationer'
+          home: 'Hjem'
+      application:
+        title: 'OAuth-autorisation påkrævet'

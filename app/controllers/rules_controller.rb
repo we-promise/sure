@@ -60,7 +60,7 @@ class RulesController < ApplicationController
   def apply
     @rule.update!(active: true)
     @rule.apply_later(ignore_attribute_locks: true)
-    redirect_back_or_to rules_path, notice: "#{@rule.resource_type.humanize} rule activated"
+    redirect_back_or_to rules_path, notice: t("rules.apply.activated", resource: @rule.resource_type)
   end
 
   def confirm

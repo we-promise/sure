@@ -1,0 +1,116 @@
+---
+da:
+  providers:
+    up:
+      name: Up
+      description: Forbind australske Up-bankkonti via et personligt adgangstoken
+  family:
+    up:
+      create_up_item:
+        default_name: Up-forbindelse
+  up_account:
+    fallback: Up-konto
+  up_item:
+    errors:
+      account_processing_failed: Kunne ikke synkronisere Up-konto
+      account_sync_schedule_failed: Kunne ikke planlægge synkronisering af Up-konto
+      transactions_failed: Kunne ikke hente Up-transaktioner
+      sync_failed: Kunne ikke synkronisere Up-forbindelse
+    sync_status:
+      no_accounts: Ingen konti fundet
+      all_synced:
+        one: 1 konto synkroniseret
+        other: "%{count} konti synkroniseret"
+      partial: "%{linked} synkroniseret, %{unlinked} skal sættes op"
+    institution_summary:
+      none: Ingen institutioner forbundet
+      one: 1 institution
+      count:
+        one: 1 institution
+        other: "%{count} institutioner"
+  up_items:
+    provider_panel:
+      default_connection_name: Up-forbindelse
+      add_connection: Tilføj Up-forbindelse
+      update_connection: Opdater forbindelse
+      connection_name_label: Forbindelsesnavn
+      connection_name_placeholder: Hoved-Up
+      access_token_label: Personligt adgangstoken
+      access_token_placeholder: Indsæt dit personlige Up-adgangstoken
+      keep_access_token_placeholder: Lad feltet stå tomt for at beholde det eksisterende token
+      setup_accounts: Sæt konti op
+      syncing: Synkroniserer...
+      sync: Synkroniser
+      disconnect: Fjern forbindelse
+      disconnect_confirm: "Er du sikker på, at du vil fjerne forbindelsen til %{name}?"
+    create:
+      success: Up-forbindelse gemt.
+    update:
+      success: Up-forbindelse opdateret.
+    destroy:
+      success: Up-forbindelse planlagt til sletning.
+      unlink_failed: Kunne ikke fjerne Up-forbindelse
+    select_accounts:
+      title: Kobl Up-konti
+      description: Vælg de Up-konti, du vil tilføje.
+      no_accounts_found: Ingen ukoblede Up-konti blev fundet.
+      no_credentials_configured: Konfigurer Up i udbyderindstillinger først.
+      cancel: Annuller
+      link_accounts: Kobl konti
+    link_accounts:
+      success:
+        one: Koblede 1 Up-konto.
+        other: "Koblede %{count} Up-konti."
+      no_accounts_selected: Vælg mindst én konto.
+      no_credentials_configured: Konfigurer Up i udbyderindstillinger først.
+      unsupported_account_type: Up understøtter ikke den kontotype.
+      link_failed: Ingen konti blev koblet.
+    select_existing_account:
+      title: "Kobl Up-konto til %{account_name}"
+      description: Vælg en ukoblet Up-konto at forbinde med denne konto.
+      no_accounts_found: Ingen ukoblede Up-konti blev fundet.
+      no_credentials_configured: Konfigurer Up i udbyderindstillinger først.
+      account_already_linked: Denne konto er allerede koblet til en udbyder.
+      cancel: Annuller
+      link_account: Kobl konto
+    link_existing_account:
+      success: "Koblede Up-konto til %{account_name}."
+      account_already_linked: Denne konto er allerede koblet til en udbyder.
+      up_account_already_linked: Denne Up-konto er allerede koblet.
+      no_account_selected: Vælg en Up-konto at koble.
+    setup_accounts:
+      title: Kobl Up-konti
+      subtitle: Vælg, hvordan hver Up-konto skal vises i Sure.
+      no_credentials: Konfigurer Up-legitimationsoplysninger først.
+      api_error: Kunne ikke hente Up-konti.
+      fetch_failed: Kunne ikke hente konti
+      no_accounts_to_setup: Ingen konti at sætte op
+      all_accounts_linked: Alle Up-konti er allerede koblet.
+      choose_account_type: Vælg en kontotype
+      choose_account_type_description: Spring konti over, du ikke vil følge.
+      account_type_label: Kontotype
+      account_types:
+        skip: Spring over
+        depository: Kontanter
+        loan: Lån
+      create_accounts: Opret konti
+      cancel: Annuller
+    complete_account_setup:
+      success:
+        one: Oprettede 1 Up-konto.
+        other: "Oprettede %{count} Up-konti."
+      all_skipped: Ingen Up-konti blev oprettet.
+      no_accounts: Ingen Up-konti blev valgt.
+      creation_failed: Kunne ikke oprette Up-konti.
+    up_item:
+      deletion_in_progress: Sletning i gang
+      syncing: Synkroniserer
+      error: Fejl
+      status_with_summary: "Synkroniseret for %{timestamp} siden · %{summary}"
+      status_never: Aldrig synkroniseret
+      delete: Slet
+      setup_needed: Kontoopsætning påkrævet
+      setup_description: "%{linked} af %{total} konti koblet."
+      setup_action: Sæt konti op
+      no_accounts_title: Ingen konti importeret endnu
+      no_accounts_description: Hent Up-konti, og vælg hvilke der skal kobles.

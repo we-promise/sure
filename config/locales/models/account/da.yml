@@ -1,0 +1,34 @@
+---
+da:
+  account_order:
+    balance_asc:
+      label: Saldo (lav til høj)
+      label_short: Saldo ↑
+    balance_desc:
+      label: Saldo (høj til lav)
+      label_short: Saldo ↓
+    name_asc:
+      label: Navn (A-Å)
+      label_short: Navn ↑
+    name_desc:
+      label: Navn (Å-A)
+      label_short: Navn ↓
+  activerecord:
+    attributes:
+      account:
+        balance: Saldo
+        currency: Valuta
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        name: Navn
+        subtype: Undertype
+    models:
+      account: Konto
+      account/credit: Kreditkort
+      account/depository: Bankkonto
+      account/investment: Investering
+      account/loan: Lån
+      account/other_asset: Andet aktiv
+      account/other_liability: Andet passiv
+      account/property: Fast ejendom
+      account/vehicle: Køretøj

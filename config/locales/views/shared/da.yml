@@ -1,0 +1,46 @@
+---
+da:
+  concerns:
+    self_hostable:
+      redis_configured: "Redis er konfigureret korrekt. Du kan nu sætte din Sure-installation op."
+  shared:
+    preview: Forhåndsvisning
+    dot_separator: "·"
+    sync_toast:
+      message: "Nye data er tilgængelige"
+      refresh: "Opdater"
+    confirm_modal:
+      accept: Bekræft
+      body_html: "<p>Du kan ikke fortryde denne beslutning</p>"
+      cancel: Annuller
+      title: Er du sikker?
+    money_field:
+      label: Beløb
+    exchange_rate_tabs:
+      calculate_rate_tab: Beregn valutakurs
+      convert_tab: Omregn med valutakurs
+      destination_amount: Beløb i målvaluta
+      exchange_rate: Valutakurs
+      exchange_rate_help: Vælg hvordan beløbet skal indtastes.
+    syncing_notice:
+      syncing: Synkroniserer kontodata...
+    require_admin: "Kun administratorer kan udføre denne handling"
+    custom_confirm:
+      default_title: "Er du sikker?"
+      default_body: "Dette kan ikke fortrydes."
+      default_btn_text: "Bekræft"
+      resource_deletion_title: "Slet %{resource}?"
+      resource_deletion_body: "Er du sikker på, at du vil slette %{resource}? Dette kan ikke fortrydes."
+      resource_deletion_btn_text: "Slet %{resource}"
+    family_moniker:
+      group_plural: Grupper
+      group_singular: Gruppe
+      plural: Husstande
+      singular: Husstand
+    trend_change:
+      no_change: "ingen ændring"
+    cancel: Annuller
+    transaction_tabs:
+      expense: Udgift
+      income: Indtægt
+      transfer: Overførsel

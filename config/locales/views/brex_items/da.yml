@@ -1,0 +1,277 @@
+---
+da:
+  brex_items:
+    default_connection_name: Brex-forbindelse
+    account_metadata:
+      provider: Brex
+      separator: " • "
+    kinds:
+      cash: Kontant
+      card: Kort
+    statuses:
+      ACTIVE: Aktiv
+      active: Aktiv
+      CLOSED: Lukket
+      closed: Lukket
+      frozen: Frosset
+      FROZEN: Frosset
+    create:
+      success: Brex-forbindelse oprettet
+    default_card_name: Brex-kort
+    default_cash_name: "Brex Cash %{id}"
+    destroy:
+      success: Brex-forbindelse fjernet
+    index:
+      title: Brex-forbindelser
+    institution_summary:
+      none: Ingen institutioner forbundet
+      one: "%{name}"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutioner"
+    sync_status:
+      no_accounts: Ingen konti fundet
+      all_synced:
+        one: "%{count} konto synkroniseret"
+        other: "%{count} konti synkroniseret"
+      partial_setup: "%{synced} synkroniseret, %{pending} skal sættes op"
+    api_error:
+      common_issues: "Almindelige problemer:"
+      expired_credentials: Generer et nyt API-token fra Brex.
+      expired_credentials_label: "Udløbne legitimationsoplysninger:"
+      heading: Kunne ikke forbinde til Brex
+      invalid_token: Tjek dit API-token under Udbyderindstillinger.
+      invalid_token_label: "Ugyldigt API-token:"
+      network: Tjek din internetforbindelse.
+      network_label: "Netværksproblem:"
+      permissions: Sørg for, at dit token har de nødvendige skrivebeskyttede konti- og transaktionsscopes.
+      permissions_label: "Utilstrækkelige tilladelser:"
+      service: Brex-API'et kan være midlertidigt utilgængeligt.
+      service_label: "Tjeneste nede:"
+      settings_link: Tjek udbyderindstillinger
+      title: Brex-forbindelsesfejl
+    errors:
+      unexpected_error: Der opstod en uventet fejl. Prøv igen senere.
+    entries:
+      default_name: Brex-transaktion
+    loading:
+      loading_message: Indlæser Brex-konti...
+      loading_title: Indlæser
+    link_accounts:
+      all_already_linked:
+        one: "Den valgte konto (%{names}) er allerede koblet"
+        other: "Alle %{count} valgte konti er allerede koblet: %{names}"
+      api_error: "API-fejl: %{message}"
+      invalid_account_names:
+        one: "Kan ikke koble konto med tomt navn"
+        other: "Kan ikke koble %{count} konti med tomme navne"
+      invalid_account_type: Brex-kontotype understøttes ikke
+      link_failed: Kunne ikke koble konti
+      no_accounts_selected: Vælg mindst én konto
+      no_api_token: Brex API-token ikke fundet. Konfigurer det under Udbyderindstillinger.
+      partial_invalid: "Koblede %{created_count} konto(er), %{already_linked_count} konto(er) var allerede koblet, %{invalid_count} konto(er) havde ugyldige navne"
+      partial_success: "Koblede %{created_count} konto(er). %{already_linked_count} konto(er) var allerede koblet: %{already_linked_names}"
+      select_connection: Vælg en Brex-forbindelse, før du kobler konti.
+      success:
+        one: "Koblede %{count} konto"
+        other: "Koblede %{count} konti"
+    brex_item:
+      accounts_need_setup: Konti skal sættes op
+      delete: Slet forbindelse
+      deletion_in_progress: sletning i gang...
+      error: Fejl
+      no_accounts_description: Denne forbindelse har ingen koblede konti endnu.
+      no_accounts_title: Ingen konti
+      setup_action: Sæt nye konti op
+      setup_description: "%{linked} af %{total} konti koblet. Vælg kontotyper til dine nyligt importerede Brex-konti."
+      setup_needed: Nye konti klar til opsætning
+      status: "Synkroniseret for %{timestamp} siden"
+      status_never: Aldrig synkroniseret
+      status_with_summary: "Senest synkroniseret for %{timestamp} siden - %{summary}"
+      syncing: Synkroniserer...
+      total: I alt
+      unlinked: Ikke koblet
+    provider_panel:
+      accounts_link: Konti
+      add_connection: Tilføj Brex-forbindelse
+      base_url_label: Base URL (valgfrit)
+      base_url_placeholder: https://api.brex.com
+      configured_html: "Konfigureret og klar til brug. Besøg fanen %{accounts_link} for at administrere og sætte konti op."
+      connection_name_label: Forbindelsesnavn
+      connection_name_placeholder: Erhvervslønkonto
+      default_connection_name: Brex-forbindelse
+      disconnect_label: "Afbryd %{name}"
+      disconnect_confirm: "Afbryd %{name}?"
+      encryption_warning:
+        title: Databasekryptering er ikke konfigureret
+        message: Konfigurer Active Record-krypteringsnøgler, før du tilføjer Brex-tokens i produktion. Uden krypteringsnøgler gemmer Sure Brex-udbyderlegitimationsoplysninger og snapshots i klartekst som andre udbyderposter.
+      instructions:
+        copy_token_html: "Kopiér tokenet og tilføj det som en navngiven forbindelse nedenfor. Sure gemmer kun tokenet til synkronisering af denne husstand."
+        create_token: "Opret et API-token med disse skrivebeskyttede scopes: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly"
+        open_tokens: Gå til Brex udvikler-/API-tokenindstillinger for den virksomhed, du vil forbinde
+        sign_in_html: "Besøg %{link} og log ind på den konto, du vil forbinde"
+      keep_token_placeholder: Lad feltet være tomt for at beholde det nuværende token
+      not_configured: Ikke konfigureret
+      sandbox_note_html: "Brug en separat navngiven forbindelse for hver Brex-virksomhed/API-token, du vil synkronisere. Lad Base URL være tom til produktion. Staging er begrænset til Brex-godkendt test og virker ikke med kundetokens."
+      setup_accounts: Sæt konti op
+      setup_title: "Opsætningsinstruktioner:"
+      sync: Synk
+      token_label: Token
+      token_placeholder: Indsæt token her
+      update_connection: Opdater forbindelse
+    provider_connection:
+      default_description: Forbind til din Brex-konto
+      default_name: Brex
+      description: "Forbind med %{name}"
+      name: "Brex - %{name}"
+    select_accounts:
+      accounts_selected: konti valgt
+      api_error: "API-fejl: %{message}"
+      cancel: Annuller
+      configure_name_in_brex: Kan ikke importere - konfigurer kontonavn i Brex
+      description: Vælg de konti, du vil koble til din %{product_name}-konto.
+      link_accounts: Kobl valgte konti
+      no_accounts_found: Ingen konti fundet. Tjek din API-tokenkonfiguration.
+      no_api_token: Brex API-token ikke fundet. Konfigurer det under Udbyderindstillinger.
+      no_credentials_configured: Konfigurer først dit Brex API-token under Udbyderindstillinger.
+      no_name_placeholder: "(Intet navn)"
+      select_connection: Vælg en Brex-forbindelse under Udbyderindstillinger.
+      title: Vælg Brex-konti
+      unexpected_error: Der opstod en uventet fejl. Prøv igen senere.
+    select_existing_account:
+      account_already_linked: Denne konto er allerede koblet til en udbyder
+      all_accounts_already_linked: Alle Brex-konti er allerede koblet
+      api_error: "API-fejl: %{message}"
+      cancel: Annuller
+      configure_name_in_brex: Kan ikke importere - konfigurer kontonavn i Brex
+      description: Vælg en Brex-konto at koble med denne konto. Transaktioner synkroniseres og deduplikeres automatisk.
+      link_account: Kobl konto
+      no_account_specified: Ingen konto angivet
+      no_accounts_found: Ingen Brex-konti fundet. Tjek din API-tokenkonfiguration.
+      no_api_token: Brex API-token ikke fundet. Konfigurer det under Udbyderindstillinger.
+      no_credentials_configured: Konfigurer først dit Brex API-token under Udbyderindstillinger.
+      no_name_placeholder: "(Intet navn)"
+      select_connection: Vælg en Brex-forbindelse under Udbyderindstillinger.
+      title: "Kobl %{account_name} med Brex"
+      unexpected_error: Der opstod en uventet fejl. Prøv igen senere.
+    setup_required:
+      description: Før du kan koble Brex-konti, skal du konfigurere dit Brex API-token.
+      heading: API-token ikke konfigureret
+      settings_link: Gå til udbyderindstillinger
+      setup_steps: "Opsætningstrin:"
+      steps:
+        enter_token: Indtast dit Brex API-token
+        find_section_html: "Find sektionen <strong>Brex</strong>"
+        open_settings_html: "Gå til <strong>Indstillinger > Udbydere</strong>"
+        return_to_link: Vend tilbage hertil for at koble dine konti
+      title: Brex-opsætning påkrævet
+    subtype_select:
+      placeholder:
+        subtype: Vælg undertype
+        type: Vælg type
+    link_existing_account:
+      account_already_linked: Denne konto er allerede koblet til en udbyder
+      api_error: "API-fejl: %{message}"
+      invalid_account_name: Kan ikke koble konto med tomt navn
+      missing_parameters: Mangler påkrævede parametre
+      no_account_specified: Ingen konto angivet
+      no_api_token: Brex API-token ikke fundet. Konfigurer det under Udbyderindstillinger.
+      provider_account_already_linked: Denne Brex-konto er allerede koblet til en anden konto
+      provider_account_not_found: Brex-konto ikke fundet
+      select_connection: Vælg en Brex-forbindelse, før du kobler konti.
+      success: "Koblede %{account_name} med Brex"
+    setup_accounts:
+      account_type_label: "Kontotype:"
+      all_accounts_linked: "Alle dine Brex-konti er allerede sat op."
+      api_error: "API-fejl: %{message}"
+      fetch_failed: "Kunne ikke hente konti"
+      no_accounts_to_setup: "Ingen konti at sætte op"
+      no_api_token: Brex API-token ikke fundet. Konfigurer det under Udbyderindstillinger.
+      account_types:
+        skip: Spring denne konto over
+        depository: Løn- eller opsparingskonto
+        credit_card: Kreditkort
+        investment: Investeringskonto
+        loan: Lån eller realkredit
+        other_asset: Andet aktiv
+      subtype_labels:
+        depository: "Konto-undertype:"
+        credit_card: ""
+        investment: "Investeringstype:"
+        loan: "Lånetype:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkort sættes automatisk op som kreditkortkonti."
+        other_asset: "Ingen ekstra muligheder nødvendige for andre aktiver."
+      subtypes:
+        depository:
+          checking: Lønkonto
+          savings: Opsparing
+          hsa: Health Savings Account
+          cd: Tidsindskud
+          money_market: Pengemarked
+        investment:
+          brokerage: Mæglerkonto
+          pension: Pension
+          retirement: Pension
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529-plan"
+          hsa: Health Savings Account
+          mutual_fund: Investeringsforening
+          ira: Traditional IRA
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: Realkredit
+          student: Studielån
+          auto: Billån
+          other: Andet lån
+      balance: Saldo
+      cancel: Annuller
+      choose_account_type: "Vælg den rigtige kontotype for hver Brex-konto:"
+      create_accounts: Opret konti
+      creating_accounts: Opretter konti...
+      historical_data_range: "Historisk datainterval:"
+      subtitle: Vælg de rigtige kontotyper til dine importerede konti
+      sync_start_date_help: Vælg, hvor langt tilbage du vil synkronisere transaktionshistorik. Maksimalt 3 års historik tilgængelig.
+      sync_start_date_label: "Start synk af transaktioner fra:"
+      title: Sæt dine Brex-konti op
+    complete_account_setup:
+      all_skipped: "Alle konti blev sprunget over. Ingen konti blev oprettet."
+      creation_failed: "Kunne ikke oprette konti: %{error}"
+      creation_failed_count: "Kunne ikke oprette %{count} konto(er)."
+      no_accounts: "Ingen konti at sætte op."
+      partial_skipped: "Oprettede %{created_count} konto(er); %{skipped_count} konto(er) blev sprunget over."
+      partial_success: "Oprettede %{created_count} konto(er), men %{failed_count} konto(er) mislykkedes."
+      success: "Oprettede %{count} konto(er)."
+      unexpected_error: Der opstod en uventet fejl.
+    sync:
+      success: Synk startet
+    syncer:
+      account_processing_failed:
+        one: "%{count} Brex-konto mislykkedes under behandling."
+        other: "%{count} Brex-konti mislykkedes under behandling."
+      account_sync_failed:
+        one: "%{count} Brex-kontosynk kunne ikke planlægges."
+        other: "%{count} Brex-kontosynkroniseringer kunne ikke planlægges."
+      accounts_need_setup:
+        one: "%{count} konto skal sættes op..."
+        other: "%{count} konti skal sættes op..."
+      accounts_failed:
+        one: "%{count} Brex-konto kunne ikke importeres."
+        other: "%{count} Brex-konti kunne ikke importeres."
+      calculating_balances: Beregner saldi...
+      checking_account_configuration: Tjekker kontokonfiguration...
+      credentials_invalid: Ugyldigt Brex API-token eller kontotilladelser
+      failed: Synk mislykkedes. Prøv igen, eller kontakt support.
+      import_failed: Brex-import mislykkedes.
+      importing_accounts: Importerer konti fra Brex...
+      processing_transactions: Behandler transaktioner...
+      transactions_failed:
+        one: "%{count} Brex-konto havde fejl ved import af transaktioner."
+        other: "%{count} Brex-konti havde fejl ved import af transaktioner."
+    update:
+      success: Brex-forbindelse opdateret

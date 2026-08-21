@@ -1,0 +1,498 @@
+---
+da:
+  import:
+    qif_category_selections:
+      update:
+        success: "Kategorier og tags gemt."
+      show:
+        title: "Konfigurer og vælg"
+        description: "Tjek det fundne datoformat, og vælg hvilke kategorier og tags fra din QIF-fil der skal ind i %{product_name}."
+        categories_heading: Kategorier
+        categories_found:
+          one: "1 kategori fundet"
+          other: "%{count} kategorier fundet"
+        category_name_col: Kategorinavn
+        transactions_col: Transaktioner
+        tags_heading: Tags
+        tags_found:
+          one: "1 tag fundet"
+          other: "%{count} tags fundet"
+        tag_name_col: Tagnavn
+        txn_count:
+          one: "1 txn"
+          other: "%{count} txn"
+        split_warning_title: Opdelte transaktioner fundet
+        split_warning_description: "Denne QIF-fil indeholder opdelte transaktioner. Opdelinger understøttes endnu ikke, så hver opdelt transaktion importeres som én transaktion med det fulde beløb og uden kategori. De enkelte opdelinger bevares ikke."
+        split_badge: opdelt
+        empty_state_primary: Ingen kategorier eller tags blev fundet i denne QIF-fil.
+        empty_state_secondary: Alle transaktioner importeres uden kategorier eller tags.
+        submit: Fortsæt til gennemgang
+    cleans:
+      show:
+        not_configured: "Konfigurer din import, før du fortsætter."
+        description: Rediger dine data i tabellen nedenfor. Røde celler er ugyldige.
+        errors_notice: Der er fejl i dine data. Hold musen over fejlen for at se
+          detaljer.
+        errors_notice_mobile: Der er fejl i dine data. Tryk på fejl-tooltippet for at se
+          detaljer.
+        title: Rens dine data
+        data_cleaned: Dine data er renset
+        next_step: Næste trin
+        all_rows: Alle rækker
+        error_rows: Fejlrækker
+    configurations:
+      update:
+        success: Import konfigureret.
+      account_import:
+        leave_empty: Lad stå tomt
+        default: Standard
+        entity_type: Enhedstype
+        name: Navn
+        balance: Saldo
+        currency: Valuta
+        balance_date: Saldodato
+        date_format: Datoformat
+        select_format: Vælg format
+        apply_configuration: Anvend konfiguration
+      transaction_import:
+        date_label: Dato
+        select_column: Vælg kolonne
+        select_format: Vælg format
+        amount_label: Beløb
+        default: Standard
+        currency_label: Valuta
+        format_label: Format
+        amount_type_strategy_label: Strategi for beløbstype
+        select_strategy: Vælg strategi
+        set: Sæt
+        as_amount_type_column: som beløbstypekolonne
+        select_value: Vælg værdi
+        as_identifier_value: som identifikatorværdi
+        treat_as_html: "Behandl \"<span class=\"font-medium\">%{value}</span>\" som"
+        income_inflow: Indtægt (indgående)
+        expense_outflow: Udgift (udgående)
+        select_type: Vælg type
+        leave_empty: Lad stå tomt
+        account_label: Konto
+        name_label: Navn
+        category_label: Kategori
+        tags_label: Tags
+        notes_label: Noter
+        apply_configuration: Anvend konfiguration
+        incomes_are_positive: Indtægter er positive
+        incomes_are_negative: Indtægter er negative
+        amount_type_label: Beløbstype
+        select_convention: Vælg konvention
+        date_format_label: Datoformat
+        rows_to_skip_label: Spring de første n rækker over
+      trade_import:
+        select_column: Vælg kolonne
+        date_label: Dato
+        quantity_label: Antal
+        buys_are_positive: Køb er positivt antal
+        buys_are_negative: Køb er negativt antal
+        default: Standard
+        currency_label: Valuta
+        format_label: Format
+        select_format: Vælg format
+        ticker_label: Ticker
+        leave_empty: Lad stå tomt
+        stock_exchange_code_label: Børskode
+        price_label: Pris
+        account_label: Konto
+        name_label: Navn
+        note_label: Note
+        no_security_provider_warning: Udbyderen af værdipapirpriser er ikke konfigureret. Dine handelsimporter virker, men Sure udfylder ikke prishistorik. Gå til indstillinger for at konfigurere dette.
+        date_format_label: Datoformat
+        apply_configuration: Anvend konfiguration
+      category_import:
+        button_label: Fortsæt
+        description: Upload en simpel CSV-fil (som den, vi genererer, når du
+          eksporterer dine data). Vi mapper kolonnerne automatisk.
+        instructions: Vælg fortsæt for at parse din CSV og gå videre til rensetrinnet.
+      merchant_import:
+        button_label: Fortsæt
+        description: Upload en CSV-fil med dine forretninger. Vi mapper kolonnerne automatisk.
+        instructions: Vælg fortsæt for at parse din CSV og gå videre til rensetrinnet.
+      mint_import:
+        date_format_label: Datoformat
+        account_optional: Konto (valgfri)
+        amount: Beløb
+        apply_configuration: Anvend konfiguration
+        category_optional: Kategori (valgfri)
+        currency: Valuta
+        date: Dato
+        format: Format
+        incomes_negative: Indtægter er negative
+        incomes_positive: Indtægter er positive
+        intro: Vi har forudkonfigureret din Mint-import. Fortsæt til næste trin.
+        leave_empty: Lad stå tomt
+        name_optional: Navn (valgfri)
+        select_format: Vælg format
+        tags_optional: Tags (valgfri)
+      actual_import:
+        preconfigured_notice: Vi har forudkonfigureret din Actual Budget-import. Fortsæt til næste trin.
+        leave_empty: Lad stå tomt
+        date_label: Dato
+        date_format_label: Datoformat
+        amount_label: Beløb
+        signage_convention_label: Fortegnskonvention
+        incomes_are_negative: Indtægter er negative
+        incomes_are_positive: Indtægter er positive
+        account_label: Konto (valgfri)
+        name_label: Modtager (valgfri)
+        category_label: Kategori (valgfri)
+        notes_label: Noter (valgfri)
+        apply_configuration: Anvend konfiguration
+      ynab_import:
+        preconfigured_notice: Vi har forudkonfigureret din YNAB-import. Fortsæt til næste trin.
+        amount_notice: Beløb findes automatisk ud fra kolonnerne Outflow og Inflow.
+        leave_empty: Lad stå tomt
+        date_label: Dato
+        date_format_label: Datoformat
+        account_label: Konto (valgfri)
+        name_label: Modtager (valgfri)
+        category_label: Kategori (valgfri)
+        notes_label: Memo (valgfri)
+        apply_configuration: Anvend konfiguration
+      rule_import:
+        description: Konfigurer din regelimport. Regler oprettes eller opdateres ud
+          fra CSV-dataene.
+        process_button: Behandl regler
+        process_help: Klik på knappen nedenfor for at behandle din CSV og generere regelrækker.
+      show:
+        description: Vælg de kolonner, der svarer til hvert felt i din CSV.
+        title: Konfigurer din import
+    confirms:
+      sure_import:
+        title: Bekræft din import
+        description: Gennemgå de data, der importeres fra din eksportfil.
+        summary: Importoversigt
+        empty_summary: Vi kunne ikke finde nogen importerbare poster i denne fil. Den kan være tom, eller linjerne matcher ikke det forventede eksportformat (hver linje skal være et JSON-objekt med nøglerne "type" og "data", med typer som denne import understøtter).
+        publish_button: Start import
+        cancel: Annuller
+      mappings:
+        create_account: Opret konto
+        csv_mapping_label: "%{mapping} i CSV"
+        sure_mapping_label: "%{mapping} i %{product_name}"
+        no_accounts: Du har ingen konti endnu. Opret en konto, som
+          vi kan bruge til (utilknyttede) rækker i din CSV, eller gå tilbage til rensetrinnet
+          og angiv et kontonavn, vi kan bruge.
+        rows_label: Rækker
+        unassigned_account: Skal der oprettes en ny konto til utilknyttede rækker?
+        next: Næste
+      show:
+        invalid_data: "Du har ugyldige data. Rediger, indtil alle fejl er løst"
+        account_mapping_description: Tildel alle konti i din importerede fil til
+          %{product_name}s eksisterende konti. Du kan også tilføje nye konti eller lade dem
+          være ukategoriserede.
+        account_mapping_title: Tildel dine konti
+        account_type_mapping_description: Tildel alle kontotyper i din importerede fil til
+          %{product_name}s
+        account_type_mapping_title: Tildel dine kontotyper
+        category_mapping_description: Tildel alle kategorier i din importerede fil til
+          %{product_name}s eksisterende kategorier. Du kan også tilføje nye kategorier eller lade
+          dem være ukategoriserede.
+        category_mapping_title: Tildel dine kategorier
+        tag_mapping_description: Tildel alle tags i din importerede fil til %{product_name}s
+          eksisterende tags. Du kan også tilføje nye tags eller lade
+          dem være ukategoriserede.
+        tag_mapping_title: Tildel dine tags
+    uploads:
+      handle_qif_upload:
+        qif_uploaded: "QIF-fil uploadet."
+      update:
+        qif_uploaded: "QIF-fil uploadet."
+      show:
+        csv_invalid: "Skal være gyldig CSV med overskrifter og mindst én datarække"
+        drop_csv_title: Slip CSV for at uploade
+        drop_csv_subtitle: Din fil uploades automatisk
+        upload_csv_tab: Upload CSV
+        copy_paste_tab: Kopiér og indsæt
+        account_optional_label: Konto (valgfri)
+        multi_account_import: Import til flere konti
+        upload_csv_button: Upload CSV
+        paste_csv_placeholder: Indsæt indholdet af din CSV-fil her
+        download_sample_csv: Download en eksempel-CSV
+        to_see_format: for at se det påkrævede CSV-format
+        qif_title: Upload QIF-fil
+        qif_description: Vælg den konto, denne QIF-fil tilhører, og upload derefter din .qif-eksport fra Quicken.
+        qif_account_label: Konto
+        qif_account_placeholder: Vælg en konto…
+        qif_file_prompt: for at tilføje din QIF-fil her
+        qif_file_hint: kun .qif-filer
+        qif_submit: Upload QIF
+        browse: Gennemse
+        csv_file_prompt: for at tilføje din CSV-fil her
+        description: Indsæt eller upload din CSV-fil nedenfor. Gennemgå vejledningen
+          i tabellen nedenfor, før du går i gang.
+        instructions_1: Nedenfor er et eksempel på CSV med kolonner, der kan importeres.
+        instructions_2: Din CSV skal have en overskriftsrække
+        instructions_3: Du kan navngive dine kolonner, som du vil. Du mapper
+          dem i et senere trin.
+        instructions_4: Kolonner markeret med stjerne (*) er påkrævede data.
+        instructions_5: Ingen kommaer, valutasymboler eller parenteser i tal.
+        title: Importér dine data
+      sure_import:
+        title: Importér fra eksport
+        description: Upload all.ndjson-filen fra din dataeksport for at gendanne konti, transaktioner, kategorier og mere.
+        drop_title: Slip NDJSON for at uploade
+        drop_subtitle: Din fil uploades automatisk
+        browse: Gennemse
+        browse_hint: for at tilføje din all.ndjson-fil her
+        upload_button: Upload NDJSON
+        hint_html: Upload <strong>all.ndjson</strong>-filen fra din dataeksport-ZIP
+        ndjson_invalid: Skal være gyldig NDJSON med mindst én post
+  imports:
+    mapping_labels:
+      account_type: "Kontotype"
+      account: "Konto"
+      category: "Kategori"
+      tag: "Tag"
+    dry_run_resources:
+      transactions: "Transaktioner"
+      balances: "Saldi"
+      accounts: "Konti"
+      categories: "Kategorier"
+      tags: "Tags"
+      rules: "Regler"
+      merchants: "Forretninger"
+      recurring_transactions: "Faste transaktioner"
+      transfers: "Overførsler"
+      rejected_transfers: "Afviste overførsler"
+      trades: "Handler"
+      holdings: "Beholdninger"
+      valuations: "Værdiansættelser"
+      budgets: "Budgetter"
+      budget_categories: "Budgetkategorier"
+    column_labels:
+      date: "Dato"
+      amount: "Beløb"
+      name: "Navn"
+      currency: "Valuta"
+      category: "Kategori"
+      tags: "Tags"
+      account: "Konto"
+      notes: "Noter"
+      qty: "Antal"
+      ticker: "Ticker"
+      exchange: "Børs"
+      price: "Pris"
+      entity_type: "Type"
+      category_parent: "Overordnet kategori"
+      category_color: "Farve"
+      category_icon: "Lucide-ikon"
+      merchant_color: "Farve"
+      merchant_website: "Website-URL"
+    update:
+      account_saved: "Konto gemt."
+      invalid_account: "Konto ikke fundet."
+    publish:
+      started: "Din import er startet i baggrunden."
+      max_rows_exceeded: "Din import overstiger det maksimale antal rækker på %{max}."
+    revert:
+      started: "Import rulles tilbage i baggrunden."
+    cancel:
+      cancelled: "Import markeret som mislykket. Du kan prøve igen fra importsiden."
+      not_cancellable: "Denne import kan ikke markeres som mislykket lige nu — jobbet kører måske stadig. Prøv igen, når den har været inaktiv i en time."
+    apply_template:
+      template_applied: "Skabelon anvendt."
+      no_template_found: "Ingen skabelon fundet. Konfigurer din import manuelt."
+    destroy:
+      deleted: "Din import er slettet."
+    failure:
+      title: Import mislykkedes
+      description: Tjek filformatet for fejl, og at alle påkrævede felter er udfyldt, og prøv derefter igen.
+      try_again: Prøv igen
+    success:
+      title: Import lykkedes
+      description: Dine importerede data er tilføjet til appen og er klar til brug.
+      back_to_dashboard: Tilbage til oversigten
+      verification:
+        title: Tilbageverifikation
+        checked: Tjekket
+        mismatches: Uoverensstemmelser
+        status:
+          not_verified: Ikke verificeret
+          matched: Matchet
+          mismatch: Uoverensstemmelse
+          failed: Mislykkedes
+          reverted: Rullet tilbage
+    importing:
+      title: Import i gang
+      description: "Din import er i gang. Tjek importmenuen for status, eller klik på 'Tjek status' for at opdatere siden. Du kan godt fortsætte med at bruge appen."
+      check_status: Tjek status
+      back_to_dashboard: Tilbage til oversigten
+    revert_failure:
+      title: Tilbagerulning af import mislykkedes
+      description: Prøv igen
+      try_again: Prøv igen
+    date_format:
+      heading: Datoformat
+      description: "Datoformatet blev automatisk fundet i din fil. Skift det, hvis datoerne ser forkerte ud."
+      preview: "Første parsed dato"
+      error_title: "Kunne ikke finde datoformat"
+      error_description: "Ingen af de understøttede datoformater kunne parse datoerne i denne fil. Tjek, at filen indeholder gyldige datoer."
+    type_labels:
+      transaction_import: "Transaktionsimport"
+      trade_import: "Handelsimport"
+      account_import: "Kontoimport"
+      mint_import: "Mint-import"
+      actual_import: "Actual-import"
+      ynab_import: "YNAB-import"
+      qif_import: "QIF-import"
+      category_import: "Kategoriimport"
+      rule_import: "Regelimport"
+      merchant_import: "Forretningsimport"
+      pdf_import: "PDF-import"
+      document_import: "Dokumentimport"
+      sure_import: "Sure-import"
+    steps:
+      upload: Upload
+      configure: Konfigurer
+      clean: Rens
+      map: Map
+      confirm: Bekræft
+      select: Vælg
+      progress: "Trin %{step} af %{total}"
+    empty:
+      message: Ingen importer fundet.
+    index:
+      title: Importer
+      new: Ny import
+    table:
+      title: Importer
+      header:
+        date: Dato
+        operation: Handling
+        status: Status
+        actions: Handlinger
+      row:
+        type_labels:
+          transaction_import: "Transaktion"
+          trade_import: "Handel"
+          account_import: "Konto"
+          mint_import: "Mint"
+          actual_import: "Actual"
+          ynab_import: "YNAB"
+          qif_import: "QIF"
+          category_import: "Kategori"
+          rule_import: "Regel"
+          merchant_import: "Forretning"
+          pdf_import: "PDF"
+          document_import: "Dokument"
+          sure_import: "Sure"
+        status:
+          in_progress: I gang
+          uploading: Behandler rækker
+          reverting: Ruller tilbage
+          revert_failed: Tilbagerulning mislykkedes
+          complete: Fuldført
+          failed: Mislykkedes
+        actions:
+          revert: Rul tilbage
+          confirm_revert: Dette sletter transaktioner, der blev importeret, men du kan stadig gennemgå og importere dine data igen når som helst.
+          delete: Slet
+          view: Vis
+          mark_failed: Markér som mislykket
+          confirm_mark_failed: Denne import har været inaktiv et stykke tid, og baggrundsjobbet blev sandsynligvis afbrudt. Markér den som mislykket, så du kan prøve igen? Ingen importerede data bevares.
+      empty: Ingen importer endnu.
+    new:
+      description: Importér fra et økonomiværktøj, eller upload rå datafiler.
+      tab_financial_tools: Økonomiværktøjer og filer
+      tab_raw_data: Rå data
+      import_ynab: Importér fra YNAB
+      import_accounts: Importér konti
+      import_categories: Importér kategorier
+      import_merchants: Importér forretninger
+      import_mint: Importér fra Mint
+      import_actual: Importér fra Actual Budget
+      import_portfolio: Importér investeringer
+      import_rules: Importér regler
+      import_transactions: Importér transaktioner
+      import_qif: Importér fra Quicken (QIF)
+      import_sure: Importér fra Sure
+      import_sure_description: Fuld-eksport .ndjson-fil
+      import_file: Importér dokument
+      import_file_description: AI-analyse af PDF'er og søgbar filupload
+      requires_account: Importér konti først for at låse denne mulighed op.
+      resume: Fortsæt %{type}
+      sources: Kilder
+      title: Ny import
+    create:
+      file_too_large: Filen er for stor. Maksimal størrelse er %{max_size}MB.
+      invalid_file_type: Ugyldig filtype. Upload en CSV-fil.
+      csv_uploaded: CSV uploadet.
+      ndjson_uploaded: NDJSON-fil uploadet.
+      pdf_too_large: PDF-filen er for stor. Maksimal størrelse er %{max_size}MB.
+      pdf_processing: Din PDF behandles. Du får en e-mail, når analysen er færdig.
+      invalid_pdf: Den uploadede fil er ikke en gyldig PDF.
+      duplicate_pdf_unavailable: Denne PDF er allerede gemt som et kontoudtog, du ikke har adgang til.
+      document_too_large: Dokumentfilen er for stor. Maksimal størrelse er %{max_size}MB.
+      invalid_document_file_type: Ugyldig dokumentfiltype til den aktive vektorbutik.
+      document_uploaded: Dokument uploadet.
+      document_upload_failed: Vi kunne ikke uploade dokumentet til vektorbutikken. Prøv igen.
+      invalid_ndjson_file_type: Ugyldig filtype eller format. Upload en gyldig .ndjson- eller .json-eksportfil.
+      document_provider_not_configured: Ingen vektorbutik er konfigureret til dokumentupload.
+    show:
+      finalize_upload: Færdiggør din filupload.
+      finalize_mappings: Færdiggør dine mappings, før du fortsætter.
+    ready:
+      description: Her er en oversigt over de nye elementer, der tilføjes til din konto,
+        når du udgiver denne import.
+      title: Bekræft dine importdata
+      summary_item_label: Element
+      summary_count_label: Antal
+      empty_summary: Vi kunne ikke finde nogen importerbare poster i denne fil. Den kan være tom, eller linjerne matcher ikke det forventede eksportformat (hver linje skal være et JSON-objekt med nøglerne "type" og "data", med typer som denne import understøtter).
+      publish_import: Udgiv import
+      back_to_imports: Tilbage til importer
+    errors:
+      custom_column_requires_inflow: "Import med tilpasset kolonne kræver, at en indgående-kolonne er valgt"
+      interrupted: "Baggrundsjobbet blev afbrudt, før det blev færdigt. Importerede data blev rullet tilbage — du kan trygt prøve igen."
+      presumed_lost: "Markeret som mislykket, efter at baggrundsjobbet blev anset for tabt. De importerede data blev rullet tilbage — du kan trygt prøve igen."
+    document_types:
+      bank_statement: Kontoudtog
+      credit_card_statement: Kreditkortudtog
+      investment_statement: Investeringsudtog
+      financial_document: Finansdokument
+      contract: Kontrakt
+      other: Andet dokument
+      unknown: Ukendt dokument
+    pdf_import:
+      processing_title: Behandler din PDF
+      processing_description: Vi analyserer dit dokument med AI. Det kan tage et øjeblik. Du får en e-mail, når analysen er færdig.
+      check_status: Tjek status
+      back_to_dashboard: Tilbage til oversigten
+      failed_title: Behandling mislykkedes
+      failed_description: Vi kunne ikke behandle dit PDF-dokument. Prøv igen, eller kontakt support.
+      try_again: Prøv igen
+      delete_import: Slet import
+      complete_title: Dokument analyseret
+      complete_description: Vi har analyseret din PDF, og her er, hvad vi fandt.
+      document_type_label: Dokumenttype
+      source_statement: Kildeudtog
+      summary_label: Opsummering
+      email_sent_notice: Der er sendt en e-mail til dig med næste trin.
+      back_to_imports: Tilbage til importer
+      unknown_state_title: Ukendt tilstand
+      unknown_state_description: Denne import er i en uventet tilstand. Gå tilbage til importer.
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Behandling mislykkedes: %{error}"
+      ready_for_review_title: Klar til gennemgang
+      ready_for_review_description: "Vi udtrak %{count} transaktioner fra dit kontoudtog. Gennemgå og udgiv dem for at tilføje dem til din konto."
+      transactions_extracted: Transaktioner udtrukket
+      transactions_extracted_count:
+        one: "%{count} transaktion"
+        other: "%{count} transaktioner"
+      select_account: Importér til konto
+      select_account_placeholder: Vælg en konto...
+      select_account_hint: Vælg hvilken konto disse transaktioner skal importeres til.
+      no_accounts: Ingen konti tilgængelige. Opret en konto først.
+      create_account: Opret konto
+      save_account: Gem
+      publish_transactions:
+        one: "Udgiv %{count} transaktion"
+        other: "Udgiv %{count} transaktioner"
+      review_transactions: Gennemgå transaktioner
+      select_account_to_continue: Vælg en konto ovenfor for at fortsætte.
+      unknown_document_type: Ukendt
