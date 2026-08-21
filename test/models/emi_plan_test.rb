@@ -174,6 +174,27 @@ class EmiPlanTest < ActiveSupport::TestCase
     refute income_entry.transaction.emi_convertible?
   end
 
+  test "emi_convertible? is false for investment account transactions" do
+    # Investment-account transactions have a separate conversion path
+    # (Convert to Trade). Allowing both to apply to the same entry would
+    # let a full-value trade and a live EMI installment schedule both
+    # count against the same money -- see
+    # transactions_controller_test.rb for the trade-side guard.
+    investment_entry = create_transaction(amount: 500, name: "Brokerage fee", account: accounts(:investment))
+
+    refute investment_entry.transaction.emi_convertible?
+  end
+
+  test "build! raises for an investment account transaction even with a valid tenure" do
+    investment_entry = create_transaction(amount: 500, name: "Brokerage fee", account: accounts(:investment))
+
+    assert_no_difference "Entry.count" do
+      assert_raises(ActiveRecord::RecordInvalid) do
+        EmiPlan.build!(entry: investment_entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
+      end
+    end
+  end
+
   test "monthly_installment_amount matches first schedule entry" do
     plan = EmiPlan.build!(entry: @entry, interest_rate: 12, tenure_months: 6, processing_fee: 0)
 

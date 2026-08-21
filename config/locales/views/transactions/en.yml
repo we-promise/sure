@@ -271,6 +271,7 @@ en:
       errors:
         not_investment_account: Only transactions in investment accounts can be converted to trades
         already_converted: This transaction has already been converted or excluded
+        emi_linked: This transaction is part of an EMI plan and can't be converted to a trade. Foreclose the plan first.
         enter_ticker: Please enter a ticker symbol
         security_not_found: Selected security no longer exists. Please select another.
         select_security: Please select or enter a security

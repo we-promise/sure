@@ -1,0 +1,201 @@
+diff --git a/app/controllers/transactions_controller.rb b/app/controllers/transactions_controller.rb
+index f6256d9d..38571506 100644
+--- a/app/controllers/transactions_controller.rb
++++ b/app/controllers/transactions_controller.rb
+@@ -257,6 +257,12 @@ class TransactionsController < ApplicationController
+       return
+     end
+ 
++    if @entry.emi_purchase? || @entry.emi_installment?
++      flash[:alert] = t("transactions.convert_to_trade.errors.emi_linked")
++      redirect_back_or_to transactions_path
++      return
++    end
++
+     render :convert_to_trade
+   end
+ 
+@@ -279,6 +285,20 @@ class TransactionsController < ApplicationController
+       return
+     end
+ 
++    # Blocks converting either an EMI purchase or one of its generated
++    # installments into a trade. create_trade_from_transaction only ever
++    # excludes @entry itself -- it has no idea an EmiPlan might be attached
++    # and won't touch the plan's other entries. Without this guard, a
++    # purchase conversion would leave the full installment schedule live
++    # alongside a brand-new full-value trade (double-counted in balance
++    # reconstruction), and an installment conversion would silently break
++    # the "schedule sums to principal" invariant the plan depends on.
++    if @entry.emi_purchase? || @entry.emi_installment?
++      flash[:alert] = t("transactions.convert_to_trade.errors.emi_linked")
++      redirect_back_or_to transactions_path
++      return
++    end
++
+     # Resolve security before transaction
+     security = resolve_security_for_conversion
+     return if performed? # Early exit if redirect already happened
+diff --git a/app/models/transaction/splittable.rb b/app/models/transaction/splittable.rb
+index 395ae81b..8fb45861 100644
+--- a/app/models/transaction/splittable.rb
++++ b/app/models/transaction/splittable.rb
+@@ -8,7 +8,17 @@ module Transaction::Splittable
+   # A transaction can become an EMI plan when it meets the same bar as a
+   # regular split (single, un-linked, non-transfer, posted expense) and
+   # hasn't already been converted.
++  #
++  # Excludes investment accounts: those transactions can be converted to a
++  # Trade instead (see TransactionsController#create_trade_from_transaction),
++  # and that path only excludes the source entry -- it has no idea an EMI
++  # plan might exist and won't touch its installment schedule. Letting a
++  # positive investment-account transaction become an EMI plan would leave
++  # the door open to both conversions applying to the same money: a full
++  # trade AND a live installment schedule, double-counting in balance
++  # reconstruction. Simplest fix is to not let the two paths overlap in
++  # the first place.
+   def emi_convertible?
+-    splittable? && !entry.emi_purchase? && !entry.emi_installment? && entry.amount.positive?
++    splittable? && !entry.emi_purchase? && !entry.emi_installment? && entry.amount.positive? && !entry.account.investment?
+   end
+ end
+diff --git a/app/views/transactions/show.html.erb b/app/views/transactions/show.html.erb
+index 77d74782..d8e0d279 100644
+--- a/app/views/transactions/show.html.erb
++++ b/app/views/transactions/show.html.erb
+@@ -440,8 +440,8 @@
+               ) %>
+             </div>
+           <% end %>
+-          <!-- Convert to Trade (Investment Accounts Only, not already converted) -->
+-          <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
++          <!-- Convert to Trade (Investment Accounts Only, not already converted, not EMI-linked) -->
++          <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? && !@entry.emi_purchase? && !@entry.emi_installment? %>
+             <div class="flex items-center justify-between gap-2 p-3">
+               <div class="text-sm space-y-1">
+                 <h4 class="text-primary"><%= t(".convert_to_trade_title") %></h4>
+diff --git a/config/locales/views/transactions/en.yml b/config/locales/views/transactions/en.yml
+index 147a601d..3894aa4e 100644
+--- a/config/locales/views/transactions/en.yml
++++ b/config/locales/views/transactions/en.yml
+@@ -271,6 +271,7 @@ en:
+       errors:
+         not_investment_account: Only transactions in investment accounts can be converted to trades
+         already_converted: This transaction has already been converted or excluded
++        emi_linked: This transaction is part of an EMI plan and can't be converted to a trade. Foreclose the plan first.
+         enter_ticker: Please enter a ticker symbol
+         security_not_found: Selected security no longer exists. Please select another.
+         select_security: Please select or enter a security
+diff --git a/test/controllers/transactions_controller_test.rb b/test/controllers/transactions_controller_test.rb
+index 5c5bce52..327f64e8 100644
+--- a/test/controllers/transactions_controller_test.rb
++++ b/test/controllers/transactions_controller_test.rb
+@@ -907,6 +907,76 @@ end
+                  "Expected transfer counterparty accounts to be preloaded"
+   end
+ 
++  # --- Convert to Trade / EMI overlap guards ---
++
++  # emi_convertible? now excludes investment accounts, so EmiPlan.build!
++  # can no longer create one there directly. To exercise the
++  # controller-side backstop guard (for legacy data, or a future
++  # regression in emi_convertible? itself), build the plan on a normal
++  # depository entry and then move the resulting entries onto an
++  # investment account afterward, bypassing validations the same way a
++  # raw account_id migration/backfill would.
++  def move_entries_to_investment_account!(*entries)
++    investment_account = accounts(:investment)
++    entries.each { |entry| entry.update_column(:account_id, investment_account.id) }
++  end
++
++  test "convert_to_trade redirects an EMI purchase entry with an EMI-specific alert" do
++    entry = create_transaction(amount: 500, name: "Laptop", account: accounts(:depository))
++    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
++    move_entries_to_investment_account!(entry, *plan.installment_entries)
++
++    get convert_to_trade_transaction_url(entry.transaction)
++
++    assert_redirected_to transactions_url
++    assert_equal I18n.t("transactions.convert_to_trade.errors.emi_linked"), flash[:alert]
++  end
++
++  test "convert_to_trade redirects an EMI installment entry with an EMI-specific alert" do
++    entry = create_transaction(amount: 600, name: "Laptop", account: accounts(:depository))
++    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
++    installment = plan.installment_entries.first
++    move_entries_to_investment_account!(entry, *plan.installment_entries)
++
++    get convert_to_trade_transaction_url(installment.transaction)
++
++    assert_redirected_to transactions_url
++    assert_equal I18n.t("transactions.convert_to_trade.errors.emi_linked"), flash[:alert]
++  end
++
++  test "create_trade_from_transaction refuses an EMI purchase entry and creates no trade" do
++    entry = create_transaction(amount: 500, name: "Laptop", account: accounts(:depository))
++    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
++    move_entries_to_investment_account!(entry, *plan.installment_entries)
++
++    assert_no_difference [ "Entry.count", "Trade.count" ] do
++      post create_trade_from_transaction_transaction_url(entry.transaction), params: {
++        security_id: "__custom__", custom_ticker: "AAPL", qty: 1
++      }
++    end
++
++    assert_redirected_to transactions_url
++    assert_equal I18n.t("transactions.convert_to_trade.errors.emi_linked"), flash[:alert]
++    refute entry.reload.excluded?
++  end
++
++  test "create_trade_from_transaction refuses an EMI installment entry and creates no trade" do
++    entry = create_transaction(amount: 600, name: "Laptop", account: accounts(:depository))
++    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
++    installment = plan.installment_entries.first
++    move_entries_to_investment_account!(entry, *plan.installment_entries)
++
++    assert_no_difference [ "Entry.count", "Trade.count" ] do
++      post create_trade_from_transaction_transaction_url(installment.transaction), params: {
++        security_id: "__custom__", custom_ticker: "AAPL", qty: 1
++      }
++    end
++
++    assert_redirected_to transactions_url
++    assert_equal I18n.t("transactions.convert_to_trade.errors.emi_linked"), flash[:alert]
++    refute installment.reload.excluded?
++  end
++
+   private
+     def rendered_entry_ids
+       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
+diff --git a/test/models/emi_plan_test.rb b/test/models/emi_plan_test.rb
+index a45bb4b2..fe8883bc 100644
+--- a/test/models/emi_plan_test.rb
++++ b/test/models/emi_plan_test.rb
+@@ -174,6 +174,27 @@ class EmiPlanTest < ActiveSupport::TestCase
+     refute income_entry.transaction.emi_convertible?
+   end
+ 
++  test "emi_convertible? is false for investment account transactions" do
++    # Investment-account transactions have a separate conversion path
++    # (Convert to Trade). Allowing both to apply to the same entry would
++    # let a full-value trade and a live EMI installment schedule both
++    # count against the same money -- see
++    # transactions_controller_test.rb for the trade-side guard.
++    investment_entry = create_transaction(amount: 500, name: "Brokerage fee", account: accounts(:investment))
++
++    refute investment_entry.transaction.emi_convertible?
++  end
++
++  test "build! raises for an investment account transaction even with a valid tenure" do
++    investment_entry = create_transaction(amount: 500, name: "Brokerage fee", account: accounts(:investment))
++
++    assert_no_difference "Entry.count" do
++      assert_raises(ActiveRecord::RecordInvalid) do
++        EmiPlan.build!(entry: investment_entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
++      end
++    end
++  end
++
+   test "monthly_installment_amount matches first schedule entry" do
+     plan = EmiPlan.build!(entry: @entry, interest_rate: 12, tenure_months: 6, processing_fee: 0)
+ 

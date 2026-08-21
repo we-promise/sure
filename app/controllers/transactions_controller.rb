@@ -257,6 +257,12 @@ class TransactionsController < ApplicationController
       return
     end
 
+    if @entry.emi_purchase? || @entry.emi_installment?
+      flash[:alert] = t("transactions.convert_to_trade.errors.emi_linked")
+      redirect_back_or_to transactions_path
+      return
+    end
+
     render :convert_to_trade
   end
 
@@ -275,6 +281,20 @@ class TransactionsController < ApplicationController
 
     if @entry.excluded?
       flash[:alert] = t("transactions.convert_to_trade.errors.already_converted")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    # Blocks converting either an EMI purchase or one of its generated
+    # installments into a trade. create_trade_from_transaction only ever
+    # excludes @entry itself -- it has no idea an EmiPlan might be attached
+    # and won't touch the plan's other entries. Without this guard, a
+    # purchase conversion would leave the full installment schedule live
+    # alongside a brand-new full-value trade (double-counted in balance
+    # reconstruction), and an installment conversion would silently break
+    # the "schedule sums to principal" invariant the plan depends on.
+    if @entry.emi_purchase? || @entry.emi_installment?
+      flash[:alert] = t("transactions.convert_to_trade.errors.emi_linked")
       redirect_back_or_to transactions_path
       return
     end
