@@ -279,48 +279,11 @@ class LunchflowItem::Importer
         if transactions_data[:transactions].present?
           begin
             existing_transactions = lunchflow_account.raw_transactions_payload.to_a
+            incoming = transactions_data[:transactions]
+            merged = merge_lunchflow_transactions(existing_transactions, incoming)
 
-            # Build set of existing transaction IDs for efficient lookup
-            # For transactions with IDs: use the ID directly
-            # For transactions without IDs (blank/nil): use content hash to prevent duplicate storage
-            existing_ids = existing_transactions.map do |tx|
-              tx_with_access = tx.with_indifferent_access
-              tx_id = tx_with_access[:id]
-
-              if tx_id.blank?
-                # Generate content hash for blank-ID transactions to detect duplicates
-                content_hash_for_transaction(tx_with_access)
-              else
-                tx_id
-              end
-            end.compact.to_set
-
-            # Filter to ONLY truly new transactions (skip duplicates)
-            # For transactions WITH IDs: skip if ID already exists (true duplicates)
-            # For transactions WITHOUT IDs: skip if content hash exists (prevents unbounded growth)
-            # Note: Pending transactions may update from pending→posted, but we treat them as immutable snapshots
-            new_transactions = transactions_data[:transactions].select do |tx|
-              next false unless tx.is_a?(Hash)
-
-              tx_with_access = tx.with_indifferent_access
-              tx_id = tx_with_access[:id]
-
-              if tx_id.blank?
-                # Use content hash to detect if we've already stored this exact transaction
-                content_hash = content_hash_for_transaction(tx_with_access)
-                !existing_ids.include?(content_hash)
-              else
-                # If has ID, only include if not already stored
-                !existing_ids.include?(tx_id)
-              end
-            end
-
-            if new_transactions.any?
-              Rails.logger.info "LunchflowItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions_data[:transactions].count - new_transactions.count} duplicates skipped) for account #{lunchflow_account.account_id}"
-              lunchflow_account.upsert_lunchflow_transactions_snapshot!(existing_transactions + new_transactions)
-            else
-              Rails.logger.info "LunchflowItem::Importer - No new transactions to store (all #{transactions_data[:transactions].count} were duplicates) for account #{lunchflow_account.account_id}"
-            end
+            Rails.logger.info "LunchflowItem::Importer - Merging #{incoming.count} fetched transactions into snapshot (#{existing_transactions.count} stored → #{merged.count}) for account #{lunchflow_account.account_id}"
+            lunchflow_account.upsert_lunchflow_transactions_snapshot!(merged)
           rescue => e
             Rails.logger.error "LunchflowItem::Importer - Failed to store transactions for account #{lunchflow_account.account_id}: #{e.message}"
             return { success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }
@@ -462,29 +425,54 @@ class LunchflowItem::Importer
     end
 
     def determine_sync_start_date(lunchflow_account)
-      # Check if this account has any stored transactions
-      # If not, treat it as a first sync for this account even if the item has been synced before
       has_stored_transactions = lunchflow_account.raw_transactions_payload.to_a.any?
 
-      if has_stored_transactions
-        # Account has been synced before, use item-level logic with buffer
-        # For subsequent syncs, fetch from last sync date with a buffer
-        if lunchflow_item.last_synced_at
-          lunchflow_item.last_synced_at - 7.days
-        else
-          # Fallback if item hasn't been synced but account has transactions
-          90.days.ago
-        end
-      else
-        # Account has no stored transactions - this is a first sync for this account
-        # Use account creation date or a generous historical window
+      unless has_stored_transactions
+        # First sync for this account: cap old connections at 90 days
         account_baseline = lunchflow_account.created_at || Time.current
-        first_sync_window = [ account_baseline - 7.days, 90.days.ago ].max
-
-        # Use the more recent of: (account created - 7 days) or (90 days ago)
-        # This caps old accounts at 90 days while respecting recent account creation dates
-        first_sync_window
+        return [ account_baseline - 7.days, 90.days.ago ].max
       end
+
+      # Re-fetch from the linked account's history so Lunch Flow merchant/description
+      # remaps overwrite stored snapshots, not only the last 7 days of new ids.
+      linked_start = lunchflow_account.current_account&.start_date&.beginning_of_day
+      history_start = linked_start || 2.years.ago
+      incremental_start = lunchflow_item.last_synced_at ? lunchflow_item.last_synced_at - 7.days : 90.days.ago
+      [ history_start, incremental_start ].min
+    end
+
+    # Incoming Lunch Flow payloads win on matching id (or content hash for blank ids)
+    # so a remapped merchant name updates the stored snapshot instead of being skipped.
+    def merge_lunchflow_transactions(existing, incoming)
+      by_key = {}
+      order = []
+
+      Array(existing).each do |tx|
+        next unless tx.is_a?(Hash)
+
+        record = tx.with_indifferent_access
+        key = lunchflow_transaction_identity_key(record)
+        by_key[key] = record
+        order << key
+      end
+
+      Array(incoming).each do |tx|
+        next unless tx.is_a?(Hash)
+
+        record = tx.with_indifferent_access
+        key = lunchflow_transaction_identity_key(record)
+        unless by_key.key?(key)
+          order << key
+        end
+        by_key[key] = record
+      end
+
+      order.map { |key| by_key[key] }
+    end
+
+    def lunchflow_transaction_identity_key(tx)
+      id = tx[:id]
+      id.blank? ? "hash:#{content_hash_for_transaction(tx)}" : "id:#{id}"
     end
 
     def handle_error(error_message)
