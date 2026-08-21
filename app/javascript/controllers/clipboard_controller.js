@@ -48,8 +48,7 @@ export default class extends Controller {
     // DS::Button renders its icon as an <svg> and its text in `span.truncate`,
     // so scope to that class rather than the first <span> in case an icon ever
     // ships wrapped in a span.
-    const label =
-      button?.querySelector("span.truncate") ?? button?.querySelector("span");
+    const label = button?.querySelector("span.truncate") ?? button?.querySelector("span");
     if (!label || !this.hasCopiedTextValue) return;
 
     clearTimeout(this.labelResetTimer);

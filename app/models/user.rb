@@ -253,7 +253,7 @@ class User < ApplicationRecord
     UserPurgeJob.perform_later(self)
   end
 
-  def transfer_to_family!(new_family, role: role)
+  def transfer_to_family!(new_family, role: self.role)
     transaction do
       lock!
       account_ids = owned_accounts.pluck(:id)

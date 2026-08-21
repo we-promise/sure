@@ -236,7 +236,7 @@ export default class extends Controller {
     this.colorsSectionTarget.classList.remove("hidden");
     this.hideFlex(this.paletteSectionTarget);
     this.pickerSectionTarget.classList.add("hidden");
-    this.updatePopupPosition();
+    this.updatePopupPosition()
     if (this.picker) {
       this.picker.destroyAndRemove();
     }

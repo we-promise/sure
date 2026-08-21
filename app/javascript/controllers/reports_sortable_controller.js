@@ -239,9 +239,7 @@ export default class extends Controller {
 
   getDragAfterElement(y) {
     const draggableElements = [
-      ...this.sectionTargets.filter(
-        (section) => section !== this.draggedElement,
-      ),
+      ...this.sectionTargets.filter((section) => section !== this.draggedElement),
     ];
 
     return draggableElements.reduce(

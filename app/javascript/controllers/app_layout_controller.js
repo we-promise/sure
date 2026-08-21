@@ -32,14 +32,8 @@ export default class extends Controller {
   }
 
   #toggleSidebarWidth(el, isCurrentlyOpen, side) {
-    const expandedClasses =
-      side === "left"
-        ? [...this.expandedSidebarClasses, "border-r"]
-        : [...this.expandedSidebarClasses, "border-l"];
-    const collapsedClasses =
-      side === "left"
-        ? [...this.collapsedSidebarClasses, "border-r-0"]
-        : [...this.collapsedSidebarClasses, "border-l-0"];
+    const expandedClasses = side === "left" ? [...this.expandedSidebarClasses, "border-r"] : [...this.expandedSidebarClasses, "border-l"];
+    const collapsedClasses = side === "left" ? [...this.collapsedSidebarClasses, "border-r-0"] : [...this.collapsedSidebarClasses, "border-l-0"];
 
     if (isCurrentlyOpen) {
       el.classList.remove(...expandedClasses);

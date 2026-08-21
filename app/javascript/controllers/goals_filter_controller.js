@@ -27,10 +27,7 @@ export default class extends Controller {
   connect() {
     this.#hydrateFromUrl();
     this.syncChipState();
-    if (
-      this.statusValue !== "all" ||
-      (this.hasInputTarget && this.inputTarget.value)
-    ) {
+    if (this.statusValue !== "all" || (this.hasInputTarget && this.inputTarget.value)) {
       this.filter();
     }
   }
@@ -105,9 +102,7 @@ export default class extends Controller {
       params.delete("q");
     }
     const qs = params.toString();
-    const url = qs
-      ? `${window.location.pathname}?${qs}`
-      : window.location.pathname;
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
     window.history.replaceState(window.history.state, "", url);
   }
 

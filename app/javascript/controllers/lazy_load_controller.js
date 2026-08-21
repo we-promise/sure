@@ -40,9 +40,7 @@ export default class extends Controller {
     this.loading = true;
 
     try {
-      const csrfToken = document.querySelector(
-        'meta[name="csrf-token"]',
-      )?.content;
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
       const response = await fetch(this.urlValue, {
         headers: {
           Accept: "text/html",
@@ -62,11 +60,7 @@ export default class extends Controller {
         }
         this.loadedValue = true;
       } else {
-        console.error(
-          "Lazy load failed:",
-          response.status,
-          response.statusText,
-        );
+        console.error("Lazy load failed:", response.status, response.statusText);
         this.showError(`Failed to load (${response.status})`);
       }
     } catch (error) {

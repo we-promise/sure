@@ -18,7 +18,10 @@ export default class extends Controller {
 
     this.segmentTargets.forEach((segment) => {
       const isActive = segment.dataset.provider === this.activeValue;
-      segment.classList.toggle("segmented-control__segment--active", isActive);
+      segment.classList.toggle(
+        "segmented-control__segment--active",
+        isActive,
+      );
       segment.setAttribute("aria-pressed", isActive.toString());
     });
 
