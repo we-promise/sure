@@ -54,11 +54,16 @@ class EntryTest < ActiveSupport::TestCase
     # emi_date_locked? (called once per row inside bulk_update!'s loop) used
     # to run `EmiPlan.find_by(id: emi_plan_id)` directly, bypassing the
     # `:originated_emi_plan` preload entirely and issuing one extra SELECT
-    # per installment. With the emi_plan association reused (and preloaded
-    # alongside originated_emi_plan), that per-row `emi_plans` lookup should
-    # no longer appear at all -- any remaining `from emi_plans` query here
-    # would mean the preload regressed back to a lazy per-row load.
-    emi_plan_lookups = queries.select { |sql| sql.downcase.include?("from \"emi_plans\"") || sql.downcase.include?("from emi_plans") }
-    assert_empty emi_plan_lookups, "Expected no per-row emi_plans queries, got:\n#{emi_plan_lookups.join("\n")}"
+    # per installment -- 3 rows here would mean 3 such queries. With the
+    # emi_plan association reused (and preloaded alongside
+    # originated_emi_plan), loading it should cost exactly one batched
+    # query total for all 3 rows, the same as the existing
+    # originated_emi_plan preload -- not one query per row. Match on the
+    # unquoted table name too since Rails' preloader can render this as
+    # either `emi_plans` or "emi_plans" depending on the query shape.
+    emi_plan_lookups = queries.select { |sql| sql.downcase.match?(/from\s+"?emi_plans"?/) }
+    assert_equal 2, emi_plan_lookups.size,
+      "Expected exactly 2 batched emi_plans queries (one per preloaded association, " \
+      "covering all 3 installment rows), not one query per row. Got:\n#{emi_plan_lookups.join("\n")}"
   end
 end

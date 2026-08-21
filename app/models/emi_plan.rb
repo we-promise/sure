@@ -96,7 +96,14 @@ class EmiPlan < ApplicationRecord
   # third decimal, so every rounding step in the schedule goes through this
   # instead. The live JS preview in emi_plan_controller.js mirrors this same
   # value (passed via the currency-precision data attribute) to stay in sync.
+  #
+  # Falls back to 2 when there's no entry yet to read a currency from (e.g.
+  # amortization_schedule called on an EmiPlan.new used purely for schedule
+  # math, before it's attached to a real purchase) -- matching the old
+  # hard-coded behavior for that case instead of raising.
   def currency_precision
+    return 2 if entry.nil?
+
     Money::Currency.new(currency).default_precision
   end
 
