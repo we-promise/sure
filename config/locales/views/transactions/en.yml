@@ -42,6 +42,8 @@ en:
       note_label: Notes
       note_placeholder: Enter a note
       create_tag: Create
+      create_merchant: Create
+      merchant_search_placeholder: Search or create merchant
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags

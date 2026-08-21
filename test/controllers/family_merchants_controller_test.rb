@@ -37,6 +37,27 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to family_merchants_path
   end
 
+  test "should create merchant as json" do
+    assert_difference("FamilyMerchant.count") do
+      post family_merchants_url(format: :json), params: { family_merchant: { name: "Quick Merchant" } }
+    end
+
+    assert_response :created
+    response_body = JSON.parse(response.body)
+    assert_equal "Quick Merchant", response_body["name"]
+    assert response_body["id"].present?
+    assert_includes response_body["html"], "data-merchant-select-target=\"option\""
+  end
+
+  test "should return json validation errors for duplicate merchant name" do
+    assert_no_difference("FamilyMerchant.count") do
+      post family_merchants_url(format: :json), params: { family_merchant: { name: @merchant.name } }
+    end
+
+    assert_response :unprocessable_entity
+    assert JSON.parse(response.body)["errors"].present?
+  end
+
   test "enhance enqueues job and redirects" do
     assert_enqueued_with(job: EnhanceProviderMerchantsJob) do
       post enhance_family_merchants_path
