@@ -439,19 +439,29 @@ class Entry < ApplicationRecord
   end
 
   # True while this entry's amount/date must stay locked because of an EMI
-  # plan that's still "live" — active, or foreclosed with posted
-  # installment history. Same bar as the model validations
+  # plan. Same bar as the model validations
   # (cannot_edit_emi_purchase_amount_or_date / ..._installment_...) and
-  # Transaction#cannot_change_kind_of_active_emi_entry. Once a plan is
-  # foreclosed with nothing ever posted, it has nothing left to desync, so
-  # this returns false and normal editing resumes.
+  # Transaction#cannot_change_kind_of_active_emi_entry.
+  #
+  # - Purchase entry: locked while the plan is active, or once foreclosed
+  #   if any installment ever posted (that history needs to stay
+  #   reconciled with the purchase). A plan foreclosed before anything
+  #   posted has nothing left to desync, so it unlocks.
+  # - Installment entry: locked while its plan is still active (matches
+  #   the schedule it was generated from), OR if it's already posted
+  #   (date <= today) — posted installments represent money that already
+  #   moved and stay locked even after the plan is foreclosed, same as
+  #   prevent_emi_installment_deletion protects them from deletion. A
+  #   never-posted installment on a foreclosed plan wouldn't normally
+  #   exist (foreclose! deletes remaining future installments), but the
+  #   date check covers it defensively either way.
   def emi_date_locked?
     if emi_purchase?
       plan = originated_emi_plan
       plan.active? || plan.posted_installments.exists?
     elsif emi_installment?
       plan = EmiPlan.find_by(id: emi_plan_id)
-      plan.present? && plan.active?
+      (plan.present? && plan.active?) || date <= Date.current
     else
       false
     end
