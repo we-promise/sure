@@ -46,14 +46,20 @@ class Provider::YaxiAdapter < Provider::Base
     } ]
   end
 
+  def self.configured?
+    build_provider.present?
+  end
+
   def self.build_provider
-    return nil unless configured?
+    return unless configuration&.configured?
 
     Provider::Yaxi.new(
       key_id: config_value(:key_id),
       secret: config_value(:secret),
       environment: config_value(:environment)
     )
+  rescue Provider::Yaxi::InvalidConfigurationError
+    nil
   end
 
   def provider_name

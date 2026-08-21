@@ -89,13 +89,14 @@ class YaxiItemsController < ApplicationController
     end
 
     def ensure_configured
-      return if Provider::YaxiAdapter.configured?
+      @yaxi_provider = Provider::YaxiAdapter.build_provider
+      return if @yaxi_provider
 
       redirect_to settings_providers_path, alert: t("yaxi_items.not_configured")
     end
 
     def yaxi_provider
-      @yaxi_provider ||= Provider::YaxiAdapter.build_provider
+      @yaxi_provider
     end
 
     def issue_ticket(service, data = nil)

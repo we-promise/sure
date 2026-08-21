@@ -41,6 +41,30 @@ class Provider::YaxiTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects a result signed with another secret" do
+    result = result_token(ticket_id: "ticket-1", data: [], secret: "x" * 32)
+
+    assert_raises(Provider::Yaxi::InvalidResultError) do
+      @provider.verify_result(result, expected_ticket_id: "ticket-1")
+    end
+  end
+
+  test "rejects a result signed by another key" do
+    result = result_token(ticket_id: "ticket-1", data: [], key_id: "api-key-other")
+
+    assert_raises(Provider::Yaxi::InvalidResultError) do
+      @provider.verify_result(result, expected_ticket_id: "ticket-1")
+    end
+  end
+
+  test "rejects an expired result" do
+    result = result_token(ticket_id: "ticket-1", data: [], expires_at: 1.minute.ago)
+
+    assert_raises(Provider::Yaxi::InvalidResultError) do
+      @provider.verify_result(result, expected_ticket_id: "ticket-1")
+    end
+  end
+
   test "rejects invalid configuration" do
     assert_raises(Provider::Yaxi::InvalidConfigurationError) do
       Provider::Yaxi.new(key_id: "", secret: Base64.strict_encode64("short"))
@@ -57,6 +81,34 @@ class Provider::YaxiTest < ActiveSupport::TestCase
     end
   end
 
+  test "adapter treats invalid Base64 as unconfigured" do
+    stub_adapter_configuration(secret: "not-base64")
+
+    assert_not Provider::YaxiAdapter.configured?
+    assert_nil Provider::YaxiAdapter.build_provider
+  end
+
+  test "adapter treats a short decoded secret as unconfigured" do
+    stub_adapter_configuration(secret: Base64.strict_encode64("short"))
+
+    assert_not Provider::YaxiAdapter.configured?
+    assert_nil Provider::YaxiAdapter.build_provider
+  end
+
+  test "adapter treats an unsupported environment as unconfigured" do
+    stub_adapter_configuration(environment: "integation")
+
+    assert_not Provider::YaxiAdapter.configured?
+    assert_nil Provider::YaxiAdapter.build_provider
+  end
+
+  test "adapter builds a provider from valid configuration" do
+    stub_adapter_configuration
+
+    assert Provider::YaxiAdapter.configured?
+    assert_instance_of Provider::Yaxi, Provider::YaxiAdapter.build_provider
+  end
+
   test "translates provider configuration for the current locale" do
     configuration = Provider::YaxiAdapter.configuration
     key_id = configuration.fields.find { |field| field.name == :key_id }
@@ -69,12 +121,19 @@ class Provider::YaxiTest < ActiveSupport::TestCase
 
   private
 
-    def result_token(ticket_id:, data:)
+    def stub_adapter_configuration(secret: @secret, environment: "integration")
+      Provider::YaxiAdapter.configuration.stubs(:configured?).returns(true)
+      Provider::YaxiAdapter.stubs(:config_value).with(:key_id).returns("api-key-test")
+      Provider::YaxiAdapter.stubs(:config_value).with(:secret).returns(secret)
+      Provider::YaxiAdapter.stubs(:config_value).with(:environment).returns(environment)
+    end
+
+    def result_token(ticket_id:, data:, secret: @secret_bytes, key_id: "api-key-test", expires_at: 5.minutes.from_now)
       JWT.encode(
-        { data: { data: data, ticketId: ticket_id, timestamp: Time.current.iso8601 }, exp: 5.minutes.from_now.to_i },
-        @secret_bytes,
+        { data: { data: data, ticketId: ticket_id, timestamp: Time.current.iso8601 }, exp: expires_at.to_i },
+        secret,
         "HS256",
-        { kid: "api-key-test" }
+        { kid: key_id }
       )
     end
 end

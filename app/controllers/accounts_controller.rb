@@ -116,6 +116,9 @@ class AccountsController < ApplicationController
   end
 
   def sync
+    yaxi_account = @account.account_providers.find_by(provider_type: "YaxiAccount")&.provider
+    return redirect_to refresh_yaxi_item_path(yaxi_account.yaxi_item) if yaxi_account
+
     unless @account.syncing?
       if @account.linked?
         # Sync all provider items for this account

@@ -12,12 +12,16 @@
   </div>
 </div>
 
-<section class="hidden bg-container shadow-border-xs rounded-xl p-5 space-y-4"
-         data-controller="yaxi-dialog"
-         data-action="yaxi-dialog:show@window->yaxi-dialog#show yaxi-dialog:hide@window->yaxi-dialog#hide"
-         data-yaxi-dialog-fallback-message-value="<%= t("yaxi_items.javascript.confirm_request") %>">
+<%= render DS::Card.new(
+      class: "hidden space-y-4",
+      data: {
+        controller: "yaxi-dialog",
+        action: "yaxi-dialog:show@window->yaxi-dialog#show yaxi-dialog:hide@window->yaxi-dialog#hide",
+        yaxi_dialog_fallback_message_value: t("yaxi_items.javascript.confirm_request")
+      }
+    ) do %>
   <p class="text-sm text-primary whitespace-pre-line" data-yaxi-dialog-target="message"></p>
-  <img class="hidden max-w-full mx-auto" alt="" data-yaxi-dialog-target="image">
+  <img class="hidden max-w-full mx-auto" alt="<%= t("yaxi_items.interaction.challenge_image") %>" data-yaxi-dialog-target="image">
   <div class="space-y-2" data-yaxi-dialog-target="options"></div>
   <div class="hidden" data-yaxi-dialog-target="fieldGroup">
     <label class="block text-sm font-medium text-primary" for="yaxi-dialog-field"><%= t("yaxi_items.interaction.field_label") %></label>
@@ -29,7 +33,7 @@
           data: { action: "yaxi-dialog#continue", yaxi_dialog_target: "continue" }
         ) %>
   </div>
-  <template>
+  <template data-yaxi-dialog-target="optionTemplate">
     <%= render DS::Button.new(text: "", type: "button", variant: "outline", class: "w-full justify-start") %>
   </template>
-</section>
+<% end %>

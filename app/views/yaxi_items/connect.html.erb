@@ -24,17 +24,20 @@
         message: t("yaxi_items.connect.security_message")
       ) %>
 
-  <section class="bg-container shadow-border-xs rounded-xl p-5 space-y-4"
-           data-controller="yaxi-search"
-           data-yaxi-search-base-url-value="<%= @base_url %>"
-           data-yaxi-search-ticket-value="<%= @ticket.token %>"
-           data-yaxi-search-messages-value="<%= json_escape(t("yaxi_items.javascript").to_json) %>">
+  <%= render DS::Card.new(
+        class: "space-y-4",
+        data: {
+          controller: "yaxi-search",
+          yaxi_search_base_url_value: @base_url,
+          yaxi_search_ticket_value: @ticket.token,
+          yaxi_search_messages_value: json_escape(t("yaxi_items.javascript").to_json)
+        }
+      ) do %>
     <form class="space-y-3" data-action="submit->yaxi-search#search">
       <label class="block text-sm font-medium text-primary" for="yaxi-bank-search"><%= t("yaxi_items.connect.bank_label") %></label>
       <%= render DS::SearchInput.new(
             id: "yaxi-bank-search",
             placeholder: t("yaxi_items.connect.bank_placeholder"),
-            aria_label: t("yaxi_items.connect.bank_label"),
             data: { yaxi_search_target: "input" }
           ) %>
       <div class="flex justify-end">
@@ -45,11 +48,15 @@
     <template data-yaxi-search-target="choiceTemplate">
       <%= render DS::Button.new(text: "", type: "button", variant: "outline", class: "w-full justify-start") %>
     </template>
-  </section>
+  <% end %>
 
-  <section class="hidden bg-container shadow-border-xs rounded-xl p-5 space-y-4"
-           data-controller="yaxi-credentials"
-           data-action="yaxi-search:selected@window->yaxi-credentials#selectBank">
+  <%= render DS::Card.new(
+        class: "hidden space-y-4",
+        data: {
+          controller: "yaxi-credentials",
+          action: "yaxi-search:selected@window->yaxi-credentials#selectBank"
+        }
+      ) do %>
     <div>
       <h2 class="font-medium text-primary" data-yaxi-credentials-target="bankName"></h2>
       <p class="mt-1 text-sm text-secondary" data-yaxi-credentials-target="advice"></p>
@@ -67,7 +74,7 @@
         <%= render DS::Button.new(text: t("yaxi_items.connect.connect"), type: "submit") %>
       </div>
     </form>
-  </section>
+  <% end %>
 
   <%= render "yaxi_items/interaction" %>
 </div>

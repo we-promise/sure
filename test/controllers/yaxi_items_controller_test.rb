@@ -10,9 +10,17 @@ class YaxiItemsControllerTest < ActionDispatch::IntegrationTest
       secret: Base64.strict_encode64(@secret_bytes),
       environment: "integration"
     )
-    Provider::YaxiAdapter.stubs(:configured?).returns(true)
     Provider::YaxiAdapter.stubs(:build_provider).returns(@provider)
     sign_in @user
+  end
+
+  test "redirects malformed provider configuration instead of raising" do
+    Provider::YaxiAdapter.stubs(:build_provider).returns(nil)
+
+    get new_yaxi_item_path
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("yaxi_items.not_configured"), flash[:alert]
   end
 
   test "accepts a verified accounts result and creates linked accounts" do
@@ -203,6 +211,36 @@ class YaxiItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal BigDecimal("42.50"), yaxi_account.reload.current_balance
+  end
+
+  test "rejects a balance whose currency does not match the connected account" do
+    item = @family.yaxi_items.create!(name: "YAXI Connection")
+    item.complete_connection!(
+      accounts_result: [
+        { iban: "DE123", currency: "EUR", displayName: "Euro account", type: "Current" },
+        { iban: "DE123", currency: "USD", displayName: "Dollar account", type: "Current" }
+      ],
+      connection_info: { "id" => "connection-test", "displayName" => "Test Bank" }
+    )
+    balances_ticket = @family.yaxi_tickets.create!(user: @user, service: "Balances", expires_at: 5.minutes.from_now)
+
+    post apply_refresh_yaxi_item_path(item), params: {
+      balances_ticket_id: balances_ticket.id,
+      balances_result_jwt: sign_result(
+        balances_ticket,
+        [
+          {
+            account: { iban: "DE123", currency: "GBP" },
+            balances: [ { amount: "42.50", currency: "GBP", balanceType: "Booked" } ]
+          }
+        ]
+      ),
+      transaction_results: []
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_nil balances_ticket.reload.consumed_at
+    assert item.yaxi_accounts.all? { |account| account.current_balance.nil? }
   end
 
   private

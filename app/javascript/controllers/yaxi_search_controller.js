@@ -24,14 +24,18 @@ export default class extends Controller {
       });
       this.renderBanks();
       this.dispatchStatus("clear");
-    } catch {
-      this.dispatchStatus("error", this.message("request_failed"));
+    } catch (error) {
+      this.dispatchStatus(
+        "error",
+        error?.userMessage || this.message("request_failed"),
+      );
     }
   }
 
   select(event) {
     const bank = this.banks[event.params.bankIndex];
-    if (bank) this.dispatch("selected", { detail: { bank }, prefix: "yaxi-search" });
+    if (bank)
+      this.dispatch("selected", { detail: { bank }, prefix: "yaxi-search" });
   }
 
   renderBanks() {
@@ -45,8 +49,9 @@ export default class extends Controller {
     }
 
     for (const [index, bank] of this.banks.entries()) {
-      const button = this.choiceTemplateTarget.content.firstElementChild.cloneNode(true);
-      button.textContent = bank.displayName;
+      const button =
+        this.choiceTemplateTarget.content.firstElementChild.cloneNode(true);
+      button.querySelector(".min-w-0.truncate").textContent = bank.displayName;
       button.dataset.action = "yaxi-search#select";
       button.dataset.yaxiSearchBankIndexParam = index;
       this.resultsTarget.append(button);
@@ -54,7 +59,9 @@ export default class extends Controller {
   }
 
   dispatchStatus(kind, value) {
-    window.dispatchEvent(new CustomEvent(`yaxi-status:${kind}`, { detail: { value } }));
+    window.dispatchEvent(
+      new CustomEvent(`yaxi-status:${kind}`, { detail: { value } }),
+    );
   }
 
   message(key) {

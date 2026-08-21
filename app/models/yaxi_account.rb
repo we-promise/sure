@@ -90,7 +90,7 @@ class YaxiAccount < ApplicationRecord
     end
   end
 
-  def import_transactions!(transactions)
+  def import_transactions!(transactions, from: nil)
     payloads = transactions.is_a?(Array) ? transactions : [ transactions ]
     flattened = payloads.flat_map do |transaction|
       data = transaction.with_indifferent_access
@@ -103,13 +103,20 @@ class YaxiAccount < ApplicationRecord
       end
     end
 
-    self.raw_transactions_payload = flattened
-    save!
+    transaction do
+      self.raw_transactions_payload = flattened
+      save!
 
-    adapter = Account::ProviderImportAdapter.new(account)
-    dated, undated = flattened.partition { |transaction| transaction_date(transaction.with_indifferent_access).present? }
-    capture_undated_transactions(undated) if undated.any?
-    dated.each { |transaction| import_transaction!(transaction.with_indifferent_access, adapter) }
+      adapter = Account::ProviderImportAdapter.new(account)
+      dated, undated = flattened.partition { |entry| transaction_date(entry.with_indifferent_access).present? }
+      capture_undated_transactions(undated) if undated.any?
+      current_pending_external_ids = dated.filter_map do |entry|
+        data = entry.with_indifferent_access
+        transaction_external_id(data) if data[:status].to_s == "Pending"
+      end
+      dated.each { |entry| import_transaction!(entry.with_indifferent_access, adapter) }
+      reconcile_pending_entries!(current_pending_external_ids, from: from) if from
+    end
   end
 
   private
@@ -157,6 +164,41 @@ class YaxiAccount < ApplicationRecord
         Array(data[:remittanceInformation]).join("|")
       ].join("\x1F")
       "yaxi_content_#{Digest::SHA256.hexdigest(digest_input)}"
+    end
+
+    def reconcile_pending_entries!(current_pending_external_ids, from:)
+      pending_entries = account.entries
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(source: "yaxi")
+        .where("(transactions.extra -> 'yaxi' ->> 'pending')::boolean = true")
+
+      missing = pending_entries.where(date: from..Date.current)
+      missing = missing.where.not(external_id: current_pending_external_ids) if current_pending_external_ids.any?
+      pruned_count = missing.count
+      missing.find_each(&:destroy!) if pruned_count.positive?
+
+      history_boundary = 90.days.ago.to_date
+      out_of_range = pending_entries.where("entries.date < ?", history_boundary).where(excluded: false)
+      excluded_count = out_of_range.update_all(excluded: true, updated_at: Time.current)
+      capture_pending_reconciliation(pruned_count, excluded_count, from) if pruned_count.positive? || excluded_count.positive?
+    end
+
+    def capture_pending_reconciliation(pruned_count, excluded_count, from)
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Reconciled stale YAXI pending transactions",
+        source: "YaxiAccount#import_transactions!",
+        provider_key: "yaxi",
+        family: yaxi_item.family,
+        account_provider: account_provider,
+        metadata: {
+          yaxi_account_id: id,
+          range_from: from.iso8601,
+          pruned_count: pruned_count,
+          excluded_out_of_range_count: excluded_count
+        }
+      )
     end
 
     def transaction_date(data)

@@ -41,6 +41,7 @@ en:
       working: Preparing secure connection…
       continue: Continue
       field_label: Authorization response
+      challenge_image: Bank authorization challenge
     item:
       provider_name: YAXI
       last_refreshed: Refreshed %{time} ago

@@ -1,4 +1,6 @@
 class YaxiRefresh
+  TRANSACTION_LOOKBACK = 3.days
+
   attr_reader :item, :user, :provider
 
   def initialize(item:, user:, provider: Provider::YaxiAdapter.build_provider)
@@ -10,12 +12,30 @@ class YaxiRefresh
   def preparation
     ActiveRecord::Base.transaction do
       accounts = refreshable_accounts.includes(:account).to_a
-      last_entry_dates = Entry.where(account_id: accounts.filter_map { |account| account.account&.id })
+      last_entry_dates = Entry.where(
+        account_id: accounts.filter_map { |account| account.account&.id },
+        source: "yaxi",
+        date: ..Date.current
+      )
         .group(:account_id)
         .maximum(:date)
+      oldest_pending_dates = Entry
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(
+          account_id: accounts.filter_map { |account| account.account&.id },
+          source: "yaxi",
+          date: ..Date.current
+        )
+        .where("(transactions.extra -> 'yaxi' ->> 'pending')::boolean = true")
+        .group(:account_id)
+        .minimum(:date)
 
       tickets = accounts.map do |account|
-        from = [ last_entry_dates[account.account&.id], 90.days.ago.to_date ].compact.max
+        earliest_date = 90.days.ago.to_date
+        last_entry_date = last_entry_dates[account.account&.id]
+        overlap_start = last_entry_date ? last_entry_date - TRANSACTION_LOOKBACK : earliest_date
+        oldest_pending_date = oldest_pending_dates[account.account&.id]
+        from = [ [ overlap_start, oldest_pending_date ].compact.min, earliest_date ].max
         ticket = issue_ticket("Transactions", account: account.reference, range: { from: from.iso8601 })
         { account_id: account.id, ticket_id: ticket.id, token: ticket.token }
       end
@@ -39,7 +59,8 @@ class YaxiRefresh
 
       apply_balances!(balances_result.fetch("data"))
       verified_transactions.each do |account, ticket, transactions|
-        account.import_transactions!(transactions)
+        range_from = Date.iso8601(ticket.service_data.fetch("range").fetch("from"))
+        account.import_transactions!(transactions, from: range_from)
         ticket.consume!
       end
       balances_ticket.consume!
@@ -110,6 +131,8 @@ class YaxiRefresh
       else
         item.yaxi_accounts.none
       end
-      candidates.find_by(currency: reference[:currency]) || candidates.first
+      return candidates.find_by(currency: reference[:currency]) if reference[:currency].present?
+
+      candidates.one? ? candidates.first : nil
     end
 end

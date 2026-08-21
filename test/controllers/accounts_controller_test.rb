@@ -258,6 +258,22 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(@account)
   end
 
+  test "syncing a YAXI account redirects to the interactive refresh" do
+    item = @user.family.yaxi_items.create!(name: "YAXI Connection", status: :good)
+    yaxi_account = item.yaxi_accounts.create!(
+      external_id: YaxiAccount.external_id_for(iban: "DE123", currency: "EUR"),
+      iban: "DE123",
+      name: "YAXI account",
+      currency: "EUR",
+      account_type: "Current"
+    )
+    yaxi_account.create_account_provider!(account: @account)
+
+    post sync_account_url(@account)
+
+    assert_redirected_to refresh_yaxi_item_path(item)
+  end
+
   test "syncing unlinked account calls account sync_later" do
     Account.any_instance.expects(:syncing?).returns(false)
     Account.any_instance.expects(:sync_later).once

@@ -41,6 +41,7 @@ de:
       working: Sichere Verbindung wird vorbereitet…
       continue: Weiter
       field_label: Autorisierungsantwort
+      challenge_image: Sicherheitsabfrage der Bank
     item:
       provider_name: YAXI
       last_refreshed: Vor %{time} aktualisiert

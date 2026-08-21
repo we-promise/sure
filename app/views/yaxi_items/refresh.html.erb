@@ -17,16 +17,16 @@
      data-yaxi-messages-value="<%= json_escape(t("yaxi_items.javascript").to_json) %>">
   <div>
     <h1 class="text-2xl font-medium text-primary"><%= t("yaxi_items.refresh.title") %></h1>
-    <p class="mt-1 text-sm text-secondary"><%= t("yaxi_items.refresh.description", bank: @yaxi_item.institution_name) %></p>
+    <p class="mt-1 text-sm text-secondary"><%= t("yaxi_items.refresh.description", bank: @yaxi_item.institution_name.presence || @yaxi_item.name) %></p>
   </div>
 
-  <div class="bg-container shadow-border-xs rounded-xl p-5 space-y-4">
+  <%= render DS::Card.new(class: "space-y-4") do %>
     <p class="text-sm text-secondary"><%= t("yaxi_items.refresh.browser_note") %></p>
     <%= render DS::Button.new(
           text: t("yaxi_items.refresh.start"),
           data: { action: "yaxi#startRefresh" }
         ) %>
-  </div>
+  <% end %>
 
   <%= render "yaxi_items/interaction" %>
 </div>

@@ -9,6 +9,12 @@ import {
   loadCredentials,
   storeCredentials,
 } from "routex-client";
+import {
+  YaxiFlow,
+  consumeYaxiRedirectState,
+  persistYaxiRedirectState,
+  yaxiErrorMessage,
+} from "services/yaxi_flow";
 
 export default class extends Controller {
   static values = {
@@ -26,17 +32,32 @@ export default class extends Controller {
   };
 
   connect() {
+    this.running = false;
     this.client = new RoutexClient({ url: new URL(this.baseUrlValue) });
     this.client.setRedirectUri(this.redirectUri());
+    this.flow = new YaxiFlow({
+      client: this.client,
+      responseTypes: { Result, Dialog, Redirect, RedirectHandle },
+      storeCredentials: (credentials) => this.storeCredentials(credentials),
+      submitResult: (body) => this.submitResult(body),
+      showDialog: (response, state) => this.showDialog(response, state),
+      followRedirect: (response, state) => this.followRedirect(response, state),
+      setBusy: (message) => this.setBusy(message),
+      message: (key) => this.message(key),
+    });
 
     if (
       new URL(window.location.href).searchParams.get("yaxi_redirect") === "1"
     ) {
+      this.running = true;
       this.resumeRedirect();
     }
   }
 
   async submitCredentials(event) {
+    if (this.running) return;
+    this.running = true;
+
     const { credentials, connectionInfo } = event.detail;
     const state = {
       stage: "connect",
@@ -49,7 +70,7 @@ export default class extends Controller {
 
     this.setBusy(this.message("connecting"));
     try {
-      await this.invoke(state, {
+      await this.flow.invoke(state, {
         fields: [
           AccountField.Iban,
           AccountField.Number,
@@ -69,6 +90,9 @@ export default class extends Controller {
   }
 
   async startRefresh() {
+    if (this.running) return;
+    this.running = true;
+
     try {
       const stored = loadCredentials(this.storageIdValue, this.secretBytes());
       if (!stored?.credentials) {
@@ -89,114 +113,10 @@ export default class extends Controller {
       };
 
       this.setBusy(this.message("refreshing_balances"));
-      await this.invoke(state, { accounts: this.accountReferencesValue });
+      await this.flow.invoke(state, { accounts: this.accountReferencesValue });
     } catch (error) {
       this.showError(error);
     }
-  }
-
-  async invoke(state, extra = {}) {
-    this.pendingState = { ...state, extra };
-    const credentials = this.hydrateCredentials(state.credentials);
-    const session = state.session ? new Uint8Array(state.session) : undefined;
-    let response;
-
-    if (state.operation === "accounts") {
-      response = await this.client.accounts({
-        credentials,
-        session,
-        recurringConsents: true,
-        ticket: state.ticket,
-        ...extra,
-      });
-    } else if (state.operation === "balances") {
-      response = await this.client.balances({
-        credentials,
-        session,
-        recurringConsents: true,
-        ticket: state.ticket,
-        ...extra,
-      });
-    } else {
-      response = await this.client.transactions({
-        credentials,
-        session,
-        recurringConsents: true,
-        ticket: state.ticket,
-      });
-    }
-
-    await this.advance(response, this.pendingState);
-  }
-
-  async advance(response, state) {
-    if (response instanceof Result) return this.handleResult(response, state);
-    if (response instanceof Dialog) {
-      this.clearBusy();
-      this.pendingState = state;
-      this.pendingDialog = response;
-      window.dispatchEvent(new CustomEvent("yaxi-dialog:show", { detail: { response } }));
-      return;
-    }
-    if (response instanceof Redirect || response instanceof RedirectHandle)
-      return this.followRedirect(response, state);
-    throw new Error(this.message("unsupported_response"));
-  }
-
-  async handleResult(response, state) {
-    if (response.session) state.session = Array.from(response.session);
-    if (response.connectionData)
-      state.credentials.connectionData = Array.from(response.connectionData);
-
-    if (state.stage === "connect") {
-      storeCredentials(this.storageIdValue, this.secretBytes(), {
-        credentials: state.credentials,
-      });
-      return this.submitResult({
-        ticket_id: state.ticketId,
-        result_jwt: response.jwt,
-        connection_info: state.connectionInfo,
-      });
-    }
-
-    if (state.stage === "refresh_balances") {
-      state.balancesResultJwt = response.jwt;
-      return this.startTransaction(state);
-    }
-
-    state.transactionResults.push({
-      account_id: state.currentTransaction.account_id,
-      ticket_id: state.currentTransaction.ticket_id,
-      result_jwt: response.jwt,
-    });
-    state.transactionIndex += 1;
-    return this.startTransaction(state);
-  }
-
-  async startTransaction(state) {
-    storeCredentials(this.storageIdValue, this.secretBytes(), {
-      credentials: state.credentials,
-    });
-    const next = state.transactionTickets[state.transactionIndex];
-    if (!next) {
-      return this.submitResult({
-        balances_ticket_id: state.balancesTicketId,
-        balances_result_jwt: state.balancesResultJwt,
-        transaction_results: state.transactionResults,
-      });
-    }
-
-    state.stage = "refresh_transactions";
-    state.operation = "transactions";
-    state.ticket = next.token;
-    state.ticketId = next.ticket_id;
-    state.currentTransaction = next;
-    this.setBusy(
-      this.message("refreshing_transactions")
-        .replace("__CURRENT__", state.transactionIndex + 1)
-        .replace("__TOTAL__", state.transactionTickets.length),
-    );
-    return this.invoke(state);
   }
 
   async respondToDialog(event) {
@@ -221,21 +141,19 @@ export default class extends Controller {
         kind,
         options,
       );
-      await this.advance(response, state);
+      await this.flow.advance(response, state);
     } catch (error) {
       this.showError(error);
     }
   }
 
   async followRedirect(response, state) {
-    const context = Array.from(response.context);
-    storeCredentials(this.storageIdValue, this.secretBytes(), {
-      credentials: state.credentials,
-    });
-    const { credentials, ...resumableState } = state;
-    sessionStorage.setItem(
+    this.storeCredentials(state.credentials);
+    persistYaxiRedirectState(
+      sessionStorage,
       this.redirectStorageKey(),
-      JSON.stringify({ ...resumableState, redirectContext: context }),
+      state,
+      response.context,
     );
     const url =
       response instanceof RedirectHandle
@@ -249,13 +167,14 @@ export default class extends Controller {
   }
 
   async resumeRedirect() {
-    const serialized = sessionStorage.getItem(this.redirectStorageKey());
-    if (!serialized)
-      return this.showError(new Error(this.message("redirect_missing")));
-    sessionStorage.removeItem(this.redirectStorageKey());
-
     try {
-      const state = JSON.parse(serialized);
+      const state = consumeYaxiRedirectState(
+        sessionStorage,
+        this.redirectStorageKey(),
+      );
+      if (!state)
+        return this.showError(new Error(this.message("redirect_missing")));
+
       const stored = loadCredentials(this.storageIdValue, this.secretBytes());
       if (!stored?.credentials)
         throw new Error(this.message("credentials_missing"));
@@ -265,7 +184,7 @@ export default class extends Controller {
         ticket: state.ticket,
         context: new Uint8Array(state.redirectContext),
       });
-      await this.advance(response, state);
+      await this.flow.advance(response, state);
     } catch (error) {
       this.showError(error);
     }
@@ -300,19 +219,24 @@ export default class extends Controller {
       if (!response.ok)
         throw new Error(payload.error || this.message("save_failed"));
       if (!payload.redirect_url) throw new Error(this.message("save_failed"));
+      this.running = false;
       window.location.assign(payload.redirect_url);
     } catch (error) {
       this.showError(error);
     }
   }
 
-  hydrateCredentials(credentials) {
-    return {
-      ...credentials,
-      connectionData: credentials.connectionData
-        ? new Uint8Array(credentials.connectionData)
-        : undefined,
-    };
+  storeCredentials(credentials) {
+    storeCredentials(this.storageIdValue, this.secretBytes(), { credentials });
+  }
+
+  showDialog(response, state) {
+    this.clearBusy();
+    this.pendingState = state;
+    this.pendingDialog = response;
+    window.dispatchEvent(
+      new CustomEvent("yaxi-dialog:show", { detail: { response } }),
+    );
   }
 
   secretBytes() {
@@ -335,7 +259,9 @@ export default class extends Controller {
   }
 
   setBusy(message) {
-    window.dispatchEvent(new CustomEvent("yaxi-status:busy", { detail: { value: message } }));
+    window.dispatchEvent(
+      new CustomEvent("yaxi-status:busy", { detail: { value: message } }),
+    );
   }
 
   clearBusy() {
@@ -343,11 +269,17 @@ export default class extends Controller {
   }
 
   showError(error) {
+    this.running = false;
     this.clearBusy();
     window.dispatchEvent(new CustomEvent("yaxi-dialog:hide"));
-    const displayedError = error.userMessage || this.message("request_failed");
-    window.dispatchEvent(new CustomEvent("yaxi-status:error", {
-      detail: { value: displayedError },
-    }));
+    const displayedError = yaxiErrorMessage(
+      error,
+      this.message("request_failed"),
+    );
+    window.dispatchEvent(
+      new CustomEvent("yaxi-status:error", {
+        detail: { value: displayedError },
+      }),
+    );
   }
 }

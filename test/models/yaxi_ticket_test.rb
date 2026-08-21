@@ -2,8 +2,10 @@ require "test_helper"
 
 class YaxiTicketTest < ActiveSupport::TestCase
   test "does not persist a ticket when signing fails" do
-    provider = mock
-    provider.stubs(:issue_ticket).raises(Provider::Yaxi::InvalidConfigurationError, "signing failed")
+    provider = OpenStruct.new
+    provider.define_singleton_method(:issue_ticket) do |**|
+      raise Provider::Yaxi::InvalidConfigurationError, "signing failed"
+    end
     Provider::YaxiAdapter.stubs(:build_provider).returns(provider)
     user = users(:family_member)
 
