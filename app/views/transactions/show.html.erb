@@ -398,25 +398,7 @@
             </div>
           <% end %>
           <!-- Mark as Recurring Form -->
-          <div class="flex items-center justify-between gap-2 p-3">
-            <div class="text-sm space-y-1">
-              <h4 class="text-primary"><%= t(".mark_recurring_title") %></h4>
-              <p class="<%= @mark_recurring_subtitle_class %>">
-                <%= @mark_recurring_subtitle %>
-              </p>
-            </div>
-            <%= render DS::Button.new(
-              text: t(".mark_recurring"),
-              variant: "outline",
-              icon: "repeat",
-              href: @mark_recurring_href,
-              method: :post,
-              frame: "_top",
-              disabled: @mark_recurring_disabled,
-              title: @mark_recurring_title,
-              class: @mark_recurring_button_class
-            ) %>
-          </div>
+          <%= render "transactions/mark_recurring", entry: @entry %>
         <% end %>
         <%# Delete Transaction Form - hidden for split children %>
         <% unless @entry.split_child? %>
