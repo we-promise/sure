@@ -505,6 +505,67 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
   end
 
+  test "index shows Pluggy-linked accounts even when they are the only accounts" do
+    # Reproduces the user's complaint: "as contas ja linkadas não estão
+    # aparecendo em Geral > Contas." A Pluggy-only family — an admin user, a
+    # PluggyItem whose pluggy_accounts are linked to real Accounts via
+    # AccountProvider, and NO manual accounts and NO other-provider items. The
+    # empty-state guard in index.html.erb omits @pluggy_items from its chain,
+    # so with every other provider list empty the guard evaluated true and
+    # rendered "_empty" instead of the @pluggy_items branch — hiding the linked
+    # Pluggy accounts on /accounts.
+    sign_in users(:empty)
+    family = users(:empty).family
+
+    # The shared "empty" family ships three stray provider-item fixtures
+    # (ibkr_items.empty_item, indexa_capital_items.configured_with_credentials,
+    # snaptrade_items.pending_registration_item). On their own they make the
+    # empty-state guard FALSE, masking the bug. Destroy them so the family is
+    # genuinely provider-empty except for the Pluggy connection below.
+    [ IbkrItem, IndexaCapitalItem, SnaptradeItem ].each do |klass|
+      klass.where(family: family).destroy_all
+    end
+
+    pluggy_item = PluggyItem.create!(
+      family: family,
+      name: "Pluggy Connection",
+      client_id: "client-id",
+      client_secret: "client-secret"
+    )
+    pluggy_account = pluggy_item.pluggy_accounts.create!(
+      pluggy_account_id: "pa-linked-only-test",
+      name: "Linked Pluggy Acct",
+      currency: "BRL"
+    )
+    linked_account = Account.create!(
+      family: family,
+      owner: users(:empty),
+      name: "Linked Only Test Account",
+      balance: 0,
+      currency: "BRL",
+      accountable: Depository.new
+    )
+    AccountProvider.create!(account: linked_account, provider: pluggy_account)
+
+    get accounts_path
+
+    assert_response :success
+    # DIAGNOSTIC: dump the rendered body so we can read exactly what rendered
+    # (resolves whether the empty-state guard fired vs. the account_groups
+    # partial simply not rendering the linked account).
+    File.write("tmp/test_accounts_index_body.html", @response.body)
+    # The user's actual complaint: the LINKED ACCOUNT must appear on /accounts.
+    # (Distinct name from the pluggy_account so this proves the Account — not
+    # the Pluggy connection header — renders.)
+    assert_includes @response.body, "Linked Only Test Account"
+    # The pluggy_item partial wrapper renders — the connection is shown.
+    assert_select "##{dom_id(pluggy_item)}", count: 1
+    # The empty-state partial must NOT render on top of linked Pluggy accounts.
+    # (Use the resolved i18n text instead of the bracket-Tailwind class
+    # selector, which assert_select matches unreliably.)
+    assert_select "p", text: I18n.t("accounts.empty.no_accounts"), count: 0
+  end
+
   # Regression for #2516: the account sidebar fragment cache renders DS::* view
   # components, which Rails' ERB dependency tracker mis-parses as a bogus "Ds/D"
   # template dependency. With automatic digesting enabled that logged

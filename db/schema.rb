@@ -1553,6 +1553,57 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_18_060353) do
     t.index ["plaid_id"], name: "index_plaid_items_on_plaid_id", unique: true
   end
 
+  create_table "pluggy_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_number"
+    t.string "account_status"
+    t.string "account_type"
+    t.boolean "activities_fetch_pending", default: false, null: false
+    t.decimal "cash_balance", precision: 19, scale: 4
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.jsonb "institution_metadata"
+    t.datetime "last_activities_sync"
+    t.datetime "last_holdings_sync"
+    t.string "name"
+    t.string "pluggy_account_id"
+    t.uuid "pluggy_item_id", null: false
+    t.string "provider"
+    t.jsonb "raw_activities_payload", default: [], null: false
+    t.jsonb "raw_holdings_payload", default: [], null: false
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.date "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["pluggy_account_id"], name: "index_pluggy_accounts_on_pluggy_account_id"
+    t.index ["pluggy_item_id"], name: "index_pluggy_accounts_on_pluggy_item_id"
+    t.index ["pluggy_item_id", "pluggy_account_id"], name: "index_pluggy_accounts_on_item_and_account_id", unique: true
+  end
+
+  create_table "pluggy_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "client_id"
+    t.string "client_secret"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.string "name"
+    t.boolean "pending_account_setup", default: false
+    t.string "pluggy_item_id"
+    t.jsonb "raw_institution_payload"
+    t.jsonb "raw_payload"
+    t.boolean "scheduled_for_deletion", default: false
+    t.string "status", default: "good"
+    t.datetime "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_pluggy_items_on_family_id"
+    t.index ["pluggy_item_id"], name: "index_pluggy_items_on_pluggy_item_id"
+    t.index ["status"], name: "index_pluggy_items_on_status"
+  end
+
   create_table "properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -2431,6 +2482,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_18_060353) do
   add_foreign_key "oidc_identities", "users"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
+  add_foreign_key "pluggy_accounts", "pluggy_items"
+  add_foreign_key "pluggy_items", "families"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"
   add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade
