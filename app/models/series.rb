@@ -56,11 +56,14 @@ class Series
     @favorable_direction = favorable_direction
   end
 
+  # Rounded like the serialized values: this trend is only ever rendered next to
+  # them, so a change between two amounts that print identically has to read as
+  # no change here too.
   def trend
     return nil if values.blank?
     @trend ||= Trend.new(
-      current: values.last&.value,
-      previous: values.first&.value,
+      current: display_amount(values.last&.value),
+      previous: display_amount(values.first&.value),
       favorable_direction: favorable_direction
     )
   end
@@ -70,7 +73,7 @@ class Series
       start_date: start_date,
       end_date: end_date,
       interval: interval,
-      trend: display_trend(trend),
+      trend: trend,
       values: values.map do |v|
         { date: v.date, date_formatted: v.date_formatted, value: display_amount(v.value), trend: display_trend(v.trend) }
       end
