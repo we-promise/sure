@@ -50,6 +50,16 @@ class EntryReconciliationTest < ActiveSupport::TestCase
     assert_nil entry.reconciled_by_statement_id
   end
 
+  test "an entry cannot cite a statement without being reconciled" do
+    entry = create_transaction(account: @account)
+    entry.reconciled_by_statement = @statement
+
+    # Mirrors chk_entries_reconciled_at_present_when_statement_set: the model
+    # rejects it before the database constraint is reached.
+    assert_not entry.valid?
+    assert_predicate entry.errors[:reconciled_at], :any?
+  end
+
   test "scopes partition reconciled from unreconciled" do
     reconciled = create_transaction(account: @account)
     unreconciled = create_transaction(account: @account)

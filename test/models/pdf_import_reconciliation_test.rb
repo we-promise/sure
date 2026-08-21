@@ -100,6 +100,20 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal 1, @import.reload.rows_count
   end
 
+  test "a row whose amount cannot be parsed is offered with its raw value intact" do
+    @import.update!(extracted_data: { "transactions" => [
+      { "date" => @date.to_s, "amount" => "not-a-number", "name" => "Mystery" }
+    ] })
+
+    @import.generate_rows_from_extracted_data
+
+    row = @import.reload.rows.sole
+    assert_equal 1, @import.rows_count
+    # Stored verbatim rather than coerced to 0, so the review step shows the user
+    # what the statement actually said.
+    assert_equal "not-a-number", row.amount
+  end
+
   test "reassigning the account re-judges the rows and releases the old reconciliation" do
     other = @family.accounts.create!(
       name: "Second Checking", balance: 0, currency: "USD", accountable: Depository.new
