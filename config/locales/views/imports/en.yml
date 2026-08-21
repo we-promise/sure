@@ -285,6 +285,7 @@ en:
       merchant_website: "Website URL"
     update:
       account_saved: "Account saved."
+      account_locked: "This import has already been published, so its account can't be changed. Revert it first if you need to import it somewhere else."
       invalid_account: "Account not found."
     publish:
       started: "Your import has started in the background."

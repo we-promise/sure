@@ -152,8 +152,14 @@ class PdfImport < Import
     end
   end
 
+  # Re-targeting is destructive: it releases the statement's evidence on the
+  # account being left and rebuilds the rows from scratch. Returns false rather
+  # than doing any of that when the import is no longer re-targetable, so a
+  # back-button or replayed PATCH cannot unwind a published import.
   def assign_account!(account)
-    transaction do
+    with_lock do
+      return false unless reassignable?
+
       previous_account_id = account_id
       update!(account: account)
 
@@ -162,7 +168,7 @@ class PdfImport < Import
         statement.link_to_account!(account) if statement.account_id != account.id
       end
 
-      next if previous_account_id == account.id
+      next true if previous_account_id == account.id
 
       # Matching is per-account, so anything reconciled against the old account
       # is no longer evidence-backed, and the rows have to be judged again.
@@ -172,7 +178,18 @@ class PdfImport < Import
         sync_mappings
         refresh_status_after_regeneration!
       end
+
+      true
     end
+  end
+
+  # A published import's entries already live in the account it was published
+  # to, and a running job owns the record while it is importing or reverting.
+  # An import that reconciled every line is still re-targetable: it is complete
+  # but committed nothing of its own, and the user may well have picked the
+  # wrong account.
+  def reassignable?
+    !data_committed? && !importing? && !reverting?
   end
 
   def pdf_uploaded?
@@ -498,6 +515,29 @@ class PdfImport < Import
       )
     end
 
+    # Reverting a statement import unwinds its evidence as well as its rows. The
+    # entries it created are already destroyed by the time this runs; the ones it
+    # only matched keep marks this statement no longer backs. Releasing and then
+    # regenerating re-judges every statement line against what the account
+    # actually holds now, so the review screen offers exactly what is missing.
+    def revert_derived_state!
+      release_reconciliations!(account_id)
+      return unless has_extracted_transactions?
+
+      generate_rows_from_extracted_data
+      # A line that matched at publish time carried no row and so no mapping.
+      # If it no longer matches it is a row again, and needs one.
+      sync_mappings
+    end
+
+    # A statement whose every line still matches something -- a provider-synced
+    # account, say -- reverts to zero rows. Returning that to pending renders the
+    # processing screen with no way out, so an import with nothing left to offer
+    # finishes as complete, the same way refresh_status_after_regeneration! ends
+    # a fully reconciled import.
+    def status_after_revert
+      statement_with_transactions? && rows_count > 0 ? :pending : :complete
+    end
 
     def format_date_for_import(date_str)
       return "" if date_str.blank?

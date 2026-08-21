@@ -185,7 +185,8 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     other = @family.accounts.create!(
       name: "Untouched Checking", balance: 0, currency: "USD", accountable: Depository.new
     )
-    @import.assign_account!(other)
+    # complete but nothing of its own committed: still the user's to re-target.
+    assert @import.assign_account!(other)
 
     @import.reload
     assert_equal 1, @import.rows_count
@@ -243,6 +244,91 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     on_other.reload
     assert on_other.reconciled?, "another account's evidence must survive"
     assert_equal @statement.id, on_other.reconciled_by_statement_id
+  end
+
+  test "reverting a fully reconciled import completes it rather than stranding it at pending" do
+    create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    @import.update!(status: :complete)
+    assert_equal 0, @import.reload.rows_count
+
+    @import.revert
+
+    @import.reload
+    assert_nil @import.error
+    # pending with no rows renders the processing screen with no way back out.
+    assert @import.complete?, "expected complete, got #{@import.status}"
+    assert_equal 0, @import.rows_count
+  end
+
+  test "reverting an import puts the transactions it created back on offer" do
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    assert_equal 1, @import.reload.rows_count
+
+    assert_difference -> { @account.entries.count }, 1 do
+      @import.import!
+    end
+    @import.update!(status: :complete)
+
+    assert_difference -> { @account.entries.count }, -1 do
+      @import.revert
+    end
+
+    @import.reload
+    assert @import.pending?, "expected pending, got #{@import.status}"
+    assert_equal 1, @import.rows_count, "the created entry is gone, so its statement line is new again"
+  end
+
+  test "reverting releases evidence from an entry the statement no longer matches" do
+    drifted = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    assert drifted.reload.reconciled?
+    @import.update!(status: :complete)
+
+    # Corrected after the fact, so the statement line no longer describes it.
+    drifted.update!(amount: 75)
+
+    @import.revert
+
+    drifted.reload
+    assert_not drifted.reconciled?, "a statement that no longer matches must stop claiming the entry"
+    assert_nil drifted.reconciled_by_statement_id
+    assert_equal 1, @import.reload.rows_count
+    assert @import.pending?, "expected pending, got #{@import.status}"
+  end
+
+  test "reassigning a published import is refused rather than half-unwinding it" do
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    @import.import!
+    @import.update!(status: :complete)
+
+    other = @family.accounts.create!(
+      name: "Wrong Turn Checking", balance: 0, currency: "USD", accountable: Depository.new
+    )
+
+    assert_not @import.assign_account!(other), "a replayed PATCH must not unwind a published import"
+
+    @import.reload
+    assert_equal @account, @import.account
+    assert_equal 1, @import.rows_count, "the rows recording what was published survive"
+    assert_equal 1, @import.entries.count
+  end
+
+  test "reassigning is refused while a job still owns the record" do
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    @import.update!(status: :importing)
+
+    other = @family.accounts.create!(
+      name: "Mid Flight Checking", balance: 0, currency: "USD", accountable: Depository.new
+    )
+
+    assert_not @import.assign_account!(other)
+    assert_equal @account, @import.reload.account
   end
 
   private

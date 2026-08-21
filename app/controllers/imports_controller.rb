@@ -16,7 +16,17 @@ class ImportsController < ApplicationController
       end
       return if @import.account_statement.present? && !require_account_permission!(account)
 
-      @import.is_a?(PdfImport) ? @import.assign_account!(account) : @import.update!(account: account)
+      if @import.is_a?(PdfImport)
+        # Refused for an import whose data already landed -- see
+        # PdfImport#reassignable?. A replayed or back-button PATCH gets the
+        # explanation rather than a silent unwind.
+        unless @import.assign_account!(account)
+          redirect_back_or_to import_path(@import), alert: t("imports.update.account_locked")
+          return
+        end
+      else
+        @import.update!(account: account)
+      end
     end
 
     redirect_to import_path(@import), notice: t("imports.update.account_saved", default: "Account saved.")
