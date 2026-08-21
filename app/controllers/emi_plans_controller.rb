@@ -34,7 +34,14 @@ class EmiPlansController < ApplicationController
     # individual field messages (e.g. tenure/interest_rate bounds) already
     # come from Rails' own i18n-backed error messages, so join those
     # directly instead of using the English-prefixed exception message.
-    redirect_back_or_to transactions_path, alert: e.record.errors.full_messages.to_sentence
+    #
+    # Falls back to the localized not_convertible message when there are no
+    # field errors to join: EmiPlan.build!'s locked eligibility recheck
+    # raises RecordInvalid.new(entry) with only a message string, never
+    # actually added to entry.errors, so full_messages is empty there and
+    # to_sentence would otherwise redirect with a blank alert.
+    alert = e.record.errors.full_messages.to_sentence.presence || t("emi_plans.new.not_convertible")
+    redirect_back_or_to transactions_path, alert: alert
   rescue ActiveRecord::RecordNotUnique
     # EmiPlan.build! locks entry and re-checks eligibility under that lock,
     # so this shouldn't normally fire for a same-entry double-submit

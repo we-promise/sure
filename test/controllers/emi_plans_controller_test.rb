@@ -61,6 +61,27 @@ class EmiPlansControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("emi_plans.new.not_convertible"), flash[:alert]
   end
 
+  test "create falls back to the not_convertible message when the locked recheck raises with no field errors" do
+    # EmiPlan.build! re-checks eligibility after locking the entry (to close
+    # a concurrent-request race -- see its comment), and raises
+    # ActiveRecord::RecordInvalid.new(entry) there with only a message
+    # string, never actually added to entry.errors. That means
+    # e.record.errors.full_messages is empty for this specific failure path,
+    # which previously produced a blank flash alert. Simulate it here by
+    # stubbing build! to raise exactly that shape of error, since actually
+    # reproducing the race in a single-threaded test isn't practical.
+    EmiPlan.stubs(:build!).raises(
+      ActiveRecord::RecordInvalid.new(@entry), I18n.t("emi_plans.new.not_convertible")
+    )
+
+    post transaction_emi_plan_path(@entry), params: {
+      emi_plan: { tenure_months: 6, interest_rate: 0, processing_fee: 0 }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("emi_plans.new.not_convertible"), flash[:alert]
+  end
+
   test "show renders the plan schedule" do
     post transaction_emi_plan_path(@entry), params: {
       emi_plan: { tenure_months: 6, interest_rate: 0, processing_fee: 0 }
