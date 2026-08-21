@@ -97,6 +97,37 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2025-03-26", JSON.parse(response.body).dig("result", "protocolVersion")
   end
 
+  test "maps unknown OAuth scopes to read_write for MCP clients" do
+    post "/register",
+      params: {
+        client_name: "Cursor",
+        redirect_uris: [ "cursor://anysphere.cursor-mcp/oauth/callback" ],
+        token_endpoint_auth_method: "none"
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
+
+    sign_in(@user)
+    verifier = SecureRandom.urlsafe_base64(64)
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+
+    post "/oauth/authorize", params: {
+      client_id: app.uid,
+      redirect_uri: app.redirect_uri,
+      response_type: "code",
+      scope: "openid",
+      code_challenge: challenge,
+      code_challenge_method: "S256"
+    }
+
+    assert_response :redirect
+    refute_includes response.location.to_s, "error=", "Unknown MCP scopes should be mapped, not rejected"
+    code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
+    assert code.present?
+  end
+
   test "rejects token with read-only scope" do
     app = Doorkeeper::Application.create!(
       name: "Test MCP Client #{SecureRandom.hex(4)}",

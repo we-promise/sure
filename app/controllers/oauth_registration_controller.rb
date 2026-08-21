@@ -1,5 +1,6 @@
 class OauthRegistrationController < ApplicationController
   LOOPBACK_HOSTS = [ "localhost", "127.0.0.1", "::1" ].freeze
+  CURSOR_REDIRECT_HOST = "anysphere.cursor-mcp"
 
   skip_authentication
   skip_before_action :verify_authenticity_token
@@ -84,11 +85,17 @@ class OauthRegistrationController < ApplicationController
 
       scheme = uri.scheme.to_s.downcase
       return true if scheme == "https"
+      return true if cursor_native_redirect?(uri)
       return false unless scheme == "http"
 
       host = uri.host.downcase.delete_prefix("[").delete_suffix("]")
       LOOPBACK_HOSTS.include?(host)
     rescue URI::InvalidURIError
       false
+    end
+
+    def cursor_native_redirect?(uri)
+      uri.scheme.to_s.downcase == "cursor" &&
+        uri.host.to_s.downcase == CURSOR_REDIRECT_HOST
     end
 end
