@@ -258,7 +258,9 @@ class User < ApplicationRecord
       lock!
       account_ids = owned_accounts.pluck(:id)
 
+      ensure_provider_items_transferable!(account_ids)
       Account.where(id: account_ids).update_all(family_id: new_family.id) if account_ids.any?
+      transfer_account_family_data!(account_ids, new_family)
       AccountShare.where(account_id: account_ids).delete_all if account_ids.any?
       account_shares.delete_all
 
@@ -267,6 +269,46 @@ class User < ApplicationRecord
       Account.where(id: account_ids).find_each { |a| a.auto_share_with_family! } if new_family.share_all_by_default?
       new_family.auto_share_existing_accounts_with(self)
     end
+  end
+
+  def ensure_provider_items_transferable!(account_ids)
+    provider_items_for_accounts(account_ids).each do |item|
+      linked_account_ids = linked_account_ids_for_provider_item(item)
+      next if linked_account_ids.empty? || (linked_account_ids - account_ids).empty?
+
+      errors.add(:base, :provider_item_has_other_accounts)
+      raise ActiveRecord::RecordInvalid, self
+    end
+  end
+
+  def transfer_account_family_data!(account_ids, new_family)
+    return if account_ids.empty?
+
+    provider_items_for_accounts(account_ids).each do |item|
+      item.update!(family: new_family) if item.respond_to?(:family=)
+    end
+
+    AccountStatement.where(account_id: account_ids).update_all(family_id: new_family.id, updated_at: Time.current)
+  end
+
+  def provider_items_for_accounts(account_ids)
+    return [] if account_ids.empty?
+
+    providers = AccountProvider.where(account_id: account_ids).includes(:provider).filter_map(&:provider)
+    providers += Account.where(id: account_ids).includes(:plaid_account, :simplefin_account).flat_map { |account| [ account.plaid_account, account.simplefin_account ] }.compact
+
+    providers.filter_map { |provider| provider_item_for_provider(provider) }.uniq
+  end
+
+  def provider_item_for_provider(provider)
+    association = provider.class.reflect_on_all_associations(:belongs_to).find { |reflection| reflection.name.to_s.end_with?("_item") }
+    provider.public_send(association.name) if association
+  end
+
+  def linked_account_ids_for_provider_item(item)
+    return [] unless item.respond_to?(:accounts)
+
+    Array(item.accounts).filter_map(&:id)
   end
 
   def purge

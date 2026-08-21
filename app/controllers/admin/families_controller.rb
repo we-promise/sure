@@ -11,6 +11,11 @@ module Admin
         return
       end
 
+      if family.has_active_subscription?
+        redirect_to admin_users_path, alert: t(".family_has_active_subscription")
+        return
+      end
+
       family.destroy!
       redirect_to admin_users_path, notice: t(".success")
     end

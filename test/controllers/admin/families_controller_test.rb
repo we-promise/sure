@@ -24,4 +24,16 @@ class Admin::FamiliesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to admin_users_url
   end
+
+  test "destroy does not delete a family with an active subscription" do
+    family = Family.create!(name: "Subscribed Empty Family")
+    family.start_subscription!("sub_admin_cleanup")
+
+    assert_no_difference("Family.count") do
+      delete admin_family_url(family)
+    end
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.families.destroy.family_has_active_subscription"), flash[:alert]
+  end
 end

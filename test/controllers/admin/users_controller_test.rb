@@ -191,6 +191,26 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "member", target.role
   end
 
+  test "update rejects blank new family selection" do
+    target = users(:family_member)
+    original_family = target.family
+
+    assert_no_difference("Family.count") do
+      patch admin_user_url(target), params: {
+        user: {
+          role: "member",
+          family_id: "new",
+          new_family_name: "   ",
+          new_family_moniker: "Group"
+        }
+      }
+    end
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.family_required"), flash[:alert]
+    assert_equal original_family, target.reload.family
+  end
+
   test "update rolls back a new family when transfer validation fails" do
     target = users(:family_member)
     original_family = target.family

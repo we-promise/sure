@@ -96,3 +96,8 @@ en:
       destroy:
         destroy_success: "User deleted successfully."
         destroy_failure: "User could not be deleted."
+    families:
+      destroy:
+        family_has_active_subscription: "Family/group has an active subscription and cannot be deleted until the subscription is cancelled."
+        family_has_users: "Family/group still has users and cannot be deleted."
+        success: "Family/group deleted successfully."

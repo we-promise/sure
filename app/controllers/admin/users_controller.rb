@@ -170,7 +170,7 @@ module Admin
 
       def membership_change_requested?
         new_family_name = user_params[:new_family_name].to_s.strip
-        new_family_name.present? || (user_params[:family_id].present? && user_params[:family_id] != "new" && user_params[:family_id] != @user.family_id)
+        new_family_name.present? || (user_params[:family_id].present? && user_params[:family_id] != @user.family_id)
       end
 
       def target_family_for_update
