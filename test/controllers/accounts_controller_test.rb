@@ -214,7 +214,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "falls back to default per_page when nothing was stored yet" do
     get account_url(@account)
     assert_response :success
-    assert_select "select[name='per_page'] option[value='10'][selected]"
+    assert_select "select[name='per_page'] option[value='100'][selected]"
   end
 
   test "activity pagination keeps activity tab when loaded from holdings tab" do

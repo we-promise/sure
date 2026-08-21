@@ -41,7 +41,7 @@ class TransactionsController < ApplicationController
                          }
                        )
 
-    @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
+    @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"] || 100))
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
     # Preload split parent data
@@ -569,7 +569,7 @@ class TransactionsController < ApplicationController
 
         params_to_restore[:q] = stored_params["q"].presence || {}
         params_to_restore[:page] = stored_params["page"].presence || 1
-        params_to_restore[:per_page] = stored_params["per_page"].presence || 50
+        params_to_restore[:per_page] = stored_params["per_page"].presence || 100
 
         redirect_to transactions_path(params_to_restore)
       else
@@ -577,7 +577,7 @@ class TransactionsController < ApplicationController
           prev_transaction_page_params: {
             q: search_params,
             page: params[:page],
-            per_page: params[:per_page].presence || stored_params["per_page"]
+            per_page: params[:per_page].presence || stored_params["per_page"] || 100
           }
         )
       end

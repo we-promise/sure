@@ -53,6 +53,37 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 70.5, children.last.amount.to_f
   end
 
+  test "create keeps cents after a comma and rejects a parseFloat-style match" do
+    @entry.update!(amount: -550720)
+
+    assert_no_difference "Entry.count" do
+      post transaction_split_path(@entry), params: {
+        split: {
+          splits: [
+            { name: "Part A", amount: "275360,30", category_id: "" },
+            { name: "Part B", amount: "275360,29", category_id: "" }
+          ]
+        }
+      }
+    end
+    assert_match(/must sum to parent amount/, flash[:alert])
+
+    assert_difference "Entry.count", 2 do
+      post transaction_split_path(@entry), params: {
+        split: {
+          splits: [
+            { name: "Part A", amount: "275360,30", category_id: "" },
+            { name: "Part B", amount: "275359,70", category_id: "" }
+          ]
+        }
+      }
+    end
+
+    children = @entry.reload.child_entries.order(:amount)
+    assert_equal(-275360.30, children.first.amount.to_f)
+    assert_equal(-275359.70, children.last.amount.to_f)
+  end
+
   test "create with mismatched amounts rejects" do
     assert_no_difference "Entry.count" do
       post transaction_split_path(@entry), params: {

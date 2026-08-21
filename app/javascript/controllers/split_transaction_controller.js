@@ -133,7 +133,7 @@ export default class extends Controller {
   updateRemaining() {
     const total = this.totalValue
     const sum = this.amountInputTargets.reduce((acc, input) => {
-      return acc + parseLocaleFloat(input.value, { separator: this.separatorValue })
+      return acc + parseLocaleFloat(input.value)
     }, 0)
 
     const remaining = total - sum

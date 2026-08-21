@@ -1,0 +1,120 @@
+<script nonce="<%= content_security_policy_nonce %>">
+  (function () {
+    var FORM = '[data-controller~="split-transaction"]';
+
+    function parseAmount(value) {
+      if (typeof value !== "string") return Number.parseFloat(value) || 0;
+      var cleaned = value.replace(/[\s\u00a0\u202f]/g, "");
+      if (!cleaned) return 0;
+      if (/^-?\d+$/.test(cleaned)) return Number.parseFloat(cleaned) || 0;
+
+      var lastComma = cleaned.lastIndexOf(",");
+      var lastDot = cleaned.lastIndexOf(".");
+      var normalized;
+      if (lastComma !== -1 && lastDot !== -1) {
+        normalized = lastComma > lastDot
+          ? cleaned.replace(/\./g, "").replace(/,/g, ".")
+          : cleaned.replace(/,/g, "");
+      } else if (lastComma !== -1) {
+        var digitsAfter = cleaned.length - lastComma - 1;
+        normalized = lastDot === -1 && digitsAfter === 3
+          ? cleaned.replace(/,/g, "")
+          : cleaned.replace(/,/g, ".");
+      } else {
+        normalized = cleaned;
+      }
+      return Number.parseFloat(normalized) || 0;
+    }
+
+    function formatAmount(value, separator) {
+      var formatted = value.toFixed(2);
+      return separator === "," ? formatted.replace(".", ",") : formatted;
+    }
+
+    function amountInputs(form) {
+      return Array.prototype.slice.call(
+        form.querySelectorAll('[data-split-transaction-target="amountInput"]')
+      );
+    }
+
+    function convertAmountInputs(form) {
+      amountInputs(form).forEach(function (input) {
+        if (input.type === "number") {
+          input.type = "text";
+          input.setAttribute("inputmode", "decimal");
+          input.removeAttribute("step");
+        }
+      });
+    }
+
+    function updateRemaining(form) {
+      convertAmountInputs(form);
+      var total = Number.parseFloat(form.dataset.splitTransactionTotalValue) || 0;
+      var separator = form.dataset.splitTransactionSeparatorValue || ".";
+      var sum = amountInputs(form).reduce(function (acc, input) {
+        return acc + parseAmount(input.value);
+      }, 0);
+      var remaining = total - sum;
+      var balanced = Math.abs(remaining) < 0.005;
+
+      var remainingEl = form.querySelector('[data-split-transaction-target="remaining"]');
+      var container = form.querySelector('[data-split-transaction-target="remainingContainer"]');
+      var error = form.querySelector('[data-split-transaction-target="error"]');
+      var submit = form.querySelector('[data-split-transaction-target="submitButton"]');
+
+      if (remainingEl) remainingEl.textContent = formatAmount(balanced ? 0 : remaining, separator);
+      if (remainingEl) {
+        remainingEl.classList.toggle("text-destructive", !balanced);
+        remainingEl.classList.toggle("text-success", balanced);
+        remainingEl.classList.toggle("text-primary", false);
+      }
+      if (container) {
+        container.classList.toggle("border-destructive", !balanced);
+        container.classList.toggle("bg-red-tint-10", !balanced);
+        container.classList.toggle("border-green-200", balanced);
+        container.classList.toggle("bg-green-tint-10", balanced);
+      }
+      if (error) error.classList.toggle("hidden", balanced);
+      if (submit) submit.disabled = !balanced;
+      return balanced;
+    }
+
+    function bind() {
+      document.querySelectorAll(FORM).forEach(updateRemaining);
+    }
+
+    if (window.SureSplitForm) {
+      window.SureSplitForm.bind();
+      return;
+    }
+
+    window.SureSplitForm = { bind: bind, parseAmount: parseAmount };
+
+    document.addEventListener("input", function (event) {
+      var form = event.target.closest(FORM);
+      if (!form || !event.target.closest('[data-split-transaction-target="amountInput"]')) return;
+      setTimeout(function () { updateRemaining(form); }, 0);
+    });
+
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest('[data-action*="split-transaction#addRow"], [data-action*="split-transaction#removeRow"]')) return;
+      var form = event.target.closest(FORM);
+      if (!form) return;
+      setTimeout(function () { updateRemaining(form); }, 0);
+    });
+
+    document.addEventListener("submit", function (event) {
+      var form = event.target;
+      if (!(form instanceof HTMLFormElement) || !form.matches(FORM)) return;
+      if (!updateRemaining(form)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true);
+
+    document.addEventListener("turbo:load", bind);
+    document.addEventListener("turbo:frame-load", bind);
+    document.addEventListener("turbo:render", bind);
+    bind();
+  })();
+</script>
