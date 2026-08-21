@@ -16,7 +16,7 @@ class SplitsController < ApplicationController
     raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
 
     splits = raw_splits.map do |s|
-      { name: s[:name], amount: s[:amount].to_d * -1, category_id: s[:category_id].presence, excluded: s[:excluded] }
+      { name: s[:name], amount: (LocaleNumber.parse(s[:amount]) || 0).to_d * -1, category_id: s[:category_id].presence, excluded: s[:excluded] }
     end
 
     @entry.split!(splits)
@@ -51,7 +51,7 @@ class SplitsController < ApplicationController
     raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
 
     splits = raw_splits.map do |s|
-      { name: s[:name], amount: s[:amount].to_d * -1, category_id: s[:category_id].presence, excluded: s[:excluded] }
+      { name: s[:name], amount: (LocaleNumber.parse(s[:amount]) || 0).to_d * -1, category_id: s[:category_id].presence, excluded: s[:excluded] }
     end
 
     Entry.transaction do

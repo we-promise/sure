@@ -5,9 +5,9 @@
       <%= icon "calendar" %>
       <p>
         <% if param_key == "start_date" %>
-          <%= t(".on_or_after", date: param_value) %>
+          <%= t(".on_or_after", date: format_date(param_value)) %>
         <% else %>
-          <%= t(".on_or_before", date: param_value) %>
+          <%= t(".on_or_before", date: format_date(param_value)) %>
         <% end %>
       </p>
     </div>

@@ -35,6 +35,24 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert @entry.split_parent?
   end
 
+  test "create accepts comma decimals" do
+    assert_difference "Entry.count", 2 do
+      post transaction_split_path(@entry), params: {
+        split: {
+          splits: [
+            { name: "Groceries", amount: "-70,5", category_id: "" },
+            { name: "Household", amount: "-29,5", category_id: "" }
+          ]
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    children = @entry.child_entries.order(:amount)
+    assert_equal 29.5, children.first.amount.to_f
+    assert_equal 70.5, children.last.amount.to_f
+  end
+
   test "create with mismatched amounts rejects" do
     assert_no_difference "Entry.count" do
       post transaction_split_path(@entry), params: {

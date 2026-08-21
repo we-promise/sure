@@ -9,6 +9,7 @@ export default class extends Controller {
   static values = {
     precision: Number,
     step: String,
+    separator: { type: String, default: "." },
   };
 
   requestSequence = 0;
@@ -32,13 +33,17 @@ export default class extends Controller {
 
       const rawValue = this.amountTarget.value.trim();
       if (rawValue !== "") {
-        const parsedAmount = parseLocaleFloat(rawValue);
+        const parsedAmount = parseLocaleFloat(rawValue, { separator: this.separatorValue });
         if (Number.isFinite(parsedAmount)) {
           const precision =
             this.hasPrecisionValue && Number.isInteger(this.precisionValue)
               ? this.precisionValue
               : currencyData.default_precision;
-          this.amountTarget.value = parsedAmount.toFixed(precision);
+          const formatted = parsedAmount.toFixed(precision);
+          this.amountTarget.value =
+            this.separatorValue === ","
+              ? formatted.replace(".", ",")
+              : formatted;
         }
       }
 
