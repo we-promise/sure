@@ -46,6 +46,7 @@ en:
       note_placeholder: Enter a note
       create_tag: Create
       create_merchant: Create
+      create_merchant_error: Could not create merchant
       merchant_search_placeholder: Search or create merchant
       submit: Add transaction
       tag_search_placeholder: Search or create tag

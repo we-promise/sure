@@ -20,12 +20,14 @@ export default class extends Controller {
     autoSubmit: Boolean,
     menuPlacement: { type: String, default: "auto" },
     offset: { type: Number, default: 6 },
+    errorMessage: String,
   };
 
   connect() {
     this.creating = false;
     this.isOpen = false;
     this.selectedId = this.hiddenInputTarget.value || "";
+    if (this.disabledValue || !this.hasMenuTarget) return;
     this.observeMenuResize();
   }
 
@@ -135,13 +137,27 @@ export default class extends Controller {
   }
 
   handleSearchKeydown(event) {
-    if (
-      event.key === "Enter" &&
-      !this.createFormTarget.classList.contains("hidden") &&
-      !this.creating
-    ) {
+    if (event.key !== "Enter") return;
+
+    if (!this.createFormTarget.classList.contains("hidden") && !this.creating) {
       event.preventDefault();
       this.createMerchant();
+      return;
+    }
+
+    event.preventDefault();
+
+    const query = this.searchTarget.value.trim().toLowerCase();
+    const match = this.optionTargets.find(
+      (option) =>
+        !option.classList.contains("hidden") &&
+        (option.dataset.filterName || "").toLowerCase() === query,
+    );
+
+    if (match) {
+      this.applySelection(match);
+      this.close();
+      this.submitForm();
     }
   }
 
@@ -182,6 +198,8 @@ export default class extends Controller {
       this.filter();
       this.close();
       this.submitForm();
+    } catch {
+      this.showCreateError();
     } finally {
       this.creating = false;
       this.createFormTarget.disabled = false;
@@ -332,7 +350,7 @@ export default class extends Controller {
   showCreateError(message) {
     if (!this.hasCreateErrorTarget) return;
 
-    this.createErrorTarget.textContent = message || "Could not create merchant";
+    this.createErrorTarget.textContent = message || this.errorMessageValue;
     this.createErrorTarget.classList.remove("hidden");
     this.searchTarget.setAttribute("aria-invalid", "true");
     this.searchTarget.focus({ preventScroll: true });

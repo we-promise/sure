@@ -52,6 +52,7 @@ class FamilyMerchantsController < ApplicationController
     else
       respond_to do |format|
         format.html { render :new, status: :unprocessable_entity }
+        format.turbo_stream { render :new, formats: [ :html ], status: :unprocessable_entity }
         format.json { render json: { errors: @family_merchant.errors.full_messages }, status: :unprocessable_entity }
       end
     end
