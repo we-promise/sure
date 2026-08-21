@@ -165,6 +165,13 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "Groups", family.moniker_label_plural
   end
 
+  test "default currency comes from country ISO data" do
+    assert_equal "CAD", Family.default_currency_for_country("CA")
+    assert_equal "EUR", Family.default_currency_for_country("DE")
+    assert_equal "BRL", Family.default_currency_for_country("BR")
+    assert_equal "USD", Family.default_currency_for_country("unknown")
+  end
+
   test "available_merchants includes family merchants without transactions" do
     family = families(:dylan_family)
 
