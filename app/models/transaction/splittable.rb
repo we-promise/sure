@@ -18,7 +18,16 @@ module Transaction::Splittable
   # trade AND a live installment schedule, double-counting in balance
   # reconstruction. Simplest fix is to not let the two paths overlap in
   # the first place.
+  #
+  # Restricted to kind == "standard": splittable? alone doesn't check kind,
+  # so without this a one_time transaction (or, degenerately, a generated
+  # emi_fee entry) could be converted. Building the plan always overwrites
+  # kind with "emi_purchase" and foreclosure restores whatever the plan
+  # recorded as original_kind -- if a non-standard kind were allowed in,
+  # that original classification would need to survive the round trip too.
+  # Requiring "standard" up front keeps that round trip lossless without
+  # having to special-case every other kind's restore behavior.
   def emi_convertible?
-    splittable? && !entry.emi_purchase? && !entry.emi_installment? && entry.amount.positive? && !entry.account.investment?
+    splittable? && standard? && !entry.emi_purchase? && !entry.emi_installment? && entry.amount.positive? && !entry.account.investment?
   end
 end

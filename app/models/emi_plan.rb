@@ -49,12 +49,13 @@ class EmiPlan < ApplicationRecord
     monthly_rate = (interest_rate.to_d / 100) / 12
     n = tenure_months
     p = principal_amount.to_d
+    precision = currency_precision
 
     emi = if monthly_rate.zero?
-      (p / n).round(2)
+      (p / n).round(precision)
     else
       factor = (1 + monthly_rate) ** n
-      (p * monthly_rate * factor / (factor - 1)).round(2)
+      (p * monthly_rate * factor / (factor - 1)).round(precision)
     end
 
     schedule = []
@@ -70,23 +71,33 @@ class EmiPlan < ApplicationRecord
         principal_component = remaining_principal
         interest_component = monthly_rate.zero? ? 0.to_d : (emi - principal_component)
       else
-        interest_component = monthly_rate.zero? ? 0.to_d : (remaining_principal * monthly_rate).round(2)
+        interest_component = monthly_rate.zero? ? 0.to_d : (remaining_principal * monthly_rate).round(precision)
         principal_component = emi - interest_component
       end
 
-      interest_component = [ interest_component, 0.to_d ].max.round(2)
-      principal_component = principal_component.round(2)
+      interest_component = [ interest_component, 0.to_d ].max.round(precision)
+      principal_component = principal_component.round(precision)
       remaining_principal -= principal_component
 
       schedule << {
         number: number,
         principal: principal_component,
         interest: interest_component,
-        total: (principal_component + interest_component).round(2)
+        total: (principal_component + interest_component).round(precision)
       }
     end
 
     @amortization_schedule = schedule
+  end
+
+  # Number of decimal places to round installment math to, based on the
+  # plan's currency (e.g. 0 for JPY, 2 for USD, 3 for KWD). Hard-coding 2
+  # here would produce fractional-yen installments or silently drop KWD's
+  # third decimal, so every rounding step in the schedule goes through this
+  # instead. The live JS preview in emi_plan_controller.js mirrors this same
+  # value (passed via the currency-precision data attribute) to stay in sync.
+  def currency_precision
+    Money::Currency.new(currency).default_precision
   end
 
   def monthly_installment_amount
@@ -157,7 +168,14 @@ class EmiPlan < ApplicationRecord
         tenure_months: tenure_months,
         processing_fee: processing_fee,
         start_date: start_date,
-        status: "active"
+        status: "active",
+        # emi_convertible? currently requires kind == "standard", so this is
+        # always "standard" today -- but recording it explicitly (rather than
+        # hard-coding "standard" again at foreclosure time) means the restore
+        # step in foreclose! stays correct even if that restriction is ever
+        # relaxed, instead of silently overwriting whatever the entry's real
+        # prior classification was.
+        original_kind: entry.transaction.kind
       )
 
       plan.save!
@@ -202,9 +220,16 @@ class EmiPlan < ApplicationRecord
   # left alone since they represent money that has already moved — deleting
   # them would silently erase real spend history.
   #
-  # The parent purchase entry's kind reverts to standard so it counts as a
+  # If no installment ever posted, the parent purchase entry's kind reverts
+  # to original_kind (whatever it was before conversion) so it counts as a
   # normal expense again for any period not already covered by a posted
-  # installment.
+  # installment. The plan record itself is also destroyed in that case: with
+  # nothing left to reconcile, keeping a foreclosed-but-empty EmiPlan around
+  # would permanently pin entry.emi_purchase? to true (originated_emi_plan
+  # stays present) and, through it, emi_convertible? to false — blocking the
+  # entry from ever being converted again, even though nothing about it is
+  # still EMI-linked. Destroying the row lets both checks correctly see a
+  # plain, unconverted transaction again.
   def foreclose!
     Entry.transaction do
       had_posted_installments = posted_installments.exists?
@@ -226,14 +251,16 @@ class EmiPlan < ApplicationRecord
         installment.destroy!
       end
 
-      update!(status: "foreclosed")
-
       # If not a single installment ever posted, this plan never represented
-      # real spend beyond the original purchase — revert it to a normal
-      # transaction so it counts in budgets again. If some installments did
-      # post, the purchase stays excluded (its spend already happened via
-      # those installments) even though no more are coming.
+      # real spend beyond the original purchase — revert it to its original
+      # kind so it counts in budgets again, then remove the now-empty plan
+      # record (see method comment for why). If some installments did post,
+      # the purchase stays excluded (its spend already happened via those
+      # installments) even though no more are coming, so the plan record
+      # (marked foreclosed) and its posted installments remain.
       if had_posted_installments
+        update!(status: "foreclosed")
+
         if outstanding_principal.positive?
           settlement_transaction = Transaction.new(kind: "emi_installment", category_id: entry.transaction.category_id)
           entry.account.entries.create!(
@@ -247,12 +274,19 @@ class EmiPlan < ApplicationRecord
             user_modified: true
           )
         end
+
+        entry.mark_user_modified!
       else
         entry.transaction.changing_emi_kind = true
-        entry.transaction.update!(kind: "standard")
-      end
+        entry.transaction.update!(kind: original_kind)
+        entry.mark_user_modified!
 
-      entry.mark_user_modified!
+        # dependent: :nullify on installment_entries doesn't apply here --
+        # there are none left (all future ones were just destroyed above,
+        # and none ever posted by definition of this branch) -- so a plain
+        # destroy is safe and leaves nothing orphaned.
+        destroy!
+      end
     end
   end
 

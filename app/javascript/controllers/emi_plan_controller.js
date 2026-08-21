@@ -5,7 +5,7 @@ import { Controller } from "@hotwired/stimulus"
 // can show a live preview before the user submits the form.
 export default class extends Controller {
   static targets = ["tenureInput", "interestInput", "feeInput", "startDateInput", "monthlyAmount", "totalInterest", "totalPayable"]
-  static values = { principal: Number, currency: String }
+  static values = { principal: Number, currency: String, precision: { type: Number, default: 2 } }
 
   connect() {
     this.recalculate()
@@ -32,10 +32,10 @@ export default class extends Controller {
 
     let emi
     if (monthlyRate === 0) {
-      emi = this.roundCents(principal / tenure)
+      emi = this.roundToPrecision(principal / tenure)
     } else {
       const factor = (1 + monthlyRate) ** tenure
-      emi = this.roundCents((principal * monthlyRate * factor) / (factor - 1))
+      emi = this.roundToPrecision((principal * monthlyRate * factor) / (factor - 1))
     }
 
     let remainingPrincipal = principal
@@ -51,38 +51,48 @@ export default class extends Controller {
         principalComponent = remainingPrincipal
         interestComponent = monthlyRate === 0 ? 0 : emi - principalComponent
       } else {
-        interestComponent = monthlyRate === 0 ? 0 : this.roundCents(remainingPrincipal * monthlyRate)
+        interestComponent = monthlyRate === 0 ? 0 : this.roundToPrecision(remainingPrincipal * monthlyRate)
         principalComponent = emi - interestComponent
       }
 
-      interestComponent = this.roundCents(Math.max(interestComponent, 0))
-      principalComponent = this.roundCents(principalComponent)
-      remainingPrincipal = this.roundCents(remainingPrincipal - principalComponent)
+      interestComponent = this.roundToPrecision(Math.max(interestComponent, 0))
+      principalComponent = this.roundToPrecision(principalComponent)
+      remainingPrincipal = this.roundToPrecision(remainingPrincipal - principalComponent)
 
-      totalInterest = this.roundCents(totalInterest + interestComponent)
-      totalPrincipal = this.roundCents(totalPrincipal + principalComponent)
+      totalInterest = this.roundToPrecision(totalInterest + interestComponent)
+      totalPrincipal = this.roundToPrecision(totalPrincipal + principalComponent)
     }
 
-    const totalPayable = this.roundCents(totalPrincipal + totalInterest + fee)
+    const totalPayable = this.roundToPrecision(totalPrincipal + totalInterest + fee)
 
     this.monthlyAmountTarget.textContent = this.formatMoney(emi)
     this.totalInterestTarget.textContent = this.formatMoney(totalInterest)
     this.totalPayableTarget.textContent = this.formatMoney(totalPayable)
   }
 
-  // Half-up rounding to 2 decimals, matching Ruby BigDecimal#round(2)'s
+  // Half-up rounding to the currency's smallest unit (0 decimals for JPY,
+  // 2 for USD, 3 for KWD, etc.), matching Ruby BigDecimal#round(precision)'s
   // default mode. Plain toFixed()/Math.round() can drift on floating-point
-  // values that land near a cent boundary (e.g. banker's rounding in some
+  // values that land near a unit boundary (e.g. banker's rounding in some
   // engines), which is exactly the kind of mismatch this preview exists to avoid.
-  roundCents(value) {
-    return Math.round((value + Number.EPSILON) * 100) / 100
+  // precisionValue mirrors EmiPlan#currency_precision on the server so a
+  // JPY plan previews whole-yen installments instead of fractional ones,
+  // and a KWD plan keeps its third decimal instead of losing it.
+  roundToPrecision(value) {
+    const factor = 10 ** this.precisionValue
+    return Math.round((value + Number.EPSILON) * factor) / factor
   }
 
   formatMoney(value) {
     try {
-      return new Intl.NumberFormat(undefined, { style: "currency", currency: this.currencyValue || "USD" }).format(value)
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: this.currencyValue || "USD",
+        minimumFractionDigits: this.precisionValue,
+        maximumFractionDigits: this.precisionValue
+      }).format(value)
     } catch {
-      return value.toFixed(2)
+      return value.toFixed(this.precisionValue)
     }
   }
 }

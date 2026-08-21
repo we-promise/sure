@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_18_060400) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_21_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -585,6 +585,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_060400) do
     t.decimal "principal_amount", precision: 19, scale: 4, null: false
     t.decimal "processing_fee", precision: 19, scale: 4, default: "0.0", null: false
     t.uuid "processing_fee_entry_id"
+    t.string "original_kind", default: "standard", null: false
     t.date "start_date", null: false
     t.string "status", default: "active", null: false
     t.integer "tenure_months", null: false

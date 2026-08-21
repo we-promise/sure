@@ -25,6 +25,7 @@
             controller: "emi-plan",
             emi_plan_principal_value: @entry.amount.to_f,
             emi_plan_currency_value: @entry.currency,
+            emi_plan_precision_value: Money::Currency.new(@entry.currency).default_precision,
             turbo_frame: :_top
           }
         ) do |form| %>

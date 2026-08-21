@@ -384,4 +384,78 @@ class EmiPlanTest < ActiveSupport::TestCase
     refute posted.valid?
     assert_includes posted.errors[:base], "Amount and date can't be changed on an individual EMI installment. Foreclose the plan to cancel remaining installments."
   end
+
+  test "build! records the entry's kind as original_kind" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0)
+
+    assert_equal "standard", plan.original_kind
+  end
+
+  test "foreclose! before any installment posts destroys the plan and frees the entry for reconversion" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current + 1.month)
+    plan_id = plan.id
+
+    plan.foreclose!
+
+    refute EmiPlan.exists?(plan_id)
+    refute @entry.reload.emi_purchase?
+    assert @entry.transaction.emi_convertible?
+
+    # Re-converting should work cleanly, since nothing is left over from
+    # the first (abandoned) plan.
+    new_plan = EmiPlan.build!(entry: @entry, interest_rate: 5, tenure_months: 6, processing_fee: 0)
+    assert new_plan.persisted?
+    assert_equal 6, new_plan.installment_entries.count
+  end
+
+  test "foreclose! with posted installments keeps the plan record and its original_kind" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current - 1.month)
+
+    plan.foreclose!
+
+    assert EmiPlan.exists?(plan.id)
+    assert_equal "standard", plan.reload.original_kind
+    refute @entry.reload.transaction.emi_convertible?
+  end
+
+  test "emi_convertible? is false for a one_time transaction" do
+    entry = create_transaction(
+      amount: 500,
+      name: "Annual fee",
+      account: accounts(:depository),
+      category: categories(:food_and_drink),
+      kind: "one_time"
+    )
+
+    refute entry.transaction.emi_convertible?
+  end
+
+  test "build! raises when the transaction isn't standard" do
+    entry = create_transaction(
+      amount: 500,
+      name: "Annual fee",
+      account: accounts(:depository),
+      category: categories(:food_and_drink),
+      kind: "one_time"
+    )
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 3, processing_fee: 0)
+    end
+  end
+
+  test "amortization schedule rounds to zero decimals for a zero-precision currency" do
+    entry = create_transaction(
+      amount: 1000,
+      name: "Camera",
+      account: accounts(:depository),
+      category: categories(:food_and_drink),
+      currency: "JPY"
+    )
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 3, processing_fee: 0)
+
+    amounts = plan.installment_entries.pluck(:amount)
+    assert amounts.all? { |a| a == a.to_i }
+    assert_equal 1000, amounts.sum
+  end
 end
