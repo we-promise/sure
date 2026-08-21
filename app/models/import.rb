@@ -57,6 +57,14 @@ class Import < ApplicationRecord
     "1,234"    => { separator: "",  delimiter: "," }   # Zero-decimal currencies like JPY
   }.freeze
 
+  # 2-digit years are ambiguous (Ruby's %y assumes 1969-2068), so this is kept
+  # out of Family::DATE_FORMATS (the global preference) and only offered when
+  # mapping a CSV file, where the user can see and verify a preview against
+  # their own data (maintainer decision on PR #531).
+  CSV_ONLY_DATE_FORMATS = [
+    [ "DD/MM/YY", "%d/%m/%y" ]
+  ].freeze
+
   def self.reasonable_date_range
     Date.new(1970, 1, 1)..Date.today.next_year(5)
   end
