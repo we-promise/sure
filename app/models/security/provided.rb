@@ -207,15 +207,16 @@ module Security::Provided
     return nil if offline?
 
     # Make sure we have a data provider before fetching
-    return nil unless price_data_provider.present?
-    response = price_data_provider.fetch_security_price(
+    provider = price_data_provider
+    return nil unless provider.present?
+    response = provider.fetch_security_price(
       symbol: ticker,
       exchange_operating_mic: exchange_operating_mic,
       date: date
     )
 
     unless response.success? # Provider error
-      log_failed_price_fetch(response.error)
+      log_failed_price_fetch(response.error, provider)
       return nil
     end
 
@@ -232,7 +233,7 @@ module Security::Provided
   # Throttled so a page with many holdings missing today's price doesn't
   # flood the debug log with one entry per request — at most one per
   # security per day.
-  def log_failed_price_fetch(error)
+  def log_failed_price_fetch(error, provider = price_data_provider)
     cache_key = "security_price_fetch_log:#{id}:#{Date.current}"
     return unless Rails.cache.write(cache_key, true, expires_in: 24.hours, unless_exist: true)
 
@@ -241,7 +242,7 @@ module Security::Provided
       level: "warn",
       message: "find_or_fetch_price failed",
       source: self.class.name,
-      provider: price_data_provider,
+      provider: provider,
       metadata: { security_id: id, ticker: ticker, provider_error: error&.message }
     )
   end

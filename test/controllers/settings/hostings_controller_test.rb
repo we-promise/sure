@@ -719,4 +719,17 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_equal original_time, Setting.market_data_sync_time
     end
   end
+
+  test "still applies market_data_sync_enabled when market_data_sync_time in the same request is invalid" do
+    with_self_hosting do
+      Setting.market_data_sync_enabled = false
+
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1", market_data_sync_time: "not-a-time" } }
+
+      assert_redirected_to settings_hosting_path
+      assert Setting.market_data_sync_enabled, "enabled flag from the same submission should not be dropped by the invalid time"
+    end
+  ensure
+    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
+  end
 end
