@@ -438,6 +438,25 @@ class Entry < ApplicationRecord
     emi_plan_id.present?
   end
 
+  # True for the one-time processing-fee entry generated alongside an EMI
+  # plan (Transaction#kind == "emi_fee"). Unlike emi_purchase?/emi_installment?,
+  # this entry isn't linked via emi_plan_id or originated_emi_plan — it's
+  # only reachable through EmiPlan#processing_fee_entry — so kind is the only
+  # way to identify it directly from the entry/transaction side.
+  def emi_fee?
+    transaction? && transaction.kind == "emi_fee"
+  end
+
+  # True for any entry that's part of an EMI plan in some form: the
+  # original purchase, a generated installment, or the one-time processing
+  # fee. Trade conversion (and similar "pick a fresh, unrelated transaction"
+  # flows) needs to exclude all three, not just purchase/installment —
+  # otherwise a fee entry could be converted into a Trade even though it
+  # exists only because of, and is still tracked by, a live EmiPlan.
+  def emi_linked?
+    emi_purchase? || emi_installment? || emi_fee?
+  end
+
   # True while this entry's amount/date must stay locked because of an EMI
   # plan. Same bar as the model validations
   # (cannot_edit_emi_purchase_amount_or_date / ..._installment_...) and
@@ -460,8 +479,7 @@ class Entry < ApplicationRecord
       plan = originated_emi_plan
       plan.active? || plan.posted_installments.exists?
     elsif emi_installment?
-      plan = EmiPlan.find_by(id: emi_plan_id)
-      (plan.present? && plan.active?) || date <= Date.current
+      (emi_plan.present? && emi_plan.active?) || date <= Date.current
     else
       false
     end
@@ -553,7 +571,7 @@ class Entry < ApplicationRecord
       return 0 unless has_updates
 
       transaction do
-        all.includes(:originated_emi_plan).each do |entry|
+        all.includes(:originated_emi_plan, :emi_plan).each do |entry|
           changed = false
 
           # Update standard attributes
