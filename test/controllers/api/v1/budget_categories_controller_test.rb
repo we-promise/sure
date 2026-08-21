@@ -129,6 +129,31 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", response_data["error"]
   end
 
+  test "excludes another family member's personal budget category" do
+    @family.update!(personal_budgets: true)
+
+    other_member_budget = @family.budgets.create!(
+      user: users(:family_member),
+      start_date: 7.months.ago.beginning_of_month.to_date,
+      end_date: 7.months.ago.end_of_month.to_date,
+      budgeted_spending: 800,
+      currency: "USD"
+    )
+    other_member_budget_category = other_member_budget.budget_categories.create!(
+      category: @category,
+      budgeted_spending: 200,
+      currency: "USD"
+    )
+
+    get api_v1_budget_categories_url, headers: api_headers(@api_key)
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert_not_includes response_data["budget_categories"].map { |budget_category| budget_category["id"] }, other_member_budget_category.id
+
+    get api_v1_budget_category_url(other_member_budget_category), headers: api_headers(@api_key)
+    assert_response :not_found
+  end
+
   test "requires authentication" do
     get api_v1_budget_categories_url
 

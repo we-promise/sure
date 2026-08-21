@@ -125,7 +125,7 @@
               horizontally when the column is too narrow for all six chips,
               rather than wrapping "On track" mid-label or forcing the row
               wider than the viewport. %>
-          <%= render DS::SegmentedControl.new(aria_label: t(".chips_aria", default: "Filter goals by status"), class: "overflow-x-auto max-w-full") do |sc| %>
+          <%= render DS::SegmentedControl.new(aria_label: t(".chips_aria"), class: "overflow-x-auto max-w-full") do |sc| %>
             <% %w[all on_track behind no_target_date paused completed].each do |status| %>
               <% sc.with_segment(t(".chips.#{status}"),
                    active: status == "all",
@@ -143,7 +143,7 @@
       <% if @grid_goals.any? %>
         <div class="flex items-center gap-1.5 mb-4 text-[11px] font-medium uppercase tracking-wide text-secondary">
           <span><%= t(".ongoing_section.heading") %></span>
-          <span class="text-subdued">·</span>
+          <span class="text-subdued" aria-hidden="true"><%= t("shared.dot_separator") %></span>
           <span class="tabular-nums" data-goals-filter-target="count"><%= @grid_goals.size %></span>
         </div>
         <div class="grid grid-cols-1 @2xl:grid-cols-2 @5xl:grid-cols-3 gap-3.5" data-goals-filter-target="grid">
@@ -182,7 +182,7 @@
             <span class="inline-flex items-center gap-1.5 mb-4 text-[11px] font-medium uppercase tracking-wide text-secondary">
               <span class="text-subdued group-open:rotate-90 motion-safe:transition-transform"><%= icon("chevron-right", size: "sm") %></span>
               <span><%= t(".archived_section.heading") %></span>
-              <span class="text-subdued">·</span>
+              <span class="text-subdued" aria-hidden="true"><%= t("shared.dot_separator") %></span>
               <span class="tabular-nums"><%= @archived_goals.size %></span>
             </span>
           <% end %>

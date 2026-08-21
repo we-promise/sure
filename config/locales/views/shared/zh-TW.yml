@@ -4,6 +4,7 @@ zh-TW:
     self_hostable:
       redis_configured: Redis 已經設定好了！現在可以開始設定您的 Sure 應用程式。
   shared:
+    dot_separator: "·"
     preview: 預覽
     sync_toast:
       message: 有新資料可用

@@ -79,17 +79,17 @@
         <% if @goal.may_reopen? %>
           <% menu.with_item(variant: "button", text: t(".reopen"), icon: "rotate-ccw", href: reopen_goal_path(@goal), method: :patch) %>
         <% end %>
-        <% if @goal.archived? %>
-          <% menu.with_item(
-               variant: "button",
-               text: t(".delete"),
-               icon: "trash-2",
-               href: goal_path(@goal),
-               method: :delete,
-               destructive: true,
-               confirm: CustomConfirm.for_resource_deletion(@goal.name, high_severity: true)
-             ) %>
-        <% end %>
+        <%# Available in any state — see GoalsController#destroy for why there's
+            no archive-first gate. %>
+        <% menu.with_item(
+             variant: "button",
+             text: t(".delete"),
+             icon: "trash-2",
+             href: goal_path(@goal),
+             method: :delete,
+             destructive: true,
+             confirm: @goal.deletion_confirm
+           ) %>
       <% end %>
     </div>
   </header>

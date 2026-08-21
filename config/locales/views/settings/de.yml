@@ -535,7 +535,7 @@ de:
           busy: Aktiv
           dead: Gescheitert
           enqueued: Wartend
-          latency: "%{value}s Latenz"
+          queue_label: "%{name}: %{size} · %{latency}s Latenz"
           retries: Wiederholungen
           scheduled: Geplant
           workers: Worker

@@ -10,7 +10,12 @@
   <%= render "onboardings/logout" %>
 <% end %>
 
-<div class="grow max-w-lg w-full mx-auto bg-surface flex flex-col justify-center md:py-0 py-2 px-4 md:px-0">
+<div class="grow max-w-lg w-full mx-auto bg-surface flex flex-col justify-center md:py-0 py-2 px-4 md:px-0"
+  data-controller="onboarding"
+  data-onboarding-household-name-label-value="<%= t(".household_name") %>"
+  data-onboarding-household-name-placeholder-value="<%= t(".household_name_placeholder") %>"
+  data-onboarding-group-name-label-value="<%= t(".group_name") %>"
+  data-onboarding-group-name-placeholder-value="<%= t(".group_name_placeholder") %>">
   <div>
     <div class="space-y-1 mb-6 text-center">
       <h1 class="text-2xl font-medium md:text-2xl"><%= t(".title") %></h1>
@@ -34,12 +39,7 @@
         <div class="space-y-4 mb-4">
           <%= form.fields_for :family do |family_form| %>
             <div class="bg-container rounded-lg shadow-border-xs p-4">
-              <div class="space-y-2"
-                data-controller="onboarding"
-                data-onboarding-household-name-label-value="<%= t(".household_name") %>"
-                data-onboarding-household-name-placeholder-value="<%= t(".household_name_placeholder") %>"
-                data-onboarding-group-name-label-value="<%= t(".group_name") %>"
-                data-onboarding-group-name-placeholder-value="<%= t(".group_name_placeholder") %>">
+              <div class="space-y-2">
                 <p class="text-sm font-medium text-primary"><%= t(".moniker_prompt", product_name: product_name) %></p>
 
                 <label class="flex items-center gap-2 text-sm text-primary">
@@ -67,7 +67,7 @@
             <%= family_form.select :country,
                                    country_options,
                                    { label: t(".country") },
-                                   required: true %>
+                                   { required: true, data: { onboarding_target: "countryField" } } %>
           <% end %>
         </div>
       <% end %>

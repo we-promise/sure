@@ -51,10 +51,16 @@
       <div class="space-y-4">
         <% @families_with_users.each do |family, users| %>
           <% pending_invitations = @invitations_by_family[family.id] || [] %>
-          <details class="bg-container-inset rounded-lg overflow-hidden group"
-                   data-controller="admin-invitation-delete"
-                   data-admin-invitation-delete-delete-all-label-value="<%= t(".invitations.delete_all") %>">
-            <summary class="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-surface-hover">
+          <%= render DS::Disclosure.new(
+                variant: :bare,
+                summary_class: "list-none focus-ring flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-surface-hover",
+                class: "bg-container-inset rounded-lg overflow-hidden",
+                data: {
+                  controller: "admin-invitation-delete",
+                  admin_invitation_delete_delete_all_label_value: t(".invitations.delete_all")
+                }
+              ) do |disclosure| %>
+            <% disclosure.with_summary_content do %>
               <div class="flex items-center gap-3">
                 <%= icon "users", class: "w-5 h-5 text-secondary shrink-0" %>
                 <div>
@@ -80,7 +86,7 @@
                 <% end %>
                 <%= icon "chevron-down", class: "w-4 h-4 text-secondary transition-transform group-open:rotate-180" %>
               </div>
-            </summary>
+            <% end %>
 
             <div class="border-t border-primary">
               <table class="w-full">
@@ -154,12 +160,16 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                           <%= form_with url: admin_invitation_path(invitation), method: :delete, class: "inline" do |f| %>
-                            <button type="submit"
-                                    data-admin-invitation-delete-target="button"
-                                    data-action="click->admin-invitation-delete#handleClick"
-                                    class="text-sm text-destructive border border-destructive rounded-lg px-2 py-1 hover:bg-destructive/10 transition-colors">
-                              <%= t(".invitations.delete") %>
-                            </button>
+                            <%= render DS::Button.new(
+                                  text: t(".invitations.delete"),
+                                  type: "submit",
+                                  variant: :outline_destructive,
+                                  size: :sm,
+                                  data: {
+                                    admin_invitation_delete_target: "button",
+                                    action: "click->admin-invitation-delete#handleClick"
+                                  }
+                                ) %>
                           <% end %>
                         </td>
                       </tr>
@@ -174,7 +184,7 @@
                 <% end %>
               <% end %>
             </div>
-          </details>
+          <% end %>
         <% end %>
       </div>
     <% else %>
