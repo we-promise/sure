@@ -4,8 +4,8 @@ pt-BR:
     attributes:
       user:
         email: E-mail
-        family: Família
-        family_id: Família
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         first_name: Primeiro Nome
         last_name: Sobrenome
         password: Senha

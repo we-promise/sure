@@ -68,6 +68,60 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "D", user.initial
   end
 
+  test "family validation label uses localized default moniker" do
+    I18n.with_locale(:es) do
+      Current.stubs(:family).returns(nil)
+      user = User.new(email: "missing-family@example.com", password: user_password_test)
+
+      assert_not user.valid?
+      assert_includes user.errors.full_messages, "Familia debe existir"
+    end
+  end
+
+  test "family validation label uses current family moniker" do
+    family = families(:dylan_family)
+    family.update!(moniker: "Group")
+
+    I18n.with_locale(:es) do
+      Current.stubs(:family).returns(family)
+      user = User.new(email: "missing-group@example.com", password: user_password_test)
+
+      assert_not user.valid?
+      assert_includes user.errors.full_messages, "Grupo debe existir"
+    end
+  end
+
+  test "family attribute labels use requested locale for current family moniker" do
+    family = families(:dylan_family)
+    family.update!(moniker: "Group")
+    Current.stubs(:family).returns(family)
+
+    I18n.with_locale(:en) do
+      assert_equal "Grupo", User.human_attribute_name(:family, locale: :es)
+      assert_equal "Grupo", User.human_attribute_name(:family_id, locale: :es)
+    end
+  end
+
+  test "family validation label renders in every supported locale" do
+    family = families(:dylan_family)
+    family.update!(moniker: "Group")
+    Current.stubs(:family).returns(family)
+
+    LanguagesHelper::SUPPORTED_LOCALES.each do |locale|
+      I18n.with_locale(locale) do
+        user = User.new(email: "missing-family-#{locale.parameterize}@example.com", password: user_password_test)
+        family_label = User.human_attribute_name(:family, locale: locale)
+        family_id_label = User.human_attribute_name(:family_id, locale: locale)
+
+        assert_not user.valid?
+        assert_includes user.errors.full_messages_for(:family).to_sentence,
+                        family_label,
+                        "expected family error to include moniker label for #{locale}"
+        assert_equal family_label, family_id_label
+      end
+    end
+  end
+
   test "names are normalized" do
     @user.update!(first_name: "", last_name: "")
     assert_nil @user.first_name
@@ -690,13 +744,15 @@ class UserTest < ActiveSupport::TestCase
     assert_equal :super_admin, User.role_for_new_family_creator
   end
 
-  test "role_for_new_family_creator returns fallback role when users exist" do
+  test "role_for_new_family_creator returns admin-capable fallback role when users exist" do
     # Users exist from fixtures
     assert User.exists?
 
     assert_equal :admin, User.role_for_new_family_creator
-    assert_equal :member, User.role_for_new_family_creator(fallback_role: :member)
-    assert_equal "custom_role", User.role_for_new_family_creator(fallback_role: "custom_role")
+    assert_equal :admin, User.role_for_new_family_creator(fallback_role: :member)
+    assert_equal :admin, User.role_for_new_family_creator(fallback_role: :guest)
+    assert_equal :admin, User.role_for_new_family_creator(fallback_role: "custom_role")
+    assert_equal "super_admin", User.role_for_new_family_creator(fallback_role: "super_admin")
   end
 
   # Preview features preference tests
