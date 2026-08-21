@@ -223,6 +223,19 @@ LLM_CONTEXT_WINDOW=8192
 # Slow local models often need a longer HTTP timeout once the prompt budget issue is fixed.
 OPENAI_REQUEST_TIMEOUT=180
 
+# Chained tool calls per turn. Each iteration is another call to the model, so
+# lowering this is the cheapest way to keep a turn inside the timeout below.
+ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2
+
+# Whole-turn budget before the chat gives up and shows a "no response" error.
+# Responses from custom providers are not streamed and tool-call rounds display
+# nothing, so this covers every call the turn makes, not just the first token.
+# Size it as a sum:
+#   (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) * OPENAI_REQUEST_TIMEOUT
+#     + tool execution + queue wait
+# Here (1 + 2) * 180 = 540s of model time, plus headroom, so 720.
+AI_RESPONSE_TIMEOUT=720
+
 # Optional: enable debug logging in the AI chat
 AI_DEBUG_MODE=true 
 ```
@@ -233,6 +246,7 @@ AI_DEBUG_MODE=true
 - If you don't set a model, chats will fail with a validation error
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
 - If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits
+- Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
 
 ### Docker Compose Example
 
@@ -318,10 +332,13 @@ For self-hosted deployments, you can configure AI settings through the web inter
 
 1. Go to **Settings** → **Self-Hosting**
 2. Scroll to the **AI Provider** section
-3. Configure:
-   - **OpenAI Access Token** - Your API key
-   - **OpenAI URI Base** - Custom endpoint (leave blank for OpenAI)
-   - **OpenAI Model** - Model name (required for custom endpoints)
+3. Configure the provider:
+   - **Access Token** - Your API key
+   - **API Base URL** - Custom endpoint (leave blank for OpenAI)
+   - **Model** - Model name (required for custom endpoints)
+   - **JSON Mode** - Structured-output format; `Auto` suits most models
+4. Optionally tune **Token Budget** — Context Window, Max Response Tokens and Max Items Per Batch. The defaults are conservative so small-context local models work out of the box; raise them for cloud or large-context models.
+5. Optionally set **Chat Response Timeout** — how long the chat waits for a whole turn before showing a "no response" error (default 90s). Raise it for slow local models; see [Chat Errors While the Model Is Still Generating](#chat-errors-while-the-model-is-still-generating).
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
 
@@ -345,7 +362,7 @@ This is useful when:
 1. User sends a message in the Sure chat UI
 2. Sure sends the conversation to your agent's API endpoint (OpenAI chat completions format)
 3. Your agent processes it using whatever LLM, tools, or context it needs
-4. Your agent can call Sure's `/mcp` endpoint for financial data (accounts, transactions, balance sheet, holdings)
+4. Your agent can call Sure's `/mcp` endpoint for financial data and actions (accounts, transactions, balance sheet, budgets, file search, statement import, goals)
 5. Your agent streams the response back to Sure via Server-Sent Events (SSE)
 
 The agent's API must be **OpenAI chat completions compatible**: accept `POST` with a `messages` array, return SSE with `delta.content` chunks.
@@ -380,17 +397,24 @@ Sure exposes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) 
 
 **Authentication:** Bearer token via `Authorization` header
 
-**Environment variables:**
+Sure supports both:
+
+- OAuth bearer tokens issued through its discovery and registration endpoints (`/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `POST /register`)
+- Static bearer tokens configured with `MCP_API_TOKEN` and `MCP_USER_EMAIL`
+
+**Static-token environment variables:**
 ```bash
 MCP_API_TOKEN=your-secret-token    # Bearer token the agent sends to authenticate
 MCP_USER_EMAIL=user@example.com    # Email of the Sure user the agent acts as
 ```
 
 The agent must send requests to `https://your-sure-instance/mcp` with:
-```
-Authorization: Bearer <MCP_API_TOKEN>
+```http
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
+
+For OAuth clients, `<access-token>` is the issued Doorkeeper bearer token. For static-token clients, it is the configured `MCP_API_TOKEN`.
 
 **Supported methods:**
 
@@ -400,7 +424,7 @@ Content-Type: application/json
 | `tools/list` | Lists available tools with names, descriptions, and input schemas |
 | `tools/call` | Calls a specific tool by name with arguments |
 
-**Available tools** (exposed via `tools/list`):
+**Base tools** (exposed via `tools/list`; treat the live response as the source of truth):
 
 | Tool | Description |
 |------|-------------|
@@ -409,8 +433,20 @@ Content-Type: application/json
 | `get_holdings` | Investment holdings data |
 | `get_balance_sheet` | Current financial position |
 | `get_income_statement` | Income and expenses |
+| `get_budget` | Budget status and category breakdowns |
 | `import_bank_statement` | Import bank statement data |
-| `search_family_files` | Search uploaded documents |
+| `search_family_files` | Search documents uploaded through the import flow |
+| `create_goal` | Create a savings goal |
+| `get_tags` | List family tags |
+| `create_tag` | Create a family tag |
+| `update_tag` | Update a family tag |
+| `get_categories` | List family categories |
+| `create_category` | Create a family category |
+| `update_category` | Update a family category |
+| `update_transaction` | Update an existing transaction |
+| `update_budget` | Update a budget category allocation |
+
+Preview users may also see Statement Vault tools in `tools/list`.
 
 **Example: list tools**
 ```bash
@@ -449,6 +485,21 @@ EXTERNAL_ASSISTANT_AGENT_ID=your-agent-name
 # URL uses Kubernetes DNS: <service>.<namespace>.svc.cluster.local:<port>
 EXTERNAL_ASSISTANT_URL=http://my-agent.my-namespace.svc.cluster.local:18789/v1/chat/completions
 ```
+
+#### Giving the agent a long-term memory of its own
+
+An external agent can do more than answer questions about the current balance:
+with its own repository behind it, it can maintain a document-backed history of
+a family's wealth, where every figure traces back to the statement it came from.
+
+That is a two-install shape — Sure as the system of record, the agent harness as
+the model and the compiler — rather than a feature inside Sure. Sure exposes a
+set of preview MCP tools for it (the Statement Vault, coverage gaps, and
+valuations that require a source citation).
+
+See [Wealth history with an external agent harness](../llm-guides/wealth-agent-harness.md)
+for which side owns what, and [the blueprint](../llm-guides/wealth-blueprint.md)
+it implements.
 
 ### Security with Pipelock
 
@@ -667,8 +718,10 @@ def self.function_classes
     Function::GetHoldings,
     Function::GetBalanceSheet,
     Function::GetIncomeStatement,
+    Function::GetBudget,
     Function::ImportBankStatement,
-    Function::SearchFamilyFiles
+    Function::SearchFamilyFiles,
+    Function::CreateGoal
   ]
 end
 ```
@@ -1079,6 +1132,41 @@ Then restart both `web` and `worker` so the new env var is loaded. If you are us
 - Check for thermal throttling
 - If you see `Net::ReadTimeout` after fixing the context budget, raise `OPENAI_REQUEST_TIMEOUT` (for example `180`)
 
+### Chat Errors While the Model Is Still Generating
+
+**Symptom:** The chat shows "Thinking…" for a while, then an error saying the assistant is not available — but the model does produce a reply and LLM Usage shows tokens were generated.
+
+**Cause:** Three settings interact here, measured over different spans:
+
+- `OPENAI_REQUEST_TIMEOUT` (default `60`) — applies to **each HTTP call** to the model, on its own.
+- `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` (default `5`) — how many chained tool calls one turn may make. A turn costs up to `1 + this` model calls.
+- `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it.
+
+Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. Worse, the assistant only shows text once a response actually contains some — a tool-call-only response produces nothing to display — so a turn that chains several tool calls sits on "Thinking…" through all of them. At the defaults the worst case is six sequential model calls plus five tool executions.
+
+**Fix:** size `AI_RESPONSE_TIMEOUT` as a **sum**, not simply as a number larger than the per-call limit:
+
+```text
+AI_RESPONSE_TIMEOUT ≥ (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT
+                      + tool execution + queue wait
+```
+
+You have two levers, and the cheaper one is usually the tool-call cap, because it divides the first term. With `ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2` a turn costs at most three model calls instead of six, halving the timeout you need. The trade-off is that genuinely long tool chains fail earlier, with a clear "exceeded the tool-call limit" error rather than a timeout.
+
+```bash
+OPENAI_REQUEST_TIMEOUT=300
+ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2
+AI_RESPONSE_TIMEOUT=1200   # (1 + 2) × 300 = 900, plus 300 headroom
+```
+
+Keeping the full five iterations at 300s per call would instead need `6 × 300 = 1800` plus headroom — which is why lowering the cap is usually the better trade.
+
+If `AI_RESPONSE_TIMEOUT` ends up below what the turn actually takes, you get a generic "no response" instead of the specific timeout error, and the job keeps running and burning tokens after the chat has given up.
+
+`AI_RESPONSE_TIMEOUT` can also be set at **Settings → Self-Hosting → OpenAI → Chat Response Timeout**, which takes effect without a restart. The environment variable wins if both are set. The minimum accepted value is `30`.
+
+Restart `web` and `worker` after changing the environment variables, and make sure your Docker Compose file forwards them into the containers.
+
 ### No Provider Available
 
 **Symptom:** "Provider not found" or similar error
@@ -1167,8 +1255,10 @@ The assistant uses OpenAI's function calling (tool use) to access user data:
 - `get_holdings` - Investment holdings data
 - `get_balance_sheet` - Current financial position
 - `get_income_statement` - Income and expenses
+- `get_budget` - Budget status and category breakdowns
 - `import_bank_statement` - Import bank statement data
 - `search_family_files` - Search uploaded documents
+- `create_goal` - Create a savings goal
 
 These are defined in `app/models/assistant/function/`.
 

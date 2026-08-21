@@ -22,11 +22,14 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to family_merchants_path
+    created_merchant = FamilyMerchant.find_by(name: "new merchant")
+    assert_equal "#000000", created_merchant.color
   end
 
   test "should update merchant" do
     patch family_merchant_url(@merchant), params: { family_merchant: { name: "new name", color: "#000000" } }
     assert_redirected_to family_merchants_path
+    assert_equal "#000000", @merchant.reload.color
   end
 
   test "should destroy merchant" do

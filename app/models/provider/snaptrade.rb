@@ -32,6 +32,13 @@ class Provider::Snaptrade
   DASHBOARD_URL = "https://dashboard.snaptrade.com".freeze
   TOKEN_EXPIRY_LEEWAY = 60 # seconds; refresh this long before actual expiry
 
+  # Filtered out of get_positions so they never reach raw_holdings_payload:
+  # units are per-contract and symbols OCC-style, which neither
+  # SnaptradeAccount::HoldingsProcessor nor the units * price sum in
+  # SnaptradeAccount::Processor#calculate_holdings_value models. A denylist, so
+  # equity-like kinds added later still import rather than being dropped.
+  UNSUPPORTED_INSTRUMENT_KINDS = %w[option future cfd].freeze
+
   class << self
     def oauth_configured?
       oauth_client_id.present? && oauth_client_secret.present?
@@ -207,7 +214,20 @@ class Provider::Snaptrade
 
   # Returns Array<Hash> of positions
   def get_positions(account_id:)
-    get_json("/api/v1/accounts/#{account_id}/positions")
+    response = get_json("/api/v1/accounts/#{account_id}/positions/all")
+    results = response["results"] if response.is_a?(Hash)
+
+    # An empty `results` is a legitimately empty account, but a missing one is
+    # a partial or schema-changed response. Raising leaves the previous
+    # snapshot in place rather than overwriting it with nothing.
+    unless results.is_a?(Array)
+      raise ApiError.new(
+        "SnapTrade positions response has no results array " \
+        "(keys: #{response.is_a?(Hash) ? response.keys.inspect : response.class})"
+      )
+    end
+
+    results.reject { |position| unsupported_instrument?(position) }
   end
 
   # Returns raw JSON: paginated form is {"data" => [...]}, may also be a plain Array
@@ -247,6 +267,15 @@ class Provider::Snaptrade
   end
 
   private
+
+    def unsupported_instrument?(position)
+      return false unless position.is_a?(Hash)
+
+      instrument = position["instrument"]
+      return false unless instrument.is_a?(Hash)
+
+      UNSUPPORTED_INSTRUMENT_KINDS.include?(instrument["kind"].to_s.downcase)
+    end
 
     def get_json(path, params = {})
       request_json(:get, path, params: params)

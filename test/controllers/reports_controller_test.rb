@@ -420,6 +420,49 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-#{subcategory_games.id}']", text: /^Games/
   end
 
+  test "index links income and expense categories to filtered transactions" do
+    start_date = Date.current.beginning_of_month
+    end_date = Date.current.end_of_month
+    expense_category = @family.categories.create!(name: "Reports Clickable Groceries", color: "#ABCDEF")
+    income_category = @family.categories.create!(name: "Reports Clickable Salary", color: "#FEDCBA")
+    account = @family.accounts.first
+
+    create_transaction(account: account, name: "Groceries", amount: 42, category: expense_category, date: Date.current)
+    create_transaction(account: account, name: "Salary", amount: -100, category: income_category, date: Date.current)
+    create_transaction(account: account, name: "Uncategorized cash", amount: 25, date: Date.current)
+
+    get reports_path(period_type: :monthly, start_date: start_date, end_date: end_date)
+    assert_response :ok
+
+    expense_href = transactions_path(q: { categories: [ expense_category.name ], start_date: start_date, end_date: end_date })
+    income_href = transactions_path(q: { categories: [ income_category.name ], start_date: start_date, end_date: end_date })
+    uncategorized_href = transactions_path(q: { categories: [ Category.uncategorized.name ], start_date: start_date, end_date: end_date })
+
+    assert_select "tr[data-category='category-#{expense_category.id}'] a[href=?]", expense_href, text: expense_category.name
+    assert_select "tr[data-category='category-#{income_category.id}'] a[href=?]", income_href, text: income_category.name
+    assert_select "tr[data-category='category-uncategorized'] a[href=?]", uncategorized_href, text: Category.uncategorized.name
+
+    # Full-row hit target via stretched ::before (mirrors dashboard outflows)
+    assert_select "tr.relative.group\\/category-row[data-category='category-#{expense_category.id}'] a[class*='before:absolute'][class*='before:inset-0']"
+  end
+
+  test "index uncategorized category link uses localized name that Search accepts" do
+    start_date = Date.current.beginning_of_month
+    end_date = Date.current.end_of_month
+    account = @family.accounts.first
+    create_transaction(account: account, name: "Uncategorized cash", amount: 25, date: Date.current)
+
+    @user.update!(locale: "zh-CN")
+    localized_name = I18n.with_locale(:"zh-CN") { Category.uncategorized.name }
+    assert_includes Category.all_uncategorized_names, localized_name
+
+    get reports_path(period_type: :monthly, start_date: start_date, end_date: end_date)
+    assert_response :ok
+
+    href = transactions_path(q: { categories: [ localized_name ], start_date: start_date, end_date: end_date })
+    assert_select "tr[data-category='category-uncategorized'] a[href=?]", href, text: localized_name
+  end
+
   test "index excludes tax-advantaged account transactions from activity breakdown" do
     @family.accounts.each { |account| account.entries.destroy_all }
 
@@ -451,11 +494,14 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-#{taxable_category.id}']", text: /Reports Taxable Income/
     assert_select "tr[data-category='category-#{retirement_category.id}']", count: 0
 
-    other_investments_row = css_select("tr[data-category='category-other_investments']").first
-    assert_not_nil other_investments_row
-    assert_match(/#{Regexp.escape(Category.other_investments.name)}/, other_investments_row.text)
-    assert_match(/#{Regexp.escape(I18n.t("reports.transactions_breakdown.table.entries", count: 1))}/, other_investments_row.text)
-    assert_match(/\$100\.00/, other_investments_row.text)
+    other_investments_rows = css_select("tr[data-category='category-other_investments']")
+    assert_operator other_investments_rows.size, :>=, 1
+    other_investments_rows.each do |row|
+      assert_match(/#{Regexp.escape(Category.other_investments.name)}/, row.text)
+      assert_equal 0, row.css("a").size
+    end
+    assert_match(/#{Regexp.escape(I18n.t("reports.transactions_breakdown.table.entries", count: 1))}/, other_investments_rows.first.text)
+    assert_match(/\$100\.00/, other_investments_rows.first.text)
   end
 
   test "monthly period navigation shows previous month link" do

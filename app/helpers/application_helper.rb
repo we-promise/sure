@@ -87,6 +87,33 @@ module ApplicationHelper
     item.merge(preview: true)
   end
 
+  # Budgets and Goals share one nav slot. Preview users get the "Plan" hub
+  # entry fronting both (it stays lit while browsing either subpage, since
+  # page_active? is a path-prefix match and /budgets · /goals don't share
+  # the /plan prefix). Everyone else gets exactly the pre-Plan Budgets
+  # entry — Goals was already hidden without the flag, so their nav is
+  # unchanged.
+  def plan_nav_item
+    if preview_features_enabled?
+      {
+        name: t("layouts.application.nav.plan"),
+        path: plan_path,
+        icon: "compass",
+        icon_custom: false,
+        active: page_active?(plan_path) || page_active?(budgets_path) || page_active?(goals_path),
+        preview: true
+      }
+    else
+      {
+        name: t("layouts.application.nav.budgets"),
+        path: budgets_path,
+        icon: "map",
+        icon_custom: false,
+        active: page_active?(budgets_path)
+      }
+    end
+  end
+
   # Wrapper around I18n.l to support custom date formats
   def format_date(object, format = :default, options = {})
     date = object.to_date

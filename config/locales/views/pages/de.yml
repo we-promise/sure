@@ -28,11 +28,22 @@ de:
         title: "Bilanz"
         no_items: "Noch keine %{name}"
         add_accounts: "Füge deine %{name}-Konten hinzu, um eine vollständige Übersicht zu erhalten."
+        add_asset_accounts: Leg deine Vermögenskonten an, um die volle Aufschlüsselung zu sehen
+        add_liability_accounts: Leg deine Verbindlichkeiten an, um die volle Aufschlüsselung zu sehen
+        classifications:
+          asset: Vermögen
+          liability: Verbindlichkeiten
+        name: Name
+        no_asset: Noch keine Vermögenswerte
+        no_liability: Noch keine Verbindlichkeiten
+        value: Wert
+        weight: Anteil
       cashflow_sankey:
         title: "Cashflow"
         no_data_title: "Keine Cashflow-Daten für diesen Zeitraum"
         no_data_description: "Füge Transaktionen hinzu, um Cashflow-Daten anzuzeigen, oder erweitere den Zeitraum."
         add_transaction: "Transaktion hinzufügen"
+        zoom_out: Zurück zum gesamten Zahlungsfluss
       no_accounts:
         title: "Noch keine Konten vorhanden"
         description: "Füge Konten hinzu, um Daten zum Nettovermögen anzuzeigen."
@@ -44,7 +55,7 @@ de:
         value: "Wert"
         weight: "Gewicht"
       investment_summary:
-        title: "Investitionen"
+        title: Investments
         total_return: "Gesamtrendite"
         holding: "Position"
         weight: "Gewicht"
@@ -56,3 +67,54 @@ de:
         trades: "Trades"
         no_investments: "Keine Anlagekonten"
         add_investment: "Füge ein Anlagekonto hinzu, um dein Portfolio zu verfolgen"
+      insights_feed:
+        title: Insights
+      money_flow:
+        apply: Übernehmen
+        balance: Saldo der Transaktionen
+        chart_span: Letzte %{count} Monate
+        date_range: "%{start_date} bis %{end_date}"
+        expenses: Ausgaben
+        filter_accounts: Konten filtern (%{count})
+        filter_accounts_all: Alle Konten
+        income: Einnahmen
+        month_picker_aria_label: Monat wählen
+        period_scope_hint: Zeigt die Monate, die du hier wählst – unabhängig vom Zeitraum oben im Dashboard.
+        search_accounts: Konten suchen
+        title: Geld rein / raus
+      sections_aria_label: Dashboard-Bereiche
+      widget_size:
+        auto: Auto
+        compact: Kompakt
+        full: Voll
+        half: Halb
+        height_label: Höhe
+        label: Größe anpassen
+        tall: Hoch
+        width_label: Breite
+    feedback:
+      bug_report: Fehler melden
+      description: Sag uns, was dir auffällt. Links zu Videos oder Screenshots sind willkommen.
+      discuss: "%{product} mit anderen besprechen"
+      feature_request: Funktion vorschlagen
+      heading: Feedback geben
+      title: Feedback
+    intro:
+      coming_soon: Die Einführung kommt bald
+      description: 'Wir bauen gerade einen ausführlicheren Einstieg, der deine Ziele, Meilensteine und den Alltag kennenlernt. Bis dahin: Öffne die Chat-Leiste und erzähl Sure, wo du finanziell gerade stehst.'
+      not_authorized: Die Einführung gibt es nur für Gastnutzer.
+      start_chatting: Chat starten
+      welcome: Willkommen!
+    redis_configuration_error:
+      heading: Redis muss eingerichtet werden
+      page_title: Redis muss eingerichtet werden – Sure
+      refresh_hint: Sobald Redis läuft, lade diese Seite neu.
+      refresh_page: Seite neu laden
+      setup_guide_hint: Folge unserer Docker-Anleitung, um Redis einzurichten
+      subheading: Deine selbst gehostete Sure-Installation braucht ein richtig eingerichtetes Redis.
+      view_setup_guide: Anleitung öffnen
+      why_required_body: 'Sure nutzt Redis für die Sidekiq-Hintergrundjobs: Kontodaten abgleichen, Importe verarbeiten und alles andere, was deine Finanzdaten aktuell hält.'
+      why_required_title: Wofür braucht Sure Redis?
+    release_notes_unavailable:
+      body_html: "<p>Die aktuellen Release Notes lassen sich gerade nicht abrufen. Versuch es später noch einmal oder öffne direkt unsere <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub-Release-Seite</a>.</p>"
+      name: Release Notes nicht verfügbar

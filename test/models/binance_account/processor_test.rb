@@ -98,11 +98,12 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     provider.stubs(:get_spot_price).returns("50000.0")
     provider.stubs(:get_all_p2p_trades).returns([]) # Skip P2P
 
-    # Mock futures trades
-    provider.stubs(:get_futures_trades).returns([])
-    provider.stubs(:get_futures_trades).with("BTCUSDT", limit: 1000, from_id: nil, startTime: nil).returns([
-      { "id" => 1, "time" => 1610000000000, "qty" => "0.1", "price" => "40000.0", "quoteQty" => "4000.0", "commission" => "0.0", "commissionAsset" => "USDT", "buyer" => true }
-    ])
+    # No cached trades -> initial sync walks time windows. First window returns
+    # the trade, every later window/pair returns nothing.
+    provider.stubs(:get_futures_trades).returns(
+      [ { "id" => 1, "time" => 1610000000000, "qty" => "0.1", "price" => "40000.0", "quoteQty" => "4000.0", "commission" => "0.0", "commissionAsset" => "USDT", "buyer" => true } ],
+      []
+    )
 
     Security.create!(ticker: "CRYPTO:BTC", name: "Bitcoin", price_provider: "binance_public")
 
@@ -111,6 +112,73 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     end
 
     assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_1")
+  end
+
+  test "initial futures sync walks multiple 7-day windows from sync_start_date" do
+    @family.update!(currency: "USD")
+    @item.update!(sync_start_date: 20.days.ago)
+    @ba.update!(raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1.0" } ] })
+
+    provider = mock
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+    provider.stubs(:get_spot_trades).returns([])
+    provider.stubs(:get_spot_price).returns("50000.0")
+    provider.stubs(:get_all_p2p_trades).returns([])
+
+    trade = ->(id) {
+      { "id" => id, "time" => 1610000000000, "qty" => "0.1", "price" => "40000.0", "quoteQty" => "4000.0", "commission" => "0.0", "commissionAsset" => "USDT", "buyer" => true }
+    }
+
+    # A 20-day span splits into three consecutive 7-day windows; each returns a
+    # distinct trade, then all remaining windows/pairs return nothing.
+    provider.stubs(:get_futures_trades).returns([ trade.call(1) ], [ trade.call(2) ], [ trade.call(3) ], [])
+
+    Security.create!(ticker: "CRYPTO:BTC", name: "Bitcoin", price_provider: "binance_public")
+
+    assert_difference "Entry.count", 3 do
+      BinanceAccount::Processor.new(@ba).process
+    end
+
+    assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_1")
+    assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_2")
+    assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_3")
+  end
+
+  test "incremental sync paginates by fromId across full pages" do
+    @family.update!(currency: "USD")
+    @ba.update!(
+      raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1.0" } ] },
+      raw_transactions_payload: {
+        "futures" => { "BTCUSDT" => [ { "id" => 100, "time" => 1610000000000 } ] }
+      }
+    )
+
+    provider = mock
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+    provider.stubs(:get_spot_trades).returns([])
+    provider.stubs(:get_spot_price).returns("50000.0")
+    provider.stubs(:get_all_p2p_trades).returns([])
+
+    full_page = (101..1100).map do |id|
+      { "id" => id, "time" => 1610000000000, "qty" => "0.1", "price" => "40000.0", "quoteQty" => "4000.0", "commission" => "0.0", "commissionAsset" => "USDT", "buyer" => true }
+    end
+    last_page = [ { "id" => 1101, "time" => 1610000000000, "qty" => "0.1", "price" => "40000.0", "quoteQty" => "4000.0", "commission" => "0.0", "commissionAsset" => "USDT", "buyer" => true } ]
+
+    # First BTCUSDT futures call returns a full 1000-row page (triggers a second
+    # fromId request); the follow-up returns the final partial page. Other pairs
+    # have no cached trades, so their window scans return nothing.
+    provider.stubs(:get_futures_trades).returns(full_page, last_page, [])
+
+    Security.create!(ticker: "CRYPTO:BTC", name: "Bitcoin", price_provider: "binance_public")
+
+    assert_difference "Entry.count", 1001 do
+      BinanceAccount::Processor.new(@ba).process
+    end
+
+    assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_101")
+    assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_1101")
   end
 
   test "processes P2P BUY trades with double-entry logic and exact native fiat" do

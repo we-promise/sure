@@ -102,6 +102,39 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
     assert_equal :server_error, error.error_type
   end
 
+  test "get_accounts sends pending=1 when pending is enabled" do
+    mock_response = OpenStruct.new(code: 200, body: '{"accounts": []}')
+
+    Provider::Simplefin.expects(:get)
+      .with { |url| url.include?("pending=1") }
+      .returns(mock_response)
+
+    @provider.get_accounts(@access_url, pending: true)
+  end
+
+  test "get_accounts omits the pending param when pending is disabled" do
+    # The SimpleFIN protocol has no pending=0 — bridges presence-check the
+    # param, so pending=0 behaves like pending=1. Disabling pending must omit
+    # the param entirely.
+    mock_response = OpenStruct.new(code: 200, body: '{"accounts": []}')
+
+    Provider::Simplefin.expects(:get)
+      .with { |url| !url.include?("pending") }
+      .returns(mock_response)
+
+    @provider.get_accounts(@access_url, pending: false)
+  end
+
+  test "get_accounts omits the pending param when pending is nil" do
+    mock_response = OpenStruct.new(code: 200, body: '{"accounts": []}')
+
+    Provider::Simplefin.expects(:get)
+      .with { |url| !url.include?("pending") }
+      .returns(mock_response)
+
+    @provider.get_accounts(@access_url, pending: nil)
+  end
+
   test "claim_access_url retries on network errors" do
     setup_token = Base64.encode64("https://example.com/claim")
     mock_response = OpenStruct.new(code: 200, body: "https://example.com/access")
