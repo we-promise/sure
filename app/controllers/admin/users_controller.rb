@@ -28,8 +28,8 @@ module Admin
       @entries_count_by_family = Entry.joins(:account).where(accounts: { family_id: family_ids }).group("accounts.family_id").count
 
       user_ids = users.map(&:id).uniq
-      @last_login_by_user = Session.where(user_id: user_ids).group(:user_id).maximum(:created_at)
-      @sessions_count_by_user = Session.where(user_id: user_ids).group(:user_id).count
+      @last_login_by_user = User.where(id: user_ids).pluck(:id, :last_login_at).to_h
+      @sessions_count_by_user = User.where(id: user_ids).pluck(:id, :sessions_count).to_h
 
       @families_with_users = users.group_by(&:family).sort_by do |family, _users|
         -(@entries_count_by_family[family.id] || 0)
