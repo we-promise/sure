@@ -150,6 +150,15 @@ class SimplefinItem < ApplicationRecord
     # Refuse to act rather than risk hijacking a live linkage. See GH issue #2852.
     if upstream_account_ids.nil?
       Rails.logger.warn "SimplefinItem#repair_stale_linkages - upstream_account_ids unavailable, skipping repair to avoid hijacking a live linkage"
+      DebugLogEntry.capture(
+        category: "provider_sync_warning",
+        level: "warn",
+        message: "Skipped stale-linkage repair: upstream_account_ids unavailable",
+        source: self.class.name,
+        provider_key: "simplefin",
+        family: family,
+        metadata: { simplefin_item_id: id, unlinked_with_data_count: unlinked_with_data.count }
+      )
       return
     end
 

@@ -122,10 +122,17 @@ class SimplefinItem::RepairStaleLinkagesTest < ActiveSupport::TestCase
 
     assert_nil @item.upstream_account_ids
 
-    @item.send(:repair_stale_linkages, [ linked_sfa, unlinked_sfa ])
+    assert_difference "DebugLogEntry.count", 1 do
+      @item.send(:repair_stale_linkages, [ linked_sfa, unlinked_sfa ])
+    end
 
     assert_equal account, linked_sfa.reload.current_account
     assert_nil unlinked_sfa.reload.current_account
+
+    entry = DebugLogEntry.last
+    assert_equal "provider_sync_warning", entry.category
+    assert_equal "simplefin", entry.provider_key
+    assert_equal @family, entry.family
   end
 
   test "does not act on an ambiguous multi-way name match" do

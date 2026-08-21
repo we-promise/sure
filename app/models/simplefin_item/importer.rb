@@ -565,6 +565,11 @@ class SimplefinItem::Importer
     #
     # Returns nothing; side-effects are snapshot + account upserts.
     def perform_account_discovery
+      # Clear any upstream_account_ids left over from a prior discovery on this same
+      # SimplefinItem instance (e.g. reused across import runs). If this discovery finds
+      # zero accounts, we must not let repair_stale_linkages act on stale IDs from before.
+      simplefin_item.upstream_account_ids = nil
+
       Rails.logger.info "SimplefinItem::Importer - perform_account_discovery START (no date params - transactions may be empty)"
       discovery_data = fetch_accounts_data(start_date: nil)
       discovered_count = discovery_data&.dig(:accounts)&.size.to_i
