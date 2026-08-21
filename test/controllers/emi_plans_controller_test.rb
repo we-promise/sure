@@ -105,6 +105,24 @@ class EmiPlansControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("emi_plans.destroy.success"), flash[:notice]
   end
 
+  test "destroy on an already-foreclosed plan does not re-run foreclose" do
+    post transaction_emi_plan_path(@entry), params: {
+      emi_plan: { tenure_months: 3, interest_rate: 0, processing_fee: 0, start_date: (Date.current - 45.days).iso8601 }
+    }
+
+    delete transaction_emi_plan_path(@entry)
+    assert_equal "foreclosed", @entry.reload.originated_emi_plan.status
+
+    # Second foreclose attempt (e.g. double-click, replayed request) must
+    # not touch entries again -- it should just bounce with the not_emi alert.
+    assert_no_difference "Entry.count" do
+      delete transaction_emi_plan_path(@entry)
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("emi_plans.show.not_emi"), flash[:alert]
+  end
+
   # --- Authorization / abuse-hardening tests ---
 
   test "cannot access another family's entry (IDOR)" do

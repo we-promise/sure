@@ -333,4 +333,34 @@ class EmiPlanTest < ActiveSupport::TestCase
     @entry.reload.transaction.kind = "one_time"
     assert @entry.transaction.valid?
   end
+
+  test "amount and date can be changed freely once foreclosed with nothing posted" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current + 1.month)
+    plan.foreclose!
+
+    entry = @entry.reload
+    entry.amount = entry.amount + 50
+    entry.date = Date.current - 1.day
+    assert entry.valid?
+  end
+
+  test "amount and date stay locked once foreclosed if something already posted" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current - 1.month)
+    plan.foreclose!
+
+    entry = @entry.reload
+    entry.amount = entry.amount + 50
+    refute entry.valid?
+    assert_includes entry.errors[:base], "Amount and date can't be changed on a purchase that's been converted to an EMI plan. Foreclose the plan first."
+  end
+
+  test "posted installment amount stays locked even after foreclose" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current - 1.month)
+    posted = plan.posted_installments.first
+    plan.foreclose!
+
+    posted.reload.amount = 1
+    refute posted.valid?
+    assert_includes posted.errors[:base], "Amount and date can't be changed on an individual EMI installment. Foreclose the plan to cancel remaining installments."
+  end
 end

@@ -127,7 +127,21 @@ class EmiPlan < ApplicationRecord
     # ActiveRecord::RecordInvalid path below -- no wasted writes, and no
     # reliance on the unique index as the only thing standing between two
     # plans on one entry.
-    entry.with_lock do
+    #
+    # NOTE: deliberately NOT entry.with_lock here. Entry uses
+    # `delegated_type :entryable`, which defines an instance method named
+    # `transaction` (returning the associated Transaction record). That
+    # shadows ActiveRecord::Base#transaction on every Entry instance --
+    # and with_lock's own implementation is `transaction { lock!; yield }`,
+    # calling that same shadowed instance method internally. So
+    # entry.with_lock silently never opens a real DB transaction, never
+    # locks the row, and never yields: it just returns entry.transaction
+    # (the Transaction record) instead of this block's value. Using the
+    # *class* method Entry.transaction explicitly, plus an explicit
+    # entry.lock!, sidesteps the collision entirely.
+    Entry.transaction do
+      entry.lock!
+
       unless entry.transaction? && entry.transaction.emi_convertible?
         raise ActiveRecord::RecordInvalid.new(entry), I18n.t("emi_plans.new.not_convertible")
       end
