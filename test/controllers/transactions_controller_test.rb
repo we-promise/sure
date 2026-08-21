@@ -109,7 +109,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_includes response.body, "A manual recurring transaction already exists for this pattern"
     assert_select "button[disabled]", text: /Mark as Recurring/
-    assert_no_match(/#{Regexp.escape(mark_as_recurring_transaction_path(entry))}/, response.body)
+    assert_no_match(/#{Regexp.escape(mark_as_recurring_transaction_path(entry.entryable))}/, response.body)
   end
 
   test "transaction count represents filtered total" do
