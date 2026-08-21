@@ -453,9 +453,14 @@ class TransactionsController < ApplicationController
     # Scoped additionally by Date.current since the "next 10 days" window is
     # date-dependent and would otherwise return a stale window on a cache hit
     # from an earlier day.
+    #
+    # Includes Family#merchants_version because the cached records are
+    # preloaded with :merchant and rendered with its name/logo, but editing
+    # or deleting a FamilyMerchant doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
-      "transactions_projected_recurring/v3/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
-        "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
+      "transactions_projected_recurring/v4/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
+        "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
+        "#{Current.family.merchants_version}/#{Current.account_share_version}"
     end
 
     def accessible_transactions

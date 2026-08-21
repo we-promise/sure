@@ -513,6 +513,13 @@ class Family < ApplicationRecord
     "#{accounts.count}-#{accounts.maximum(:updated_at)&.to_f}"
   end
 
+  # Used for invalidating caches that render merchant name/logo (e.g. the
+  # transactions index's projected recurring list), since editing or
+  # deleting a FamilyMerchant doesn't touch `recurring_transactions`.
+  def merchants_version
+    "#{merchants.count}-#{merchants.maximum(:updated_at)&.to_f}"
+  end
+
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
   end

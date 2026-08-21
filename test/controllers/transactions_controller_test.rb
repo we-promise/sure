@@ -1037,6 +1037,26 @@ end
     Rails.cache = original_cache
   end
 
+  test "index projected_recurring cache reflects a merchant rename immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    recurring = recurring_transactions(:netflix_subscription)
+    merchant = recurring.merchant
+
+    get transactions_url
+    assert_match(/#{Regexp.escape(merchant.name)}/, response.body,
+      "the recurring transaction should render with the merchant's original name")
+
+    merchant.update!(name: "Netflix Renamed")
+
+    get transactions_url
+    assert_match(/Netflix Renamed/, response.body,
+      "renaming the merchant must not leave a stale cached projected-recurring list")
+  ensure
+    Rails.cache = original_cache
+  end
+
   test "index uncategorized_count cache reflects deleting an uncategorized transaction immediately" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
