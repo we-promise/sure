@@ -295,6 +295,45 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow_entry.entryable.kind
   end
 
+  test "does not match an EMI purchase entry, even when it looks like a transfer candidate" do
+    # An EMI purchase entry has an opposite-signed match sitting in another
+    # account on the same day. Without the EMI kind filter, the SQL
+    # candidate query would surface this pair and auto_match_transfers!
+    # would try to flip the emi_purchase transaction's kind to
+    # funds_movement, which Transaction#cannot_change_kind_of_active_emi_entry
+    # rejects -- raising ActiveRecord::RecordInvalid, unrescued, inside the
+    # enclosing Transfer.transaction block. This must not happen: the pair
+    # should be silently skipped and no exception raised.
+    purchase_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    EmiPlan.build!(entry: purchase_entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
+
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      assert_nothing_raised do
+        @family.auto_match_transfers!
+      end
+    end
+
+    assert_equal "emi_purchase", purchase_entry.reload.entryable.kind
+  end
+
+  test "does not match an EMI installment entry, even when it looks like a transfer candidate" do
+    purchase_entry = create_transaction(date: Date.current - 1.month, account: @depository, amount: 600)
+    plan = EmiPlan.build!(entry: purchase_entry, interest_rate: 0, tenure_months: 6, processing_fee: 0, start_date: Date.current)
+    installment = plan.installment_entries.find_by(emi_installment_number: 1)
+
+    create_transaction(date: Date.current, account: @credit_card, amount: -installment.amount)
+
+    assert_no_difference -> { Transfer.count } do
+      assert_nothing_raised do
+        @family.auto_match_transfers!
+      end
+    end
+
+    assert_equal "emi_installment", installment.reload.entryable.kind
+  end
+
   private
     def load_exchange_prices
       rates = {

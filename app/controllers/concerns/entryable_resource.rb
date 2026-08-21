@@ -37,6 +37,14 @@ module EntryableResource
     @entry.sync_account_later
 
     redirect_back_or_to account_path(@entry.account), notice: t("account.entries.destroy.success")
+  rescue ActiveRecord::RecordNotDestroyed => e
+    # Entry's before_destroy guards (EMI purchase/installment, split child)
+    # throw :abort with a message in errors[:base] instead of letting the
+    # record actually delete. Surface that message instead of a 500 — the
+    # view is expected to hide the delete action for these cases, but this
+    # is the backstop for any path that reaches here anyway (bulk actions,
+    # API, a stale page).
+    redirect_back_or_to account_path(@entry.account), alert: e.record.errors[:base].first || t("entries.destroy.failure")
   end
 
   private

@@ -253,4 +253,69 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     converted_entry = converted_entries.first
     assert_equal 150.0, converted_entry.amount
   end
+
+  test "excludes an active emi_purchase entry from balance, counting only its installments" do
+    depository = @family.accounts.create!(name: "EMI Checking", accountable: Depository.new, currency: "USD", balance: 5000)
+    entry = depository.entries.create!(
+      date: Date.current,
+      name: "Laptop",
+      amount: 1200,
+      currency: "USD",
+      entryable: Transaction.new(category: @family.categories.first)
+    )
+
+    EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 3, processing_fee: 0)
+
+    sync_cache = Balance::SyncCache.new(depository)
+    converted_entries = sync_cache.send(:converted_entries)
+
+    # The parent purchase should be excluded; only the 3 installments remain.
+    assert_equal 3, converted_entries.size
+    assert_equal 1200.0, converted_entries.sum(&:amount) # sums back to the original principal, not double
+  end
+
+  test "re-includes the purchase in balance once foreclosed before anything posted" do
+    depository = @family.accounts.create!(name: "EMI Checking 2", accountable: Depository.new, currency: "USD", balance: 5000)
+    entry = depository.entries.create!(
+      date: Date.current,
+      name: "Laptop",
+      amount: 1200,
+      currency: "USD",
+      entryable: Transaction.new(category: @family.categories.first)
+    )
+
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current + 1.month)
+    plan.foreclose!
+
+    sync_cache = Balance::SyncCache.new(depository)
+    converted_entries = sync_cache.send(:converted_entries)
+
+    # Nothing ever posted, so the purchase reverts to a normal, counted entry.
+    assert_equal 1, converted_entries.size
+    assert_equal 1200.0, converted_entries.first.amount
+  end
+
+  test "keeps the purchase excluded from balance if foreclosed after an installment posted" do
+    depository = @family.accounts.create!(name: "EMI Checking 3", accountable: Depository.new, currency: "USD", balance: 5000)
+    entry = depository.entries.create!(
+      date: Date.current,
+      name: "Laptop",
+      amount: 1200,
+      currency: "USD",
+      entryable: Transaction.new(category: @family.categories.first)
+    )
+
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current - 45.days)
+    plan.foreclose!
+
+    sync_cache = Balance::SyncCache.new(depository)
+    converted_entries = sync_cache.send(:converted_entries)
+
+    # Purchase stays excluded; the 2 posted installments plus a settlement
+    # entry for the 3rd (future, deleted) installment's outstanding
+    # principal are counted — so the full $1200 is represented somewhere,
+    # not silently dropped.
+    refute converted_entries.any? { |e| e.id == entry.id }
+    assert_equal 1200.0, converted_entries.sum(&:amount)
+  end
 end
