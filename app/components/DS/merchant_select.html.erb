@@ -21,9 +21,8 @@
               <%= "disabled" if disabled %>>
         <span data-merchant-select-target="selectionContainer" class="flex items-center gap-2 truncate">
           <% if selected_merchant %>
-            <% logo_url = selected_merchant.respond_to?(:logo_url) && selected_merchant.logo_url.present? ? Setting.transform_brand_fetch_url(selected_merchant.logo_url) : nil %>
-            <% if logo_url %>
-              <%= image_tag logo_url, class: "w-5 h-5 rounded-full border border-secondary shrink-0", loading: "lazy" %>
+            <% if selected_merchant_logo_url %>
+              <%= image_tag selected_merchant_logo_url, class: "w-5 h-5 rounded-full border border-secondary shrink-0", loading: "lazy" %>
             <% else %>
               <%= render DS::FilledIcon.new(variant: :text, text: selected_merchant.name, size: "sm", rounded: true) %>
             <% end %>
@@ -60,7 +59,8 @@
       <div class="flex flex-col gap-0.5 max-h-64 overflow-auto"
            id="<%= menu_id %>"
            role="listbox"
-           tabindex="-1">
+           tabindex="-1"
+           data-merchant-select-target="listbox">
         <% if include_blank.present? %>
           <button type="button"
                   class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if selected_id.blank? %>"

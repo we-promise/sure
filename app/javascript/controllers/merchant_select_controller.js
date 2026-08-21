@@ -11,6 +11,7 @@ export default class extends Controller {
     "hiddenInput",
     "createForm",
     "createError",
+    "listbox",
   ];
 
   static values = {
@@ -191,8 +192,8 @@ export default class extends Controller {
         return;
       }
 
-      this.createFormTarget.insertAdjacentHTML("beforebegin", merchant.html);
-      const newOption = this.optionTargets[this.optionTargets.length - 1];
+      this.listboxTarget.insertAdjacentHTML("beforeend", merchant.html);
+      const newOption = this.listboxTarget.lastElementChild;
       this.applySelection(newOption);
       this.searchTarget.value = "";
       this.filter();
