@@ -244,6 +244,12 @@ class RecurringTransaction
       def manual_recurring_matches_entry?(recurring, entry)
         return false unless entry.currency == recurring.currency
         return false if recurring.account_id.present? && entry.account_id != recurring.account_id
+        # Anchor on the row's stable, user-set seed amount (not
+        # expected_amount_avg, which the very corruption we're guarding
+        # against here could already have skewed) so unrelated charges that
+        # happen to share a merchant/day don't get averaged in (issue #2936
+        # follow-up).
+        return false unless RecurringTransaction.amount_within_variance_band?(entry.amount, recurring.amount)
 
         expected_day = [ recurring.expected_day_of_month, entry.date.end_of_month.day ].min
         day = entry.date.day

@@ -1,3 +1,5 @@
+<%# locals: (budget:, editable:) %>
+
 <%= tag.div data: { controller: "donut-chart", donut_chart_segments_value: budget.to_donut_segments_json }, class: "relative h-full" do %>
   <div data-donut-chart-target="chartContainer" class="absolute inset-0 pointer-events-none"></div>
 
@@ -12,25 +14,31 @@
           <%= format_money(budget.actual_spending_money) %>
         </div>
 
-        <%= render DS::Link.new(
-          text: t(".of_budget", amount: budget.budgeted_spending_money.format),
-          variant: "secondary",
-          icon: "pencil",
-          icon_position: "right",
-          size: "sm",
-          href: edit_budget_path(budget)
-        ) %>
+        <% if editable %>
+          <%= render DS::Link.new(
+            text: t(".of_budget", amount: budget.budgeted_spending_money.format),
+            variant: "secondary",
+            icon: "pencil",
+            icon_position: "right",
+            size: "sm",
+            href: edit_budget_path(budget, **budget_owner_query)
+          ) %>
+        <% else %>
+          <p class="text-secondary text-sm"><%= t(".of_budget", amount: budget.budgeted_spending_money.format) %></p>
+        <% end %>
       <% else %>
         <div data-donut-chart-target="amount" class="text-subdued text-3xl mb-2 privacy-sensitive whitespace-nowrap">
           <span><%= format_money Money.new(0, budget.currency || budget.family.currency) %></span>
         </div>
 
-        <%= render DS::Link.new(
-          text: t(".new_budget"),
-          size: "sm",
-          icon: "plus",
-          href: edit_budget_path(budget)
-        ) %>
+        <% if editable %>
+          <%= render DS::Link.new(
+            text: t(".new_budget"),
+            size: "sm",
+            icon: "plus",
+            href: edit_budget_path(budget, **budget_owner_query)
+          ) %>
+        <% end %>
       <% end %>
     </div>
 
@@ -46,14 +54,18 @@
             <%= format_money(bc.actual_spending_money) %>
           </p>
 
-          <%= render DS::Link.new(
-            text: t(".of_budget", amount: bc.budgeted_spending_money.format(precision: 0)),
-            variant: "secondary",
-            icon: "pencil",
-            icon_position: "right",
-            size: "sm",
-            href: budget_budget_categories_path(budget)
-          ) %>
+          <% if editable %>
+            <%= render DS::Link.new(
+              text: t(".of_budget", amount: bc.budgeted_spending_money.format(precision: 0)),
+              variant: "secondary",
+              icon: "pencil",
+              icon_position: "right",
+              size: "sm",
+              href: budget_budget_categories_path(budget, **budget_owner_query)
+            ) %>
+          <% else %>
+            <p class="text-secondary text-sm"><%= t(".of_budget", amount: bc.budgeted_spending_money.format(precision: 0)) %></p>
+          <% end %>
         </div>
       </div>
     <% end %>

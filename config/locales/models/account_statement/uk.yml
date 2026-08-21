@@ -1,0 +1,30 @@
+---
+uk:
+  activerecord:
+    attributes:
+      account_statement:
+        account: "Рахунок"
+        account_last4_hint: "Останні чотири цифри рахунку"
+        account_name_hint: "Підказка щодо назви рахунку"
+        closing_balance: "Кінцевий баланс"
+        content_sha256: "Дайджест вмісту"
+        currency: "Валюта"
+        filename: "Назва файлу"
+        institution_name_hint: "Підказка щодо назви установи"
+        opening_balance: "Початковий баланс"
+        original_file: "Файл виписки"
+        period_end_on: "Кінець періоду"
+        period_start_on: "Початок періоду"
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: "вже завантажено для цієї сім'ї"
+            content_sha256:
+              duplicate_statement_file: "вже завантажено для цієї сім'ї"
+            original_file:
+              invalid_format: "має бути файлом PDF, CSV або XLSX"
+              too_large: "завеликий. Максимальний розмір — %{max_mb}MB"
+            period_end_on:
+              on_or_after_start: "має бути на або після початку періоду"

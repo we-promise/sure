@@ -29,6 +29,7 @@ de:
       plural: Familien
       singular: Familie
     preview: Vorschau
+    dot_separator: "·"
     require_admin: Das dürfen nur Admins
     sync_toast:
       message: Neue Daten verfügbar
