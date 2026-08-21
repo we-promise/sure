@@ -603,6 +603,11 @@ class SimplefinItem::Importer
         # SimplefinAccount records would appear in the setup UI as duplicates.
         upstream_account_ids = discovery_data[:accounts].map { |a| a[:id].to_s }.compact
         prune_orphaned_simplefin_accounts(upstream_account_ids)
+
+        # Expose to SimplefinItem#repair_stale_linkages, which runs later in the same sync
+        # (via SimplefinItem::Syncer -> #process_accounts) and needs to know which linked
+        # accounts are actually absent upstream before treating them as stale. See GH #2852.
+        simplefin_item.upstream_account_ids = upstream_account_ids
       end
     end
 
