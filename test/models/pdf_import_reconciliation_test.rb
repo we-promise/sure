@@ -234,8 +234,15 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
     @import.assign_account!(other)
 
-    assert_not on_first.reload.reconciled?, "the account being left is released"
-    assert on_other.reload.reconciled?, "another account's evidence must survive"
+    # Both fields matter: reconciled_at is the state, reconciled_by_statement_id
+    # is the evidence, and Entry#unmark_reconciled! clears the pair.
+    on_first.reload
+    assert_not on_first.reconciled?, "the account being left is released"
+    assert_nil on_first.reconciled_by_statement_id, "its statement evidence is cleared too"
+
+    on_other.reload
+    assert on_other.reconciled?, "another account's evidence must survive"
+    assert_equal @statement.id, on_other.reconciled_by_statement_id
   end
 
   private
