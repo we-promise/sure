@@ -203,6 +203,34 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_nil Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
+  test "zero-amount foreign holdings do not mark the date unknown" do
+    sold_out = Security.create!(ticker: "SOLD", name: "Sold Out")
+    active = Security.create!(ticker: "LIVE", name: "Live Position")
+
+    # Closed USD position in a CAD account — no FX rate needed (amount is zero).
+    @account.update!(currency: "CAD")
+    @account.holdings.create!(
+      security: sold_out,
+      date: Date.current,
+      qty: 0,
+      price: 100,
+      amount: 0,
+      currency: "USD"
+    )
+    @account.holdings.create!(
+      security: active,
+      date: Date.current,
+      qty: 1,
+      price: 200,
+      amount: 200,
+      currency: "CAD"
+    )
+
+    DebugLogEntry.expects(:capture).never
+
+    assert_equal 200, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
   test "batches FX lookups for foreign holdings on the same date" do
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
     ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: Date.current, rate: 1.25)

@@ -29,11 +29,17 @@ class Balance::SyncCache
     # any unconvertible foreign holding is unknown, rather than silently treating
     # that holding as 1:1 or zero. Callers use nil to preserve existing balance
     # components and avoid reclassifying unknown investments as cash.
+    #
+    # Zero-amount rows (sold-out positions, neutralized manual rows) are skipped:
+    # they contribute nothing to the total and must not demand FX or mark the
+    # whole date unknown when rates are missing.
     def holdings_value_by_date
       @holdings_value_by_date ||= begin
         @unknown_holdings_value_dates = {}
         rows = account.holdings.pluck(:id, :date, :amount, :currency)
         rows.group_by { |(_id, date, _amount, _currency)| date }.each_with_object(Hash.new(0)) do |(date, day_rows), totals|
+          day_rows = day_rows.reject { |(_id, _date, amount, _currency)| amount.zero? }
+
           foreign_currencies = day_rows
             .map { |(_id, _date, _amount, currency)| currency }
             .uniq
