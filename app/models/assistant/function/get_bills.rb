@@ -68,9 +68,12 @@ class Assistant::Function::GetBills < Assistant::Function
     # (frequency, next due date); without it every series costs one query.
     scope = accessible_series.includes(:merchant, :account, :destination_account, :category,
                                        :recurring_occurrences, :recurrence_rules)
+    invalid = reject_unknown_filters(params)
+    return invalid if invalid
+
     scope = apply_status_filter(scope, params["status"])
 
-    if (bill_type = params["bill_type"]).presence_in(RecurringTransaction.bill_types.keys)
+    if (bill_type = params["bill_type"]).present?
       scope = scope.where(bill_type: bill_type)
     end
 
@@ -107,6 +110,32 @@ class Assistant::Function::GetBills < Assistant::Function
   end
 
   private
+    PAYMENT_STATES = %w[overdue due upcoming partial paid].freeze
+
+    # strict_mode? is false and MCP clients bypass provider validation
+    # entirely, so out-of-schema values arrive here routinely. Each one used to
+    # fail differently and silently: an unknown status was coerced to active,
+    # an unknown bill_type dropped its filter so "subscriptions" (plural)
+    # answered with rent and a car loan totalled as subscriptions, and an
+    # unknown payment_state matched nothing and read as an empty family.
+    #
+    # A value the caller believes in is worth an error. Guessing at it produces
+    # a confident answer about the wrong bills.
+    def reject_unknown_filters(params)
+      unknown_value(params["status"], STATUS_VOCABULARY.keys + [ "all" ], "status") ||
+        unknown_value(params["bill_type"], RecurringTransaction.bill_types.keys, "bill_type") ||
+        unknown_value(params["payment_state"], PAYMENT_STATES, "payment_state")
+    end
+
+    def unknown_value(value, allowed, field)
+      return nil if value.blank? || value.to_s.in?(allowed)
+
+      {
+        error: "#{value} is not a valid #{field}",
+        hint: "Valid values: #{allowed.join(', ')}."
+      }
+    end
+
     def apply_status_filter(scope, status)
       return scope if status == "all"
 
@@ -120,6 +149,13 @@ class Assistant::Function::GetBills < Assistant::Function
     # a $0 total, which is worse than no answer at all. Only runs when nothing
     # matched, so the normal path costs no extra query.
     def other_status_hint(params)
+      # Only the status filter can be pointed elsewhere. When something else
+      # emptied the result, saying "nothing matched status active" is simply
+      # false, and the retry it prescribes returns empty again with no hint at
+      # all, because this method early-returns on status: all.
+      narrowing = params.values_at("payment_state", "search", "due_within_days").compact_blank
+      return if narrowing.any?
+
       requested = params["status"].presence || "active"
       return if requested == "all"
 

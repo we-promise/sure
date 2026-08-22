@@ -140,6 +140,68 @@ class Assistant::Function::GetBillsTest < ActiveSupport::TestCase
     assert_nil result[:hint], "status: all already saw everything, so there is nowhere else to point"
   end
 
+
+  # strict_mode? is false and MCP bypasses provider validation, so out-of-schema
+  # values arrive routinely. Each one used to fail silently and differently.
+  test "an unknown bill_type is refused rather than dropping the filter" do
+    create_series(name: "Rent", amount: 2000)
+    create_series(name: "Netflix", amount: 12, bill_type: "subscription")
+
+    result = call_tool("bill_type" => "subscriptions")
+
+    assert_match(/not a valid bill_type/, result[:error],
+      "plural used to drop the filter and total rent as a subscription")
+    assert_nil result[:bills]
+  end
+
+  test "an unknown status is refused rather than silently meaning active" do
+    create_series(name: "Rent", amount: 2000)
+
+    result = call_tool("status" => "inactive")
+
+    assert_match(/not a valid status/, result[:error])
+    assert_match(/paused/, result[:hint], "the hint has to name the word that works")
+  end
+
+  test "an unknown payment_state is refused rather than matching nothing" do
+    create_series(name: "Rent", amount: 2000)
+
+    result = call_tool("payment_state" => "unpaid")
+
+    assert_match(/not a valid payment_state/, result[:error])
+  end
+
+  test "valid filters still work" do
+    create_series(name: "Netflix", amount: 12, bill_type: "subscription")
+
+    result = call_tool("bill_type" => "subscription")
+
+    assert_equal 1, result[:total_results]
+  end
+
+  # The hint can only redirect a status filter. Blaming status for a result
+  # emptied by payment_state sent the model to the suggestion queue while it
+  # was asking about overdue bills, and the retry it prescribed returned empty
+  # again with no hint at all.
+  test "the empty-result hint stays quiet when another filter did the emptying" do
+    create_series(name: "Rent", amount: 2000)
+    create_series(name: "Detected", amount: 9, status: "suggested", manual: false)
+
+    result = call_tool("payment_state" => "overdue")
+
+    assert_equal 0, result[:total_results]
+    assert_nil result[:hint], "nothing about the suggested series explains an overdue query"
+  end
+
+  test "the hint still fires when status alone emptied the result" do
+    create_series(name: "Detected", amount: 9, status: "suggested", manual: false)
+
+    result = call_tool({})
+
+    assert_equal 0, result[:total_results]
+    assert_match(/suggested/, result[:hint])
+  end
+
   private
 
     def call_tool(params = {})
