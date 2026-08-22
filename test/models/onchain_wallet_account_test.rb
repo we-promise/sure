@@ -74,6 +74,25 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "the database rejects an asset kind no index keys on" do
+    odd = @item.onchain_wallet_accounts.new(
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      wallet_address: OnchainTestHelper::FAKE_ADDRESS,
+      asset_kind: "trc20",
+      contract_address: "0xccc",
+      symbol: "FUSD",
+      decimals: 6,
+      quantity: 1,
+      currency: "USD"
+    )
+
+    # Each partial unique index names its kind, so a row carrying another one is
+    # keyed by nothing and would duplicate freely.
+    assert_raises ActiveRecord::StatementInvalid do
+      odd.save!(validate: false)
+    end
+  end
+
   test "a native row and token rows coexist for one address" do
     create_onchain_wallet_account(item: @item)
     create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa"))
