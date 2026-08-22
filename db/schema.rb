@@ -656,6 +656,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_21_034200) do
     t.boolean "user_modified", default: false, null: false
     t.boolean "import_locked", default: false, null: false
     t.uuid "parent_entry_id"
+    t.datetime "reconciled_at"
+    t.uuid "reconciled_by_statement_id"
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
     t.index ["account_id", "date", "entryable_id"], name: "index_entries_on_investment_totals_lookup", where: "(((entryable_type)::text = 'Trade'::text) AND (excluded = false))"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
@@ -668,6 +670,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_21_034200) do
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
+    t.index ["account_id", "reconciled_at"], name: "index_entries_on_account_and_reconciled_at", where: "(reconciled_at IS NOT NULL)"
+    t.index ["reconciled_by_statement_id"], name: "index_entries_on_reconciled_by_statement", where: "(reconciled_by_statement_id IS NOT NULL)"
+    t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
   end
 
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2378,6 +2383,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_21_034200) do
   add_foreign_key "debug_log_entries", "users", on_delete: :nullify
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
   add_foreign_key "enable_banking_items", "families"
+  add_foreign_key "entries", "account_statements", column: "reconciled_by_statement_id", on_delete: :nullify
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "entries", column: "parent_entry_id", on_delete: :cascade
   add_foreign_key "entries", "imports"
