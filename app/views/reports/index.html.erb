@@ -149,6 +149,7 @@
             touchstart->reports-sortable#touchStart
             touchmove->reports-sortable#touchMove
             touchend->reports-sortable#touchEnd
+            touchcancel->reports-sortable#touchCancel
             keydown->reports-sortable#handleKeyDown">
           <div class="px-4 py-2 flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -167,7 +168,7 @@
             </div>
             <button
               type="button"
-              class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100"
+              class="cursor-grab active:cursor-grabbing hidden lg:flex items-center justify-center w-6 h-6 text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
               aria-label="<%= t("reports.index.drag_to_reorder") %>">
               <%= icon("grip-vertical", size: "sm") %>
             </button>
