@@ -341,4 +341,55 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal family.id, invitee.family_id
     assert_equal 0, AccountShare.where(user: invitee).count
   end
+
+  # A pending_oidc_auth stashed in the session outlives the removal that blocks
+  # its identity, so every action that consumes it has to re-check the block.
+
+  test "create_user refuses a pending auth whose identity was removed" do
+    SsoIdentityBlock.create!(
+      provider: pending_auth["provider"],
+      uid_digest: Digest::SHA256.hexdigest(pending_auth["uid"]),
+      identity_label: pending_auth["email"]
+    )
+    session[:pending_oidc_auth] = pending_auth.merge("email" => "blocked-jit@example.com")
+
+    assert_no_difference "User.count" do
+      post :create_user
+    end
+
+    assert_redirected_to new_session_path
+    assert_nil session[:pending_oidc_auth]
+  end
+
+  test "create_link refuses a pending auth whose identity was removed" do
+    SsoIdentityBlock.create!(
+      provider: pending_auth["provider"],
+      uid_digest: Digest::SHA256.hexdigest(pending_auth["uid"]),
+      identity_label: pending_auth["email"]
+    )
+    session[:pending_oidc_auth] = pending_auth
+
+    assert_no_difference "OidcIdentity.count" do
+      post :create_link, params: { email: @user.email, password: user_password_test }
+    end
+
+    assert_redirected_to new_session_path
+    assert_nil session[:pending_oidc_auth]
+  end
+
+  test "link and new_user refuse a pending auth whose identity was removed" do
+    SsoIdentityBlock.create!(
+      provider: pending_auth["provider"],
+      uid_digest: Digest::SHA256.hexdigest(pending_auth["uid"]),
+      identity_label: pending_auth["email"]
+    )
+
+    session[:pending_oidc_auth] = pending_auth
+    get :link
+    assert_redirected_to new_session_path
+
+    session[:pending_oidc_auth] = pending_auth
+    get :new_user
+    assert_redirected_to new_session_path
+  end
 end

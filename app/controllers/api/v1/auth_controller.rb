@@ -403,6 +403,12 @@ module Api
             return nil
           end
 
+          if SsoIdentityBlock.blocked?(provider: cached[:provider], uid: cached[:uid])
+            Rails.cache.delete(cache_key)
+            render json: { error: "SSO identity was removed by an administrator" }, status: :forbidden
+            return nil
+          end
+
           cached
         end
 

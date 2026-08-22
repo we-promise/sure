@@ -38,6 +38,8 @@ module Authentication
     end
 
     def create_session_for(user)
+      return false unless user&.active?
+
       session = user.sessions.create!
       cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
       session

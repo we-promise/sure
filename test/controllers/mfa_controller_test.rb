@@ -99,6 +99,20 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert Session.exists?(user_id: @user.id)
   end
 
+  test "verify_code cannot create a session after the user is deactivated" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    @user.update_column(:active, false)
+
+    assert_no_difference -> { Session.where(user_id: @user.id).count } do
+      post verify_mfa_path, params: { code: totp.now }
+    end
+  end
+
   test "verify_code authenticates with valid backup code" do
     @user.setup_mfa!
     backup_code = @user.enable_mfa!.first

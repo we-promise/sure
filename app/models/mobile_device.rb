@@ -67,6 +67,11 @@ class MobileDevice < ApplicationRecord
   # previous tokens. Returns a hash with token details ready for an API
   # response or deep-link callback.
   def issue_token!
+    unless user.active?
+      errors.add(:base, "User is inactive")
+      raise ActiveRecord::RecordInvalid, self
+    end
+
     revoke_all_tokens!
 
     access_token = Doorkeeper::AccessToken.create!(

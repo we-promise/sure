@@ -1,5 +1,6 @@
 class OidcAccountsController < ApplicationController
   skip_authentication only: [ :link, :create_link, :new_user, :create_user ]
+  before_action :reject_removed_identity, only: [ :link, :create_link, :new_user, :create_user ]
   layout "auth"
 
   def link
@@ -197,6 +198,15 @@ class OidcAccountsController < ApplicationController
   end
 
   private
+
+    def reject_removed_identity
+      pending_auth = session[:pending_oidc_auth]
+      return unless pending_auth.present?
+      return unless SsoIdentityBlock.blocked?(provider: pending_auth["provider"], uid: pending_auth["uid"])
+
+      session.delete(:pending_oidc_auth)
+      redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+    end
 
     # Convert pending auth hash to OmniAuth-like structure
     def build_auth_hash(pending_auth)

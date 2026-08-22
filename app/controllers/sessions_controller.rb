@@ -201,7 +201,12 @@ class SessionsController < ApplicationController
     end
 
     user = User.find_by(id: data[:user_id])
-    unless user
+    # This code is minted during the OIDC callback and redeemed up to two minutes
+    # later, so an administrator can permanently remove the user inside that
+    # window. User#revoke_all_credentials! cannot reach a session that does not
+    # exist yet, and this path never re-consults the SSO identity (the code
+    # carries only a user id), so re-check the account here before minting one.
+    unless user&.active?
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
       return
     end
@@ -222,6 +227,11 @@ class SessionsController < ApplicationController
     # Nil safety: ensure auth and required fields are present
     unless auth&.provider && auth&.uid
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      return
+    end
+
+    if SsoIdentityBlock.blocked?(provider: auth.provider, uid: auth.uid)
+      reject_removed_sso_identity(auth.provider)
       return
     end
 
@@ -340,6 +350,22 @@ class SessionsController < ApplicationController
   end
 
   private
+    def reject_removed_sso_identity(provider)
+      SsoAuditLog.log_login_failed!(
+        provider: provider,
+        request: request,
+        reason: "removed_identity"
+      )
+
+      if session.delete(:mobile_sso).present?
+        mobile_sso_redirect(error: "sso_failed", message: "SSO authentication failed")
+      elsif session.delete(:desktop_sso).present?
+        redirect_to "sure://sso/callback?error=sso_failed", allow_other_host: true
+      else
+        redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      end
+    end
+
     def handle_mobile_sso_callback(user)
       device_info = session.delete(:mobile_sso)
 
