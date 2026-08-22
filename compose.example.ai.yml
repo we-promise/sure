@@ -10,10 +10,11 @@
 #
 #   Pipelock — agent security proxy
 #   (always runs)
-#     - Forward proxy (port 8888): scans outbound HTTPS from Faraday-based
-#       clients (e.g. ruby-openai). NOT covered: SimpleFin, Coinbase, or
-#       anything using Net::HTTP/HTTParty directly. HTTPS_PROXY is
-#       cooperative; Docker Compose has no egress network policy.
+#     - Forward proxy (port 8888): applies destination, SSRF, rate, budget,
+#       CONNECT-header DLP, and receipt controls to HTTPS tunnels from clients
+#       that honor HTTPS_PROXY. HTTPS bodies remain encrypted because this
+#       example does not configure TLS interception. HTTPS_PROXY is cooperative;
+#       Docker Compose has no egress network policy.
 #     - MCP reverse proxy (port 8889): scans inbound AI traffic (DLP,
 #       prompt injection, tool poisoning, tool call policy). External AI
 #       clients should connect to Pipelock on port 8889 rather than
@@ -25,9 +26,8 @@
 #   (optional, --profile local-ai)
 #     - Only starts when you run: docker compose --profile local-ai up
 #
-#   Ollama + Open WebUI + OpenClaw — external AI assistant
+#   OpenClaw — external AI assistant
 #   (optional, --profile external-assistant)
-#     - Local LLM inference available via Ollama + Open WebUI
 #     - Starts an OpenClaw locally for Sure's external assistant mode.
 #     - Set EXTERNAL_ASSISTANT_URL to http://openclaw:18789/v1/chat/completions
 #       for internal routing.
@@ -83,7 +83,8 @@ x-rails-env: &rails_env
   MCP_API_TOKEN: ${MCP_API_TOKEN:-}
   MCP_USER_EMAIL: ${MCP_USER_EMAIL:-}
   # Route outbound HTTPS through Pipelock for clients that respect HTTPS_PROXY.
-  # Covered: OpenAI API (ruby-openai/Faraday). NOT covered: SimpleFin, Coinbase (Net::HTTP).
+  # This applies tunnel-level controls; encrypted HTTPS bodies are not inspected
+  # unless you separately configure TLS interception and trust its CA.
   HTTPS_PROXY: "http://pipelock:8888"
   HTTP_PROXY: "http://pipelock:8888"
   # Skip proxy for internal Docker network services (including ollama for local LLM calls)
@@ -130,7 +131,7 @@ x-rails-env: &rails_env
 
 services:
   pipelock:
-    image: ghcr.io/luckypipewrench/pipelock:2.8.0
+    image: ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c
     user: "${PIPELOCK_UID:-1000}:${PIPELOCK_GID:-1000}"
     container_name: pipelock
     hostname: pipelock
@@ -146,12 +147,12 @@ services:
       #   mkdir -p ./pipelock-evidence ./pipelock-keys
       # Generate the receipt-signing key via the image (no host binary needed;
       # --out must be an absolute path inside the container):
-      #   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:2.8.0 \
+      #   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c \
       #     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
       # The key is written 0600 owned by uid 1000 (Pipelock's default user). If
       # your host user is not uid 1000, use this variant instead:
       #   export PIPELOCK_UID="$(id -u)" PIPELOCK_GID="$(id -g)"
-      #   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:2.8.0 \
+      #   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c \
       #     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
       # That makes the key and evidence directory readable/writable by the same
       # uid/gid the compose service uses.
@@ -185,7 +186,6 @@ services:
   ollama:
     profiles:
       - local-ai
-      - external-assistant
     volumes:
       - ollama:/root/.ollama
     container_name: ollama
@@ -211,7 +211,6 @@ services:
   ollama-webui:
     profiles:
       - local-ai
-      - external-assistant
     image: ghcr.io/open-webui/open-webui
     container_name: ollama-webui
     volumes:

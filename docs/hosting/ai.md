@@ -424,29 +424,9 @@ For OAuth clients, `<access-token>` is the issued Doorkeeper bearer token. For s
 | `tools/list` | Lists available tools with names, descriptions, and input schemas |
 | `tools/call` | Calls a specific tool by name with arguments |
 
-**Base tools** (exposed via `tools/list`; treat the live response as the source of truth):
-
-| Tool | Description |
-|------|-------------|
-| `get_accounts` | Retrieve account information |
-| `get_transactions` | Query transaction history |
-| `get_holdings` | Investment holdings data |
-| `get_balance_sheet` | Current financial position |
-| `get_income_statement` | Income and expenses |
-| `get_budget` | Budget status and category breakdowns |
-| `import_bank_statement` | Import bank statement data |
-| `search_family_files` | Search documents uploaded through the import flow |
-| `create_goal` | Create a savings goal |
-| `get_tags` | List family tags |
-| `create_tag` | Create a family tag |
-| `update_tag` | Update a family tag |
-| `get_categories` | List family categories |
-| `create_category` | Create a family category |
-| `update_category` | Update a family category |
-| `update_transaction` | Update an existing transaction |
-| `update_budget` | Update a budget category allocation |
-
-Preview users may also see Statement Vault tools in `tools/list`.
+**Available tools** (exposed via `tools/list`): the `/mcp` endpoint serves the
+same registry as the builtin assistant. See the canonical tool tables in
+[mcp.md](mcp.md#available-tools), which also cover the preview tools.
 
 **Example: list tools**
 ```bash
@@ -503,14 +483,14 @@ it implements.
 
 ### Security with Pipelock
 
-When [Pipelock](https://github.com/luckyPipewrench/pipelock) is enabled (`pipelock.enabled=true` in Helm, or the `pipelock` service in Docker Compose), all traffic between Sure and the external agent is scanned:
+When [Pipelock](https://github.com/luckyPipewrench/pipelock) is enabled (`pipelock.enabled=true` in Helm, or the `pipelock` service in Docker Compose), Sure configures two mediated routes:
 
 - **Outbound** (Sure -> agent): routed through Pipelock's forward proxy via `HTTPS_PROXY`
 - **Inbound** (agent -> Sure /mcp): routed through Pipelock's MCP reverse proxy (port 8889)
 
-Pipelock scans for prompt injection, DLP violations, and tool poisoning. The external agent does not need Pipelock installed. Sure's Pipelock handles both directions.
+The MCP reverse proxy scans readable MCP traffic for prompt injection, DLP violations, and tool poisoning. The forward proxy applies tunnel-level controls to HTTPS, but the default examples don't enable TLS interception and can't scan encrypted bodies. The external agent doesn't need Pipelock installed.
 
-If you need audit evidence, configure Pipelock's flight recorder as described in [Pipelock signed action receipts](pipelock.md#signed-action-receipts). `pipelock.enabled=true` gives scanning; receipts require mounted evidence storage plus a receipt-signing key.
+If you need audit evidence, configure Pipelock's flight recorder as described in [Pipelock signed action receipts](pipelock.md#signed-action-receipts). Enabling Pipelock adds the mediated routes, while receipts require mounted evidence storage plus a receipt-signing key.
 
 **`NO_PROXY` behavior (Helm/Kubernetes only):** The Helm chart's env template sets `NO_PROXY` to include `.svc.cluster.local` and other internal domains. This means in-cluster agent URLs (like `http://agent.namespace.svc.cluster.local:18789`) bypass the forward proxy and go directly. If your agent is in-cluster, its traffic won't be forward-proxy scanned (but MCP callbacks from the agent are still scanned by the reverse proxy). Docker Compose deployments use a different `NO_PROXY` set; check your compose file for the exact values.
 
@@ -708,28 +688,42 @@ Assistant.for_chat(chat) # => Assistant::Builtin instance
 
 ### Function Registry
 
-The `Assistant.function_classes` method centralizes all available financial tools:
-
-```ruby
-def self.function_classes
-  [
-    Function::GetTransactions,
-    Function::GetAccounts,
-    Function::GetHoldings,
-    Function::GetBalanceSheet,
-    Function::GetIncomeStatement,
-    Function::GetBudget,
-    Function::ImportBankStatement,
-    Function::SearchFamilyFiles,
-    Function::CreateGoal
-  ]
-end
-```
+`Assistant.function_classes(user = nil)` centralizes all available financial
+tools. The full list lives in `app/models/assistant.rb` (not repeated here;
+it drifts). Passing a user matters: preview tools
+(`PREVIEW_FUNCTION_CLASSES`) are appended only when that user has preview
+features enabled.
 
 These functions are:
 - Used by builtin assistants for LLM function calling
 - Exposed via the MCP endpoint for external agents
 - Defined in `app/models/assistant/function/`
+
+### Responder loop
+
+`Assistant::Responder` drives the tool loop. Facts that matter when adding a
+function:
+
+- The iteration cap counts **rounds** (model round-trips), not individual
+  calls; parallel calls in one round count once. Default 8, override with
+  `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`.
+- On the final permitted round the follow-up request offers **no tools**, so
+  the model must answer in text with whatever it gathered (a grace turn
+  instead of a dead chat). `ToolCallLimitError` remains as a backstop.
+- Tool failures do not raise out of the loop. `FunctionToolCaller` returns
+  `{error:, hint:}` results, and the system prompt tells the model to follow
+  the hint and retry exactly once. Functions should return
+  `{ error: "...", message: "..." }`-shaped soft failures for expected
+  problems (unknown ids, invalid dates) rather than raising.
+
+### System prompt structure
+
+The prompt is `Assistant::Configurable::STATIC_INSTRUCTIONS` (a frozen,
+byte-stable constant, which providers can cache as a repeated prefix)
+followed by a volatile `## Session context` block: date, formats, currency,
+an account roster and category names. The roster collapses to counts beyond
+25 accounts, categories beyond 60 names, and both collapse whenever the
+configured context window is below 4096 tokens.
 
 ### Adding a New Assistant Type
 
@@ -1139,10 +1133,10 @@ Then restart both `web` and `worker` so the new env var is loaded. If you are us
 **Cause:** Three settings interact here, measured over different spans:
 
 - `OPENAI_REQUEST_TIMEOUT` (default `60`) — applies to **each HTTP call** to the model, on its own.
-- `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` (default `5`) — how many chained tool calls one turn may make. A turn costs up to `1 + this` model calls.
+- `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` (default `8`) — how many chained tool-call rounds one turn may make. A turn costs up to `1 + this` model calls. On the final permitted round the model is offered no tools, so it answers in text instead of erroring.
 - `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it.
 
-Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. Worse, the assistant only shows text once a response actually contains some — a tool-call-only response produces nothing to display — so a turn that chains several tool calls sits on "Thinking…" through all of them. At the defaults the worst case is six sequential model calls plus five tool executions.
+Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. Worse, the assistant only shows text once a response actually contains some — a tool-call-only response produces nothing to display — so a turn that chains several tool calls sits on "Thinking…" through all of them. At the defaults the worst case is nine sequential model calls plus eight tool-round executions.
 
 **Fix:** size `AI_RESPONSE_TIMEOUT` as a **sum**, not simply as a number larger than the per-call limit:
 
@@ -1151,7 +1145,7 @@ AI_RESPONSE_TIMEOUT ≥ (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUE
                       + tool execution + queue wait
 ```
 
-You have two levers, and the cheaper one is usually the tool-call cap, because it divides the first term. With `ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2` a turn costs at most three model calls instead of six, halving the timeout you need. The trade-off is that genuinely long tool chains fail earlier, with a clear "exceeded the tool-call limit" error rather than a timeout.
+You have two levers, and the cheaper one is usually the tool-call cap, because it divides the first term. With `ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2` a turn costs at most three model calls instead of nine, cutting the timeout you need by two-thirds. The trade-off is that genuinely long tool chains fail earlier, with a clear "exceeded the tool-call limit" error rather than a timeout.
 
 ```bash
 OPENAI_REQUEST_TIMEOUT=300
@@ -1159,7 +1153,7 @@ ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2
 AI_RESPONSE_TIMEOUT=1200   # (1 + 2) × 300 = 900, plus 300 headroom
 ```
 
-Keeping the full five iterations at 300s per call would instead need `6 × 300 = 1800` plus headroom — which is why lowering the cap is usually the better trade.
+Keeping the full eight iterations at 300s per call would instead need `9 × 300 = 2700` plus headroom — which is why lowering the cap is usually the better trade.
 
 If `AI_RESPONSE_TIMEOUT` ends up below what the turn actually takes, you get a generic "no response" instead of the specific timeout error, and the job keeps running and burning tokens after the chat has given up.
 
@@ -1234,9 +1228,16 @@ Restart `web` and `worker` after changing the environment variables, and make su
 
 The builtin AI assistant uses a system prompt that defines its behavior. The prompt is defined in `app/models/assistant/configurable.rb`. This does not apply to external assistants, which manage their own prompts.
 
+The prompt has two halves: `STATIC_INSTRUCTIONS`, a frozen constant that is
+byte-identical on every request (providers cache and discount an
+exactly-repeated prefix), and a trailing `## Session context` block holding
+everything volatile (date, currency, account roster, categories).
+
 To customize:
 1. Fork the repository
-2. Edit the `default_instructions` method
+2. Edit the `STATIC_INSTRUCTIONS` constant (keep customizations there so the
+   prompt stays cacheable; only put genuinely per-request data in the session
+   context builders)
 3. Rebuild and deploy
 
 **What you can customize:**
@@ -1250,17 +1251,29 @@ To customize:
 The assistant uses OpenAI's function calling (tool use) to access user data:
 
 **Available functions:**
-- `get_transactions` - Retrieve transaction history
-- `get_accounts` - Get account information
-- `get_holdings` - Investment holdings data
-- `get_balance_sheet` - Current financial position
-- `get_income_statement` - Income and expenses
-- `get_budget` - Budget status and category breakdowns
-- `import_bank_statement` - Import bank statement data
-- `search_family_files` - Search uploaded documents
-- `create_goal` - Create a savings goal
 
-These are defined in `app/models/assistant/function/`.
+Read and analysis:
+- `get_transactions` - Search transactions with filters, sorting and pagination
+- `get_recurring_transactions` - Detected and manual recurring transactions (subscriptions, bills) with totals
+- `get_accounts` - Accounts with ids and current balances; opt-in balance history series
+- `get_holdings` - Investment holdings
+- `get_balance_sheet` - Net worth, assets and liabilities with a configurable history period and interval
+- `get_income_statement` - Income and expenses for a period, with monthly series, prior-period comparison and account filtering
+- `get_budget` - Budget summary for a month
+- `get_merchants` - Merchants with the ids update_transaction accepts and the exact names get_transactions filters on
+- `get_tags` / `get_categories` - Tag and category listings with pagination
+
+Write:
+- `update_transaction`, `update_budget`, `create_goal`
+- `create_tag` / `update_tag`, `create_category` / `update_category`
+
+Documents:
+- `import_bank_statement` - Import bank statement data
+- `search_family_files` - Search uploaded documents (vector store)
+
+These are defined in `app/models/assistant/function/`. Preview tools
+(Statement Vault, `get_valuations`, `get_insights`) are listed in
+[mcp.md](mcp.md#preview-tools).
 
 ### Vector Store (Document Search)
 

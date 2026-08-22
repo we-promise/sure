@@ -67,24 +67,34 @@ class MobileDevice < ApplicationRecord
   # previous tokens. Returns a hash with token details ready for an API
   # response or deep-link callback.
   def issue_token!
-    revoke_all_tokens!
+    user.with_lock do
+      unless user.active?
+        errors.add(:base, "User is inactive")
+        raise ActiveRecord::RecordInvalid, self
+      end
 
-    access_token = Doorkeeper::AccessToken.create!(
-      application: self.class.shared_oauth_application,
-      resource_owner_id: user_id,
-      mobile_device_id: id,
-      expires_in: 30.days.to_i,
-      scopes: "read_write",
-      use_refresh_token: true
-    )
+      revoke_all_tokens!
 
-    {
-      access_token: access_token.plaintext_token,
-      refresh_token: access_token.plaintext_refresh_token,
-      token_type: "Bearer",
-      expires_in: access_token.expires_in,
-      created_at: access_token.created_at.to_i
-    }
+      access_token = Doorkeeper::AccessToken.create!( # pipelock:ignore Credential in URL
+        application: self.class.shared_oauth_application,
+        resource_owner_id: user_id,
+        mobile_device_id: id,
+        expires_in: 30.days.to_i,
+        scopes: "read_write",
+        use_refresh_token: true
+      )
+
+      {
+        access_token: access_token.plaintext_token,
+        refresh_token: access_token.plaintext_refresh_token,
+        token_type: "Bearer",
+        expires_in: access_token.expires_in,
+        created_at: access_token.created_at.to_i
+      }
+    end
+  rescue ActiveRecord::RecordNotFound
+    errors.add(:base, "User is inactive")
+    raise ActiveRecord::RecordInvalid, self
   end
 
   private
