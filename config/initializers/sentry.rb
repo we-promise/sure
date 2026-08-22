@@ -10,9 +10,8 @@ if ENV["SENTRY_DSN"].present?
     # Patch Ruby logger to forward logs
     config.enabled_patches = [ :logger ]
 
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # We recommend adjusting this value in production.
+    # Capture 25% of ordinary performance transactions by default.
+    # AI monitoring transactions opt into 100% sampling through traces_sampler.
     traces_sample_rate = 0.25
     config.traces_sample_rate = traces_sample_rate
     config.traces_sampler = lambda do |sampling_context|

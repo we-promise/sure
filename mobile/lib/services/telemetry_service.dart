@@ -333,9 +333,7 @@ class TelemetryService {
       final key = LogService.sanitize(entry.key);
       if (_isSensitiveKey(key)) continue;
 
-      final value = _normalizeDataKey(key) == 'gen_ai_conversation_id'
-          ? _sanitizeConversationId(entry.value)
-          : sanitizeValue(entry.value);
+      final value = _sanitizeDataValue(key, entry.value);
       if (value != null) {
         sanitized[key] = value;
       }
@@ -357,7 +355,7 @@ class TelemetryService {
         final key = LogService.sanitize(entry.key.toString());
         if (_isSensitiveKey(key)) continue;
 
-        final sanitizedValue = sanitizeValue(entry.value);
+        final sanitizedValue = _sanitizeDataValue(key, entry.value);
         if (sanitizedValue != null) {
           sanitized[key] = sanitizedValue;
         }
@@ -394,6 +392,12 @@ class TelemetryService {
     if (RegExp(r'^[a-zA-Z0-9_-]{1,120}$').hasMatch(id)) return id;
 
     return null;
+  }
+
+  static Object? _sanitizeDataValue(String key, Object? value) {
+    return _normalizeDataKey(key) == 'gen_ai_conversation_id'
+        ? _sanitizeConversationId(value)
+        : sanitizeValue(value);
   }
 
   static bool _isSensitiveKey(String key) {

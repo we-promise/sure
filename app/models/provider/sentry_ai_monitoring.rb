@@ -1,8 +1,8 @@
-require "digest"
+require "openssl"
 
 class Provider::SentryAiMonitoring
-  SAFE_CONVERSATION_ID = /\A[a-zA-Z0-9_-]{1,120}\z/
   AI_SAMPLE_CONTEXT = { ai_monitoring: true }.freeze
+  TELEMETRY_KEY_PURPOSE = "sentry_ai_monitoring_identifier".freeze
 
   class << self
     def with_chat_span(provider:, model:, conversation_id: nil, user_identifier: nil)
@@ -109,8 +109,8 @@ class Provider::SentryAiMonitoring
       def set_common_data(span, provider:, model:, conversation_id:, user_identifier:, attributes:)
         set_data(span, "gen_ai.system", provider) if provider.present?
         set_data(span, "gen_ai.request.model", model) if model.present?
-        set_data(span, "gen_ai.conversation.id", safe_conversation_id(conversation_id))
-        set_data(span, "user.id", user_identifier.to_s) if user_identifier.present?
+        set_data(span, "gen_ai.conversation.id", telemetry_identifier("conversation", conversation_id))
+        set_data(span, "user.id", telemetry_identifier("user", user_identifier))
 
         attributes.each { |key, value| set_data(span, key, value) if value.present? }
       end
@@ -121,12 +121,15 @@ class Provider::SentryAiMonitoring
         span.set_data(key, value)
       end
 
-      def safe_conversation_id(value)
-        id = value.to_s.strip
-        return if id.blank?
-        return id if id.match?(SAFE_CONVERSATION_ID)
+      def telemetry_identifier(namespace, value)
+        identifier = value.to_s.strip
+        return if identifier.blank?
 
-        Digest::SHA256.hexdigest(id)
+        OpenSSL::HMAC.hexdigest("SHA256", telemetry_secret, "#{namespace}:#{identifier}")
+      end
+
+      def telemetry_secret
+        Rails.application.key_generator.generate_key(TELEMETRY_KEY_PURPOSE, 32)
       end
 
       def integer_from(value)

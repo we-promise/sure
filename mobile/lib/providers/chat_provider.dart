@@ -201,6 +201,8 @@ class ChatProvider with ChangeNotifier {
   }) async {
     _isSendingMessage = true;
     _errorMessage = null;
+    var sendSucceeded = false;
+    Object? sendThrowable;
     final sendSpan = TelemetryService.instance.startSpan(
       'gen_ai.chat',
       'mobile chat message',
@@ -255,6 +257,7 @@ class ChatProvider with ChangeNotifier {
 
         // Start polling for AI response
         _startPolling(accessToken, chatId);
+        sendSucceeded = true;
         return true;
       } else {
         // Roll back the optimistic message on failure.
@@ -265,13 +268,15 @@ class ChatProvider with ChangeNotifier {
     } catch (e) {
       // Roll back the optimistic message on error.
       _rollbackOptimisticMessage(optimisticId, chatId);
+      sendThrowable = e;
       _log.warning('ChatProvider', 'sendMessage failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
       return false;
     } finally {
       await TelemetryService.instance.finishSpan(
         sendSpan,
-        success: _errorMessage == null,
+        success: sendSucceeded,
+        throwable: sendThrowable,
       );
       _isSendingMessage = false;
       notifyListeners();
