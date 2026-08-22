@@ -246,6 +246,12 @@ class RecurringTransaction
         end
       end
 
+      # True once any allocation on this entry lacks a source amount, which
+      # makes every capacity sum over it meaningless.
+      def unmeasurable_entry?(entry)
+        RecurringAllocation.where(entry: entry, source_amount: nil).exists?
+      end
+
       # How much of the entry is not yet spoken for, in the entry's currency.
       def entry_capacity(entry, entry_total)
         already = RecurringAllocation.where(entry: entry).sum(
@@ -296,11 +302,29 @@ class RecurringTransaction
       end
 
       # One transaction can pay several occurrences, but never more than
-      # itself. Compared in the ENTRY's currency via source_amount; a
-      # cross-currency allocation whose source amount is unknowable (no rate)
-      # is exempt, documented as such.
+      # itself. Compared in the ENTRY's currency via source_amount.
+      #
+      # An allocation with no exchange rate for its date has no source amount,
+      # so it cannot be expressed in the entry's currency, and neither it nor
+      # anything beside it can be measured against the transaction total.
+      # Exempting those outright meant a single 100 EUR transaction could be
+      # allocated 150 USD twice over, and indeed without limit: capacity summed
+      # COALESCE(source_amount, allocated_amount), mixing currencies into a
+      # number that meant nothing.
+      #
+      # The first such allocation is a judgement the user made about a
+      # transaction they can see. A second one is a transaction silently paying
+      # an unbounded number of bills, so an unmeasurable entry takes no more
+      # than one.
       def guard_entry_capacity!(entry, source_amount)
-        return if source_amount.nil?
+        if source_amount.nil? || unmeasurable_entry?(entry)
+          return if RecurringAllocation.where(entry: entry).none?
+
+          raise OverAllocationError,
+                "this transaction carries an allocation that cannot be converted to " \
+                "#{entry.currency}, so what is left of it cannot be measured. Add an exchange " \
+                "rate for #{entry.date} or remove the existing payment first"
+        end
 
         capacity = entry_capacity(entry, entry.amount.abs)
 

@@ -218,7 +218,63 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal 500, allocation.allocated_amount
   end
 
+
+  # Without a rate for the entry's date an allocation has no source amount, so
+  # it cannot be measured against the transaction. The guard used to skip those
+  # entirely, and entry_capacity summed COALESCE(source_amount, allocated_amount)
+  # across currencies, so one 100 EUR transaction could pay 150 USD twice and
+  # keep going.
+  test "an unmeasurable entry cannot be spread across several occurrences" do
+    ExchangeRate.delete_all
+    entry = foreign_entry(amount: 100, currency: "EUR")
+    first_occurrence = usd_occurrence(expected: 150)
+    second_occurrence = usd_occurrence(expected: 150, due_on: Date.current + 30)
+
+    RecurringTransaction::Allocator.new(first_occurrence).allocate!(amount: 150, entry: entry)
+
+    assert_raises RecurringTransaction::Allocator::OverAllocationError do
+      RecurringTransaction::Allocator.new(second_occurrence).allocate!(amount: 150, entry: entry)
+    end
+
+    assert_equal 1, RecurringAllocation.where(entry: entry).count,
+      "one judgement call is allowed; an unbounded fan-out is not"
+  end
+
+  test "the first unmeasurable allocation is still permitted" do
+    ExchangeRate.delete_all
+    entry = foreign_entry(amount: 100, currency: "EUR")
+    occurrence = usd_occurrence(expected: 150)
+
+    allocation = RecurringTransaction::Allocator.new(occurrence).allocate!(amount: 150, entry: entry)
+
+    assert allocation.persisted?
+    assert_nil allocation.source_amount
+  end
+
   private
+
+    def foreign_entry(amount:, currency:)
+      account = accounts(:depository)
+      account.entries.create!(
+        name: "Foreign charge", date: Date.current, amount: amount,
+        currency: currency, entryable: Transaction.new
+      )
+    end
+
+    def usd_occurrence(expected:, due_on: Date.current)
+      series = @family.recurring_transactions.create!(
+        name: "Bill #{expected} #{due_on}", account: accounts(:depository),
+        amount: expected, currency: "USD", status: "active", bill_type: "bill",
+        manual: true, dedup_scope: "bill-#{expected}-#{due_on}",
+        expected_day_of_month: due_on.day, last_occurrence_date: 1.month.ago.to_date,
+        next_expected_date: due_on
+      )
+      series.recurring_occurrences.destroy_all
+      series.recurring_occurrences.create!(
+        family: @family, original_due_on: due_on, due_on: due_on,
+        currency: "USD", expected_amount: expected, status: "scheduled"
+      )
+    end
     def entry_for(amount)
       @account.entries.create!(
         date: Date.current,
