@@ -20,12 +20,10 @@ module Holding::Gapfillable
             previous_holding = holding
           else
             # Carry the previous day's data forward, including cost_basis so
-            # avg_cost/trend stay consistent across gap-filled days. Cost basis
-            # only changes on a buy trade, and gap-filled dates have none, so the
-            # previous real day's value applies unchanged.
-            filled_holdings << Holding.new(
-              account: previous_holding.account,
-              security: previous_holding.security,
+            # avg_cost/trend stay consistent across gap-filled days.
+            filled_holdings << Holding::HoldingData.new(
+              account_id: previous_holding.account_id,
+              security_id: previous_holding.security_id,
               date: date,
               qty: previous_holding.qty,
               price: previous_holding.price,

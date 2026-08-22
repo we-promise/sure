@@ -23,7 +23,7 @@ en:
           retries: "Retries"
           scheduled: "Scheduled"
           dead: "Dead"
-          latency: "%{value}s latency"
+          queue_label: "%{name}: %{size} · %{latency}s latency"
         table:
           type: "Operation"
           family: "Family"
@@ -175,10 +175,24 @@ en:
         language_auto: Browser language
         page_title: Preferences
         timezone: Timezone
+        translations_notice: Please note, we are still working on translations for various languages.
+        budget_title: Budget
+        budget_subtitle: Configure how your budgets behave
         month_start_day: Budget month starts on
         month_start_day_hint: Set when your budget month starts (e.g., payday)
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
-        translations_notice: Please note, we are still working on translations for various languages.
+        personal_budgets: Personal budgets
+        personal_budgets_hint: Enable individual budgets for each family member.
+        household_budget_enabled: Household budget
+        household_budget_enabled_hint: Keep a shared household budget alongside personal budgets. Turn off to use personal budgets only.
+        budget_sharing_title: Budget sharing
+        budget_sharing_subtitle: Let other members view or edit your personal budget
+        budget_sharing_no_members: No other members in your %{moniker} to share with
+        budget_sharing_permission_label: "%{name}'s access"
+        budget_sharing_permissions:
+          none: No access
+          read_only: View only
+          read_write: Can edit
         currencies_title: "%{moniker} Currencies"
         currencies_subtitle: Choose which currencies appear in money fields for your %{moniker}
         base_currency_label: Base currency
@@ -204,6 +218,9 @@ en:
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.
+    budget_shares:
+      update:
+        success: Budget sharing settings updated
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
@@ -293,8 +310,8 @@ en:
         copy_url: Copy
         copied: Copied!
         how_to_connect_title: How to connect Claude
-        step_1: "Open Claude.ai and go to Settings → Integrations."
-        step_2: Click "Add integration" and paste the MCP server URL above.
+        step_1: "Open Claude.ai and go to Settings → Customize → Connectors."
+        step_2: Click "Add connector" and paste the MCP server URL above.
         step_3: Click Connect — you'll be redirected to Sure to sign in and authorize access.
         step_4: Once authorized, Claude can read your accounts, transactions, and balance data.
         connected_title: Connected clients
@@ -360,7 +377,7 @@ en:
         ok: Connected
         warn: Action needed
         err: Error
-        off: Not configured
+        "off": Not configured
       maturity:
         beta: Beta
         alpha: Alpha
@@ -381,7 +398,6 @@ en:
       meta:
         sync_error: Sync error
         no_recent_sync: Sync overdue
-        registration_needed: Registration needed
         reconsent_required: Re-consent required
         reconsent_needed:
           one: Re-consent needed in 1 day
@@ -397,6 +413,7 @@ en:
         akahu: Sync New Zealand financial institutions via Akahu.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
+        redbark: Sync Australian bank accounts via Redbark open banking.
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
@@ -406,6 +423,7 @@ en:
         binance: Sync your Binance spot balances using a read-only API key.
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
+        trading212: Sync your Trading 212 investment portfolio using a read-only API key.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         questrade: Sync your Questrade investment accounts directly via the Questrade API.
         indexa_capital: Track your Indexa Capital automated investment portfolio.
@@ -599,6 +617,29 @@ en:
         save_configuration: Save Configuration
         update_configuration: Update Configuration
         status_configured_prefix: "%{summary}. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to manage discovered accounts.
+        not_configured: Not configured.
+      trading212_panel:
+        steps:
+          step_1: Go to Trading 212 → Settings → API (web or mobile app).
+          step_2: Generate a new API key — Trading 212 will show you an API ID and a Secret Key.
+          step_3: Paste both below, select your environment and account currency, then save.
+        api_key_label: API ID
+        api_key_placeholder_new: Paste your Trading 212 API ID
+        api_key_placeholder_existing: Leave blank to keep the current API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Paste your Trading 212 Secret Key
+        api_secret_placeholder_existing: Leave blank to keep the current Secret Key
+        environment_label: Environment
+        environment_live: Live account
+        environment_demo: Demo account
+        currency_label: Account currency
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        sync: Sync
+        disconnect_confirm: Disconnect Trading 212?
+        status_configured_prefix: "Configured. Visit the"
         accounts_tab: Accounts
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.

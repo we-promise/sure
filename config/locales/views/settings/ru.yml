@@ -126,8 +126,8 @@ ru:
         page_title: MCP-сервер
         revoke: Отозвать
         revoke_confirm: Отозвать доступ для этого клиента?
-        step_1: Откройте Claude.ai и перейдите в Settings → Integrations.
-        step_2: Нажмите «Add integration» и вставьте URL MCP-сервера выше.
+        step_1: Откройте Claude.ai и перейдите в Settings → Customize → Connectors.
+        step_2: Нажмите «Add connector» и вставьте URL MCP-сервера выше.
         step_3: Нажмите Connect — вы будете перенаправлены в Sure для входа и 
           подтверждения доступа.
         step_4: После авторизации Claude сможет читать ваши счета, операции и данные 
@@ -493,7 +493,6 @@ ru:
           one: Повторное согласие требуется через %{count} день
           other: Повторное согласие требуется через %{count} дня
         reconsent_required: Требуется повторное согласие
-        registration_needed: Требуется регистрация
         sync_error: Ошибка синхронизации
       not_authorized: Не авторизован
       not_found: Поставщик не найден.

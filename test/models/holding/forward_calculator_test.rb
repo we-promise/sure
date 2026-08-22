@@ -111,22 +111,22 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_holdings(expected, calculated)
   end
 
-  # Gap-filled days must carry cost_basis forward to keep avg_cost/trend
-  # consistent with the surrounding real holdings.
-  test "carries cost_basis forward into gap-filled holdings" do
-    wmt = Security.create!(ticker: "WMT", name: "Walmart Inc.")
+  # Cost basis is a per-share weighted average that only changes on buy trades,
+  # so it must carry forward (LOCF) onto gap-filled non-trade dates rather than
+  # resetting to nil/zero.
+  test "carries cost basis forward onto gap-filled dates" do
+    load_prices
 
-    # Only the trade date has a price; the following days have neither a market
-    # price nor a trade, so the calculator gap-fills them.
-    create_trade(wmt, qty: 100, date: 3.days.ago.to_date, price: 100, account: @account)
+    create_trade(@wmt, qty: 100, date: 3.days.ago.to_date, price: 100, account: @account)
 
     calculated = Holding::ForwardCalculator.new(@account).calculate
 
-    real_holding = calculated.find { |h| h.security == wmt && h.date == 3.days.ago.to_date }
-    gap_filled = calculated.find { |h| h.security == wmt && h.date == 1.day.ago.to_date }
+    wmt_holdings = calculated.select { |h| h.security_id == @wmt.id && h.qty.positive? }
 
-    assert_equal 100, real_holding.cost_basis
-    assert_equal real_holding.cost_basis, gap_filled.cost_basis
+    assert wmt_holdings.any?, "expected WMT holdings to be generated"
+    wmt_holdings.each do |holding|
+      assert_equal 100, holding.cost_basis, "Cost basis should carry forward on #{holding.date}"
+    end
   end
 
   test "offline tickers sync holdings based on most recent trade price" do
@@ -151,11 +151,11 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
-        calculated_entry = calculated.find { |c| c.security == expected_entry.security && c.date == expected_entry.date }
+        calculated_entry = calculated.find { |c| c.security_id == expected_entry.security_id && c.date == expected_entry.date }
 
-        assert_equal expected_entry.qty, calculated_entry.qty, "Qty mismatch for #{expected_entry.security.ticker} on #{expected_entry.date}"
-        assert_equal expected_entry.price, calculated_entry.price, "Price mismatch for #{expected_entry.security.ticker} on #{expected_entry.date}"
-        assert_equal expected_entry.amount, calculated_entry.amount, "Amount mismatch for #{expected_entry.security.ticker} on #{expected_entry.date}"
+        assert_equal expected_entry.qty, calculated_entry.qty, "Qty mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
+        assert_equal expected_entry.price, calculated_entry.price, "Price mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
+        assert_equal expected_entry.amount, calculated_entry.amount, "Amount mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
       end
     end
 

@@ -128,8 +128,8 @@ tr:
         page_title: MCP Sunucusu
         revoke: İptal Et
         revoke_confirm: Bu istemcinin erişimi iptal edilsin mi?
-        step_1: Claude.ai'yi açın ve Ayarlar → Entegrasyonlar'a gidin.
-        step_2: '"Entegrasyon ekle"ye tıklayın ve yukarıdaki MCP sunucu URL''sini
+        step_1: Claude.ai'yi açın ve Ayarlar → Özelleştir → Bağlayıcılar'a gidin.
+        step_2: '"Bağlayıcı ekle"ye tıklayın ve yukarıdaki MCP sunucu URL''sini
           yapıştırın.'
         step_3: Bağlan'a tıklayın — giriş yapmak ve erişimi yetkilendirmek için Sure'a
           yönlendirileceksiniz.
