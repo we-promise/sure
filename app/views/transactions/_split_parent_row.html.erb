@@ -36,6 +36,12 @@
               </div>
 
               <div class="flex items-center gap-1 flex-shrink-0">
+                <% if transaction.pending? %>
+                  <%= render DS::Tooltip.new(text: t("transactions.transaction.pending_tooltip"), as: :span) do %>
+                    <%= render DS::Pill.new(label: t("transactions.transaction.pending"), tone: :neutral, marker: false, icon: "clock") %>
+                  <% end %>
+                <% end %>
+
                 <%= render DS::Pill.new(
                   label: t("transactions.split_parent_row.split_label"),
                   tone: :neutral,
