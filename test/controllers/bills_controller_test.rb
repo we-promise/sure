@@ -1444,6 +1444,36 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/due before [A-Z][a-z]{2} \d+/, response.body)
   end
 
+
+  # The bridge is filtered out of the timeline, and only a shortfall earned a
+  # banner, so a bill due before payday that the cash comfortably covered
+  # appeared nowhere on the page built to answer what is due before payday.
+  test "a covered bridge window still shows what is due before payday" do
+    @family.accounts.where(accountable_type: "Depository").update_all(balance: 5_000)
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 5)
+    declare_bill(name: "Curbside Cuts", amount: 150, due: Date.current + 2)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_match I18n.t("bills.paycheck.bridge_label"), response.body
+    assert_match "Curbside Cuts", response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("bills.paycheck.shortfall_label"))}/, response.body,
+      "the cash covers it, so nothing is short")
+  end
+
+  test "a covered bridge is never rendered as a timeline row" do
+    @family.accounts.where(accountable_type: "Depository").update_all(balance: 5_000)
+    declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 5)
+    declare_bill(name: "Curbside Cuts", amount: 150, due: Date.current + 2)
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_no_match(/-\$150\.00/, response.body,
+      "a timeline row prints income minus obligations, which is a deficit on a window that earns nothing")
+  end
+
   private
 
     def declare_scheduled_income(frequency:, weekday: nil, day_of_month: nil)

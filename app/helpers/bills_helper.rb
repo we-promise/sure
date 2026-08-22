@@ -165,12 +165,23 @@ module BillsHelper
     # closed the only useful fact left is when it had been due.
     return t("bills.due_label.settled", date: date) unless occurrence.scheduled?
 
+    # Overdue is the occurrence's own judgement, not a sign test on the date.
+    # RecurringOccurrence#derived_state only calls a cycle overdue once its
+    # grace period has run out, and every other surface honours that: the
+    # overview files a bill inside its grace under This month, and get_bills
+    # reports state "due". This label read the raw date and printed "Overdue by
+    # 1 day" on the same bill, in the secondary colour, because the surrounding
+    # tone check asks overdue? and got false. The screen contradicted itself
+    # and the assistant at once.
     if occurrence.snoozed_until.present? && occurrence.snoozed_until > occurrence.due_on && days.positive?
       t("bills.due_label.snoozed", date: date)
-    elsif days.negative?
+    elsif occurrence.overdue?
       t("bills.due_label.overdue", count: days.abs, date: date)
     elsif days.zero?
       t("bills.due_label.today")
+    elsif days.negative?
+      # Past its date but still inside the grace the bill was given.
+      t("bills.due_label.due_since", date: date)
     else
       t("bills.due_label.upcoming", count: days, date: date)
     end

@@ -132,6 +132,7 @@ en:
         other: "Overdue by %{count} days, was due %{date}"
       today: "Due today"
       settled: "Was due %{date}"
+      due_since: "Due %{date}"
       snoozed: "Snoozed until %{date}"
       upcoming:
         one: "Due tomorrow, %{date}"
@@ -199,6 +200,9 @@ en:
       # The gap before the next payday, said as news rather than drawn as a
       # pay period. Compact on purpose: it has to be noticeable without
       # becoming the identity of the page.
+      bridge_label: Before your next paycheck
+      bridge_amount: "· %{amount} due"
+      bridge_split: "Due before %{date}, covered by the %{cash} in your accounts."
       shortfall_label: Short before your next payday
       shortfall_amount: "· %{amount}"
       shortfall_split: "%{obligations} is due before %{date} and your accounts hold %{cash}."

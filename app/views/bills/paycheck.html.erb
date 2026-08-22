@@ -9,12 +9,17 @@
 
   if @plan
     # The leading window has no income to allocate, so it is reported above the
-    # timeline as a warning. A plan holding only that window keeps it, or the
-    # page would have nothing to show.
+    # timeline rather than inside it. It is never a timeline row: those print
+    # income minus obligations as "Safe after bills", and a window that earns
+    # nothing would show that as a deficit on money already in the bank.
+    #
+    # Both states are reported. Short earns the warning; covered earns the
+    # quiet strip, because dropping it meant a bill due before payday appeared
+    # nowhere on the page built to answer exactly that.
     bridge = @plan.find(&:bridge?)
     periods = @plan.reject(&:bridge?)
-    shortfall = bridge if bridge&.short? && periods.any?
-    periods = @plan if periods.empty?
+    shortfall = bridge if bridge&.short?
+    bridge_note = bridge if bridge && !bridge.short? && bridge.items.any?
   end
 %>
 
@@ -56,6 +61,8 @@
   <% else %>
     <% if shortfall %>
       <%= render "bills/paycheck_shortfall", period: shortfall, currency: currency %>
+    <% elsif bridge_note %>
+      <%= render "bills/paycheck_bridge", period: bridge_note, currency: currency %>
     <% end %>
 
     <div class="bg-container rounded-xl shadow-border-xs">

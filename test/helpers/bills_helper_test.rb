@@ -179,6 +179,28 @@ class BillsHelperTest < ActionView::TestCase
       "the overdue case must survive: that is the one the label exists for")
   end
 
+
+  # derived_state only calls a cycle overdue once its grace has run out, and
+  # the overview and get_bills both honour that. This label read the raw date,
+  # so the screen said Overdue by 1 day about a bill the assistant correctly
+  # called due.
+  test "a cycle inside its grace period is not labelled overdue" do
+    occurrence = build_occurrence(due_on: Date.current - 1, status: "scheduled")
+    assert_equal :due, occurrence.derived_state, "precondition: still inside grace"
+
+    label = occurrence_due_label(occurrence)
+
+    assert_no_match(/overdue/i, label)
+    assert_match(/due/i, label)
+  end
+
+  test "a cycle past its grace is still labelled overdue" do
+    occurrence = build_occurrence(due_on: Date.current - 30, status: "scheduled")
+    assert_equal :overdue, occurrence.derived_state, "precondition: grace exhausted"
+
+    assert_match(/overdue/i, occurrence_due_label(occurrence))
+  end
+
   private
 
     def build_occurrence(due_on:, status:)
