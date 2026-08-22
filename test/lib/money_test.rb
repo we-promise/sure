@@ -91,8 +91,8 @@ class MoneyTest < ActiveSupport::TestCase
   end
 
   test "rounds for display using currency precision" do
-    assert_equal Money.new(1000.9, :usd).format, Money.new(1000.899, :usd).for_display.format
-    assert_equal Money.new(1001, :jpy).format, Money.new(1000.6, :jpy).for_display.format
+    assert_equal Money.new(1000.9, :usd), Money.new(1000.899, :usd).for_display
+    assert_equal Money.new(1001, :jpy), Money.new(1000.6, :jpy).for_display
   end
 
   test "formats correctly for French locale" do

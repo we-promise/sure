@@ -79,6 +79,20 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilderTest < ActiveSupport::TestCase
     end
   end
 
+  test "serializes a nil trend percentage when displayed value increases from zero" do
+    period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
+
+    create_balance(account: @asset_account, date: period.start_date, balance: 0.0001)
+    create_balance(account: @asset_account, date: period.end_date, balance: 1)
+
+    series = builder.breakdown_series(period: period)
+    parsed = JSON.parse(series.to_json)
+
+    assert_equal 0, series[:values].first[:value].amount
+    assert_equal 1, series[:values].last[:value].amount
+    assert_nil parsed["values"].last["trend"]["percent"]
+  end
+
   test "cache key includes payload version" do
     period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
 
