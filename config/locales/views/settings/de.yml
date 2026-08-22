@@ -57,6 +57,11 @@ de:
         month_start_day: Budgetmonat beginnt am
         month_start_day_hint: Lege fest, wann dein Budgetmonat beginnt (z. B. Gehaltstag)
         month_start_day_warning: Deine Budgets und MTD-Berechnungen verwenden diesen benutzerdefinierten Starttag anstelle des 1. jedes Monats.
+        reporting_title: "%{moniker}-Berichte"
+        reporting_subtitle: "Steuere, wie Anlagebeiträge in deinen %{moniker}-Berichten und Budgets angezeigt werden"
+        investment_contributions:
+          title: Anlagebeiträge als Übertragungen behandeln
+          description: Blende Anlagebeiträge aus deinen Cashflow-Diagrammen und Budgets aus, während die verknüpften Übertragungen erhalten bleiben.
         additional_currencies_label: Weitere Währungen
         base_currency_badge: Basiswährung
         base_currency_label: Basiswährung

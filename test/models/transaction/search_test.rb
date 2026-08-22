@@ -56,6 +56,22 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes transfer_ids, one_time_entry.entryable.id
     assert_not_includes transfer_ids, standard_entry.entryable.id
 
+    investment_contribution_entry = create_transaction(
+      account: @checking_account,
+      amount: 700,
+      kind: "investment_contribution"
+    )
+    investment_contribution_results = Transaction::Search.new(
+      @family,
+      filters: { types: [ "transfer" ], kinds: [ "investment_contribution" ] }
+    ).transactions_scope
+
+    investment_contribution_ids = investment_contribution_results.pluck(:id)
+
+    assert_includes investment_contribution_ids, investment_contribution_entry.entryable.id
+    assert_not_includes investment_contribution_ids, transfer_entry.entryable.id
+    assert_not_includes investment_contribution_ids, payment_entry.entryable.id
+
     # Test expense type filter (excludes transfer kinds but includes one_time)
     expense_results = Transaction::Search.new(@family, filters: { types: [ "expense" ] }).transactions_scope
     expense_ids = expense_results.pluck(:id)
@@ -91,6 +107,20 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes non_transfer_ids, loan_payment_entry.entryable.id
     assert_not_includes non_transfer_ids, transfer_entry.entryable.id
     assert_not_includes non_transfer_ids, payment_entry.entryable.id
+  end
+
+  test "search ignores invalid transaction kinds" do
+    transaction = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { kinds: [ "standard", "invalid" ] }).transactions_scope
+    invalid_results = Transaction::Search.new(@family, filters: { kinds: [ "invalid" ] }).transactions_scope
+
+    assert_equal [ transaction.entryable.id ], results.pluck(:id)
+    assert_empty invalid_results
   end
 
   test "search category filter handles uncategorized transactions correctly with kind filtering" do
@@ -277,6 +307,13 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     assert_not_includes result_ids, investment_contribution.entryable.id
     assert_includes result_ids, standard_expense.entryable.id
+  end
+
+  test "invalid kind filter returns an empty relation" do
+    result = Transaction::Search.new(@family, filters: { kinds: [ "not_a_transaction_kind" ] }).transactions_scope
+
+    assert_respond_to result, :reverse_chronological
+    assert_empty result
   end
 
   test "family-based API requires family parameter" do

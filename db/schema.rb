@@ -793,6 +793,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
     t.string "assistant_type", default: "builtin", null: false
     t.string "default_account_sharing", default: "shared", null: false
     t.string "enabled_currencies", array: true
+    t.boolean "treat_investment_contributions_as_transfers", default: false, null: false
     t.datetime "last_sync_all_attempted_at"
     t.boolean "personal_budgets", default: false, null: false
     t.boolean "household_budget_enabled", default: true, null: false

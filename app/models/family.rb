@@ -176,6 +176,13 @@ class Family < ApplicationRecord
     nil
   end
 
+  # Investment contributions can be treated as internal transfers in shared
+  # reporting. This is a family setting because dashboards, reports, and
+  # budgets all summarize family data.
+  def treat_investment_contributions_as_transfers?
+    treat_investment_contributions_as_transfers
+  end
+
   def custom_enabled_currencies?
     enabled_currencies.present?
   end
@@ -493,6 +500,17 @@ class Family < ApplicationRecord
     @entries_cache_version ||= begin
       ts = entries.maximum(:updated_at)
       ts.present? ? ts.to_i : 0
+    end
+  end
+
+  # Income-statement aggregates depend on persisted transfer matches as well as
+  # entries. A match can be created or removed without changing either entry,
+  # so expose a separate version for cache keys that apply transfer-aware logic.
+  def transfers_cache_version
+    @transfers_cache_version ||= begin
+      scope = Transfer.joins(outflow_transaction: { entry: :account })
+                      .where(accounts: { family_id: id })
+      "#{scope.maximum(:updated_at)&.to_i || 0}-#{scope.count}"
     end
   end
 

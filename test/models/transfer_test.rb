@@ -14,6 +14,23 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
+  test "reject restores matched transactions to regular transactions" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:loan), amount: -500)
+    outflow = outflow_entry.transaction
+    inflow = inflow_entry.transaction
+    outflow.update!(kind: "loan_payment")
+    inflow.update!(kind: "funds_movement")
+    transfer = Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow)
+
+    transfer.reject!
+
+    assert_not Transfer.exists?(transfer.id)
+    assert_equal "standard", outflow.reload.kind
+    assert_equal "standard", inflow.reload.kind
+    assert RejectedTransfer.exists?(inflow_transaction_id: inflow.id, outflow_transaction_id: outflow.id)
+  end
+
   test "transfer has different accounts, opposing amounts, and within 4 days of each other" do
     outflow_entry = create_transaction(date: 1.day.ago.to_date, account: accounts(:depository), amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
