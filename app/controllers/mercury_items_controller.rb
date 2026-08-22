@@ -434,7 +434,7 @@ class MercuryItemsController < ApplicationController
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        render :new, status: :unprocessable_entity
+        redirect_to accounts_path, alert: @error_message, status: :see_other
       end
     end
   end
