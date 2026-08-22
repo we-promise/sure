@@ -395,7 +395,12 @@ class Provider::Openai < Provider
 
         input_payload = chat_config.build_input(prompt: prompt)
 
-        begin
+        Provider::SentryAiMonitoring.with_chat_span(
+          provider: custom_provider? ? "openai-compatible" : "openai",
+          model: model,
+          conversation_id: session_id,
+          user_identifier: user_identifier
+        ) do |sentry_span|
           request_params = {
             model: model,
             input: input_payload,
@@ -435,6 +440,7 @@ class Provider::Openai < Provider
               user_identifier: user_identifier
             )
             record_llm_usage(family: family, model: model, operation: "chat", usage: usage)
+            Provider::SentryAiMonitoring.set_usage(sentry_span, usage)
             response
           else
             parsed = ChatParser.new(raw_response).parsed
@@ -449,9 +455,11 @@ class Provider::Openai < Provider
               user_identifier: user_identifier
             )
             record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
+            Provider::SentryAiMonitoring.set_usage(sentry_span, raw_response["usage"])
             parsed
           end
         rescue => e
+          Provider::SentryAiMonitoring.set_error(sentry_span, e)
           log_langfuse_generation(
             name: "chat_response",
             model: model,
@@ -498,7 +506,12 @@ class Provider::Openai < Provider
         params[:tool_choice] = "none" if tool_choice == :none && tools.present?
         params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
-        begin
+        Provider::SentryAiMonitoring.with_chat_span(
+          provider: custom_provider? ? "openai-compatible" : "openai",
+          model: model,
+          conversation_id: session_id,
+          user_identifier: user_identifier
+        ) do |sentry_span|
           raw_response = client.chat(parameters: params)
 
           parsed = GenericChatParser.new(raw_response).parsed
@@ -514,6 +527,7 @@ class Provider::Openai < Provider
           )
 
           record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
+          Provider::SentryAiMonitoring.set_usage(sentry_span, raw_response["usage"])
 
           # If a streamer was provided, manually call it with the parsed response
           # to maintain the same contract as the streaming version
@@ -531,6 +545,7 @@ class Provider::Openai < Provider
 
           parsed
         rescue => e
+          Provider::SentryAiMonitoring.set_error(sentry_span, e)
           log_langfuse_generation(
             name: "chat_response",
             model: model,
