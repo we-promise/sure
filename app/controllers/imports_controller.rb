@@ -9,7 +9,7 @@ class ImportsController < ApplicationController
     account_id = params.dig(:pdf_import, :account_id) || params.dig(:import, :account_id)
 
     if account_id.present?
-      account = accessible_accounts.find_by(id: account_id)
+      account = Current.family.accounts.writable_by(Current.user).find_by(id: account_id)
       unless account
         redirect_back_or_to import_path(@import), alert: t("imports.update.invalid_account", default: "Account not found.")
         return
@@ -98,7 +98,7 @@ class ImportsController < ApplicationController
     type = params.dig(:import, :type).to_s
     type = "TransactionImport" unless Import::TYPES.include?(type)
 
-    account = accessible_accounts.find_by(id: params.dig(:import, :account_id))
+    account = Current.family.accounts.writable_by(Current.user).find_by(id: params.dig(:import, :account_id))
     import = Current.family.imports.create!(
       type: type,
       account: account,
