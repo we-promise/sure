@@ -93,6 +93,27 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "unlinking the account drops the tracking row and leaves the account manual" do
+    onchain_account = create_onchain_wallet_account(item: @item)
+    account = accounts(:investment)
+    provider_link = onchain_account.ensure_account_provider!(account)
+    holding = holdings(:one)
+    holding.update!(account_provider: provider_link)
+
+    assert_difference "OnchainWalletAccount.count", -1 do
+      account.account_providers.destroy_all
+    end
+
+    # What the user asked for is to stop tracking the address, not to lose the
+    # account: the Sure account and its holdings stay, as manual ones.
+    assert Account.exists?(account.id)
+    assert Holding.exists?(holding.id)
+    assert_nil holding.reload.account_provider_id
+    # Left behind, the row would stop syncing while its partial unique index
+    # still held the slot, so linking the same asset again would collide.
+    assert_not OnchainWalletAccount.exists?(onchain_account.id)
+  end
+
   test "a native row and token rows coexist for one address" do
     create_onchain_wallet_account(item: @item)
     create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa"))
