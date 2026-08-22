@@ -172,6 +172,18 @@ export default class extends Controller {
     this.resetTouchState();
   }
 
+  touchCancel() {
+    this.cancelHold();
+
+    if (this.draggedElement) {
+      this.draggedElement.classList.remove("opacity-50", "scale-[1.02]");
+      this.draggedElement.setAttribute("aria-grabbed", "false");
+    }
+
+    this.clearPlaceholders();
+    this.resetTouchState();
+  }
+
   cancelHold() {
     if (this.holdTimer) {
       clearTimeout(this.holdTimer);
