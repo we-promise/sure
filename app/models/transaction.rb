@@ -95,12 +95,20 @@ class Transaction < ApplicationRecord
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
   # Providers that support pending transaction flags
-  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up mercury redbark].freeze
+  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu open_banking_io up mercury redbark].freeze
 
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
   PENDING_CHECK_SQL = PENDING_PROVIDERS
     .map { |p| "(t.extra -> '#{p}' ->> 'pending')::boolean = true" }
+    .join(" OR ")
+    .freeze
+
+  # Same predicate against the `transactions` table itself, for callers joining entries to
+  # transactions rather than using a subquery alias. Derived from PENDING_PROVIDERS so a new
+  # provider cannot be added to the list and forgotten in a finder.
+  PENDING_CHECK_SQL_FOR_TRANSACTIONS = PENDING_PROVIDERS
+    .map { |p| "(transactions.extra -> '#{p}' ->> 'pending')::boolean = true" }
     .join(" OR ")
     .freeze
 

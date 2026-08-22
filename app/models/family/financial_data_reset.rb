@@ -40,6 +40,7 @@ class Family::FinancialDataReset
   ].freeze
   STATUS_COUNT_KEYS = (COUNT_KEYS - %i[syncs]) + %i[plaid_items]
   PROVIDER_ITEM_ASSOCIATIONS = %i[
+    akahu_items
     binance_items
     brex_items
     coinbase_items
@@ -52,11 +53,14 @@ class Family::FinancialDataReset
     lunchflow_items
     redbark_items
     mercury_items
+    open_banking_io_items
     plaid_items
     simplefin_items
     snaptrade_items
     sophtron_items
+    trading212_items
     up_items
+    wise_items
   ].freeze
 
   Result = Struct.new(:user, :family, :dry_run, :before_counts, :deleted_counts, :after_counts, keyword_init: true)

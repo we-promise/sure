@@ -795,16 +795,7 @@ class Account::ProviderImportAdapter
       .where(amount: amount)
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
-      SQL
+      .where(Transaction::PENDING_CHECK_SQL_FOR_TRANSACTIONS)
       .order(date: :desc) # Prefer most recent pending transaction
 
     candidates.first
@@ -846,16 +837,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
-      SQL
+      .where(Transaction::PENDING_CHECK_SQL_FOR_TRANSACTIONS)
 
     # If merchant_id is provided, prioritize matching by merchant
     if merchant_id.present?
@@ -920,16 +902,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date)
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
-      SQL
+      .where(Transaction::PENDING_CHECK_SQL_FOR_TRANSACTIONS)
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
     if merchant_id.present? && name.present?

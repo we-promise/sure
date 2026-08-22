@@ -348,6 +348,7 @@ it:
       sync_provider_in_progress: Sincronizzazione avviata.
       recently_synced: Sincronizzato di recente. Riprova tra un momento.
       taglines:
+        open_banking_io: "Sincronizza conti bancari europei tramite open-banking.io."
         akahu: Sincronizza gli istituti finanziari neozelandesi tramite Akahu.
         simplefin: Connetti conti bancari USA tramite il protocollo aperto SimpleFIN.
         lunchflow: Connetti 20.000+ banche da 40+ paesi (UK, EU, USA e altro!)
@@ -480,6 +481,10 @@ it:
         step_1_html: "Vai su %{link} e crea un'app personale."
         step_2: "Copia il token dell'app e il token utente."
         step_3: "Incolla i token qui sotto, salva, poi collega i tuoi conti sincronizzati."
+      open_banking_io_panel:
+        step_1_html: "Vai su %{link}, collega la tua banca ed esporta le tue credenziali."
+        step_2: "Apri il file credentials.json scaricato."
+        step_3: "Incolla tutto il suo contenuto qui sotto, salva e poi collega i conti sincronizzati."
       up_panel:
         step_1_html: "Vai su %{link} e genera un token di accesso personale."
         step_2: "Copia il tuo token di accesso personale."

@@ -7,5 +7,10 @@ Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :openai_access_token,
   :client_id, :consumer_key, :snaptrade_user_id, :snaptrade_user_secret,
   :oauth_access_token, :oauth_refresh_token, :code_verifier, :code_challenge,
-  :bank_username, :bank_password, :security_answers, :captcha_input
+  :bank_username, :bank_password, :security_answers, :captcha_input,
+  # Whole-bundle credential pastes. open-banking.io's `credentials_json` carries an API key
+  # AND the PKCS#8 private key that decrypts every zero-knowledge envelope, and it matches
+  # none of the substrings above -- unlike `app_token`/`api_key`, which `:token`/`:_key`
+  # already cover for the other providers.
+  :credentials_json, :private_key
 ]
