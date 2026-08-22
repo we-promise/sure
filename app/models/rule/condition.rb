@@ -1,10 +1,33 @@
 class Rule::Condition < ApplicationRecord
+  # Keep in sync with the keys returned by each Rule::Registry subclass'
+  # #condition_filters (plus "compound", which is handled directly in #apply
+  # rather than via a filter). A cross-check test in
+  # test/models/rule/condition_test.rb guards against drift between this list
+  # and the registry.
+  SUPPORTED_CONDITION_TYPES = %w[
+    compound
+    transaction_account
+    transaction_amount
+    transaction_category
+    transaction_details
+    transaction_merchant
+    transaction_name
+    transaction_notes
+    transaction_type
+  ].freeze
+
+  LEGACY_CONDITION_TYPE_ALIASES = {
+    "name" => "transaction_name"
+  }.freeze
+
   belongs_to :rule, touch: true, optional: -> { where.not(parent_id: nil) }
   belongs_to :parent, class_name: "Rule::Condition", optional: true, inverse_of: :sub_conditions
 
   has_many :sub_conditions, -> { order(:created_at, :id) }, class_name: "Rule::Condition", foreign_key: :parent_id, dependent: :destroy, inverse_of: :parent
 
-  validates :condition_type, presence: true
+  before_validation :normalize_legacy_condition_type
+
+  validates :condition_type, presence: true, inclusion: { in: SUPPORTED_CONDITION_TYPES, allow_blank: true }
   validates :operator, presence: true
   validates :value, presence: true, unless: -> { compound? || operator == "is_null" }
 
@@ -57,9 +80,18 @@ class Rule::Condition < ApplicationRecord
 
   def filter
     rule.registry.get_filter!(condition_type)
+  rescue Rule::Registry::UnsupportedConditionError
+    Rule::ConditionFilter::Unsupported.new(rule, condition_type)
   end
 
   private
+    def normalize_legacy_condition_type
+      return if condition_type.blank?
+
+      normalized = LEGACY_CONDITION_TYPE_ALIASES[condition_type]
+      self.condition_type = normalized if normalized
+    end
+
     def build_compound_scope(scope)
       if operator == "or"
         combined_scope = sub_conditions
