@@ -50,7 +50,7 @@ class Onchain::EvmAdapter
   def has_activity?(address)
     return false unless valid_address?(address)
 
-    keyless_backend.has_activity?(address)
+    detection_backend.has_activity?(address)
   rescue StandardError => e
     Rails.logger.warn("Onchain::EvmAdapter(#{chain}) - activity probe failed: #{e.class}")
     false
@@ -109,6 +109,18 @@ class Onchain::EvmAdapter
         chain: chain,
         base_url: explorer_url,
         max_pages: Onchain::HistoryBudget.pages
+      )
+    end
+
+    # Detection asks every candidate network in turn on the request thread, so it
+    # reads with the detection budget rather than the sync's: one short attempt,
+    # no retry.
+    def detection_backend
+      @detection_backend ||= Provider::Blockscout.new(
+        chain: chain,
+        base_url: explorer_url,
+        request_timeout: Onchain::DetectionBudget.timeout,
+        max_retries: Onchain::DetectionBudget.retries
       )
     end
 

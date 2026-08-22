@@ -24,8 +24,7 @@
                           Onchain::Chains.all.map { |chain| [ chain.label, chain.key ] }.sort_by(&:first),
                           @chain
                         ),
-                        { include_blank: t(".chain_auto_detect") },
-                        label: t(".chain_label"),
+                        { include_blank: t(".chain_auto_detect"), label: t(".chain_label") },
                         class: "w-full rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
 
         <div class="rounded-lg bg-surface p-3 space-y-2 text-sm text-secondary">

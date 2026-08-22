@@ -302,6 +302,30 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
     assert_empty @adapter.fetch_snapshot(ADDRESS).movements
   end
 
+  test "a full page of signatures is incomplete history, not the whole of it" do
+    page = Array.new(Onchain::SolanaAdapter::SIGNATURES_PER_SOURCE) do |index|
+      { "signature" => "sig#{index}", "blockTime" => Time.utc(2026, 2, 3).to_i - index }
+    end
+    stub_snapshot(lamports: 1_000_000_000, token_accounts: [], signatures: page)
+    stub_token_list([])
+
+    snapshot = @adapter.fetch_snapshot(ADDRESS)
+
+    # The page came back full and the adapter passes no cursor, so older
+    # signatures exist that were never asked for. Counting against the budget
+    # alone would call this a complete history.
+    assert snapshot.history_truncated?
+  end
+
+  test "detection asks once and does not retry a rate-limited node" do
+    probe = stub_request(:post, Provider::SolanaRpc.url).to_return(status: 429, body: "rate limited")
+
+    assert_not @adapter.has_activity?(ADDRESS)
+    # Detection runs on the request thread: retrying with backoff here is what
+    # turns one slow chain into a page that hangs.
+    assert_requested probe, times: 1
+  end
+
   private
     def with_asset_budget(tokens)
       previous = ENV["ONCHAIN_MAX_TOKENS_PER_ADDRESS"]

@@ -43,4 +43,26 @@ class Onchain::SecurityResolverTest < ActiveSupport::TestCase
       assert Onchain::SecurityResolver.priceable?("wbtc")
     end
   end
+
+  test "a reused security with no price provider is bound to the crypto one" do
+    existing = Security.create!(ticker: "CRYPTO:BTC", name: "Bitcoin", price_provider: nil)
+
+    resolved = Onchain::SecurityResolver.resolve(symbol: "BTC")
+
+    assert_equal existing, resolved
+    # A blank provider falls back to whichever is enabled first, and only the
+    # crypto one quotes a bare coin symbol, so the holding would value at zero.
+    assert_equal Onchain::SecurityResolver::PRICE_PROVIDER, resolved.reload.price_provider
+  end
+
+  test "a price provider another integration chose is left alone" do
+    existing = Security.create!(ticker: "CRYPTO:BTC", name: "Bitcoin", price_provider: "yahoo_finance")
+
+    resolved = Onchain::SecurityResolver.resolve(symbol: "BTC")
+
+    assert_equal existing, resolved
+    # The CRYPTO: prefix is shared with the exchange integrations; stomping their
+    # choice would break their pricing to fix ours.
+    assert_equal "yahoo_finance", resolved.reload.price_provider
+  end
 end

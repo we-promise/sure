@@ -37,10 +37,14 @@ class Provider::Blockscout
   # page.
   attr_reader :truncated
 
-  def initialize(chain:, base_url:, max_pages: DEFAULT_MAX_PAGES)
+  # Detection reads on the request thread and cannot afford the sync's patience,
+  # so both the per-request timeout and the retry count are the caller's to set.
+  def initialize(chain:, base_url:, max_pages: DEFAULT_MAX_PAGES, request_timeout: nil, max_retries: MAX_RETRIES)
     @chain = chain.to_s
     @base_url = ENV["BLOCKSCOUT_#{@chain.upcase}_URL"].presence || base_url
     @max_pages = max_pages
+    @request_timeout = request_timeout
+    @max_retries = max_retries
     @truncated = false
   end
 
@@ -202,14 +206,20 @@ class Provider::Blockscout
       begin
         attempts += 1
         throttle_request
-        translate_transport_errors { handle_response(self.class.get("#{base_url}#{path}")) }
+        translate_transport_errors { handle_response(self.class.get("#{base_url}#{path}", **request_options)) }
       rescue RateLimitError => e
-        raise if attempts > MAX_RETRIES
+        raise if attempts > @max_retries
 
-        Rails.logger.warn("Provider::Blockscout(#{chain}) - rate limited (attempt #{attempts}/#{MAX_RETRIES}): #{e.message}")
+        Rails.logger.warn("Provider::Blockscout(#{chain}) - rate limited (attempt #{attempts}/#{@max_retries}): #{e.message}")
         sleep(RETRY_BASE_DELAY * (2**(attempts - 1)))
         retry
       end
+    end
+
+    def request_options(**options)
+      return options if @request_timeout.nil?
+
+      options.merge(timeout: @request_timeout)
     end
 
     def throttle_request

@@ -35,6 +35,13 @@ class Provider::SolanaRpc
     ENV["SOLANA_RPC_URL"].presence || DEFAULT_URL
   end
 
+  # Detection reads on the request thread and cannot afford the sync's patience,
+  # so both the per-request timeout and the retry count are the caller's to set.
+  def initialize(request_timeout: nil, max_retries: MAX_RETRIES)
+    @request_timeout = request_timeout
+    @max_retries = max_retries
+  end
+
   # @return [Integer] lamports
   def get_balance(address)
     result = rpc("getBalance", [ address ])
@@ -81,14 +88,20 @@ class Provider::SolanaRpc
       begin
         attempts += 1
         throttle_request
-        translate_transport_errors { handle_response(self.class.post(self.class.url, body: body)) }
+        translate_transport_errors { handle_response(self.class.post(self.class.url, **request_options(body: body))) }
       rescue RateLimitError => e
-        raise if attempts > MAX_RETRIES
+        raise if attempts > @max_retries
 
-        Rails.logger.warn("Provider::SolanaRpc - rate limited (attempt #{attempts}/#{MAX_RETRIES}): #{e.message}")
+        Rails.logger.warn("Provider::SolanaRpc - rate limited (attempt #{attempts}/#{@max_retries}): #{e.message}")
         sleep(RETRY_BASE_DELAY * (2**(attempts - 1)))
         retry
       end
+    end
+
+    def request_options(**options)
+      return options if @request_timeout.nil?
+
+      options.merge(timeout: @request_timeout)
     end
 
     def throttle_request

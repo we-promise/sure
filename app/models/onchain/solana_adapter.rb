@@ -60,7 +60,7 @@ class Onchain::SolanaAdapter
   def has_activity?(address)
     return false unless valid_address?(address)
 
-    provider.get_balance(address).positive?
+    detection_provider.get_balance(address).positive?
   rescue StandardError => e
     Rails.logger.warn("Onchain::SolanaAdapter - activity probe failed: #{e.class}")
     false
@@ -101,6 +101,16 @@ class Onchain::SolanaAdapter
 
     def provider
       @provider ||= Provider::SolanaRpc.new
+    end
+
+    # Detection asks every candidate chain in turn on the request thread, so it
+    # reads with the detection budget rather than the sync's: one short attempt,
+    # no retry.
+    def detection_provider
+      @detection_provider ||= Provider::SolanaRpc.new(
+        request_timeout: Onchain::DetectionBudget.timeout,
+        max_retries: Onchain::DetectionBudget.retries
+      )
     end
 
     def native_asset(address)
@@ -170,13 +180,22 @@ class Onchain::SolanaAdapter
     end
 
     def movements(address, token_accounts)
-      seen = signature_sources(address, token_accounts)
-        .flat_map { |pubkey| provider.get_signatures(pubkey, limit: SIGNATURES_PER_SOURCE) }
+      pages = signature_sources(address, token_accounts).map do |pubkey|
+        provider.get_signatures(pubkey, limit: SIGNATURES_PER_SOURCE)
+      end
+
+      seen = pages.flatten
         .uniq { |entry| entry[:signature] }
         .sort_by { |entry| -entry[:block_time].to_i }
 
+      # A source that fills its page has older signatures we never ask for: the
+      # adapter passes no cursor, so a full page means the read stopped short of
+      # the address's history rather than reaching the end of it. Counting only
+      # the budget would call that history complete.
+      capped_source = pages.any? { |page| page.size >= SIGNATURES_PER_SOURCE }
+
       budget = Onchain::HistoryBudget.transactions
-      @history_truncated = seen.size > budget
+      @history_truncated = capped_source || seen.size > budget
       signatures = seen.first(budget)
 
       signatures.flat_map do |entry|

@@ -79,7 +79,18 @@ class Onchain::SecurityResolver
     # reusing it keeps one asset in one record instead of splitting holdings
     # across two rows for the same coin.
     def existing_security
-      Security.find_by(ticker: ticker)
+      security = Security.find_by(ticker: ticker)
+      return nil if security.nil?
+
+      # A blank price_provider falls back to whichever provider happens to be
+      # enabled first, and only the crypto one quotes a bare coin symbol — so a
+      # reused row would price at zero and read as a broken sync. A provider
+      # another integration deliberately chose is left alone: the CRYPTO: prefix
+      # is shared with the exchange integrations, and stomping their choice would
+      # break their pricing to fix ours.
+      security.update!(price_provider: PRICE_PROVIDER) if security.price_provider.blank?
+
+      security
     end
 
     def create_security

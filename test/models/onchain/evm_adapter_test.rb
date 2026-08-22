@@ -98,6 +98,16 @@ class Onchain::EvmAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "detection asks once and does not retry a rate-limited explorer" do
+    probe = stub_request(:get, summary_url).to_return(status: 429, body: "rate limited")
+
+    assert_not @adapter.has_activity?(ADDRESS)
+    # A 0x address is a candidate on every EVM network and they are asked in
+    # turn on the request thread, so retrying with backoff per network is what
+    # turns detection into a page that hangs.
+    assert_requested probe, times: 1
+  end
+
   test "a timed-out explorer during detection means not detected here" do
     stub_request(:get, summary_url).to_timeout
 
