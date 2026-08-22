@@ -40,11 +40,15 @@ module Authentication
     end
 
     def create_session_for(user)
-      return false unless user&.persisted? && User.where(id: user.id, active: true).exists?
+      return false unless user&.persisted?
 
-      session = user.sessions.create!
-      cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
-      session
+      user.with_lock do
+        next false unless user.active?
+
+        session = user.sessions.create!
+        cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
+        session
+      end
     end
 
     def self_hosted_first_login?
