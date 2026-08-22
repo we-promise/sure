@@ -19,7 +19,8 @@ module Holding::Gapfillable
             filled_holdings << holding
             previous_holding = holding
           else
-            # Create a new holding based on the previous day's data
+            # Carry the previous day's data forward, including cost_basis so
+            # avg_cost/trend stay consistent across gap-filled days.
             filled_holdings << Holding::HoldingData.new(
               account_id: previous_holding.account_id,
               security_id: previous_holding.security_id,
