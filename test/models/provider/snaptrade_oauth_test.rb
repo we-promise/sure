@@ -355,6 +355,22 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     assert_equal "read", body["scope"]
   end
 
+  test "start_device_authorization authenticates a confidential client" do
+    configure_oauth!
+
+    request = OpenStruct.new(headers: {})
+    connection = mock("faraday")
+    connection.expects(:get).returns(faraday_response(status: 200, body: discovery_body))
+    connection.expects(:post).yields(request)
+      .returns(faraday_response(status: 200, body: { device_code: "dev-c0de", user_code: "WXYZ-1234" }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    Provider::Snaptrade.start_device_authorization
+
+    assert_equal "Basic #{Base64.strict_encode64('client-id:client-secret')}", request.headers["Authorization"]
+    assert_nil Rack::Utils.parse_query(request.body)["client_id"]
+  end
+
   test "start_device_authorization raises when the metadata has no device endpoint" do
     configure_device_flow_only!
 
@@ -371,7 +387,6 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
     request = OpenStruct.new(headers: {})
     connection = mock("faraday")
-    connection.expects(:get).returns(faraday_response(status: 200, body: discovery_body))
     connection.expects(:post).with(Provider::Snaptrade::TOKEN_URL).yields(request)
       .returns(faraday_response(status: 200, body: { access_token: "at", refresh_token: "rt", expires_in: 900, token_type: "Bearer", scope: "read" }.to_json))
     Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
@@ -392,7 +407,6 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     configure_device_flow_only!
 
     connection = mock("faraday")
-    connection.expects(:get).returns(faraday_response(status: 200, body: discovery_body))
     connection.expects(:post).returns(faraday_response(status: 400, body: { error: "authorization_pending" }.to_json))
     Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
 

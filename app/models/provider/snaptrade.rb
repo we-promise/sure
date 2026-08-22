@@ -137,8 +137,9 @@ class Provider::Snaptrade
       # its own. Nothing has been applied that a retry could duplicate.
       response = with_retries("POST #{endpoint}") do
         oauth_connection.post(endpoint) do |request|
+          request.headers["Authorization"] = basic_auth_header if confidential_client?
           request.headers["Content-Type"] = "application/x-www-form-urlencoded"
-          request.body = URI.encode_www_form(client_id: oauth_client_id, scope: scope)
+          request.body = URI.encode_www_form(with_client_credentials({ scope: scope }))
         end
       end
 
@@ -158,10 +159,7 @@ class Provider::Snaptrade
       raise ConfigurationError, "SnapTrade OAuth is not configured" unless oauth_configured?
       raise ArgumentError, "device_code is required" if device_code.blank?
 
-      token_request(
-        { grant_type: DEVICE_CODE_GRANT, device_code: device_code },
-        token_url: oauth_authorization_server_metadata["token_endpoint"].presence || TOKEN_URL
-      )
+      token_request({ grant_type: DEVICE_CODE_GRANT, device_code: device_code })
     end
 
     # Endpoints come from the authorization server's own metadata rather than
@@ -210,7 +208,7 @@ class Provider::Snaptrade
 
     private
 
-      def token_request(params, token_url: TOKEN_URL)
+      def token_request(params, token_url: token_endpoint)
         raise ConfigurationError, "SnapTrade OAuth is not configured" unless oauth_configured?
 
         # Not retried: a token request consumes a single-use authorization or
@@ -240,6 +238,16 @@ class Provider::Snaptrade
           "SnapTrade OAuth token request failed: #{error}",
           status_code: response.status, response_body: response.body
         )
+      end
+
+      # Whatever issued a token has to be what refreshes it, so every token
+      # request resolves the endpoint the same way. Reads the discovery document
+      # only if it is already cached -- deliberately never fetches it here. The
+      # device flow warms that cache immediately before its own token request,
+      # while the browser flow keeps working off the constant it has always
+      # used, with no new network call and no new way for refresh to fail.
+      def token_endpoint
+        Rails.cache.read(OAUTH_METADATA_CACHE_KEY).try(:[], "token_endpoint").presence || TOKEN_URL
       end
 
       # A client secret means the token endpoint authenticates the client with

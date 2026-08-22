@@ -69,7 +69,7 @@
             ) %>
           </div>
         <% end %>
-      <% elsif Provider::Snaptrade.oauth_configured? %>
+      <% elsif @device_flow_available %>
         <%= form_with url: start_oauth_device_flow_snaptrade_items_path,
                       method: :post,
                       data: { turbo_frame: "drawer" },
