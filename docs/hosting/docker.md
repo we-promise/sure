@@ -214,8 +214,8 @@ If you find bugs or have a feature request, be sure to read through our [contrib
 
 Sure ships with a separate compose file for AI-related features: `compose.example.ai.yml`. It adds:
 
-- **Pipelock** (always on): AI agent security proxy that scans outbound LLM calls and inbound MCP traffic
-- **Ollama + Open WebUI** (optional `--profile ai`): local LLM inference
+- **Pipelock** (always on): AI agent security proxy for outbound tunnel controls and inbound MCP scanning
+- **Ollama + Open WebUI** (optional `--profile local-ai`): local LLM inference
 
 ### Using the AI compose file
 
@@ -229,7 +229,7 @@ curl -o pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/
 docker compose -f compose.ai.yml up -d
 
 # Run with Pipelock + Ollama
-docker compose -f compose.ai.yml --profile ai up -d
+docker compose -f compose.ai.yml --profile local-ai up -d
 ```
 
 ### Setting up the external AI assistant
@@ -252,16 +252,22 @@ The external assistant delegates chat to a remote AI agent instead of calling LL
    - **Per-family (UI):** Go to Settings > Self-Hosting > AI Assistant, select "External"
    - **Global (env):** Set `ASSISTANT_TYPE=external` to force all families to use external
 
+To use the bundled OpenClaw service instead of a separately hosted agent, start the `external-assistant` profile. This profile starts OpenClaw without the local Ollama or Open WebUI services:
+
+```bash
+docker compose -f compose.ai.yml --profile external-assistant up -d
+```
+
 See [docs/hosting/ai.md](ai.md) for full configuration details including agent ID, session keys, and email allowlisting.
 
 ### Pipelock security proxy
 
-Pipelock sits between Sure and external services, scanning AI traffic for:
+Pipelock sits between Sure and external services. The default Compose file provides:
 
-- **Secret exfiltration** (DLP): catches API keys, tokens, or personal data leaking in prompts
-- **Prompt injection**: detects attempts to override system instructions
-- **Tool poisoning**: validates MCP tool calls against known-safe patterns
-- **Signed receipts**: optional hash-chained evidence of mediated decisions when `flight_recorder.dir` and `signing_key_path` are configured
+- MCP request and response scanning for DLP, prompt injection, and tool poisoning
+- HTTPS tunnel controls for destination, SSRF, rate, budget, CONNECT headers, and optional signed receipts
+
+The example doesn't enable TLS interception, so Pipelock can't read encrypted HTTPS request or response bodies. Docker Compose also doesn't prevent a client from bypassing the proxy.
 
 When using `compose.example.ai.yml`, Pipelock is always running. External AI agents should connect to port 8889 (MCP reverse proxy) instead of directly to Sure's `/mcp` on port 3000.
 
