@@ -251,8 +251,8 @@ class ImportsController < ApplicationController
     end
 
     def create_sure_import(file)
-      if file.size > SureImport::MAX_NDJSON_SIZE
-        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
+      if file.size > SureImport.max_ndjson_size
+        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport.max_ndjson_size / 1.megabyte)
         return
       end
 
