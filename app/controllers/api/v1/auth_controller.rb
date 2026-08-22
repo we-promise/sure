@@ -292,23 +292,37 @@ module Api
           return
         end
 
-        # Create new access token
-        new_token = Doorkeeper::AccessToken.create!(
-          application: access_token.application,
-          resource_owner_id: access_token.resource_owner_id,
-          mobile_device_id: access_token.mobile_device_id,
-          expires_in: 30.days.to_i,
-          scopes: access_token.scopes,
-          use_refresh_token: true
-        )
+        user = User.find_by(id: access_token.resource_owner_id)
+        new_token = begin
+          user&.with_lock do
+            next false unless user.active?
 
-        # Revoke old access token
-        access_token.revoke
+            access_token.with_lock do
+              next false if access_token.revoked?
 
-        # Update device last seen
-        user = User.find(access_token.resource_owner_id)
-        device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
-        device&.update_last_seen!
+              token = Doorkeeper::AccessToken.create!( # pipelock:ignore Credential in URL
+                application: access_token.application,
+                resource_owner_id: access_token.resource_owner_id,
+                mobile_device_id: access_token.mobile_device_id,
+                expires_in: 30.days.to_i,
+                scopes: access_token.scopes,
+                use_refresh_token: true
+              )
+
+              access_token.revoke
+              device = user.mobile_devices.find_by(device_id: params.dig(:device, :device_id))
+              device&.update_last_seen!
+              token
+            end
+          end
+        rescue ActiveRecord::RecordNotFound
+          false
+        end
+
+        unless new_token
+          render json: { error: "Invalid refresh token" }, status: :unauthorized
+          return
+        end
 
         render json: {
           access_token: new_token.plaintext_token,
