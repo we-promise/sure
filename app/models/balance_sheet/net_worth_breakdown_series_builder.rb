@@ -2,6 +2,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
   # Monthly interval regardless of period length so the reports chart always
   # shows one point per month in the selected range.
   INTERVAL = "1 month"
+  CACHE_VERSION = "v2"
 
   def initialize(family, user: nil)
     @family = family
@@ -133,6 +134,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
       shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
       key = [
         "balance_sheet_net_worth_breakdown_series",
+        CACHE_VERSION,
         user&.id,
         shares_version,
         period.start_date,

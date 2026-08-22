@@ -82,8 +82,13 @@
             <%= @net_worth_metrics[:current_net_worth].format %>
           </span>
           <% if @net_worth_metrics[:trend] %>
-            <span class="tufte-metric-card-change" style="color: <%= @net_worth_metrics[:trend].color %>">
-              <%= @net_worth_metrics[:trend].value >= 0 ? "+" : "" %><%= @net_worth_metrics[:trend].value.format %> (<%= @net_worth_metrics[:trend].percent_formatted %>) <%= t("reports.print.net_worth.this_period") %>
+            <% trend = @net_worth_metrics[:trend] %>
+            <span class="tufte-metric-card-change" style="color: <%= trend.color %>">
+              <%= trend.value.format(signify_positive: true) %>
+              <% if trend.percent.finite? %>
+                (<%= trend.percent_formatted %>)
+              <% end %>
+              <%= t("reports.print.net_worth.this_period") %>
             </span>
           <% end %>
           <% if has_sparkline_data?(@trends_data) %>

@@ -79,6 +79,12 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilderTest < ActiveSupport::TestCase
     end
   end
 
+  test "cache key includes payload version" do
+    period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
+
+    assert_includes builder.send(:cache_key, period), BalanceSheet::NetWorthBreakdownSeriesBuilder::CACHE_VERSION
+  end
+
   private
     def builder
       BalanceSheet::NetWorthBreakdownSeriesBuilder.new(@family)
