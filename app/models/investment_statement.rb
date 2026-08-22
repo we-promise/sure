@@ -75,7 +75,11 @@ class InvestmentStatement
         id: Holding
           .where(account_id: investment_account_ids)
           .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
-          .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
+          .order(Arel.sql(
+            Holding.latest_security_order_sql(
+              partition_columns: %w[account_id security_id]
+            )
+          ))
       )
       .includes(:security, :account)
   end

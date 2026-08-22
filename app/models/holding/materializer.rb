@@ -17,6 +17,7 @@ class Holding::Materializer
 
     Rails.logger.info("Persisting #{@holdings.size} holdings")
     persist_holdings
+    cleanup_stale_calculated_currencies
 
     if strategy == :forward && security_ids.nil?
       purge_stale_holdings
@@ -194,6 +195,101 @@ class Holding::Materializer
       Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings on latest provider snapshot date") if deleted_count > 0
     end
 
+    # Calculated holdings preserve native price currency. After rematerialization,
+    # delete calculated non-provider rows for the same security/date that still use
+    # an older currency (orphaned from prior account-currency normalization).
+    #
+    # Manual/locked rows are never deleted: their original amount + currency stay
+    # on a neutralized (qty/amount zero) row so a bad FX pin is recoverable. When
+    # conversion succeeds, the kept native-currency row also receives the converted
+    # basis with the source row's cost_basis_source / cost_basis_locked flags
+    # (never forced to "manual"/locked).
+    #
+    # Batches the candidate lookup for all rematerialized (security, date) keys in
+    # one query so reverse materialization does not N+1 over every day/security.
+    def cleanup_stale_calculated_currencies
+      return if @holdings.empty?
+
+      keep_by_key = @holdings
+        .group_by { |holding| [ holding.security_id, holding.date ] }
+        .transform_values { |rows| rows.map(&:currency).uniq }
+
+      security_ids = keep_by_key.keys.map(&:first).uniq
+      dates = keep_by_key.keys.map(&:last).uniq
+
+      candidates = account.holdings
+        .where(account_provider_id: nil, security_id: security_ids, date: dates)
+        .to_a
+
+      targets_by_key = {}
+      stale_by_key = Hash.new { |h, k| h[k] = [] }
+
+      candidates.each do |holding|
+        key = [ holding.security_id, holding.date ]
+        keep_currencies = keep_by_key[key]
+        next unless keep_currencies
+
+        if keep_currencies.include?(holding.currency)
+          targets_by_key[key] = holding if holding.currency == keep_currencies.first
+        else
+          stale_by_key[key] << holding
+        end
+      end
+
+      return if stale_by_key.empty?
+
+      stale_by_key.each do |(security_id, date), stale_rows|
+        preserve_manual_cost_basis_from_stale_rows(
+          stale_rows: stale_rows,
+          target: targets_by_key[[ security_id, date ]],
+          date: date
+        )
+      end
+
+      stale_ids = stale_by_key.values.flat_map { |rows| rows.map(&:id) }
+      deleted_count = stale_ids.any? ? account.holdings.calculated.where(id: stale_ids).delete_all : 0
+
+      Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings with outdated currencies") if deleted_count > 0
+    end
+
+    # Keeps user-entered/locked basis recoverable on the orphaned currency row
+    # (qty/amount zeroed so balances and DISTINCT ON prefer the native row), and
+    # optionally mirrors a converted value onto the kept currency row.
+    def preserve_manual_cost_basis_from_stale_rows(stale_rows:, target:, date:)
+      manual_rows = stale_rows.reject(&:calculated?)
+      return if manual_rows.empty?
+
+      source = manual_rows.max_by { |holding| [ holding.cost_basis_locked? ? 1 : 0, holding.updated_at || Time.at(0) ] }
+
+      if target && source.cost_basis.present? && !target.cost_basis_locked?
+        converted = convert_cost_basis_amount(source.cost_basis, from: source.currency, to: target.currency, date: date)
+
+        if converted
+          target.update!(
+            cost_basis: converted,
+            cost_basis_source: source.cost_basis_source,
+            cost_basis_locked: source.cost_basis_locked?
+          )
+        end
+      end
+
+      # Zero market exposure so SyncCache / current_holdings do not double-count,
+      # but leave cost_basis + currency intact as the recoverable original entry.
+      manual_rows.each do |row|
+        next if row.qty.zero? && row.amount.zero?
+
+        row.update!(qty: 0, amount: 0)
+      end
+    end
+
+    def convert_cost_basis_amount(amount, from:, to:, date:)
+      return amount if from == to
+
+      Money.new(amount, from).exchange_to(to, date: date).amount
+    rescue Money::ConversionError
+      nil
+    end
+
     def holding_key(holding)
       [ holding.account_id || account.id, holding.security_id, holding.date, holding.currency ]
     end
@@ -204,10 +300,9 @@ class Holding::Materializer
     # reports keep showing trend data.
     #
     # Provider and calculated rows can be denominated in different currencies
-    # (e.g., IBKR reports USD holdings while the reverse calculator converts to
-    # the account's base currency). When they differ, the cost_basis is converted
-    # at the snapshot date — the same convention ReverseCalculator uses for trade
-    # prices — so the result is consistent with trade-derived cost_basis values.
+    # (e.g., IBKR reports EUR holdings while calculated rows use USD market prices).
+    # When they differ, the cost_basis is converted at the snapshot date so the
+    # result is consistent with trade-derived cost_basis values.
     def carry_forward_provider_cost_basis(holding)
       snapshots = provider_cost_basis_snapshots[holding.security_id]
       return nil if snapshots.blank?

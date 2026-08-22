@@ -238,6 +238,32 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_in_delta 100.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
   end
 
+  test "cost_basis_for returns nil when buy currency cannot be converted to holding currency" do
+    security = Security.create!(ticker: "FXMISS", name: "Missing FX")
+    buy_date = 2.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date, currency: "EUR")
+    end
+
+    # Holding currency is USD (account); no EUR→USD rate exists
+    assert_nil cost_basis_for(calc, security, Date.current, "USD")
+  end
+
+  test "cost_basis_for returns nil when FX rate is zero" do
+    security = Security.create!(ticker: "FXZERO", name: "Zero FX")
+    buy_date = 2.days.ago.to_date
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: buy_date, rate: 0)
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date, currency: "EUR")
+    end
+
+    assert_nil cost_basis_for(calc, security, Date.current, "USD"),
+               "Zero rates must not become a 0 cost basis (Money#exchange_to rejected rate <= 0)"
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
@@ -291,8 +317,8 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
       calc
     end
 
-    def cost_basis_for(calc, security, date)
-      calc.send(:cost_basis_for, security.id, date)
+    def cost_basis_for(calc, security, date, currency = @account.currency)
+      calc.send(:cost_basis_for, security.id, date, currency)
     end
 
     def load_today_portfolio

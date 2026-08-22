@@ -74,38 +74,50 @@ class Holding::ReverseCalculator
           price: price.price,
           currency: price.currency,
           amount: qty * price.price,
-          cost_basis: cost_basis_for(security_id, date)
+          cost_basis: cost_basis_for(security_id, date, price.currency)
         )
       end.compact
     end
 
     def precompute_cost_basis
+      @cost_basis_buys = Hash.new { |h, k| h[k] = [] }
+      # Snapshots keep binary search over buy dates; conversion stays currency-aware
+      # and is memoized by [security_id, currency, buy_count].
       @cost_basis_snapshots = Hash.new { |h, k| h[k] = [] }
-      tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+      @cost_basis_memo = {}
+      @fx_rate_memo = {}
 
       portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
         trade = trade_entry.entryable
         next unless trade.qty > 0
 
         security_id = trade.security_id
-        trade_price = Money.new(trade.price, trade.currency)
-        begin
-          converted_price = trade_price.exchange_to(account.currency).amount
-        rescue Money::ConversionError
-          converted_price = trade.price
-        end
-
-        tracker[security_id][:total_cost] += converted_price * trade.qty
-        tracker[security_id][:total_qty] += trade.qty
+        @cost_basis_buys[security_id] << {
+          date: trade_entry.date,
+          qty: trade.qty,
+          price: trade.price,
+          currency: trade.currency
+        }
 
         @cost_basis_snapshots[security_id] << [
           trade_entry.date,
-          tracker[security_id][:total_cost] / tracker[security_id][:total_qty]
+          @cost_basis_buys[security_id].size
         ]
       end
     end
 
-    def cost_basis_for(security_id, date)
+    def cost_basis_for(security_id, date, currency)
+      buy_count = buy_count_as_of(security_id, date)
+      return nil if buy_count.nil? || buy_count.zero?
+
+      memo_key = [ security_id, currency, buy_count ]
+      return @cost_basis_memo[memo_key] if @cost_basis_memo.key?(memo_key)
+
+      applicable = @cost_basis_buys[security_id].first(buy_count)
+      @cost_basis_memo[memo_key] = weighted_average_cost(applicable, currency)
+    end
+
+    def buy_count_as_of(security_id, date)
       snapshots = @cost_basis_snapshots[security_id]
       return nil if snapshots.empty?
 
@@ -120,5 +132,39 @@ class Holding::ReverseCalculator
         end
       end
       result
+    end
+
+    def weighted_average_cost(buys, currency)
+      total_qty = buys.sum { |buy| buy[:qty] }
+      return nil if total_qty.zero?
+
+      total_cost = BigDecimal("0")
+
+      buys.each do |buy|
+        converted_price = convert_buy_price(buy, currency)
+        return nil if converted_price.nil?
+
+        total_cost += converted_price * buy[:qty]
+      end
+
+      total_cost / total_qty
+    end
+
+    def convert_buy_price(buy, currency)
+      return buy[:price] if buy[:currency] == currency
+
+      rate = fx_rate(from: buy[:currency], to: currency, date: buy[:date])
+      # Match Money#exchange_to: absent or non-positive rates are unusable
+      # (ExchangeRate does not enforce positivity at the DB layer).
+      return nil unless rate&.positive?
+
+      buy[:price] * rate
+    end
+
+    def fx_rate(from:, to:, date:)
+      key = [ from, to, date ]
+      return @fx_rate_memo[key] if @fx_rate_memo.key?(key)
+
+      @fx_rate_memo[key] = ExchangeRate.find_or_fetch_rate(from: from, to: to, date: date)&.rate
     end
 end

@@ -92,25 +92,39 @@ class Trade < ApplicationRecord
     def calculate_realized_gain_loss
       return nil unless sell?
 
+      prefer_currency = entry.account.currency
+
       # Use preloaded holdings if available (set by reports controller to avoid N+1)
       # Treat defined-but-empty preload as authoritative to prevent DB fallback
       holding = if defined?(@preloaded_holdings)
-        # Use select + max_by for deterministic selection regardless of array order
-        (@preloaded_holdings || [])
-          .select { |h| h.security_id == security_id && h.date <= entry.date }
-          .max_by(&:date)
+        Holding.pick_latest_for_security(
+          (@preloaded_holdings || []).select { |h| h.security_id == security_id && h.date <= entry.date },
+          prefer_currency: prefer_currency
+        )
       else
-        # Fall back to database query only when not preloaded
+        # Fall back to database query only when not preloaded — same tie-break as
+        # Holding.latest_security_order_sql / pick_latest_for_security.
         entry.account.holdings
           .where(security_id: security_id)
           .where("date <= ?", entry.date)
-          .order(date: :desc)
+          .order(Arel.sql(Holding.latest_security_order_sql(
+            prefer_currency: prefer_currency,
+            partition_columns: []
+          )))
           .first
       end
 
       return nil unless holding&.avg_cost
 
-      cost_basis = holding.avg_cost * qty.abs
+      # Holding cost basis is stored in the security/holding currency, which can
+      # differ from the sell trade currency for manual multi-currency accounts.
+      converted_avg_cost = begin
+        holding.avg_cost.exchange_to(currency, date: entry.date)
+      rescue Money::ConversionError
+        return nil
+      end
+
+      cost_basis = converted_avg_cost * qty.abs
       sale_proceeds = price_money * qty.abs
 
       Trend.new(current: sale_proceeds, previous: cost_basis)
