@@ -1,0 +1,112 @@
+---
+es:
+  retirement:
+    show:
+      page_title: Planificación de Jubilación
+      subtitle: Sigue tu camino hacia la independencia financiera y la preparación para la jubilación
+      current_age: Edad Actual
+      years_to_retirement:
+        one: "%{count} año para la jubilación"
+        other: "%{count} años para la jubilación"
+      estimated_pension: Pensión Mensual Estimada
+      after_tax: Después de impuestos
+      pension_gap: Brecha Mensual de Pensión
+      target: "Objetivo"
+      required_savings: Ahorro Mensual Necesario
+      per_month: al mes para cerrar la brecha de pensión
+      fire_progress: Progreso FIRE
+      current_portfolio: Cartera Actual
+      fire_number: Número FIRE
+      progress: Progreso
+      estimated_fire_date: Fecha FIRE Estimada
+      assumptions: Supuestos
+      edit: Editar
+      birth_year: Año de Nacimiento
+      retirement_age: Edad de Jubilación
+      expected_return: Rendimiento Esperado
+      inflation: Tasa de Inflación
+      tax_rate: Tasa Impositiva
+      monthly_savings: Ahorro Mensual
+      pension_history: Historial de Pensión
+      add_entry: Añadir nueva entrada de pensión
+      date: Fecha
+      pension_points: Puntos de Pensión
+      points_gained: Puntos Ganados
+      current_pension: Pensión Actual
+      projected_pension: Pensión Proyectada
+      notes: Notas
+      notes_placeholder: "ej. Informe de vida laboral 2024"
+      save_entry: Guardar Entrada
+      confirm_delete: "¿Estás seguro de querer eliminar esta entrada?"
+      no_entries: Aún no hay entradas de pensión
+      no_entries_hint: Añade entradas de tus informes de pensión para seguir tu progreso
+      setup_required: Por favor configura primero la planificación de jubilación
+      uk_progress_title: Progreso de Pensión Estatal
+      uk_qualifying_years: Años Calificados (NI)
+      uk_years_remaining:
+        zero: "¡Todos los años calificados alcanzados — State Pension completa!"
+        one: "%{count} año más para la State Pension completa"
+        other: "%{count} años más para la State Pension completa"
+    form_fields: &retirement_form_fields_es
+      personal_section: Información Personal
+      birth_year: Año de Nacimiento
+      retirement_age: Edad de Jubilación Deseada
+      financial_section: Objetivos Financieros
+      target_monthly_income: Ingreso Mensual Objetivo (Jubilación)
+      current_monthly_savings: Ahorro Mensual Actual
+      currency: Moneda
+      pension_section: Sistema de Pensiones
+      pension_system: Sistema de Pensiones
+      country: País
+      de_expected_annual_points: Puntos Anuales Esperados
+      de_expected_annual_points_hint: Salario promedio = ~1,0 puntos/año
+      de_rentenwert: Valor Actual de Pensión (Rentenwert)
+      de_rentenwert_hint: Valor actual en EUR (2025 ~ 39,32)
+      de_contribution_start_year: Año de Inicio de Contribuciones
+      us_estimated_monthly_benefit: Beneficio Mensual Estimado
+      us_estimated_monthly_benefit_hint: De tu declaración SSA (ssa.gov)
+      uk_qualifying_years: Años Calificados (NI)
+      uk_qualifying_years_hint: "35 años para la State Pension completa"
+      uk_full_weekly_rate: Tarifa Semanal Completa (£)
+      uk_full_weekly_rate_hint: "2024/25: £221,20/semana"
+      fr_estimated_monthly_pension: Pensión Mensual Estimada
+      fr_estimated_monthly_pension_hint: De tu relevé de situation individuelle
+      fr_trimestres: Trimestres Validados
+      es_estimated_monthly_pension: Pensión Mensual Estimada
+      es_estimated_monthly_pension_hint: De tu informe de vida laboral
+      es_contribution_years: Años de Cotización
+      custom_hint: Añade entradas de pensión manualmente para seguir tu pensión estimada.
+      assumptions_section: Supuestos
+      expected_return: Rendimiento Anual Esperado (%)
+      inflation: Inflación Esperada (%)
+      tax_rate: Tasa Impositiva en Jubilación (%)
+    setup:
+      page_title: Configurar Planificación de Jubilación
+      subtitle: Configura tus parámetros de planificación de jubilación y FIRE
+      cancel: Cancelar
+      save: Guardar y Continuar
+    edit:
+      page_title: Editar Configuración de Jubilación
+      subtitle: Actualiza tus parámetros de planificación de jubilación
+      cancel: Cancelar
+      save: Guardar Cambios
+    create:
+      created: La planificación de jubilación se ha configurado correctamente
+    update:
+      updated: Configuración de jubilación actualizada correctamente
+    add_pension_entry:
+      pension_entry_added: Entrada de pensión añadida correctamente
+    destroy_pension_entry:
+      pension_entry_removed: Entrada de pensión eliminada
+    pension_system_groups:
+      europe: Europa
+      united_kingdom: Reino Unido
+      north_america: Norteamérica
+      other: Otros
+    pension_systems:
+      de_grv: Pensión Estatal Alemana (GRV)
+      us_ss: Seguridad Social de EE.UU.
+      uk_sp: Pensión Estatal del Reino Unido
+      fr_regime: Régimen General Francés
+      es_ss: Seguridad Social Española
+      custom: Personalizado / Otro

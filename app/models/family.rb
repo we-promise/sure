@@ -50,6 +50,7 @@ class Family < ApplicationRecord
 
   has_many :budgets, dependent: :destroy
   has_many :budget_categories, through: :budgets
+  has_one :retirement_config, dependent: :destroy
 
   has_many :goals, dependent: :destroy
 
