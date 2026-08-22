@@ -1,6 +1,11 @@
 class SnaptradeItemsController < ApplicationController
-  before_action :set_snaptrade_item, only: [ :show, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :delete_connection ]
-  before_action :require_admin!, only: [ :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :oauth_authorize, :oauth_callback, :preload_accounts, :select_accounts, :select_existing_account, :link_existing_account ]
+  PERMITTED_OAUTH_SCOPES = %w[read].freeze
+  # RFC 8628 §3.5: the authorization server is telling us to keep waiting, not
+  # that anything went wrong.
+  DEVICE_FLOW_PENDING_ERRORS = %w[authorization_pending slow_down].freeze
+
+  before_action :set_snaptrade_item, only: [ :show, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :complete_oauth_device_flow ]
+  before_action :require_admin!, only: [ :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :oauth_authorize, :oauth_callback, :oauth_device_authorize, :start_oauth_device_flow, :complete_oauth_device_flow, :preload_accounts, :select_accounts, :select_existing_account, :link_existing_account ]
 
   def index
     @snaptrade_items = Current.family.snaptrade_items.ordered
@@ -185,7 +190,7 @@ class SnaptradeItemsController < ApplicationController
 
   # Start the SnapTrade OAuth authorization-code + PKCE flow
   def oauth_authorize
-    unless Provider::Snaptrade.oauth_configured?
+    unless Provider::Snaptrade.authorization_code_configured?
       redirect_to settings_providers_path, alert: t(".not_configured")
       return
     end
@@ -263,6 +268,81 @@ class SnaptradeItemsController < ApplicationController
     redirect_to settings_providers_path, alert: t(".failed")
   end
 
+  # Device flow, step 0: the drawer, before any network call is made.
+  def oauth_device_authorize
+    assign_device_flow_context
+    return render_device_flow_unconfigured unless Provider::Snaptrade.oauth_configured?
+
+    @snaptrade_item = if params[:item_id].present?
+      Current.family.snaptrade_items.find(params[:item_id])
+    else
+      current_snaptrade_item
+    end
+
+    render :oauth_device_flow
+  end
+
+  # Device flow, step 1: ask SnapTrade for the code the user confirms.
+  def start_oauth_device_flow
+    assign_device_flow_context
+    return render_device_flow_unconfigured unless Provider::Snaptrade.oauth_configured?
+
+    @snaptrade_item = if params[:item_id].present?
+      Current.family.snaptrade_items.find(params[:item_id])
+    else
+      current_snaptrade_item || Current.family.snaptrade_items.create!(name: t("snaptrade_items.default_name"))
+    end
+
+    @device_authorization = @snaptrade_item.start_oauth_device_flow(scope: @oauth_scope)
+
+    render :oauth_device_flow
+  rescue Provider::Snaptrade::Error => e
+    Rails.logger.error "SnapTrade device authorization failed: #{e.class} - #{e.message}"
+    @error_message = t(".failed")
+    render :oauth_device_flow, status: :unprocessable_entity
+  end
+
+  # Device flow, step 2: redeem the confirmed code. From here the item is
+  # indistinguishable from one authorized through the browser redirect.
+  def complete_oauth_device_flow
+    assign_device_flow_context
+
+    if params[:device_code].blank?
+      @error_message = t(".device_code_required")
+      render :oauth_device_flow, status: :unprocessable_entity
+      return
+    end
+
+    @snaptrade_item.complete_oauth_device_flow!(device_code: params[:device_code])
+    @snaptrade_item.sync_later_with_follow_up
+
+    destination = if @return_to == "setup_accounts"
+      setup_accounts_snaptrade_item_path(@snaptrade_item, accountable_type: @accountable_type.presence)
+    else
+      settings_providers_path
+    end
+
+    redirect_after_device_flow destination, notice: t(".success")
+  rescue Provider::Snaptrade::Error => e
+    Rails.logger.error "SnapTrade device token request failed: #{e.class} - #{e.message}"
+
+    # Waiting on the user is the expected case, not a failure worth recording.
+    unless device_flow_pending?(e)
+      DebugLogEntry.capture(
+        category: "provider_auth",
+        level: :error,
+        message: "SnapTrade device code exchange failed: #{e.message}",
+        source: "SnaptradeItemsController#complete_oauth_device_flow",
+        provider_key: "snaptrade",
+        family: Current.family
+      )
+    end
+
+    @error_message = device_flow_error_message(e)
+    restore_device_authorization_from_params
+    render :oauth_device_flow, status: :unprocessable_entity
+  end
+
   # Delete a brokerage connection
   def delete_connection
     authorization_id = params[:authorization_id]
@@ -325,7 +405,7 @@ class SnaptradeItemsController < ApplicationController
       snaptrade_item.sync_later_with_follow_up
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item)
     else
-      redirect_to oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id)
+      redirect_to helpers.snaptrade_authorize_path(item_id: snaptrade_item.id)
     end
   end
 
@@ -342,7 +422,7 @@ class SnaptradeItemsController < ApplicationController
     if snaptrade_item.oauth_configured?
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: @accountable_type, return_to: @return_to)
     else
-      redirect_to oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id, accountable_type: @accountable_type, return_to: @return_to)
+      redirect_to helpers.snaptrade_authorize_path(item_id: snaptrade_item.id, accountable_type: @accountable_type, return_to: @return_to)
     end
   end
 
@@ -403,6 +483,73 @@ class SnaptradeItemsController < ApplicationController
 
       active_items.syncable.ordered.first ||
         active_items.ordered.first
+    end
+
+    def assign_device_flow_context
+      @return_to = params[:return_to]
+      @accountable_type = params[:accountable_type]
+      @oauth_scope = permitted_oauth_scope
+      @device_flow_available = Provider::Snaptrade.oauth_configured?
+    end
+
+    def permitted_oauth_scope
+      requested_scope = params[:scope].to_s
+      return requested_scope if PERMITTED_OAUTH_SCOPES.include?(requested_scope)
+
+      "read"
+    end
+
+    # The device code survives a failed attempt: the user code is still valid,
+    # so re-rendering the same page lets them finish in SnapTrade and retry
+    # without starting over.
+    def restore_device_authorization_from_params
+      @device_authorization = params.permit(
+        :device_code,
+        :user_code,
+        :verification_uri,
+        :verification_uri_complete,
+        :expires_in,
+        :interval
+      ).to_h
+    end
+
+    def render_device_flow_unconfigured
+      @device_flow_available = false
+      @error_message = t("snaptrade_items.oauth_device_flow.missing_client_id")
+      render :oauth_device_flow, status: :unprocessable_entity
+    end
+
+    # The drawer form posts into the `drawer` frame so errors re-render in
+    # place. A plain redirect would be followed as a frame navigation, and both
+    # destinations carry the layout's empty `drawer` frame -- Turbo would swap
+    # that in and just close the dialog, losing the notice and never advancing
+    # to account setup. A redirect stream action breaks out to the top level.
+    def redirect_after_device_flow(path, notice:)
+      if turbo_frame_request?
+        flash[:notice] = notice
+        render turbo_stream: turbo_stream.action(:redirect, path)
+      else
+        redirect_to path, notice: notice
+      end
+    end
+
+    def device_flow_pending?(error)
+      DEVICE_FLOW_PENDING_ERRORS.include?(error.try(:oauth_error))
+    end
+
+    # Chosen from the machine-readable OAuth code only. error.message can carry
+    # upstream detail, so it never reaches the page.
+    def device_flow_error_message(error)
+      return t("snaptrade_items.complete_oauth_device_flow.authorization_pending") if device_flow_pending?(error)
+
+      case error.try(:oauth_error)
+      when "expired_token"
+        t("snaptrade_items.complete_oauth_device_flow.expired")
+      when "access_denied"
+        t("snaptrade_items.complete_oauth_device_flow.access_denied")
+      else
+        t("snaptrade_items.complete_oauth_device_flow.failed")
+      end
     end
 
     def build_connections_list
