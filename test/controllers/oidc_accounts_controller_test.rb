@@ -46,6 +46,22 @@ class OidcAccountsControllerTest < ActionController::TestCase
     )
   end
 
+  test "rolls back identity linking when session creation fails" do
+    session[:pending_oidc_auth] = pending_auth
+    @controller.stubs(:create_session_for).returns(false)
+
+    assert_no_difference [ "OidcIdentity.count", "SsoAuditLog.count" ] do
+      post :create_link,
+        params: {
+          email: @user.email,
+          password: user_password_test
+        }
+    end
+
+    assert_redirected_to new_session_path
+    assert session[:pending_oidc_auth].present?
+  end
+
   test "should reject linking with invalid password" do
     session[:pending_oidc_auth] = pending_auth
 
@@ -275,6 +291,19 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     assert_response :unprocessable_entity
     assert_nil User.find_by(email: auth["email"])
+  end
+
+  test "create_user rolls back onboarding when session creation fails" do
+    session[:pending_oidc_auth] = new_user_auth
+    @controller.stubs(:create_session_for).returns(false)
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+      post :create_user
+    end
+
+    assert_response :unprocessable_entity
+    assert_nil User.find_by(email: new_user_auth["email"])
+    assert session[:pending_oidc_auth].present?
   end
 
   test "should create session after OIDC registration" do

@@ -80,7 +80,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       post sessions_url, params: { email: @user.email, password: user_password_test }
     end
 
-    assert_redirected_to root_url
+    assert_redirected_to new_session_url
     assert cookies[:session_token].blank?
   end
 
