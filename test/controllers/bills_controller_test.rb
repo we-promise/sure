@@ -706,6 +706,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # the planner parked in this window, and never asks the user to operate on
   # the allocation itself.
   test "the gap before the first payday is a banner, not a period in the timeline" do
+    # The banner reports a shortfall, and a shortfall now means the cash cannot
+    # reach, not merely that the window earns nothing. Pin the balance under the
+    # bill so the condition this test is about actually holds.
+    @family.accounts.where(accountable_type: "Depository").update_all(balance: 100)
     declare_income(name: "Frito Lay", amount: -1200, payday: Date.current + 4)
     declare_bill(name: "Watson Property", amount: 2150, due: Date.current + 3)
 

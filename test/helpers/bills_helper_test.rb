@@ -211,7 +211,8 @@ class BillsHelperTest < ActionView::TestCase
         obligation_total: obligations,
         remaining: BigDecimal(income.to_s) - obligations,
         leading: leading,
-        final: false
+        final: false,
+        cash_on_hand: nil
       )
     end
 end

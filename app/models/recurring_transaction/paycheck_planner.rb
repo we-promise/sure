@@ -12,7 +12,8 @@ class RecurringTransaction
 
     Period = Data.define(
       :starts_on, :ends_on, :income, :income_sources, :items,
-      :due_total, :reserved_total, :obligation_total, :remaining, :leading, :final
+      :due_total, :reserved_total, :obligation_total, :remaining, :leading, :final,
+      :cash_on_hand
     ) do
       # The window between today and the next payday: nothing arrives in it, so
       # what it needs must come from cash already in hand.
@@ -20,12 +21,36 @@ class RecurringTransaction
         leading && !income.positive?
       end
 
+      # A bridge window earns no income by construction, so measuring it the
+      # way every other window is measured guarantees a shortfall the instant
+      # any bill falls inside it. That is not a warning, it is a restatement of
+      # having a bill before payday, and it fired for everyone who did.
+      #
+      # What actually decides whether that window is a problem is the cash
+      # already in hand, which is what this always claimed to compare and never
+      # did. When the balance cannot be established, cash_on_hand is nil and
+      # nothing is claimed: an unknown balance is not evidence of a shortfall.
       def short?
-        remaining.negative?
+        if bridge?
+          # An unknown balance is not evidence of a shortfall.
+          cash_on_hand.present? && obligation_total > cash_on_hand
+        else
+          remaining.negative?
+        end
       end
 
       def shortfall
-        remaining.negative? ? -remaining : 0
+        return BigDecimal("0") unless short?
+
+        bridge? ? obligation_total - cash_on_hand : -remaining
+      end
+
+      # What the cash still covers once the window's bills are met. nil when
+      # the balance is unknown, so copy can stay quiet rather than guess.
+      def cash_after_obligations
+        return nil unless bridge? && cash_on_hand.present?
+
+        cash_on_hand - obligation_total
       end
 
       # Chronological, because both render as a ledger keyed on the due date.
@@ -81,7 +106,8 @@ class RecurringTransaction
           obligation_total: obligation_total,
           remaining: period[:income] - obligation_total,
           leading: period[:leading],
-          final: period[:final]
+          final: period[:final],
+          cash_on_hand: period[:leading] ? cash_on_hand : nil
         )
       end
     end
@@ -220,6 +246,30 @@ class RecurringTransaction
               .where("recurring_occurrences.due_on <= ?", through)
               .includes(recurring_transaction: :merchant)
               .to_a
+      end
+
+      # Cash a bill can actually be paid from before the next paycheck: the
+      # family's own deposit accounts, minus the tax-advantaged ones nobody
+      # spends rent out of. Credit cards share the `:cash` balance type but are
+      # a liability, so they are not money on hand.
+      #
+      # nil, never zero, when there is nothing to read. Zero would assert the
+      # user is broke and raise a shortfall on that basis; nil says the balance
+      # is unknown and the window goes unjudged.
+      def cash_on_hand
+        return @cash_on_hand if defined?(@cash_on_hand)
+
+        accounts = family.accounts.visible
+                         .where(accountable_type: "Depository")
+                         .merge(Account.accessible_by(user))
+
+        excluded = family.tax_advantaged_account_ids
+        accounts = accounts.where.not(id: excluded) if excluded.present?
+
+        @cash_on_hand =
+          if accounts.exists?
+            accounts.sum { |account| to_family_currency(account.balance_money) }
+          end
       end
 
       # An unconvertible obligation is counted and reported, never folded in as

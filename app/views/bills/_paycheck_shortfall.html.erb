@@ -1,6 +1,10 @@
 <%# The gap between today and the next payday, when what is owed in it exceeds
-    what is on hand. Reports the shortfall, how it splits between due and
-    reserved, and the largest obligation behind it. %>
+    what is on hand.
+
+    This used to say "no income arriving before then", which was true of every
+    bridge window ever built and therefore explained nothing. The window earns
+    nothing by definition; the fact worth reporting is that the cash does not
+    reach, so the banner now shows both numbers it compared. %>
 
 <% largest = period.largest_obligation %>
 
@@ -15,7 +19,10 @@
   </div>
 
   <p class="text-xs text-secondary">
-    <%= t("bills.paycheck.shortfall_split", date: l(period.ends_on + 1, format: :short)) %>
+    <%= t("bills.paycheck.shortfall_split",
+          obligations: format_money(Money.new(period.obligation_total, currency)),
+          date: l(period.ends_on + 1, format: :short),
+          cash: format_money(Money.new(period.cash_on_hand, currency))) %>
   </p>
 
   <% if largest.present? %>

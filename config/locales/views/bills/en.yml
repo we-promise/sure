@@ -201,7 +201,7 @@ en:
       # becoming the identity of the page.
       shortfall_label: Short before your next payday
       shortfall_amount: "· %{amount}"
-      shortfall_split: "Due before %{date}, with no income arriving before then."
+      shortfall_split: "%{obligations} is due before %{date} and your accounts hold %{cash}."
       shortfall_largest: "Largest upcoming obligation:"
       review_plan: Review plan
       allocation_aria: "Of %{income} income, %{due} is due now, %{reserved} is reserved for later, and %{safe} is safe to spend."

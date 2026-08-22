@@ -97,8 +97,8 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
 
     assert plan.first.bridge?
-    assert plan.first.short?, "nothing arrives, so anything due is a shortfall"
-    assert_equal plan.first.shortfall, -plan.first.remaining
+    assert_not plan.first.short?,
+      "a $20 bill against $5,000 in the bank is not a shortfall, whatever the window earns"
     assert plan.drop(1).none?(&:bridge?), "a window that pays is never a bridge"
   end
 
@@ -133,8 +133,8 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
 
     assert_equal 64, bridge.due_total
     assert_equal 0, bridge.reserved_total
-    assert bridge.short?, "nothing arrives to cover it"
-    assert_equal 64, bridge.shortfall
+    assert_not bridge.short?, "the cash on hand covers it, so nothing is short"
+    assert_equal 0, bridge.shortfall
   end
 
   # The reserve does not vanish, it moves to the paychecks that precede the bill.
@@ -328,7 +328,64 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_includes plan.first.items, shares.first, "and it belongs to the leading window"
   end
 
+
+  # The bridge window earns nothing by construction, so judging it the way every
+  # other window is judged made "short before your next payday" fire for anyone
+  # who simply had a bill before payday. What decides it is the cash in hand,
+  # which the code claimed to compare and never did.
+  test "a bridge window is short only when the cash cannot cover it" do
+    set_cash(40)
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 5, preset: "weekly", income: true)
+    create_series(name: "Water", amount: 64, due: Date.current + 2)
+
+    bridge = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+
+    assert bridge.short?, "$64 due against $40 in the bank is a real shortfall"
+    assert_equal 24, bridge.shortfall, "short by the gap, not by the whole bill"
+  end
+
+  test "a bridge window covered by cash reports what is left, not a shortfall" do
+    set_cash(500)
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 5, preset: "weekly", income: true)
+    create_series(name: "Water", amount: 64, due: Date.current + 2)
+
+    bridge = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+
+    assert_not bridge.short?
+    assert_equal 436, bridge.cash_after_obligations
+  end
+
+  test "an unknown balance is not evidence of a shortfall" do
+    @family.accounts.update_all(status: "disabled")
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 5, preset: "weekly", income: true)
+    create_series(name: "Water", amount: 64, due: Date.current + 2)
+
+    bridge = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+
+    assert_nil bridge.cash_on_hand
+    assert_not bridge.short?, "with no readable balance the window goes unjudged rather than flagged"
+    assert_nil bridge.cash_after_obligations
+  end
+
+  # A paycheck window is still measured against its own paycheck: cash on hand
+  # belongs to the gap before payday, not to the money that arrives on it.
+  test "a paycheck window stays measured against its income" do
+    set_cash(100_000)
+    create_series(name: "Paycheck", amount: -100, due: Date.current + 1, preset: "weekly", income: true)
+    create_series(name: "Rent", amount: 4_000, due: Date.current + 2)
+
+    paying = Planner.new(@family, user: @user).plan(periods_limit: 3).reject(&:bridge?).first
+
+    assert paying.short?, "a bill that outgrows its paycheck is short however much cash exists"
+  end
+
   private
+    # The family fixture carries more than one deposit account, and the plan
+    # sums all of them, so a test that means to pin the cash has to set them all.
+    def set_cash(amount)
+      @family.accounts.where(accountable_type: %q(Depository)).update_all(balance: amount / @family.accounts.where(accountable_type: %q(Depository)).count.to_d)
+    end
+
     def create_series(name:, amount:, due:, preset: "monthly", income: false)
       series = @family.recurring_transactions.create!(
         name: name,
