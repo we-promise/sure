@@ -60,7 +60,14 @@ class Onchain::SolanaAdapter
   def has_activity?(address)
     return false unless valid_address?(address)
 
-    detection_provider.get_balance(address).positive?
+    return true if detection_provider.get_balance(address).positive?
+
+    # A wallet can hold SPL tokens with no SOL of its own: each token account
+    # carries its own rent, so an empty wallet address is not an empty wallet.
+    # Only asked once the balance comes back zero, so the ordinary case still
+    # costs the single request this probe is meant to be. Emptied token accounts
+    # are left behind on Solana by design and are not activity.
+    held_token_accounts(detection_provider.get_token_accounts(address)).any?
   rescue StandardError => e
     Rails.logger.warn("Onchain::SolanaAdapter - activity probe failed: #{e.class}")
     false

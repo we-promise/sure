@@ -63,6 +63,13 @@ class CreateOnchainWalletItemsAndAccounts < ActiveRecord::Migration[7.2]
       # The model enforces this as well; a direct write does not go through it.
       t.check_constraint "asset_kind = 'native' OR contract_address IS NOT NULL",
                          name: "chk_onchain_wallet_accounts_token_has_contract"
+
+      # The partial unique indexes below name their kind, so a row carrying any
+      # other one is keyed by nothing and duplicates freely. Adding a token kind
+      # already means adding its index here; this keeps the table from silently
+      # accepting rows for one that has none.
+      t.check_constraint "asset_kind IN ('native', 'erc20', 'spl')",
+                         name: "chk_onchain_wallet_accounts_known_asset_kind"
     end
 
     add_index :onchain_wallet_accounts, [ :onchain_wallet_item_id, :chain, :wallet_address ],

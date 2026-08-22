@@ -317,6 +317,26 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
     assert snapshot.history_truncated?
   end
 
+  test "a wallet holding SPL tokens but no SOL is still detected" do
+    stub_snapshot(
+      lamports: 0,
+      token_accounts: [ token_account(mint: USDC_MINT, amount: "1000000", decimals: 6) ]
+    )
+
+    # Each token account carries its own rent, so a wallet address emptied of SOL
+    # is not an emptied wallet.
+    assert @adapter.has_activity?(ADDRESS)
+  end
+
+  test "token accounts left behind empty are not activity" do
+    stub_snapshot(
+      lamports: 0,
+      token_accounts: [ token_account(mint: USDC_MINT, amount: "0", decimals: 6) ]
+    )
+
+    assert_not @adapter.has_activity?(ADDRESS)
+  end
+
   test "detection asks once and does not retry a rate-limited node" do
     probe = stub_request(:post, Provider::SolanaRpc.url).to_return(status: 429, body: "rate limited")
 
