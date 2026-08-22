@@ -794,6 +794,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
     t.string "default_account_sharing", default: "shared", null: false
     t.string "enabled_currencies", array: true
     t.datetime "last_sync_all_attempted_at"
+    t.boolean "auto_match_transfers_disabled", default: false, null: false
     t.boolean "personal_budgets", default: false, null: false
     t.boolean "household_budget_enabled", default: true, null: false
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
