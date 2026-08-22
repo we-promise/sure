@@ -78,6 +78,14 @@ class I18nTest < ActiveSupport::TestCase
   end
 
   private
+    def german_locale_paths
+      @german_locale_paths ||= locale_paths.select { |path| path.basename.to_s.match?(/(^|[._-])de\.yml\z/) }
+    end
+
+    def locale_paths
+      @locale_paths ||= GERMAN_COVERAGE_GLOBS.flat_map { |glob| Pathname.pwd.glob(glob) }.uniq
+    end
+
     def duplicate_key_offenses(node, path, file)
       offenses = []
 
@@ -103,7 +111,5 @@ class I18nTest < ActiveSupport::TestCase
       when Psych::Nodes::Sequence
         node.children.each { |child| offenses.concat(duplicate_key_offenses(child, path, file)) }
       end
-
-      offenses
     end
 end
