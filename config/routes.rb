@@ -434,6 +434,7 @@ Rails.application.routes.draw do
       put :revert
       put :apply_template
       post :cancel
+      get :summary
     end
 
     resource :upload, only: %i[show update], module: :import
@@ -841,6 +842,12 @@ Rails.application.routes.draw do
         delete :invitations, to: "invitations#destroy_all"
       end
     end
+    # Singular `resource :system_health` would otherwise route to
+    # `Admin::SystemHealthsController` (Rails pluralizes the controller
+    # name even for singular resources, unlike its plural siblings above
+    # that happen to round-trip cleanly). The controller file is singular,
+    # so name it explicitly.
+    resource :system_health, only: :show, controller: "system_health"
   end
 
   # Defines the root path route ("/")
