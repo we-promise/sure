@@ -15,6 +15,7 @@ class UI::Account::Chart < ApplicationComponent
     account.balance_money - account.cash_balance_money
   end
 
+  # Money value shown as the main indicator for the selected chart view.
   def view_balance_money
     case view
     when "balance"
@@ -23,9 +24,24 @@ class UI::Account::Chart < ApplicationComponent
       holdings_value_money
     when "cash_balance"
       account.cash_balance_money
+    when "gains"
+      gains_money
     end
   end
 
+  # Formatted main indicator. Gains are signed explicitly (e.g. "+€79.53") since
+  # a gain of zero-or-more is otherwise indistinguishable from a balance.
+  def view_balance_display
+    signed_format(view_balance_money)
+  end
+
+  # Formatted family-currency amount for foreign-currency accounts, signed the
+  # same way as the main indicator. Nil when no conversion applies.
+  def converted_balance_display
+    converted_balance_money&.then { |money| signed_format(money) }
+  end
+
+  # Label displayed above the main indicator, based on account type and chart view.
   def title
     case account.accountable_type
     when "Investment", "Crypto"
@@ -36,6 +52,8 @@ class UI::Account::Chart < ApplicationComponent
         I18n.t("UI.account.chart.title.holdings_value")
       when "cash_balance"
         I18n.t("UI.account.chart.title.cash_value")
+      when "gains"
+        I18n.t("UI.account.chart.title.total_gains")
       end
     when "Property"
       I18n.t("UI.account.chart.title.estimated_property_value")
@@ -54,11 +72,14 @@ class UI::Account::Chart < ApplicationComponent
     account.currency != account.family.currency
   end
 
+  # Main indicator converted to the family currency for foreign-currency accounts,
+  # or nil when no conversion applies (same currency or missing exchange rate).
   def converted_balance_money
     return nil unless foreign_currency?
 
     begin
-      account.balance_money.exchange_to(account.family.currency)
+      base_money = view == "gains" ? gains_money : account.balance_money
+      base_money.exchange_to(account.family.currency)
     rescue Money::ConversionError
       nil
     end
@@ -70,6 +91,12 @@ class UI::Account::Chart < ApplicationComponent
 
   def series
     account.balance_series(period: period, view: view)
+  end
+
+  # Current total unrealized gains, taken from the series so the main indicator
+  # always matches the last point of the chart (there is no stored gains column).
+  def gains_money
+    series.values.last&.value || Money.new(0, account.currency)
   end
 
   def trend
@@ -86,4 +113,12 @@ class UI::Account::Chart < ApplicationComponent
       period.comparison_label
     end
   end
+
+  private
+    # Prefixes positive gains with "+"; other views keep plain Money formatting.
+    def signed_format(money)
+      return money.format unless view == "gains" && money.amount.positive?
+
+      "+#{money.format}"
+    end
 end

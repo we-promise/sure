@@ -9,7 +9,7 @@ class DS::Buttonish < DesignSystemComponent
       icon_classes: "text-primary"
     },
     destructive: {
-      container_classes: "text-inverse bg-red-600 theme-dark:bg-red-400 hover:bg-red-700 theme-dark:hover:bg-red-500 disabled:bg-red-200 theme-dark:disabled:bg-red-600",
+      container_classes: "text-inverse button-bg-destructive hover:button-bg-destructive-hover disabled:bg-red-200 theme-dark:disabled:bg-red-600",
       icon_classes: "text-inverse"
     },
     outline: {
@@ -92,7 +92,7 @@ class DS::Buttonish < DesignSystemComponent
       # `aria-disabled` to stay clickable/focusable (e.g. submit buttons whose
       # click handler surfaces validation errors — a truly disabled default
       # submit would also swallow Enter-key implicit submission).
-      "font-medium whitespace-nowrap disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
+      "font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
       merged_base_classes,
       full_width ? "w-full justify-center" : nil,
       container_size_classes,

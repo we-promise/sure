@@ -3,7 +3,7 @@
     <div>
       <p class="text-sm text-secondary"><%= t(".category") %></p>
       <h3 class="text-2xl font-medium text-primary">
-        <%= @budget_category.name %>
+        <%= @budget_category.category.display_name %>
       </h3>
 
       <% if @budget_category.budget.initialized? %>

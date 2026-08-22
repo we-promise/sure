@@ -3,6 +3,7 @@
 class ProviderConnectionStatus
   PROVIDERS = [
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
+    { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
     { key: "plaid", type: "PlaidItem", association: :plaid_items, accounts: :plaid_accounts },
     { key: "simplefin", type: "SimplefinItem", association: :simplefin_items, accounts: :simplefin_accounts },
     { key: "lunchflow", type: "LunchflowItem", association: :lunchflow_items, accounts: :lunchflow_accounts },
@@ -10,13 +11,18 @@ class ProviderConnectionStatus
     { key: "coinbase", type: "CoinbaseItem", association: :coinbase_items, accounts: :coinbase_accounts },
     { key: "binance", type: "BinanceItem", association: :binance_items, accounts: :binance_accounts },
     { key: "kraken", type: "KrakenItem", association: :kraken_items, accounts: :kraken_accounts },
+    { key: "onchain_wallet", type: "OnchainWalletItem", association: :onchain_wallet_items, accounts: :onchain_wallet_accounts },
     { key: "coinstats", type: "CoinstatsItem", association: :coinstats_items, accounts: :coinstats_accounts },
     { key: "snaptrade", type: "SnaptradeItem", association: :snaptrade_items, accounts: :snaptrade_accounts, linked_accounts: :linked_accounts },
     { key: "ibkr", type: "IbkrItem", association: :ibkr_items, accounts: :ibkr_accounts },
     { key: "mercury", type: "MercuryItem", association: :mercury_items, accounts: :mercury_accounts },
     { key: "brex", type: "BrexItem", association: :brex_items, accounts: :brex_accounts },
     { key: "sophtron", type: "SophtronItem", association: :sophtron_items, accounts: :sophtron_accounts },
-    { key: "indexa_capital", type: "IndexaCapitalItem", association: :indexa_capital_items, accounts: :indexa_capital_accounts }
+    { key: "indexa_capital", type: "IndexaCapitalItem", association: :indexa_capital_items, accounts: :indexa_capital_accounts },
+    { key: "trading212", type: "Trading212Item", association: :trading212_items, accounts: :trading212_accounts },
+    { key: "questrade", type: "QuestradeItem", association: :questrade_items, accounts: :questrade_accounts },
+    { key: "redbark", type: "RedbarkItem", association: :redbark_items, accounts: :redbark_accounts },
+    { key: "wise", type: "WiseItem", association: :wise_items, accounts: :wise_accounts }
   ].freeze
 
   class << self
@@ -84,8 +90,8 @@ class ProviderConnectionStatus
       provider: provider[:key],
       provider_type: provider[:type],
       name: item_value(:name, provider[:key].humanize),
-      status: item_value(:status),
-      requires_update: item_boolean(:requires_update?),
+      status: item_status,
+      requires_update: item_requires_update?,
       credentials_configured: credentials_configured?,
       scheduled_for_deletion: item_boolean(:scheduled_for_deletion?),
       pending_account_setup: pending_account_setup?,
@@ -103,6 +109,18 @@ class ProviderConnectionStatus
 
     def credentials_configured?
       item_boolean(:credentials_configured?)
+    end
+
+    def item_status
+      return item.effective_status(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
+
+      item_value(:status)
+    end
+
+    def item_requires_update?
+      return item.setup_token_update_required?(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
+
+      item_boolean(:requires_update?)
     end
 
     def pending_account_setup?

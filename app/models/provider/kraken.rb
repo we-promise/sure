@@ -43,6 +43,15 @@ class Provider::Kraken
     private_post("TradesHistory", params)
   end
 
+  def get_ledgers(start: nil, type: nil, offset: nil)
+    params = {}
+    params["start"] = start.to_i.to_s if start.present?
+    params["type"] = type.to_s if type.present?
+    params["ofs"] = offset.to_i.to_s if offset.present?
+
+    private_post("Ledgers", params)
+  end
+
   def get_asset_info(asset: nil)
     params = {}
     params["asset"] = asset if asset.present?

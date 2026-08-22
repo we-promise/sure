@@ -15,7 +15,16 @@ class LunchflowItem::Importer
     accounts_data = fetch_accounts_data
     unless accounts_data
       Rails.logger.error "LunchflowItem::Importer - Failed to fetch accounts data for item #{lunchflow_item.id}"
-      return { success: false, error: "Failed to fetch accounts data", accounts_imported: 0, transactions_imported: 0 }
+      return {
+        success: false,
+        error: "Failed to fetch accounts data",
+        accounts_updated: 0,
+        accounts_created: 0,
+        accounts_failed: 0,
+        accounts_pruned: 0,
+        transactions_imported: 0,
+        transactions_failed: 0
+      }
     end
 
     # Store raw payload
@@ -30,6 +39,7 @@ class LunchflowItem::Importer
     accounts_updated = 0
     accounts_created = 0
     accounts_failed = 0
+    accounts_pruned = 0
 
     if accounts_data[:accounts].present?
       # Get linked lunchflow account IDs (ones actually imported/used by the user)
@@ -73,9 +83,16 @@ class LunchflowItem::Importer
           end
         end
       end
+
+      # Remove records for accounts that no longer exist upstream so they don't
+      # linger as unlinked "Need setup" accounts (#1861). Guarded to a non-empty
+      # upstream list so a transient empty/failed response can't wipe out all
+      # accounts.
+      upstream_account_ids = accounts_data[:accounts].filter_map { |a| a[:id].to_s.presence }
+      accounts_pruned = prune_orphaned_lunchflow_accounts(upstream_account_ids)
     end
 
-    Rails.logger.info "LunchflowItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed)"
+    Rails.logger.info "LunchflowItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed), pruned #{accounts_pruned}"
 
     # Step 3: Fetch transactions only for linked accounts with active status
     transactions_imported = 0
@@ -103,12 +120,59 @@ class LunchflowItem::Importer
       accounts_updated: accounts_updated,
       accounts_created: accounts_created,
       accounts_failed: accounts_failed,
+      accounts_pruned: accounts_pruned,
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed
     }
   end
 
   private
+
+    # Removes LunchflowAccount records that no longer exist upstream and are not
+    # linked to any Account, so accounts deleted in Lunch Flow stop lingering as
+    # unlinked records that pin the item to "Need setup" (#1861). Mirrors
+    # SimpleFin's prune_orphaned_simplefin_accounts. LunchFlow linkage is only
+    # via AccountProvider (no legacy FK), so a present account_provider means keep.
+    #
+    # account_id is nullable on lunchflow_accounts. A NULL account_id can never
+    # match an upstream id, and `where.not(account_id: upstream_account_ids)`
+    # alone would silently drop those rows (SQL `NULL NOT IN (...)` is never
+    # TRUE). We explicitly OR them back in so a NULL-id unlinked record — which
+    # has no upstream identity and would otherwise pin the item to "Need setup"
+    # forever — is also pruned. The per-record account_provider guard below still
+    # protects any linked record regardless of its account_id.
+    def prune_orphaned_lunchflow_accounts(upstream_account_ids)
+      return 0 if upstream_account_ids.blank?
+
+      scope = lunchflow_item.lunchflow_accounts.includes(:account_provider)
+      orphaned = scope
+        .where.not(account_id: upstream_account_ids)
+        .or(scope.where(account_id: nil))
+
+      pruned = 0
+      orphaned.each do |lunchflow_account|
+        if lunchflow_account.account_provider.present?
+          Rails.logger.info "LunchflowItem::Importer - Keeping stale LunchflowAccount id=#{lunchflow_account.id} account_id=#{lunchflow_account.account_id} (still linked to Account)"
+          next
+        end
+
+        begin
+          Rails.logger.info "LunchflowItem::Importer - Pruning orphaned LunchflowAccount id=#{lunchflow_account.id} account_id=#{lunchflow_account.account_id} (no longer exists upstream)"
+          if lunchflow_account.destroy
+            pruned += 1
+          else
+            # A before_destroy callback halted deletion — don't inflate the count.
+            Rails.logger.warn "LunchflowItem::Importer - Destroy halted for LunchflowAccount id=#{lunchflow_account.id}; not counting as pruned"
+          end
+        rescue => e
+          # Don't let one failed destroy abort the whole import (transactions are
+          # fetched in a later step). Mirrors the importer's continue-on-error style.
+          Rails.logger.error "LunchflowItem::Importer - Failed to prune LunchflowAccount id=#{lunchflow_account.id}: #{e.message}"
+        end
+      end
+
+      pruned
+    end
 
     def fetch_accounts_data
       begin
@@ -211,51 +275,72 @@ class LunchflowItem::Importer
         transactions_count = transactions_data[:transactions]&.count || 0
         Rails.logger.info "LunchflowItem::Importer - Fetched #{transactions_count} transactions for account #{lunchflow_account.account_id}"
 
-        # Store transactions in the account
+        # Store transactions in the account.
+        #
+        # Transactions are keyed by their Lunchflow ID, or by a content hash when
+        # Lunchflow returns a blank ID (as it does for some pending transactions).
+        # Stored transactions were previously treated as immutable, so a
+        # transaction that Lunchflow later flipped from pending to posted was
+        # skipped as a duplicate and its stale pending snapshot was kept forever —
+        # leaving the entry stuck with a "Pending" badge (#2735). We now refresh
+        # the stored snapshot in place when the upstream payload changes, while
+        # still deduplicating by key to prevent unbounded growth.
         if transactions_data[:transactions].present?
           begin
             existing_transactions = lunchflow_account.raw_transactions_payload.to_a
 
-            # Build set of existing transaction IDs for efficient lookup
-            # For transactions with IDs: use the ID directly
-            # For transactions without IDs (blank/nil): use content hash to prevent duplicate storage
-            existing_ids = existing_transactions.map do |tx|
+            # Stable key for a transaction: its real ID, or a content hash for the
+            # blank IDs Lunchflow returns for some pending transactions.
+            transaction_key = lambda do |tx|
               tx_with_access = tx.with_indifferent_access
-              tx_id = tx_with_access[:id]
+              tx_with_access[:id].presence || content_hash_for_transaction(tx_with_access)
+            end
 
-              if tx_id.blank?
-                # Generate content hash for blank-ID transactions to detect duplicates
-                content_hash_for_transaction(tx_with_access)
+            # Pool the existing snapshot into one bucket per key. Two genuinely
+            # distinct purchases can share a content hash (Lunchflow returns blank IDs
+            # for some pending transactions), so match incoming rows to stored rows
+            # one-for-one rather than collapsing every same-key row into a single
+            # entry. Collapsing regressed identical same-response purchases, dropping
+            # one before LunchflowEntry::Processor could suffix the collision.
+            existing_pool = Hash.new { |pool, key| pool[key] = [] }
+            existing_transactions.each do |tx|
+              next unless tx.is_a?(Hash)
+
+              existing_pool[transaction_key.call(tx)] << tx
+            end
+
+            new_count = 0
+            updated_count = 0
+            merged = []
+            transactions_data[:transactions].each do |tx|
+              next unless tx.is_a?(Hash)
+
+              stored = existing_pool[transaction_key.call(tx)].shift
+              if stored.nil?
+                # New to the snapshot. A second same-response row that collides with
+                # the first on content hash lands here too, so both are preserved.
+                merged << tx
+                new_count += 1
+              elsif stored.with_indifferent_access == tx.with_indifferent_access
+                # Unchanged since last sync; keep the stored copy as-is.
+                merged << stored
               else
-                tx_id
-              end
-            end.compact.to_set
-
-            # Filter to ONLY truly new transactions (skip duplicates)
-            # For transactions WITH IDs: skip if ID already exists (true duplicates)
-            # For transactions WITHOUT IDs: skip if content hash exists (prevents unbounded growth)
-            # Note: Pending transactions may update from pending→posted, but we treat them as immutable snapshots
-            new_transactions = transactions_data[:transactions].select do |tx|
-              next false unless tx.is_a?(Hash)
-
-              tx_with_access = tx.with_indifferent_access
-              tx_id = tx_with_access[:id]
-
-              if tx_id.blank?
-                # Use content hash to detect if we've already stored this exact transaction
-                content_hash = content_hash_for_transaction(tx_with_access)
-                !existing_ids.include?(content_hash)
-              else
-                # If has ID, only include if not already stored
-                !existing_ids.include?(tx_id)
+                # Upstream data changed (e.g. pending → posted); refresh the stored
+                # snapshot so the status transition propagates to the processor.
+                merged << tx
+                updated_count += 1
               end
             end
 
-            if new_transactions.any?
-              Rails.logger.info "LunchflowItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions_data[:transactions].count - new_transactions.count} duplicates skipped) for account #{lunchflow_account.account_id}"
-              lunchflow_account.upsert_lunchflow_transactions_snapshot!(existing_transactions + new_transactions)
+            # Keep any stored rows the current response no longer returned — a normal
+            # sync never prunes the snapshot (unchanged prior behaviour).
+            leftover = existing_pool.values.flatten(1)
+
+            if new_count > 0 || updated_count > 0
+              Rails.logger.info "LunchflowItem::Importer - Storing #{new_count} new and #{updated_count} updated transactions (#{existing_transactions.count} existing) for account #{lunchflow_account.account_id}"
+              lunchflow_account.upsert_lunchflow_transactions_snapshot!(merged + leftover)
             else
-              Rails.logger.info "LunchflowItem::Importer - No new transactions to store (all #{transactions_data[:transactions].count} were duplicates) for account #{lunchflow_account.account_id}"
+              Rails.logger.info "LunchflowItem::Importer - No new or updated transactions to store (all #{transactions_data[:transactions].count} unchanged) for account #{lunchflow_account.account_id}"
             end
           rescue => e
             Rails.logger.error "LunchflowItem::Importer - Failed to store transactions for account #{lunchflow_account.account_id}: #{e.message}"
@@ -269,7 +354,19 @@ class LunchflowItem::Importer
         begin
           fetch_and_update_balance(lunchflow_account)
         rescue => e
-          # Log but don't fail transaction import if balance fetch fails
+          # Log but don't fail transaction import if balance fetch fails.
+          # current_balance stays nil, so the processor will skip the balance
+          # update for this account — capture the failure, because the sync
+          # still reports success and this is otherwise invisible to support.
+          DebugLogEntry.capture(
+            category: "provider_sync",
+            level: "warn",
+            message: "Balance fetch failed for account #{lunchflow_account.account_id}; keeping previous balance",
+            source: self.class.name,
+            provider_key: "lunchflow",
+            family: lunchflow_item.family,
+            metadata: { account_id: lunchflow_account.account_id, error_class: e.class.name, error: e.message }
+          )
           Rails.logger.warn "LunchflowItem::Importer - Failed to update balance for account #{lunchflow_account.account_id}: #{e.message}"
         end
 

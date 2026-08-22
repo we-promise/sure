@@ -68,6 +68,60 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "D", user.initial
   end
 
+  test "family validation label uses localized default moniker" do
+    I18n.with_locale(:es) do
+      Current.stubs(:family).returns(nil)
+      user = User.new(email: "missing-family@example.com", password: user_password_test)
+
+      assert_not user.valid?
+      assert_includes user.errors.full_messages, "Familia debe existir"
+    end
+  end
+
+  test "family validation label uses current family moniker" do
+    family = families(:dylan_family)
+    family.update!(moniker: "Group")
+
+    I18n.with_locale(:es) do
+      Current.stubs(:family).returns(family)
+      user = User.new(email: "missing-group@example.com", password: user_password_test)
+
+      assert_not user.valid?
+      assert_includes user.errors.full_messages, "Grupo debe existir"
+    end
+  end
+
+  test "family attribute labels use requested locale for current family moniker" do
+    family = families(:dylan_family)
+    family.update!(moniker: "Group")
+    Current.stubs(:family).returns(family)
+
+    I18n.with_locale(:en) do
+      assert_equal "Grupo", User.human_attribute_name(:family, locale: :es)
+      assert_equal "Grupo", User.human_attribute_name(:family_id, locale: :es)
+    end
+  end
+
+  test "family validation label renders in every supported locale" do
+    family = families(:dylan_family)
+    family.update!(moniker: "Group")
+    Current.stubs(:family).returns(family)
+
+    LanguagesHelper::SUPPORTED_LOCALES.each do |locale|
+      I18n.with_locale(locale) do
+        user = User.new(email: "missing-family-#{locale.parameterize}@example.com", password: user_password_test)
+        family_label = User.human_attribute_name(:family, locale: locale)
+        family_id_label = User.human_attribute_name(:family_id, locale: locale)
+
+        assert_not user.valid?
+        assert_includes user.errors.full_messages_for(:family).to_sentence,
+                        family_label,
+                        "expected family error to include moniker label for #{locale}"
+        assert_equal family_label, family_id_label
+      end
+    end
+  end
+
   test "names are normalized" do
     @user.update!(first_name: "", last_name: "")
     assert_nil @user.first_name
@@ -510,6 +564,45 @@ class UserTest < ActiveSupport::TestCase
     assert_equal new_order, @user.dashboard_section_order
   end
 
+  test "dashboard_section_height returns stored preset or nil" do
+    @user.update!(preferences: {})
+    assert_nil @user.dashboard_section_height("net_worth_chart")
+
+    @user.update_dashboard_preferences({
+      "dashboard_section_layout" => { "net_worth_chart" => { "height" => "tall" } }
+    })
+    @user.reload
+
+    assert_equal "tall", @user.dashboard_section_height("net_worth_chart")
+    assert_nil @user.dashboard_section_height("balance_sheet")
+  end
+
+  test "dashboard_section_width returns stored col_span or nil" do
+    @user.update!(preferences: {})
+    assert_nil @user.dashboard_section_width("cashflow_sankey")
+
+    @user.update_dashboard_preferences({
+      "dashboard_section_layout" => { "cashflow_sankey" => { "col_span" => "single" } }
+    })
+
+    assert_equal "single", @user.reload.dashboard_section_width("cashflow_sankey")
+  end
+
+  test "dashboard_section_layout merges width and height without clobbering" do
+    @user.update!(preferences: {})
+
+    @user.update_dashboard_preferences({
+      "dashboard_section_layout" => { "net_worth_chart" => { "height" => "tall" } }
+    })
+    @user.update_dashboard_preferences({
+      "dashboard_section_layout" => { "net_worth_chart" => { "col_span" => "full" } }
+    })
+    @user.reload
+
+    assert_equal "tall", @user.dashboard_section_height("net_worth_chart")
+    assert_equal "full", @user.dashboard_section_width("net_worth_chart")
+  end
+
   test "handles empty preferences gracefully for dashboard methods" do
     @user.update!(preferences: {})
 
@@ -518,7 +611,7 @@ class UserTest < ActiveSupport::TestCase
       "Should return false when collapsed_sections key is missing"
 
     # dashboard_section_order should return default order when key is missing
-    assert_equal %w[cashflow_sankey outflows_donut net_worth_chart balance_sheet],
+    assert_equal %w[insights_feed cashflow_sankey outflows_donut net_worth_chart balance_sheet],
       @user.dashboard_section_order,
       "Should return default order when section_order key is missing"
 
@@ -651,13 +744,15 @@ class UserTest < ActiveSupport::TestCase
     assert_equal :super_admin, User.role_for_new_family_creator
   end
 
-  test "role_for_new_family_creator returns fallback role when users exist" do
+  test "role_for_new_family_creator returns admin-capable fallback role when users exist" do
     # Users exist from fixtures
     assert User.exists?
 
     assert_equal :admin, User.role_for_new_family_creator
-    assert_equal :member, User.role_for_new_family_creator(fallback_role: :member)
-    assert_equal "custom_role", User.role_for_new_family_creator(fallback_role: "custom_role")
+    assert_equal :admin, User.role_for_new_family_creator(fallback_role: :member)
+    assert_equal :admin, User.role_for_new_family_creator(fallback_role: :guest)
+    assert_equal :admin, User.role_for_new_family_creator(fallback_role: "custom_role")
+    assert_equal "super_admin", User.role_for_new_family_creator(fallback_role: "super_admin")
   end
 
   # Preview features preference tests
@@ -695,6 +790,59 @@ class UserTest < ActiveSupport::TestCase
 
     assert_not User.exists?(user.id)
     assert_not ActiveStorage::Attachment.exists?(attachment_id)
+  end
+
+  # Admin-initiated permanent removal (super-admin action)
+  test "permanently_remove! deactivates, revokes all credentials, and schedules purge" do
+    target = users(:family_member)
+    target.sessions.create!
+    assert target.sessions.exists?
+    assert target.api_keys.exists?
+    assert target.oidc_identities.exists?
+
+    assert target.permanently_remove!
+
+    target.reload
+    assert_not target.active?
+    assert_empty target.sessions
+    assert_empty target.api_keys
+    assert_empty target.oidc_identities
+  end
+
+  test "permanently_remove! is blocked (fail-closed) for an admin with co-members and keeps credentials" do
+    target = users(:family_admin)
+    target.sessions.create!
+    assert_operator target.family.users.count, :>, 1
+
+    assert_not target.permanently_remove!
+
+    assert target.reload.active?
+    assert target.sessions.exists?
+    assert target.oidc_identities.exists?
+  end
+
+  test "permanently_remove! schedules purge for an already inactive user" do
+    target = users(:family_member)
+    target.update_column(:active, false)
+
+    assert_enqueued_with(job: UserPurgeJob, args: [ target ]) do
+      assert target.permanently_remove!
+    end
+  end
+
+  test "deactivate refuses the last active super admin" do
+    family = Family.create!(name: "Sole admin family", locale: "en", date_format: "%m-%d-%Y", currency: "USD")
+    target = User.create!(
+      family: family,
+      email: "sole-super-admin@example.com",
+      password: user_password_test,
+      role: :super_admin
+    )
+    User.where(role: :super_admin).where.not(id: target.id).update_all(active: false)
+
+    assert_not target.deactivate
+    assert target.reload.active?
+    assert_match(/last active super admin/, target.errors.full_messages.to_sentence)
   end
 
   test "purging the last user cascades to remove family and its export attachments" do

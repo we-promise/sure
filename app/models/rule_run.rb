@@ -34,29 +34,55 @@ class RuleRun < ApplicationRecord
   # Thread-safe method to complete a job and update the run
   def complete_job!(modified_count: 0)
     with_lock do
-      increment!(:transactions_modified, modified_count)
-      decrement!(:pending_jobs_count)
+      self.transactions_modified += modified_count
+      self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
 
       # Preserve a previously recorded failure while still draining pending jobs.
-      if pending_jobs_count <= 0
-        update!(status: "success") unless failed?
-      end
+      self.status = "success" if pending_jobs_count <= 0 && !failed?
+
+      save!
     end
   end
 
-  def fail_job!(error_message:)
-    with_lock do
-      decrement!(:pending_jobs_count) if pending_jobs_count.positive?
+  def fail_job!(error:, source:, transaction_ids: [])
+    should_log = false
+    current_error_message = "#{error.class}: #{error.message}"
 
-      combined_error_message = [ self.error_message.presence, error_message.presence ]
+    with_lock do
+      should_log = !failed?
+
+      self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
+      self.status = "failed"
+      self.error_message = [ error_message.presence, current_error_message ]
         .compact
         .uniq
         .join("\n")
 
-      update!(
-        status: "failed",
-        error_message: combined_error_message
+      save!
+    end
+
+    capture_failure_debug_log(error:, source:, transaction_ids:) if should_log
+  end
+
+  private
+    def capture_failure_debug_log(error:, source:, transaction_ids:)
+      DebugLogEntry.capture(
+        category: "rule_run",
+        level: "error",
+        message: "Rule run failed: #{error.class}: #{error.message}",
+        source: source,
+        family: rule.family,
+        metadata: {
+          rule_run_id: id,
+          rule_id: rule_id,
+          rule_name: rule_name,
+          execution_type: execution_type,
+          error_class: error.class.name,
+          error_message: error.message,
+          transaction_count: transaction_ids.size,
+          transaction_ids: transaction_ids,
+          backtrace: Array(error.backtrace).first(10)
+        }
       )
     end
-  end
 end

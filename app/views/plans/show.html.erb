@@ -1,0 +1,17 @@
+<%# Plan hub: budgets + goals under one nav entry. Two summary cards
+    fronting the existing /budgets and /goals pages — the two features
+    share a home here, not a data model. %>
+<div class="@container space-y-6 pb-6 lg:pb-12">
+  <header>
+    <div class="flex items-center gap-2">
+      <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+      <%= render DS::Pill.new(label: t("shared.preview"), size: :md) %>
+    </div>
+    <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
+  </header>
+
+  <div class="grid grid-cols-1 @3xl:grid-cols-2 gap-4 items-stretch">
+    <%= render "plans/budget_card", budget: @budget, top_budget_categories: @top_budget_categories, editable: @editable, switch_options: @switch_options %>
+    <%= render "plans/goals_card", goals: @goals, summary: @goals_summary, linkable_account_count: @linkable_account_count, family_has_goals: @family_has_goals %>
+  </div>
+</div>

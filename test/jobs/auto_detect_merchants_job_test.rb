@@ -16,19 +16,27 @@ class AutoDetectMerchantsJobTest < ActiveJob::TestCase
     )
   end
 
-  test "marks rule run as failed with context when merchant detection raises" do
+  test "records rule run failure debug log before reraising merchant detection errors" do
     @family.stubs(:auto_detect_transaction_merchants).raises(StandardError, "Invalid JSON in provider response")
 
-    assert_raises(StandardError) do
-      AutoDetectMerchantsJob.perform_now(@family, transaction_ids: [ @transaction.id ], rule_run_id: @rule_run.id)
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_raises(StandardError) do
+        AutoDetectMerchantsJob.perform_now(@family, transaction_ids: [ @transaction.id ], rule_run_id: @rule_run.id)
+      end
     end
 
     @rule_run.reload
 
     assert_equal "failed", @rule_run.status
     assert_equal 0, @rule_run.pending_jobs_count
-    assert_includes @rule_run.error_message, "Merchant auto-detection failed"
-    assert_includes @rule_run.error_message, "Invalid JSON in provider response"
-    assert_includes @rule_run.error_message, @transaction.id.to_s
+    assert_equal "StandardError: Invalid JSON in provider response", @rule_run.error_message
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "rule_run", entry.category
+    assert_equal "error", entry.level
+    assert_equal "AutoDetectMerchantsJob", entry.source
+    assert_equal @family, entry.family
+    assert_equal @rule_run.id, entry.metadata["rule_run_id"]
+    assert_equal [ @transaction.id ], entry.metadata["transaction_ids"]
   end
 end

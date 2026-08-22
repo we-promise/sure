@@ -11,6 +11,18 @@ class Import::ConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show renders the YNAB configuration partial" do
+    ynab = @user.family.imports.create!(
+      type: "YnabImport",
+      raw_file_str: file_fixture("imports/ynab.csv").read,
+      col_sep: ","
+    )
+
+    get import_configuration_url(ynab)
+
+    assert_response :success
+  end
+
   test "updating a valid configuration regenerates rows" do
     TransactionImport.any_instance.expects(:generate_rows_from_csv).once
 

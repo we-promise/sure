@@ -10,6 +10,7 @@ class Rule::Registry::TransactionResource < Rule::Registry
       Rule::ConditionFilter::TransactionType.new(rule),
       Rule::ConditionFilter::TransactionMerchant.new(rule),
       Rule::ConditionFilter::TransactionCategory.new(rule),
+      Rule::ConditionFilter::TransactionTag.new(rule),
       Rule::ConditionFilter::TransactionDetails.new(rule),
       Rule::ConditionFilter::TransactionNotes.new(rule),
       Rule::ConditionFilter::TransactionAccount.new(rule)
@@ -24,7 +25,8 @@ class Rule::Registry::TransactionResource < Rule::Registry
       Rule::ActionExecutor::SetTransactionName.new(rule),
       Rule::ActionExecutor::SetInvestmentActivityLabel.new(rule),
       Rule::ActionExecutor::ExcludeTransaction.new(rule),
-      Rule::ActionExecutor::SetAsTransferOrPayment.new(rule)
+      Rule::ActionExecutor::SetAsTransferOrPayment.new(rule),
+      Rule::ActionExecutor::SendEmailNotification.new(rule)
     ]
 
     if ai_enabled?

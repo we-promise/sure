@@ -24,7 +24,7 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "input[name='user[family_attributes][moniker]'][value='Family'][required]"
     assert_select "input[name='user[family_attributes][moniker]'][value='Group'][required]"
-    assert_select "p", text: /Will be using Sure with/i
+    assert_select "p.text-sm.font-medium.text-primary", text: /Will be using.*with/i
   end
 
   test "should get preferences" do
@@ -107,6 +107,44 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     # Should show formatted currency example
     assert_select "p", text: /\$2,325\.25/
     assert_select "span", text: /\+\$78\.90/
+  end
+
+  test "preferences page derives currency from the onboarding country" do
+    @family.update!(country: "CA", currency: "USD")
+
+    get preferences_onboarding_url
+
+    assert_response :success
+    assert_select "select[name='user[family_attributes][currency]'] option[selected][value='CAD']"
+  end
+
+  test "preferences page keeps the saved currency after preferences have been set" do
+    @family.update!(country: "CA", currency: "USD")
+    @user.update!(set_onboarding_preferences_at: Time.current)
+
+    get preferences_onboarding_url
+
+    assert_response :success
+    assert_select "select[name='user[family_attributes][currency]'] option[selected][value='USD']"
+  end
+
+  test "preferences page preserves an explicit currency override" do
+    @family.update!(country: "CA", currency: "USD")
+
+    get preferences_onboarding_url, params: { currency: "USD" }
+
+    assert_response :success
+    assert_select "select[name='user[family_attributes][currency]'] option[selected][value='USD']"
+  end
+
+  test "preferences page ignores an unsupported currency override" do
+    @family.update!(country: "CA", currency: "USD")
+
+    get preferences_onboarding_url, params: { currency: "NOPE" }
+
+    assert_response :success
+    assert_select "[data-onboarding-currency-override-value='false']"
+    assert_select "select[name='user[family_attributes][currency]'] option[selected][value='CAD']"
   end
 
   test "preferences page shows date formatting example" do

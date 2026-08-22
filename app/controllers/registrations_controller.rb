@@ -73,7 +73,12 @@ class RegistrationsController < ApplicationController
         end
 
         @invitation&.update!(accepted_at: Time.current)
+        # Joining an existing family must honor the family's default sharing
+        # policy so the user sees the accounts the family shares.
+        @user.family.auto_share_existing_accounts_with(@user)
         @session = create_session_for(@user)
+        raise ActiveRecord::Rollback unless @session
+
         success = true
       end
 

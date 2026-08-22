@@ -34,5 +34,18 @@
                                         min: 0 %>
       </div>
     <% end %>
+
+    <% enable_banking_account = account.provider_account_for("EnableBankingAccount") if account.persisted? %>
+    <% if enable_banking_account %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="space-y-1">
+          <p class="text-sm" id="enable_banking_balance_toggle_label"><%= t("credit_cards.form.treat_balance_as_available_credit_label") %></p>
+          <p class="text-secondary text-xs"><%= t("credit_cards.form.treat_balance_as_available_credit_description") %></p>
+        </div>
+        <%= form.fields_for :enable_banking, enable_banking_account do |eb_form| %>
+          <%= eb_form.toggle :treat_balance_as_available_credit, "aria-labelledby": "enable_banking_balance_toggle_label" %>
+        <% end %>
+      </div>
+    <% end %>
   </div>
 <% end %>

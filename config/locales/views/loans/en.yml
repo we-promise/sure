@@ -13,6 +13,9 @@ en:
       none: None
       subtype_prompt: Select loan type
       subtype_none: None
+      rate_type_adjustable: Adjustable
+      rate_type_fixed: Fixed
+      rate_type_variable: Variable
     new:
       title: Enter loan details
     overview:

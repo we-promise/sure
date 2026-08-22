@@ -132,12 +132,12 @@
         </div>
 
         <!-- Price mismatch warning -->
-        <div class="hidden p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg" data-convert-to-trade-target="priceWarning">
+        <div class="hidden p-3 bg-warning/10 border border-warning/20 rounded-lg" data-convert-to-trade-target="priceWarning">
           <div class="flex items-start gap-2">
-            <%= icon "alert-triangle", size: "sm", class: "text-yellow-600 dark:text-yellow-500 mt-0.5 shrink-0" %>
+            <%= icon "alert-triangle", size: "sm", color: "warning", class: "mt-0.5 shrink-0" %>
             <div class="text-sm">
-              <p class="font-medium text-yellow-800 dark:text-yellow-200"><%= t(".price_mismatch_title") %></p>
-              <p class="text-yellow-700 dark:text-yellow-300" data-convert-to-trade-target="priceWarningMessage"></p>
+              <p class="font-medium text-primary"><%= t(".price_mismatch_title") %></p>
+              <p class="text-secondary" data-convert-to-trade-target="priceWarningMessage"></p>
             </div>
           </div>
         </div>

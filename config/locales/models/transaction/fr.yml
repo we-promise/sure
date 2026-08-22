@@ -6,6 +6,7 @@ fr:
         transaction:
           attributes:
             attachments:
-              too_many: "ne peut pas dépasser %{max} fichiers par transaction"
-              too_large: "le fichier %{index} est trop volumineux (maximum %{max_mb} Mo)"
-              invalid_format: "le fichier %{index} a un format non pris en charge (%{file_format})"
+              invalid_format: le fichier %{index} a un format non pris en charge (%{file_format})
+              too_large: le fichier %{index} est trop volumineux (maximum %{max_mb}
+                Mo)
+              too_many: ne peut pas dépasser %{max} fichiers par transaction
