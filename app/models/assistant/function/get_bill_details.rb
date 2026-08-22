@@ -18,8 +18,8 @@ class Assistant::Function::GetBillDetails < Assistant::Function
         Analytics are computed from confirmed payments on settled occurrences only, never
         from estimates, and are null when nothing has been paid yet. The one figure that is
         not payment-derived says so in its name: annualized_declared is the amount on the
-        bill times its cadence, while annualized_run_rate follows what has actually been
-        paid. Where they disagree, the run rate is what the bill is costing.
+        bill times its cadence, while annualized_cost follows what has actually been paid.
+        Where they disagree, annualized_cost is what the bill is costing.
 
         history is capped at the last #{HISTORY_LIMIT} settled cycles and price_changes at
         #{PRICE_CHANGE_LOOKBACK_MONTHS} months. history_window and price_change_window report
@@ -121,8 +121,9 @@ class Assistant::Function::GetBillDetails < Assistant::Function
         # payment was $50 reported a $50 average and a $1,200 year in the same
         # hash, and the description told the model to trust it as payment-derived.
         # Run rate now follows the payments; the declared figure keeps its own
-        # name so a caller comparing the two can see the gap.
-        annualized_run_rate: Money.new(average * series.schedule.occurrences_per_year, series.currency).format,
+        # name, so a caller comparing the two can see the gap. annualized_cost
+        # keeps its name and starts meaning what the block always promised.
+        annualized_cost: Money.new(average * series.schedule.occurrences_per_year, series.currency).format,
         annualized_declared: (series.monthly_equivalent_amount * 12).abs.format,
         paid_this_year: Money.new(ytd, series.currency).format
       }

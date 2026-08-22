@@ -88,7 +88,7 @@ class Assistant::Function::GetBillDetailsTest < ActiveSupport::TestCase
     analytics = call_tool(series.id)[:analytics]
 
     assert_equal "$50.00", analytics[:average_paid]
-    assert_equal "$600.00", analytics[:annualized_run_rate], "twelve payments of what is actually paid"
+    assert_equal "$600.00", analytics[:annualized_cost], "twelve payments of what is actually paid"
     assert_equal "$1,200.00", analytics[:annualized_declared], "the declared figure keeps its own name"
   end
 
