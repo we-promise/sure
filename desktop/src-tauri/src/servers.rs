@@ -32,7 +32,10 @@ pub struct ServerEntry {
     pub label: String,
 }
 
-pub fn normalize_server_url(input: &str) -> Result<String, ServerError> {
+/// How many bases `check_server` will probe; each one costs an HTTP round trip.
+pub const MAX_BASE_CANDIDATES: usize = 4;
+
+fn split_base(input: &str) -> Result<(String, String), ServerError> {
     let trimmed = input.trim();
     if trimmed.is_empty() {
         return Err(ServerError::InvalidUrl("empty".into()));
@@ -52,7 +55,36 @@ pub fn normalize_server_url(input: &str) -> Result<String, ServerError> {
         Some(p) => format!("{scheme}://{host}:{p}"),
         None => format!("{scheme}://{host}"),
     };
-    Ok(origin)
+    Ok((origin, parsed.path().trim_end_matches('/').to_string()))
+}
+
+/// Canonical form of a server address: origin plus the path it is served under.
+/// The path is kept, so a Sure mounted under a prefix (`https://host/sure`)
+/// works; `base_candidates` is what still resolves a pasted deep link.
+pub fn normalize_server_url(input: &str) -> Result<String, ServerError> {
+    let (origin, path) = split_base(input)?;
+    Ok(format!("{origin}{path}"))
+}
+
+/// Bases to try for a normalized URL, most specific first and always ending at
+/// the origin. A prefix-mounted server and a pasted deep link are the same
+/// shape, so the server decides: the first candidate whose `/up` answers wins.
+pub fn base_candidates(normalized: &str) -> Vec<String> {
+    let Ok((origin, path)) = split_base(normalized) else {
+        return vec![normalized.to_string()];
+    };
+    let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+    let mut candidates: Vec<String> = (0..=segments.len())
+        .rev()
+        .map(|depth| format!("{origin}{}", segments[..depth].iter().map(|s| format!("/{s}")).collect::<String>()))
+        .collect();
+    if candidates.len() > MAX_BASE_CANDIDATES {
+        // Drop from the middle: the origin is the likeliest answer of them all.
+        let origin_only = candidates.pop().expect("candidates is never empty");
+        candidates.truncate(MAX_BASE_CANDIDATES - 1);
+        candidates.push(origin_only);
+    }
+    candidates
 }
 
 pub fn health_check_url(base: &str) -> String {
