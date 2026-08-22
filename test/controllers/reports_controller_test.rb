@@ -438,12 +438,16 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     income_href = transactions_path(q: { categories: [ income_category.name ], start_date: start_date, end_date: end_date })
     uncategorized_href = transactions_path(q: { categories: [ Category.uncategorized.name ], start_date: start_date, end_date: end_date })
 
-    assert_select "tr[data-category='category-#{expense_category.id}'] a[href=?]", expense_href, text: expense_category.name
-    assert_select "tr[data-category='category-#{income_category.id}'] a[href=?]", income_href, text: income_category.name
-    assert_select "tr[data-category='category-uncategorized'] a[href=?]", uncategorized_href, text: Category.uncategorized.name
+    assert_select "tr[data-category='category-#{expense_category.id}'] a[href=?]", expense_href, text: /#{Regexp.escape(expense_category.name)}/
+    assert_select "tr[data-category='category-#{income_category.id}'] a[href=?]", income_href, text: /#{Regexp.escape(income_category.name)}/
+    assert_select "tr[data-category='category-uncategorized'] a[href=?]", uncategorized_href, text: /#{Regexp.escape(Category.uncategorized.name)}/
 
-    # Full-row hit target via stretched ::before (mirrors dashboard outflows)
-    assert_select "tr.relative.group\\/category-row[data-category='category-#{expense_category.id}'] a[class*='before:absolute'][class*='before:inset-0']"
+    # Full-row hit target via a normal flex <a> wrapping icon+name+count —
+    # deliberately not a `position: relative`/`absolute` stretched-link inside
+    # the <table>, which caused a WebKit scrollHeight bug (see #3093).
+    assert_select "tr[data-category='category-#{expense_category.id}'] a.flex.items-center"
+    assert_select "tr[data-category='category-#{expense_category.id}'].relative", 0
+    assert_select "tr[data-category='category-#{expense_category.id}'] a[class*='before:absolute']", 0
   end
 
   test "index uncategorized category link uses localized name that Search accepts" do
@@ -460,7 +464,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     href = transactions_path(q: { categories: [ localized_name ], start_date: start_date, end_date: end_date })
-    assert_select "tr[data-category='category-uncategorized'] a[href=?]", href, text: localized_name
+    assert_select "tr[data-category='category-uncategorized'] a[href=?]", href, text: /#{Regexp.escape(localized_name)}/
   end
 
   test "index excludes tax-advantaged account transactions from activity breakdown" do
