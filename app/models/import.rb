@@ -168,7 +168,7 @@ class Import < ApplicationRecord
 
     import!
 
-    family.sync_later
+    sync_family_after_import
 
     update! status: :complete
   rescue => error
@@ -424,6 +424,11 @@ class Import < ApplicationRecord
   private
     def row_count_exceeded?
       rows_count > max_row_count
+    end
+
+    def sync_family_after_import
+      family.auto_match_transfers!
+      family.sync_later
     end
 
     def import!

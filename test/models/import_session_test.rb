@@ -58,6 +58,27 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_source_mapping session, "Transaction", "txn-1", transaction
   end
 
+  test "publish auto-matches historical transfers before family sync" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.attach_chunk!(
+      sequence: 1,
+      client_chunk_id: "history",
+      content: build_ndjson(historical_transfer_records),
+      filename: "history.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    assert_difference -> { Transfer.count }, 1 do
+      session.publish
+    end
+
+    checking = @family.accounts.find_by!(name: "Historical Checking")
+    credit_card = @family.accounts.find_by!(name: "Historical Card")
+    outflow = checking.entries.find_by!(name: "Old Transfer").entryable
+    inflow = credit_card.entries.find_by!(name: "Old Transfer").entryable
+    assert Transfer.exists?(outflow_transaction: outflow, inflow_transaction: inflow)
+  end
+
   test "publishing session chunks records readback verification for each chunk" do
     session = @family.import_sessions.create!(expected_chunks: 2)
     session.attach_chunk!(
@@ -781,6 +802,57 @@ class ImportSessionTest < ActiveSupport::TestCase
             amount: "-12.34",
             currency: "USD",
             name: "Grocery Run"
+          }
+        }
+      ]
+    end
+
+    def historical_transfer_records
+      historical_date = 120.days.ago.to_date.iso8601
+
+      [
+        {
+          type: "Account",
+          data: {
+            id: "historical-checking",
+            name: "Historical Checking",
+            balance: "0.00",
+            currency: "USD",
+            accountable_type: "Depository",
+            accountable: { subtype: "checking" }
+          }
+        },
+        {
+          type: "Account",
+          data: {
+            id: "historical-card",
+            name: "Historical Card",
+            balance: "0.00",
+            currency: "USD",
+            accountable_type: "CreditCard",
+            accountable: { available_credit: "0.00" }
+          }
+        },
+        {
+          type: "Transaction",
+          data: {
+            id: "historical-outflow",
+            account_id: "historical-checking",
+            date: historical_date,
+            amount: "500.00",
+            currency: "USD",
+            name: "Old Transfer"
+          }
+        },
+        {
+          type: "Transaction",
+          data: {
+            id: "historical-inflow",
+            account_id: "historical-card",
+            date: historical_date,
+            amount: "-500.00",
+            currency: "USD",
+            name: "Old Transfer"
           }
         }
       ]
