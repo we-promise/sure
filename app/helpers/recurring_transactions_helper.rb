@@ -3,14 +3,13 @@ module RecurringTransactionsHelper
     RecurringTransaction::FrequencyPreset.label(recurring_transaction)
   end
 
-  def recurring_status_badge_classes(status)
+  # Status is domain state; the tone is how the design system says it. The
+  # mapping lives here so every surface badges a status the same way.
+  def recurring_status_pill_tone(status)
     case status.to_s
-    when "active"
-      "bg-success/10 text-success"
-    when "suggested"
-      "bg-warning/10 text-warning"
-    else
-      "bg-surface-inset text-primary"
+    when "active"    then :success
+    when "suggested" then :warning
+    else :neutral
     end
   end
 
