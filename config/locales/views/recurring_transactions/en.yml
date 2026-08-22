@@ -184,6 +184,7 @@ en:
       seen_count:
         one: "seen once"
         other: "seen %{count} times"
+      collapsed_hint: Tap to review
       confirm: Add bill
       dismiss: Not a bill
     confirmed: Bill added to your recurring transactions

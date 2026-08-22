@@ -9,10 +9,16 @@
 
     An autopaying bill is still worth seeing and still counts toward the total,
     but it recedes so the rows that want something from you carry the weight. %>
-<div class="group/row">
+<div>
 <%# The row reads as interactive without dressing up as a button: a hover tint
-    and the name underlining, the same cues the transaction list uses. %>
-<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 transition-colors group-hover/row:bg-surface-hover <%= "opacity-70" if series.autopay? %>">
+    and the name underlining, the same cues the transaction list uses.
+
+    The tint hangs off this element rather than a group on the wrapper. The
+    wrapper also holds the expansion, so a group hover kept the row lit while
+    the pointer was down in the expanded pane, and the lit band clipped against
+    the pane's own fill. Hover still propagates from every child of the row, so
+    the trailing action tints it exactly as before. %>
+<div class="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 transition-colors hover:bg-surface-hover <%= "opacity-70" if series.autopay? %>">
   <%# The bulk of the row is the inspect control. Only the trailing verb sits
       outside it, so there are no anchors inside anchors. %>
   <%# Names the cycle it was opened from. Without it the expansion falls back to

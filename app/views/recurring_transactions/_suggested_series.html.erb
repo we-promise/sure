@@ -1,39 +1,57 @@
 <%# locals: (suggested:) %>
 <%# Detection proposes, the user disposes. Rendered from both the Bills
-    overview and Settings -> Recurring, so every key is absolutely scoped. %>
-<div class="rounded-xl bg-container-inset space-y-1 p-1">
-  <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
-    <p><%= t("recurring_transactions.suggested.title") %></p>
-    <span class="text-subdued">&middot;</span>
-    <p><%= suggested.size %></p>
-  </div>
+    overview and Settings -> Recurring, so every key is absolutely scoped.
 
-  <div class="bg-container rounded-lg shadow-border-xs divide-y divide-divider">
-    <% suggested.each do |suggestion| %>
-      <div class="flex items-center justify-between gap-4 px-4 py-3">
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-primary truncate"><%= suggestion.display_name %></p>
-          <p class="text-xs text-secondary">
-            <span class="privacy-sensitive"><%= format_money(suggestion.amount_money.abs) %></span>
-            &middot; <%= frequency_label(suggestion) %>
-            &middot; <%= t("recurring_transactions.suggested.seen_count", count: suggestion.occurrence_count) %>
-          </p>
+    Collapsible because this sits above the bills the user actually came to
+    see. Someone who is not ready to triage nine guesses should be able to fold
+    them away and still find their rent, and have that stick. %>
+<details class="group/suggested rounded-xl bg-container-inset"
+         data-controller="persisted-disclosure"
+         data-persisted-disclosure-key-value="bills-suggested"
+         open>
+  <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer select-none list-none rounded-xl hover:bg-surface-hover transition-colors">
+    <%= icon "chevron-right", size: "sm",
+              class: "transition-transform group-open/suggested:rotate-90" %>
+
+    <p class="text-xs font-medium text-secondary uppercase">
+      <%= t("recurring_transactions.suggested.title") %>
+    </p>
+
+    <%= render DS::Pill.new(label: suggested.size.to_s, tone: :neutral, marker: false) %>
+
+    <p class="ml-auto text-xs text-subdued group-open/suggested:hidden">
+      <%= t("recurring_transactions.suggested.collapsed_hint") %>
+    </p>
+  </summary>
+
+  <div class="px-1 pb-1">
+    <div class="bg-container rounded-lg divide-y divide-subdued">
+      <% suggested.each do |suggestion| %>
+        <div class="flex items-center justify-between gap-4 px-4 py-3">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-primary truncate"><%= suggestion.display_name %></p>
+            <p class="text-xs text-secondary">
+              <span class="privacy-sensitive"><%= format_money(suggestion.amount_money.abs) %></span>
+              &middot; <%= frequency_label(suggestion) %>
+              &middot; <%= t("recurring_transactions.suggested.seen_count", count: suggestion.occurrence_count) %>
+            </p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <%= render DS::Link.new(
+              text: t("recurring_transactions.suggested.confirm"),
+              variant: "primary",
+              href: confirm_recurring_transaction_path(suggestion),
+              method: :post
+            ) %>
+            <%= render DS::Link.new(
+              text: t("recurring_transactions.suggested.dismiss"),
+              variant: "ghost",
+              href: dismiss_recurring_transaction_path(suggestion),
+              method: :post
+            ) %>
+          </div>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <%= render DS::Link.new(
-            text: t("recurring_transactions.suggested.confirm"),
-            variant: "primary",
-            href: confirm_recurring_transaction_path(suggestion),
-            method: :post
-          ) %>
-          <%= render DS::Link.new(
-            text: t("recurring_transactions.suggested.dismiss"),
-            variant: "ghost",
-            href: dismiss_recurring_transaction_path(suggestion),
-            method: :post
-          ) %>
-        </div>
-      </div>
-    <% end %>
+      <% end %>
+    </div>
   </div>
-</div>
+</details>
