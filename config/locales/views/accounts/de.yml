@@ -117,6 +117,7 @@ de:
         activity: Aktivität
         holdings: Bestände
         overview: Übersicht
+        schedule: Tilgungsplan
         statements: Auszüge
     update:
       success: "%{type}-Konto aktualisiert"
