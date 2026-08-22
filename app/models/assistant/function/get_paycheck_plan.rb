@@ -64,10 +64,29 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
       family_currency: family.currency,
       unconvertible_count: planner.unconvertible_count,
       periods: periods.map { |period| serialize_period(period) }
-    }
+    }.merge(unconfirmed_exclusion)
   end
 
   private
+    # The planner counts confirmed series only, which is the right call: a
+    # detection nobody has acknowledged is not yet an obligation. But every
+    # figure here is spending headroom, so dropping them without a word makes
+    # the plan read more comfortable than it is. Name what was left out and let
+    # the assistant caveat the number instead of overstating it.
+    def unconfirmed_exclusion
+      count = accessible_series.suggested.count
+      return {} if count.zero?
+
+      {
+        unconfirmed_excluded: {
+          count: count,
+          note: "#{count} detected series are still awaiting confirmation and are NOT counted in " \
+                "these figures, so safe-to-spend is an upper bound. Say so when presenting it. " \
+                "Call get_bills with status: suggested to list them."
+        }
+      }
+    end
+
     def serialize_period(period)
       {
         starts_on: period.starts_on.iso8601,

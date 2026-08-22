@@ -67,9 +67,48 @@ class Assistant::Function::GetPaycheckPlanTest < ActiveSupport::TestCase
     assert result[:hint].present?
   end
 
+  # Same class of bug as the get_bills one: the planner counts confirmed series
+  # only, which is correct, but every figure it returns is spending headroom, so
+  # dropping unconfirmed detections without a word makes the plan look safer
+  # than it is.
+  test "a plan that ignores unconfirmed detections says so" do
+    declare_income
+    @family.recurring_transactions.create!(
+      name: "Detected subscription", account: accounts(:depository), amount: 40,
+      currency: "USD", expected_day_of_month: Date.current.day, status: "suggested",
+      bill_type: "subscription", manual: false, dedup_scope: "detected-40",
+      last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current
+    )
+
+    result = call_tool
+
+    assert result[:unconfirmed_excluded].present?,
+      "the plan must disclose obligations it left out"
+    assert_equal 1, result[:unconfirmed_excluded][:count]
+    assert_match(/upper bound/, result[:unconfirmed_excluded][:note])
+  end
+
+  test "no exclusion notice when everything is confirmed" do
+    declare_income
+
+    result = call_tool
+
+    assert result[:periods].present?
+    assert_nil result[:unconfirmed_excluded]
+  end
+
   private
 
     def call_tool(params = {})
       Assistant::Function::GetPaycheckPlan.new(@user).call(params)
+    end
+
+    def declare_income
+      @family.recurring_transactions.create!(
+        name: "Payday", account: accounts(:depository), amount: -2000,
+        currency: "USD", expected_day_of_month: Date.current.day, status: "active",
+        bill_type: "income", manual: true, dedup_scope: "payday--2000",
+        last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current
+      )
     end
 end
