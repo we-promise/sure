@@ -152,7 +152,28 @@ class Family < ApplicationRecord
   before_validation :normalize_enabled_currencies!
 
   def primary_currency_code
-    normalize_currency_code(currency) || "USD"
+    self.class.normalize_currency_code(currency) || "USD"
+  end
+
+  def default_currency_for_country
+    self.class.default_currency_for_country(country)
+  end
+
+  def self.default_currency_for_country(country)
+    country_currency = ISO3166::Country.new(country.to_s.upcase)&.currency_code
+    normalize_currency_code(country_currency) || "USD"
+  end
+
+  def self.default_currency_by_country
+    LanguagesHelper::COUNTRY_MAPPING.keys.index_with { |country| default_currency_for_country(country) }
+  end
+
+  def self.normalize_currency_code(value)
+    return if value.blank?
+
+    Money::Currency.new(value).iso_code
+  rescue Money::Currency::UnknownCurrencyError, ArgumentError
+    nil
   end
 
   def custom_enabled_currencies?
@@ -310,8 +331,12 @@ class Family < ApplicationRecord
     AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
   end
 
+  # Memoized per user: the layout renders the sidebar for desktop and mobile
+  # (each with three tab panels), so one request asks for the balance sheet
+  # many times; rebuilding it repeats the account/sync/exchange-rate queries.
   def balance_sheet(user: Current.user)
-    BalanceSheet.new(self, user: user)
+    @balance_sheets ||= {}
+    @balance_sheets[user&.id] ||= BalanceSheet.new(self, user: user)
   end
 
   def income_statement(user: Current.user, accounts: nil)
@@ -492,15 +517,7 @@ class Family < ApplicationRecord
     end
 
     def normalize_currency_codes(values)
-      Array(values).filter_map { |value| normalize_currency_code(value) }.uniq
-    end
-
-    def normalize_currency_code(value)
-      return if value.blank?
-
-      Money::Currency.new(value).iso_code
-    rescue Money::Currency::UnknownCurrencyError, ArgumentError
-      nil
+      Array(values).filter_map { |value| self.class.normalize_currency_code(value) }.uniq
     end
 
     # Not a plain `inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }`

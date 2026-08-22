@@ -32,6 +32,9 @@ en:
       category: Category
       category_label: Category
       category_prompt: Select a Category
+      category_search_placeholder: Search categories
+      create_category: 'Create "%{name}"'
+      create_category_error: Could not create category
       date: Date
       description: Description
       description_placeholder: Describe transaction

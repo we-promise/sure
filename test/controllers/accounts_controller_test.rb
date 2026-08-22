@@ -171,12 +171,60 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
   end
 
+  test "account activity keeps excluded entries visible so they can be restored" do
+    trade_entry = entries(:trade)
+    trade_entry.update!(excluded: true)
+
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(trade_entry)}"
+  end
+
   test "renders investment account with gains chart view" do
     get account_url(accounts(:investment), chart_view: "gains")
 
     assert_response :success
     assert_select "option[value=gains][selected]"
     assert_select "p", text: I18n.t("UI.account.chart.title.total_gains")
+  end
+
+  test "remembers selected per_page across account navigation" do
+    other_account = accounts(:credit_card)
+
+    get account_url(@account, per_page: 50)
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+
+    get account_url(other_account)
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+  end
+
+  test "shares remembered per_page with the global transactions page" do
+    get transactions_url(per_page: 100)
+    assert_response :success
+
+    get account_url(@account)
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='100'][selected]"
+  end
+
+  test "shares account per_page preference with the global transactions page" do
+    get account_url(@account, per_page: 50)
+    assert_response :success
+
+    get transactions_url
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+  end
+
+  test "falls back to default per_page when nothing was stored yet" do
+    get account_url(@account)
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='10'][selected]"
   end
 
   test "activity pagination keeps activity tab when loaded from holdings tab" do
