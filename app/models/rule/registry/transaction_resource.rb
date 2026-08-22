@@ -24,6 +24,7 @@ class Rule::Registry::TransactionResource < Rule::Registry
       Rule::ActionExecutor::SetTransactionMerchant.new(rule),
       Rule::ActionExecutor::SetTransactionName.new(rule),
       Rule::ActionExecutor::SetInvestmentActivityLabel.new(rule),
+      Rule::ActionExecutor::InvertTransactionAmount.new(rule),
       Rule::ActionExecutor::ExcludeTransaction.new(rule),
       Rule::ActionExecutor::SetAsTransferOrPayment.new(rule),
       Rule::ActionExecutor::SendEmailNotification.new(rule)
