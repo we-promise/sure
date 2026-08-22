@@ -16,7 +16,7 @@ integration.
 | macOS desktop app | People who want Sure in a native Mac window with system app chrome and deep-link handling. | Native shell around the web app | See [Sure Desktop](../desktop/README.md). |
 | Mobile app | Basic mobile access on iOS and Android, currently focused on login and account balances. | Flutter companion app | See [Sure Mobile](../mobile/README.md). |
 | LLM agents and assistants | Claude Desktop, GPT agents, local agents, or custom tools that need structured access to Sure data. | MCP endpoint for external AI clients | See [MCP Server for External AI Assistants](hosting/mcp.md). |
-| Custom API clients | Scripts, services, importer experiments, dashboards, or other integrations. | HTTP API | See the [API docs](api/) and the OpenAPI spec at [docs/api/openapi.yaml](api/openapi.yaml). |
+| Custom API clients | Scripts, services, importer experiments, dashboards, or other integrations. | HTTP API | See the OpenAPI spec at [docs/api/openapi.yaml](api/openapi.yaml) and endpoint guides such as [docs/api/transactions.md](api/transactions.md). |
 
 ## Web app
 
@@ -88,8 +88,12 @@ Custom clients can call Sure's HTTP API directly. This is the right path for
 scripts, services, import experiments, dashboards, and integrations that do not
 need an MCP-compatible agent interface.
 
-Start with the API docs in [docs/api](api/) and the OpenAPI spec at
-[docs/api/openapi.yaml](api/openapi.yaml).
+API requests can authenticate with a user-generated `X-Api-Key` header, or with
+OAuth2 bearer tokens from Sure's Doorkeeper authorization server for registered
+app clients.
+
+Start with the OpenAPI spec at [docs/api/openapi.yaml](api/openapi.yaml) and
+endpoint guides such as [docs/api/transactions.md](api/transactions.md).
 
 ## Choosing a client
 
