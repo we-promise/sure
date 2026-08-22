@@ -64,6 +64,9 @@ class Assistant::Function::CreateBill < Assistant::Function
     category, category_error = resolve_category(params["category_name"])
     return category_error if category_error
 
+    frequency, frequency_error = resolve_frequency(params["frequency"])
+    return frequency_error if frequency_error
+
     series = RecurringTransaction::DeclaredBill.new(
       family: family,
       user: user,
@@ -71,7 +74,7 @@ class Assistant::Function::CreateBill < Assistant::Function
         name: params["name"],
         amount: params["amount"],
         first_due_on: params["first_due_on"],
-        frequency_preset: params["frequency"].presence_in(RecurringTransaction::FrequencyPreset::PRESETS) || "monthly",
+        frequency_preset: frequency,
         is_income: params["is_income"] == true,
         account_id: account&.id,
         payment_url: params["payment_url"],
@@ -102,6 +105,24 @@ class Assistant::Function::CreateBill < Assistant::Function
   end
 
   private
+    # An unrecognized cadence used to fall back to monthly. The enum word for a
+    # once-a-year bill is "annual", so a model offering the equally natural
+    # "yearly" turned a $600 premium into a $600 monthly commitment, twelve
+    # times the real obligation, with no indication anything had been ignored.
+    # A financial write is the wrong place to guess.
+    def resolve_frequency(value)
+      return [ "monthly", nil ] if value.blank?
+
+      preset = value.to_s.presence_in(RecurringTransaction::FrequencyPreset::PRESETS)
+      return [ preset, nil ] if preset
+
+      [ nil, {
+        error: "#{value} is not a frequency this app recognizes",
+        hint: "Use one of: #{RecurringTransaction::FrequencyPreset::PRESETS.join(', ')}. " \
+              "Omit it entirely for monthly."
+      } ]
+    end
+
     def resolve_account(name)
       return [ nil, nil ] if name.blank?
 

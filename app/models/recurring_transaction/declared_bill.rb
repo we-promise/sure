@@ -80,10 +80,40 @@ class RecurringTransaction
     # a validation error rather than an escaping exception.
     def self.save(recurring)
       recurring.dedup_scope = recurring.amount.to_d.to_s("F") if recurring.dedup_scope.blank?
+
+      # Every dedup index is keyed on account_id, and Postgres treats NULLs as
+      # distinct, so a bill created without an account collides with nothing.
+      # Declaring one is explicitly supported ("omit it to create the bill
+      # without an account"), which meant a retried create silently doubled the
+      # family's recurring commitments. No partial index can express this, so
+      # the check lives here.
+      if recurring.account_id.nil? && account_less_duplicate?(recurring)
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.already_exists"))
+        return false
+      end
+
       recurring.save
     rescue ActiveRecord::RecordNotUnique
       recurring.errors.add(:base, I18n.t("recurring_transactions.create.already_exists"))
       false
+    end
+
+    # Mirrors the identity the unique indexes use, minus the account that is
+    # absent by definition: a merchant-keyed row matches on merchant, a
+    # name-keyed row matches on name.
+    def self.account_less_duplicate?(recurring)
+      scope = recurring.family.recurring_transactions
+                       .where(account_id: nil,
+                              currency: recurring.currency,
+                              dedup_scope: recurring.dedup_scope,
+                              destination_account_id: recurring.destination_account_id)
+      scope = scope.where.not(id: recurring.id) if recurring.id
+
+      if recurring.merchant_id.present?
+        scope.exists?(merchant_id: recurring.merchant_id)
+      else
+        scope.exists?(name: recurring.name, merchant_id: nil)
+      end
     end
   end
 end

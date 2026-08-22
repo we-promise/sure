@@ -90,6 +90,49 @@ class Assistant::Function::CreateBillTest < ActiveSupport::TestCase
     assert_not @family.recurring_transactions.exists?(name: "Bill")
   end
 
+
+  # Every dedup index is keyed on account_id, and Postgres treats NULLs as
+  # distinct, so an account-less bill collided with nothing and an LLM retry
+  # doubled the family's recurring commitments.
+  test "an account-less bill is not duplicated by a retry" do
+    args = { "name" => "Netflix", "amount" => 15.99, "first_due_on" => (Date.current + 3).iso8601 }
+
+    first = call_tool(args)
+    second = call_tool(args)
+
+    assert first[:created]
+    assert second[:error].present?, "the retry must be recognized as the same bill"
+    assert_equal 1, @family.recurring_transactions.where(name: "Netflix").count
+  end
+
+  test "a different amount is still a distinct account-less bill" do
+    call_tool("name" => "Netflix", "amount" => 15.99, "first_due_on" => (Date.current + 3).iso8601)
+    second = call_tool("name" => "Netflix", "amount" => 24.99, "first_due_on" => (Date.current + 3).iso8601)
+
+    assert second[:created], "a price tier is a real second row, not a duplicate"
+    assert_equal 2, @family.recurring_transactions.where(name: "Netflix").count
+  end
+
+  # "annual" is the enum word; "yearly" is the equally natural thing a model
+  # says. It used to fall back to monthly, turning a $600 premium into a $600
+  # monthly obligation.
+  test "an unrecognized frequency is refused rather than made monthly" do
+    result = call_tool("name" => "Insurance", "amount" => 600, "first_due_on" => (Date.current + 3).iso8601, "frequency" => "yearly")
+
+    assert result[:error].present?
+    assert_match(/not a frequency/, result[:error])
+    assert_match(/annual/, result[:hint], "the hint has to name the word that works")
+    assert_equal 0, @family.recurring_transactions.where(name: "Insurance").count
+  end
+
+  test "a recognized frequency still applies" do
+    result = call_tool("name" => "Insurance", "amount" => 600, "first_due_on" => (Date.current + 3).iso8601, "frequency" => "annual")
+
+    assert result[:created]
+    series = @family.recurring_transactions.find_by(name: "Insurance")
+    assert_equal "annual", RecurringTransaction::FrequencyPreset.detect(series).key
+  end
+
   private
 
     def call_tool(params)
