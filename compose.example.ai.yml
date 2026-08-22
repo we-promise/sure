@@ -26,9 +26,8 @@
 #   (optional, --profile local-ai)
 #     - Only starts when you run: docker compose --profile local-ai up
 #
-#   Ollama + Open WebUI + OpenClaw — external AI assistant
+#   OpenClaw — external AI assistant
 #   (optional, --profile external-assistant)
-#     - Local LLM inference available via Ollama + Open WebUI
 #     - Starts an OpenClaw locally for Sure's external assistant mode.
 #     - Set EXTERNAL_ASSISTANT_URL to http://openclaw:18789/v1/chat/completions
 #       for internal routing.
@@ -187,7 +186,6 @@ services:
   ollama:
     profiles:
       - local-ai
-      - external-assistant
     volumes:
       - ollama:/root/.ollama
     container_name: ollama
@@ -213,7 +211,6 @@ services:
   ollama-webui:
     profiles:
       - local-ai
-      - external-assistant
     image: ghcr.io/open-webui/open-webui
     container_name: ollama-webui
     volumes:

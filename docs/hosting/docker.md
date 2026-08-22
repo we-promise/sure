@@ -252,7 +252,7 @@ The external assistant delegates chat to a remote AI agent instead of calling LL
    - **Per-family (UI):** Go to Settings > Self-Hosting > AI Assistant, select "External"
    - **Global (env):** Set `ASSISTANT_TYPE=external` to force all families to use external
 
-To use the bundled OpenClaw service instead of a separately hosted agent, start the `external-assistant` profile:
+To use the bundled OpenClaw service instead of a separately hosted agent, start the `external-assistant` profile. This profile starts OpenClaw without the local Ollama or Open WebUI services:
 
 ```bash
 docker compose -f compose.ai.yml --profile external-assistant up -d

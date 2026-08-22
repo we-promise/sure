@@ -53,6 +53,13 @@ jobs:
           pipelock test --fail-on-gap --category "${vector_categories}" --config pipelock.example.yaml
           docker compose -f compose.example.ai.yml config --quiet
 
+          external_services="$(docker compose -f compose.example.ai.yml --profile external-assistant config --services)"
+          grep -qx 'openclaw' <<<"${external_services}"
+          if grep -Eqx 'ollama|ollama-webui' <<<"${external_services}"; then
+            echo "::error::External assistant profile exposes local AI services"
+            exit 1
+          fi
+
           rendered_config="${RUNNER_TEMP}/sure-pipelock.yaml"
           helm template sure charts/sure \
             --kube-version 1.25.0 \
