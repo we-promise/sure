@@ -106,11 +106,29 @@ class PdfImport < Import
     transaction do
       mappings.each(&:create_mappable!)
 
-      new_transactions = rows.map do |row|
-        category = mappings.categories.mappable_for(row.category)
+      # Rows were already filtered against existing records when they were
+      # generated, but a provider sync can land in between, so check again here
+      # the way TransactionImport#import! does.
+      adapter = Account::ProviderImportAdapter.new(account)
+      # Entries this statement already consumed during row generation are spoken
+      # for. Without excluding them, a statement carrying two same-amount
+      # transactions where the account held only one would re-match the surviving
+      # row against that same entry and silently drop a genuinely new
+      # transaction. Newly synced entries are still caught, because only the
+      # already-reconciled ones are excluded.
+      claimed = reconciled_entries.pluck(:id)
+      reconciled_now = []
+      reconciled_at = Time.current
+
+      new_transactions = rows.filter_map do |row|
+        if (existing = already_recorded_entry(adapter, row, claimed))
+          claimed << existing.id
+          reconciled_now << existing
+          next
+        end
 
         Transaction.new(
-          category: category,
+          category: mappings.categories.mappable_for(row.category),
           entry: Entry.new(
             account: account,
             date: row.date_iso,
@@ -119,23 +137,59 @@ class PdfImport < Import
             currency: row.currency,
             notes: row.notes,
             import: self,
-            import_locked: true
+            import_locked: true,
+            # Born reconciled: the statement being imported is the evidence.
+            # Set by id rather than association so activerecord-import writes the
+            # column directly on the recursive insert.
+            reconciled_at: reconciled_at,
+            reconciled_by_statement_id: account_statement&.id
           )
         )
       end
 
       Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
+      reconcile_entries!(reconciled_now, at: reconciled_at)
     end
   end
 
+  # Re-targeting is destructive: it releases the statement's evidence on the
+  # account being left and rebuilds the rows from scratch. Returns false rather
+  # than doing any of that when the import is no longer re-targetable, so a
+  # back-button or replayed PATCH cannot unwind a published import.
   def assign_account!(account)
-    transaction do
+    with_lock do
+      return false unless reassignable?
+
+      previous_account_id = account_id
       update!(account: account)
+
       if (statement = account_statement)
         statement.lock!
         statement.link_to_account!(account) if statement.account_id != account.id
       end
+
+      next true if previous_account_id == account.id
+
+      # Matching is per-account, so anything reconciled against the old account
+      # is no longer evidence-backed, and the rows have to be judged again.
+      release_reconciliations!(previous_account_id)
+      if has_extracted_transactions?
+        generate_rows_from_extracted_data
+        sync_mappings
+        refresh_status_after_regeneration!
+      end
+
+      true
     end
+  end
+
+  # A published import's entries already live in the account it was published
+  # to, and a running job owns the record while it is importing or reverting.
+  # An import that reconciled every line is still re-targetable: it is complete
+  # but committed nothing of its own, and the user may well have picked the
+  # wrong account.
+  def reassignable?
+    !data_committed? && !importing? && !reverting?
   end
 
   def pdf_uploaded?
@@ -163,8 +217,8 @@ class PdfImport < Import
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # process_pdf (PR #1985).
     provider = Provider::Registry.preferred_llm_provider
-    raise "AI provider not configured" unless provider
-    raise "AI provider does not support PDF processing" unless provider.supports_pdf_processing?
+    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
+    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
 
     response = provider.process_pdf(
       pdf_content: pdf_file_content,
@@ -173,7 +227,7 @@ class PdfImport < Import
 
     unless response.success?
       error_message = response.error&.message || "Unknown PDF processing error"
-      raise error_message
+      raise Provider::Error, error_message
     end
 
     result = response.data
@@ -191,7 +245,7 @@ class PdfImport < Import
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # extract_bank_statement (PR #1985).
     provider = Provider::Registry.preferred_llm_provider
-    raise "AI provider not configured" unless provider
+    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
 
     response = provider.extract_bank_statement(
       pdf_content: pdf_file_content,
@@ -200,11 +254,16 @@ class PdfImport < Import
 
     unless response.success?
       error_message = response.error&.message || "Unknown extraction error"
-      raise error_message
+      raise Provider::Error, error_message
     end
 
-    update!(extracted_data: response.data)
-    response.data
+    # BankStatementExtractor returns symbol keys, but every reader here (and in
+    # generate_rows_from_extracted_data) digs with strings. jsonb keeps the hash
+    # exactly as assigned until the record is reloaded, so without this the
+    # in-memory read comes back empty and the import produces no rows at all.
+    data = response.data.deep_stringify_keys
+    update!(extracted_data: data)
+    data
   end
 
   def bank_statement?
@@ -225,7 +284,12 @@ class PdfImport < Import
 
   def generate_rows_from_extracted_data
     transaction do
-      rows.destroy_all
+      # insert_all! below bypasses ActiveRecord, so the `rows` association is
+      # never populated with what it wrote. Reload before destroying, or a second
+      # call on the same in-memory record (assign_account! regenerating after
+      # ProcessPdfJob already generated) clears a stale empty collection, deletes
+      # nothing, and collides on (import_id, source_row_number).
+      rows.reload.destroy_all
 
       unless has_extracted_transactions?
         update_column(:rows_count, 0)
@@ -233,10 +297,9 @@ class PdfImport < Import
       end
 
       currency = account&.currency || family.currency
-
-      mapped_rows = extracted_transactions.map.with_index(1) do |txn, index|
-        {
-          import_id: id,
+      candidates = extracted_transactions.map.with_index(1) do |txn, index|
+        Import::Row.new(
+          import: self,
           source_row_number: index,
           date: format_date_for_import(txn["date"]),
           amount: txn["amount"].to_s,
@@ -244,12 +307,81 @@ class PdfImport < Import
           category: txn["category"].to_s,
           notes: txn["notes"].to_s,
           currency: currency
+        )
+      end
+
+      unmatched, matched_entries = partition_already_recorded(candidates)
+
+      reconcile_entries!(matched_entries)
+
+      mapped_rows = unmatched.map.with_index(1) do |row, index|
+        {
+          import_id: id,
+          source_row_number: index,
+          date: row.date,
+          amount: row.amount,
+          name: row.name,
+          category: row.category,
+          notes: row.notes,
+          currency: row.currency
         }
       end
 
       Import::Row.insert_all!(mapped_rows) if mapped_rows.any?
+      # Drop the now-stale association cache so later reads (sync_mappings, the
+      # view) see what was actually written.
+      rows.reset
       update_column(:rows_count, mapped_rows.size)
     end
+  end
+
+  # Transactions this statement reconciled against records that already existed.
+  # Derived from the statement link rather than stored, so it cannot go stale.
+  def reconciled_entries
+    return Entry.none if account_statement.blank?
+
+    Entry.reconciled_by(account_statement)
+  end
+
+  # The half of reconciled_entries this import did not create -- transactions the
+  # account already held when the statement arrived. Everything this import
+  # creates is born reconciled too, so the two have to be told apart before
+  # either count means anything.
+  def already_recorded_entries
+    reconciled_entries.where.not(id: entries.select(:id))
+  end
+
+  # The next three are memoized because the summary dialog and the review screen
+  # each read them more than once, and every read is its own COUNT -- rendering
+  # the dialog issued roughly fifteen queries for a static summary. They report
+  # a finished outcome for display, so a value cached for the life of the
+  # request is what callers want; anything re-judging the import recomputes from
+  # the entries directly. (`||=` is safe here: 0 is truthy in Ruby.)
+  def already_recorded_count
+    @already_recorded_count ||= already_recorded_entries.count
+  end
+
+  def imported_count
+    @imported_count ||= entries.count
+  end
+
+  # Rows still on offer. import! creates an entry per row and leaves the rows in
+  # place as the record of what was published, so past that point rows_count is
+  # a history, not a queue. Memoized mostly for data_committed?, which is two
+  # more EXISTS queries every time it is asked.
+  def awaiting_review_count
+    @awaiting_review_count ||= data_committed? ? 0 : rows_count
+  end
+
+  # No query: extracted_data is already in memory.
+  def extracted_count
+    extracted_transactions.size
+  end
+
+  # Whether the statement described transactions the account already had. The
+  # difference between "nothing to import" and "nothing was found".
+  def reconciled_anything?
+    already_recorded_count.positive?
   end
 
   def send_next_steps_email(user)
@@ -322,6 +454,131 @@ class PdfImport < Import
   end
 
   private
+
+    # A statement's posting date routinely differs by a day or two from the date
+    # a provider recorded for the same transaction, so matching allows a small
+    # window rather than demanding an exact date.
+    RECONCILIATION_DATE_WINDOW = 3
+
+    # Splits candidate rows into those that are genuinely new and the existing
+    # entries the rest already correspond to. Matching is per-account, so with no
+    # account assigned yet every row is treated as new and judged again once the
+    # user picks one (see assign_account!).
+    def partition_already_recorded(candidates)
+      return [ candidates, [] ] if account.blank?
+
+      adapter = Account::ProviderImportAdapter.new(account)
+      claimed = []
+      unmatched = []
+      matched = []
+
+      candidates.each do |row|
+        if (existing = already_recorded_entry(adapter, row, claimed))
+          claimed << existing.id
+          matched << existing
+        else
+          unmatched << row
+        end
+      end
+
+      [ unmatched, matched ]
+    end
+
+    # Name is deliberately not part of the match: statement descriptions and
+    # provider names for the same transaction rarely agree, and the adapter makes
+    # the same choice for provider sync.
+    def already_recorded_entry(adapter, row, claimed)
+      adapter.find_duplicate_transaction(
+        date: row.date_iso,
+        amount: row.signed_amount,
+        currency: row.currency,
+        exclude_entry_ids: claimed,
+        date_window: RECONCILIATION_DATE_WINDOW,
+        include_provider_entries: true
+      )
+    rescue ArgumentError, TypeError => e # Date::Error subclasses ArgumentError
+      # A row whose date or amount will not parse cannot be judged. Offer it for
+      # import rather than dropping it silently -- the review step surfaces it.
+      DebugLogEntry.capture(
+        category: "import",
+        level: "warn",
+        message: "PdfImport: could not evaluate statement row for reconciliation (#{e.class})",
+        source: "pdf_import",
+        family: family,
+        account: account,
+        metadata: {
+          import_id: id,
+          account_statement_id: account_statement_id,
+          source_row_number: row.source_row_number,
+          raw_date: row.date,
+          raw_amount: row.amount,
+          error_class: e.class.name
+        }
+      )
+      nil
+    end
+
+    def reconcile_entries!(entries, at: Time.current)
+      return if entries.blank?
+
+      Entry.where(id: entries.map(&:id)).update_all(
+        reconciled_at: at,
+        reconciled_by_statement_id: account_statement&.id,
+        updated_at: at
+      )
+    end
+
+    # Regeneration can empty the row set (everything now matches) or refill it
+    # (the new account matches nothing). Status has to follow, using the same
+    # rule ProcessPdfJob applies after initial processing -- otherwise a
+    # fully-matched import sits at pending with no rows, which renders as the
+    # processing screen forever and cannot be restarted.
+    def refresh_status_after_regeneration!
+      return if data_committed?
+      return unless pending? || complete?
+
+      target = statement_with_transactions? && rows_count > 0 ? "pending" : "complete"
+      update!(status: target) unless status.to_s == target
+    end
+
+    # Scoped to the account being moved away from. A statement is evidence for
+    # exactly one account at a time, but it can back more than one import, so an
+    # unscoped release would clear reconciliations another account still relies
+    # on. Nothing is reconciled while no account is assigned, so a blank scope
+    # has nothing to release.
+    def release_reconciliations!(account_scope_id)
+      return if account_statement.blank? || account_scope_id.blank?
+
+      Entry.reconciled_by(account_statement).where(account_id: account_scope_id).update_all(
+        reconciled_at: nil,
+        reconciled_by_statement_id: nil,
+        updated_at: Time.current
+      )
+    end
+
+    # Reverting a statement import unwinds its evidence as well as its rows. The
+    # entries it created are already destroyed by the time this runs; the ones it
+    # only matched keep marks this statement no longer backs. Releasing and then
+    # regenerating re-judges every statement line against what the account
+    # actually holds now, so the review screen offers exactly what is missing.
+    def revert_derived_state!
+      release_reconciliations!(account_id)
+      return unless has_extracted_transactions?
+
+      generate_rows_from_extracted_data
+      # A line that matched at publish time carried no row and so no mapping.
+      # If it no longer matches it is a row again, and needs one.
+      sync_mappings
+    end
+
+    # A statement whose every line still matches something -- a provider-synced
+    # account, say -- reverts to zero rows. Returning that to pending renders the
+    # processing screen with no way out, so an import with nothing left to offer
+    # finishes as complete, the same way refresh_status_after_regeneration! ends
+    # a fully reconciled import.
+    def status_after_revert
+      statement_with_transactions? && rows_count > 0 ? :pending : :complete
+    end
 
     def format_date_for_import(date_str)
       return "" if date_str.blank?
