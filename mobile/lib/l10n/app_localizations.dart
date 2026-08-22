@@ -214,6 +214,12 @@ abstract class AppLocalizations {
   /// **'Sign in with Google'**
   String get loginSignInWithGoogle;
 
+  /// Explanation shown when SSO is disabled because a custom CA is configured only inside the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser sign-in cannot use an app-managed CA certificate. Install the CA on your device and remove it from the app to use Google sign-in.'**
+  String get loginSsoCustomCertificateUnsupported;
+
   /// Label for the MFA code input field.
   ///
   /// In en, this message translates to:
@@ -1005,6 +1011,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You can change this later in the settings.'**
   String get backendConfigChangeHint;
+
+  /// Label for the custom CA certificate section.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom CA certificate'**
+  String get backendConfigCertificateLabel;
+
+  /// Subtitle when no custom CA certificate is selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional certificate for a private HTTPS server'**
+  String get backendConfigCertificateSubtitle;
+
+  /// Button label for selecting a CA certificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose certificate'**
+  String get backendConfigCertificateChoose;
+
+  /// Tooltip for removing the selected CA certificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove certificate'**
+  String get backendConfigCertificateRemove;
+
+  /// Help text for custom CA certificate configuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the root CA certificate used by your server (for example Caddy\'s root.crt). PEM and DER certificates are supported. Hostname verification remains enabled.'**
+  String get backendConfigCertificateHelp;
+
+  /// Error shown when a selected certificate cannot be parsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a file containing one valid X.509 certificate (maximum 64 KB).'**
+  String get backendConfigCertificateInvalid;
+
+  /// SHA-256 fingerprint of the selected custom CA certificate.
+  ///
+  /// In en, this message translates to:
+  /// **'SHA-256: {fingerprint}'**
+  String backendConfigCertificateFingerprint(String fingerprint);
 
   /// App bar title for the recent transactions screen.
   ///
@@ -1863,6 +1911,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'URL must start with http:// or https://'**
   String get backendConfigUrlScheme;
+
+  /// Validation error when a custom CA is configured for a non-HTTPS backend.
+  ///
+  /// In en, this message translates to:
+  /// **'A custom CA certificate requires an https:// backend URL'**
+  String get backendConfigCertificateRequiresHttps;
 
   /// Validation error when the backend URL is malformed.
   ///
