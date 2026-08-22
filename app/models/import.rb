@@ -356,7 +356,7 @@ class Import < ApplicationRecord
       tags: Import::TagMapping.for_import(self).creational.count
     }
 
-    mappings.merge(
+    mappings.merge!(
       accounts: Import::AccountMapping.for_import(self).creational.count,
     ) if account.nil?
 

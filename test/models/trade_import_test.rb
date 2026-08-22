@@ -42,6 +42,34 @@ class TradeImportTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1500"), row.signed_amount
   end
 
+  test "dry_run includes count of accounts to be created when no account is preselected" do
+    csv = <<~CSV
+      date,ticker,qty,price,account
+      2024-05-15,AAPL,10,150.00,NewAccount
+    CSV
+
+    @import.update!(
+      raw_file_str: csv,
+      date_col_label: "date",
+      ticker_col_label: "ticker",
+      qty_col_label: "qty",
+      price_col_label: "price",
+      account_col_label: "account",
+      date_format: "%Y-%m-%d",
+      signage_convention: "inflows_positive"
+    )
+
+    @import.generate_rows_from_csv
+    @import.mappings.create! key: "NewAccount", create_when_empty: true, type: "Import::AccountMapping"
+    @import.reload
+
+    assert_nil @import.account
+
+    dry_run = @import.dry_run
+    assert_equal 1, dry_run[:transactions]
+    assert_equal 1, dry_run[:accounts]
+  end
+
   test "imports trades and accounts" do
     aapl_resolver = mock
     googl_resolver = mock
