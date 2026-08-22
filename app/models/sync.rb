@@ -264,10 +264,6 @@ class Sync < ApplicationRecord
     Sync.transaction do
       lock!
 
-      # Eagerly load children once so that all_children_finalized? and
-      # has_failed_children? can filter in-memory without additional DB queries.
-      children.load
-
       # If this is the "parent" and there are still children running, don't finalize.
       return unless all_children_finalized?
 
@@ -332,11 +328,11 @@ class Sync < ApplicationRecord
     end
 
     def has_failed_children?
-      children.any?(&:failed?)
+      children.where(status: 'failed').exists?
     end
 
     def all_children_finalized?
-      children.none? { |child| child.pending? || child.syncing? }
+      !children.where(status: ['pending', 'syncing']).exists?
     end
 
     def perform_post_sync
