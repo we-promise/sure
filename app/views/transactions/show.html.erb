@@ -83,13 +83,14 @@
                     disable_currency: @entry.linked? || split_locked || edit_locked %>
             </div>
             <%= f.fields_for :entryable do |ef| %>
-              <%= ef.collection_select :category_id,
-                      Current.family.categories.alphabetically,
-                    :id, :name,
-                    { label: t(".category_label"),
-                      class: "text-subdued", include_blank: t(".uncategorized"),
-                      variant: :badge, searchable: true, disabled: @entry.split_child? || annotate_locked },
-                    "data-auto-submit-form-target": "auto" %>
+              <%= render DS::CategorySelect.new(
+                    form: ef,
+                    categories: Current.family.categories.alphabetically,
+                    selected_id: ef.object.category_id,
+                    disabled: @entry.split_child? || annotate_locked,
+                    auto_submit: true,
+                    blank_label: t(".uncategorized")
+                  ) %>
             <% end %>
           <% end %>
         <% end %>
