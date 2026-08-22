@@ -351,23 +351,31 @@ class PdfImport < Import
     reconciled_entries.where.not(id: entries.select(:id))
   end
 
+  # The next three are memoized because the summary dialog and the review screen
+  # each read them more than once, and every read is its own COUNT -- rendering
+  # the dialog issued roughly fifteen queries for a static summary. They report
+  # a finished outcome for display, so a value cached for the life of the
+  # request is what callers want; anything re-judging the import recomputes from
+  # the entries directly. (`||=` is safe here: 0 is truthy in Ruby.)
   def already_recorded_count
-    already_recorded_entries.count
+    @already_recorded_count ||= already_recorded_entries.count
   end
 
   def imported_count
-    entries.count
-  end
-
-  def extracted_count
-    extracted_transactions.size
+    @imported_count ||= entries.count
   end
 
   # Rows still on offer. import! creates an entry per row and leaves the rows in
   # place as the record of what was published, so past that point rows_count is
-  # a history, not a queue.
+  # a history, not a queue. Memoized mostly for data_committed?, which is two
+  # more EXISTS queries every time it is asked.
   def awaiting_review_count
-    data_committed? ? 0 : rows_count
+    @awaiting_review_count ||= data_committed? ? 0 : rows_count
+  end
+
+  # No query: extracted_data is already in memory.
+  def extracted_count
+    extracted_transactions.size
   end
 
   # Whether the statement described transactions the account already had. The
