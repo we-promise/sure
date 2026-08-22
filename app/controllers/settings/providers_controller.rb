@@ -295,7 +295,7 @@ class Settings::ProvidersController < ApplicationController
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
       @snaptrade_items = Current.family.snaptrade_items.ordered
       @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
-      @trading212_items = Current.family.trading212_items.ordered.select(:id)
+      @trading212_items = Current.family.trading212_items.ordered
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered

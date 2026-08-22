@@ -11,6 +11,7 @@ class Trading212Item < ApplicationRecord
   end
 
   belongs_to :family
+  has_one_attached :logo, dependent: :purge_later
   has_many :trading212_accounts, dependent: :destroy
 
   validates :api_key, presence: true, on: :create
