@@ -5,8 +5,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
-  before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
+  before_action :ensure_write_scope, only: [ :create, :update, :destroy, :split, :unsplit ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
+  before_action :set_writable_transaction, only: [ :split, :unsplit ]
 
   def index
     family = current_resource_owner.family
@@ -25,7 +26,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     # Include necessary associations for efficient queries
     transactions_query = transactions_query.includes(
-      { entry: :account },
+      { entry: [ :account, { child_entries: { entryable: :category } }, { parent_entry: :entryable } ] },
       :category, :merchant, :tags,
       transfer_as_outflow: { inflow_transaction: { entry: :account } },
       transfer_as_inflow: { outflow_transaction: { entry: :account } }
@@ -198,15 +199,108 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     }, status: :internal_server_error
   end
 
+  # Split a transaction into multiple categorized parts.
+  # If the transaction is already split, the existing split is replaced.
+  # If a split child ID is given, the request resolves to its parent.
+  def split
+    resolve_to_parent!
+
+    Entry.transaction do
+      @entry.lock!
+
+      unless @entry.transaction.splittable? || @entry.split_parent?
+        render json: {
+          error: "validation_failed",
+          message: "Transaction cannot be split (transfers, pending, excluded, and already-split transactions are not splittable)"
+        }, status: :unprocessable_entity
+        return
+      end
+
+      splits = parsed_splits
+      if splits.blank?
+        render json: {
+          error: "validation_failed",
+          message: "At least one split part is required",
+          errors: [ "At least one split part is required" ]
+        }, status: :unprocessable_entity
+        return
+      end
+
+      @entry.unsplit! if @entry.split_parent?
+      @entry.split!(splits)
+    end
+    @entry.sync_account_later
+
+    @transaction = @entry.transaction
+    render :show
+
+  rescue ActionController::ParameterMissing
+    render json: {
+      error: "bad_request",
+      message: "Required parameters are missing or invalid"
+    }, status: :bad_request
+  rescue ActiveRecord::RecordInvalid => e
+    render json: {
+      error: "validation_failed",
+      message: e.message
+    }, status: :unprocessable_entity
+  rescue => e
+    Rails.logger.error "TransactionsController#split error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      error: "internal_server_error",
+      message: "An unexpected error occurred"
+    }, status: :internal_server_error
+  end
+
+  # Remove a split and restore the parent transaction.
+  # If a split child ID is given, the request resolves to its parent.
+  def unsplit
+    resolve_to_parent!
+
+    Entry.transaction do
+      @entry.lock!
+
+      unless @entry.split_parent?
+        render json: {
+          error: "validation_failed",
+          message: "Transaction is not split"
+        }, status: :unprocessable_entity
+        return
+      end
+
+      @entry.unsplit!
+    end
+    @entry.sync_account_later
+
+    @transaction = @entry.transaction
+    render :show
+
+  rescue => e
+    Rails.logger.error "TransactionsController#unsplit error: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      error: "internal_server_error",
+      message: "An unexpected error occurred"
+    }, status: :internal_server_error
+  end
+
   private
 
-    def set_transaction
+    def set_writable_transaction
+      set_transaction(writable: true)
+    end
+
+    def set_transaction(writable: false)
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
       family = current_resource_owner.family
+      account_scope = writable ? Account.writable_by(current_resource_owner) : Account.accessible_by(current_resource_owner)
       @transaction = family.transactions
         .joins(entry: :account)
-        .merge(Account.accessible_by(current_resource_owner))
+        .merge(account_scope)
         .find(params[:id])
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
@@ -372,6 +466,43 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       params.dig(:transaction, :amount).present? ||
         params.dig(:transaction, :date).present? ||
         params.dig(:transaction, :nature).present?
+    end
+
+    def resolve_to_parent!
+      @entry = @entry.parent_entry if @entry.split_child?
+    end
+
+    def parsed_splits
+      raw_splits = split_params[:splits]
+      raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
+
+      raw_splits.map do |s|
+        unless s.is_a?(ActionController::Parameters) || s.is_a?(Hash)
+          raise ActionController::ParameterMissing, :splits
+        end
+
+        amount = s[:amount]
+        unless amount.is_a?(Numeric) || (amount.is_a?(String) && amount.match?(/\A-?\d+(\.\d+)?\z/))
+          raise ActionController::ParameterMissing, :amount
+        end
+
+        {
+          name: s[:name],
+          amount: amount.to_d,
+          category_id: s[:category_id].presence,
+          excluded: s[:excluded]
+        }
+      end
+    end
+
+    def split_params
+      split = params.require(:split)
+      raise ActionController::ParameterMissing, :split unless split.is_a?(ActionController::Parameters)
+
+      split = split.permit(splits: %i[name amount category_id excluded])
+      raise ActionController::ParameterMissing, :splits unless split.key?(:splits)
+
+      split
     end
 
     def idempotency_key_requested?

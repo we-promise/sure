@@ -54,6 +54,18 @@ RSpec.describe 'API V1 Merchants', type: :request do
       consumes 'multipart/form-data'
       produces 'application/json'
 
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        required: %w[file],
+        properties: {
+          file: {
+            type: :string,
+            format: :binary,
+            description: 'CSV file with columns: name* (required), color, website_url'
+          }
+        }
+      }, description: 'CSV file with columns: name* (required), color, website_url'
+
       parameter name: :file, in: :formData, type: :file, required: true,
                 description: 'CSV file with columns: name* (required), color, website_url'
 
@@ -75,6 +87,7 @@ RSpec.describe 'API V1 Merchants', type: :request do
       response '401', 'unauthorized' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:'X-Api-Key') { nil }
+        let(:file) { nil }
         run_test!
       end
 
