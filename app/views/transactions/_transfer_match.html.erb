@@ -2,9 +2,12 @@
 
 <div id="<%= dom_id(transaction, "transfer_match") %>" class="flex items-center gap-1">
   <% if transaction.transfer.confirmed? %>
-    <span title="<%= transaction.transfer.payment? ? t("transactions.transfer_match.payment_confirmed") : t("transactions.transfer_match.transfer_confirmed") %>">
+    <%= link_to transfer_path(transaction.transfer),
+          title: transaction.transfer.payment? ? t("transactions.transfer_match.payment_confirmed") : t("transactions.transfer_match.transfer_confirmed"),
+          data: { turbo_frame: "drawer", turbo_prefetch: false },
+          class: "text-secondary hover:text-primary" do %>
       <%= icon "link-2", size: "sm", class: "text-secondary" %>
-    </span>
+    <% end %>
   <% elsif transaction.transfer.pending? %>
     <span class="hidden lg:inline">
       <%= render DS::Pill.new(
