@@ -5,7 +5,7 @@
     <%= styled_form_with url: transactions_bulk_update_path, scope: "bulk_update", class: "h-full flex flex-col justify-between gap-4", data: { turbo_frame: "_top" } do |form| %>
       <div class="space-y-4">
         <%= render DS::Disclosure.new(title: t(".overview"), open: true) do %>
-          <%= form.date_field :date, label: t(".date_label"), max: Date.current %>
+          <%= form.date_field :date, label: t(".date_label") %>
         <% end %>
 
         <%= render DS::Disclosure.new(title: t(".transactions_section"), open: true) do %>

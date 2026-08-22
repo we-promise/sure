@@ -135,7 +135,19 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     end
 
     def calc_end_date
-      [ account.entries.order(:date).last&.date, account.holdings.order(:date).last&.date ].compact.max || Date.current
+      # Materialize balances only up to today. Future-dated entries are
+      # supported (see #1080) but they must not push the displayed
+      # balance into the future — Account#balance reads from the latest
+      # row in `balances`, and that row needs to mean "today's actual
+      # state", not "what the balance will be when scheduled entries
+      # post". The projection chart layer is free to extrapolate further
+      # from the future entries themselves.
+      last_entry_or_holding = [
+        account.entries.order(:date).last&.date,
+        account.holdings.order(:date).last&.date
+      ].compact.max
+
+      [ last_entry_or_holding, Date.current ].compact.min || Date.current
     end
 
     # Negative entries amount on an "asset" account means, "account value has increased"
