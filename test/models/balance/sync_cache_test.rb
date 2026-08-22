@@ -191,16 +191,46 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     security = Security.create!(ticker: "TST", name: "Test")
     @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
 
-    DebugLogEntry.expects(:capture).with(
+    DebugLogEntry.expects(:capture).once.with(
       has_entries(
         category: "exchange_rate_conversion",
         account: @account,
         family: @family,
-        metadata: has_entries(from_currency: "EUR", to_currency: "USD")
+        metadata: has_entries(
+          from_currency: "EUR",
+          to_currency: "USD",
+          holdings_affected: 1,
+          first_date: Date.current,
+          last_date: Date.current
+        )
       )
     )
 
     assert_nil Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
+  test "aggregates FX conversion failures by currency pair per sync" do
+    s1 = Security.create!(ticker: "S1", name: "Security 1")
+    s2 = Security.create!(ticker: "S2", name: "Security 2")
+    yesterday = 1.day.ago.to_date
+
+    @account.holdings.create!(security: s1, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+    @account.holdings.create!(security: s2, date: Date.current, qty: 1, price: 50, amount: 50, currency: "EUR")
+    @account.holdings.create!(security: s1, date: yesterday, qty: 1, price: 40, amount: 40, currency: "EUR")
+
+    DebugLogEntry.expects(:capture).once.with(
+      has_entries(
+        metadata: has_entries(
+          from_currency: "EUR",
+          to_currency: "USD",
+          holdings_affected: 3,
+          first_date: yesterday,
+          last_date: Date.current
+        )
+      )
+    )
+
+    Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
   test "zero-amount foreign holdings do not mark the date unknown" do

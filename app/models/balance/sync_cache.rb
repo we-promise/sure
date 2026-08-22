@@ -36,8 +36,9 @@ class Balance::SyncCache
     def holdings_value_by_date
       @holdings_value_by_date ||= begin
         @unknown_holdings_value_dates = {}
+        unknown_fx = Hash.new { |pairs, key| pairs[key] = { count: 0, first_date: nil, last_date: nil } }
         rows = account.holdings.pluck(:id, :date, :amount, :currency)
-        rows.group_by { |(_id, date, _amount, _currency)| date }.each_with_object(Hash.new(0)) do |(date, day_rows), totals|
+        totals = rows.group_by { |(_id, date, _amount, _currency)| date }.each_with_object(Hash.new(0)) do |(date, day_rows), day_totals|
           day_rows = day_rows.reject { |(_id, _date, amount, _currency)| amount.zero? }
 
           foreign_currencies = day_rows
@@ -52,36 +53,53 @@ class Balance::SyncCache
             fallback: nil
           )
 
-          day_rows.each do |id, _date, amount, currency|
+          day_rows.each do |_id, _date, amount, currency|
             if currency == account.currency
-              totals[date] += amount
+              day_totals[date] += amount
               next
             end
 
             rate = rates[currency]
             if rate.nil?
               @unknown_holdings_value_dates[date] = true
-              DebugLogEntry.capture(
-                category: "exchange_rate_conversion",
-                level: "warn",
-                message: "Cannot convert holding into account currency",
-                source: self.class.name,
-                family: account.family,
-                account: account,
-                account_provider: account_provider,
-                metadata: {
-                  holding_id: id,
-                  date: date,
-                  from_currency: currency,
-                  to_currency: account.currency
-                }
-              )
+              record_unknown_fx_conversion(unknown_fx, from: currency, to: account.currency, date: date)
               next
             end
 
-            totals[date] += amount * rate
+            day_totals[date] += amount * rate
           end
         end
+
+        log_unknown_fx_conversions(unknown_fx)
+        totals
+      end
+    end
+
+    def record_unknown_fx_conversion(unknown_fx, from:, to:, date:)
+      stats = unknown_fx[[ from, to ]]
+      stats[:count] += 1
+      stats[:first_date] = stats[:first_date] ? [ stats[:first_date], date ].min : date
+      stats[:last_date] = stats[:last_date] ? [ stats[:last_date], date ].max : date
+    end
+
+    def log_unknown_fx_conversions(unknown_fx)
+      unknown_fx.each do |(from_currency, to_currency), stats|
+        DebugLogEntry.capture(
+          category: "exchange_rate_conversion",
+          level: "warn",
+          message: "Cannot convert holding into account currency",
+          source: self.class.name,
+          family: account.family,
+          account: account,
+          account_provider: account_provider,
+          metadata: {
+            from_currency: from_currency,
+            to_currency: to_currency,
+            holdings_affected: stats[:count],
+            first_date: stats[:first_date],
+            last_date: stats[:last_date]
+          }
+        )
       end
     end
 
