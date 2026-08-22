@@ -29,19 +29,20 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
       "retry #{retry_count}/#{MAX_RETRIES}, range: #{start_date} to #{end_date}"
     )
 
-    # Get provider (nil when the item is not authorized)
+    # Get provider and credentials
     snaptrade_item = snaptrade_account.snaptrade_item
     provider = snaptrade_item.snaptrade_provider
+    credentials = snaptrade_item.snaptrade_credentials
 
-    if provider.nil?
-      Rails.logger.error("SnaptradeActivitiesFetchJob - Item not authorized for account #{snaptrade_account.id}")
+    unless provider && credentials
+      Rails.logger.error("SnaptradeActivitiesFetchJob - No provider/credentials for account #{snaptrade_account.id}")
       snaptrade_account.update!(activities_fetch_pending: false)
       snaptrade_account.snaptrade_item.broadcast_sync_complete
       return
     end
 
     # Fetch activities from API
-    activities_data = fetch_activities(snaptrade_account, provider, start_date, end_date)
+    activities_data = fetch_activities(snaptrade_account, provider, credentials, start_date, end_date)
 
     if activities_data.any?
       Rails.logger.info(
@@ -94,22 +95,84 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
 
   private
 
-    def fetch_activities(snaptrade_account, provider, start_date, end_date)
-      response = provider.get_account_activities(
-        account_id: snaptrade_account.snaptrade_account_id,
-        start_date: start_date,
-        end_date: end_date
-      )
+    # SnapTrade caps a page at PAGE_LIMIT and reports the full count in
+    # pagination.total, so reading only the first response silently drops
+    # everything past it on a busy account.
+    PAGE_LIMIT = 1000
+    MAX_PAGES = 50
 
-      activities = if response.is_a?(Hash)
-        response["data"] || []
+    def fetch_activities(snaptrade_account, provider, credentials, start_date, end_date)
+      activities = []
+      offset = 0
+      complete = false
+
+      MAX_PAGES.times do
+        response = provider.get_account_activities(
+          user_id: credentials[:user_id],
+          user_secret: credentials[:user_secret],
+          account_id: snaptrade_account.snaptrade_account_id,
+          start_date: start_date,
+          end_date: end_date,
+          offset: offset,
+          limit: PAGE_LIMIT
+        )
+
+        page = extract_activities_page(response)
+        activities.concat(page)
+
+        total = extract_activities_total(response)
+        offset += page.size
+
+        if page.empty? || (total.nil? ? page.size < PAGE_LIMIT : offset >= total)
+          complete = true
+          break
+        end
+      end
+
+      # Exhausting MAX_PAGES without a completion condition means the account has
+      # more activities than the cap allows, and nothing continues the fetch. The
+      # partial result would otherwise look like the whole history, so record it
+      # where support can filter by family and provider rather than only in the
+      # application log.
+      unless complete
+        DebugLogEntry.capture(
+          category: "sync",
+          level: "warn",
+          message: "SnaptradeActivitiesFetchJob - hit the #{MAX_PAGES}-page cap for account " \
+                   "#{snaptrade_account.id}; activities beyond #{activities.size} were not fetched",
+          source: "snaptrade",
+          family: snaptrade_account.snaptrade_item&.family,
+          provider_key: "snaptrade",
+          metadata: {
+            snaptrade_account_id: snaptrade_account.id,
+            fetched: activities.size,
+            page_limit: PAGE_LIMIT,
+            max_pages: MAX_PAGES,
+            start_date: start_date.to_s,
+            end_date: end_date.to_s
+          }
+        )
+      end
+
+      # Convert SDK objects to hashes
+      activities.map { |a| sdk_object_to_hash(a) }
+    end
+
+    def extract_activities_page(response)
+      if response.respond_to?(:data)
+        response.data || []
       elsif response.is_a?(Array)
         response
       else
         []
       end
+    end
 
-      activities.map { |a| sdk_object_to_hash(a) }
+    def extract_activities_total(response)
+      pagination = response.respond_to?(:pagination) ? response.pagination : nil
+      return nil unless pagination.respond_to?(:total)
+
+      pagination.total
     end
 
     # Merge activities, deduplicating by ID

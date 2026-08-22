@@ -2,6 +2,10 @@
 de:
   snaptrade_items:
     default_name: "SnapTrade-Verbindung"
+    create:
+      success: "SnapTrade wurde erfolgreich eingerichtet."
+    update:
+      success: "SnapTrade-Konfiguration wurde erfolgreich aktualisiert."
     destroy:
       success: "SnapTrade-Verbindung wurde zur Löschung vorgemerkt."
     connect:
@@ -46,6 +50,9 @@ de:
       failed: "Löschen der Verbindung fehlgeschlagen: %{message}"
       missing_authorization_id: "Autorisierungs-ID fehlt"
       api_deletion_failed: Verbindung konnte bei SnapTrade nicht gelöscht werden – Zugangsdaten fehlen. Die Verbindung kann in deinem SnapTrade-Konto noch existieren.
+    delete_orphaned_user:
+      success: "Verwaiste Registrierung wurde erfolgreich gelöscht."
+      failed: "Löschen der verwaisten Registrierung fehlgeschlagen."
     setup_accounts:
       title: "SnapTrade-Konten einrichten"
       header: "SnapTrade-Konten einrichten"
@@ -123,7 +130,20 @@ de:
       name: "SnapTrade"
       connection_description: Verbinde deinen Broker über SnapTrade (25+ Broker unterstützt)
       description: "SnapTrade verbindet mit 25+ großen Brokern (Fidelity, Vanguard, Schwab, Robinhood usw.) und liefert vollständige Handelshistorie mit Aktivitätslabels und Einstandskosten."
+      setup_title: "Einrichtungsanleitung:"
+      step_1_html: "Konto erstellen unter <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
+      step_2: "Client ID und Consumer Key aus dem Dashboard kopieren"
+      step_3: "Zugangsdaten unten eintragen und auf Speichern klicken"
+      step_4: "Auf die Konten-Seite gehen und „Weiteren Broker verbinden“ nutzen, um deine Anlagekonten zu verknüpfen"
       free_tier_warning: "Free Tier enthält 5 Broker-Verbindungen. Weitere erfordern einen kostenpflichtigen SnapTrade-Plan."
+      client_id_label: "Client ID"
+      client_id_placeholder: "SnapTrade Client ID eingeben"
+      client_id_update_placeholder: "Neue Client ID zum Aktualisieren eingeben"
+      consumer_key_label: "Consumer Key"
+      consumer_key_placeholder: "SnapTrade Consumer Key eingeben"
+      consumer_key_update_placeholder: "Neuen Consumer Key zum Aktualisieren eingeben"
+      save_button: "Konfiguration speichern"
+      update_button: "Konfiguration aktualisieren"
       status_connected:
         one: "%{count} Konto von SnapTrade"
         other: "%{count} Konten von SnapTrade"
@@ -148,15 +168,15 @@ de:
       delete_connection_title: "Broker-Verbindung löschen?"
       delete_connection_body: Die Verbindung zu %{brokerage} wird dauerhaft von SnapTrade entfernt. Alle Konten dieses Brokers werden getrennt. Für einen neuen Abgleich musst du dich erneut verbinden.
       delete_connection_confirm: "Verbindung löschen"
-      manage_at_snaptrade: Verbindungen bei SnapTrade verwalten
-      oauth_connect_button: Mit SnapTrade verbinden
-      oauth_reauthorize_button: Erneut freigeben
-      oauth_setup_step_1_html: Registrier eine OAuth-App unter <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
-      oauth_setup_step_2_html: Trag die Callback-URL dieser App (<code>%{callback_url}</code>) als zulässige Redirect-URI ein
-      oauth_setup_step_3: Setz SNAPTRADE_OAUTH_CLIENT_ID und SNAPTRADE_OAUTH_CLIENT_SECRET in deiner Umgebung und starte neu
-      oauth_status_authorized: Bei SnapTrade freigegeben.
-      oauth_status_ready: Gib Sure den Lesezugriff auf deine SnapTrade-Kontodaten frei.
-      oauth_title: SnapTrade OAuth
+      orphaned_users_title:
+        one: "%{count} verwaiste Registrierung"
+        other: "%{count} verwaiste Registrierungen"
+      orphaned_users_description: "Das sind frühere SnapTrade-Registrierungen, die deine Verbindungsplätze belegen. Lösch sie, um Plätze freizugeben."
+      orphaned_user: "Verwaiste Registrierung"
+      delete_orphaned_user: "Löschen"
+      delete_orphaned_user_title: "Verwaiste Registrierung löschen?"
+      delete_orphaned_user_body: "Diese verwaiste SnapTrade-Registrierung und alle zugehörigen Broker-Verbindungen werden dauerhaft gelöscht, Verbindungsplätze werden frei."
+      delete_orphaned_user_confirm: "Registrierung löschen"
 
   snaptrade_item:
     sync_status:

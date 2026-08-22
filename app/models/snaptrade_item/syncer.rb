@@ -10,9 +10,9 @@ class SnaptradeItem::Syncer
   def perform_sync(sync)
     Rails.logger.info "SnaptradeItem::Syncer - Starting sync for item #{snaptrade_item.id}"
 
-    # Verify the item is authorized
-    unless snaptrade_item.oauth_configured?
-      raise StandardError, "SnapTrade is not authorized"
+    # Verify user is registered
+    unless snaptrade_item.user_registered?
+      raise StandardError, "User not registered with SnapTrade"
     end
 
     # Phase 1: Import data from SnapTrade API
@@ -49,9 +49,15 @@ class SnaptradeItem::Syncer
     collect_health_stats(sync, errors: nil)
   rescue Provider::Snaptrade::AuthenticationError => e
     snaptrade_item.update!(status: :requires_update)
+    capture_debug_log(e, category: "auth_error", level: "error")
     collect_health_stats(sync, errors: [ { message: e.message, category: "auth_error" } ])
     raise
+  rescue Provider::Snaptrade::ApiError => e
+    capture_debug_log(e, category: "sync_error", level: "warn", status_code: e.status_code)
+    collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
+    raise
   rescue => e
+    capture_debug_log(e, category: "sync_error", level: "error")
     collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
     raise
   end
@@ -62,6 +68,26 @@ class SnaptradeItem::Syncer
   end
 
   private
+
+    # Provider failures are support-relevant, and Rails.logger alone leaves them
+    # out of /settings/debug where they can be filtered by family and provider.
+    # Captured here rather than in Provider::Snaptrade because the provider is
+    # built from bare credentials and has no family to attach.
+    def capture_debug_log(error, category:, level:, status_code: nil)
+      DebugLogEntry.capture(
+        category: category,
+        level: level,
+        message: "SnaptradeItem::Syncer - sync failed for item #{snaptrade_item.id}: #{error.class} - #{error.message}",
+        source: "snaptrade",
+        family: snaptrade_item.family,
+        provider_key: "snaptrade",
+        metadata: {
+          snaptrade_item_id: snaptrade_item.id,
+          error_class: error.class.name,
+          status_code: status_code
+        }.compact
+      )
+    end
 
     def count_holdings
       snaptrade_item.snaptrade_accounts.sum { |sa| Array(sa.raw_holdings_payload).size }
