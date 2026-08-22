@@ -16,6 +16,11 @@ class Tag < ApplicationRecord
   # Tag name key for i18n
   UNTAGGED_NAME_KEY = "models.tag.untagged"
 
+  # Stable, non-localized filter value for the synthetic "Untagged" option.
+  # Using an opaque sentinel (rather than the translated display name) means a real
+  # tag can never collide with it, regardless of name or locale.
+  UNTAGGED_FILTER_VALUE = "__untagged__"
+
   class << self
     def untagged
       new(name: I18n.t(UNTAGGED_NAME_KEY), color: UNCATEGORIZED_COLOR)
@@ -24,14 +29,6 @@ class Tag < ApplicationRecord
     # Helper to get the localized name for "Untagged"
     def untagged_name
       I18n.t(UNTAGGED_NAME_KEY)
-    end
-
-    # Returns all possible "Untagged" names across all supported locales
-    # Used to detect the untagged filter regardless of URL parameter language
-    def all_untagged_names
-      LanguagesHelper::SUPPORTED_LOCALES.map do |locale|
-        I18n.t(UNTAGGED_NAME_KEY, locale: locale)
-      end.uniq
     end
   end
 

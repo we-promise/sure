@@ -640,7 +640,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "standard"
     )
 
-    results = Transaction::Search.new(@family, filters: { merchants: [ Merchant.no_merchant.name ] }).transactions_scope
+    results = Transaction::Search.new(@family, filters: { merchants: [ Merchant::NO_MERCHANT_FILTER_VALUE ] }).transactions_scope
     result_ids = results.pluck(:id)
 
     assert_includes result_ids, without_merchant.entryable.id
@@ -670,7 +670,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     results = Transaction::Search.new(
       @family,
-      filters: { merchants: [ merchants(:netflix).name, Merchant.no_merchant.name ] }
+      filters: { merchants: [ merchants(:netflix).name, Merchant::NO_MERCHANT_FILTER_VALUE ] }
     ).transactions_scope
     result_ids = results.pluck(:id)
 
@@ -714,7 +714,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "standard"
     )
 
-    results = Transaction::Search.new(@family, filters: { tags: [ Tag.untagged.name ] }).transactions_scope
+    results = Transaction::Search.new(@family, filters: { tags: [ Tag::UNTAGGED_FILTER_VALUE ] }).transactions_scope
     result_ids = results.pluck(:id)
 
     assert_includes result_ids, without_tag.entryable.id
@@ -744,7 +744,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     results = Transaction::Search.new(
       @family,
-      filters: { tags: [ tags(:one).name, Tag.untagged.name ] }
+      filters: { tags: [ tags(:one).name, Tag::UNTAGGED_FILTER_VALUE ] }
     ).transactions_scope
     result_ids = results.pluck(:id)
 
@@ -772,6 +772,86 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     assert_includes result_ids, with_tag.entryable.id
     assert_not_includes result_ids, without_tag.entryable.id
+  end
+
+  test "a real merchant literally named like the localized No merchant label remains selectable" do
+    # Regression test: filter values are opaque sentinels (Merchant::NO_MERCHANT_FILTER_VALUE), not the
+    # translated display name, so a merchant a user happens to name "No merchant" can't be misdetected
+    # as the synthetic filter option.
+    lookalike_merchant = @family.merchants.create!(
+      name: Merchant.no_merchant_name,
+      color: "#123456"
+    )
+
+    lookalike_transaction = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      merchant: lookalike_merchant,
+      kind: "standard"
+    )
+
+    without_merchant = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { merchants: [ lookalike_merchant.name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, lookalike_transaction.entryable.id
+    assert_not_includes result_ids, without_merchant.entryable.id
+  end
+
+  test "a real tag literally named like the localized Untagged label remains selectable" do
+    lookalike_tag = @family.tags.create!(name: Tag.untagged_name)
+
+    lookalike_transaction = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      tags: [ lookalike_tag ],
+      kind: "standard"
+    )
+
+    without_tag = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { tags: [ lookalike_tag.name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, lookalike_transaction.entryable.id
+    assert_not_includes result_ids, without_tag.entryable.id
+  end
+
+  test "Untagged filter works with controller-style reverse_chronological ordering" do
+    # Regression test for a PostgreSQL error: a top-level `.distinct` combined with `reverse_chronological`'s
+    # CASE-expression ORDER BY raises PG::InvalidColumnReference, since DISTINCT requires every ORDER BY
+    # expression to appear in the select list. apply_tag_filter must not add one.
+    with_tag = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      tags: [ tags(:one), tags(:two) ],
+      kind: "standard"
+    )
+
+    without_tag = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { tags: [ Tag::UNTAGGED_FILTER_VALUE ] }).transactions_scope
+
+    assert_nothing_raised do
+      results.reverse_chronological.to_a
+    end
+
+    result_ids = results.pluck(:id)
+    assert_includes result_ids, without_tag.entryable.id
+    assert_not_includes result_ids, with_tag.entryable.id
   end
 
   test "empty accessible_account_ids yields no visible transactions" do

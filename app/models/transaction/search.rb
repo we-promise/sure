@@ -185,10 +185,8 @@ class Transaction::Search
     def apply_merchant_filter(query, merchants)
       return query unless merchants.present?
 
-      # Check for "No merchant" in any supported locale (handles URL params in different languages)
-      all_no_merchant_names = Merchant.all_no_merchant_names
-      include_no_merchant = (merchants & all_no_merchant_names).any?
-      real_merchants = merchants - all_no_merchant_names
+      include_no_merchant = merchants.include?(Merchant::NO_MERCHANT_FILTER_VALUE)
+      real_merchants = merchants - [ Merchant::NO_MERCHANT_FILTER_VALUE ]
 
       if include_no_merchant
         query.left_joins(:merchant).where("merchants.name IN (?) OR merchants.id IS NULL", real_merchants)
@@ -202,22 +200,24 @@ class Transaction::Search
     def apply_tag_filter(query, tags)
       return query unless tags.present?
 
-      # Check for "Untagged" in any supported locale (handles URL params in different languages)
-      all_untagged_names = Tag.all_untagged_names
-      include_untagged = (tags & all_untagged_names).any?
-      real_tags = tags - all_untagged_names
+      include_untagged = tags.include?(Tag::UNTAGGED_FILTER_VALUE)
+      real_tags = tags - [ Tag::UNTAGGED_FILTER_VALUE ]
 
       # Use a subquery instead of an INNER JOIN: `.joins(:tags)` fans out to
       # one row per matching tag, so a transaction tagged with two of the
       # filtered tags produces two rows and double-counts in the summary
       # box (COUNT / SUM) even though the list renders it once.
       # See https://github.com/we-promise/sure/issues/3174
-      matching_ids = if include_untagged
-        query.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).select(:id)
+      #
+      # A top-level `.distinct` would break controller-level ordering (e.g. reverse_chronological's
+      # CASE expression) under PostgreSQL, since DISTINCT requires all ORDER BY expressions to appear in
+      # the select list. Deduplicate via a subquery instead so `query`'s own select/order stay untouched.
+      matching_transaction_ids = if include_untagged
+        Transaction.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).select(:id)
       else
-        query.joins(:tags).where(tags: { name: real_tags }).distinct.select(:id)
+        Transaction.joins(:tags).where(tags: { name: real_tags }).select(:id)
       end
-      query.where(id: matching_ids)
+      query.where(transactions: { id: matching_transaction_ids })
     end
 
     def apply_status_filter(query, statuses)
