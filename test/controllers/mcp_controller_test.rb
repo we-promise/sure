@@ -1,6 +1,8 @@
 require "test_helper"
 
 class McpControllerTest < ActionDispatch::IntegrationTest
+  MCP_PROTOCOL_VERSION = "2025-06-18"
+
   setup do
     @user = users(:family_admin)
     @token = "test-mcp-token-#{SecureRandom.hex(8)}"
@@ -44,7 +46,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     result = JSON.parse(response.body)["result"]
-    assert_equal "2025-03-26", result["protocolVersion"]
+    assert_mcp_initialize_response(result)
   end
 
   test "authenticates a token issued to a dynamically registered MCP client" do
@@ -94,7 +96,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
          headers: mcp_headers(token_response["access_token"])
 
     assert_response :ok
-    assert_equal "2025-03-26", JSON.parse(response.body).dig("result", "protocolVersion")
+    assert_mcp_initialize_response(JSON.parse(response.body)["result"])
   end
 
   test "rejects token with read-only scope" do
@@ -262,7 +264,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
       assert_equal "2.0", body["jsonrpc"]
       assert_equal 1, body["id"]
-      assert_equal "2025-03-26", result["protocolVersion"]
+      assert_mcp_initialize_response(result)
       assert_equal "sure", result["serverInfo"]["name"]
       assert result["capabilities"].key?("tools")
     end
@@ -564,5 +566,12 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     def jsonrpc_notification(method, params = {})
       { jsonrpc: "2.0", method: method, params: params }
+    end
+
+    def assert_mcp_initialize_response(result)
+      assert_equal MCP_PROTOCOL_VERSION, result["protocolVersion"]
+      assert_match(/\A[0-9a-f-]{36}\z/, result["sessionId"])
+      assert_equal MCP_PROTOCOL_VERSION, response.headers["Mcp-Protocol-Version"]
+      assert_equal result["sessionId"], response.headers["Mcp-Session-Id"]
     end
 end
