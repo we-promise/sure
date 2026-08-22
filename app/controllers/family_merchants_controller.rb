@@ -51,8 +51,14 @@ class FamilyMerchantsController < ApplicationController
       end
     else
       respond_to do |format|
+        # No explicit format.turbo_stream branch: Turbo's form submissions send an
+        # Accept header that prefers turbo-stream, but forcing that format here would
+        # lock the response's Content-Type to turbo-stream while still rendering the
+        # plain :new HTML template — Turbo's client then sees a turbo-stream
+        # Content-Type with no <turbo-stream> tags in the body and does nothing.
+        # Leaving turbo-stream undeclared lets Rails' content negotiation fall back to
+        # format.html below, which renders :new with the correct text/html type.
         format.html { render :new, status: :unprocessable_entity }
-        format.turbo_stream { render :new, formats: [ :html ], status: :unprocessable_entity }
         format.json { render json: { errors: @family_merchant.errors.full_messages }, status: :unprocessable_entity }
       end
     end
