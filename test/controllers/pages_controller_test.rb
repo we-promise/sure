@@ -14,6 +14,13 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "dashboard renders the net worth chart as drag-selectable, opting it out of card drag-and-drop" do
+    get root_path
+
+    assert_response :ok
+    assert_select "#netWorthChart[data-time-series-chart-selectable-value='true'][draggable='false']"
+  end
+
   test "update_preferences persists dashboard section layout height" do
     patch "/dashboard/preferences", params: {
       preferences: { dashboard_section_layout: { net_worth_chart: { height: "compact" } } }
