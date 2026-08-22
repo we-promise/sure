@@ -52,6 +52,22 @@ en:
       confirm_changes: Confirm changes
     actions:
       value_placeholder: Enter a value
+      split:
+        type_fixed: Fixed amount
+        type_percentage: Percentage
+        type_label: Split type
+        add_split: Add split
+        name_placeholder: Split name
+        share_label: Split amount or percentage
+        category_label: Split category
+        merchant_label: Split merchant
+        no_merchant: No merchant
+        tags_hint: "Hold Ctrl/Cmd to select multiple tags"
+        hint: "Fixed splits are subtracted first, as exact dollar amounts. Percentage splits then divide whatever's left. If every split here uses a fixed amount, also add a condition that matches an exact transaction amount (e.g. Amount = 42.00), since every matching transaction needs the same total for the fixed amounts to add up."
+        fixed_summary_label: fixed
+        summary:
+          one: "%{count} split"
+          other: "%{count} splits"
     update:
       success: Rule updated
     destroy:

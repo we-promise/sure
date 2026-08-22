@@ -15,6 +15,10 @@ en:
       amount_label: Amount
       category_label: Category
       uncategorized: "(uncategorized)"
+      merchant_label: Merchant
+      no_merchant: "(no merchant)"
+      tags_label: Tags
+      tags_hint: Hold Ctrl/Cmd to select multiple tags
       original_name: "Name:"
       original_date: "Date:"
       original_amount: "Amount"

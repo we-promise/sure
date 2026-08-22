@@ -26,6 +26,7 @@ class Rule::Registry::TransactionResource < Rule::Registry
       Rule::ActionExecutor::SetInvestmentActivityLabel.new(rule),
       Rule::ActionExecutor::ExcludeTransaction.new(rule),
       Rule::ActionExecutor::SetAsTransferOrPayment.new(rule),
+      Rule::ActionExecutor::SplitTransaction.new(rule),
       Rule::ActionExecutor::SendEmailNotification.new(rule)
     ]
 

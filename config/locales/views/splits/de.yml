@@ -15,6 +15,10 @@ de:
       amount_label: Betrag
       category_label: Kategorie
       uncategorized: "(nicht kategorisiert)"
+      merchant_label: Händler
+      no_merchant: "(kein Händler)"
+      tags_label: Tags
+      tags_hint: Strg/Cmd gedrückt halten, um mehrere Tags auszuwählen
       original_name: "Name:"
       original_date: "Datum:"
       original_amount: "Betrag"

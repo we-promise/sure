@@ -51,4 +51,36 @@ class RuleJobTest < ActiveJob::TestCase
     assert_equal 10, rule_run.transactions_modified
     assert_equal 10, rule_run.transactions_blocked
   end
+
+  test "captures a debug log entry when the rule run raises" do
+    rule = @family.rules.create!(
+      name: "Failing rule",
+      resource_type: "transaction",
+      effective_date: 1.year.ago.to_date,
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods")
+      ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_category", value: @food_and_dining.id)
+      ]
+    )
+
+    error = RuntimeError.new("boom")
+    Rule.any_instance.stubs(:apply).raises(error)
+
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_raises(RuntimeError) { RuleJob.perform_now(rule) }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "rule_run", entry.category
+    assert_equal "error", entry.level
+    assert_equal "RuleJob", entry.source
+    assert_equal @family, entry.family
+    assert_equal rule.id, entry.metadata["rule_id"]
+    assert_equal "RuntimeError", entry.metadata["error_class"]
+
+    rule_run = rule.rule_runs.order(:created_at).last
+    assert_equal "failed", rule_run.status
+  end
 end

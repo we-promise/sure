@@ -91,6 +91,47 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
   end
 
+  test "creates rule with a split_transaction action from split_rows params" do
+    category = categories(:food_and_drink)
+
+    post rules_url, params: {
+      rule: {
+        effective_date: 30.days.ago.to_date,
+        resource_type: "transaction",
+        conditions_attributes: {
+          "0" => {
+            condition_type: "transaction_name",
+            operator: "like",
+            value: "Netflix+Hulu Bundle"
+          }
+        },
+        actions_attributes: {
+          "0" => {
+            action_type: "split_transaction",
+            split_rows: {
+              "0" => { type: "percentage", name: "Netflix", share: "70", category_id: category.id },
+              "1" => { type: "percentage", name: "Hulu", share: "30", category_id: "" }
+            }
+          }
+        }
+      }
+    }
+
+    rule = @user.family.rules.order("created_at DESC").first
+
+    assert_equal 1, rule.actions.count
+    action = rule.actions.first
+    assert_equal "split_transaction", action.action_type
+
+    parsed_value = JSON.parse(action.value)
+    assert_equal [ "Netflix", "Hulu" ], parsed_value["splits"].map { |s| s["name"] }
+    assert_equal [ "percentage", "percentage" ], parsed_value["splits"].map { |s| s["type"] }
+    assert_equal category.id, parsed_value["splits"].first["category_id"]
+    assert_nil parsed_value["splits"].last["category_id"]
+
+    assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
+  end
+
   test "can update rule" do
     rule = rules(:one)
 
