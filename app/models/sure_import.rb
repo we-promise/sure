@@ -179,7 +179,7 @@ class SureImport < Import
 
     import!
 
-    family.sync_later
+    sync_family_after_import
 
     update! status: :complete
   rescue StandardError => error

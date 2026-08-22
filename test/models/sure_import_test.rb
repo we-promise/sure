@@ -251,6 +251,57 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "publish auto-matches historical transfers imported from full ndjson before family sync" do
+    @family = Family.create!(name: "NDJSON Backfill", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
+    @import = @family.imports.create!(type: "SureImport")
+    historical_date = 120.days.ago.to_date
+
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "checking",
+        name: "Backfill Checking",
+        balance: "0.00",
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable: { subtype: "checking" }
+      } },
+      { type: "Account", data: {
+        id: "card",
+        name: "Backfill Card",
+        balance: "0.00",
+        currency: "USD",
+        accountable_type: "CreditCard",
+        accountable: { available_credit: "0.00" }
+      } },
+      { type: "Transaction", data: {
+        id: "outflow",
+        account_id: "checking",
+        date: historical_date.iso8601,
+        amount: "500.00",
+        currency: "USD",
+        name: "Payment"
+      } },
+      { type: "Transaction", data: {
+        id: "inflow",
+        account_id: "card",
+        date: historical_date.iso8601,
+        amount: "-500.00",
+        currency: "USD",
+        name: "Payment"
+      } }
+    ]))
+
+    assert_difference -> { Transfer.count }, 1 do
+      @import.publish
+    end
+
+    checking = @family.accounts.find_by!(name: "Backfill Checking")
+    credit_card = @family.accounts.find_by!(name: "Backfill Card")
+    outflow = checking.entries.find_by!(name: "Payment").entryable
+    inflow = credit_card.entries.find_by!(name: "Payment").entryable
+    assert Transfer.exists?(outflow_transaction: outflow, inflow_transaction: inflow)
+  end
+
   test "publish records matched readback verification from family-scoped deltas" do
     other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
     other_family.accounts.create!(
