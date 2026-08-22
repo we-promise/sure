@@ -54,6 +54,26 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "the database rejects a token row with no contract address" do
+    orphan = @item.onchain_wallet_accounts.new(
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      wallet_address: OnchainTestHelper::FAKE_ADDRESS,
+      asset_kind: OnchainTestHelper::FAKE_TOKEN_KIND,
+      contract_address: nil,
+      symbol: "FUSD",
+      decimals: 6,
+      quantity: 1,
+      currency: "USD"
+    )
+
+    # A token is keyed on its contract, and NULLs are distinct to Postgres, so
+    # this row would slip past the partial unique index and duplicate freely.
+    # The model refuses it too; validate: false proves the table does.
+    assert_raises ActiveRecord::StatementInvalid do
+      orphan.save!(validate: false)
+    end
+  end
+
   test "a native row and token rows coexist for one address" do
     create_onchain_wallet_account(item: @item)
     create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa"))

@@ -56,6 +56,13 @@ class CreateOnchainWalletItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.jsonb :extra, default: {}, null: false
 
       t.timestamps
+
+      # A token is identified by its contract, and the partial unique indexes
+      # below key on it — but NULLs are distinct to Postgres, so a token row that
+      # reached the table without one would slip past its index and duplicate.
+      # The model enforces this as well; a direct write does not go through it.
+      t.check_constraint "asset_kind = 'native' OR contract_address IS NOT NULL",
+                         name: "chk_onchain_wallet_accounts_token_has_contract"
     end
 
     add_index :onchain_wallet_accounts, [ :onchain_wallet_item_id, :chain, :wallet_address ],
