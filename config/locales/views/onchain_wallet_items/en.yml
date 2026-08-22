@@ -79,6 +79,18 @@ en:
         other: "%{count} assets tracked"
       sync: Sync now
       syncing: Syncing...
+    wallet_card:
+      addresses_tracked:
+        one: 1 address tracked
+        other: "%{count} addresses tracked"
+      deletion_in_progress: Removing...
+      manage: Manage
+      needs_attention: Needs attention
+      no_wallets_message: Link an address from the provider settings to see it here.
+      no_wallets_title: No wallets linked yet
+      status: Synced %{timestamp} ago
+      status_never: Not synced yet
+      syncing: Syncing...
     price_provider_warning:
       body: No enabled market data provider can price crypto, so these wallets track quantities but show a value of zero.
       enable: Enable crypto prices
