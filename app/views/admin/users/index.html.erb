@@ -122,18 +122,30 @@
                         <% if user.id == Current.user.id %>
                           <span class="text-sm text-secondary"><%= t(".you") %></span>
                         <% else %>
-                          <%= form_with model: [:admin, user], method: :patch, class: "flex items-center justify-end gap-2", data: { controller: "auto-submit-form" } do |form| %>
-                            <%= form.select :role,
-                                options_for_select([
-                                  [t(".roles.guest"), "guest"],
-                                  [t(".roles.member"), "member"],
-                                  [t(".roles.admin"), "admin"],
-                                  [t(".roles.super_admin"), "super_admin"]
-                                ], user.role),
-                                {},
-                                class: "text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1",
-                                data: { auto_submit_form_target: "auto" } %>
-                          <% end %>
+                          <div class="flex items-center justify-end gap-2">
+                            <%= form_with model: [:admin, user], method: :patch, class: "flex items-center", data: { controller: "auto-submit-form" } do |form| %>
+                              <%= form.select :role,
+                                  options_for_select([
+                                    [t(".roles.guest"), "guest"],
+                                    [t(".roles.member"), "member"],
+                                    [t(".roles.admin"), "admin"],
+                                    [t(".roles.super_admin"), "super_admin"]
+                                  ], user.role),
+                                  {},
+                                  class: "text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1",
+                                  data: { auto_submit_form_target: "auto" } %>
+                            <% end %>
+                            <% unless user.super_admin? && user.active? && @active_super_admin_count <= 1 %>
+                              <%= render DS::Button.new(
+                                    text: t(".table.remove"),
+                                    href: deletion_admin_user_path(user),
+                                    method: :get,
+                                    frame: "modal",
+                                    variant: :outline_destructive,
+                                    size: :sm
+                                  ) %>
+                            <% end %>
+                          </div>
                         <% end %>
                       </td>
                     </tr>
@@ -194,6 +206,31 @@
       </div>
     <% end %>
   </div>
+
+  <% if @sso_identity_blocks.any? %>
+    <%= settings_section title: t(".removed_sso_identities.title"), collapsible: true, open: false do %>
+      <p class="text-sm text-secondary mb-4"><%= t(".removed_sso_identities.description") %></p>
+      <div class="space-y-2">
+        <% @sso_identity_blocks.each do |block| %>
+          <div class="flex items-center justify-between gap-4 rounded-lg border border-primary p-3">
+            <div>
+              <p class="font-medium text-primary"><%= block.identity_label %></p>
+              <p class="text-sm text-secondary"><%= block.provider %> · <%= l(block.created_at, format: :long) %></p>
+            </div>
+            <%= form_with url: admin_sso_identity_block_path(block), method: :delete do %>
+              <%= render DS::Button.new(
+                    text: t(".removed_sso_identities.allow_again"),
+                    type: "submit",
+                    variant: :outline_destructive,
+                    size: :sm,
+                    data: { turbo_confirm: t(".removed_sso_identities.confirm", email: block.identity_label) }
+                  ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
 
   <%= settings_section title: t(".role_descriptions_title"), collapsible: true, open: true do %>
     <div class="space-y-3 text-sm">

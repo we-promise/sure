@@ -207,6 +207,7 @@ class Provider::Anthropic < Provider
     instructions: nil,
     functions: [],
     function_results: [],
+    tool_choice: nil,
     messages: nil,
     conversation_history: [],
     streamer: nil,
@@ -221,6 +222,7 @@ class Provider::Anthropic < Provider
         instructions: instructions,
         functions: functions,
         function_results: function_results,
+        tool_choice: tool_choice,
         conversation_history: conversation_history,
         default_max_tokens: default_max_tokens
       )
