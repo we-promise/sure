@@ -5,6 +5,7 @@ module TransactionsHelper
       { key: "date_filter", label: t("transactions.search.filters.date"), icon: "calendar" },
       { key: "type_filter", label: t("transactions.search.filters.type"), icon: "tag" },
       { key: "status_filter", label: t("transactions.search.filters.status"), icon: "clock" },
+      { key: "reconcile_status_filter", label: t("transactions.search.filters.reconcile_status"), icon: "check-circle" },
       { key: "amount_filter", label: t("transactions.search.filters.amount"), icon: "hash" },
       { key: "category_filter", label: t("transactions.search.filters.category"), icon: "shapes" },
       { key: "tag_filter", label: t("transactions.search.filters.tag"), icon: "tags" },
@@ -22,6 +23,24 @@ module TransactionsHelper
 
   def in_split_group?(entry, params_grouped)
     entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
+  end
+
+  # Single source of truth for how each reconciled_status renders — used by
+  # both the transaction row/detail badge (_reconcile_badge.html.erb) and the
+  # bulk-reconcile selection-bar menu (_selection_bar.html.erb), so the two
+  # can't silently drift out of sync.
+  RECONCILE_STATUS_PRESENTATION = {
+    "unreconciled" => { tone: :neutral, icon: "circle" },
+    "cleared" => { tone: :warning, icon: "circle-dot" },
+    "reconciled" => { tone: :success, icon: "check-circle" }
+  }.freeze
+
+  def reconcile_status_tone(status)
+    RECONCILE_STATUS_PRESENTATION.fetch(status, RECONCILE_STATUS_PRESENTATION["unreconciled"])[:tone]
+  end
+
+  def reconcile_status_icon(status)
+    RECONCILE_STATUS_PRESENTATION.fetch(status, RECONCILE_STATUS_PRESENTATION["unreconciled"])[:icon]
   end
 
   # ---- Transaction extra details helpers ----
